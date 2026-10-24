@@ -58,6 +58,17 @@ test('team share, transfer, activity log and delete user with reassignment', asy
   await expect(card).toHaveCount(0)
 })
 
+test('LangSmith card: off and locked until LANGSMITH_API_KEY is set', async ({ page }) => {
+  const auth = await login(page)
+  const st = (await (await page.request.get('/api/admin/langsmith', { headers: auth })).json()).data
+  expect(st).toMatchObject({ configured: false, evals: false })
+  await page.goto('/settings/users'); await expect(page.locator('#langsmith-settings')).toBeVisible()
+  await expect(page.locator('#langsmith-evals')).toBeDisabled(); await expect(page.locator('#langsmith-not-configured')).toBeVisible()
+  const r = await (await page.request.put('/api/admin/langsmith', { headers: auth, data: { evals: true } })).json()
+  expect(r.data.evals).toBe(true)  // saved even without a key; nothing is sent until one is set
+  await page.request.put('/api/admin/langsmith', { headers: auth, data: { evals: false } })
+})
+
 test('org-resource policy and delete warning with dependents', async ({ page }) => {
   const auth = await login(page)
   const pol = await (await page.request.get('/api/admin/policy', { headers: auth })).json()

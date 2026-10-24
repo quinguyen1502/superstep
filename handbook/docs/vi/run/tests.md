@@ -115,6 +115,27 @@ sao (xem [Mẫu workflow](../guide/templates.md)). Chúng đạt với model moc
 offline. **Hỏi đáp RAG** và **Hỗ trợ có chuyển cấp** cần chọn kho tri thức trước.
 Mẫu bạn tự lưu không kèm test case.
 
+## Gửi kết quả sang LangSmith
+
+Khi máy chủ có `LANGSMITH_API_KEY` (và `LANGSMITH_ENDPOINT` nếu LangSmith tự
+host), admin có thể bật **Cài đặt > Người dùng > LangSmith > Gửi kết quả kiểm
+thử sang LangSmith**. Mỗi run test đã xong sẽ được gửi ở chế độ nền:
+
+- các test case của workflow thành một dataset LangSmith tên
+  `Superstep: <workflow> (<id>)`, mỗi case một example (input, điều kiện,
+  câu trả lời soạn sẵn), được đồng bộ ở mỗi lần gửi;
+- run test thành một experiment trên dataset đó, mỗi case một run (state cuối
+  làm output) và feedback `passed` cùng một điểm cho mỗi điều kiện.
+
+Khi đó bảng Kiểm thử có menu **LangSmith**: **Mở trong LangSmith** mở experiment,
+và editor có thể chọn **Gửi sang LangSmith** để gửi lại một run test (một
+experiment mới). Gửi lỗi chỉ được ghi
+log, không làm thay đổi kết quả test.
+
+Khi các run cũng được trace sang LangSmith (`LANGSMITH_TRACING=true`, xem
+[Quan sát hệ thống](../operate/observability.md)), link **Mở trace** của mỗi run
+mở trace của nó trong LangSmith, trừ khi đã đặt `STUDIO_TRACE_URL`.
+
 ## API
 
 ```text
@@ -124,5 +145,6 @@ POST        /api/workflows/{wid}/tests/run              {test_ids?, mock?, versi
 GET         /api/workflows/{wid}/tests/runs             (lịch sử)
 GET         /api/workflows/{wid}/tests/runs/{sid}       (kết quả và so sánh)
 POST        /api/workflows/{wid}/tests/runs/{sid}/cancel
+POST        /api/workflows/{wid}/tests/runs/{sid}/langsmith   (gửi lại sang LangSmith)
 POST        /api/workflows/{wid}/tests/from-run/{run_id}   (bản nháp, chưa lưu)
 ```

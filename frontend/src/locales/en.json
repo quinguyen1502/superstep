@@ -397,6 +397,12 @@
     "RUN_INPUT_TOO_LARGE": "Run input is too large (max {{max_kb}} KB)",
     "RUN_FAILED": "Run failed",
     "RUN_TIMEOUT": "Run exceeded the time limit ({{seconds}}s)",
+    "THREAD_NOT_FOUND": "Thread not found or not yours",
+    "THREAD_EXISTS": "A thread with this id already exists",
+    "THREAD_BUSY": "The thread already has a run in progress",
+    "THREAD_WORKFLOW_MISMATCH": "The thread belongs to another workflow",
+    "LANGSMITH_NOT_CONFIGURED": "LangSmith is not configured: set LANGSMITH_API_KEY on the server",
+    "LANGSMITH_PUSH_FAILED": "Sending to LangSmith failed ({{reason}})",
     "RUN_NOT_FOUND": "Run not found, already finished or not yours",
     "RUN_NODE_NOT_REACHED": "The run finished without reaching node '{{node}}'",
     "NODE_FAILED": "Node failed",
@@ -1757,7 +1763,11 @@
       "still_failing": "Still failing",
       "still_passing": "Still passing",
       "new": "New"
-    }
+    },
+    "openLangSmith": "Open in LangSmith",
+    "sendLangSmith": "Send to LangSmith",
+    "langsmith": "LangSmith",
+    "langsmithNotConfigured": "Set LANGSMITH_API_KEY on the server first"
   },
   "codeView": {
     "tab": "Code",
@@ -1769,6 +1779,8 @@
     "noCode": "This node has no code of its own",
     "selectHint": "Select a node on the canvas to find its code",
     "download": "Download .{{ext}}",
+    "downloadProject": "Project .zip",
+    "downloadProjectTip": "A runnable LangGraph project (langgraph.json, dependencies, README) for langgraph dev and LangSmith Studio",
     "languageLabel": "Language"
   },
   "demo": {
@@ -1894,5 +1906,13 @@
     "tooLarge": "Too large",
     "badJson": "The state must be a JSON object",
     "forkedFrom": "Forked from {{run}} (checkpoint {{n}})"
+  },
+  "langsmith": {
+    "title": "LangSmith",
+    "intro": "Send each finished test suite run to LangSmith: the test cases become a dataset and the run an experiment on it.",
+    "evals": "Send test results to LangSmith",
+    "notConfigured": "Set LANGSMITH_API_KEY on the server to turn this on.",
+    "tracingOn": "Runs are traced to the LangSmith project {{project}}; each run links to its trace.",
+    "tracingOff": "Set LANGSMITH_TRACING=true to also trace runs to LangSmith."
   }
 }

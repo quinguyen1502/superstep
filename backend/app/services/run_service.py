@@ -427,7 +427,7 @@ class RunService:
                  "final_state": json.loads(r.final_state or "null"), "status": r.status, "started": r.started, "ended": r.ended, "source": r.source or "ui", "version": r.workflow_version,
                  "metrics": None if r.duration_ms is None else {"duration_ms": r.duration_ms, "tokens_in": r.tokens_in, "tokens_out": r.tokens_out,
                                                                 "tokens": (r.tokens_in or 0) + (r.tokens_out or 0), "cost_usd": r.cost_usd, "error_count": r.error_count},
-                 "trace_id": r.trace_id, "trace_url": trace_url(r.trace_id), "code_runtime": r.code_runtime, "chat": chat.get(r.id)}
+                 "trace_id": r.trace_id, "trace_url": trace_url(r.trace_id, r.trace_root), "code_runtime": r.code_runtime, "chat": chat.get(r.id)}
                 for r in rows]
 
     def record(self, rid, wid, inp, events, final, status, t0, uid: str = "", checkpoint: dict | None = None, source: str = "ui",
@@ -440,15 +440,17 @@ class RunService:
         fence: lease generation of a queue job; raises StaleLease (nothing written) when another worker owns the run."""
         if fence is not None and self.runs.lease_gen(rid) != fence: raise StaleLease(rid)  # before any side effect (spans, notifications)
         t1 = time.time(); metrics = summarize(events, t0, t1)  # from the full events, before capping
-        trace_id = None; run_meta = {"id": rid, "workflow_id": wid, "owner": uid, "status": status, "started": t0, "ended": t1, "source": source}
+        trace_id = trace_root = None; run_meta = {"id": rid, "workflow_id": wid, "owner": uid, "status": status, "started": t0, "ended": t1, "source": source}
         try:
             if span is not None:
                 if checkpoint is not None: checkpoint = {**checkpoint, "trace": span.ref}
                 trace_id = self.telemetry.end_run(span, {**run_meta, "started": span.run["started"]}, metrics)
+                if trace_id and not span.parent: trace_root = span.ids["span_id"]  # the first segment: the trace's root
             elif status not in ("waiting", "paused"):
                 trace_id = self.telemetry.record_run(run_meta, events if trace_events is None else trace_events, metrics, trace_parent)
         except Exception: trace_id = None  # tracing must never fail a run
         if trace_id is None and trace_parent: trace_id = trace_parent.get("trace_id")
+        root = {"trace_root": trace_root} if trace_root else {}  # later segments keep the first one's
         test = source == "test"  # a workflow test answers its own Human nodes and sends nothing (DEC-0044)
         if self.notifier is not None and uid and status in ("waiting", "expired") and not test:
             ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
@@ -465,11 +467,11 @@ class RunService:
         final = cap_event({"state": final})["state"] if final is not None else None
         self.runs.add(Run(id=rid, workflow_id=wid or "adhoc", input=_dumps(inp), events=_dumps(events), code_runtime=code_runtime_of(events),
                           final_state=_dumps(final), status=status, started=t0, ended=t1, trace_id=trace_id, owner=uid or None, source=source, workflow_version=version,
-                          checkpoint=_dumps(checkpoint) if checkpoint else None, **metrics), **({"fence": fence} if fence is not None else {}))
+                          checkpoint=_dumps(checkpoint) if checkpoint else None, **root, **metrics), **({"fence": fence} if fence is not None else {}))
         if self.ledger is not None and status not in ("waiting", "paused"):
             try: self.ledger.purge(rid)  # finished: the ledger only matters while the run can still be recovered
             except Exception: log.warning("purging the node ledger of run %s failed", rid)
-        return {"metrics": {**metrics, "tokens": metrics["tokens_in"] + metrics["tokens_out"]}, "trace_id": trace_id, "trace_url": trace_url(trace_id)}
+        return {"metrics": {**metrics, "tokens": metrics["tokens_in"] + metrics["tokens_out"]}, "trace_id": trace_id, "trace_url": trace_url(trace_id, trace_root)}
 
     async def _save_progress(self, rid, events, ev, plan, span) -> None:
         """Persist events so far + where to continue from if this worker dies (TASK-0020/0021): the next node(s),
