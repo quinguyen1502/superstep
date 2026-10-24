@@ -69,7 +69,8 @@ def test_finished_suite_becomes_a_dataset_and_experiment(c, fake):
         u = user(c); wid = save(c, u, APPROVAL)
         add(c, u, wid, name="Approved", answers={"ask": ["approved"]}, checks=[{"kind": "field", "field": "decision", "op": "equals", "value": "approved"}])
         add(c, u, wid, name="Wrong", answers={"ask": ["rejected"]}, checks=[{"kind": "field", "field": "decision", "op": "equals", "value": "approved"}])
-        assert c.get(f"/api/workflows/{wid}/tests", headers=H(u["token"])).json()["data"]["langsmith"] is True
+        lst = c.get(f"/api/workflows/{wid}/tests", headers=H(u["token"])).json()["data"]
+        assert lst["langsmith"] is True and lst["langsmith_configured"] is True
         s = wait_url(c, u, wid, run_all(c, u, wid)["id"])
         (ds,) = fake.datasets.values(); (exp,) = fake.projects
         assert ds.name.endswith(f"({wid})") and exp.reference_dataset_id == ds.id and fake.ended == [exp.id]

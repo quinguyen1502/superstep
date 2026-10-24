@@ -22,6 +22,7 @@ from ..engine import checks as C
 from ..engine.limits import size
 from ..models import Run, WorkflowTest, WorkflowTestResult, WorkflowTestSuite
 from ..repositories import RunRepository, WorkflowRepository, WorkflowTestRepository, WorkflowVersionRepository
+from .langsmith import configured as langsmith_configured
 from .job_queue import JobQueue
 from .run_service import RESPONSE_MAX
 
@@ -89,7 +90,8 @@ class WorkflowTestService:
         cases = self.repo.list_for_workflow(wid); last = self.repo.latest_results([t.id for t in cases])
         return {"items": [self.public(t, last.get(t.id)) for t in cases], "suites": self._suites(wid),
                 "can_edit": (self.access is None or self.access.may(wid, uid, P.EDIT)) and not json.loads(w.data or "{}").get("source"),
-                "limit": config.test_cases_max(), "langsmith": self.langsmith is not None and self.langsmith().evals_enabled()}
+                "limit": config.test_cases_max(), "langsmith": self.langsmith is not None and self.langsmith().evals_enabled(),
+                "langsmith_configured": self.langsmith is not None and langsmith_configured()}
 
     def history(self, wid: str, uid: str) -> dict:
         """The workflow's last suite runs, newest first: version, who, when, passed / failed."""

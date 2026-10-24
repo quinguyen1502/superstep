@@ -1763,7 +1763,9 @@
       "new": "Mới"
     },
     "openLangSmith": "Mở trong LangSmith",
-    "sendLangSmith": "Gửi sang LangSmith"
+    "sendLangSmith": "Gửi sang LangSmith",
+    "langsmith": "LangSmith",
+    "langsmithNotConfigured": "Cần đặt LANGSMITH_API_KEY trên máy chủ trước"
   },
   "codeView": {
     "tab": "Code",

@@ -129,8 +129,9 @@ background:
 - the test run becomes an experiment on that dataset, with one run per case
   (final state as outputs) and feedback `passed` plus one score per check.
 
-The Tests panel then shows **Open in LangSmith**. Editors can press **Send to
-LangSmith** to send a test run again (a new experiment). A failed send is
+The Tests panel then has a **LangSmith** menu: **Open in LangSmith** opens the
+experiment, and editors can choose **Send to LangSmith** to send a test run again
+(a new experiment). A failed send is
 logged and never changes the test results.
 
 When runs are also traced to LangSmith (`LANGSMITH_TRACING=true`, see

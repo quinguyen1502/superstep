@@ -1,9 +1,9 @@
 schema_version: 1
-run_id: 20261024T134211131723Z
+run_id: 20261024T145129288555Z
 status: failed
 profile: full
-updated_at: '2026-10-24T13:42:11.131723+00:00'
-source_sha256: 8dac8e81b74c137cac5a7941d500a248a8dafa2a0a45ff4ea2e121b4cdba84f3
+updated_at: '2026-10-24T14:51:29.288555+00:00'
+source_sha256: 62f004a21e9c21850804397e6ac07e5051a9db646a8693ad2866564f18ed3ed5
 inputs:
   app.json: d080abda26f3ac897a49947e17b9ba9bdf9e2bf76dca2ab2dc546e241149fdca
   railway.json: a0724a95e35b88455976d48915c339b68ef5c66a9d30553ffdf688cf98ecc49a
@@ -239,7 +239,7 @@ inputs:
   backend/app/services/webhooks.py: b5c5e1f13ad5d4086d5c112b1d87cf778ba4e8cf11829de31b93fc74dbf93427
   backend/app/services/workflow_diff.py: b8e53a498159e64acce40178f3d445dabf28def9a1cdb4d29083ce037ba73204
   backend/app/services/workflow_service.py: 79f10ef706732545680814e9525bad7e28655adc42e22ae173096b151e448d06
-  backend/app/services/workflow_test_service.py: de0a37f62ca7ea6f78afad9313edb772835f90136ffdc48a54b8b0160415d1cb
+  backend/app/services/workflow_test_service.py: b07810ed510ca3f5c61c8e3591084182cbed661af71c7774035715bc9a47967e
   backend/app/services/approval_channels/__init__.py: 4912bf3290db4df6d7df8230f39abf58b09b6d8fa8f19cdbefa26d2a8b10e61b
   backend/app/services/approval_channels/base.py: c3a8ef2091c1ed1bf68727c5899eaa2b8d511676a7ab51754269f4a4395909bd
   backend/app/services/approval_channels/links.py: f1f53174742fe42b34fa62c7817ad4e69c8b15baf4448936a6cf807c3591716b
@@ -285,7 +285,7 @@ inputs:
   backend/tests/test_import_sandbox.py: 4fdee27f94dd3a70b45e7f8f69956c3ed97a978a03211218f8c7742004f9fa4f
   backend/tests/test_inbox.py: 1368159091a098443728e70d111556c70819335a222843e0191d61ad3f9f4639
   backend/tests/test_knowledge.py: 43132899dea35ca037e882f21d6338c6dfb20aead99d7dd9bf73592de5f53682
-  backend/tests/test_langsmith.py: 1a083122716ff0be9b9b23751670060fff685a927ec5ed41b545496466a42041
+  backend/tests/test_langsmith.py: e16744109e6415458d477177f5c99241741fb06d1bdca071170b6a5fbc836900
   backend/tests/test_layers.py: d2f21eb4b8b0b17a5f7ee602ec543d69d9c109c4f54a7c18aa8329e0c5fcc1ae
   backend/tests/test_llm_providers.py: 55bbe5c38cc821fde487df2d64d62a003ef0742876ab5da6a1f3f2659714007b
   backend/tests/test_local_providers.py: 77b92dd1ced72c4f3aecb2c395dc579e31d6d89384ca17ec7b2d36141bd97adb
@@ -467,7 +467,7 @@ inputs:
   frontend/src/components/editor/editor-palette.tsx: 82d89729609377fe3f3f5f7c797a21dae48a98d7cd3708986211a9a3b569f541
   frontend/src/components/editor/editor-run-panel.tsx: 7c9ff5f43cc5626ed003188c658324b793488caf34555ee9fa915ea8b054951d
   frontend/src/components/editor/editor-skeleton.tsx: 1ad689f0e56e9cac59889a1119f417fadaa3cee52bd6f91431fb57b2e525232a
-  frontend/src/components/editor/editor-tests-panel.tsx: 1f99b970f84e61924227239a3fd0d4642af0f7b2354753546b2de584207e5852
+  frontend/src/components/editor/editor-tests-panel.tsx: e8756689f22115ec77a8b0a0167e8ce38953d16da4022a277d57288fd09d3574
   frontend/src/components/editor/meta.ts: 3af2a921176417df0b98d57a4b5e99bba5b23fc44b247057dfa50ce461cb2c67
   frontend/src/components/editor/node-types.ts: 4e36c15769c38b516b7c06380f4eaf220c28b9e40fdc37c70f02f10dbf5a425e
   frontend/src/components/editor/parts.tsx: cc950b89f946ebb7a70b08ee5c03d5802aeed1f8d110940aba7f9b3c52273751
@@ -553,7 +553,7 @@ inputs:
   frontend/src/lib/__tests__/graph-ops.test.ts: 7757fcb636fba3d7555f95339d4cc8bc54d3105eb49b354720ae1d6b6fc51797
   frontend/src/lib/__tests__/history.test.ts: 363b9dafbe6d87c4077c9ca790c07b4030327d6102e3759a9771fc197a326b9f
   frontend/src/lib/__tests__/layout.test.ts: bed1d9451072295db5b3806475bf9cea5c0551282cdd12fd9619e38d17ffb7d4
-  frontend/src/lib/__tests__/locales.test.ts: 7549d665aca346266db5f1dbff64462b4517ec8b5e371950ee7e7e5eec5788c3
+  frontend/src/lib/__tests__/locales.test.ts: 455e661c4b18ef9d98e4322c95f501fba5f0660c9cdaa7e2f31d298f7be445b2
   frontend/src/lib/__tests__/palette.test.ts: 1a8a304663efd260d314376763ab11502eaf1cb4b7eb784a5311a93e2dd2cc71
   frontend/src/lib/__tests__/panel-sizes.test.ts: 5fb2f81844ce4e56be0c4450c77f5eb5624efc97f9f2692f90821f04185bb3bd
   frontend/src/lib/__tests__/shortcuts.test.ts: b14236e8a6b326d45919adec98a2a607577b64008f8b7d04d51934f59faad06f
@@ -561,8 +561,8 @@ inputs:
   frontend/src/lib/__tests__/state-type.test.ts: 453b5229031b05f0f2c517e8ad3435acadc50368a88b045755a130e41bb99a69
   frontend/src/lib/__tests__/templates.test.ts: aaf8128f0c8c424d1ee214bd1dca325e6454741f9b0348f6d21b54d08e961296
   frontend/src/lib/__tests__/ui-class-check.test.ts: 4dfea62d93d84208ed44b3631fddc8e08cccf87e9d3c9286c5cc324f218069ca
-  frontend/src/locales/en.json: 572fcca1a2c168d28496568a807603ab7731c76e70282c9f464c5e97a5b5fd24
-  frontend/src/locales/vi.json: 416c617ad1d97f2680fc136d1803c6d22e0dce52c5a8f3823bb6dff1184b4773
+  frontend/src/locales/en.json: ef4f55476f53bda2b5fc21cebf7e1bc80f00d7f0243b2a4209126efe89a5f148
+  frontend/src/locales/vi.json: ee1866f924aa364cfa8977c9f5e44f9aa68ff308e13b0eddd0b7b60ea545a8c2
   frontend/src/pages/Approvals.tsx: 0b707477ce9791d4c39769808afd3d5ab5388bb1efbb2fd42b247fb7c2c40af9
   frontend/src/pages/Approve.tsx: b853663a0c83418f6611320a5ef0092004ec062cf577494f0810ef30f6120a65
   frontend/src/pages/Auth.tsx: 7e69c07d28897199ec407552747ddbad6e9999c575b908caad2e62f99f449730
@@ -590,7 +590,7 @@ inputs:
   handbook/docs/en/reference/openapi.public.json: 8f6d0a6122cd456c58189276b737a09f3f973fd12bfb056bd88f61e03050c992
   handbook/site/404.html: e67249082eea09e39e8fb68b84ca1fd099c693af050a60e12040986899b12371
   handbook/site/index.html: fd3cefd9351838da03b59d08ada3f59fd000b2c7f5d7d43d88e50a5f210b8170
-  handbook/site/search.json: 4c22026c1e995610db8688a06853b2af28b594b1fd66fbd994dae2b75f507dad
+  handbook/site/search.json: 4b3c8ad11db6505b62c0b4330ba6645a3c1c4efb200580140faf8afb792f0391
   handbook/site/assets/javascripts/bundle.a2388154.min.js: a2388154fa115a8b07ce9676b71adfd7ee9e704ac321feb06127a98730b5e21b
   handbook/site/assets/javascripts/workers/search.c47bb847.min.js: c47bb8474294453d842f5cb386fdf3340304f095c63a37aa935d1bc7d382f180
   handbook/site/guide/index.html: fdbdc16af06625056d8f271c2719c3f4691ca44dfc7f05f843dd260a625149c8
@@ -633,7 +633,7 @@ inputs:
   handbook/site/run/human-approval/index.html: 7c715975d3c3b1b877ccda098bc161042e3030f25d0109434dc3331c270ab6ea
   handbook/site/run/public-api/index.html: 6a3bd535abf66f2bb117e0bc2bfbb23e118d18168cd7bc0eeb7c0bfb5a826875
   handbook/site/run/schedules/index.html: 96e1dfffde5bf1256d561b03efde7d2d4805647952b0f8719d1bcc7e73a5cfe8
-  handbook/site/run/tests/index.html: 1b29876a52449084c275b0ff35f4c0d83b8a87230f5ff571313096bb3c15d0a7
+  handbook/site/run/tests/index.html: 6ce8e5e709bec663b118286ed5f71e72a1b101aeb3cc50b444e5075ce598af6f
   handbook/site/run/traces/index.html: 8bdd92ad7aa35d11957250277b3b1d51f34133c1459fa306dc1af62c10b60588
   handbook/site/start/index.html: c51092bf227dea0996c175aeb7191dd973a6fdc2feb516411fa39185e44914ba
   handbook/site/start/concepts/index.html: 13c280afca49024fa064278b05fbb1f0ceabee25717fa55a1ecf8b87ab4f17ed
@@ -641,7 +641,7 @@ inputs:
   handbook/site/start/quickstart/index.html: 6254b7e8b04fd5d449457972196a4a1781e2f2788f55b95addf9d3481c210074
   handbook/site/vi/404.html: 83861332683547aae69fedcd7f56cc0be7e35bba3683b295f10b9fe0757e2419
   handbook/site/vi/index.html: a40361a513559814026a291277ad378bc59e76eb1c2fdaba76dacacdac6ab84b
-  handbook/site/vi/search.json: b1d539a8482f22f6c33b5ec8d82dbc6f3ae002bfd52780f5ffbdb3e107e6626a
+  handbook/site/vi/search.json: 4afbc50c3462ca2f2ab08312cb6c1132255df54abe4da454f28e19b51d57593b
   handbook/site/vi/assets/javascripts/bundle.a2388154.min.js: a2388154fa115a8b07ce9676b71adfd7ee9e704ac321feb06127a98730b5e21b
   handbook/site/vi/assets/javascripts/workers/search.c47bb847.min.js: c47bb8474294453d842f5cb386fdf3340304f095c63a37aa935d1bc7d382f180
   handbook/site/vi/guide/index.html: 18082d3e0c5ddf54a7b45ff221adc7bb55cd44e56f44789b0028093060fbfdd0
@@ -684,7 +684,7 @@ inputs:
   handbook/site/vi/run/human-approval/index.html: 230d99a57ecb27bc84b49a4e9faef9964a83bf121dd807d8d3cb7d18d87a66eb
   handbook/site/vi/run/public-api/index.html: 3d49b8080fd3e353773b798ec6bc13bb95435a438a9f390ef49c220b7f0ec9dd
   handbook/site/vi/run/schedules/index.html: c65914365dc9f10c6b14cf6f4b3dfa4ccdd92e229f4180b386ff93a297999231
-  handbook/site/vi/run/tests/index.html: 048c7c0d5a01f3a32134c6a77e800d1a9183e104d64b2a12d45fa94ca8532e56
+  handbook/site/vi/run/tests/index.html: 1ba2f7ae38d2fc57751d99e06a29e9cd00c68556a6f6c8c59dd6a667ed4e8555
   handbook/site/vi/run/traces/index.html: ae578f9e2ee0781a2ee6ebb8a370470167e2308e25d0a9cc91d7429a35d50932
   handbook/site/vi/start/index.html: 632b8648ff26bd8dfdc70e912c02d9953ea8759e045def20341fa887bc3fa144
   handbook/site/vi/start/concepts/index.html: 41ee1220c9bb2e8707f438b63002afb57e365dcefffaf10d9503d3794f2abbd3
@@ -732,9 +732,9 @@ results:
   source: backend/pyproject.toml
   status: failed
   returncode: 1
-  started_at: '2026-10-24T13:38:48.823674+00:00'
-  duration_seconds: 180.639
-  output_sha256: 557c7739afe7d4924a064732ebbbf6491d3cf82e37959201ec2d1b380c611d84
+  started_at: '2026-10-24T14:47:58.888065+00:00'
+  duration_seconds: 188.292
+  output_sha256: 03344db9989c0509e286cdd447b61b5d8607af30bf550b3863d3bf822a95ba20
 - check_id: node:frontend:build
   kind: build
   working_dir: frontend
@@ -745,9 +745,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T13:41:49.462333+00:00'
-  duration_seconds: 11.075
-  output_sha256: e868cd28bce2acd38efae619819851c3e01f4d6baedbd0d1bfc942d5718f26f8
+  started_at: '2026-10-24T14:51:07.180343+00:00'
+  duration_seconds: 9.122
+  output_sha256: 10b2dd3b656efb7e9f612a5a5c412947587524dbee15a7402bdae2b5fdbd65c0
 - check_id: node:frontend:lint
   kind: lint
   working_dir: frontend
@@ -758,8 +758,8 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T13:42:00.537336+00:00'
-  duration_seconds: 1.414
+  started_at: '2026-10-24T14:51:16.302715+00:00'
+  duration_seconds: 1.37
   output_sha256: 30517070e73e9ee351c0692d1d15e440b30cc72a23eeb0c8a38c54c08132bc1c
 - check_id: node:frontend:test
   kind: test
@@ -771,9 +771,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T13:42:01.951803+00:00'
-  duration_seconds: 4.264
-  output_sha256: a1672d4d1269e5a4a64ac7f3a2e31c735c9fcabb1889117b4b191ce581d592a8
+  started_at: '2026-10-24T14:51:17.672316+00:00'
+  duration_seconds: 6.027
+  output_sha256: 9ba8e6024254f7469bba91256e6335e755cfd0b6c1d7f25570609742e517ee91
 - check_id: python:sdk/python:test
   kind: test
   working_dir: sdk/python
@@ -784,9 +784,9 @@ results:
   source: sdk/python/pyproject.toml
   status: passed
   returncode: 0
-  started_at: '2026-10-24T13:42:06.215471+00:00'
-  duration_seconds: 0.416
-  output_sha256: 76607cee6f636e3f811e1c4335f2b713397678b3d6e5c3a4f17cfc3d0f6ddc4e
+  started_at: '2026-10-24T14:51:23.698980+00:00'
+  duration_seconds: 0.458
+  output_sha256: be81c4619a7a6820e198802e84602621e77a53a2029399eea8ce469aa2b25a09
 - check_id: node:sdk/typescript:build
   kind: build
   working_dir: sdk/typescript
@@ -797,8 +797,8 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T13:42:06.631608+00:00'
-  duration_seconds: 1.917
+  started_at: '2026-10-24T14:51:24.156855+00:00'
+  duration_seconds: 1.774
   output_sha256: 55bbf8b4027b9e5a75745f1e81e3eee53bec58ec7e311f56e256fbe025f24c90
 - check_id: node:sdk/typescript:test
   kind: test
@@ -810,9 +810,9 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T13:42:08.548579+00:00'
-  duration_seconds: 0.897
-  output_sha256: 2fc6df3d9d0a288f709937d5a0f178a00a2786e263353ab3d4968a98a3361716
+  started_at: '2026-10-24T14:51:25.930476+00:00'
+  duration_seconds: 1.189
+  output_sha256: d2fa3cc73160881b45395e7e6f1bd21d9fa78c73efbbfd919494d920a809fff9
 - check_id: node:sdk/typescript:typecheck
   kind: typecheck
   working_dir: sdk/typescript
@@ -823,6 +823,6 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T13:42:09.445927+00:00'
-  duration_seconds: 1.686
+  started_at: '2026-10-24T14:51:27.119882+00:00'
+  duration_seconds: 2.169
   output_sha256: 0214e636182f470704605f9f489ef0194da1480b139feba1514beef02d501488

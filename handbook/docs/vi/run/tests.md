@@ -127,8 +127,9 @@ thử sang LangSmith**. Mỗi run test đã xong sẽ được gửi ở chế �
 - run test thành một experiment trên dataset đó, mỗi case một run (state cuối
   làm output) và feedback `passed` cùng một điểm cho mỗi điều kiện.
 
-Khi đó bảng Kiểm thử hiện **Mở trong LangSmith**. Editor có thể bấm **Gửi sang
-LangSmith** để gửi lại một run test (một experiment mới). Gửi lỗi chỉ được ghi
+Khi đó bảng Kiểm thử có menu **LangSmith**: **Mở trong LangSmith** mở experiment,
+và editor có thể chọn **Gửi sang LangSmith** để gửi lại một run test (một
+experiment mới). Gửi lỗi chỉ được ghi
 log, không làm thay đổi kết quả test.
 
 Khi các run cũng được trace sang LangSmith (`LANGSMITH_TRACING=true`, xem
