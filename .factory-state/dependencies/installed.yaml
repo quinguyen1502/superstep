@@ -1,6 +1,6 @@
 schema_version: 1
 status: installed
-updated_at: '2026-10-24T14:16:57.460352+00:00'
+updated_at: '2026-10-24T15:16:53.758914+00:00'
 source_sha256: 2a7de220b33c93d5bf7d64521b19e1d2575b98ef746597b0ca395f87cdab7052
 inputs:
   backend/pyproject.toml: 6c83ab33063ec167ac0a6c6f27754bbf7d0874b1dcb7d3d5c21ed09978f21eed
@@ -28,7 +28,7 @@ commands:
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-24T14:16:21.143826+00:00'
+  started_at: '2026-10-24T15:16:41.415314+00:00'
   returncode: 0
   status: observed
   integrity:
@@ -55,7 +55,7 @@ commands:
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-24T14:16:29.504110+00:00'
+  started_at: '2026-10-24T15:16:47.921305+00:00'
   returncode: 0
   status: observed
   integrity:
@@ -81,23 +81,7 @@ commands:
   expected_paths:
   - backend/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-24T14:16:31.315789+00:00'
-  returncode: 0
-  status: observed
-- target_id: python-venv:sdk/python
-  manager: venv
-  working_dir: sdk/python
-  argv:
-  - /workspace/venv-factory/bin/python
-  - -m
-  - venv
-  - .venv
-  manifest: sdk/python/pyproject.toml
-  requires_network: false
-  expected_paths:
-  - sdk/python/.venv/bin/python
-  integrity_argv: []
-  started_at: '2026-10-24T14:16:47.723018+00:00'
+  started_at: '2026-10-24T15:16:49.732218+00:00'
   returncode: 0
   status: observed
 - target_id: python:sdk/python
@@ -115,23 +99,7 @@ commands:
   expected_paths:
   - sdk/python/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-24T14:16:49.363886+00:00'
-  returncode: 0
-  status: observed
-- target_id: python-venv:handbook
-  manager: venv
-  working_dir: handbook
-  argv:
-  - /workspace/venv-factory/bin/python
-  - -m
-  - venv
-  - .venv
-  manifest: handbook/requirements.txt
-  requires_network: false
-  expected_paths:
-  - handbook/.venv/bin/python
-  integrity_argv: []
-  started_at: '2026-10-24T14:16:52.276720+00:00'
+  started_at: '2026-10-24T15:16:51.743242+00:00'
   returncode: 0
   status: observed
 - target_id: python:handbook
@@ -149,7 +117,7 @@ commands:
   expected_paths:
   - handbook/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-24T14:16:53.899305+00:00'
+  started_at: '2026-10-24T15:16:53.432127+00:00'
   returncode: 0
   status: observed
 failure: null

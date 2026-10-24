@@ -45,3 +45,7 @@ create an account with **Sign up** instead.
 
 - `git grep "admin123\|admin@example" -- handbook/docs README.md README.vi.md` finds nothing.
 - `zensical build` and `zensical build -f mkdocs.vi.yml`: no issues. Neither string appears in the built `site/`.
+
+## Handoff Notes
+
+- Backfilled 2026-10-24 (TASK-0093): Review none recorded at the time; QA none recorded at the time; develop verified retroactively by QA-0085.

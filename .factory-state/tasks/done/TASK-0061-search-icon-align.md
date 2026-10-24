@@ -42,3 +42,7 @@ the same kind of offset: `top-1` with `size-7` in Workflows, and `top-0.5` with 
   - Workflows: icon 8 / 8 px.
 - `npm run build`, `npm run lint` and `vitest run` (58 passed).
 - CI on PR #77 (commit `8ac56b8`): all six checks passed.
+
+## Handoff Notes
+
+- Backfilled 2026-10-24 (TASK-0093): Review none recorded at the time; QA none recorded at the time; develop verified retroactively by QA-0085.

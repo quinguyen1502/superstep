@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import PlainTextResponse
 from ...schemas.workflow import Rename, WorkflowIn
 from ..deps import current_user, limit_body, run_service, workflow_service
@@ -53,6 +53,13 @@ def python_code(wid: str, version: int | None = Query(None, ge=1), language: str
 def workflow_code(wid: str, version: int | None = Query(None, ge=1), language: str = Query("python", max_length=40),
                   user=Depends(current_user), svc=Depends(workflow_service)):
     return svc.export(wid, user["id"], version, language)
+
+@router.get("/workflows/{wid}/export/{language}/project")
+def export_project(wid: str, language: str, version: int | None = Query(None, ge=1), user=Depends(current_user),
+                   svc=Depends(workflow_service)):
+    out = svc.export_project(wid, user["id"], version, language)
+    return Response(out["content"], media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{out["filename"]}"'})
 
 @router.get("/workflows/{wid}/export/{language}")
 def export_file(wid: str, language: str, version: int | None = Query(None, ge=1), user=Depends(current_user),
