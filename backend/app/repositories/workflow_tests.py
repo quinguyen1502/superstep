@@ -65,6 +65,9 @@ class WorkflowTestRepository:
                           .values(status=status, passed=passed, failed=failed, ended=now)).rowcount
             s.commit(); return n == 1
 
+    def set_suite(self, sid: str, **values) -> None:
+        with self.db.session() as s: s.execute(update(WorkflowTestSuite).where(WorkflowTestSuite.id == sid).values(**values)); s.commit()
+
     # ---- results ----
     def results(self, sid: str) -> list[WorkflowTestResult]:
         with self.db.session() as s:

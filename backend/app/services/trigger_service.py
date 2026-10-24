@@ -139,4 +139,4 @@ def run_result(r: Run) -> dict:
             "waiting": {"node": wait.get("node"), "prompt": wait.get("prompt")} if wait else None,
             "metrics": None if r.duration_ms is None else {"duration_ms": r.duration_ms, "tokens_in": r.tokens_in, "tokens_out": r.tokens_out,
                                                            "cost_usd": r.cost_usd, "error_count": r.error_count},
-            "trace_url": trace_url(r.trace_id), "started": r.started, "ended": r.ended if done else None}
+            "trace_url": trace_url(r.trace_id, r.trace_root), "started": r.started, "ended": r.ended if done else None}

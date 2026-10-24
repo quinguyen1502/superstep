@@ -6,6 +6,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **LangSmith evals and trace links (opt-in).** With `LANGSMITH_API_KEY` set and the admin setting **Send test
+  results to LangSmith** on, each finished workflow test run goes to LangSmith: the test cases as a dataset (kept
+  in sync) and the run as an experiment with `passed` and per-check feedback; a **LangSmith** menu (Open in
+  LangSmith, Send to LangSmith) in the Tests panel, whose toolbar now uses one outline style and default sizes. Runs traced to LangSmith (`LANGSMITH_TRACING=true`) link to their LangSmith
+  trace when `STUDIO_TRACE_URL` is not set. Routes `GET|PUT /api/admin/langsmith`,
+  `POST /api/workflows/{wid}/tests/runs/{sid}/langsmith`; columns `runs.trace_root`,
+  `workflow_test_suites.langsmith_url` (migration 0037); error codes `LANGSMITH_NOT_CONFIGURED`,
+  `LANGSMITH_PUSH_FAILED`.
 - **LangGraph Agent Server API (subset) at `/api/lg`.** The official `langgraph-sdk` clients and `RemoteGraph` can
   run Superstep workflows: assistants (one per workflow: search, get, graph, schemas), threads (create, get, search,
   delete, state, history), runs (create, wait, stream with `values` / `updates`, get, list, join, cancel, also

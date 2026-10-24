@@ -38,6 +38,7 @@ from ..services.notification_service import NotificationService
 from ..services.demo_service import DemoService, start_visit
 from ..services.rate_limit import Counter, RateLimiter, make_counter, make_rate_limiter
 from ..services.trigger_service import TriggerService
+from ..services.langsmith import LangSmithService
 from ..services.agent_server_service import AgentServerService
 from ..services.schedule_service import ScheduleService
 from ..services.chat_trigger_service import ChatTriggerService
@@ -65,7 +66,7 @@ def get_job_queue() -> JobQueue:
 
 @lru_cache
 def run_worker() -> RunWorker:
-    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service)
+    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service)
 
 
 @lru_cache
@@ -173,9 +174,13 @@ def run_service() -> RunService:
                       knowledge=knowledge_service(), mcp=mcp_service(), access=access_service(),
                       policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service)
 
+def langsmith_service() -> LangSmithService:
+    db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),
+                                           RunRepository(db), audit=audit_service())
+
 def workflow_test_service() -> WorkflowTestService:
     db = get_db(); return WorkflowTestService(WorkflowTestRepository(db), WorkflowRepository(db), RunRepository(db), WorkflowVersionRepository(db),
-                                              get_job_queue(), run_service, access=access_service())
+                                              get_job_queue(), run_service, access=access_service(), langsmith=langsmith_service)
 
 def channel_service() -> ChannelService:
     db = get_db(); return ChannelService(ApprovalRepository(db), UserRepository(db), ADAPTERS, policy_service().org_allowed, triggers=ChatTriggerRepository(db))

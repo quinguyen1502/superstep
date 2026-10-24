@@ -56,6 +56,8 @@ CATALOG: dict[str, tuple[int, str]] = {
     "THREAD_EXISTS": (409, "A thread with this id already exists"),
     "THREAD_BUSY": (409, "The thread already has a run in progress"),
     "THREAD_WORKFLOW_MISMATCH": (409, "The thread belongs to another workflow"),
+    "LANGSMITH_NOT_CONFIGURED": (400, "LangSmith is not configured: set LANGSMITH_API_KEY on the server"),
+    "LANGSMITH_PUSH_FAILED": (502, "Sending to LangSmith failed ({reason})"),
     "RUN_NOT_WAITING": (409, "This run is not waiting for a response"),
     "RUN_RESPONSE_INVALID": (400, "The response must be text (max {max} characters)"),
     "TRIGGER_TOKEN_INVALID": (401, "Missing, invalid or revoked workflow token"),

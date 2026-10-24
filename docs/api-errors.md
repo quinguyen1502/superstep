@@ -83,6 +83,8 @@
 | `THREAD_EXISTS` | 409 | A thread with this id already exists |
 | `THREAD_BUSY` | 409 | The thread already has a run in progress |
 | `THREAD_WORKFLOW_MISMATCH` | 409 | The thread belongs to another workflow |
+| `LANGSMITH_NOT_CONFIGURED` | 400 | LangSmith is not configured: set LANGSMITH_API_KEY on the server |
+| `LANGSMITH_PUSH_FAILED` | 502 | Sending to LangSmith failed ({reason}) |
 | `RUN_NODE_NOT_REACHED` | 400 | The run finished without reaching node '{node}' |
 | `NODE_FAILED` | 500 | Node failed |
 | `HTTP_TOOL_URL_BLOCKED` | 400 | HTTP Tool node {node}: the URL must be a public http(s) address |

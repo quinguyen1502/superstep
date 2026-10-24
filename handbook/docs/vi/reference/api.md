@@ -140,6 +140,7 @@ WS /ws/run
     GET    /api/workflows/{wid}/tests/runs     (lịch sử các lần chạy test)
     GET    /api/workflows/{wid}/tests/runs/{sid}   (kèm so sánh với phiên bản trước)
     POST   /api/workflows/{wid}/tests/runs/{sid}/cancel
+    POST   /api/workflows/{wid}/tests/runs/{sid}/langsmith
     POST   /api/workflows/{wid}/tests/from-run/{run_id}   (bản nháp test case từ một run, chưa lưu)
     ```
 
@@ -212,6 +213,7 @@ WS /ws/run
     GET    /api/admin/users                     PATCH  /api/admin/users/{target}
     DELETE /api/admin/users/{target}            POST   /api/admin/users/{target}/password-reset
     GET    /api/admin/policy                    PUT    /api/admin/policy
+    GET    /api/admin/langsmith                 PUT    /api/admin/langsmith
     GET    /api/admin/audit
     GET    /api/teams                           POST   /api/teams
     PATCH  /api/teams/{tid}                     DELETE /api/teams/{tid}

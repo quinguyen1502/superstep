@@ -177,7 +177,7 @@ class AgentServerService:
     def run(self, r: Run, link: AgentThreadRun) -> dict:
         return {"run_id": r.id, "thread_id": link.thread_id, "assistant_id": r.workflow_id, "status": RUN_STATUS.get(r.status, "error"),
                 "metadata": _load(link.meta, {}), "created_at": iso(link.created), "updated_at": iso(r.ended or r.started),
-                "multitask_strategy": "reject", "kwargs": {}, "trace_url": trace_url(r.trace_id)}
+                "multitask_strategy": "reject", "kwargs": {}, "trace_url": trace_url(r.trace_id, r.trace_root)}
 
     def _run_of(self, p: Principal, tid: str, rid: str) -> tuple[Run, AgentThreadRun]:
         self._thread(p, tid); link = self.threads.run(rid); r = self.runs.get(rid)

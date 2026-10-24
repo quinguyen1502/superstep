@@ -23,16 +23,19 @@ CHAT_CLEANUP_EVERY = 3600  # seconds between chat retention sweeps
 class RunWorker:
     def __init__(self, jobs: JobQueue, services: Callable[[], RunService], deliveries: Optional[Callable[[], object]] = None,
                  schedules: Optional[Callable[[], object]] = None, approvals: Optional[Callable[[], object]] = None,
-                 chat: Optional[Callable[[], object]] = None):
+                 chat: Optional[Callable[[], object]] = None, langsmith: Optional[Callable[[], object]] = None):
         self.jobs, self.services, self.deliveries = jobs, services, deliveries  # deliveries: -> DeliveryService
         self.schedules = schedules  # -> ScheduleService (TASK-0046): due cron schedules start runs from maintain()
         self.approvals = approvals  # -> ApprovalService (TASK-0066): Human node reminders and deadlines from maintain()
         self.chat = chat  # -> ChatRunService (TASK-0075): chat_message jobs check a message and start its run
+        self.langsmith = langsmith  # -> LangSmithService: langsmith_suite jobs send a finished test suite as an experiment
         self._tasks: list[asyncio.Task] = []; self._stop = False
 
     async def run_job(self, job: dict) -> Optional[str]:
         if job.get("kind") == "delivery":
             return await asyncio.to_thread(self.deliveries().attempt, job["delivery_id"]) if self.deliveries else None
+        if job.get("kind") == "langsmith_suite":
+            return await asyncio.to_thread(self.langsmith().on_suite_done, job["suite_id"]) if self.langsmith else None
         if job.get("kind") == "chat_message":
             return await self.chat().handle(job["message_id"]) if self.chat else None
         svc = self.services(); rid = job["run_id"]; row = svc.runs.get(rid); attempt = int(job.get("attempt") or 1)
