@@ -5,7 +5,8 @@ from sqlalchemy.exc import IntegrityError
 from ..core import config
 from ..core import permissions as P
 from ..core.errors import AppError
-from ..engine import exporters, subgraphs
+from ..engine import exporters, project_export, subgraphs
+from ..engine.export_common import slug
 from ..engine.examples import EXAMPLE
 from ..models import Workflow, WorkflowVersion
 from ..repositories import RunRepository, WorkflowRepository, WorkflowVersionRepository
@@ -142,6 +143,13 @@ class WorkflowService:
         out = exporter.write(wf, w.name, n, children, example)
         return {"language": exporter.id, "media_type": exporter.media_type, "filename": out.filename, "version": n,
                 "code": out.code, "nodes": out.nodes}
+
+    def export_project(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT) -> dict:
+        """The export as a runnable LangGraph project (a zip for `langgraph dev` and LangSmith Studio)."""
+        out = self.export(wid, uid, version, language)
+        name = self.owned(wid, uid).name
+        return {"filename": f"{slug(name, 'workflow').replace('_', '-')}-{out['language']}.zip",
+                "content": project_export.to_project(out["language"], out["code"], name)}
 
     def owned(self, wid: str, uid: str, action: str = P.VIEW) -> Workflow:
         """The workflow if `uid` may perform `action` on it (owner, share or admin, TASK-0014)."""

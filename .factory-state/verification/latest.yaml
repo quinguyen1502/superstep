@@ -1,9 +1,9 @@
 schema_version: 1
-run_id: 20261024T141858936392Z
+run_id: 20261024T151055021640Z
 status: failed
 profile: full
-updated_at: '2026-10-24T14:18:58.936392+00:00'
-source_sha256: 4a71c234cb132ba4a0cf7d277c6adb1016a483ac48ae66668ea5db0ea63271e1
+updated_at: '2026-10-24T15:10:55.021640+00:00'
+source_sha256: cb04b6e3ee18ab560ef0bcf965c8e0639f80acede3cd88ca108fca0063b3da16
 inputs:
   app.json: d080abda26f3ac897a49947e17b9ba9bdf9e2bf76dca2ab2dc546e241149fdca
   railway.json: a0724a95e35b88455976d48915c339b68ef5c66a9d30553ffdf688cf98ecc49a
@@ -39,7 +39,7 @@ inputs:
   backend/app/api/routes/triggers.py: 8beb0b6880edf743d90575b386a927b1df7f79b7b6b0f61c86773526881768a2
   backend/app/api/routes/users.py: ba2056211871810778fddb5663780ca81a042388650e266d53ff793a715bb8ea
   backend/app/api/routes/workflow_tests.py: 543ba3ecf177e70ea0f1daf8b77624de4b5c00b39667636539ad0c7f87d63da1
-  backend/app/api/routes/workflows.py: a3e2317d02773d84ee0300c9fdad84c4cb998696a0b0a1a79998739474c7f6b1
+  backend/app/api/routes/workflows.py: 5563cf05f756dff19ecef9b2f8a871991128e01499dcb21f4092033622253b4d
   backend/app/core/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   backend/app/core/client_ip.py: 656a99aee90305a8e9c5d543c77e83e2c899bdaf88334239e113d8f47cfc8da1
   backend/app/core/config.py: 672ec38a4af87482e42d7eb9887db81932ed63cf908d6e56786f829e38031612
@@ -73,6 +73,7 @@ inputs:
   backend/app/engine/node_policy.py: d89b6be995b7ae83d2152aa1ef34ab9f26119f85f30346a3be87bbdb3b059cf6
   backend/app/engine/nodes.py: f2d6269733da8cb3a59b1219bfe091166392bd02f45aa872f7d0faf90f43d39d
   backend/app/engine/ports.py: f0a421dff32b3a47ea993b2ef8b2f8a930bbd81b1c84e6c05715356a41c02f93
+  backend/app/engine/project_export.py: 0f56eaf7c748cb4f16c752f932dc3f8fc9b841f19f9ed69c92bbd1c12e04112f
   backend/app/engine/providers.py: c557791fdf52f85ba42b283a43056cbabdce87a5716574c70d562b2771dec23a
   backend/app/engine/python_export.py: 79103b42c9f28a0e2cfe0945ea8fd2d035f2821778c55ffddd504727216f5bf6
   backend/app/engine/reducers.py: 6321dc0f65b5d1e59d90f06c4caf121bae1a5b59680c94d359bbf1a29140d552
@@ -230,7 +231,7 @@ inputs:
   backend/app/services/user_service.py: 003fdbcdc497a9f87a36db35d6ba85b6a7015583f3ccf289bb92c653ca411d27
   backend/app/services/webhooks.py: b5c5e1f13ad5d4086d5c112b1d87cf778ba4e8cf11829de31b93fc74dbf93427
   backend/app/services/workflow_diff.py: b8e53a498159e64acce40178f3d445dabf28def9a1cdb4d29083ce037ba73204
-  backend/app/services/workflow_service.py: 79f10ef706732545680814e9525bad7e28655adc42e22ae173096b151e448d06
+  backend/app/services/workflow_service.py: e5e7dfdfb4b2c5c5d9b05db7f6afd5069d6b43cb39b37b9cb31c069e1a0941ea
   backend/app/services/workflow_test_service.py: faecf772b9aed00153a924b17eed9963af39d5d4ecfb481a2c497e98772084ac
   backend/app/services/approval_channels/__init__.py: 4912bf3290db4df6d7df8230f39abf58b09b6d8fa8f19cdbefa26d2a8b10e61b
   backend/app/services/approval_channels/base.py: c3a8ef2091c1ed1bf68727c5899eaa2b8d511676a7ab51754269f4a4395909bd
@@ -285,6 +286,7 @@ inputs:
   backend/tests/test_paas_deploy.py: f0200c2f2c6fbf7c47f744dca521f988b8a44414094e72d4c59737019c38a663
   backend/tests/test_password_change.py: 0cdfe4e7187893b7e99dba57cf27abf77a31b8d1d9755895ced8ccfa6e22a835
   backend/tests/test_phase3_hardening.py: 8257ceec6aa0493135a779c20993c1e4fb82a2db61530f9a0ddd0193577370e6
+  backend/tests/test_project_export.py: 438877d2bb33518db6cb2845d0c1214f81dc005314b2b0cd6c6071d6d923bcae
   backend/tests/test_providers_streaming_embeddings.py: 8e631b66855a1affc3a3251c2be0497b1707cfc6dbf7f4291a64875b7d616c19
   backend/tests/test_public_openapi.py: bdfed8b0f7d9b339099adaeef196302ea414c0f4c2245f2e16af57721c14274d
   backend/tests/test_python_export.py: 04022b7e941182676dcfba71b12ca87c2ea1f898a2c90e62c85449bee5b539df
@@ -332,7 +334,7 @@ inputs:
   frontend/e2e/canvas-menu.spec.ts: 8a44c8954a573848ed7087e5f2981e912562d0b21253d27da4894d4ba2bafff1
   frontend/e2e/chat-triggers.spec.ts: 98f7fe75c29ba134816935548b60b4b6b35e113a582585f8baff7b02d666a5f8
   frontend/e2e/clipboard.spec.ts: 664f7585eef550efef1ff1fddd496c2c8622c4f3e9f5f7ea34e274323a99dcbc
-  frontend/e2e/code-export.spec.ts: b67a25d01e5b58ac2a8edbaf1019859a5430ec09f8a28b9fba66ae2acce77d61
+  frontend/e2e/code-export.spec.ts: 7b2f7474fb8b8deb38ba0df03ecb5617f8bb73972b9c6d70badc6147f5679c77
   frontend/e2e/code-node.spec.ts: d3e6e6349b1947aa32491ebfddbb228597634aa4ccc9e455bded7ec7d3862b04
   frontend/e2e/code-subprocess.spec.ts: 72f717f8cc2ff80c864fb754a5fb605ad87446c8b03c55cfb187fd7227729689
   frontend/e2e/code-typescript.spec.ts: fa8146e683b7e7c17973ac146593aef13ae872628469e3c2bfaa9a432ef1f3d1
@@ -451,7 +453,7 @@ inputs:
   frontend/src/components/editor/canvas-edit.ts: c329394989974ddefbf0c810e52af342902a90e3b444d83803155f8422d2530a
   frontend/src/components/editor/canvas-nodes.tsx: 8ba930d5636edc71311be8cb1e5717339fe896886ef6997d171c0d7efbb3f987
   frontend/src/components/editor/editor-canvas.tsx: 00772ce9778335da9ea0cb537d277f782737b76233bd0dfc7fbc98ff51deb0ef
-  frontend/src/components/editor/editor-code-panel.tsx: 0aaa57784f83d1e65993b11f47960079345c0cd371455c4e0de833e10888c02f
+  frontend/src/components/editor/editor-code-panel.tsx: ab86eb3d20a3e2e1ef7e2c52cd3b71b70273bcf2235df85f83958e19238da834
   frontend/src/components/editor/editor-config.tsx: 0861b38d3c92e2e6e6556e0379f715dbcebbf46e0a331caaec759bdbc148c12f
   frontend/src/components/editor/editor-header.tsx: 36a6621d88bcff604809fd5f7ea9f3036f3d0604af1af9fd907f74785c87303c
   frontend/src/components/editor/editor-palette.tsx: 82d89729609377fe3f3f5f7c797a21dae48a98d7cd3708986211a9a3b569f541
@@ -502,7 +504,7 @@ inputs:
   frontend/src/lib/chat-triggers.ts: 35dda2ab6b6bdc8ff09f40c29fd40c5f93d9e36f01066bf4f4ae5da1716b6537
   frontend/src/lib/chat.ts: 2a248d61f4f1f911a85451a052fae48edfa73e896d824cd932836d2013a22275
   frontend/src/lib/clipboard.ts: e4cce0fd907ad326f903817b241f61735127039e397f0d107ddd4b3c7ff43bb6
-  frontend/src/lib/code-export.ts: 1cd140ecbfe083a63386ed5a1897f6606d369c6290ed8e4f7ba6e5e0cad28552
+  frontend/src/lib/code-export.ts: 6c5e57dfecc1ebf82a1b1ed3c68cbdff1257f6237280fc905c75542c6db622b7
   frontend/src/lib/code-mode.ts: 9aae787aa165c3662f56b04e9699d6506772131cd4a0a6522d7c970e423902f8
   frontend/src/lib/code-runtime.ts: ebe5b4343f9e716474a1b48d03406c469d003c9bc0f0b6a284b76cfded4ec054
   frontend/src/lib/codemirror-theme.ts: 5e4701d0f1921f27fda52ea12c70d52269759dca8d24345d3e03bcef101fee50
@@ -537,7 +539,7 @@ inputs:
   frontend/src/lib/__tests__/chat-triggers.test.ts: 7a10abe0d764612535943d470e43da72cd82f779cfad1b9574aac20fcb624274
   frontend/src/lib/__tests__/chat.test.ts: 18b11443366cfa8340497122bc25c2d828e9a425498394d1792ffd195278d00c
   frontend/src/lib/__tests__/clipboard.test.ts: d7eb009c0ac594a3316365597842dfdc06738cb37923c55f615cb2a22f5e184c
-  frontend/src/lib/__tests__/code-export.test.ts: aae3d915d84cf495916a738c2855b24296162518208fc5171473b239d6a46d6c
+  frontend/src/lib/__tests__/code-export.test.ts: e96503ecf8b4c1fa0d364efa76879668d88e5c4f28e2cbf19e43594ea8fbd987
   frontend/src/lib/__tests__/code-mode.test.ts: 55de300c213aa4ce2ab006aa43616a2571ec1bb756ac939a0d29f2e3f15f79d5
   frontend/src/lib/__tests__/demo.test.ts: ad162a682c18fdec31b3083eec65ee2fe777e63aa060e7c18245257b8b8b159b
   frontend/src/lib/__tests__/graph-ops.test.ts: 7757fcb636fba3d7555f95339d4cc8bc54d3105eb49b354720ae1d6b6fc51797
@@ -551,8 +553,8 @@ inputs:
   frontend/src/lib/__tests__/state-type.test.ts: 453b5229031b05f0f2c517e8ad3435acadc50368a88b045755a130e41bb99a69
   frontend/src/lib/__tests__/templates.test.ts: aaf8128f0c8c424d1ee214bd1dca325e6454741f9b0348f6d21b54d08e961296
   frontend/src/lib/__tests__/ui-class-check.test.ts: 4dfea62d93d84208ed44b3631fddc8e08cccf87e9d3c9286c5cc324f218069ca
-  frontend/src/locales/en.json: 11a7994f47e796346c7a5883093270b8eae6c4e4ec5cf4087ad914e51b9ffb64
-  frontend/src/locales/vi.json: 2d511733269ea3d734430ba8172fb47cb6a0f240eb12a8d80de1adb58b9bbd80
+  frontend/src/locales/en.json: 706ee5184832eb55cfbe9b6fcac4aaa822b0981a0af8544122286ed2c77f653f
+  frontend/src/locales/vi.json: f4ca26100fd48d3ec8d45d5a04cef5016a14a337cb6bab9c83c6f11f9a0d11b3
   frontend/src/pages/Approvals.tsx: 0b707477ce9791d4c39769808afd3d5ab5388bb1efbb2fd42b247fb7c2c40af9
   frontend/src/pages/Approve.tsx: b853663a0c83418f6611320a5ef0092004ec062cf577494f0810ef30f6120a65
   frontend/src/pages/Auth.tsx: 7e69c07d28897199ec407552747ddbad6e9999c575b908caad2e62f99f449730
@@ -570,15 +572,118 @@ inputs:
   frontend/src/pages/settings/TeamsSection.tsx: 1ec8f2dbc051a5c434a2d2070c3e114b2762ea8adaa039f7a70ab3b83a1e4c43
   frontend/src/pages/settings/UsersSection.tsx: ec84ecb36741d60f5b038cf6a01758d61b6485002eb9f9a88f9137a8d152d6fd
   frontend/src/pages/settings/sections.ts: 3b2eeaebc1da24a6c83cd3fec4a78bf3678761f9994b8c103325a40524427643
+  frontend/test-results/.last-run.json: 91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903
   handbook/check_images.py: c088cb89a62cf9bfdc8f5339d355ab99744e58949acaa96ebb5415b89a52b80d
   handbook/requirements.txt: 58b3379a8c8a1f8ee2acc05126743ab404dcc6f96d045c25313dd18313b079c7
+  handbook/.cache/mkdocstrings.json: 2821bd283642dbde42672368179a8dbd4ae27bf80a16f73937f5da21cf1f6be1
   handbook/docs/en/javascripts/api-reference.js: af0b73ed0518f132c86d6df7dd83450be9205a7a76014b41d97dea71aa02b87d
   handbook/docs/en/javascripts/lang-switch.js: e858bc27d5733ce763834230e224be95f632412f01f87666de581ac04c4ce679
   handbook/docs/en/javascripts/vendor/redoc.standalone.js: dcaf76612bc4a3fbcc923a8966dee2f6146a5f32e5ce1b6f02dd60cbbf89500b
   handbook/docs/en/reference/openapi.public.json: 8f6d0a6122cd456c58189276b737a09f3f973fd12bfb056bd88f61e03050c992
+  handbook/site/404.html: 5cd869c2d0b9eb683c343201178a1b88da829cb084261c7401ff5cb93a345d2b
+  handbook/site/index.html: cb7b0a6979aed535070b76a3e0b857d89d82a890f535b22c3aa343c42db527ec
+  handbook/site/search.json: de60a4db87c16bc777e04d400d8e68c978fbc36b16c26356b2b90e7622aaa7ce
+  handbook/site/assets/javascripts/bundle.a2388154.min.js: a2388154fa115a8b07ce9676b71adfd7ee9e704ac321feb06127a98730b5e21b
+  handbook/site/assets/javascripts/workers/search.c47bb847.min.js: c47bb8474294453d842f5cb386fdf3340304f095c63a37aa935d1bc7d382f180
+  handbook/site/guide/index.html: bea7e0728d917cc5480cc07c9b7003839251a9d4ebc99845d593ffd0b6ed77e4
+  handbook/site/guide/code-mode/index.html: 7f76d0f742bc64d840947457bbf7356c717243aee1c7f380adf1dfa1b65d3cf4
+  handbook/site/guide/editor/index.html: d66958fa1572ac6d7416fc12e0dfd57c41f54988fe8ba68155161a5c58eb7e9e
+  handbook/site/guide/knowledge/index.html: 0ecf68bae1e4522b671ab37f6200e459563001c7ff96b6f03cabf67f908f63d5
+  handbook/site/guide/mcp/index.html: 6c908470ecc3bddd8045252282b09811afe1b6ba1eb831f6d868f9fc47ab3199
+  handbook/site/guide/nodes/index.html: b6a02a5655405fe5906c85ce335b1cdfbf230ad379873973507b8a613801ff14
+  handbook/site/guide/python-export/index.html: dcae72457032b79d3e996b1af93e6c6cec92190de13ae2c3b46f354df586cc15
+  handbook/site/guide/state/index.html: 1ff3dbb55dfece5c5574dfd9cb0d518532f75f4bf9ee325e8c4b5d187c1305ae
+  handbook/site/guide/templates/index.html: 493d7b5680f1ae9413327f427fdef7a0104cd4090bf5d90eea720703cdf5aafd
+  handbook/site/guide/versions/index.html: ac32581d7ac6700324db6ef26c7e8d83feebdbd6829a6a82f97174e456a5ae0c
+  handbook/site/javascripts/api-reference.js: af0b73ed0518f132c86d6df7dd83450be9205a7a76014b41d97dea71aa02b87d
+  handbook/site/javascripts/lang-switch.js: e858bc27d5733ce763834230e224be95f632412f01f87666de581ac04c4ce679
+  handbook/site/javascripts/vendor/redoc.standalone.js: dcaf76612bc4a3fbcc923a8966dee2f6146a5f32e5ce1b6f02dd60cbbf89500b
+  handbook/site/operate/index.html: b16b83b3bac20abf39bb01490fbf71a0ca43349d5f708a602e8ee20e3d658277
+  handbook/site/operate/access/index.html: 2fdb41971d0bfdb82fe4b30c0b3f86a6d768cb04a600e7069e95359086df4428
+  handbook/site/operate/accounts/index.html: bf2cb37f3d967044f73dc1b96a03bd025f7b046038f7dd0c3d301bc454ba9e0f
+  handbook/site/operate/channels/index.html: de0187fcc37ebd74c6fe2c40788a0218d06078ecae7882459358a5259842751d
+  handbook/site/operate/code-runtime/index.html: bcd0c0e1acf6bcd832a8d7518d6650d033e0855dd0fcfc720796d5796364eb04
+  handbook/site/operate/deploy/index.html: a99a357c0cd7d7d4e7857c80485cee82d976b1f60289109fc228d50c9e3b844c
+  handbook/site/operate/import/index.html: f3d569bdb77606a576eef4224734c51710bc3059585bb6b0db3b0c9771cb1c7d
+  handbook/site/operate/observability/index.html: 580869c6dc1f4503a0437c0063b602e0fe9faf8c97d922acda04f344e202f4c6
+  handbook/site/operate/providers/index.html: 19cd12d720ad993d29a2db4903fe1e25b424b21bc2be912329aaa0e51f664254
+  handbook/site/reference/index.html: cd01df97abb3911cb2f2dc6470de9624e0f5e50bdb0260e0408f8231e9a04eeb
+  handbook/site/reference/openapi.public.json: 8f6d0a6122cd456c58189276b737a09f3f973fd12bfb056bd88f61e03050c992
+  handbook/site/reference/api/index.html: f88bfc5887b6a05a53362d88233c92ca01b04007846dddceb54b00d51884475c
+  handbook/site/reference/architecture/index.html: e92141e7414107b7ce37a82bc0c1f58c954b29139c36c9f2325d7f73261d30f9
+  handbook/site/reference/configuration/index.html: f1a2211ab8e87f076371316156e1676665a69cbcd60eaa911d3ac18abb2f1c27
+  handbook/site/reference/development/index.html: f8d63abc436595164301480713bd9ee4dda9c39a7543bdfb3373db0c8e68e3c6
+  handbook/site/reference/errors/index.html: cfe5971b497ba86cf16d2295e2b289133692a9c3e1db3e2886dced88fc30b266
+  handbook/site/reference/faq/index.html: 78d99795f10147fd69e87e66836724d345386fe00bd040e0f37e071a4dcce8d7
+  handbook/site/reference/public-api/index.html: d7ae338b3eb72e1582ef7cc63613169f59aeb783290628f7adb3bd399f8a6652
+  handbook/site/reference/shortcuts/index.html: 2b2e5512046c17936e8c82e7d3152f1bf43c9b5cd2b1b65b5dc38e0e42ebef52
+  handbook/site/run/index.html: b9be6fc5ce2734e196a95a221526374d7ae42afd2a6e8d5df35dc371abc339e6
+  handbook/site/run/api-triggers/index.html: 7943cc9949495deea9c5d2cc4ba4d0099c7e2226135b32318555ff37e2f17ba4
+  handbook/site/run/chat/index.html: a897b96845b106724ebb142406477f1ea3518f7cba89d35f66fd456c2c841ed3
+  handbook/site/run/chat-triggers/index.html: 80b5486c78f13e8bda46a67da647c508b25e134aa574fc5555bb07c0f618d5ed
+  handbook/site/run/human-approval/index.html: f72952d7b068da8406df6f52653adf35b5632c5a4539f2a6443b9d56b817d2de
+  handbook/site/run/public-api/index.html: 02ab674166f1e303cc61a43ca7e576224ee8f70efa1d397bcfddb8dabae30f35
+  handbook/site/run/schedules/index.html: dc14486290ee013e5c35ec5910e1e4201cf182e3684b9413042ee50428bcc7c9
+  handbook/site/run/tests/index.html: 42130a9a7501844bd33b3f75f7f889d2c2c123fab17b1b45d4361da4c7a3e1cd
+  handbook/site/run/traces/index.html: deb73889c4d22dd9ef03e66e61d1dc0f0e59c8e61eaf3f9813c9ae838ae4e837
+  handbook/site/start/index.html: debda8cb102894eaa3c3b3c5578b8cac63edcfe210939725e9f680cd614e27c5
+  handbook/site/start/concepts/index.html: 6e3372e9b697b3fa98f288149af577b4238429200c5e7dfc9cda1008eb7fa6f9
+  handbook/site/start/install/index.html: 549c4f191be11ae26d49602e1e57381e33b7e8a67e070f856cf248e123981ef6
+  handbook/site/start/quickstart/index.html: c15f964b5f6fd7a0d1d1892bcb1d295116c38c480641069cb22229e3a1b7fae8
+  handbook/site/vi/404.html: 1ff500bcdd461683ceedd28fe8439fec97ba2ed70a7f4143c13b361a48c68c88
+  handbook/site/vi/index.html: 313189017f4bd290c5aa70308684103f4e145139729b20e949f4df41edc0ab50
+  handbook/site/vi/search.json: ede1cafa6fd048f5322eada552011b7ba87469d792e81d2de44fbbddf735f195
+  handbook/site/vi/assets/javascripts/bundle.a2388154.min.js: a2388154fa115a8b07ce9676b71adfd7ee9e704ac321feb06127a98730b5e21b
+  handbook/site/vi/assets/javascripts/workers/search.c47bb847.min.js: c47bb8474294453d842f5cb386fdf3340304f095c63a37aa935d1bc7d382f180
+  handbook/site/vi/guide/index.html: a5c8914b6a4f241ff4619e6a4312dae60bb9dd6a1be582fe4c16013a3782ec7f
+  handbook/site/vi/guide/code-mode/index.html: e9c74c60d31899c2244196f41fb8e8f2ab67a7b9d54ee8b42856a8577fc623a8
+  handbook/site/vi/guide/editor/index.html: 95f0255b4dc98e8a8ddb9f13188e460107da2189cfdec23746830063d83ac043
+  handbook/site/vi/guide/knowledge/index.html: de231a82149a11d230f6aff938882765290d6acaec5cea8351bcb68671ae591c
+  handbook/site/vi/guide/mcp/index.html: c2ccbd3f062bd390821fc6846644425794b5e64c8895bc7a6f089548e3995967
+  handbook/site/vi/guide/nodes/index.html: 05fcc7c99488a726142093a6a835cbec6b953555bf61e07218d54140f7904479
+  handbook/site/vi/guide/python-export/index.html: d599565f1e00fb8ed3572052d721f0ad785ec28743c67252e72f60f2e8ad6d7f
+  handbook/site/vi/guide/state/index.html: c43938e1a4549c750f6a782003cd7300655bd433dc653a6d29ee41cf81f66ff7
+  handbook/site/vi/guide/templates/index.html: d2c6794e6673878d509fc4d0adbdbb31b08bff4f1a9663f7d7d94262218c984c
+  handbook/site/vi/guide/versions/index.html: 2106c1072011a74d9674cf5cc03956731fd6c9f9f473efb3a4d8d3920d6ee593
+  handbook/site/vi/javascripts/api-reference.js: af0b73ed0518f132c86d6df7dd83450be9205a7a76014b41d97dea71aa02b87d
+  handbook/site/vi/javascripts/lang-switch.js: e858bc27d5733ce763834230e224be95f632412f01f87666de581ac04c4ce679
+  handbook/site/vi/javascripts/vendor/redoc.standalone.js: dcaf76612bc4a3fbcc923a8966dee2f6146a5f32e5ce1b6f02dd60cbbf89500b
+  handbook/site/vi/operate/index.html: de43eefd025742f09a25677e3f45cd0cad6d7e7750f4243b53eec74ab5188100
+  handbook/site/vi/operate/access/index.html: 24f84b86f3462b6420871d74dc1dfef07ae0f333abd0dbd46c1006e3f55bbc12
+  handbook/site/vi/operate/accounts/index.html: 2f79936d0ad1949d3ad169dab8274698ac771519743b6ea21d362c1c40923897
+  handbook/site/vi/operate/channels/index.html: 25159587873eed631d1b173b0d90aa4ca961e0ebe5660eebd788cf12ce1e76cf
+  handbook/site/vi/operate/code-runtime/index.html: 1ae8c21b188f242b2a8e41c7c86bf63a8ad1331e3d9ad6a2bfa27e74d74d93c2
+  handbook/site/vi/operate/deploy/index.html: 3b375d5410aa5eef52487e27d7335efaea7f8270c881af51efba4abd30838e7f
+  handbook/site/vi/operate/import/index.html: 632b8876f38f5d54d425abfc9462150e7c6d440fb9e051faf60e642d5a00b7c9
+  handbook/site/vi/operate/observability/index.html: fc3eede67eb564a3273e465d21b3ebc6451f257c958200b149e83d93faffce28
+  handbook/site/vi/operate/providers/index.html: 45cda300d82e647502de50956518532d3ce794a22174da9e4afbab9bd255f765
+  handbook/site/vi/reference/index.html: e163a3ffe6607e29c0c75d77135a09502500ea034dfa7442449163eec7875e1a
+  handbook/site/vi/reference/openapi.public.json: 8f6d0a6122cd456c58189276b737a09f3f973fd12bfb056bd88f61e03050c992
+  handbook/site/vi/reference/api/index.html: 57c22275511fffdd8902bb744764d1d5a543e679379e7e7db57e6104979d513f
+  handbook/site/vi/reference/architecture/index.html: 5d85cc0193c96a73f150d9142d5fc980ea2e43d099c65e93515a37b171d2a9a6
+  handbook/site/vi/reference/configuration/index.html: 425b72183c28b5feed08fd102e2a4cf993a1415d8b6400a491286069ec3427b8
+  handbook/site/vi/reference/development/index.html: 5e8d9df886eef0669e7908035061779dfce4c7894ee8c70282d893d19355a428
+  handbook/site/vi/reference/errors/index.html: 026bee8306f348e9f39c16b58b0ef42c4b9f347b1ff39bf6778e7fee36f16ffb
+  handbook/site/vi/reference/faq/index.html: 170e7ab58018a4b3af80edf4da4502d2a34eaef80b527bb2f4f7a6fb5e1d9235
+  handbook/site/vi/reference/public-api/index.html: b62f74e3f49f863af3c245a23bb794ccf7b029aa3d289a0de9ff36aff4587aa2
+  handbook/site/vi/reference/shortcuts/index.html: 04645d7443f39f0e9dfe690b420d0d89a056138be721d3769286cf18b5c5b652
+  handbook/site/vi/run/index.html: c4652a90dab20b4c2a1405e8309b7803075a954051f6b8ac8f8fdfec301f01cc
+  handbook/site/vi/run/api-triggers/index.html: abde1cc2d1d941823dc7cbbe853e4bc1b8de9715e5b3dcb5573afabee9e136c6
+  handbook/site/vi/run/chat/index.html: dddcab928bedf53b70dc0fb10c729cc74c08415906fad122c5beb4ba05c0d4ed
+  handbook/site/vi/run/chat-triggers/index.html: 9fdaca0f5e874e37c43937c7e0c537fe83c113fff3814fb2e5f1fce5cfae1d25
+  handbook/site/vi/run/human-approval/index.html: 1c6108a4f3a86a27ec11544295b13a1f43cfda6f1e4b78731fe3d16988d97be7
+  handbook/site/vi/run/public-api/index.html: 69180b7d6dcfbf9f91cf34765a470bc0eae8281cc7229d861827fe5fcb3e0efb
+  handbook/site/vi/run/schedules/index.html: 2fbd02e2cd201e295245ba8d9b76386f6e00bb1ddb87b7e93f1504fb467a6434
+  handbook/site/vi/run/tests/index.html: 29b64c7e920cf8e521d0d53432910eff29eefbbb5a2b5d0dfda3690b20dfb88e
+  handbook/site/vi/run/traces/index.html: 604ce4ca015118262d088319505ac4ca0af7ab296d3e874d387c361da3ca6eef
+  handbook/site/vi/start/index.html: 82a2192275395b385678351e9517210006a934ebe438984dee7eeabbff876330
+  handbook/site/vi/start/concepts/index.html: 9a8c85d032c1500103dbf807fabac87179fb4187c43f2743837c226265b41735
+  handbook/site/vi/start/install/index.html: c0a763dae92959cf96bab0ba9678de00f398ce9e7641c8b503ea97819a0068f6
+  handbook/site/vi/start/quickstart/index.html: 90f85906aa94c83f382e35be9cf8ce22b940beb600c85dd15eb6c1f72aee91c0
   scripts/check_deploy_configs.py: cd94e7c90f6da7550499a6942f6b569ad979b14ce2171cf5d8b3c0ca83b1de3e
   scripts/compose_smoke.py: bd505d9bb76cc0a25cfd5a0a90a5e94c27c3bea5e40f875fad6de59697a2970c
   scripts/gen_public_openapi.py: 150d117f15e89bf38ef93f2d82e1e06a449723f10f095bb6b60b9fb5ce812cb5
+  scripts/langgraph_dev_smoke.py: 289902ec1ef247be6138cfe764c61c42fb84a5ae0ba9962032ee62cbcaa1dc02
   scripts/sandbox_smoke.py: b1a18deb48d67cc1aa641e1b622f8bbe980ef195d9eb9402d73199f74bf4f783
   scripts/promo/video.html: 5d77a23a796c2901db05c12dc33acb465eaed0f4b644687e87052852e4aa86ad
   sdk/python/pyproject.toml: 5f766d84dc3a56a8f84d4119588270e81fd25925abaac3fe8126b679b473011b
@@ -617,9 +722,9 @@ results:
   source: backend/pyproject.toml
   status: failed
   returncode: 1
-  started_at: '2026-10-24T14:15:37.470544+00:00'
-  duration_seconds: 182.05
-  output_sha256: 4c87f520bed54120f23066d0dd74e7eeba323a753c4f4bd3a5ddbc5b77558641
+  started_at: '2026-10-24T15:07:27.741280+00:00'
+  duration_seconds: 187.721
+  output_sha256: 90616138793a2f53ca5cfa006b9ff1571164014c162f60b9430bf542e3f7491f
 - check_id: node:frontend:build
   kind: build
   working_dir: frontend
@@ -630,9 +735,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:18:39.520479+00:00'
-  duration_seconds: 9.125
-  output_sha256: 97b0413ccfed7c8dc202ef14f06606225c9f3ad2de6b844d15bc194cd73899ed
+  started_at: '2026-10-24T15:10:35.462513+00:00'
+  duration_seconds: 9.278
+  output_sha256: cc4031d2207d963ff2cdeae7f16dc54c289853bba671aff955298ff385717696
 - check_id: node:frontend:lint
   kind: lint
   working_dir: frontend
@@ -643,8 +748,8 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:18:48.645274+00:00'
-  duration_seconds: 1.221
+  started_at: '2026-10-24T15:10:44.740726+00:00'
+  duration_seconds: 1.323
   output_sha256: 30517070e73e9ee351c0692d1d15e440b30cc72a23eeb0c8a38c54c08132bc1c
 - check_id: node:frontend:test
   kind: test
@@ -656,9 +761,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:18:49.866237+00:00'
-  duration_seconds: 4.565
-  output_sha256: 373552815e61ae30e57aeb6b4bc5b404af4a60ebb18cc8d5b6d229ed008976a4
+  started_at: '2026-10-24T15:10:46.063877+00:00'
+  duration_seconds: 4.14
+  output_sha256: 1e1b843d3753ef2567fdf5e23ef946ffa2a38e3ddb658592befb9bd08814979d
 - check_id: python:sdk/python:test
   kind: test
   working_dir: sdk/python
@@ -669,9 +774,9 @@ results:
   source: sdk/python/pyproject.toml
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:18:54.431051+00:00'
-  duration_seconds: 0.443
-  output_sha256: ae758f67fc5941c22e1e4c5d00922d3b1080308e2400f8657f010b7958e9f595
+  started_at: '2026-10-24T15:10:50.204079+00:00'
+  duration_seconds: 0.485
+  output_sha256: d67ec3cf9e9b21e49d96650f46f2736f10510ab2af95c246662cd1e902ee38eb
 - check_id: node:sdk/typescript:build
   kind: build
   working_dir: sdk/typescript
@@ -682,8 +787,8 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:18:54.874013+00:00'
-  duration_seconds: 1.46
+  started_at: '2026-10-24T15:10:50.689591+00:00'
+  duration_seconds: 1.57
   output_sha256: 55bbf8b4027b9e5a75745f1e81e3eee53bec58ec7e311f56e256fbe025f24c90
 - check_id: node:sdk/typescript:test
   kind: test
@@ -695,9 +800,9 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:18:56.333971+00:00'
-  duration_seconds: 0.917
-  output_sha256: 2cd4df157e33497bca993d26a36c1ec03ea608b3832a9f4b7cead3895da41f92
+  started_at: '2026-10-24T15:10:52.260056+00:00'
+  duration_seconds: 0.921
+  output_sha256: d4d929d780ed88e6e310831f02ef9c5633ec5747dbfa0dba054424045fdc4aad
 - check_id: node:sdk/typescript:typecheck
   kind: typecheck
   working_dir: sdk/typescript
@@ -708,6 +813,6 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:18:57.251033+00:00'
-  duration_seconds: 1.685
+  started_at: '2026-10-24T15:10:53.181581+00:00'
+  duration_seconds: 1.84
   output_sha256: 0214e636182f470704605f9f489ef0194da1480b139feba1514beef02d501488

@@ -1767,6 +1767,8 @@
     "noCode": "This node has no code of its own",
     "selectHint": "Select a node on the canvas to find its code",
     "download": "Download .{{ext}}",
+    "downloadProject": "Project .zip",
+    "downloadProjectTip": "A runnable LangGraph project (langgraph.json, dependencies, README) for langgraph dev and LangSmith Studio",
     "languageLabel": "Language"
   },
   "demo": {

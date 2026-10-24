@@ -6,6 +6,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **LangGraph project export.** The Code tab's **Project .zip** button (and
+  `GET /api/workflows/{wid}/export/{language}/project`) saves the Python or LangGraph.js export as a runnable project:
+  `langgraph.json`, the graph module with a module-level `graph`, `requirements.txt` + `pyproject.toml` or
+  `package.json`, `.env.example` and a README. It runs with `langgraph dev` (Python `langgraph-cli[inmem]`, JS
+  `@langchain/langgraph-cli`) and opens in LangSmith Studio; `scripts/langgraph_dev_smoke.py` checks both with the
+  official `langgraph-sdk`.
 - **Public API and SDKs.** The two workflow-trigger routes (`POST /api/hooks/workflows/{wid}/runs`,
   `GET /api/hooks/workflows/{wid}/runs/{run_id}`) now have a full OpenAPI contract: `WorkflowToken` (`X-Workflow-Token`)
   and `WorkflowBearer` security schemes, typed request and response models, error-envelope responses with examples,
