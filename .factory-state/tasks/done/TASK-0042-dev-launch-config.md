@@ -68,3 +68,4 @@ Track `.claude/launch.json`, the dev server configuration the Claude desktop app
 ## Handoff Notes
 
 - None.
+- Backfilled 2026-10-24 (TASK-0093): Review none recorded at the time; QA none recorded at the time; develop verified retroactively by QA-0085.
