@@ -41,3 +41,7 @@ Export a workflow as a runnable LangGraph.js TypeScript file next to the Python 
 ## Progress Log
 
 - 2026-10-23: owner approved the merge; merged into develop (PR #112).
+
+## Handoff Notes
+
+- Backfilled 2026-10-24 (TASK-0093): Review REV-0075; QA QA-0075; develop verified retroactively by QA-0085.
