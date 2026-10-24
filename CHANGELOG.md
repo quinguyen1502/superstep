@@ -61,6 +61,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   runs and notifications are no longer shared between visitors; the samples stay shared and read-only. Visitors older
   than `STUDIO_DEMO_VISITOR_TTL` (default one day) are removed with their runs and chats.
 
+### Fixed
+
+- Flaky tests: the parallel Human-sibling test accepts both valid orders (LangGraph cancels siblings that have not
+  started when the Human node pauses), the process-group test skips with a reason when the host's process limit
+  prevents the fork, the credentials e2e waits for the list before deleting, the Code time-limit bound allows a slow
+  CI runner, and the compose smoke waits for `run_summary` before reading run history.
+
 ### Removed from known limits
 
 - Demo visitors no longer see each other's run history and chats, and mock replies are no longer always Vietnamese.

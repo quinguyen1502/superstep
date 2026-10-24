@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0092
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
 - Updated: 2026-10-24
@@ -15,7 +15,7 @@
 ## Objective
 
 Make `backend/tests/test_effectively_once.py::test_ui_run_paused_in_parallel_branch_does_not_rerun_sibling`
-deterministic. Recorded only; no fix in this task yet.
+deterministic. Recorded only; Fixed by TASK-0109 (REV-0101, QA-0101).
 
 ## Evidence
 
@@ -48,3 +48,7 @@ deterministic. Recorded only; no fix in this task yet.
 
 - 50 consecutive isolated runs pass on the box; CI green.
 - If the engine changes, a DEC records the ordering guarantee.
+
+## Handoff Notes
+
+- Fixed by TASK-0109; Review REV-0101, QA-0101.
