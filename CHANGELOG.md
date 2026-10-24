@@ -6,6 +6,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Handbook: Superstep vs LangSmith** (en, vi). A comparison with LangSmith Studio and LangSmith Agent Builder
+  (what each is for, pricing and hosting, how the LangGraph interop features work with LangSmith), citing
+  LangChain's Studio docs, pricing page, self-hosted overview and the Agent Builder GA post.
 - **Time travel in the Run panel.** **Time travel** on a finished run lists its checkpoints (the nodes that ran
   next and the state before them, then the final state); inspect or edit a state and **Fork from here** to start
   a new run at those nodes. The fork runs the original run's stored version, keeps iteration counts and records

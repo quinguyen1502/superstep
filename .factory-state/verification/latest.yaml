@@ -1,9 +1,9 @@
 schema_version: 1
-run_id: 20261024T153914432853Z
+run_id: 20261024T155258705684Z
 status: failed
 profile: full
-updated_at: '2026-10-24T15:39:14.432853+00:00'
-source_sha256: beec8fde1c607bf641a24640ff7cdcc657aafb14a27b52b4c5568648690b29b3
+updated_at: '2026-10-24T15:52:58.705684+00:00'
+source_sha256: 655cde475b00229b396a6ecdd5fe39908b5ddb86c1e8a0ae520aed3e38e8d156
 inputs:
   app.json: d080abda26f3ac897a49947e17b9ba9bdf9e2bf76dca2ab2dc546e241149fdca
   railway.json: a0724a95e35b88455976d48915c339b68ef5c66a9d30553ffdf688cf98ecc49a
@@ -589,111 +589,113 @@ inputs:
   frontend/test-results/.last-run.json: 91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903
   handbook/check_images.py: c088cb89a62cf9bfdc8f5339d355ab99744e58949acaa96ebb5415b89a52b80d
   handbook/requirements.txt: 58b3379a8c8a1f8ee2acc05126743ab404dcc6f96d045c25313dd18313b079c7
-  handbook/.cache/mkdocstrings.json: c87741ca845afe75a7412a53f2096655490b090c9f96a966c4eec9122d7ce71f
+  handbook/.cache/mkdocstrings.json: ee11b77f5b91d12814a13e016c06bfb5c49b52c086a9265b0aee0ff56211c673
   handbook/docs/en/javascripts/api-reference.js: af0b73ed0518f132c86d6df7dd83450be9205a7a76014b41d97dea71aa02b87d
   handbook/docs/en/javascripts/lang-switch.js: e858bc27d5733ce763834230e224be95f632412f01f87666de581ac04c4ce679
   handbook/docs/en/javascripts/vendor/redoc.standalone.js: dcaf76612bc4a3fbcc923a8966dee2f6146a5f32e5ce1b6f02dd60cbbf89500b
   handbook/docs/en/reference/openapi.public.json: 8f6d0a6122cd456c58189276b737a09f3f973fd12bfb056bd88f61e03050c992
-  handbook/site/404.html: 5cd869c2d0b9eb683c343201178a1b88da829cb084261c7401ff5cb93a345d2b
-  handbook/site/index.html: cb7b0a6979aed535070b76a3e0b857d89d82a890f535b22c3aa343c42db527ec
-  handbook/site/search.json: ac3eaa1b1e864540b4a18c2169c5be0b8ab74326808e67fd3487d30c0fcfca04
+  handbook/site/404.html: 39f8ec4470712a3b830b059a5617095d925d92ef1af2393d7cb75201481266a0
+  handbook/site/index.html: 323d58e7911f90eb3e39c134cec43752d9bab6b18939101a168b45a65850d770
+  handbook/site/search.json: 6ac79f65d26dc54ede40416e1f28508a9e8e47cd28da3331dc84822c90191064
   handbook/site/assets/javascripts/bundle.a2388154.min.js: a2388154fa115a8b07ce9676b71adfd7ee9e704ac321feb06127a98730b5e21b
   handbook/site/assets/javascripts/workers/search.c47bb847.min.js: c47bb8474294453d842f5cb386fdf3340304f095c63a37aa935d1bc7d382f180
-  handbook/site/guide/index.html: bea7e0728d917cc5480cc07c9b7003839251a9d4ebc99845d593ffd0b6ed77e4
-  handbook/site/guide/code-mode/index.html: 7f76d0f742bc64d840947457bbf7356c717243aee1c7f380adf1dfa1b65d3cf4
-  handbook/site/guide/editor/index.html: d66958fa1572ac6d7416fc12e0dfd57c41f54988fe8ba68155161a5c58eb7e9e
-  handbook/site/guide/knowledge/index.html: 0ecf68bae1e4522b671ab37f6200e459563001c7ff96b6f03cabf67f908f63d5
-  handbook/site/guide/mcp/index.html: 6c908470ecc3bddd8045252282b09811afe1b6ba1eb831f6d868f9fc47ab3199
-  handbook/site/guide/nodes/index.html: b6a02a5655405fe5906c85ce335b1cdfbf230ad379873973507b8a613801ff14
-  handbook/site/guide/python-export/index.html: f3e7b49b7ac948a3dd7e4e787fd39196d4acebeb5c7af0027a5ef2f8da148f88
-  handbook/site/guide/state/index.html: 1ff3dbb55dfece5c5574dfd9cb0d518532f75f4bf9ee325e8c4b5d187c1305ae
-  handbook/site/guide/templates/index.html: 493d7b5680f1ae9413327f427fdef7a0104cd4090bf5d90eea720703cdf5aafd
-  handbook/site/guide/versions/index.html: ac32581d7ac6700324db6ef26c7e8d83feebdbd6829a6a82f97174e456a5ae0c
+  handbook/site/guide/index.html: 8d703cd0ff98a937106316e43ddace10959972fde5a6479b0fcd7890d7e3cab9
+  handbook/site/guide/code-mode/index.html: e7e05e876128a671237d0596dedf3e78d6a04325c6f15c4d5f8198655177a921
+  handbook/site/guide/editor/index.html: 2994b01d8378cc133f9a5e9ae083124316d5f682e20f76454eb2897956375fc2
+  handbook/site/guide/knowledge/index.html: 455fdf4c63d68da4afde08723ebff6e4f1d8f43a0d16350cd2998ea108b5f539
+  handbook/site/guide/mcp/index.html: c67cda3a1cab2ee9f4a332d19d98313e87f20895f1d8c94bcd84bd44bb40a5a1
+  handbook/site/guide/nodes/index.html: a9562beb8707187cc94a4614fb88274dd0e932c9c3b249f9993a3f090701514b
+  handbook/site/guide/python-export/index.html: 43dc89e71122666357651cb85ff7842b7a8666da569b4334103027e7556adfc9
+  handbook/site/guide/state/index.html: d5027e35ff4384ce3479196ea8eba93489d382acdb41797095c3002d9a88502e
+  handbook/site/guide/templates/index.html: 8f54568a1e80f3872abd0c4e5c7cd7da82631c70c557248e13ec40f88d333442
+  handbook/site/guide/versions/index.html: eb0e88f234c95a75ea5cbab4d7e1b3b133c989491382f654ad5d88649b3514b7
   handbook/site/javascripts/api-reference.js: af0b73ed0518f132c86d6df7dd83450be9205a7a76014b41d97dea71aa02b87d
   handbook/site/javascripts/lang-switch.js: e858bc27d5733ce763834230e224be95f632412f01f87666de581ac04c4ce679
   handbook/site/javascripts/vendor/redoc.standalone.js: dcaf76612bc4a3fbcc923a8966dee2f6146a5f32e5ce1b6f02dd60cbbf89500b
-  handbook/site/operate/index.html: b16b83b3bac20abf39bb01490fbf71a0ca43349d5f708a602e8ee20e3d658277
-  handbook/site/operate/access/index.html: 2fdb41971d0bfdb82fe4b30c0b3f86a6d768cb04a600e7069e95359086df4428
-  handbook/site/operate/accounts/index.html: bf2cb37f3d967044f73dc1b96a03bd025f7b046038f7dd0c3d301bc454ba9e0f
-  handbook/site/operate/channels/index.html: de0187fcc37ebd74c6fe2c40788a0218d06078ecae7882459358a5259842751d
-  handbook/site/operate/code-runtime/index.html: bcd0c0e1acf6bcd832a8d7518d6650d033e0855dd0fcfc720796d5796364eb04
-  handbook/site/operate/deploy/index.html: a99a357c0cd7d7d4e7857c80485cee82d976b1f60289109fc228d50c9e3b844c
-  handbook/site/operate/import/index.html: f3d569bdb77606a576eef4224734c51710bc3059585bb6b0db3b0c9771cb1c7d
-  handbook/site/operate/observability/index.html: 580869c6dc1f4503a0437c0063b602e0fe9faf8c97d922acda04f344e202f4c6
-  handbook/site/operate/providers/index.html: 19cd12d720ad993d29a2db4903fe1e25b424b21bc2be912329aaa0e51f664254
-  handbook/site/reference/index.html: cd01df97abb3911cb2f2dc6470de9624e0f5e50bdb0260e0408f8231e9a04eeb
+  handbook/site/operate/index.html: 55deafeef44ab3a301452120c62fef10320b140685a49afb414e88f7259022ac
+  handbook/site/operate/access/index.html: 388306fb37a66ad13ae6b6b65c66146d19af13c95581b542559e5381cca3e87f
+  handbook/site/operate/accounts/index.html: 01e776bebb768e03c1e7260569afca5800b69f28033e7ee85a9275339f07e1c9
+  handbook/site/operate/channels/index.html: fb027c1a91777360c0654ee409b78e8d55a001a2e3dec5e6ad7427dc1c5afb2c
+  handbook/site/operate/code-runtime/index.html: da8c93cffa12306bd90d5a9b187b9aaa3c08df6c5c21b47eacddd7e09163d02f
+  handbook/site/operate/deploy/index.html: 4d67a8677baf4c230ce7ee4c96c4e2141881792022df35964af499a43a826644
+  handbook/site/operate/import/index.html: 39ee526c3a1a7c8c73a4ce5238b5f2a2d8c90fa5eb2ad172cc761238b1f23c7a
+  handbook/site/operate/observability/index.html: cdbb58b78869df998086f24b391e725382699afb38d7fa6780145818eb038ade
+  handbook/site/operate/providers/index.html: aa840c231ec7fc191d2852792dd8a7dc2838c39be7a9efb3b227508c727fda3a
+  handbook/site/reference/index.html: 77a052ff5c7e0758c888aa27572a85b7e35f0c694641181c0452a63e380cb1b7
   handbook/site/reference/openapi.public.json: 8f6d0a6122cd456c58189276b737a09f3f973fd12bfb056bd88f61e03050c992
-  handbook/site/reference/api/index.html: 8936d6d34c4b2c15ab823df75059824c389f2796136607217bda9ee079ebb98d
-  handbook/site/reference/architecture/index.html: e92141e7414107b7ce37a82bc0c1f58c954b29139c36c9f2325d7f73261d30f9
-  handbook/site/reference/configuration/index.html: f1a2211ab8e87f076371316156e1676665a69cbcd60eaa911d3ac18abb2f1c27
-  handbook/site/reference/development/index.html: f8d63abc436595164301480713bd9ee4dda9c39a7543bdfb3373db0c8e68e3c6
-  handbook/site/reference/errors/index.html: f18c11887beee46920afdac3557ba93ee83da700865f85cce5d42146aee04fdc
-  handbook/site/reference/faq/index.html: 78d99795f10147fd69e87e66836724d345386fe00bd040e0f37e071a4dcce8d7
-  handbook/site/reference/public-api/index.html: d7ae338b3eb72e1582ef7cc63613169f59aeb783290628f7adb3bd399f8a6652
-  handbook/site/reference/shortcuts/index.html: 2b2e5512046c17936e8c82e7d3152f1bf43c9b5cd2b1b65b5dc38e0e42ebef52
-  handbook/site/run/index.html: b9be6fc5ce2734e196a95a221526374d7ae42afd2a6e8d5df35dc371abc339e6
-  handbook/site/run/api-triggers/index.html: 7943cc9949495deea9c5d2cc4ba4d0099c7e2226135b32318555ff37e2f17ba4
-  handbook/site/run/chat/index.html: a897b96845b106724ebb142406477f1ea3518f7cba89d35f66fd456c2c841ed3
-  handbook/site/run/chat-triggers/index.html: 80b5486c78f13e8bda46a67da647c508b25e134aa574fc5555bb07c0f618d5ed
-  handbook/site/run/human-approval/index.html: f72952d7b068da8406df6f52653adf35b5632c5a4539f2a6443b9d56b817d2de
-  handbook/site/run/public-api/index.html: 02ab674166f1e303cc61a43ca7e576224ee8f70efa1d397bcfddb8dabae30f35
-  handbook/site/run/schedules/index.html: dc14486290ee013e5c35ec5910e1e4201cf182e3684b9413042ee50428bcc7c9
-  handbook/site/run/tests/index.html: 42130a9a7501844bd33b3f75f7f889d2c2c123fab17b1b45d4361da4c7a3e1cd
-  handbook/site/run/traces/index.html: 21bb024740c57dd6d90fba7663a5a24194520ed4db1e3c9578f10a5c85025f67
-  handbook/site/start/index.html: debda8cb102894eaa3c3b3c5578b8cac63edcfe210939725e9f680cd614e27c5
-  handbook/site/start/concepts/index.html: 6e3372e9b697b3fa98f288149af577b4238429200c5e7dfc9cda1008eb7fa6f9
-  handbook/site/start/install/index.html: 549c4f191be11ae26d49602e1e57381e33b7e8a67e070f856cf248e123981ef6
-  handbook/site/start/quickstart/index.html: c15f964b5f6fd7a0d1d1892bcb1d295116c38c480641069cb22229e3a1b7fae8
-  handbook/site/vi/404.html: 1ff500bcdd461683ceedd28fe8439fec97ba2ed70a7f4143c13b361a48c68c88
-  handbook/site/vi/index.html: 313189017f4bd290c5aa70308684103f4e145139729b20e949f4df41edc0ab50
-  handbook/site/vi/search.json: 18796731a2f594d5a9a59cecf3057f67358a46fb8c50dbaa72bafcccbe5cc0d8
+  handbook/site/reference/api/index.html: e2d6151e092da758b4217c2e2c263eef0f41d1408c27c4612ba7d36d5c49c797
+  handbook/site/reference/architecture/index.html: 0c68bad0a1b02dac971ceabbf4169cbd49607b5bd2076172608f2515b7c47dc9
+  handbook/site/reference/configuration/index.html: 4cf81f18f3709c259b4a687c240bb0eaaf6653316b242044116e7a5f68a7d554
+  handbook/site/reference/development/index.html: fee80e5099eefb1f68a2639b41b70af13f3635cd721e752a6ad7f5d35200321c
+  handbook/site/reference/errors/index.html: eee83ead9abcd8ea4b093be1b6369285dbe13e27e74b0016c36a42091df89092
+  handbook/site/reference/faq/index.html: 9b355176c473fac0c0b6c999b2347980b45bcd2d72e1cf448ac131629207b067
+  handbook/site/reference/public-api/index.html: adc715fca729541221908ff85491bfd23a24e20a7635eb65bf1d153f07c38a4a
+  handbook/site/reference/shortcuts/index.html: d1f8be19d3599066057daf3ec3610e3f37c7a0be525b0876e534522df2764688
+  handbook/site/reference/superstep-vs-langsmith/index.html: da49dbb00fa91276365c7aea066206d1ba14125e17300d680d4563d2d6685c1c
+  handbook/site/run/index.html: 898f92d75191ccc902db465fdea84c9e3664cf269d7287e2aa35a2ca3fba4d6e
+  handbook/site/run/api-triggers/index.html: f5df5e38d1e87b32e67e8fef58453416167f93f5e4eb70c7987e782c2ebc4441
+  handbook/site/run/chat/index.html: 91ebe33a8f4f34a30be59016f25c7e9c75efb4d41ec0553a9acc5d60477536ca
+  handbook/site/run/chat-triggers/index.html: ff85d69fb2b3d69d4f1040d80415ad39216773fbdbf6de8525fa943abceaf150
+  handbook/site/run/human-approval/index.html: c40780b748b3b0640faaf5156f181492b6a86f2e6ade193ebae9fb882f9de476
+  handbook/site/run/public-api/index.html: afeca6cde66be3639ba5ca68672f3ea1025ccc8dfdb7244cfea21bbc1ffeb304
+  handbook/site/run/schedules/index.html: 17d0cd699fa4ebdd80037fd2ec02261b4bab8213edfda251b3a17524360215fd
+  handbook/site/run/tests/index.html: 3c02b6bea770d82e3abf750091d03443dc93ca4bcefcf615b42c69fd8ebf98f8
+  handbook/site/run/traces/index.html: cf961244e48a4dcc1dc34fc6fbc6b1d23f531985f7e92749d1ae032772d28030
+  handbook/site/start/index.html: a60fba599e833a9da2391e2a60fa421d9714c16726bcab506d27dcdb2dcbdaca
+  handbook/site/start/concepts/index.html: 116ff9d7471394c43cb2c4ed639e1d6f3512b9c2bdb11dfe3205b22baf20f841
+  handbook/site/start/install/index.html: 201cbf8d1159f9a6cd2aec9672ce233e7a78d0be917ded17d1552ecb120dbfd1
+  handbook/site/start/quickstart/index.html: c6b849152f605ce6ebe5026128e405c9c276ce12410210d59f94a047abb8f2c3
+  handbook/site/vi/404.html: 70fa6cdd7b21de8931350af06d9e67c1e363f478202f3c1f6c631c07cdf90363
+  handbook/site/vi/index.html: b244a41a505e57c62e1ed065d84b8e020ef4da0446b21704598afd0ff51448f8
+  handbook/site/vi/search.json: b2854b383d1974a28fee3ba7bd6571567c2e74ccdad8c4959074b824b1d0d207
   handbook/site/vi/assets/javascripts/bundle.a2388154.min.js: a2388154fa115a8b07ce9676b71adfd7ee9e704ac321feb06127a98730b5e21b
   handbook/site/vi/assets/javascripts/workers/search.c47bb847.min.js: c47bb8474294453d842f5cb386fdf3340304f095c63a37aa935d1bc7d382f180
-  handbook/site/vi/guide/index.html: a5c8914b6a4f241ff4619e6a4312dae60bb9dd6a1be582fe4c16013a3782ec7f
-  handbook/site/vi/guide/code-mode/index.html: e9c74c60d31899c2244196f41fb8e8f2ab67a7b9d54ee8b42856a8577fc623a8
-  handbook/site/vi/guide/editor/index.html: 95f0255b4dc98e8a8ddb9f13188e460107da2189cfdec23746830063d83ac043
-  handbook/site/vi/guide/knowledge/index.html: de231a82149a11d230f6aff938882765290d6acaec5cea8351bcb68671ae591c
-  handbook/site/vi/guide/mcp/index.html: c2ccbd3f062bd390821fc6846644425794b5e64c8895bc7a6f089548e3995967
-  handbook/site/vi/guide/nodes/index.html: 05fcc7c99488a726142093a6a835cbec6b953555bf61e07218d54140f7904479
-  handbook/site/vi/guide/python-export/index.html: d99c7438a1bd6fdd10b4b793901fc6161f643f6d3dd4e3998a9da3991e45000b
-  handbook/site/vi/guide/state/index.html: c43938e1a4549c750f6a782003cd7300655bd433dc653a6d29ee41cf81f66ff7
-  handbook/site/vi/guide/templates/index.html: d2c6794e6673878d509fc4d0adbdbb31b08bff4f1a9663f7d7d94262218c984c
-  handbook/site/vi/guide/versions/index.html: 2106c1072011a74d9674cf5cc03956731fd6c9f9f473efb3a4d8d3920d6ee593
+  handbook/site/vi/guide/index.html: 72e3a95bbd5b95838c5af188d999b735231628c9882397938013ccec414e1f41
+  handbook/site/vi/guide/code-mode/index.html: ba9051cf3390b731535c5aa59209068231f96a0399149ffb20d23339be29c584
+  handbook/site/vi/guide/editor/index.html: f57ec27f45c398111144ba00c9f09d0a67530e1a10fea068334916f88c5620e5
+  handbook/site/vi/guide/knowledge/index.html: 2251298256c8088e5594fbd8140ccd2f60beab899aaee3b4133d1f47dfdc3ab9
+  handbook/site/vi/guide/mcp/index.html: 50d7871a36ab19c1236f7f41bf691b9444ca06bec314b2a677ad3bd241c862ce
+  handbook/site/vi/guide/nodes/index.html: 2f86cf172d4f53b58b78c81f7b3547a66b7cdd39856b343ce9d12ce53110e97f
+  handbook/site/vi/guide/python-export/index.html: fefe4cf93f758aa06133aa8458193ac8d88b5c6e93d0b37e6dd608a7e0c435ce
+  handbook/site/vi/guide/state/index.html: 448c49b211471be0962ae200180d4c16c44688c5b04bc61d403d66afb02889a8
+  handbook/site/vi/guide/templates/index.html: e29bec12ad7eb0879c10461eb9014f420f0e27077e73b4eba95709898b42ee6a
+  handbook/site/vi/guide/versions/index.html: e5732644159922fb4fdde4c974c630d624757d29b16df3ff3bc5618ed150cd1d
   handbook/site/vi/javascripts/api-reference.js: af0b73ed0518f132c86d6df7dd83450be9205a7a76014b41d97dea71aa02b87d
   handbook/site/vi/javascripts/lang-switch.js: e858bc27d5733ce763834230e224be95f632412f01f87666de581ac04c4ce679
   handbook/site/vi/javascripts/vendor/redoc.standalone.js: dcaf76612bc4a3fbcc923a8966dee2f6146a5f32e5ce1b6f02dd60cbbf89500b
-  handbook/site/vi/operate/index.html: de43eefd025742f09a25677e3f45cd0cad6d7e7750f4243b53eec74ab5188100
-  handbook/site/vi/operate/access/index.html: 24f84b86f3462b6420871d74dc1dfef07ae0f333abd0dbd46c1006e3f55bbc12
-  handbook/site/vi/operate/accounts/index.html: 2f79936d0ad1949d3ad169dab8274698ac771519743b6ea21d362c1c40923897
-  handbook/site/vi/operate/channels/index.html: 25159587873eed631d1b173b0d90aa4ca961e0ebe5660eebd788cf12ce1e76cf
-  handbook/site/vi/operate/code-runtime/index.html: 1ae8c21b188f242b2a8e41c7c86bf63a8ad1331e3d9ad6a2bfa27e74d74d93c2
-  handbook/site/vi/operate/deploy/index.html: 3b375d5410aa5eef52487e27d7335efaea7f8270c881af51efba4abd30838e7f
-  handbook/site/vi/operate/import/index.html: 632b8876f38f5d54d425abfc9462150e7c6d440fb9e051faf60e642d5a00b7c9
-  handbook/site/vi/operate/observability/index.html: fc3eede67eb564a3273e465d21b3ebc6451f257c958200b149e83d93faffce28
-  handbook/site/vi/operate/providers/index.html: 45cda300d82e647502de50956518532d3ce794a22174da9e4afbab9bd255f765
-  handbook/site/vi/reference/index.html: e163a3ffe6607e29c0c75d77135a09502500ea034dfa7442449163eec7875e1a
+  handbook/site/vi/operate/index.html: 03146aacb6b1aa1746d0da466912b208065d4ee614f2186d7ff2559facac97c4
+  handbook/site/vi/operate/access/index.html: 300c5e739ff3da4049b77d73e26cf3c6412f2d32e3721babe019ac346c8ab79a
+  handbook/site/vi/operate/accounts/index.html: 527c0d43e4418bcd57d0104dcb57134808a57d254fd027f0cddc312ef8c1cfd1
+  handbook/site/vi/operate/channels/index.html: d0eb5d95da168f1e765de1e2d0202df287b67f5b23d7f72970f9d4328381420e
+  handbook/site/vi/operate/code-runtime/index.html: 35aac1374b21c54ca466b6ceeabfefa897d75c1be233b186d666a59033ef3cae
+  handbook/site/vi/operate/deploy/index.html: f5b3c7afb72f74e94b3118f9fb38e59485fe0f2c1e7218b9b46dd1148deb3693
+  handbook/site/vi/operate/import/index.html: 89418e76cc43b371512f9c42bd90d94f5ab14b3f512f3dcfc530ab86ec3b462f
+  handbook/site/vi/operate/observability/index.html: 6ec48f0ba9be08a76fb7a74241e6af0f5253b4c1e2e9013e615843b89612497d
+  handbook/site/vi/operate/providers/index.html: f0d0703277fb5b0c31f920d3527753f0e6ee4b94b89aaf39f49380ce5222669e
+  handbook/site/vi/reference/index.html: 9be3c0c5126089ad8cf292a7dac13dc50f8724d7197b9c9eb179c61a6601dbbf
   handbook/site/vi/reference/openapi.public.json: 8f6d0a6122cd456c58189276b737a09f3f973fd12bfb056bd88f61e03050c992
-  handbook/site/vi/reference/api/index.html: 6b3cbf7c56350942277a0c7cec95b711a5981e9bd07cb451ab254554c9b7f5c5
-  handbook/site/vi/reference/architecture/index.html: 5d85cc0193c96a73f150d9142d5fc980ea2e43d099c65e93515a37b171d2a9a6
-  handbook/site/vi/reference/configuration/index.html: 425b72183c28b5feed08fd102e2a4cf993a1415d8b6400a491286069ec3427b8
-  handbook/site/vi/reference/development/index.html: 5e8d9df886eef0669e7908035061779dfce4c7894ee8c70282d893d19355a428
-  handbook/site/vi/reference/errors/index.html: 8f40ee29c0b2508b071a8ea423e9a7d47ef83c11b68b1d74a11c6d264dab0b6d
-  handbook/site/vi/reference/faq/index.html: 170e7ab58018a4b3af80edf4da4502d2a34eaef80b527bb2f4f7a6fb5e1d9235
-  handbook/site/vi/reference/public-api/index.html: b62f74e3f49f863af3c245a23bb794ccf7b029aa3d289a0de9ff36aff4587aa2
-  handbook/site/vi/reference/shortcuts/index.html: 04645d7443f39f0e9dfe690b420d0d89a056138be721d3769286cf18b5c5b652
-  handbook/site/vi/run/index.html: c4652a90dab20b4c2a1405e8309b7803075a954051f6b8ac8f8fdfec301f01cc
-  handbook/site/vi/run/api-triggers/index.html: abde1cc2d1d941823dc7cbbe853e4bc1b8de9715e5b3dcb5573afabee9e136c6
-  handbook/site/vi/run/chat/index.html: dddcab928bedf53b70dc0fb10c729cc74c08415906fad122c5beb4ba05c0d4ed
-  handbook/site/vi/run/chat-triggers/index.html: 9fdaca0f5e874e37c43937c7e0c537fe83c113fff3814fb2e5f1fce5cfae1d25
-  handbook/site/vi/run/human-approval/index.html: 1c6108a4f3a86a27ec11544295b13a1f43cfda6f1e4b78731fe3d16988d97be7
-  handbook/site/vi/run/public-api/index.html: 69180b7d6dcfbf9f91cf34765a470bc0eae8281cc7229d861827fe5fcb3e0efb
-  handbook/site/vi/run/schedules/index.html: 2fbd02e2cd201e295245ba8d9b76386f6e00bb1ddb87b7e93f1504fb467a6434
-  handbook/site/vi/run/tests/index.html: 29b64c7e920cf8e521d0d53432910eff29eefbbb5a2b5d0dfda3690b20dfb88e
-  handbook/site/vi/run/traces/index.html: 2a72bcd1309a9c38e3e20104ec317f459b7d60ec7ff00f775b3e08bff64f365c
-  handbook/site/vi/start/index.html: 82a2192275395b385678351e9517210006a934ebe438984dee7eeabbff876330
-  handbook/site/vi/start/concepts/index.html: 9a8c85d032c1500103dbf807fabac87179fb4187c43f2743837c226265b41735
-  handbook/site/vi/start/install/index.html: c0a763dae92959cf96bab0ba9678de00f398ce9e7641c8b503ea97819a0068f6
-  handbook/site/vi/start/quickstart/index.html: 90f85906aa94c83f382e35be9cf8ce22b940beb600c85dd15eb6c1f72aee91c0
+  handbook/site/vi/reference/api/index.html: 5da329dac702229f7346f2f5effa86646b1eaf7b84120f811290f526a1cbd2ef
+  handbook/site/vi/reference/architecture/index.html: 07d7133ec0f8d622454f993abfd0a1946b81017c3a58092eca896f56922362fb
+  handbook/site/vi/reference/configuration/index.html: 543f81e865594b961ef9ac6e9942a565c1aad95273a6f2ffb4d3d5a125bc3b58
+  handbook/site/vi/reference/development/index.html: 1906f19e8cf0b082dd4e46dc3f020b57bbda293250b863477b2f3b7c82bb9e8e
+  handbook/site/vi/reference/errors/index.html: 74f6e6006974ab78595f6b893a74bcd45c3ef1edbfd1f3b17ffa6507fc5fcf86
+  handbook/site/vi/reference/faq/index.html: 6f999413ba2ab73f648805f56923d4c1ce18f5f008ee3b88939666f34c28f3ff
+  handbook/site/vi/reference/public-api/index.html: 899745b49cfee0322de5ec4823d30c388701fc9bfc9b55836c1d5ad47f180be8
+  handbook/site/vi/reference/shortcuts/index.html: 673578fc5e704d94934ec8cf7a5b3e44c157ace0f5f5e40abcbfcee95615e3af
+  handbook/site/vi/reference/superstep-vs-langsmith/index.html: 422aae716a44adcdc07a70a9f94be4a1b7b53fc63c0b6f275cfa238608cc73a9
+  handbook/site/vi/run/index.html: 440895e1a56b3c419cd0d4b38744115413b03cde66c3b1b7d03dcee81dbd90a7
+  handbook/site/vi/run/api-triggers/index.html: c37ac6e1e591ac672a4367347bf2515a6cd91e3c867766a4dfa439f495714e88
+  handbook/site/vi/run/chat/index.html: 2e08ef897401bcbde0016a4d84cce46ec8936c652ffc55abf34872ede6a8ca4b
+  handbook/site/vi/run/chat-triggers/index.html: a1938802ae214c473b3986287fb32e0354f51b9bac90beea39a2dec1b376e662
+  handbook/site/vi/run/human-approval/index.html: 2e5beb0eb84715860b626064c2e7b6d20c252b8a722e653a63c1fd539b383086
+  handbook/site/vi/run/public-api/index.html: c210abb067f9a6fb91a0f5a54a79392dd3c7e0efa894c54f1b7aa044540e482c
+  handbook/site/vi/run/schedules/index.html: 6d51f347e3118412c7118c8dfe938c37607d3c21f53764e40c3c28aeb23cf699
+  handbook/site/vi/run/tests/index.html: e9783afda948fae3a49eef1253d30469c4a81fe60b021932dff3eda00a10a864
+  handbook/site/vi/run/traces/index.html: 1ccdf7120cb1a870d7f3898d7cd5cfa16237c9ba73f49936db0bec0cbad56e7b
+  handbook/site/vi/start/index.html: 8894d9c7c8599fcc1eb4904d096c839566185eacc95e7fd096654843702a96c2
+  handbook/site/vi/start/concepts/index.html: f634fc8987e102eaaa47f692716c5adc90b50416e184df6d9189beb92ad58d52
+  handbook/site/vi/start/install/index.html: 5c07b8ec17352be6c4a3b2a011364b84d595559ba79188a7b13e6397cdbb6abc
+  handbook/site/vi/start/quickstart/index.html: 6daa4c5aaa69d95780434b0d80be8dd2d33a53edf71ec436ca111e3886edb837
   scripts/agent_server_smoke.py: dcbb65510ac141f4b8664fc9fcfacd42875afd787fef01d13bd4594693ad6607
   scripts/check_deploy_configs.py: cd94e7c90f6da7550499a6942f6b569ad979b14ce2171cf5d8b3c0ca83b1de3e
   scripts/compose_smoke.py: bd505d9bb76cc0a25cfd5a0a90a5e94c27c3bea5e40f875fad6de59697a2970c
@@ -737,9 +739,9 @@ results:
   source: backend/pyproject.toml
   status: failed
   returncode: 1
-  started_at: '2026-10-24T15:35:39.816475+00:00'
-  duration_seconds: 194.696
-  output_sha256: 22ae263989fa6c64b48f3485c7989f46e0c00627e9fb679f7ff9fda4f520add4
+  started_at: '2026-10-24T15:49:32.418844+00:00'
+  duration_seconds: 186.939
+  output_sha256: a40350af79f4dec8a8b62cfb2108449a97ed747c8683f2797dacc0b03481dcbb
 - check_id: node:frontend:build
   kind: build
   working_dir: frontend
@@ -750,9 +752,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T15:38:54.512629+00:00'
-  duration_seconds: 9.98
-  output_sha256: 347c0ab4a37a65493f74cc656e7022799ac91b7f21c4809fea3196ad3a449f1c
+  started_at: '2026-10-24T15:52:39.358035+00:00'
+  duration_seconds: 9.502
+  output_sha256: cc3996705f8e016d9ef32774f067a458ca7170caeeb4f019e4909d0b3e2e6dc6
 - check_id: node:frontend:lint
   kind: lint
   working_dir: frontend
@@ -763,8 +765,8 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T15:39:04.492896+00:00'
-  duration_seconds: 1.341
+  started_at: '2026-10-24T15:52:48.860459+00:00'
+  duration_seconds: 1.277
   output_sha256: 63ed2456494b021f7b85da1c3dd8d953a93cb700c565fcfea28196a9206b52a1
 - check_id: node:frontend:test
   kind: test
@@ -776,9 +778,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T15:39:05.833969+00:00'
-  duration_seconds: 4.129
-  output_sha256: 97ef0afaef35a1ca34722cdb61765e82c98f1171238b733ba68104197fd2e96b
+  started_at: '2026-10-24T15:52:50.137113+00:00'
+  duration_seconds: 4.052
+  output_sha256: 0e682176984068436441cd54f3d38685d186f693ea7a9ee23ebfd5136f7d3404
 - check_id: python:sdk/python:test
   kind: test
   working_dir: sdk/python
@@ -789,9 +791,9 @@ results:
   source: sdk/python/pyproject.toml
   status: passed
   returncode: 0
-  started_at: '2026-10-24T15:39:09.962711+00:00'
-  duration_seconds: 0.395
-  output_sha256: af00fcc0dc413752b152913b4436b8a5663fd695c38fd5c443ef52efbd5d3b54
+  started_at: '2026-10-24T15:52:54.189485+00:00'
+  duration_seconds: 0.438
+  output_sha256: fb1bc6a5a264ee4dffed82e8a6d9693487d30e87513415fedfecbfecd7014099
 - check_id: node:sdk/typescript:build
   kind: build
   working_dir: sdk/typescript
@@ -802,8 +804,8 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T15:39:10.357253+00:00'
-  duration_seconds: 1.516
+  started_at: '2026-10-24T15:52:54.627551+00:00'
+  duration_seconds: 1.504
   output_sha256: 55bbf8b4027b9e5a75745f1e81e3eee53bec58ec7e311f56e256fbe025f24c90
 - check_id: node:sdk/typescript:test
   kind: test
@@ -815,9 +817,9 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T15:39:11.872845+00:00'
-  duration_seconds: 0.848
-  output_sha256: 70ab806f1de46f0966260fe70d4400abbc90a0509bea0f533a334dc9059b24d5
+  started_at: '2026-10-24T15:52:56.131903+00:00'
+  duration_seconds: 0.846
+  output_sha256: 3e8ff8220548228104d47ed71bae1d385b501ca5a6bf13ef19b8ef53a82814b7
 - check_id: node:sdk/typescript:typecheck
   kind: typecheck
   working_dir: sdk/typescript
@@ -828,6 +830,6 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T15:39:12.721252+00:00'
-  duration_seconds: 1.712
+  started_at: '2026-10-24T15:52:56.977728+00:00'
+  duration_seconds: 1.728
   output_sha256: 0214e636182f470704605f9f489ef0194da1480b139feba1514beef02d501488
