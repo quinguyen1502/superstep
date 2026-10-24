@@ -1,14 +1,14 @@
 schema_version: 1
-run_id: 20261024T161924968272Z
+run_id: 20261024T162956160701Z
 status: passed
 profile: full
-updated_at: '2026-10-24T16:19:24.968272+00:00'
-source_sha256: bf4c5323d54c3c32168d9fc8d012022cf97601338b25d3cc720a5d9339cffdfa
+updated_at: '2026-10-24T16:29:56.160701+00:00'
+source_sha256: 804693c68744e6a5e2e0903dde67176c80af0923096d9b6e502b6cab763ed3ac
 inputs:
   app.json: d080abda26f3ac897a49947e17b9ba9bdf9e2bf76dca2ab2dc546e241149fdca
   railway.json: a0724a95e35b88455976d48915c339b68ef5c66a9d30553ffdf688cf98ecc49a
   .claude/launch.json: 37d8fa380ca3d34d6913f1a0b745c24633bee5f401c24798d533d1c5ab4672a6
-  backend/pyproject.toml: 6c83ab33063ec167ac0a6c6f27754bbf7d0874b1dcb7d3d5c21ed09978f21eed
+  backend/pyproject.toml: 16f5df996070250202db339d48a6b9768fdeebf3563db9daf1d10123a70b3e2d
   backend/requirements.txt: 7f44cca80ec97c6318b8bd9fa225305135a8921fc233949569061d5ff75a77ae
   backend/app/__init__.py: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
   backend/app/main.py: ebfa2a7d8d578ad802a3018458f08b179eaff9139a2d68dad261b1a5b9eb0e18
@@ -331,8 +331,8 @@ inputs:
   frontend/.oxlintrc.json: b4d344818a1e1bf43997e4744a9153c8eef770c98b58229cd86363dabb85ded4
   frontend/components.json: d0ada54e59710099b766eae59a1a35d31b717a6ec43d73a8814de1815ddc1749
   frontend/index.html: d17fde433eb0368caffd1f32439ca28f14cea62deff54ee494162bcb9bbca0b2
-  frontend/package-lock.json: 8c548359a418e0854e03fc064c1a18512b4aecec4782d6e5b4773b1b263de1b9
-  frontend/package.json: b687a40bc8b466047b799fa53422312f0abd5a715ccf404dfcbdda0795bb1c8b
+  frontend/package-lock.json: cc885a8be263e12bda71df6af101733fb9cb6ac9b0b3070872d2e241bbf8b7a6
+  frontend/package.json: f64a9c9c819ced4a3af9448c56a201a75a055b4f38574e973ffbdc0e4eac314a
   frontend/playwright.config.ts: a9a0baa487d69563c991523c0ac272eab5c7f272a1bfd479fd4715d7ab5ca796
   frontend/tsconfig.app.json: 7d669df3af11aecd3a0df2a21e039668277524a9e6c73ad77a314a7a884612ef
   frontend/tsconfig.json: 770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808
@@ -635,9 +635,9 @@ results:
   source: backend/pyproject.toml
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:15:54.085621+00:00'
-  duration_seconds: 189.212
-  output_sha256: 4c925d688a61576ba2438aef0ce0fda75ac5a7e99161696a7cffb1b5b7d7e0a0
+  started_at: '2026-10-24T16:26:24.388417+00:00'
+  duration_seconds: 191.394
+  output_sha256: 3fef8fbc45bb304d0cad1011cd3658425dc413f1827d5bd9ebc0bc961d449a9b
 - check_id: node:frontend:build
   kind: build
   working_dir: frontend
@@ -648,9 +648,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:19:03.298069+00:00'
-  duration_seconds: 10.374
-  output_sha256: 73988bb40797ed93f0de1d06f155737e9fc92c6fceea51231864b8fd9190ada4
+  started_at: '2026-10-24T16:29:35.782123+00:00'
+  duration_seconds: 10.344
+  output_sha256: ce4aa7fdf720815f8fca4935e717dbd4fdf9b8a9a6c2b83d0d760042e59b7775
 - check_id: node:frontend:lint
   kind: lint
   working_dir: frontend
@@ -661,9 +661,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:19:13.672524+00:00'
-  duration_seconds: 1.46
-  output_sha256: 63ed2456494b021f7b85da1c3dd8d953a93cb700c565fcfea28196a9206b52a1
+  started_at: '2026-10-24T16:29:46.126039+00:00'
+  duration_seconds: 1.426
+  output_sha256: 4082592024b34369526d954f4720ca6b88b72b4a4f929b86d582c388764294b7
 - check_id: node:frontend:test
   kind: test
   working_dir: frontend
@@ -674,9 +674,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:19:15.132662+00:00'
-  duration_seconds: 4.682
-  output_sha256: 7f381336ad8ac8b40b336b04cd7c11adae0525752d3396b61c0bf2ad23be4ea0
+  started_at: '2026-10-24T16:29:47.552236+00:00'
+  duration_seconds: 4.073
+  output_sha256: 8a0efabf0fc855ed27f021115bd4e27397470fbd8b8b77be890e067de6988001
 - check_id: python:sdk/python:test
   kind: test
   working_dir: sdk/python
@@ -687,9 +687,9 @@ results:
   source: sdk/python/pyproject.toml
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:19:19.814295+00:00'
-  duration_seconds: 0.512
-  output_sha256: e9727bfb7806c4149ecdaf9799e74596d8d187f282fac5e7ddb7ea1e22f67811
+  started_at: '2026-10-24T16:29:51.625431+00:00'
+  duration_seconds: 0.419
+  output_sha256: c38e1e7173830d31a242a28cf705ea63b0b49d840d95c824c69020d833e54975
 - check_id: node:sdk/typescript:build
   kind: build
   working_dir: sdk/typescript
@@ -700,8 +700,8 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:19:20.326684+00:00'
-  duration_seconds: 1.618
+  started_at: '2026-10-24T16:29:52.044496+00:00'
+  duration_seconds: 1.502
   output_sha256: 55bbf8b4027b9e5a75745f1e81e3eee53bec58ec7e311f56e256fbe025f24c90
 - check_id: node:sdk/typescript:test
   kind: test
@@ -713,9 +713,9 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:19:21.945209+00:00'
-  duration_seconds: 0.896
-  output_sha256: e755d9ee543e302938861dae832a4aeb028bdd3047d17a0fa1076d05e5c6e773
+  started_at: '2026-10-24T16:29:53.546480+00:00'
+  duration_seconds: 0.865
+  output_sha256: a266e1ec5c0ae48e32c040683e7da06aad966d951fe428057c6357365e606400
 - check_id: node:sdk/typescript:typecheck
   kind: typecheck
   working_dir: sdk/typescript
@@ -726,6 +726,6 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T16:19:22.841224+00:00'
-  duration_seconds: 2.127
+  started_at: '2026-10-24T16:29:54.411168+00:00'
+  duration_seconds: 1.749
   output_sha256: 0214e636182f470704605f9f489ef0194da1480b139feba1514beef02d501488
