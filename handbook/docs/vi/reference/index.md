@@ -44,4 +44,10 @@
 
     Trả lời ngắn cho các câu hỏi hay gặp.
 
+-   :material-scale-balance:{ .lg .middle } **[Superstep và LangSmith](superstep-vs-langsmith.md)**
+
+    ---
+
+    So sánh Superstep với LangSmith Studio và Agent Builder, và cách dùng chúng cùng nhau.
+
 </div>

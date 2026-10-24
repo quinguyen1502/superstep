@@ -6,6 +6,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Handbook: Superstep vs LangSmith** (en, vi). A comparison with LangSmith Studio and LangSmith Agent Builder
+  (what each is for, pricing and hosting, how the LangGraph interop features work with LangSmith), citing
+  LangChain's Studio docs, pricing page, self-hosted overview and the Agent Builder GA post.
 - **Public API and SDKs.** The two workflow-trigger routes (`POST /api/hooks/workflows/{wid}/runs`,
   `GET /api/hooks/workflows/{wid}/runs/{run_id}`) now have a full OpenAPI contract: `WorkflowToken` (`X-Workflow-Token`)
   and `WorkflowBearer` security schemes, typed request and response models, error-envelope responses with examples,
