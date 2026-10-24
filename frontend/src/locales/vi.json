@@ -397,6 +397,12 @@
     "RUN_INPUT_TOO_LARGE": "Input quá lớn (tối đa {{max_kb}} KB)",
     "RUN_FAILED": "Run thất bại",
     "RUN_TIMEOUT": "Run vượt quá thời gian cho phép ({{seconds}}s)",
+    "THREAD_NOT_FOUND": "Không tìm thấy thread hoặc thread không thuộc về bạn",
+    "THREAD_EXISTS": "Đã có thread với id này",
+    "THREAD_BUSY": "Thread đang có một run chạy dở",
+    "THREAD_WORKFLOW_MISMATCH": "Thread thuộc về workflow khác",
+    "LANGSMITH_NOT_CONFIGURED": "Chưa cấu hình LangSmith: hãy đặt LANGSMITH_API_KEY trên máy chủ",
+    "LANGSMITH_PUSH_FAILED": "Gửi sang LangSmith thất bại ({{reason}})",
     "RUN_NOT_FOUND": "Không tìm thấy run, run đã kết thúc hoặc không thuộc về bạn",
     "RUN_NODE_NOT_REACHED": "Run đã kết thúc mà không tới node '{{node}}'",
     "NODE_FAILED": "Node bị lỗi",
@@ -414,6 +420,8 @@
     "IMPORT_NOT_READY": "Job chưa sẵn sàng hoặc graph không hợp lệ",
     "IMPORT_DISABLED": "Import repo đang tắt (đặt STUDIO_ENABLE_IMPORT=1 để bật tính năng thử nghiệm)",
     "RUN_NOT_WAITING": "Run này không ở trạng thái chờ phản hồi",
+    "CHECKPOINT_NOT_FOUND": "Không tìm thấy checkpoint trong run này, hoặc không thể fork từ nó",
+    "RUN_FORK_UNSUPPORTED": "Không thể fork run của graph LangGraph được import",
     "RUN_RESPONSE_INVALID": "Phản hồi phải là văn bản (tối đa {{max}} ký tự)",
     "TRIGGER_TOKEN_INVALID": "Token workflow bị thiếu, không hợp lệ hoặc đã thu hồi",
     "TOKEN_NOT_FOUND": "Không tìm thấy token",
@@ -1755,7 +1763,11 @@
       "still_failing": "Vẫn lỗi",
       "still_passing": "Vẫn đạt",
       "new": "Mới"
-    }
+    },
+    "openLangSmith": "Mở trong LangSmith",
+    "sendLangSmith": "Gửi sang LangSmith",
+    "langsmith": "LangSmith",
+    "langsmithNotConfigured": "Cần đặt LANGSMITH_API_KEY trên máy chủ trước"
   },
   "codeView": {
     "tab": "Code",
@@ -1767,6 +1779,8 @@
     "noCode": "Node này không có mã riêng",
     "selectHint": "Chọn một node trên canvas để xem mã của node đó",
     "download": "Tải .{{ext}}",
+    "downloadProject": "Dự án .zip",
+    "downloadProjectTip": "Dự án LangGraph chạy được (langgraph.json, dependencies, README) cho langgraph dev và LangSmith Studio",
     "languageLabel": "Ngôn ngữ"
   },
   "demo": {
@@ -1877,5 +1891,28 @@
     },
     "visitorBanner": "Bạn đang xem trước như khách chat",
     "visitorExit": "Về góc nhìn người dựng"
+  },
+  "timeTravel": {
+    "open": "Du hành thời gian",
+    "title": "Du hành thời gian",
+    "intro": "Mỗi checkpoint là state trước một bước của run này. Chọn một checkpoint, xem hoặc sửa state, rồi fork: một run mới bắt đầu từ đó.",
+    "before": "Trước {{nodes}}",
+    "final": "State cuối",
+    "state": "State",
+    "edited": "Đã sửa",
+    "reset": "Đặt lại",
+    "fork": "Fork từ đây",
+    "none": "Run này không có checkpoint.",
+    "tooLarge": "Quá lớn",
+    "badJson": "State phải là một object JSON",
+    "forkedFrom": "Fork từ {{run}} (checkpoint {{n}})"
+  },
+  "langsmith": {
+    "title": "LangSmith",
+    "intro": "Gửi mỗi run bộ kiểm thử đã xong sang LangSmith: các ca kiểm thử thành một dataset và run thành một experiment trên đó.",
+    "evals": "Gửi kết quả kiểm thử sang LangSmith",
+    "notConfigured": "Đặt LANGSMITH_API_KEY trên máy chủ để bật tính năng này.",
+    "tracingOn": "Các run được trace vào dự án LangSmith {{project}}; mỗi run có liên kết tới trace của nó.",
+    "tracingOff": "Đặt LANGSMITH_TRACING=true để trace cả các run sang LangSmith."
   }
 }

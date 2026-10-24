@@ -13,6 +13,10 @@ human-in-the-loop run is traced when it ends.
 | LangSmith | `LANGSMITH_API_KEY` and `LANGSMITH_TRACING=true`, plus optional `LANGSMITH_PROJECT` and `LANGSMITH_ENDPOINT` |
 | **Open trace** link in the UI | `STUDIO_TRACE_URL`, for example `http://localhost:16686/trace/{trace_id}` |
 
+When runs are traced to LangSmith and `STUDIO_TRACE_URL` is not set, **Open
+trace** opens the run in LangSmith. Test results can go to LangSmith too: see
+[Workflow tests](../run/tests.md#send-results-to-langsmith).
+
 When Studio's LangSmith exporter is on, LangChain's own LangSmith tracer is
 turned off, so each LLM call is exported once.
 

@@ -116,6 +116,28 @@ from it gets a copy (see [Workflow templates](../guide/templates.md)). They pass
 with the offline mock model. **RAG Q&A** and **Support with escalation** need a
 knowledge base first. Templates you save carry no test cases.
 
+## Send results to LangSmith
+
+When the server has `LANGSMITH_API_KEY` (and `LANGSMITH_ENDPOINT` for a
+self-hosted LangSmith), an admin can turn on **Settings > Users > LangSmith >
+Send test results to LangSmith**. Each finished test run is then sent in the
+background:
+
+- the workflow's test cases become a LangSmith dataset named
+  `Superstep: <workflow> (<id>)`, one example per case (input, checks, scripted
+  answers), kept in sync on each send;
+- the test run becomes an experiment on that dataset, with one run per case
+  (final state as outputs) and feedback `passed` plus one score per check.
+
+The Tests panel then has a **LangSmith** menu: **Open in LangSmith** opens the
+experiment, and editors can choose **Send to LangSmith** to send a test run again
+(a new experiment). A failed send is
+logged and never changes the test results.
+
+When runs are also traced to LangSmith (`LANGSMITH_TRACING=true`, see
+[Observability](../operate/observability.md)), each run's **Open trace** link
+opens its trace in LangSmith, unless `STUDIO_TRACE_URL` is set.
+
 ## API
 
 ```text
@@ -125,5 +147,6 @@ POST        /api/workflows/{wid}/tests/run              {test_ids?, mock?, versi
 GET         /api/workflows/{wid}/tests/runs             (history)
 GET         /api/workflows/{wid}/tests/runs/{sid}       (results and comparison)
 POST        /api/workflows/{wid}/tests/runs/{sid}/cancel
+POST        /api/workflows/{wid}/tests/runs/{sid}/langsmith   (send to LangSmith again)
 POST        /api/workflows/{wid}/tests/from-run/{run_id}   (a draft case, not saved)
 ```

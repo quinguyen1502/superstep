@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, AlertTriangle, FlaskConical, ShieldAlert, History } from 'lucide-react'
+import { ExternalLink, AlertTriangle, FlaskConical, GitBranch, ShieldAlert, History } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -21,13 +21,14 @@ import { ChannelLogo } from '@/components/approvals/channel-logo'
 import { api } from '@/lib/api'
 import { EditorTestsPanel, TestCaseDialog, type TestCase } from './editor-tests-panel'
 import { EditorCodePanel } from './editor-code-panel'
+import { TimeTravelDialog } from './time-travel-dialog'
 import { useStudioCtx } from './studio-context'
 
 /** Bottom panel (TASK-0085): Run (input | logs side by side, a picker for the last runs and a dialog with all of them),
  * Test (TASK-0067) and Code (TASK-0071). Chat lives in its own side panel (components/chat/chat-side-panel.tsx). */
 export function EditorRunPanel() {
   const { t } = useTranslation()
-  const { input, setInput, log, setLog, errors, history, tab, setTab, running, traceSel, setTraceSel, replay, setReplay, openRun, respond, trace, traceMeta, wid, source, edit } = useStudioCtx()
+  const { input, setInput, log, setLog, errors, history, tab, setTab, running, traceSel, setTraceSel, replay, setReplay, openRun, respond, fork, trace, traceMeta, wid, source, edit } = useStudioCtx()
   // the "Test runs" switch lists the workflow's test runs instead of its other runs (TASK-0067)
   const [testRuns, setTestRuns] = useState<any[] | null>(null)
   const showTests = (on: boolean) => { if (!on || !wid) { setTestRuns(null); return } api<any[]>(`/api/workflows/${wid}/runs?tests=true`).then(setTestRuns).catch(() => setTestRuns([])) }
@@ -41,8 +42,10 @@ export function EditorRunPanel() {
     <Button size="icon-xs" variant="ghost" data-testid="save-test" aria-label={t('tests.saveFromRun')} onClick={() => saveCase(rid)}><FlaskConical /></Button></Tip>
   const finished = (s: string) => s !== 'running' && s !== 'queued' && s !== 'idle'
   const mode = tab === 'tests' ? 'test' : tab === 'code' ? 'code' : 'run'
-  const [allOpen, setAllOpen] = useState(false)
+  const [allOpen, setAllOpen] = useState(false); const [travel, setTravel] = useState(false)
+  const canTravel = !!wid && !source && !running && !!trace.runId && finished(trace.status) && trace.status !== 'waiting'
   const pick = rows.find(h => h.id === trace.runId)
+  const forkedFrom = (log as any[]).find(e => e.type === 'run_started')?.forked_from as { run_id: string; checkpoint: number } | undefined
   return <section className="h-full min-h-0 flex flex-col">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b px-3" id="run-toolbar">
         <Tabs value={mode} onValueChange={v => setTab(v === 'test' ? 'tests' : v === 'code' ? 'code' : 'logs')}>
@@ -72,11 +75,16 @@ export function EditorRunPanel() {
         </div></ResizablePanel>
         <ResizableHandle withHandle />
         <ResizablePanel id="run-logs-panel" minSize="30%" className="min-h-0"><div className="flex h-full min-h-0 flex-col">
+          {forkedFrom && <p className="flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 text-xs text-muted-foreground" id="trace-forked-from">
+            <GitBranch className="size-3.5" />{t('timeTravel.forkedFrom', { run: forkedFrom.run_id, n: forkedFrom.checkpoint + 1 })}</p>}
           {trace.waiting?.runId && !running && <HumanPanel waiting={trace.waiting} onRespond={r => respond(trace.waiting!.runId!, r)} />}
           <RunTrace trace={trace} events={log as any} meta={traceMeta} selected={traceSel} onSelect={sp => setTraceSel(sp?.key ?? null)}
             replay={replay ?? undefined} onExitReplay={() => { setReplay(null); setLog([]); setTraceSel(null) }}
-            actions={canSave && !running && trace.runId && finished(trace.status) ? <Button variant="ghost" size="xs" id="trace-save-test"
-              onClick={() => saveCase(trace.runId!)}><FlaskConical />{t('tests.saveFromRun')}</Button> : undefined} />
+            actions={canTravel || (canSave && !running && trace.runId && finished(trace.status)) ? <>
+              {canTravel && <Button variant="ghost" size="xs" id="trace-time-travel" onClick={() => setTravel(true)}><GitBranch />{t('timeTravel.open')}</Button>}
+              {canSave && !running && trace.runId && finished(trace.status) && <Button variant="ghost" size="xs" id="trace-save-test"
+                onClick={() => saveCase(trace.runId!)}><FlaskConical />{t('tests.saveFromRun')}</Button>}</> : undefined} />
+          {trace.runId && <TimeTravelDialog runId={trace.runId} open={travel} onOpenChange={setTravel} onFork={(i, s) => fork(trace.runId!, i, s)} />}
         </div></ResizablePanel>
       </ResizablePanelGroup>}
       {mode === 'test' && <div className="min-h-0 flex-1"><EditorTestsPanel select={picked} /></div>}

@@ -75,3 +75,7 @@ web Docker image builds.
 - Python 3.12 venv: import and the full pytest suite, as above.
 - `docker compose build web api` with Docker 28.3.3: both images built.
 - CI on PR #66: all six checks pass (both backend jobs, both frontend builds, compose build + smoke, factory verify). Merged in PR #66.
+
+## Handoff Notes
+
+- Backfilled 2026-10-24 (TASK-0093): Review none recorded at the time; QA none recorded at the time; develop verified retroactively by QA-0085.

@@ -79,6 +79,12 @@
 | `RUN_FAILED` | 500 | Run failed |
 | `RUN_TIMEOUT` | 408 | Run exceeded the time limit ({seconds}s, STUDIO_RUN_TIMEOUT) |
 | `RUN_NOT_FOUND` | 404 | Run not found, already finished or not yours |
+| `THREAD_NOT_FOUND` | 404 | Thread not found or not yours |
+| `THREAD_EXISTS` | 409 | A thread with this id already exists |
+| `THREAD_BUSY` | 409 | The thread already has a run in progress |
+| `THREAD_WORKFLOW_MISMATCH` | 409 | The thread belongs to another workflow |
+| `LANGSMITH_NOT_CONFIGURED` | 400 | LangSmith is not configured: set LANGSMITH_API_KEY on the server |
+| `LANGSMITH_PUSH_FAILED` | 502 | Sending to LangSmith failed ({reason}) |
 | `RUN_NODE_NOT_REACHED` | 400 | The run finished without reaching node '{node}' |
 | `NODE_FAILED` | 500 | Node failed |
 | `HTTP_TOOL_URL_BLOCKED` | 400 | HTTP Tool node {node}: the URL must be a public http(s) address |
@@ -172,6 +178,8 @@
 | `CODE_LANGUAGE_UNSUPPORTED` | 400 | Code node {node}: {language} is not available on this server |
 | `CODE_WRITE_FORBIDDEN` | 403 | Your role may not add Code nodes or change their code (code.write) |
 | `RUN_NOT_WAITING` | 409 | This run is not waiting for a response |
+| `CHECKPOINT_NOT_FOUND` | 404 | Checkpoint not found in this run, or it cannot be forked |
+| `RUN_FORK_UNSUPPORTED` | 400 | Runs of imported LangGraph graphs cannot be forked |
 | `RUN_RESPONSE_INVALID` | 400 | The response must be text (max {max} characters) |
 | `TRIGGER_TOKEN_INVALID` | 401 | Missing, invalid or revoked workflow token |
 | `TOKEN_NOT_FOUND` | 404 | Token not found |

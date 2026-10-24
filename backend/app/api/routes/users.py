@@ -1,8 +1,8 @@
 """User administration and workflow sharing (TASK-0014)."""
 from fastapi import APIRouter, Depends, Query
 from ...core import permissions as P
-from ...schemas.rbac import MemberIn, PolicyIn, ShareIn, TeamIn, TeamShareIn, TransferIn, UserDelete, UserUpdate
-from ..deps import audit_service, current_user, ownership_service, policy_service, share_service, team_service, user_service, workflow_service
+from ...schemas.rbac import MemberIn, LangSmithIn, PolicyIn, ShareIn, TeamIn, TeamShareIn, TransferIn, UserDelete, UserUpdate
+from ..deps import audit_service, current_user, langsmith_service, ownership_service, policy_service, share_service, team_service, user_service, workflow_service
 
 router = APIRouter(prefix="/api", tags=["rbac"])
 
@@ -43,6 +43,12 @@ def get_policy(user=Depends(current_user), svc=Depends(policy_service)): return 
 
 @router.put("/admin/policy")
 def put_policy(body: PolicyIn, user=Depends(current_user), svc=Depends(policy_service)): return svc.update(user["id"], body.org_resources_roles)
+
+@router.get("/admin/langsmith")
+def get_langsmith(user=Depends(current_user), svc=Depends(langsmith_service)): return svc.get(user["id"])
+
+@router.put("/admin/langsmith")
+def put_langsmith(body: LangSmithIn, user=Depends(current_user), svc=Depends(langsmith_service)): return svc.update(user["id"], body.evals)
 
 @router.get("/teams")
 def list_teams(user=Depends(current_user), svc=Depends(team_service)): return svc.list(user["id"])

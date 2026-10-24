@@ -16,3 +16,5 @@ export function saveExportLanguage(v: ExportLanguage, storage: Pick<Storage, 'se
 
 export const exportUrl = (wid: string, language: ExportLanguage) => `/api/workflows/${encodeURIComponent(wid)}/code?language=${language}`
 export const fileExtension = (language: ExportLanguage) => (language === 'typescript' ? 'ts' : 'py')
+/** The runnable LangGraph project (zip with langgraph.json) for `langgraph dev` and LangSmith Studio. */
+export const projectUrl = (wid: string, language: ExportLanguage) => `/api/workflows/${encodeURIComponent(wid)}/export/${language}/project`

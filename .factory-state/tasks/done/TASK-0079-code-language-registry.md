@@ -40,3 +40,7 @@ Make the Tool node Code mode language-pluggable without changing what Python use
 ## Progress Log
 
 - 2026-10-23: merged into develop (PR #109, merge commit 9ff7259); marked done in PR #110 since #109 is already merged.
+
+## Handoff Notes
+
+- Backfilled 2026-10-24 (TASK-0093): Review REV-0072; QA QA-0072; develop verified retroactively by QA-0085.

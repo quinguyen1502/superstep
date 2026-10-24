@@ -76,10 +76,13 @@ def disable_langchain_tracer() -> None:
         pass
 
 
-def trace_url(trace_id: Optional[str]) -> Optional[str]:
-    """Link to the trace viewer when STUDIO_TRACE_URL (e.g. http://localhost:16686/trace/{trace_id}) is set."""
+def trace_url(trace_id: Optional[str], root: Optional[str] = None) -> Optional[str]:
+    """Link to the trace viewer when STUDIO_TRACE_URL (e.g. http://localhost:16686/trace/{trace_id}) is set, else to
+    the run in LangSmith when tracing goes there (`root`: the span id of the trace's root span)."""
     tpl = _env("STUDIO_TRACE_URL")
-    return tpl.replace("{trace_id}", trace_id) if tpl and trace_id else None
+    if tpl: return tpl.replace("{trace_id}", trace_id) if trace_id else None
+    from .langsmith import run_url
+    return run_url(root) if trace_id else None
 
 
 def _ns(seconds: float) -> int: return int(seconds * 1e9)

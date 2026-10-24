@@ -35,6 +35,32 @@ all**, to replay it on the same timeline, labelled with its version.
 A pause is not a human approval. A superstep that is only Start does not use
 up the step.
 
+## Time travel: fork from a checkpoint
+
+Open a finished run (or pick one in **View all runs**) and press **Time travel**
+above its timeline. The dialog lists the run's checkpoints: one per step, named
+after the nodes that ran next ("Before Approved?"), with the state they started
+from, and last the final state.
+
+1. Pick a checkpoint to inspect its state.
+2. Optionally edit the state (it must stay a JSON object). **Reset** puts the
+   recorded state back.
+3. Press **Fork from here**. A new run starts at those nodes with that state;
+   the nodes before it do not run again. Its timeline shows **Forked from**
+   the original run and checkpoint. The original run is not changed.
+
+A fork runs the workflow version the original run ran when that version is
+stored, else the saved workflow. Iteration counts (loop limits) carry over.
+Checkpoints whose state was too large to record, the final state, runs of
+imported LangGraph graphs and runs still waiting or running cannot be forked.
+Only the run's owner (or the workflow's owner and admins) can see its
+checkpoints.
+
+```text
+GET  /api/runs/{run_id}/checkpoints
+WS   /ws/run   {"fork": {"run_id": "...", "checkpoint": 1, "state": {...}}}   (state is optional)
+```
+
 ## Cancel
 
 **Cancel** (++ctrl+period++) sends `{"type": "cancel"}`. Closing the tab also

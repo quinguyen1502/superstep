@@ -49,6 +49,7 @@ nav:
       - Duyệt bởi người: run/human-approval.md
       - API trigger và webhook: run/api-triggers.md
       - API công khai và SDK: run/public-api.md
+      - API tương thích LangGraph: run/agent-server-api.md
       - Lịch chạy: run/schedules.md
       - Chạy từ chat: run/chat-triggers.md
       - Chat: run/chat.md

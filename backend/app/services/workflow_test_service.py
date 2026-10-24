@@ -22,6 +22,7 @@ from ..engine import checks as C
 from ..engine.limits import size
 from ..models import Run, WorkflowTest, WorkflowTestResult, WorkflowTestSuite
 from ..repositories import RunRepository, WorkflowRepository, WorkflowTestRepository, WorkflowVersionRepository
+from .langsmith import configured as langsmith_configured
 from .job_queue import JobQueue
 from .run_service import RESPONSE_MAX
 
@@ -40,9 +41,10 @@ def _id() -> str: return uuid.uuid4().hex[:12]
 
 class WorkflowTestService:
     def __init__(self, repo: WorkflowTestRepository, workflows: WorkflowRepository, runs: RunRepository, versions: WorkflowVersionRepository,
-                 jobs: JobQueue, run_service: Callable[[], object], access=None):
+                 jobs: JobQueue, run_service: Callable[[], object], access=None, langsmith: Optional[Callable[[], object]] = None):
         self.repo, self.workflows, self.runs, self.versions, self.jobs, self.access = repo, workflows, runs, versions, jobs, access
         self.run_service = run_service  # -> RunService: closes a test run that waits with no answer left, cancels running cases
+        self.langsmith = langsmith  # -> LangSmithService: a finished suite goes to LangSmith when that setting is on
 
     def _workflow(self, wid: str, uid: str, action: str = P.VIEW):
         if self.access is not None: return self.access.workflow(wid, uid, action)
@@ -71,7 +73,7 @@ class WorkflowTestService:
     def public_suite(s: WorkflowTestSuite, results: Optional[list[WorkflowTestResult]] = None, by: Optional[str] = None,
                      compare: Optional[dict] = None) -> dict:
         out = {"id": s.id, "workflow_id": s.workflow_id, "version": s.version, "status": s.status, "mock": s.mock, "total": s.total,
-               "passed": s.passed, "failed": s.failed, "started": s.started, "ended": s.ended, "by": by}
+               "passed": s.passed, "failed": s.failed, "started": s.started, "ended": s.ended, "by": by, "langsmith_url": s.langsmith_url}
         if results is not None:
             changes = (compare or {}).get("changes", {})
             out["compare"] = {k: compare[k] for k in ("suite_id", "version", "counts")} if compare else None
@@ -88,7 +90,8 @@ class WorkflowTestService:
         cases = self.repo.list_for_workflow(wid); last = self.repo.latest_results([t.id for t in cases])
         return {"items": [self.public(t, last.get(t.id)) for t in cases], "suites": self._suites(wid),
                 "can_edit": (self.access is None or self.access.may(wid, uid, P.EDIT)) and not json.loads(w.data or "{}").get("source"),
-                "limit": config.test_cases_max()}
+                "limit": config.test_cases_max(), "langsmith": self.langsmith is not None and self.langsmith().evals_enabled(),
+                "langsmith_configured": self.langsmith is not None and langsmith_configured()}
 
     def history(self, wid: str, uid: str) -> dict:
         """The workflow's last suite runs, newest first: version, who, when, passed / failed."""
@@ -191,7 +194,9 @@ class WorkflowTestService:
             if self._start(s, r): running += 1
         if running == 0 and all(r.status in FINAL for r in self.repo.results(sid)):
             rs = self.repo.results(sid)
-            self.repo.end_suite(sid, "done", sum(r.status == "passed" for r in rs), sum(r.status == "failed" for r in rs), time.time())
+            if self.repo.end_suite(sid, "done", sum(r.status == "passed" for r in rs), sum(r.status == "failed" for r in rs), time.time()) \
+                    and self.langsmith is not None and self.langsmith().evals_enabled():
+                self.jobs.enqueue({"kind": "langsmith_suite", "suite_id": sid})  # network: the worker sends it, not this request
 
     def _start(self, s: WorkflowTestSuite, r: WorkflowTestResult) -> bool:
         rid = uuid.uuid4().hex[:10]
@@ -202,6 +207,14 @@ class WorkflowTestService:
         self.jobs.enqueue({"run_id": rid, "workflow_id": s.workflow_id, "owner": s.owner, "input": inp, "callback_url": None, "token_id": None,
                            "source": "test", "test": {"mock": bool(s.mock)}, **({"version": s.version} if s.version else {})})  # that version's snapshot
         return True
+
+    def send_to_langsmith(self, wid: str, sid: str, uid: str) -> dict:
+        """Send a finished suite run to LangSmith now (again: a new experiment)."""
+        self._editable(wid, uid); s = self.repo.suite(sid)
+        if s is None or s.workflow_id != wid: raise AppError("TEST_SUITE_NOT_FOUND")
+        if s.status == "running" or self.langsmith is None: raise AppError("TEST_SUITE_RUNNING" if s.status == "running" else "LANGSMITH_NOT_CONFIGURED")
+        self.langsmith().push_suite(sid)
+        return self.suite(wid, sid, uid)
 
     # ---- a draft case from a run ----
     def from_run(self, wid: str, rid: str, uid: str) -> dict:

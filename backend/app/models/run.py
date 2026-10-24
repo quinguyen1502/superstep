@@ -21,6 +21,7 @@ class Run(Base):
     cost_usd: Mapped[Optional[float]] = mapped_column(Float)  # NULL when a model has no known price
     error_count: Mapped[Optional[int]] = mapped_column(Integer)
     trace_id: Mapped[Optional[str]] = mapped_column(Text)     # OTel trace id (hex) when an exporter is configured
+    trace_root: Mapped[Optional[str]] = mapped_column(Text)   # span id (hex) of the trace's root span: LangSmith's run id
     # human-in-the-loop (TASK-0006): owner of the run and the saved checkpoint while status == "waiting"
     owner: Mapped[Optional[str]] = mapped_column(Text, index=True)
     checkpoint: Mapped[Optional[str]] = mapped_column(Text)  # JSON {node, state, workflow}; cleared when the run ends

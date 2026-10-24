@@ -13,6 +13,10 @@ không làm gì. Span được gửi đi khi từng node xong; run đang chờ n
 | LangSmith | `LANGSMITH_API_KEY` và `LANGSMITH_TRACING=true`, thêm `LANGSMITH_PROJECT` và `LANGSMITH_ENDPOINT` nếu cần |
 | Link **Mở trace** trong UI | `STUDIO_TRACE_URL`, ví dụ `http://localhost:16686/trace/{trace_id}` |
 
+Khi run được trace sang LangSmith và chưa đặt `STUDIO_TRACE_URL`, **Mở trace**
+mở run đó trong LangSmith. Kết quả test cũng có thể gửi sang LangSmith: xem
+[Kiểm thử workflow](../run/tests.md).
+
 Khi exporter LangSmith của Studio bật, tracer LangSmith riêng của LangChain bị
 tắt, để mỗi lời gọi LLM chỉ được xuất một lần.
 

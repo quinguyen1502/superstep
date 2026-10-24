@@ -35,6 +35,7 @@ class WorkflowTestSuite(Base):
     failed: Mapped[int] = mapped_column(Integer, default=0)
     started: Mapped[float] = mapped_column(Float, nullable=False)
     ended: Mapped[Optional[float]] = mapped_column(Float)
+    langsmith_url: Mapped[Optional[str]] = mapped_column(Text)  # the LangSmith experiment of this suite run, once sent
 
 
 class WorkflowTestResult(Base):

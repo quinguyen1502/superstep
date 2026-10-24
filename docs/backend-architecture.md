@@ -38,6 +38,7 @@
 ## Responses and errors (DEC-0010)
 
 - Every REST response is the envelope `{success, data, error}`. Routes return plain data; `EnvelopeResponse` (the FastAPI default response class) wraps it.
+  One exception: the LangGraph Agent Server API subset under `/api/lg` (`api/routes/agent_server.py`, see `docs/agent-server-api.md`) returns the Agent Server bodies, so the official LangGraph clients work; its errors still use the error envelope.
 - Services raise `AppError("CODE", details=…, **params)`; codes and messages live only in `core/errors.py` `CATALOG`. `api/error_handlers.py` is the only place that builds error responses. Format and code catalog: `docs/api-errors.md`.
 - Engine messages (validator, node errors) are English free text carried in `details` / `errors`.
 

@@ -26,6 +26,9 @@ def suite_history(wid: str, user=Depends(current_user), svc=Depends(workflow_tes
 @router.get("/runs/{sid}")
 def get_suite(wid: str, sid: str, user=Depends(current_user), svc=Depends(workflow_test_service)): return svc.suite(wid, sid, user["id"])
 
+@router.post("/runs/{sid}/langsmith")
+def send_suite(wid: str, sid: str, user=Depends(current_user), svc=Depends(workflow_test_service)): return svc.send_to_langsmith(wid, sid, user["id"])
+
 @router.post("/runs/{sid}/cancel")
 def cancel_suite(wid: str, sid: str, user=Depends(current_user), svc=Depends(workflow_test_service)): return svc.cancel(wid, sid, user["id"])
 

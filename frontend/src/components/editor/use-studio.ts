@@ -123,6 +123,8 @@ export function useStudio() {
     stream({ workflow_id: wid, workflow: toJSON(), input: inp })
   }
   const respond = (runId: string, response: string) => stream({ resume_run_id: runId, response }, true)
+  /** Time travel: a new run from a checkpoint of `runId`, with its state or an edited one. */
+  const fork = (runId: string, checkpoint: number, state?: Record<string, unknown>) => stream({ fork: { run_id: runId, checkpoint, ...(state ? { state } : {}) } })
   const cancelRun = () => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'cancel' }))
   const removeIds = (nodeIds: string[], edgeIds: string[] = []) => {
     const r = removeElements(nodes, edges, nodeIds, edgeIds); if (!r.removed) return
@@ -301,7 +303,7 @@ export function useStudio() {
     id, nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, state, setState, name, setName, wid, setSel,
     input, setInput, log, setLog, errors, setErrors, tools, mode, source, creds, setCreds, providers, channels, history,
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,
-    hist, load, openRun, toJSON, save, mark, run, respond, cancelRun, removeIds,
+    hist, load, openRun, toJSON, save, mark, run, respond, fork, cancelRun, removeIds,
     clipNote, note, insert, editable, layoutDir, cheat, setCheat, insertAround, addNode, addNote, dlg, setDlg, ctx, setCtx,
     delWf, isDirty, saves, paletteCmds, trace, traceMeta, step, continueRun, nodesView, onNodeClick, onConnect, onDrop,
     selNode, selEdge, upd, setRuntime, d, runTo, fieldNames, canvasLock, setCanvasLock, copyIds, chatOpen: chatOpen && canChat, setChatOpen, canChat,
