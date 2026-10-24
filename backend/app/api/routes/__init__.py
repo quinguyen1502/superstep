@@ -1,4 +1,4 @@
-from . import approvals, auth, chat, chat_sessions, code, users, credentials, hooks, imports, knowledge, mcp, meta, notifications, runs, runs_ws, templates, triggers, workflow_tests, workflows
+from . import agent_server, approvals, auth, chat, chat_sessions, code, users, credentials, hooks, imports, knowledge, mcp, meta, notifications, runs, runs_ws, templates, triggers, workflow_tests, workflows
 
 ROUTERS = [auth.router, meta.router, workflows.router, credentials.router, imports.router, runs.router, runs_ws.router, triggers.router, hooks.router,
-           notifications.router, notifications.ws_router, approvals.router, knowledge.router, mcp.router, users.router, templates.router, code.router, workflow_tests.router, chat.router, chat_sessions.router]
+           notifications.router, notifications.ws_router, approvals.router, knowledge.router, mcp.router, users.router, templates.router, code.router, workflow_tests.router, chat.router, chat_sessions.router, agent_server.router]

@@ -7,7 +7,7 @@ from ..core import config, security
 from ..core.errors import AppError
 from ..services.notification_hub import NotificationHub, make_notification_hub
 from ..models.database import Database
-from ..repositories import ChatSessionRepository, CredentialRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
+from ..repositories import AgentThreadRepository, ChatSessionRepository, CredentialRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
 from ..services.audit_service import AuditService
 from ..services.code_service import CodeService
 from ..services.inbox_service import InboxService
@@ -38,6 +38,7 @@ from ..services.notification_service import NotificationService
 from ..services.demo_service import DemoService, start_visit
 from ..services.rate_limit import Counter, RateLimiter, make_counter, make_rate_limiter
 from ..services.trigger_service import TriggerService
+from ..services.agent_server_service import AgentServerService
 from ..services.schedule_service import ScheduleService
 from ..services.chat_trigger_service import ChatTriggerService
 from ..services.chat_run_service import ChatRunService
@@ -112,6 +113,11 @@ def chat_session_service() -> ChatSessionService:
 def trigger_service() -> TriggerService:
     db = get_db(); return TriggerService(WorkflowRepository(db), RunRepository(db), WorkflowTokenRepository(db), get_job_queue(), get_rate_limiter(),
                                          access=access_service())
+
+
+def agent_server_service() -> AgentServerService:
+    db = get_db(); return AgentServerService(WorkflowRepository(db), RunRepository(db), AgentThreadRepository(db), trigger_service(),
+                                             AuthService(UserRepository(db)).current, access=access_service(), runner=run_service)
 
 
 @lru_cache

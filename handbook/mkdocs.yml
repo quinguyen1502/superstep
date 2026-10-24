@@ -50,6 +50,7 @@ nav:
       - Human approval: run/human-approval.md
       - API triggers and webhooks: run/api-triggers.md
       - Public API and SDKs: run/public-api.md
+      - LangGraph-compatible API: run/agent-server-api.md
       - Schedules: run/schedules.md
       - Chat triggers: run/chat-triggers.md
       - Chat: run/chat.md

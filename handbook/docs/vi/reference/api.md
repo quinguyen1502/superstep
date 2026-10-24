@@ -29,7 +29,7 @@ không có bản dịch. Danh sách mã ở [Mã lỗi](errors.md).
 | API client | `POST /api/auth/login` → `data.token`; then `Authorization: Bearer <token>` |
 | Trình duyệt | Cookie `studio_session`, cộng `X-Requested-With: studio` cho request ghi |
 | WebSocket | Cookie, hoặc `?token=<token>` |
-| Trigger workflow | `Authorization: Bearer wft_…`, chỉ cho `/api/hooks/*` |
+| Trigger workflow | `Authorization: Bearer wft_…`, chỉ cho `/api/hooks/*` và `/api/lg/*` |
 
 ## Chạy workflow qua WebSocket
 
@@ -96,6 +96,23 @@ WS /ws/run
     DELETE /api/workflows/{wid}/tokens/{tid}    POST   /api/workflows/{wid}/tokens/{tid}/rotate-secret
     POST   /api/hooks/workflows/{wid}/runs      GET    /api/hooks/workflows/{wid}/runs/{run_id}
     GET    /api/workflows/{wid}/deliveries      POST   /api/workflows/{wid}/deliveries/{did}/redeliver
+    ```
+
+??? abstract "LangGraph Agent Server API (một phần)"
+    API tương thích LangGraph ([hướng dẫn](../run/agent-server-api.md)), `x-api-key: wft_…` hoặc JWT.
+
+    ```text
+    GET    /api/lg/info                         POST   /api/lg/assistants/search
+    GET    /api/lg/assistants/{id}             GET    /api/lg/assistants/{id}/graph
+    GET    /api/lg/assistants/{id}/schemas     POST   /api/lg/threads
+    POST   /api/lg/threads/search               GET    /api/lg/threads/{tid}
+    DELETE /api/lg/threads/{tid}               GET    /api/lg/threads/{tid}/state
+    POST   /api/lg/threads/{tid}/history       POST   /api/lg/threads/{tid}/runs
+    POST   /api/lg/threads/{tid}/runs/wait     POST   /api/lg/threads/{tid}/runs/stream
+    GET    /api/lg/threads/{tid}/runs          GET    /api/lg/threads/{tid}/runs/{rid}
+    GET    /api/lg/threads/{tid}/runs/{rid}/join  POST /api/lg/threads/{tid}/runs/{rid}/cancel
+    POST   /api/lg/runs                         POST   /api/lg/runs/wait
+    POST   /api/lg/runs/stream
     ```
 
 ??? abstract "Lịch chạy"

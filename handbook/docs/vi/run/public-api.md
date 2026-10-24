@@ -10,7 +10,7 @@ có trong [Tham chiếu API công khai](../reference/public-api.md).
 
 | Thuật ngữ | Nghĩa |
 | --- | --- |
-| Token của workflow | Secret `wft_...` chỉ khởi chạy được run của **một** workflow. Gửi dưới dạng `X-Workflow-Token: wft_...` hoặc `Authorization: Bearer wft_...`. Token này không gọi được endpoint nào khác. |
+| Token của workflow | Secret `wft_...` chỉ khởi chạy được run của **một** workflow. Gửi dưới dạng `X-Workflow-Token: wft_...` hoặc `Authorization: Bearer wft_...`. Ngoài các endpoint này, token chỉ dùng được với [API tương thích LangGraph](agent-server-api.md) của cùng workflow. |
 | Run | Một lần thực thi phiên bản đã lưu mới nhất của workflow. `input` là state ban đầu. |
 | Trạng thái | `queued` và `running` khi đang chạy; sau đó là `ok`, `error`, `cancelled`, `timeout`, `waiting` (dừng ở node Human) hoặc `expired`. |
 | Envelope | Mọi phản hồi đều có dạng `{"success", "data", "error"}`. Khi lỗi, `error.code` là mã ổn định; `error.message` là tiếng Anh, dùng cho log. |

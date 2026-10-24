@@ -79,6 +79,10 @@
 | `RUN_FAILED` | 500 | Run failed |
 | `RUN_TIMEOUT` | 408 | Run exceeded the time limit ({seconds}s, STUDIO_RUN_TIMEOUT) |
 | `RUN_NOT_FOUND` | 404 | Run not found, already finished or not yours |
+| `THREAD_NOT_FOUND` | 404 | Thread not found or not yours |
+| `THREAD_EXISTS` | 409 | A thread with this id already exists |
+| `THREAD_BUSY` | 409 | The thread already has a run in progress |
+| `THREAD_WORKFLOW_MISMATCH` | 409 | The thread belongs to another workflow |
 | `RUN_NODE_NOT_REACHED` | 400 | The run finished without reaching node '{node}' |
 | `NODE_FAILED` | 500 | Node failed |
 | `HTTP_TOOL_URL_BLOCKED` | 400 | HTTP Tool node {node}: the URL must be a public http(s) address |
