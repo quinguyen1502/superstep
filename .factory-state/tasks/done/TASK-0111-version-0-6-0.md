@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0111
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
-- Updated: 2026-10-24
+- Updated: 2026-10-25
 - Requirement IDs: REQ-0067, REQ-0050, REQ-0051, REQ-0052, REQ-0053, REQ-0054, REQ-0065, REQ-0066
 - Design IDs: none
 - Architecture IDs: none
@@ -27,6 +27,7 @@ Version 0.6.0, the same way as 0.5.0 (TASK-0105, #123): bump `backend/pyproject.
 ## Activity Log
 
 - 2026-10-24: bumped, verified (QA-0103); PR into develop. After merge: full e2e and verify on develop, release PR develop -> main, tag v0.6.0, GitHub Release.
+- 2026-10-25: PR #138 merged into develop (1dd9313); moved to done by TASK-0112.
 
 ## Handoff Notes
 
