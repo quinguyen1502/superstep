@@ -20,8 +20,10 @@ async def main():
         await ws.send(json.dumps({"workflow_id": wf["id"], "input": {"question": "hello"}}))
         types = []
         async for raw in ws:
-            ev = json.loads(raw); types.append(ev["type"])
-            if ev["type"] in ("run_finished", "error", "run_cancelled"): break
+            ev = json.loads(raw)
+            # run_summary comes after the run is written to history; stopping at run_finished raced the write
+            if ev["type"] == "run_summary": break
+            types.append(ev["type"])
     print("events:", " ".join(types))
     assert types[0] == "run_started" and types[-1] == "run_finished", types
     with httpx.Client(base_url=BASE, timeout=10) as c:
