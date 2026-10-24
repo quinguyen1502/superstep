@@ -57,7 +57,9 @@ class Effects:
         return run
 
 
-def call_tool(fn: Callable, state: dict, key: Optional[str]) -> Any:
-    """Python tools opt in to the idempotency key by declaring an `idempotency_key` parameter."""
-    if key and "idempotency_key" in inspect.signature(fn).parameters: return fn(state, idempotency_key=key)
-    return fn(state)
+def call_tool(fn: Callable, state: dict, key: Optional[str], locale: str = "en") -> Any:
+    """Python tools opt in to the idempotency key by declaring an `idempotency_key` parameter, and to the run's
+    language (engine/locale) by declaring `locale`."""
+    params = inspect.signature(fn).parameters
+    kw = {**({"idempotency_key": key} if key and "idempotency_key" in params else {}), **({"locale": locale} if "locale" in params else {})}
+    return fn(state, **kw)

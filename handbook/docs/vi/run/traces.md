@@ -35,6 +35,31 @@ phát lại trên cùng timeline, kèm nhãn phiên bản.
 Dừng kiểu này không phải là duyệt bởi người. Superstep chỉ có Start không tính
 là một bước.
 
+## Du hành thời gian: fork từ một checkpoint
+
+Mở một run đã xong (hoặc chọn trong **Xem tất cả run**) rồi bấm **Du hành thời
+gian** phía trên timeline. Hộp thoại liệt kê các checkpoint của run: mỗi bước
+một checkpoint, đặt tên theo các node chạy tiếp theo ("Trước Approved?"), kèm
+state mà chúng bắt đầu, và cuối cùng là state cuối.
+
+1. Chọn một checkpoint để xem state của nó.
+2. Có thể sửa state (phải vẫn là một object JSON). **Đặt lại** đưa state đã ghi
+   về như cũ.
+3. Bấm **Fork từ đây**. Một run mới bắt đầu tại các node đó với state đó; các
+   node trước đó không chạy lại. Timeline của nó hiện **Fork từ** run gốc và
+   checkpoint. Run gốc không bị thay đổi.
+
+Bản fork chạy phiên bản workflow mà run gốc đã chạy nếu phiên bản đó còn được
+lưu, nếu không thì chạy workflow đã lưu. Số lần lặp (giới hạn vòng lặp) được
+giữ nguyên. Không thể fork checkpoint có state quá lớn để ghi lại, state cuối,
+run của graph LangGraph được import, và run đang chờ hoặc đang chạy. Chỉ chủ
+run (hoặc chủ workflow và admin) mới xem được các checkpoint của nó.
+
+```text
+GET  /api/runs/{run_id}/checkpoints
+WS   /ws/run   {"fork": {"run_id": "...", "checkpoint": 1, "state": {...}}}   (state không bắt buộc)
+```
+
 ## Huỷ
 
 **Huỷ** (++ctrl+period++) gửi `{"type": "cancel"}`. Đóng tab cũng huỷ run. Huỷ

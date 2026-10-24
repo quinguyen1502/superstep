@@ -38,6 +38,7 @@
 ## Responses and errors (DEC-0010)
 
 - Every REST response is the envelope `{success, data, error}`. Routes return plain data; `EnvelopeResponse` (the FastAPI default response class) wraps it.
+  One exception: the LangGraph Agent Server API subset under `/api/lg` (`api/routes/agent_server.py`, see `docs/agent-server-api.md`) returns the Agent Server bodies, so the official LangGraph clients work; its errors still use the error envelope.
 - Services raise `AppError("CODE", details=…, **params)`; codes and messages live only in `core/errors.py` `CATALOG`. `api/error_handlers.py` is the only place that builds error responses. Format and code catalog: `docs/api-errors.md`.
 - Engine messages (validator, node errors) are English free text carried in `details` / `errors`.
 
@@ -120,7 +121,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
   - `check_callback_url`, the SSRF guard.
 - `services/run_worker.py`: `RunWorker` dequeues a job, skips it if it is no longer `queued`, sets it to `running`, then calls `RunService.plan` and `execute` (no socket: `send` is a no-op and cancel comes via the RunBus), then delivers the webhook.
   - Started by the app lifespan when `STUDIO_WORKER` is not `0`; `app/worker.py` runs it standalone.
-- Routes: `api/routes/triggers.py`.
+- Routes: `api/routes/triggers.py` (owner, JWT) and `api/routes/hooks.py` (public, workflow token; tag `public`). `api/openapi_public.py` builds the public-only spec from `hooks.py` (`/openapi.public.json`, `/docs/public`, `docs/api/openapi.public.json`).
 
 ## Workflow versions (TASK-0008, DEC-0015)
 

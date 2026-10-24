@@ -32,4 +32,6 @@ export function eventErrors(ev: { error?: ApiErrorBody; errors?: string[] }): st
 }
 
 export const fmtDate = (t: number) => new Date(t * 1000).toLocaleString(i18n.resolvedLanguage)
+/** The UI language sent with run and chat requests, so offline (mock) answers match it. */
+export const uiLocale = (): string => i18n.resolvedLanguage ?? 'en'
 export default i18n

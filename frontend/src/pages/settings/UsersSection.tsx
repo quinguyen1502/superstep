@@ -78,6 +78,26 @@ function PolicyCard() {
     </CardContent></Card>
 }
 
+type LangSmith = { configured: boolean; tracing: boolean; evals: boolean; project: string; endpoint: string | null }
+
+/** Send finished workflow test suites to LangSmith as experiments (needs LANGSMITH_API_KEY on the server). */
+function LangSmithCard() {
+  const { t } = useTranslation(); const [s, setS] = useState<LangSmith | null>(null); const [err, setErr] = useState('')
+  useEffect(() => { api<LangSmith>('/api/admin/langsmith').then(setS).catch(e => setErr(e.message)) }, [])
+  const toggle = async (on: boolean) => {
+    setErr(''); try { setS(await api<LangSmith>('/api/admin/langsmith', { method: 'PUT', json: { evals: on } })) } catch (e: any) { setErr(e.message) }
+  }
+  return <Card id="langsmith-settings"><CardHeader><CardTitle>{t('langsmith.title')}</CardTitle><CardDescription>{t('langsmith.intro')}</CardDescription></CardHeader>
+    <CardContent className="space-y-2">
+      <div className="flex items-center gap-3 text-sm">
+        <Switch id="langsmith-evals" checked={!!s?.evals} disabled={!s?.configured} onCheckedChange={toggle} />
+        <Label htmlFor="langsmith-evals" className="font-normal">{t('langsmith.evals')}</Label></div>
+      {s && !s.configured && <p className="text-xs text-muted-foreground" id="langsmith-not-configured">{t('langsmith.notConfigured')}</p>}
+      {s?.configured && <p className="text-xs text-muted-foreground">{t(s.tracing ? 'langsmith.tracingOn' : 'langsmith.tracingOff', { project: s.project })}</p>}
+      {err && <p role="alert" className="text-sm text-destructive">{err}</p>}
+    </CardContent></Card>
+}
+
 export function UsersSection() {
   const { t } = useTranslation(); const me = useMe()
   const [data, setData] = useState<Data | null>(null); const [err, setErr] = useState(''); const [busy, setBusy] = useState<string | null>(null)
@@ -123,6 +143,7 @@ export function UsersSection() {
           <p className="text-xs text-muted-foreground">{t('users.accessNote')}</p></div>
       </CardContent></Card>
     <PolicyCard />
+    <LangSmithCard />
     <CodeRuntimeCard />
     <ResetLinkDialog user={reset} onClose={() => setReset(null)} />
     <DeleteUserDialog user={del} onClose={() => setDel(null)} onDone={m => { setDel(null); setNotice(m); load() }} />

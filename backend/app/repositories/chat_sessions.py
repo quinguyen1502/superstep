@@ -46,3 +46,9 @@ class ChatSessionRepository:
         with self.db.session() as s:
             ids = select(ChatSession.id).where(ChatSession.workflow_id == wid)
             s.execute(delete(ChatTurn).where(ChatTurn.session_id.in_(ids))); s.execute(delete(ChatSession).where(ChatSession.workflow_id == wid)); s.commit()
+
+    def delete_for_owner(self, owner: str) -> None:
+        """Every chat of one studio user, with the turns (a demo visitor's, when it expires)."""
+        with self.db.session() as s:
+            ids = select(ChatSession.id).where(ChatSession.owner == owner)
+            s.execute(delete(ChatTurn).where(ChatTurn.session_id.in_(ids))); s.execute(delete(ChatSession).where(ChatSession.owner == owner)); s.commit()

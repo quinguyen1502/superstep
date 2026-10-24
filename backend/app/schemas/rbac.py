@@ -39,3 +39,7 @@ class UserDelete(BaseModel):
 
 class PolicyIn(BaseModel):
     org_resources_roles: list[str]
+
+
+class LangSmithIn(BaseModel):
+    evals: bool

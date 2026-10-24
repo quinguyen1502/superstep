@@ -269,8 +269,13 @@ def test_ui_run_paused_in_parallel_branch_does_not_rerun_sibling(c):
     w = wf([("a", "tool", tool("t21_a", "a")), ("h", "human", {"prompt": "ok?", "output_field": "b"})], [("s", "a"), ("s", "h"), ("a", "e"), ("h", "e")])
     wid = c.post("/api/workflows", json=w, headers=H(tok)).json()["data"]["id"]; CALLS.clear()
     evs = ws(c, tok, {"workflow_id": wid, "input": {}}); rid = evs[0]["run_id"]
-    assert any(e["type"] == "run_waiting" for e in evs) and CALLS["a"] == [1] and NodeResultRepository(get_db()).for_run(rid)
+    # The Human node pauses by raising, and LangGraph cancels sibling tasks that have not started yet when a task
+    # raises (pregel/_runner.py). So `a` may or may not run before the pause; both orders are valid (TASK-0109).
+    ran_before = CALLS.get("a", []) == [1]
+    assert any(e["type"] == "run_waiting" for e in evs) and CALLS.get("a", []) in ([], [1])
+    assert bool(NodeResultRepository(get_db()).for_run(rid)) == ran_before  # recorded in the ledger only if it ran
     done = ws(c, tok, {"resume_run_id": rid, "response": "yes"})
-    assert done[-1]["status"] == "ok" and CALLS["a"] == [1]  # the sibling's result came from the ledger
-    assert any(e.get("reused") for e in done if e["type"] == "node_finished" and e.get("node") == "a")
+    assert done[-1]["status"] == "ok" and CALLS["a"] == [1]  # the sibling ran exactly once across both segments
+    reused = any(e.get("reused") for e in done if e["type"] == "node_finished" and e.get("node") == "a")
+    assert reused == ran_before  # when it ran before the pause, the resume took its result from the ledger
     assert not NodeResultRepository(get_db()).for_run(rid)  # purged once the run finished

@@ -31,7 +31,7 @@ File không cần gì từ Superstep. Nó chạy input mẫu (input của test c
 tiên nếu workflow có test case), in ra những gì mỗi node trả về, rồi state cuối:
 
 ```text
-[read_the_request] {"details": "[mock:gpt-4o-mini] Trả lời: I'd like leave ..."}
+[read_the_request] {"details": "[mock:gpt-4o-mini] Answer: I'd like leave ..."}
 >> manager_approval: approved
 [manager_approval] {"decision": "approved"}
 (e-mail not sent) to bo@example.com: Your leave request: approved
@@ -179,6 +179,62 @@ API key và các thiết lập khác được đọc từ biến môi trường 
 ra, kèm một chú thích: LangGraph.js không nhận node không tới được. File Python
 cũng có stub tương tự cho Code node TypeScript (`NotImplementedError`).
 
+## Dự án cho langgraph dev và LangSmith Studio
+
+**Dự án .zip** (cạnh nút **Tải**) lưu bản xuất thành một dự án LangGraph nhỏ
+mà [LangGraph CLI](https://docs.langchain.com/langsmith/cli) chạy bằng
+`langgraph dev`, nhờ đó graph mở được trong
+[LangSmith Studio](https://docs.langchain.com/langsmith/studio). File zip có
+một thư mục:
+
+| File | Nội dung |
+| --- | --- |
+| `agent.py` / `agent.ts` | File xuất, thêm `graph = build_graph()` ở cuối: graph mà server nạp |
+| `langgraph.json` | Cấu hình CLI: `graphs` ánh xạ tên workflow tới `./agent.py:graph`, `env` là `.env` |
+| `requirements.txt`, `pyproject.toml` | Python: `langgraph` và các thư viện bên ngoài mà Code node import |
+| `package.json`, `tsconfig.json` | TypeScript: `@langchain/langgraph`, `@langchain/core`, `langchain` và `@langchain/langgraph-cli` với `npm run dev` |
+| `.env.example` | Các biến môi trường graph đọc, key của model và tracing LangSmith |
+| `README.md` | Cách chạy |
+
+Python:
+
+```bash
+unzip leave-request-python.zip && cd leave-request
+pip install -U "langgraph-cli[inmem]" -r requirements.txt
+cp .env.example .env
+langgraph dev
+```
+
+TypeScript (Node 20 trở lên):
+
+```bash
+unzip leave-request-typescript.zip && cd leave-request
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Server nghe ở `http://localhost:2024` và in ra đường dẫn Studio
+(`https://smith.langchain.com/studio/?baseUrl=http://localhost:2024`). Server
+cục bộ và API của nó chạy không cần tài khoản; riêng Studio cần đăng nhập
+LangSmith. Mọi client LangGraph đều gọi được server, ví dụ Python SDK:
+
+```python
+from langgraph_sdk import get_client
+
+client = get_client(url="http://localhost:2024")
+assistant = (await client.assistants.search())[0]
+thread = await client.threads.create()
+print(await client.runs.wait(thread["thread_id"], assistant["assistant_id"], input={"message": "Xin chào"}))
+```
+
+Dự án khác file đơn ở ba điểm nhỏ: graph được compile không kèm checkpointer
+(server tự thêm, nên `interrupt()` của node Human dừng thread và Studio tiếp tục
+nó), import TypeScript là tên package thường thay vì `npm:` của Deno, và ví dụ
+TypeScript chỉ chạy bằng `npm run example`, không chạy khi server import file.
+`scripts/langgraph_dev_smoke.py python|typescript` xuất workflow mẫu, chạy
+`langgraph dev` trên nó và gọi bằng SDK.
+
 ## Những gì không có trong file
 
 - Credential, API key, cấu hình SMTP, kho tri thức, máy chủ MCP, kênh duyệt,
@@ -195,6 +251,7 @@ lần khi subgraph trả về.
 ## API
 
 `GET /api/workflows/{wid}/python` trả về code, tên file, version và các dòng
-của từng node; `GET /api/workflows/{wid}/export/python` tải file. Cả hai nhận
+của từng node; `GET /api/workflows/{wid}/export/python` tải file và `GET /api/workflows/{wid}/export/{language}/project` tải zip dự án.
+Cả ba nhận
 `?version=n` và `?language=python|typescript` (`GET /api/workflows/{wid}/code`
 và `/export/typescript` cũng vậy, với tên trung lập). Xem [HTTP API](../reference/api.md).

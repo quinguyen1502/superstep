@@ -2,6 +2,8 @@
 
 Any workflow can be started over HTTP by another service. To start one from a
 Slack or Telegram message instead, see [Chat triggers](chat-triggers.md).
+For the Python and TypeScript SDKs and every error code, see
+[Public API and SDKs](public-api.md).
 
 ![Trigger via API](../images/api-trigger.png)
 

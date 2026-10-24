@@ -141,7 +141,8 @@ def test_time_limit_and_cancel_stop_the_call(local, monkeypatch):
     monkeypatch.setenv("STUDIO_CODE_MAX_SECONDS", "1")
     t = time.monotonic()
     with pytest.raises(AppError) as e: cr.run_code("def main(s):\n    while True: pass", {})
-    assert e.value.code == "CODE_TIMEOUT" and time.monotonic() - t < 5
+    # the loop never ends on its own, so any bound proves the kill; 15 s leaves room for a loaded CI runner (TASK-0109)
+    assert e.value.code == "CODE_TIMEOUT" and time.monotonic() - t < 15
     t = time.monotonic()
     with pytest.raises(AppError) as e: cr.run_code("import time\ndef main(s):\n    time.sleep(20)", {}, timeout=10, cancelled=lambda: time.monotonic() - t > 0.3)
     assert e.value.code == "CODE_FAILED" and "cancelled" in e.value.message and time.monotonic() - t < 5

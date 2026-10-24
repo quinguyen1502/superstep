@@ -11,19 +11,21 @@ def register_tool(name: str):
         return fn
     return deco
 
-ORDERS = {"A100": "Đã giao hàng (delivered) ngày 2026-10-10",
-          "B200": "Đang vận chuyển (in transit), dự kiến 2026-10-18",
-          "C300": "Đang xử lý (processing)"}
+ORDERS = {"en": {"A100": "Delivered on 2026-10-10", "B200": "In transit, expected 2026-10-18", "C300": "Processing",
+                  "unknown": "not in our system"},
+          "vi": {"A100": "Đã giao hàng (delivered) ngày 2026-10-10", "B200": "Đang vận chuyển (in transit), dự kiến 2026-10-18",
+                 "C300": "Đang xử lý (processing)", "unknown": "không tồn tại trong hệ thống"}}
+ORDER_TEXT = {"en": ("No order number found in the message.", "Order"), "vi": ("Không tìm thấy mã đơn hàng trong tin nhắn.", "Đơn")}
 
 @register_tool("lookup_order")
-def lookup_order(state: Dict[str, Any]) -> str:
-    """Example function: find an order id (e.g. A100) in state.message and return status."""
+def lookup_order(state: Dict[str, Any], locale: str = "en") -> str:
+    """Example function: find an order id (e.g. A100) in state.message and return status, in `locale` (en, vi)."""
+    lang = locale if locale in ORDERS else "en"
     m = re.search(r"\b([A-Z]\d{3})\b", str(state.get("message", "")).upper())
     if not m:
-        return "Không tìm thấy mã đơn hàng trong tin nhắn."
-    oid = m.group(1)
-    return f"Đơn {oid}: {ORDERS.get(oid, 'không tồn tại trong hệ thống')}"
-
+        return ORDER_TEXT[lang][0]
+    oid, orders = m.group(1), ORDERS[lang]
+    return f"{ORDER_TEXT[lang][1]} {oid}: {orders.get(oid, orders['unknown'])}"
 
 if os.environ.get("STUDIO_ENABLE_DEMO_TOOLS") == "1":
     @register_tool("sleep_demo")

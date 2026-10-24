@@ -33,7 +33,7 @@ test case's input when the workflow has one) and prints what each node
 returned, then the final state:
 
 ```text
-[read_the_request] {"details": "[mock:gpt-4o-mini] Trả lời: I'd like leave ..."}
+[read_the_request] {"details": "[mock:gpt-4o-mini] Answer: I'd like leave ..."}
 >> manager_approval: approved
 [manager_approval] {"decision": "approved"}
 (e-mail not sent) to bo@example.com: Your leave request: approved
@@ -180,6 +180,64 @@ nothing connects to Start is left out, with a comment: LangGraph.js refuses
 unreachable nodes. The Python file has the same kind of stub for TypeScript Code
 nodes (`NotImplementedError`).
 
+## A project for langgraph dev and LangSmith Studio
+
+**Project .zip** (next to **Download**) saves the export as a small LangGraph
+project that the [LangGraph CLI](https://docs.langchain.com/langsmith/cli) runs
+with `langgraph dev`, so the graph opens in
+[LangSmith Studio](https://docs.langchain.com/langsmith/studio). The zip has one
+folder:
+
+| File | What it is |
+| --- | --- |
+| `agent.py` / `agent.ts` | The exported file, plus `graph = build_graph()` at the end: the graph the server loads |
+| `langgraph.json` | The CLI configuration: `graphs` maps the workflow name to `./agent.py:graph`, `env` is `.env` |
+| `requirements.txt`, `pyproject.toml` | Python: `langgraph` and the third-party imports of Code nodes |
+| `package.json`, `tsconfig.json` | TypeScript: `@langchain/langgraph`, `@langchain/core`, `langchain`, and `@langchain/langgraph-cli` with `npm run dev` |
+| `.env.example` | The environment variables the graph reads, model keys and LangSmith tracing |
+| `README.md` | How to run it |
+
+Python:
+
+```bash
+unzip leave-request-python.zip && cd leave-request
+pip install -U "langgraph-cli[inmem]" -r requirements.txt
+cp .env.example .env
+langgraph dev
+```
+
+TypeScript (Node 20 or later):
+
+```bash
+unzip leave-request-typescript.zip && cd leave-request
+npm install
+cp .env.example .env
+npm run dev
+```
+
+The server listens on `http://localhost:2024` and prints the Studio link
+(`https://smith.langchain.com/studio/?baseUrl=http://localhost:2024`). The
+local server and its API work without an account; Studio itself needs a
+LangSmith sign-in. Any LangGraph client can call the server, for example the
+Python SDK:
+
+```python
+from langgraph_sdk import get_client
+
+client = get_client(url="http://localhost:2024")
+assistant = (await client.assistants.search())[0]
+thread = await client.threads.create()
+print(await client.runs.wait(thread["thread_id"], assistant["assistant_id"], input={"message": "Hi"}))
+```
+
+The project differs from the single file in three small ways: the graph is
+compiled without a checkpointer (the server adds its own, so a Human node's
+`interrupt()` pauses the thread and Studio resumes it), the TypeScript imports
+are plain package names instead of Deno `npm:` specifiers, and the TypeScript
+example runs only with `npm run example`, not when the server imports the file.
+`scripts/langgraph_dev_smoke.py python|typescript` exports the example
+workflow, starts `langgraph dev` on it and calls it with the SDK.
+
 ## What is not in the file
 
 - Credentials, API keys, SMTP settings, knowledge bases, MCP servers, approval
@@ -197,7 +255,8 @@ writes is combined again when the subgraph returns.
 
 `GET /api/workflows/{wid}/python` returns the code, the file name, the version
 and the line ranges of each node; `GET /api/workflows/{wid}/export/python`
-downloads the file. Both take `?version=n` and `?language=python|typescript`
+downloads the file and `GET /api/workflows/{wid}/export/{language}/project` the
+project zip. All take `?version=n` and `?language=python|typescript`
 (`GET /api/workflows/{wid}/code` and `/export/typescript` are the same with a
 neutral name). See the
 [HTTP API](../reference/api.md).

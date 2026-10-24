@@ -1,0 +1,919 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Superstep public API",
+    "description": "Start workflow runs from other services and read their results.\n\nAuthenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner\ncreates tokens in the editor under **⋯ → API**; each token starts runs of one workflow only.\n\nEvery response is an envelope: `{\"success\": true, \"data\": …, \"error\": null}` or\n`{\"success\": false, \"data\": null, \"error\": {\"code\", \"message\", \"details\"}}`. `code` is the stable contract.\n",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/hooks/workflows/{wid}/runs": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Start a run",
+        "description": "Queue a run of the workflow's latest saved version with `input` as the initial state.\n\nEach token may start `STUDIO_TRIGGER_RATE_LIMIT` runs per `STUDIO_TRIGGER_RATE_WINDOW` seconds; over the limit the\nanswer is `429 RATE_LIMITED` with `Retry-After`.",
+        "operationId": "startRun",
+        "security": [
+          {
+            "WorkflowToken": []
+          },
+          {
+            "WorkflowBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow id (shown in the editor URL and the API dialog).",
+              "examples": [
+                "example"
+              ],
+              "title": "Wid"
+            },
+            "description": "Workflow id (shown in the editor URL and the API dialog)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Queued (`async`), or a `sync` run still going. Poll `poll_url`; the same URL is in the `Location` header.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunAcceptedEnvelope"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "description": "The poll URL.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "`sync` mode: the run finished within the wait.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResultEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "TRIGGER_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "TRIGGER_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TRIGGER_TOKEN_INVALID",
+                        "message": "Missing, invalid or revoked workflow token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "RUN_INPUT_INVALID, CALLBACK_URL_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RUN_INPUT_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RUN_INPUT_INVALID",
+                        "message": "Run input must be a JSON object"
+                      }
+                    }
+                  },
+                  "CALLBACK_URL_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CALLBACK_URL_INVALID",
+                        "message": "callback_url must be a public http(s) URL"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "RUN_INPUT_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RUN_INPUT_TOO_LARGE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RUN_INPUT_TOO_LARGE",
+                        "message": "Run input is too large (max 256 KB)"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hooks/workflows/{wid}/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Get a run",
+        "description": "Status and result of a run started with this workflow's tokens. Polling is not rate limited.\n\nFinished statuses: `ok`, `error`, `cancelled`, `timeout`, `waiting` (paused at a Human node), `expired`.",
+        "operationId": "getRun",
+        "security": [
+          {
+            "WorkflowToken": []
+          },
+          {
+            "WorkflowBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow id (shown in the editor URL and the API dialog).",
+              "examples": [
+                "example"
+              ],
+              "title": "Wid"
+            },
+            "description": "Workflow id (shown in the editor URL and the API dialog)."
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Run id returned when the run was started.",
+              "examples": [
+                "3f9c2a1b7d"
+              ],
+              "title": "Run Id"
+            },
+            "description": "Run id returned when the run was started."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current status; `final_state` once finished.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResultEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "TRIGGER_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "TRIGGER_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TRIGGER_TOKEN_INVALID",
+                        "message": "Missing, invalid or revoked workflow token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RUN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RUN_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RUN_NOT_FOUND",
+                        "message": "Run not found, already finished or not yours"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code",
+            "description": "Stable UPPER_SNAKE error code; the contract (see docs/api-errors.md).",
+            "examples": [
+              "TRIGGER_TOKEN_INVALID"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "description": "English message for humans and logs.",
+            "examples": [
+              "Missing, invalid or revoked workflow token"
+            ]
+          },
+          "details": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details",
+            "description": "Optional extra data, e.g. a list of {field, message} for VALIDATION_ERROR."
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": false,
+            "examples": [
+              false
+            ]
+          },
+          "data": {
+            "type": "null",
+            "title": "Data"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorEnvelope"
+      },
+      "RunAccepted": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id",
+            "examples": [
+              "3f9c2a1b7d"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "ok",
+              "error",
+              "cancelled",
+              "timeout",
+              "waiting",
+              "expired"
+            ],
+            "title": "Status",
+            "examples": [
+              "queued"
+            ]
+          },
+          "poll_url": {
+            "type": "string",
+            "title": "Poll Url",
+            "examples": [
+              "https://superstep.example.com/api/hooks/workflows/example/runs/3f9c2a1b7d"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "status",
+          "poll_url"
+        ],
+        "title": "RunAccepted",
+        "description": "202 body: the run is queued; poll `poll_url` (also sent as the Location header)."
+      },
+      "RunAcceptedEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunAccepted"
+              },
+              {
+                "$ref": "#/components/schemas/RunPending"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "RunAcceptedEnvelope",
+        "description": "Success envelope of a 202: a queued run, or a sync run that is still going."
+      },
+      "RunMetrics": {
+        "properties": {
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "tokens_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens In"
+          },
+          "tokens_out": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tokens Out"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "error_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Count"
+          }
+        },
+        "type": "object",
+        "title": "RunMetrics"
+      },
+      "RunPending": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "ok",
+              "error",
+              "cancelled",
+              "timeout",
+              "waiting",
+              "expired"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Where the run came from: `api` for this API."
+          },
+          "final_state": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final State",
+            "description": "State at the end; set once the run has finished."
+          },
+          "error": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "The last error event of a failed run (an object with `code` and `message`)."
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunWaiting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          },
+          "started": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started",
+            "description": "Unix time (seconds)."
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended",
+            "description": "Unix time (seconds); set once the run has finished."
+          },
+          "poll_url": {
+            "type": "string",
+            "title": "Poll Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "workflow_id",
+          "status",
+          "source",
+          "poll_url"
+        ],
+        "title": "RunPending",
+        "description": "202 body of a `sync` run that is still going after STUDIO_SYNC_WAIT_MAX: the current result plus `poll_url`.",
+        "examples": [
+          {
+            "ended": 1761292800.4,
+            "final_state": {
+              "intent": "order_status"
+            },
+            "metrics": {
+              "cost_usd": 0.0,
+              "duration_ms": 412,
+              "error_count": 0,
+              "tokens_in": 0,
+              "tokens_out": 0
+            },
+            "run_id": "3f9c2a1b7d",
+            "source": "api",
+            "started": 1761292800.0,
+            "status": "ok",
+            "workflow_id": "example"
+          }
+        ]
+      },
+      "RunResult": {
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "ok",
+              "error",
+              "cancelled",
+              "timeout",
+              "waiting",
+              "expired"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Where the run came from: `api` for this API."
+          },
+          "final_state": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final State",
+            "description": "State at the end; set once the run has finished."
+          },
+          "error": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "The last error event of a failed run (an object with `code` and `message`)."
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunWaiting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trace_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Url"
+          },
+          "started": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started",
+            "description": "Unix time (seconds)."
+          },
+          "ended": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended",
+            "description": "Unix time (seconds); set once the run has finished."
+          }
+        },
+        "type": "object",
+        "required": [
+          "run_id",
+          "workflow_id",
+          "status",
+          "source"
+        ],
+        "title": "RunResult",
+        "examples": [
+          {
+            "ended": 1761292800.4,
+            "final_state": {
+              "intent": "order_status"
+            },
+            "metrics": {
+              "cost_usd": 0.0,
+              "duration_ms": 412,
+              "error_count": 0,
+              "tokens_in": 0,
+              "tokens_out": 0
+            },
+            "run_id": "3f9c2a1b7d",
+            "source": "api",
+            "started": 1761292800.0,
+            "status": "ok",
+            "workflow_id": "example"
+          }
+        ]
+      },
+      "RunResultEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/RunResult"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "RunResultEnvelope",
+        "description": "Success envelope carrying a run result."
+      },
+      "RunWaiting": {
+        "properties": {
+          "node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node"
+          },
+          "prompt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt"
+          }
+        },
+        "type": "object",
+        "title": "RunWaiting",
+        "description": "Set when status is `waiting`: the Human node the run is paused at."
+      },
+      "StartRunRequest": {
+        "properties": {
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input",
+            "description": "Initial state of the run."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "async",
+              "sync"
+            ],
+            "title": "Mode",
+            "description": "`async` returns 202 at once. `sync` waits up to STUDIO_SYNC_WAIT_MAX seconds for the result, then falls back to 202 with `poll_url`.",
+            "default": "async"
+          },
+          "callback_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Callback Url",
+            "description": "Public http(s) URL that receives a signed POST when the run ends."
+          }
+        },
+        "type": "object",
+        "title": "StartRunRequest",
+        "examples": [
+          {
+            "input": {
+              "message": "where is my order A100"
+            },
+            "mode": "async"
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "WorkflowToken": {
+        "type": "apiKey",
+        "description": "Workflow token (`wft_…`), created by the workflow owner under **⋯ → API** in the editor.",
+        "in": "header",
+        "name": "X-Workflow-Token"
+      },
+      "WorkflowBearer": {
+        "type": "http",
+        "description": "The same workflow token as `Authorization: Bearer wft_…`.",
+        "scheme": "bearer",
+        "bearerFormat": "wft_…"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "public",
+      "description": "Workflow-trigger API for external callers (workflow token)."
+    }
+  ]
+}

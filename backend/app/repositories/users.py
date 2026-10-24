@@ -19,6 +19,11 @@ class UserRepository:
         with self.db.session() as s:
             u = User(id=uid, email=email, password=password_hash, created=created); s.add(u); s.commit(); return u
 
+    def ids_created_before(self, prefix: str, before: float) -> list[str]:
+        """Ids starting with `prefix` of accounts created before `before` (demo visitors past their TTL)."""
+        with self.db.session() as s:
+            return list(s.scalars(select(User.id).where(User.id.startswith(prefix, autoescape=True), User.created < before)))
+
     def set_prefs(self, uid: str, **prefs) -> Optional[User]:
         """Preferences: notify_in_app / notify_email (TASK-0021, booleans), lang (TASK-0022 follow-up, en | vi)."""
         with self.db.session() as s:

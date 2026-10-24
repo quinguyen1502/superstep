@@ -49,6 +49,8 @@ nav:
       - Runs and traces: run/traces.md
       - Human approval: run/human-approval.md
       - API triggers and webhooks: run/api-triggers.md
+      - Public API and SDKs: run/public-api.md
+      - LangGraph-compatible API: run/agent-server-api.md
       - Schedules: run/schedules.md
       - Chat triggers: run/chat-triggers.md
       - Chat: run/chat.md
@@ -67,8 +69,10 @@ nav:
       - reference/index.md
       - Configuration: reference/configuration.md
       - HTTP API: reference/api.md
+      - Public API reference: reference/public-api.md
       - Error codes: reference/errors.md
       - Architecture: reference/architecture.md
       - Keyboard shortcuts: reference/shortcuts.md
       - Development: reference/development.md
       - FAQ: reference/faq.md
+      - Superstep vs LangSmith: reference/superstep-vs-langsmith.md

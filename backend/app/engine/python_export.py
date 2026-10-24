@@ -170,7 +170,7 @@ def mock_llm(prompt: str, model: str) -> str:
             return "refund"
         return "general"
     tail = prompt.strip().splitlines()[-1] if prompt.strip() else ""
-    return f"[mock:{model}] Trả lời: {tail[:200]}"
+    return f"[mock:{model}] Answer: {tail[:200]}"
 
 
 def call_llm(prompt: str, model: str) -> str:

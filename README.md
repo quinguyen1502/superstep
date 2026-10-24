@@ -19,7 +19,7 @@
 
 <p align="center"><b>Build LangGraph workflows in the browser and run them as services.</b></p>
 
-<p align="center"><a href="https://quinguyen1502.github.io/superstep/">Documentation</a> • <a href="https://quinguyen1502.github.io/superstep/#video">Quickstart video</a> • <a href="https://quinguyen1502.github.io/superstep/reference/api/">HTTP API</a> • <a href="https://quinguyen1502.github.io/superstep/reference/architecture/">Architecture</a></p>
+<p align="center"><a href="https://quinguyen1502.github.io/superstep/">Documentation</a> • <a href="https://quinguyen1502.github.io/superstep/#video">Quickstart video</a> • <a href="https://quinguyen1502.github.io/superstep/reference/api/">HTTP API</a> • <a href="https://quinguyen1502.github.io/superstep/run/public-api/">Public API and SDKs</a> • <a href="https://quinguyen1502.github.io/superstep/reference/architecture/">Architecture</a></p>
 
 <img src="handbook/docs/en/images/overview.png" alt="Superstep editor with a branching workflow, node settings, a run waiting for a human, and the chat panel" width="100%">
 
@@ -134,6 +134,7 @@ Fly.io, Railway, Zeabur, Northflank, Coolify and Dokploy (the full-feature path 
 | Traces, tests, human approval, API triggers, schedules, chat triggers | [Run](https://quinguyen1502.github.io/superstep/run/) |
 | Deployment, accounts, roles, providers, channels | [Operate](https://quinguyen1502.github.io/superstep/operate/) |
 | Configuration, HTTP API, error codes, architecture | [Reference](https://quinguyen1502.github.io/superstep/reference/) |
+| Start workflows from other services: Python and TypeScript SDKs, public API reference | [Public API and SDKs](https://quinguyen1502.github.io/superstep/run/public-api/), [reference](https://quinguyen1502.github.io/superstep/reference/public-api/) |
 
 The handbook source is in [`handbook/`](handbook/README.md). Every variable is
 in [`.env.example`](.env.example) and every error code in
@@ -152,6 +153,7 @@ cd frontend && npm run e2e
 | `backend/app/` | FastAPI app: routers → services → repositories and the LangGraph engine ([layers](docs/backend-architecture.md)) |
 | `frontend/` | React, TypeScript, Vite, React Flow, Tailwind v4, shadcn/ui ([UI rules](docs/ui-conventions.md)) |
 | `handbook/` | The documentation site (Zensical) |
+| `sdk/` | Python (`superstep`) and TypeScript (`@superstep/sdk`) clients for the public API ([SDKs](sdk/README.md)); spec in `docs/api/openapi.public.json` |
 | `scripts/promo/` | The quickstart video renderer |
 | `.factory-state/` | Requirements, decisions, tasks, reviews and QA |
 

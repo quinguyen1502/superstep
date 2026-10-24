@@ -1,0 +1,71 @@
+name: Publish SDKs
+
+# Publishes an SDK when a tag is pushed:
+#   sdk-py-v<version>   sdk/python      -> PyPI   "superstep"
+#   sdk-ts-v<version>   sdk/typescript  -> npm    "@superstep/sdk"
+# The tag version must equal the package version. Nothing is published from branches or pull requests.
+#
+# Setup (once, by a maintainer; see sdk/README.md):
+#   PyPI: add a trusted publisher for this repository, workflow "sdk-publish.yml", environment "pypi"
+#         (no secret needed). Without trusted publishing, add the secret PYPI_API_TOKEN and set `password:` below.
+#   npm:  add the secret NPM_TOKEN (an automation token of an account that owns the @superstep scope) to the
+#         environment "npm". Provenance uses the id-token permission.
+on:
+  push:
+    tags: ["sdk-py-v*", "sdk-ts-v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    if: startsWith(github.ref_name, 'sdk-py-v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write  # PyPI trusted publishing
+    defaults:
+      run:
+        working-directory: sdk/python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]" build
+      - name: Tag matches the package version
+        run: |
+          v=$(python -c "import superstep; print(superstep.__version__)")
+          [ "sdk-py-v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package $v"; exit 1; }
+      - run: python -m pytest -q
+      - run: python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/python/dist
+
+  typescript:
+    if: startsWith(github.ref_name, 'sdk-ts-v')
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write  # npm provenance
+    defaults:
+      run:
+        working-directory: sdk/typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Tag matches the package version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          [ "sdk-ts-v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package $v"; exit 1; }
+      - run: npm run gen:check && npm run typecheck && npm test
+      - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

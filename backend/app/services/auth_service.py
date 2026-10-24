@@ -3,7 +3,7 @@
 TASK-0045: failed sign-ins lock an e-mail for a while, password reset links (admin-made, or e-mailed when SMTP is set),
 and tokens issued before the last password change stop working."""
 import hashlib, html, math, re, secrets, threading, time, uuid
-from typing import Optional
+from typing import Callable, Optional
 from ..core import config, security
 from ..core import permissions as P
 from ..core.errors import AppError
@@ -31,9 +31,11 @@ def _digest(token: str) -> str: return hashlib.sha256(token.encode()).hexdigest(
 
 
 class AuthService:
-    def __init__(self, users: UserRepository, workflows=None, sec: Optional[AuthSecurityRepository] = None, background: bool = True, audit=None):
+    def __init__(self, users: UserRepository, workflows=None, sec: Optional[AuthSecurityRepository] = None, background: bool = True, audit=None,
+                 visit: Optional[Callable[[], str]] = None):
         # workflows: WorkflowService (seeds the example for new users); sec: lockout + reset links (None: neither)
-        self.users, self.workflows, self.sec, self.background, self.audit = users, workflows, sec, background, audit
+        # visit: demo mode, a fresh visitor account for each "Try the demo" sign-in (demo_service.start_visit)
+        self.users, self.workflows, self.sec, self.background, self.audit, self.visit = users, workflows, sec, background, audit, visit
 
     def _session(self, uid: str) -> dict:
         u = self.users.get_by_id(uid); token = security.make_token(uid, u.email)
@@ -71,6 +73,7 @@ class AuthService:
     def login(self, email: str, password: str) -> dict:
         u = self._check_password(normalise_email(email), password, "AUTH_INVALID_CREDENTIALS")  # generic: no user enumeration
         if not u.active: raise AppError("AUTH_ACCOUNT_DISABLED")
+        if u.id == demo_service.VISITOR_ID and self.visit is not None and config.demo_mode(): return self._session(self.visit())  # per-visitor history
         return self._session(u.id)
 
     def change_password(self, uid: str, current: str, new: str) -> dict:

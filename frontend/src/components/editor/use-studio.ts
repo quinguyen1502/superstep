@@ -11,7 +11,7 @@ import { clipStore, copySelection, pasteClip, type Clip } from '@/lib/clipboard'
 import { canEdit, type Access } from '@/lib/rbac'
 import { useDemoMode } from '@/lib/demo'
 import { api, wsUrl, sessionExpired, signedIn } from '@/lib/api'
-import i18n, { eventErrors } from '@/lib/i18n'
+import i18n, { eventErrors, uiLocale } from '@/lib/i18n'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/lib/theme'
 import type { Channels } from '@/lib/approvals'
@@ -104,7 +104,7 @@ export function useStudio() {
     if (resume) setLog(l => l.filter(e => e.type !== 'run_summary'))
     else { setLog([]); setReplay(null); setNodes(ns => ns.map(n => ({ ...n, data: { ...n.data, _status: '', _dur: null } }))) }
     const ws = new WebSocket(wsUrl('/ws/run')); wsRef.current = ws
-    ws.onopen = () => ws.send(JSON.stringify(msg))
+    ws.onopen = () => ws.send(JSON.stringify({ ...msg, locale: uiLocale() }))  // the mock model answers in the UI language
     ws.onmessage = m => {
       const ev: LogItem = JSON.parse(m.data); setLog(l => [...l, ev])
       if (ev.type === 'node_started') mark(canvasId(ev.node!), { _status: 'running' })
@@ -123,6 +123,8 @@ export function useStudio() {
     stream({ workflow_id: wid, workflow: toJSON(), input: inp })
   }
   const respond = (runId: string, response: string) => stream({ resume_run_id: runId, response }, true)
+  /** Time travel: a new run from a checkpoint of `runId`, with its state or an edited one. */
+  const fork = (runId: string, checkpoint: number, state?: Record<string, unknown>) => stream({ fork: { run_id: runId, checkpoint, ...(state ? { state } : {}) } })
   const cancelRun = () => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'cancel' }))
   const removeIds = (nodeIds: string[], edgeIds: string[] = []) => {
     const r = removeElements(nodes, edges, nodeIds, edgeIds); if (!r.removed) return
@@ -301,7 +303,7 @@ export function useStudio() {
     id, nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, state, setState, name, setName, wid, setSel,
     input, setInput, log, setLog, errors, setErrors, tools, mode, source, creds, setCreds, providers, channels, history,
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,
-    hist, load, openRun, toJSON, save, mark, run, respond, cancelRun, removeIds,
+    hist, load, openRun, toJSON, save, mark, run, respond, fork, cancelRun, removeIds,
     clipNote, note, insert, editable, layoutDir, cheat, setCheat, insertAround, addNode, addNote, dlg, setDlg, ctx, setCtx,
     delWf, isDirty, saves, paletteCmds, trace, traceMeta, step, continueRun, nodesView, onNodeClick, onConnect, onDrop,
     selNode, selEdge, upd, setRuntime, d, runTo, fieldNames, canvasLock, setCanvasLock, copyIds, chatOpen: chatOpen && canChat, setChatOpen, canChat,

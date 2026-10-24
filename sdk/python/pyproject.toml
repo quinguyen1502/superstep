@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "superstep"
+dynamic = ["version"]
+description = "Python client for the Superstep public API: start workflow runs and read their results."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{ name = "Qui Nguyen" }]
+dependencies = ["httpx>=0.25,<1"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Typing :: Typed",
+  "Framework :: AsyncIO",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+# `factory deps apply` installs `.[test]`, so verification has pytest without it in base deps.
+test = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.urls]
+Homepage = "https://github.com/quinguyen1502/superstep"
+Documentation = "https://quinguyen1502.github.io/superstep/run/public-api/"
+
+[tool.hatch.version]
+path = "src/superstep/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/superstep"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

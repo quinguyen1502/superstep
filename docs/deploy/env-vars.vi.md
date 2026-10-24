@@ -18,7 +18,8 @@ Các biến quan trọng với image all-in-one. Danh sách đầy đủ (kênh 
 | Biến | Mặc định trong image | Mục đích |
 |---|---|---|
 | `STUDIO_ADMIN_PASSWORD` | rỗng | Mật khẩu cho admin đầu tiên đó. Rỗng = tự sinh và ghi vào log một lần. Cần từ 8 ký tự, có chữ và số. Chỉ dùng khi tạo tài khoản. |
-| `STUDIO_DEMO_MODE` | rỗng | `true` chạy bản demo công khai ([demo.vi.md](demo.vi.md)): một tài khoản khách dùng chung chỉ cho xem, workflow mẫu được tạo lại mỗi lần khởi động, node Code/HTTP/Send email tắt, model dùng mock. Không dùng cho công việc thật. |
+| `STUDIO_DEMO_MODE` | rỗng | `true` chạy bản demo công khai ([demo.vi.md](demo.vi.md)): mỗi lần đăng nhập một tài khoản khách chỉ cho xem, workflow mẫu được tạo lại mỗi lần khởi động, node Code/HTTP/Send email tắt, model dùng mock. Không dùng cho công việc thật. |
+| `STUDIO_DEMO_VISITOR_TTL` | `86400` | Chỉ ở chế độ demo: số giây trước khi tài khoản khách bị xoá cùng các run và cuộc trò chuyện. |
 | `STUDIO_DEMO_RUN_RATE_LIMIT` | `20` | Chỉ ở chế độ demo: số run mỗi IP mỗi phút (0 = tắt). |
 | `STUDIO_PUBLIC_URL` | rỗng | Địa chỉ https của ứng dụng (link trong email, callback Slack/Telegram). |
 | `OPENAI_API_KEY`, `OPENAI_BASE_URL` | rỗng | Nhà cung cấp LLM mặc định. Rỗng = câu trả lời mẫu; người dùng cũng có thể thêm credential trong Cài đặt. |

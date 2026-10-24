@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0084
-- Status: review (draft PR, stacked: P1)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-23
 - Updated: 2026-10-23
@@ -41,7 +41,9 @@ Human "answered by", retention and errors.
 ## Activity Log
 
 - 2026-10-23: implemented on `feat/agent-chat-p1-backend`; draft PR #116 into develop.
+- 2026-10-24: PR #116 merged into develop (98516a8); moved to done by TASK-0110.
 
 ## Handoff Notes
 
-- Not merged; needs owner review.
+- Merged (see Activity Log).
+- Review REV-0077, QA QA-0077.

@@ -1,0 +1,53 @@
+{
+  "name": "@superstep/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript client for the Superstep public API: start workflow runs and read their results.",
+  "license": "MIT",
+  "author": "Qui Nguyen",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/quinguyen1502/superstep.git",
+    "directory": "sdk/typescript"
+  },
+  "homepage": "https://quinguyen1502.github.io/superstep/run/public-api/",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "gen": "openapi-typescript ../../docs/api/openapi.public.json -o src/schema.ts && node scripts/header.mjs",
+    "gen:check": "node scripts/gen-check.mjs",
+    "build": "rm -rf dist && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && node scripts/cjs-package.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run test/client.test.ts test/package.test.ts",
+    "test:integration": "vitest run test/integration.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "openapi-typescript": "^7.4.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

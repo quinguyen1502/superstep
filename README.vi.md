@@ -19,7 +19,7 @@
 
 <p align="center"><b>Dựng workflow LangGraph trên trình duyệt và chạy chúng như một dịch vụ.</b></p>
 
-<p align="center"><a href="https://quinguyen1502.github.io/superstep/vi/">Tài liệu</a> • <a href="https://quinguyen1502.github.io/superstep/vi/#video">Video bắt đầu nhanh</a> • <a href="https://quinguyen1502.github.io/superstep/vi/reference/api/">HTTP API</a> • <a href="https://quinguyen1502.github.io/superstep/vi/reference/architecture/">Kiến trúc</a></p>
+<p align="center"><a href="https://quinguyen1502.github.io/superstep/vi/">Tài liệu</a> • <a href="https://quinguyen1502.github.io/superstep/vi/#video">Video bắt đầu nhanh</a> • <a href="https://quinguyen1502.github.io/superstep/vi/reference/api/">HTTP API</a> • <a href="https://quinguyen1502.github.io/superstep/vi/run/public-api/">API công khai và SDK</a> • <a href="https://quinguyen1502.github.io/superstep/vi/reference/architecture/">Kiến trúc</a></p>
 
 <img src="handbook/docs/vi/images/overview.png" alt="Trình soạn thảo Superstep: workflow rẽ nhánh, cài đặt node, run đang chờ người duyệt và khung Chat" width="100%">
 
@@ -139,6 +139,7 @@ Fly.io, Railway, Zeabur, Northflank, Coolify và Dokploy (cách đầy đủ tí
 | Trace, test, duyệt giữa chừng, API trigger, lịch chạy, chạy từ chat | [Chạy](https://quinguyen1502.github.io/superstep/vi/run/) |
 | Triển khai, tài khoản, vai trò, nhà cung cấp, kênh duyệt | [Vận hành](https://quinguyen1502.github.io/superstep/vi/operate/) |
 | Cấu hình, HTTP API, mã lỗi, kiến trúc | [Tham chiếu](https://quinguyen1502.github.io/superstep/vi/reference/) |
+| Khởi chạy workflow từ dịch vụ khác: SDK Python và TypeScript, tham chiếu API công khai | [API công khai và SDK](https://quinguyen1502.github.io/superstep/vi/run/public-api/), [tham chiếu](https://quinguyen1502.github.io/superstep/vi/reference/public-api/) |
 
 Mã nguồn handbook nằm ở [`handbook/`](handbook/README.md). Mọi biến môi trường
 có trong [`.env.example`](.env.example) và mọi mã lỗi trong
@@ -157,6 +158,7 @@ cd frontend && npm run e2e
 | `backend/app/` | App FastAPI: router → service → repository và engine LangGraph ([các lớp](docs/backend-architecture.md)) |
 | `frontend/` | React, TypeScript, Vite, React Flow, Tailwind v4, shadcn/ui ([quy tắc UI](docs/ui-conventions.md)) |
 | `handbook/` | Site tài liệu (Zensical) |
+| `sdk/` | Client Python (`superstep`) và TypeScript (`@superstep/sdk`) cho API công khai ([SDK](sdk/README.md)); spec ở `docs/api/openapi.public.json` |
 | `scripts/promo/` | Công cụ render video bắt đầu nhanh |
 | `.factory-state/` | Requirement, decision, task, review và QA |
 

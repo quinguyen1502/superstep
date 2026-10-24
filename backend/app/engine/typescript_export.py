@@ -208,7 +208,7 @@ function mockLlm(prompt: string, model: string): string {
     return "general";
   }
   const tail = prompt.trim() ? prompt.trim().split(/\r?\n/).at(-1)! : "";
-  return `[mock:${model}] Trả lời: ${[...tail].slice(0, 200).join("")}`;
+  return `[mock:${model}] Answer: ${[...tail].slice(0, 200).join("")}`;
 }
 
 async function callLlm(prompt: string, model: string): Promise<string> {

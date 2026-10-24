@@ -78,10 +78,11 @@ class TriggerService:
         return {"ok": True}
 
     # ---- trigger (workflow token) ----
-    def authenticate(self, wid: str, token: Optional[str]) -> WorkflowToken:
-        """Valid, not revoked, for this workflow, and the workflow still belongs to the token's owner."""
+    def authenticate(self, wid: Optional[str], token: Optional[str]) -> WorkflowToken:
+        """Valid, not revoked, for this workflow (any when `wid` is None), and the workflow still belongs to the
+        token's owner."""
         t = self.tokens.by_hash(_hash(token)) if token and token.startswith(TOKEN_PREFIX) else None
-        if t is None or t.revoked or t.workflow_id != wid or not self._allowed(wid, t.owner):
+        if t is None or t.revoked or (wid is not None and t.workflow_id != wid) or not self._allowed(t.workflow_id, t.owner):
             raise AppError("TRIGGER_TOKEN_INVALID")
         self.tokens.set_fields(t.id, last_used=time.time())
         return t
@@ -94,13 +95,23 @@ class TriggerService:
         if not ok: raise AppError("RATE_LIMITED", headers={"Retry-After": str(retry)}, retry_after=retry)
 
     def start(self, tok: WorkflowToken, inp, callback_url: Optional[str]) -> str:
+        self.check_input(inp)
+        return self.queue(tok.workflow_id, tok.owner, inp, check_callback_url(callback_url), tok.id)
+
+    @staticmethod
+    def check_input(inp) -> None:
         if not isinstance(inp, dict): raise AppError("RUN_INPUT_INVALID")
         if size(inp) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
-        callback_url = check_callback_url(callback_url)
+
+    def queue(self, wid: str, owner: str, inp: dict, callback_url: Optional[str] = None, token_id: Optional[str] = None,
+              before_enqueue=None) -> str:
+        """Record a queued API run of the workflow's latest version and hand it to the worker. `before_enqueue(rid)`
+        runs between the two (e.g. to link the run to a thread before a worker can pick it up)."""
         rid = uuid.uuid4().hex[:10]
-        self.runs.add(Run(id=rid, workflow_id=tok.workflow_id, input=json.dumps(inp, ensure_ascii=False), events="[]", status="queued",
-                          started=time.time(), owner=tok.owner, source="api", callback_url=callback_url, callback_token_id=tok.id if callback_url else None))
-        self.jobs.enqueue({"run_id": rid, "workflow_id": tok.workflow_id, "owner": tok.owner, "input": inp, "callback_url": callback_url, "token_id": tok.id})
+        self.runs.add(Run(id=rid, workflow_id=wid, input=json.dumps(inp, ensure_ascii=False), events="[]", status="queued",
+                          started=time.time(), owner=owner, source="api", callback_url=callback_url, callback_token_id=token_id if callback_url else None))
+        if before_enqueue is not None: before_enqueue(rid)
+        self.jobs.enqueue({"run_id": rid, "workflow_id": wid, "owner": owner, "input": inp, "callback_url": callback_url, "token_id": token_id})
         return rid
 
     def result(self, tok: WorkflowToken, rid: str) -> dict:
@@ -128,4 +139,4 @@ def run_result(r: Run) -> dict:
             "waiting": {"node": wait.get("node"), "prompt": wait.get("prompt")} if wait else None,
             "metrics": None if r.duration_ms is None else {"duration_ms": r.duration_ms, "tokens_in": r.tokens_in, "tokens_out": r.tokens_out,
                                                            "cost_usd": r.cost_usd, "error_count": r.error_count},
-            "trace_url": trace_url(r.trace_id), "started": r.started, "ended": r.ended if done else None}
+            "trace_url": trace_url(r.trace_id, r.trace_root), "started": r.started, "ended": r.ended if done else None}

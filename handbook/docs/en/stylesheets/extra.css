@@ -118,3 +118,7 @@
 [data-md-color-scheme="slate"] .md-typeset .md-button:focus {
   color: #15131c;
 }
+
+/* Public API reference (Redoc): use the full content width and keep Redoc's own fonts readable on both schemes. */
+.api-reference { position: relative; z-index: 0; margin: 1rem -0.8rem 0; background: #fff; border-radius: 0.2rem; }
+.md-typeset .api-reference h1, .md-typeset .api-reference h2 { margin: 0; }

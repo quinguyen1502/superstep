@@ -2,6 +2,8 @@
 
 Workflow nào cũng có thể được một dịch vụ khác khởi chạy qua HTTP. Để chạy
 bằng tin nhắn Slack hoặc Telegram, xem [Chạy từ chat](chat-triggers.md).
+SDK cho Python, TypeScript và toàn bộ mã lỗi nằm ở
+[API công khai và SDK](public-api.md).
 
 ![Chạy qua API](../images/api-trigger.png)
 

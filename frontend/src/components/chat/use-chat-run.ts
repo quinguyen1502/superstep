@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, wsUrl } from '@/lib/api'
 import { useOnChange } from '@/lib/use-when'
-import { eventErrors } from '@/lib/i18n'
+import { eventErrors, uiLocale } from '@/lib/i18n'
 import { buildTrace, type RunEvent } from '@/lib/trace'
 import { answers, type ChatSessionFull } from '@/lib/chat'
 
@@ -36,7 +36,7 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
     if (!sid) return
     setError(''); setEvents([]); setPending(shown); setRunning(true)
     const sock = new WebSocket(wsUrl('/ws/run')); ws.current = sock; let runId = resumeOf
-    sock.onopen = () => sock.send(JSON.stringify({ chat_session_id: sid, ...msg }))
+    sock.onopen = () => sock.send(JSON.stringify({ chat_session_id: sid, ...msg, locale: uiLocale() }))
     sock.onmessage = m => { const ev: RunEvent = JSON.parse(m.data); if (ev.run_id) runId = ev.run_id
       if (ev.type === 'error' && !ev.node && !runId) setError(eventErrors(ev).join('; '))
       setEvents(l => [...l, ev]) }

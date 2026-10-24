@@ -120,3 +120,72 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - name: Docker-runtime Code tests (TASK-0053, TASK-0080)
         run: python -m pytest -q tests/test_code_node.py tests/test_code_typescript.py -rs
+
+  sdk-python:
+    name: Python SDK (pytest, Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.12"]
+    defaults:
+      run:
+        working-directory: sdk/python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e ".[dev]" build
+      - run: python -m pytest -q
+      - run: python -m build
+
+  sdk-typescript:
+    name: TypeScript SDK (vitest, Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    defaults:
+      run:
+        working-directory: sdk/typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - run: npm ci
+      - name: Generated types match docs/api/openapi.public.json
+        run: npm run gen:check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build && npm pack --dry-run
+
+  sdk-integration:
+    name: SDKs against a live backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/typescript/package-lock.json
+      - name: Install backend and SDKs
+        run: |
+          python -m pip install -e "backend[dev]" -e "sdk/python[dev]"
+          npm ci --prefix sdk/typescript
+      - name: Public spec is up to date
+        run: python scripts/gen_public_openapi.py --check
+      - run: scripts/sdk_integration.sh
+        env:
+          BACKEND_PYTHON: python
+          SDK_PYTHON: python

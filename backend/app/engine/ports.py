@@ -22,3 +22,4 @@ class Ports:
     code_audit: Optional[CodeAudit] = None
     test: bool = False         # a workflow test run (TASK-0067, DEC-0044): Send email nodes do a dry run
     mock_models: bool = False  # a test run with the offline mock model: LLM and Decision nodes never call a provider
+    locale: str = "en"         # language of offline answers: the mock model and the example tools (engine/locale)

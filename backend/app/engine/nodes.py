@@ -70,7 +70,7 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             report = (lambda u: usage(node["id"], u)) if usage else None
             tokens = token_stream(node["id"])
             try: return {d["output_field"]: call_llm(render(d.get("prompt", ""), state), d.get("model", "gpt-4o-mini"), cred, report, tokens,
-                                                     mock=offline)}
+                                                     mock=offline, locale=ports.locale)}
             finally:
                 if tokens: tokens.flush()
     elif t == "human":
@@ -87,7 +87,7 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             elif d.get("mode") == "code":
                 res = code_call(node["id"], d, state, ports)
             else:
-                res = call_tool(TOOLS[d["function"]], state, effects.key(node["id"]) if effects else None)
+                res = call_tool(TOOLS[d["function"]], state, effects.key(node["id"]) if effects else None, ports.locale)
             return {d["output_field"]: res}
     elif t == "retriever":
         def fn(state):

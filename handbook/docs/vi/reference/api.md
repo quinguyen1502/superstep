@@ -3,6 +3,10 @@
 UI dùng cùng API với mọi client khác. Trang OpenAPI tương tác nằm ở `/docs` của
 API (<http://localhost:8000/docs> khi phát triển).
 
+Dịch vụ chỉ cần khởi chạy workflow thì dùng API công khai: xem
+[API công khai và SDK](../run/public-api.md) và
+[Tham chiếu API công khai](public-api.md) (`/openapi.public.json`, `/docs/public`).
+
 ## Envelope
 
 Mọi response REST đều là một envelope:
@@ -25,7 +29,7 @@ không có bản dịch. Danh sách mã ở [Mã lỗi](errors.md).
 | API client | `POST /api/auth/login` → `data.token`; then `Authorization: Bearer <token>` |
 | Trình duyệt | Cookie `studio_session`, cộng `X-Requested-With: studio` cho request ghi |
 | WebSocket | Cookie, hoặc `?token=<token>` |
-| Trigger workflow | `Authorization: Bearer wft_…`, chỉ cho `/api/hooks/*` |
+| Trigger workflow | `Authorization: Bearer wft_…`, chỉ cho `/api/hooks/*` và `/api/lg/*` |
 
 ## Chạy workflow qua WebSocket
 
@@ -73,6 +77,7 @@ WS /ws/run
     GET    /api/workflows/{wid}/export/python   (file .py để tải về)
     GET    /api/workflows/{wid}/code            (?language=python|typescript; như /python)
     GET    /api/workflows/{wid}/export/{language}  (python: file .py, typescript: file .ts LangGraph.js)
+    GET    /api/workflows/{wid}/export/{language}/project  (zip dự án LangGraph chạy được bằng langgraph dev)
     ```
 
 ??? abstract "Runs"
@@ -80,6 +85,7 @@ WS /ws/run
     ```text
     GET    /api/workflows/{wid}/runs          (?tests=true: các run test)
     GET    /api/runs/pending
+    GET    /api/runs/{run_id}/checkpoints   (time travel; fork: WS /ws/run {"fork": {...}})
     POST   /api/runs/{run_id}/cancel
     WS     /ws/run
     ```
@@ -91,6 +97,23 @@ WS /ws/run
     DELETE /api/workflows/{wid}/tokens/{tid}    POST   /api/workflows/{wid}/tokens/{tid}/rotate-secret
     POST   /api/hooks/workflows/{wid}/runs      GET    /api/hooks/workflows/{wid}/runs/{run_id}
     GET    /api/workflows/{wid}/deliveries      POST   /api/workflows/{wid}/deliveries/{did}/redeliver
+    ```
+
+??? abstract "LangGraph Agent Server API (một phần)"
+    API tương thích LangGraph ([hướng dẫn](../run/agent-server-api.md)), `x-api-key: wft_…` hoặc JWT.
+
+    ```text
+    GET    /api/lg/info                         POST   /api/lg/assistants/search
+    GET    /api/lg/assistants/{id}             GET    /api/lg/assistants/{id}/graph
+    GET    /api/lg/assistants/{id}/schemas     POST   /api/lg/threads
+    POST   /api/lg/threads/search               GET    /api/lg/threads/{tid}
+    DELETE /api/lg/threads/{tid}               GET    /api/lg/threads/{tid}/state
+    POST   /api/lg/threads/{tid}/history       POST   /api/lg/threads/{tid}/runs
+    POST   /api/lg/threads/{tid}/runs/wait     POST   /api/lg/threads/{tid}/runs/stream
+    GET    /api/lg/threads/{tid}/runs          GET    /api/lg/threads/{tid}/runs/{rid}
+    GET    /api/lg/threads/{tid}/runs/{rid}/join  POST /api/lg/threads/{tid}/runs/{rid}/cancel
+    POST   /api/lg/runs                         POST   /api/lg/runs/wait
+    POST   /api/lg/runs/stream
     ```
 
 ??? abstract "Lịch chạy"
@@ -118,6 +141,7 @@ WS /ws/run
     GET    /api/workflows/{wid}/tests/runs     (lịch sử các lần chạy test)
     GET    /api/workflows/{wid}/tests/runs/{sid}   (kèm so sánh với phiên bản trước)
     POST   /api/workflows/{wid}/tests/runs/{sid}/cancel
+    POST   /api/workflows/{wid}/tests/runs/{sid}/langsmith
     POST   /api/workflows/{wid}/tests/from-run/{run_id}   (bản nháp test case từ một run, chưa lưu)
     ```
 
@@ -190,6 +214,7 @@ WS /ws/run
     GET    /api/admin/users                     PATCH  /api/admin/users/{target}
     DELETE /api/admin/users/{target}            POST   /api/admin/users/{target}/password-reset
     GET    /api/admin/policy                    PUT    /api/admin/policy
+    GET    /api/admin/langsmith                 PUT    /api/admin/langsmith
     GET    /api/admin/audit
     GET    /api/teams                           POST   /api/teams
     PATCH  /api/teams/{tid}                     DELETE /api/teams/{tid}

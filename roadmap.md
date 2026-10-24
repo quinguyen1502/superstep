@@ -228,7 +228,7 @@ attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1: t
 
 - TASK-0084 Web chat backend: chat sessions and turns (migration 0035), the `web` chat trigger with its settings, one
   `source="chat"` run per message over the run socket with the history window, reply-once answers, `node_token.field`,
-  Human `answered_by`, retention cleanup, `CHAT_*` errors. **draft PR #116** (REV-0077, QA-0077).
+  Human `answered_by`, retention cleanup, `CHAT_*` errors. merged in #116 (REV-0077, QA-0077).
 - TASK-0085 Studio Chat tab: shadcn Message Scroller / Message / Bubble / Trace / Code Block, a sanitised Markdown answer,
   chats list and New chat, Builder / Visitor view by the step setting, Human nodes answered in the chat or waiting for
-  a reviewer, the Chat settings dialog, the Human "Answered by" option, handbook pages. **draft PR #117** (REV-0078, QA-0078).
+  a reviewer, the Chat settings dialog, the Human "Answered by" option, handbook pages. merged in #117 (REV-0078, QA-0078).

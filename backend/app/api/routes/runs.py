@@ -11,6 +11,12 @@ def pending_runs(user=Depends(current_user)):
     return run_service().pending(user["id"])
 
 
+@router.get("/{run_id}/checkpoints")
+def run_checkpoints(run_id: str, user=Depends(current_user)):
+    """Time travel: the checkpoints of a run (nodes that ran next and the state before them), then its final state."""
+    return run_service().checkpoints(run_id, user["id"])
+
+
 @router.post("/{run_id}/cancel")
 def cancel_run(run_id: str, user=Depends(current_user)):
     """Stop a running run (on any API worker when Redis is configured) or close a waiting one."""

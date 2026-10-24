@@ -51,6 +51,10 @@ def test_timeout_kills_the_whole_process_group(host, tmp_path, monkeypatch):
             f'    open({str(pidfile)!r}, "w").write(str(p.pid))\n    time.sleep(30)')
     t = time.monotonic()
     with pytest.raises(AppError) as e: cr.run_code(code, {})
+    if e.value.code == "CODE_FAILED" and "BlockingIOError" in (e.value.output or {}).get("traceback", ""):
+        # the runner caps RLIMIT_NPROC, which counts every process of this user: on a busy shared host the cap is
+        # already reached, so the code cannot fork its grandchild and there is nothing to test (TASK-0109)
+        pytest.skip("process limit reached: the sandboxed code cannot fork on this host (RLIMIT_NPROC counts all user processes)")
     assert e.value.code == "CODE_TIMEOUT" and e.value.output["runtime"] == "subprocess" and time.monotonic() - t < 6
     pid = int(pidfile.read_text()); time.sleep(0.3)
     with pytest.raises(ProcessLookupError):

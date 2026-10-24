@@ -38,3 +38,7 @@ Run `export function main(state)` written in TypeScript with the same contract, 
 
 - 2026-10-23: CI fix: moved the inline comment off the USER line in docker/studio-code-ts/Dockerfile (Docker parsed it as part of the user); owner approved the merge; merged into develop (PR #110).
 - 2026-10-23: CI fix: allowlist entries pinned to `name@major` (`npm:zod@3,npm:date-fns@4`), `deps.ts` caches exactly those, and the import check refuses unversioned or other-major imports, naming the allowed spec (an unversioned `npm:zod` resolved to zod 4, which the image does not cache).
+
+## Handoff Notes
+
+- Backfilled 2026-10-24 (TASK-0093): Review REV-0073; QA QA-0073; develop verified retroactively by QA-0085.

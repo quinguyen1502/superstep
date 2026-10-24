@@ -77,8 +77,9 @@ def home_dir() -> str:
 
 def demo_mode() -> bool:
     """STUDIO_DEMO_MODE=true: the public demo (services/demo_service.py). Code nodes, HTTP and Send email nodes are off,
-    models use the offline mock, and visitors share one read-only account. Never turn it on for real work."""
+    models use the offline mock, and each visitor gets a temporary read-only account of their own. Never turn it on for real work."""
     return (os.environ.get("STUDIO_DEMO_MODE") or "").strip().lower() in ("1", "true", "yes", "on")
+def demo_visitor_ttl() -> float: return max(60.0, float(_int("STUDIO_DEMO_VISITOR_TTL", 24 * 3600)))  # demo: a visitor's runs and chats are removed after (s)
 def demo_run_rate_limit() -> int: return max(0, _int("STUDIO_DEMO_RUN_RATE_LIMIT", 20))  # runs per client IP per minute in demo mode (0 = off)
 def demo_user() -> bool: return not IS_PROD  # the seeded admin@example.com / admin123 account exists only outside production
 def smtp() -> dict | None:
