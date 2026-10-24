@@ -85,6 +85,7 @@ WS /ws/run
     ```text
     GET    /api/workflows/{wid}/runs          (?tests=true: test runs)
     GET    /api/runs/pending
+    GET    /api/runs/{run_id}/checkpoints   (time travel; fork: WS /ws/run {"fork": {...}})
     POST   /api/runs/{run_id}/cancel
     WS     /ws/run
     ```

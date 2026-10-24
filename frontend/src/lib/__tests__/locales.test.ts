@@ -18,6 +18,7 @@ const SAME_OK = new Set([
   'langsmith.title',
   'tests.langsmith',
   'api.button',
+  'timeTravel.state',
   'approvals.col.run',
   'approvals.field.access_token',
   'approvals.field.app_secret',

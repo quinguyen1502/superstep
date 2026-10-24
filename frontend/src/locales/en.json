@@ -420,6 +420,8 @@
     "IMPORT_NOT_READY": "Import job is not ready or the graph is invalid",
     "IMPORT_DISABLED": "Repo import is disabled (set STUDIO_ENABLE_IMPORT=1 to enable this experimental feature)",
     "RUN_NOT_WAITING": "This run is not waiting for a response",
+    "CHECKPOINT_NOT_FOUND": "Checkpoint not found in this run, or it cannot be forked",
+    "RUN_FORK_UNSUPPORTED": "Runs of imported LangGraph graphs cannot be forked",
     "RUN_RESPONSE_INVALID": "The response must be text (max {{max}} characters)",
     "TRIGGER_TOKEN_INVALID": "Missing, invalid or revoked workflow token",
     "TOKEN_NOT_FOUND": "Token not found",
@@ -1889,6 +1891,21 @@
     },
     "visitorBanner": "You're previewing what chat visitors see",
     "visitorExit": "Back to builder view"
+  },
+  "timeTravel": {
+    "open": "Time travel",
+    "title": "Time travel",
+    "intro": "Each checkpoint is the state before a step of this run. Pick one, inspect or edit its state, and fork: a new run starts there.",
+    "before": "Before {{nodes}}",
+    "final": "Final state",
+    "state": "State",
+    "edited": "Edited",
+    "reset": "Reset",
+    "fork": "Fork from here",
+    "none": "This run has no checkpoints.",
+    "tooLarge": "Too large",
+    "badJson": "The state must be a JSON object",
+    "forkedFrom": "Forked from {{run}} (checkpoint {{n}})"
   },
   "langsmith": {
     "title": "LangSmith",

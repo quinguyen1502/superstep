@@ -18,6 +18,7 @@ from ..engine.runtime import resume_nodes, run_stream
 from ..models import Run
 from ..repositories import RunRepository, StaleLease, WorkflowRepository
 from .run_bus import InMemoryRunBus, RunBus
+from . import time_travel
 from .telemetry import Telemetry, summarize, trace_url
 from ..core.logging import get_logger
 from .workflow_diff import same_content
@@ -46,6 +47,7 @@ class RunPlan:
     invalid: Optional[list] = None  # subgraph reference errors found while planning (TASK-0011), reported as WORKFLOW_INVALID
     steps: Optional[int] = None  # stop after this many working supersteps (TASK-0036); None runs to the end
     until: Optional[str] = None  # pause after this node finishes (TASK-0036); None runs to the end
+    forked: Optional[dict] = None  # {run_id, checkpoint, nodes, edited}: a new run forked from a checkpoint of another one
 
     @property
     def imported(self) -> bool:
@@ -173,6 +175,7 @@ class RunService:
         if not isinstance(req, dict): raise AppError("RUN_REQUEST_INVALID")
         steps = _parse_steps(req); until = _parse_until(req)
         if req.get("chat_session_id"): return self._plan_chat(uid, req, steps, until)
+        if req.get("fork") is not None: return self._plan_fork(uid, req["fork"], steps, until)
         if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until)
         wid = req.get("workflow_id"); row = None
         if wid: row = self._workflow(wid, uid, P.RUN)
@@ -275,6 +278,45 @@ class RunService:
         if not wid or self.versions is None: return None
         v = self.versions.latest(wid)
         return v.version if v and same_content(json.loads(v.data or "{}"), wf) else None
+
+    # ---- time travel: checkpoints of a run, and a fork from one ----
+    def _readable_run(self, rid, uid: str) -> Run:
+        """A run of a saved workflow its owner (or the workflow's owner / an admin) may inspect, as in the run history."""
+        r = self.runs.get(rid) if isinstance(rid, str) else None
+        if r is None or not r.workflow_id or r.workflow_id == "adhoc": raise AppError("RUN_NOT_FOUND")
+        if r.owner != uid:
+            row = self.workflows.get(r.workflow_id)
+            if row is None or self.access is None or self.access.access_of(row, uid) != "owner": raise AppError("RUN_NOT_FOUND")
+        return r
+
+    def checkpoints(self, rid: str, uid: str) -> dict:
+        r = self._readable_run(rid, uid)
+        done = r.status not in ("running", "queued")
+        return {"run_id": r.id, "workflow_id": r.workflow_id, "version": r.workflow_version, "status": r.status,
+                "checkpoints": time_travel.checkpoints(json.loads(r.events or "[]"), json.loads(r.final_state or "null") if done else None)}
+
+    def _plan_fork(self, uid: str, fork, steps: Optional[int], until: Optional[str]) -> RunPlan:
+        """A new run of the same workflow that starts at a checkpoint of `fork.run_id`, with its state or an edited one.
+        It runs the version the original run ran when that is stored, else the saved workflow."""
+        if not isinstance(fork, dict): raise AppError("RUN_REQUEST_INVALID")
+        r = self._readable_run(fork.get("run_id"), uid)
+        cps = time_travel.checkpoints(json.loads(r.events or "[]")); i = fork.get("checkpoint")
+        if not isinstance(i, int) or isinstance(i, bool) or not 0 <= i < len(cps) or not cps[i]["forkable"]: raise AppError("CHECKPOINT_NOT_FOUND")
+        cp = cps[i]; state = fork.get("state", cp["state"])
+        if not isinstance(state, dict) or state.get("_truncated"): raise AppError("RUN_INPUT_INVALID")
+        if size(state) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
+        req = {"workflow_id": r.workflow_id, "input": {}}
+        try: plan = self.plan(uid, {**req, "version": r.workflow_version} if r.workflow_version else req)
+        except AppError as e:
+            if e.code != "VERSION_NOT_FOUND": raise
+            plan = self.plan(uid, req)  # the version is gone (or not readable): the saved workflow
+        if plan.imported: raise AppError("RUN_FORK_UNSUPPORTED")
+        ids = {n.get("id") for n in plan.workflow.get("nodes") or []}
+        if not set(cp["nodes"]) <= ids: raise AppError("CHECKPOINT_NOT_FOUND")
+        plan.input, plan.steps, plan.until = state, steps, until
+        plan.resume = {"node": cp["nodes"][0], "nodes": cp["nodes"], "state": state, "counts": cp["counts"]}
+        plan.forked = {"run_id": r.id, "checkpoint": i, "nodes": cp["nodes"], "edited": state != cp["state"]}
+        return plan
 
     # ---- human-in-the-loop (TASK-0006) ----
     def waiting_run(self, rid: str, uid: str) -> Run:
@@ -535,7 +577,7 @@ class RunService:
             elif prev: first = {"type": "run_resumed", "run_id": rid, "ts": t0, "node": plan.resume["node"], "nodes": resume_nodes(plan.resume),
                                 **({"response": plan.resume["value"]} if "value" in plan.resume else {}),
                                 **({"by": plan.resumed_by} if plan.resumed_by else {})}
-            else: first = {"type": "run_started", "run_id": rid, "ts": t0}
+            else: first = {"type": "run_started", "run_id": rid, "ts": t0, **({"forked_from": plan.forked} if plan.forked else {})}
             await emit(first)
             if plan.checkpointing: await self._save_progress(rid, events, plan.resume or {}, plan, span)  # this segment's trace, before any node
             threading.Thread(target=worker, daemon=True).start()

@@ -420,6 +420,8 @@
     "IMPORT_NOT_READY": "Job chưa sẵn sàng hoặc graph không hợp lệ",
     "IMPORT_DISABLED": "Import repo đang tắt (đặt STUDIO_ENABLE_IMPORT=1 để bật tính năng thử nghiệm)",
     "RUN_NOT_WAITING": "Run này không ở trạng thái chờ phản hồi",
+    "CHECKPOINT_NOT_FOUND": "Không tìm thấy checkpoint trong run này, hoặc không thể fork từ nó",
+    "RUN_FORK_UNSUPPORTED": "Không thể fork run của graph LangGraph được import",
     "RUN_RESPONSE_INVALID": "Phản hồi phải là văn bản (tối đa {{max}} ký tự)",
     "TRIGGER_TOKEN_INVALID": "Token workflow bị thiếu, không hợp lệ hoặc đã thu hồi",
     "TOKEN_NOT_FOUND": "Không tìm thấy token",
@@ -1889,6 +1891,21 @@
     },
     "visitorBanner": "Bạn đang xem trước như khách chat",
     "visitorExit": "Về góc nhìn người dựng"
+  },
+  "timeTravel": {
+    "open": "Du hành thời gian",
+    "title": "Du hành thời gian",
+    "intro": "Mỗi checkpoint là state trước một bước của run này. Chọn một checkpoint, xem hoặc sửa state, rồi fork: một run mới bắt đầu từ đó.",
+    "before": "Trước {{nodes}}",
+    "final": "State cuối",
+    "state": "State",
+    "edited": "Đã sửa",
+    "reset": "Đặt lại",
+    "fork": "Fork từ đây",
+    "none": "Run này không có checkpoint.",
+    "tooLarge": "Quá lớn",
+    "badJson": "State phải là một object JSON",
+    "forkedFrom": "Fork từ {{run}} (checkpoint {{n}})"
   },
   "langsmith": {
     "title": "LangSmith",
