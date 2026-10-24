@@ -38,3 +38,7 @@ Let people with `code.write` pick Python or TypeScript in Code mode and see the 
 ## Progress Log
 
 - 2026-10-23: owner approved the merge; merged into develop (PR #111).
+
+## Handoff Notes
+
+- Backfilled 2026-10-24 (TASK-0093): Review REV-0074; QA QA-0074; develop verified retroactively by QA-0085.

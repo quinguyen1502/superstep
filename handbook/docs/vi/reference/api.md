@@ -77,6 +77,7 @@ WS /ws/run
     GET    /api/workflows/{wid}/export/python   (file .py để tải về)
     GET    /api/workflows/{wid}/code            (?language=python|typescript; như /python)
     GET    /api/workflows/{wid}/export/{language}  (python: file .py, typescript: file .ts LangGraph.js)
+    GET    /api/workflows/{wid}/export/{language}/project  (zip dự án LangGraph chạy được bằng langgraph dev)
     ```
 
 ??? abstract "Runs"

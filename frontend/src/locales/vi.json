@@ -1777,6 +1777,8 @@
     "noCode": "Node này không có mã riêng",
     "selectHint": "Chọn một node trên canvas để xem mã của node đó",
     "download": "Tải .{{ext}}",
+    "downloadProject": "Dự án .zip",
+    "downloadProjectTip": "Dự án LangGraph chạy được (langgraph.json, dependencies, README) cho langgraph dev và LangSmith Studio",
     "languageLabel": "Ngôn ngữ"
   },
   "demo": {
