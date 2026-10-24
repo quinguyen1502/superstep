@@ -1,8 +1,8 @@
 schema_version: 1
-run_id: 20261024T142021884999Z
+run_id: 20261024T151055021640Z
 status: failed
 profile: full
-updated_at: '2026-10-24T14:20:21.884999+00:00'
+updated_at: '2026-10-24T15:10:55.021640+00:00'
 source_sha256: cb04b6e3ee18ab560ef0bcf965c8e0639f80acede3cd88ca108fca0063b3da16
 inputs:
   app.json: d080abda26f3ac897a49947e17b9ba9bdf9e2bf76dca2ab2dc546e241149fdca
@@ -722,9 +722,9 @@ results:
   source: backend/pyproject.toml
   status: failed
   returncode: 1
-  started_at: '2026-10-24T14:17:04.180972+00:00'
-  duration_seconds: 176.236
-  output_sha256: 5eb9bb0bba05cd83a0d6e47b142de2cd53172bd9da493abf193e8de6a3f6aa1c
+  started_at: '2026-10-24T15:07:27.741280+00:00'
+  duration_seconds: 187.721
+  output_sha256: 90616138793a2f53ca5cfa006b9ff1571164014c162f60b9430bf542e3f7491f
 - check_id: node:frontend:build
   kind: build
   working_dir: frontend
@@ -735,9 +735,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:20:00.417286+00:00'
-  duration_seconds: 8.8
-  output_sha256: 9f240c0898f1427f3e18d04d931fa5af2b81f03a549649f71dfb923b1b45e8a1
+  started_at: '2026-10-24T15:10:35.462513+00:00'
+  duration_seconds: 9.278
+  output_sha256: cc4031d2207d963ff2cdeae7f16dc54c289853bba671aff955298ff385717696
 - check_id: node:frontend:lint
   kind: lint
   working_dir: frontend
@@ -748,8 +748,8 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:20:09.217189+00:00'
-  duration_seconds: 1.271
+  started_at: '2026-10-24T15:10:44.740726+00:00'
+  duration_seconds: 1.323
   output_sha256: 30517070e73e9ee351c0692d1d15e440b30cc72a23eeb0c8a38c54c08132bc1c
 - check_id: node:frontend:test
   kind: test
@@ -761,9 +761,9 @@ results:
   source: frontend/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:20:10.488035+00:00'
-  duration_seconds: 6.227
-  output_sha256: 4e068a0c43e35dfd28b002e5d0cc968f6dfa383a9ecefb3ca067583cad42b843
+  started_at: '2026-10-24T15:10:46.063877+00:00'
+  duration_seconds: 4.14
+  output_sha256: 1e1b843d3753ef2567fdf5e23ef946ffa2a38e3ddb658592befb9bd08814979d
 - check_id: python:sdk/python:test
   kind: test
   working_dir: sdk/python
@@ -774,9 +774,9 @@ results:
   source: sdk/python/pyproject.toml
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:20:16.715496+00:00'
-  duration_seconds: 0.521
-  output_sha256: 222978eafc8b42ecc06c044be4e4ad6b7609ca556e192ab207f21fefd1f1908b
+  started_at: '2026-10-24T15:10:50.204079+00:00'
+  duration_seconds: 0.485
+  output_sha256: d67ec3cf9e9b21e49d96650f46f2736f10510ab2af95c246662cd1e902ee38eb
 - check_id: node:sdk/typescript:build
   kind: build
   working_dir: sdk/typescript
@@ -787,8 +787,8 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:20:17.236948+00:00'
-  duration_seconds: 1.907
+  started_at: '2026-10-24T15:10:50.689591+00:00'
+  duration_seconds: 1.57
   output_sha256: 55bbf8b4027b9e5a75745f1e81e3eee53bec58ec7e311f56e256fbe025f24c90
 - check_id: node:sdk/typescript:test
   kind: test
@@ -800,9 +800,9 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:20:19.143670+00:00'
-  duration_seconds: 0.956
-  output_sha256: 3d95e41f380f864589e62814d1679aaa653f5ece65e5f0e5d529fc7dfc84b63f
+  started_at: '2026-10-24T15:10:52.260056+00:00'
+  duration_seconds: 0.921
+  output_sha256: d4d929d780ed88e6e310831f02ef9c5633ec5747dbfa0dba054424045fdc4aad
 - check_id: node:sdk/typescript:typecheck
   kind: typecheck
   working_dir: sdk/typescript
@@ -813,6 +813,6 @@ results:
   source: sdk/typescript/package.json
   status: passed
   returncode: 0
-  started_at: '2026-10-24T14:20:20.100141+00:00'
-  duration_seconds: 1.785
+  started_at: '2026-10-24T15:10:53.181581+00:00'
+  duration_seconds: 1.84
   output_sha256: 0214e636182f470704605f9f489ef0194da1480b139feba1514beef02d501488
