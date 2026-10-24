@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0085
-- Status: review (draft PR, stacked: P2 on TASK-0084)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-23
 - Updated: 2026-10-23
@@ -46,8 +46,10 @@ Human node's "Answered by" option, docs, handbook and tests.
 - 2026-10-23: implemented on `feat/agent-chat-p2-ui` (stacked on `feat/agent-chat-p1-backend`); draft PR #117 (base #116).
 - 2026-10-23: owner approved the panel layout mockup; implemented on #117: bottom panel Run · Test · Code, Chat as a
   resizable side panel with fullscreen (REV-0078 revision 3, QA-0078 revision 3).
+- 2026-10-24: PR #117 merged into develop (861668f); moved to done by TASK-0110.
 
 ## Handoff Notes
 
-- Not merged; needs owner review. A Human node's timeout is its existing deadline (TASK-0066); there is no chat-only
+- Merged (see Activity Log). A Human node's timeout is its existing deadline (TASK-0066); there is no chat-only
   timeout action.
+- Review REV-0078, QA QA-0078.

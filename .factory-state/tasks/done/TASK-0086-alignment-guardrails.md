@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0086
-- Status: review (draft PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-23
 - Updated: 2026-10-23
@@ -37,7 +37,9 @@ develop fixed or opted out with a reason.
 - 2026-10-23: lint check found 54 hits on develop (plus 16 hand-sized icon Buttons once `size-*` on Button was
   added: 14 moved to `icon-xs`/`icon-sm`/`icon`, 2 opted out); the alignment spec found the editor header (28px buttons next to a 32px input and icon buttons) and the
   list header (28px approvals badge next to 32px icon buttons) on develop. Fixed; draft PR into develop.
+- 2026-10-24: PR #118 merged into develop (5e1d1fa); moved to done by TASK-0110.
 
 ## Handoff Notes
 
 - vi handbook: mirror the new paragraph in `handbook/docs/vi/reference/development.md`.
+- Review REV-0079, QA QA-0079.
