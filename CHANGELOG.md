@@ -67,6 +67,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   started when the Human node pauses), the process-group test skips with a reason when the host's process limit
   prevents the fork, the credentials e2e waits for the list before deleting, the Code time-limit bound allows a slow
   CI runner, and the compose smoke waits for `run_summary` before reading run history.
+- `factory validate` is clean again: the factory verification workflow is the generated one (it no longer runs on
+  pushes to `main`; release PRs still run it) and merged tasks are filed as done.
 
 ### Removed from known limits
 

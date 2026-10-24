@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0090
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
 - Updated: 2026-10-24
@@ -35,6 +35,7 @@ Export a workflow as a runnable LangGraph project.
 
 - Branch `feat/langgraph-project-export` (PR #128) predates the owner's switch to the factory workflow on 2026-10-24; it keeps its name, and these artifacts were added as a normal commit on it.
 - 2026-10-24: implemented, verified with `factory deps apply` and `factory verify run --profile full` plus e2e and handbook builds (QA-0083); PR into develop.
+- 2026-10-24: PR #128 merged into develop (b43dea6); moved to done by TASK-0110.
 
 ## Handoff Notes
 

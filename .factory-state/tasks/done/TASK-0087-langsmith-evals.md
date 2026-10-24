@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0087
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
 - Updated: 2026-10-24
@@ -34,6 +34,7 @@ LangSmith evals and trace links.
 ## Activity Log
 
 - 2026-10-24: implemented, verified with `factory deps apply` and `factory verify run --profile full` plus e2e and handbook builds (QA-0080); PR into develop.
+- 2026-10-24: PR #132 merged into develop (229d05a); moved to done by TASK-0110.
 
 ## Handoff Notes
 

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0109
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
 - Updated: 2026-10-24
@@ -50,6 +50,8 @@ e2e delete-confirm timeout, plus two CI timing flakes found while merging the v0
 ## Activity Log
 
 - 2026-10-24: reproduced (1 in 20 isolated runs failed with KeyError 'a'), fixed, proved with repeated runs, verified (QA-0101); PR into develop. Closes TASK-0092.
+
+- 2026-10-24: PR #136 merged into develop (1a77fde); moved to done by TASK-0110.
 
 ## Handoff Notes
 

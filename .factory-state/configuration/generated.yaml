@@ -1,12 +1,12 @@
 schema_version: 1
 status: applied
-source_sha256: 0e4bcac5363814d07d49d07b524a63d6b55b65b6e91c5820bff10db88431a79a
-applied_at: '2026-10-16T12:35:22.654750+00:00'
+source_sha256: 13a8a26e6547bddde6764680432b81b8a8c9847468d8acd6d5490f48446db28c
+applied_at: '2026-10-24T16:05:15.433194+00:00'
 configurators:
 - github-actions-verify
 outputs:
   .github/workflows/factory-verify.yml:
-    sha256: 9293aec6338db63a1cfec2ea484b1519e434e101eafa90539eaef28c43b9aaff
+    sha256: ace0c00bba5c3086ab698d84bce897fefdc32c741a52abdd5768ec4b9ea3e8c7
     configurator: github-actions-verify
     status: generated
 conflicts: []
