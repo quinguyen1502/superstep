@@ -2,7 +2,7 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
-## Unreleased
+## 0.6.0 (2026-10-24)
 
 ### Added
 
