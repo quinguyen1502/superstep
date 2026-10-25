@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0119
-- Status: doing
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -111,6 +111,8 @@ and LangGraph project export, and a clear TypeScript refusal.
     `docs/api-errors.md`, en and vi); the Code tab shows it.
   - The Tests panel can add a "Tool called" check (Agent node, tool, called or not). Agent nodes with a tool that
     needs approval appear under Human answers. A waiting Agent tool step is named after its Agent node.
+- 2026-10-25: validation (`factory verify run --profile full`: only the 6 known environment failures), review REV-0111
+  (no blocking findings), QA QA-0111 (pass with follow-up); task to review.
 
 ## Handoff Notes
 
