@@ -5,8 +5,8 @@ import { expectRowAligned } from './helpers/alignment'
 // the offline mock and read its rounds in the trace. Approving a tool call during the run comes with TASK-0117.
 const shot = async (page: Page, name: string, sel = '#config-panel') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const T = {
-  vi: { password: 'Mật khẩu', round: 'Vòng 1', calls: 'gọi lookup_order', approval: 'Cần duyệt' },
-  en: { password: 'Password', round: 'Round 1', calls: 'calls lookup_order', approval: 'Needs approval' },
+  vi: { password: 'Mật khẩu', round: 'Vòng 1', calls: 'gọi lookup_order', up: 'Đưa http_request lên', down: 'Đưa http_request xuống' },
+  en: { password: 'Password', round: 'Round 1', calls: 'calls lookup_order', up: 'Move http_request up', down: 'Move http_request down' },
 }
 const AGENT = (name: string) => ({ name, state: [{ name: 'message', type: 'string' }, { name: 'answer', type: 'string' }, { name: 'steps', type: 'list' }],
   nodes: [N('start', 'start', 40), N('ag', 'agent', 300, { label: 'Helper', model: 'gpt-4o-mini', prompt: 'Help the customer: {{state.message}}', output_field: 'answer', max_rounds: 5, tools: [] }), N('end', 'end', 560)],
@@ -45,6 +45,13 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     const saved = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data
     const tools = saved.nodes.find((n: { id: string }) => n.id === 'ag').data.tools
     expect(tools.map((t: { name: string; source: string; approval?: boolean }) => [t.name, t.source, !!t.approval])).toEqual([['lookup_order', 'builtin', false], ['http_request', 'http', true]])
+    // moving a tool moves its card's own state (the parameter rows) with it
+    await page.locator('#agent-tool-1').getByRole('button', { name: T[lang].up }).click()
+    await expect(page.locator('#agent-tool-0-name')).toHaveValue('http_request')
+    await expect(page.locator('#agent-tool-0-params').getByTestId('agent-param')).toHaveCount(1)
+    await expect(page.locator('#agent-tool-1-params')).toHaveCount(0)
+    await page.locator('#agent-tool-0').getByRole('button', { name: T[lang].down }).click()
+    await expect(page.locator('#agent-tool-1-name')).toHaveValue('http_request')
 
     // the offline mock calls the closest tool once, then answers: a round on the trace with the tool call
     await page.locator('#run-tab').click(); await page.locator('#run-input').fill('{"message": "Where is order B200?"}')

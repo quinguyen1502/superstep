@@ -31,7 +31,7 @@ type Row = { name: string; type: string; description: string; required: boolean 
 const rowsOf = (s?: Schema): Row[] => Object.entries(s?.properties || {}).map(([name, p]) =>
   ({ name, type: p?.type || 'string', description: p?.description || '', required: (s?.required || []).includes(name) }))
 const schemaOf = (rows: Row[]): Schema => ({ type: 'object',
-  properties: Object.fromEntries(rows.map(r => [r.name, { type: r.type, ...(r.description ? { description: r.description } : {}) }])),
+  properties: Object.fromEntries(rows.filter(r => r.name).map(r => [r.name, { type: r.type, ...(r.description ? { description: r.description } : {}) }])),
   required: rows.filter(r => r.required && r.name).map(r => r.name) })
 
 /** The parameters the model fills for an HTTP tool, as rows (name, type, description, required). */
@@ -68,7 +68,7 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
   const others = taken.filter(n => n !== tool.name)
   const server = servers?.find(s => s.id === tool.server_id)
   const tpl = { fields: [...fields, { name: 'args', type: 'object' }], readOnly }
-  return <Card className="gap-3 p-3" data-testid="agent-tool" data-source={tool.source}>
+  return <Card className="gap-3 p-3" id={id} data-testid="agent-tool" data-source={tool.source}>
     <div className="flex items-center gap-2">
       <span className="rounded-md bg-muted p-1.5 text-muted-foreground"><I className="size-3.5" /></span>
       <span className="min-w-0 flex-1 truncate text-xs font-medium">{t(`agent.sources.${tool.source}`)}</span>
@@ -144,7 +144,12 @@ export function AgentSettings({ data: d, fields, fieldNames, listFields, creds, 
   }, [])
   const tools: AgentTool[] = Array.isArray(d.tools) ? d.tools : []
   const names = tools.map(x => x.name)
-  const setTools = (next: AgentTool[]) => onChange({ tools: next })
+  // a stable key per tool card that moves with it, so a card's own state (parameter rows) never shows another tool
+  const [keyed, setKeyed] = useState(() => ({ keys: tools.map((_, i) => i), next: tools.length }))
+  let keys = keyed.keys
+  if (keys.length !== tools.length) {  // the list changed elsewhere (undo, redo, paste): new keys for every card
+    const fresh = { keys: tools.map((_, i) => keyed.next + i), next: keyed.next + tools.length }; setKeyed(fresh); keys = fresh.keys }
+  const setTools = (next: AgentTool[], nextKeys: number[]) => { setKeyed({ keys: nextKeys, next: Math.max(keyed.next, ...nextKeys.map(k => k + 1)) }); onChange({ tools: next }) }
   const provider = providers.find(p => p.id === creds.find(c => c.id === d.credential_id)?.provider)
   const tpl = { fields, readOnly, placeholder: t('template.placeholder', { open: '{{' }) }
   const optional = (key: string, opts: string[], id: string) => <Select value={d[key] || 'none'} onValueChange={v => onChange({ [key]: v === 'none' ? '' : v })}>
@@ -172,15 +177,16 @@ export function AgentSettings({ data: d, fields, fieldNames, listFields, creds, 
       <span className="flex-1 text-xs font-semibold uppercase text-muted-foreground">{t('agent.tools')}</span>
       <DropdownMenu><DropdownMenuTrigger asChild disabled={readOnly}><Button variant="outline" size="sm" id="agent-add-tool"><Plus />{t('agent.addTool')}</Button></DropdownMenuTrigger>
         <DropdownMenuContent align="end">{SOURCES.map(s => { const I = ICONS[s]
-          return <DropdownMenuItem key={s} id={`agent-add-${s}`} onSelect={() => setTools([...tools, newTool(s, names)])}><I />{t(`agent.sources.${s}`)}</DropdownMenuItem> })}</DropdownMenuContent></DropdownMenu>
+          return <DropdownMenuItem key={s} id={`agent-add-${s}`} onSelect={() => setTools([...tools, newTool(s, names)], [...keys, keyed.next])}><I />{t(`agent.sources.${s}`)}</DropdownMenuItem> })}</DropdownMenuContent></DropdownMenu>
     </div>
     <p className="text-[11px] text-muted-foreground">{t('agent.toolsHint')}</p>
     {!tools.length && <p className="text-[11px] text-destructive" id="agent-no-tools">{t('agent.noToolsYet')}</p>}
-    {tools.map((x, i) => <ToolCard key={`${nodeId}-${i}-${x.source}`} tool={x} index={i} count={tools.length} taken={names} fields={fields} readOnly={readOnly}
+    {tools.map((x, i) => <ToolCard key={keys[i]} tool={x} index={i} count={tools.length} taken={names} fields={fields} readOnly={readOnly}
       servers={servers} kbs={kbs} builtins={builtins}
-      onChange={nx => setTools(tools.map((y, j) => j === i ? nx : y))}
-      onMove={by => { const next = [...tools]; const [it] = next.splice(i, 1); next.splice(i + by, 0, it); setTools(next) }}
-      onRemove={() => setTools(tools.filter((_, j) => j !== i))} />)}
+      onChange={nx => setTools(tools.map((y, j) => j === i ? nx : y), keys)}
+      onMove={by => { const move = <T,>(xs: T[]) => { const next = [...xs]; const [it] = next.splice(i, 1); next.splice(i + by, 0, it); return next }
+        setTools(move(tools), move(keys)) }}
+      onRemove={() => setTools(tools.filter((_, j) => j !== i), keys.filter((_, j) => j !== i))} />)}
     {tools.some(x => x.approval) && <>
       <p className="text-[11px] text-muted-foreground" id="agent-approval-hint">{t('agent.approvalHint')}</p>
       <HumanApprovalSettings key={`${nodeId}-approval`} value={d.approval} channels={channels} onChange={v => onChange({ approval: v })} />
