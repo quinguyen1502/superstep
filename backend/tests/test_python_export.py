@@ -6,11 +6,11 @@ import ast, json, os, re, subprocess, sys, uuid
 from collections import Counter
 import pytest
 from fastapi.testclient import TestClient
-from app.engine import python_export as X, subgraphs, templating
+from app.engine import agents, python_export as X, subgraphs, templating
 from app.engine.compiler import pick_branch
 from app.engine.decisions import mock as decision_mock
 from app.engine.foreach import visible
-from app.engine.llm import mock_llm
+from app.engine.llm import mock_agent, mock_llm
 from app.engine.ports import Ports
 from app.engine.runtime import run_stream
 from app.engine.templates import BUILTINS
@@ -88,11 +88,26 @@ def offline(monkeypatch):
     for k in KEYS: monkeypatch.delenv(k, raising=False)
 
 
+def picked(n):
+    """A knowledge base and a server picked (their ports are stubs here), on the node or on an Agent node's tools."""
+    if n["type"] in ("retriever", "mcp"): return {**n, "data": {**n["data"], "knowledge_base_id": "kb", "server_id": "srv"}}
+    if n["type"] == "agent":
+        return {**n, "data": {**n["data"], "tools": [{**t, "knowledge_base_id": "kb", "server_id": "srv"} if t.get("source") in ("knowledge", "mcp") else t
+                                                     for t in n["data"].get("tools") or []]}}
+    return n
+
+
+def without_ms(state):
+    """Tool call durations differ between two runs: the steps fields are compared without them."""
+    return {k: [{a: b for a, b in x.items() if a != "ms"} if isinstance(x, dict) else x for x in v] if isinstance(v, list) else v
+            for k, v in state.items()}
+
+
 def studio(wf, inp, answers=None, children=None):
-    """The studio's mock run: node ids in finish order and the final state. Human nodes get `answers` in order."""
+    """The studio's mock run: node ids in finish order and the final state. Human nodes get `answers` in order, and an
+    Agent node's approvals the answers under the Agent node's id."""
     wf = subgraphs.expand(wf, (children or {}).get) if children else wf
-    wf = {**wf, "nodes": [{**n, "data": {**n["data"], "knowledge_base_id": "kb", "server_id": "srv"}} if n["type"] in ("retriever", "mcp") else n
-                          for n in wf["nodes"]]}  # a knowledge base and a server picked (their ports are stubs here)
+    wf = {**wf, "nodes": [picked(n) for n in wf["nodes"]]}
     ports = Ports(retrieve=lambda *a: [], mcp_call=lambda *a: None, test=True, mock_models=True)
     left = {k: list(v) for k, v in (answers or {}).items()}
     path, resume = [], None
@@ -103,7 +118,7 @@ def studio(wf, inp, answers=None, children=None):
         if last["type"] != "run_waiting":
             assert last["type"] == "run_finished", last
             return path, visible(last["state"])
-        resume = {**last["checkpoint"], "value": left[last["node"]].pop(0)}
+        resume = {**last["checkpoint"], "value": left[agents.agent_of_step(last["node"]) or last["node"]].pop(0)}
 
 
 def exported(tmp_path, code):
@@ -119,7 +134,7 @@ def exported(tmp_path, code):
 
 def same_run(tmp_path, wf, inp, answers=None, children=None, ordered=True, ignore=()):
     out = X.to_python(wf, wf.get("name", "Workflow"), 1, children, {"input": inp, "answers": answers or {}})
-    flat = subgraphs.expand(wf, (children or {}).get) if children else wf
+    flat = agents.expand(subgraphs.expand(wf, (children or {}).get) if children else wf)
     kinds = {n["id"]: n["type"] for n in flat["nodes"]}
     path, state = studio(wf, inp, answers, children)
     want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
@@ -127,8 +142,8 @@ def same_run(tmp_path, wf, inp, answers=None, children=None, ordered=True, ignor
     got, final = exported(tmp_path, out.code)
     got = [n for n in got if n not in skip]
     assert (got if ordered else Counter(got)) == (want if ordered else Counter(want))
-    final = {k: v for k, v in final.items() if not k.startswith("loop_") and k not in ignore}
-    assert final == {k: v for k, v in state.items() if k not in ignore}
+    final = {k: v for k, v in final.items() if not k.startswith(("loop_", "agent_")) and k not in ignore}
+    assert without_ms(final) == without_ms({k: v for k, v in state.items() if k not in ignore})
     return out
 
 
@@ -186,6 +201,36 @@ def test_tools_decisions_mcp_and_email(tmp_path, monkeypatch):
     assert final["size"] == len("Order A100 is high priority") + len("two\nlines") and final["risk"] == "high"
     assert final["verdict"]["s"] == {"type": "score", "score": 0.0} and final["sent"] if "sent" in final else True
     assert unused_imports(code) == set()
+
+
+AGENT = {"name": "Agent sources", "state": [F("message"), F("answer"), F("steps", "list"), F("history", "list")],
+         "nodes": [N("start", "start"), N("ag", "agent", label="Helper \"one\"", system_prompt="Be brief", prompt="{{state.message}}", output_field="answer",
+                                          steps_field="steps", history_field="history", max_rounds=3, credential_id="cred-SECRET1",
+                                          approval={"channel": "slack", "channel_id": "ch-SECRET2", "approvers": ["boss-SECRET3@x.io"]},
+                                          tools=[{"name": "lookup_order", "description": "Find an order", "source": "builtin", "function": "lookup_order"},
+                                                 {"name": "add", "description": "Add numbers", "source": "mcp", "server_id": "srv-SECRET4", "tool": "add",
+                                                  "parameters": {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]}, "approval": True},
+                                                 {"name": "faq", "description": "Search the FAQ", "source": "knowledge", "knowledge_base_id": "kb-SECRET5", "top_k": 2},
+                                                 {"name": "get_item", "description": "Get an item", "source": "http", "method": "GET", "url": "https://api.example.com/items"},
+                                                 {"name": "post-it", "description": "Post a note", "source": "http", "method": "POST", "url": "https://api.example.com/{{state.args.id}}",
+                                                  "body": '{"text": "{{state.args.text}}"}'}]),
+                   N("end", "end")],
+         "edges": [E("start", "ag"), E("ag", "end")]}
+
+
+def test_agent_with_every_tool_source(tmp_path):
+    out = same_run(tmp_path, AGENT, {"message": "find order B200", "history": [{"role": "user", "content": "hi"}]}, {"ag": ["approved"]})
+    code = out.code
+    assert "SECRET" not in code and unused_imports(code) == set() and "pip install langgraph httpx" in code
+    assert [out.names[k] for k in ("ag", "ag/__model", "ag/__tool", "ag/__exit")] == ["helper_one", "helper_one_model", "helper_one_tool", "helper_one_end"]
+    assert 'return call_mcp_tool("add", args)' in code and 'retrieve(str(args.get("query") or ""), top_k=2)' in code
+    assert "params=query or None" in code and "body = json.dumps(args" not in code  # GET: query string; POST with a body template
+    assert 'question = ("Helper \\"one\\" wants to call "' in code and "also go to a channel" in code
+    assert 'builder.add_conditional_edges("helper_one_model", route_helper_one_model, {"tool": "helper_one_tool", "done": "helper_one_end"})' in code
+    assert "agent_helper_one: Optional[dict]  # an Agent node's conversation" in code and '"recursion_limit": ' in code
+    # the mock calls the MCP tool when the task names it, which needs approval: approve and reject both follow the studio
+    for answer in ("approved", "No, use 2"):
+        same_run(tmp_path, AGENT, {"message": "add numbers"}, {"ag": [answer]})
 
 
 def test_http_tool_compiles_without_running():
@@ -251,6 +296,17 @@ def test_helpers_match_the_engine():
         assert ns["mock_llm"](p, "m") == mock_llm(p, "m")
     for v, labels in (("Approved.", ["approved", "rejected"]), ("a b", ["a", "a b"]), ("x", ["y"]), ("yes", ["yes", "no"])):
         assert ns["pick_branch"](v, labels) == pick_branch(v, labels)
+    exec(compile(head + X.MODEL + X.AGENT, "agent helpers", "exec"), ns)
+    tools = [{"name": "add", "description": "Add numbers", "parameters": {"type": "object", "properties": {"a": {"type": "integer"}, "q": {"type": "string"}}, "required": ["a"]}},
+             {"name": "find_order", "description": "Find an order", "parameters": {"type": "object", "properties": {"text": {"type": "string"}}}}]
+    for msgs in ([{"role": "user", "content": "find order A100"}], [{"role": "system", "content": "s"}, {"role": "user", "content": "add 1"}],
+                 [{"role": "user", "content": "x"}, {"role": "tool", "content": "done"}], []):
+        for ts in (tools, None):
+            assert ns["mock_agent"](msgs, ts, "m") == mock_agent(msgs, ts, "m")
+    for schema, args in ((tools[0]["parameters"], {"a": 1}), (tools[0]["parameters"], {}), (tools[0]["parameters"], {"a": True}),
+                         (tools[0]["parameters"], {"a": "1"}), (tools[0]["parameters"], [1]), ({"properties": {"x": {"type": ["string", "null"]}}}, {"x": 1})):
+        assert ns["check_arguments"](schema, args) == agents.arg_error(schema, args)
+    assert ns["shorten"]("x" * 10, 4) == agents.shorten("x" * 10, 4) and ns["tool_text"]({"a": 1}) == agents.text({"a": 1})
     body = {"state": "a HIGH risk", "questions": {"q": {"type": "choice", "instructions": "", "criteria": {"low": None, "high": None}}}}
     assert ns["decide"]("a HIGH risk", {"type": "choice", "instructions": "", "options": ["low", "high"]}) == decision_mock(body)["answers"]["q"]["choice"]
 

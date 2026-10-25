@@ -49,6 +49,24 @@ def test_python_project_graph_runs_without_a_checkpointer(tmp_path, monkeypatch)
         sys.modules.pop("exported_agent", None)
 
 
+def test_python_project_of_the_support_agent_template_runs(tmp_path, monkeypatch):
+    """TASK-0119: the Agent node template as a project: the module imports and its graph answers with the order tool."""
+    from app.engine.templates import BUILTINS
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    b = next(x for x in BUILTINS if x["id"] == "builtin-support-agent")
+    f = files("python", b["workflow"], title=b["name"])
+    assert "langgraph" in f["requirements.txt"] and json.loads(f["langgraph.json"])["graphs"] == {"support_agent": "./agent.py:graph"}
+    (tmp_path / "agent.py").write_text(f["agent.py"])
+    spec = importlib.util.spec_from_file_location("exported_support_agent", tmp_path / "agent.py")
+    mod = importlib.util.module_from_spec(spec); sys.modules["exported_support_agent"] = mod
+    try:
+        spec.loader.exec_module(mod)
+        out = mod.graph.invoke({"message": "Where is my order B200?"})
+        assert "In transit" in out["answer"] and [s["tool"] for s in out["steps"]] == ["lookup_order"]
+    finally:
+        sys.modules.pop("exported_support_agent", None)
+
+
 def test_python_requirements_list_third_party_imports_only():
     assert P._py_requirements("import os, json\nimport httpx\nfrom langgraph.graph import StateGraph\nfrom . import x\n") == [P.LANGGRAPH_PY, "httpx"]
 

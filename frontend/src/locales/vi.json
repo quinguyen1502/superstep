@@ -466,6 +466,7 @@
     "TEST_NOT_SUPPORTED": "Workflow LangGraph đã import không hỗ trợ test",
     "PYTHON_EXPORT_UNAVAILABLE": "Workflow LangGraph đã import vốn là mã Python nên không cần xuất.",
     "TYPESCRIPT_EXPORT_UNAVAILABLE": "Workflow LangGraph đã import là mã Python nên không xuất ra TypeScript được.",
+    "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED": "Chưa xuất được node Agent sang TypeScript ({{node}}): hãy xuất workflow sang Python.",
     "EXPORT_LANGUAGE_UNSUPPORTED": "Không xuất được sang {{language}}: hãy chọn một trong {{supported}}.",
     "CALLBACK_URL_INVALID": "callback_url phải là URL http(s) công khai",
     "VERSION_NOT_FOUND": "Phiên bản này không còn tồn tại.",
@@ -1716,6 +1717,7 @@
       "status": "Trạng thái run",
       "field": "Trường state",
       "node": "Node",
+      "tool": "Gọi công cụ",
       "duration": "Thời gian",
       "cost": "Chi phí"
     },
@@ -1723,6 +1725,8 @@
     "compare": "Phép so sánh",
     "value": "Giá trị",
     "node": "Node",
+    "agentNode": "Node Agent",
+    "tool": "Công cụ",
     "unit": {
       "duration": "giây (tối đa)",
       "cost": "US$ (tối đa)"
@@ -1739,6 +1743,10 @@
       "ran": "đã chạy",
       "not_ran": "không chạy"
     },
+    "called": {
+      "called": "đã gọi",
+      "not_called": "không gọi"
+    },
     "status": {
       "queued": "Trong hàng đợi",
       "running": "Đang chạy",
@@ -1752,6 +1760,8 @@
       "fieldNoValue": "{{field}} {{op}}",
       "ran": "“{{node}}” đã chạy",
       "notRan": "“{{node}}” không chạy",
+      "called": "“{{node}}” đã gọi {{tool}}",
+      "notCalled": "“{{node}}” không gọi {{tool}}",
       "duration": "Chạy tối đa {{max}} giây",
       "cost": "Chi phí tối đa ${{max}}"
     },

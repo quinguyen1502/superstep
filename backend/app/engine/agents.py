@@ -45,6 +45,7 @@ NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 QUERY = {"type": "object", "properties": {"query": {"type": "string", "description": "What to search for"}}, "required": ["query"]}
 APPROVED, REJECTED = "approved", "rejected"
+FAILED = "The tool failed"  # the result of a call that ran and raised (checks.py tells it from calls that never ran)
 ASK = {"en": "{agent} wants to call {tool} with these arguments:\n{args}\nApprove to run it, or reject it. A text reply rejects it and tells the model why.",
        "vi": "{agent} muốn gọi công cụ {tool} với các tham số:\n{args}\nDuyệt để chạy, hoặc từ chối. Trả lời bằng chữ là từ chối và cho model biết lý do."}
 JSON_TYPES = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
@@ -332,7 +333,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 try: status, result = "ok", text(run_tool(nid, tool, args, state, ports, effects))
                 except Exception as e:
                     if getattr(e, "fenced", False): raise  # this worker lost the run
-                    status, result = "error", f"The tool failed: {safe_error(e)}"
+                    status, result = "error", f"{FAILED}: {safe_error(e)}"
             ms = round((time.perf_counter() - t0) * 1000, 2)
             p.setdefault("messages", []).append({"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": shorten(result, RESULT_CHARS)})
             step = {"tool": call["name"], "args": args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,

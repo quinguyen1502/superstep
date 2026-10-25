@@ -25,3 +25,8 @@ export function newTool(source: ToolSource, taken: string[]): AgentTool {
   if (source === 'knowledge') return { name, source, description: '', knowledge_base_id: '', top_k: 4 }
   return { name, source, description: '' }
 }
+
+/** An Agent node's tool names, for the Tests panel's "tool called" check (TASK-0119). */
+export const toolNames = (data: unknown): string[] => (((data as { tools?: AgentTool[] })?.tools) ?? []).map(t => t.name).filter(Boolean)
+/** Whether an Agent node asks a person before a tool call: test cases answer it like a Human node (TASK-0117). */
+export const needsApproval = (data: unknown): boolean => (((data as { tools?: AgentTool[] })?.tools) ?? []).some(t => t.approval)
