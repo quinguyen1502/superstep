@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0114
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -42,6 +42,7 @@ public API's workflow token.
 
 - 2026-10-25: implemented, tests and e2e pass, screenshots reviewed (en, vi); verified with `factory deps apply` and
   `factory verify run --profile full` (QA-0106).
+- 2026-10-25: PR #142 merged into develop (a6aba88) with the owner's approval; moved to done.
 
 ## Handoff Notes
 
