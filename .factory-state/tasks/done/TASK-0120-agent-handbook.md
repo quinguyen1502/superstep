@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0120
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -95,6 +95,7 @@ Document the Agent node in the handbook (en, vi) and update the pages that compa
   - TASK-0115 to TASK-0119 moved to done (their PRs merged).
 - 2026-10-25: validation (strict builds en and vi; `factory verify run --profile full`: only the 6 known environment
   failures), review REV-0112 (no blocking findings), QA QA-0112 (pass); task to review.
+- 2026-10-25: PR #148 merged into develop (d000cd5) with the owner's approval; moved to done.
 
 ## Handoff Notes
 
