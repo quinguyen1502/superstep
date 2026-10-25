@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0072
-- Status: Draft (owner questions in CLAR-0003)
+- Status: Accepted (planned as TASK-0116 to TASK-0120, DEC-0063)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -22,6 +22,25 @@
 - The loop has a **maximum number of rounds**. Each tool can be marked **needs approval**: the run pauses before that
   call and waits for a person, like a Human node.
 
+## Owner Decisions
+
+CLAR-0003, answered 2026-10-25 (all recommended options):
+
+1. **Tools are defined inline** in the Agent node's settings (pick an MCP tool, a built-in, a knowledge base, or
+   define an HTTP tool). Canvas tool nodes are not planned.
+2. **Approval works as for a Human node** (inbox, run panel, Slack/Telegram, approvers, deadline), set once on the
+   Agent node for all its tools that need approval.
+3. **The approver can Approve or Reject**, with an optional comment; no argument editing.
+4. **A rejection is told to the model** ("rejected by a reviewer" plus the comment) as the tool result; the loop goes
+   on and the round counts.
+5. **At the round limit, one more model call without tools** asks for a final answer; the trace marks that the limit
+   was hit.
+6. **Output:** the final answer in the output field, and optionally the list of tool calls (tool, arguments, result,
+   status) in a second "steps field".
+7. **Memory:** an optional "history field" (default `messages`) adds earlier turns before the task prompt.
+8. **Exports:** Python and the LangGraph project export support the node; the TypeScript export refuses it with a
+   clear error code until a later task.
+
 ## Problem Or Opportunity
 
 - Today every tool call is a node the builder places and wires by hand (Tool, MCP, Retriever). The graph decides the
@@ -37,20 +56,21 @@
 
 - **Agent node** in the palette, the config panel, the validator, the compiler, the run trace and the exports.
 - **Settings:** credential and model (as the LLM node), system prompt and task prompt (templates with `{{state}}`
-  paths), the allowed tools, maximum rounds, output field, and the approval settings (CLAR-0003 Q2).
-- **Tools**, each with a name and a description the model reads (CLAR-0003 Q1 decides where tools are defined):
+  paths), the allowed tools, maximum rounds, output field, optional steps field and history field, and the
+  approval settings (decisions 2, 6, 7).
+- **Tools**, listed inline on the node (decision 1), each with a name and a description the model reads:
   - **MCP:** a tool of a registered MCP server (REQ-0011). Its input schema comes from the server's tool list.
   - **HTTP:** method, URL, headers, body and credential as the HTTP Tool node, plus the parameters the model fills
     (a small JSON Schema). URL and body templates can use the model's arguments and state.
   - **Built-in:** a function from the Python tool registry (`engine/tools.py`), with a parameter schema.
   - **Knowledge base search:** a knowledge base and `top_k`; the model supplies the query.
 - **Loop:** call the model with the tools; run the tool calls it asks for; send the results back; stop when the model
-  answers without a tool call, or when the round limit is hit (CLAR-0003 Q5). One round = one model call plus the
-  tool calls it asked for. Several calls in one round run one after another, in the model's order.
+  answers without a tool call; at the round limit one more call without tools asks for the final answer
+  (decision 5). One round = one model call plus the tool calls it asked for. Several calls in one round run one after another, in the model's order.
 - **Approval before a tool:** a per-tool "needs approval" switch. The run waits with a prompt that names the tool and
   shows the arguments. It goes through the existing waiting step: the Approvals inbox, the run panel, the approval
-  channels (Slack, Telegram) and the deadline settings (REQ-0003, REQ-0034, REQ-0041). The answer resumes the run;
-  CLAR-0003 Q3 and Q4 decide what the approver can do and what a rejection does.
+  channels (Slack, Telegram) and the deadline settings (REQ-0003, REQ-0034, REQ-0041). The approver can Approve or
+  Reject with a comment (decision 3); a rejection goes back to the model as the tool result (decision 4).
 - **Mock model:** the offline mock (no key, demo, test runs with the mock option) drives the loop
   deterministically, so templates, tests and the public demo work offline.
 - **Trace and usage:** each round shows in the run trace under the Agent node: the model's reply, each tool call with
@@ -60,7 +80,7 @@
 - **Template:** at least one built-in template with an Agent node (for example support: the order lookup tool plus a
   knowledge base), with test cases, as every built-in template has.
 - **Errors:** new codes in `core/errors.py` `CATALOG`, `docs/api-errors.md` and both locales, for example a provider
-  without tool calling, the round limit, an approval rejected (if it stops the node).
+  without tool calling, and the TypeScript export refusing the node.
 - **UI:** shadcn/ui and theme tokens only, en+vi strings with identical keys, glossary rows for the new terms
   (`docs/ui-conventions.md` rules 10 and 11). Removing a tool from the list follows the delete rule
   (`ConfirmDeleteDialog`, DEC-0025) only if it deletes a stored record; removing a row from an unsaved node list is
@@ -120,12 +140,13 @@
   3. Round 3: the model answers without a tool. `answer` holds the text; the next node runs.
 - A run where the model wants `send_refund`: the run status becomes `waiting`. The Approvals inbox and the Slack
   channel show "Agent wants to call send_refund" with the arguments. After Approve the call runs and the loop goes on;
-  after Reject the outcome follows CLAR-0003 Q4.
+  after Reject the model is told the call was rejected and answers without it.
 - The API restarts while the run waits, or between two rounds: the run continues from the last finished round. No
   tool call and no model call that already finished runs again.
 - With no credential (mock), the same workflow runs offline: the mock calls a listed tool, then answers with its
   result, so the trace has at least one tool round.
-- A model that keeps calling tools stops after 6 rounds with the outcome chosen in CLAR-0003 Q5.
+- A model that keeps calling tools stops after 6 rounds; one more call without tools gives the answer, and the
+  trace marks the limit.
 
 ## Business Rules
 
@@ -146,9 +167,8 @@
   migration only if a stored record changes (a node's settings live in the workflow JSON).
 - Effectively-once per tool call: every model call and every tool call inside the loop is a step that is recorded
   once, so a resume after a pause, a restart (TASK-0115) or a retried job does not repeat it. Each HTTP tool call
-  gets its own stable idempotency key. The mechanism (for example compiling the node into LangGraph model and tool
-  steps with checkpoints, or a per-step journal on the existing ledger) is a design decision for `plan-tasks`
-  (DEC).
+  gets its own stable idempotency key. DEC-0063: the node is expanded into LangGraph model and tool steps (one tool
+  call per step) before compilation, as subgraphs are.
 - Rounds must fit the run's step budget; the round limit has a hard maximum and raises the recursion budget as For
   each loops do (`foreach.step_budget`).
 - Offline mock mode keeps working with no API keys (`project.md` constraint).
@@ -165,16 +185,18 @@
   back, and writes the final answer to the output field; MCP, HTTP, built-in and knowledge base tools each have a
   test.
 - A tool with "needs approval" pauses the run before the call; the waiting step appears in the Approvals inbox and
-  the channels with the tool name and arguments; approve runs the call; reject follows CLAR-0003 Q4; deadlines apply.
+  the channels with the tool name and arguments; approve runs the call; reject sends "rejected" and the
+  comment to the model; deadlines apply.
 - A pytest restart test (as in TASK-0115) shows that a run paused at an agent approval, and a run stopped between
   two rounds, continue after a restart without repeating a finished model call or tool call.
-- The round limit stops the loop with the CLAR-0003 Q5 outcome; an unlisted tool or bad arguments are never
-  executed.
+- The round limit ends the loop with one call without tools and a marked trace; an unlisted tool or bad arguments
+  are never executed.
 - The offline mock produces at least one tool round and a final answer; the Agent template's test cases pass with the
   mock option.
 - The run trace (studio and the chat's `full` view) shows each round, tool call, result, error and approval; usage
   and cost add up.
-- Workflow tests have a "tool called" check; Python export (and the other exports per CLAR-0003 Q8) handle the node.
+- Workflow tests have a "tool called" check; the Python and LangGraph project exports handle the node; the
+  TypeScript export refuses it with a clear error code.
 - en/vi strings with identical keys and glossary rows; handbook pages (en, vi) build in strict mode; e2e covers
   adding the node, a run with tool rounds, and an approval; `factory verify run --profile full` passes.
 
@@ -192,8 +214,8 @@
 - The node sits inside a For each loop or a subgraph: each iteration has its own rounds, keys and approvals.
 - A workflow version changes while a run waits at an approval: the run keeps its own workflow snapshot, as Human
   nodes do.
-- Time travel forks a run at a checkpoint inside the loop (if rounds are checkpoints): the fork continues from that
-  round.
+- Time travel forks a run at a checkpoint inside the loop (each step is a checkpoint, DEC-0063): the fork continues
+  from that step.
 
 ## Assumptions
 
@@ -201,17 +223,24 @@
   SDK is needed.
 - One Agent node is one agent; the default round limit is small (for example 5) with a hard maximum (for example
   25).
-- Answers in CLAR-0003 may move items between In Scope and Out Of Scope; the requirement is updated when they come.
+- The CLAR-0003 answers did not change the scope beyond the decisions above.
 
 ## Open Questions
 
-- Eight owner questions in `.factory-state/artifacts/CLAR-0003-agent-node.md`: where tools are defined, who
-  approves, whether an approver can edit arguments, what a rejection does, what the round limit does, what the node
-  writes to state, whether the chat history goes in, and which exports support the node.
+- None: CLAR-0003 answered 2026-10-25 (Owner Decisions above).
+
+## Planning
+
+- 2026-10-25: the owner accepted REQ-0072 with the CLAR-0003 answers. Planned as TASK-0116 (engine loop), TASK-0117
+  (approval before a tool call and restart safety), TASK-0118 (editor and trace), TASK-0119 (tests check, template,
+  exports) and TASK-0120 (handbook), with DEC-0063 (the node is expanded into LangGraph model and tool steps).
 
 ## Related Artifacts
 
 - `.factory-state/artifacts/CLAR-0003-agent-node.md`
+- `.factory-state/decisions/DEC-0063-agent-node-expansion.md`
+- Tasks: `.factory-state/tasks/todo/TASK-0116-agent-engine-loop.md`, `TASK-0117-agent-tool-approval.md`,
+  `TASK-0118-agent-editor-and-trace.md`, `TASK-0119-agent-tests-template-export.md`, `TASK-0120-agent-handbook.md`
 - `.factory-state/artifacts/REQ-0003-human-in-the-loop.md`, `REQ-0007-rag-node.md`, `REQ-0011-mcp-tools.md`,
   `REQ-0034-more-approval-channels.md`, `REQ-0041-approval-deadlines-and-inbox.md`, `REQ-0042-workflow-tests.md`,
   `REQ-0043-python-export.md`, `REQ-0048-agent-chat.md`, `REQ-0051-time-travel.md`,

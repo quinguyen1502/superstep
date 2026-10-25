@@ -2,7 +2,7 @@
 schema_version: 1
 id: CLAR-0003
 task_id: REQ-0072
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0072-agent-node.md
   - .factory-state/artifacts/REQ-0011-mcp-tools.md
@@ -11,7 +11,7 @@ source_artifacts:
   - .factory-state/decisions/DEC-0018-effectively-once.md
 created: 2026-10-25
 updated: 2026-10-25
-answered_at: null
+answered_at: '2026-10-25'
 questions:
   - id: tool-definition
     type: single_choice
@@ -134,12 +134,20 @@ questions:
       - value: all
         label: Python, the LangGraph project and TypeScript in the first version
     depends_on: null
-answers: {}
+answers:
+  tool-definition: inline
+  approval-where: same-as-human
+  approval-edit: approve-reject
+  on-reject: tell-model
+  max-rounds: final-answer
+  output: answer-and-steps
+  memory: messages-field
+  export: python-now
 ---
 # Clarification
 
-Owner questions for REQ-0072 (Agent node). Each question has a recommended option; the requirement is written so
-that the recommended answers fit it without a scope change.
+Owner questions for REQ-0072 (Agent node). The owner answered in chat on 2026-10-25 ("Theo đề xuất hết") and picked
+the recommended option for all eight; the answers are written into REQ-0072 and DEC-0063.
 
 The owner may answer it with:
 
