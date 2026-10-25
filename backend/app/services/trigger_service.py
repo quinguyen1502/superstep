@@ -9,6 +9,7 @@ from ..models import Run, WorkflowToken
 from ..repositories import RunRepository, WorkflowRepository, WorkflowTokenRepository
 from .job_queue import JobQueue
 from .rate_limit import RateLimiter
+from .run_service import human_response
 from .telemetry import trace_url
 from .webhooks import check_callback_url  # noqa: F401  (re-exported)
 
@@ -119,12 +120,23 @@ class TriggerService:
         if r is None or r.workflow_id != tok.workflow_id or r.owner != tok.owner: raise AppError("RUN_NOT_FOUND")
         return run_result(r)
 
-    async def wait(self, tok: WorkflowToken, rid: str, timeout: float) -> dict:
-        """Sync mode: poll the shared runs table (works across worker processes) until the run settles."""
+    def resume(self, tok: WorkflowToken, rid: str, response) -> float:
+        """Answer the Human node a run of this token's workflow waits at; the worker continues it from its checkpoint.
+        Returns the end of the paused segment (`since` for `wait`)."""
+        r = self.runs.get(rid)
+        if r is None or r.workflow_id != tok.workflow_id or r.owner != tok.owner: raise AppError("RUN_NOT_FOUND")
+        if r.status != "waiting": raise AppError("RUN_NOT_WAITING")
+        self.jobs.enqueue({"kind": "resume", "run_id": r.id, "owner": r.owner, "response": human_response(response), "workflow_id": r.workflow_id})
+        return r.ended or 0.0
+
+    async def wait(self, tok: WorkflowToken, rid: str, timeout: float, since: Optional[float] = None) -> dict:
+        """Sync mode: poll the shared runs table (works across worker processes) until the run settles (a resumed
+        run: settles again after `since`, the end of its paused segment)."""
         deadline = time.time() + timeout
         while True:
             res = await asyncio.to_thread(self.result, tok, rid)
-            if res["status"] in FINAL or time.time() >= deadline: return res
+            settled = res["status"] in FINAL and (since is None or (res["ended"] or 0) > since)
+            if settled or time.time() >= deadline: return res
             await asyncio.sleep(0.2)
 
 

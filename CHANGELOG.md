@@ -6,6 +6,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Workflows as MCP tools.** An MCP server at `/mcp` (official MCP Python SDK, Streamable HTTP, stateless JSON
+  responses). Turn it on per workflow under **API > MCP** (off by default; route `GET`/`PUT
+  /api/workflows/{wid}/mcp`); clients authenticate with the workflow's token (`Authorization: Bearer wft_...` or
+  `X-Workflow-Token`) and get `run_<workflow>` (input schema from the state fields), `get_run` and `resume_run`
+  (answers a run paused at a Human node). The tab copies a config for Cursor, Claude Desktop (via `mcp-remote`) or
+  Claude Code. New error code `MCP_SERVER_DISABLED`. Handbook page Workflows as MCP tools (en, vi).
 - **Agent node.** A model gets a task prompt and the tools you allow, decides which tool to call with which
   arguments, reads the result and repeats until it answers. Tools are MCP server tools, HTTP requests (with
   parameters the model fills), built-in Python functions and knowledge base search, each with a name and a

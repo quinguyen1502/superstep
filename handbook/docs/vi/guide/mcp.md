@@ -47,6 +47,8 @@ Argument đúng bằng một tham chiếu thì giữ nguyên kiểu. Kết quả
 
 Workflow được chia sẻ chạy bằng máy chủ MCP của **chủ** workflow.
 
+Để client MCP gọi workflow **của bạn** như công cụ, xem [Workflow làm công cụ MCP](../run/mcp-server.md).
+
 ## Node MCP hay node Agent
 
 Node MCP tool gọi một công cụ với các tham số bạn điền sẵn, ở một chỗ cố định

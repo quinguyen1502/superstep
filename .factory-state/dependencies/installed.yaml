@@ -1,10 +1,10 @@
 schema_version: 1
 status: installed
-updated_at: '2026-10-25T12:59:32.375038+00:00'
-source_sha256: 1df44c83ccc778603b80f0af5cebdce1146b08b775447afbfe4af2a8b85cead6
+updated_at: '2026-10-25T05:24:27.074696+00:00'
+source_sha256: 929d96d653d048060ce06a264a701c268ea3528040643adb5fe99de2797c84f8
 inputs:
-  backend/pyproject.toml: 16f5df996070250202db339d48a6b9768fdeebf3563db9daf1d10123a70b3e2d
-  backend/requirements.txt: 7f44cca80ec97c6318b8bd9fa225305135a8921fc233949569061d5ff75a77ae
+  backend/pyproject.toml: aaf11f0572d99f073c8eb187ddee56d332542461dec0a1d00a5b555d9ce771fb
+  backend/requirements.txt: f8b6ca5ea80ef1411634725432f2a85a9bf7223eae6bc54ba6dc7c390526a6ff
   frontend/package-lock.json: cc885a8be263e12bda71df6af101733fb9cb6ac9b0b3070872d2e241bbf8b7a6
   frontend/package.json: f64a9c9c819ced4a3af9448c56a201a75a055b4f38574e973ffbdc0e4eac314a
   handbook/requirements.txt: 58b3379a8c8a1f8ee2acc05126743ab404dcc6f96d045c25313dd18313b079c7
@@ -16,7 +16,7 @@ commands:
   manager: npm
   working_dir: frontend
   argv:
-  - /opt/node22/bin/npm
+  - /usr/local/bin/npm
   - ci
   - --include=dev
   manifest: frontend/package.json
@@ -24,16 +24,16 @@ commands:
   expected_paths:
   - frontend/node_modules
   integrity_argv:
-  - /opt/node22/bin/npm
+  - /usr/local/bin/npm
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-25T12:58:47.222207+00:00'
+  started_at: '2026-10-25T05:24:14.571396+00:00'
   returncode: 0
   status: observed
   integrity:
     argv:
-    - /opt/node22/bin/npm
+    - /usr/local/bin/npm
     - ls
     - --depth=0
     - --include=dev
@@ -43,7 +43,7 @@ commands:
   manager: npm
   working_dir: sdk/typescript
   argv:
-  - /opt/node22/bin/npm
+  - /usr/local/bin/npm
   - ci
   - --include=dev
   manifest: sdk/typescript/package.json
@@ -51,16 +51,16 @@ commands:
   expected_paths:
   - sdk/typescript/node_modules
   integrity_argv:
-  - /opt/node22/bin/npm
+  - /usr/local/bin/npm
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-25T12:59:01.433261+00:00'
+  started_at: '2026-10-25T05:24:21.141206+00:00'
   returncode: 0
   status: observed
   integrity:
     argv:
-    - /opt/node22/bin/npm
+    - /usr/local/bin/npm
     - ls
     - --depth=0
     - --include=dev
@@ -81,23 +81,7 @@ commands:
   expected_paths:
   - backend/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-25T12:59:04.168763+00:00'
-  returncode: 0
-  status: observed
-- target_id: python-venv:sdk/python
-  manager: venv
-  working_dir: sdk/python
-  argv:
-  - /usr/bin/python3
-  - -m
-  - venv
-  - .venv
-  manifest: sdk/python/pyproject.toml
-  requires_network: false
-  expected_paths:
-  - sdk/python/.venv/bin/python
-  integrity_argv: []
-  started_at: '2026-10-25T12:59:12.461973+00:00'
+  started_at: '2026-10-25T05:24:23.037339+00:00'
   returncode: 0
   status: observed
 - target_id: python:sdk/python
@@ -115,23 +99,7 @@ commands:
   expected_paths:
   - sdk/python/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-25T12:59:15.026754+00:00'
-  returncode: 0
-  status: observed
-- target_id: python-venv:handbook
-  manager: venv
-  working_dir: handbook
-  argv:
-  - /usr/bin/python3
-  - -m
-  - venv
-  - .venv
-  manifest: handbook/requirements.txt
-  requires_network: false
-  expected_paths:
-  - handbook/.venv/bin/python
-  integrity_argv: []
-  started_at: '2026-10-25T12:59:22.697141+00:00'
+  started_at: '2026-10-25T05:24:25.162476+00:00'
   returncode: 0
   status: observed
 - target_id: python:handbook
@@ -149,7 +117,7 @@ commands:
   expected_paths:
   - handbook/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-25T12:59:24.983923+00:00'
+  started_at: '2026-10-25T05:24:26.774504+00:00'
   returncode: 0
   status: observed
 failure: null

@@ -4,13 +4,15 @@
 
 - Project: superstep
 - Task ID: TASK-0113
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
 - Requirement IDs: REQ-0069
 - Design IDs: none
 - Architecture IDs: none
+- Pull request: [#141](https://github.com/quinguyen1502/superstep/pull/141) `factory/task-0113-superstep-vs-agent-tools`
+- Merge commit: `bb70e04` (2026-10-25)
 
 ## Objective
 
@@ -40,6 +42,8 @@ PydanticAI).
   `factory deps apply` and `factory verify run --profile full` (QA-0105); PR #141 into develop.
 - 2026-10-25: scope change from the owner: split into a visual-builders page (adds Langflow and Flowise) and an
   agent-frameworks page; old `superstep-vs-agent-tools.md` removed; re-verified (QA-0105).
+
+- 2026-10-25: PR #141 merged into develop as bb70e04; moved to done in TASK-0114.
 
 ## Handoff Notes
 

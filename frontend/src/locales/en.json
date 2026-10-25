@@ -436,6 +436,7 @@
     "CHECKPOINT_NOT_FOUND": "Checkpoint not found in this run, or it cannot be forked",
     "RUN_FORK_UNSUPPORTED": "Runs of imported LangGraph graphs cannot be forked",
     "RUN_RESPONSE_INVALID": "The response must be text (max {{max}} characters)",
+    "MCP_SERVER_DISABLED": "This workflow is not exposed as an MCP tool; turn it on under API in the editor",
     "TRIGGER_TOKEN_INVALID": "Missing, invalid or revoked workflow token",
     "TOKEN_NOT_FOUND": "Token not found",
     "SCHEDULE_NOT_FOUND": "Schedule not found",
@@ -645,6 +646,26 @@
     "showRevoked": "Show revoked ({{count}})",
     "revokeTitle": "Revoke token {{name}}?",
     "revokeBody": "Clients using this token are refused immediately. This cannot be undone."
+  },
+  "mcpServer": {
+    "tab": "MCP",
+    "enable": "Expose as an MCP tool",
+    "enableHelp": "MCP clients (Claude Desktop, Cursor, other agents) connect with a token of this workflow and call it as a tool. Off by default.",
+    "needsToken": "Create a token on the Tokens tab first: clients authenticate with it.",
+    "url": "Server URL",
+    "tools": "Tools: {{tool}} (input = the workflow's state fields), get_run, resume_run.",
+    "client": "Client",
+    "clients": {
+      "cursor": "Cursor",
+      "claude-desktop": "Claude Desktop",
+      "claude-code": "Claude Code"
+    },
+    "where": {
+      "cursor": ".cursor/mcp.json",
+      "claude-desktop": "claude_desktop_config.json (via mcp-remote)",
+      "claude-code": "Terminal"
+    },
+    "human": "A run that pauses at a Human node returns status waiting with its run_id; the client answers it with resume_run. Runs show in history with source API."
   },
   "versions": {
     "button": "Versions",

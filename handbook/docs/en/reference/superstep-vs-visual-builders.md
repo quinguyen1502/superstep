@@ -47,7 +47,7 @@ How you call it and take it elsewhere:
 
 | Product | API, SDK, MCP | Code export |
 | --- | --- | --- |
-| Superstep | Public run API, Python `superstep` and TypeScript `@superstep/sdk` SDKs, Agent Server API subset at `/api/lg` | Runnable LangGraph Python or LangGraph.js project |
+| Superstep | Public run API, Python `superstep` and TypeScript `@superstep/sdk` SDKs, Agent Server API subset at `/api/lg`, workflows as MCP tools at `/mcp` | Runnable LangGraph Python or LangGraph.js project |
 | n8n | REST API and webhooks | No (workflows export as JSON) |
 | Dify | REST API, `difyctl` CLI, publish apps as MCP servers | No |
 | Langflow | Run API, webhooks, MCP server and client, Flow DevOps Toolkit SDK | No (flows export as JSON) |

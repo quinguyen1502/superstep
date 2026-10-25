@@ -10,7 +10,7 @@ in the [Public API reference](../reference/public-api.md).
 
 | Term | Meaning |
 | --- | --- |
-| Workflow token | A secret `wft_...` that starts runs of **one** workflow. Send it as `X-Workflow-Token: wft_...` or `Authorization: Bearer wft_...`. Besides these endpoints it only works with the [LangGraph-compatible API](agent-server-api.md) of the same workflow. |
+| Workflow token | A secret `wft_...` that starts runs of **one** workflow. Send it as `X-Workflow-Token: wft_...` or `Authorization: Bearer wft_...`. Besides these endpoints it only works with the [LangGraph-compatible API](agent-server-api.md) and the [MCP server](mcp-server.md) of the same workflow. |
 | Run | One execution of the workflow's latest saved version. `input` is its initial state. |
 | Status | `queued` and `running` while it goes; then `ok`, `error`, `cancelled`, `timeout`, `waiting` (paused at a Human node) or `expired`. |
 | Envelope | Every response is `{"success", "data", "error"}`. On failure `error.code` is a stable code; `error.message` is English for logs. |

@@ -436,6 +436,7 @@
     "CHECKPOINT_NOT_FOUND": "Không tìm thấy checkpoint trong run này, hoặc không thể fork từ nó",
     "RUN_FORK_UNSUPPORTED": "Không thể fork run của graph LangGraph được import",
     "RUN_RESPONSE_INVALID": "Phản hồi phải là văn bản (tối đa {{max}} ký tự)",
+    "MCP_SERVER_DISABLED": "Workflow này chưa được cung cấp dưới dạng công cụ MCP; hãy bật trong mục API của editor",
     "TRIGGER_TOKEN_INVALID": "Token workflow bị thiếu, không hợp lệ hoặc đã thu hồi",
     "TOKEN_NOT_FOUND": "Không tìm thấy token",
     "SCHEDULE_NOT_FOUND": "Không tìm thấy lịch chạy",
@@ -645,6 +646,26 @@
     "showRevoked": "Hiện token đã thu hồi ({{count}})",
     "revokeTitle": "Thu hồi token {{name}}?",
     "revokeBody": "Client dùng token này bị từ chối ngay. Không thể hoàn tác."
+  },
+  "mcpServer": {
+    "tab": "MCP",
+    "enable": "Cung cấp dưới dạng công cụ MCP",
+    "enableHelp": "Các client MCP (Claude Desktop, Cursor, agent khác) kết nối bằng token của workflow này và gọi nó như một công cụ. Mặc định tắt.",
+    "needsToken": "Hãy tạo token ở thẻ Token trước: client xác thực bằng token đó.",
+    "url": "URL máy chủ",
+    "tools": "Công cụ: {{tool}} (đầu vào = các trường state của workflow), get_run, resume_run.",
+    "client": "Ứng dụng client",
+    "clients": {
+      "cursor": "Cursor",
+      "claude-desktop": "Claude Desktop",
+      "claude-code": "Claude Code"
+    },
+    "where": {
+      "cursor": ".cursor/mcp.json",
+      "claude-desktop": "claude_desktop_config.json (qua mcp-remote)",
+      "claude-code": "Dòng lệnh"
+    },
+    "human": "Run dừng ở node Human trả về trạng thái waiting kèm run_id; client trả lời bằng resume_run. Run hiện trong lịch sử với nguồn API."
   },
   "versions": {
     "button": "Phiên bản",

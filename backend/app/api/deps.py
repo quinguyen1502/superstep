@@ -38,6 +38,7 @@ from ..services.notification_service import NotificationService
 from ..services.demo_service import DemoService, start_visit
 from ..services.rate_limit import Counter, RateLimiter, make_counter, make_rate_limiter
 from ..services.trigger_service import TriggerService
+from ..services.workflow_mcp_service import WorkflowMcpService
 from ..services.langsmith import LangSmithService
 from ..services.agent_server_service import AgentServerService
 from ..services.schedule_service import ScheduleService
@@ -114,6 +115,10 @@ def chat_session_service() -> ChatSessionService:
 def trigger_service() -> TriggerService:
     db = get_db(); return TriggerService(WorkflowRepository(db), RunRepository(db), WorkflowTokenRepository(db), get_job_queue(), get_rate_limiter(),
                                          access=access_service())
+
+
+def workflow_mcp_service() -> WorkflowMcpService:
+    return WorkflowMcpService(trigger_service(), WorkflowRepository(get_db()))
 
 
 def agent_server_service() -> AgentServerService:

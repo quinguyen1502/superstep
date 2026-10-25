@@ -48,6 +48,8 @@ keeps its type. The result goes to `output_field`.
 
 A shared workflow runs with the **owner's** MCP servers.
 
+To let MCP clients call **your** workflows as tools, see [Workflows as MCP tools](../run/mcp-server.md).
+
 ## MCP node or Agent node
 
 An MCP tool node calls one tool with arguments you fill in, at a fixed place

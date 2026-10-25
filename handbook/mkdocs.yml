@@ -52,6 +52,7 @@ nav:
       - API triggers and webhooks: run/api-triggers.md
       - Public API and SDKs: run/public-api.md
       - LangGraph-compatible API: run/agent-server-api.md
+      - Workflows as MCP tools: run/mcp-server.md
       - Schedules: run/schedules.md
       - Chat triggers: run/chat-triggers.md
       - Chat: run/chat.md
