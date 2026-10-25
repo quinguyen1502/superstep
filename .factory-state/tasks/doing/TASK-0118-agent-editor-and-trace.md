@@ -106,7 +106,23 @@ trace and the chat.
   stacked on `factory/task-0116-agent-engine-loop` (PR #144, 9eac951). Its PR targets develop and contains #144's
   commits until #144 merges; then develop is merged in. REV-0108 follow-ups taken here: hide `agent:` fields in the
   trace; treat text from tool rounds as steps in the chat.
+- 2026-10-25: implemented. Agent in the palette and canvas (`META.agent`, `--node-agent*` tokens light and dark,
+  `DEFAULTS.agent`, `samples.agentPrompt`); `components/agent-settings.tsx` (credential with a warning for providers
+  without tool calling, model, system and task prompts, max rounds, output, steps and history fields, tool cards for
+  MCP / HTTP / built-in / knowledge base with name, description, parameters (HTTP), reorder, remove and "needs
+  approval", and the Human approval and deadline settings when a tool needs approval); `lib/agent.ts`; trace rows of
+  agent steps indented with the round, the tools called, the answer, the tool result and the limit mark, the
+  `agent:` field hidden (`lib/trace.ts`, `run-trace.tsx`); chat steps: tool calls by name, model calls in `full` only,
+  the reply stream keeps the last model call (`lib/chat.ts`, `chat_session_service.steps_of`); en/vi strings and
+  glossary rows. Tests: `lib/__tests__/agent-trace.test.ts`, `test_chat_steps_show_tool_calls_by_name`,
+  `e2e/agent-node.spec.ts` (vi light, en dark; screenshots reviewed). Checks run: tsc, vitest (103), lint, lint:ui,
+  build, e2e agent-node + agent-chat + trace + mcp, pytest agent + chat sessions + layers.
 
 ## Handoff Notes
 
-- Stacked on TASK-0116 (#144). Next: implement (`scoped-change`), then `task-validation`.
+- Stacked on TASK-0116 (#144). Next: `task-validation`, `task-review`, `task-qa`, Draft PR.
+- Validator errors show in the run panel's error list, naming the node (as for every node type); there is no per-node
+  error badge on the canvas.
+- The "needs approval" switch and the approval settings are saved now; the run pauses before such a call only with
+  TASK-0117. Merge order: #144, TASK-0117, this task (or this task before TASK-0117 with the switch documented as
+  not yet active).

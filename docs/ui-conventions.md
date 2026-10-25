@@ -75,6 +75,10 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
     | Builder / Visitor (short View as labels on the compact chat toolbar) | Người dựng / Khách | |
     | You're previewing what chat visitors see (visitor view banner) | Bạn đang xem trước như khách chat | |
     | answered by | người trả lời | the option "A reviewer" is "Người duyệt" |
+    | round (an Agent node's model call and the tool calls it asks for) | vòng | "Số vòng tối đa", "Vòng 2" in the trace (TASK-0118) |
+    | tool call | lần gọi công cụ | |
+    | parameter (what a model passes to a tool) | tham số | |
+    | task prompt (an Agent node's prompt) | prompt nhiệm vụ | "System prompt" stays |
     | retention | thời gian lưu | "Thời gian lưu (ngày)" |
     | Runs on host (subprocess Code runtime; never "not isolated" / "without isolation") | Chạy trực tiếp trên server; "Chạy trên server" on the canvas node; never "không cách ly" | longer texts say "without Docker limiting its access" / "không có Docker giới hạn quyền"; "cách ly" / "isolation" only for what the Docker sandbox does | warning badge with a tooltip: "Code runs directly on the server, without Docker limiting its access. Use only for trusted code." / "Code đang chạy trực tiếp trên máy chủ, không có Docker giới hạn quyền. Chỉ nên dùng cho code tin cậy." |
 

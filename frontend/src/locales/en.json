@@ -238,7 +238,8 @@
     "mcp": "Call a tool on an MCP server",
     "foreach": "Repeat a branch for each list item",
     "decision": "Ask TypeSafe Jev typed questions",
-    "email": "Send an e-mail through SMTP"
+    "email": "Send an e-mail through SMTP",
+    "agent": "A model that picks and calls tools"
   },
   "trace": {
     "idle": "Not run",
@@ -269,7 +270,17 @@
     "estimated": "(estimated)",
     "waiting": "Waiting for a human",
     "paused": "Paused after a step",
-    "streaming": "Streaming from the model…"
+    "streaming": "Streaming from the model…",
+    "agent": {
+      "round": "Round {{n}}",
+      "calls": "calls {{tools}}",
+      "answer": "answer: {{text}}",
+      "limit": "round limit reached",
+      "status": {
+        "error": "error",
+        "refused": "refused"
+      }
+    }
   },
   "import": {
     "button": "Import repo",
@@ -587,7 +598,8 @@
   "samples": {
     "input": "{\n  \"message\": \"Where is my order A100?\"\n}",
     "prompt": "Answer: {{var}}",
-    "greeting": "Hello!"
+    "greeting": "Hello!",
+    "agentPrompt": "Help the user: {{var}}"
   },
   "human": {
     "title": "Waiting for your response",
@@ -1915,5 +1927,44 @@
     "notConfigured": "Set LANGSMITH_API_KEY on the server to turn this on.",
     "tracingOn": "Runs are traced to the LangSmith project {{project}}; each run links to its trace.",
     "tracingOff": "Set LANGSMITH_TRACING=true to also trace runs to LangSmith."
+  },
+  "agent": {
+    "systemPrompt": "System prompt (optional, {{field}})",
+    "taskPrompt": "Task prompt ({{field}})",
+    "maxRounds": "Max rounds",
+    "maxRoundsHint": "One round is a model call plus the tool calls it asks for. At the limit, the model answers without tools.",
+    "none": "None",
+    "stepsField": "Steps field (optional)",
+    "stepsHint": "A list field that gets each tool call: tool, arguments, result and status.",
+    "historyField": "History field (optional)",
+    "historyHint": "A list of earlier messages ({role, content}) added before the task prompt, such as a chat's messages field.",
+    "tools": "Tools",
+    "toolsHint": "The model can call only these tools. It reads each tool's name and description to choose.",
+    "noToolsYet": "Add at least one tool.",
+    "addTool": "Add tool",
+    "sources": {
+      "mcp": "MCP tool",
+      "http": "HTTP request",
+      "builtin": "Built-in function",
+      "knowledge": "Knowledge base search"
+    },
+    "toolName": "Name",
+    "duplicateName": "Another tool has this name.",
+    "toolDescription": "Description for the model",
+    "needsApproval": "Needs approval",
+    "approvalHint": "Calls to tools that need approval wait for an approver, with these settings.",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "removeTool": "Remove {{name}}",
+    "parameters": "Parameters the model fills",
+    "paramName": "Parameter name",
+    "paramType": "Type",
+    "paramDescription": "Description",
+    "paramRequired": "Required",
+    "addParam": "Add parameter",
+    "removeParam": "Remove parameter {{name}}",
+    "httpArgsHint": "Use {{arg}} in the URL or body to insert a parameter. Without a body, POST, PUT and PATCH send the parameters as JSON, and GET adds them to the URL.",
+    "kbHint": "The model writes the search query.",
+    "noToolCalling": "{{provider}} cannot call tools. Choose a credential with tool calling for this Agent node."
   }
 }

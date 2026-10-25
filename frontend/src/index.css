@@ -68,6 +68,9 @@
     --color-node-email: var(--node-email);
     --color-node-email-foreground: var(--node-email-foreground);
     --color-node-email-muted: var(--node-email-muted);
+    --color-node-agent: var(--node-agent);
+    --color-node-agent-foreground: var(--node-agent-foreground);
+    --color-node-agent-muted: var(--node-agent-muted);
     --color-node-note: var(--node-note);
     --color-node-note-foreground: var(--node-note-foreground);
     --color-node-note-muted: var(--node-note-muted);
@@ -166,6 +169,9 @@
     --node-email: oklch(0.56 0.18 320);
     --node-email-foreground: oklch(0.985 0 0);
     --node-email-muted: oklch(0.56 0.18 320 / 0.12);
+    --node-agent: oklch(0.58 0.15 105);
+    --node-agent-foreground: oklch(0.985 0 0);
+    --node-agent-muted: oklch(0.58 0.15 105 / 0.12);
     --node-note: oklch(0.58 0.12 210);
     --node-note-foreground: oklch(0.985 0 0);
     --node-note-muted: oklch(0.58 0.12 210 / 0.12);
@@ -257,6 +263,9 @@
     --node-email: oklch(0.74 0.15 320);
     --node-email-foreground: oklch(0.145 0 0);
     --node-email-muted: oklch(0.74 0.15 320 / 0.18);
+    --node-agent: oklch(0.78 0.15 105);
+    --node-agent-foreground: oklch(0.145 0 0);
+    --node-agent-muted: oklch(0.78 0.15 105 / 0.18);
     --node-note: oklch(0.74 0.1 210);
     --node-note-foreground: oklch(0.145 0 0);
     --node-note-muted: oklch(0.74 0.1 210 / 0.18);

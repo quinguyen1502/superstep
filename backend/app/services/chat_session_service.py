@@ -14,6 +14,7 @@ import json, time, uuid
 from typing import Optional
 from ..core import permissions as P
 from ..core.errors import AppError
+from ..engine import agents
 from ..engine.limits import size
 from ..core import config
 from ..models import ChatMessage, ChatSession, ChatTurn, Run, WorkflowChatTrigger
@@ -42,15 +43,20 @@ def steps_of(events: list, mode: str) -> list[dict]:
     out: dict[str, dict] = {}
     for e in events:
         t, nid = e.get("type"), e.get("node")
-        if t not in STEP_EVENTS or not nid or e.get("node_type") in ("start", "end"): continue
+        hidden = ("start", "end", "agent", "agent_exit") + (() if mode == "full" else ("agent_model",))  # an Agent shows its tool calls
+        if t not in STEP_EVENTS or not nid or e.get("node_type") in hidden: continue
         key = f"{nid}:{e.get('iteration') or 1}"
         s = out.setdefault(key, {"node": nid, "label": e.get("label") or nid, "type": e.get("node_type") or e.get("kind"), "status": "running"})
         if t == "node_finished": s["status"] = "ok"
         if t == "error": s["status"] = "error"
         if t == "run_waiting": s["status"] = "waiting"  # a Human node that waits for its answer
+        step = e.get("agent") if isinstance(e.get("agent"), dict) else None  # what an Agent step did (TASK-0116)
+        if step and step.get("kind") == "tool" and step.get("tool"): s["label"] = f"{s['label'].rsplit(' › ', 1)[0]} › {step['tool']}"
         if mode == "full":
             for k in ("duration_ms", "input", "delta", "errors", "code"):
                 if k in e: s[k] = e[k]
+            if step: s["delta"] = step
+            if isinstance(s.get("input"), dict): s["input"] = agents.visible(s["input"])
     return list(out.values())
 
 
