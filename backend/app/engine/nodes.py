@@ -6,7 +6,7 @@ import httpx
 from ..core import config
 from ..core.errors import AppError
 from ..core.net import pinned_request, public_address
-from . import code_languages, code_runtime, decisions, emails, foreach
+from . import agents, code_languages, code_runtime, decisions, emails, foreach
 from .effects import Effects, call_tool
 from .errors import Interrupt
 from .llm import LLMError, TokenBuffer, call_llm
@@ -102,6 +102,8 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":
         fn = foreach.node_fn(node)
+    elif t in agents.TYPES:  # an Agent node and its expanded steps (TASK-0116, DEC-0063)
+        fn = agents.node_fn(node, resolve, usage, effects, ports, offline, token_stream)
     elif t == "email" and config.demo_mode():
         def fn(state): raise AppError("DEMO_NODE_DISABLED", node="Send email")
     elif t == "email":

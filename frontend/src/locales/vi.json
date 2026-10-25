@@ -533,6 +533,7 @@
     "MODEL_NOT_FOUND": "{{provider}} không có model tên {{model}}",
     "CREDENTIAL_HEADER_UNSUPPORTED": "{{provider}} không nhận header {{header}}",
     "PROVIDER_EMBEDDINGS_UNSUPPORTED": "{{provider}} không hỗ trợ embedding; hãy chọn credential khác cho kho tri thức này",
+    "AGENT_TOOLS_UNSUPPORTED": "{{provider}} không gọi được công cụ; hãy chọn một credential hỗ trợ gọi công cụ cho node Agent",
     "KB_EMBEDDING_DIMENSION_MISMATCH": "Model embedding trả về vector {{got}} chiều nhưng kho tri thức đang lưu vector {{expected}} chiều; hãy lập chỉ mục lại kho tri thức",
     "TEMPLATE_NOT_FOUND": "Không tìm thấy mẫu",
     "TEMPLATE_READ_ONLY": "Không thể xoá mẫu này",

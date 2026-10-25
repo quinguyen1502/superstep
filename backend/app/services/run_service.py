@@ -9,7 +9,7 @@ from ..core import config
 from ..core import permissions as P
 from ..core.errors import CATALOG, AppError
 from ..engine import repo_import
-from ..engine import subgraphs
+from ..engine import agents, subgraphs
 from ..engine.errors import ValidationError
 from ..engine.limits import cap_event, cap_run, safe_error, size
 from ..engine.effects import Effects
@@ -260,11 +260,14 @@ class RunService:
         return take
 
     def _expand(self, uid: str, wid: Optional[str], wf: dict) -> tuple[dict, Optional[list]]:
-        """Inline subgraph nodes (TASK-0011) with the workflows this user may read. The expanded graph is what runs and
-        what checkpoints store, so a resumed or recovered run continues on the same graph even if a child changed."""
-        if wf.get("source") or not subgraphs.has_subgraphs(wf): return wf, None
-        try: return subgraphs.expand(wf, self.workflow_loader(uid), wid), None
-        except ValidationError as e: return wf, e.errors
+        """Inline subgraph nodes (TASK-0011) with the workflows this user may read, then Agent nodes' steps (TASK-0116). The
+        expanded graph is what runs and what checkpoints store, so a resumed or recovered run continues on the same graph
+        even if a child changed."""
+        if wf.get("source"): return wf, None
+        if subgraphs.has_subgraphs(wf):
+            try: wf = subgraphs.expand(wf, self.workflow_loader(uid), wid)
+            except ValidationError as e: return wf, e.errors
+        return agents.expand(wf), None
 
     def workflow_loader(self, uid: str):
         def load(ref: str) -> Optional[dict]:

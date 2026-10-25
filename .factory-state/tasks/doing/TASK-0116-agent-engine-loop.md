@@ -110,7 +110,19 @@ provider registry, run the four tool sources, and write the answer, steps and hi
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
 - 2026-10-25: started on `factory/task-0116-agent-engine-loop` from develop at bb70e04 plus the planning commits
   (REQ-0072, CLAR-0003, DEC-0063, TASK-0116..0120), which ride this task's PR; the owner accepted DEC-0063.
+- 2026-10-25: implemented `engine/agents.py` (expansion, routers, step budget, the four step functions, tool sources,
+  argument check), `llm.call_agent` / `llm.mock_agent`, `Provider.invoke_tools` (LangChain `bind_tools`; Anthropic
+  Messages API over plain HTTP), tool parameter schemas in `engine/tools.py` (also in `GET /api/meta/tools`), validator,
+  compiler routers, runtime expansion and budget, `RunService._expand`, `AGENT_TOOLS_UNSUPPORTED`;
+  `tests/test_agent_node.py` (15 tests).
 
 ## Handoff Notes
 
-- Next: implement (`scoped-change`), then `task-validation`.
+- Next: `task-validation`, `task-review`, `task-qa`.
+- Trace events: `node_finished` of an agent step carries `agent` (what the step did: `kind` model|tool, `round`,
+  text or tool call, result, status, `limit_hit`); the delta leaves the hidden `agent:<id>` field out, the `input` keeps
+  it so time travel can fork inside the loop. TASK-0118 groups by `agent_of`.
+- Scope notes: the validator checks that MCP server/tool and knowledge base references are set (as the MCP and
+  Retriever nodes do), not that they exist; a provider without tool calling is caught when the step runs (the
+  validator has no credentials). Cancellation needs no extra check: the run stops between steps, and every model
+  call and tool call is a step. Exports still treat the node as a pass-through until TASK-0119.
