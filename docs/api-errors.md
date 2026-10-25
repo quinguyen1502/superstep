@@ -215,6 +215,7 @@
 | `EXPORT_LANGUAGE_UNSUPPORTED` | 400 | Cannot export to {language}: use one of {supported} |
 | `CALLBACK_URL_INVALID` | 400 | callback_url must be a public http(s) URL |
 | `VERSION_NOT_FOUND` | 404 | Workflow version not found |
+| `RUN_INTERRUPTED` | 500 | The server stopped while this run was going {attempts} times, so it was not continued again |
 | `RUN_EXPIRED` | 410 | This run waited too long for a response and expired |
 | `RATE_LIMITED` | 429 | Too many requests, retry in {retry_after} s |
 | `NOTIFICATION_NOT_FOUND` | 404 | Notification not found |

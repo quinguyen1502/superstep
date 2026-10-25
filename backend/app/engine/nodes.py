@@ -107,7 +107,7 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
     elif t == "foreach":
         fn = foreach.node_fn(node)
     elif t in agents.TYPES:  # an Agent node and its expanded steps (TASK-0116, DEC-0063)
-        fn = agents.node_fn(node, resolve, usage, effects, ports, offline, token_stream)
+        fn = agents.node_fn(node, resolve, usage, effects, ports, offline, token_stream, resume)
     elif t == "email" and config.demo_mode():
         def fn(state): raise AppError("DEMO_NODE_DISABLED", node="Send email")
     elif t == "email":

@@ -37,7 +37,7 @@ How runs pause, resume and get checked:
 
 | Product | Human in the loop | Durable runs | Tests, evals, observability |
 | --- | --- | --- | --- |
-| Superstep | Human nodes; approve in the studio, Slack, Telegram, WhatsApp, email or Teams, with deadlines | Database checkpoints, leased worker jobs; time travel: fork a finished run from a checkpoint | Workflow tests, LangSmith evals, OpenTelemetry traces |
+| Superstep | Human nodes; approve in the studio, Slack, Telegram, WhatsApp, email or Teams, with deadlines | Checkpoints in its database (SQLite or Postgres): paused and running queue runs continue after a restart or a worker crash; time travel: fork a finished run from a checkpoint | Workflow tests, LangSmith evals, OpenTelemetry traces |
 | n8n | Human review of AI Agent tool calls; Slack "send and wait" approvals | Queue mode with workers | Evaluations (test cases, metrics); OpenTelemetry for self-hosted |
 | Dify | Human Input node | Not covered by the sources | Logs, dashboard, annotations; LangSmith, Langfuse, Opik, Phoenix and others |
 | Langflow | Human Input component; approval of agent tool calls | HITL pauses at a checkpoint and resumes from it; otherwise not covered by the sources | Playground; LangSmith, Langfuse, Opik, Arize integrations |

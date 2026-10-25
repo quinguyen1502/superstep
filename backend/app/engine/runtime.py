@@ -124,9 +124,9 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                        **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did (TASK-0116)
                        **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
                        **({"code_output": cap_payload(code_out.pop(nid))} if nid in code_out else {})}
-    except Interrupt as i:  # a Human node is waiting: hand back a checkpoint instead of an error
+    except Interrupt as i:  # a Human node or an Agent tool approval is waiting: hand back a checkpoint instead of an error
         # parallel siblings of the Human node resume with it (their results come from the ledger when recorded)
-        yield {"type": "run_waiting", **meta(i.node), "prompt": i.prompt, "state": cap_payload(agents.visible(state)),
+        yield {"type": "run_waiting", **meta(i.node), "prompt": i.prompt, **{k: cap_payload(v) for k, v in i.extra.items()}, "state": cap_payload(agents.visible(state)),
                "checkpoint": {"node": i.node, "nodes": pending or [i.node], "state": cp_state, "counts": cp_counts}}
         return
     except Exception as e:  # attribute runtime failures to the node that was running

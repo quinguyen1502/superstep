@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0117
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -97,6 +97,21 @@ runs survive pauses and restarts without repeating a finished model or tool call
 ## Activity Log
 
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
+- 2026-10-25: started on `factory/task-0117-agent-tool-approval`, stacked on TASK-0116 (`factory/task-0116-agent-engine-loop`,
+  PR #144) with TASK-0115 (PR #143) merged in for the restart harness; the owner asked to continue the remaining work
+  before #144 and #143 merge.
+- 2026-10-25: implemented.
+  - `agent_tool` raises `Interrupt` before a call to a tool with `approval: true`; the `run_waiting` event adds
+    `label` ("Helper › send_refund"), `tool` and `arguments`; the prompt names the tool and shows the arguments (en, vi).
+  - Answers: `approved` runs the call; `rejected` or any other text rejects it. A text reply is the comment: the model
+    gets "Rejected by a reviewer: <text>". This keeps the existing answer shape (Approve, Reject, text reply).
+  - A call with an unknown tool or invalid arguments fails without asking an approver.
+  - The validator checks the Agent node's deadline when a tool needs approval.
+  - In a chat, an Agent tool approval is always answered by a reviewer, never by the person chatting.
+  - Test cases answer an Agent node's approvals under the Agent node's id; a draft case made from a run does the same.
+  - Tests: `tests/test_agent_approval.py` (12) and two Agent cases in `tests/test_durable_restart.py`.
+- 2026-10-25: validation (`factory verify run --profile full`: only the 6 known environment failures), review REV-0110
+  (no blocking findings), QA QA-0110 (pass with follow-up); task to review.
 
 ## Handoff Notes
 

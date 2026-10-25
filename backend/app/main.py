@@ -35,7 +35,9 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app):
         w = run_worker() if config.worker_enabled() else None  # executes queued API runs (TASK-0007)
-        if w: w.start(config.worker_concurrency())
+        if w:
+            w.start(config.worker_concurrency())
+            await w.recover_unfinished()  # in-memory queue: runs that were going when the server stopped (TASK-0115)
         sweeper = asyncio.create_task(expire_waiting_loop())  # TASK-0019: waiting runs past STUDIO_WAIT_TTL -> expired
         yield
         sweeper.cancel()

@@ -27,7 +27,7 @@ you decide. For visual builders, see
 | Core model | Explicit graph: nodes, edges, typed state, checkpoints | Flows (state, events, branching) that call Crews of role-playing agents | A typed agent loop; Pydantic Graph for graph control flow |
 | License | MIT (Superstep and LangGraph) | MIT (framework); AMP is commercial | MIT |
 | Human in the loop | Human nodes and LangGraph interrupts; approve in the studio, Slack, Telegram, WhatsApp, email or Teams | `@human_feedback` in Flows; resume endpoint in AMP | Human approval of tool calls; long waits through durable engines |
-| Durable runs and time travel | Checkpoints in the database, leased worker jobs; fork a finished run from a checkpoint | `@persist` flow state, restore from a saved state | Durable execution on Temporal, DBOS, Prefect and others; step persistence to save, resume and fork |
+| Durable runs and time travel | Checkpoints in the database (SQLite or Postgres): paused and running queue runs continue after a restart; fork a finished run from a checkpoint | `@persist` flow state, restore from a saved state | Durable execution on Temporal, DBOS, Prefect and others; step persistence to save, resume and fork |
 | Tests, evals, observability | Workflow tests, LangSmith evals, OpenTelemetry traces | AMP tracing; many third-party integrations | Pydantic Evals; OpenTelemetry-native, Logfire |
 | Running it as a service | Built in: API tokens, webhooks, schedules, public API with Python and TypeScript SDKs | Your own service, or AMP deployments with a REST API | Your own service; AG-UI and Vercel AI event streams for front ends |
 
