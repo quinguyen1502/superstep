@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0115
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -39,6 +39,7 @@ Prove that runs survive a server restart and fix the in-memory queue case, where
 
 - 2026-10-25: findings recorded in DEC-0062 (Human-node pauses already durable; in-memory queue runs stuck after a
   restart, confirmed by the new test with recovery turned off); fix, tests, docs; verified (QA-0107).
+- 2026-10-25: PR #143 merged into develop (e348e58, with #146) with the owner's approval; moved to done by TASK-0120.
 
 ## Handoff Notes
 

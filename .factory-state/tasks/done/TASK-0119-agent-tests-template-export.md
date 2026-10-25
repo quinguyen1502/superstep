@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0119
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -113,6 +113,7 @@ and LangGraph project export, and a clear TypeScript refusal.
     needs approval appear under Human answers. A waiting Agent tool step is named after its Agent node.
 - 2026-10-25: validation (`factory verify run --profile full`: only the 6 known environment failures), review REV-0111
   (no blocking findings), QA QA-0111 (pass with follow-up); task to review.
+- 2026-10-25: PR #147 merged into develop (65ed3bb) with the owner's approval; moved to done by TASK-0120.
 
 ## Handoff Notes
 
