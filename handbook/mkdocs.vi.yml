@@ -75,3 +75,5 @@ nav:
       - Phát triển: reference/development.md
       - Câu hỏi thường gặp: reference/faq.md
       - Superstep và LangSmith: reference/superstep-vs-langsmith.md
+      - Superstep và trình dựng trực quan: reference/superstep-vs-visual-builders.md
+      - Superstep và framework agent: reference/superstep-vs-agent-frameworks.md

@@ -2,6 +2,16 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## Unreleased
+
+### Added
+
+- **Handbook: two comparison pages** (en, vi), next to Superstep vs LangSmith. **Superstep vs visual builders**
+  compares Superstep with n8n, Dify, Langflow and Flowise (what runs under the canvas, license, hosting, human in the
+  loop, durable runs, evals and observability, API and code export). **Superstep vs agent frameworks** compares
+  Superstep plus LangGraph with the code-first frameworks CrewAI and PydanticAI. Both cite each project's docs and
+  license file and say when to choose another tool.
+
 ## 0.6.0 (2026-10-24)
 
 ### Added
