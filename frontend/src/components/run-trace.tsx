@@ -55,10 +55,11 @@ function AgentSummary({ a }: { a: AgentStep }) {
   const text = a.kind === 'tool' ? `${a.tool} → ${a.result ?? ''}`
     : a.tool_calls?.length ? t('trace.agent.calls', { tools: a.tool_calls.map(c => c.name).join(', ') }) : t('trace.agent.answer', { text: a.text || '—' })
   return <>
-    {a.round > 0 && <Badge variant="outline" size="sm" data-testid="span-round">{t('trace.agent.round', { n: a.round })}</Badge>}
-    {a.limit_hit && <Badge variant="warning" size="sm" data-testid="span-limit">{t('trace.agent.limit')}</Badge>}
+    {/* what happened first: a narrow row clips the badges at its end (TASK-0117 statuses) */}
     {a.approval === 'approved' && <Badge variant="success" size="sm" data-testid="span-approved">{t('trace.agent.approved')}</Badge>}
     {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' ? 'secondary' : a.status === 'rejected' ? 'warning' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
+    {a.limit_hit && <Badge variant="warning" size="sm" data-testid="span-limit">{t('trace.agent.limit')}</Badge>}
+    {a.round > 0 && <Badge variant="outline" size="sm" data-testid="span-round">{t('trace.agent.round', { n: a.round })}</Badge>}
     <Tip tip={text}><span className="truncate min-w-0 flex-1 text-muted-foreground text-[11px]" data-testid="span-agent">{text}</span></Tip>
   </>
 }
