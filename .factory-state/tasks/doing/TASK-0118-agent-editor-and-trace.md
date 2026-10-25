@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0118
-- Status: todo
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -102,7 +102,11 @@ trace and the chat.
 ## Activity Log
 
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
+- 2026-10-25: started at the owner's request in parallel with TASK-0116, on `factory/task-0118-agent-editor-and-trace`,
+  stacked on `factory/task-0116-agent-engine-loop` (PR #144, 9eac951). Its PR targets develop and contains #144's
+  commits until #144 merges; then develop is merged in. REV-0108 follow-ups taken here: hide `agent:` fields in the
+  trace; treat text from tool rounds as steps in the chat.
 
 ## Handoff Notes
 
-- Can start after TASK-0116 is merged, in parallel with TASK-0117.
+- Stacked on TASK-0116 (#144). Next: implement (`scoped-change`), then `task-validation`.
