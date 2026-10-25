@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0120
-- Status: todo
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -81,6 +81,7 @@ Document the Agent node in the handbook (en, vi) and update the pages that compa
 ## Activity Log
 
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
+- 2026-10-25: started on `factory/task-0120-agent-handbook` from develop 65ed3bb (TASK-0116 to TASK-0119 merged).
 
 ## Handoff Notes
 
