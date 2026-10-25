@@ -278,8 +278,10 @@
       "limit": "round limit reached",
       "status": {
         "error": "error",
-        "refused": "refused"
-      }
+        "refused": "refused",
+        "rejected": "rejected by a reviewer"
+      },
+      "approved": "approved"
     }
   },
   "import": {

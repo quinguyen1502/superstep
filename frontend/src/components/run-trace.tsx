@@ -57,7 +57,8 @@ function AgentSummary({ a }: { a: AgentStep }) {
   return <>
     {a.round > 0 && <Badge variant="outline" size="sm" data-testid="span-round">{t('trace.agent.round', { n: a.round })}</Badge>}
     {a.limit_hit && <Badge variant="warning" size="sm" data-testid="span-limit">{t('trace.agent.limit')}</Badge>}
-    {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' ? 'secondary' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
+    {a.approval === 'approved' && <Badge variant="success" size="sm" data-testid="span-approved">{t('trace.agent.approved')}</Badge>}
+    {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' ? 'secondary' : a.status === 'rejected' ? 'warning' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
     <Tip tip={text}><span className="truncate min-w-0 flex-1 text-muted-foreground text-[11px]" data-testid="span-agent">{text}</span></Tip>
   </>
 }

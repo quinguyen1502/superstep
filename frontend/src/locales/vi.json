@@ -278,8 +278,10 @@
       "limit": "đã hết số vòng",
       "status": {
         "error": "lỗi",
-        "refused": "bị từ chối"
-      }
+        "refused": "bị từ chối",
+        "rejected": "người duyệt từ chối"
+      },
+      "approved": "đã duyệt"
     }
   },
   "import": {

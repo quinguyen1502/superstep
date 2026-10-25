@@ -6,7 +6,8 @@ export type RunEvent = { type: string; node?: string; label?: string; node_type?
   code_output?: CodeOutput; agent?: AgentStep }
 /** What one step of an Agent node did (TASK-0116, DEC-0063): a model call (`model`) or one tool call (`tool`). */
 export type AgentStep = { kind: 'model' | 'tool'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
-  tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused'; ms?: number }
+  tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected'; ms?: number
+  approval?: 'approved' | 'rejected' }  // a tool that needed approval (TASK-0117)
 /** An Agent node `ag` runs as the steps `ag/__model`, `ag/__tool` and `ag/__exit`: the Agent node's id, else undefined. */
 export const agentOf = (node: string) => /^(.+)\/__(model|tool|exit)$/.exec(node)?.[1]
 /** State without the agents' conversations (`agent:<id>`), which the engine keeps for time travel only. */
