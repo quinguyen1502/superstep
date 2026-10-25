@@ -17,6 +17,12 @@ configuring nodes, wiring state, and reusing work across workflows.
 
     Every node type, its settings, and how it behaves in a run.
 
+-   :material-robot-outline:{ .lg .middle } **[Agent node](agent.md)**
+
+    ---
+
+    A model that picks and calls the tools you allow, with rounds and approvals.
+
 -   :material-code-braces:{ .lg .middle } **[State and references](state.md)**
 
     ---

@@ -117,6 +117,16 @@ close the request. With no channel configured, nothing is sent.
 
 Setting up each channel is in [Approval channels](../operate/channels.md).
 
+## Approvals from an Agent node
+
+An [Agent node](../guide/agent.md#approval-before-a-tool) can ask before it
+calls a tool marked **Needs approval**. The run waits exactly as at a Human
+node: the step, named `Agent › tool`, shows the tool and its arguments, and it
+goes to the run panel, the **Approvals** page and the approval channel set on
+the Agent node, with its approvers and deadline. **Approve** runs the call.
+**Reject**, or a text reply, rejects it, and the model is told so, with the
+text as the reason. Each call asks again.
+
 ## A typical pattern
 
 ```text

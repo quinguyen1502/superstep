@@ -24,7 +24,7 @@ sửa để biết cái gì vẫn chạy đúng và thay đổi nào làm hỏng
 | --- | --- |
 | Tên | Test case nói về gì, ví dụ "Từ chối nghỉ phép". |
 | Input | Input của run, dạng JSON. |
-| Câu trả lời cho Human node | Với mỗi node Human, các câu trả lời theo thứ tự: Duyệt, Từ chối hoặc trả lời bằng chữ. Node chờ thêm lần nữa, ví dụ sau khi viết lại, sẽ nhận câu kế tiếp. |
+| Câu trả lời cho Human node | Với mỗi node Human, các câu trả lời theo thứ tự: Duyệt, Từ chối hoặc trả lời bằng chữ. Node chờ thêm lần nữa, ví dụ sau khi viết lại, sẽ nhận câu kế tiếp. Node Agent có công cụ cần duyệt cũng được liệt kê: mỗi lần gọi một câu trả lời. |
 | Điều kiện | Những gì run phải cho ra. Tất cả phải đạt. |
 
 | Điều kiện | Đạt khi |
@@ -32,6 +32,7 @@ sửa để biết cái gì vẫn chạy đúng và thay đổi nào làm hỏng
 | Trạng thái run | Run kết thúc `ok`, `error` hoặc `waiting`, như đã chọn. Không có điều kiện trạng thái thì run phải kết thúc `ok`. |
 | Trường state | Một trường bằng, chứa, không chứa hoặc khớp mẫu (biểu thức chính quy), hoặc rỗng hay không rỗng. Object và danh sách so sánh dạng JSON. |
 | Node | Một node có chạy, hoặc không chạy. |
+| Gọi công cụ | Một [node Agent](../guide/agent.md) đã gọi, hoặc không gọi, một công cụ. Lần gọi được tính khi nó đã chạy, kể cả khi công cụ bị lỗi; lần gọi bị từ chối, bị refused hoặc có tham số sai thì không tính. |
 | Thời gian | Run chạy không quá số giây này. |
 | Chi phí | Run tốn không quá số US$ này. Không kiểm khi model chưa có giá. |
 
@@ -44,7 +45,7 @@ Mỗi workflow có tối đa 50 test case (`STUDIO_TEST_CASES_MAX`), mỗi test 
   một test case chỉ chạy test case đó.
 - Tối đa 4 test case chạy cùng lúc (`STUDIO_TEST_PARALLEL`). Mỗi workflow chỉ có
   một run test tại một thời điểm; **Huỷ** để dừng.
-- **Dùng model mock offline** chạy mọi node LLM và Decision bằng mock offline:
+- **Dùng model mock offline** chạy mọi node LLM, Agent và Decision bằng mock offline:
   không gọi model, không tốn tiền, lần nào cũng ra cùng câu trả lời. Khi tắt,
   test dùng model thật và credential của chúng.
 - Mỗi test case hiện đạt hay không đạt, mỗi điều kiện hiện giá trị mong đợi và
@@ -66,8 +67,8 @@ test kiểm đúng những gì run thật làm. Chỉ những gì tới tay ngư
 | Gửi thông báo | — |
 | Gọi API callback | — |
 
-Node Tool, HTTP, MCP, Code và Retriever vẫn chạy thật. Hãy trỏ chúng tới hệ
-thống thử nghiệm khi chúng thay đổi dữ liệu.
+Node Tool, HTTP, MCP, Code và Retriever, cùng các công cụ của node Agent, vẫn
+chạy thật. Hãy trỏ chúng tới hệ thống thử nghiệm khi chúng thay đổi dữ liệu.
 
 ## So sánh với phiên bản trước
 
@@ -106,13 +107,15 @@ Bỏ những gì không cần rồi lưu.
 
 Điều kiện nhắc tới node hoặc trường state mà graph không còn có được đánh dấu
 **Không còn trong graph**, và không đạt với lý do đó khi chạy. Sửa hoặc bỏ
-điều kiện đó.
+điều kiện đó. Điều kiện **Gọi công cụ** nhắc tới công cụ mà node Agent không còn
+có cũng được đánh dấu như vậy.
 
 ## Mẫu có sẵn
 
 Mỗi mẫu có sẵn đi kèm một đến ba test case, và workflow tạo từ mẫu có một bản
 sao (xem [Mẫu workflow](../guide/templates.md)). Chúng đạt với model mock
-offline. **Hỏi đáp RAG** và **Hỗ trợ có chuyển cấp** cần chọn kho tri thức trước.
+offline. **Hỏi đáp RAG**, **Hỗ trợ có chuyển cấp** và **Agent hỗ trợ khách hàng**
+cần chọn kho tri thức trước.
 Mẫu bạn tự lưu không kèm test case.
 
 ## Gửi kết quả sang LangSmith

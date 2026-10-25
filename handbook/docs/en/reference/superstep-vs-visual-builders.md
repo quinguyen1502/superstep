@@ -37,7 +37,7 @@ How runs pause, resume and get checked:
 
 | Product | Human in the loop | Durable runs | Tests, evals, observability |
 | --- | --- | --- | --- |
-| Superstep | Human nodes; approve in the studio, Slack, Telegram, WhatsApp, email or Teams, with deadlines | Checkpoints in its database (SQLite or Postgres): paused and running queue runs continue after a restart or a worker crash; time travel: fork a finished run from a checkpoint | Workflow tests, LangSmith evals, OpenTelemetry traces |
+| Superstep | Human nodes, and approval before an Agent node's tool calls; approve in the studio, Slack, Telegram, WhatsApp, email or Teams, with deadlines | Checkpoints in its database (SQLite or Postgres): paused and running queue runs continue after a restart or a worker crash; time travel: fork a finished run from a checkpoint | Workflow tests, LangSmith evals, OpenTelemetry traces |
 | n8n | Human review of AI Agent tool calls; Slack "send and wait" approvals | Queue mode with workers | Evaluations (test cases, metrics); OpenTelemetry for self-hosted |
 | Dify | Human Input node | Not covered by the sources | Logs, dashboard, annotations; LangSmith, Langfuse, Opik, Phoenix and others |
 | Langflow | Human Input component; approval of agent tool calls | HITL pauses at a checkpoint and resumes from it; otherwise not covered by the sources | Playground; LangSmith, Langfuse, Opik, Arize integrations |
@@ -55,11 +55,17 @@ How you call it and take it elsewhere:
 
 ## Superstep
 
-- **Visual LangGraph.** Graphs are drawn on a canvas (13 node types, a typed
+- **Visual LangGraph.** Graphs are drawn on a canvas (14 node types, a typed
   state with reducers, loops, parallel branches, subgraphs, Human nodes) and
   compile to a LangGraph `StateGraph`. Python and TypeScript Code nodes run in
   a locked Docker sandbox (on the host on managed platforms) when you need
   code. See [Nodes](../guide/nodes.md).
+- **An Agent node inside the graph.** A model picks and calls the tools you
+  list (MCP server tools, HTTP requests, built-in functions, knowledge base
+  search) for up to a set number of rounds; any tool can need an approval
+  before each call. Each model and tool call is a checkpointed step, so it
+  shows in the trace and is not repeated after a restart (see
+  [Agent node](../guide/agent.md)).
 - **Code export and LangGraph interop.** Any workflow exports as a runnable
   LangGraph project (`langgraph.json`, served by `langgraph dev`, see
   [Export to Python](../guide/python-export.md)), and a subset of the Agent
@@ -84,7 +90,9 @@ How you call it and take it elsewhere:
 
 What Superstep does not try to be: it has far fewer ready integrations than the
 other four (it connects through HTTP, MCP servers, email and its chat
-channels), no hosted cloud service and no marketplace.
+channels), no hosted cloud service and no marketplace. Its Agent node is one
+agent with the tools you list: no multi-agent teams or hand-offs, and no
+TypeScript export of it yet.
 
 ## n8n
 
@@ -168,8 +176,9 @@ agent canvas with checkpointed human input, and many deployment guides.
 - **Call Superstep from them.** n8n, Dify, Langflow or Flowise can start a
   Superstep workflow over HTTP through the public API, for example to put a
   reviewed, approval-gated step inside a larger automation.
-- **Call them from Superstep.** HTTP and MCP nodes can reach an n8n webhook, a
-  Dify app API, a Langflow MCP server or a Flowise prediction endpoint.
+- **Call them from Superstep.** HTTP and MCP nodes, or an Agent node's HTTP and
+  MCP tools, can reach an n8n webhook, a Dify app API, a Langflow MCP server or
+  a Flowise prediction endpoint.
 
 ## When to choose another tool
 

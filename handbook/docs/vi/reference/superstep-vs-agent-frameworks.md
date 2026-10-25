@@ -24,9 +24,9 @@ trước khi quyết định. Về các trình dựng trực quan, xem
 | | Superstep + LangGraph | CrewAI | PydanticAI |
 | --- | --- | --- | --- |
 | Cách dựng | Vẽ graph, hoặc viết code LangGraph; xuất code để chuyển từ cách này sang cách kia | Code Python (Flow và Crew); Crew Studio không cần code trong AMP | Code Python; đặc tả agent bằng YAML/JSON |
-| Mô hình cốt lõi | Graph tường minh: node, cạnh, state có kiểu, checkpoint | Flow (state, sự kiện, rẽ nhánh) gọi các Crew gồm agent đóng vai | Vòng lặp agent có kiểu; Pydantic Graph cho luồng điều khiển dạng graph |
+| Mô hình cốt lõi | Graph tường minh: node, cạnh, state có kiểu, checkpoint; node Agent chạy vòng lặp công cụ do model chọn ngay trong graph | Flow (state, sự kiện, rẽ nhánh) gọi các Crew gồm agent đóng vai | Vòng lặp agent có kiểu; Pydantic Graph cho luồng điều khiển dạng graph |
 | Giấy phép | MIT (Superstep và LangGraph) | MIT (framework); AMP là thương mại | MIT |
-| Human in the loop | Human node và interrupt của LangGraph; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams | `@human_feedback` trong Flow; endpoint resume trong AMP | Duyệt lời gọi tool; chờ lâu nhờ engine durable |
+| Human in the loop | Human node, duyệt trước khi node Agent gọi công cụ, và interrupt của LangGraph; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams | `@human_feedback` trong Flow; endpoint resume trong AMP | Duyệt lời gọi tool; chờ lâu nhờ engine durable |
 | Chạy bền vững và du hành thời gian | Checkpoint trong database (SQLite hoặc Postgres): run đang dừng và run trong hàng đợi đang chạy tiếp tục sau khi khởi động lại; fork run đã xong từ một checkpoint | Lưu state Flow bằng `@persist`, khôi phục từ state đã lưu | Durable execution trên Temporal, DBOS, Prefect và các engine khác; step persistence để lưu, tiếp tục và fork |
 | Test, eval, quan sát | Test workflow, eval LangSmith, trace OpenTelemetry | Tracing của AMP; nhiều tích hợp bên thứ ba | Pydantic Evals; OpenTelemetry gốc, Logfire |
 | Chạy như dịch vụ | Có sẵn: token API, webhook, lịch, API công khai với SDK Python và TypeScript | Dịch vụ do bạn tự dựng, hoặc triển khai trên AMP có REST API | Dịch vụ do bạn tự dựng; stream sự kiện AG-UI và Vercel AI cho frontend |
@@ -41,6 +41,11 @@ trước khi quyết định. Về các trình dựng trực quan, xem
   LangGraph chạy được (xem [Xuất ra Python](../guide/python-export.md)), và
   [API tương thích LangGraph](../run/agent-server-api.md) cho phép client
   LangGraph gọi workflow vẫn nằm trong Superstep.
+- **Vòng lặp agent ở chỗ model nên tự chọn.** [Node Agent](../guide/agent.md)
+  cho model gọi các công cụ bạn liệt kê (MCP, HTTP, hàm có sẵn, tìm trong kho
+  tri thức) tới khi trả lời được, có giới hạn số vòng và duyệt theo từng công
+  cụ. Đó là một agent trong graph, không phải một nhóm agent: với crew chia vai
+  hay code agent có kiểu, các framework bên dưới phù hợp hơn.
 - **Code ở chỗ cần code.** Code node Python và TypeScript dành cho các bước
   viết dễ hơn vẽ.
 - **Kết hợp được.** Một chương trình CrewAI hoặc PydanticAI có thể chạy

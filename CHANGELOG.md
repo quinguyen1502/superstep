@@ -6,6 +6,20 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Agent node.** A model gets a task prompt and the tools you allow, decides which tool to call with which
+  arguments, reads the result and repeats until it answers. Tools are MCP server tools, HTTP requests (with
+  parameters the model fills), built-in Python functions and knowledge base search, each with a name and a
+  description for the model. **Max rounds** (1–25, default 5) caps the loop; at the limit the model answers
+  without tools. A tool marked **Needs approval** pauses the run before each call, like a Human node (run panel,
+  Approvals page, approval channels, approvers, deadline): Approve runs it, Reject or a text reply tells the model
+  why not. Optional steps field (every call with its arguments, result and status) and history field. Each model
+  and tool call is its own checkpointed step, so a restart repeats at most the unfinished one; the run trace groups
+  them by round. The offline mock drives the loop for templates, tests and the demo. Workflow tests get a **Tool
+  called** check and answer Agent approvals; new built-in template **Support agent** with three test cases; the
+  Python and LangGraph project exports write the loop with `interrupt()` before approved tools. The TypeScript
+  export refuses Agent nodes for now. Error codes `AGENT_TOOLS_UNSUPPORTED`,
+  `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED`. Handbook: Agent node (en, vi), and the node reference, MCP, approvals,
+  tests, traces, chat, templates, export and comparison pages.
 - **Runs survive a restart without Redis.** With the in-memory job queue (no `REDIS_URL`), the server now queues
   every `queued` or `running` API, schedule, chat or test run again at start-up, and the worker continues it from
   its last progress checkpoint, as Redis lease recovery already did. A run taken `STUDIO_RECOVER_MAX_ATTEMPTS`

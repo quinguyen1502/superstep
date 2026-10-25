@@ -91,6 +91,9 @@ chạy từ chat:
   [Duyệt](human-approval.md) (và các kênh của nó) như thường lệ. Chat hiện câu
   trả lời khi run chạy tiếp.
 
+Bước duyệt công cụ của [node Agent](../guide/agent.md#duyet-truoc-khi-goi-cong-cu)
+luôn do người duyệt trả lời: người chat không duyệt hành động của chính agent.
+
 Không gửi được tin nhắn mới khi chat đang chờ trả lời. [Hạn chờ](human-approval.md#han-cho)
 của node áp dụng cho cả hai cách; khi quá hạn, hành động khi hết hạn quyết định
 điều gì xảy ra.

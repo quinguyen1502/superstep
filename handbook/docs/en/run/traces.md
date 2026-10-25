@@ -20,6 +20,11 @@ Click a row, or a node on the canvas, to open its detail:
 
 ![State diff](../images/trace-detail.png)
 
+An [Agent node](../guide/agent.md#trace-and-usage) shows its steps under it:
+`Agent › model` rows with the round and the tools it called or its answer, and
+`Agent › tool` rows with the tool, a shortened result, and **approved** or
+**rejected by a reviewer** when a person answered.
+
 **Raw events** switches the whole timeline to the original event stream. Pick
 an earlier run in the run menu next to the tabs (the last 10), or in **View
 all**, to replay it on the same timeline, labelled with its version.
