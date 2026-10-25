@@ -120,7 +120,7 @@ trace and the chat.
 - 2026-10-25: review fix (0572604): tool cards keep their own state when moved, unnamed parameters are skipped; e2e
   moves a tool. Validation: `factory verify run --profile full` passed every check except `python:backend:test`,
   whose only failures are the 6 environment tests (QA-0109). REV-0109 approved for QA; QA-0109 pass with follow-up.
-  Moved to review; Draft PR into develop (stacked on #144).
+  Moved to review; Draft PR #145 into develop (stacked on #144).
 
 ## Handoff Notes
 
