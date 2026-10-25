@@ -1,0 +1,134 @@
+"""TASK-0115: runs survive a server restart. A real uvicorn process (default SQLite database, in-memory job queue) is
+killed with SIGKILL and started again on the same database:
+- a run paused at a Human node is resumed after the restart;
+- an API run that was going (one node finished, the next one sleeping) continues from its progress checkpoint after
+  the restart, without running the finished node again;
+- a run that keeps being interrupted ends as `error` RUN_INTERRUPTED instead of being retried forever."""
+import json, os, signal, socket, sqlite3, subprocess, sys, tempfile, time, uuid
+from pathlib import Path
+import httpx, pytest
+from websockets.sync.client import connect
+from test_hitl import APPROVAL
+
+BACKEND = Path(__file__).resolve().parents[1]
+ADMIN = "durable-admin@example.com"
+
+
+def H(t): return {"Authorization": f"Bearer {t}"}
+
+
+class Server:
+    """`uvicorn app.main:app` on its own port and database; `restart()` kills it hard and starts it again."""
+    def __init__(self, root: Path, **env):
+        self.root = root; self.db = str(root / "studio.db"); self.proc = None
+        self.env = {**os.environ, "STUDIO_DB": self.db, "STUDIO_SECRET_KEY_FILE": str(root / "secret.key"), "JWT_SECRET": "durable-test-" + "x" * 32,
+                    "STUDIO_IMPORT_DIR": str(root / "imports"), "STUDIO_COOKIE_SECURE": "0", "STUDIO_ADMIN_EMAILS": ADMIN, "TMPDIR": str(root), **env}
+        for k in ("REDIS_URL", "DATABASE_URL", "STUDIO_DEMO_MODE"): self.env.pop(k, None)
+
+    def start(self):
+        with socket.socket() as s: s.bind(("127.0.0.1", 0)); self.port = s.getsockname()[1]
+        self.proc = subprocess.Popen([sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(self.port), "--log-level", "warning"],
+                                     cwd=BACKEND, env=self.env)
+        self.url = f"http://127.0.0.1:{self.port}"
+        for _ in range(300):
+            try:
+                if httpx.get(f"{self.url}/api/health", timeout=1).status_code == 200: return self
+            except httpx.HTTPError: pass
+            time.sleep(0.1)
+        raise AssertionError("server did not start")
+
+    def kill(self):
+        self.proc.send_signal(signal.SIGKILL); self.proc.wait(10)
+
+    def restart(self):
+        self.kill(); return self.start()
+
+    def run_row(self, rid):
+        with sqlite3.connect(self.db) as c:
+            c.row_factory = sqlite3.Row; return dict(c.execute("select * from runs where id = ?", (rid,)).fetchone())
+
+
+@pytest.fixture
+def server(request):
+    root = Path(tempfile.mkdtemp(prefix="durable-")); srv = Server(root, **getattr(request, "param", {})).start()
+    yield srv
+    if srv.proc and srv.proc.poll() is None: srv.kill()
+
+
+def setup(srv, wf):
+    email = f"d{uuid.uuid4().hex[:6]}@example.com" if wf is APPROVAL else ADMIN  # Code nodes need code.write (an admin)
+    jwt = httpx.post(f"{srv.url}/api/auth/register", json={"email": email, "password": "secret12"}).json()["data"]["token"]
+    saved = httpx.post(f"{srv.url}/api/workflows", json={**wf, "name": f"{wf['name']} {uuid.uuid4().hex[:4]}"}, headers=H(jwt)).json()
+    assert saved.get("data"), saved
+    wid = saved["data"]["id"]
+    tok = httpx.post(f"{srv.url}/api/workflows/{wid}/tokens", json={"name": "d"}, headers=H(jwt)).json()["data"]["token"]
+    return jwt, wid, tok
+
+
+def poll(srv, wid, tok, rid, until=("ok", "error", "waiting", "timeout", "cancelled"), timeout=30):
+    for _ in range(int(timeout / 0.2)):
+        r = httpx.get(f"{srv.url}/api/hooks/workflows/{wid}/runs/{rid}", headers=H(tok)).json()["data"]
+        if r["status"] in until: return r
+        time.sleep(0.2)
+    raise AssertionError(f"run {rid} did not settle: {r['status']}")
+
+
+def test_waiting_run_resumes_after_restart(server):
+    jwt, wid, tok = setup(server, APPROVAL)
+    rid = httpx.post(f"{server.url}/api/hooks/workflows/{wid}/runs", json={"input": {"message": "order 7"}}, headers=H(tok)).json()["data"]["run_id"]
+    assert poll(server, wid, tok, rid)["status"] == "waiting"
+    server.restart()
+    pending = httpx.get(f"{server.url}/api/runs/pending", headers=H(jwt)).json()["data"]
+    assert [p["id"] for p in pending] == [rid]  # still waiting, from the database
+    ws = server.url.replace("http", "ws") + f"/ws/run?token={jwt}"
+    with connect(ws) as w:
+        w.send(json.dumps({"resume_run_id": rid, "response": "approved"}))
+        while json.loads(w.recv()).get("type") != "run_summary": pass
+    done = poll(server, wid, tok, rid)
+    assert done["status"] == "ok" and done["final_state"]["decision"] == "approved"
+
+
+SLOW = lambda log: {  # noqa: E731
+    "name": "Slow", "state": [{"name": "a", "type": "string"}, {"name": "b", "type": "string"}],
+    "nodes": [{"id": "s", "type": "start", "position": {"x": 0, "y": 0}, "data": {"label": "s"}},
+              {"id": "first", "type": "tool", "position": {"x": 1, "y": 0}, "data": {"label": "first", "mode": "code", "output_field": "a",
+               "code": f"def main(state):\n    open({log!r}, 'a').write('first\\n')\n    return 'done'\n"}},
+              {"id": "slow", "type": "tool", "position": {"x": 2, "y": 0}, "data": {"label": "slow", "mode": "code", "output_field": "b",
+               "code": f"import time\ndef main(state):\n    open({log!r}, 'a').write('slow\\n')\n    time.sleep(3)\n    return 'late'\n"}},
+              {"id": "e", "type": "end", "position": {"x": 3, "y": 0}, "data": {"label": "e"}}],
+    "edges": [{"id": "1", "source": "s", "target": "first"}, {"id": "2", "source": "first", "target": "slow"}, {"id": "3", "source": "slow", "target": "e"}]}
+CODE = {"STUDIO_ENABLE_CODE_NODES": "1", "STUDIO_CODE_RUNTIME": "subprocess", "STUDIO_RUN_TIMEOUT": "30"}
+
+
+def start_slow(server):
+    log = server.root / "calls.log"
+    _, wid, tok = setup(server, SLOW(str(log)))
+    rid = httpx.post(f"{server.url}/api/hooks/workflows/{wid}/runs", json={"input": {}}, headers=H(tok)).json()["data"]["run_id"]
+    for _ in range(150):  # `first` finished and its progress checkpoint names `slow` as next
+        cp = json.loads(server.run_row(rid)["checkpoint"] or "null") or {}
+        if "slow" in json.dumps(cp.get("node") or cp.get("nodes")) and log.exists() and "slow" in log.read_text(): break
+        time.sleep(0.1)
+    else: raise AssertionError("the run never reached the slow node")
+    return log, wid, tok, rid
+
+
+@pytest.mark.parametrize("server", [CODE], indirect=True)
+def test_running_run_continues_after_restart(server):
+    log, wid, tok, rid = start_slow(server)
+    assert server.run_row(rid)["status"] == "running"
+    server.restart()
+    done = poll(server, wid, tok, rid)
+    assert done["status"] == "ok" and done["final_state"] == {"a": "done", "b": "late"}
+    assert log.read_text().splitlines() == ["first", "slow", "slow"]  # `first` ran once; the interrupted node again
+
+
+@pytest.mark.parametrize("server", [{**CODE, "STUDIO_RECOVER_MAX_ATTEMPTS": "2"}], indirect=True)
+def test_run_interrupted_too_often_fails_with_a_code(server):
+    log, wid, tok, rid = start_slow(server)
+    server.restart()  # attempt 2 starts the slow node again ...
+    for _ in range(100):
+        if log.read_text().count("slow") == 2: break
+        time.sleep(0.1)
+    server.restart()  # ... and is interrupted too: recovery gives up
+    done = poll(server, wid, tok, rid)
+    assert done["status"] == "error" and done["error"]["code"] == "RUN_INTERRUPTED" and done["error"]["details"] == {"attempts": 2}

@@ -92,12 +92,39 @@ docker compose up --scale worker=3
 | `STUDIO_WORKER_CONCURRENCY` | 2 | Số job một worker chạy cùng lúc |
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | 30 giây | Thời hạn giữ job; worker gia hạn trong lúc chạy |
 | `STUDIO_JOB_REAP_EVERY` | 15 giây | Chu kỳ đưa các job hết hạn giữ về lại hàng đợi |
+| `STUDIO_RECOVER_ON_START` | 1 | Hàng đợi trong bộ nhớ: đưa lại các run chưa xong vào hàng đợi khi server khởi động |
+| `STUDIO_RECOVER_MAX_ATTEMPTS` | 3 | Số lần một run được nhận trước khi việc khôi phục dừng với `RUN_INTERRUPTED` |
 
-Hàng đợi trong bộ nhớ chỉ dùng khi phát triển: job mất khi process đó khởi
-động lại. Với Redis, job có worker bị chết sẽ được đưa lại hàng đợi khi hết hạn
-giữ, và chạy tiếp từ checkpoint cuối (`run_recovered` trong trace). Mỗi lần
-worker nhận một run, `runs.lease_gen` tăng lên; mọi lần ghi phải mang fencing
-token đó, nên worker đã mất quyền giữ không ghi được và tự dừng.
+Với Redis, job có worker bị chết sẽ được đưa lại hàng đợi khi hết hạn giữ, và
+chạy tiếp từ checkpoint cuối (`run_recovered` trong trace). Mỗi lần worker nhận
+một run, `runs.lease_gen` tăng lên; mọi lần ghi phải mang fencing token đó, nên
+worker đã mất quyền giữ không ghi được và tự dừng.
+
+## Run qua các lần khởi động lại
+
+Superstep lưu checkpoint của run trong database của chính nó (mặc định SQLite,
+Postgres khi có `DATABASE_URL`), không phải trong saver bộ nhớ của LangGraph,
+nên khởi động lại hay sập server đều không mất run đang dừng:
+
+| Run | Sau khi khởi động lại |
+| --- | --- |
+| Đang dừng ở node Human | Vẫn đang chờ. Trả lời trong studio, kênh chat hoặc API như trước; run chạy tiếp từ checkpoint. |
+| Run API, lịch, chat hoặc test đang chờ hoặc đang chạy | Chạy tiếp từ node đã xong cuối cùng. Job trong hàng đợi lưu checkpoint tiến độ sau mỗi node; node đang chạy dở chạy lại, các lần gọi đã xong không lặp lại ([side effect gần như đúng một lần](../reference/architecture.md#side-effect-gan-nhu-ung-mot-lan)). |
+| Đang chạy trong editor | Kết thúc cùng kết nối của trình duyệt; run chỉ được lưu khi xong. Hãy chạy lại. |
+
+Cách các run chưa xong quay lại tùy hàng đợi:
+
+- **Redis** (`REDIS_URL`): job vẫn nằm trong Redis; khi hết hạn giữ, worker bất
+  kỳ nhận lại.
+- **Hàng đợi trong bộ nhớ** (không có `REDIS_URL`, một process): job trong bộ
+  nhớ đã mất, nên khi khởi động server đưa mọi run `queued` hoặc `running` vào
+  lại hàng đợi dưới dạng job khôi phục. Chỉ đặt `STUDIO_RECOVER_ON_START=0` khi
+  nhiều process API dùng chung một database mà không có Redis, vì process này
+  sẽ nhận mất run của process kia.
+
+Run đã được nhận `STUDIO_RECOVER_MAX_ATTEMPTS` lần (ví dụ một node cứ làm sập
+server) không được chạy tiếp nữa: run kết thúc với `error`, mã
+`RUN_INTERRUPTED`, giữ lại các sự kiện đến lúc đó.
 
 ## Model chạy ở máy khi dùng Compose
 
