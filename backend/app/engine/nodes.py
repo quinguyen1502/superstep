@@ -41,12 +41,16 @@ def code_call(nid: str, d: Dict[str, Any], state: Dict[str, Any], ports: Ports) 
 def http_call(nid: str, d: Dict[str, Any], state: Dict[str, Any], extra: Dict[str, str]) -> Any:
     """HTTP Tool request (TASK-0039, REQ-0027): public http(s) addresses only unless STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1.
     The host is resolved once and the request connects to that checked IP; redirects are never followed."""
-    url, ip = public_address(render(d.get("url", ""), state), config.http_tool_allow_private(), "HTTP_TOOL_URL_BLOCKED", node=nid)
+    return http_send(nid, d.get("method", "GET"), render(d.get("url", ""), state), render(d.get("body", ""), state), extra)
+
+
+def http_send(nid: str, method: str, url: str, body: str, extra: Dict[str, str]) -> Any:
+    """The request of an HTTP Tool node or an Agent node's HTTP tool, with its URL and body already rendered."""
+    url, ip = public_address(url, config.http_tool_allow_private(), "HTTP_TOOL_URL_BLOCKED", node=nid)
     target, headers, ext = pinned_request(url, ip)
     u = urlsplit(url); auth = (unquote(u.username), unquote(u.password or "")) if u.username else None  # user:pass@ in the URL
-    body = render(d.get("body", ""), state)
     with httpx.Client(timeout=config.http_tool_timeout(), follow_redirects=False) as c:
-        r = c.send(c.build_request(d.get("method", "GET"), target, content=body.encode() if body else None,
+        r = c.send(c.build_request(method, target, content=body.encode() if body else None,
                                    headers={"Content-Type": "application/json", **extra, **headers}, extensions=ext), auth=auth)
     try: return r.json()
     except Exception: return r.text

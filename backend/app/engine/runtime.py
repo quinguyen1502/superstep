@@ -58,6 +58,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     ports: user-bound services for Retriever / MCP nodes (engine.ports.Ports)."""
     if resume is None and (bad := check_input(wf, inputs)): raise ValidationError(bad)
     wf = agents.expand(wf)  # usually expanded already by the run service (idempotent, TASK-0116)
+    if until and any(n["id"] == until and n.get("type") == "agent" for n in wf["nodes"]): until = f"{until}{agents.SEP}{agents.EXIT}"  # the whole agent
     usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished (TASK-0010)
     code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished (TASK-0053)
     held = {"node": resume["node"], "value": resume["value"]} if resume and "value" in resume else None

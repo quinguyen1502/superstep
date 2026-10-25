@@ -83,7 +83,7 @@ def arg_error(schema: Dict[str, Any], args: Any) -> Optional[str]:
     if missing: return f"missing argument(s): {', '.join(missing)}"
     for k, v in args.items():
         want = (props.get(k) or {}).get("type") if isinstance(props.get(k), dict) else None
-        if want not in JSON_TYPES or v is None: continue
+        if not isinstance(want, str) or want not in JSON_TYPES or v is None: continue  # type lists (["string", "null"]) pass
         ok = isinstance(v, JSON_TYPES[want]) and not (want in ("number", "integer") and isinstance(v, bool))
         if not ok: return f"argument {k} must be of type {want}"
     return None
@@ -98,14 +98,16 @@ def shorten(s: str, n: int) -> str:
 
 
 def http_request(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], headers: Dict[str, str]) -> Any:
-    from .nodes import http_call  # nodes dispatches to this module
-    method = (t.get("method") or "GET").upper()
+    """The builder's templates are rendered once; the model's arguments are inserted as values and never rendered, so an
+    argument that looks like `{{state.x}}` cannot read other state fields."""
+    from .nodes import http_send  # nodes dispatches to this module
+    method, tpl_url, tpl_body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
     ctx = {**state, "args": args}
-    url, body = t.get("url") or "", t.get("body") or ""
-    uses_args = any(r.field == "args" for r in refs(url) + refs(body))
-    if not body and method in ("POST", "PUT", "PATCH"): body = json.dumps(args, ensure_ascii=False)
+    url, body = render(tpl_url, ctx), render(tpl_body, ctx)
+    uses_args = any(r.field == "args" for r in refs(tpl_url) + refs(tpl_body))
+    if not tpl_body and method in ("POST", "PUT", "PATCH"): body = json.dumps(args, ensure_ascii=False)
     elif method == "GET" and args and not uses_args: url += ("&" if "?" in url else "?") + urlencode({k: text(v) for k, v in args.items()})
-    return http_call(nid, {"url": url, "method": method, "body": body}, ctx, headers)
+    return http_send(nid, method, url, body, headers)
 
 
 def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects]) -> Any:

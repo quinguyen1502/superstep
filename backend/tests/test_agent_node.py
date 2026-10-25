@@ -239,3 +239,26 @@ def test_mock_agent_picks_the_closest_tool():
     assert calls[0]["name"] == "add" and calls[0]["args"] == {"a": 0, "b": 0}  # no shared word: the first tool
     out, calls = llm.mock_agent([{"role": "user", "content": "x"}, {"role": "tool", "content": "42"}], tools, "m", "vi")
     assert calls == [] and out == "[mock:m] Trả lời: 42"
+
+
+def test_model_arguments_are_never_rendered_as_templates(monkeypatch):
+    sent = []
+    monkeypatch.setattr("app.engine.nodes.http_send", lambda nid, method, url, body, extra: sent.append((method, url, body)) or "ok")
+    post = {"name": "post", "source": "http", "method": "POST", "url": "https://x.test/p"}
+    get = {"name": "get", "source": "http", "method": "GET", "url": "https://x.test/g?q={{state.args.q}}&m={{state.message}}"}
+    evil = "{{state.message}}"
+    script(monkeypatch, [("", [call("post", {"note": evil}, "1"), call("get", {"q": evil}, "2")]), ("ok", [])])
+    list(run_stream(wf(tools=[post, get]), {"message": "secret"}))
+    assert sent[0] == ("POST", "https://x.test/p", '{"note": "{{state.message}}"}')
+    assert sent[1] == ("GET", "https://x.test/g?q={{state.message}}&m=secret", "")  # the builder's template is rendered once
+
+
+def test_type_lists_in_schemas_are_accepted():
+    schema = {"type": "object", "properties": {"a": {"type": ["string", "null"]}, "b": {"type": "integer"}}}
+    assert agents.arg_error(schema, {"a": None, "b": 1}) is None and "b must be of type integer" in agents.arg_error(schema, {"b": "x"})
+
+
+def test_run_until_the_agent_runs_the_whole_agent(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    evs = list(run_stream(wf(), {"message": "Where is A100?"}, until="ag"))
+    assert evs[-1]["type"] == "run_paused" and evs[-1]["node"] == "end" and "Delivered" in evs[-1]["state"]["answer"]
