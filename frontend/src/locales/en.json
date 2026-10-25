@@ -1338,6 +1338,10 @@
       "builtin-feedback-digest": {
         "name": "Customer feedback digest",
         "description": "Label each piece of feedback, write a report and e-mail it to the team."
+      },
+      "builtin-support-agent": {
+        "name": "Support agent",
+        "description": "An agent looks up orders and the refund policy; a person approves each refund it requests."
       }
     }
   },

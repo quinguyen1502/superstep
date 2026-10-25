@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | [Start](#start-and-end), [End](#start-and-end) | Entry and exit of the graph | — |
 | [LLM](#llm) | Call a model with a prompt template | `output_field` |
+| [Agent](#agent) | A model that picks and calls the tools you allow, until it answers | `output_field`, `steps_field` (optional) |
 | [Decision (Jev)](#decision-jev) | Typed answers from TypeSafe Jev | one field per question, plus `output_field` |
 | [Retriever](#retriever) | Search a knowledge base | `output_field` (list) |
 | [Tool](#tool) | Python function, HTTP request or your own Python code | `output_field` |
@@ -18,7 +19,7 @@
 
 ## Execution settings
 
-LLM, Decision, Retriever, Tool, MCP tool and Human nodes have an
+LLM, Agent, Decision, Retriever, Tool, MCP tool and Human nodes have an
 **Execution** block in their config:
 
 | Setting | Effect |
@@ -48,6 +49,13 @@ While a run is going, token deltas arrive as `node_token` events and show in
 the Logs row and the Output tab. They are not stored in run history; the final
 text is. Provider failures (401, timeout and so on) become a node `error`
 event, never a server crash.
+
+## Agent
+
+A task prompt, a list of tools (MCP, HTTP, built-in function, knowledge base
+search) and a maximum number of rounds. The model calls tools until it
+answers; a tool can need a person's approval before each call. See
+[Agent node](agent.md).
 
 ## Decision (Jev)
 

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0120
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -81,6 +81,20 @@ Document the Agent node in the handbook (en, vi) and update the pages that compa
 ## Activity Log
 
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
+- 2026-10-25: started on `factory/task-0120-agent-handbook` from develop 65ed3bb (TASK-0116 to TASK-0119 merged).
+- 2026-10-25: implemented.
+  - New handbook page `guide/agent.md` (en, vi): when to use it, settings, the four tool sources, rounds and the
+    limit, approval, the mock, the trace, tests, the template, exports and errors. Three screenshots come from a new
+    `agent <lang>` test in `e2e/handbook.spec.ts` (`HANDBOOK_SHOTS=1 npm run e2e -- handbook -g agent`).
+  - Updated pages (en, vi): nodes, guide index, MCP (MCP node or Agent node), templates, Python export (an Agent
+    node; the TypeScript refusal), human approval, tests (the "Tool called" check), traces, chat, and the three
+    comparison pages.
+  - Updated elsewhere: both navs, the README feature lists (14 node types, Agent node) and CHANGELOG Unreleased.
+  - TASK-0119 follow-up fix: the Support agent template's gallery name and description in both locales, with a test
+    that every built-in has them.
+  - TASK-0115 to TASK-0119 moved to done (their PRs merged).
+- 2026-10-25: validation (strict builds en and vi; `factory verify run --profile full`: only the 6 known environment
+  failures), review REV-0112 (no blocking findings), QA QA-0112 (pass); task to review.
 
 ## Handoff Notes
 

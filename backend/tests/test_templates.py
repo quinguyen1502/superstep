@@ -1,5 +1,6 @@
 """TASK-0025: template library: built-ins, save-as (sanitised), import/export, use, scopes, delete."""
-import uuid
+import json, uuid
+from pathlib import Path
 import pytest
 from types import SimpleNamespace as NS
 from fastapi.testclient import TestClient
@@ -43,6 +44,14 @@ def test_builtins_are_well_formed():
     for b in T.BUILTINS:
         assert T.problems(T.export_payload(b["name"], b["description"], b["workflow"])) == []
         assert all("knowledge base" in e for e in validate(b["workflow"]))  # only "pick your KB" may remain
+
+
+def test_builtins_have_a_name_and_description_in_both_ui_languages():
+    """The gallery shows built-ins by `templates.builtin.<id>` (TASK-0120 adds the Support agent's)."""
+    for lang in ("en", "vi"):
+        shown = json.loads((Path(__file__).resolve().parents[2] / f"frontend/src/locales/{lang}.json").read_text())["templates"]["builtin"]
+        assert sorted(shown) == sorted(b["id"] for b in T.BUILTINS), lang
+        assert all(shown[b["id"]].get("name") and shown[b["id"]].get("description") for b in T.BUILTINS), lang
 
 
 NEW = ["builtin-refund-approval", "builtin-leave-request", "builtin-social-post", "builtin-large-order", "builtin-expense-claim",

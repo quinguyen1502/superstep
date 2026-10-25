@@ -47,3 +47,12 @@ in the config. Argument strings are
 keeps its type. The result goes to `output_field`.
 
 A shared workflow runs with the **owner's** MCP servers.
+
+## MCP node or Agent node
+
+An MCP tool node calls one tool with arguments you fill in, at a fixed place
+in the graph. To let a model decide whether and when to call a tool, and with
+which arguments, add the tool to an [Agent node](agent.md) instead: pick the
+server and the tool, and the model reads the tool's description and input
+schema from the server. Only the tools you add are offered, never the server's
+whole list.

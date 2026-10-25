@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0117
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -112,6 +112,7 @@ runs survive pauses and restarts without repeating a finished model or tool call
   - Tests: `tests/test_agent_approval.py` (12) and two Agent cases in `tests/test_durable_restart.py`.
 - 2026-10-25: validation (`factory verify run --profile full`: only the 6 known environment failures), review REV-0110
   (no blocking findings), QA QA-0110 (pass with follow-up); task to review.
+- 2026-10-25: PR #146 merged into develop (e348e58) with the owner's approval; moved to done by TASK-0120.
 
 ## Handoff Notes
 

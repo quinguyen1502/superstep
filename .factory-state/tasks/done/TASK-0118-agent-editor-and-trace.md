@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0118
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -121,6 +121,7 @@ trace and the chat.
   moves a tool. Validation: `factory verify run --profile full` passed every check except `python:backend:test`,
   whose only failures are the 6 environment tests (QA-0109). REV-0109 approved for QA; QA-0109 pass with follow-up.
   Moved to review; Draft PR #145 into develop (stacked on #144).
+- 2026-10-25: PR #145 merged into develop (9ec4e98) with the owner's approval; moved to done by TASK-0120.
 
 ## Handoff Notes
 

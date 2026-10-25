@@ -71,31 +71,35 @@ docker compose up --build   # http://localhost:8080
 
 ## Tính năng
 
-1. **Trình soạn thảo trực quan:** 13 loại node (LLM, Tool, Condition, For
-   each, Join, Subgraph, MCP, Retriever, Decision, Send email, Human, Start,
-   End) cùng node Code chỉ đọc từ repo đã import, state có kiểu và reducer,
+1. **Trình soạn thảo trực quan:** 14 loại node (LLM, Agent, Tool, Condition,
+   For each, Join, Subgraph, MCP, Retriever, Decision, Send email, Human,
+   Start, End) cùng node Code chỉ đọc từ repo đã import, state có kiểu và reducer,
    tham chiếu `{{state.field}}` được kiểm tra trước khi chạy, và thư viện mẫu
    để bắt đầu nhanh.
 2. **Trace của run:** thời gian, token và chi phí từng node, input, output và
    state diff của mỗi bước, debug từng bước và chạy tới node đã chọn. Test
    case kiểm tra kết quả của workflow, và có thể so sánh các run test.
-3. **Duyệt giữa chừng (human-in-the-loop):** node Human dừng run tại
+3. **Node Agent:** model tự chọn và gọi các công cụ bạn cho phép (công cụ
+   của máy chủ MCP, yêu cầu HTTP, hàm có sẵn, tìm trong kho tri thức) tới khi
+   trả lời được, có giới hạn số vòng và bước duyệt trước các công cụ bạn đánh
+   dấu.
+4. **Duyệt giữa chừng (human-in-the-loop):** node Human dừng run tại
    checkpoint; duyệt trong hộp Duyệt của studio, hoặc qua Slack, Telegram,
    WhatsApp, email hay Teams; hạn chờ gửi nhắc, chuyển người duyệt hoặc cho run
    hết hạn.
-4. **Trigger:** token API cho từng workflow, run đồng bộ và bất đồng bộ,
+5. **Trigger:** token API cho từng workflow, run đồng bộ và bất đồng bộ,
    webhook kết quả có chữ ký và retry, lịch cron theo múi giờ, và chạy từ
    chat: một lệnh gửi Slack app hoặc bot Telegram chạy workflow, bot trả lời.
-5. **Độ tin cậy:** checkpoint trong database, job của worker có lease, side
+6. **Độ tin cậy:** checkpoint trong database, job của worker có lease, side
    effect thực hiện gần như đúng một lần (effectively-once) nhờ idempotency
    key và sổ ghi kết quả.
-6. **Model và công cụ:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio và
+7. **Model và công cụ:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio và
    server tương thích OpenAI; kho tri thức pgvector; máy chủ MCP; code Python
    chạy trong container Docker bị giới hạn chặt.
-7. **Vận hành:** phiên bản bất biến có diff và khôi phục, vai trò admin,
+8. **Vận hành:** phiên bản bất biến có diff và khôi phục, vai trò admin,
    editor và viewer, chia sẻ và nhóm, nhật ký audit, trace OpenTelemetry gửi
    tới OTLP hoặc LangSmith.
-8. **Học LangGraph:** tab Code hiện mọi workflow dưới dạng một file Python
+9. **Học LangGraph:** tab Code hiện mọi workflow dưới dạng một file Python
    LangGraph dễ đọc, chạy được độc lập (offline với model mock), tô sáng code
    của node đang chọn, và xuất ra để dùng trong dự án của bạn.
 

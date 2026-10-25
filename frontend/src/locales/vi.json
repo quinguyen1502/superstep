@@ -1338,6 +1338,10 @@
       "builtin-feedback-digest": {
         "name": "Tổng hợp phản hồi khách hàng",
         "description": "Gắn nhãn từng phản hồi, viết báo cáo và gửi email cho nhóm."
+      },
+      "builtin-support-agent": {
+        "name": "Agent hỗ trợ khách hàng",
+        "description": "Agent tra cứu đơn hàng và chính sách hoàn tiền; mỗi yêu cầu hoàn tiền của agent đều cần người duyệt."
       }
     }
   },

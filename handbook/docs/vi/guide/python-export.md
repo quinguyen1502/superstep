@@ -51,8 +51,9 @@ Final state: {...}
     `LLM_PROVIDER` là bất kỳ nhà cung cấp nào `init_chat_model` hỗ trợ
     (`openai`, `anthropic`, `ollama`, …); tên model của node được dùng nguyên
     như trên canvas.
-- **Node Human.** `EXAMPLE_ANSWERS` chứa các câu trả lời của test case đầu
-  tiên. Khi một node hết câu trả lời, file hỏi trên terminal.
+- **Node Human và bước duyệt.** `EXAMPLE_ANSWERS` chứa các câu trả lời của
+  test case đầu tiên, kể cả cho bước duyệt công cụ của node Agent. Khi một node
+  hết câu trả lời, file hỏi trên terminal.
 - **Node Code** chạy nguyên như đã viết, trong tiến trình Python của bạn, không
   có sandbox của studio. Hãy đọc chúng trước khi chạy file người khác chia sẻ.
 
@@ -65,6 +66,7 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, rồi `call_llm(prompt, model)` |
 | Condition | một node không đổi gì, và `add_conditional_edges` với hàm router và bảng nhãn → node |
 | Human | `interrupt(...)` dừng run; `Command(resume=answer)` chạy tiếp |
+| Agent | một hàm vào, một hàm model và một hàm công cụ với hai router, và một hàm kết thúc; `interrupt(...)` trước công cụ cần duyệt |
 | Join | một node, và `add_edge([nhánh, nhánh], join)`: chạy một lần khi mọi nhánh xong |
 | For each | một trường vị trí vòng lặp và một router trả về `each` hoặc `done` |
 | Decision | `decide(text, question)` cho từng câu hỏi |
@@ -72,7 +74,7 @@ Final state: {...}
 | Tool: function | code của hàm, được chép vào |
 | Tool: HTTP | một request `httpx` |
 | Tool: Code | code của node, nằm trong hàm của node |
-| Retriever, MCP, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio |
+| Retriever, MCP, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio (kể cả công cụ kho tri thức và MCP của node Agent) |
 | Note | một comment |
 | Retry, cache, trường input | `RetryPolicy`, `CachePolicy`, `input_schema` trong `add_node` |
 | Timeout | một comment: LangGraph không dừng được node đang chặn |
@@ -129,6 +131,29 @@ checkpointer (`MemorySaver`), nên `main()` chạy tiếp được bằng
 `graph.stream(Command(resume="approved"), config)`. Khi đó node chạy lại từ
 đầu, và `interrupt()` trả về câu trả lời.
 
+### Một node Agent
+
+Lấy từ mẫu Agent hỗ trợ khách hàng. Node Agent được viết đúng như studio chạy
+nó: mỗi bước một hàm, và cuộc hội thoại nằm trong một trường state
+(`agent_support_agent`) mà hàm kết thúc sẽ xoá.
+
+```python
+builder.add_edge("support_agent", "support_agent_model")
+builder.add_conditional_edges("support_agent_model", route_support_agent_model, {"tool": "support_agent_tool", "done": "support_agent_end"})
+builder.add_conditional_edges("support_agent_tool", route_support_agent_tool, {"tool": "support_agent_tool", "model": "support_agent_model"})
+```
+
+- `support_agent_model` gọi `call_agent(messages, tools, model)`: bản mock, hoặc
+  khi đặt `LLM_PROVIDER` thì một chat model của LangChain với `bind_tools`.
+- `support_agent_tool` chạy một lần gọi công cụ. Công cụ trong
+  `SUPPORT_AGENT_NEEDS_APPROVAL` hỏi trước bằng `interrupt()`; "approved" thì
+  chạy, mọi câu trả lời khác được báo cho model làm lý do.
+- `SUPPORT_AGENT_TOOLS` chứa tên, mô tả và JSON Schema của từng công cụ, còn
+  `SUPPORT_AGENT_MAX_ROUNDS` là giới hạn số vòng.
+
+File không dùng `create_react_agent`: hàm đó không hỏi trước riêng một công cụ
+được, và không ghi các vòng và các bước như studio.
+
 ### Một Subgraph
 
 ```python
@@ -172,6 +197,7 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | Tool: function | stub ném lỗi: hàm là Python trên server |
 | Tool: HTTP | `fetch`, không đi theo chuyển hướng |
 | Retriever, MCP, Send email | stub có `TODO`, như file Python |
+| Agent | chưa xuất được: `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED`; hãy xuất workflow sang Python |
 | Retry, cache, trường đầu vào, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` trong `addNode` |
 
 API key và các thiết lập khác được đọc từ biến môi trường (`LLM_PROVIDER`,

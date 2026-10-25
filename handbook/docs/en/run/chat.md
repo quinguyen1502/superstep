@@ -91,6 +91,10 @@ runs from a chat:
   goes to the [Approvals](human-approval.md) page (and its channels) as usual.
   The chat shows the answer once the run goes on.
 
+An [Agent node](../guide/agent.md#approval-before-a-tool)'s tool approvals are
+always a reviewer's: the person chatting does not approve the agent's own
+actions.
+
 A new message cannot be sent while the chat waits for an answer. The node's
 [deadline](human-approval.md#deadlines) applies in both cases; when it passes,
 its timeout action decides what happens.

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0116
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -121,6 +121,7 @@ provider registry, run the four tool sources, and write the answer, steps and hi
   whose only failures are the 6 environment tests that fail on develop in this container too (QA-0108). REV-0108
   approved for QA; QA-0108 pass with follow-up; DEC-0063 amended (field name, provider check at run time). Moved to
   review; Draft PR #144 into develop.
+- 2026-10-25: PR #144 merged into develop (8503d20) with the owner's approval; moved to done by TASK-0120.
 
 ## Handoff Notes
 
