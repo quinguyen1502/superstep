@@ -72,7 +72,7 @@ function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; met
     className={cn('trace-row w-full grid grid-cols-[18px_minmax(0,1fr)_72px_minmax(80px,30%)] items-center gap-2 px-3 py-1 text-left text-xs hover:bg-accent/60 border-l-2 border-transparent',
       selected && 'bg-accent border-l-primary', s.status === 'error' && 'bg-destructive/5 hover:bg-destructive/10')}>
     <StatusIcon s={s.status} className="size-3.5" />
-    <span className={cn('flex items-center gap-1.5 min-w-0', agentOf(s.node) && 'pl-4')}>
+    <span className={cn('flex items-center gap-1.5 min-w-0 overflow-hidden', agentOf(s.node) && 'pl-4')}>
       <span className={cn('rounded p-0.5', m.color)}><I className="size-3" /></span>
       <span className={cn('truncate font-medium shrink-0 max-w-[45%]', s.status === 'error' && 'text-destructive')}>{s.label}</span>
       {s.iter > 1 && !s.agent && <Badge variant="secondary" size="sm">#{s.iter}</Badge>}
