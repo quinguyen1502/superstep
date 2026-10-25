@@ -120,7 +120,7 @@ provider registry, run the four tool sources, and write the answer, steps and hi
   `factory deps apply` passed; `factory verify run --profile full` passed every check except `python:backend:test`,
   whose only failures are the 6 environment tests that fail on develop in this container too (QA-0108). REV-0108
   approved for QA; QA-0108 pass with follow-up; DEC-0063 amended (field name, provider check at run time). Moved to
-  review; Draft PR into develop.
+  review; Draft PR #144 into develop.
 
 ## Handoff Notes
 
