@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0116
-- Status: doing
+- Status: review (PR)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -115,10 +115,16 @@ provider registry, run the four tool sources, and write the answer, steps and hi
   Messages API over plain HTTP), tool parameter schemas in `engine/tools.py` (also in `GET /api/meta/tools`), validator,
   compiler routers, runtime expansion and budget, `RunService._expand`, `AGENT_TOOLS_UNSUPPORTED`;
   `tests/test_agent_node.py` (15 tests).
+- 2026-10-25: review fixes (de0a7f5): HTTP tool arguments are never rendered as templates, schema type lists are
+  accepted, run-until-agent runs the whole agent; service-path run and fork test (8acbd6d). Validation:
+  `factory deps apply` passed; `factory verify run --profile full` passed every check except `python:backend:test`,
+  whose only failures are the 6 environment tests that fail on develop in this container too (QA-0108). REV-0108
+  approved for QA; QA-0108 pass with follow-up; DEC-0063 amended (field name, provider check at run time). Moved to
+  review; Draft PR into develop.
 
 ## Handoff Notes
 
-- Next: `task-validation`, `task-review`, `task-qa`.
+- Review REV-0108, QA-0108. Next: owner review of the PR; `finish-pr` after approval and green CI.
 - Trace events: `node_finished` of an agent step carries `agent` (what the step did: `kind` model|tool, `round`,
   text or tool call, result, status, `limit_hit`); the delta leaves the hidden `agent:<id>` field out, the `input` keeps
   it so time travel can fork inside the loop. TASK-0118 groups by `agent_of`.

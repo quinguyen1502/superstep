@@ -42,10 +42,14 @@
    - Edges: `A → A/__model`; after `A/__model`, pending calls go to `A/__tool`, otherwise to `A/__exit`; after
      `A/__tool`, more pending calls go to `A/__tool`, otherwise back to `A/__model`. Labels are `Agent › model` and
      `Agent › tool`, and errors are named by label (`subgraphs.readable`).
-2. **Private state:** expansion adds a hidden object field `__agent__A`:
+2. **Private state:** the agent keeps a hidden object field `agent:A`:
    `{messages: [{role, content, tool_calls?, tool_call_id?, name?}], pending: [{id, name, args}], rounds, limit_hit,
-   steps: [{tool, args, result, status, ms}]}`. It is plain JSON, so checkpoints, time travel and the exports
-   serialize it. Fields starting with `__` are left out of input forms and input schemas.
+   steps: [{tool, args, result, status, ms}], answer, last}`. It is plain JSON, so checkpoints, time travel and the
+   exports serialize it. Like the For each `loop:` cursors, it is declared only in the compiled state, never in the
+   workflow's state schema, so input forms and schemas never show it. The `agent:` prefix is reserved. It is left
+   out of the run's final state and the trace deltas; a step's `node_finished` carries `agent` (= `last`, what the
+   step did), and its `input` keeps the field so time travel can fork inside the loop. (Amended 2026-10-25 after
+   TASK-0116, REV-0108: the draft named the field `__agent__A`.)
 3. **Effectively-once per step:** `agent_model` and `agent_tool` join `SIDE_EFFECT_TYPES`. Each execution is a
    LangGraph step with its own checkpoint and its own `node_started` iteration, so it gets its own ledger entry and
    idempotency key `(run, A/__tool, iteration)`; HTTP tools send it as `Idempotency-Key`. A pause, crash or restart
@@ -53,8 +57,8 @@
 4. **Model calls go through the provider registry:** a provider method `invoke_tools(messages, tools, model, cred,
    on_token) -> (text, tool_calls, usage)`. The base implementation uses `chat_model(...).bind_tools(...)`
    (OpenAI, OpenAI-compatible, LM Studio, OpenRouter, Ollama). Anthropic implements it over its Messages API `tools`
-   over plain HTTP, with no new dependency. A provider with `supports_tools = False` fails validation with a new
-   error code. At the round limit the call is made without tools and `limit_hit` is set (CLAR-0003 Q5).
+   over plain HTTP, with no new dependency. A provider with `supports_tools = False` fails when the model step runs,
+   with `AGENT_TOOLS_UNSUPPORTED` (the validator never sees credentials; amended 2026-10-25, REV-0108). At the round limit the call is made without tools and `limit_hit` is set (CLAR-0003 Q5).
 5. **The mock** (`llm.mock_agent`) is deterministic. With no tool result yet, it calls the listed tool whose name or
    description shares the most words with the task prompt (the first tool when none do), filling string parameters
    with the task text. Otherwise it answers `[mock:<model>] Answer: <last tool result>`.
