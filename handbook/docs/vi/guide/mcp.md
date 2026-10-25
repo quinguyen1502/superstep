@@ -46,3 +46,5 @@ Argument đúng bằng một tham chiếu thì giữ nguyên kiểu. Kết quả
 `output_field`.
 
 Workflow được chia sẻ chạy bằng máy chủ MCP của **chủ** workflow.
+
+Để client MCP gọi workflow **của bạn** như công cụ, xem [Workflow làm công cụ MCP](../run/mcp-server.md).

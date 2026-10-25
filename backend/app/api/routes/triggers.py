@@ -6,8 +6,8 @@ Owner (JWT): manage per-workflow tokens under /api/workflows/{wid}/tokens and cr
 The public routes that external callers use with those tokens live in `hooks.py`.
 """
 from fastapi import APIRouter, Depends
-from ...schemas.trigger import ChatTriggerIn, ChatTriggerPatch, ScheduleIn, SchedulePatch, SchedulePreview, TokenIn
-from ..deps import chat_trigger_service, current_user, delivery_service, schedule_service, trigger_service
+from ...schemas.trigger import McpSettingsIn, ChatTriggerIn, ChatTriggerPatch, ScheduleIn, SchedulePatch, SchedulePreview, TokenIn
+from ..deps import workflow_mcp_service, chat_trigger_service, current_user, delivery_service, schedule_service, trigger_service
 
 router = APIRouter(prefix="/api", tags=["triggers"])
 
@@ -29,6 +29,16 @@ def redeliver(wid: str, did: str, user=Depends(current_user), svc=Depends(delive
 
 @router.delete("/workflows/{wid}/tokens/{tid}")
 def revoke_token(wid: str, tid: str, user=Depends(current_user), svc=Depends(trigger_service)): return svc.revoke_token(wid, tid, user["id"])
+
+
+
+# ---- MCP server (TASK-0114): the workflow as a tool at /mcp ----
+@router.get("/workflows/{wid}/mcp")
+def mcp_settings(wid: str, user=Depends(current_user), svc=Depends(workflow_mcp_service)): return svc.settings(wid, user["id"])
+
+@router.put("/workflows/{wid}/mcp")
+def set_mcp(wid: str, body: McpSettingsIn, user=Depends(current_user), svc=Depends(workflow_mcp_service)):
+    return svc.set_enabled(wid, user["id"], body.enabled)
 
 
 # ---- cron schedules (TASK-0046) ----

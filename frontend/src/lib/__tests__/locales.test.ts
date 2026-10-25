@@ -18,6 +18,7 @@ const SAME_OK = new Set([
   'langsmith.title',
   'tests.langsmith',
   'api.button',
+  'mcpServer.tab', 'mcpServer.clients.cursor', 'mcpServer.clients.claude-desktop', 'mcpServer.clients.claude-code', 'mcpServer.where.cursor',  // product names, a file name
   'timeTravel.state',
   'approvals.col.run',
   'approvals.field.access_token',

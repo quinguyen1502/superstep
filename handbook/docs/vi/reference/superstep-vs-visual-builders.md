@@ -47,7 +47,7 @@ Cách gọi và mang đi nơi khác:
 
 | Sản phẩm | API, SDK, MCP | Xuất code |
 | --- | --- | --- |
-| Superstep | API chạy công khai, SDK Python `superstep` và TypeScript `@superstep/sdk`, một phần Agent Server API tại `/api/lg` | Dự án LangGraph Python hoặc LangGraph.js chạy được |
+| Superstep | API chạy công khai, SDK Python `superstep` và TypeScript `@superstep/sdk`, một phần Agent Server API tại `/api/lg`, workflow làm công cụ MCP tại `/mcp` | Dự án LangGraph Python hoặc LangGraph.js chạy được |
 | n8n | REST API và webhook | Không (workflow xuất ra JSON) |
 | Dify | REST API, CLI `difyctl`, xuất bản ứng dụng thành MCP server | Không |
 | Langflow | API chạy flow, webhook, MCP server và client, Flow DevOps Toolkit SDK | Không (flow xuất ra JSON) |

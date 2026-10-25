@@ -47,3 +47,5 @@ in the config. Argument strings are
 keeps its type. The result goes to `output_field`.
 
 A shared workflow runs with the **owner's** MCP servers.
+
+To let MCP clients call **your** workflows as tools, see [Workflows as MCP tools](../run/mcp-server.md).

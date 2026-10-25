@@ -1,12 +1,13 @@
 # Run
 
-A workflow runs in five ways. All of them go through the same engine,
+A workflow runs in six ways. All of them go through the same engine,
 produce the same trace, and appear in the run history (**Run → View all**).
 
 | Started by | How | Badge in History |
 | --- | --- | --- |
 | The editor | **Run**, **Step** or **Run to here**, over `/ws/run` | — |
 | Another service | `POST /api/hooks/workflows/{wid}/runs` with a workflow token | **API** |
+| An MCP client | The workflow's `run_...` tool at `/mcp`, with a workflow token | **API** |
 | A timetable | A cron schedule on the workflow | **Schedule** |
 | A chat message | A command word to your Slack app or Telegram bot | **Chat** |
 | A person resuming | Approve, reject or answer a waiting Human node | — |
@@ -30,6 +31,12 @@ produce the same trace, and appear in the run history (**Run → View all**).
     ---
 
     Tokens, sync and async runs, signed callbacks, workers.
+
+-   :material-tools:{ .lg .middle } **[Workflows as MCP tools](mcp-server.md)**
+
+    ---
+
+    Claude Desktop, Cursor and other agents call the workflow as a tool.
 
 -   :material-calendar-clock:{ .lg .middle } **[Schedules](schedules.md)**
 
