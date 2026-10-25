@@ -190,7 +190,9 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         a, d = n["id"], n.get("data") or {}
         label = d.get("label") or a
         n["data"] = {**d, "agent_expanded": True}
-        inner = {k: v for k, v in d.items() if k not in ("label", "cache", "input_fields")}
+        # a cached step would skip its model or tool call (and its approval) on a run with the same state: only the
+        # entry step keeps the node's cache and input fields; retry and timeout apply to each step
+        inner = {k: v for k, v in d.items() if k not in ("label", "cache_ttl", "input_fields")}
         step = lambda suffix, typ, name: {"id": f"{a}{SEP}{suffix}", "type": typ, "position": n.get("position"),
                                           "data": {**inner, "label": f"{label} › {name}", "agent_of": a}}
         nodes += [step(MODEL, "agent_model", "model"), step(TOOL, "agent_tool", "tool"), step(EXIT, "agent_exit", "end")]
