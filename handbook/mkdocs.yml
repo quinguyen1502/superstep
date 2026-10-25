@@ -76,4 +76,5 @@ nav:
       - Development: reference/development.md
       - FAQ: reference/faq.md
       - Superstep vs LangSmith: reference/superstep-vs-langsmith.md
-      - Superstep vs n8n, Dify, CrewAI, PydanticAI: reference/superstep-vs-agent-tools.md
+      - Superstep vs visual builders: reference/superstep-vs-visual-builders.md
+      - Superstep vs agent frameworks: reference/superstep-vs-agent-frameworks.md

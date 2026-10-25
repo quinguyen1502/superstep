@@ -50,10 +50,16 @@
 
     How Superstep compares with LangSmith Studio and Agent Builder, and how they work together.
 
--   :material-compare-horizontal:{ .lg .middle } **[Superstep vs n8n, Dify, CrewAI, PydanticAI](superstep-vs-agent-tools.md)**
+-   :material-compare-horizontal:{ .lg .middle } **[Superstep vs visual builders](superstep-vs-visual-builders.md)**
 
     ---
 
-    How Superstep compares with n8n, Dify, CrewAI and PydanticAI, and when to choose each.
+    How Superstep compares with n8n, Dify, Langflow and Flowise, and when to choose each.
+
+-   :material-code-braces:{ .lg .middle } **[Superstep vs agent frameworks](superstep-vs-agent-frameworks.md)**
+
+    ---
+
+    If you would rather write agents in code: Superstep plus LangGraph compared with CrewAI and PydanticAI.
 
 </div>

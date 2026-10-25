@@ -14,13 +14,15 @@
 
 ## Objective
 
-Handbook: Superstep vs n8n, Dify, CrewAI, PydanticAI.
+Handbook: Superstep vs visual builders (n8n, Dify, Langflow, Flowise) and Superstep vs agent frameworks (CrewAI,
+PydanticAI).
 
 ## Scope
 
 ### In Scope
 
-- handbook/docs/{en,vi}/reference/superstep-vs-agent-tools.md, reference/index.md, mkdocs.yml, mkdocs.vi.yml,
+- handbook/docs/{en,vi}/reference/superstep-vs-visual-builders.md and superstep-vs-agent-frameworks.md,
+  reference/index.md, mkdocs.yml, mkdocs.vi.yml,
   CHANGELOG.md.
 - Merged TASK-0112 (#140) moved to `done`.
 
@@ -35,7 +37,9 @@ Handbook: Superstep vs n8n, Dify, CrewAI, PydanticAI.
 ## Activity Log
 
 - 2026-10-25: sources fetched, page written (en, vi), strict handbook builds clean, verified with
-  `factory deps apply` and `factory verify run --profile full` (QA-0105); PR into develop.
+  `factory deps apply` and `factory verify run --profile full` (QA-0105); PR #141 into develop.
+- 2026-10-25: scope change from the owner: split into a visual-builders page (adds Langflow and Flowise) and an
+  agent-frameworks page; old `superstep-vs-agent-tools.md` removed; re-verified (QA-0105).
 
 ## Handoff Notes
 
