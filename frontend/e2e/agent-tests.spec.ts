@@ -45,4 +45,12 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await expect(page.locator('#tests-summary')).toContainText('4 đạt, 0 không đạt', { timeout: 60_000 })
   await page.getByTestId('test-row').filter({ hasText: 'Tra đơn hàng A100' }).click()
   await expect(page.getByTestId('check-row').nth(1)).toContainText('“Support agent” đã gọi lookup_order')
+
+  // the Code tab: Python has the Agent node's steps; TypeScript refuses it and leaves no Python file behind
+  await page.locator('#code-tab').click()
+  await page.locator('#code-export-language').click(); await page.locator('#code-export-language-python').click()
+  await expect(page.locator('#code-file')).toHaveText(/^support_agent.*\.py$/, { timeout: 30_000 })
+  await page.locator('#code-export-language').click(); await page.locator('#code-export-language-typescript').click()
+  await expect(page.getByText(/Chưa xuất được node Agent sang TypeScript \(Support agent\)/)).toBeVisible()
+  await expect(page.locator('#code-file')).toHaveText(''); await expect(page.locator('#code-download')).toBeDisabled()
 })
