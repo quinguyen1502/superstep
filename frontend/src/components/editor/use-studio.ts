@@ -18,10 +18,11 @@ import type { Channels } from '@/lib/approvals'
 import { type Credential } from '@/components/credentials-dialog'
 import { useProviders } from '@/lib/providers'
 import { buildTrace, withSummary } from '@/lib/trace'
+import type { BuiltinTool } from '@/lib/agent'
 import { useShortcuts } from '@/lib/use-shortcuts'
 import { useGraphHistory } from '@/lib/use-graph-history'
 import { removeElements, selectionIds, spliceNode } from '@/lib/graph-ops'
-import { META, INSERTABLE, DEFAULTS, MENU_OF, MENU_IDS, ACTION_ICONS, canvasId, styleEdges, defaultInput, LOOP_LABELS, type Field, type LogItem } from './meta'
+import { META, INSERTABLE, DEFAULTS, samplePrompt, MENU_OF, MENU_IDS, ACTION_ICONS, canvasId, styleEdges, defaultInput, LOOP_LABELS, type Field, type LogItem } from './meta'
 
 /** Editor state and actions (TASK-0040: moved out of pages/Editor.tsx). Panels read it through StudioContext. */
 export function useStudio() {
@@ -35,7 +36,7 @@ export function useStudio() {
   const [input, setInput] = useState(() => i18n.t('samples.input'))
   const [log, setLog] = useState<LogItem[]>([])
   const [errors, setErrors] = useState<string[]>([])
-  const [tools, setTools] = useState<{ name: string }[]>([])
+  const [tools, setTools] = useState<BuiltinTool[]>([])  // name, doc and the parameters an Agent node's model fills
   const [mode, setMode] = useState('')
   const [source, setSource] = useState<any>(null)
   const [creds, setCreds] = useState<Credential[]>([])
@@ -189,7 +190,7 @@ export function useStudio() {
   // command palette (TASK-0028, DEC-0031): registry actions, add node, jump to node — re-registered each render so closures stay fresh
   const freshNode = (type: string) => ({
     id: `${type}_${Date.now().toString(36)}${idc.current++}`, type, position: { x: 0, y: 0 }, selected: true,
-    data: { ...DEFAULTS[type], ...(type === 'llm' ? { prompt: i18n.t('samples.prompt', { var: '{{state.message}}' }) } : {}) },
+    data: { ...DEFAULTS[type], ...samplePrompt(type) },
   })
   const insertAround = (type: string, where: { dir: 'before' | 'after'; anchor: string } | { dir: 'edge'; edgeId: string }) => {
     const r = spliceNode(nodes, edges, freshNode(type), where)
@@ -200,7 +201,7 @@ export function useStudio() {
   const addNode = (type: string, pos: { x: number; y: number }, select = false) => {
     const id = `${type}_${Date.now().toString(36)}${idc.current++}`
     setNodes(ns => [...(select ? ns.map(n => n.selected ? { ...n, selected: false } : n) : ns), { id, type, position: pos, selected: select,
-      data: { ...DEFAULTS[type], ...(type === 'llm' ? { prompt: i18n.t('samples.prompt', { var: '{{state.message}}' }) } : {}) } }])
+      data: { ...DEFAULTS[type], ...samplePrompt(type) } }])
     if (select) setSel({ kind: 'node', id })
   }
   const addNote = (pos: { x: number; y: number }) => {

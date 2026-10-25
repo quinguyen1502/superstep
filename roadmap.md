@@ -243,7 +243,7 @@ expanded into LangGraph model and tool steps, one tool call per step.
 - TASK-0116 Engine: expansion, model calls with tools through the provider registry (Anthropic over plain HTTP),
   MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **review** (PR #144, REV-0108, QA-0108)
 - TASK-0117 Approval before a tool call through the Human approval path; restart tests (needs #143). **todo**
-- TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **todo**
+- TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **review** (PR #145, stacked on #144, REV-0109, QA-0109)
 - TASK-0119 "Tool called" test check, Support agent template with tests, Python and project export, TypeScript
   refusal. **todo**
 - TASK-0120 Handbook (en, vi), comparison pages, CHANGELOG. **todo**

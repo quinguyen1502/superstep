@@ -238,7 +238,8 @@
     "mcp": "Gọi công cụ trên máy chủ MCP",
     "foreach": "Lặp nhánh cho từng phần tử",
     "decision": "Hỏi TypeSafe Jev, nhận câu trả lời có kiểu",
-    "email": "Gửi email qua SMTP"
+    "email": "Gửi email qua SMTP",
+    "agent": "Model tự chọn và gọi công cụ"
   },
   "trace": {
     "idle": "Chưa chạy",
@@ -269,7 +270,19 @@
     "estimated": "(ước tính)",
     "waiting": "Đang chờ người phản hồi",
     "paused": "Tạm dừng sau một bước",
-    "streaming": "Model đang trả lời…"
+    "streaming": "Model đang trả lời…",
+    "agent": {
+      "round": "Vòng {{n}}",
+      "calls": "gọi {{tools}}",
+      "answer": "trả lời: {{text}}",
+      "limit": "đã hết số vòng",
+      "status": {
+        "error": "lỗi",
+        "refused": "bị từ chối",
+        "rejected": "người duyệt từ chối"
+      },
+      "approved": "đã duyệt"
+    }
   },
   "import": {
     "button": "Import repo",
@@ -588,7 +601,8 @@
   "samples": {
     "input": "{\n  \"message\": \"Đơn hàng A100 của tôi đâu rồi?\"\n}",
     "prompt": "Trả lời: {{var}}",
-    "greeting": "Xin chào!"
+    "greeting": "Xin chào!",
+    "agentPrompt": "Giúp người dùng: {{var}}"
   },
   "human": {
     "title": "Đang chờ phản hồi của bạn",
@@ -1916,5 +1930,44 @@
     "notConfigured": "Đặt LANGSMITH_API_KEY trên máy chủ để bật tính năng này.",
     "tracingOn": "Các run được trace vào dự án LangSmith {{project}}; mỗi run có liên kết tới trace của nó.",
     "tracingOff": "Đặt LANGSMITH_TRACING=true để trace cả các run sang LangSmith."
+  },
+  "agent": {
+    "systemPrompt": "System prompt (tuỳ chọn, {{field}})",
+    "taskPrompt": "Prompt nhiệm vụ ({{field}})",
+    "maxRounds": "Số vòng tối đa",
+    "maxRoundsHint": "Mỗi vòng gồm một lần gọi model và các lần gọi công cụ mà model yêu cầu. Khi hết số vòng, model trả lời mà không dùng công cụ.",
+    "none": "Không dùng",
+    "stepsField": "Trường các bước (tuỳ chọn)",
+    "stepsHint": "Trường list nhận từng lần gọi công cụ: công cụ, tham số, kết quả và trạng thái.",
+    "historyField": "Trường lịch sử (tuỳ chọn)",
+    "historyHint": "Danh sách tin nhắn trước đó ({role, content}) được thêm trước prompt nhiệm vụ, ví dụ trường messages của chat.",
+    "tools": "Công cụ",
+    "toolsHint": "Model chỉ gọi được các công cụ này. Model đọc tên và mô tả của từng công cụ để chọn.",
+    "noToolsYet": "Hãy thêm ít nhất một công cụ.",
+    "addTool": "Thêm công cụ",
+    "sources": {
+      "mcp": "Công cụ MCP",
+      "http": "Yêu cầu HTTP",
+      "builtin": "Hàm có sẵn",
+      "knowledge": "Tìm trong kho tri thức"
+    },
+    "toolName": "Tên",
+    "duplicateName": "Đã có công cụ khác trùng tên này.",
+    "toolDescription": "Mô tả cho model",
+    "needsApproval": "Cần duyệt",
+    "approvalHint": "Các lần gọi công cụ cần duyệt sẽ chờ người duyệt, theo cài đặt dưới đây.",
+    "moveUp": "Đưa {{name}} lên",
+    "moveDown": "Đưa {{name}} xuống",
+    "removeTool": "Bỏ {{name}}",
+    "parameters": "Tham số model điền",
+    "paramName": "Tên tham số",
+    "paramType": "Kiểu",
+    "paramDescription": "Mô tả",
+    "paramRequired": "Bắt buộc",
+    "addParam": "Thêm tham số",
+    "removeParam": "Bỏ tham số {{name}}",
+    "httpArgsHint": "Dùng {{arg}} trong URL hoặc body để chèn một tham số. Nếu không có body, POST, PUT và PATCH gửi tham số dạng JSON, còn GET thêm tham số vào URL.",
+    "kbHint": "Model tự viết câu tìm kiếm.",
+    "noToolCalling": "{{provider}} không gọi được công cụ. Hãy chọn credential hỗ trợ gọi công cụ cho node Agent."
   }
 }

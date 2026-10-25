@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0118
-- Status: todo
+- Status: review (PR)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -102,7 +102,31 @@ trace and the chat.
 ## Activity Log
 
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
+- 2026-10-25: started at the owner's request in parallel with TASK-0116, on `factory/task-0118-agent-editor-and-trace`,
+  stacked on `factory/task-0116-agent-engine-loop` (PR #144, 9eac951). Its PR targets develop and contains #144's
+  commits until #144 merges; then develop is merged in. REV-0108 follow-ups taken here: hide `agent:` fields in the
+  trace; treat text from tool rounds as steps in the chat.
+- 2026-10-25: implemented. Agent in the palette and canvas (`META.agent`, `--node-agent*` tokens light and dark,
+  `DEFAULTS.agent`, `samples.agentPrompt`); `components/agent-settings.tsx` (credential with a warning for providers
+  without tool calling, model, system and task prompts, max rounds, output, steps and history fields, tool cards for
+  MCP / HTTP / built-in / knowledge base with name, description, parameters (HTTP), reorder, remove and "needs
+  approval", and the Human approval and deadline settings when a tool needs approval); `lib/agent.ts`; trace rows of
+  agent steps indented with the round, the tools called, the answer, the tool result and the limit mark, the
+  `agent:` field hidden (`lib/trace.ts`, `run-trace.tsx`); chat steps: tool calls by name, model calls in `full` only,
+  the reply stream keeps the last model call (`lib/chat.ts`, `chat_session_service.steps_of`); en/vi strings and
+  glossary rows. Tests: `lib/__tests__/agent-trace.test.ts`, `test_chat_steps_show_tool_calls_by_name`,
+  `e2e/agent-node.spec.ts` (vi light, en dark; screenshots reviewed). Checks run: tsc, vitest (103), lint, lint:ui,
+  build, e2e agent-node + agent-chat + trace + mcp, pytest agent + chat sessions + layers.
+- 2026-10-25: review fix (0572604): tool cards keep their own state when moved, unnamed parameters are skipped; e2e
+  moves a tool. Validation: `factory verify run --profile full` passed every check except `python:backend:test`,
+  whose only failures are the 6 environment tests (QA-0109). REV-0109 approved for QA; QA-0109 pass with follow-up.
+  Moved to review; Draft PR #145 into develop (stacked on #144).
 
 ## Handoff Notes
 
-- Can start after TASK-0116 is merged, in parallel with TASK-0117.
+- Stacked on TASK-0116 (#144). Review REV-0109, QA-0109. Next: owner review; `finish-pr` after #144 merges and CI is green.
+- Validator errors show in the run panel's error list, naming the node (as for every node type); there is no per-node
+  error badge on the canvas.
+- The "needs approval" switch and the approval settings are saved now; the run pauses before such a call only with
+  TASK-0117. Merge order: #144, TASK-0117, this task (or this task before TASK-0117 with the switch documented as
+  not yet active).

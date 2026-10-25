@@ -20,6 +20,7 @@ import { ModelPicker } from '@/components/model-picker'
 import { SubgraphSettings } from '@/components/subgraph-settings'
 import { RetrieverSettings } from '@/components/retriever-settings'
 import { McpSettings } from '@/components/mcp-settings'
+import { AgentSettings } from '@/components/agent-settings'
 import { DecisionSettings } from '@/components/decision-settings'
 import { EmailSettings } from '@/components/email-settings'
 import { TemplateEditor } from '@/components/template-editor'
@@ -65,6 +66,9 @@ export function EditorConfig() {
             <F label={t('field.promptTemplate', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={7} id="llm-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>
             <F label={t('field.outputField')}><Sel value={d.output_field} onChange={v => upd('output_field', v)} opts={fieldNames} /></F>
           </>}
+          {selNode.type === 'agent' && <AgentSettings key={selNode.id} data={d} nodeId={selNode.id} fields={state} fieldNames={fieldNames}
+            listFields={state.filter(f => f.type === 'list').map(f => f.name)} creds={chatCreds} providers={providers} channels={channels}
+            builtins={tools} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
           {selNode.type === 'human' && <>
             <F label={t('field.humanPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={4} id="human-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>
             <F label={t('field.outputField')}><Sel value={d.output_field} onChange={v => upd('output_field', v)} opts={fieldNames} /></F>

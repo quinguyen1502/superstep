@@ -21,19 +21,28 @@ export type ChatSession = { id: string; workflow_id: string; channel: string; ti
   created: number; updated: number }
 export type ChatSessionFull = ChatSession & { steps_mode: StepsMode; turns: ChatTurn[] }
 
-/** The reply streamed so far: the `node_token` deltas of the nodes that write the reply field. */
+/** The reply streamed so far: the `node_token` deltas of the nodes that write the reply field. A node that streams
+ *  again (an Agent's next model call, a loop) replaces its earlier text, as its field is replaced (TASK-0118). */
 export function liveReply(events: RunEvent[], replyField: string): string {
-  return events.filter(e => e.type === 'node_token' && (e as any).field === replyField && typeof e.delta === 'string').map(e => e.delta).join('')
+  const parts = new Map<string, { it: number; text: string }>()
+  for (const e of events) {
+    if (e.type !== 'node_token' || (e as any).field !== replyField || typeof e.delta !== 'string' || !e.node) continue
+    const it = e.iteration ?? 1; const p = parts.get(e.node)
+    parts.set(e.node, p && p.it === it ? { it, text: p.text + e.delta } : p && p.it > it ? p : { it, text: e.delta })
+  }
+  return [...parts.values()].map(p => p.text).join('')
 }
 
-const HIDDEN = new Set(['start', 'end'])
+const HIDDEN = new Set(['start', 'end', 'agent', 'agent_exit'])  // an Agent node shows its tool calls (and model calls in full)
+/** A step's label in a chat: an Agent's tool step names the tool ("Support › lookup_order"). */
+const stepLabel = (s: Span) => s.agent?.kind === 'tool' && s.agent.tool ? `${s.label.replace(/ › [^›]*$/, '')} › ${s.agent.tool}` : s.label
 /** A live run's steps as a chat shows them (DEC-0053), from the trace spans: none, labels or full. Same rules as the server. */
 export function liveSteps(spans: Span[], mode: StepsMode): ChatStep[] {
   if (mode === 'none') return []
-  return spans.filter(s => !HIDDEN.has(s.type)).map(s => {
+  return spans.filter(s => !HIDDEN.has(s.type) && (mode === 'full' || s.type !== 'agent_model')).map(s => {
     const status: ChatStep['status'] = s.status === 'done' ? 'ok' : s.status === 'error' ? 'error' : s.status === 'waiting' ? 'waiting' : 'running'
-    const base: ChatStep = { node: s.node, label: s.label, type: s.type, status }
-    return mode === 'full' ? { ...base, duration_ms: s.duration, input: s.input, delta: s.output, errors: s.error ? [s.error] : undefined } : base
+    const base: ChatStep = { node: s.node, label: stepLabel(s), type: s.type, status }
+    return mode === 'full' ? { ...base, duration_ms: s.duration, input: s.input, delta: s.agent ?? s.output, errors: s.error ? [s.error] : undefined } : base
   })
 }
 
