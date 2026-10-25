@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0117
-- Status: doing
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -110,6 +110,8 @@ runs survive pauses and restarts without repeating a finished model or tool call
   - In a chat, an Agent tool approval is always answered by a reviewer, never by the person chatting.
   - Test cases answer an Agent node's approvals under the Agent node's id; a draft case made from a run does the same.
   - Tests: `tests/test_agent_approval.py` (12) and two Agent cases in `tests/test_durable_restart.py`.
+- 2026-10-25: validation (`factory verify run --profile full`: only the 6 known environment failures), review REV-0110
+  (no blocking findings), QA QA-0110 (pass with follow-up); task to review.
 
 ## Handoff Notes
 
