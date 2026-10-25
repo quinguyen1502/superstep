@@ -114,6 +114,16 @@ hạn sẽ đóng yêu cầu. Chưa cấu hình kênh nào thì không gửi gì
 
 Cách thiết lập từng kênh ở [Kênh duyệt](../operate/channels.md).
 
+## Duyệt từ node Agent
+
+[Node Agent](../guide/agent.md#duyet-truoc-khi-goi-cong-cu) có thể hỏi trước khi
+gọi một công cụ bật **Cần duyệt**. Run chờ đúng như ở node Human: bước này, tên
+là `Agent › công cụ`, hiện công cụ và các tham số, và được gửi tới panel run,
+trang **Duyệt** và kênh duyệt đặt trên node Agent, cùng người duyệt và hạn chờ
+của nó. **Duyệt** để chạy lần gọi. **Từ chối**, hoặc trả lời bằng chữ, là từ
+chối, và model được báo như vậy, với đoạn chữ làm lý do. Mỗi lần gọi đều hỏi
+lại.
+
 ## Mẫu thường gặp
 
 ```text

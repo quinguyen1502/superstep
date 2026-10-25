@@ -98,6 +98,18 @@ def test_registry_and_split_imports():
 # ---- API ----
 
 
+def test_agent_nodes_are_refused_with_a_code(c):
+    from app.core.errors import AppError
+    from tests.test_python_export import AGENT
+    with pytest.raises(AppError) as e: T.to_typescript(AGENT, "Agent")
+    assert e.value.code == "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED" and e.value.details == {"node": 'Helper "one"'}
+    with pytest.raises(AppError): T.to_typescript(PARENT, "P", None, {"child1": AGENT})  # inside a subgraph too
+    u = user(c); wid = save(c, u, AGENT)
+    r = c.get(f"/api/workflows/{wid}/code?language=typescript", headers=H(u["token"])).json()
+    assert r["error"]["code"] == "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED" and r["error"]["details"]["node"] == 'Helper "one"'
+    assert "def helper_one_tool" in c.get(f"/api/workflows/{wid}/code?language=python", headers=H(u["token"])).json()["data"]["code"]
+
+
 def test_api_language_parameter(c):
     u = user(c)
     wid = save(c, u, PARALLEL)  # saving Code nodes needs code.write; the exporter is the same
@@ -181,7 +193,8 @@ def test_all_node_types_type_check(tmp_path, deno_env):
 
 
 RUNNABLE = [(b["id"], i) for b in BUILTINS for i in range(len(b["tests"]))
-            if not any(n["type"] == "tool" and (n.get("data") or {}).get("mode", "function") == "function" for n in b["workflow"]["nodes"])]
+            if not any((n["type"] == "tool" and (n.get("data") or {}).get("mode", "function") == "function") or n["type"] == "agent"
+                       for n in b["workflow"]["nodes"])]  # TypeScript has no Python functions and no Agent node yet
 
 
 @pytest.mark.parametrize("tid,i", RUNNABLE)

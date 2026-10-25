@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | [Start](#start-va-end), [End](#start-va-end) | Điểm vào và điểm ra của graph | — |
 | [LLM](#llm) | Gọi model với prompt template | `output_field` |
+| [Agent](#agent) | Model tự chọn và gọi các công cụ bạn cho phép, tới khi trả lời được | `output_field`, `steps_field` (tuỳ chọn) |
 | [Decision (Jev)](#decision-jev) | Câu trả lời có kiểu từ TypeSafe Jev | mỗi câu hỏi một trường, cộng `output_field` |
 | [Retriever](#retriever) | Tìm trong kho tri thức | `output_field` (danh sách) |
 | [Tool](#tool) | Hàm Python, request HTTP, hoặc code Python của bạn | `output_field` |
@@ -18,8 +19,8 @@
 
 ## Cấu hình thực thi
 
-Node LLM, Decision, Retriever, Tool, MCP tool và Human có mục **Thực thi**
-trong cấu hình:
+Node LLM, Agent, Decision, Retriever, Tool, MCP tool và Human có mục **Thực
+thi** trong cấu hình:
 
 | Cấu hình | Tác dụng |
 | --- | --- |
@@ -48,6 +49,12 @@ Trong lúc chạy, từng đoạn token tới dưới dạng sự kiện `node_t
 dòng Logs lẫn tab Output. Các đoạn này không lưu vào lịch sử run; văn bản cuối
 cùng thì có. Lỗi từ nhà cung cấp (401, timeout, …) thành sự kiện `error` của
 node, không làm sập server.
+
+## Agent
+
+Một prompt nhiệm vụ, danh sách công cụ (MCP, HTTP, hàm có sẵn, tìm trong kho
+tri thức) và số vòng tối đa. Model gọi công cụ tới khi trả lời được; một công cụ
+có thể cần người duyệt trước mỗi lần gọi. Xem [Node Agent](agent.md).
 
 ## Decision (Jev)
 

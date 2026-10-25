@@ -7,7 +7,7 @@
 | Nhóm | Nội dung |
 | --- | --- |
 | Workflow trống | Chỉ có Start và End. |
-| Có sẵn | Mười hai mẫu ở dưới. |
+| Có sẵn | Mười ba mẫu ở dưới. |
 | Chỉ mình tôi | Các mẫu bạn đã lưu. |
 | Toàn tổ chức | Các mẫu chia sẻ cho mọi người. |
 
@@ -31,11 +31,13 @@ mẫu có sẵn hiện theo ngôn ngữ giao diện.
 | **Đề nghị mua sắm** | Trưởng nhóm duyệt trên Slack, sau đó tài chính duyệt qua email. Người đề nghị luôn nhận kết quả. |
 | **Hỗ trợ có chuyển cấp** | Trả lời từ kho tri thức; node Decision chuyển câu trả lời chưa chắc chắn cho nhân viên hỗ trợ trong studio. |
 | **Tổng hợp phản hồi khách hàng** | Vòng For each gắn nhãn từng phản hồi, rồi LLM viết báo cáo và gửi email cho team. |
+| **Agent hỗ trợ khách hàng** | Một [node Agent](agent.md) tra cứu đơn hàng và chính sách hoàn tiền; mỗi yêu cầu hoàn tiền của agent đều cần người duyệt. |
 
 Mẫu có kênh duyệt chỉ ghi loại kênh. Sau khi tạo, chọn kết nối, người nhận và
 người duyệt trên node Human (xem [Kênh duyệt](../operate/channels.md)). Trước
 đó, run sẽ dừng chờ ở node Human và có thể duyệt ngay trong studio. **Hỏi đáp
-RAG** và **Hỗ trợ có chuyển cấp** cần một kho tri thức trước khi chạy.
+RAG**, **Hỗ trợ có chuyển cấp** và **Agent hỗ trợ khách hàng** cần một kho tri
+thức trước khi chạy.
 
 Mỗi mẫu có sẵn đi kèm một đến ba test case cho thấy mẫu dùng để làm gì, ví dụ
 "Approved leave" và "Rejected leave". Workflow tạo từ mẫu có các test case này
@@ -54,8 +56,8 @@ các sửa đổi chưa lưu thì lưu trước). Chọn tên, mô tả và ai �
 tổ chức cần quyền `org.manage`.
 
 Mẫu không bao giờ mang theo credential, kho tri thức, máy chủ MCP, kết nối kênh
-duyệt, người nhận hay người duyệt, liên kết subgraph, header hay API key. Các
-trường đó được để trống, sau khi tạo bạn tự chọn lại. Node Human chỉ giữ loại kênh
+duyệt, người nhận hay người duyệt, liên kết subgraph, header hay API key, kể cả
+trong các công cụ của node Agent. Các trường đó được để trống, sau khi tạo bạn tự chọn lại. Node Human chỉ giữ loại kênh
 mà nó dùng, và hạn chờ của nó (không kèm địa chỉ chuyển tiếp).
 
 ## Xuất và nhập

@@ -9,7 +9,7 @@ from ..core import config
 from ..core import permissions as P
 from ..core.errors import CATALOG, AppError
 from ..engine import repo_import
-from ..engine import subgraphs
+from ..engine import agents, subgraphs
 from ..engine.errors import ValidationError
 from ..engine.limits import cap_event, cap_run, safe_error, size
 from ..engine.effects import Effects
@@ -260,11 +260,14 @@ class RunService:
         return take
 
     def _expand(self, uid: str, wid: Optional[str], wf: dict) -> tuple[dict, Optional[list]]:
-        """Inline subgraph nodes (TASK-0011) with the workflows this user may read. The expanded graph is what runs and
-        what checkpoints store, so a resumed or recovered run continues on the same graph even if a child changed."""
-        if wf.get("source") or not subgraphs.has_subgraphs(wf): return wf, None
-        try: return subgraphs.expand(wf, self.workflow_loader(uid), wid), None
-        except ValidationError as e: return wf, e.errors
+        """Inline subgraph nodes (TASK-0011) with the workflows this user may read, then Agent nodes' steps (TASK-0116). The
+        expanded graph is what runs and what checkpoints store, so a resumed or recovered run continues on the same graph
+        even if a child changed."""
+        if wf.get("source"): return wf, None
+        if subgraphs.has_subgraphs(wf):
+            try: wf = subgraphs.expand(wf, self.workflow_loader(uid), wid)
+            except ValidationError as e: return wf, e.errors
+        return agents.expand(wf), None
 
     def workflow_loader(self, uid: str):
         def load(ref: str) -> Optional[dict]:
@@ -401,6 +404,19 @@ class RunService:
                        self.credentials.resolver(self.resources_of(r.workflow_id, r.owner or "")) if self.credentials else None, previous=r,
                        resume={k: cp[k] for k in RESUME_KEYS if k in cp}, version=r.workflow_version, recovered=True,
                        ports=self.ports(self.resources_of(r.workflow_id, r.owner or ""), r.owner or ""), **common)
+
+    def recovery_job(self, r: Run) -> dict:
+        """The queue job that continues an unfinished run after a restart (RunWorker.recover_unfinished)."""
+        test = self.tests().test_job(r.id) if r.source == "test" and self.tests else None
+        return {"run_id": r.id, "workflow_id": r.workflow_id, "owner": r.owner, "input": json.loads(r.input or "{}"), "source": r.source,
+                "callback_url": r.callback_url, "token_id": r.callback_token_id, "recovered": True, "attempt": (r.lease_gen or 0) + 1,
+                **({"test": test} if test is not None else {}), **({"version": r.workflow_version} if r.source == "test" and r.workflow_version else {})}
+
+    def interrupted(self, r: Run, attempts: int) -> None:
+        """End an unfinished run that recovery gave up on: `error` RUN_INTERRUPTED, its events so far kept."""
+        err = AppError("RUN_INTERRUPTED", attempts=attempts).to_dict()
+        self.record(r.id, r.workflow_id, json.loads(r.input or "{}"), json.loads(r.events or "[]") + [error_event(err, ts=time.time())], None, "error",
+                    r.started, r.owner or "", source=r.source or "api", version=r.workflow_version)
 
     def pending(self, uid: str) -> list[dict]:
         """Runs of this user waiting for a human response (newest first)."""

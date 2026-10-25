@@ -69,29 +69,32 @@ docker compose up --build   # http://localhost:8080
 
 ## Features
 
-1. **Visual editor:** 13 node types (LLM, Tool, Condition, For each, Join,
-   Subgraph, MCP, Retriever, Decision, Send email, Human, Start, End) plus
-   read-only Code nodes from imported repos, a typed state with reducers,
+1. **Visual editor:** 14 node types (LLM, Agent, Tool, Condition, For each,
+   Join, Subgraph, MCP, Retriever, Decision, Send email, Human, Start, End)
+   plus read-only Code nodes from imported repos, a typed state with reducers,
    `{{state.field}}` references checked before a run, and a template library
    to start from.
 2. **Run traces:** duration, tokens and cost per node, the input, output and
    state diff of every step, step-by-step and run-to-node debugging. Test
    cases check a workflow's results, and test runs can be compared.
-3. **Human in the loop:** a Human node pauses a run from a checkpoint; approve
+3. **Agent node:** a model picks and calls the tools you allow (MCP server
+   tools, HTTP requests, built-in functions, knowledge base search) until it
+   answers, with a round limit and an approval before the tools you mark.
+4. **Human in the loop:** a Human node pauses a run from a checkpoint; approve
    in the studio's Approvals inbox, or from Slack, Telegram, WhatsApp, email
    or Teams; deadlines send reminders, escalate or expire a waiting run.
-4. **Triggers:** per-workflow API tokens, sync and async runs, signed result
+5. **Triggers:** per-workflow API tokens, sync and async runs, signed result
    webhooks with retries, cron schedules with time zones, and chat triggers: a
    command to the Slack app or Telegram bot starts a run and the bot replies.
-5. **Reliability:** checkpoints in the database, leased worker jobs, and
+6. **Reliability:** checkpoints in the database, leased worker jobs, and
    effectively-once side effects through idempotency keys and a result ledger.
-6. **Models and tools:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio and
+7. **Models and tools:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio and
    OpenAI-compatible servers; pgvector knowledge bases; MCP servers; Python
    code in a locked Docker container.
-7. **Operations:** immutable versions with diff and restore, admin, editor
+8. **Operations:** immutable versions with diff and restore, admin, editor
    and viewer roles, shares and teams, an audit log, and OpenTelemetry traces
    to OTLP or LangSmith.
-8. **Learn LangGraph:** the Code tab shows any workflow as one readable LangGraph
+9. **Learn LangGraph:** the Code tab shows any workflow as one readable LangGraph
    Python file that runs on its own (offline with a mock model), with the
    selected node's code highlighted, and exports it to your own project.
 

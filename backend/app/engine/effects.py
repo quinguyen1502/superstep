@@ -14,7 +14,8 @@ import hashlib, inspect
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Protocol
 
-SIDE_EFFECT_TYPES = ("llm", "tool", "decision", "email")  # Decision: a paid call; Send email: never sent twice
+SIDE_EFFECT_TYPES = ("llm", "tool", "decision", "email", "agent_model", "agent_tool")  # Decision: a paid call; Send email: never sent twice;
+# an Agent node's model and tool steps (TASK-0116): one ledger entry and idempotency key per model call and per tool call
 
 
 class Ledger(Protocol):

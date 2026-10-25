@@ -13,6 +13,7 @@ The output is a pure function of its input: the same graph gives the same bytes.
 from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
+from ..core.errors import AppError
 from . import foreach
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .templating import VAR_RE, _ONE_FILTER
@@ -816,5 +817,9 @@ class _Writer(GraphWriter):
 
 def to_typescript(wf: dict, name: str, version: Optional[int] = None, children: Optional[dict] = None,
                   example: Optional[dict] = None) -> Export:
-    """The LangGraph.js TypeScript file for workflow `wf` (same arguments as `python_export.to_python`)."""
+    """The LangGraph.js TypeScript file for workflow `wf` (same arguments as `python_export.to_python`). Agent nodes are
+    refused for now (TASK-0119, CLAR-0003 Q8): export the workflow as Python."""
+    for g in [wf, *(children or {}).values()]:
+        agent = next((n for n in g.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"), None)
+        if agent: raise AppError("TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED", node=one_line((agent.get("data") or {}).get("label") or agent.get("id"))[:80])
     return _Writer(name, version, children or {}, example).write(wf)

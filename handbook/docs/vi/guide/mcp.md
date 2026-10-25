@@ -48,3 +48,11 @@ Argument đúng bằng một tham chiếu thì giữ nguyên kiểu. Kết quả
 Workflow được chia sẻ chạy bằng máy chủ MCP của **chủ** workflow.
 
 Để client MCP gọi workflow **của bạn** như công cụ, xem [Workflow làm công cụ MCP](../run/mcp-server.md).
+
+## Node MCP hay node Agent
+
+Node MCP tool gọi một công cụ với các tham số bạn điền sẵn, ở một chỗ cố định
+trong graph. Muốn model tự quyết định có gọi công cụ không, gọi lúc nào và với
+tham số gì, hãy thêm công cụ đó vào một [node Agent](agent.md): chọn máy chủ và
+công cụ, model sẽ đọc mô tả và schema input của công cụ từ máy chủ. Model chỉ
+được dùng các công cụ bạn thêm, không bao giờ là cả danh sách của máy chủ.

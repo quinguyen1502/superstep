@@ -280,5 +280,36 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await setInput(page, RELEASES); await run(page)
       await shot(page, lang, 'editor-dark')
     })
+
+    // The Agent node (TASK-0120): its settings, a run waiting before request_refund, then the trace after Approve.
+    // Run alone with `-g agent`. The policy search tool needs a knowledge base, so it is left out here.
+    test(`agent ${lang}`, async ({ page }) => {
+      await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
+      await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
+      const H = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+      const vi = lang === 'vi'
+      const wid = (await (await page.request.post('/api/templates/builtin-support-agent/use', { headers: H, data: { name: vi ? 'Agent hỗ trợ khách hàng' : 'Support agent' } })).json()).data.id
+      const wf = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data
+      const agent = wf.nodes.find((n: { type: string }) => n.type === 'agent')
+      agent.data.tools = agent.data.tools.filter((t: { source: string }) => t.source !== 'knowledge')
+      if (vi) {  // the mock picks the tool whose description shares the most words with the message
+        Object.assign(agent.data, { label: 'Agent hỗ trợ', prompt: 'Giúp khách hàng này. Tin nhắn: {{state.message}}',
+          system_prompt: 'Bạn là nhân viên hỗ trợ của một cửa hàng online. Dùng các công cụ để tra cứu đơn hàng. Chỉ yêu cầu hoàn tiền khi đơn bị vỡ hoặc giao trễ.' })
+        agent.data.tools[0].description = 'Tra cứu trạng thái giao hàng của một đơn'
+        agent.data.tools[1].description = 'Yêu cầu hoàn tiền cho đơn hàng bị vỡ hoặc giao trễ'
+      }
+      expect((await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).success).toBe(true)
+
+      await page.goto(`/workflows/${wid}`); await expect(page.locator('.react-flow__node')).toHaveCount(3); await fit(page)
+      await page.locator('.react-flow__node[data-id="agent"]').click(); await expect(page.locator('#agent-settings')).toBeVisible()
+      await page.locator('#agent-settings').getByText(vi ? 'Công cụ' : 'Tools', { exact: true }).first().scrollIntoViewIfNeeded()
+      await shot(page, lang, 'agent-settings')
+      await setInput(page, JSON.stringify({ message: vi ? 'Đơn A100 của tôi bị vỡ, cho tôi hoàn tiền' : 'Order A100 arrived broken, please refund it' }, null, 2))
+      await run(page, 'waiting'); await expect(page.locator('#human-panel')).toBeVisible()
+      await shot(page, lang, 'agent-waiting')
+      await page.locator('#human-approve').click()
+      await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+      await shot(page, lang, 'agent-trace')
+    })
   })
 }

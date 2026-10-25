@@ -7,6 +7,7 @@ models and how to build a LangChain chat model (streaming + `bind_tools` come wi
 Adding a provider = subclass `OpenAICompatible` (or `Provider`) with a few attributes and append it to REGISTRY.
 Errors are raised as `ProviderError(code, **params)`; codes live in core/errors.py (PROVIDER_*, MODEL_NOT_FOUND)."""
 from __future__ import annotations
+import json
 from typing import Any, Callable, ClassVar, Dict, List, Optional, Tuple
 import httpx
 from ..core import config, smtp
@@ -128,6 +129,32 @@ class Provider:
             make_usage(self.id, model, estimate_tokens(prompt), estimate_tokens(out), estimated=True)
         return out.strip(), usage
 
+    def invoke_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], model: str, cred: Dict[str, Any],
+                     on_token: Optional[Callable[[str], None]] = None) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
+        """One Agent node model call (TASK-0116): (text, tool calls [{id, name, args}], usage). `messages` are plain dicts
+        {role: system|user|assistant|tool, content, tool_calls?, tool_call_id?}; `tools` [{name, description, parameters}]."""
+        model = model or self.default_model
+        try:
+            m = self.chat_model(cred, model, **(self.stream_kwargs if on_token else {}))
+            if tools: m = m.bind_tools([{"type": "function", "function": t} for t in tools])
+            if on_token is None: msg = m.invoke(_lc_messages(messages))
+            else:
+                msg = None
+                for chunk in m.stream(_lc_messages(messages)):
+                    if (d := _text(chunk.content)): on_token(d)
+                    msg = chunk if msg is None else msg + chunk
+                if msg is None: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "empty stream")
+        except ProviderError: raise
+        except Exception as e:
+            mapped = self.map_error(e, model) or _map_http_error(e, self.id, model, self.base(cred, self.default_base_url))
+            raise mapped from None
+        out = _text(msg.content).strip()
+        calls = [{"id": c.get("id") or f"call_{i}", "name": c.get("name") or "", "args": c.get("args") or {}} for i, c in enumerate(getattr(msg, "tool_calls", None) or [])]
+        u = getattr(msg, "usage_metadata", None) or {}
+        usage = make_usage(self.id, model, u["input_tokens"], u["output_tokens"]) if u else \
+            make_usage(self.id, model, estimate_tokens(json.dumps(messages, ensure_ascii=False)), estimate_tokens(out), estimated=True)
+        return out, calls, usage
+
     # --- embeddings (knowledge bases) ----------------------------------------------------
     supports_embeddings: ClassVar[bool] = True
     default_embedding_model: ClassVar[str] = ""
@@ -154,6 +181,18 @@ class Provider:
             out += vecs
         if len({len(v) for v in out}) > 1: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "embeddings of different dimensions")
         return out
+
+
+def _lc_messages(messages: List[Dict[str, Any]]) -> list:
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+    out = []
+    for m in messages:
+        role, text = m.get("role"), m.get("content") or ""
+        if role == "system": out.append(SystemMessage(text))
+        elif role == "assistant": out.append(AIMessage(text, tool_calls=[{"id": c["id"], "name": c["name"], "args": c.get("args") or {}} for c in m.get("tool_calls") or []]))
+        elif role == "tool": out.append(ToolMessage(text, tool_call_id=m.get("tool_call_id") or ""))
+        else: out.append(HumanMessage(text))
+    return out
 
 
 def _text(content: Any) -> str:
@@ -228,6 +267,7 @@ class PlainHTTP(Provider):
 class OpenAI(PlainHTTP):
     """Hosted OpenAI (kept on plain HTTP like before TASK-0030; `ChatOpenAI` handles the same base URL for tools)."""
     id, label, default_base_url, default_model, key_required = "openai", "OpenAI / OpenAI-compatible", "https://api.openai.com/v1", "gpt-4o-mini", True
+    stream_kwargs = {"stream_usage": True}  # Agent node calls go through ChatOpenAI (invoke_tools)
 
     def chat_model(self, cred, model, **kw): return OpenAICompatible.chat_model(self, cred, model, **kw)
 
@@ -248,6 +288,37 @@ class Anthropic(PlainHTTP):
     models_path, supports_embeddings = "/v1/models", False
 
     def auth_headers(self, cred): return {"x-api-key": cred.get("api_key") or "", "anthropic-version": "2023-06-01"}
+
+    def invoke_tools(self, messages, tools, model, cred, on_token=None):
+        """The Messages API with `tools` over plain HTTP (no LangChain package for Anthropic): tool results go back as
+        `tool_result` blocks in one user turn."""
+        model = model or self.default_model
+        system = "\n\n".join(m.get("content") or "" for m in messages if m.get("role") == "system")
+        turns: List[Dict[str, Any]] = []
+        for m in messages:
+            role, text = m.get("role"), m.get("content") or ""
+            if role == "system": continue
+            if role == "tool":
+                block = {"type": "tool_result", "tool_use_id": m.get("tool_call_id") or "", "content": text}
+                if turns and turns[-1]["role"] == "user" and isinstance(turns[-1]["content"], list): turns[-1]["content"].append(block)
+                else: turns.append({"role": "user", "content": [block]})
+            elif role == "assistant":
+                blocks = ([{"type": "text", "text": text}] if text else []) + [
+                    {"type": "tool_use", "id": c["id"], "name": c["name"], "input": c.get("args") or {}} for c in m.get("tool_calls") or []]
+                turns.append({"role": "assistant", "content": blocks or text})
+            else: turns.append({"role": "user", "content": text})
+        body: Dict[str, Any] = {"model": model, "max_tokens": 1024, "messages": turns}
+        if system: body["system"] = system
+        if tools: body["tools"] = [{"name": t["name"], "description": t.get("description") or "", "input_schema": t.get("parameters") or {"type": "object"}} for t in tools]
+        data = request(self.id, "POST", self.base(cred, self.default_base_url) + "/v1/messages", self.auth_headers(cred), body, model=model)
+        try:
+            blocks = data["content"]
+            out = "".join(b.get("text", "") for b in blocks if b.get("type") == "text").strip()
+            calls = [{"id": b["id"], "name": b["name"], "args": b.get("input") or {}} for b in blocks if b.get("type") == "tool_use"]
+        except Exception: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "invalid response") from None
+        if on_token and out: on_token(out)
+        u = data.get("usage") or {}
+        return out, calls, make_usage(self.id, data.get("model") or model, u.get("input_tokens", 0), u.get("output_tokens", 0))
 
     def _complete(self, prompt, model, cred):
         data = request(self.id, "POST", self.base(cred, self.default_base_url) + "/v1/messages", self.auth_headers(cred),

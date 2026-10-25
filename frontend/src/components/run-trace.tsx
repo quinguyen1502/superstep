@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CodeConsole } from '@/components/code-settings'
 import { JsonView } from '@/components/json-view'
-import { fmtCost, fmtMs, stateDiff, type RunEvent, type Span, type Trace } from '@/lib/trace'
+import { agentOf, fmtCost, fmtMs, stateDiff, type AgentStep, type RunEvent, type Span, type Trace } from '@/lib/trace'
 import { cn } from '@/lib/utils'
 import { Tip } from '@/components/tip'
 
@@ -49,6 +49,21 @@ function Summary({ trace, replay, onExitReplay, raw, setRaw, actions }: { trace:
   </div>
 }
 
+/** What an Agent node's step did, on its trace row: the round, the tools the model called or its answer, or one tool call. */
+function AgentSummary({ a }: { a: AgentStep }) {
+  const { t } = useTranslation()
+  const text = a.kind === 'tool' ? `${a.tool} → ${a.result ?? ''}`
+    : a.tool_calls?.length ? t('trace.agent.calls', { tools: a.tool_calls.map(c => c.name).join(', ') }) : t('trace.agent.answer', { text: a.text || '—' })
+  return <>
+    {/* what happened first: a narrow row clips the badges at its end (TASK-0117 statuses) */}
+    {a.approval === 'approved' && <Badge variant="success" size="sm" data-testid="span-approved">{t('trace.agent.approved')}</Badge>}
+    {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' ? 'secondary' : a.status === 'rejected' ? 'warning' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
+    {a.limit_hit && <Badge variant="warning" size="sm" data-testid="span-limit">{t('trace.agent.limit')}</Badge>}
+    {a.round > 0 && <Badge variant="outline" size="sm" data-testid="span-round">{t('trace.agent.round', { n: a.round })}</Badge>}
+    <Tip tip={text}><span className="truncate min-w-0 flex-1 text-muted-foreground text-[11px]" data-testid="span-agent">{text}</span></Tip>
+  </>
+}
+
 function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; meta: Meta; selected: boolean; onClick: () => void }) {
   const { t } = useTranslation(); const m = meta(s.type); const I = m.icon
   const total = Math.max(trace.total || 0, 1); const t0 = trace.start ?? s.start
@@ -58,13 +73,13 @@ function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; met
     className={cn('trace-row w-full grid grid-cols-[18px_minmax(0,1fr)_72px_minmax(80px,30%)] items-center gap-2 px-3 py-1 text-left text-xs hover:bg-accent/60 border-l-2 border-transparent',
       selected && 'bg-accent border-l-primary', s.status === 'error' && 'bg-destructive/5 hover:bg-destructive/10')}>
     <StatusIcon s={s.status} className="size-3.5" />
-    <span className="flex items-center gap-1.5 min-w-0">
+    <span className={cn('flex items-center gap-1.5 min-w-0 overflow-hidden', agentOf(s.node) && 'pl-4')}>
       <span className={cn('rounded p-0.5', m.color)}><I className="size-3" /></span>
       <span className={cn('truncate font-medium shrink-0 max-w-[45%]', s.status === 'error' && 'text-destructive')}>{s.label}</span>
-      {s.iter > 1 && <Badge variant="secondary" size="sm">#{s.iter}</Badge>}
+      {s.iter > 1 && !s.agent && <Badge variant="secondary" size="sm">#{s.iter}</Badge>}
       {s.code?.runtime === 'subprocess' && <Badge variant="warning" size="sm" data-testid="span-unisolated">{t('code.runtimeLabel', { runtime: s.code.runtime })}</Badge>}
-      <span className="truncate shrink-0 max-w-[25%] text-muted-foreground font-mono text-[10px]">{s.node}</span>
-      {s.tokens != null && <Tooltip><TooltipTrigger asChild><span className="text-muted-foreground text-[10px]" data-testid="span-tokens">· {t('trace.tokensShort', { count: s.tokens })}{s.cost ? ` · ${fmtCost(s.cost)}` : ''}</span></TooltipTrigger>
+      {s.agent ? <AgentSummary a={s.agent} /> : <span className="truncate shrink-0 max-w-[25%] text-muted-foreground font-mono text-[10px]">{s.node}</span>}
+      {s.tokens != null && <Tooltip><TooltipTrigger asChild><span className="shrink-0 whitespace-nowrap text-muted-foreground text-[10px]" data-testid="span-tokens">· {t('trace.tokensShort', { count: s.tokens })}{s.cost ? ` · ${fmtCost(s.cost)}` : ''}</span></TooltipTrigger>
         <TooltipContent>{t('trace.usageDetail', { model: s.usage?.model ?? '—', tin: s.usage?.tokens_in ?? 0, tout: s.usage?.tokens_out ?? 0, cost: fmtCost(s.cost) })}{s.usage?.estimated ? ` ${t('trace.estimated')}` : ''}</TooltipContent></Tooltip>}
       {s.status === 'running' && s.live && <span data-testid="span-live" className="truncate min-w-0 font-mono text-[11px] text-muted-foreground">{s.live.slice(-160)}</span>}
       {s.error && <Tooltip><TooltipTrigger asChild><span className="truncate min-w-0 text-destructive text-[11px]">— {s.error}</span></TooltipTrigger>
@@ -110,7 +125,7 @@ function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void
         <TabsContent value="output">{s.status === 'running' && s.live
           ? <div className="space-y-1" id="trace-live"><div className="flex items-center gap-1 text-[11px] text-muted-foreground"><Loader2 className="size-3 animate-spin" />{t('trace.streaming')}</div>
               <pre className="whitespace-pre-wrap break-words rounded-md border bg-muted/40 p-2 font-mono text-[11px]">{s.live}</pre></div>
-          : <div className="space-y-2">{s.status !== 'error' && <JsonView value={s.output} />}<CodeConsole stdout={s.code?.stdout} traceback={s.code?.traceback} id="trace-code-output" />
+          : <div className="space-y-2">{s.status !== 'error' && <JsonView value={s.agent ?? s.output} />}<CodeConsole stdout={s.code?.stdout} traceback={s.code?.traceback} id="trace-code-output" />
               {s.status === 'error' && !s.code && <JsonView value={s.output} />}</div>}</TabsContent>
         <TabsContent value="diff"><DiffView s={s} /></TabsContent>
         <TabsContent value="raw"><JsonView value={s.events} /></TabsContent>

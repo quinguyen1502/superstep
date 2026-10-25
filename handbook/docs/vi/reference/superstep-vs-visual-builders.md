@@ -37,7 +37,7 @@ Cách run tạm dừng, tiếp tục và được kiểm tra:
 
 | Sản phẩm | Human in the loop | Chạy bền vững | Test, eval, quan sát |
 | --- | --- | --- | --- |
-| Superstep | Human node; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams, có hạn chót | Checkpoint trong database, job worker có lease; du hành thời gian: fork run đã xong từ một checkpoint | Test workflow, eval LangSmith, trace OpenTelemetry |
+| Superstep | Human node, và duyệt trước khi node Agent gọi công cụ; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams, có hạn chót | Checkpoint trong database (SQLite hoặc Postgres): run đang dừng và run trong hàng đợi đang chạy tiếp tục sau khi khởi động lại hay worker sập; du hành thời gian: fork run đã xong từ một checkpoint | Test workflow, eval LangSmith, trace OpenTelemetry |
 | n8n | Duyệt lời gọi tool của AI Agent; duyệt qua Slack bằng "send and wait" | Queue mode với worker | Evaluations (test case, metric); OpenTelemetry khi tự host |
 | Dify | Node Human Input | Nguồn không đề cập | Log, dashboard, annotation; LangSmith, Langfuse, Opik, Phoenix và khác |
 | Langflow | Component Human Input; duyệt lời gọi tool của agent | HITL dừng tại một checkpoint và tiếp tục từ đó; ngoài ra nguồn không đề cập | Playground; tích hợp LangSmith, Langfuse, Opik, Arize |
@@ -55,11 +55,16 @@ Cách gọi và mang đi nơi khác:
 
 ## Superstep
 
-- **LangGraph trực quan.** Graph được vẽ trên canvas (13 loại node, state có
+- **LangGraph trực quan.** Graph được vẽ trên canvas (14 loại node, state có
   kiểu với reducer, vòng lặp, nhánh song song, subgraph, Human node) và biên
   dịch thành `StateGraph` của LangGraph. Code node Python và TypeScript chạy
   trong sandbox Docker khóa chặt (trên host khi dùng nền tảng được quản lý) khi
   bạn cần code. Xem [Node](../guide/nodes.md).
+- **Node Agent nằm trong graph.** Model tự chọn và gọi các công cụ bạn liệt kê
+  (công cụ của máy chủ MCP, yêu cầu HTTP, hàm có sẵn, tìm trong kho tri thức)
+  trong số vòng đã đặt; công cụ nào cũng có thể cần duyệt trước mỗi lần gọi.
+  Mỗi lần gọi model hay công cụ là một bước có checkpoint, nên hiện trong trace
+  và không chạy lại sau khi khởi động lại (xem [Node Agent](../guide/agent.md)).
 - **Xuất code và tương thích LangGraph.** Mọi workflow xuất được thành dự án
   LangGraph chạy được (`langgraph.json`, chạy bằng `langgraph dev`, xem
   [Xuất ra Python](../guide/python-export.md)), và một phần Agent Server API
@@ -85,7 +90,9 @@ Cách gọi và mang đi nơi khác:
 
 Những gì Superstep không cố trở thành: số tích hợp có sẵn ít hơn nhiều so với
 bốn công cụ kia (kết nối qua HTTP, MCP server, email và các kênh chat), không
-có dịch vụ cloud host sẵn và không có marketplace.
+có dịch vụ cloud host sẵn và không có marketplace. Node Agent của Superstep là
+một agent với các công cụ bạn liệt kê: không có nhóm nhiều agent hay chuyển
+việc giữa các agent, và chưa xuất được sang TypeScript.
 
 ## n8n
 
@@ -168,8 +175,9 @@ human input có checkpoint, và nhiều hướng dẫn triển khai.
 - **Gọi Superstep từ chúng.** n8n, Dify, Langflow hay Flowise có thể chạy
   workflow Superstep qua HTTP bằng API công khai, ví dụ để đặt một bước đã được
   review và có duyệt bởi người vào một quy trình tự động lớn hơn.
-- **Gọi chúng từ Superstep.** Node HTTP và MCP có thể gọi webhook của n8n, API
-  ứng dụng Dify, Langflow MCP server hoặc endpoint prediction của Flowise.
+- **Gọi chúng từ Superstep.** Node HTTP và MCP, hoặc công cụ HTTP và MCP của
+  node Agent, có thể gọi webhook của n8n, API ứng dụng Dify, Langflow MCP
+  server hoặc endpoint prediction của Flowise.
 
 ## Khi nào nên chọn công cụ khác
 

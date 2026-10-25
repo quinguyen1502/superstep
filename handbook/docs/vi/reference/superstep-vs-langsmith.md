@@ -66,7 +66,9 @@ liệt kê với tên **LangSmith Fleet**.
 Agent Builder và Superstep đều là cách dựng agent không cần viết code, theo hai
 hướng khác nhau: Agent Builder để agent tự lên các bước từ mục tiêu; Superstep
 để bạn vẽ các bước, nên mọi đường đi, nhánh và bước duyệt đều rõ ràng và xem
-lại được.
+lại được. Ở chỗ model nên tự chọn, [node Agent](../guide/agent.md) của Superstep
+tự chọn và gọi các công cụ bạn liệt kê ngay trong một bước đã vẽ, và hỏi duyệt
+trước các công cụ bạn đánh dấu.
 
 ## Giá và hosting
 

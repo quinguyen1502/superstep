@@ -67,7 +67,9 @@ product for building agents "using everyday language, not code" is listed as
 Agent Builder and Superstep are both ways to build agents without writing
 code, with different approaches: Agent Builder lets the agent plan its own
 steps from a goal; Superstep has you draw the steps, so every path, branch and
-approval is explicit and reviewable.
+approval is explicit and reviewable. Where the model should choose, a
+Superstep [Agent node](../guide/agent.md) picks and calls the tools you list
+inside one drawn step, and asks for approval before the tools you mark.
 
 ## Pricing and hosting
 

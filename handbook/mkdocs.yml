@@ -37,6 +37,7 @@ nav:
       - guide/index.md
       - The editor: guide/editor.md
       - Nodes: guide/nodes.md
+      - Agent node: guide/agent.md
       - State and references: guide/state.md
       - Code mode: guide/code-mode.md
       - Knowledge bases: guide/knowledge.md
