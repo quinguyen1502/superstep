@@ -61,6 +61,15 @@ def test_validation():
     assert validate(wf(tools=[{"name": "h", "source": "http", "method": "GET", "url": "https://x.test/{{state.args.id}}"}])) == []
 
 
+def test_steps_are_never_cached():
+    """The node's cache applies to the entry step only: a cached tool step would skip the call on a run with the same
+    state (TASK-0116 review fix)."""
+    x = agents.expand(wf(cache_ttl=60, timeout=30, retry={"max_attempts": 2, "initial_interval": 1}))
+    data = {n["id"]: n["data"] for n in x["nodes"]}
+    assert data["ag"]["cache_ttl"] == 60 and all("cache_ttl" not in data[f"ag/{s}"] for s in ("__model", "__tool", "__exit"))
+    assert data["ag/__tool"]["timeout"] == 30 and data["ag/__model"]["retry"]["max_attempts"] == 2
+
+
 def test_expansion_is_idempotent_and_leaves_the_input_alone():
     w = wf(); x = agents.expand(w)
     assert [n["id"] for n in w["nodes"]] == ["start", "ag", "end"]
