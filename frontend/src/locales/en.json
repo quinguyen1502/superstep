@@ -456,6 +456,7 @@
     "EXPORT_LANGUAGE_UNSUPPORTED": "Cannot export to {{language}}: use one of {{supported}}.",
     "CALLBACK_URL_INVALID": "callback_url must be a public http(s) URL",
     "VERSION_NOT_FOUND": "That version no longer exists.",
+    "RUN_INTERRUPTED": "The server stopped while this run was going {{attempts}} times, so it was not continued again",
     "RUN_EXPIRED": "This run waited too long for a response and has expired.",
     "RATE_LIMITED": "Too many requests. Try again in {{retry_after}} s.",
     "NOTIFICATION_NOT_FOUND": "Notification not found.",

@@ -402,6 +402,19 @@ class RunService:
                        resume={k: cp[k] for k in RESUME_KEYS if k in cp}, version=r.workflow_version, recovered=True,
                        ports=self.ports(self.resources_of(r.workflow_id, r.owner or ""), r.owner or ""), **common)
 
+    def recovery_job(self, r: Run) -> dict:
+        """The queue job that continues an unfinished run after a restart (RunWorker.recover_unfinished)."""
+        test = self.tests().test_job(r.id) if r.source == "test" and self.tests else None
+        return {"run_id": r.id, "workflow_id": r.workflow_id, "owner": r.owner, "input": json.loads(r.input or "{}"), "source": r.source,
+                "callback_url": r.callback_url, "token_id": r.callback_token_id, "recovered": True, "attempt": (r.lease_gen or 0) + 1,
+                **({"test": test} if test is not None else {}), **({"version": r.workflow_version} if r.source == "test" and r.workflow_version else {})}
+
+    def interrupted(self, r: Run, attempts: int) -> None:
+        """End an unfinished run that recovery gave up on: `error` RUN_INTERRUPTED, its events so far kept."""
+        err = AppError("RUN_INTERRUPTED", attempts=attempts).to_dict()
+        self.record(r.id, r.workflow_id, json.loads(r.input or "{}"), json.loads(r.events or "[]") + [error_event(err, ts=time.time())], None, "error",
+                    r.started, r.owner or "", source=r.source or "api", version=r.workflow_version)
+
     def pending(self, uid: str) -> list[dict]:
         """Runs of this user waiting for a human response (newest first)."""
         out = []; self.expire_waiting()

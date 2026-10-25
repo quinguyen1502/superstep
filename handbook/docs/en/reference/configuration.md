@@ -65,6 +65,8 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_WORKER_CONCURRENCY` | `2` | Jobs per worker |
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | `30` | Job lease (s) |
 | `STUDIO_JOB_REAP_EVERY` | `15` | Requeue expired leases every (s) |
+| `STUDIO_RECOVER_ON_START` | `1` | In-memory queue: requeue unfinished runs at start-up ([runs across restarts](../operate/deploy.md#runs-across-restarts)) |
+| `STUDIO_RECOVER_MAX_ATTEMPTS` | `3` | Times one run is taken before it ends as `RUN_INTERRUPTED` |
 
 ## API triggers and webhooks
 

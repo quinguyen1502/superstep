@@ -198,6 +198,11 @@ class WorkflowTestService:
                     and self.langsmith is not None and self.langsmith().evals_enabled():
                 self.jobs.enqueue({"kind": "langsmith_suite", "suite_id": sid})  # network: the worker sends it, not this request
 
+    def test_job(self, rid: str) -> Optional[dict]:
+        """The `test` field of a test run's queue job, rebuilt from its suite (start-up recovery, TASK-0115)."""
+        res = self.repo.result_for_run(rid); s = self.repo.suite(res.suite_id) if res else None
+        return {"mock": bool(s.mock)} if s else None
+
     def _start(self, s: WorkflowTestSuite, r: WorkflowTestResult) -> bool:
         rid = uuid.uuid4().hex[:10]
         if not self.repo.claim_result(r.id, rid): return False

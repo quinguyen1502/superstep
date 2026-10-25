@@ -456,6 +456,7 @@
     "EXPORT_LANGUAGE_UNSUPPORTED": "Không xuất được sang {{language}}: hãy chọn một trong {{supported}}.",
     "CALLBACK_URL_INVALID": "callback_url phải là URL http(s) công khai",
     "VERSION_NOT_FOUND": "Phiên bản này không còn tồn tại.",
+    "RUN_INTERRUPTED": "Server đã dừng {{attempts}} lần khi run này đang chạy, nên run không được chạy tiếp nữa",
     "RUN_EXPIRED": "Run này đã chờ phản hồi quá lâu và đã hết hạn.",
     "RATE_LIMITED": "Quá nhiều yêu cầu. Thử lại sau {{retry_after}} giây.",
     "NOTIFICATION_NOT_FOUND": "Không tìm thấy thông báo.",

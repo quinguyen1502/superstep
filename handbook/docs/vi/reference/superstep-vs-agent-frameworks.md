@@ -27,7 +27,7 @@ trước khi quyết định. Về các trình dựng trực quan, xem
 | Mô hình cốt lõi | Graph tường minh: node, cạnh, state có kiểu, checkpoint | Flow (state, sự kiện, rẽ nhánh) gọi các Crew gồm agent đóng vai | Vòng lặp agent có kiểu; Pydantic Graph cho luồng điều khiển dạng graph |
 | Giấy phép | MIT (Superstep và LangGraph) | MIT (framework); AMP là thương mại | MIT |
 | Human in the loop | Human node và interrupt của LangGraph; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams | `@human_feedback` trong Flow; endpoint resume trong AMP | Duyệt lời gọi tool; chờ lâu nhờ engine durable |
-| Chạy bền vững và du hành thời gian | Checkpoint trong database, job worker có lease; fork run đã xong từ một checkpoint | Lưu state Flow bằng `@persist`, khôi phục từ state đã lưu | Durable execution trên Temporal, DBOS, Prefect và các engine khác; step persistence để lưu, tiếp tục và fork |
+| Chạy bền vững và du hành thời gian | Checkpoint trong database (SQLite hoặc Postgres): run đang dừng và run trong hàng đợi đang chạy tiếp tục sau khi khởi động lại; fork run đã xong từ một checkpoint | Lưu state Flow bằng `@persist`, khôi phục từ state đã lưu | Durable execution trên Temporal, DBOS, Prefect và các engine khác; step persistence để lưu, tiếp tục và fork |
 | Test, eval, quan sát | Test workflow, eval LangSmith, trace OpenTelemetry | Tracing của AMP; nhiều tích hợp bên thứ ba | Pydantic Evals; OpenTelemetry gốc, Logfire |
 | Chạy như dịch vụ | Có sẵn: token API, webhook, lịch, API công khai với SDK Python và TypeScript | Dịch vụ do bạn tự dựng, hoặc triển khai trên AMP có REST API | Dịch vụ do bạn tự dựng; stream sự kiện AG-UI và Vercel AI cho frontend |
 

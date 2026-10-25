@@ -37,7 +37,7 @@ Cách run tạm dừng, tiếp tục và được kiểm tra:
 
 | Sản phẩm | Human in the loop | Chạy bền vững | Test, eval, quan sát |
 | --- | --- | --- | --- |
-| Superstep | Human node; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams, có hạn chót | Checkpoint trong database, job worker có lease; du hành thời gian: fork run đã xong từ một checkpoint | Test workflow, eval LangSmith, trace OpenTelemetry |
+| Superstep | Human node; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams, có hạn chót | Checkpoint trong database (SQLite hoặc Postgres): run đang dừng và run trong hàng đợi đang chạy tiếp tục sau khi khởi động lại hay worker sập; du hành thời gian: fork run đã xong từ một checkpoint | Test workflow, eval LangSmith, trace OpenTelemetry |
 | n8n | Duyệt lời gọi tool của AI Agent; duyệt qua Slack bằng "send and wait" | Queue mode với worker | Evaluations (test case, metric); OpenTelemetry khi tự host |
 | Dify | Node Human Input | Nguồn không đề cập | Log, dashboard, annotation; LangSmith, Langfuse, Opik, Phoenix và khác |
 | Langflow | Component Human Input; duyệt lời gọi tool của agent | HITL dừng tại một checkpoint và tiếp tục từ đó; ngoài ra nguồn không đề cập | Playground; tích hợp LangSmith, Langfuse, Opik, Arize |
