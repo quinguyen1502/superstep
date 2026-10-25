@@ -262,3 +262,21 @@ def test_run_until_the_agent_runs_the_whole_agent(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     evs = list(run_stream(wf(), {"message": "Where is A100?"}, until="ag"))
     assert evs[-1]["type"] == "run_paused" and evs[-1]["node"] == "end" and "Delivered" in evs[-1]["state"]["answer"]
+
+
+def test_saved_workflow_run_and_fork_inside_the_loop(monkeypatch):
+    """Through the run service: the stored run, its checkpoints, and a fork at the tool step that does not call the model
+    again before the tool runs."""
+    from tests.test_hitl import H, c, user, ws
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    tok = user(); w = wf(steps_field="steps")
+    wid = c.post("/api/workflows", json=w, headers=H(tok)).json()["data"]["id"]
+    evs = ws(tok, {"workflow_id": wid, "input": {"message": "Where is order B200?"}}, until=("run_summary",))
+    rid = evs[0]["run_id"]
+    assert next(e for e in evs if e["type"] == "run_finished")["state"]["steps"][0]["tool"] == "lookup_order"
+    cps = c.get(f"/api/runs/{rid}/checkpoints", headers=H(tok)).json()["data"]["checkpoints"]
+    at = next(cp for cp in cps if cp["nodes"] == ["ag/__tool"])
+    assert at["forkable"] and at["labels"] == ["Helper › tool"]
+    evs = ws(tok, {"fork": {"run_id": rid, "checkpoint": at["index"]}}, until=("run_summary",))
+    ran = [e["node"] for e in evs if e["type"] == "node_finished"]
+    assert ran[:2] == ["ag/__tool", "ag/__model"] and "In transit" in next(e for e in evs if e["type"] == "run_finished")["state"]["answer"]
