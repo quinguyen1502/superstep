@@ -30,7 +30,9 @@ STEP_EVENTS = ("node_started", "node_finished", "error", "run_waiting")
 
 
 def answered_by(node_data: Optional[dict]) -> str:
-    """Who answers a Human node in a chat (DEC-0054): the person chatting (default) or a reviewer in the Approvals inbox."""
+    """Who answers a Human node in a chat (DEC-0054): the person chatting (default) or a reviewer in the Approvals inbox.
+    An Agent node's tool approval is always a reviewer's: the person chatting does not approve the agent's own actions."""
+    if (node_data or {}).get("agent_of"): return "reviewer"
     v = (node_data or {}).get("answered_by")
     return v if v in ANSWERED_BY else "visitor"
 

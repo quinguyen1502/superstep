@@ -13,6 +13,11 @@ Node data: credential_id, model, system_prompt, prompt, output_field, steps_fiel
   knowledge: knowledge_base_id, top_k                               http: method, url, body, parameters
 HTTP templates read the model's arguments as `{{state.args.<name>}}`; without a body, POST/PUT/PATCH send the
 arguments as JSON, and a GET whose URL does not use them gets them as query parameters.
+
+Approval (TASK-0117, DEC-0063 decision 7): before a call to a tool with `approval: true`, `A/__tool` pauses the run like a
+Human node (`Interrupt`), with the Agent node's `approval` and `deadline` settings (copied onto the step by `expand`), so
+the Approvals inbox, the channels and the deadlines work unchanged. The answer `approved` runs the call; `rejected` or
+any other text rejects it, and the model gets "Rejected by a reviewer" plus that text as the tool result.
 """
 from __future__ import annotations
 import copy, json, re, time
@@ -21,6 +26,7 @@ from urllib.parse import urlencode
 from ..core import config
 from ..core.errors import AppError
 from .effects import Effects, call_tool
+from .errors import Interrupt
 from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
@@ -38,6 +44,9 @@ STEP_CHARS = 2000    # ... and into the steps field / trace shortened to this
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 QUERY = {"type": "object", "properties": {"query": {"type": "string", "description": "What to search for"}}, "required": ["query"]}
+APPROVED, REJECTED = "approved", "rejected"
+ASK = {"en": "{agent} wants to call {tool} with these arguments:\n{args}\nApprove to run it, or reject it. A text reply rejects it and tells the model why.",
+       "vi": "{agent} muốn gọi công cụ {tool} với các tham số:\n{args}\nDuyệt để chạy, hoặc từ chối. Trả lời bằng chữ là từ chối và cho model biết lý do."}
 JSON_TYPES = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
 
 
@@ -52,6 +61,12 @@ def visible(state: Dict[str, Any]) -> Dict[str, Any]:
 def owner(node: Dict[str, Any]) -> str:
     """The Agent node an expanded step belongs to."""
     return (node.get("data") or {}).get("agent_of") or node["id"]
+
+
+def agent_of_step(nid: str) -> Optional[str]:
+    """`A` for the tool step `A/__tool`, whose approvals test cases answer under the Agent node's id (TASK-0117)."""
+    tail = SEP + TOOL
+    return nid[:-len(tail)] if nid.endswith(tail) else None
 
 
 def step_of(delta: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -164,6 +179,10 @@ def errors(nid: str, d: Dict[str, Any], schema: List[Dict[str, Any]]) -> List[st
     return errs
 
 
+def needs_approval(d: Dict[str, Any]) -> bool:
+    return any(isinstance(t, dict) and t.get("approval") for t in d.get("tools") or [])
+
+
 def templates(d: Dict[str, Any]) -> List[str]:
     """Templates rendered with the run state (HTTP tool templates are checked without `state.args`)."""
     out = [d.get("system_prompt") or "", d.get("prompt") or ""]
@@ -192,7 +211,7 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         n["data"] = {**d, "agent_expanded": True}
         inner = {k: v for k, v in d.items() if k not in ("label", "cache", "input_fields")}
         step = lambda suffix, typ, name: {"id": f"{a}{SEP}{suffix}", "type": typ, "position": n.get("position"),
-                                          "data": {**inner, "label": f"{label} › {name}", "agent_of": a}}
+                                          "data": {**inner, "label": f"{label} › {name}", "agent_of": a, "agent_label": label}}
         nodes += [step(MODEL, "agent_model", "model"), step(TOOL, "agent_tool", "tool"), step(EXIT, "agent_exit", "end")]
         m, t, x = f"{a}{SEP}{MODEL}", f"{a}{SEP}{TOOL}", f"{a}{SEP}{EXIT}"
         edges[:] = [{**e, "source": x} if e.get("source") == a else e for e in edges]  # the agent's way out
@@ -225,9 +244,21 @@ def router(node: Dict[str, Any]) -> Callable[[dict], str]:
 
 # ---- steps ------------------------------------------------------------------------------------
 
+def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
+    """The approver's answer for this step, consumed once (as for a Human node) so a later call to the tool asks again."""
+    if resume is not None and resume.get("node") == nid and "value" in resume: return str(resume.pop("value"))
+    return None
+
+
+def rejection(response: str) -> str:
+    comment = "" if response.strip().lower() == REJECTED else response.strip()
+    return "Rejected by a reviewer" + (f": {comment}" if comment else "")
+
+
 def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Effects] = None, ports: Optional[Ports] = None,
-            offline: bool = False, tokens: Optional[Callable[[str], Any]] = None) -> Callable[[dict], dict]:
-    """tokens(nid) -> a TokenBuffer for the run stream, or None (engine/nodes.token_stream)."""
+            offline: bool = False, tokens: Optional[Callable[[str], Any]] = None, resume: Optional[Dict[str, Any]] = None) -> Callable[[dict], dict]:
+    """tokens(nid) -> a TokenBuffer for the run stream, or None (engine/nodes.token_stream).
+    resume: {"node", "value"} when the run continues after an approval (engine/runtime)."""
     ports = ports or Ports()
     t, d, nid = node["type"], node.get("data") or {}, node["id"]
     key = private(owner(node))
@@ -278,12 +309,23 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
         def fn(state):
             p = copy.deepcopy(state.get(key) or {})
             if not p.get("pending"): return {}
-            call, p["pending"] = p["pending"][0], p["pending"][1:]
-            tool, args, t0 = by_name.get(call["name"]), call.get("args"), time.perf_counter()
+            call = p["pending"][0]
+            tool, args = by_name.get(call["name"]), call.get("args")
+            bad = None if tool is None else arg_error(parameters(tool), args)
+            decided = None
+            if tool is not None and not bad and tool.get("approval"):  # a call that cannot run is not shown to an approver
+                decided = answer(resume, nid)
+                if decided is None:
+                    who = d.get("agent_label") or owner(node)
+                    raise Interrupt(nid, ASK.get(ports.locale, ASK["en"]).format(agent=who, tool=call["name"], args=json.dumps(args, ensure_ascii=False, indent=2)),
+                                    {"label": f"{who} › {call['name']}", "tool": call["name"], "arguments": args})
+            p["pending"], t0 = p["pending"][1:], time.perf_counter()
             if tool is None:
                 status, result = "error", f"Unknown tool {call['name']}: use one of {', '.join(sorted(n for n in by_name if n))}"
-            elif (bad := arg_error(parameters(tool), args)):
+            elif bad:
                 status, result = "error", f"Invalid arguments for {call['name']}: {bad}"
+            elif decided is not None and decided.strip().lower() != APPROVED:
+                status, result = "rejected", rejection(decided)
             else:
                 try: status, result = "ok", text(run_tool(nid, tool, args, state, ports, effects))
                 except Exception as e:
@@ -291,7 +333,8 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                     status, result = "error", f"The tool failed: {safe_error(e)}"
             ms = round((time.perf_counter() - t0) * 1000, 2)
             p.setdefault("messages", []).append({"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": shorten(result, RESULT_CHARS)})
-            step = {"tool": call["name"], "args": args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms}
+            step = {"tool": call["name"], "args": args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
+                    **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {})}
             p.setdefault("steps", []).append(step)
             p["last"] = {"kind": "tool", "round": p.get("rounds", 0), **step}
             return {key: p}

@@ -3,8 +3,10 @@ killed with SIGKILL and started again on the same database:
 - a run paused at a Human node is resumed after the restart;
 - an API run that was going (one node finished, the next one sleeping) continues from its progress checkpoint after
   the restart, without running the finished node again;
-- a run that keeps being interrupted ends as `error` RUN_INTERRUPTED instead of being retried forever."""
-import json, os, signal, socket, sqlite3, subprocess, sys, tempfile, time, uuid
+- a run that keeps being interrupted ends as `error` RUN_INTERRUPTED instead of being retried forever.
+TASK-0117 adds the Agent node: a run paused at a tool approval resumes after a restart, and a run killed between two
+rounds continues without repeating the finished model call or tool call."""
+import http.server, json, os, signal, socket, sqlite3, subprocess, sys, tempfile, threading, time, uuid
 from pathlib import Path
 import httpx, pytest
 from websockets.sync.client import connect
@@ -21,9 +23,9 @@ class Server:
     """`uvicorn app.main:app` on its own port and database; `restart()` kills it hard and starts it again."""
     def __init__(self, root: Path, **env):
         self.root = root; self.db = str(root / "studio.db"); self.proc = None
-        self.env = {**os.environ, "STUDIO_DB": self.db, "STUDIO_SECRET_KEY_FILE": str(root / "secret.key"), "JWT_SECRET": "durable-test-" + "x" * 32,
+        base = {k: v for k, v in os.environ.items() if k not in ("REDIS_URL", "DATABASE_URL", "STUDIO_DEMO_MODE", "OPENAI_API_KEY", "OPENAI_BASE_URL")}
+        self.env = {**base, "STUDIO_DB": self.db, "STUDIO_SECRET_KEY_FILE": str(root / "secret.key"), "JWT_SECRET": "durable-test-" + "x" * 32,
                     "STUDIO_IMPORT_DIR": str(root / "imports"), "STUDIO_COOKIE_SECURE": "0", "STUDIO_ADMIN_EMAILS": ADMIN, "TMPDIR": str(root), **env}
-        for k in ("REDIS_URL", "DATABASE_URL", "STUDIO_DEMO_MODE"): self.env.pop(k, None)
 
     def start(self):
         with socket.socket() as s: s.bind(("127.0.0.1", 0)); self.port = s.getsockname()[1]
@@ -132,3 +134,87 @@ def test_run_interrupted_too_often_fails_with_a_code(server):
     server.restart()  # ... and is interrupted too: recovery gives up
     done = poll(server, wid, tok, rid)
     assert done["status"] == "error" and done["error"]["code"] == "RUN_INTERRUPTED" and done["error"]["details"] == {"attempts": 2}
+
+
+# ---- Agent node (TASK-0117) -------------------------------------------------------------------
+
+def agent(tool):
+    return {"name": "Agent", "state": [{"name": "message", "type": "string"}, {"name": "answer", "type": "string"}, {"name": "steps", "type": "list"}],
+            "nodes": [{"id": "s", "type": "start", "position": {"x": 0, "y": 0}, "data": {"label": "s"}},
+                      {"id": "ag", "type": "agent", "position": {"x": 1, "y": 0}, "data": {"label": "Helper", "prompt": "{{state.message}}", "output_field": "answer",
+                                                                                         "steps_field": "steps", "tools": [tool]}},
+                      {"id": "e", "type": "end", "position": {"x": 2, "y": 0}, "data": {"label": "e"}}],
+            "edges": [{"id": "1", "source": "s", "target": "ag"}, {"id": "2", "source": "ag", "target": "e"}]}
+
+
+def test_agent_waiting_at_a_tool_approval_resumes_after_restart(server):
+    lookup = {"name": "lookup_order", "description": "Find an order", "source": "builtin", "function": "lookup_order", "approval": True}
+    jwt, wid, tok = setup(server, agent(lookup))
+    rid = httpx.post(f"{server.url}/api/hooks/workflows/{wid}/runs", json={"input": {"message": "Where is order B200?"}}, headers=H(tok)).json()["data"]["run_id"]
+    assert poll(server, wid, tok, rid)["status"] == "waiting"
+    server.restart()
+    assert [p["id"] for p in httpx.get(f"{server.url}/api/runs/pending", headers=H(jwt)).json()["data"]] == [rid]
+    ws = server.url.replace("http", "ws") + f"/ws/run?token={jwt}"
+    with connect(ws) as w:
+        w.send(json.dumps({"resume_run_id": rid, "response": "approved"}))
+        while json.loads(w.recv()).get("type") != "run_summary": pass
+    done = poll(server, wid, tok, rid)
+    assert done["status"] == "ok" and "In transit" in done["final_state"]["answer"]
+    assert [(x["tool"], x["approval"]) for x in done["final_state"]["steps"]] == [("lookup_order", "approved")]
+
+
+class FakeModel:
+    """An OpenAI-compatible model and a `ping` API on one local port. The model calls `ping` first; its answer after the
+    tool result is slow the first time, so the test can kill the server between the two rounds."""
+    def __init__(self):
+        self.completions, self.pings, self.answering = [], 0, threading.Event()
+        fake = self
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                if self.path.endswith("/ping"): fake.pings += 1; return self.reply({"pong": fake.pings})
+                fake.completions.append(body)
+                after_tool = any(m.get("role") == "tool" for m in body.get("messages") or [])
+                if after_tool and not fake.answering.is_set(): fake.answering.set(); time.sleep(4)
+                self.reply(fake.answer(after_tool, bool(body.get("stream"))))
+            def reply(self, out):
+                stream = isinstance(out, str)
+                data = (out if stream else json.dumps(out)).encode()
+                self.send_response(200); self.send_header("Content-Type", "text/event-stream" if stream else "application/json")
+                self.send_header("Content-Length", str(len(data))); self.end_headers()
+                try: self.wfile.write(data)
+                except OSError: pass  # the studio was killed while waiting
+            def log_message(self, *a): pass
+        self.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler); self.port = self.srv.server_port
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    @staticmethod
+    def answer(after_tool, stream):
+        call = {"id": "t1", "type": "function", "function": {"name": "ping", "arguments": "{}"}}
+        msg = {"role": "assistant", "content": "Ping answered."} if after_tool else {"role": "assistant", "content": None, "tool_calls": [call]}
+        head = {"id": "x", "created": 1, "model": "m"}
+        if not stream:
+            return {**head, "object": "chat.completion", "choices": [{"index": 0, "message": msg, "finish_reason": "stop" if after_tool else "tool_calls"}],
+                    "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7}}
+        delta = {"role": "assistant", "content": msg["content"]} if after_tool else {"role": "assistant", "tool_calls": [{**call, "index": 0}]}
+        rows = [{"choices": [{"index": 0, "delta": delta}]}, {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop" if after_tool else "tool_calls"}]}]
+        return "".join(f"data: {json.dumps({**head, 'object': 'chat.completion.chunk', **r})}\n\n" for r in rows) + "data: [DONE]\n\n"
+
+
+FAKE_MODEL = FakeModel()
+
+
+@pytest.mark.parametrize("server", [{"OPENAI_API_KEY": "sk-test", "OPENAI_BASE_URL": f"http://127.0.0.1:{FAKE_MODEL.port}/v1",
+                                     "STUDIO_HTTP_TOOL_ALLOW_PRIVATE": "1", "STUDIO_RUN_TIMEOUT": "30"}], indirect=True)
+def test_agent_run_killed_between_two_rounds_does_not_repeat_finished_calls(server):
+    ping = {"name": "ping", "description": "Ping the API", "source": "http", "method": "POST", "url": f"http://127.0.0.1:{FAKE_MODEL.port}/ping"}
+    _, wid, tok = setup(server, agent(ping))
+    rid = httpx.post(f"{server.url}/api/hooks/workflows/{wid}/runs", json={"input": {"message": "ping it"}}, headers=H(tok)).json()["data"]["run_id"]
+    assert FAKE_MODEL.answering.wait(30), "the second model call never came"  # round 1 (model + ping) finished, round 2 is waiting on the model
+    server.restart()
+    done = poll(server, wid, tok, rid)
+    assert done["status"] == "ok" and done["final_state"]["answer"] == "Ping answered."
+    first = [b for b in FAKE_MODEL.completions if not any(m.get("role") == "tool" for m in b["messages"])]
+    assert len(first) == 1 and FAKE_MODEL.pings == 1  # the finished model call and tool call ran once
+    assert len(FAKE_MODEL.completions) == 3  # the interrupted model call ran again
+    assert [x["tool"] for x in done["final_state"]["steps"]] == ["ping"]

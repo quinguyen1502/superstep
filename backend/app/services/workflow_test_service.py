@@ -18,7 +18,7 @@ from typing import Callable, List, Optional
 from ..core import config, permissions as P
 from ..core.errors import AppError
 from ..core.logging import get_logger
-from ..engine import checks as C
+from ..engine import agents, checks as C
 from ..engine.limits import size
 from ..models import Run, WorkflowTest, WorkflowTestResult, WorkflowTestSuite
 from ..repositories import RunRepository, WorkflowRepository, WorkflowTestRepository, WorkflowVersionRepository
@@ -37,6 +37,11 @@ PREFILL_TEXT = 200  # a longer final value is checked with "contains" its first 
 
 
 def _id() -> str: return uuid.uuid4().hex[:12]
+
+
+def answer_key(node: Optional[str]) -> Optional[str]:
+    """Answers are listed per Human node, and an Agent node's tool approvals under the Agent node's id (TASK-0117)."""
+    return agents.agent_of_step(node or "") or node
 
 
 class WorkflowTestService:
@@ -233,7 +238,7 @@ class WorkflowTestService:
         final = json.loads(run.final_state or "null"); final = final if isinstance(final, dict) else {}
         answers: dict = {}
         for e in events:
-            if e.get("type") == "run_resumed" and isinstance(e.get("response"), str): answers.setdefault(e.get("node"), []).append(e["response"])
+            if e.get("type") == "run_resumed" and isinstance(e.get("response"), str): answers.setdefault(answer_key(e.get("node")), []).append(e["response"])
         checks = [{"kind": "status", "value": run.status}] if run.status in C.STATUSES else []
         trivial = {n.get("id") for n in self._graph(run).get("nodes") or [] if isinstance(n, dict) and n.get("type") in ("start", "end")}
         ran = list(dict.fromkeys(e.get("node") for e in events if e.get("type") == "node_finished" and e.get("node") and e["node"] not in trivial))
@@ -258,7 +263,7 @@ class WorkflowTestService:
             events = json.loads(run.events or "[]")
             node = next((e.get("node") for e in reversed(events) if e.get("type") == "run_waiting"), None)
             used = sum(1 for e in events if e.get("type") == "run_resumed" and e.get("node") == node)
-            answers = case["answers"].get(node) or []
+            answers = case["answers"].get(answer_key(node)) or []
             if used < len(answers):  # answer like a channel decision would; the worker's claim makes it happen once
                 # a second later: this segment is still settling, and must leave the run bus before the next one joins it
                 self.jobs.enqueue_at({"kind": "resume", "run_id": rid, "owner": run.owner, "response": answers[used], "workflow_id": run.workflow_id,
