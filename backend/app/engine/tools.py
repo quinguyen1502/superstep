@@ -34,6 +34,19 @@ def lookup_order(state: Dict[str, Any], locale: str = "en") -> str:
     oid, orders = m.group(1), ORDERS[lang]
     return f"{ORDER_TEXT[lang][1]} {oid}: {orders.get(oid, orders['unknown'])}"
 
+REFUND_TEXT = {"en": ("No order number found in the message.", "Refund requested for order {oid} (example: nothing was paid)."),
+               "vi": ("Không tìm thấy mã đơn hàng trong tin nhắn.", "Đã gửi yêu cầu hoàn tiền cho đơn {oid} (ví dụ: chưa trả tiền thật).")}
+
+REQUEST_REFUND_PARAMETERS = {"type": "object", "properties": {"message": {"type": "string", "description": "Text that contains the order number, e.g. A100"}},
+                             "required": ["message"]}
+
+@register_tool("request_refund", REQUEST_REFUND_PARAMETERS)  # one line: the Python export copies the function without its decorator
+def request_refund(state: Dict[str, Any], locale: str = "en") -> str:
+    """Example function: request a refund for the order id (e.g. A100) in state.message. Nothing is paid (TASK-0119)."""
+    lang = locale if locale in REFUND_TEXT else "en"
+    m = re.search(r"\b([A-Z]\d{3})\b", str(state.get("message", "")).upper())
+    return REFUND_TEXT[lang][1].format(oid=m.group(1)) if m else REFUND_TEXT[lang][0]
+
 if os.environ.get("STUDIO_ENABLE_DEMO_TOOLS") == "1":
     @register_tool("sleep_demo")
     def sleep_demo(state: Dict[str, Any]) -> str:

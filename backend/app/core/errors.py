@@ -96,6 +96,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "PYTHON_EXPORT_UNAVAILABLE": (400, "Imported LangGraph workflows are Python code already: there is nothing to export"),
     "TYPESCRIPT_EXPORT_UNAVAILABLE": (400, "Imported LangGraph workflows are Python code: they cannot be exported as TypeScript"),
     "EXPORT_LANGUAGE_UNSUPPORTED": (400, "Cannot export to {language}: use one of {supported}"),
+    "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED": (400, "Agent nodes cannot be exported as TypeScript yet ({node}): export the workflow as Python"),
     "RUN_INTERRUPTED": (500, "The server stopped while this run was going {attempts} times, so it was not continued again"),
     "RUN_EXPIRED": (410, "This run waited too long for a response and expired"),
     "RATE_LIMITED": (429, "Too many requests, retry in {retry_after} s"),

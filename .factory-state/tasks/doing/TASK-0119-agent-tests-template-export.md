@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0119
-- Status: todo
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -90,6 +90,27 @@ and LangGraph project export, and a clear TypeScript refusal.
 ## Activity Log
 
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
+- 2026-10-25: started on `factory/task-0119-agent-tests-template-export`, stacked on TASK-0117
+  (`factory/task-0117-agent-tool-approval`, PR #146) with TASK-0118 (`factory/task-0118-agent-editor-and-trace`, PR #145)
+  merged in, so the Tests panel and its e2e have the Agent node on the canvas. The owner asked to do this task right
+  after opening #146.
+- 2026-10-25: implemented.
+  - `engine/checks.py`: the `tool` check. It reads each tool step's summary in the run's events; "called" means the
+    call ran, with a result or the tool's own error (`agents.FAILED`). Refused, rejected and invalid calls did not run.
+  - Built-in template `builtin-support-agent` ("Support agent"): `lookup_order`, a refund-policy knowledge base search
+    and `request_refund` with approval and a one-day deadline that rejects. Three test cases pass with the mock: the
+    order tool; an approved refund; a rejected refund.
+  - `request_refund` is a new example built-in tool (en, vi). It is deterministic and pays nothing, unlike an HTTP
+    tool, so the template's cases and the export's same-path check stay offline.
+  - `templates.sanitize` also blanks the resource ids and secret-like keys inside an Agent node's `tools` (REV-0110).
+  - `python_export` (and so `project_export`) writes an Agent node as the studio expands it: an entry function, model
+    and tool functions with two routers, and an end function. The conversation is kept in an `agent_<name>` state
+    field, approval uses `interrupt()`, and `call_agent` / `mock_agent` follow the engine's mock. Knowledge base and
+    MCP tools use the existing stubs; HTTP tools use `httpx`.
+  - `typescript_export` refuses Agent nodes (also inside subgraphs) with `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED` (catalog,
+    `docs/api-errors.md`, en and vi); the Code tab shows it.
+  - The Tests panel can add a "Tool called" check (Agent node, tool, called or not). Agent nodes with a tool that
+    needs approval appear under Human answers. A waiting Agent tool step is named after its Agent node.
 
 ## Handoff Notes
 

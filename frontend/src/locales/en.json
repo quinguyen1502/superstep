@@ -466,6 +466,7 @@
     "TEST_NOT_SUPPORTED": "Imported LangGraph workflows cannot have tests",
     "PYTHON_EXPORT_UNAVAILABLE": "Imported LangGraph workflows are Python code already: there is nothing to export.",
     "TYPESCRIPT_EXPORT_UNAVAILABLE": "Imported LangGraph workflows are Python code: they cannot be exported as TypeScript.",
+    "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED": "Agent nodes cannot be exported as TypeScript yet ({{node}}): export the workflow as Python.",
     "EXPORT_LANGUAGE_UNSUPPORTED": "Cannot export to {{language}}: use one of {{supported}}.",
     "CALLBACK_URL_INVALID": "callback_url must be a public http(s) URL",
     "VERSION_NOT_FOUND": "That version no longer exists.",
@@ -1716,6 +1717,7 @@
       "status": "Run status",
       "field": "State field",
       "node": "Node",
+      "tool": "Tool called",
       "duration": "Duration",
       "cost": "Cost"
     },
@@ -1723,6 +1725,8 @@
     "compare": "Comparison",
     "value": "Value",
     "node": "Node",
+    "agentNode": "Agent node",
+    "tool": "Tool",
     "unit": {
       "duration": "seconds at most",
       "cost": "US$ at most"
@@ -1739,6 +1743,10 @@
       "ran": "ran",
       "not_ran": "did not run"
     },
+    "called": {
+      "called": "called",
+      "not_called": "not called"
+    },
     "status": {
       "queued": "Queued",
       "running": "Running",
@@ -1752,6 +1760,8 @@
       "fieldNoValue": "{{field}} {{op}}",
       "ran": "“{{node}}” ran",
       "notRan": "“{{node}}” did not run",
+      "called": "“{{node}}” called {{tool}}",
+      "notCalled": "“{{node}}” did not call {{tool}}",
       "duration": "Takes at most {{max}} s",
       "cost": "Costs at most ${{max}}"
     },

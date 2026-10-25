@@ -70,6 +70,27 @@ def test_checks_evaluate_every_kind():
     assert C.passed([{"kind": "status", "value": "error"}], C.evaluate([{"kind": "status", "value": "error"}], {**run, "status": "error"}, wf), "error")
 
 
+def test_tool_called_check():
+    """TASK-0119: whether an Agent node's model called a tool and the call ran, read from the step summaries of the run."""
+    def step(tool, status="ok", result="done", node="ag/__tool"):
+        return {"type": "node_finished", "node": node, "agent": {"kind": "tool", "tool": tool, "status": status, "result": result}}
+    run = {"status": "ok", "final_state": {}, "events": [
+        {"type": "node_finished", "node": "ag/__model", "agent": {"kind": "model", "tool_calls": [{"name": "refund"}]}},
+        step("lookup"), step("refund", "rejected", "Rejected by a reviewer"), step("broken", "error", "The tool failed: boom"),
+        step("typo", "error", "Invalid arguments for typo: missing argument(s): a"), step("other", node="b/__tool")]}
+    wf = {"nodes": [{"id": "ag"}, {"id": "b"}]}
+    cases = [("lookup", True, True), ("refund", False, True), ("broken", True, True), ("typo", False, True), ("other", False, True),
+             ("never", False, True), ("lookup", False, False), ("refund", True, False)]
+    got = C.evaluate([{"kind": "tool", "node": "ag", "tool": t, "called": want} for t, want, _ in cases], run, wf)
+    assert [g["passed"] for g in got] == [ok for _, _, ok in cases]
+    assert (got[1]["expected"], got[1]["actual"]) == ("not_called", "not_called") and (got[6]["expected"], got[6]["actual"]) == ("not_called", "called")
+    assert C.evaluate([{"kind": "tool", "node": "zz", "tool": "x", "called": True}], run, wf)[0]["reason"] == "node_missing"
+    # like node checks, it reads the events of a run that did not finish
+    assert C.evaluate([{"kind": "tool", "node": "ag", "tool": "lookup", "called": True}], {**run, "status": "error"}, wf)[0]["passed"] is True
+    assert C.errors([{"kind": "tool", "node": "", "tool": "x", "called": True}, {"kind": "tool", "node": "ag", "called": "yes"}]) == [
+        "check 1: choose an Agent node", "check 2: choose a tool", "check 2: called must be true or false"]
+
+
 def test_check_validation():
     assert C.errors([]) == ["add at least one check"]
     assert C.errors([{"kind": "x"}]) == ["check 1: unknown kind"]

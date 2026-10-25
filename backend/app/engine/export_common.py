@@ -8,11 +8,11 @@ from __future__ import annotations
 import re, unicodedata
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple
-from . import foreach
+from . import agents, foreach
 from .templates import sanitize
 
 SKIP = ("start", "end", "note")  # canvas nodes that are not LangGraph nodes
-TITLES = {"llm": "LLM", "foreach": "For each", "mcp": "MCP", "email": "Send email", "subgraph_exit": "Subgraph exit"}
+TITLES = {"agent": "Agent", "llm": "LLM", "foreach": "For each", "mcp": "MCP", "email": "Send email", "subgraph_exit": "Subgraph exit"}
 RECURSION = 25  # LangGraph's default step limit (Python and JS)
 EMPTY = {"string": "", "number": 0, "integer": 0, "boolean": False, "list": [], "object": {}}
 
@@ -72,6 +72,7 @@ class Graph:
         self.edges = [e for e in self.wf["edges"] if e["source"] in self.nodes and e["target"] in self.nodes]
         self.names: Dict[str, str] = {}
         self.cursors: Dict[str, str] = {}
+        self.agents: Dict[str, Dict[str, str]] = {}  # Agent node id -> its LangGraph names: model, tool, exit, chat (state field)
         self.fields: List[dict] = list(self.wf["state"])
 
     def order(self) -> List[str]:
@@ -119,6 +120,10 @@ class GraphWriter:
             g.names[nid] = names.take(slug((n.get("data") or {}).get("label") or nid, n["type"]))
             if n["type"] == "foreach":
                 g.cursors[nid] = names.take(self.cursor_name(g.names[nid]))
+            if n["type"] == "agent":  # one node per step, as the studio expands it (DEC-0063)
+                base = g.names[nid]
+                g.agents[nid] = {"model": names.take(f"{base}_model"), "tool": names.take(f"{base}_tool"), "exit": names.take(f"{base}_end"),
+                                 "chat": names.take(f"agent_{base}")}
             if n["type"] == "subgraph":
                 ref = g.refs.get(nid) or ""
                 if ref in self.children and ref not in self.built:  # each child once, even when used twice
@@ -139,6 +144,8 @@ class GraphWriter:
 
     def expanded_names(self, g: Graph, prefix: str = "", seen: Tuple[str, ...] = ()) -> Dict[str, str]:
         out = {prefix + nid: name for nid, name in g.names.items()}
+        steps = {"model": agents.MODEL, "tool": agents.TOOL, "exit": agents.EXIT}
+        out.update({f"{prefix}{nid}{agents.SEP}{steps[k]}": v for nid, a in g.agents.items() for k, v in a.items() if k in steps})
         for nid, ref in g.refs.items():
             if ref in self.built and ref not in seen:
                 out.update(self.expanded_names(self.built[ref][0], f"{prefix}{nid}/", seen + (ref,)))
@@ -183,6 +190,12 @@ class GraphWriter:
             if t == "retriever": self.uses.add("retrieve")
             if t == "mcp": self.uses.add("call_mcp_tool")
             if t == "email": self.uses.add("send_email")
+            if t == "agent":
+                self.uses.update({"templates", "model", "agent"})
+                sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
+                if "knowledge" in sources: self.uses.add("retrieve")
+                if "mcp" in sources: self.uses.add("call_mcp_tool")
+                if agents.needs_approval(d): self.uses.add("human")
 
     def inputs(self, g: Graph, nid: str) -> List[str]:
         """The node's input fields when they are all state fields (as `node_policy.input_schema`), else none."""
@@ -215,5 +228,6 @@ class GraphWriter:
                 for n in g.nodes.values(): written.update(writes(n))
             inp = {k: EMPTY.get(f.get("type", "string"), "") for k, f in fields.items() if k not in written}
         answers = {names[k]: list(v) for k, v in (self.example.get("answers") or {}).items() if k in names and v}
-        budget = max([foreach.step_budget(main.wf)] + [foreach.step_budget(c.wf) for c, _, _ in self.built.values()])
+        budget = max([foreach.step_budget(main.wf) + agents.step_budget(main.wf)] +
+                     [foreach.step_budget(c.wf) + agents.step_budget(c.wf) for c, _, _ in self.built.values()])
         return inp, answers, budget
