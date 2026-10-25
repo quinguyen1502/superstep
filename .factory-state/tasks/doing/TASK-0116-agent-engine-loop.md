@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0116
-- Status: todo
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -108,7 +108,9 @@ provider registry, run the four tool sources, and write the answer, steps and hi
 ## Activity Log
 
 - 2026-10-25: planned from REQ-0072 (CLAR-0003 answered).
+- 2026-10-25: started on `factory/task-0116-agent-engine-loop` from develop at bb70e04 plus the planning commits
+  (REQ-0072, CLAR-0003, DEC-0063, TASK-0116..0120), which ride this task's PR; the owner accepted DEC-0063.
 
 ## Handoff Notes
 
-- Next: `task-start TASK-0116`.
+- Next: implement (`scoped-change`), then `task-validation`.

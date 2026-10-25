@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0063
-- Status: Proposed (owner review with the TASK-0116 to TASK-0120 plan)
+- Status: Accepted (owner, 2026-10-25)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25

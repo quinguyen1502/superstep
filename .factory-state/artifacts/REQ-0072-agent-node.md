@@ -239,8 +239,9 @@ CLAR-0003, answered 2026-10-25 (all recommended options):
 
 - `.factory-state/artifacts/CLAR-0003-agent-node.md`
 - `.factory-state/decisions/DEC-0063-agent-node-expansion.md`
-- Tasks: `.factory-state/tasks/todo/TASK-0116-agent-engine-loop.md`, `TASK-0117-agent-tool-approval.md`,
-  `TASK-0118-agent-editor-and-trace.md`, `TASK-0119-agent-tests-template-export.md`, `TASK-0120-agent-handbook.md`
+- Tasks: TASK-0116 to TASK-0120 under `.factory-state/tasks/` (`TASK-0116-agent-engine-loop.md`,
+  `TASK-0117-agent-tool-approval.md`, `TASK-0118-agent-editor-and-trace.md`, `TASK-0119-agent-tests-template-export.md`,
+  `TASK-0120-agent-handbook.md`; the folder follows each task's lifecycle state)
 - `.factory-state/artifacts/REQ-0003-human-in-the-loop.md`, `REQ-0007-rag-node.md`, `REQ-0011-mcp-tools.md`,
   `REQ-0034-more-approval-channels.md`, `REQ-0041-approval-deadlines-and-inbox.md`, `REQ-0042-workflow-tests.md`,
   `REQ-0043-python-export.md`, `REQ-0048-agent-chat.md`, `REQ-0051-time-travel.md`,

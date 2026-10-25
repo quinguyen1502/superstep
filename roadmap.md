@@ -237,11 +237,11 @@ attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1: t
 
 REQ-0072, Accepted 2026-10-25 (CLAR-0003: all recommended options; inline tools, approval as for Human nodes,
 approve or reject, a rejection is told to the model, a last call without tools at the round limit, answer plus
-optional steps, optional history field, Python and LangGraph project exports first). DEC-0063 (proposed): the node is
+optional steps, optional history field, Python and LangGraph project exports first). DEC-0063 (accepted 2026-10-25): the node is
 expanded into LangGraph model and tool steps, one tool call per step.
 
 - TASK-0116 Engine: expansion, model calls with tools through the provider registry (Anthropic over plain HTTP),
-  MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **todo**
+  MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **doing**
 - TASK-0117 Approval before a tool call through the Human approval path; restart tests (needs #143). **todo**
 - TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **todo**
 - TASK-0119 "Tool called" test check, Support agent template with tests, Python and project export, TypeScript
