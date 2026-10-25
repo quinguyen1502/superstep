@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0112
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -34,6 +34,7 @@ Commit the develop verification evidence of the v0.6.0 pre-release check, so the
 ## Activity Log
 
 - 2026-10-25: verified (QA-0104); PR into develop.
+- 2026-10-25: PR #140 merged into develop (f7e466c); moved to done by TASK-0113.
 
 ## Handoff Notes
 

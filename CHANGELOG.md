@@ -2,6 +2,14 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## Unreleased
+
+### Added
+
+- **Handbook: Superstep vs n8n, Dify, CrewAI, PydanticAI** (en, vi). A comparison table and a section per tool
+  (approach, LangGraph, license, self-hosting, human in the loop, durable runs, evals, API), how to use them
+  together and when to choose another tool, citing each project's docs and license file.
+
 ## 0.6.0 (2026-10-24)
 
 ### Added

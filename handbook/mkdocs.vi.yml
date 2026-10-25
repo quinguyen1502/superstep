@@ -75,3 +75,4 @@ nav:
       - Phát triển: reference/development.md
       - Câu hỏi thường gặp: reference/faq.md
       - Superstep và LangSmith: reference/superstep-vs-langsmith.md
+      - Superstep và n8n, Dify, CrewAI, PydanticAI: reference/superstep-vs-agent-tools.md

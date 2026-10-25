@@ -50,4 +50,10 @@
 
     So sánh Superstep với LangSmith Studio và Agent Builder, và cách dùng chúng cùng nhau.
 
+-   :material-compare-horizontal:{ .lg .middle } **[Superstep và n8n, Dify, CrewAI, PydanticAI](superstep-vs-agent-tools.md)**
+
+    ---
+
+    So sánh Superstep với n8n, Dify, CrewAI và PydanticAI, và khi nào nên chọn mỗi công cụ.
+
 </div>
