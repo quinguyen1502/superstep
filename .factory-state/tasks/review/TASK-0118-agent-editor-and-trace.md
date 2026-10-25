@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0118
-- Status: doing
+- Status: review (PR)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
@@ -117,10 +117,14 @@ trace and the chat.
   glossary rows. Tests: `lib/__tests__/agent-trace.test.ts`, `test_chat_steps_show_tool_calls_by_name`,
   `e2e/agent-node.spec.ts` (vi light, en dark; screenshots reviewed). Checks run: tsc, vitest (103), lint, lint:ui,
   build, e2e agent-node + agent-chat + trace + mcp, pytest agent + chat sessions + layers.
+- 2026-10-25: review fix (0572604): tool cards keep their own state when moved, unnamed parameters are skipped; e2e
+  moves a tool. Validation: `factory verify run --profile full` passed every check except `python:backend:test`,
+  whose only failures are the 6 environment tests (QA-0109). REV-0109 approved for QA; QA-0109 pass with follow-up.
+  Moved to review; Draft PR into develop (stacked on #144).
 
 ## Handoff Notes
 
-- Stacked on TASK-0116 (#144). Next: `task-validation`, `task-review`, `task-qa`, Draft PR.
+- Stacked on TASK-0116 (#144). Review REV-0109, QA-0109. Next: owner review; `finish-pr` after #144 merges and CI is green.
 - Validator errors show in the run panel's error list, naming the node (as for every node type); there is no per-node
   error badge on the canvas.
 - The "needs approval" switch and the approval settings are saved now; the run pauses before such a call only with
