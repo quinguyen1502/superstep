@@ -280,3 +280,16 @@ def test_saved_workflow_run_and_fork_inside_the_loop(monkeypatch):
     evs = ws(tok, {"fork": {"run_id": rid, "checkpoint": at["index"]}}, until=("run_summary",))
     ran = [e["node"] for e in evs if e["type"] == "node_finished"]
     assert ran[:2] == ["ag/__tool", "ag/__model"] and "In transit" in next(e for e in evs if e["type"] == "run_finished")["state"]["answer"]
+
+
+def test_chat_steps_show_tool_calls_by_name(monkeypatch):
+    """TASK-0118: a chat lists an Agent's tool calls ("Helper › lookup_order"); model calls only in the full mode; the
+    entry and exit never; the full mode shows what the step did and leaves the conversation out."""
+    from app.services.chat_session_service import steps_of
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    evs = list(run_stream(wf(), {"message": "Where is order B200?"}))
+    labels = steps_of(evs, "labels")
+    assert [(s["label"], s["type"], s["status"]) for s in labels] == [("Helper › lookup_order", "agent_tool", "ok")]
+    full = steps_of(evs, "full")
+    assert [s["type"] for s in full] == ["agent_model", "agent_tool", "agent_model"]
+    assert full[1]["delta"]["tool"] == "lookup_order" and not any(k.startswith(agents.PREFIX) for k in full[1]["input"])
