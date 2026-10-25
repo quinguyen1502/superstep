@@ -232,3 +232,18 @@ attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1: t
 - TASK-0085 Studio Chat tab: shadcn Message Scroller / Message / Bubble / Trace / Code Block, a sanitised Markdown answer,
   chats list and New chat, Builder / Visitor view by the step setting, Human nodes answered in the chat or waiting for
   a reviewer, the Chat settings dialog, the Human "Answered by" option, handbook pages. merged in #117 (REV-0078, QA-0078).
+
+## Agent node
+
+REQ-0072, Accepted 2026-10-25 (CLAR-0003: all recommended options; inline tools, approval as for Human nodes,
+approve or reject, a rejection is told to the model, a last call without tools at the round limit, answer plus
+optional steps, optional history field, Python and LangGraph project exports first). DEC-0063 (accepted 2026-10-25): the node is
+expanded into LangGraph model and tool steps, one tool call per step.
+
+- TASK-0116 Engine: expansion, model calls with tools through the provider registry (Anthropic over plain HTTP),
+  MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **review** (PR #144, REV-0108, QA-0108)
+- TASK-0117 Approval before a tool call through the Human approval path; restart tests (needs #143). **todo**
+- TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **todo**
+- TASK-0119 "Tool called" test check, Support agent template with tests, Python and project export, TypeScript
+  refusal. **todo**
+- TASK-0120 Handbook (en, vi), comparison pages, CHANGELOG. **todo**

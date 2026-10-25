@@ -196,6 +196,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "PROVIDER_BAD_RESPONSE": (502, "{provider} returned an unexpected response: {reason}"),
     "MODEL_NOT_FOUND": (400, "{provider} has no model named {model}"),
     "PROVIDER_EMBEDDINGS_UNSUPPORTED": (400, "{provider} does not provide embeddings; choose another credential for this knowledge base"),
+    "AGENT_TOOLS_UNSUPPORTED": (400, "{provider} cannot call tools; choose a credential with tool calling for this Agent node"),
     "KB_EMBEDDING_DIMENSION_MISMATCH": (409, "The embedding model returns {got}-dimensional vectors but this knowledge base stores {expected}-dimensional ones; re-index the knowledge base"),
     "CREDENTIAL_HEADER_UNSUPPORTED": (400, "{provider} does not accept the header {header}"),
     # Send email nodes and SMTP credentials (TASK-0051)
