@@ -27,6 +27,7 @@ from ..core import config
 from ..core.errors import AppError
 from .effects import Effects, call_tool
 from .errors import Interrupt
+from .issues import Issue
 from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
@@ -147,36 +148,36 @@ def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str,
 def errors(nid: str, d: Dict[str, Any], schema: List[Dict[str, Any]]) -> List[str]:
     """Settings errors of one Agent node (the validator adds output_field and template checks)."""
     errs, types = [], {f["name"]: f.get("type", "string") for f in schema}
-    if not str(d.get("prompt") or "").strip(): errs.append(f"Agent node {nid}: the task prompt is missing")
+    if not str(d.get("prompt") or "").strip(): errs.append(Issue("AGENT_PROMPT_MISSING", node=nid))
     r = d.get("max_rounds", DEFAULT_ROUNDS)
-    if not isinstance(r, int) or isinstance(r, bool) or not 1 <= r <= MAX_ROUNDS: errs.append(f"Agent node {nid}: max rounds must be 1-{MAX_ROUNDS}")
+    if not isinstance(r, int) or isinstance(r, bool) or not 1 <= r <= MAX_ROUNDS: errs.append(Issue("AGENT_ROUNDS", node=nid, max=MAX_ROUNDS))
     for key, want in (("steps_field", "list"), ("history_field", "list")):
         f = d.get(key)
-        if f and types and f not in types: errs.append(f"Agent node {nid}: {key} '{f}' is not in the state")
-        elif f and types and types[f] != want: errs.append(f"Agent node {nid}: {key} '{f}' must be a list field")
+        if f and types and f not in types: errs.append(Issue("AGENT_FIELD_UNKNOWN", node=nid, key=key, field=f))
+        elif f and types and types[f] != want: errs.append(Issue("AGENT_FIELD_NOT_LIST", node=nid, key=key, field=f))
     tools = d.get("tools")
-    if not isinstance(tools, list) or not tools: return errs + [f"Agent node {nid}: add at least one tool"]
+    if not isinstance(tools, list) or not tools: return errs + [Issue("AGENT_TOOLS_MISSING", node=nid)]
     seen = set()
     for i, t in enumerate(tools, 1):
-        if not isinstance(t, dict): errs.append(f"Agent node {nid}: tool {i} is not an object"); continue
+        if not isinstance(t, dict): errs.append(Issue("AGENT_TOOL_NOT_OBJECT", node=nid, index=i)); continue
         name, src = t.get("name") or "", t.get("source")
-        who = f"Agent node {nid}: tool {name or i}"
-        if not NAME_RE.match(name): errs.append(f"{who}: the name must be 1-64 letters, digits, _ or -")
-        elif name in seen: errs.append(f"Agent node {nid}: two tools are named {name}")
+        who = {"node": nid, "tool": name or i}
+        if not NAME_RE.match(name): errs.append(Issue("AGENT_TOOL_NAME", **who))
+        elif name in seen: errs.append(Issue("AGENT_TOOL_DUPLICATE", node=nid, tool=name))
         seen.add(name)
-        if src not in SOURCES: errs.append(f"{who}: unknown source '{src}'"); continue
-        if src == "mcp" and not (t.get("server_id") and t.get("tool")): errs.append(f"{who}: choose an MCP server and tool")
-        if src == "builtin" and t.get("function") not in TOOLS: errs.append(f"{who}: function '{t.get('function')}' is not registered")
+        if src not in SOURCES: errs.append(Issue("AGENT_TOOL_SOURCE", **who, source=src)); continue
+        if src == "mcp" and not (t.get("server_id") and t.get("tool")): errs.append(Issue("AGENT_TOOL_MCP", **who))
+        if src == "builtin" and t.get("function") not in TOOLS: errs.append(Issue("AGENT_TOOL_FUNCTION", **who, function=t.get("function")))
         if src == "knowledge":
-            if not t.get("knowledge_base_id"): errs.append(f"{who}: choose a knowledge base")
+            if not t.get("knowledge_base_id"): errs.append(Issue("AGENT_TOOL_KB", **who))
             k = t.get("top_k", 4)
-            if not isinstance(k, int) or isinstance(k, bool) or not 1 <= k <= 20: errs.append(f"{who}: top_k must be 1-20")
+            if not isinstance(k, int) or isinstance(k, bool) or not 1 <= k <= 20: errs.append(Issue("AGENT_TOOL_TOP_K", **who))
         if src == "http":
-            if not t.get("url"): errs.append(f"{who}: URL is missing")
-            if (t.get("method") or "GET").upper() not in METHODS: errs.append(f"{who}: method must be one of {', '.join(METHODS)}")
+            if not t.get("url"): errs.append(Issue("AGENT_TOOL_URL", **who))
+            if (t.get("method") or "GET").upper() not in METHODS: errs.append(Issue("AGENT_TOOL_METHOD", **who, methods=", ".join(METHODS)))
         p = t.get("parameters")
         if p is not None and (not isinstance(p, dict) or not isinstance(p.get("properties", {}), dict) or p.get("type", "object") != "object"):
-            errs.append(f"{who}: parameters must be a JSON Schema object with properties")
+            errs.append(Issue("AGENT_TOOL_PARAMETERS", **who))
     return errs
 
 

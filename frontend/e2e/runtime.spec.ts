@@ -51,6 +51,6 @@ test('validation errors are listed clearly', async ({ page }) => {
   await page.locator('#run-btn').click()
   await page.locator('#run-tab').click()
   const box = page.locator('#validation-errors')
-  await expect(box).toContainText('Loop without a Condition') // validator details stay English (server messages)
-  await expect(box).toContainText('is not reachable from Start')
+  await expect(box).toContainText('Vòng lặp không đi qua Condition hay For each') // validator messages by their code (TASK-0132)
+  await expect(box).toContainText('Node lonely không đi tới được từ Start')
 })

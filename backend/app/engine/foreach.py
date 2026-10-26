@@ -12,6 +12,7 @@ The list is read on every visit: a body that changes it changes what is left to 
 """
 from __future__ import annotations
 from typing import Any, Callable, Dict, List
+from .issues import Issue
 
 EACH, DONE = "each", "done"
 PREFIX = "loop:"
@@ -61,31 +62,31 @@ def errors(nid: str, d: Dict[str, Any], out: List[dict], schema: List[dict], rea
     """Problems with one For each node. `reaches(a, b)`: b is reachable from a along edges."""
     errs: List[str] = []
     by = {f["name"]: f for f in schema}
-    def field(key: str, what: str, types=None, required=True):
+    def field(key: str, what: str, types=None, required=True):  # what: LIST, ITEM or INDEX (in the issue codes)
         name = d.get(key)
         if not name:
-            if required: errs.append(f"For each node {nid}: choose the {what}")
+            if required: errs.append(Issue(f"FOREACH_{what}_MISSING", node=nid))
             return
         f = by.get(name)
-        if schema and f is None: errs.append(f"For each node {nid}: {what} '{name}' is not in the state"); return
+        if schema and f is None: errs.append(Issue(f"FOREACH_{what}_UNKNOWN", node=nid, field=name)); return
         if f is None: return
-        if types and f.get("type", "string") not in types: errs.append(f"For each node {nid}: {what} '{name}' must be of type {' or '.join(types)}")
+        if types and f.get("type", "string") not in types: errs.append(Issue(f"FOREACH_{what}_TYPE", node=nid, field=name, types=" or ".join(types)))
         if key != "items_field" and (f.get("reducer") or "replace") != "replace":
-            errs.append(f"For each node {nid}: {what} '{name}' must not have a reducer (each item replaces the last)")
-    field("items_field", "list field", ("list",))
-    field("item_field", "item field")
-    field("index_field", "index field", ("integer", "number"), required=False)
+            errs.append(Issue(f"FOREACH_{what}_REDUCER", node=nid, field=name))
+    field("items_field", "LIST", ("list",))
+    field("item_field", "ITEM")
+    field("index_field", "INDEX", ("integer", "number"), required=False)
     names = [d.get(k) for k in ("items_field", "item_field", "index_field") if d.get(k)]
-    if len(set(names)) != len(names): errs.append(f"For each node {nid}: the list, item and index fields must be different fields")
+    if len(set(names)) != len(names): errs.append(Issue("FOREACH_FIELDS_SAME", node=nid))
     m = d.get("max_items")
     if m is not None and (isinstance(m, bool) or not isinstance(m, int) or not MAX_ITEMS[0] <= m <= MAX_ITEMS[1]):
-        errs.append(f"For each node {nid}: max items must be an integer from {MAX_ITEMS[0]} to {MAX_ITEMS[1]}")
+        errs.append(Issue("FOREACH_MAX_ITEMS", node=nid, min=MAX_ITEMS[0], max=MAX_ITEMS[1]))
     labels = [e.get("label") for e in out]
     if sorted(labels) != [DONE, EACH]:
-        errs.append(f"For each node {nid}: needs exactly one '{EACH}' edge (the loop body) and one '{DONE}' edge (after the last item)")
+        errs.append(Issue("FOREACH_EDGES", node=nid, each=EACH, done=DONE))
     else:
         body = next(e["target"] for e in out if e.get("label") == EACH)
-        if not reaches(body, nid): errs.append(f"For each node {nid}: the '{EACH}' branch must lead back to this For each node")
+        if not reaches(body, nid): errs.append(Issue("FOREACH_BODY", node=nid, each=EACH))
     return errs
 
 

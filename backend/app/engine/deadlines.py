@@ -9,6 +9,7 @@ Durations are wall-clock time.
 from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional
+from .issues import Issue
 
 UNITS = {"m": 60, "h": 3600, "d": 86400}
 ACTIONS = ("reject", "approve", "escalate")
@@ -41,19 +42,19 @@ def parse(d: Dict[str, Any]) -> Optional[dict]:
 def errors(nid: str, d: Dict[str, Any], wait_ttl: float) -> List[str]:
     raw = d.get("deadline")
     if raw is None or raw == {} or (isinstance(raw, dict) and not raw.get("after") and not raw.get("remind_every")): return []
-    if not isinstance(raw, dict): return [f"Human node {nid}: deadline must be an object"]
+    if not isinstance(raw, dict): return [Issue("DEADLINE_NOT_OBJECT", node=nid)]
     errs, after = [], seconds(raw.get("after"))
-    if after is None: errs.append(f"Human node {nid}: deadline must be a duration like 30m, 4h or 2d")
+    if after is None: errs.append(Issue("DEADLINE_DURATION", node=nid))
     if raw.get("remind_every"):
         every = seconds(raw["remind_every"])
-        if every is None: errs.append(f"Human node {nid}: reminder interval must be a duration like 30m, 4h or 2d")
-        elif after is not None and every >= after: errs.append(f"Human node {nid}: reminders must come more often than the deadline")
+        if every is None: errs.append(Issue("DEADLINE_REMINDER_DURATION", node=nid))
+        elif after is not None and every >= after: errs.append(Issue("DEADLINE_REMINDER_OFTEN", node=nid))
     action = raw.get("on_timeout") or "reject"
-    if action not in ACTIONS: errs.append(f"Human node {nid}: on timeout must be one of {', '.join(ACTIONS)}")
+    if action not in ACTIONS: errs.append(Issue("DEADLINE_ACTION", node=nid, actions=", ".join(ACTIONS)))
     if action == "escalate":
         to = emails(raw.get("escalate_to"))
-        if not to: errs.append(f"Human node {nid}: add who to escalate to")
-        elif any("@" not in e for e in to): errs.append(f"Human node {nid}: escalate to needs e-mail addresses")
+        if not to: errs.append(Issue("DEADLINE_ESCALATE_MISSING", node=nid))
+        elif any("@" not in e for e in to): errs.append(Issue("DEADLINE_ESCALATE_EMAILS", node=nid))
     if after is not None and wait_ttl and after * (2 if action == "escalate" else 1) > wait_ttl:
-        errs.append(f"Human node {nid}: the deadline is longer than the wait limit (STUDIO_WAIT_TTL, {int(wait_ttl // 3600)} h)")
+        errs.append(Issue("DEADLINE_TOO_LONG", node=nid, hours=int(wait_ttl // 3600)))
     return errs

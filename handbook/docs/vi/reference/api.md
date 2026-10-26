@@ -22,6 +22,12 @@ Mọi response REST đều là một envelope:
 tiếng Anh, cho người đọc và log. Client dịch theo `code` và dùng `message` khi
 không có bản dịch. Danh sách mã ở [Mã lỗi](errors.md).
 
+Phần kiểm tra workflow cũng vậy. `POST /api/validate`, lưu workflow
+(`POST /api/workflows`) và dùng một mẫu đều trả về `errors`, danh sách thông báo
+tiếng Anh, và `issues`, mã của chúng theo cùng thứ tự: `{"code", "params"}`, hoặc
+`null` với thông báo không có mã. Sự kiện `error` của run qua WebSocket cũng có
+`issues` khi báo các lỗi kiểm tra này. Editor hiện `issues` theo ngôn ngữ giao diện.
+
 ## Xác thực
 
 | Client | Cách |

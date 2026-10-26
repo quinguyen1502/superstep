@@ -7,6 +7,7 @@ from ..core import permissions as P
 from ..core.errors import AppError
 from ..engine import exporters, project_export, subgraphs
 from ..engine.export_common import slug
+from ..engine.issues import issues_of
 from ..engine.examples import EXAMPLE
 from ..models import Workflow, WorkflowVersion
 from ..repositories import RunRepository, WorkflowRepository, WorkflowVersionRepository
@@ -196,11 +197,16 @@ class WorkflowService:
         wf.pop("source", None)  # never trust client-provided source metadata
         if old.get("source"): wf["source"] = old["source"]
         self._write(wid, wf.get("name", "Untitled"), wf, uid, new=not ex, before=old)  # the owner never changes
-        return {"id": wid, "errors": [] if wf.get("source") else self.validate(wf, uid, wid)}
+        return {"id": wid, **({"errors": [], "issues": []} if wf.get("source") else self.checked(wf, uid, wid))}
 
     def validate(self, wf: dict, uid: str, wid=None):
         """Static checks, with subgraph references resolved against this user's workflows (TASK-0011)."""
         return subgraphs.validate_with(wf, self._loader(uid), wid or wf.get("id"))
+
+    def checked(self, wf: dict, uid: str, wid=None) -> dict:
+        """The static checks as the API sends them: English `errors`, and their codes for the editor (TASK-0132)."""
+        errs = self.validate(wf, uid, wid)
+        return {"errors": errs, "issues": issues_of(errs)}
 
     def _loader(self, uid: str):
         """Subgraph references resolve to workflows this user can open (own, shared, any for admins; TASK-0014)."""
