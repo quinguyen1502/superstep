@@ -136,6 +136,34 @@ def test_run_interrupted_too_often_fails_with_a_code(server):
     assert done["status"] == "error" and done["error"]["code"] == "RUN_INTERRUPTED" and done["error"]["details"] == {"attempts": 2}
 
 
+
+def ASK_THEN_SLOW(log):  # a Human node, then the slow Code node: the resume claims the run again
+    wf = SLOW(log); n = wf["nodes"]
+    n.insert(1, {"id": "ask", "type": "human", "position": {"x": 1, "y": 1}, "data": {"label": "ask", "prompt": "Go?", "output_field": "a"}})
+    wf["edges"] = [{"id": "0", "source": "s", "target": "ask"}, {"id": "1", "source": "ask", "target": "first"}, *wf["edges"][1:]]
+    return wf
+
+
+@pytest.mark.parametrize("server", [{**CODE, "STUDIO_RECOVER_MAX_ATTEMPTS": "2"}], indirect=True)
+def test_resumes_do_not_count_as_interruptions(server):
+    """TASK-0123: a resume after a Human node bumps the run's lease too; a restart right after it is the first
+    interruption, so the run continues (it used to end as RUN_INTERRUPTED at the limit)."""
+    log = server.root / "calls.log"
+    jwt, wid, tok = setup(server, ASK_THEN_SLOW(str(log)))
+    rid = httpx.post(f"{server.url}/api/hooks/workflows/{wid}/runs", json={"input": {}}, headers=H(tok)).json()["data"]["run_id"]
+    assert poll(server, wid, tok, rid)["status"] == "waiting"
+    res = httpx.post(f"{server.url}/api/approvals/inbox/{rid}", json={"response": "approved"}, headers=H(jwt)).json()  # the worker resumes it
+    assert res["success"], res
+    for _ in range(150):
+        if log.exists() and "slow" in log.read_text(): break
+        time.sleep(0.1)
+    else: raise AssertionError("the run never reached the slow node")
+    assert server.run_row(rid)["lease_gen"] == 2  # claimed twice: the start and the resume
+    server.restart()
+    done = poll(server, wid, tok, rid)
+    assert done["status"] == "ok" and done["final_state"]["b"] == "late"
+    assert log.read_text().splitlines() == ["first", "slow", "slow"]
+
 # ---- Agent node (TASK-0117) -------------------------------------------------------------------
 
 def agent(tool):

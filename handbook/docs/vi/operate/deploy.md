@@ -93,7 +93,7 @@ docker compose up --scale worker=3
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | 30 giây | Thời hạn giữ job; worker gia hạn trong lúc chạy |
 | `STUDIO_JOB_REAP_EVERY` | 15 giây | Chu kỳ đưa các job hết hạn giữ về lại hàng đợi |
 | `STUDIO_RECOVER_ON_START` | 1 | Hàng đợi trong bộ nhớ: đưa lại các run chưa xong vào hàng đợi khi server khởi động |
-| `STUDIO_RECOVER_MAX_ATTEMPTS` | 3 | Số lần một run được nhận trước khi việc khôi phục dừng với `RUN_INTERRUPTED` |
+| `STUDIO_RECOVER_MAX_ATTEMPTS` | 3 | Số lần restart được cắt ngang một run trước khi việc khôi phục dừng với `RUN_INTERRUPTED` |
 
 Với Redis, job có worker bị chết sẽ được đưa lại hàng đợi khi hết hạn giữ, và
 chạy tiếp từ checkpoint cuối (`run_recovered` trong trace). Mỗi lần worker nhận
@@ -122,9 +122,10 @@ Cách các run chưa xong quay lại tùy hàng đợi:
   nhiều process API dùng chung một database mà không có Redis, vì process này
   sẽ nhận mất run của process kia.
 
-Run đã được nhận `STUDIO_RECOVER_MAX_ATTEMPTS` lần (ví dụ một node cứ làm sập
-server) không được chạy tiếp nữa: run kết thúc với `error`, mã
-`RUN_INTERRUPTED`, giữ lại các sự kiện đến lúc đó.
+Run đã bị restart cắt ngang `STUDIO_RECOVER_MAX_ATTEMPTS` lần (ví dụ một node
+cứ làm sập server) không được chạy tiếp nữa: run kết thúc với `error`, mã
+`RUN_INTERRUPTED`, giữ lại các sự kiện đến lúc đó. Các lần chạy tiếp sau node
+Human hoặc sau khi duyệt tool của Agent không được tính.
 
 ## Model chạy ở máy khi dùng Compose
 

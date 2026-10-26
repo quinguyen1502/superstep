@@ -58,7 +58,7 @@ def webhook_backoff_max() -> float: return max(0.0, float(os.environ.get("STUDIO
 def secret_grace() -> float: return max(0.0, float(os.environ.get("STUDIO_SECRET_GRACE", 24 * 3600)))  # old signing secret stays valid
 def job_visibility() -> int: return max(3, _int("STUDIO_JOB_VISIBILITY_TIMEOUT", 30))  # lease of a taken job
 def recover_on_start() -> bool: return os.environ.get("STUDIO_RECOVER_ON_START", "1") != "0"  # in-memory queue: requeue unfinished runs at start-up
-def recover_max_attempts() -> int: return max(1, _int("STUDIO_RECOVER_MAX_ATTEMPTS", 3))  # claims of one run before recovery gives up
+def recover_max_attempts() -> int: return max(1, _int("STUDIO_RECOVER_MAX_ATTEMPTS", 3))  # restarts that may cut one run off before recovery gives up (resumes do not count)
 def job_reap_every() -> float: return max(0.2, float(os.environ.get("STUDIO_JOB_REAP_EVERY", 15)))
 def static_dir() -> str: return os.environ.get("STUDIO_STATIC_DIR", "")  # built frontend served by the API (all-in-one image); empty = off
 def public_url() -> str: return (os.environ.get("STUDIO_PUBLIC_URL") or "").rstrip("/")  # links in e-mails
