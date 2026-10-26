@@ -65,6 +65,8 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_WORKER_CONCURRENCY` | `2` | Số job mỗi worker |
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | `30` | Thời hạn giữ job (giây) |
 | `STUDIO_JOB_REAP_EVERY` | `15` | Chu kỳ đưa job hết hạn về hàng đợi (giây) |
+| `STUDIO_RECOVER_ON_START` | `1` | Hàng đợi trong bộ nhớ: đưa lại run chưa xong vào hàng đợi khi khởi động ([run qua các lần khởi động lại](../operate/deploy.md#run-qua-cac-lan-khoi-ong-lai)) |
+| `STUDIO_RECOVER_MAX_ATTEMPTS` | `3` | Số lần restart được cắt ngang một run trước khi run kết thúc với `RUN_INTERRUPTED` |
 
 ## API trigger và webhook
 

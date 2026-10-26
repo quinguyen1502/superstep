@@ -1,14 +1,17 @@
 # Quickstart video
 
-Renders the 70 s video on the handbook home page. It follows the
+Renders the 91 s video on the handbook home page. Its first five chapters follow the
 [Quickstart](../../handbook/docs/en/start/quickstart.md) step by step: create a
-blank workflow, drag an LLM and a Human node, wire and configure them, send
-the approval request to Slack, run and approve, read the state diff, create an API token, call it with `curl`, add a
-schedule, and open History.
+blank workflow, drag an LLM and a Human node, wire and configure them (the prompt on the Config **Settings** tab, the
+output field on **Data**), send the approval request to Slack, run and approve, read the state diff, create an API
+token, call it with `curl`, add a schedule, and open History. A sixth chapter, **New**, shows the Support agent
+template's Agent node with an approved tool call and its rounds in the trace, time travel, the workflow as an MCP
+tool, and the phone layout.
 
 The screens are real: `frontend/e2e/quickstart.spec.ts` does the quickstart in
 the UI and saves one frame per step, plus the box of every control the next
-action uses. `video.html` is an HTML timeline that moves a cursor to those
+action uses, and two 390x844 screenshots of the editor (`phone-canvas.png`, `phone-config.png`) that the video
+shows in a phone frame. `video.html` is an HTML timeline that moves a cursor to those
 boxes, zooms the camera onto them and captions each step. Chrome renders it
 frame by frame and ffmpeg encodes the frames with a generated music bed.
 
@@ -39,7 +42,7 @@ The spec takes about a minute, each render a few minutes. To check a layout
 without encoding, render stills at chosen seconds:
 
 ```bash
-node render.mjs --lang en --stills 9,40,55
+node render.mjs --lang en --stills 9,40,55,75
 ```
 
 Stills and `renderAt` take seconds of the output video. The script in

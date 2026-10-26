@@ -4,7 +4,7 @@ import json, time
 from typing import Any, Dict, List, Optional
 from langgraph.checkpoint.memory import InMemorySaver
 from .compiler import compile_workflow
-from . import foreach
+from . import agents, foreach
 from .effects import Effects
 from .errors import Interrupt, ValidationError
 from .limits import safe_error
@@ -57,6 +57,8 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     effects: idempotency keys + node-result ledger + fencing guard for side-effect nodes (TASK-0021).
     ports: user-bound services for Retriever / MCP nodes (engine.ports.Ports)."""
     if resume is None and (bad := check_input(wf, inputs)): raise ValidationError(bad)
+    wf = agents.expand(wf)  # usually expanded already by the run service (idempotent, TASK-0116)
+    if until and any(n["id"] == until and n.get("type") == "agent" for n in wf["nodes"]): until = f"{until}{agents.SEP}{agents.EXIT}"  # the whole agent
     usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished (TASK-0010)
     code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished (TASK-0053)
     held = {"node": resume["node"], "value": resume["value"]} if resume and "value" in resume else None
@@ -78,7 +80,9 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         return {"type": "node_started", **meta(nid), "iteration": counts[nid]}
 
     t0 = time.perf_counter(); pending: List[str] = []; done_steps = 0; finished_ids: set[str] = set()
-    cfg = {"recursion_limit": recursion_limit() + foreach.step_budget(wf), "configurable": {"thread_id": "run"}}  # For each loops add steps
+    superstep = 0  # numbers this segment's supersteps on node_finished: nodes with the same number ran in parallel (time travel)
+    cfg = {"recursion_limit": recursion_limit() + foreach.step_budget(wf) + agents.step_budget(wf),  # For each loops and agents add steps
+           "configurable": {"thread_id": "run"}}
 
     def counts_as_step(ids: List[str]) -> bool:
         return any(nodes[n]["type"] not in ("start", "end") for n in ids)
@@ -98,13 +102,13 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                 if counts_as_step(pending): done_steps += 1  # the superstep that just finished
                 # pause before this superstep starts: step budget spent, or the chosen node just finished
                 if (steps is not None and done_steps >= steps) or (until is not None and until in pending):
-                    yield {"type": "run_paused", "node": nxt[0], "nodes": nxt, "state": cap_payload(dict(state)),
+                    yield {"type": "run_paused", "node": nxt[0], "nodes": nxt, "state": cap_payload(agents.visible(state)),
                            "checkpoint": {"node": nxt[0], "nodes": nxt, "state": dict(state), "counts": dict(counts)}}
                     return
                 cp_state, cp_counts = dict(state), dict(counts)
                 if not first and any(nodes[n]["type"] not in ("start", "end") for n in nxt):
                     yield {"type": "_checkpoint", "node": nxt[0], "nodes": nxt, "state": dict(state), "counts": dict(counts)}
-                first = False; pending = nxt; t0 = time.perf_counter()
+                first = False; pending = nxt; t0 = time.perf_counter(); superstep += 1
                 for n2 in nxt: yield started(n2)
                 continue
             before = dict(state)
@@ -115,14 +119,15 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                 reused = effects is not None and nid in effects.reused
                 if reused: effects.reused.discard(nid)
                 finished_ids.add(nid)
-                yield {"type": "node_finished", **meta(nid), "iteration": counts.get(nid, 1),
+                yield {"type": "node_finished", **meta(nid), "iteration": counts.get(nid, 1), "superstep": superstep,
                        "duration_ms": round((time.perf_counter() - t0) * 1000, 2),
-                       "input": cap_payload(before), "delta": cap_payload(delta),
+                       "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),  # input: time travel forks from it
+                       **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did (TASK-0116)
                        **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
                        **({"code_output": cap_payload(code_out.pop(nid))} if nid in code_out else {})}
-    except Interrupt as i:  # a Human node is waiting: hand back a checkpoint instead of an error
+    except Interrupt as i:  # a Human node or an Agent tool approval is waiting: hand back a checkpoint instead of an error
         # parallel siblings of the Human node resume with it (their results come from the ledger when recorded)
-        yield {"type": "run_waiting", **meta(i.node), "prompt": i.prompt, "state": cap_payload(dict(state)),
+        yield {"type": "run_waiting", **meta(i.node), "prompt": i.prompt, **{k: cap_payload(v) for k, v in i.extra.items()}, "state": cap_payload(agents.visible(state)),
                "checkpoint": {"node": i.node, "nodes": pending or [i.node], "state": cp_state, "counts": cp_counts}}
         return
     except Exception as e:  # attribute runtime failures to the node that was running
@@ -138,7 +143,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", "node": until, "code": "RUN_NODE_NOT_REACHED", "errors": [msg],
                "error": {"code": "RUN_NODE_NOT_REACHED", "message": msg, "details": {"node": until}}}
         return
-    yield {"type": "run_finished", "state": foreach.visible(state)}
+    yield {"type": "run_finished", "state": agents.visible(foreach.visible(state))}
 
 
 def resume_nodes(resume: Dict[str, Any]) -> List[str]:

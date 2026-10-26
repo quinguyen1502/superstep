@@ -14,8 +14,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { JsonEditor } from '@/components/json-editor'
 import { Tip } from '@/components/tip'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
+import { needsApproval, toolNames } from '@/lib/agent'
 import { api } from '@/lib/api'
 import i18n from '@/lib/i18n'
+import { agentOf } from '@/lib/trace'
 import { cn } from '@/lib/utils'
 import { useStudioCtx } from './studio-context'
 
@@ -23,8 +25,9 @@ import { useStudioCtx } from './studio-context'
  * saved version, with the offline mock model as an option; each case's checks with expected and actual values.
  * TASK-0068: each result compared with the latest suite run on an earlier version, Run against version, the suite
  * history, and checks that name a node or field no longer in the graph marked as stale. */
-type Kind = 'status' | 'field' | 'node' | 'duration' | 'cost'
-export type TestCheck = { kind: Kind; value?: string; field?: string; op?: string; node?: string; ran?: boolean; max?: number }
+type Kind = 'status' | 'field' | 'node' | 'tool' | 'duration' | 'cost'
+/** `tool`: whether an Agent node (`node`) called the tool and the call ran (TASK-0119). */
+export type TestCheck = { kind: Kind; value?: string; field?: string; op?: string; node?: string; ran?: boolean; tool?: string; called?: boolean; max?: number }
 type CheckResult = TestCheck & { passed: boolean | null; expected: string; actual: string | null; reason: string | null }
 type Change = 'regression' | 'fixed' | 'still_failing' | 'still_passing' | 'new'
 export type TestCase = { id: string; name: string; input: Record<string, unknown>; answers: Record<string, string[]>; checks: TestCheck[]
@@ -35,19 +38,20 @@ type Suite = { id: string; status: string; mock: boolean; total: number; passed:
   by: string | null; langsmith_url?: string | null; results?: Result[]; compare?: { suite_id: string; version: number; counts: Record<Change, number> } | null }
 type Listing = { items: TestCase[]; suites: Suite[]; can_edit: boolean; limit: number; langsmith?: boolean; langsmith_configured?: boolean }
 
-const KINDS: Kind[] = ['status', 'field', 'node', 'duration', 'cost']
+const KINDS: Kind[] = ['status', 'field', 'node', 'tool', 'duration', 'cost']
 const OPS = ['equals', 'contains', 'not_contains', 'matches', 'empty', 'not_empty']
 const NO_VALUE = ['empty', 'not_empty']
 const STATUSES = ['ok', 'error', 'waiting']
 const POLL_MS = 1000
 const CHANGES: Change[] = ['regression', 'fixed', 'new', 'still_failing', 'still_passing']
 const changeVariant = (c: Change) => c === 'regression' ? 'destructive' : c === 'fixed' ? 'success' : c === 'new' ? 'outline' : 'secondary'
-/** A check that names a node or a state field the graph no longer has (the run fails it with that reason). */
-const isStale = (c: TestCheck, nodeIds: string[], fields: string[]) =>
-  (c.kind === 'node' && !!c.node && !nodeIds.includes(c.node)) || (c.kind === 'field' && !!c.field && !fields.includes(c.field))
+/** A check that names a node, a state field or an Agent node's tool the graph no longer has (the run fails a missing node or field). */
+const isStale = (c: TestCheck, nodeIds: string[], fields: string[], tools: (nid: string) => string[]) =>
+  ((c.kind === 'node' || c.kind === 'tool') && !!c.node && !nodeIds.includes(c.node)) || (c.kind === 'field' && !!c.field && !fields.includes(c.field))
+  || (c.kind === 'tool' && !!c.node && nodeIds.includes(c.node) && !!c.tool && !tools(c.node).includes(c.tool))
 const when = (ts: number) => new Date(ts * 1000).toLocaleString(i18n.resolvedLanguage)
 const blank = (k: Kind): TestCheck => ({ status: { kind: k, value: 'ok' }, field: { kind: k, field: '', op: 'equals', value: '' }, node: { kind: k, node: '', ran: true },
-  duration: { kind: k, max: 30 }, cost: { kind: k, max: 0.05 } } as Record<Kind, TestCheck>)[k]
+  tool: { kind: k, node: '', tool: '', called: true }, duration: { kind: k, max: 30 }, cost: { kind: k, max: 0.05 } } as Record<Kind, TestCheck>)[k]
 const variant = (s?: string) => s === 'passed' ? 'success' : s === 'failed' ? 'destructive' : s === 'running' || s === 'queued' ? 'outline' : 'secondary'
 
 /** `select`: the case to show first (a case just saved from a run). */
@@ -59,7 +63,9 @@ export function EditorTestsPanel({ select }: { select?: string | null }) {
   const [sel, setSel] = useState<string | null>(null); const [mock, setMock] = useState(false); const [err, setErr] = useState('')
   const [editing, setEditing] = useState<TestCase | 'new' | null>(null)
   const del = useConfirmDelete()
-  const label = (id: string) => (nodes.find(n => n.id === id)?.data as any)?.label || id
+  // a waiting Agent tool step (`<agent>/__tool`) is named after its Agent node
+  const label = (id: string) => ((nodes.find(n => n.id === id) ?? nodes.find(n => n.id === agentOf(id)))?.data as any)?.label || id
+  const toolsOf = (nid: string) => toolNames(nodes.find(n => n.id === nid)?.data)
   const loadSuite = (sid: string) => api<Suite>(`/api/workflows/${wid}/tests/runs/${sid}`).then(setSuite)
   const load = () => wid && api<Listing>(`/api/workflows/${wid}/tests`).then(d => {
     setList(d); setErr(''); setSel(s => [s, select].find(x => x && d.items.some(c => c.id === x)) ?? d.items[0]?.id ?? null)  // keep the choice, else the first case
@@ -162,7 +168,7 @@ export function EditorTestsPanel({ select }: { select?: string | null }) {
           <tbody>{(res?.checks ?? cur.checks.map(c => ({ ...c, passed: undefined } as any))).map((c: CheckResult, i: number) => <tr key={i} className="border-t align-top leading-5" data-testid="check-row">
             <td className="py-1"><span className="flex h-5 items-center">{/* centred on the first text line */}
               {c.passed === true ? <Check className="size-3.5 text-success" /> : c.passed === false ? <X className="size-3.5 text-destructive" /> : c.passed === null ? <CircleDashed className="size-3.5 text-muted-foreground" /> : null}</span></td>
-            <td className="py-1 pr-2">{describe(t, c, label)}{isStale(c, nodeIds, fieldNames) && <Badge variant="warning" className="ml-2 align-middle" data-testid="check-stale">{t('tests.stale')}</Badge>}</td>
+            <td className="py-1 pr-2">{describe(t, c, label)}{isStale(c, nodeIds, fieldNames, toolsOf) && <Badge variant="warning" className="ml-2 align-middle" data-testid="check-stale">{t('tests.stale')}</Badge>}</td>
             <td className="py-1 pr-2 font-mono break-all">{res ? shown(t, c, c.expected) : ''}</td>
             <td className="py-1 font-mono break-all">{res ? (c.reason ? <span className="font-sans text-muted-foreground">{t(`tests.reason.${c.reason}`, { node: label(c.node ?? '') })}</span> : shown(t, c, c.actual)) : ''}</td></tr>)}</tbody></table>}
       </div></ScrollArea>
@@ -176,6 +182,7 @@ function describe(t: (k: string, o?: any) => string, c: TestCheck, label: (id: s
   if (c.kind === 'status') return t('tests.desc.status', { value: t(`status.${c.value}`) })
   if (c.kind === 'field') return t(NO_VALUE.includes(c.op || '') ? 'tests.desc.fieldNoValue' : 'tests.desc.field', { field: c.field, op: t(`tests.op.${c.op}`), value: c.value })
   if (c.kind === 'node') return t(c.ran ? 'tests.desc.ran' : 'tests.desc.notRan', { node: label(c.node || '') })
+  if (c.kind === 'tool') return t(c.called ? 'tests.desc.called' : 'tests.desc.notCalled', { node: label(c.node || ''), tool: c.tool })
   return t(`tests.desc.${c.kind}`, { max: c.max })
 }
 
@@ -183,6 +190,7 @@ function shown(t: (k: string) => string, c: TestCheck, v: string | null): string
   if (v === null) return '—'
   if (c.kind === 'status') return t(`status.${v}`)
   if (c.kind === 'node') return t(`tests.ran.${v}`)
+  if (c.kind === 'tool') return t(`tests.called.${v}`)
   if (c.kind === 'field' && NO_VALUE.includes(v)) return t(`tests.op.${v}`)
   return v
 }
@@ -195,7 +203,9 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
   const [name, setName] = useState(value?.name ?? ''); const [input, setInput] = useState(value ? JSON.stringify(value.input, null, 2) : runInput)
   const [answers, setAnswers] = useState<Record<string, string[]>>(value?.answers ?? {})
   const [checks, setChecks] = useState<TestCheck[]>(value?.checks ?? [blank('status')]); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
-  const humans = nodes.filter(n => n.type === 'human'); const graphNodes = nodes.filter(n => n.type !== 'note')
+  // Human nodes, and Agent nodes with a tool that needs approval (answered under the Agent node's id, TASK-0117)
+  const humans = nodes.filter(n => n.type === 'human' || (n.type === 'agent' && needsApproval(n.data))); const graphNodes = nodes.filter(n => n.type !== 'note')
+  const agentNodes = nodes.filter(n => n.type === 'agent'); const toolsOf = (nid: string) => toolNames(nodes.find(n => n.id === nid)?.data)
   const setCheck = (i: number, c: TestCheck) => setChecks(cs => cs.map((x, j) => j === i ? c : x))
   const setAnswer = (nid: string, list: string[]) => setAnswers(a => ({ ...a, [nid]: list }))
   const save = async () => {
@@ -231,7 +241,7 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
           {checks.map((c, i) => <div key={i} className="flex flex-wrap items-center gap-2" data-testid="check-edit">
             <Select value={c.kind} onValueChange={k => setCheck(i, blank(k as Kind))}>
               <SelectTrigger className="w-36" aria-label={t('tests.kind')} data-testid="check-kind"><SelectValue /></SelectTrigger>
-              <SelectContent>{KINDS.map(k => <SelectItem key={k} value={k}>{t(`tests.kinds.${k}`)}</SelectItem>)}</SelectContent></Select>
+              <SelectContent>{KINDS.filter(k => k !== 'tool' || agentNodes.length > 0 || c.kind === 'tool').map(k => <SelectItem key={k} value={k}>{t(`tests.kinds.${k}`)}</SelectItem>)}</SelectContent></Select>
             {c.kind === 'status' && <Pick value={c.value} opts={STATUSES.map(s => [s, t(`status.${s}`)])} label={t('tests.kinds.status')} onChange={v => setCheck(i, { ...c, value: v })} />}
             {c.kind === 'field' && <>
               <Pick value={c.field} opts={fieldNames.map(f => [f, f])} label={t('tests.field')} placeholder={t('tests.field')} testid="check-field" onChange={v => setCheck(i, { ...c, field: v })} />
@@ -240,10 +250,16 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
             {c.kind === 'node' && <>
               <Pick value={c.node} opts={graphNodes.map(n => [n.id, (n.data as any)?.label || n.id])} label={t('tests.node')} placeholder={t('tests.node')} testid="check-node" onChange={v => setCheck(i, { ...c, node: v })} />
               <Pick value={c.ran ? 'ran' : 'not_ran'} opts={['ran', 'not_ran'].map(r => [r, t(`tests.ran.${r}`)])} label={t('tests.kinds.node')} onChange={v => setCheck(i, { ...c, ran: v === 'ran' })} /></>}
+            {c.kind === 'tool' && <>
+              <Pick value={c.node} opts={agentNodes.map(n => [n.id, (n.data as any)?.label || n.id])} label={t('tests.agentNode')} placeholder={t('tests.agentNode')} testid="check-agent"
+                onChange={v => setCheck(i, { ...c, node: v, tool: toolsOf(v).includes(c.tool || '') ? c.tool : '' })} />
+              <Pick value={c.tool} opts={toolsOf(c.node || '').map(n => [n, n])} label={t('tests.tool')} placeholder={t('tests.tool')} testid="check-tool" onChange={v => setCheck(i, { ...c, tool: v })} />
+              <Pick value={c.called ? 'called' : 'not_called'} opts={['called', 'not_called'].map(r => [r, t(`tests.called.${r}`)])} label={t('tests.kinds.tool')} testid="check-called"
+                onChange={v => setCheck(i, { ...c, called: v === 'called' })} /></>}
             {(c.kind === 'duration' || c.kind === 'cost') && <Input type="number" min={0} step="any" className="w-28 text-xs" aria-label={t(`tests.kinds.${c.kind}`)}
               value={c.max ?? ''} onChange={e => setCheck(i, { ...c, max: Number(e.target.value) })} />}
             {(c.kind === 'duration' || c.kind === 'cost') && <span className="text-xs text-muted-foreground">{t(`tests.unit.${c.kind}`)}</span>}
-            {isStale(c, graphNodes.map(n => n.id), fieldNames) && <span className="text-xs text-warning" data-testid="check-stale">{t('tests.stale')}</span>}
+            {isStale(c, graphNodes.map(n => n.id), fieldNames, toolsOf) && <span className="text-xs text-warning" data-testid="check-stale">{t('tests.stale')}</span>}
             <Button size="icon" variant="ghost" className="ml-auto" aria-label={t('common.delete')} disabled={checks.length < 2} onClick={() => setChecks(cs => cs.filter((_, j) => j !== i))}><X /></Button>
           </div>)}
           <Button size="sm" variant="outline" data-testid="check-add" onClick={() => setChecks(cs => [...cs, blank('field')])}><Plus />{t('tests.addCheck')}</Button>

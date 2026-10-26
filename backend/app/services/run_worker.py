@@ -18,6 +18,7 @@ from .run_service import RunService, error_event
 
 log = get_logger("worker")
 CHAT_CLEANUP_EVERY = 3600  # seconds between chat retention sweeps
+_recovered = False  # start-up recovery runs once per process: later lifespans (tests) share the same in-memory queue
 
 
 class RunWorker:
@@ -129,6 +130,27 @@ class RunWorker:
             if time.time() - last_reap >= config.job_reap_every():
                 last_reap = time.time(); await self.reap()
             await asyncio.sleep(min(1.0, config.job_reap_every()))
+
+    async def recover_unfinished(self) -> int:
+        """Start-up recovery for the in-memory queue (TASK-0115, DEC-0062): jobs held in memory are gone after a restart,
+        so every queued or running queue-job run is queued again as a recovered job. The worker continues it from its
+        last progress checkpoint (or from the start when no node had finished), exactly as for a lost Redis lease. A
+        run cut off STUDIO_RECOVER_MAX_ATTEMPTS times (it keeps stopping the server, or keeps being interrupted) ends
+        as `error` RUN_INTERRUPTED instead; resumes after a Human node or an Agent tool approval do not count
+        (RunService.interruptions). Waiting runs need nothing: their checkpoint is in
+        the database and any process resumes them. Returns the number of runs requeued."""
+        global _recovered
+        if self.jobs.kind != "memory" or not config.recover_on_start() or _recovered: return 0  # Redis: the reaper requeues lost jobs
+        _recovered = True
+        svc = self.services(); n = 0; most = config.recover_max_attempts()
+        for r in await asyncio.to_thread(svc.runs.list_unfinished):
+            try:
+                if (cut := svc.interruptions(r)) >= most:
+                    await asyncio.to_thread(svc.interrupted, r, cut); await svc.settled(r.id, r.source); continue
+                self.jobs.enqueue(await asyncio.to_thread(svc.recovery_job, r)); n += 1
+            except Exception: log.exception("recovering run %s failed", r.id)
+        if n: log.warning("requeued %s unfinished run(s) after a restart", n)
+        return n
 
     def start(self, n: int) -> None:
         self._stop = False

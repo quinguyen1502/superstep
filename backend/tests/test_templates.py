@@ -1,5 +1,6 @@
 """TASK-0025: template library: built-ins, save-as (sanitised), import/export, use, scopes, delete."""
-import uuid
+import json, uuid
+from pathlib import Path
 import pytest
 from types import SimpleNamespace as NS
 from fastapi.testclient import TestClient
@@ -45,8 +46,16 @@ def test_builtins_are_well_formed():
         assert all("knowledge base" in e for e in validate(b["workflow"]))  # only "pick your KB" may remain
 
 
+def test_builtins_have_a_name_and_description_in_both_ui_languages():
+    """The gallery shows built-ins by `templates.builtin.<id>` (TASK-0120 adds the Support agent's)."""
+    for lang in ("en", "vi"):
+        shown = json.loads((Path(__file__).resolve().parents[2] / f"frontend/src/locales/{lang}.json").read_text())["templates"]["builtin"]
+        assert sorted(shown) == sorted(b["id"] for b in T.BUILTINS), lang
+        assert all(shown[b["id"]].get("name") and shown[b["id"]].get("description") for b in T.BUILTINS), lang
+
+
 NEW = ["builtin-refund-approval", "builtin-leave-request", "builtin-social-post", "builtin-large-order", "builtin-expense-claim",
-       "builtin-purchase-request", "builtin-support-escalation", "builtin-feedback-digest"]
+       "builtin-purchase-request", "builtin-support-escalation", "builtin-feedback-digest", "builtin-support-agent"]
 FIRST_HUMAN = {"builtin-refund-approval": "finance", "builtin-leave-request": "manager", "builtin-social-post": "editor",
                "builtin-large-order": "manager", "builtin-expense-claim": "approver", "builtin-purchase-request": "lead"}
 INPUTS = {"request": "Refund order 1042, $80, the parcel arrived broken.", "message": "I'd like leave from 3 to 5 March for a family event.",
@@ -56,7 +65,7 @@ INPUTS = {"request": "Refund order 1042, $80, the parcel arrived broken.", "mess
 
 
 def test_builtin_order_and_channel_kinds():
-    """TASK-0064: 12 built-ins, the eight new ones after the first four. Human nodes on a channel store only its kind."""
+    """TASK-0064: the built-ins, the new ones after the first four (TASK-0119 adds the Support agent). Human nodes on a channel store only its kind."""
     assert [b["id"] for b in T.BUILTINS] == ["builtin-chatbot", "builtin-rag", "builtin-approval", "builtin-router", *NEW]
     kinds = {b["id"]: [n["data"]["approval"] for n in b["workflow"]["nodes"] if n["type"] == "human" and "approval" in n["data"]] for b in T.BUILTINS}
     assert {i: [a["channel"] for a in v] for i, v in kinds.items() if v} == {
@@ -74,7 +83,7 @@ def test_channel_templates_have_deadlines():
     assert due[("builtin-leave-request", "manager")] == {"after": 172800.0, "remind_every": 86400.0, "on_timeout": "reject", "escalate_to": []}
 
 
-@pytest.mark.parametrize("tid", [i for i in NEW if i != "builtin-support-escalation"])  # that one needs a knowledge base, like builtin-rag
+@pytest.mark.parametrize("tid", [i for i in NEW if i not in ("builtin-support-escalation", "builtin-support-agent")])  # those need a knowledge base, like builtin-rag
 def test_new_builtins_run_offline(tid, monkeypatch):
     """Mock LLM and dry-run e-mail: each runs up to its first Human node, or to the end."""
     for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "TYPESAFE_API_KEY"): monkeypatch.delenv(k, raising=False)
@@ -94,6 +103,16 @@ def test_channel_template_waits_in_the_studio_without_a_connection():
         ws.send_json({"workflow_id": wid, "input": {"request": "Refund order 1042", "customer_email": "ann@example.com"}}); evs = []
         while not evs or evs[-1]["type"] not in ("run_finished", "run_waiting", "error"): evs.append(ws.receive_json())
     assert evs[-1]["type"] == "run_waiting" and evs[-1]["node"] == "finance"
+
+
+def test_sanitize_blanks_the_resources_of_agent_tools():
+    """TASK-0119: an Agent node's tools point at knowledge bases and MCP servers too; secret-like keys go as well."""
+    wf = {"nodes": [{"id": "ag", "type": "agent", "data": {"credential_id": "c1", "tools": [
+        {"name": "kb", "source": "knowledge", "knowledge_base_id": "kb-1", "top_k": 3},
+        {"name": "m", "source": "mcp", "server_id": "srv-1", "tool": "add", "api_key": "sk-1"}, "odd"]}}]}
+    tools = T.sanitize(wf)["nodes"][0]["data"]["tools"]
+    assert tools == [{"name": "kb", "source": "knowledge", "knowledge_base_id": "", "top_k": 3}, {"name": "m", "source": "mcp", "server_id": "", "tool": "add"}, "odd"]
+    assert wf["nodes"][0]["data"]["tools"][0]["knowledge_base_id"] == "kb-1"  # the input is not changed
 
 
 def test_sanitize_keeps_only_the_channel_kind():
@@ -190,9 +209,11 @@ def test_builtin_test_cases_pass_in_mock_mode(monkeypatch):
             cases = cl.get(f"/api/workflows/{wid}/tests", headers=h).json()["data"]["items"]
             assert [x["name"] for x in cases] == [x["name"] for x in b["tests"]], b["id"]
             wf = cl.get(f"/api/workflows/{wid}", headers=h).json()["data"]
-            if any(n["type"] == "retriever" for n in wf["nodes"]):
+            if any(n["type"] in ("retriever", "agent") for n in wf["nodes"]):
                 for n in wf["nodes"]:
                     if n["type"] == "retriever": n["data"]["knowledge_base_id"] = kb["id"]
+                    for t in n["data"].get("tools") or []:  # an Agent node's knowledge base tools (TASK-0119)
+                        if t.get("source") == "knowledge": t["knowledge_base_id"] = kb["id"]
                 cl.post("/api/workflows", json=wf, headers=h)
             suite = run_all(cl, {"token": u.token}, wid, mock=True)
             assert {r["name"]: (r["status"], r["reason"], [ch for ch in r["checks"] if ch["passed"] is False]) for r in suite["results"]} == \

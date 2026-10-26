@@ -18,3 +18,4 @@ langchain-openai>=1.0
 openai>=2.45,<3  # 3.x moved to httpx2, which respx (tests) cannot intercept; see DEC-0032
 langchain-ollama>=1.0
 respx>=0.21
+mcp>=1.12,<2  # MCP server for workflows (TASK-0114)

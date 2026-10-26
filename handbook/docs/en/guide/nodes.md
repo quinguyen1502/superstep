@@ -4,6 +4,7 @@
 | --- | --- | --- |
 | [Start](#start-and-end), [End](#start-and-end) | Entry and exit of the graph | — |
 | [LLM](#llm) | Call a model with a prompt template | `output_field` |
+| [Agent](#agent) | A model that picks and calls the tools you allow, until it answers | `output_field`, `steps_field` (optional) |
 | [Decision (Jev)](#decision-jev) | Typed answers from TypeSafe Jev | one field per question, plus `output_field` |
 | [Retriever](#retriever) | Search a knowledge base | `output_field` (list) |
 | [Tool](#tool) | Python function, HTTP request or your own Python code | `output_field` |
@@ -16,10 +17,26 @@
 | [Subgraph](#subgraph) | Run another saved workflow inside this one | shared fields |
 | [Code (imported)](#code-imported) | Read-only node from an imported repo | — |
 
+## Config tabs
+
+Select a node and the **Config** panel shows its type, id and **Label**, then
+the same three tabs for every node, always in this order:
+
+| Tab | What you find there |
+| --- | --- |
+| **Settings** | What the node does: credential, model, prompts, tools, mode, code, approvers and deadline. |
+| **Data** | Every choice of a state field: the output field, an Agent's steps and history fields, a loop's fields, the field a Condition branches on, a Decision's answer fields, and **Input fields**. |
+| **Execution** | How the node runs: retry, timeout, cache, and limits such as an Agent's max rounds or a loop's max items. |
+
+A tab the node does not use stays in its place, greyed out. The panel keeps
+the tab you chose when you select another node, so you can open **Data** and
+click through the graph to see where each node writes. A red dot on a tab
+means something there needs attention, such as a missing output field.
+
 ## Execution settings
 
-LLM, Decision, Retriever, Tool, MCP tool and Human nodes have an
-**Execution** block in their config:
+LLM, Agent, Decision, Retriever, Tool, MCP tool and Human nodes have these
+settings in their **Execution** tab:
 
 | Setting | Effect |
 | --- | --- |
@@ -48,6 +65,13 @@ While a run is going, token deltas arrive as `node_token` events and show in
 the Logs row and the Output tab. They are not stored in run history; the final
 text is. Provider failures (401, timeout and so on) become a node `error`
 event, never a server crash.
+
+## Agent
+
+A task prompt, a list of tools (MCP, HTTP, built-in function, knowledge base
+search) and a maximum number of rounds. The model calls tools until it
+answers; a tool can need a person's approval before each call. See
+[Agent node](agent.md).
 
 ## Decision (Jev)
 

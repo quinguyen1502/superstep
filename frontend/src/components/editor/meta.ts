@@ -1,5 +1,5 @@
 import { type Edge } from '@xyflow/react'
-import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Brain, Wrench, GitBranch, Flag, CirclePlay, Trash2, Code2, UserCheck, Merge, Layers, Database, Plug, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square, Repeat, Scale, Mail } from 'lucide-react'
+import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Brain, Wrench, GitBranch, Flag, CirclePlay, Trash2, Code2, UserCheck, Merge, Layers, Database, Plug, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square, Repeat, Scale, Mail, Bot } from 'lucide-react'
 import i18n from '@/lib/i18n'
 
 export type Field = { name: string; type: string; reducer?: string }
@@ -22,9 +22,14 @@ META.foreach = { label: 'For each', icon: Repeat, color: 'bg-node-foreach-muted 
 META.decision = { label: 'Decision (Jev)', icon: Scale, color: 'bg-node-decision-muted text-node-decision', accent: 'bg-node-decision' }
 META.email = { label: 'Send email', icon: Mail, color: 'bg-node-email-muted text-node-email', accent: 'bg-node-email' }
 META.code = { label: 'Code', icon: Code2, color: 'bg-node-code-muted text-node-code', accent: 'bg-node-code' }
-export const TYPES = ['start', 'llm', 'decision', 'retriever', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
+META.agent = { label: 'Agent', icon: Bot, color: 'bg-node-agent-muted text-node-agent', accent: 'bg-node-agent' }
+/** An Agent node's expanded steps (TASK-0116, DEC-0063) appear in traces only: `ag/__model`, `ag/__tool`, `ag/__exit`. */
+META.agent_model = { ...META.agent, icon: Brain }
+META.agent_tool = { ...META.agent, icon: Wrench }
+META.agent_exit = META.agent
+export const TYPES = ['start', 'llm', 'agent', 'decision', 'retriever', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
 export const INSERTABLE = TYPES.filter(t => t !== 'start' && t !== 'end')
-export const RUNTIME = new Set(['llm', 'retriever', 'tool', 'mcp', 'human', 'decision'])
+export const RUNTIME = new Set(['llm', 'agent', 'retriever', 'tool', 'mcp', 'human', 'decision'])
 /** Reducers per field type (TASK-0011): how parallel writes combine. */
 export const REDUCERS: Record<string, string[]> = { list: ['replace', 'append'], object: ['replace', 'merge'], number: ['replace', 'add'], integer: ['replace', 'add'] }
 /** Trace events of nodes inside a subgraph carry `sub/inner` ids: the canvas shows them on the subgraph node. */
@@ -40,6 +45,7 @@ export function defaultInput(state: Field[]) {
 export const DEFAULTS: Record<string, any> = {
   start: { label: 'Start' }, end: { label: 'End' },
   llm: { label: 'LLM', model: 'gpt-4o-mini', prompt: '', output_field: '' }, // prompt comes from i18n `samples.prompt` on drop
+  agent: { label: 'Agent', model: 'gpt-4o-mini', system_prompt: '', prompt: '', output_field: '', max_rounds: 5, tools: [] }, // prompt: i18n `samples.agentPrompt`
   tool: { label: 'Tool', mode: 'function', function: 'lookup_order', method: 'GET', url: '', body: '', output_field: '' },
   condition: { label: 'Condition', field: '', default: '' },
   decision: { label: 'Decision', credential_id: '', model: 'jev-latest', text: '{{state.message}}', output_field: '',
@@ -51,6 +57,9 @@ export const DEFAULTS: Record<string, any> = {
   retriever: { label: 'Retriever', knowledge_base_id: '', query: '{{state.message}}', top_k: 4, output_field: '' },
   join: { label: 'Join' }, subgraph: { label: 'Subgraph', workflow_id: '' }, // response (text, or approved / rejected) goes to output_field
 }
+/** The prompt a dropped LLM or Agent node starts with, in the UI language. */
+export const samplePrompt = (type: string) => type === 'llm' ? { prompt: i18n.t('samples.prompt', { var: '{{state.message}}' }) }
+  : type === 'agent' ? { prompt: i18n.t('samples.agentPrompt', { var: '{{state.message}}' }) } : {}
 
 /** Where registry actions appear in the editor's ⋯ menu (others stay keyboard/palette only), with stable ids for tests. */
 export const MENU_OF: Record<string, 'arrange' | 'help' | undefined> = { layout: 'arrange', fitView: 'arrange', cheatsheet: 'help' }

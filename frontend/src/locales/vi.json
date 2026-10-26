@@ -190,7 +190,6 @@
     "inputFields": "Trường input",
     "inputFieldsHint": "Tắt hết để truyền cả state. Bật trường nào thì node chỉ thấy các trường đó.",
     "inputFieldsEmpty": "Thêm trường vào state để chọn phần node được thấy.",
-    "runtime": "Thực thi",
     "retryAttempts": "Số lần thử",
     "retryWait": "Chờ giữa các lần (giây)",
     "nodeTimeout": "Timeout (giây)",
@@ -222,7 +221,21 @@
     "tabRun": "Chạy",
     "pickRun": "Chọn một run…",
     "viewAllRuns": "Xem tất cả",
-    "historyDesc": "Mọi run của workflow này. Mở một run để xem lại trong nhật ký."
+    "historyDesc": "Mọi run của workflow này. Mở một run để xem lại trong nhật ký.",
+    "mobileNav": {
+      "label": "Khu vực làm việc",
+      "canvas": "Canvas",
+      "nodes": "Node",
+      "addHint": "Chạm vào một node để thêm vào canvas."
+    },
+    "configTabs": {
+      "label": "Cấu hình node",
+      "settings": "Cài đặt",
+      "data": "Dữ liệu",
+      "execution": "Thực thi",
+      "issue": "Cần xem lại",
+      "nothing": "Node này không có gì khác để cấu hình."
+    }
   },
   "nodes": {
     "start": "Điểm bắt đầu",
@@ -238,7 +251,8 @@
     "mcp": "Gọi công cụ trên máy chủ MCP",
     "foreach": "Lặp nhánh cho từng phần tử",
     "decision": "Hỏi TypeSafe Jev, nhận câu trả lời có kiểu",
-    "email": "Gửi email qua SMTP"
+    "email": "Gửi email qua SMTP",
+    "agent": "Model tự chọn và gọi công cụ"
   },
   "trace": {
     "idle": "Chưa chạy",
@@ -269,7 +283,19 @@
     "estimated": "(ước tính)",
     "waiting": "Đang chờ người phản hồi",
     "paused": "Tạm dừng sau một bước",
-    "streaming": "Model đang trả lời…"
+    "streaming": "Model đang trả lời…",
+    "agent": {
+      "round": "Vòng {{n}}",
+      "calls": "gọi {{tools}}",
+      "answer": "trả lời: {{text}}",
+      "limit": "đã hết số vòng",
+      "status": {
+        "error": "lỗi",
+        "refused": "bị từ chối",
+        "rejected": "người duyệt từ chối"
+      },
+      "approved": "đã duyệt"
+    }
   },
   "import": {
     "button": "Import repo",
@@ -423,6 +449,7 @@
     "CHECKPOINT_NOT_FOUND": "Không tìm thấy checkpoint trong run này, hoặc không thể fork từ nó",
     "RUN_FORK_UNSUPPORTED": "Không thể fork run của graph LangGraph được import",
     "RUN_RESPONSE_INVALID": "Phản hồi phải là văn bản (tối đa {{max}} ký tự)",
+    "MCP_SERVER_DISABLED": "Workflow này chưa được cung cấp dưới dạng công cụ MCP; hãy bật trong mục API của editor",
     "TRIGGER_TOKEN_INVALID": "Token workflow bị thiếu, không hợp lệ hoặc đã thu hồi",
     "TOKEN_NOT_FOUND": "Không tìm thấy token",
     "SCHEDULE_NOT_FOUND": "Không tìm thấy lịch chạy",
@@ -453,9 +480,11 @@
     "TEST_NOT_SUPPORTED": "Workflow LangGraph đã import không hỗ trợ test",
     "PYTHON_EXPORT_UNAVAILABLE": "Workflow LangGraph đã import vốn là mã Python nên không cần xuất.",
     "TYPESCRIPT_EXPORT_UNAVAILABLE": "Workflow LangGraph đã import là mã Python nên không xuất ra TypeScript được.",
+    "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED": "Chưa xuất được node Agent sang TypeScript ({{node}}): hãy xuất workflow sang Python.",
     "EXPORT_LANGUAGE_UNSUPPORTED": "Không xuất được sang {{language}}: hãy chọn một trong {{supported}}.",
     "CALLBACK_URL_INVALID": "callback_url phải là URL http(s) công khai",
     "VERSION_NOT_FOUND": "Phiên bản này không còn tồn tại.",
+    "RUN_INTERRUPTED": "Server đã dừng {{attempts}} lần khi run này đang chạy, nên run không được chạy tiếp nữa",
     "RUN_EXPIRED": "Run này đã chờ phản hồi quá lâu và đã hết hạn.",
     "RATE_LIMITED": "Quá nhiều yêu cầu. Thử lại sau {{retry_after}} giây.",
     "NOTIFICATION_NOT_FOUND": "Không tìm thấy thông báo.",
@@ -533,6 +562,7 @@
     "MODEL_NOT_FOUND": "{{provider}} không có model tên {{model}}",
     "CREDENTIAL_HEADER_UNSUPPORTED": "{{provider}} không nhận header {{header}}",
     "PROVIDER_EMBEDDINGS_UNSUPPORTED": "{{provider}} không hỗ trợ embedding; hãy chọn credential khác cho kho tri thức này",
+    "AGENT_TOOLS_UNSUPPORTED": "{{provider}} không gọi được công cụ; hãy chọn một credential hỗ trợ gọi công cụ cho node Agent",
     "KB_EMBEDDING_DIMENSION_MISMATCH": "Model embedding trả về vector {{got}} chiều nhưng kho tri thức đang lưu vector {{expected}} chiều; hãy lập chỉ mục lại kho tri thức",
     "TEMPLATE_NOT_FOUND": "Không tìm thấy mẫu",
     "TEMPLATE_READ_ONLY": "Không thể xoá mẫu này",
@@ -586,7 +616,8 @@
   "samples": {
     "input": "{\n  \"message\": \"Đơn hàng A100 của tôi đâu rồi?\"\n}",
     "prompt": "Trả lời: {{var}}",
-    "greeting": "Xin chào!"
+    "greeting": "Xin chào!",
+    "agentPrompt": "Giúp người dùng: {{var}}"
   },
   "human": {
     "title": "Đang chờ phản hồi của bạn",
@@ -628,6 +659,26 @@
     "showRevoked": "Hiện token đã thu hồi ({{count}})",
     "revokeTitle": "Thu hồi token {{name}}?",
     "revokeBody": "Client dùng token này bị từ chối ngay. Không thể hoàn tác."
+  },
+  "mcpServer": {
+    "tab": "MCP",
+    "enable": "Cung cấp dưới dạng công cụ MCP",
+    "enableHelp": "Các client MCP (Claude Desktop, Cursor, agent khác) kết nối bằng token của workflow này và gọi nó như một công cụ. Mặc định tắt.",
+    "needsToken": "Hãy tạo token ở thẻ Token trước: client xác thực bằng token đó.",
+    "url": "URL máy chủ",
+    "tools": "Công cụ: {{tool}} (đầu vào = các trường state của workflow), get_run, resume_run.",
+    "client": "Ứng dụng client",
+    "clients": {
+      "cursor": "Cursor",
+      "claude-desktop": "Claude Desktop",
+      "claude-code": "Claude Code"
+    },
+    "where": {
+      "cursor": ".cursor/mcp.json",
+      "claude-desktop": "claude_desktop_config.json (qua mcp-remote)",
+      "claude-code": "Dòng lệnh"
+    },
+    "human": "Run dừng ở node Human trả về trạng thái waiting kèm run_id; client trả lời bằng resume_run. Run hiện trong lịch sử với nguồn API."
   },
   "versions": {
     "button": "Phiên bản",
@@ -1321,6 +1372,10 @@
       "builtin-feedback-digest": {
         "name": "Tổng hợp phản hồi khách hàng",
         "description": "Gắn nhãn từng phản hồi, viết báo cáo và gửi email cho nhóm."
+      },
+      "builtin-support-agent": {
+        "name": "Agent hỗ trợ khách hàng",
+        "description": "Agent tra cứu đơn hàng và chính sách hoàn tiền; mỗi yêu cầu hoàn tiền của agent đều cần người duyệt."
       }
     }
   },
@@ -1546,7 +1601,8 @@
     "removeQuestion": "Xoá câu hỏi {{id}}",
     "removeItem": "Xoá",
     "outputField": "Ghi mọi câu trả lời kèm xác suất vào (trường object)",
-    "hint": "Ghi câu trả lời lựa chọn vào một trường văn bản, rồi dùng Condition trên trường đó để rẽ nhánh. Câu trả lời chấm điểm và có/không cần trường kiểu số. Ctrl+Z để hoàn tác khi lỡ xoá."
+    "hint": "Ghi câu trả lời lựa chọn vào một trường văn bản, rồi dùng Condition trên trường đó để rẽ nhánh. Câu trả lời chấm điểm và có/không cần trường kiểu số. Ctrl+Z để hoàn tác khi lỡ xoá.",
+    "fieldFor": "{{id}}: ghi câu trả lời vào"
   },
   "email": {
     "credential": "Credential SMTP",
@@ -1700,6 +1756,7 @@
       "status": "Trạng thái run",
       "field": "Trường state",
       "node": "Node",
+      "tool": "Gọi công cụ",
       "duration": "Thời gian",
       "cost": "Chi phí"
     },
@@ -1707,6 +1764,8 @@
     "compare": "Phép so sánh",
     "value": "Giá trị",
     "node": "Node",
+    "agentNode": "Node Agent",
+    "tool": "Công cụ",
     "unit": {
       "duration": "giây (tối đa)",
       "cost": "US$ (tối đa)"
@@ -1723,6 +1782,10 @@
       "ran": "đã chạy",
       "not_ran": "không chạy"
     },
+    "called": {
+      "called": "đã gọi",
+      "not_called": "không gọi"
+    },
     "status": {
       "queued": "Trong hàng đợi",
       "running": "Đang chạy",
@@ -1736,6 +1799,8 @@
       "fieldNoValue": "{{field}} {{op}}",
       "ran": "“{{node}}” đã chạy",
       "notRan": "“{{node}}” không chạy",
+      "called": "“{{node}}” đã gọi {{tool}}",
+      "notCalled": "“{{node}}” không gọi {{tool}}",
       "duration": "Chạy tối đa {{max}} giây",
       "cost": "Chi phí tối đa ${{max}}"
     },
@@ -1914,5 +1979,44 @@
     "notConfigured": "Đặt LANGSMITH_API_KEY trên máy chủ để bật tính năng này.",
     "tracingOn": "Các run được trace vào dự án LangSmith {{project}}; mỗi run có liên kết tới trace của nó.",
     "tracingOff": "Đặt LANGSMITH_TRACING=true để trace cả các run sang LangSmith."
+  },
+  "agent": {
+    "systemPrompt": "System prompt (tuỳ chọn, {{field}})",
+    "taskPrompt": "Prompt nhiệm vụ ({{field}})",
+    "maxRounds": "Số vòng tối đa",
+    "maxRoundsHint": "Mỗi vòng gồm một lần gọi model và các lần gọi công cụ mà model yêu cầu. Khi hết số vòng, model trả lời mà không dùng công cụ.",
+    "none": "Không dùng",
+    "stepsField": "Trường các bước (tuỳ chọn)",
+    "stepsHint": "Trường list nhận từng lần gọi công cụ: công cụ, tham số, kết quả và trạng thái.",
+    "historyField": "Trường lịch sử (tuỳ chọn)",
+    "historyHint": "Danh sách tin nhắn trước đó ({role, content}) được thêm trước prompt nhiệm vụ, ví dụ trường messages của chat.",
+    "tools": "Công cụ",
+    "toolsHint": "Model chỉ gọi được các công cụ này. Model đọc tên và mô tả của từng công cụ để chọn.",
+    "noToolsYet": "Hãy thêm ít nhất một công cụ.",
+    "addTool": "Thêm công cụ",
+    "sources": {
+      "mcp": "Công cụ MCP",
+      "http": "Yêu cầu HTTP",
+      "builtin": "Hàm có sẵn",
+      "knowledge": "Tìm trong kho tri thức"
+    },
+    "toolName": "Tên",
+    "duplicateName": "Đã có công cụ khác trùng tên này.",
+    "toolDescription": "Mô tả cho model",
+    "needsApproval": "Cần duyệt",
+    "approvalHint": "Các lần gọi công cụ cần duyệt sẽ chờ người duyệt, theo cài đặt dưới đây.",
+    "moveUp": "Đưa {{name}} lên",
+    "moveDown": "Đưa {{name}} xuống",
+    "removeTool": "Bỏ {{name}}",
+    "parameters": "Tham số model điền",
+    "paramName": "Tên tham số",
+    "paramType": "Kiểu",
+    "paramDescription": "Mô tả",
+    "paramRequired": "Bắt buộc",
+    "addParam": "Thêm tham số",
+    "removeParam": "Bỏ tham số {{name}}",
+    "httpArgsHint": "Dùng {{arg}} trong URL hoặc body để chèn một tham số. Nếu không có body, POST, PUT và PATCH gửi tham số dạng JSON, còn GET thêm tham số vào URL.",
+    "kbHint": "Model tự viết câu tìm kiếm.",
+    "noToolCalling": "{{provider}} không gọi được công cụ. Hãy chọn credential hỗ trợ gọi công cụ cho node Agent."
   }
 }

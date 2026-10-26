@@ -60,7 +60,8 @@ State là bản ghi có kiểu mà mọi node đọc và ghi. Workflow mới có
 
 4. Ở **State schema** trong panel trái, chọn **Thêm trường** và đặt tên trường
    mới là `reply`.
-5. Đặt **Trường output** là `reply`. Node ghi câu trả lời vào đó.
+5. Mở tab **Dữ liệu** và đặt **Trường output** là `reply`. Node ghi câu trả
+   lời vào đó.
 
 ![Cấu hình node LLM](../images/quickstart-llm.png)
 
@@ -75,9 +76,10 @@ State là bản ghi có kiểu mà mọi node đọc và ghi. Workflow mới có
     {{state.reply}}
     ```
 
-3. Thêm trường `decision` vào state và chọn nó làm **Trường output**. Trường này
+3. Thêm trường `decision` vào state, rồi ở tab **Dữ liệu** chọn nó làm
+   **Trường output**. Trường này
    nhận `approved`, `rejected` hoặc câu trả lời được gõ vào.
-4. Tuỳ chọn: ở **Kênh duyệt**, đặt **Gửi yêu cầu duyệt tới** một kênh
+4. Tuỳ chọn: quay lại tab **Cài đặt**, ở **Kênh duyệt**, đặt **Gửi yêu cầu duyệt tới** một kênh
    Slack, Telegram, WhatsApp, email hoặc Teams đã kết nối, rồi điền đích gửi
    (với Slack là channel id). **Người duyệt (email)** liệt kê những người khác
    được trả lời. Kênh được kết nối ở **Cài đặt → Kênh**; xem

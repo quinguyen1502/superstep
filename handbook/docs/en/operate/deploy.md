@@ -91,13 +91,40 @@ docker compose up --scale worker=3
 | `STUDIO_WORKER_CONCURRENCY` | 2 | Jobs one worker runs at once |
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | 30 s | Lease on a job; the worker renews it while running |
 | `STUDIO_JOB_REAP_EVERY` | 15 s | How often expired leases are requeued |
+| `STUDIO_RECOVER_ON_START` | 1 | In-memory queue: requeue unfinished runs when the server starts |
+| `STUDIO_RECOVER_MAX_ATTEMPTS` | 3 | Restarts that may cut one run off before recovery gives up with `RUN_INTERRUPTED` |
 
-The in-memory queue is for development only: its jobs vanish when that
-process restarts. On Redis, a job whose worker died is requeued when its lease
-expires, and continues from the last checkpoint (`run_recovered` in the
-trace). Each time a worker takes a run, `runs.lease_gen` increases; writes
-must carry that fencing token, so a worker that lost the lease cannot commit
-and stops.
+On Redis, a job whose worker died is requeued when its lease expires, and
+continues from the last checkpoint (`run_recovered` in the trace). Each time a
+worker takes a run, `runs.lease_gen` increases; writes must carry that fencing
+token, so a worker that lost the lease cannot commit and stops.
+
+## Runs across restarts
+
+Superstep keeps its run checkpoints in its own database (SQLite by default,
+Postgres with `DATABASE_URL`), not in LangGraph's in-memory saver, so a restart
+or a crash loses no paused run:
+
+| Run | After a restart |
+| --- | --- |
+| Paused at a Human node | Still waiting. Answer it in the studio, a chat channel or the API as before; it continues from its checkpoint. |
+| Queued or running API, schedule, chat or test run | Continues from its last finished node. Queue jobs save a progress checkpoint after every node; the node that was in flight runs again, finished calls are not repeated ([effectively-once side effects](../reference/architecture.md#effectively-once-side-effects)). |
+| Running in the editor | Ends with the browser connection; it is not stored until it finishes. Run it again. |
+
+How unfinished queue runs come back depends on the queue:
+
+- **Redis** (`REDIS_URL`): the job stays in Redis; once its lease expires any
+  worker takes it again.
+- **In-memory queue** (no `REDIS_URL`, a single process): jobs held in memory
+  are gone, so at start-up the server queues every `queued` or `running` run
+  again as a recovered job. Set `STUDIO_RECOVER_ON_START=0` only if several API
+  processes share one database without Redis, since one of them would take
+  over the runs of another.
+
+A run that has been cut off by a restart `STUDIO_RECOVER_MAX_ATTEMPTS` times
+(for example a node that keeps crashing the server) is not continued again: it
+ends as `error` with code `RUN_INTERRUPTED`, keeping its events so far. Resuming
+after a Human node or an Agent tool approval does not count.
 
 ## Local models from Compose
 

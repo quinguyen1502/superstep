@@ -4,6 +4,9 @@ A check is a small dict:
 - {"kind": "status", "value": "ok" | "error" | "waiting"}
 - {"kind": "field", "field": name, "op": equals | contains | not_contains | matches | empty | not_empty, "value": text}
 - {"kind": "node", "node": id, "ran": true | false}
+- {"kind": "tool", "node": Agent node id, "tool": name, "called": true | false}: whether the Agent node's model called the
+  tool and the call ran (its result or its own error went back to the model); a call refused, rejected by an approver
+  or with invalid arguments did not run (TASK-0119)
 - {"kind": "duration", "max": seconds}  /  {"kind": "cost", "max": US dollars}
 
 `evaluate` returns one result per check: {passed: True | False | None, expected, actual, reason}. `passed` None means
@@ -13,8 +16,10 @@ Without a status check, a case also needs the run to end `ok`.
 from __future__ import annotations
 import json, re
 from typing import Any, Dict, List, Optional
+from . import agents
 
-KINDS = ("status", "field", "node", "duration", "cost")
+KINDS = ("status", "field", "node", "tool", "duration", "cost")
+RAN = ("ok", "failed")  # tool call outcomes that count as called
 STATUSES = ("ok", "error", "waiting")
 OPS = ("equals", "contains", "not_contains", "matches", "empty", "not_empty")
 NO_VALUE = ("empty", "not_empty")
@@ -45,6 +50,10 @@ def errors(checks: Any) -> List[str]:
         if k == "node":
             if not isinstance(c.get("node"), str) or not c["node"].strip(): errs.append(f"check {i}: choose a node")
             if not isinstance(c.get("ran"), bool): errs.append(f"check {i}: ran must be true or false")
+        if k == "tool":
+            if not isinstance(c.get("node"), str) or not c["node"].strip(): errs.append(f"check {i}: choose an Agent node")
+            if not isinstance(c.get("tool"), str) or not c["tool"].strip(): errs.append(f"check {i}: choose a tool")
+            if not isinstance(c.get("called"), bool): errs.append(f"check {i}: called must be true or false")
         if k in ("duration", "cost"):
             m = c.get("max")
             if isinstance(m, bool) or not isinstance(m, (int, float)) or m <= 0: errs.append(f"check {i}: the limit must be a positive number")
@@ -80,7 +89,8 @@ def evaluate(checks: List[dict], run: Dict[str, Any], workflow: Dict[str, Any]) 
     state = run.get("final_state") or {}; state = state if isinstance(state, dict) else {}
     schema = {f.get("name") for f in workflow.get("state") or [] if isinstance(f, dict)}
     nodes = {n.get("id") for n in workflow.get("nodes") or [] if isinstance(n, dict)}
-    ran = {e.get("node") for e in run.get("events") or [] if isinstance(e, dict) and e.get("type") == "node_finished"}
+    finished = [e for e in run.get("events") or [] if isinstance(e, dict) and e.get("type") == "node_finished"]
+    ran = {e.get("node") for e in finished}
     out = []
     for c in checks:
         k = c["kind"]
@@ -89,6 +99,11 @@ def evaluate(checks: List[dict], run: Dict[str, Any], workflow: Dict[str, Any]) 
             exp = "ran" if c["ran"] else "not_ran"
             if c["node"] not in nodes: out.append(_result(False, exp, reason="node_missing"))
             else: out.append(_result((c["node"] in ran) == c["ran"], exp, "ran" if c["node"] in ran else "not_ran"))
+        elif k == "tool":
+            exp = "called" if c["called"] else "not_called"
+            if c["node"] not in nodes: out.append(_result(False, exp, reason="node_missing")); continue
+            called = any(tool_ran(e, c["node"], c["tool"]) for e in finished)
+            out.append(_result(called == c["called"], exp, "called" if called else "not_called"))
         elif not done: out.append(_result(None, text(c.get("value") or c.get("op") or c.get("max")), reason="not_evaluated"))
         elif k == "field": out.append(_field(c, state, schema))
         elif k == "duration":
@@ -98,6 +113,18 @@ def evaluate(checks: List[dict], run: Dict[str, Any], workflow: Dict[str, Any]) 
             cost = run.get("cost_usd")
             out.append(_result(None, text(c["max"]), reason="no_price") if cost is None else _result(cost <= c["max"], text(c["max"]), cost))
     return out
+
+
+def tool_ran(e: dict, agent: str, tool: str) -> bool:
+    """Whether this `node_finished` event is a call of `tool` by Agent node `agent` that ran (engine/agents step summary)."""
+    a = e.get("agent") if isinstance(e.get("agent"), dict) else {}
+    return e.get("node") == f"{agent}{agents.SEP}{agents.TOOL}" and a.get("kind") == "tool" and a.get("tool") == tool and outcome(a) in RAN
+
+
+def outcome(a: dict) -> str:
+    """ok, failed (the tool raised), or not run: refused, rejected, unknown tool or invalid arguments."""
+    if a.get("status") == "ok": return "ok"
+    return "failed" if a.get("status") == "error" and str(a.get("result") or "").startswith(agents.FAILED) else "not_run"
 
 
 def passed(checks: List[dict], results: List[dict], status: str) -> bool:

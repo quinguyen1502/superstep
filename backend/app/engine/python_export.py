@@ -7,16 +7,19 @@ the state as a `TypedDict`, one function per node, `build_graph()` with `add_nod
 
 The graph is read through `templates.sanitize`, so no credential, knowledge base, server, channel, approver or
 secret-like value reaches the file. Retriever, MCP and Send email nodes call stubs (they need studio services).
-A Subgraph node becomes its child workflow's own compiled graph, added as a node (Q3). Comments are English (Q2).
+A Subgraph node becomes its child workflow's own compiled graph, added as a node (Q3). An Agent node becomes the
+studio's own expansion (TASK-0119, DEC-0063): an entry node, a model node and a tool node in a loop with two routers,
+and an end node; approval is `interrupt()`, and its knowledge base and MCP tools use the same stubs. Comments are
+English (Q2).
 The output is a pure function of its input: the same graph gives the same bytes.
 """
 from __future__ import annotations
 import ast, builtins, inspect, io, json, keyword, re, tokenize
 from typing import Any, Dict, List, Optional
-from . import foreach
+from . import agents, foreach
 from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWriter, camel as _camel, number as _number,
                             one_line as _one_line, slug)
-from .templating import VAR_RE, _ONE_FILTER
+from .templating import VAR_RE, _ONE_FILTER, refs
 from .tools import TOOLS
 
 PY_TYPES = {"string": "str", "number": "float", "integer": "int", "boolean": "bool", "object": "dict", "list": "list"}
@@ -28,7 +31,8 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
     "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "send_email", "addresses", "build_graph",
-    "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", *REDUCERS.values()}
+    "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
+    "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 
 
 RULE = re.compile(r"# --- (.+?) -+")
@@ -233,6 +237,90 @@ def decide(text: str, question: dict) -> Any:
     return float(found.group()) if found else 0.0
 '''
 
+AGENT = r'''
+# --- Agents --------------------------------------------------------------------------------------------------
+# An Agent node is a loop of two nodes: the model node asks the model, which answers or asks for tool calls, and the
+# tool node runs one call and gives the result back. Without LLM_PROVIDER, call_agent() is an offline mock: it calls
+# the tool that best matches the task once, then answers with its result (the studio's mock agent).
+MAX_CALLS_PER_ROUND = 8
+RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
+STEP_CHARS = 2000  # ... and into the steps field shortened to this
+JSON_TYPES = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
+
+
+def agent_task(messages: list) -> tuple:
+    """The last user message and the tool results after it."""
+    last = max((i for i, m in enumerate(messages) if m.get("role") == "user"), default=-1)
+    return (messages[last].get("content") or "") if last >= 0 else "", [m for m in messages[last + 1:] if m.get("role") == "tool"]
+
+
+def mock_agent(messages: list, tools: Optional[list], model: str) -> tuple:
+    """Offline agent: with no tool result yet it calls the tool whose name and description share the most words with
+    the task (the first one on a tie), string arguments filled with the task; then it answers with the last result."""
+    task, results = agent_task(messages)
+    if tools and not results:
+        words = set(re.findall(r"\w+", task.lower()))
+        score = lambda t: len(words & set(re.findall(r"\w+", f"{t['name'].replace('_', ' ')} {t.get('description') or ''}".lower())))  # noqa: E731
+        best = max(tools, key=score)
+        params = best.get("parameters") or {}
+        props, required = params.get("properties") or {}, set(params.get("required") or [])
+        empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
+        args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
+                for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+        return "", [{"id": "mock_call_1", "name": best["name"], "args": args}]
+    said = (results[-1].get("content") or "") if results else (task.strip().splitlines() or [""])[-1]
+    return f"[mock:{model}] Answer: {said[:200]}", []
+
+
+def call_agent(messages: list, tools: Optional[list], model: str) -> tuple:
+    """One model call: (text, tool calls [{id, name, args}]). With tools None the model has to answer."""
+    if not LLM_PROVIDER:
+        return mock_agent(messages, tools, model)
+    from langchain.chat_models import init_chat_model
+    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+
+    history = []
+    for m in messages:
+        if m["role"] == "assistant":
+            calls = [{"id": c["id"], "name": c["name"], "args": c["args"] or {}} for c in m.get("tool_calls") or []]
+            history.append(AIMessage(m["content"], tool_calls=calls))
+        elif m["role"] == "tool":
+            history.append(ToolMessage(m["content"], tool_call_id=m["tool_call_id"]))
+        else:
+            history.append(SystemMessage(m["content"]) if m["role"] == "system" else HumanMessage(m["content"]))
+    llm = init_chat_model(model, model_provider=LLM_PROVIDER)
+    if tools:
+        llm = llm.bind_tools([{"type": "function", "function": t} for t in tools])
+    reply = llm.invoke(history)
+    text = reply.content if isinstance(reply.content, str) else "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
+    return text.strip(), [{"id": c.get("id") or f"call_{i}", "name": c["name"], "args": c.get("args") or {}} for i, c in enumerate(reply.tool_calls)]
+
+
+def check_arguments(schema: dict, args: Any) -> Optional[str]:
+    """Why the model's arguments do not fit the tool's parameters: required names and top-level JSON types."""
+    if not isinstance(args, dict):
+        return "arguments must be a JSON object"
+    props = schema.get("properties") or {}
+    missing = [k for k in schema.get("required") or [] if k not in args]
+    if missing:
+        return f"missing argument(s): {', '.join(missing)}"
+    for k, v in args.items():
+        want = (props.get(k) or {}).get("type") if isinstance(props.get(k), dict) else None
+        if not isinstance(want, str) or want not in JSON_TYPES or v is None:
+            continue
+        if not isinstance(v, JSON_TYPES[want]) or (want in ("number", "integer") and isinstance(v, bool)):
+            return f"argument {k} must be of type {want}"
+    return None
+
+
+def tool_text(value: Any) -> str:
+    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
+
+
+def shorten(text: str, n: int) -> str:
+    return text if len(text) <= n else text[:n] + f"… (shortened from {len(text)} characters)"
+'''
+
 STUBS = {
     "retrieve": '''
 
@@ -306,6 +394,10 @@ class _Writer(GraphWriter):
             for n in g.get("nodes") or []:
                 d = (n.get("data") or {}) if isinstance(n, dict) else {}
                 if n.get("type") == "tool" and d.get("mode", "function") == "function": self.tool_source(d.get("function") or "")
+                if n.get("type") == "agent":  # an Agent node's built-in tools (TASK-0119); its steps are timed
+                    self.imports.add("time")
+                    for t in d.get("tools") or []:
+                        if isinstance(t, dict) and t.get("source") == "builtin": self.tool_source(t.get("function") or "")
         main, graphs = self.prepare(raw, self.taken)
         self.body(graphs, main)
         self.lines = [_rule(m.group(1)) if (m := RULE.fullmatch(ln)) else ln for ln in self.lines]
@@ -337,7 +429,9 @@ class _Writer(GraphWriter):
         doc = [f'"""{_doc(self.title)}{v}: a LangGraph graph exported from Superstep.', "",
                "The graph on the canvas, written as code: the state, one function per node, and build_graph(), which",
                "connects them. Run it:", "", f"    {pip}", f"    python {slug(self.title, 'workflow')}.py", ""]
-        if "model" in self.uses:
+        if "agent" in self.uses:
+            doc += ["LLM and Agent nodes use an offline mock model unless LLM_PROVIDER is set (see call_llm and call_agent below).", ""]
+        elif "model" in self.uses:
             doc += ["LLM nodes use an offline mock model unless LLM_PROVIDER is set (see call_llm below).", ""]
         if "code" in self.uses:
             doc += ["Code nodes run here as written on the canvas, without the studio's sandbox: read them first.", ""]
@@ -358,6 +452,7 @@ class _Writer(GraphWriter):
     def body(self, graphs: List[_Graph], main: _Graph) -> None:
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
+        if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
         if "routing" in self.uses: self.add("\n" + ROUTING.rstrip())
         if "decide" in self.uses: self.add("\n" + DECIDE.rstrip())
         stubs = [k for k in STUBS if k in self.uses]
@@ -410,11 +505,12 @@ class _Writer(GraphWriter):
         else:
             self.add("# A subgraph has its own state. It shares fields with the parent graph by name: the parent passes them")
             self.add("# in, and the fields the subgraph changed come back when it ends.")
-        rows = [(f["name"], self.ann(f)) for f in fields] + [(c, "int") for c in g.cursors.values()]
+        chats = [a["chat"] for a in g.agents.values()]
+        rows = [(f["name"], self.ann(f)) for f in fields] + [(c, "int") for c in g.cursors.values()] + [(c, "Optional[dict]") for c in chats]
         if rows and all(n.isidentifier() and not keyword.iskeyword(n) for n, _ in rows):
             self.add(f"class {cls}(TypedDict, total=False):")
             for n, a in rows:
-                why = "  # loop position of a For each node" if n in g.cursors.values() else ""
+                why = "  # loop position of a For each node" if n in g.cursors.values() else "  # an Agent node's conversation" if n in chats else ""
                 self.add(f"    {n}: {a}{why}")
         else:
             body = ", ".join(f"{lit(n)}: {a}" for n, a in rows)
@@ -472,6 +568,8 @@ class _Writer(GraphWriter):
             self.foreach(g, nid, cls, head)
         elif t == "decision":
             self.decision(g, nid, cls, head)
+        elif t == "agent":
+            self.agent(g, nid, cls, head)
         elif t == "tool":
             self.tool(g, nid, cls, head, ret)
         elif t == "retriever":
@@ -631,8 +729,177 @@ class _Writer(GraphWriter):
             self.add("    send_email(message)")
             self.add("    return {}")
 
+    def agent(self, g: _Graph, nid: str, cls: str, head: str) -> None:
+        """An Agent node as the studio runs it (DEC-0063): an entry node, the model node and the tool node in a loop, and
+        an end node, with the conversation in its own state field."""
+        d = g.nodes[nid].get("data") or {}; name, const, a = g.names[nid], g.names[nid].upper(), g.agents[nid]
+        chat, model, tool, end = lit(a["chat"]), a["model"], a["tool"], a["exit"]
+        tools = agents.specs(d)
+        approval = [t.get("name") for t in d.get("tools") or [] if isinstance(t, dict) and t.get("approval")]
+        who = _one_line(d.get("label") or nid)
+        if d.get("system_prompt"): self.add(f"{const}_SYSTEM = {lit(d['system_prompt'])}")
+        self.add(f"{const}_PROMPT = {lit(d.get('prompt') or '')}")
+        self.add(f"# The tools the model may call: their names, what they do, and the JSON Schema of their arguments.")
+        self.add(f"{const}_TOOLS = {lit(tools)}")
+        if approval: self.add(f"{const}_NEEDS_APPROVAL = {lit(approval)}  # these ask a person first (interrupt)")
+        for t in d.get("tools") or []:
+            if isinstance(t, dict) and t.get("source") == "http":
+                self.add(f"{self.http_key(const, t)}_URL = {lit(t.get('url') or '')}")
+                self.add(f"{self.http_key(const, t)}_BODY = {lit(t.get('body') or '')}")
+        self.add(f"{const}_MAX_ROUNDS = {self.rounds(d)}")
+        self.add("")
+        self.add("")
+        self.add(f"def {name}(state: {cls}) -> dict:")
+        self.add(f'    """{head}: starts the conversation in state[{chat}].')
+        self.add("")
+        self.add("    Then the model and the tools take turns, one node each:")
+        self.add(f"    - {model}() asks the model, which answers or asks for tool calls;")
+        self.add(f"    - {tool}() runs one tool call (route_{model}() and route_{tool}() pick the next node);")
+        self.add(f"    - {end}() writes the answer.\"\"\"")
+        self.add("    messages = []")
+        if d.get("system_prompt"): self.add(f"    messages.append({{\"role\": \"system\", \"content\": render({const}_SYSTEM, state)}})")
+        if d.get("history_field"):
+            self.add(f"    for m in state.get({lit(d['history_field'])}) or []:  # the earlier turns of a chat")
+            self.add("        if isinstance(m, dict) and m.get(\"role\") in (\"user\", \"assistant\") and isinstance(m.get(\"content\"), str):")
+            self.add("            messages.append({\"role\": m[\"role\"], \"content\": m[\"content\"]})")
+        self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}})")
+        self.add(f"    return {{{chat}: {{\"messages\": messages, \"pending\": [], \"rounds\": 0, \"steps\": [], \"answer\": None}}}}")
+        self.add("")
+        self.add("")
+        self.add(f"def {model}(state: {cls}) -> dict:")
+        self.add(f'    """{_doc(who)}: one model call. After {const}_MAX_ROUNDS rounds the model gets no tools, so it has to answer."""')
+        self.add(f"    chat = dict(state[{chat}])")
+        self.add(f"    last = chat[\"rounds\"] >= {const}_MAX_ROUNDS")
+        self.add(f"    text, calls = call_agent(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
+        self.add("    calls = [] if last else [{\"id\": str(c.get(\"id\") or f\"call_{i}\"), \"name\": str(c.get(\"name\") or \"\"), \"args\": c.get(\"args\")}")
+        self.add("                             for i, c in enumerate(calls)]")
+        self.add("    if not last:")
+        self.add("        chat[\"rounds\"] += 1")
+        self.add("    chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"assistant\", \"content\": text, **({\"tool_calls\": calls} if calls else {})}]")
+        self.add("    chat[\"pending\"] = calls[:MAX_CALLS_PER_ROUND]")
+        self.add("    for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run")
+        self.add("        why = f\"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round\"")
+        self.add("        chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"tool\", \"tool_call_id\": c[\"id\"], \"name\": c[\"name\"], \"content\": why}]")
+        self.add("        chat[\"steps\"] = chat[\"steps\"] + [{\"tool\": c[\"name\"], \"args\": c[\"args\"], \"result\": why, \"status\": \"refused\", \"ms\": 0}]")
+        self.add("    if not calls:")
+        self.add("        chat[\"answer\"] = text")
+        self.add(f"    return {{{chat}: chat}}")
+        self.add("")
+        self.add("")
+        self.add(f"def route_{model}(state: {cls}) -> str:")
+        self.add("    \"\"\"After a model call: \"tool\" while tool calls wait, else \"done\".\"\"\"")
+        self.add(f"    return \"tool\" if state[{chat}][\"pending\"] else \"done\"")
+        self.agent_calls(d, name, const, cls)
+        self.add("")
+        self.add("")
+        self.add(f"def {tool}(state: {cls}) -> dict:")
+        self.add(f'    """{_doc(who)}: runs the first tool call the model asked for and gives the result back to the model.')
+        if approval:
+            self.add(f"    A tool in {const}_NEEDS_APPROVAL asks first with interrupt(): \"approved\" runs the call; any other answer")
+            self.add("    rejects it, and the model is told why. On resume the node runs again from the top.")
+        if (d.get("approval") or {}).get("channel") or d.get("deadline"):
+            self.add("    In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
+        self.add('    """')
+        self.add(f"    chat = dict(state[{chat}])")
+        self.add("    call, chat[\"pending\"] = chat[\"pending\"][0], chat[\"pending\"][1:]")
+        self.add(f"    spec = next((t for t in {const}_TOOLS if t[\"name\"] == call[\"name\"]), None)")
+        self.add("    problem = None if spec is None else check_arguments(spec[\"parameters\"], call[\"args\"])")
+        if approval:
+            self.add("    answer = None")
+            self.add(f"    if spec is not None and problem is None and call[\"name\"] in {const}_NEEDS_APPROVAL:")
+            self.add(f"        question = ({lit(who + ' wants to call ')} + call[\"name\"] + \" with these arguments:\\n\"")
+            self.add("                    + json.dumps(call[\"args\"], ensure_ascii=False, indent=2)")
+            self.add("                    + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\")")
+            self.add(f"        answer = str(interrupt({{\"node\": {lit(name)}, \"question\": question}}))")
+        self.add("    started = time.perf_counter()")
+        self.add("    if spec is None:")
+        self.add(f"        status, result = \"error\", f\"Unknown tool {{call['name']}}: use one of {{', '.join(sorted(t['name'] for t in {const}_TOOLS))}}\"")
+        self.add("    elif problem:")
+        self.add("        status, result = \"error\", f\"Invalid arguments for {call['name']}: {problem}\"")
+        if approval:
+            self.add("    elif answer is not None and answer.strip().lower() != \"approved\":")
+            self.add("        comment = \"\" if answer.strip().lower() == \"rejected\" else answer.strip()")
+            self.add("        status, result = \"rejected\", \"Rejected by a reviewer\" + (f\": {comment}\" if comment else \"\")")
+        self.add("    else:")
+        self.add("        try:")
+        self.add(f"            status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
+        self.add("        except Exception as error:  # the model hears about the failure and can try something else")
+        self.add("            status, result = \"error\", f\"The tool failed: {error}\"")
+        self.add("    step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
+        self.add("            \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
+        if approval:
+            self.add("    if answer is not None:")
+            self.add("        step[\"approval\"] = \"rejected\" if status == \"rejected\" else \"approved\"")
+        self.add("    chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"tool\", \"tool_call_id\": call[\"id\"], \"name\": call[\"name\"],")
+        self.add("                                          \"content\": shorten(result, RESULT_CHARS)}]")
+        self.add("    chat[\"steps\"] = chat[\"steps\"] + [step]")
+        self.add(f"    return {{{chat}: chat}}")
+        self.add("")
+        self.add("")
+        self.add(f"def route_{tool}(state: {cls}) -> str:")
+        self.add("    \"\"\"After a tool call: the next waiting call, else back to the model with the results.\"\"\"")
+        self.add(f"    return \"tool\" if state[{chat}][\"pending\"] else \"model\"")
+        self.add("")
+        self.add("")
+        self.add(f"def {end}(state: {cls}) -> dict:")
+        self.add(f'    """{_doc(who)}: the model\'s answer into the state, and the conversation cleared."""')
+        self.add(f"    chat = state[{chat}]")
+        out = [f"{lit(d.get('output_field') or '')}: chat[\"answer\"] or \"\""]
+        if d.get("steps_field"): out.append(f"{lit(d['steps_field'])}: chat[\"steps\"]")
+        self.add(f"    return {{{', '.join(out)}, {chat}: None}}")
+
+    def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
+        """call_<agent>_tool(): what each of the Agent node's tools does."""
+        self.add("")
+        self.add("")
+        self.add(f"def call_{name}_tool(name: str, args: dict, state: {cls}) -> Any:")
+        self.add("    \"\"\"Runs the tool the model asked for with the model's arguments.\"\"\"")
+        for t in d.get("tools") or []:
+            if not isinstance(t, dict): continue
+            src, tname = t.get("source"), t.get("name") or ""
+            self.add(f"    if name == {lit(tname)}:")
+            if src == "builtin":
+                fn = t.get("function") or ""
+                if fn in self.extra: self.add(f"        return {fn}({{**state, **args}})  # the arguments over the state, as in the studio")
+                else:
+                    self.add(f"        # TODO: the function {lit(fn)} is not registered on this server any more.")
+                    self.add("        return None")
+            elif src == "knowledge":
+                self.add(f"        return retrieve(str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
+            elif src == "mcp":
+                self.add(f"        return call_mcp_tool({lit(t.get('tool') or '')}, args)")
+            elif src == "http":
+                method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
+                key = self.http_key(const, t)
+                self.add(f"        values = {{**state, \"args\": args}}  # the templates read the arguments as {{{{state.args.<name>}}}}")
+                self.add(f"        url, body = render({key}_URL, values), render({key}_BODY, values)")
+                uses_args = "args" in {r.field for r in refs(url) + refs(body)}
+                query = method == "GET" and not uses_args
+                if not body and method in ("POST", "PUT", "PATCH"):
+                    self.add("        body = json.dumps(args, ensure_ascii=False)  # no body template: the arguments as JSON")
+                if query: self.add("        query = {k: tool_text(v) for k, v in args.items()}  # the URL does not use the arguments")
+                self.add(f"        response = httpx.request({lit(method)}, url, {'params=query or None, ' if query else ''}content=body.encode() or None,")
+                self.add("                                 headers={\"Content-Type\": \"application/json\"}, timeout=30, follow_redirects=False)")
+                self.add("        try:")
+                self.add("            return response.json()")
+                self.add("        except ValueError:")
+                self.add("            return response.text")
+            else:
+                self.add(f"        raise ValueError({lit(f'unknown tool source {src!r}')})")
+        self.add("    raise ValueError(f\"unknown tool {name}\")")
+
+    @staticmethod
+    def http_key(const: str, t: dict) -> str:
+        return f"{const}_{re.sub(r'[^A-Za-z0-9]', '_', t.get('name') or '').upper()}"
+
+    @staticmethod
+    def rounds(d: dict) -> int:
+        r = d.get("max_rounds", agents.DEFAULT_ROUNDS)
+        return r if isinstance(r, int) and not isinstance(r, bool) and 1 <= r <= agents.MAX_ROUNDS else agents.DEFAULT_ROUNDS
+
     def build(self, g: _Graph, cls: str, build: str, is_main: bool) -> None:
         name = lambda i: "END" if g.nodes[i]["type"] == "end" else lit(g.names[i])  # noqa: E731
+        leave = lambda i: lit(g.agents[i]["exit"]) if i in g.agents else lit(g.names[i])  # an Agent node's edges leave from its end node  # noqa: E731
         cache = any(_number((n.get("data") or {}).get("cache_ttl"), int) is not None for n in g.nodes.values())
         self.add("")
         self.add("")
@@ -661,6 +928,8 @@ class _Writer(GraphWriter):
             if self.inputs(g, nid):
                 kw.append(f"input_schema={_camel(g.names[nid])}Input")
             self.add(f"    builder.add_node({lit(g.names[nid])}, {fn}{''.join(', ' + k for k in kw)})")
+            if n["type"] == "agent":
+                for step in ("model", "tool", "exit"): self.add(f"    builder.add_node({lit(g.agents[nid][step])}, {g.agents[nid][step]})")
             if (timeout := _number(d.get("timeout"))) is not None:
                 self.add(f"    # The studio stops {g.names[nid]} after {timeout} s; LangGraph has no timeout for a node that blocks.")
             if is_main: self.span(nid, s)
@@ -671,8 +940,14 @@ class _Writer(GraphWriter):
             n = g.nodes[nid]
             if n["type"] in ("end", "note"): continue
             out = g.out(nid)
-            src = "START" if n["type"] == "start" else lit(g.names[nid])
+            src = "START" if n["type"] == "start" else leave(nid)
             s = len(self.lines) + 1
+            if n["type"] == "agent":
+                a = {k: lit(v) for k, v in g.agents[nid].items()}
+                self.add("    # The Agent node's loop: the model, then each tool call it asks for, then back to the model.")
+                self.add(f"    builder.add_edge({lit(g.names[nid])}, {a['model']})")
+                self.add(f"    builder.add_conditional_edges({a['model']}, route_{g.agents[nid]['model']}, {{\"tool\": {a['tool']}, \"done\": {a['exit']}}})")
+                self.add(f"    builder.add_conditional_edges({a['tool']}, route_{g.agents[nid]['tool']}, {{\"tool\": {a['tool']}, \"model\": {a['model']}}})")
             if n["type"] in ("condition", "foreach") and out:
                 if first_edge and n["type"] == "condition":
                     self.add("    # A conditional edge: the router returns a label, and the map says which node it leads to.")
@@ -689,7 +964,7 @@ class _Writer(GraphWriter):
                 for e in out:
                     if g.nodes[e["target"]]["type"] == "end": self.span(e["target"], len(self.lines))
         for j in joins:
-            srcs = [("START" if g.nodes[e["source"]]["type"] == "start" else lit(g.names[e["source"]]))
+            srcs = [("START" if g.nodes[e["source"]]["type"] == "start" else leave(e["source"]))
                     for e in g.edges if e["target"] == j and e["source"] in g.nodes]
             s = len(self.lines) + 1
             self.add(f"    # Fan-in: {g.names[j]} waits for all of {', '.join(x.strip(chr(34)) for x in srcs)}.")

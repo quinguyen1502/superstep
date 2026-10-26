@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0110
-- Status: review (PR)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
-- Updated: 2026-10-24
+- Updated: 2026-10-25
 - Requirement IDs: REQ-0066
 - Design IDs: none
 - Architecture IDs: DEC-0060
@@ -34,6 +34,7 @@ Make `factory validate` clean on develop.
 ## Activity Log
 
 - 2026-10-24: implemented and validated (QA-0102); PR into develop.
+- 2026-10-25: PR #137 merged into develop (a22433f); moved to done by TASK-0112.
 
 ## Handoff Notes
 

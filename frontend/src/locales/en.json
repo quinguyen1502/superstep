@@ -190,7 +190,6 @@
     "inputFields": "Input fields",
     "inputFieldsHint": "Leave all off to pass the whole state. Turn fields on to pass only those.",
     "inputFieldsEmpty": "Add a state field to choose what this node sees.",
-    "runtime": "Execution",
     "retryAttempts": "Retry attempts",
     "retryWait": "Wait between tries (seconds)",
     "nodeTimeout": "Timeout (seconds)",
@@ -222,7 +221,21 @@
     "tabRun": "Run",
     "pickRun": "Pick a run…",
     "viewAllRuns": "View all",
-    "historyDesc": "Every run of this workflow. Open one to replay it in the logs."
+    "historyDesc": "Every run of this workflow. Open one to replay it in the logs.",
+    "mobileNav": {
+      "label": "Editor views",
+      "canvas": "Canvas",
+      "nodes": "Nodes",
+      "addHint": "Tap a node to add it to the canvas."
+    },
+    "configTabs": {
+      "label": "Node settings",
+      "settings": "Settings",
+      "data": "Data",
+      "execution": "Execution",
+      "issue": "Needs attention",
+      "nothing": "This node has nothing else to set."
+    }
   },
   "nodes": {
     "start": "Start point",
@@ -238,7 +251,8 @@
     "mcp": "Call a tool on an MCP server",
     "foreach": "Repeat a branch for each list item",
     "decision": "Ask TypeSafe Jev typed questions",
-    "email": "Send an e-mail through SMTP"
+    "email": "Send an e-mail through SMTP",
+    "agent": "A model that picks and calls tools"
   },
   "trace": {
     "idle": "Not run",
@@ -269,7 +283,19 @@
     "estimated": "(estimated)",
     "waiting": "Waiting for a human",
     "paused": "Paused after a step",
-    "streaming": "Streaming from the model…"
+    "streaming": "Streaming from the model…",
+    "agent": {
+      "round": "Round {{n}}",
+      "calls": "calls {{tools}}",
+      "answer": "answer: {{text}}",
+      "limit": "round limit reached",
+      "status": {
+        "error": "error",
+        "refused": "refused",
+        "rejected": "rejected by a reviewer"
+      },
+      "approved": "approved"
+    }
   },
   "import": {
     "button": "Import repo",
@@ -423,6 +449,7 @@
     "CHECKPOINT_NOT_FOUND": "Checkpoint not found in this run, or it cannot be forked",
     "RUN_FORK_UNSUPPORTED": "Runs of imported LangGraph graphs cannot be forked",
     "RUN_RESPONSE_INVALID": "The response must be text (max {{max}} characters)",
+    "MCP_SERVER_DISABLED": "This workflow is not exposed as an MCP tool; turn it on under API in the editor",
     "TRIGGER_TOKEN_INVALID": "Missing, invalid or revoked workflow token",
     "TOKEN_NOT_FOUND": "Token not found",
     "SCHEDULE_NOT_FOUND": "Schedule not found",
@@ -453,9 +480,11 @@
     "TEST_NOT_SUPPORTED": "Imported LangGraph workflows cannot have tests",
     "PYTHON_EXPORT_UNAVAILABLE": "Imported LangGraph workflows are Python code already: there is nothing to export.",
     "TYPESCRIPT_EXPORT_UNAVAILABLE": "Imported LangGraph workflows are Python code: they cannot be exported as TypeScript.",
+    "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED": "Agent nodes cannot be exported as TypeScript yet ({{node}}): export the workflow as Python.",
     "EXPORT_LANGUAGE_UNSUPPORTED": "Cannot export to {{language}}: use one of {{supported}}.",
     "CALLBACK_URL_INVALID": "callback_url must be a public http(s) URL",
     "VERSION_NOT_FOUND": "That version no longer exists.",
+    "RUN_INTERRUPTED": "The server stopped while this run was going {{attempts}} times, so it was not continued again",
     "RUN_EXPIRED": "This run waited too long for a response and has expired.",
     "RATE_LIMITED": "Too many requests. Try again in {{retry_after}} s.",
     "NOTIFICATION_NOT_FOUND": "Notification not found.",
@@ -533,6 +562,7 @@
     "MODEL_NOT_FOUND": "{{provider}} has no model named {{model}}",
     "CREDENTIAL_HEADER_UNSUPPORTED": "{{provider}} does not accept the header {{header}}",
     "PROVIDER_EMBEDDINGS_UNSUPPORTED": "{{provider}} does not provide embeddings; choose another credential for this knowledge base",
+    "AGENT_TOOLS_UNSUPPORTED": "{{provider}} cannot call tools; choose a credential with tool calling for this Agent node",
     "KB_EMBEDDING_DIMENSION_MISMATCH": "The embedding model returns {{got}}-dimensional vectors but this knowledge base stores {{expected}}-dimensional ones; re-index the knowledge base",
     "TEMPLATE_NOT_FOUND": "Template not found",
     "TEMPLATE_READ_ONLY": "This template cannot be deleted",
@@ -586,7 +616,8 @@
   "samples": {
     "input": "{\n  \"message\": \"Where is my order A100?\"\n}",
     "prompt": "Answer: {{var}}",
-    "greeting": "Hello!"
+    "greeting": "Hello!",
+    "agentPrompt": "Help the user: {{var}}"
   },
   "human": {
     "title": "Waiting for your response",
@@ -628,6 +659,26 @@
     "showRevoked": "Show revoked ({{count}})",
     "revokeTitle": "Revoke token {{name}}?",
     "revokeBody": "Clients using this token are refused immediately. This cannot be undone."
+  },
+  "mcpServer": {
+    "tab": "MCP",
+    "enable": "Expose as an MCP tool",
+    "enableHelp": "MCP clients (Claude Desktop, Cursor, other agents) connect with a token of this workflow and call it as a tool. Off by default.",
+    "needsToken": "Create a token on the Tokens tab first: clients authenticate with it.",
+    "url": "Server URL",
+    "tools": "Tools: {{tool}} (input = the workflow's state fields), get_run, resume_run.",
+    "client": "Client",
+    "clients": {
+      "cursor": "Cursor",
+      "claude-desktop": "Claude Desktop",
+      "claude-code": "Claude Code"
+    },
+    "where": {
+      "cursor": ".cursor/mcp.json",
+      "claude-desktop": "claude_desktop_config.json (via mcp-remote)",
+      "claude-code": "Terminal"
+    },
+    "human": "A run that pauses at a Human node returns status waiting with its run_id; the client answers it with resume_run. Runs show in history with source API."
   },
   "versions": {
     "button": "Versions",
@@ -1321,6 +1372,10 @@
       "builtin-feedback-digest": {
         "name": "Customer feedback digest",
         "description": "Label each piece of feedback, write a report and e-mail it to the team."
+      },
+      "builtin-support-agent": {
+        "name": "Support agent",
+        "description": "An agent looks up orders and the refund policy; a person approves each refund it requests."
       }
     }
   },
@@ -1546,7 +1601,8 @@
     "removeQuestion": "Remove question {{id}}",
     "removeItem": "Remove",
     "outputField": "All answers with probabilities go to (object field)",
-    "hint": "Write a choice to a text field, then use a Condition on that field to branch. Score and yes/no answers need a number field. Ctrl+Z undoes a removal."
+    "hint": "Write a choice to a text field, then use a Condition on that field to branch. Score and yes/no answers need a number field. Ctrl+Z undoes a removal.",
+    "fieldFor": "{{id}}: write the answer to"
   },
   "email": {
     "credential": "SMTP credential",
@@ -1700,6 +1756,7 @@
       "status": "Run status",
       "field": "State field",
       "node": "Node",
+      "tool": "Tool called",
       "duration": "Duration",
       "cost": "Cost"
     },
@@ -1707,6 +1764,8 @@
     "compare": "Comparison",
     "value": "Value",
     "node": "Node",
+    "agentNode": "Agent node",
+    "tool": "Tool",
     "unit": {
       "duration": "seconds at most",
       "cost": "US$ at most"
@@ -1723,6 +1782,10 @@
       "ran": "ran",
       "not_ran": "did not run"
     },
+    "called": {
+      "called": "called",
+      "not_called": "not called"
+    },
     "status": {
       "queued": "Queued",
       "running": "Running",
@@ -1736,6 +1799,8 @@
       "fieldNoValue": "{{field}} {{op}}",
       "ran": "“{{node}}” ran",
       "notRan": "“{{node}}” did not run",
+      "called": "“{{node}}” called {{tool}}",
+      "notCalled": "“{{node}}” did not call {{tool}}",
       "duration": "Takes at most {{max}} s",
       "cost": "Costs at most ${{max}}"
     },
@@ -1914,5 +1979,44 @@
     "notConfigured": "Set LANGSMITH_API_KEY on the server to turn this on.",
     "tracingOn": "Runs are traced to the LangSmith project {{project}}; each run links to its trace.",
     "tracingOff": "Set LANGSMITH_TRACING=true to also trace runs to LangSmith."
+  },
+  "agent": {
+    "systemPrompt": "System prompt (optional, {{field}})",
+    "taskPrompt": "Task prompt ({{field}})",
+    "maxRounds": "Max rounds",
+    "maxRoundsHint": "One round is a model call plus the tool calls it asks for. At the limit, the model answers without tools.",
+    "none": "None",
+    "stepsField": "Steps field (optional)",
+    "stepsHint": "A list field that gets each tool call: tool, arguments, result and status.",
+    "historyField": "History field (optional)",
+    "historyHint": "A list of earlier messages ({role, content}) added before the task prompt, such as a chat's messages field.",
+    "tools": "Tools",
+    "toolsHint": "The model can call only these tools. It reads each tool's name and description to choose.",
+    "noToolsYet": "Add at least one tool.",
+    "addTool": "Add tool",
+    "sources": {
+      "mcp": "MCP tool",
+      "http": "HTTP request",
+      "builtin": "Built-in function",
+      "knowledge": "Knowledge base search"
+    },
+    "toolName": "Name",
+    "duplicateName": "Another tool has this name.",
+    "toolDescription": "Description for the model",
+    "needsApproval": "Needs approval",
+    "approvalHint": "Calls to tools that need approval wait for an approver, with these settings.",
+    "moveUp": "Move {{name}} up",
+    "moveDown": "Move {{name}} down",
+    "removeTool": "Remove {{name}}",
+    "parameters": "Parameters the model fills",
+    "paramName": "Parameter name",
+    "paramType": "Type",
+    "paramDescription": "Description",
+    "paramRequired": "Required",
+    "addParam": "Add parameter",
+    "removeParam": "Remove parameter {{name}}",
+    "httpArgsHint": "Use {{arg}} in the URL or body to insert a parameter. Without a body, POST, PUT and PATCH send the parameters as JSON, and GET adds them to the URL.",
+    "kbHint": "The model writes the search query.",
+    "noToolCalling": "{{provider}} cannot call tools. Choose a credential with tool calling for this Agent node."
   }
 }

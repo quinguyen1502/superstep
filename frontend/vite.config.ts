@@ -17,6 +17,7 @@ export default defineConfig({
   build: { rolldownOptions: { output: { advancedChunks: { groups: VENDOR } } } },
   server: { host: '0.0.0.0', port: Number(process.env.STUDIO_UI_PORT || 5173), proxy: {
     '/api': `http://${API}`,
+    '/mcp': `http://${API}`,
     '/ws': { target: `ws://${API}`, ws: true },
   } },
 })

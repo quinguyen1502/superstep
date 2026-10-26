@@ -45,3 +45,7 @@ class ChatTriggerPatch(BaseModel):
     input_field: Optional[str] = Field(None, max_length=120)
     reply_field: Optional[str] = Field(None, max_length=120)
     enabled: Optional[bool] = None
+
+
+class McpSettingsIn(BaseModel):
+    enabled: bool

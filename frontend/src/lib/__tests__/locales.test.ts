@@ -18,6 +18,7 @@ const SAME_OK = new Set([
   'langsmith.title',
   'tests.langsmith',
   'api.button',
+  'mcpServer.tab', 'mcpServer.clients.cursor', 'mcpServer.clients.claude-desktop', 'mcpServer.clients.claude-code', 'mcpServer.where.cursor',  // product names, a file name
   'timeTravel.state',
   'approvals.col.run',
   'approvals.field.access_token',
@@ -35,6 +36,7 @@ const SAME_OK = new Set([
   'chat.step.input',
   'chat.step.output',
   'chat.tab',
+  'editor.mobileNav.canvas',  // glossary: canvas stays in English
   'approvals.identityPh.whatsapp',
   'approvals.kind.slack',
   'approvals.kind.studio',

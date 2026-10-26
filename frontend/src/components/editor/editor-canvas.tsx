@@ -10,10 +10,12 @@ import { CanvasEdit } from './canvas-edit'
 import { nodeTypes } from './node-types'
 import { Tip } from '@/components/tip'
 import { removable } from '@/lib/graph-ops'
+import { useIsMobile } from '@/lib/use-viewport-width'
 
 /** Canvas with its context menu (TASK-0040). */
 export function EditorCanvas() {
   const { t } = useTranslation()
+  const mobile = useIsMobile()  // phones (TASK-0121): zoom out further so a whole workflow fits the narrow screen
   const { nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, setSel, source, edit, dark, rf, removeIds, clipNote, copyIds, insert, editable, insertAround, addNode, addNote, ctx, setCtx, nodesView, onNodeClick, onConnect, onDrop, canvasLock, setCanvasLock } = useStudioCtx()
   return <ContextMenu>
     <ContextMenuTrigger asChild>
@@ -33,12 +35,12 @@ export function EditorCanvas() {
         onEdgeClick={(_, e) => setSel({ kind: 'edge', id: e.id })}
         onEdgeContextMenu={(e, ed) => { if (!edit || source) { e.preventDefault(); e.stopPropagation(); return } setCtx({ kind: 'edge', id: ed.id }); setSel({ kind: 'edge', id: ed.id }) }}
         onPaneContextMenu={e => { if (!editable) { e.preventDefault(); e.stopPropagation(); return } setCtx({ kind: 'pane', at: rf.screenToFlowPosition({ x: e.clientX, y: e.clientY }) }) }}
-        onPaneClick={() => setSel(null)} deleteKeyCode={null} fitView>
+        onPaneClick={() => setSel(null)} deleteKeyCode={null} fitView minZoom={mobile ? 0.2 : undefined}>
         <Background /><Controls showInteractive={false}>
           <Tip tip={t(canvasLock ? 'editor.unlockCanvas' : 'editor.lockCanvas')}><ControlButton onClick={() => setCanvasLock(v => !v)} aria-label={t(canvasLock ? 'editor.unlockCanvas' : 'editor.lockCanvas')}>
             <CanvasLockIcon locked={canvasLock} />
           </ControlButton></Tip>
-        </Controls><MiniMap pannable zoomable className="[&>svg]:h-20 [&>svg]:w-28" />
+        </Controls><MiniMap pannable zoomable className="[&>svg]:h-20 [&>svg]:w-28 max-md:hidden" />
       </ReactFlow>
       </CanvasEdit.Provider>
     </main>

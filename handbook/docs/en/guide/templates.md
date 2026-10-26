@@ -7,7 +7,7 @@
 | Group | Contents |
 | --- | --- |
 | Blank workflow | Start and End only. |
-| Built-in | The twelve templates below. |
+| Built-in | The thirteen templates below. |
 | Only me | Templates you saved. |
 | Organisation | Templates shared with everyone. |
 
@@ -30,12 +30,13 @@ a new workflow you own. Built-in names and descriptions follow the UI language.
 | **Purchase request** | A team lead approves in Slack, then finance approves by e-mail. The requester hears back either way. |
 | **Support with escalation** | Answers from a knowledge base; a Decision node sends unsure answers to a support agent in the studio. |
 | **Customer feedback digest** | A For each loop labels every piece of feedback, then an LLM writes a report that is e-mailed to the team. |
+| **Support agent** | An [Agent node](agent.md) looks up orders and the refund policy; a person approves each refund it requests. |
 
 A template with an approval channel names only the channel. After creating it, pick the
 connection, the target and the approvers on the Human node (see
 [Approval channels](../operate/channels.md)). Until then a run waits at the
-Human node and can be answered in the studio. **RAG Q&A** and **Support with
-escalation** need a knowledge base before they run.
+Human node and can be answered in the studio. **RAG Q&A**, **Support with
+escalation** and **Support agent** need a knowledge base before they run.
 
 Each built-in template comes with one to three test cases that show what it is
 for, for example "Approved leave" and "Rejected leave". A workflow made from it
@@ -54,8 +55,8 @@ says nothing within a day. Change or turn them off on the node.
 sees it. Organisation scope needs `org.manage`.
 
 Templates never carry credentials, knowledge bases, MCP servers, approval
-connections, targets or approvers, subgraph links, headers or API keys. Those
-fields are emptied, so pick your own after creating. A Human node keeps only
+connections, targets or approvers, subgraph links, headers or API keys, also
+inside an Agent node's tools. Those fields are emptied, so pick your own after creating. A Human node keeps only
 the kind of channel it uses, and its deadline without the hand-over addresses.
 
 ## Export and import

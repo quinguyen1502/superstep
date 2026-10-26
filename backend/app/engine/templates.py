@@ -20,6 +20,9 @@ def sanitize(wf: dict) -> dict:
              if not k.startswith("_") and k.lower() not in SECRET_KEYS}
         for f in REF_FIELDS:
             if f in d: d[f] = ""
+        if isinstance(d.get("tools"), list):  # an Agent node's tools point at servers and knowledge bases too (TASK-0119)
+            d["tools"] = [{k: "" if k in REF_FIELDS else v for k, v in t.items() if not k.startswith("_") and k.lower() not in SECRET_KEYS}
+                          if isinstance(t, dict) else t for t in d["tools"]]
         if isinstance(d.get("approval"), dict):  # a Human node keeps only the channel kind, not the connection, target or approvers (TASK-0064)
             d["approval"] = {"channel": d["approval"]["channel"]} if d["approval"].get("channel") else {}
         if isinstance(d.get("deadline"), dict):  # the timing stays, the escalation addresses go, like approvers (TASK-0066)
@@ -118,6 +121,7 @@ def _ask(i, x, y, label, prompt, field, kind=None, due=None):
 def _llm(i, x, y, label, prompt, field): return _n(i, "llm", x, y, label=label, model="gpt-4o-mini", output_field=field, prompt=prompt)
 def _mail(i, x, y, label, to, subject, body, **kw): return _n(i, "email", x, y, label=label, to=to, subject=subject, body=body, format="text", **kw)
 def _route(i, x, y, label, field, default="rejected"): return _n(i, "condition", x, y, label=label, field=field, default=default)
+def _tool(name, description, source, **settings): return {"name": name, "description": description, "source": source, **settings}
 def _choice(qid, instructions, *options):
     return {"id": qid, "type": "choice", "instructions": instructions, "field": qid, "options": [{"label": l, "description": d} for l, d in options]}
 
@@ -226,6 +230,24 @@ BUILTINS += [
 
 
 
+# An Agent node (TASK-0119, REQ-0072): the model picks the tools; a refund waits for a person's approval first.
+BUILTINS += [
+    {"id": "builtin-support-agent", "name": "Support agent", "description": "An agent looks up orders and the refund policy; a person approves each refund it requests.", "workflow": {
+        "state": _s("message", "answer", "steps:list"),
+        "nodes": [_n("start", "start", 40, 200, label="Start"),
+                  _n("agent", "agent", 280, 200, label="Support agent", model="gpt-4o-mini", max_rounds=6, output_field="answer", steps_field="steps",
+                     system_prompt="You are the support agent of an online shop. Use the tools to look up orders and the refund policy. "
+                                   "Request a refund only when the policy allows it, and say what you did.",
+                     prompt="Help this customer. Message: {{state.message}}",
+                     tools=[_tool("lookup_order", "Find the delivery status of an order", "builtin", function="lookup_order"),
+                            _tool("search_refund_policy", "Search the refund policy", "knowledge", knowledge_base_id="", top_k=3),
+                            _tool("request_refund", "Request a refund for an order that arrived broken or late", "builtin", function="request_refund",
+                                  approval=True)],
+                     deadline={"after": "1d", "on_timeout": "reject"}),
+                  _n("end", "end", 560, 200, label="End")],
+        "edges": [_e("e1", "start", "agent"), _e("e2", "agent", "end")]}},
+]
+
 # Test cases of each built-in template (TASK-0069, REQ-0042), in the shape of the workflow tests API. They pass with the
 # offline mock model: a Condition takes the label it finds as a whole word, and the Decision mock the label it finds in the
 # state, so the inputs name their branch. A workflow made from the template gets a copy; saved templates carry none.
@@ -233,6 +255,8 @@ def _case(name, inp, answers=None, *checks): return {"name": name, "input": inp,
 def _ran(node, ran=True): return {"kind": "node", "node": node, "ran": ran}
 def _is(field, value): return {"kind": "field", "field": field, "op": "equals", "value": value}
 def _filled(field): return {"kind": "field", "field": field, "op": "not_empty"}
+def _has(field, text): return {"kind": "field", "field": field, "op": "contains", "value": text}
+def _called(node, tool, called=True): return {"kind": "tool", "node": node, "tool": tool, "called": called}
 OK = {"kind": "status", "value": "ok"}
 YES, NO = ["approved"], ["rejected"]
 
@@ -279,6 +303,13 @@ TESTS: dict[str, list[dict]] = {
               {"lead": YES, "finance": NO}, _ran("rejected_mail"), _ran("approved_mail", False))],
     "builtin-support-escalation": [
         _case("Sure answer goes straight out", {"message": "How long is the laptop warranty?"}, None, _is("verdict", "answered"), _ran("review", False), _filled("answer"))],
+    "builtin-support-agent": [
+        _case("Order status comes from the order tool", {"message": "Where is my order B200?"}, None,
+              _called("agent", "lookup_order"), _called("agent", "request_refund", False), _has("answer", "In transit")),
+        _case("Approved refund is requested", {"message": "Order A100 arrived broken, please refund it"}, {"agent": YES},
+              _called("agent", "request_refund"), _has("answer", "Refund requested for order A100")),
+        _case("Rejected refund is not requested", {"message": "Order A100 arrived broken, please refund it"}, {"agent": NO},
+              _called("agent", "request_refund", False), _has("answer", "Rejected by a reviewer"))],
     "builtin-feedback-digest": [
         _case("Three pieces of feedback make one report", {"feedback": ["Love the new editor", "Runs are slow on Mondays", "Please add a Discord channel"]},
               None, _ran("send"), _filled("report"), _filled("sent"))],

@@ -17,6 +17,12 @@ node, nối state, và dùng lại công sức giữa các workflow.
 
     Từng loại node, cấu hình và cách nó chạy trong một run.
 
+-   :material-robot-outline:{ .lg .middle } **[Node Agent](agent.md)**
+
+    ---
+
+    Model tự chọn và gọi các công cụ bạn cho phép, có giới hạn số vòng và bước duyệt.
+
 -   :material-code-braces:{ .lg .middle } **[State và tham chiếu](state.md)**
 
     ---

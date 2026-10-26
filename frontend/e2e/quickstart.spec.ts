@@ -1,5 +1,5 @@
 // The handbook quickstart, done in the UI: build, run, approve, trigger over HTTP, schedule.
-// Writes one frame per step plus the box of every control the step uses to scripts/promo/build/frames/<lang>/
+// Writes one frame per step (and two phone-*.png at 390x844) plus the box of every control the step uses to scripts/promo/build/frames/<lang>/
 // (flow.json) for the intro video, and copies the quickstart screenshots to handbook/docs/<lang>/images/.
 // Run: HANDBOOK_SHOTS=1 npm run e2e -- quickstart
 import fs from 'node:fs'
@@ -18,12 +18,15 @@ const T = {
     prompt: 'Write a short, polite reply to this customer message: {{state.message}}',
     question: 'Send this reply to the customer?\n\n{{state.reply}}',
     message: 'My order A100 arrived broken. Can I get a refund?', token: 'billing-service', schedule: 'Weekday check', history: 'History', wfName: 'Workflow name',
+    refund: 'Order A100 arrived broken, please refund it', kb: 'Refund policy',
   },
   vi: {
     name: 'Trả lời hoàn tiền', draft: 'Soạn trả lời', approve: 'Duyệt trả lời', label: 'Nhãn', output: 'Trường output', addField: 'Thêm trường',
     prompt: 'Viết một câu trả lời ngắn, lịch sự cho tin nhắn của khách: {{state.message}}',
     question: 'Gửi câu trả lời này cho khách?\n\n{{state.reply}}',
     message: 'Đơn A100 của tôi bị vỡ khi nhận. Tôi được hoàn tiền không?', token: 'billing-service', schedule: 'Kiểm tra ngày thường', history: 'Lịch sử', wfName: 'Tên workflow',
+    refund: 'Order A100 arrived broken, please refund it',  // the template's tools are in English: the mock agent picks one by shared words
+    kb: 'Chính sách hoàn tiền',
   },
 }
 // Frames that also illustrate the quickstart page
@@ -33,7 +36,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
   test.describe(`quickstart ${lang}`, () => {
     test.use({ locale: lang === 'en' ? 'en-US' : 'vi-VN' })
 
-    test(`capture ${lang}`, async ({ page }) => {
+    test(`capture ${lang}`, async ({ page, browser }) => {
       const s = T[lang]
       const dir = `../scripts/promo/build/frames/${lang}`
       fs.mkdirSync(dir, { recursive: true })
@@ -59,7 +62,9 @@ for (const lang of ['en', 'vi'] as Lang[]) {
         await page.locator('#panel-left').getByRole('button', { name: s.addField }).click()
         await page.locator('#panel-left input').last().fill(name)
       }
-      const pickOutput = async (name: string) => { await field(s.output).getByRole('combobox').click(); await page.getByRole('option', { name, exact: true }).click() }
+      // the output field is in the Config panel's Data tab (TASK-0121); back to Settings afterwards
+      const configTab = (k: 'settings' | 'data') => page.locator(`#config-tab-${k}`).click()
+      const pickOutput = async (name: string) => { await configTab('data'); await field(s.output).getByRole('combobox').click(); await page.getByRole('option', { name, exact: true }).click() }
 
       await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
       await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
@@ -118,15 +123,16 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await snap('llm-selected', { label: field(s.label).locator('input'), prompt: page.locator('#llm-prompt'), addField: page.locator('#panel-left').getByRole('button', { name: s.addField }) })
       await field(s.label).locator('input').fill(s.draft)
       await page.locator('#llm-prompt').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.insertText(s.prompt)
+      await snap('llm-prompt', { prompt: page.locator('#llm-prompt'), tabs: page.locator('#config-tabs') })
       await addField('reply'); await pickOutput('reply')
-      await snap('llm-config', { prompt: page.locator('#llm-prompt'), output: field(s.output), state: page.locator('#panel-left input').last(), human: page.locator(human) })
-      await page.locator(human).click()
+      await snap('llm-config', { tabs: page.locator('#config-tabs'), output: field(s.output), state: page.locator('#panel-left input').last(), human: page.locator(human) })
+      await page.locator(human).click(); await configTab('settings')
       await field(s.label).locator('input').fill(s.approve)
       await page.locator('#human-prompt').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.insertText(s.question)
-      await addField('decision'); await pickOutput('decision')
+      await addField('decision'); await pickOutput('decision'); await configTab('settings')
       // Send the request to Slack as well; the studio still shows it to the run's owner
       await page.locator('#approval-channel').scrollIntoViewIfNeeded()
-      await snap('human-config', { prompt: page.locator('#human-prompt'), output: field(s.output), channel: page.locator('#approval-channel') })
+      await snap('human-config', { prompt: page.locator('#human-prompt'), tabs: page.locator('#config-tabs'), channel: page.locator('#approval-channel') })
       await page.locator('#approval-channel').click(); await expect(page.getByRole('option', { name: /Slack/ })).toBeVisible()
       await snap('channels', { list: page.getByRole('listbox'), slack: page.getByRole('option', { name: /Slack/ }) })
       await page.getByRole('option', { name: /Slack/ }).click()
@@ -179,6 +185,54 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await page.locator('#history-all').click()
       await expect(page.getByTestId('history-row')).toHaveCount(2, { timeout: 30_000 })
       await snap('history', { rows: page.getByTestId('history-row').first() })
+
+      // 6. New: the Agent node from its template, an approved tool call, its rounds, time travel, MCP, the phone layout
+      await page.goto('/workflows'); await page.locator('#new-wf').click(); await expect(page.locator('#template-gallery')).toBeVisible()
+      const agentCard = page.locator('[data-testid=tpl-card][data-id=builtin-support-agent]')
+      await agentCard.scrollIntoViewIfNeeded()
+      await snap('gallery-agent', { card: agentCard })
+      await agentCard.locator('button').first().click()
+      const agent = '.react-flow__node-agent'
+      await expect(page.locator(agent)).toBeVisible()
+      const agentWid = page.url().split('/workflows/')[1]
+      // The policy search tool needs a knowledge base: a small one, picked for it, as the user would before the first run
+      for (const k of (await (await page.request.get('/api/knowledge-bases', { headers: H })).json()).data)
+        if (k.name === s.kb) await page.request.delete(`/api/knowledge-bases/${k.id}`, { headers: H })
+      const kb = (await (await page.request.post('/api/knowledge-bases', { headers: H, data: { name: s.kb } })).json()).data
+      const awf = (await (await page.request.get(`/api/workflows/${agentWid}`, { headers: H })).json()).data
+      for (const n of awf.nodes) if (n.type === 'agent') for (const tl of n.data.tools) if (tl.source === 'knowledge') tl.knowledge_base_id = kb.id
+      expect((await page.request.post('/api/workflows', { headers: H, data: awf })).ok()).toBeTruthy()
+      await page.reload(); await expect(page.locator(agent)).toBeVisible()
+      await page.locator(agent).click(); await configTab('settings')
+      await page.locator('#agent-tool-2').scrollIntoViewIfNeeded()
+      await snap('agent', { node: page.locator(agent), tool: page.locator('#agent-tool-2'), approval: page.locator('#agent-tool-2-approval') })
+      await page.locator('#run-tab').click()
+      await page.locator('#run-input').click(); await page.keyboard.press('ControlOrMeta+a')
+      await page.keyboard.insertText(JSON.stringify({ message: s.refund }, null, 2))
+      await page.locator('#run-btn').click()
+      await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'waiting', { timeout: 30_000 })
+      await snap('agent-waiting', { panel: page.locator('#human-panel'), approve: page.locator('#human-approve') })
+      await page.locator('#human-approve').click()
+      await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+      await snap('agent-trace', { timeline: page.locator('#trace-timeline'), round: page.locator('.trace-row[data-span="agent/__model#1"]'), travel: page.locator('#trace-time-travel') })
+      await page.locator('#trace-time-travel').click()
+      const cps = page.getByTestId('checkpoint')
+      await expect(cps.first()).toBeVisible(); await cps.first().click()
+      await snap('time-travel', { list: cps.first(), state: page.locator('#checkpoint-state'), fork: page.locator('#time-travel-fork') })
+      await page.keyboard.press('Escape'); await expect(page.locator('#time-travel-dialog')).toHaveCount(0)
+      await page.locator('#more-btn').click(); await page.locator('#api-btn').click(); await page.locator('#api-mcp-tab').click()
+      await page.locator('#mcp-enabled').click(); await expect(page.locator('#mcp-snippet')).toBeVisible()
+      await snap('mcp', { enabled: page.locator('#mcp-enabled'), snippet: page.locator('#mcp-snippet') })
+      await page.keyboard.press('Escape')
+      // The phone layout: the same signed-in session at 390x844, saved as phone-*.png (shown in a phone frame)
+      const phone = await browser.newContext({ storageState: await page.context().storageState(), viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: lang === 'en' ? 'en-US' : 'vi-VN' })
+      const mob = await phone.newPage()
+      await mob.goto(`/workflows/${agentWid}`); await expect(mob.locator('#mobile-tab-canvas')).toBeVisible(); await mob.waitForTimeout(600)
+      await mob.screenshot({ path: `${dir}/phone-canvas.png` })
+      await mob.locator(agent).click(); await mob.locator('#mobile-tab-config').click(); await expect(mob.locator('#config-tabs')).toBeVisible()
+      await mob.waitForTimeout(450); await mob.screenshot({ path: `${dir}/phone-config.png` })
+      await phone.close()
 
       fs.writeFileSync(`${dir}/flow.json`, JSON.stringify({ viewport: [1440, 900], frames, api }, null, 2))
       for (const [frame, doc] of Object.entries(DOC)) fs.copyFileSync(`${dir}/${frame}.png`, `../handbook/docs/${lang}/images/${doc}.png`)

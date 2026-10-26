@@ -24,7 +24,8 @@ export function EditorCodePanel() {
   useEffect(() => {
     if (!wid) return
     let live = true
-    api<CodeExport>(exportUrl(wid, language)).then(d => { if (live) { setOut(d); setErr('') } }).catch(e => { if (live) setErr(e.message) })
+    // a refused export (an Agent node in TypeScript, TASK-0119) must not leave the other language's file behind
+    api<CodeExport>(exportUrl(wid, language)).then(d => { if (live) { setOut(d); setErr('') } }).catch(e => { if (live) { setOut(null); setErr(e.message) } })
     return () => { live = false }
   }, [wid, saves, language])
   if (!wid) return <p className="p-3 text-xs text-muted-foreground" id="code-save-first">{t('codeView.saveFirst')}</p>

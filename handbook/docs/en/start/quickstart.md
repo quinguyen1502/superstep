@@ -60,7 +60,8 @@ workflow has one field, `message`, which holds the run input.
 
 4. Under **State schema** in the left panel, select **Add field** and name
    the new field `reply`.
-5. Set **Output field** to `reply`. The node writes its answer there.
+5. Open the **Data** tab and set **Output field** to `reply`. The node writes
+   its answer there.
 
 ![LLM node settings](../images/quickstart-llm.png)
 
@@ -75,9 +76,10 @@ workflow has one field, `message`, which holds the run input.
     {{state.reply}}
     ```
 
-3. Add a state field `decision` and set it as the **Output field**. It
+3. Add a state field `decision` and, in the **Data** tab, set it as the
+   **Output field**. It
    receives `approved`, `rejected` or a typed answer.
-4. Optional: under **Approval channel**, set **Send the approval request to**
+4. Optional: back in the **Settings** tab, under **Approval channel**, set **Send the approval request to**
    a connected Slack, Telegram, WhatsApp, e-mail or Teams channel, then its
    target (for Slack, the channel id). **Approvers (e-mails)** lists who else
    may answer. Channels are connected under **Settings → Channels**; see

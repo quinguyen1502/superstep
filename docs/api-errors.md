@@ -100,6 +100,7 @@
 | `MODEL_NOT_FOUND` | 400 | {provider} has no model named {model} |
 | `CREDENTIAL_HEADER_UNSUPPORTED` | 400 | {provider} does not accept the header {header} |
 | `PROVIDER_EMBEDDINGS_UNSUPPORTED` | 400 | {provider} does not provide embeddings; choose another credential for this knowledge base |
+| `AGENT_TOOLS_UNSUPPORTED` | 400 | {provider} cannot call tools; choose a credential with tool calling for this Agent node |
 | `KB_EMBEDDING_DIMENSION_MISMATCH` | 409 | The embedding model returns {got}-dimensional vectors but this knowledge base stores {expected}-dimensional ones; re-index the knowledge base |
 | `KB_NOT_FOUND` | 404 | Knowledge base not found or not yours |
 | `KB_NAME_REQUIRED` | 400 | Knowledge base name is required |
@@ -181,6 +182,7 @@
 | `CHECKPOINT_NOT_FOUND` | 404 | Checkpoint not found in this run, or it cannot be forked |
 | `RUN_FORK_UNSUPPORTED` | 400 | Runs of imported LangGraph graphs cannot be forked |
 | `RUN_RESPONSE_INVALID` | 400 | The response must be text (max {max} characters) |
+| `MCP_SERVER_DISABLED` | 403 | This workflow is not exposed as an MCP tool; turn it on under API in the editor |
 | `TRIGGER_TOKEN_INVALID` | 401 | Missing, invalid or revoked workflow token |
 | `TOKEN_NOT_FOUND` | 404 | Token not found |
 | `SCHEDULE_NOT_FOUND` | 404 | Schedule not found |
@@ -212,8 +214,10 @@
 | `PYTHON_EXPORT_UNAVAILABLE` | 400 | Imported LangGraph workflows are Python code already: there is nothing to export |
 | `TYPESCRIPT_EXPORT_UNAVAILABLE` | 400 | Imported LangGraph workflows are Python code: they cannot be exported as TypeScript |
 | `EXPORT_LANGUAGE_UNSUPPORTED` | 400 | Cannot export to {language}: use one of {supported} |
+| `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED` | 400 | Agent nodes cannot be exported as TypeScript yet ({node}): export the workflow as Python |
 | `CALLBACK_URL_INVALID` | 400 | callback_url must be a public http(s) URL |
 | `VERSION_NOT_FOUND` | 404 | Workflow version not found |
+| `RUN_INTERRUPTED` | 500 | The server stopped while this run was going {attempts} times, so it was not continued again |
 | `RUN_EXPIRED` | 410 | This run waited too long for a response and expired |
 | `RATE_LIMITED` | 429 | Too many requests, retry in {retry_after} s |
 | `NOTIFICATION_NOT_FOUND` | 404 | Notification not found |

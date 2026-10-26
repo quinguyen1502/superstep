@@ -24,7 +24,7 @@ after each edit to see what still works, and what a change broke.
 | --- | --- |
 | Name | What the case is about, for example "Rejected leave". |
 | Input | The run input, as JSON. |
-| Human answers | For each Human node, the answers in order: Approve, Reject or a text reply. A node that waits again, for example after a rewrite, gets the next one. |
+| Human answers | For each Human node, the answers in order: Approve, Reject or a text reply. A node that waits again, for example after a rewrite, gets the next one. An Agent node with a tool that needs approval is listed too: one answer per call. |
 | Checks | What the run must show. All of them must pass. |
 
 | Check | Passes when |
@@ -32,6 +32,7 @@ after each edit to see what still works, and what a change broke.
 | Run status | The run ended `ok`, `error` or `waiting`, as chosen. Without a status check, the run must end `ok`. |
 | State field | A field equals, contains, does not contain or matches a pattern (regular expression), or is empty or not empty. Objects and lists compare as JSON. |
 | Node | A node ran, or did not run. |
+| Tool called | An [Agent node](../guide/agent.md) called a tool, or did not. A call counts when it ran, even if the tool failed; a rejected, refused or invalid call does not. |
 | Duration | The run took at most this many seconds. |
 | Cost | The run cost at most this many US$. Not checked when a model has no known price. |
 
@@ -44,7 +45,7 @@ A workflow keeps up to 50 test cases (`STUDIO_TEST_CASES_MAX`), each with up to
   a case runs only that one.
 - Up to 4 cases run at a time (`STUDIO_TEST_PARALLEL`). One run of the tests per
   workflow at a time; **Cancel** stops it.
-- **Use the offline mock model** runs every LLM and Decision node with the
+- **Use the offline mock model** runs every LLM, Agent and Decision node with the
   offline mock: no model calls, no cost, the same answers every time. Without
   it the tests use the real models and their credentials.
 - Each case shows pass or fail, and each check its expected and actual value.
@@ -67,8 +68,8 @@ off:
 | Send notifications | — |
 | Call the API callback | — |
 
-Tool, HTTP, MCP, Code and Retriever nodes run for real. Point them at test
-systems when they change data.
+Tool, HTTP, MCP, Code and Retriever nodes, and an Agent node's tools, run for
+real. Point them at test systems when they change data.
 
 ## Compare with earlier versions
 
@@ -107,14 +108,15 @@ Remove what you do not need, then save.
 
 A check that names a node or a state field the graph no longer has is marked
 **No longer in the graph**, and fails with that reason when it runs. Change the
-check or remove it.
+check or remove it. A **Tool called** check whose tool the Agent node no longer
+has is marked too.
 
 ## Built-in templates
 
 Each built-in template comes with one to three test cases, and a workflow made
 from it gets a copy (see [Workflow templates](../guide/templates.md)). They pass
-with the offline mock model. **RAG Q&A** and **Support with escalation** need a
-knowledge base first. Templates you save carry no test cases.
+with the offline mock model. **RAG Q&A**, **Support with escalation** and
+**Support agent** need a knowledge base first. Templates you save carry no test cases.
 
 ## Send results to LangSmith
 

@@ -17,6 +17,7 @@ from ..core import config
 from ..core import permissions as P
 from ..core.errors import AppError
 from ..engine.reducers import apply as apply_delta
+from ..engine.state_schema import state_schema
 from ..models import AgentThread, AgentThreadRun, Run
 from ..repositories import AgentThreadRepository, RunRepository, WorkflowRepository
 from .run_service import human_response
@@ -27,7 +28,6 @@ RUN_STATUS = {"queued": "pending", "running": "running", "ok": "success", "error
               "waiting": "interrupted", "paused": "interrupted", "cancelled": "interrupted", "expired": "error"}
 THREAD_STATUS = {"pending": "busy", "running": "busy", "interrupted": "interrupted", "error": "error", "timeout": "error"}
 SETTLED = ("ok", "error", "cancelled", "timeout", "waiting", "expired", "paused")
-JSON_TYPES = {"string": "string", "number": "number", "integer": "integer", "boolean": "boolean", "object": "object", "list": "array"}
 POLL = 0.25  # seconds between looks at a running run (the runs table is shared by all workers)
 
 
@@ -107,8 +107,7 @@ class AgentServerService:
 
     def schemas(self, p: Principal, aid: str) -> dict:
         wf = _load(self._workflow(p, aid).data, {})
-        props = {f["name"]: {"type": JSON_TYPES.get(f.get("type"), "string")} for f in wf.get("state") or [] if f.get("name")}
-        state = {"title": "State", "type": "object", "properties": props}
+        state = state_schema(wf)
         return {"graph_id": aid, "input_schema": state, "output_schema": state, "state_schema": state,
                 "config_schema": {"title": "Config", "type": "object", "properties": {}},
                 "context_schema": {"title": "Context", "type": "object", "properties": {}}}

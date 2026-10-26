@@ -36,6 +36,7 @@ nav:
       - guide/index.md
       - Trình soạn thảo: guide/editor.md
       - Các loại node: guide/nodes.md
+      - Node Agent: guide/agent.md
       - State và tham chiếu: guide/state.md
       - Chế độ Code: guide/code-mode.md
       - Kho tri thức: guide/knowledge.md
@@ -50,6 +51,7 @@ nav:
       - API trigger và webhook: run/api-triggers.md
       - API công khai và SDK: run/public-api.md
       - API tương thích LangGraph: run/agent-server-api.md
+      - Workflow làm công cụ MCP: run/mcp-server.md
       - Lịch chạy: run/schedules.md
       - Chạy từ chat: run/chat-triggers.md
       - Chat: run/chat.md
@@ -75,3 +77,5 @@ nav:
       - Phát triển: reference/development.md
       - Câu hỏi thường gặp: reference/faq.md
       - Superstep và LangSmith: reference/superstep-vs-langsmith.md
+      - Superstep và trình dựng trực quan: reference/superstep-vs-visual-builders.md
+      - Superstep và framework agent: reference/superstep-vs-agent-frameworks.md

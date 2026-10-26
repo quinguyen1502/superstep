@@ -52,8 +52,9 @@ Final state: {...}
 
     `LLM_PROVIDER` is any provider `init_chat_model` knows (`openai`,
     `anthropic`, `ollama`, …); the node's model name is used as written.
-- **Human nodes.** `EXAMPLE_ANSWERS` holds the answers from the first test
-  case. When a node has no answer left, the file asks on the terminal.
+- **Human nodes and approvals.** `EXAMPLE_ANSWERS` holds the answers from the
+  first test case, also for an Agent node's tool approvals. When a node has no
+  answer left, the file asks on the terminal.
 - **Code nodes** run as written, in your Python process, without the studio's
   sandbox. Read them before running a file someone else shared.
 
@@ -66,6 +67,7 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, then `call_llm(prompt, model)` |
 | Condition | a node that changes nothing, and `add_conditional_edges` with a router function and a label → node map |
 | Human | `interrupt(...)` pauses the run; `Command(resume=answer)` continues it |
+| Agent | an entry, a model and a tool function with two routers, and an end function; `interrupt(...)` before a tool that needs approval |
 | Join | a node, and `add_edge([branch, branch], join)`: it runs once all branches finished |
 | For each | a loop position field and a router that returns `each` or `done` |
 | Decision | `decide(text, question)` for each question |
@@ -73,7 +75,7 @@ Final state: {...}
 | Tool: function | the function's code, copied in |
 | Tool: HTTP | an `httpx` request |
 | Tool: Code | the node's code, inside the node function |
-| Retriever, MCP, Send email | stubs with a `TODO`: they need studio services |
+| Retriever, MCP, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base and MCP tools) |
 | Note | a comment |
 | Retry, cache, input fields | `RetryPolicy`, `CachePolicy`, `input_schema` on `add_node` |
 | Timeout | a comment: LangGraph cannot stop a node that blocks |
@@ -129,6 +131,29 @@ compiled with a checkpointer (`MemorySaver`), so `main()` can resume it with
 `graph.stream(Command(resume="approved"), config)`. The node then runs again
 from the top, and `interrupt()` returns the answer.
 
+### An Agent node
+
+From the Support agent template. The Agent node is written as the studio runs
+it: one function per step, and the conversation in a state field
+(`agent_support_agent`) that the end function clears.
+
+```python
+builder.add_edge("support_agent", "support_agent_model")
+builder.add_conditional_edges("support_agent_model", route_support_agent_model, {"tool": "support_agent_tool", "done": "support_agent_end"})
+builder.add_conditional_edges("support_agent_tool", route_support_agent_tool, {"tool": "support_agent_tool", "model": "support_agent_model"})
+```
+
+- `support_agent_model` calls `call_agent(messages, tools, model)`: the mock,
+  or with `LLM_PROVIDER` set a LangChain chat model with `bind_tools`.
+- `support_agent_tool` runs one tool call. A tool in
+  `SUPPORT_AGENT_NEEDS_APPROVAL` asks first with `interrupt()`; "approved" runs
+  it, any other answer is told to the model as the reason.
+- `SUPPORT_AGENT_TOOLS` holds each tool's name, description and JSON Schema,
+  and `SUPPORT_AGENT_MAX_ROUNDS` the limit.
+
+The file does not use `create_react_agent`: it cannot ask before one tool
+only, and it would not write the rounds and steps the studio writes.
+
 ### A Subgraph
 
 ```python
@@ -172,6 +197,7 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | Tool: function | a stub that throws: the function is Python on the server |
 | Tool: HTTP | `fetch`, without following redirects |
 | Retriever, MCP, Send email | stubs with a `TODO`, as in the Python file |
+| Agent | not exported yet: `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED`; export the workflow as Python |
 | Retry, cache, input fields, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` on `addNode` |
 
 API keys and other settings are read from environment variables

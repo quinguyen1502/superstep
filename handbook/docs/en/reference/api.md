@@ -97,6 +97,8 @@ WS /ws/run
     DELETE /api/workflows/{wid}/tokens/{tid}    POST   /api/workflows/{wid}/tokens/{tid}/rotate-secret
     POST   /api/hooks/workflows/{wid}/runs      GET    /api/hooks/workflows/{wid}/runs/{run_id}
     GET    /api/workflows/{wid}/deliveries      POST   /api/workflows/{wid}/deliveries/{did}/redeliver
+    GET    /api/workflows/{wid}/mcp             PUT    /api/workflows/{wid}/mcp
+    POST   /mcp                                 (MCP Streamable HTTP, workflow token)
     ```
 
 ??? abstract "LangGraph Agent Server API (subset)"

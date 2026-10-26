@@ -20,6 +20,11 @@ Bấm vào một dòng, hoặc vào node trên canvas, để mở chi tiết:
 
 ![State diff](../images/trace-detail.png)
 
+[Node Agent](../guide/agent.md#trace-va-muc-dung) hiện các bước của nó ngay bên
+dưới: dòng `Agent › model` có vòng và các công cụ đã gọi hoặc câu trả lời, dòng
+`Agent › tool` có công cụ, kết quả đã rút gọn, và **đã duyệt** hoặc **người
+duyệt từ chối** khi có người trả lời.
+
 **Raw events** chuyển cả timeline sang luồng sự kiện gốc. Chọn một run trước
 đó ở menu run cạnh các tab (10 run gần nhất), hoặc trong **Xem tất cả**, để
 phát lại trên cùng timeline, kèm nhãn phiên bản.

@@ -3,6 +3,11 @@ import { expect, type Locator } from '@playwright/test'
 /** Alignment guardrails (docs/ui-conventions.md, rule 11). */
 export type Box = { name: string; top: number; height: number; centre: number }
 
+/** Wait until the element's open animations (a dialog's zoom and fade) have finished or been cancelled: boxes measured mid-zoom are scaled. */
+export async function settled(l: Locator) {
+  await l.evaluate(el => Promise.allSettled(el.getAnimations({ subtree: true }).map(a => a.finished)))
+}
+
 async function boxes(locators: Locator[]): Promise<Box[]> {
   const out: Box[] = []
   for (const l of locators) {
