@@ -281,7 +281,7 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0126 Vietnamese "Hàm" label, a "choose a knowledge base" hint, and the template's missing setup listed when
   it opens (REQ-0007, REQ-0015, REQ-0072). **merged** (PR #160, REV-0114, QA-0114).
 - TASK-0129 Factory housekeeping: review and QA records for TASK-0125 to TASK-0128, requirement statuses, this
-  roadmap, DEC-0064, verification commands in the tool policy. **review**.
+  roadmap, DEC-0064, verification commands in the tool policy. **merged** (PR #168).
 
 ## Releases
 
