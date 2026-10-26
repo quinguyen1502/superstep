@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0073
-- Status: Draft (waiting for the owner's answers in CLAR-0004)
+- Status: Accepted (owner, 2026-10-26; CLAR-0004 answered with all recommended options)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -19,8 +19,24 @@
 - A workflow that contains its own Agent node then acts as a **specialist agent**, and the calling Agent is its
   **supervisor**. This gives several agents working together without a new node type. Each agent keeps its own
   prompt, model, tools and limits, and is built and tested on its own canvas.
-- A **hand-off**, where one agent passes the conversation to another and stops, is a separate choice. It is asked in
-  CLAR-0004 and is not in scope until the owner picks it.
+- A **hand-off**, where one agent passes the conversation to another and stops, is not in scope (CLAR-0004 question 1).
+
+## Owner Decisions
+
+CLAR-0004, answered 2026-10-26 (all recommended options):
+
+1. **Workflow tools come first**: another saved workflow as an Agent tool, which gives the supervisor pattern. Hand-off,
+   code tools and every tool of an MCP server stay out of scope.
+2. **A workflow tool runs as a linked child run**: a run of its own (record, history, checkpoints, ledger) with a
+   parent run id. The parent's tool step waits for it, and a restart repeats neither the child's finished nodes nor
+   the child itself.
+3. **Approvals inside the child are passed up**: the parent run waits too, and the Approvals inbox and the channels
+   show the child's request with both workflow names.
+4. **The latest saved version** of the child, taken when the parent run starts, as for Subgraph nodes. A waiting
+   parent keeps that version in its snapshot.
+5. **The trace is nested**: the child's steps show under the tool call in the parent's trace, with a link to the
+   child run.
+6. **Exports:** Python, the LangGraph project and TypeScript all support workflow tools in the first version.
 
 ## Problem Or Opportunity
 
@@ -44,22 +60,24 @@
 - **Parameters:** derived from the chosen workflow's state fields (as REQ-0070 does for MCP tools), with a choice of
   which fields the model fills. **Result:** the fields of the workflow's final state that the builder picks, as JSON,
   shortened like any tool result.
-- **Running the call:** the workflow runs as the run owner, with the owner's credentials, MCP servers and knowledge
-  bases (DEC-0023), and the same demo and test-run rules (DEC-0044). How it runs (inside the tool step, or as a linked
-  child run) is CLAR-0004 question 2.
+- **Running the call:** the workflow runs as a linked child run (Owner Decision 2) with the parent run's resource
+  owner, so the owner's credentials, MCP servers and knowledge bases (DEC-0023), and the same demo and test-run rules
+  (DEC-0044).
 - **Limits:** a depth limit and a cycle check across workflow tools and subgraphs (A calls B calls A is refused when
   saving, as for Subgraph nodes). The child's steps count toward a budget, so a supervisor cannot start unbounded
   work.
-- **Trace:** the tool call shows the child workflow's steps, or a link to its run (CLAR-0004 question 5), with
-  duration, usage and cost added to the Agent node.
-- **Approvals inside the child** (a Human node, or an Agent tool that needs approval): either refused by the
-  validator, or passed up so the parent run waits (CLAR-0004 question 3).
+- **Trace:** the tool call shows the child workflow's steps nested under it, with a link to the child run, and its
+  duration, usage and cost added to the Agent node (Owner Decision 5).
+- **Approvals inside the child** (a Human node, or an Agent tool that needs approval) are passed up: the parent run
+  waits too, and the inbox and the channels show the child's request with both workflow names (Owner Decision 3).
+- **Runs:** a child run shows its parent (a link) in the run page and the history; a parent shows "waiting for
+  <child workflow>" while a child runs or waits. Cancelling the parent cancels its children.
 - **Validator:** a missing or unreadable workflow, an imported (code) workflow, a cycle, too deep, unknown result
   fields. All of these get message codes (DEC-0065) in en and vi.
 - **Workflow tests (REQ-0042):** the existing "tool called" check works for workflow tools; test runs of the parent
   run the child with test-run rules.
-- **Exports:** the Python and TypeScript exports write the child workflow as its own graph in the same file, called by
-  the tool function (CLAR-0004 question 6).
+- **Exports:** the Python, LangGraph project and TypeScript exports write the child workflow as its own graph in the
+  same file, called by the tool function (Owner Decision 6).
 - **Template:** a built-in "Support team" template. A supervisor Agent uses two specialist workflows as tools, with
   test cases that pass with the mock model.
 - **UI:** the tool card for the workflow source (a workflow picker, the parameter and result field choices, a link to
@@ -69,18 +87,18 @@
 
 ### Out Of Scope
 
-- Hand-off between agents, unless the owner picks it in CLAR-0004 question 1.
+- Hand-off between agents (CLAR-0004 question 1).
 - Agents running in parallel. A round's tool calls still run one after another (REQ-0072).
 - Agents that talk to each other freely (group chat, AutoGen style) or share a memory other than the state they pass.
 - Code-mode tools (Python or TypeScript written in the Agent node), and using every tool of an MCP server without
-  listing it. Both are listed in CLAR-0004 question 1 as other candidates.
+  listing it (CLAR-0004 question 1).
 - Calling a workflow of another user that is not shared with the run owner.
 - Images, files and audio as tool input or output.
 
 ## Stakeholders Or Users
 
 - Builders who want small, focused agents instead of one agent with every tool.
-- Approvers, when a specialist's tool needs approval (CLAR-0004 question 3).
+- Approvers, when a specialist's tool needs approval: the request names both workflows.
 - Workflow owners: the child runs with their credentials and budget (DEC-0023).
 
 ## Current Context
@@ -109,11 +127,11 @@
 - In a third workflow, "Support team", an Agent node lists both as tools: `order_desk` ("Questions about where an
   order is") and `refund_desk` ("Questions about refunds"). Parameters: `message`. Result: `answer`.
 - A run with "Where is B200, and can I get a refund?":
-  1. The supervisor calls `order_desk` with a message about B200. The trace shows the child's steps under that call
-     (or a link to its run), and the result `{"answer": "B200 is in transit…"}`.
-  2. It calls `refund_desk`. If `send_refund` needs approval, the behaviour depends on CLAR-0004 question 3: the
-     validator either refused this setup when saving, or the parent run is now `waiting`, the Approvals inbox shows
-     "Refund desk wants to call send_refund", and after Approve both runs continue.
+  1. The supervisor calls `order_desk` with a message about B200. The trace shows the child's steps under that call,
+     with a link to its run, and the result `{"answer": "B200 is in transit…"}`.
+  2. It calls `refund_desk`. `send_refund` needs approval, so the child run and the parent run are both `waiting`.
+     The Approvals inbox shows the request with both workflow names ("Support team › Refund desk: Agent wants to call
+     send_refund"), and after Approve the child finishes and the parent goes on.
   3. The supervisor answers using both results.
 - Saving "Order desk" with a workflow tool that points back to "Support team" fails with a cycle message, in the UI
   language.
@@ -124,8 +142,8 @@
 
 - The model can call only the workflows listed on the node, with arguments that match the derived schema. Other calls
   go back to the model as an error result, as for any tool (REQ-0072).
-- A workflow tool runs the workflow version saved at the time of the call (or pinned; CLAR-0004 question 4). A run
-  that waits keeps its own snapshot, as Human nodes do.
+- A workflow tool runs the child's latest saved version, taken when the parent run starts (as for Subgraph nodes).
+  The parent's snapshot keeps it, so a pause, a restart or a resume runs the same version.
 - The child's result is untrusted tool output: shortened, and it never changes the parent's tools, approvals or
   credentials.
 - Depth: workflow tools and subgraphs together nest at most `MAX_DEPTH` (5) levels. A cycle is refused when saving and
@@ -135,8 +153,7 @@
 ## Constraints
 
 - Layering (DEC-0009): the engine reaches other workflows only through `Ports` (as `subgraphs` gets a loader). No
-  FastAPI in services. A migration only if a stored record changes, for example a parent run id on child runs if
-  CLAR-0004 question 2 picks linked runs.
+  FastAPI in services. A migration adds the parent run and the calling step to child runs (DEC-0066).
 - Effectively once: a finished child call is never repeated after a pause, a restart or a retried job. Its result is
   recorded with the tool step.
 - The step budget and the run timeout cover the child's work.
@@ -154,10 +171,13 @@
 - The supervisor template runs offline with the mock and its test cases pass.
 - A restart test (as in TASK-0115 and TASK-0127) shows that a finished child call is not repeated, and that a call cut
   off mid-way finishes or fails clearly.
-- Approvals inside a child behave as CLAR-0004 question 3 decides, with a test either way.
-- The trace shows the child's work as CLAR-0004 question 5 decides, in the studio and the chat's `full` view.
-- The Python and TypeScript exports handle workflow tools as CLAR-0004 question 6 decides, and pass `deno check` and the
-  same-path test.
+- An approval inside a child makes both runs wait; the inbox and the channels show it with both workflow names; after
+  Approve or Reject the child settles and the parent goes on, with a test for each.
+- Cancelling the parent cancels a running or waiting child; a failed child gives the model an error result.
+- The trace shows the child's steps under the tool call with a link to the child run, in the studio and the chat's
+  `full` view.
+- The Python, LangGraph project and TypeScript exports handle workflow tools; they pass `python -m py_compile`,
+  `deno check` and the same-path test.
 - en and vi strings with the same keys, glossary rows; handbook pages (en, vi) build in strict mode; e2e covers adding
   a workflow tool and a run that calls it; `factory verify run --profile full` passes.
 
@@ -184,13 +204,23 @@
 
 ## Open Questions
 
-- Six owner questions are in CLAR-0004: which feature first, how a workflow tool runs, approvals inside a child, which
-  version runs, how the trace shows the child, and which exports support it. The recommended answers are the ones
-  written above.
+- None: CLAR-0004 answered 2026-10-26 (Owner Decisions above).
+
+## Planning
+
+- 2026-10-26: the owner accepted REQ-0073 with the CLAR-0004 answers. Planned as TASK-0133 (tool settings and
+  validation), TASK-0134 (linked child runs), TASK-0135 (approvals inside a child, runs pages), TASK-0136 (editor and
+  nested trace), TASK-0137 (tests check, template, exports) and TASK-0138 (handbook), with DEC-0066 (a workflow tool
+  is a linked child run that the parent's tool step waits for).
 
 ## Related Artifacts
 
 - `.factory-state/artifacts/CLAR-0004-agent-workflow-tools.md`
+- `.factory-state/decisions/DEC-0066-workflow-tools-child-runs.md`
+- Tasks: TASK-0133 to TASK-0138 under `.factory-state/tasks/` (`TASK-0133-workflow-tool-settings.md`,
+  `TASK-0134-workflow-tool-child-runs.md`, `TASK-0135-child-run-approvals.md`, `TASK-0136-workflow-tool-editor-trace.md`,
+  `TASK-0137-workflow-tool-template-export.md`, `TASK-0138-workflow-tool-handbook.md`; the folder follows each task's
+  lifecycle state)
 - `.factory-state/artifacts/REQ-0072-agent-node.md`, `.factory-state/artifacts/CLAR-0003-agent-node.md`,
   `.factory-state/decisions/DEC-0063-agent-node-expansion.md`
 - `.factory-state/artifacts/REQ-0070-workflows-as-mcp-tools.md`, `.factory-state/artifacts/REQ-0071-durable-resume-after-restart.md`,

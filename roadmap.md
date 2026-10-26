@@ -270,6 +270,24 @@ expanded into LangGraph model and tool steps, one tool call per step.
 - TASK-0125 LangGraph.js export of Agent nodes (CLAR-0003 question 8, also REQ-0047); the TypeScript refusal is
   removed. **merged** (PR #158, REV-0113, QA-0113).
 
+## Agent workflow tools
+
+REQ-0073, Accepted 2026-10-26 (CLAR-0004: all recommended options; another workflow as an Agent tool, the supervisor
+pattern for several agents; a linked child run; approvals inside the child passed up; the child's latest saved
+version; a nested trace; Python, project and TypeScript exports). DEC-0066 (proposed): a workflow tool is a linked
+child run that the parent's tool step waits for.
+
+- TASK-0133 Tool settings, parameters and results from the child's state fields, the snapshot at planning, cycle
+  and depth checks across subgraphs and workflow tools, validator codes. **todo**.
+- TASK-0134 Linked child runs: migration, `AwaitChild`, `start_child`, resume of the parent when a child settles,
+  cancel cascade, restart tests. **todo** (after TASK-0133).
+- TASK-0135 Approvals inside a child with both workflow names; parent and children in the API, run page and history.
+  **todo** (after TASK-0134).
+- TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **todo** (after TASK-0134).
+- TASK-0137 "Tool called" test check, "Support team" template, Python, project and TypeScript exports. **todo**
+  (after TASK-0134).
+- TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **todo** (after TASK-0135 to TASK-0137).
+
 ## Owner requests
 
 Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.

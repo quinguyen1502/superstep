@@ -2,7 +2,7 @@
 schema_version: 1
 id: CLAR-0004
 task_id: REQ-0073
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0073-agent-workflow-tools.md
   - .factory-state/artifacts/REQ-0072-agent-node.md
@@ -11,7 +11,7 @@ source_artifacts:
   - .factory-state/decisions/DEC-0018-effectively-once.md
 created: 2026-10-26
 updated: 2026-10-26
-answered_at: null
+answered_at: '2026-10-26'
 questions:
   - id: first-feature
     type: single_choice
@@ -119,14 +119,21 @@ questions:
     depends_on:
       question: first-feature
       equals: workflow-tools
-answers: {}
+answers:
+  first-feature: workflow-tools
+  run-mode: child-run
+  child-approval: pass-up
+  version: latest
+  trace: nested
+  exports: python-and-typescript
 ---
 # Clarification
 
-Owner questions for REQ-0073 (the next Agent feature). The recommended options are the ones REQ-0073 is written
-for. If question 1 picks another feature, REQ-0073 is rewritten for it and questions 2 to 6 no longer apply.
+Owner questions for REQ-0073 (the next Agent feature). The owner answered in chat on 2026-10-26 ("Merge 174 và trả lời
+clar-0004 theo đề xuất") and picked the recommended option for all six; the answers are written into REQ-0073 and
+DEC-0066.
 
-The owner may answer in chat ("theo đề xuất", or one answer per question), or with:
+The owner may answer it with:
 
 ```text
 factory clarify CLAR-0004 -C <project-dir>
