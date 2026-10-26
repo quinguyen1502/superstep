@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 
@@ -26,66 +26,8 @@ class TaskRecord:
         }
 
 
-@dataclass
-class UsageRecord:
-    """A single token/cost usage entry attributed to a task or agent."""
-
-    scope: str
-    ref: str
-    tool_id: str
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cost_usd: float = 0.0
-    recorded_at: str = ""
-    note: Optional[str] = None
-
-    @property
-    def total_tokens(self) -> int:
-        return int(self.input_tokens) + int(self.output_tokens)
-
-    def to_dict(self) -> Dict[str, object]:
-        return {
-            "scope": self.scope,
-            "ref": self.ref,
-            "tool_id": self.tool_id,
-            "input_tokens": int(self.input_tokens),
-            "output_tokens": int(self.output_tokens),
-            "cost_usd": float(self.cost_usd),
-            "recorded_at": self.recorded_at,
-            "note": self.note,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "UsageRecord":
-        return cls(
-            scope=str(data.get("scope", "")),
-            ref=str(data.get("ref", "")),
-            tool_id=str(data.get("tool_id", "")),
-            input_tokens=int(data.get("input_tokens", 0) or 0),
-            output_tokens=int(data.get("output_tokens", 0) or 0),
-            cost_usd=float(data.get("cost_usd", 0.0) or 0.0),
-            recorded_at=str(data.get("recorded_at", "")),
-            note=(str(data["note"]) if data.get("note") is not None else None),
-        )
-
-
-@dataclass
-class UsageAggregate:
-    """Token/cost totals grouped by a dimension key (ref or tool)."""
-
-    key: str
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cost_usd: float = 0.0
-    entries: int = 0
-
-    @property
-    def total_tokens(self) -> int:
-        return self.input_tokens + self.output_tokens
-
-
 class TaskStore(ABC):
-    """Backend-agnostic access to lifecycle tasks and usage metrics."""
+    """Backend-agnostic access to lifecycle tasks."""
 
     @abstractmethod
     def list_tasks(self) -> List[TaskRecord]:
@@ -103,51 +45,9 @@ class TaskStore(ABC):
     def move_task(self, task_id: str, target_state: str) -> TaskRecord:
         ...
 
-    @abstractmethod
-    def record_usage(self, record: UsageRecord) -> None:
-        ...
-
-    @abstractmethod
-    def list_usage(
-        self,
-        scope: Optional[str] = None,
-        ref: Optional[str] = None,
-    ) -> List[UsageRecord]:
-        ...
-
     def forget(self, task_ids: List[str]) -> None:
-        """Drop tasks from any database mirror (e.g. after archiving).
-
-        The folder backend keeps the files as truth and overrides nothing here;
-        database-backed stores remove the rows.
-        """
-
-    def aggregate_usage(self, by: str = "ref") -> List[UsageAggregate]:
-        """Group usage records by 'ref', 'tool', or 'scope'."""
-        if by not in {"ref", "tool", "scope"}:
-            raise ValueError("Aggregate usage by must be ref, tool, or scope.")
-        groups: Dict[str, UsageAggregate] = {}
-        for record in self.list_usage():
-            if by == "tool":
-                key = record.tool_id
-            elif by == "scope":
-                key = record.scope
-            else:
-                key = f"{record.scope}:{record.ref}"
-            bucket = groups.setdefault(key, UsageAggregate(key=key))
-            bucket.input_tokens += int(record.input_tokens)
-            bucket.output_tokens += int(record.output_tokens)
-            bucket.cost_usd += float(record.cost_usd)
-            bucket.entries += 1
-        return [groups[key] for key in sorted(groups)]
-
-    def usage_for_key(self, budget_key: str) -> int:
-        """Total tokens recorded for a budget key such as 'task:TASK-0001'."""
-        scope, _, ref = budget_key.partition(":")
-        return sum(
-            record.total_tokens
-            for record in self.list_usage(scope=scope or None, ref=ref or None)
-        )
+        """Hook for stores that mirror tasks outside the Markdown files."""
+        del task_ids
 
 
 _TASK_ID_RE = re.compile(r"^-\s*Task ID:\s*(?P<id>\S+)\s*$", re.MULTILINE)

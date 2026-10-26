@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import List
 
 from .clarification import clarification_problems
-from .configuration import configuration_problems
 from .constants import (
     FACTORY_CONFIG_PATH,
     REQUIRED_PROJECT_PATHS,
@@ -16,7 +15,6 @@ from .constants import (
 )
 from .models import FactoryConfig
 from .dependencies import dependency_problems
-from .scaffold import scaffold_problems
 from .tooling import tooling_problems
 from .verification import verification_problems
 
@@ -65,6 +63,7 @@ def inspect_project(project_dir: Path) -> ValidationReport:
         except (OSError, ValueError) as exc:
             report.errors.append(f"invalid factory config: {exc}")
         else:
+            report.warnings.extend(config.ignored_setting_warnings())
             if "claude-code" in config.enabled_tools:
                 bridge = project_dir / ".claude" / "CLAUDE.md"
                 if not bridge.exists():
@@ -93,24 +92,14 @@ def inspect_project(project_dir: Path) -> ValidationReport:
     tooling_errors, tooling_warnings = tooling_problems(project_dir)
     report.errors.extend(tooling_errors)
     report.warnings.extend(tooling_warnings)
-    scaffold_errors, scaffold_warnings = scaffold_problems(project_dir)
-    report.errors.extend(scaffold_errors)
-    report.warnings.extend(scaffold_warnings)
     dependency_errors, dependency_warnings = dependency_problems(project_dir)
     report.errors.extend(dependency_errors)
     report.warnings.extend(dependency_warnings)
     verification_errors, verification_warnings = verification_problems(project_dir)
     report.errors.extend(verification_errors)
     report.warnings.extend(verification_warnings)
-    configuration_errors, configuration_warnings = configuration_problems(project_dir)
-    report.errors.extend(configuration_errors)
-    report.warnings.extend(configuration_warnings)
-    from .metrics import metrics_problems
     from .readiness import readiness_problems
 
-    metrics_errors, metrics_warnings = metrics_problems(project_dir)
-    report.errors.extend(metrics_errors)
-    report.warnings.extend(metrics_warnings)
     ready_errors, ready_warnings = readiness_problems(project_dir)
     report.errors.extend(ready_errors)
     report.warnings.extend(ready_warnings)

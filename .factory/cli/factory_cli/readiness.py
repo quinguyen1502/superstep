@@ -131,8 +131,7 @@ def inspect_readiness(project_dir: Path) -> ReadinessReport:
     if approved and not (project_dir / SCAFFOLD_METADATA_PATH).is_file():
         report.gaps.append(
             "approved source stack has no published scaffold "
-            f"({', '.join(approved)}); run factory scaffold apply or record why "
-            "source generation is skipped"
+            f"({', '.join(approved)}); record why source generation is skipped"
         )
     config_path = project_dir / ".factory-state" / "factory.yaml"
     if config_path.is_file():

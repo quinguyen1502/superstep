@@ -15,6 +15,7 @@ from .constants import (
     TOOL_KIT_LEVELS,
     TOOL_POLICY_PATH,
     TOOLING_ROOT,
+    VERIFICATION_KINDS,
 )
 from .models import ImportAction, ImportPlan
 
@@ -27,12 +28,26 @@ ACTIVE_LEVELS = {"guardrails", "automation", "custom"}
 class CommandPolicy:
     command: str = ""
     evidence: str = "Expected"
+    cwd: str = ""
+    kind: str = ""
 
     def validate(self) -> None:
         if not isinstance(self.command, str):
             raise ValueError("Tool policy commands must be strings.")
         if self.evidence not in {"Expected", "Observed"}:
             raise ValueError("Command evidence must be Expected or Observed.")
+        if not isinstance(self.cwd, str) or not isinstance(self.kind, str):
+            raise ValueError("Command cwd and kind must be strings.")
+        if self.cwd:
+            path = Path(self.cwd)
+            if path.is_absolute() or ".." in path.parts:
+                raise ValueError(
+                    "Command cwd must be a relative path inside the project."
+                )
+        if self.kind and self.kind not in VERIFICATION_KINDS:
+            raise ValueError(
+                "Command kind must be one of: " + ", ".join(VERIFICATION_KINDS) + "."
+            )
 
 
 @dataclass
@@ -75,8 +90,12 @@ class ToolPolicy:
 
     def to_yaml(self) -> str:
         self.validate()
+        payload = asdict(self)
+        payload["commands"] = {
+            name: _command_payload(command) for name, command in self.commands.items()
+        }
         return yaml.safe_dump(
-            asdict(self), sort_keys=False, allow_unicode=True, default_flow_style=False
+            payload, sort_keys=False, allow_unicode=True, default_flow_style=False
         )
 
     @classmethod
@@ -100,6 +119,15 @@ class ToolPolicy:
             raise ValueError(f"Invalid tool policy fields: {exc}") from exc
         policy.validate()
         return policy
+
+
+def _command_payload(command: CommandPolicy) -> Dict[str, str]:
+    payload = {"command": command.command, "evidence": command.evidence}
+    if command.cwd:
+        payload["cwd"] = command.cwd
+    if command.kind:
+        payload["kind"] = command.kind
+    return payload
 
 
 def parse_command_spec(spec: str) -> Tuple[str, str]:
@@ -159,12 +187,13 @@ def overlay_tool_policy(
         updated.validate_on_stop = validate_on_stop
     if commands:
         for name, command in commands.items():
-            evidence = (
-                updated.commands[name].evidence
-                if name in updated.commands
-                else "Expected"
+            existing = updated.commands.get(name)
+            updated.commands[name] = CommandPolicy(
+                command=command,
+                evidence=existing.evidence if existing else "Expected",
+                cwd=existing.cwd if existing else "",
+                kind=existing.kind if existing else "",
             )
-            updated.commands[name] = CommandPolicy(command=command, evidence=evidence)
     updated.validate()
     return updated
 

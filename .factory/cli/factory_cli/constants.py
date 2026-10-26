@@ -43,20 +43,24 @@ DEPENDENCY_ROOT = f"{FACTORY_STATE_DIR}/dependencies"
 DEPENDENCY_METADATA_PATH = f"{DEPENDENCY_ROOT}/installed.yaml"
 VERIFICATION_ROOT = f"{FACTORY_STATE_DIR}/verification"
 VERIFICATION_METADATA_PATH = f"{VERIFICATION_ROOT}/latest.yaml"
-CONFIGURATION_ROOT = f"{FACTORY_STATE_DIR}/configuration"
-CONFIGURATION_METADATA_PATH = f"{CONFIGURATION_ROOT}/generated.yaml"
-ORCHESTRATION_ROOT = f"{FACTORY_STATE_DIR}/orchestration"
-ORCHESTRATION_METADATA_PATH = f"{ORCHESTRATION_ROOT}/active.yaml"
-ORCHESTRATION_INCOMPLETE_PATH = f"{ORCHESTRATION_ROOT}/INCOMPLETE"
-ORCHESTRATION_BRIEF_NAME = "ORCHESTRATION-BRIEF.md"
-ORCHESTRATION_WORKTREE_DIR = f"{ORCHESTRATION_ROOT}/worktrees"
-
-STORAGE_BACKENDS = ("folder", "folder+sqlite", "folder+postgres")
-STORAGE_DB_PATH = f"{FACTORY_STATE_DIR}/factory.db"
-METRICS_ROOT = f"{FACTORY_STATE_DIR}/metrics"
-METRICS_USAGE_PATH = f"{METRICS_ROOT}/usage.yaml"
-METRICS_USAGE_JSONL = f"{METRICS_ROOT}/usage.jsonl"
-USAGE_SCOPES = ("task", "agent")
+VERIFICATION_RUNS_ROOT = f"{VERIFICATION_ROOT}/runs"
+VERIFICATION_KINDS = (
+    "check",
+    "test",
+    "lint",
+    "typecheck",
+    "build",
+    "format",
+    "analyze",
+)
+VERIFICATION_QUICK_KINDS = (
+    "check",
+    "test",
+    "lint",
+    "typecheck",
+    "format",
+    "analyze",
+)
 ARCHIVE_ROOT = f"{FACTORY_STATE_DIR}/archive"
 ARCHIVE_TASK_ROOT = f"{ARCHIVE_ROOT}/tasks"
 ARCHIVE_ARTIFACT_ROOT = f"{ARCHIVE_ROOT}/artifacts"

@@ -29,10 +29,15 @@ enabled_tools:
 protect_factory_assets: false
 validate_on_stop: false
 
-# Named commands used by workflows and derived tool permissions.
-# Fill in with the project's real commands. Each entry has:
-#   command:  the shell command (with any args or flags)
+# Named commands used by workflows, factory verify, and derived tool
+# permissions. Fill in with the project's real commands. Each entry has:
+#   command:  argument list, not a shell pipeline (no pipes or &&)
 #   evidence: Expected (declared by owner) | Observed (recorded from a real run)
+#   cwd:      optional directory relative to the project root
+#   kind:     optional check|test|lint|typecheck|build|format|analyze
+# `factory verify` runs entries whose name or kind is one of those kinds.
+# Leave the verification commands empty and `factory verify run` records
+# the commands it discovers. After that, edit this file to change them.
 #
 # Example (Flutter):
 #   commands:
@@ -59,5 +64,6 @@ validate_on_stop: false
 #       command: npm run lint
 #       evidence: Expected
 #
-# Leave empty on init; populate during discovery.
+# Leave empty on init. The first `factory verify run` fills verification
+# commands from manifests; edit them here after that.
 commands: {}

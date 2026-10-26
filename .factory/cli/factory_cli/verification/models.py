@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import shlex
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class VerificationCheck:
             "check_id": self.check_id,
             "kind": self.kind,
             "working_dir": self.working_dir,
-            "argv": list(self.argv),
+            "command": self.command_display,
             "source": self.source,
         }
 
@@ -35,6 +35,9 @@ class VerificationPlan:
     checks: List[VerificationCheck] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
+    origin: str = "discovery"
+    selected_kinds: Tuple[str, ...] = ()
+    fingerprint: str = ""
 
     @property
     def ready(self) -> bool:
@@ -74,6 +77,4 @@ class VerificationResult:
             **self.check.to_dict(),
             "status": self.status,
             "returncode": self.returncode,
-            "started_at": self.started_at,
-            "duration_seconds": round(self.duration_seconds, 3),
         }

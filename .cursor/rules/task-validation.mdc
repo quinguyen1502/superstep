@@ -10,6 +10,7 @@ Run and report validation for the active task using the project's canonical tool
 ## Inputs
 
 - Read `.factory-state/tooling/tool-policy.yaml` for declared commands (`format`, `analyze`, `lint`, `test`, `build`, or project-specific names).
+- `factory verify` runs the same file. A command is included when its name or `kind` is `check`, `test`, `lint`, `typecheck`, `build`, `format`, or `analyze`. Once any of those entries exist, verify does not discover a second command list.
 - If no tool policy exists, ask the user which commands to run before proceeding. Do not invent commands.
 - Note which validation profile the user requested when it matters (quick vs full). Default to running all declared commands.
 

@@ -12,8 +12,4 @@ Supported question types are `confirmation`, `single_choice`, `multi_choice`, `f
 
 ## Owner Flow
 
-```text
-factory clarify CLAR-0001 -C <project-dir>
-```
-
-The owner sees progress for active questions, may save partial answers, and reviews the complete answer set before submitting. Submission does not approve a pull request or execute the selected action. The next agent reads the artifact and updates the related requirement, design, architecture, decision, or task artifacts.
+The owner answers in the current chat, or edits the `answers` map in the clarification artifact. Submitting answers does not approve a pull request or execute the selected action. The next agent reads the artifact and updates the related requirement, design, architecture, decision, or task artifacts.

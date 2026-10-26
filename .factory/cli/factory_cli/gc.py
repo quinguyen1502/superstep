@@ -1,9 +1,10 @@
-"""Compact finished factory-state without deleting history.
+"""Compact finished factory-state without deleting task history.
 
-``factory gc`` moves old ``done`` tasks off the board and, by default, their
-companion ``REV`` / ``QA`` / ``SUM`` artifacts with them. Files stay in git
-under ``.factory-state/archive/``. IDs remain reserved. Requirements,
-decisions, standards, and live tasks are never moved.
+``factory gc`` moves old ``done`` tasks, and by default their companion
+``REV`` / ``QA`` / ``SUM`` artifacts, under ``.factory-state/archive/``.
+IDs remain reserved. Requirements, decisions, standards, and live tasks
+are never moved. Timestamped files in ``verification/runs/`` are deleted;
+``verification/latest.yaml`` stays.
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from .constants import (
     GC_DEFAULT_KEEP,
     TASK_ROOT,
     TASK_STATES,
+    VERIFICATION_RUNS_ROOT,
 )
 from .errors import FactoryError
 from .locks import LockTimeout, project_lock
@@ -51,6 +53,7 @@ class GcPlan:
     keep_names: List[str] = field(default_factory=list)
     moves: List[GcMove] = field(default_factory=list)
     forgotten_ids: List[str] = field(default_factory=list)
+    deletions: List[str] = field(default_factory=list)
 
     @property
     def task_moves(self) -> List[GcMove]:
@@ -196,6 +199,7 @@ def plan_gc(
     task_counts = {
         state: _count_md(project_dir / TASK_ROOT / state) for state in TASK_STATES
     }
+    deletions = _verification_run_deletions(project_dir)
     return GcPlan(
         project_dir=project_dir,
         keep=keep,
@@ -207,7 +211,19 @@ def plan_gc(
         keep_names=keep_names,
         moves=moves,
         forgotten_ids=forgotten_ids,
+        deletions=deletions,
     )
+
+
+def _verification_run_deletions(project_dir: Path) -> List[str]:
+    runs = project_dir / VERIFICATION_RUNS_ROOT
+    if not runs.is_dir():
+        return []
+    return [
+        f"{VERIFICATION_RUNS_ROOT}/{path.name}"
+        for path in sorted(runs.glob("*.yaml"))
+        if path.is_file()
+    ]
 
 
 def render_gc_plan(plan: GcPlan, apply: bool = False) -> str:
@@ -244,16 +260,21 @@ def render_gc_plan(plan: GcPlan, apply: bool = False) -> str:
         )
     else:
         lines.append("  artifacts left in place (--no-artifacts)")
+    lines.append(
+        f"  delete   {len(plan.deletions)} verification run(s) -> {VERIFICATION_RUNS_ROOT}/"
+    )
     lines.append("")
     if apply:
-        lines.append("Writing archive.")
+        lines.append("Moving archived tasks and deleting verification runs.")
     else:
-        lines.append("Dry run; pass --apply to write. Files are moved, not deleted.")
+        lines.append(
+            "Dry run; pass --apply to move archived tasks and delete verification runs."
+        )
     return "\n".join(lines)
 
 
 def apply_gc_plan(plan: GcPlan) -> int:
-    if not plan.moves:
+    if not plan.moves and not plan.deletions:
         print("Nothing to archive.")
         return 0
     try:
@@ -270,6 +291,12 @@ def apply_gc_plan(plan: GcPlan) -> int:
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 source.replace(destination)
                 print(f"Archived: {move.source} -> {move.destination}")
+            for relative in plan.deletions:
+                path = plan.project_dir / relative
+                if not path.is_file():
+                    raise FactoryError(f"Verification run disappeared: {relative}")
+                path.unlink()
+                print(f"Deleted: {relative}")
     except LockTimeout as exc:
         raise FactoryError(str(exc)) from exc
     if plan.forgotten_ids:
@@ -277,10 +304,13 @@ def apply_gc_plan(plan: GcPlan) -> int:
             open_task_store(plan.project_dir).forget(plan.forgotten_ids)
         except StoreError:
             pass
-    print(
-        f"Archived {len(plan.task_moves)} task(s) and "
-        f"{len(plan.artifact_moves)} artifact(s)."
-    )
+    if plan.moves:
+        print(
+            f"Archived {len(plan.task_moves)} task(s) and "
+            f"{len(plan.artifact_moves)} artifact(s)."
+        )
+    if plan.deletions:
+        print(f"Deleted {len(plan.deletions)} verification run(s).")
     return 0
 
 
