@@ -173,15 +173,16 @@ refund and a rejected one. `request_refund` is an example: it pays nothing.
   [Export to Python](python-export.md#an-agent-node)): the Agent node becomes
   the same steps as in the studio, with `interrupt()` before a tool that needs
   approval. Without `LLM_PROVIDER` the file uses the same mock.
-- **TypeScript** is not available yet for a workflow with an Agent node, also
-  inside a subgraph: the export returns `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED`.
+- **TypeScript** (LangGraph.js): the same steps, with the same mock and
+  `interrupt()`. MCP and knowledge base tools call stubs, as in the Python file.
+  Built-in tools are Python functions of the server, so they throw: the model
+  is told the tool failed, and you port them to TypeScript.
 
 ## Errors
 
 | Code | When |
 | --- | --- |
 | `AGENT_TOOLS_UNSUPPORTED` | The credential's provider cannot call tools (TypeSafe, SMTP). The model step fails when it runs. |
-| `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED` | A TypeScript export of a workflow with an Agent node. |
 | `WORKFLOW_INVALID` | A run of a workflow the editor marks invalid: no task prompt, no tool, max rounds out of range, a tool without its settings (server and tool, function, knowledge base or URL), two tools with one name, or a steps or history field that is not a list. |
 
 All codes are in [Error codes](../reference/errors.md).

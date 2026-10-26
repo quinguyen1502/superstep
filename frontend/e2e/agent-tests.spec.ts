@@ -46,11 +46,11 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await page.getByTestId('test-row').filter({ hasText: 'Tra đơn hàng A100' }).click()
   await expect(page.getByTestId('check-row').nth(1)).toContainText('“Support agent” đã gọi lookup_order')
 
-  // the Code tab: Python has the Agent node's steps; TypeScript refuses it and leaves no Python file behind
+  // the Code tab: both languages have the Agent node's steps (TypeScript since TASK-0125)
   await page.locator('#code-tab').click()
   await page.locator('#code-export-language').click(); await page.locator('#code-export-language-python').click()
   await expect(page.locator('#code-file')).toHaveText(/^support_agent.*\.py$/, { timeout: 30_000 })
   await page.locator('#code-export-language').click(); await page.locator('#code-export-language-typescript').click()
-  await expect(page.getByText(/Chưa xuất được node Agent sang TypeScript \(Support agent\)/)).toBeVisible()
-  await expect(page.locator('#code-file')).toHaveText(''); await expect(page.locator('#code-download')).toBeDisabled()
+  await expect(page.locator('#code-file')).toHaveText(/^support_agent.*\.ts$/, { timeout: 30_000 })
+  await expect(page.locator('#code-download')).toBeEnabled()
 })

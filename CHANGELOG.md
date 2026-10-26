@@ -2,6 +2,17 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## Unreleased
+
+### Added
+
+- **Agent nodes in the TypeScript export** (TASK-0125). A workflow with an Agent node, also inside a subgraph, now
+  exports as LangGraph.js: the entry, model, tool and end steps as in the Python file, the studio's mock agent
+  offline, LangChain.js `initChatModel` with `bindTools` when `LLM_PROVIDER` is set, and `interrupt()` before a tool
+  that needs approval. MCP and knowledge base tools call stubs; built-in tools are Python functions, so they throw
+  and the model is told. The error code `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED` is gone. Handbook: Agent node and
+  Export to Python (en, vi).
+
 ## 0.7.0 (2026-10-26)
 
 ### Added
