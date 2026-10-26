@@ -93,7 +93,6 @@ const SAME_OK = new Set([
   'errors.TEST_CASE_INVALID',
   'field.bodyTemplate',
   'field.code',
-  'field.function',
   'field.method',
   'field.model',
   'field.promptTemplate',

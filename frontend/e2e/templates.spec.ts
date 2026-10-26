@@ -12,6 +12,15 @@ test('blank and built-in templates from the New workflow gallery', async ({ page
   await expect(g.locator('[data-id=builtin-chatbot] [data-testid=tpl-delete]')).toHaveCount(0)  // built-ins are read-only
   await g.locator('[data-id=builtin-router] button').first().click()
   await expect(page).toHaveURL(/\/workflows\/[^/]+$/); await expect(page.locator('.react-flow__node')).toHaveCount(7)
+  await expect(page.locator('#validation-errors')).toHaveCount(0)  // nothing to pick: no list
+  // TASK-0126: a template that needs a knowledge base says so when it opens, and on the node
+  await page.goto('/workflows'); await page.locator('#new-wf').click(); await g.locator('[data-id=builtin-rag] button').first().click()
+  await expect(page.locator('#validation-errors')).toContainText('1 lỗi cần sửa')
+  await expect(page.locator('#validation-errors')).toContainText('choose a knowledge base')
+  await page.locator('.react-flow__node[data-id="retrieve"]').click()
+  await expect(page.locator('#retriever-required')).toContainText('Hãy chọn kho tri thức')
+  await page.reload(); await expect(page.locator('.react-flow__node')).toHaveCount(4)
+  await expect(page.locator('#validation-errors')).toHaveCount(0)  // shown once, not on every visit
   await page.goto('/workflows'); await page.locator('#new-wf').click(); await page.locator('#tpl-blank').click()
   await expect(page).toHaveURL(/\/workflows\/[^/]+$/); await expect(page.locator('.react-flow__node')).toHaveCount(2)
 })

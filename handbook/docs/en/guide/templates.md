@@ -36,7 +36,9 @@ A template with an approval channel names only the channel. After creating it, p
 connection, the target and the approvers on the Human node (see
 [Approval channels](../operate/channels.md)). Until then a run waits at the
 Human node and can be answered in the studio. **RAG Q&A**, **Support with
-escalation** and **Support agent** need a knowledge base before they run.
+escalation** and **Support agent** need a knowledge base before they run: the
+new workflow opens with that in the Run panel, and the node's knowledge base
+picker stays marked until you choose one.
 
 Each built-in template comes with one to three test cases that show what it is
 for, for example "Approved leave" and "Rejected leave". A workflow made from it
