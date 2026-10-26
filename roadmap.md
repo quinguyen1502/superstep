@@ -282,7 +282,7 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
   it opens (REQ-0007, REQ-0015, REQ-0072). **merged** (PR #160, REV-0114, QA-0114).
 - TASK-0129 Factory housekeeping: review and QA records for TASK-0125 to TASK-0128, requirement statuses, this
   roadmap, DEC-0064, verification commands in the tool policy. **merged** (PR #168).
-- TASK-0130 Per-command `factory verify` timeout (framework 6e66d20); the backend suite gets 900 s. **in progress**.
+- TASK-0130 Per-command `factory verify` timeout (framework 6e66d20); the backend suite gets 900 s. **merged** (PR #170).
 
 ## Releases
 
