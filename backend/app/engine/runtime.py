@@ -80,6 +80,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         return {"type": "node_started", **meta(nid), "iteration": counts[nid]}
 
     t0 = time.perf_counter(); pending: List[str] = []; done_steps = 0; finished_ids: set[str] = set()
+    superstep = 0  # numbers this segment's supersteps on node_finished: nodes with the same number ran in parallel (time travel)
     cfg = {"recursion_limit": recursion_limit() + foreach.step_budget(wf) + agents.step_budget(wf),  # For each loops and agents add steps
            "configurable": {"thread_id": "run"}}
 
@@ -107,7 +108,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                 cp_state, cp_counts = dict(state), dict(counts)
                 if not first and any(nodes[n]["type"] not in ("start", "end") for n in nxt):
                     yield {"type": "_checkpoint", "node": nxt[0], "nodes": nxt, "state": dict(state), "counts": dict(counts)}
-                first = False; pending = nxt; t0 = time.perf_counter()
+                first = False; pending = nxt; t0 = time.perf_counter(); superstep += 1
                 for n2 in nxt: yield started(n2)
                 continue
             before = dict(state)
@@ -118,7 +119,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                 reused = effects is not None and nid in effects.reused
                 if reused: effects.reused.discard(nid)
                 finished_ids.add(nid)
-                yield {"type": "node_finished", **meta(nid), "iteration": counts.get(nid, 1),
+                yield {"type": "node_finished", **meta(nid), "iteration": counts.get(nid, 1), "superstep": superstep,
                        "duration_ms": round((time.perf_counter() - t0) * 1000, 2),
                        "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),  # input: time travel forks from it
                        **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did (TASK-0116)

@@ -92,7 +92,7 @@ docker compose up --scale worker=3
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | 30 s | Lease on a job; the worker renews it while running |
 | `STUDIO_JOB_REAP_EVERY` | 15 s | How often expired leases are requeued |
 | `STUDIO_RECOVER_ON_START` | 1 | In-memory queue: requeue unfinished runs when the server starts |
-| `STUDIO_RECOVER_MAX_ATTEMPTS` | 3 | Times one run is taken before recovery gives up with `RUN_INTERRUPTED` |
+| `STUDIO_RECOVER_MAX_ATTEMPTS` | 3 | Restarts that may cut one run off before recovery gives up with `RUN_INTERRUPTED` |
 
 On Redis, a job whose worker died is requeued when its lease expires, and
 continues from the last checkpoint (`run_recovered` in the trace). Each time a
@@ -121,9 +121,10 @@ How unfinished queue runs come back depends on the queue:
   processes share one database without Redis, since one of them would take
   over the runs of another.
 
-A run that has already been taken `STUDIO_RECOVER_MAX_ATTEMPTS` times (for
-example a node that keeps crashing the server) is not continued again: it ends
-as `error` with code `RUN_INTERRUPTED`, keeping its events so far.
+A run that has been cut off by a restart `STUDIO_RECOVER_MAX_ATTEMPTS` times
+(for example a node that keeps crashing the server) is not continued again: it
+ends as `error` with code `RUN_INTERRUPTED`, keeping its events so far. Resuming
+after a Human node or an Agent tool approval does not count.
 
 ## Local models from Compose
 

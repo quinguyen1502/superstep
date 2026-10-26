@@ -412,6 +412,14 @@ class RunService:
                 "callback_url": r.callback_url, "token_id": r.callback_token_id, "recovered": True, "attempt": (r.lease_gen or 0) + 1,
                 **({"test": test} if test is not None else {}), **({"version": r.workflow_version} if r.source == "test" and r.workflow_version else {})}
 
+    @staticmethod
+    def interruptions(r: Run) -> int:
+        """How many times an unfinished run has been cut off by a restart or a lost worker, this time included. Every claim
+        bumps `lease_gen`: the first start, each recovery and each resume after a Human node or an Agent tool approval;
+        the resumes (one `run_resumed` event each) are not interruptions."""
+        resumes = sum(1 for e in json.loads(r.events or "[]") if isinstance(e, dict) and e.get("type") == "run_resumed")
+        return max(0, (r.lease_gen or 0) - resumes)
+
     def interrupted(self, r: Run, attempts: int) -> None:
         """End an unfinished run that recovery gave up on: `error` RUN_INTERRUPTED, its events so far kept."""
         err = AppError("RUN_INTERRUPTED", attempts=attempts).to_dict()

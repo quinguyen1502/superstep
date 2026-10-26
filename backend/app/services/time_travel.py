@@ -1,8 +1,10 @@
 """Time travel (fork from a checkpoint): the checkpoints of a finished run, read back from its event log.
 
-Every `node_finished` event carries the state the node started from (`input`). Nodes that started from the same
-state in a row ran in the same superstep, so they form one checkpoint: {nodes that ran next, state before them,
-iteration counts}. Forking a checkpoint starts a new run at those nodes with that state (optionally edited), the
+Every `node_finished` event carries the state the node started from (`input`) and the number of its superstep in the
+run segment (`superstep`). Nodes of one superstep ran in parallel, so they form one checkpoint: {nodes that ran next,
+state before them, iteration counts}. Events written before `superstep` existed fall back to nodes in a row that
+started from the same state (which also joins a node to the one before it when that one left the state unchanged,
+e.g. a Condition). Forking a checkpoint starts a new run at those nodes with that state (optionally edited), the
 same way a recovered or resumed run continues (engine.runtime.run_stream `resume`). The last entry is the run's
 final state, for inspection only. Pure functions: no I/O.
 """
@@ -17,13 +19,15 @@ def _truncated(state: Any) -> bool:
 
 
 def checkpoints(events: list, final_state: Optional[dict] = None) -> list[dict]:
-    out: list[dict] = []; cur: Optional[dict] = None; counts: dict[str, int] = {}
+    out: list[dict] = []; cur: Optional[dict] = None; step: Any = None; counts: dict[str, int] = {}
     for ev in events or []:
         t = ev.get("type")
         if t in ("run_resumed", "run_recovered"): cur = None  # a new segment starts a new superstep
         if t != "node_finished" or ev.get("node_type") in SKIP: continue
         node, state = ev.get("node"), ev.get("input")
-        if cur is not None and cur["state"] == state and node not in cur["nodes"]:
+        same = ev["superstep"] == step if "superstep" in ev else cur is not None and cur["state"] == state
+        step = ev.get("superstep")
+        if cur is not None and same and node not in cur["nodes"]:
             cur["nodes"].append(node); cur["labels"].append(ev.get("label") or node)
         else:
             cur = {"index": len(out), "nodes": [node], "labels": [ev.get("label") or node], "state": state, "counts": dict(counts),

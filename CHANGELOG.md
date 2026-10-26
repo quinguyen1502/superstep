@@ -54,6 +54,15 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   when you select another node; a dot marks a missing output field or an Agent without tools. Handbook: Nodes >
   Config tabs (en, vi).
 
+### Fixed
+
+- **Time travel after a Condition.** A node that ran after a node leaving the state unchanged (a Condition) was
+  grouped into that node's checkpoint, so forking there ran both, the old branch included, and End twice. Each
+  `node_finished` event now carries its `superstep`, and checkpoints follow it (older runs keep the old grouping).
+- **Restart recovery and resumed runs.** Each resume after a Human node or an Agent tool approval counted toward
+  `STUDIO_RECOVER_MAX_ATTEMPTS`, so a run that had been resumed a few times ended as `RUN_INTERRUPTED` at its first
+  restart. Only restarts that cut the run off count now.
+
 ## 0.6.0 (2026-10-24)
 
 ### Added

@@ -50,3 +50,37 @@ def test_fork_errors_and_permissions():
     assert err(tok, {"run_id": rid, "checkpoint": "0"}) == "CHECKPOINT_NOT_FOUND"
     assert err(tok, {"run_id": rid, "checkpoint": 1, "state": [1]}) == "RUN_INPUT_INVALID"
     assert err(tok, "x") == "RUN_REQUEST_INVALID"
+
+
+def test_checkpoints_follow_the_superstep_numbers():
+    """TASK-0123: nodes group by `superstep`, not by equal input state. A Condition leaves the state unchanged, so the
+    node after it starts from the same state, yet runs in the next superstep; parallel nodes keep their superstep's state."""
+    evs = [{"type": "node_finished", "node": "s", "node_type": "start", "input": {}, "superstep": 1},
+           {"type": "node_finished", "node": "route", "node_type": "condition", "input": {"m": "go"}, "superstep": 2},
+           {"type": "node_finished", "node": "yes", "node_type": "llm", "input": {"m": "go"}, "superstep": 3},
+           {"type": "node_finished", "node": "a", "node_type": "llm", "input": {"m": "go", "y": 1}, "superstep": 4},
+           {"type": "node_finished", "node": "b", "node_type": "llm", "input": {"m": "go", "y": 1, "a": 2}, "superstep": 4}]
+    assert [(c["nodes"], c["state"]) for c in TT.checkpoints(evs)] == [
+        (["route"], {"m": "go"}), (["yes"], {"m": "go"}), (["a", "b"], {"m": "go", "y": 1})]
+
+
+ROUTED = {"name": "Routed", "state": [{"name": "message", "type": "string"}, {"name": "a", "type": "string"}, {"name": "b", "type": "string"}],
+          "nodes": [{"id": "s", "type": "start", "position": {"x": 0, "y": 0}, "data": {"label": "Start"}},
+                    {"id": "route", "type": "condition", "position": {"x": 0, "y": 0}, "data": {"label": "Route", "field": "message", "default": "x"}},
+                    {"id": "yes", "type": "llm", "position": {"x": 0, "y": 0}, "data": {"label": "Yes", "prompt": "Say yes", "output_field": "a"}},
+                    {"id": "no", "type": "llm", "position": {"x": 0, "y": 0}, "data": {"label": "No", "prompt": "Say no", "output_field": "b"}},
+                    {"id": "e", "type": "end", "position": {"x": 0, "y": 0}, "data": {"label": "End"}}],
+          "edges": [{"id": "1", "source": "s", "target": "route"}, {"id": "2", "source": "route", "target": "yes", "label": "go"},
+                    {"id": "3", "source": "route", "target": "no", "label": "x"}, {"id": "4", "source": "yes", "target": "e"},
+                    {"id": "5", "source": "no", "target": "e"}]}
+
+
+def test_fork_before_a_condition_takes_one_branch():
+    """TASK-0123: forking before a Condition with an edited state runs the Condition alone, then the branch it picks
+    (it used to run the old branch alongside it, and End twice)."""
+    tok = user(); wid = c.post("/api/workflows", json=ROUTED, headers=H(tok)).json()["data"]["id"]
+    rid = ws(tok, {"workflow_id": wid, "input": {"message": "go"}})[0]["run_id"]
+    cps = c.get(f"/api/runs/{rid}/checkpoints", headers=H(tok)).json()["data"]["checkpoints"]
+    assert [x["nodes"] for x in cps] == [["route"], ["yes"], []]
+    evs = ws(tok, {"fork": {"run_id": rid, "checkpoint": 0, "state": {"message": "nope"}}})
+    assert [e["node"] for e in evs if e["type"] == "node_finished"] == ["route", "no", "e"] and evs[-1]["status"] == "ok"
