@@ -4,7 +4,8 @@
 
 - Project: superstep
 - Task ID: TASK-0122
-- Status: review
+- Status: done
+- 2026-10-26: PR #152 merged into develop (fed117b) with the owner's approval; moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -54,6 +55,12 @@ added since it was made (Agent node, time travel, workflows as MCP tools, phone 
 - `HANDBOOK_SHOTS=1 npx playwright test quickstart` (e2e ports 8150/5230/8151/8152): 2 passed.
 - `node render.mjs --lang en --stills …` and `--lang vi --stills …`: checked as contact sheets.
 - `node render.mjs --lang en`, `node render.mjs --lang vi`: see the PR for duration and size.
+
+## Review And QA
+
+- Review: the owner reviewed the PR and approved the merge. No separate REV artifact.
+- QA: the validation above, plus frames from the rendered videos at 72 s (vi) and 88 s (en), and the audio level
+  (mean -15.2 dB). PR #152 CI: 15 passed, 2 skipped.
 
 ## Notes
 
