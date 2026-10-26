@@ -53,3 +53,8 @@ Two small UI fixes the owner approved in chat on 2026-10-26 ("Làm đi"):
   - the Support agent's knowledge base tool shows the hint, and the built-in tool's label is "Hàm".
 - Browser check on a local dev server (en and vi): Support agent and RAG from the gallery.
 - Handbook `guide/templates.md` (en, vi) and CHANGELOG (Unreleased) updated.
+
+## Review And QA
+
+- Review: REV-0114, QA: QA-0114. Both were written after the merge, by TASK-0129 on 2026-10-26: the PR was merged on CI and the
+  validation above, without them.

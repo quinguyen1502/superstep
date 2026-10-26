@@ -233,17 +233,61 @@ attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1: t
   chats list and New chat, Builder / Visitor view by the step setting, Human nodes answered in the chat or waiting for
   a reviewer, the Chat settings dialog, the Human "Answered by" option, handbook pages. merged in #117 (REV-0078, QA-0078).
 
+## Comparison pages
+
+REQ-0069, Done.
+
+- TASK-0113 Handbook: Superstep vs visual builders and vs agent frameworks (en, vi). **merged** (PR #141, REV-0105, QA-0105).
+
+## Workflows as MCP tools
+
+REQ-0070, Done. DEC-0061.
+
+- TASK-0114 Opted-in workflows as MCP tools at `/mcp` (Streamable HTTP), migration 0038. **merged** (PR #142, REV-0106, QA-0106).
+
+## Runs across restarts
+
+REQ-0071, Done. DEC-0062.
+
+- TASK-0115 Start-up recovery for the in-memory queue, and restart tests. **merged** (PR #143, REV-0107, QA-0107).
+- TASK-0127 An answer to a waiting run is kept on the run until the resumed segment records something, so a restart
+  does not lose it (migration 0039). **merged** (PR #163, REV-0115, QA-0115).
+
 ## Agent node
 
-REQ-0072, Accepted 2026-10-25 (CLAR-0003: all recommended options; inline tools, approval as for Human nodes,
+REQ-0072, Accepted 2026-10-25, Done 2026-10-26 (CLAR-0003: all recommended options; inline tools, approval as for Human nodes,
 approve or reject, a rejection is told to the model, a last call without tools at the round limit, answer plus
 optional steps, optional history field, Python and LangGraph project exports first). DEC-0063 (accepted 2026-10-25): the node is
 expanded into LangGraph model and tool steps, one tool call per step.
 
 - TASK-0116 Engine: expansion, model calls with tools through the provider registry (Anthropic over plain HTTP),
-  MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **review** (PR #144, REV-0108, QA-0108)
-- TASK-0117 Approval before a tool call through the Human approval path; restart tests (needs #143). **todo**
-- TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **review** (PR #145, stacked on #144, REV-0109, QA-0109)
+  MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **merged** (PR #144, REV-0108, QA-0108).
+- TASK-0117 Approval before a tool call through the Human approval path; restart tests. **merged** (PR #146, REV-0110, QA-0110).
+- TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **merged** (PR #145, REV-0109, QA-0109).
 - TASK-0119 "Tool called" test check, Support agent template with tests, Python and project export, TypeScript
-  refusal. **todo**
-- TASK-0120 Handbook (en, vi), comparison pages, CHANGELOG. **todo**
+  refusal. **merged** (PR #147, REV-0111, QA-0111).
+- TASK-0120 Handbook (en, vi), comparison pages, CHANGELOG. **merged** (PR #148, REV-0112, QA-0112).
+- TASK-0125 LangGraph.js export of Agent nodes (CLAR-0003 question 8, also REQ-0047); the TypeScript refusal is
+  removed. **merged** (PR #158, REV-0113, QA-0113).
+
+## Owner requests
+
+Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.
+
+- TASK-0121 Phone layout, and one fixed set of Config tabs for every node. **merged** (PR #150).
+- TASK-0122 Intro video remade with the new features (en, vi). **merged** (PR #152).
+- TASK-0123 Fixes: time travel after a Condition (REQ-0051), and restart recovery counting resumes (REQ-0071).
+  **merged** (PR #153).
+- TASK-0126 Vietnamese "Hàm" label, a "choose a knowledge base" hint, and the template's missing setup listed when
+  it opens (REQ-0007, REQ-0015, REQ-0072). **merged** (PR #160, REV-0114, QA-0114).
+- TASK-0129 Factory housekeeping: review and QA records for TASK-0125 to TASK-0128, requirement statuses, this
+  roadmap, DEC-0064, verification commands in the tool policy. **review**.
+
+## Releases
+
+- TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,
+  intro video. **released** (PR #155 to main, tag `v0.7.0`).
+- TASK-0128 Version 0.8.0: the TypeScript export of Agent nodes, template setup hints, an answer kept across a
+  restart. **released** (PR #166 to main, tag `v0.8.0`).
+- Earlier releases (0.3.0 to 0.6.0: TASK-0096, TASK-0098, TASK-0100, TASK-0105, TASK-0111) and the tasks between
+  TASK-0087 and TASK-0112 are not listed in this roadmap. Their task files and CHANGELOG.md have the details.

@@ -43,3 +43,9 @@ Version 0.8.0 (owner request in chat, 2026-10-26: "Merge và bump version đi"),
     - v0.7.0, the same commands: 48 out of 48 passed.
   - Each run uses a fresh database, and 0.8.0 changes nothing in webhook deliveries. Treated as a timing flake under
     load; the cause is not found. Worth watching: if it fails again, look at how long the API run takes to settle.
+
+## Review And QA
+
+- Review: the owner approved the release in chat ("Merge và bump version đi"). No separate REV artifact.
+- QA: the CI results above, and the Image workflow on the tag. No separate QA artifact.
+- Added by TASK-0129 on 2026-10-26: `factory validate` reported the task without these references.
