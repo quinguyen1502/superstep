@@ -25,9 +25,10 @@ class RunMetrics:
 
 @dataclass(frozen=True)
 class RunWaiting:
-    """The Human node a `waiting` run is paused at."""
+    """The Human node a `waiting` run is paused at, or the child run of a workflow tool it waits for (`child_run_id`)."""
     node: Optional[str] = None
     prompt: Optional[str] = None
+    child_run_id: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class Run:
     final_state: Optional[Dict[str, Any]] = None
     error: Optional[Any] = None
     waiting: Optional[RunWaiting] = None
+    parent_run_id: Optional[str] = None  # the run whose Agent node called this one as a workflow tool
     metrics: Optional[RunMetrics] = None
     trace_url: Optional[str] = None
     started: Optional[float] = None

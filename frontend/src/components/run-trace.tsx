@@ -33,7 +33,7 @@ const StatusIcon = ({ s, className }: { s: Span['status'] | Trace['status']; cla
 function Summary({ trace, replay, onExitReplay, raw, setRaw, actions }: { trace: Trace; replay?: string; onExitReplay?: () => void; raw: boolean; setRaw: (b: boolean) => void; actions?: ReactNode }) {
   const { t } = useTranslation()
   return <div id="trace-summary" data-status={trace.status} className={cn('flex items-center gap-3 border-b px-3 py-1.5 text-xs', (trace.status === 'error') && 'bg-destructive/5', trace.status === 'timeout' && 'bg-warning/10', trace.status === 'cancelled' && 'bg-muted')}>
-    <span className="flex items-center gap-1.5 font-medium"><StatusIcon s={trace.status} />{t(`trace.${trace.status}`)}</span>
+    <span className="flex items-center gap-1.5 font-medium"><StatusIcon s={trace.status} />{t(trace.waiting?.child ? 'trace.waitingChild' : `trace.${trace.status}`)}</span>
     <Separator orientation="vertical" className="h-4" />
     <span className="flex items-center gap-1 text-muted-foreground"><Clock className="size-3.5" />{fmtMs(trace.total)}</span>
     <span className="flex items-center gap-1 text-muted-foreground"><Layers className="size-3.5" />{t('trace.steps', { count: trace.spans.length })}</span>

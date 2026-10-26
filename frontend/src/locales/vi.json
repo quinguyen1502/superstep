@@ -285,6 +285,7 @@
     "usageDetail": "{{model}}: {{tin}} token vào / {{tout}} token ra · {{cost}}",
     "estimated": "(ước tính)",
     "waiting": "Đang chờ người phản hồi",
+    "waitingChild": "Đang chờ một workflow khác",
     "paused": "Tạm dừng sau một bước",
     "streaming": "Model đang trả lời…",
     "agent": {
@@ -621,6 +622,16 @@
     "prompt": "Trả lời: {{var}}",
     "greeting": "Xin chào!",
     "agentPrompt": "Giúp người dùng: {{var}}"
+  },
+  "childRuns": {
+    "waitingTitle": "Đang chờ một workflow khác",
+    "waitingFor": "Công cụ {{tool}} đang chạy workflow {{name}}. Run này tự chạy tiếp khi workflow đó xong.",
+    "childWaits": "Run đó đang chờ duyệt: hãy trả lời ở trang Duyệt.",
+    "openChild": "Mở run đó",
+    "calledBy": "Được gọi bởi {{name}}",
+    "openParent": "Mở run đã gọi",
+    "badge": "Gọi công cụ",
+    "unknown": "một workflow bạn không mở được"
   },
   "human": {
     "title": "Đang chờ phản hồi của bạn",

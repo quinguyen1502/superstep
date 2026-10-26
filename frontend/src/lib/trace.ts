@@ -3,7 +3,8 @@ import i18n, { eventErrors, type ApiErrorBody } from '@/lib/i18n'
 export type RunEvent = { type: string; node?: string; label?: string; node_type?: string; iteration?: number; duration_ms?: number
   input?: any; delta?: any; state?: any; errors?: string[]; error?: ApiErrorBody; ts?: number; tokens?: number; usage?: Usage & { total_tokens?: number }; run_id?: string; status?: string; reason?: string
   metrics?: RunMetrics | null; trace_id?: string | null; trace_url?: string | null; prompt?: string; response?: string
-  code_output?: CodeOutput; agent?: AgentStep }
+  code_output?: CodeOutput; agent?: AgentStep
+  wait?: { kind: 'child'; run_id: string }; tool?: string; workflow_id?: string }  // a run waiting for a workflow tool's child run (TASK-0134)
 /** What one step of an Agent node did (TASK-0116, DEC-0063): a model call (`model`) or one tool call (`tool`). */
 export type AgentStep = { kind: 'model' | 'tool'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
   tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected'; ms?: number
@@ -23,7 +24,7 @@ export type Span = { key: string; node: string; label: string; type: string; ite
   live?: string; code?: CodeOutput; agent?: AgentStep }  // TASK-0030: LLM text streamed so far (node_token deltas; not stored in run history)
 export type Trace = { runId?: string; spans: Span[]; status: 'idle' | 'running' | 'ok' | 'error' | 'cancelled' | 'timeout' | 'waiting' | 'expired' | 'paused'; start?: number; end?: number; total?: number
   tokens?: number; errors: string[]; final?: any; metrics?: RunMetrics; traceUrl?: string
-  waiting?: { runId?: string; node?: string; label?: string; prompt?: string }
+  waiting?: { runId?: string; node?: string; label?: string; prompt?: string; child?: { runId: string; workflowId?: string; tool?: string } }
   paused?: { runId?: string } }  // TASK-0036: one-step pause, not a human approval
 
 export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: string; type?: string } = () => ({})): Trace {
@@ -74,7 +75,8 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
   const metrics = summary?.metrics ?? undefined
   return { runId, spans: kept, status, start, end, total: metrics?.duration_ms ?? (start != null && end != null ? (end - start) * 1000 : undefined),
     tokens: metrics?.tokens ?? (tokens || undefined), errors, final, metrics, traceUrl: summary?.trace_url ?? undefined,
-    waiting: status === 'waiting' && waitingEv ? { runId, node: waitingEv.node, label: waitingEv.label, prompt: waitingEv.prompt } : undefined,
+    waiting: status === 'waiting' && waitingEv ? { runId, node: waitingEv.node, label: waitingEv.label, prompt: waitingEv.prompt,
+      ...(waitingEv.wait ? { child: { runId: waitingEv.wait.run_id, workflowId: waitingEv.workflow_id, tool: waitingEv.tool } } : {}) } : undefined,
     paused: status === 'paused' ? { runId } : undefined }
 }
 
