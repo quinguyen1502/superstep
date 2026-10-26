@@ -4,7 +4,12 @@
 
 - Project: superstep
 - Task ID: TASK-0124
-- Status: review
+- Status: done
+- 2026-10-26: released with the owner's approval:
+  - #154 (version bump) merged into develop (89b0d42);
+  - #156 (alignment test fix) merged into develop (ff0a7ff);
+  - #155 (release, develop -> main) merged (0063e82), with CI 31 passed and 2 skipped;
+  - tag `v0.7.0` on 0063e82, and the GitHub Release "Superstep v0.7.0".
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
