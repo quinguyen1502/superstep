@@ -5,7 +5,8 @@ killed with SIGKILL and started again on the same database:
   the restart, without running the finished node again;
 - a run that keeps being interrupted ends as `error` RUN_INTERRUPTED instead of being retried forever.
 TASK-0117 adds the Agent node: a run paused at a tool approval resumes after a restart, and a run killed between two
-rounds continues without repeating the finished model call or tool call."""
+rounds continues without repeating the finished model call or tool call. TASK-0127: an answer accepted just before a
+restart is not lost."""
 import http.server, json, os, signal, socket, sqlite3, subprocess, sys, tempfile, threading, time, uuid
 from pathlib import Path
 import httpx, pytest
@@ -163,6 +164,22 @@ def test_resumes_do_not_count_as_interruptions(server):
     done = poll(server, wid, tok, rid)
     assert done["status"] == "ok" and done["final_state"]["b"] == "late"
     assert log.read_text().splitlines() == ["first", "slow", "slow"]
+
+def test_answer_queued_before_a_restart_is_not_lost(server):
+    """TASK-0127: the inbox answer is accepted, but the server stops before a worker takes its resume job (here the
+    process has no worker at all). The answer was kept on the run, so the restarted server resumes it; before, the
+    run stayed waiting and its closed waiting step refused a second answer."""
+    jwt, wid, tok = setup(server, APPROVAL)
+    rid = httpx.post(f"{server.url}/api/hooks/workflows/{wid}/runs", json={"input": {"message": "order 7"}}, headers=H(tok)).json()["data"]["run_id"]
+    assert poll(server, wid, tok, rid)["status"] == "waiting"
+    server.env["STUDIO_WORKER"] = "0"; server.restart()
+    res = httpx.post(f"{server.url}/api/approvals/inbox/{rid}", json={"response": "approved"}, headers=H(jwt)).json()
+    assert res["success"], res
+    row = server.run_row(rid); assert row["status"] == "waiting" and json.loads(row["resume_job"])["response"] == "approved"
+    server.env["STUDIO_WORKER"] = "1"; server.restart()
+    done = poll(server, wid, tok, rid)
+    assert done["status"] == "ok" and done["final_state"]["decision"] == "approved"
+    assert server.run_row(rid)["resume_job"] is None
 
 # ---- Agent node (TASK-0117) -------------------------------------------------------------------
 

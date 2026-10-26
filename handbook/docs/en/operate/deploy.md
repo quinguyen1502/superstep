@@ -108,6 +108,7 @@ or a crash loses no paused run:
 | Run | After a restart |
 | --- | --- |
 | Paused at a Human node | Still waiting. Answer it in the studio, a chat channel or the API as before; it continues from its checkpoint. |
+| Answered, but not yet continued | Continues with that answer. The answer is kept on the run until the run moves on, so an answer accepted just before the restart is not lost. |
 | Queued or running API, schedule, chat or test run | Continues from its last finished node. Queue jobs save a progress checkpoint after every node; the node that was in flight runs again, finished calls are not repeated ([effectively-once side effects](../reference/architecture.md#effectively-once-side-effects)). |
 | Running in the editor | Ends with the browser connection; it is not stored until it finishes. Run it again. |
 
@@ -117,7 +118,8 @@ How unfinished queue runs come back depends on the queue:
   worker takes it again.
 - **In-memory queue** (no `REDIS_URL`, a single process): jobs held in memory
   are gone, so at start-up the server queues every `queued` or `running` run
-  again as a recovered job. Set `STUDIO_RECOVER_ON_START=0` only if several API
+  again as a recovered job, and every answer kept on a run that has not moved
+  on yet. Set `STUDIO_RECOVER_ON_START=0` only if several API
   processes share one database without Redis, since one of them would take
   over the runs of another.
 

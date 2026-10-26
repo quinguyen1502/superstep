@@ -23,7 +23,7 @@ from ..engine.limits import size
 from ..models import Run, WorkflowTest, WorkflowTestResult, WorkflowTestSuite
 from ..repositories import RunRepository, WorkflowRepository, WorkflowTestRepository, WorkflowVersionRepository
 from .langsmith import configured as langsmith_configured
-from .job_queue import JobQueue
+from .job_queue import JobQueue, enqueue_resume
 from .run_service import RESPONSE_MAX
 
 log = get_logger("tests")
@@ -266,8 +266,9 @@ class WorkflowTestService:
             answers = case["answers"].get(answer_key(node)) or []
             if used < len(answers):  # answer like a channel decision would; the worker's claim makes it happen once
                 # a second later: this segment is still settling, and must leave the run bus before the next one joins it
-                self.jobs.enqueue_at({"kind": "resume", "run_id": rid, "owner": run.owner, "response": answers[used], "workflow_id": run.workflow_id,
-                                      "by": {"channel": "test"}, "test": {"mock": bool(s.mock)}}, now + RESUME_DELAY)
+                enqueue_resume(self.runs, lambda job: self.jobs.enqueue_at(job, now + RESUME_DELAY),
+                               {"kind": "resume", "run_id": rid, "owner": run.owner, "response": answers[used], "workflow_id": run.workflow_id,
+                                "by": {"channel": "test"}, "test": {"mock": bool(s.mock)}})
                 return
             try: self.run_service().cancel_waiting(rid, run.owner)
             except AppError: pass

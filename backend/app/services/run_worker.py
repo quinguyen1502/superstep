@@ -7,7 +7,7 @@ Runs inside the API process (STUDIO_WORKER=1, default) and/or as a dedicated pro
 - `maintain` (every worker): promotes due delayed jobs every second and reaps expired leases every
   STUDIO_JOB_REAP_EVERY seconds. The lease of a running job is renewed every visibility/3 seconds.
 """
-import asyncio, time
+import asyncio, json, time
 from typing import Callable, Optional
 from ..core import config
 from ..core.errors import AppError
@@ -137,13 +137,26 @@ class RunWorker:
         last progress checkpoint (or from the start when no node had finished), exactly as for a lost Redis lease. A
         run cut off STUDIO_RECOVER_MAX_ATTEMPTS times (it keeps stopping the server, or keeps being interrupted) ends
         as `error` RUN_INTERRUPTED instead; resumes after a Human node or an Agent tool approval do not count
-        (RunService.interruptions). Waiting runs need nothing: their checkpoint is in
-        the database and any process resumes them. Returns the number of runs requeued."""
+        (RunService.interruptions). A waiting run needs nothing (its checkpoint is in the database), unless it was
+        answered and the answer's resume job was lost (TASK-0127): the answer kept on the run is queued again, also
+        for a run claimed by that resume and cut off before it recorded anything, which goes back to waiting first.
+        Returns the number of runs requeued."""
         global _recovered
         if self.jobs.kind != "memory" or not config.recover_on_start() or _recovered: return 0  # Redis: the reaper requeues lost jobs
         _recovered = True
         svc = self.services(); n = 0; most = config.recover_max_attempts()
+        kept = await asyncio.to_thread(svc.runs.list_resumes)
+        for r in kept:
+            try:
+                if r.status == "running":  # claimed by the resume, then cut off: its checkpoint is still the waiting one
+                    if (cut := svc.interruptions(r)) >= most:
+                        await asyncio.to_thread(svc.interrupted, r, cut); await svc.settled(r.id, r.source); continue
+                    await asyncio.to_thread(svc.runs.set_status, r.id, "waiting")
+                self.jobs.enqueue(json.loads(r.resume_job)); n += 1
+            except Exception: log.exception("recovering the answer to run %s failed", r.id)
+        answered = {r.id for r in kept}
         for r in await asyncio.to_thread(svc.runs.list_unfinished):
+            if r.id in answered: continue
             try:
                 if (cut := svc.interruptions(r)) >= most:
                     await asyncio.to_thread(svc.interrupted, r, cut); await svc.settled(r.id, r.source); continue
