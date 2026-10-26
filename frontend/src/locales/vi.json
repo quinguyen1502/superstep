@@ -286,6 +286,12 @@
     "estimated": "(ước tính)",
     "waiting": "Đang chờ người phản hồi",
     "waitingChild": "Đang chờ một workflow khác",
+    "child": {
+      "steps": "Các bước của {{name}}",
+      "open": "Mở run",
+      "loading": "Đang tải run được gọi…",
+      "unavailable": "Không hiện được run được gọi ở đây."
+    },
     "paused": "Tạm dừng sau một bước",
     "streaming": "Model đang trả lời…",
     "agent": {
@@ -2012,8 +2018,19 @@
       "mcp": "Công cụ MCP",
       "http": "Yêu cầu HTTP",
       "builtin": "Hàm có sẵn",
-      "knowledge": "Tìm trong kho tri thức"
+      "knowledge": "Tìm trong kho tri thức",
+      "workflow": "Workflow khác"
     },
+    "workflow": "Workflow",
+    "workflowRequired": "Hãy chọn workflow",
+    "workflowHint": "Model chạy workflow đã lưu này như một công cụ. Nó chạy thành một run riêng, với credential của bạn; phiên bản lưu mới nhất được chạy.",
+    "workflowField": "Trường state",
+    "workflowInput": "Tham số",
+    "workflowOutput": "Kết quả",
+    "workflowInputOf": "{{field}} là tham số model điền",
+    "workflowOutputOf": "{{field}} được trả về cho model",
+    "workflowOutputsRequired": "Hãy chọn ít nhất một trường kết quả",
+    "workflowFieldsHint": "Tham số là các trường model điền khi gọi công cụ; kết quả là phần model nhận lại từ state cuối của workflow.",
     "toolName": "Tên",
     "duplicateName": "Đã có công cụ khác trùng tên này.",
     "toolDescription": "Mô tả cho model",

@@ -70,7 +70,7 @@ export function EditorConfig() {
       <F label={t('field.model')}><ModelPicker credentialId={d.credential_id || undefined} value={d.model || ''} onChange={v => upd('model', v)} placeholder={providers.find(p => p.id === creds.find(c => c.id === d.credential_id)?.provider)?.default_model || 'gpt-4o-mini'} /></F>
       <F label={t('field.promptTemplate', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={7} id="llm-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>
     </>}
-    {type === 'agent' && selNode && <AgentSettings key={selNode.id} data={d} nodeId={selNode.id} fields={state} creds={chatCreds} providers={providers} channels={channels}
+    {type === 'agent' && selNode && <AgentSettings key={selNode.id} wid={wid} data={d} nodeId={selNode.id} fields={state} creds={chatCreds} providers={providers} channels={channels}
       builtins={tools} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
     {type === 'human' && selNode && <>
       <F label={t('field.humanPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={4} id="human-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
-import { useState, type ReactNode } from 'react'
-import { AlertTriangle, Ban, CheckCircle2, Clock, Hand, Pause, TimerOff, Coins, DollarSign, ExternalLink, Layers, Loader2, X, XCircle, type LucideIcon, ShieldAlert } from 'lucide-react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
+import { AlertTriangle, Ban, CheckCircle2, Clock, Hand, Pause, TimerOff, Coins, DollarSign, ExternalLink, Layers, Loader2, X, XCircle, type LucideIcon, ShieldAlert, Workflow } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -12,7 +12,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CodeConsole } from '@/components/code-settings'
 import { JsonView } from '@/components/json-view'
-import { agentOf, fmtCost, fmtMs, stateDiff, type AgentStep, type RunEvent, type Span, type Trace } from '@/lib/trace'
+import { agentOf, buildTrace, fmtCost, fmtMs, stateDiff, type AgentStep, type RunEvent, type Span, type Trace } from '@/lib/trace'
+import { api } from '@/lib/api'
+import { TextLink } from '@/components/text-link'
 import { cn } from '@/lib/utils'
 import { Tip } from '@/components/tip'
 
@@ -62,6 +64,26 @@ function AgentSummary({ a }: { a: AgentStep }) {
     {a.round > 0 && <Badge variant="outline" size="sm" data-testid="span-round">{t('trace.agent.round', { n: a.round })}</Badge>}
     <Tip tip={text}><span className="truncate min-w-0 flex-1 text-muted-foreground text-[11px]" data-testid="span-agent">{text}</span></Tip>
   </>
+}
+
+/** The steps of a workflow tool's child run under the tool call (TASK-0136, DEC-0066): fetched once, read-only, with a
+ *  link to the child run. Shown in the studio trace and in a chat's full view. */
+export function ChildSteps({ runId, name, className }: { runId: string; name?: string; className?: string }) {
+  const { t } = useTranslation()
+  const [run, setRun] = useState<{ workflow_id: string; status: string; events: RunEvent[] } | null | 'error'>(null)
+  useEffect(() => { api<any>(`/api/runs/${runId}`).then(setRun).catch(() => setRun('error')) }, [runId])
+  const box = cn('ml-9 mr-3 my-0.5 border-l pl-3 py-1 text-[11px]', className)
+  if (run === null) return <div className={cn(box, 'text-muted-foreground')} data-testid="child-steps"><Loader2 className="inline size-3 animate-spin" /> {t('trace.child.loading')}</div>
+  if (run === 'error') return <div className={cn(box, 'text-muted-foreground')} data-testid="child-steps">{t('trace.child.unavailable')}</div>
+  const tr = buildTrace(run.events)
+  return <div className={box} data-testid="child-steps" data-run={runId}>
+    <div className="flex items-center gap-1.5 text-muted-foreground"><Workflow className="size-3" />{t('trace.child.steps', { name: name || runId })}
+      <TextLink to={`/workflows/${run.workflow_id}?run=${runId}`} className="ml-auto" id={`child-open-${runId}`}>{t('trace.child.open')}</TextLink></div>
+    {tr.spans.filter(x => x.type !== 'start' && x.type !== 'end').map(x => <div key={x.key} data-testid="child-step" className="flex items-center gap-1.5 py-0.5">
+      <StatusIcon s={x.status} className="size-3" /><span className={cn('truncate', agentOf(x.node) && 'pl-3', x.status === 'error' && 'text-destructive')}>{x.label}</span>
+      {x.agent?.kind === 'tool' && x.agent.tool && <span className="truncate text-muted-foreground">{x.agent.tool}</span>}
+      <span className="ml-auto shrink-0 tabular-nums text-muted-foreground">{fmtMs(x.duration)}</span></div>)}
+  </div>
 }
 
 function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; meta: Meta; selected: boolean; onClick: () => void }) {
@@ -146,7 +168,8 @@ export function RunTrace({ trace, events, meta, selected, onSelect, replay, onEx
     <div className="flex-1 min-h-0 flex">
       <ScrollArea className="flex-1 min-h-0"><div className="py-1" id="trace-timeline">
         {raw ? <div className="px-3 font-mono text-[11px] space-y-0.5" id="raw-events">{events.map((e, i) => <div key={i} className={cn('flex gap-2', e.type === 'error' && 'text-destructive')}><span className="w-6 shrink-0 select-none text-right text-muted-foreground tabular-nums">{i}</span><span className="min-w-0 break-all">{JSON.stringify(e)}</span></div>)}</div>
-        : <>{trace.spans.map(s => <Row key={s.key} s={s} trace={trace} meta={meta} selected={s.key === selected} onClick={() => onSelect(s.key === selected ? null : s)} />)}
+        : <>{trace.spans.map(s => <Fragment key={s.key}><Row s={s} trace={trace} meta={meta} selected={s.key === selected} onClick={() => onSelect(s.key === selected ? null : s)} />
+            {s.agent?.child_run_id && <ChildSteps runId={s.agent.child_run_id} name={s.agent.tool} />}</Fragment>)}
           {trace.errors.length > 0 && !trace.spans.some(s => s.error) && <Alert variant={trace.status === 'timeout' ? 'warning' : 'destructive'} id="trace-run-error" className="mx-3 my-1 w-auto">{trace.status === 'timeout' ? <TimerOff /> : <AlertTriangle />}<AlertDescription className="text-xs">{trace.errors.join('; ')}</AlertDescription></Alert>}
           {trace.status === 'cancelled' && <Alert variant="warning" className="mx-3 my-1 w-auto" id="trace-cancelled"><Ban /><AlertDescription className="text-xs">{t(events.some(e => e.reason === 'disconnect') ? 'trace.cancelledDisconnect' : 'trace.cancelledMsg')}</AlertDescription></Alert>}
           {trace.spans.some(s => s.code?.runtime === 'subprocess') && <Alert variant="warning" className="mx-3 my-1 w-auto" id="trace-code-unisolated"><ShieldAlert /><AlertDescription className="text-xs">{t('code.runUnisolated')}</AlertDescription></Alert>}

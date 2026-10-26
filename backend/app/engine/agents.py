@@ -423,6 +423,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             ms = round((time.perf_counter() - t0) * 1000, 2)
             p.setdefault("messages", []).append({"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": shorten(result, RESULT_CHARS)})
             step = {"tool": call["name"], "args": args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
+                    **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),
                     **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {})}
             p.setdefault("steps", []).append(step)
             p["last"] = {"kind": "tool", "round": p.get("rounds", 0), **step}
