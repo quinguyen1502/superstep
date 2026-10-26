@@ -46,6 +46,13 @@ Version 0.7.0 (owner request in chat, 2026-10-26), the same way as 0.6.0 (TASK-0
   - the code sandbox images.
 - The version bump changes no code, so the release PR's CI is the check.
 
+- Full e2e on develop at 89b0d42: 95 passed, 11 skipped, 1 failed.
+  - The failure: `alignment.spec.ts`, dark-en, rename dialog footer. It failed 3 times out of 3.
+  - Cause: the check measured the buttons during the dialog's zoom-in, at a scale of about 0.96 (30.76 px instead
+    of 32 px), so it is a timing problem in the test, not a layout regression.
+  - Fix in #156: `settled()` in `e2e/helpers/alignment.ts` waits for the dialog's animations to end before
+    measuring. After the fix: 24 passed out of 24 with `--repeat-each 3`.
+
 ## Review And QA
 
 - Review: the owner approves the release in chat. No separate REV artifact.
