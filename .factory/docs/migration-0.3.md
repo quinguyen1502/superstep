@@ -32,7 +32,6 @@ Projects using a detached copy from an earlier release can continue existing art
 ```text
 factory validate .
 factory tools validate -C .
-factory scaffold validate -C .       # when scaffold state exists
 factory deps validate -C .           # when dependency state exists
 factory verify validate -C .         # after the first verification run
 factory stack plan -C .              # preview new configuration only

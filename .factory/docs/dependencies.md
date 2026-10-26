@@ -1,15 +1,13 @@
 # Project Dependency Installation
 
-Factory treats dependency installation as the optional second phase of source scaffolding. The owner sees one continuous setup flow, but source publication and package-manager execution remain separate transactions because network operations cannot be rolled back reliably.
+Factory installs project-local dependencies from manifests and lockfiles already in the repository. Package-manager execution is its own transaction because network operations cannot be rolled back reliably.
 
 ## Flow
 
 ```text
-atomic scaffold publish
-        ↓
 dependency discovery and exact command preview
         ↓
-owner confirmation and network approval
+network approval via --allow-network
         ↓
 project-local package-manager commands
         ↓
@@ -18,7 +16,7 @@ installed.yaml or INCOMPLETE
 dependency validation
 ```
 
-An interactive `factory scaffold apply` offers this phase after source publication. Scripts and CI must select it explicitly with `--with-deps --allow-network`, or stop after source with `--skip-deps`.
+Scripts and CI select the install explicitly:
 
 The phase can be planned, retried, and validated independently:
 

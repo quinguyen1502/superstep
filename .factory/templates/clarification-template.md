@@ -26,10 +26,6 @@ answers: {}
 
 Use this artifact when a task has at least four owner questions, a long checklist, multiple groups, or conditional questions. Link it directly from the task artifact.
 
-The owner may answer it with:
-
-```text
-factory clarify CLAR-0001 -C <project-dir>
-```
+The owner answers in chat, or edits the `answers` map in this file.
 
 The implementing agent must propagate submitted answers into the related requirement, design, architecture, decision, or task artifacts.

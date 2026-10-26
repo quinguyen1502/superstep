@@ -1,24 +1,10 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import List, Optional
 
-import yaml
-
-from ..constants import (
-    METRICS_USAGE_JSONL,
-    METRICS_USAGE_PATH,
-    TASK_ROOT,
-    TASK_STATES,
-)
-from .base import (
-    TaskRecord,
-    TaskStore,
-    UsageRecord,
-    parse_task_markdown,
-    parse_task_owner,
-)
+from ..constants import TASK_ROOT, TASK_STATES
+from .base import TaskRecord, TaskStore, parse_task_markdown, parse_task_owner
 
 # Reading the metadata header (Task ID + In Scope title) never needs the whole
 # file, so list operations read only this many bytes per task.
@@ -193,49 +179,3 @@ class FolderTaskStore(TaskStore):
             path=str(destination.relative_to(self.project_dir)),
             body=body,
         )
-
-    # -- usage metrics -------------------------------------------------------
-
-    def _usage_yaml_path(self) -> Path:
-        return self.project_dir / METRICS_USAGE_PATH
-
-    def _usage_jsonl_path(self) -> Path:
-        return self.project_dir / METRICS_USAGE_JSONL
-
-    def record_usage(self, record: UsageRecord) -> None:
-        # Append a single line so recording is O(1) instead of rewriting the
-        # whole file each time, which matters as the log grows.
-        path = self._usage_jsonl_path()
-        path.parent.mkdir(parents=True, exist_ok=True)
-        line = json.dumps(record.to_dict(), ensure_ascii=False)
-        with path.open("a", encoding="utf-8") as handle:
-            handle.write(line + "\n")
-
-    def list_usage(
-        self,
-        scope: Optional[str] = None,
-        ref: Optional[str] = None,
-    ) -> List[UsageRecord]:
-        records: List[UsageRecord] = []
-        # Legacy YAML records (written before the JSONL log) are still read.
-        yaml_path = self._usage_yaml_path()
-        if yaml_path.is_file():
-            data = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or []
-            if not isinstance(data, list):
-                raise StoreError(f"Invalid usage metrics file: {yaml_path}")
-            records.extend(UsageRecord.from_dict(item) for item in data)
-        jsonl_path = self._usage_jsonl_path()
-        if jsonl_path.is_file():
-            for line in jsonl_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    records.append(UsageRecord.from_dict(json.loads(line)))
-                except json.JSONDecodeError as exc:
-                    raise StoreError(f"Invalid usage metrics line: {exc}") from exc
-        if scope is not None:
-            records = [item for item in records if item.scope == scope]
-        if ref is not None:
-            records = [item for item in records if item.ref == ref]
-        return records

@@ -2,10 +2,9 @@
 
 `ids` is dispatched here rather than in `main`, and the indirection earns its
 keep: agents are required to run `factory ids` before every push that adds
-artifacts, while importing `main` pulls in the adapter, model, storage and TUI
-stack — and with it PyYAML, rich and textual. A fresh checkout has none of
-them, so the one mandatory pre-push command was the one command that could not
-run.
+artifacts, while importing `main` pulls in the adapter, model, and storage
+stack — and with it PyYAML. A fresh checkout has none of that, so the one
+mandatory pre-push command was the one command that could not run.
 
 Nothing else is special-cased. Every other command wants the CLI anyway, and a
 missing dependency there is a real missing dependency.
