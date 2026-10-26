@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "superstep-backend"
-version = "0.7.0"
+version = "0.8.0"
 license = "MIT"
 description = "FastAPI backend for Superstep (compiler, runner, auth, repo import)"
 requires-python = ">=3.12"
