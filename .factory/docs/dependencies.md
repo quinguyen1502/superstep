@@ -66,13 +66,15 @@ For npm projects, Factory explicitly includes development dependencies because l
 A successful apply records `.factory-state/dependencies/installed.yaml` with:
 
 - input manifest and lockfile hashes;
-- the exact argument arrays and working directories;
+- the argument arrays and working directories, with an absolute executable
+  recorded by its name (`npm`, not `/usr/local/bin/npm`) so the file is the
+  same on every machine;
 - managers and expected project-local outputs;
 - timestamps, exit statuses, and completion status.
 
 If a command fails, already-published source remains untouched. Factory records the partial command evidence and writes `.factory-state/dependencies/INCOMPLETE`. Fix the runtime, credentials, registry, or manifest issue, then run `factory deps plan` and `factory deps apply` again. A later success removes the marker.
 
-`factory deps validate` fails for incomplete or missing dependency state, missing expected environments, and missing top-level npm dependencies declared by `package.json`. Legacy npm state without integrity evidence produces a warning and can be refreshed by rerunning `factory deps apply`. Manifest or lockfile drift is reported as a warning so the owner can deliberately rerun installation. The top-level `factory validate` includes dependency checks only after dependency state exists.
+`factory deps validate` fails for incomplete or missing dependency state, missing expected environments, and missing top-level npm dependencies declared by `package.json`. Legacy npm state without integrity evidence produces a warning and can be refreshed by rerunning `factory deps apply`. Manifest or lockfile drift is reported as a warning so the owner can deliberately rerun installation. Build output and caches (`dist/`, `build/`, `coverage/`, `.next/`, `.svelte-kit/`) are not searched for manifests, so a `package.json` a build copies there is not drift. The top-level `factory validate` includes dependency checks only after dependency state exists.
 
 ## Boundaries
 
