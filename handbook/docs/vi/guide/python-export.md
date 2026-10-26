@@ -154,6 +154,19 @@ builder.add_conditional_edges("support_agent_tool", route_support_agent_tool, {"
 File không dùng `create_react_agent`: hàm đó không hỏi trước riêng một công cụ
 được, và không ghi các vòng và các bước như studio.
 
+Một [công cụ workflow](agent.md#workflow-lam-cong-cu) (từ mẫu Đội hỗ trợ) gọi
+graph riêng của workflow kia, được viết một lần trong cùng file:
+
+```python
+def call_supervisor_tool(name: str, args: dict, state: State) -> Any:
+    if name == "order_desk":
+        final = build_order_desk().invoke({k: args[k] for k in ["message"] if k in args})
+        return {k: final.get(k) for k in ["answer"]}
+```
+
+Trong studio, lần gọi là một run được gọi; trong file, graph con chạy ngay trong
+bước công cụ, và một `interrupt()` bên trong nó làm cả graph dừng chờ.
+
 ### Một Subgraph
 
 ```python

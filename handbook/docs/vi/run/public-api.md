@@ -124,6 +124,8 @@ Phản hồi là `202 Accepted`:
 Hỏi lại mỗi một hoặc hai giây và giãn dần với run dài; việc poll không bị
 giới hạn tần suất. Run kết thúc ở `error` có lỗi của node hỏng trong `error`;
 run ở `waiting` ghi tên node Human và prompt của nó trong `waiting`.
+Run đang chờ run được gọi của một [công cụ workflow](../guide/agent.md#workflow-lam-cong-cu)
+thì có `waiting.child_run_id`, còn run được gọi có `parent_run_id`.
 
 ## Chạy và chờ
 

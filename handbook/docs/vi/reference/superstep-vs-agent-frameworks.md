@@ -24,7 +24,7 @@ trước khi quyết định. Về các trình dựng trực quan, xem
 | | Superstep + LangGraph | CrewAI | PydanticAI |
 | --- | --- | --- | --- |
 | Cách dựng | Vẽ graph, hoặc viết code LangGraph; xuất code để chuyển từ cách này sang cách kia | Code Python (Flow và Crew); Crew Studio không cần code trong AMP | Code Python; đặc tả agent bằng YAML/JSON |
-| Mô hình cốt lõi | Graph tường minh: node, cạnh, state có kiểu, checkpoint; node Agent chạy vòng lặp công cụ do model chọn ngay trong graph | Flow (state, sự kiện, rẽ nhánh) gọi các Crew gồm agent đóng vai | Vòng lặp agent có kiểu; Pydantic Graph cho luồng điều khiển dạng graph |
+| Mô hình cốt lõi | Graph tường minh: node, cạnh, state có kiểu, checkpoint; node Agent chạy vòng lặp công cụ do model chọn ngay trong graph, và gọi được workflow khác (có agent riêng) làm công cụ | Flow (state, sự kiện, rẽ nhánh) gọi các Crew gồm agent đóng vai | Vòng lặp agent có kiểu; Pydantic Graph cho luồng điều khiển dạng graph |
 | Giấy phép | MIT (Superstep và LangGraph) | MIT (framework); AMP là thương mại | MIT |
 | Human in the loop | Human node, duyệt trước khi node Agent gọi công cụ, và interrupt của LangGraph; duyệt trong studio, Slack, Telegram, WhatsApp, email hoặc Teams | `@human_feedback` trong Flow; endpoint resume trong AMP | Duyệt lời gọi tool; chờ lâu nhờ engine durable |
 | Chạy bền vững và du hành thời gian | Checkpoint trong database (SQLite hoặc Postgres): run đang dừng và run trong hàng đợi đang chạy tiếp tục sau khi khởi động lại; fork run đã xong từ một checkpoint | Lưu state Flow bằng `@persist`, khôi phục từ state đã lưu | Durable execution trên Temporal, DBOS, Prefect và các engine khác; step persistence để lưu, tiếp tục và fork |
@@ -44,8 +44,12 @@ trước khi quyết định. Về các trình dựng trực quan, xem
 - **Vòng lặp agent ở chỗ model nên tự chọn.** [Node Agent](../guide/agent.md)
   cho model gọi các công cụ bạn liệt kê (MCP, HTTP, hàm có sẵn, tìm trong kho
   tri thức) tới khi trả lời được, có giới hạn số vòng và duyệt theo từng công
-  cụ. Đó là một agent trong graph, không phải một nhóm agent: với crew chia vai
-  hay code agent có kiểu, các framework bên dưới phù hợp hơn.
+  cụ. Agent còn gọi được workflow khác làm công cụ, mỗi workflow có agent riêng:
+  một agent điều phối và các agent chuyên trách, mỗi agent được dựng và test
+  trên canvas riêng (xem [Workflow làm công cụ](../guide/agent.md#workflow-lam-cong-cu)).
+  Không có chuyển việc giữa các agent, cũng không có các agent tự trò chuyện
+  với nhau: với crew chia vai hay code agent có kiểu, các framework bên dưới
+  phù hợp hơn.
 - **Code ở chỗ cần code.** Code node Python và TypeScript dành cho các bước
   viết dễ hơn vẽ.
 - **Kết hợp được.** Một chương trình CrewAI hoặc PydanticAI có thể chạy

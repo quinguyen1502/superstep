@@ -32,6 +32,7 @@ mẫu có sẵn hiện theo ngôn ngữ giao diện.
 | **Hỗ trợ có chuyển cấp** | Trả lời từ kho tri thức; node Decision chuyển câu trả lời chưa chắc chắn cho nhân viên hỗ trợ trong studio. |
 | **Tổng hợp phản hồi khách hàng** | Vòng For each gắn nhãn từng phản hồi, rồi LLM viết báo cáo và gửi email cho team. |
 | **Agent hỗ trợ khách hàng** | Một [node Agent](agent.md) tra cứu đơn hàng và chính sách hoàn tiền; mỗi yêu cầu hoàn tiền của agent đều cần người duyệt. |
+| **Đội hỗ trợ** | Một agent điều phối giao mỗi câu hỏi cho một [công cụ workflow](agent.md#workflow-lam-cong-cu) chuyên trách: Order desk hoặc Refund desk. Dùng mẫu sẽ tạo cả ba workflow. |
 
 Mẫu có kênh duyệt chỉ ghi loại kênh. Sau khi tạo, chọn kết nối, người nhận và
 người duyệt trên node Human (xem [Kênh duyệt](../operate/channels.md)). Trước

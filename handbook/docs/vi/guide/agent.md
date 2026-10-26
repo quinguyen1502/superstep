@@ -14,6 +14,7 @@ duyệt trước.
 | **Node Agent** | Thứ tự các bước tuỳ vào yêu cầu: "tra đơn hàng, rồi xem chính sách hoàn tiền, rồi trả lời", nhưng chỉ khi khách hỏi chuyện hoàn tiền. |
 | Graph cố định (các node LLM, Tool, MCP tool, Retriever, Condition) | Run nào cũng đi qua cùng các bước, hoặc nhánh nào cũng phải được vẽ ra và xem lại. Graph quyết định; model chỉ điền nội dung. |
 | [Subgraph](nodes.md#subgraph) | Một phần cố định của graph được nhiều workflow dùng chung. |
+| [Workflow làm công cụ](#workflow-lam-cong-cu) | Model nên tự quyết có chạy một workflow khác hay không và khi nào: một agent giao việc cho các agent nhỏ hơn, chuyên một việc. |
 
 Node Agent là một node trên canvas. Hãy đặt nó trong một graph lớn hơn:
 Condition phía sau có thể rẽ nhánh theo câu trả lời, và node Human phía sau có
@@ -81,11 +82,57 @@ Mũi tên lên và xuống đặt thứ tự model nhìn thấy.
     Một [kho tri thức](knowledge.md) của bạn và `top_k` (1–20, mặc định 4).
     Model tự viết câu tìm kiếm và nhận các đoạn phù hợp nhất.
 
+=== "Workflow khác"
+
+    Một workflow đã lưu, chạy thành một run riêng. Chọn workflow, rồi chọn các
+    trường state model điền (**Tham số**) và các trường trong state cuối mà
+    model nhận lại (**Kết quả**). Xem
+    [Workflow làm công cụ](#workflow-lam-cong-cu).
+
 Trước khi chạy, tham số của lần gọi được kiểm theo tham số của công cụ (các
 tham số bắt buộc và kiểu JSON). Công cụ không tồn tại, tham số sai hoặc công cụ
 bị lỗi sẽ trả về lỗi làm kết quả cho model, để model thử lại hoặc trả lời mà
 không dùng nó. Kết quả gửi lại model được rút gọn còn 8.000 ký tự; trace và
 trường các bước giữ 2.000 ký tự.
+
+## Workflow làm công cụ
+
+Một công cụ có thể là một workflow đã lưu khác. Nếu workflow đó có node Agent
+riêng, nó là một **agent chuyên trách**, còn node Agent gọi nó là **agent điều
+phối**. Nhiều agent cùng làm việc theo cách này mà không cần loại node mới, và
+mỗi agent được dựng và test trên canvas riêng của nó.
+
+![Công cụ workflow trong cấu hình node Agent](../images/workflow-tool-settings.png)
+
+- **Khi chọn workflow**, công cụ được đặt tên theo workflow đó, và chọn sẵn
+  `message` làm tham số, `answer` làm kết quả nếu workflow có các trường này
+  (dạng chat thường gặp). Đổi lại bằng các công tắc; phải có ít nhất một trường
+  kết quả. **Mở workflow** mở nó trong editor.
+- **Cái gì chạy.** Mỗi lần gọi tạo một **run được gọi** từ phiên bản lưu mới
+  nhất của workflow, lấy lúc run gọi nó bắt đầu. Run được gọi có bản ghi, lịch
+  sử và checkpoint riêng, và dùng credential, máy chủ MCP và kho tri thức của
+  bên gọi. Model nhận các trường kết quả dạng JSON; nếu run được gọi lỗi, model
+  nhận lỗi đó và agent làm tiếp.
+- **Chờ.** Trong lúc run được gọi chạy, run gọi nó đứng chờ, như ở node Human.
+  Panel run hiện **Đang chờ một workflow khác** kèm link tới run được gọi;
+  không ai trả lời ở đó. Khi run được gọi xong, run gọi nó tự chạy tiếp, kể cả
+  sau khi server khởi động lại: một lần gọi đã chạy không bao giờ bị chạy lại.
+- **Duyệt bên trong run được gọi** được đẩy lên trên. Node Human, hoặc công cụ
+  Agent cần duyệt, bên trong run được gọi vẫn chờ như thường; trang **Duyệt**
+  và các kênh ghi tên cả hai workflow, ví dụ `Đội hỗ trợ › Refund desk`:
+
+    ![Một yêu cầu duyệt bên trong workflow được gọi](../images/workflow-tool-approval.png)
+
+- **Trace.** Lần gọi công cụ hiện các bước của run được gọi ngay bên dưới, kèm
+  **Mở run**. Trace của chính run được gọi bắt đầu bằng **Được gọi bởi** và
+  link quay lại. Token và chi phí của nó được cộng vào node Agent gọi nó.
+
+    ![Các bước của workflow được gọi dưới lần gọi công cụ](../images/workflow-tool-trace.png)
+
+- **Giới hạn.** Công cụ workflow và subgraph lồng nhau tối đa 5 cấp, và một
+  workflow không thể tự gọi lại mình qua một chuỗi công cụ hay subgraph: khi lưu
+  sẽ báo lỗi. Huỷ run gọi sẽ huỷ cả run được gọi. Workflow đang được dùng làm
+  công cụ không xoá được nếu không chọn **Vẫn xoá**, như với subgraph.
 
 ## Vòng và giới hạn
 
@@ -162,6 +209,11 @@ Trong tab [Test](../run/tests.md):
   node**: cho Duyệt, Từ chối hoặc trả lời bằng chữ cho từng lần gọi, theo thứ
   tự.
 
+Trong run test, workflow được gọi chạy với cùng quy tắc test (model mock
+offline nếu chọn, email chỉ chạy thử). Câu hỏi cho người bên trong nó không
+được test trả lời: run được gọi bị huỷ và lần gọi công cụ thất bại, điều kiện
+**Gọi công cụ** vẫn thấy lần gọi đó.
+
 ## Mẫu Agent hỗ trợ khách hàng
 
 Mẫu **Agent hỗ trợ khách hàng** trong [thư viện mẫu](templates.md) có một node
@@ -170,6 +222,15 @@ thức trước), và `request_refund`, công cụ cần duyệt và bị từ c
 không có ai trả lời. Các test case của mẫu kiểm một câu hỏi về đơn hàng, một
 lần hoàn tiền được duyệt và một lần bị từ chối. `request_refund` chỉ là ví dụ:
 nó không hoàn tiền thật.
+
+## Mẫu Đội hỗ trợ
+
+Mẫu **Đội hỗ trợ** minh hoạ cách điều phối. Dùng mẫu sẽ tạo ba workflow: agent
+điều phối, **Order desk** (một Agent có `lookup_order`) và **Refund desk** (một
+Agent có `request_refund`, công cụ cần duyệt). Agent điều phối có hai công cụ
+workflow, `order_desk` và `refund_desk`, và giao mỗi câu hỏi cho bàn phụ trách.
+Các test case kiểm rằng câu hỏi về đơn hàng tới bàn đơn hàng, còn yêu cầu hoàn
+tiền tới bàn hoàn tiền.
 
 ## Xuất code
 
@@ -181,12 +242,17 @@ nó không hoàn tiền thật.
   `interrupt()`. Công cụ MCP và kho tri thức gọi stub, như file Python. Công cụ
   có sẵn là hàm Python trên server nên sẽ ném lỗi: model được báo công cụ lỗi,
   và bạn cần chuyển các hàm đó sang TypeScript.
+- **Công cụ workflow**, ở cả ba bản: mỗi workflow được gọi thành một graph
+  riêng trong cùng file, viết một lần, và hàm công cụ gọi graph đó với các trường
+  tham số rồi trả về các trường kết quả. Câu hỏi cho người bên trong nó làm
+  graph gọi nó dừng chờ.
 
 ## Lỗi
 
 | Mã | Khi nào |
 | --- | --- |
 | `AGENT_TOOLS_UNSUPPORTED` | Nhà cung cấp của credential không gọi được công cụ (TypeSafe, SMTP). Bước model lỗi khi chạy. |
-| `WORKFLOW_INVALID` | Chạy một workflow mà editor đánh dấu chưa hợp lệ: thiếu prompt nhiệm vụ, không có công cụ, số vòng ngoài khoảng cho phép, công cụ thiếu cấu hình (máy chủ và công cụ, hàm, kho tri thức hoặc URL), hai công cụ trùng tên, hoặc trường các bước hay trường lịch sử không phải list. |
+| `WORKFLOW_INVALID` | Chạy một workflow mà editor đánh dấu chưa hợp lệ: thiếu prompt nhiệm vụ, không có công cụ, số vòng ngoài khoảng cho phép, công cụ thiếu cấu hình (máy chủ và công cụ, hàm, kho tri thức, URL hoặc workflow), hai công cụ trùng tên, hoặc trường các bước hay trường lịch sử không phải list. Riêng công cụ workflow: workflow không có hoặc không được chia sẻ với bạn, workflow nhập từ code, tạo vòng, lồng quá 5 cấp, hoặc trường tham số hay kết quả mà workflow không có. |
+| `WORKFLOW_TOOL_TOO_DEEP` | Lúc chạy, công cụ workflow lồng nhau quá 5 run; lần gọi không được chạy và model nhận lỗi. |
 
 Mọi mã lỗi có trong [Mã lỗi](../reference/errors.md).
