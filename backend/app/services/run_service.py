@@ -491,7 +491,8 @@ class RunService:
         final = cap_event({"state": final})["state"] if final is not None else None
         self.runs.add(Run(id=rid, workflow_id=wid or "adhoc", input=_dumps(inp), events=_dumps(events), code_runtime=code_runtime_of(events),
                           final_state=_dumps(final), status=status, started=t0, ended=t1, trace_id=trace_id, owner=uid or None, source=source, workflow_version=version,
-                          checkpoint=_dumps(checkpoint) if checkpoint else None, **root, **metrics), **({"fence": fence} if fence is not None else {}))
+                          checkpoint=_dumps(checkpoint) if checkpoint else None, resume_job=None, **root, **metrics),
+                      **({"fence": fence} if fence is not None else {}))  # resume_job: a kept answer is used up (TASK-0127)
         if self.ledger is not None and status not in ("waiting", "paused"):
             try: self.ledger.purge(rid)  # finished: the ledger only matters while the run can still be recovered
             except Exception: log.warning("purging the node ledger of run %s failed", rid)

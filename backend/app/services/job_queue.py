@@ -3,7 +3,8 @@
 Jobs are small JSON dicts. Kinds: run jobs {"run_id", "workflow_id", "owner", "input", "callback_url"?, "token_id"?}
 and webhook deliveries {"kind": "delivery", "delivery_id"}.
 
-- InMemoryJobQueue (REDIS_URL unset): **dev/single-process only**. Jobs are lost on restart.
+- InMemoryJobQueue (REDIS_URL unset): **dev/single-process only**. Jobs are lost on restart; start-up recovery queues
+  unfinished runs again, and the answers to waiting runs that `enqueue_resume` kept on the run (TASK-0115, TASK-0127).
 - RedisJobQueue (REDIS_URL set): at-least-once.
   - `dequeue`: BLMOVE `studio:run-jobs` → `studio:run-jobs:processing:<worker>`, then take a **lease**
     `studio:job-lease:<id>` with TTL = visibility timeout.
@@ -16,7 +17,7 @@ and webhook deliveries {"kind": "delivery", "delivery_id"}.
 Blocking calls are made from worker threads (asyncio.to_thread), never on the event loop.
 """
 import hashlib, heapq, json, queue, threading, time, uuid
-from typing import Optional, Protocol
+from typing import Callable, Optional, Protocol
 
 QUEUE_KEY = "studio:run-jobs"
 PROCESSING_PREFIX = "studio:run-jobs:processing:"
@@ -38,6 +39,12 @@ class JobQueue(Protocol):
     def touch(self, job: dict) -> None: ...
     def ack(self, job: dict) -> None: ...
     def reap(self) -> int: ...
+
+
+def enqueue_resume(runs, enqueue: Callable[[dict], None], job: dict) -> None:
+    """Queue the answer to a waiting run (a resume job), kept on the run first (TASK-0127): an in-memory queue loses it
+    on a restart, and RunWorker.recover_unfinished queues the kept one again. `runs` is the RunRepository."""
+    runs.keep_resume(job); enqueue(job)
 
 
 class InMemoryJobQueue:

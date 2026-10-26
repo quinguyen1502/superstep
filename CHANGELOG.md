@@ -21,6 +21,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **An answer accepted just before a restart is no longer lost** (TASK-0127). With the in-memory job queue (no
+  `REDIS_URL`), an answer to a waiting run (from the Approvals inbox, a chat channel, a deadline, MCP `resume_run`,
+  `/api/lg` or a workflow test) only existed as a queued job: a restart before a worker took it left the run waiting,
+  and the inbox and channels refused a second answer. The answer is now kept on the run (`runs.resume_job`,
+  migration 0039) until the run moves on, and start-up recovery queues it again; a run cut off right after it took
+  the answer goes back to waiting and resumes, instead of starting over.
 - The Vietnamese label of the function picker (Tool node, an Agent node's built-in tool) is "Hàm", not "Function".
 - "1 error to fix", not "1 errors to fix", in the Run panel.
 

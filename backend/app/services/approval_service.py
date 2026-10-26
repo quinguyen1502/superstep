@@ -17,6 +17,7 @@ from ..repositories import ApprovalRepository, RunRepository, UserRepository, Wo
 from .approval_channels import ApprovalChannel, ApprovalMessage
 from .approval_channels.messages import lang_of, text
 from .channel_service import ChannelService
+from .job_queue import enqueue_resume
 
 log = get_logger("approvals")
 DECISIONS = {"a": "approved", "r": "rejected"}
@@ -220,7 +221,7 @@ class ApprovalService:
             self.repo.decide(r.id, "superseded"); return refuse("APPROVAL_ALREADY_DECIDED")
         if not self.repo.decide(r.id, decision, uid, external): return refuse("APPROVAL_ALREADY_DECIDED")  # lost the race: single use
         self._audit(r.owner, kind, decision, r, actor=uid, external=external)
-        if self.enqueue: self.enqueue({"kind": "resume", "run_id": r.run_id, "owner": r.owner, "response": decision,
+        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": r.run_id, "owner": r.owner, "response": decision,
                                        "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
         return None, self.repo.request(r.id), decision
 
@@ -272,7 +273,7 @@ class ApprovalService:
         the run like a channel decision (the run stays its owner's)."""
         self.close_run(w.run_id, "answered")
         self._audit(w.owner, "studio", response if response in DECISIONS.values() else "answered", actor=uid, run_id=w.run_id, wid=w.workflow_id)
-        if self.enqueue: self.enqueue({"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
+        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
                                        "by": {"channel": "studio", "user_id": uid}})
 
     # ---- the run went on without the channel (answered in the studio, cancelled, expired) ----
@@ -343,7 +344,7 @@ class ApprovalService:
         log_skipped()
         self.close_run(w.run_id, f"deadline_{response}")
         self._audit(w.owner, kind, "timed_out", run_id=w.run_id, wid=w.workflow_id)
-        if self.enqueue: self.enqueue({"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
+        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
                                        "by": {"channel": "deadline", "on_timeout": action}})
         return 1
 

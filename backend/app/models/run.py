@@ -32,3 +32,5 @@ class Run(Base):
     callback_url: Mapped[Optional[str]] = mapped_column(Text)
     code_runtime: Mapped[Optional[str]] = mapped_column(Text)  # where Code nodes ran: docker | subprocess; NULL = none (TASK-0056)
     callback_token_id: Mapped[Optional[str]] = mapped_column(Text)  # signs the callback (the token's secret)
+    # JSON: the queued resume job of a waiting run, until the resumed segment records progress or a result (TASK-0127)
+    resume_job: Mapped[Optional[str]] = mapped_column(Text)
