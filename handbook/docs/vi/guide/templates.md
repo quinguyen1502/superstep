@@ -37,7 +37,8 @@ Mẫu có kênh duyệt chỉ ghi loại kênh. Sau khi tạo, chọn kết nố
 người duyệt trên node Human (xem [Kênh duyệt](../operate/channels.md)). Trước
 đó, run sẽ dừng chờ ở node Human và có thể duyệt ngay trong studio. **Hỏi đáp
 RAG**, **Hỗ trợ có chuyển cấp** và **Agent hỗ trợ khách hàng** cần một kho tri
-thức trước khi chạy.
+thức trước khi chạy: workflow mới mở ra đã báo điều này ở panel Chạy, và ô chọn
+kho tri thức của node được đánh dấu cho tới khi bạn chọn một kho.
 
 Mỗi mẫu có sẵn đi kèm một đến ba test case cho thấy mẫu dùng để làm gì, ví dụ
 "Approved leave" và "Rejected leave". Workflow tạo từ mẫu có các test case này

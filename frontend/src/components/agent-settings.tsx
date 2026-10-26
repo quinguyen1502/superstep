@@ -100,6 +100,7 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
             set({ knowledge_base_id: v, ...(k && !tool.description ? { description: k.description || k.name } : {}) }) }}>
           <SelectTrigger className="w-full" id={`${id}-kb`}><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
           <SelectContent>{(kbs || []).map(k => <SelectItem key={k.id} value={k.id}>{k.name} · {t('kb.documents', { count: k.documents })}</SelectItem>)}</SelectContent></Select>
+        {!tool.knowledge_base_id && <p className="text-[11px] text-destructive" id={`${id}-kb-required`}>{t('editor.retrieverRequired')}</p>}
         {kbs && !kbs.length && <p className="text-[11px] text-muted-foreground">{t('editor.retrieverNone')} <TextLink to="/settings/knowledge">{t('editor.retrieverCreate')}</TextLink></p>}</div>
       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor={`${id}-topk`}>{t('editor.retrieverTopK')}</Label>
         <Input id={`${id}-topk`} type="number" min={1} max={20} value={tool.top_k ?? 4} onChange={e => set({ top_k: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />

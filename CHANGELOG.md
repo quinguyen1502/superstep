@@ -13,6 +13,17 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   and the model is told. The error code `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED` is gone. Handbook: Agent node and
   Export to Python (en, vi).
 
+### Changed
+
+- **Templates say what they still need** (TASK-0126). A workflow made from a template opens with the list of what it
+  needs before it can run (for example a knowledge base for the RAG and Support agent templates), and a knowledge
+  base picker with nothing chosen shows a hint, on the Retriever node and on an Agent node's knowledge base tool.
+
+### Fixed
+
+- The Vietnamese label of the function picker (Tool node, an Agent node's built-in tool) is "Hàm", not "Function".
+- "1 error to fix", not "1 errors to fix", in the Run panel.
+
 ## 0.7.0 (2026-10-26)
 
 ### Added

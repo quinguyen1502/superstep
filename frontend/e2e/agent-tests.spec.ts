@@ -12,6 +12,10 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await expect(page).toHaveURL(/\/workflows$/)
   const H = { Authorization: `Bearer ${await apiToken(page)}` }
   const wid = (await (await page.request.post('/api/templates/builtin-support-agent/use', { headers: H, data: {} })).json()).data.id
+  // TASK-0126: the policy search tool says it needs a knowledge base; the built-in tool's label is translated
+  await page.goto(`/workflows/${wid}`); await page.locator('.react-flow__node[data-id="agent"]').click()
+  await expect(page.locator('#agent-tool-1-kb-required')).toContainText('Hãy chọn kho tri thức')
+  await expect(page.locator('label[for="agent-tool-0-function"]')).toHaveText('Hàm')
   // without a knowledge base to pick here, the policy search tool goes; the cases never call it
   const wf = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data
   for (const n of wf.nodes) if (n.type === 'agent') n.data.tools = n.data.tools.filter((t: { source: string }) => t.source !== 'knowledge')
