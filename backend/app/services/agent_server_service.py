@@ -20,6 +20,7 @@ from ..engine.reducers import apply as apply_delta
 from ..engine.state_schema import state_schema
 from ..models import AgentThread, AgentThreadRun, Run
 from ..repositories import AgentThreadRepository, RunRepository, WorkflowRepository
+from .job_queue import enqueue_resume
 from .run_service import human_response
 from .trigger_service import TOKEN_PREFIX, TriggerService
 from .telemetry import trace_url
@@ -207,8 +208,8 @@ class AgentServerService:
             if last is None or last.status != "waiting": raise AppError("RUN_NOT_WAITING")
             human_response(command["resume"])  # text or true / false: refused here, not later by the worker
             self.threads.set_fields(t.id, updated=now)
-            self.triggers.jobs.enqueue({"kind": "resume", "run_id": last.id, "owner": last.owner, "response": command["resume"],
-                                        "workflow_id": last.workflow_id})
+            enqueue_resume(self.triggers.runs, self.triggers.jobs.enqueue, {"kind": "resume", "run_id": last.id, "owner": last.owner,
+                                                                            "response": command["resume"], "workflow_id": last.workflow_id})
             return {**self.run(last, self.threads.run(last.id)), "status": "pending"}, last, last.ended or 0.0
         inp = {} if inp is None else inp
         self.triggers.check_input(inp)
