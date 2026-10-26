@@ -1,10 +1,11 @@
 /** Agent node settings (TASK-0118, REQ-0072): model, prompts, the tools the model may call (MCP, HTTP, built-in,
- *  knowledge base) and the approval settings for tools that need approval; its fields (`AgentData`) and round limit
+ *  knowledge base, another workflow: TASK-0136, REQ-0073) and the approval settings for tools that need approval; its fields (`AgentData`) and round limit
  *  (`AgentExecution`) sit in the Config panel's Data and Execution tabs (TASK-0121). The engine is
  *  `backend/app/engine/agents.py` (DEC-0063). */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, ArrowUp, Database, Globe, Plug, Plus, TriangleAlert, Wrench, X, type LucideIcon } from 'lucide-react'
+import { ArrowDown, ArrowUp, Database, ExternalLink, Globe, Plug, Plus, TriangleAlert, Workflow, Wrench, X, type LucideIcon } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -25,9 +26,9 @@ import type { Channels } from '@/lib/approvals'
 import type { KnowledgeBase } from '@/lib/knowledge'
 import type { McpList, McpServer } from '@/lib/mcp'
 import type { ProviderInfo } from '@/lib/providers'
-import { METHODS, PARAM_TYPES, SOURCES, newTool, toolName, type AgentTool, type BuiltinTool, type Schema, type ToolSource } from '@/lib/agent'
+import { METHODS, PARAM_TYPES, SOURCES, defaultFields, newTool, toolName, type AgentTool, type BuiltinTool, type Schema, type ToolSource } from '@/lib/agent'
 
-const ICONS: Record<ToolSource, LucideIcon> = { mcp: Plug, http: Globe, builtin: Wrench, knowledge: Database }
+const ICONS: Record<ToolSource, LucideIcon> = { mcp: Plug, http: Globe, builtin: Wrench, knowledge: Database, workflow: Workflow }
 type Row = { name: string; type: string; description: string; required: boolean }
 const rowsOf = (s?: Schema): Row[] => Object.entries(s?.properties || {}).map(([name, p]) =>
   ({ name, type: p?.type || 'string', description: p?.description || '', required: (s?.required || []).includes(name) }))
@@ -60,10 +61,57 @@ function ParamsEditor({ id, value, onChange }: { id: string; value?: Schema; onC
 }
 
 type ToolProps = { tool: AgentTool; index: number; count: number; taken: string[]; fields: TemplateField[]; readOnly?: boolean
-  servers: McpServer[] | null; kbs: KnowledgeBase[] | null; builtins: BuiltinTool[]
+  servers: McpServer[] | null; kbs: KnowledgeBase[] | null; builtins: BuiltinTool[]; workflows: Wf[] | null
   onChange: (t: AgentTool) => void; onMove: (by: number) => void; onRemove: () => void }
 
-function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, builtins, onChange, onMove, onRemove }: ToolProps) {
+type Wf = { id: string; name: string; description?: string }
+type Field = { name: string; type?: string }
+
+/** A workflow tool (TASK-0136, DEC-0066): which saved workflow runs, the state fields the model fills (parameters) and
+ *  the fields of its final state the model gets back (result). The fields come from the workflow's latest version. */
+function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: AgentTool; others: string[]; workflows: Wf[] | null; set: (p: Partial<AgentTool>) => void }) {
+  const { t } = useTranslation(); const [fields, setFields] = useState<Field[] | null>(null)
+  useEffect(() => {
+    if (!tool.workflow_id) { setFields(null); return }
+    api<{ state?: Field[] }>(`/api/workflows/${tool.workflow_id}`).then(w => setFields(w.state || [])).catch(() => setFields([]))
+  }, [tool.workflow_id])
+  const missing = !!tool.workflow_id && !!workflows && !workflows.some(w => w.id === tool.workflow_id)
+  const pick = (wid: string) => {
+    const w = workflows?.find(x => x.id === wid)
+    api<{ state?: Field[] }>(`/api/workflows/${wid}`).then(full => {
+      const names = (full.state || []).map(f => f.name)
+      set({ workflow_id: wid, name: toolName((w?.name || 'workflow').toLowerCase(), others), description: tool.description || w?.description || w?.name || '', ...defaultFields(names) })
+    }).catch(() => set({ workflow_id: wid }))
+  }
+  const toggle = (key: 'inputs' | 'outputs', f: string, on: boolean) => {
+    const cur = tool[key] || []; set({ [key]: on ? [...cur.filter(x => x !== f), f] : cur.filter(x => x !== f) })
+  }
+  return <>
+    <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor={`${id}-workflow`}>{t('agent.workflow')}</Label>
+      <Select value={tool.workflow_id || undefined} onValueChange={pick}>
+        <SelectTrigger className="w-full" id={`${id}-workflow`}><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
+        <SelectContent>{(workflows || []).map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent></Select>
+      {!tool.workflow_id && <p className="text-[11px] text-destructive" id={`${id}-workflow-required`}>{t('agent.workflowRequired')}</p>}
+      {missing && <p className="text-[11px] text-destructive">{t('editor.subgraphMissing')}</p>}
+      {workflows && !workflows.length && <p className="text-[11px] text-muted-foreground">{t('editor.subgraphNone')} <TextLink to="/workflows">{t('editor.subgraphCreate')}</TextLink></p>}
+      <p className="text-[11px] text-muted-foreground">{t('agent.workflowHint')}</p></div>
+    {fields && fields.length > 0 && <div className="space-y-1" id={`${id}-fields`}>
+      <div className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-2 text-[11px] text-muted-foreground">
+        <span>{t('agent.workflowField')}</span><span className="text-center">{t('agent.workflowInput')}</span><span className="text-center">{t('agent.workflowOutput')}</span></div>
+      {fields.map(f => <div key={f.name} className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-2" data-testid="workflow-tool-field">
+        <span className="truncate font-mono text-xs">{f.name} <span className="text-muted-foreground">{f.type || 'string'}</span></span>
+        <span className="flex justify-center"><Switch size="sm" id={`${id}-in-${f.name}`} aria-label={t('agent.workflowInputOf', { field: f.name })}
+          checked={(tool.inputs || []).includes(f.name)} onCheckedChange={c => toggle('inputs', f.name, c)} /></span>
+        <span className="flex justify-center"><Switch size="sm" id={`${id}-out-${f.name}`} aria-label={t('agent.workflowOutputOf', { field: f.name })}
+          checked={(tool.outputs || []).includes(f.name)} onCheckedChange={c => toggle('outputs', f.name, c)} /></span>
+      </div>)}
+      {!(tool.outputs || []).length && <p className="text-[11px] text-destructive" id={`${id}-outputs-required`}>{t('agent.workflowOutputsRequired')}</p>}
+      <p className="text-[11px] text-muted-foreground">{t('agent.workflowFieldsHint')}</p></div>}
+    {tool.workflow_id && !missing && <Button variant="outline" size="sm" asChild><Link to={`/workflows/${tool.workflow_id}`} id={`${id}-open`}><ExternalLink />{t('editor.subgraphOpen')}</Link></Button>}
+  </>
+}
+
+function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, builtins, workflows, onChange, onMove, onRemove }: ToolProps) {
   const { t } = useTranslation(); const I = ICONS[tool.source] ?? Wrench; const id = `agent-tool-${index}`
   const set = (patch: Partial<AgentTool>) => onChange({ ...tool, ...patch })
   const others = taken.filter(n => n !== tool.name)
@@ -106,6 +154,7 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
         <Input id={`${id}-topk`} type="number" min={1} max={20} value={tool.top_k ?? 4} onChange={e => set({ top_k: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />
         <p className="text-[11px] text-muted-foreground">{t('agent.kbHint')}</p></div>
     </>}
+    {tool.source === 'workflow' && <WorkflowTool id={id} tool={tool} others={others} workflows={workflows} set={set} />}
     {tool.source === 'http' && <>
       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">{t('field.method')}</Label>
         <Select value={tool.method || 'GET'} onValueChange={v => set({ method: v })}>
@@ -135,7 +184,7 @@ const F = ({ label, htmlFor, children }: { label: string; htmlFor?: string; chil
 
 type Patch = (patch: Record<string, any>) => void
 type Props = { data: Record<string, any>; fields: TemplateField[]; creds: Credential[]
-  providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch }
+  providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch; wid?: string }
 
 /** Data tab (TASK-0121): the fields the agent writes its answer and steps to, and the history it reads. */
 export function AgentData({ data: d, fieldNames, listFields, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; onChange: Patch }) {
@@ -161,13 +210,15 @@ export function AgentExecution({ data: d, onChange }: { data: Record<string, any
 }
 
 /** Settings tab: model, prompts, tools and the approval settings for tools that need approval. */
-export function AgentSettings({ data: d, fields, creds, providers, channels, builtins, readOnly, nodeId, onChange }: Props) {
+export function AgentSettings({ data: d, fields, creds, providers, channels, builtins, readOnly, nodeId, onChange, wid }: Props) {
   const { t } = useTranslation()
   const [servers, setServers] = useState<McpServer[] | null>(null); const [kbs, setKbs] = useState<KnowledgeBase[] | null>(null)
   useEffect(() => {
     api<McpList>('/api/mcp/servers').then(x => setServers(x.servers)).catch(() => setServers([]))
     api<KnowledgeBase[]>('/api/knowledge-bases').then(setKbs).catch(() => setKbs([]))
   }, [])
+  const [workflows, setWorkflows] = useState<Wf[] | null>(null)  // workflow tools: every workflow but this one
+  useEffect(() => { api<Wf[]>('/api/workflows').then(ws => setWorkflows(ws.filter(w => w.id !== wid))).catch(() => setWorkflows([])) }, [wid])
   const tools: AgentTool[] = Array.isArray(d.tools) ? d.tools : []
   const names = tools.map(x => x.name)
   // a stable key per tool card that moves with it, so a card's own state (parameter rows) never shows another tool
@@ -197,7 +248,7 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
     <p className="text-[11px] text-muted-foreground">{t('agent.toolsHint')}</p>
     {!tools.length && <p className="text-[11px] text-destructive" id="agent-no-tools">{t('agent.noToolsYet')}</p>}
     {tools.map((x, i) => <ToolCard key={keys[i]} tool={x} index={i} count={tools.length} taken={names} fields={fields} readOnly={readOnly}
-      servers={servers} kbs={kbs} builtins={builtins}
+      servers={servers} kbs={kbs} builtins={builtins} workflows={workflows}
       onChange={nx => setTools(tools.map((y, j) => j === i ? nx : y), keys)}
       onMove={by => { const move = <T,>(xs: T[]) => { const next = [...xs]; const [it] = next.splice(i, 1); next.splice(i + by, 0, it); return next }
         setTools(move(tools), move(keys)) }}

@@ -78,6 +78,9 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
     | round (an Agent node's model call and the tool calls it asks for) | vòng | "Số vòng tối đa", "Vòng 2" in the trace (TASK-0118) |
     | tool call | lần gọi công cụ | |
     | parameter (what a model passes to a tool) | tham số | |
+    | workflow tool (an Agent tool that runs another saved workflow) | công cụ workflow | the source in the tool menu is "Another workflow" / "Workflow khác" (TASK-0136) |
+    | child run / called run (the run a workflow tool starts) | run được gọi | "Called by …" / "Được gọi bởi …"; the parent waits: "Waiting for another workflow" / "Đang chờ một workflow khác" |
+    | result (the fields a workflow tool gives back) | kết quả | |
     | task prompt (an Agent node's prompt) | prompt nhiệm vụ | "System prompt" stays |
     | retention | thời gian lưu | "Thời gian lưu (ngày)" |
     | Runs on host (subprocess Code runtime; never "not isolated" / "without isolation") | Chạy trực tiếp trên server; "Chạy trên server" on the canvas node; never "không cách ly" | longer texts say "without Docker limiting its access" / "không có Docker giới hạn quyền"; "cách ly" / "isolation" only for what the Docker sandbox does | warning badge with a tooltip: "Code runs directly on the server, without Docker limiting its access. Use only for trusted code." / "Code đang chạy trực tiếp trên máy chủ, không có Docker giới hạn quyền. Chỉ nên dùng cho code tin cậy." |

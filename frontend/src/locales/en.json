@@ -286,6 +286,12 @@
     "estimated": "(estimated)",
     "waiting": "Waiting for a human",
     "waitingChild": "Waiting for another workflow",
+    "child": {
+      "steps": "Steps of {{name}}",
+      "open": "Open run",
+      "loading": "Loading the called run…",
+      "unavailable": "The called run cannot be shown here."
+    },
     "paused": "Paused after a step",
     "streaming": "Streaming from the model…",
     "agent": {
@@ -2012,8 +2018,19 @@
       "mcp": "MCP tool",
       "http": "HTTP request",
       "builtin": "Built-in function",
-      "knowledge": "Knowledge base search"
+      "knowledge": "Knowledge base search",
+      "workflow": "Another workflow"
     },
+    "workflow": "Workflow",
+    "workflowRequired": "Choose a workflow",
+    "workflowHint": "The model runs this saved workflow as a tool. It runs as its own run, with your credentials; its latest saved version runs.",
+    "workflowField": "State field",
+    "workflowInput": "Parameter",
+    "workflowOutput": "Result",
+    "workflowInputOf": "{{field}} is a parameter the model fills",
+    "workflowOutputOf": "{{field}} comes back to the model",
+    "workflowOutputsRequired": "Choose at least one result field",
+    "workflowFieldsHint": "Parameters are the fields the model fills when it calls the tool; the result is what it gets back from the workflow's final state.",
     "toolName": "Name",
     "duplicateName": "Another tool has this name.",
     "toolDescription": "Description for the model",

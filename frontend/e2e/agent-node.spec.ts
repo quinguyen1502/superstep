@@ -5,8 +5,8 @@ import { expectRowAligned } from './helpers/alignment'
 // the offline mock and read its rounds in the trace. Approving a tool call during the run comes with TASK-0117.
 const shot = async (page: Page, name: string, sel = '#config-panel') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const T = {
-  vi: { password: 'Mật khẩu', round: 'Vòng 1', calls: 'gọi lookup_order', up: 'Đưa http_request lên', down: 'Đưa http_request xuống' },
-  en: { password: 'Password', round: 'Round 1', calls: 'calls lookup_order', up: 'Move http_request up', down: 'Move http_request down' },
+  vi: { password: 'Mật khẩu', urlMissing: /chưa có URL/, round: 'Vòng 1', calls: 'gọi lookup_order', up: 'Đưa http_request lên', down: 'Đưa http_request xuống' },
+  en: { password: 'Password', urlMissing: /URL is missing/, round: 'Round 1', calls: 'calls lookup_order', up: 'Move http_request up', down: 'Move http_request down' },
 }
 const AGENT = (name: string) => ({ name, state: [{ name: 'message', type: 'string' }, { name: 'answer', type: 'string' }, { name: 'steps', type: 'list' }],
   nodes: [N('start', 'start', 40), N('ag', 'agent', 300, { label: 'Helper', model: 'gpt-4o-mini', prompt: 'Help the customer: {{state.message}}', output_field: 'answer', max_rounds: 5, tools: [] }), N('end', 'end', 560)],
@@ -39,7 +39,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await expectRowAligned([param.getByRole('textbox').first(), param.getByRole('combobox'), param.getByRole('button').first()], { label: 'parameter row' })
     await shot(page, `agent-settings-${lang}`)
     await page.locator('#save-btn').click()
-    await expect(page.getByText(/URL is missing/)).toBeVisible()
+    await expect(page.getByText(T[lang].urlMissing)).toBeVisible()  // in the UI language since TASK-0132
     await page.locator('#agent-tool-1-url').click(); await page.keyboard.type('https://example.com/refund')
     await page.locator('#save-btn').click(); await expect(page.locator('#unsaved-badge')).toHaveCount(0)
     const saved = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data

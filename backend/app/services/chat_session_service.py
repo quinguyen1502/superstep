@@ -58,6 +58,7 @@ def steps_of(events: list, mode: str) -> list[dict]:
             for k in ("duration_ms", "input", "delta", "errors", "code"):
                 if k in e: s[k] = e[k]
             if step: s["delta"] = step
+            if step and step.get("child_run_id"): s["child_run_id"] = step["child_run_id"]  # a workflow tool's child run (TASK-0136)
             if isinstance(s.get("input"), dict): s["input"] = agents.visible(s["input"])
     return list(out.values())
 

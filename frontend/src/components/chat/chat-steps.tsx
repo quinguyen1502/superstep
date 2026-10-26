@@ -8,6 +8,7 @@ import { META } from '@/components/editor/meta'
 import { fmtMs } from '@/lib/trace'
 import type { ChatStep, StepsMode } from '@/lib/chat'
 import { Workflow } from 'lucide-react'
+import { ChildSteps } from '@/components/run-trace'
 
 const json = (v: unknown) => typeof v === 'string' ? v : JSON.stringify(v, null, 2)
 
@@ -35,6 +36,7 @@ export function ChatSteps({ steps, mode }: { steps: ChatStep[]; mode: StepsMode 
             {s.errors?.length ? <Output label={t('chat.step.errorDetail')} value={s.errors.join('\n')} /> : null}
             {s.input !== undefined && <Output label={t('chat.step.input')} value={s.input} />}
             {s.delta !== undefined && <Output label={t('chat.step.output')} value={s.delta} />}
+            {s.child_run_id && <ChildSteps runId={s.child_run_id} name={s.label.split(' › ').pop()} className="ml-0" />}
           </div></TraceCollapsibleContent>
         </TraceCollapsible>
       : <Line key={`${s.node}-${i}`} s={s} />)}

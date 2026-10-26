@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0136
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -84,7 +84,31 @@ trace and the chat's `full` view, with a link to the child run (DEC-0066 decisio
 ## Activity Log
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
+- 2026-10-26: started on `factory/task-0136-workflow-tool-editor-trace`, stacked on TASK-0135 (PR #179).
+- 2026-10-26: implemented.
+  - Editor: the "Another workflow" tool source.
+    - A workflow picker lists every workflow but this one.
+    - Picking one names the tool in lower case, copies the description, and picks `message` in and `answer` out
+      (`defaultFields`).
+    - A table of the child's state fields has Parameter and Result switches.
+    - There are required hints and an "Open workflow" button.
+  - Trace: the tool step's agent record carries `child_run_id` and `child_workflow_id`. `ChildSteps` fetches the
+    child (new `GET /api/runs/{id}`, `RunService.run_detail`, same rules as the history) and lists its steps under the
+    tool call, with "Open run". The chat's full view does the same (`steps_of` and `liveSteps` carry the child run).
+  - Strings in en and vi; glossary rows in `docs/ui-conventions.md`.
+  - Tests: `test_workflow_tool_trace.py`, vitest `workflow-tools.test.ts`, and the e2e editor test in
+    `workflow-tools.spec.ts`.
+  - The vi e2e test of `agent-node.spec.ts` still expected the English "URL is missing" (out of date since TASK-0132);
+    it now expects the vi text.
+
+## Validation Results
+
+- See QA-0120.
+
+## Review And QA
+
+- Review: REV-0120. QA: QA-0120.
 
 ## Handoff Notes
 
--
+- TASK-0137's template can rely on the card: its specialists' `message` and `answer` fields are picked by default.

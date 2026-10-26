@@ -14,7 +14,7 @@ export type AnsweredBy = typeof ANSWERED_BY[number]
 export type ChatSettings = { enabled: boolean; slug: string; access: string; input_field: string; reply_field: string
   messages_field: string; max_turns: number; steps: StepsMode; retention_days: number }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
-  duration_ms?: number; input?: any; delta?: any; errors?: string[] }
+  duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string }  // child_run_id: a workflow tool's run (TASK-0136)
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
   node?: string | null; answered_by?: AnsweredBy | null; code?: string | null; created: number; steps?: ChatStep[] }
 export type ChatSession = { id: string; workflow_id: string; channel: string; title?: string | null; last_run_id?: string | null
@@ -42,7 +42,8 @@ export function liveSteps(spans: Span[], mode: StepsMode): ChatStep[] {
   return spans.filter(s => !HIDDEN.has(s.type) && (mode === 'full' || s.type !== 'agent_model')).map(s => {
     const status: ChatStep['status'] = s.status === 'done' ? 'ok' : s.status === 'error' ? 'error' : s.status === 'waiting' ? 'waiting' : 'running'
     const base: ChatStep = { node: s.node, label: stepLabel(s), type: s.type, status }
-    return mode === 'full' ? { ...base, duration_ms: s.duration, input: s.input, delta: s.agent ?? s.output, errors: s.error ? [s.error] : undefined } : base
+    return mode === 'full' ? { ...base, duration_ms: s.duration, input: s.input, delta: s.agent ?? s.output, errors: s.error ? [s.error] : undefined,
+      ...(s.agent?.child_run_id ? { child_run_id: s.agent.child_run_id } : {}) } : base
   })
 }
 

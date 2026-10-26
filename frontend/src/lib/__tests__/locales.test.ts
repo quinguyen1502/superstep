@@ -15,6 +15,7 @@ const vars = (s: string) => [...s.matchAll(/{{\s*([\w.]+)\s*}}/g)].map((m) => m[
 /** vi strings that may stay identical to en: brand names, IDs, examples, and glossary terms kept in English. */
 const SAME_OK = new Set([
   'activity.types.workflow',
+  'agent.workflow',
   'langsmith.title',
   'tests.langsmith',
   'api.button',

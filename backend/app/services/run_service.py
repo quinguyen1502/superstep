@@ -548,12 +548,19 @@ class RunService:
         everyone = self.access is None or self.access.access_of(row, uid) == "owner"  # owner and admins see every run
         rows = [r for r in self.runs.list_for_workflow(wid, tests=tests) if everyone or r.owner == uid]
         chat = self.chat().runs_info([r.id for r in rows if r.source == "chat"]) if self.chat else {}  # TASK-0075: who sent the message
-        return [{"id": r.id, "workflow_id": r.workflow_id, "input": json.loads(r.input or "null"), "events": json.loads(r.events or "[]"),
+        return [self.row(r, uid, chat) for r in rows]
+
+    def run_detail(self, rid: str, uid: str) -> dict:
+        """One run as the history lists it (TASK-0136: a workflow tool's child steps in its parent's trace)."""
+        return self.row(self._readable_run(rid, uid), uid)
+
+    def row(self, r: Run, uid: str, chat: Optional[dict] = None) -> dict:
+        return {"id": r.id, "workflow_id": r.workflow_id, "input": json.loads(r.input or "null"), "events": json.loads(r.events or "[]"),
                  "final_state": json.loads(r.final_state or "null"), "status": r.status, "started": r.started, "ended": r.ended, "source": r.source or "ui", "version": r.workflow_version,
                  "metrics": None if r.duration_ms is None else {"duration_ms": r.duration_ms, "tokens_in": r.tokens_in, "tokens_out": r.tokens_out,
                                                                 "tokens": (r.tokens_in or 0) + (r.tokens_out or 0), "cost_usd": r.cost_usd, "error_count": r.error_count},
-                 "trace_id": r.trace_id, "trace_url": trace_url(r.trace_id, r.trace_root), "code_runtime": r.code_runtime, "chat": chat.get(r.id),
-                 **self.links(r, uid)} for r in rows]
+                 "trace_id": r.trace_id, "trace_url": trace_url(r.trace_id, r.trace_root), "code_runtime": r.code_runtime, "chat": (chat or {}).get(r.id),
+                 **self.links(r, uid)}
 
     def links(self, r: Run, uid: str) -> dict:
         """A workflow tool's child run names its parent; a parent waiting for a child names the child (TASK-0135). Names of

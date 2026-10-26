@@ -283,7 +283,7 @@ linked child run that the parent's tool step waits for.
   cancel cascade, restart tests. **review** (REV-0118, QA-0118).
 - TASK-0135 Approvals inside a child with both workflow names; parent and children in the API, run page and history.
   **review** (REV-0119, QA-0119).
-- TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **todo** (after TASK-0134).
+- TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **review** (REV-0120, QA-0120).
 - TASK-0137 "Tool called" test check, "Support team" template, Python, project and TypeScript exports. **todo**
   (after TASK-0134).
 - TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **todo** (after TASK-0135 to TASK-0137).
