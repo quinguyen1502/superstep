@@ -2,7 +2,7 @@
 
 The `factory` CLI initializes and operates artifact-driven project
 repositories. Initialization publishes artifacts directly. Dependency
-installation, verification, and stack configuration are later commands.
+installation and verification are later commands.
 
 For a step-by-step introduction, follow [`quickstart.md`](quickstart.md).
 
@@ -19,7 +19,6 @@ factory tools configure [--no-interactive] [--level LEVEL] [--status proposed|ap
 factory gc [-C <project-dir>] [--keep N] [--apply] [--no-artifacts]
 factory deps plan|apply|validate -C <project-dir>
 factory verify plan|run|validate -C <project-dir> [--profile quick|full] [--check KIND]
-factory stack plan|apply|validate -C <project-dir>
 factory skills plan|apply|validate -C <project-dir> [--skill NAME] [--force]
 factory task create <task-id> <title> [--state backlog|todo|doing|review|qa|done]
 factory task move <task-id> <state>
@@ -242,13 +241,14 @@ a project backfill, not a framework defect.
 
 ## Factory-state gc
 
-`factory gc` compacts a large `.factory-state/` without deleting
-history. It moves old `done` tasks to
-`.factory-state/archive/tasks/done/` and, by default, companion
+`factory gc` compacts a large `.factory-state/`. It moves old `done`
+tasks to `.factory-state/archive/tasks/done/` and, by default, companion
 `REV` / `QA` / `SUM` artifacts that only reference those tasks to
 `.factory-state/archive/artifacts/`. Requirements, decisions,
 standards, and live tasks stay put. Archived IDs remain reserved, so
-`factory ids` will not reuse them.
+`factory ids` will not reuse them. It also deletes timestamped files
+under `.factory-state/verification/runs/`. The current
+`verification/latest.yaml` stays.
 
 ```text
 factory gc -C project
@@ -256,7 +256,8 @@ factory gc --apply --keep 20 -C project
 factory gc --apply --keep 0 -C project
 ```
 
-The default is a dry-run inventory and plan. `--apply` writes.
+The default is a dry-run inventory and plan. `--apply` moves tasks and
+deletes verification runs.
 `--keep N` leaves the N highest-numbered done tasks in the lifecycle
 folders (default 20). `--keep 0` archives every done task. `--no-artifacts`
 moves tasks only. `factory task archive` remains the primitive for one
@@ -284,10 +285,10 @@ import. Credential or network failure stops the import instead of
 replacing the configured submodule with a copy.
 
 `factory validate` checks the required structure, config schema,
-enabled tool bridges, tooling policy and hashes, dependency,
-verification, and stack-configuration provenance, standards, task
-lifecycle folders, import completion, done-task review/QA references,
-and clarification schemas. Retired `factory.yaml` keys
+enabled tool bridges, tooling policy and hashes, dependency and
+verification state, standards, task lifecycle folders, import
+completion, done-task review/QA references, and clarification schemas.
+Retired `factory.yaml` keys
 (`storage_backend`, `storage_dsn`, `budget_enforcement`, `budgets`)
 still load and are reported as warnings. Unanswered clarification
 questions are warnings rather than automatic lifecycle locks in v1.
@@ -313,7 +314,7 @@ Per-command details live in dedicated docs:
 
 - Dependencies: [`dependencies.md`](dependencies.md)
 - Verification: [`verification.md`](verification.md)
-- Stack configuration: [`stack-configuration.md`](stack-configuration.md)
+- CI workflow: [`stack-configuration.md`](stack-configuration.md)
 - Task lifecycle: [`task-lifecycle.md`](task-lifecycle.md)
 - Clarifications: [`clarifications.md`](clarifications.md)
 - Tool kits: [`tool-kits.md`](tool-kits.md)

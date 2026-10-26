@@ -34,10 +34,7 @@ factory validate .
 factory tools validate -C .
 factory deps validate -C .           # when dependency state exists
 factory verify validate -C .         # after the first verification run
-factory stack plan -C .              # preview new configuration only
 ```
-
-`factory stack apply` remains a separate owner-reviewed operation. Existing CI, Compose, and environment files are preserved as proposals rather than overwritten.
 
 ## Behavioral Changes
 

@@ -6,18 +6,13 @@ from hashlib import sha256
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .configuration import (
-    ConfigurationError,
-    apply_configuration_plan,
-    configuration_problems,
-    create_configuration_plan,
-)
 from .constants import (
     GC_DEFAULT_KEEP,
     PROJECT_PRESET_IDS,
     TASK_STATES,
     TOOL_IDS,
     TOOL_KIT_LEVELS,
+    VERIFICATION_KINDS,
 )
 from .storage import StoreError
 from .dependencies import (
@@ -100,8 +95,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             return handle_dependencies(args)
         if args.command == "verify":
             return handle_verification(args)
-        if args.command == "stack":
-            return handle_stack_configuration(args)
         if args.command == "skills":
             return handle_skills(args)
         if args.command == "ids":
@@ -134,7 +127,6 @@ def main(argv: Optional[List[str]] = None) -> int:
                     task_id=args.task_id,
                 )
     except (
-        ConfigurationError,
         FactoryError,
         DependencyError,
         VerificationError,
@@ -255,8 +247,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_subcommands = verify.add_subparsers(dest="verify_command")
     for command, help_text in (
-        ("plan", "Preview deterministic project validation checks."),
-        ("run", "Run reviewed checks and record verification evidence."),
+        ("plan", "Preview the verification commands that would run."),
+        ("run", "Run verification commands and record the result."),
         ("validate", "Validate the latest verification evidence."),
     ):
         verify_command = verify_subcommands.add_parser(command, help=help_text)
@@ -268,21 +260,9 @@ def build_parser() -> argparse.ArgumentParser:
             verify_command.add_argument(
                 "--check",
                 action="append",
-                choices=("check", "test", "lint", "typecheck", "build"),
+                choices=VERIFICATION_KINDS,
                 default=[],
             )
-
-    stack = subcommands.add_parser(
-        "stack", help="Plan, apply, or validate approved stack configuration."
-    )
-    stack_subcommands = stack.add_subparsers(dest="stack_command")
-    for command, help_text in (
-        ("plan", "Preview configuration derived from Approved stack choices."),
-        ("apply", "Publish reviewed stack configuration without overwriting conflicts."),
-        ("validate", "Validate managed stack configuration and decision drift."),
-    ):
-        stack_command = stack_subcommands.add_parser(command, help=help_text)
-        stack_command.add_argument("-C", "--project-dir", default=".")
 
     skills = subcommands.add_parser(
         "skills",
@@ -382,13 +362,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     gc = subcommands.add_parser(
         "gc",
-        help="Archive old done tasks and companion REV/QA/SUM artifacts.",
+        help="Archive old done tasks and delete timestamped verification runs.",
     )
     gc.add_argument("-C", "--project-dir", default=".")
     gc.add_argument(
         "--apply",
         action="store_true",
-        help="Write the archive. Default is a dry-run inventory and plan.",
+        help="Move archived tasks and delete verification runs. Default is a dry-run.",
     )
     gc.add_argument(
         "--keep",
@@ -779,44 +759,6 @@ def handle_verification(args: argparse.Namespace) -> int:
         print(f"Project verification failed: {len(failed)} check(s).")
         return 1
     print(f"Project verification passed: {project_dir}")
-    return 0
-
-
-def handle_stack_configuration(args: argparse.Namespace) -> int:
-    if not args.stack_command:
-        raise FactoryError("Choose a stack command: plan, apply, or validate.")
-    project_dir = Path(args.project_dir).resolve()
-    if not project_dir.is_dir():
-        raise FactoryError(f"Project directory does not exist: {project_dir}")
-    if args.stack_command == "validate":
-        errors, warnings = configuration_problems(project_dir, require_state=True)
-        if errors:
-            print("Stack configuration validation failed:")
-            for error in errors:
-                print(f"  - {error}")
-        else:
-            print(f"Stack configuration validation passed: {project_dir}")
-        if warnings:
-            print("Warnings:")
-            for warning in warnings:
-                print(f"  - {warning}")
-        return 1 if errors else 0
-
-    plan = create_configuration_plan(project_dir)
-    print(plan.render())
-    if args.stack_command == "plan":
-        return 0 if plan.ready else 1
-    if not plan.ready:
-        return 1
-
-    unresolved = apply_configuration_plan(plan, None)
-    if unresolved:
-        print("Applied safe stack configuration; existing files were preserved.")
-        print("Resolve configuration proposals:")
-        for path in unresolved:
-            print(f"  - {path}")
-        return 1
-    print(f"Stack configuration applied: {project_dir}")
     return 0
 
 

@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import List
 
 from .clarification import clarification_problems
-from .configuration import configuration_problems
 from .constants import (
     FACTORY_CONFIG_PATH,
     REQUIRED_PROJECT_PATHS,
@@ -99,9 +98,6 @@ def inspect_project(project_dir: Path) -> ValidationReport:
     verification_errors, verification_warnings = verification_problems(project_dir)
     report.errors.extend(verification_errors)
     report.warnings.extend(verification_warnings)
-    configuration_errors, configuration_warnings = configuration_problems(project_dir)
-    report.errors.extend(configuration_errors)
-    report.warnings.extend(configuration_warnings)
     from .readiness import readiness_problems
 
     ready_errors, ready_warnings = readiness_problems(project_dir)

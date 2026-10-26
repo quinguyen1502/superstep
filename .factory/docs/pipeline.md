@@ -8,15 +8,15 @@ what each one produces, and points to the commands that drive them.
 ## Milestones
 
 ```
- ┌──────┐    ┌─────────┐    ┌────────┐    ┌────────────┐    ┌───────┐
- │ Init │ ─▶ │  Deps   │ ─▶ │ Verify │ ─▶ │ Stack conf │ ─▶ │ Tasks │
- └──────┘    └─────────┘    └────────┘    └────────────┘    └───────┘
-     required      optional      optional         optional      checkpoint
+ ┌──────┐    ┌─────────┐    ┌────────┐    ┌───────┐
+ │ Init │ ─▶ │  Deps   │ ─▶ │ Verify │ ─▶ │ Tasks │
+ └──────┘    └─────────┘    └────────┘    └───────┘
+     required      optional      optional     checkpoint
 ```
 
-Deps, Verify, and Stack config are optional. A project can skip them
-when it does not need them. Verify is the check CI runs after the
-project has source. Init is required. Tasks is the day-to-day checkpoint.
+Deps and Verify are optional. A project can skip them when it does not
+need them. Verify is the check CI runs after the project has source.
+Init is required. Tasks is the day-to-day checkpoint.
 
 ### 1. Init  ·  `factory init <name>` (or `factory import`)
 
@@ -38,23 +38,19 @@ Marker: `.factory-state/dependencies/installed.yaml`. Incomplete:
 
 ### 3. Verify  ·  `factory verify plan|run|validate`
 
-Runs the deterministic project checks discovered from manifests — test,
-lint, typecheck, framework-check, build — and stores hashed evidence.
-This is the check a project CI workflow runs on pull requests.
+Runs the verification commands declared in `tool-policy.yaml` — test,
+lint, typecheck, format, analyze, build — and records the pass or fail
+result. An empty command list is discovered from manifests once and then
+recorded into the policy. This is the check a project CI workflow runs
+on pull requests.
 
 Marker: `.factory-state/verification/latest.yaml`. Docs: [`verification.md`](verification.md).
 
-### 4. Stack config  ·  `factory stack plan|apply|validate`
+Copy [`templates/ci/factory-verify.yml`](../templates/ci/factory-verify.yml)
+to `.github/workflows/` when the project should run that check on pull
+requests. Docs: [`stack-configuration.md`](stack-configuration.md).
 
-Publishes CI (GitHub Actions or GitLab CI) and — when Docker Compose is
-approved — a compose file for the chosen database. Configurators derive
-from explicitly `Approved` decisions and preserve existing configuration
-as review proposals.
-
-Marker: `.factory-state/configuration/generated.yaml`. Incomplete:
-`.factory-state/configuration/INCOMPLETE`. Docs: [`stack-configuration.md`](stack-configuration.md).
-
-### 5. Tasks  ·  `factory task create|move|archive`
+### 4. Tasks  ·  `factory task create|move|archive`
 
 Once the pipeline is set up, day-to-day work moves through the lifecycle:
 

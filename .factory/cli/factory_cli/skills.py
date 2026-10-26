@@ -10,7 +10,7 @@ This module discovers those templates and produces per-tool assets:
 - Grok:        `.grok/skills/<name>/SKILL.md` (byte-identical copy).
 
 Design mirrors the existing `plan / apply / validate` pattern used by
-`tools`, `scaffold`, `deps`, and `stack` commands.
+`tools` and `deps`.
 """
 from __future__ import annotations
 

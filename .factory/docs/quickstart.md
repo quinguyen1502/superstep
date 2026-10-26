@@ -50,7 +50,9 @@ implementation.
 ## 4. (Optional) Install dependencies and verify
 
 When the repository already has manifests, install project-local
-dependencies and run the deterministic checks:
+dependencies and run the checks declared in `tool-policy.yaml`. If that
+file lists no verification commands yet, `verify run` records the
+commands it discovers:
 
 ```bash
 factory deps plan
@@ -59,9 +61,9 @@ factory verify plan --profile full
 factory verify run --profile full
 ```
 
-`factory stack plan` previews CI and database configuration derived from
-`Approved` technology choices. `factory stack apply` publishes that
-configuration and keeps existing files as proposals.
+To run the same check on pull requests, copy
+`.factory/templates/ci/factory-verify.yml` to
+`.github/workflows/factory-verify.yml` and edit the branch list.
 
 ## Where to go next
 

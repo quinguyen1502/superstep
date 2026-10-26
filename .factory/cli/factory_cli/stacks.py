@@ -8,7 +8,6 @@ CAPABILITY_LABELS = {
     "scaffold": "scaffold",
     "dependencies": "dependencies",
     "verify": "verify",
-    "configuration": "configuration",
 }
 
 
@@ -195,16 +194,12 @@ STACK_DEFINITIONS: Tuple[StackDefinition, ...] = (
         "database",
         "PostgreSQL",
         "Relational database with strong transactional and extension support.",
-        ("configuration",),
-        prerequisites=("Docker Compose for the v1 service configurator",),
     ),
     StackDefinition(
         "mysql",
         "database",
         "MySQL",
         "Relational database commonly paired with framework ORM adapters.",
-        ("configuration",),
-        prerequisites=("Docker Compose for the v1 service configurator",),
     ),
     StackDefinition(
         "sqlite",
@@ -217,8 +212,6 @@ STACK_DEFINITIONS: Tuple[StackDefinition, ...] = (
         "database",
         "MongoDB",
         "Document database requiring a framework-specific driver or ODM decision.",
-        ("configuration",),
-        prerequisites=("Docker Compose for the v1 service configurator",),
     ),
     StackDefinition(
         "database-not-applicable",
@@ -249,7 +242,6 @@ STACK_DEFINITIONS: Tuple[StackDefinition, ...] = (
         "infrastructure",
         "Docker Compose",
         "Project-local container orchestration for application services and databases.",
-        ("configuration",),
         prerequisites=("Docker Compose CLI",),
     ),
     StackDefinition(
@@ -262,15 +254,13 @@ STACK_DEFINITIONS: Tuple[StackDefinition, ...] = (
         "github-actions",
         "ci_cd",
         "GitHub Actions",
-        "Repository verification workflow executed by GitHub Actions.",
-        ("configuration",),
+        "Repository verification workflow. Copy templates/ci/factory-verify.yml into .github/workflows/ and edit it there.",
     ),
     StackDefinition(
         "gitlab-ci",
         "ci_cd",
         "GitLab CI",
-        "Repository verification pipeline executed by GitLab CI.",
-        ("configuration",),
+        "Repository verification pipeline executed by GitLab CI. The owner maintains the pipeline file.",
         prerequisites=("GitLab runner with approved stack runtimes",),
     ),
     StackDefinition(

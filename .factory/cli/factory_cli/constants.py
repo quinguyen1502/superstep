@@ -43,8 +43,24 @@ DEPENDENCY_ROOT = f"{FACTORY_STATE_DIR}/dependencies"
 DEPENDENCY_METADATA_PATH = f"{DEPENDENCY_ROOT}/installed.yaml"
 VERIFICATION_ROOT = f"{FACTORY_STATE_DIR}/verification"
 VERIFICATION_METADATA_PATH = f"{VERIFICATION_ROOT}/latest.yaml"
-CONFIGURATION_ROOT = f"{FACTORY_STATE_DIR}/configuration"
-CONFIGURATION_METADATA_PATH = f"{CONFIGURATION_ROOT}/generated.yaml"
+VERIFICATION_RUNS_ROOT = f"{VERIFICATION_ROOT}/runs"
+VERIFICATION_KINDS = (
+    "check",
+    "test",
+    "lint",
+    "typecheck",
+    "build",
+    "format",
+    "analyze",
+)
+VERIFICATION_QUICK_KINDS = (
+    "check",
+    "test",
+    "lint",
+    "typecheck",
+    "format",
+    "analyze",
+)
 ARCHIVE_ROOT = f"{FACTORY_STATE_DIR}/archive"
 ARCHIVE_TASK_ROOT = f"{ARCHIVE_ROOT}/tasks"
 ARCHIVE_ARTIFACT_ROOT = f"{ARCHIVE_ROOT}/artifacts"
