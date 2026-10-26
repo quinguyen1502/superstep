@@ -7,7 +7,7 @@
 - Status: Accepted
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
-- Updated: 2026-10-26
+- Updated: 2026-10-26 (point 4: `--no-runs`)
 - Related Requirements: REQ-0066
 - Related Architecture: none
 - Related Tasks: TASK-0129 (PR #162 brought in the framework change)
@@ -29,7 +29,7 @@ generates `.github/workflows/factory-verify.yml` or checks it against a stored h
 3. The verification commands are listed in `tool-policy.yaml` and committed. `factory verify` runs exactly those, in
    CI and locally. A new package or check is added to the policy by hand.
 4. `.factory-state/verification/runs/` stays as history (QA-0104 cites one of its files). The CLI no longer writes
-   there. `factory gc --apply` would delete it, so run gc with that in mind.
+   there. Run `factory gc` with `--no-runs` to keep it (framework 513545e, TASK-0131).
 
 ## Consequences
 

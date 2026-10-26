@@ -105,6 +105,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 keep=args.keep,
                 with_artifacts=args.with_artifacts,
                 apply=args.apply,
+                with_tasks=args.with_tasks,
+                with_runs=args.with_runs,
             )
         if args.command == "task":
             if args.task_command == "create":
@@ -394,7 +396,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_false",
         help="Move tasks only; leave REV/QA/SUM artifacts in place.",
     )
-    gc.set_defaults(with_artifacts=True)
+    gc.add_argument(
+        "--no-tasks",
+        dest="with_tasks",
+        action="store_false",
+        help="Leave done tasks and their artifacts in place; only delete verification runs.",
+    )
+    gc.add_argument(
+        "--no-runs",
+        dest="with_runs",
+        action="store_false",
+        help="Keep verification/runs/; only archive done tasks.",
+    )
+    gc.set_defaults(with_artifacts=True, with_tasks=True, with_runs=True)
     return parser
 
 
@@ -584,12 +598,14 @@ def handle_skills(args: argparse.Namespace) -> int:
             return 0
         drifts = plan.conflicts
         missing = plan.creates
-        if not drifts and not missing:
+        if not drifts and not missing and not plan.updates:
             print(f"Skills validation passed: {len(plan.keeps)} in sync.")
             return 0
         print("Skills validation failed:")
         for entry in missing:
             print(f"  missing  {entry.asset.path}")
+        for entry in plan.updates:
+            print(f"  update   {entry.asset.path}  (run factory skills apply)")
         for entry in drifts:
             print(f"  drift    {entry.asset.path}  ({entry.reason})")
         return 1

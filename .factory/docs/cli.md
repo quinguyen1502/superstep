@@ -16,7 +16,7 @@ factory specs -C <project-dir> [--refiner TOOL] [--no-ai] [--no-interactive]
 factory validate [project-dir]
 factory tools status|configure|plan|apply|validate -C <project-dir>
 factory tools configure [--no-interactive] [--level LEVEL] [--status proposed|approved] [--tool TOOL] [--command NAME=COMMAND] -C <project-dir>
-factory gc [-C <project-dir>] [--keep N] [--apply] [--no-artifacts]
+factory gc [-C <project-dir>] [--keep N] [--apply] [--no-artifacts] [--no-tasks] [--no-runs]
 factory deps plan|apply|validate -C <project-dir>
 factory verify plan|run|validate -C <project-dir> [--profile quick|full] [--check KIND] [--timeout SECONDS (run)]
 factory skills plan|apply|validate -C <project-dir> [--skill NAME] [--force]
@@ -260,8 +260,10 @@ The default is a dry-run inventory and plan. `--apply` moves tasks and
 deletes verification runs.
 `--keep N` leaves the N highest-numbered done tasks in the lifecycle
 folders (default 20). `--keep 0` archives every done task. `--no-artifacts`
-moves tasks only. `factory task archive` remains the primitive for one
-task or a whole column.
+moves tasks only. `--no-tasks` leaves every task and artifact in place and
+only deletes verification runs; `--no-runs` keeps `verification/runs/`
+(for example when a QA artifact cites a run file) and only archives tasks.
+`factory task archive` remains the primitive for one task or a whole column.
 
 `factory validate` checks review/QA references on `tasks/done/` only,
 so archiving historical done tasks also drops those files out of that

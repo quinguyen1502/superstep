@@ -11,15 +11,23 @@ This module discovers those templates and produces per-tool assets:
 
 Design mirrors the existing `plan / apply / validate` pattern used by
 `tools` and `deps`.
+
+`apply` records the hash of every file it writes or finds in sync in
+`.factory-state/skills/generated.yaml`. A file that still has its recorded
+hash was not edited by hand, so a newer template replaces it ("update");
+a file that differs from both is the owner's ("conflict").
 """
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .constants import TOOL_IDS
+import yaml
+
+from .constants import SKILLS_GENERATED_PATH, TOOL_IDS
 
 
 SKILL_TEMPLATES_ROOT = "templates/skills"
@@ -38,7 +46,7 @@ class SkillAsset:
 @dataclass
 class SkillPlanEntry:
     asset: SkillAsset
-    status: str  # "create" | "keep" | "conflict"
+    status: str  # "create" | "keep" | "update" | "conflict"
     reason: str = ""
 
 
@@ -53,6 +61,10 @@ class SkillPlan:
     @property
     def keeps(self) -> List[SkillPlanEntry]:
         return [e for e in self.entries if e.status == "keep"]
+
+    @property
+    def updates(self) -> List[SkillPlanEntry]:
+        return [e for e in self.entries if e.status == "update"]
 
     @property
     def conflicts(self) -> List[SkillPlanEntry]:
@@ -72,7 +84,7 @@ class SkillPlan:
                 lines.append(f"    {label}{entry.asset.path}")
         lines.append(
             f"Summary: {len(self.creates)} create, {len(self.keeps)} keep, "
-            f"{len(self.conflicts)} conflict."
+            f"{len(self.updates)} update, {len(self.conflicts)} conflict."
         )
         return "\n".join(lines)
 
@@ -81,6 +93,7 @@ class SkillPlan:
 class SkillApplyResult:
     created: List[str] = field(default_factory=list)
     kept: List[str] = field(default_factory=list)
+    updated: List[str] = field(default_factory=list)
     overwritten: List[str] = field(default_factory=list)
     conflicts_preserved: List[str] = field(default_factory=list)
 
@@ -192,7 +205,24 @@ def assets_for_tool(tool_id: str, skill: str, source_content: str) -> List[Skill
     return []
 
 
-def _classify(target: Path, expected: str) -> Tuple[str, str]:
+def _sha256(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def load_generated(project_dir: Path) -> Dict[str, str]:
+    """Path -> sha256 of the content `apply` last wrote or found in sync."""
+    path = project_dir / SKILLS_GENERATED_PATH
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    outputs = data.get("outputs") if isinstance(data, dict) else None
+    if not isinstance(outputs, dict):
+        return {}
+    return {str(key): str(value) for key, value in outputs.items()}
+
+
+def _classify(target: Path, expected: str, recorded: Optional[str]) -> Tuple[str, str]:
     if not target.exists():
         return "create", ""
     try:
@@ -201,6 +231,8 @@ def _classify(target: Path, expected: str) -> Tuple[str, str]:
         return "conflict", f"cannot read existing file: {exc}"
     if current == expected:
         return "keep", "matches template"
+    if recorded is not None and _sha256(current) == recorded:
+        return "update", "template changed; the file was not edited"
     return "conflict", "existing file differs from template"
 
 
@@ -223,6 +255,7 @@ def plan_skills(
                 f"Requested skills not found in templates: {', '.join(sorted(missing))}"
             )
     plan = SkillPlan()
+    generated = load_generated(project_dir)
     for source in templates:
         skill = source.parent.name
         try:
@@ -236,7 +269,7 @@ def plan_skills(
         for tool_id in enabled_tools:
             for asset in assets_for_tool(tool_id, skill, content):
                 target = project_dir / asset.path
-                status, reason = _classify(target, asset.content)
+                status, reason = _classify(target, asset.content, generated.get(asset.path))
                 plan.entries.append(SkillPlanEntry(asset=asset, status=status, reason=reason))
     return plan
 
@@ -249,19 +282,32 @@ def apply_plan(
     from .project import atomic_write  # avoid circular import at module load
 
     result = SkillApplyResult()
+    generated = load_generated(project_dir)
     for entry in plan.entries:
         target = project_dir / entry.asset.path
         if entry.status == "keep":
             result.kept.append(entry.asset.path)
+            generated[entry.asset.path] = _sha256(entry.asset.content)
             continue
         if entry.status == "conflict" and not force:
             result.conflicts_preserved.append(entry.asset.path)
             continue
         atomic_write(target, entry.asset.content)
+        generated[entry.asset.path] = _sha256(entry.asset.content)
         if entry.status == "create":
             result.created.append(entry.asset.path)
+        elif entry.status == "update":
+            result.updated.append(entry.asset.path)
         else:
             result.overwritten.append(entry.asset.path)
+    if plan.entries:
+        atomic_write(
+            project_dir / SKILLS_GENERATED_PATH,
+            yaml.safe_dump(
+                {"schema_version": 1, "outputs": dict(sorted(generated.items()))},
+                sort_keys=False,
+            ),
+        )
     return result
 
 
@@ -269,6 +315,7 @@ def render_apply_summary(result: SkillApplyResult) -> str:
     lines = [
         f"Created: {len(result.created)}",
         f"Kept: {len(result.kept)}",
+        f"Updated: {len(result.updated)}",
         f"Overwritten: {len(result.overwritten)}",
         f"Conflicts preserved: {len(result.conflicts_preserved)}",
     ]

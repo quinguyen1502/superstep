@@ -30,6 +30,8 @@ project/
     │   └── proposals/
     ├── dependencies/
     │   └── installed.yaml
+    ├── skills/
+    │   └── generated.yaml
     ├── standards/
     │   ├── architecture.md
     │   ├── coding.md
@@ -172,10 +174,12 @@ The `factory skills` command automates emission for the tools enabled
 in `.factory-state/factory.yaml`:
 
 - `factory skills plan -C <project>` — preview what would be
-  created, kept, or conflict without touching the filesystem.
+  created, kept, updated, or conflict without touching the filesystem.
 - `factory skills apply -C <project> [--force] [--skill NAME]` —
-  emit skill files. By default, conflicting files are preserved;
-  `--force` overwrites them.
+  emit skill files and record their hashes in
+  `.factory-state/skills/generated.yaml`. A file that still has its
+  recorded hash was not edited, so a newer template updates it. A file
+  edited by hand is a conflict and is preserved; `--force` overwrites it.
 - `factory skills validate -C <project>` — check that emitted files
   match the framework templates (drift detection).
 

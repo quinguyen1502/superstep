@@ -84,7 +84,8 @@ running the same checks again leaves the file unchanged.
 
 Raw command output is printed for diagnosis and is not stored. Timestamped
 copies under `.factory-state/verification/runs/` are no longer written.
-`factory gc --apply` deletes any that are already there. `latest.yaml` stays.
+`factory gc --apply` deletes any that are already there (`--no-tasks` does only
+that). `latest.yaml` stays.
 
 Older evidence that still contains input hashes or absolute paths remains
 valid. `factory validate` warns until `factory verify run` replaces it.

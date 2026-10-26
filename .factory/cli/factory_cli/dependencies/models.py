@@ -2,7 +2,18 @@ from __future__ import annotations
 
 import shlex
 from dataclasses import dataclass, field
-from typing import Dict, List
+from pathlib import Path
+from typing import Dict, List, Sequence
+
+
+def portable_argv(argv: Sequence[str]) -> List[str]:
+    """The command as recorded in Factory state: an absolute executable such as
+    /usr/local/bin/npm becomes its name, so the record is the same on every
+    machine. Execution still uses the resolved path."""
+    if not argv:
+        return []
+    head = argv[0]
+    return [Path(head).name if Path(head).is_absolute() else head, *argv[1:]]
 
 
 @dataclass(frozen=True)
@@ -25,11 +36,11 @@ class DependencyCommand:
             "target_id": self.target_id,
             "manager": self.manager,
             "working_dir": self.working_dir,
-            "argv": list(self.argv),
+            "argv": portable_argv(self.argv),
             "manifest": self.manifest,
             "requires_network": self.requires_network,
             "expected_paths": list(self.expected_paths),
-            "integrity_argv": list(self.integrity_argv),
+            "integrity_argv": portable_argv(self.integrity_argv),
         }
 
 
