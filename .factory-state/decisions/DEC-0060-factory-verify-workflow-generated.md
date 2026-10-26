@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Decision ID: DEC-0060
-- Status: Accepted
+- Status: Superseded by DEC-0064 (2026-10-26); point 2 still holds
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
-- Updated: 2026-10-24
+- Updated: 2026-10-26
 - Related Requirements: REQ-0066
 - Related Architecture: none
 - Related Tasks: TASK-0110

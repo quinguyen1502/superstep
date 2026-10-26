@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0072
-- Status: Accepted (planned as TASK-0116 to TASK-0120, DEC-0063)
+- Status: Done (TASK-0116 to TASK-0120, PRs #144 to #148; the TypeScript export in TASK-0125, PR #158)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
