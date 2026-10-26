@@ -29,7 +29,7 @@ from urllib.parse import urlencode
 from ..core import config
 from ..core.errors import AppError
 from .effects import Effects, call_tool
-from .errors import Interrupt, ValidationError
+from .errors import AwaitChild, Interrupt, ValidationError
 from .issues import Issue
 from .limits import safe_error
 from .llm import call_agent
@@ -152,7 +152,6 @@ def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str,
     if src == "http":
         if config.demo_mode(): raise AppError("DEMO_NODE_DISABLED", node="HTTP Tool")
         return http_request(nid, t, args, state, effects.headers(nid) if effects else {})
-    if src == "workflow": raise RuntimeError("workflow tools cannot run yet")  # child runs come with TASK-0134
     raise RuntimeError(f"unknown tool source {src!r}")
 
 
@@ -304,6 +303,23 @@ def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
     return None
 
 
+def child_result(resume: Optional[Dict[str, Any]], nid: str) -> Optional[Dict[str, Any]]:
+    """The finished child run of a workflow tool call, consumed once: {child_run_id, status, output, error, usage}. The
+    run service sends it as a dict; a person's answer is always text, so it can never pass for one (TASK-0134)."""
+    v = resume.get("value") if resume is not None and resume.get("node") == nid else None
+    if isinstance(v, dict) and "child_run_id" in v: return resume.pop("value")
+    return None
+
+
+def child_outcome(t: Dict[str, Any], got: Dict[str, Any]) -> tuple:
+    """(status, result text) of a workflow tool call from its finished child run."""
+    if got.get("status") == "ok":
+        final = got.get("output") or {}
+        return "ok", text({f: final.get(f) for f in field_list(t.get("outputs"))})
+    why = got.get("error") or got.get("status") or "unknown"
+    return "error", f"{FAILED}: the workflow ended with {got.get('status')}: {why}"
+
+
 def rejection(response: str) -> str:
     comment = "" if response.strip().lower() == REJECTED else response.strip()
     return "Rejected by a reviewer" + (f": {comment}" if comment else "")
@@ -367,7 +383,9 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             tool, args = by_name.get(call["name"]), call.get("args")
             bad = None if tool is None else arg_error(parameters(tool), args)
             decided = None
-            if tool is not None and not bad and tool.get("approval"):  # a call that cannot run is not shown to an approver
+            got = child_result(resume, nid) if tool is not None and tool.get("source") == "workflow" else None
+            if tool is not None and not bad and tool.get("approval") and got is None:  # a call that cannot run is not shown to an approver;
+                # a child that finished ran after its approval
                 decided = answer(resume, nid)
                 if decided is None:
                     who = d.get("agent_label") or owner(node)
@@ -380,6 +398,23 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 status, result = "error", f"Invalid arguments for {call['name']}: {bad}"
             elif decided is not None and decided.strip().lower() != APPROVED:
                 status, result = "rejected", rejection(decided)
+            elif got is not None:
+                status, result = child_outcome(tool, got)
+                if usage and got.get("usage"): usage(nid, got["usage"])  # the child's tokens and cost count on the Agent node
+            elif tool.get("source") == "workflow":  # start the child run (once per call) and wait for it (DEC-0066)
+                try:
+                    if ports.start_child is None: raise RuntimeError("workflow tools need the run service")
+                    call_key = f"{effects.key(nid) if effects else nid}#{call['id']}"
+                    inp = {f: args[f] for f in field_list(tool.get("inputs")) if f in args}
+                    cid = ports.start_child(call_key, tool.get("snapshot") or {}, tool.get("version"), inp,
+                                            {"workflow_id": tool.get("workflow_id"), "tool": call["name"]})
+                except Exception as e:
+                    if getattr(e, "fenced", False): raise
+                    status, result = "error", f"{FAILED}: {safe_error(e)}"
+                else:
+                    who = d.get("agent_label") or owner(node)
+                    raise AwaitChild(nid, cid, {"label": f"{who} › {call['name']}", "tool": call["name"], "arguments": args,
+                                                "workflow_id": tool.get("workflow_id")})
             else:
                 try: status, result = "ok", text(run_tool(nid, tool, args, state, ports, effects))
                 except Exception as e:

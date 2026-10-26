@@ -101,6 +101,7 @@
 | `CREDENTIAL_HEADER_UNSUPPORTED` | 400 | {provider} does not accept the header {header} |
 | `PROVIDER_EMBEDDINGS_UNSUPPORTED` | 400 | {provider} does not provide embeddings; choose another credential for this knowledge base |
 | `AGENT_TOOLS_UNSUPPORTED` | 400 | {provider} cannot call tools; choose a credential with tool calling for this Agent node |
+| `WORKFLOW_TOOL_TOO_DEEP` | 400 | Workflow tools nest more than {max} runs deep; this call was not started |
 | `KB_EMBEDDING_DIMENSION_MISMATCH` | 409 | The embedding model returns {got}-dimensional vectors but this knowledge base stores {expected}-dimensional ones; re-index the knowledge base |
 | `KB_NOT_FOUND` | 404 | Knowledge base not found or not yours |
 | `KB_NAME_REQUIRED` | 400 | Knowledge base name is required |

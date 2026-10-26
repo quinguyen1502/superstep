@@ -1,11 +1,12 @@
 from typing import Optional
-from sqlalchemy import Float, Integer, Text
+from sqlalchemy import Float, Index, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from .base import Base
 
 
 class Run(Base):
     __tablename__ = "runs"
+    __table_args__ = (Index("ux_runs_parent_call", "parent_run_id", "parent_step", unique=True),)  # one child per call (TASK-0134)
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     workflow_id: Mapped[Optional[str]] = mapped_column(Text)
     input: Mapped[Optional[str]] = mapped_column(Text)        # JSON
@@ -34,3 +35,7 @@ class Run(Base):
     callback_token_id: Mapped[Optional[str]] = mapped_column(Text)  # signs the callback (the token's secret)
     # JSON: the queued resume job of a waiting run, until the resumed segment records progress or a result (TASK-0127)
     resume_job: Mapped[Optional[str]] = mapped_column(Text)
+    # workflow tools (TASK-0134, DEC-0066): the run whose Agent tool step started this one, and the call key
+    # (`<idempotency key of the step>#<call id>`); unique together, so a call starts at most one child
+    parent_run_id: Mapped[Optional[str]] = mapped_column(Text, index=True)
+    parent_step: Mapped[Optional[str]] = mapped_column(Text)

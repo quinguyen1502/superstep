@@ -280,7 +280,7 @@ linked child run that the parent's tool step waits for.
 - TASK-0133 Tool settings, parameters and results from the child's state fields, the snapshot at planning, cycle
   and depth checks across subgraphs and workflow tools, validator codes. **review** (REV-0117, QA-0117).
 - TASK-0134 Linked child runs: migration, `AwaitChild`, `start_child`, resume of the parent when a child settles,
-  cancel cascade, restart tests. **todo** (after TASK-0133).
+  cancel cascade, restart tests. **review** (REV-0118, QA-0118).
 - TASK-0135 Approvals inside a child with both workflow names; parent and children in the API, run page and history.
   **todo** (after TASK-0134).
 - TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **todo** (after TASK-0134).

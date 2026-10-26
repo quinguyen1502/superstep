@@ -1,6 +1,7 @@
 import json
 from typing import Optional
 from sqlalchemy import delete, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from ..models import Run
 from ..models.database import Database
 
@@ -71,6 +72,24 @@ class RunRepository:
         with self.db.session() as s:
             return list(s.scalars(select(Run).where(Run.resume_job.is_not(None), Run.status.in_(("waiting", "running")))
                                   .order_by(Run.started).limit(limit)))
+
+    def child_of(self, parent: str, step: str) -> Optional[Run]:
+        """The child run a workflow tool call started (TASK-0134)."""
+        with self.db.session() as s:
+            return s.scalars(select(Run).where(Run.parent_run_id == parent, Run.parent_step == step)).first()
+
+    def children(self, parent: str) -> list[Run]:
+        with self.db.session() as s:
+            return list(s.scalars(select(Run).where(Run.parent_run_id == parent).order_by(Run.started)))
+
+    def add_child(self, run: Run) -> Run:
+        """Insert a child run, or return the one another attempt inserted for the same call first."""
+        with self.db.session() as s:
+            try: s.add(run); s.commit(); return run
+            except IntegrityError: s.rollback()
+        found = self.child_of(run.parent_run_id, run.parent_step)
+        if found is None: raise RuntimeError("child run insert failed")
+        return found
 
     def list_waiting(self, owner: str, limit: int = 100) -> list[Run]:
         """Runs waiting for this user's answer; a workflow test answers its own (TASK-0067)."""

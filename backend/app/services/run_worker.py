@@ -49,6 +49,9 @@ class RunWorker:
         try:
             if row.status == "running":  # recovered: continue from the last checkpoint (or restart without one)
                 plan = svc.plan_recover(row, gen, attempt)
+            elif row.parent_run_id:  # a workflow tool's child run (TASK-0134): the snapshot its parent's plan took
+                plan = svc.plan_child(row)
+                plan.checkpointing, plan.fence, plan.attempt = True, gen, attempt
             else:
                 plan = svc.plan(job["owner"], {"workflow_id": job["workflow_id"], "input": job.get("input") or {},
                                                **({"version": job["version"]} if job.get("version") else {})})  # a test suite on a stored version
@@ -69,7 +72,7 @@ class RunWorker:
         """Continue a waiting run with a decision from an approval channel (TASK-0022). The claim (waiting -> running,
         compare-and-set) makes sure only one resume happens, however many jobs or clicks there were."""
         rid, owner = job["run_id"], job["owner"]
-        try: plan = svc.plan_resume(owner, rid, job["response"], via_channel=True)
+        try: plan = svc.plan_resume(owner, rid, job.get("response"), via_channel=True, child=job.get("child"))
         except AppError as e:
             log.info("approval resume of run %s skipped: %s", rid, e.code); return None
         gen = svc.runs.claim(rid, ("waiting",))
