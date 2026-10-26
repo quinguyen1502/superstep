@@ -2,6 +2,15 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## Unreleased
+
+### Changed
+
+- **Workflow checks in Vietnamese** (TASK-0132). The editor shows the problems found when you save, open a template or
+  run (a missing knowledge base, a node with no outgoing edge, a loop without a Condition…) in the UI language.
+  `POST /api/validate`, saving a workflow and using a template now also return `issues`, the code of each message in
+  `errors`; a run's `error` event carries them too. `errors` is unchanged.
+
 ## 0.8.0 (2026-10-26)
 
 ### Added

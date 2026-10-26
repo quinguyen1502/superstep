@@ -13,6 +13,7 @@ from __future__ import annotations
 import os, re
 from typing import Any, Callable, Dict, List, Optional
 from . import providers
+from .issues import Issue
 from .templating import render, render_args
 from .usage import estimate_tokens, make_usage
 
@@ -102,38 +103,38 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, offline: bool = Fals
 
 
 def errors(nid: str, d: Dict[str, Any], schema: List[dict]) -> List[str]:
-    errs: List[str] = []; by = {f["name"]: f for f in schema}; pre = f"Decision node {nid}"
+    errs: List[str] = []; by = {f["name"]: f for f in schema}
     qs = d.get("questions")
-    if not isinstance(qs, list) or not qs: return [f"{pre}: add at least one question"]
-    if len(qs) > MAX_QUESTIONS: errs.append(f"{pre}: at most {MAX_QUESTIONS} questions")
-    if not isinstance(d.get("text"), str) or not d["text"].strip(): errs.append(f"{pre}: the text to evaluate is empty")
+    if not isinstance(qs, list) or not qs: return [Issue("DECISION_QUESTIONS_MISSING", node=nid)]
+    if len(qs) > MAX_QUESTIONS: errs.append(Issue("DECISION_QUESTIONS_MANY", node=nid, max=MAX_QUESTIONS))
+    if not isinstance(d.get("text"), str) or not d["text"].strip(): errs.append(Issue("DECISION_TEXT_EMPTY", node=nid))
     seen = set()
     for i, q in enumerate(qs, 1):
-        if not isinstance(q, dict): errs.append(f"{pre}: question {i} is not an object"); continue
-        qid, t = q.get("id"), q.get("type"); name = f"{pre}, question {qid or i}"
-        if not isinstance(qid, str) or not ID_RE.match(qid): errs.append(f"{name}: the id must start with a letter or _ and use letters, digits and _")
-        elif qid in seen: errs.append(f"{pre}: duplicate question id '{qid}'")
+        if not isinstance(q, dict): errs.append(Issue("DECISION_QUESTION_NOT_OBJECT", node=nid, index=i)); continue
+        qid, t = q.get("id"), q.get("type"); name = {"node": nid, "question": qid or i}
+        if not isinstance(qid, str) or not ID_RE.match(qid): errs.append(Issue("DECISION_QUESTION_ID", **name))
+        elif qid in seen: errs.append(Issue("DECISION_QUESTION_DUPLICATE", node=nid, question=qid))
         seen.add(qid)
-        if t not in TYPES: errs.append(f"{name}: type must be one of {', '.join(TYPES)}"); continue
-        if not isinstance(q.get("instructions"), str) or not q["instructions"].strip(): errs.append(f"{name}: instructions are empty")
+        if t not in TYPES: errs.append(Issue("DECISION_QUESTION_TYPE", **name, types=", ".join(TYPES))); continue
+        if not isinstance(q.get("instructions"), str) or not q["instructions"].strip(): errs.append(Issue("DECISION_INSTRUCTIONS_EMPTY", **name))
         if t == "choice":
             labels = [o.get("label") if isinstance(o, dict) else None for o in (q.get("options") if isinstance(q.get("options"), list) else [])]
-            if not OPTIONS[0] <= len(labels) <= OPTIONS[1]: errs.append(f"{name}: needs {OPTIONS[0]}-{OPTIONS[1]} options")
-            if any(not isinstance(l, str) or not l.strip() for l in labels): errs.append(f"{name}: every option needs a label")
-            elif len(set(labels)) != len(labels): errs.append(f"{name}: option labels must be different")
+            if not OPTIONS[0] <= len(labels) <= OPTIONS[1]: errs.append(Issue("DECISION_OPTIONS_COUNT", **name, min=OPTIONS[0], max=OPTIONS[1]))
+            if any(not isinstance(l, str) or not l.strip() for l in labels): errs.append(Issue("DECISION_OPTION_LABEL", **name))
+            elif len(set(labels)) != len(labels): errs.append(Issue("DECISION_OPTION_LABELS_SAME", **name))
         if t == "score":
             levels = q.get("levels") if isinstance(q.get("levels"), list) else []
-            if not LEVELS[0] <= len(levels) <= LEVELS[1]: errs.append(f"{name}: needs {LEVELS[0]}-{LEVELS[1]} levels")
-            if any(not isinstance(l, str) or not l.strip() for l in levels): errs.append(f"{name}: every level needs a description")
+            if not LEVELS[0] <= len(levels) <= LEVELS[1]: errs.append(Issue("DECISION_LEVELS_COUNT", **name, min=LEVELS[0], max=LEVELS[1]))
+            if any(not isinstance(l, str) or not l.strip() for l in levels): errs.append(Issue("DECISION_LEVEL_EMPTY", **name))
         if (fld := q.get("field")) and schema:
             f = by.get(fld)
-            if f is None: errs.append(f"{name}: field '{fld}' is not in the state")
-            elif f.get("type", "string") not in FIELD_TYPES[t]: errs.append(f"{name}: field '{fld}' must be of type {' or '.join(FIELD_TYPES[t])}")
-            elif (f.get("reducer") or "replace") != "replace": errs.append(f"{name}: field '{fld}' must not have a reducer")
+            if f is None: errs.append(Issue("DECISION_FIELD_UNKNOWN", **name, field=fld))
+            elif f.get("type", "string") not in FIELD_TYPES[t]: errs.append(Issue("DECISION_FIELD_TYPE", **name, field=fld, types=" or ".join(FIELD_TYPES[t])))
+            elif (f.get("reducer") or "replace") != "replace": errs.append(Issue("DECISION_FIELD_REDUCER", **name, field=fld))
     of = d.get("output_field")
     if of and schema:
         f = by.get(of)
-        if f is None: errs.append(f"{pre}: output_field '{of}' is not in the state")
-        elif f.get("type", "string") != "object": errs.append(f"{pre}: output_field '{of}' must be of type object")
-    if not fields(d): errs.append(f"{pre}: choose an output field or a field for at least one question")
+        if f is None: errs.append(Issue("DECISION_OUTPUT_UNKNOWN", node=nid, field=of))
+        elif f.get("type", "string") != "object": errs.append(Issue("DECISION_OUTPUT_TYPE", node=nid, field=of))
+    if not fields(d): errs.append(Issue("DECISION_FIELDS_MISSING", node=nid))
     return errs

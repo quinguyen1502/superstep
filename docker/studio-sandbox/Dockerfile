@@ -22,7 +22,7 @@ WORKDIR /srv
 # Only the modules the Code runtime needs (no database, no API, no credentials code).
 COPY backend/app/__init__.py backend/app/sandbox_service.py app/
 COPY backend/app/core/__init__.py backend/app/core/config.py backend/app/core/errors.py backend/app/core/logging.py app/core/
-COPY backend/app/engine/__init__.py backend/app/engine/code_runtime.py backend/app/engine/code_languages.py app/engine/
+COPY backend/app/engine/__init__.py backend/app/engine/code_runtime.py backend/app/engine/code_languages.py backend/app/engine/issues.py app/engine/
 COPY backend/app/engine/sandbox/ app/engine/sandbox/
 RUN chmod -R a+rX /srv && python -c "import app.sandbox_service"
 EXPOSE 8080

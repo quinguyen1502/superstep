@@ -13,6 +13,7 @@ from typing import Any, Callable, Dict, List, Optional
 from ..core import smtp
 from ..core.errors import AppError
 from . import providers
+from .issues import Issue
 from .ports import Ports
 from .templating import VAR_RE, render, render_args
 
@@ -92,25 +93,25 @@ def node_fn(node: Dict[str, Any], resolve=None, key: Callable[[], Optional[str]]
 
 
 def errors(nid: str, d: Dict[str, Any], schema: List[dict]) -> List[str]:
-    errs: List[str] = []; pre = f"Send email node {nid}"
+    errs: List[str] = []
     static: List[str] = []
     for k in ADDRESS_FIELDS:
         v = d.get(k) or ""
-        if not isinstance(v, str): errs.append(f"{pre}: {k} must be text"); continue
+        if not isinstance(v, str): errs.append(Issue("EMAIL_FIELD_TEXT", node=nid, key=k)); continue
         if not VAR_RE.search(v):  # fixed addresses are checked now, templated ones when the node runs
             got = smtp.addresses(v)
-            if (bad := smtp.invalid(got)): errs.append(f"{pre}: '{bad[0][:100]}' in {k} is not an e-mail address")
+            if (bad := smtp.invalid(got)): errs.append(Issue("EMAIL_ADDRESS_INVALID", node=nid, address=bad[0][:100], key=k))
             if k != "reply_to": static += got
-    if not any((d.get(k) or "").strip() for k in ("to", "cc", "bcc") if isinstance(d.get(k) or "", str)): errs.append(f"{pre}: add a recipient (To, Cc or Bcc)")
-    if len(set(static)) > MAX_RECIPIENTS: errs.append(f"{pre}: at most {MAX_RECIPIENTS} recipients")
-    if not str(d.get("subject") or "").strip(): errs.append(f"{pre}: the subject is empty")
-    if not str(d.get("body") or "").strip(): errs.append(f"{pre}: the message is empty")
-    if d.get("format", "text") not in FORMATS: errs.append(f"{pre}: format must be text or html")
+    if not any((d.get(k) or "").strip() for k in ("to", "cc", "bcc") if isinstance(d.get(k) or "", str)): errs.append(Issue("EMAIL_RECIPIENT_MISSING", node=nid))
+    if len(set(static)) > MAX_RECIPIENTS: errs.append(Issue("EMAIL_RECIPIENTS_MANY", node=nid, max=MAX_RECIPIENTS))
+    if not str(d.get("subject") or "").strip(): errs.append(Issue("EMAIL_SUBJECT_EMPTY", node=nid))
+    if not str(d.get("body") or "").strip(): errs.append(Issue("EMAIL_BODY_EMPTY", node=nid))
+    if d.get("format", "text") not in FORMATS: errs.append(Issue("EMAIL_FORMAT", node=nid))
     if d.get("retry") or d.get("cache_ttl") is not None:  # a retry after the server took the message, or a cache hit, would be wrong
-        errs.append(f"{pre}: retry and cache are not available, an e-mail must be sent once")
+        errs.append(Issue("EMAIL_NO_RETRY", node=nid))
     of = d.get("output_field")
     if of and schema:
         f = {x["name"]: x for x in schema}.get(of)
-        if f is None: errs.append(f"{pre}: output_field '{of}' is not in the state")
-        elif f.get("type", "string") != "object": errs.append(f"{pre}: output_field '{of}' must be of type object")
+        if f is None: errs.append(Issue("EMAIL_OUTPUT_UNKNOWN", node=nid, field=of))
+        elif f.get("type", "string") != "object": errs.append(Issue("EMAIL_OUTPUT_TYPE", node=nid, field=of))
     return errs

@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { TemplatePreview } from '@/components/template-preview'
 import { api } from '@/lib/api'
+import type { Issue } from '@/lib/i18n'
 import { download, readTemplateFile, type Template } from '@/lib/templates'
 import { useLoadWhen } from '@/lib/use-when'
 
@@ -30,8 +31,8 @@ export function TemplateGallery({ open, onOpenChange, onBlank }: Props) {
     try { await f() } catch (e: any) { setErr(e.message === 'invalid-json' ? t('templates.invalidJson') : e.message) } finally { setBusy(null) }
   }
   const use = (tp: Template) => run(tp.id, async () => {
-    const r = await api<{ id: string; errors?: string[] }>(`/api/templates/${tp.id}/use`, { method: 'POST', json: {} })
-    nav(`/workflows/${r.id}`, { state: { errors: r.errors ?? [] } })  // the editor lists what the new workflow still needs
+    const r = await api<{ id: string; errors?: string[]; issues?: Issue[] }>(`/api/templates/${tp.id}/use`, { method: 'POST', json: {} })
+    nav(`/workflows/${r.id}`, { state: { errors: r.errors ?? [], issues: r.issues } })  // the editor lists what the new workflow still needs
   })
   const exp = (tp: Template) => run(`x-${tp.id}`, async () => download(tp.name, await api(`/api/templates/${tp.id}/export`)))
   const imp = (f?: File) => f && run('import', async () => { await api('/api/templates/import', { method: 'POST', json: { file: await readTemplateFile(f) } }); await load() })

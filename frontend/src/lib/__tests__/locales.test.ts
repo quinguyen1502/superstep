@@ -125,6 +125,7 @@ const SAME_OK = new Set([
   'transfer.kinds.credential',
   'transfer.kinds.subgraph',
   'users.email',
+  'validation.NODE_PROBLEM',
   'versions.nodes_one',
   'versions.stateTitle',
 ])

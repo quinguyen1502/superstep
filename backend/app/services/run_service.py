@@ -11,6 +11,7 @@ from ..core.errors import CATALOG, AppError
 from ..engine import repo_import
 from ..engine import agents, subgraphs
 from ..engine.errors import ValidationError
+from ..engine.issues import Issue, issues_of
 from ..engine.limits import cap_event, cap_run, safe_error, size
 from ..engine.effects import Effects
 from ..engine.ports import Ports
@@ -60,10 +61,12 @@ class RunPlan:
 
 
 def error_event(error: dict, **extra) -> dict:
-    """WebSocket error event: structured `error` {code, message, details?} plus the legacy `errors` list."""
+    """WebSocket error event: structured `error` {code, message, details?} plus the legacy `errors` list, and the
+    codes of validation messages in `issues` (TASK-0132)."""
     details = error.get("details")
-    return {"type": "error", **extra, "error": error,
-            "errors": details if isinstance(details, list) and details else [error["message"]]}
+    errors = details if isinstance(details, list) and details else [error["message"]]
+    return {"type": "error", **extra, "error": error, "errors": errors,
+            **({"issues": issues_of(errors)} if any(isinstance(e, Issue) for e in errors) else {})}
 
 
 def _normalise(ev: dict) -> dict:

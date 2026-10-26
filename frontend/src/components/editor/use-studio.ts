@@ -11,7 +11,7 @@ import { clipStore, copySelection, pasteClip, type Clip } from '@/lib/clipboard'
 import { canEdit, type Access } from '@/lib/rbac'
 import { useDemoMode } from '@/lib/demo'
 import { api, wsUrl, sessionExpired, signedIn } from '@/lib/api'
-import i18n, { eventErrors, uiLocale } from '@/lib/i18n'
+import i18n, { eventErrors, issueTexts, uiLocale, type Issue } from '@/lib/i18n'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/lib/theme'
 import type { Channels } from '@/lib/approvals'
@@ -77,9 +77,9 @@ export function useStudio() {
   const openWorkflow = useEffectEvent(() => {
     api(`/api/workflows/${id}`).then(wf => { setLoadErr(null); load(wf)
       // a workflow just made from a template: what it still needs (a knowledge base, a server...), as a save shows it
-      const pending = (loc.state as { errors?: unknown } | null)?.errors
+      const st = loc.state as { errors?: unknown; issues?: Issue[] } | null; const pending = st?.errors
       if (Array.isArray(pending) && pending.length) {
-        setErrors(pending.map(String)); setTab('input')
+        setErrors(issueTexts(pending.map(String), st?.issues)); setTab('input')
         nav(`${loc.pathname}${loc.search}`, { replace: true, state: null })  // once: a reload must not bring them back
       }
       // ?run=<id> (from the pending list) opens that run with its Human panel
@@ -100,7 +100,7 @@ export function useStudio() {
   const save = async () => {
     try {
       const r = await api('/api/workflows', { method: 'POST', json: toJSON() })
-      setWid(r.id); setErrors(r.errors); savedSnap.current = snap(); setSaves(n => n + 1); if (r.errors.length) setTab('input')
+      setWid(r.id); setErrors(issueTexts(r.errors, r.issues)); savedSnap.current = snap(); setSaves(n => n + 1); if (r.errors.length) setTab('input')
     } catch (e: any) { setErrors([t('editor.saveFailed', { error: e.message })]); setTab('input') }
   }
   const mark = (id: string, patch: any) => setNodes(ns => ns.map(n => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
