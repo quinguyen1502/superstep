@@ -80,12 +80,12 @@ class WorkflowService:
         return {"items": items, "total": repo.count(wid), "limit": limit, "offset": offset, "children_changed": self.children_changed(wid, uid)}
 
     def children_changed(self, wid: str, uid: str) -> list[dict]:
-        """Subgraph children saved after this workflow's latest version (their changes apply to its next runs)."""
+        """Subgraph and workflow tool children saved after this workflow's latest version (their changes apply to its next runs)."""
         if self.versions is None: return []
         w = self.repo.get(wid); mine = self.versions.latest(wid)
         if w is None or mine is None: return []
         out = []
-        for _, ref in subgraphs.refs(json.loads(w.data or "{}")):
+        for ref in dict.fromkeys(ref for _, ref in subgraphs.all_refs(json.loads(w.data or "{}"))):
             c = self.versions.latest(ref) if ref else None
             if c is not None and c.created > mine.created and (self.access is None or self.access.may(ref, uid)):
                 out.append({"id": ref, "name": c.name, "version": c.version, "at": c.created})
@@ -230,10 +230,11 @@ class WorkflowService:
         return {"id": nid, "name": d["name"]}
 
     def dependents(self, wid: str, uid: str) -> list[dict]:
-        """Workflows that embed `wid` as a subgraph. Names are shown only where the caller has access (TASK-0029)."""
+        """Workflows that embed `wid` as a subgraph or call it as an Agent tool. Names are shown only where the caller has
+        access (TASK-0029)."""
         out = []
         for w in self.repo.referencing(wid):
-            if any(ref == wid for _, ref in subgraphs.refs(json.loads(w.data or "{}"))):
+            if any(ref == wid for _, ref in subgraphs.all_refs(json.loads(w.data or "{}"))):
                 vis = self.access is None or self.access.may(w.id, uid)
                 out.append({"id": w.id if vis else None, "name": w.name if vis else None})
         return out

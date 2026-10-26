@@ -8,9 +8,12 @@ crash or a restart repeats at most the step that had not finished. The conversat
 `agent:A` (plain JSON): {messages, pending, rounds, limit_hit, steps, answer, last}.
 
 Node data: credential_id, model, system_prompt, prompt, output_field, steps_field?, history_field?, max_rounds and
-`tools`, each {name, description, source: mcp | http | builtin | knowledge, approval?} plus its source's settings:
+`tools`, each {name, description, source: mcp | http | builtin | knowledge | workflow, approval?} plus its source's settings:
   mcp: server_id, tool, parameters (the server's input schema)    builtin: function (engine/tools.py)
   knowledge: knowledge_base_id, top_k                               http: method, url, body, parameters
+  workflow: workflow_id, inputs (the state fields the model fills), outputs (the final state fields it gets back)
+A workflow tool (REQ-0073, DEC-0066) gets `snapshot` and `version` when a run is planned (`snapshot()`): the child's latest
+saved workflow, so a paused or recovered run calls the same version.
 HTTP templates read the model's arguments as `{{state.args.<name>}}`; without a body, POST/PUT/PATCH send the
 arguments as JSON, and a GET whose URL does not use them gets them as query parameters.
 
@@ -26,11 +29,13 @@ from urllib.parse import urlencode
 from ..core import config
 from ..core.errors import AppError
 from .effects import Effects, call_tool
-from .errors import Interrupt
+from .errors import Interrupt, ValidationError
 from .issues import Issue
 from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
+from .state_schema import state_schema
+from . import subgraphs
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
@@ -38,7 +43,7 @@ PREFIX, SEP = "agent:", "/"
 MODEL, TOOL, EXIT = "__model", "__tool", "__exit"
 TYPES = ("agent", "agent_model", "agent_tool", "agent_exit")
 ROUTERS = ("agent_model", "agent_tool")  # steps that pick the next step (they may loop)
-SOURCES = ("mcp", "http", "builtin", "knowledge")
+SOURCES = ("mcp", "http", "builtin", "knowledge", "workflow")
 DEFAULT_ROUNDS, MAX_ROUNDS, MAX_CALLS_PER_ROUND = 5, 25, 8
 RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
 STEP_CHARS = 2000    # ... and into the steps field / trace shortened to this
@@ -82,6 +87,9 @@ def parameters(t: Dict[str, Any]) -> Dict[str, Any]:
     src = t.get("source")
     if src == "knowledge": return QUERY
     if src == "builtin": return PARAMETERS.get(t.get("function") or "") or {"type": "object", "properties": {}}
+    if src == "workflow":  # the child's state fields the model fills, typed from the snapshot once a run is planned
+        props, want = state_schema(t.get("snapshot") or {})["properties"], field_list(t.get("inputs"))
+        return {"type": "object", "properties": {f: props.get(f) or {"type": "string"} for f in want}, "required": want}
     p = t.get("parameters")
     return p if isinstance(p, dict) and p else {"type": "object", "properties": {}}
 
@@ -104,6 +112,10 @@ def arg_error(schema: Dict[str, Any], args: Any) -> Optional[str]:
         ok = isinstance(v, JSON_TYPES[want]) and not (want in ("number", "integer") and isinstance(v, bool))
         if not ok: return f"argument {k} must be of type {want}"
     return None
+
+
+def field_list(v: Any) -> List[str]:
+    return [f for f in v if isinstance(f, str)] if isinstance(v, list) else []
 
 
 def text(v: Any) -> str:
@@ -140,6 +152,7 @@ def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str,
     if src == "http":
         if config.demo_mode(): raise AppError("DEMO_NODE_DISABLED", node="HTTP Tool")
         return http_request(nid, t, args, state, effects.headers(nid) if effects else {})
+    if src == "workflow": raise RuntimeError("workflow tools cannot run yet")  # child runs come with TASK-0134
     raise RuntimeError(f"unknown tool source {src!r}")
 
 
@@ -172,6 +185,12 @@ def errors(nid: str, d: Dict[str, Any], schema: List[Dict[str, Any]]) -> List[st
             if not t.get("knowledge_base_id"): errs.append(Issue("AGENT_TOOL_KB", **who))
             k = t.get("top_k", 4)
             if not isinstance(k, int) or isinstance(k, bool) or not 1 <= k <= 20: errs.append(Issue("AGENT_TOOL_TOP_K", **who))
+        if src == "workflow":
+            if not t.get("workflow_id"): errs.append(Issue("AGENT_TOOL_WORKFLOW", **who))
+            for key, code in (("inputs", "AGENT_TOOL_INPUTS"), ("outputs", "AGENT_TOOL_OUTPUTS")):
+                v, names = t.get(key), field_list(t.get(key))
+                bad = v is not None and (not isinstance(v, list) or len(names) != len(v) or len(set(names)) != len(names) or not all(names))
+                if bad or (key == "outputs" and not names): errs.append(Issue(code, **who))
         if src == "http":
             if not t.get("url"): errs.append(Issue("AGENT_TOOL_URL", **who))
             if (t.get("method") or "GET").upper() not in METHODS: errs.append(Issue("AGENT_TOOL_METHOD", **who, methods=", ".join(METHODS)))
@@ -214,9 +233,14 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         # a cached step would skip its model or tool call (and its approval) on a run with the same state: only the
         # entry step keeps the node's cache and input fields; retry and timeout apply to each step
         inner = {k: v for k, v in d.items() if k not in ("label", "cache_ttl", "input_fields")}
-        step = lambda suffix, typ, name: {"id": f"{a}{SEP}{suffix}", "type": typ, "position": n.get("position"),
-                                          "data": {**inner, "label": f"{label} › {name}", "agent_of": a, "agent_label": label}}
-        nodes += [step(MODEL, "agent_model", "model"), step(TOOL, "agent_tool", "tool"), step(EXIT, "agent_exit", "end")]
+        # a workflow tool's child snapshot is run by the tool step only: the other steps keep its state fields (the
+        # parameter types), which keeps the checkpoint small
+        lean = {**inner, "tools": [{**t, "snapshot": {"state": t["snapshot"].get("state") or []}}
+                                   if isinstance(t, dict) and isinstance(t.get("snapshot"), dict) else t for t in d.get("tools") or []]}
+        step = lambda suffix, typ, name, data: {"id": f"{a}{SEP}{suffix}", "type": typ, "position": n.get("position"),
+                                                "data": {**data, "label": f"{label} › {name}", "agent_of": a, "agent_label": label}}
+        n["data"] = {**n["data"], "tools": lean["tools"]} if "tools" in d else n["data"]
+        nodes += [step(MODEL, "agent_model", "model", lean), step(TOOL, "agent_tool", "tool", inner), step(EXIT, "agent_exit", "end", lean)]
         m, t, x = f"{a}{SEP}{MODEL}", f"{a}{SEP}{TOOL}", f"{a}{SEP}{EXIT}"
         edges[:] = [{**e, "source": x} if e.get("source") == a else e for e in edges]  # the agent's way out
         edges += [{"id": f"{a}{SEP}e-model", "source": a, "target": m},
@@ -226,6 +250,32 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
                   {"id": f"{a}{SEP}e-back", "source": t, "target": m, "label": "model"}]
     out["edges"] = edges
     return out
+
+
+def snapshot(wf: Dict[str, Any], load: subgraphs.Loader, self_id: Optional[str] = None,
+             version: Optional[Callable[[str, Dict[str, Any]], Optional[int]]] = None) -> Dict[str, Any]:
+    """The workflow with each workflow tool's child copied in as `snapshot` (DEC-0066 decision 2): the child's latest saved
+    workflow with its subgraphs expanded and its own workflow tools snapshotted, and `version(id, child)` as `version`.
+    Run after `subgraphs.expand`, so Agent nodes inside subgraphs are covered. Raises ValidationError (references).
+    Snapshots that came with the workflow are dropped first: only the ones made here are run."""
+    sent = [t for n in wf.get("nodes", []) if isinstance(n, dict) for t in (n.get("data") or {}).get("tools") or []
+            if isinstance(t, dict) and ("snapshot" in t or "version" in t)]
+    if sent:
+        wf = copy.deepcopy(wf)
+        for n in wf["nodes"]:
+            for t in (n.get("data") or {}).get("tools") or [] if isinstance(n, dict) else []:
+                if isinstance(t, dict): t.pop("snapshot", None); t.pop("version", None)
+    if not subgraphs.tool_refs(wf): return wf
+    errs = subgraphs.check(wf, load, self_id)
+    if errs: raise ValidationError(errs)
+    def snap(w: Dict[str, Any]) -> Dict[str, Any]:  # check() ruled out cycles and bounded the depth
+        out = copy.deepcopy(w)
+        for _, t in subgraphs.tool_refs(out):
+            raw = load(t["workflow_id"]) or {}
+            t["snapshot"] = snap(subgraphs.expand(raw, load, t["workflow_id"]))
+            t["version"] = version(t["workflow_id"], raw) if version else None
+        return out
+    return snap(wf)
 
 
 def step_budget(wf: Dict[str, Any]) -> int:

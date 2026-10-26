@@ -8,6 +8,9 @@ Wiring: the subgraph node stays as a pass-through entry and connects to the chil
 becomes one pass-through exit node `sub/__exit` that carries the subgraph node's outgoing edges.
 State: shared by field name. Child fields missing in the parent are added; the same name must have the same type.
 References are resolved by `load(workflow_id) -> dict | None` (the service binds it to workflows the user may read).
+
+Agent nodes may call other workflows as tools (REQ-0073, DEC-0066). Those are not expanded here (a call is a child run),
+but `check` follows them too, so cycles and depth count subgraphs and workflow tools together.
 """
 from __future__ import annotations
 import copy
@@ -29,8 +32,20 @@ def refs(wf: Dict[str, Any]) -> List[Tuple[str, str]]:
 def has_subgraphs(wf: Dict[str, Any]) -> bool: return bool(refs(wf))
 
 
+def tool_refs(wf: Dict[str, Any]) -> List[Tuple[str, Dict[str, Any]]]:
+    """(Agent node id, tool settings) of the Agent nodes' workflow tools (not recursive; the expanded steps are skipped)."""
+    return [(n["id"], t) for n in wf.get("nodes", []) if isinstance(n, dict) and n.get("type") == "agent"
+            for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "workflow"]
+
+
+def all_refs(wf: Dict[str, Any]) -> List[Tuple[str, str]]:
+    """(node id, referenced workflow id) of subgraph nodes and workflow tools: the workflows this one depends on."""
+    return refs(wf) + [(nid, t.get("workflow_id") or "") for nid, t in tool_refs(wf)]
+
+
 def check(wf: Dict[str, Any], load: Loader, self_id: Optional[str] = None) -> List[str]:
-    """Reference errors without expanding: missing workflow, cycle, too deep. Used when saving."""
+    """Reference errors without expanding: missing workflow, cycle, too deep, and a workflow tool's unknown fields. Used
+    when saving and planning a run."""
     errs: List[str] = []
     def walk(w, stack, depth):
         for nid, ref in refs(w):
@@ -40,6 +55,19 @@ def check(wf: Dict[str, Any], load: Loader, self_id: Optional[str] = None) -> Li
             child = load(ref)
             if child is None: errs.append(Issue("SUBGRAPH_NOT_FOUND", node=nid, workflow=ref)); continue
             if child.get("source"): errs.append(Issue("SUBGRAPH_IMPORTED", node=nid)); continue
+            walk(child, stack + [ref], depth + 1)
+        for nid, t in tool_refs(w):
+            ref, who = t.get("workflow_id") or "", {"node": nid, "tool": t.get("name") or "?"}
+            if not ref: continue  # the validator reports AGENT_TOOL_WORKFLOW
+            if ref in stack: errs.append(Issue("WORKFLOW_TOOL_CYCLE", **who, workflow=ref, chain=" → ".join(stack + [ref]))); continue
+            if depth >= MAX_DEPTH: errs.append(Issue("WORKFLOW_TOOL_TOO_DEEP", **who, max=MAX_DEPTH)); continue
+            child = load(ref)
+            if child is None: errs.append(Issue("WORKFLOW_TOOL_NOT_FOUND", **who, workflow=ref)); continue
+            if child.get("source"): errs.append(Issue("WORKFLOW_TOOL_IMPORTED", **who)); continue
+            names = {f.get("name") for f in child.get("state") or [] if isinstance(f, dict)}
+            for key, code in (("inputs", "WORKFLOW_TOOL_INPUT_UNKNOWN"), ("outputs", "WORKFLOW_TOOL_OUTPUT_UNKNOWN")):
+                want = t.get(key) if isinstance(t.get(key), list) else []  # other shapes: AGENT_TOOL_INPUTS / _OUTPUTS
+                errs.extend(Issue(code, **who, field=f) for f in want if isinstance(f, str) and f not in names)
             walk(child, stack + [ref], depth + 1)
     walk(wf, [self_id] if self_id else [], 0)
     return errs
@@ -58,7 +86,7 @@ def _merge_state(parent: list, child: list, nid: str, errs: List[str]) -> list:
 def validate_with(wf: Dict[str, Any], load: Loader, self_id: Optional[str] = None) -> List[str]:
     """Save-time validation: reference errors, else the expanded graph's errors (child fields count as known)."""
     from .validator import validate
-    if not has_subgraphs(wf): return validate(wf)
+    if not has_subgraphs(wf) and not tool_refs(wf): return validate(wf)
     errs = check(wf, load, self_id)
     if errs: return validate(wf) + errs
     try: x = expand(wf, load, self_id)
