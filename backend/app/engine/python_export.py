@@ -734,7 +734,7 @@ class _Writer(GraphWriter):
         an end node, with the conversation in its own state field."""
         d = g.nodes[nid].get("data") or {}; name, const, a = g.names[nid], g.names[nid].upper(), g.agents[nid]
         chat, model, tool, end = lit(a["chat"]), a["model"], a["tool"], a["exit"]
-        tools = agents.specs(d)
+        tools = agents.specs(self.tool_spec_data(d))
         approval = [t.get("name") for t in d.get("tools") or [] if isinstance(t, dict) and t.get("approval")]
         who = _one_line(d.get("label") or nid)
         if d.get("system_prompt"): self.add(f"{const}_SYSTEM = {lit(d['system_prompt'])}")
@@ -868,6 +868,17 @@ class _Writer(GraphWriter):
                 self.add(f"        return retrieve(str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":
                 self.add(f"        return call_mcp_tool({lit(t.get('tool') or '')}, args)")
+            elif src == "workflow":
+                ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
+                if ref in self.built:
+                    child, build = self.built[ref][0], self.built[ref][1]
+                    self.add(f"        # the workflow \"{_doc(child.title)}\" as its own graph (in the studio: a child run). Inside this graph's run,")
+                    self.add("        # a question for a person in it pauses this graph too.")
+                    self.add(f"        final = {build}().invoke({{k: args[k] for k in {lit(inputs)} if k in args}})")
+                    self.add(f"        return {{k: final.get(k) for k in {lit(outputs)}}}")
+                else:
+                    self.add(f"        # TODO: the workflow {lit(ref)} was not found (deleted, or not shared with you).")
+                    self.add("        return None")
             elif src == "http":
                 method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
                 key = self.http_key(const, t)

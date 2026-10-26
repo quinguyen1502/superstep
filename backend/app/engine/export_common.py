@@ -66,8 +66,17 @@ class Graph:
     def __init__(self, raw: dict, title: str, wid: Optional[str]):
         self.raw, self.title, self.wid = raw, title, wid
         self.wf = sanitize(raw)
+        # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it (TASK-0137)
+        kept = {(n.get("id"), t.get("name")): t.get("workflow_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
+                for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "workflow"}
+        for n in self.wf["nodes"]:
+            for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
+                if isinstance(t, dict) and t.get("source") == "workflow": t["workflow_id"] = kept.get((n["id"], t.get("name"))) or ""
         self.refs = {n["id"]: (n.get("data") or {}).get("workflow_id") or "" for n in raw.get("nodes") or []
                      if isinstance(n, dict) and n.get("type") == "subgraph"}
+        # workflow tools of Agent nodes (TASK-0137, DEC-0066): their own graphs, with their own state, called by the tool
+        self.tool_refs = [t.get("workflow_id") or "" for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
+                          for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "workflow"]
         self.nodes = {n["id"]: n for n in self.wf["nodes"]}
         self.edges = [e for e in self.wf["edges"] if e["source"] in self.nodes and e["target"] in self.nodes]
         self.names: Dict[str, str] = {}
@@ -124,14 +133,26 @@ class GraphWriter:
                 base = g.names[nid]
                 g.agents[nid] = {"model": names.take(f"{base}_model"), "tool": names.take(f"{base}_tool"), "exit": names.take(f"{base}_end"),
                                  "chat": names.take(f"agent_{base}")}
-            if n["type"] == "subgraph":
-                ref = g.refs.get(nid) or ""
-                if ref in self.children and ref not in self.built:  # each child once, even when used twice
-                    child = Graph(self.children[ref], one_line(self.children[ref].get("name")) or ref, ref)
-                    self.built[ref] = (child, "", "")
-                    self.name_graphs(child, names)
-                    base = slug(child.title, "subgraph")
-                    self.built[ref] = (child, names.take(self.build_name(base)), names.take(self.state_name(base)))
+            if n["type"] == "subgraph": self.build_child(g.refs.get(nid) or "", names)
+            if n["type"] == "agent":
+                for t in (n.get("data") or {}).get("tools") or []:
+                    if isinstance(t, dict) and t.get("source") == "workflow": self.build_child(t.get("workflow_id") or "", names)
+
+    def build_child(self, ref: str, names: Names) -> None:
+        """Name a subgraph's or workflow tool's workflow and its own nodes, each child once even when used twice."""
+        if ref in self.children and ref not in self.built:
+            child = Graph(self.children[ref], one_line(self.children[ref].get("name")) or ref, ref)
+            self.built[ref] = (child, "", "")
+            self.name_graphs(child, names)
+            base = slug(child.title, "subgraph")
+            self.built[ref] = (child, names.take(self.build_name(base)), names.take(self.state_name(base)))
+
+    def tool_spec_data(self, d: dict) -> dict:
+        """An Agent node's data with each workflow tool's child state attached, so the exported tool schemas have the
+        child's field types, as `agents.parameters` gives them in a run."""
+        tools = [{**t, "snapshot": {"state": (self.children.get(t.get("workflow_id") or "") or {}).get("state") or []}}
+                 if isinstance(t, dict) and t.get("source") == "workflow" else t for t in d.get("tools") or []]
+        return {**d, "tools": tools}
 
     def all_fields(self, g: Graph, seen: Tuple[str, ...] = ()) -> List[dict]:
         """The graph's state fields and those of its subgraphs (shared by name, as the studio expands them)."""
@@ -157,9 +178,9 @@ class GraphWriter:
         return out
 
     def children_first(self, g: Graph, seen: Optional[List[str]] = None) -> List[Graph]:
-        """Subgraphs, deepest first, each once."""
+        """Subgraphs and workflow tools' workflows, deepest first, each once."""
         seen = [] if seen is None else seen
-        for ref in g.refs.values():
+        for ref in [*g.refs.values(), *g.tool_refs]:
             if ref in self.built and ref not in seen:
                 seen.append(ref)
                 self.children_first(self.built[ref][0], seen)

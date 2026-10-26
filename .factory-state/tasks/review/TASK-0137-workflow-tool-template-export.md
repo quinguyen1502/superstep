@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0137
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -90,7 +90,42 @@ LangGraph project and TypeScript exports (DEC-0066 decision 9).
 ## Activity Log
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
+- 2026-10-26: started on `factory/task-0137-workflow-tool-template-export`, stacked on TASK-0136 (PR #180).
+- 2026-10-26: implemented.
+  - Test runs:
+    - a test parent waiting for its child is not answered or failed by the suite;
+    - a child under a test run keeps the test rules (`run_ports` of the top run);
+    - a child under a test run that waits for a person sends nothing and is cancelled, so the parent's tool call
+      fails (`under_test`).
+  - The "tool called" check works for workflow tools unchanged (the steps name the tool).
+  - Template "Support team" (`builtin-support-team`): a supervisor with `order_desk` and `refund_desk` tools.
+    - Its two helper workflows ("Order desk", "Refund desk" with an approval tool) are created when it is used.
+    - Each tool's `helper` key becomes the new workflow's id.
+    - Two test cases pass with the mock. The refund case shows that a refund desk approval in a test run is
+      cancelled.
+    - Gallery strings in en and vi.
+  - Exports: Python, the LangGraph project (shares it) and TypeScript.
+    - Each workflow tool's workflow is its own graph in the same file, written once. The tool function invokes it
+      with the input fields and returns the output fields.
+    - The tool schema has the child's field types.
+    - `WorkflowService.export` loads tool children (`all_refs`), and the export keeps the tool's `workflow_id`,
+      which `sanitize` used to blank.
+  - Tests:
+    - `test_workflow_tool_template.py` (the template and its suite);
+    - the same-path test of every built-in now runs the Support team's order case, with a studio helper that runs
+      children;
+    - TypeScript: `test_workflow_tools_take_the_studio_path` (deno) and `test_workflow_tools_are_written_without_deno`;
+    - e2e: the Support team from the gallery, and the built-in count 14 in `templates.spec.ts`.
+
+## Validation Results
+
+- See QA-0121.
+
+## Review And QA
+
+- Review: REV-0121. QA: QA-0121.
 
 ## Handoff Notes
 
--
+- TASK-0138: the handbook can show the Support team template; the screenshots of the gallery card, the nested trace and
+  the tool card exist from the e2e runs (`REVIEW_SHOTS`).

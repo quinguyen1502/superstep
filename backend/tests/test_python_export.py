@@ -98,8 +98,10 @@ def picked(n):
 
 
 def without_ms(state):
-    """Tool call durations differ between two runs: the steps fields are compared without them."""
-    return {k: [{a: b for a, b in x.items() if a != "ms"} if isinstance(x, dict) else x for x in v] if isinstance(v, list) else v
+    """Tool call durations differ between two runs, and only the studio has child run ids: the steps fields are compared
+    without them."""
+    return {k: [{a: b for a, b in x.items() if a not in ("ms", "child_run_id", "child_workflow_id")} if isinstance(x, dict) else x for x in v]
+                if isinstance(v, list) else v
             for k, v in state.items()}
 
 
@@ -107,8 +109,11 @@ def studio(wf, inp, answers=None, children=None):
     """The studio's mock run: node ids in finish order and the final state. Human nodes get `answers` in order, and an
     Agent node's approvals the answers under the Agent node's id."""
     wf = subgraphs.expand(wf, (children or {}).get) if children else wf
+    wf = agents.snapshot(wf, (children or {}).get)  # workflow tools carry their child, as a planned run does (TASK-0137)
     wf = {**wf, "nodes": [picked(n) for n in wf["nodes"]]}
     ports = Ports(retrieve=lambda *a: [], mcp_call=lambda *a: None, test=True, mock_models=True)
+    calls = {}  # a workflow tool's child runs here, as the run service would run it; only the parent's path is compared
+    ports.start_child = lambda key, child, version, args, meta: calls.setdefault(key, (child, args)) and key
     left = {k: list(v) for k, v in (answers or {}).items()}
     path, resume = [], None
     while True:
@@ -118,6 +123,10 @@ def studio(wf, inp, answers=None, children=None):
         if last["type"] != "run_waiting":
             assert last["type"] == "run_finished", last
             return path, visible(last["state"])
+        if last.get("wait"):
+            child, args = calls[last["wait"]["run_id"]]
+            resume = {**last["checkpoint"], "value": {"child_run_id": last["wait"]["run_id"], "status": "ok", "output": studio(child, args)[1]}}
+            continue
         resume = {**last["checkpoint"], "value": left[agents.agent_of_step(last["node"]) or last["node"]].pop(0)}
 
 
@@ -140,7 +149,7 @@ def same_run(tmp_path, wf, inp, answers=None, children=None, ordered=True, ignor
     want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
     skip = {out.names[i] for i, t in kinds.items() if t == "subgraph"}
     got, final = exported(tmp_path, out.code)
-    got = [n for n in got if n not in skip]
+    got = [n for n in got if n not in skip and n in out.names.values()]  # a workflow tool's own graph prints its steps too
     assert (got if ordered else Counter(got)) == (want if ordered else Counter(want))
     final = {k: v for k, v in final.items() if not k.startswith(("loop_", "agent_")) and k not in ignore}
     assert without_ms(final) == without_ms({k: v for k, v in state.items() if k not in ignore})
@@ -155,13 +164,24 @@ def unused_imports(code):
     return imported - used
 
 
-CASES = [(b["id"], i) for b in BUILTINS for i in range(len(b["tests"]))]
+def with_helpers(b):
+    """A built-in template's graph with its workflow tools pointing at its helper workflows, which come as children."""
+    wf = json.loads(json.dumps(b["workflow"])); helpers = {h["key"]: h["workflow"] for h in b.get("helpers") or []}
+    for n in wf["nodes"]:
+        for t in (n.get("data") or {}).get("tools") or []:
+            if t.get("helper"): t["workflow_id"] = t.pop("helper")
+    return wf, helpers or None
+
+
+# the Support team's refund case waits for an approval inside its refund desk: a test run cancels it, the export pauses
+CASES = [(b["id"], i) for b in BUILTINS for i in range(len(b["tests"])) if (b["id"], i) != ("builtin-support-team", 1)]
 
 
 @pytest.mark.parametrize("tid,i", CASES)
 def test_builtin_templates_take_the_studio_path(tmp_path, tid, i):
     b = next(x for x in BUILTINS if x["id"] == tid); case = b["tests"][i]
-    out = same_run(tmp_path, b["workflow"], case["input"], case.get("answers"))
+    wf, children = with_helpers(b)
+    out = same_run(tmp_path, wf, case["input"], case.get("answers"), children)
     assert unused_imports(out.code) == set() and out.filename.endswith(".py")
 
 

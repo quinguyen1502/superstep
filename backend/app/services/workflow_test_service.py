@@ -261,6 +261,7 @@ class WorkflowTestService:
         if s.status != "running": self.repo.finish_result(res.id, "cancelled", now); return
         if run.status == "waiting":
             events = json.loads(run.events or "[]")
+            if next((e for e in reversed(events) if e.get("type") == "run_waiting"), {}).get("wait"): return  # a workflow tool's child runs (TASK-0137)
             node = next((e.get("node") for e in reversed(events) if e.get("type") == "run_waiting"), None)
             used = sum(1 for e in events if e.get("type") == "run_resumed" and e.get("node") == node)
             answers = case["answers"].get(answer_key(node)) or []

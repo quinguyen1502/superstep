@@ -1396,6 +1396,10 @@
       "builtin-support-agent": {
         "name": "Agent hỗ trợ khách hàng",
         "description": "Agent tra cứu đơn hàng và chính sách hoàn tiền; mỗi yêu cầu hoàn tiền của agent đều cần người duyệt."
+      },
+      "builtin-support-team": {
+        "name": "Đội hỗ trợ",
+        "description": "Một agent điều phối giao mỗi câu hỏi cho một workflow chuyên trách: bàn đơn hàng hoặc bàn hoàn tiền. Cả hai được tạo cùng lúc."
       }
     }
   },

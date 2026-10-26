@@ -178,7 +178,7 @@ def same_run(tmp_path, env, wf, inp, answers=None, children=None, ordered=True, 
     want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
     skip = {out.names[i] for i, t in kinds.items() if t == "subgraph"}
     got, final, _ = ts_run(tmp_path, env, out.code)
-    got = [n for n in got if n not in skip]
+    got = [n for n in got if n not in skip and n in out.names.values()]  # a workflow tool's own graph prints its steps too
     assert (got if ordered else Counter(got)) == (want if ordered else Counter(want))
     final = {k: v for k, v in final.items() if not k.startswith(("loop_", "agent_")) and k not in ignore}
     assert without_ms(final) == without_ms({k: v for k, v in state.items() if k not in ignore})
@@ -228,8 +228,35 @@ def python_functions(n: dict) -> bool:
     return n["type"] == "tool" and d.get("mode", "function") == "function"
 
 
-RUNNABLE = [(b["id"], i) for b in BUILTINS for i in range(len(b["tests"]))
-            if not any(python_functions(n) for n in b["workflow"]["nodes"])]  # TypeScript cannot run the server's Python functions
+RUNNABLE = [(b["id"], i) for b in BUILTINS for i in range(len(b["tests"]))  # TypeScript cannot run the server's Python functions,
+            if not any(python_functions(n) for g in [b["workflow"], *(h["workflow"] for h in b.get("helpers") or [])]  # in helpers neither
+                       for n in g["nodes"])]
+
+
+DESK = {"name": "Order desk", "state": [F("message"), F("answer")],
+        "nodes": [N("start", "start"), N("x", "llm", label="Look up", prompt="Where is {{state.message}}?", output_field="answer"), N("end", "end")],
+        "edges": [E("start", "x"), E("x", "end")]}
+TEAM = {"name": "Order team", "state": [F("message"), F("answer"), F("steps", "list")],
+        "nodes": [N("start", "start"), N("ag", "agent", label="Supervisor", prompt="Help: {{state.message}}", output_field="answer", steps_field="steps",
+                                     tools=[{"name": "order_desk", "description": "Questions about orders", "source": "workflow", "workflow_id": "desk1",
+                                             "inputs": ["message"], "outputs": ["answer"]}]),
+                  N("end", "end")],
+        "edges": [E("start", "ag"), E("ag", "end")]}
+
+
+def test_workflow_tools_take_the_studio_path(tmp_path, deno_env):
+    """TASK-0137: a workflow tool calls the child's own graph in the same file; the parent takes the studio's path and the
+    model gets the same result."""
+    out = same_run(tmp_path, deno_env, TEAM, {"message": "order B200"}, children={"desk1": DESK})
+    assert "const graph = build_order_desk();" in out.code and out.code.count("function build_order_desk(") == 1
+
+
+def test_workflow_tools_are_written_without_deno():
+    code = T.to_typescript(TEAM, "Order team", 1, {"desk1": DESK}, None).code
+    assert "const graph = build_order_desk();" in code and "await graph.invoke(input as Parameters<typeof graph.invoke>[0])" in code
+    assert '"answer": {\n' not in code and '"message": {"type": "string"}' in code  # the child's field types in the tool schema
+    missing = T.to_typescript(TEAM, "Order team", 1, {}, None).code
+    assert '// TODO: the workflow "desk1" was not found' in missing
 
 
 @pytest.mark.parametrize("tid,i", RUNNABLE)
