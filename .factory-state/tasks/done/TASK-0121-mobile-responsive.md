@@ -95,6 +95,16 @@ Make the studio usable on a phone, and split the node Config panel into one fixe
   spec expects 13 and checks `builtin-support-agent`; `templates.spec.ts` 3 passed.
 - `quickstart.spec.ts` (capture run) not run: it rewrites the promo frames.
 
+## Review And QA
+
+- Review: no REV artifact. The owner reviewed the result in chat and asked to merge PR #150 without a separate
+  review (2026-10-26).
+- QA: no QA artifact, by the same owner decision. Evidence is under Validation above: unit tests, the new
+  `mobile.spec.ts` and `config-tabs.spec.ts`, the full e2e run, the browser checks at 375×812 and on desktop in light
+  and dark, and the green CI on PR #150.
+- Residual risk: no viewer-role e2e for switching Config tabs; the quickstart images and promo frames still show the
+  single-scroll Config.
+
 ## Research: node Config as tabs
 
 Measured in the studio (Agent node, Config panel content height):
