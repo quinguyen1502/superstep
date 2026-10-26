@@ -24,7 +24,7 @@ export function EditorCodePanel() {
   useEffect(() => {
     if (!wid) return
     let live = true
-    // a refused export (an Agent node in TypeScript, TASK-0119) must not leave the other language's file behind
+    // a refused export (an imported LangGraph workflow in TypeScript) must not leave the other language's file behind
     api<CodeExport>(exportUrl(wid, language)).then(d => { if (live) { setOut(d); setErr('') } }).catch(e => { if (live) { setOut(null); setErr(e.message) } })
     return () => { live = false }
   }, [wid, saves, language])

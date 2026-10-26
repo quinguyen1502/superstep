@@ -888,15 +888,6 @@ class _Writer(GraphWriter):
                 self.add(f"        raise ValueError({lit(f'unknown tool source {src!r}')})")
         self.add("    raise ValueError(f\"unknown tool {name}\")")
 
-    @staticmethod
-    def http_key(const: str, t: dict) -> str:
-        return f"{const}_{re.sub(r'[^A-Za-z0-9]', '_', t.get('name') or '').upper()}"
-
-    @staticmethod
-    def rounds(d: dict) -> int:
-        r = d.get("max_rounds", agents.DEFAULT_ROUNDS)
-        return r if isinstance(r, int) and not isinstance(r, bool) and 1 <= r <= agents.MAX_ROUNDS else agents.DEFAULT_ROUNDS
-
     def build(self, g: _Graph, cls: str, build: str, is_main: bool) -> None:
         name = lambda i: "END" if g.nodes[i]["type"] == "end" else lit(g.names[i])  # noqa: E731
         leave = lambda i: lit(g.agents[i]["exit"]) if i in g.agents else lit(g.names[i])  # an Agent node's edges leave from its end node  # noqa: E731

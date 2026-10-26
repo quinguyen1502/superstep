@@ -197,7 +197,7 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | Tool: function | stub ném lỗi: hàm là Python trên server |
 | Tool: HTTP | `fetch`, không đi theo chuyển hướng |
 | Retriever, MCP, Send email | stub có `TODO`, như file Python |
-| Agent | chưa xuất được: `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED`; hãy xuất workflow sang Python |
+| Agent | các bước vào, model, công cụ và kết thúc, như file Python; `callAgent` là mock, hoặc `initChatModel` với `bindTools` khi đặt `LLM_PROVIDER`. Công cụ có sẵn là stub ném lỗi |
 | Retry, cache, trường đầu vào, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` trong `addNode` |
 
 API key và các thiết lập khác được đọc từ biến môi trường (`LLM_PROVIDER`,

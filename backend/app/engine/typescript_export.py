@@ -8,15 +8,16 @@ so `deno run` / `deno check` work as is; for Node, drop the `npm:` prefixes.
 The graph is read through `templates.sanitize` (`export_common`), so no credential reaches the file: keys come from
 environment variables at run time. TypeScript Code nodes are inlined as written; Python Code nodes and registered
 Python tool functions become stubs that throw. Retriever, MCP and Send email nodes call stubs, as in the Python file.
+An Agent node is its model and tool steps in a loop, as in the Python file (TASK-0125, DEC-0063); its built-in tools are
+Python functions, so they throw too, and the model is told the tool failed.
 The output is a pure function of its input: the same graph gives the same bytes.
 """
 from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
-from ..core.errors import AppError
-from . import foreach
+from . import agents, foreach
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
-from .templating import VAR_RE, _ONE_FILTER
+from .templating import VAR_RE, _ONE_FILTER, refs
 
 LANGGRAPH = "npm:@langchain/langgraph@^1.5"
 CHECKPOINT = "npm:@langchain/langgraph-checkpoint@^1"
@@ -38,12 +39,15 @@ KEYWORDS = {
 GLOBALS = {
     "console", "fetch", "JSON", "Math", "Object", "Array", "String", "Number", "Boolean", "Promise", "Error", "Date",
     "RegExp", "Map", "Set", "Symbol", "globalThis", "structuredClone", "AbortSignal", "prompt", "process", "Deno",
-    "NaN", "Infinity", "parseInt", "parseFloat", "setTimeout", "Record", "Partial", "Response", "Request", "URL"}
+    "NaN", "Infinity", "parseInt", "parseFloat", "setTimeout", "Record", "Partial", "Response", "Request", "URL",
+    "URLSearchParams", "performance"}
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER",
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
+    "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS", "JSON_TYPES", "WORDS", "Schema", "ToolSpec", "ToolCall", "ChatMessage",
+    "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "checkArguments", "toolText", "shorten", "Question", "Message",
     *(r[0] for r in REDUCERS.values())}
 
 
@@ -276,6 +280,104 @@ async function decide(text: string, question: Question): Promise<unknown> {
 }
 '''
 
+AGENT = r'''
+// --- Agents --------------------------------------------------------------------------------------------------
+// An Agent node is a loop of two nodes: the model node asks the model, which answers or asks for tool calls, and the
+// tool node runs one call and gives the result back. Without LLM_PROVIDER, callAgent() is an offline mock: it calls
+// the tool that best matches the task once, then answers with its result (the studio's mock agent).
+const MAX_CALLS_PER_ROUND = 8;
+const RESULT_CHARS = 8000;  // a tool result goes back to the model shortened to this
+const STEP_CHARS = 2000;  // ... and into the steps field shortened to this
+
+type Schema = { type?: string; properties?: Record<string, unknown>; required?: string[] };
+type ToolSpec = { name: string; description: string; parameters: Schema };
+type ToolCall = { id: string; name: string; args: unknown };
+type ChatMessage = { role: string; content: string; tool_calls?: ToolCall[]; tool_call_id?: string; name?: string };
+type AgentStep = { tool: string; args: unknown; result: string; status: string; ms: number; approval?: string };
+/** An Agent node's conversation, in its own state field while the loop runs. */
+type AgentChat = { messages: ChatMessage[]; pending: ToolCall[]; rounds: number; steps: AgentStep[]; answer: string | null };
+
+const WORDS = /[\p{L}\p{N}_]+/gu;
+
+/** The last user message and the tool results after it. */
+function agentTask(messages: ChatMessage[]): [string, ChatMessage[]] {
+  const last = messages.map((m) => m.role).lastIndexOf("user");
+  return [last >= 0 ? messages[last].content || "" : "", messages.slice(last + 1).filter((m) => m.role === "tool")];
+}
+
+/** Offline agent: with no tool result yet it calls the tool whose name and description share the most words with
+ * the task (the first one on a tie), string arguments filled with the task; then it answers with the last result. */
+function mockAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): [string, ToolCall[]] {
+  const [task, results] = agentTask(messages);
+  if (tools?.length && !results.length) {
+    const words = new Set(task.toLowerCase().match(WORDS));
+    const score = (t: ToolSpec) =>
+      [...new Set(`${t.name.replaceAll("_", " ")} ${t.description || ""}`.toLowerCase().match(WORDS))].filter((w) => words.has(w)).length;
+    const best = tools.reduce((a, t) => (score(t) > score(a) ? t : a));
+    const required = best.parameters?.required ?? [];
+    const empty: Record<string, unknown> = { number: 0, integer: 0, boolean: false, array: [], object: {} };
+    const args: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(best.parameters?.properties ?? {})) {
+      const type = v !== null && typeof v === "object" && "type" in v ? v.type : "string";
+      if (type === "string") args[k] = task;
+      else if (required.includes(k)) args[k] = empty[String(type)] ?? null;
+    }
+    return ["", [{ id: "mock_call_1", name: best.name, args }]];
+  }
+  const said = results.length ? results.at(-1)!.content || "" : task.trim() ? task.trim().split(/\r?\n/).at(-1)! : "";
+  return [`[mock:${model}] Answer: ${[...said].slice(0, 200).join("")}`, []];
+}
+
+/** One model call: [text, tool calls]. With tools null the model has to answer. */
+async function callAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): Promise<[string, ToolCall[]]> {
+  if (!LLM_PROVIDER) return mockAgent(messages, tools, model);
+  const { initChatModel } = await import("%(langchain)s");
+  const llm = await initChatModel(model, { modelProvider: LLM_PROVIDER });
+  // LangChain.js turns { role, content, tool_calls, tool_call_id } objects into its message classes.
+  const history = messages.map((m) => (m.tool_calls ? { ...m, tool_calls: m.tool_calls.map((c) => ({ ...c, args: c.args ?? {} })) } : m));
+  const reply = tools?.length
+    ? await llm.bindTools(tools.map((t) => ({ type: "function" as const, function: t }))).invoke(history)
+    : await llm.invoke(history);
+  const text = typeof reply.content === "string"
+    ? reply.content
+    : reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
+  return [text.trim(), (reply.tool_calls ?? []).map((c, i) => ({ id: c.id || `call_${i}`, name: c.name, args: c.args ?? {} }))];
+}
+
+const JSON_TYPES: Record<string, (v: unknown) => boolean> = {
+  string: (v) => typeof v === "string",
+  number: (v) => typeof v === "number",
+  integer: (v) => Number.isInteger(v),
+  boolean: (v) => typeof v === "boolean",
+  array: (v) => Array.isArray(v),
+  object: (v) => v !== null && typeof v === "object" && !Array.isArray(v),
+};
+
+/** Why the model's arguments do not fit the tool's parameters: required names and top-level JSON types. */
+function checkArguments(schema: Schema, args: unknown): string | null {
+  if (!JSON_TYPES.object(args)) return "arguments must be a JSON object";
+  const given = args as Record<string, unknown>;
+  const missing = (schema.required ?? []).filter((k) => !Object.hasOwn(given, k));
+  if (missing.length) return `missing argument(s): ${missing.join(", ")}`;
+  for (const [k, v] of Object.entries(given)) {
+    const prop = Object.hasOwn(schema.properties ?? {}, k) ? schema.properties![k] : null;
+    const want = prop !== null && typeof prop === "object" && "type" in prop ? prop.type : null;
+    if (typeof want !== "string" || !Object.hasOwn(JSON_TYPES, want) || v === null) continue;
+    if (!JSON_TYPES[want](v)) return `argument ${k} must be of type ${want}`;
+  }
+  return null;
+}
+
+function toolText(value: unknown): string {
+  return typeof value === "string" ? value : pyJson(value);
+}
+
+function shorten(s: string, n: number): string {
+  const chars = [...s];
+  return chars.length <= n ? s : chars.slice(0, n).join("") + `… (shortened from ${chars.length} characters)`;
+}
+''' % {"langchain": LANGCHAIN}
+
 STUBS = {
     "retrieve": r'''
 /** Retriever nodes search a Superstep knowledge base, which this file cannot reach.
@@ -370,8 +472,14 @@ class _Writer(GraphWriter):
                f" *     deno run --allow-env --allow-read{net} {file}", " *",
                " * For Node, drop the \"npm:\" prefixes and versions, `npm i @langchain/langgraph @langchain/core`, then",
                f" * `npx tsx {file}`.", " *"]
-        if "model" in self.uses:
+        if "agent" in self.uses:
+            doc += [" * LLM and Agent nodes use an offline mock model unless LLM_PROVIDER is set (see callLlm and callAgent",
+                    " * below).", " *"]
+        elif "model" in self.uses:
             doc += [" * LLM nodes use an offline mock model unless LLM_PROVIDER is set (see callLlm below).", " *"]
+        if "agent_builtin" in self.uses:
+            doc += [" * An Agent node's built-in tools are Python functions of the Superstep server: here they throw, and the",
+                    " * model is told the tool failed. Port them to TypeScript.", " *"]
         if "code" in self.uses:
             doc += [" * TypeScript Code nodes run here as written on the canvas, without the studio's sandbox: read them",
                     " * first. Python Code nodes and Python tool functions are stubs that throw: port them to TypeScript.", " *"]
@@ -389,6 +497,7 @@ class _Writer(GraphWriter):
         self.add(ENV.rstrip())
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add(MODEL.rstrip())
+        if "agent" in self.uses: self.add(AGENT.rstrip())
         if "routing" in self.uses or "decide" in self.uses: self.add(ROUTING.rstrip())
         if "decide" in self.uses: self.add(DECIDE.rstrip())
         stubs = [k for k in STUBS if k in self.uses]
@@ -445,6 +554,7 @@ class _Writer(GraphWriter):
         self.add(f"const {cls} = Annotation.Root({{")
         for f in self.all_fields(g): self.add(f"  {lit(f['name'])}: {self.ann(f)},")
         for c in g.cursors.values(): self.add(f"  {lit(c)}: Annotation<number>(),  // loop position of a For each node")
+        for a in g.agents.values(): self.add(f"  {lit(a['chat'])}: Annotation<AgentChat | null>(),  // an Agent node's conversation")
         self.add("});")
         self.add(f"type {cls} = typeof {cls}.State;")
         if is_main:
@@ -520,6 +630,8 @@ class _Writer(GraphWriter):
             self.add("}")
         elif t == "email":
             self.email(g, nid, cls, head, sig)
+        elif t == "agent":
+            self.agent(g, nid, cls, head, sig)
         elif t == "subgraph":
             ref = g.refs.get(nid) or ""
             build = self.built[ref][1] if ref in self.built else None
@@ -677,8 +789,179 @@ class _Writer(GraphWriter):
             self.add("  return {};")
         self.add("}")
 
+    def agent(self, g: Graph, nid: str, cls: str, head: str, sig: str) -> None:
+        """An Agent node as the studio runs it (DEC-0063), as in the Python file: an entry node, the model node and the
+        tool node in a loop, and an end node, with the conversation in its own state field."""
+        d = g.nodes[nid].get("data") or {}; name, const, a = g.names[nid], g.names[nid].upper(), g.agents[nid]
+        chat, model, tool, end = lit(a["chat"]), a["model"], a["tool"], a["exit"]
+        approval = [t.get("name") for t in d.get("tools") or [] if isinstance(t, dict) and t.get("approval")]
+        who = one_line(d.get("label") or nid)
+        if d.get("system_prompt"): self.add(f"const {const}_SYSTEM = {lit(d['system_prompt'])};")
+        self.add(f"const {const}_PROMPT = {lit(d.get('prompt') or '')};")
+        self.add("// The tools the model may call: their names, what they do, and the JSON Schema of their arguments.")
+        self.add(f"const {const}_TOOLS: ToolSpec[] = {lit(agents.specs(d))};")
+        if approval: self.add(f"const {const}_NEEDS_APPROVAL = {lit(approval)};  // these ask a person first (interrupt)")
+        for t in d.get("tools") or []:
+            if isinstance(t, dict) and t.get("source") == "http":
+                self.add(f"const {self.http_key(const, t)}_URL = {lit(t.get('url') or '')};")
+                self.add(f"const {self.http_key(const, t)}_BODY = {lit(t.get('body') or '')};")
+        self.add(f"const {const}_MAX_ROUNDS = {self.rounds(d)};")
+        self.add("")
+        self.add(f"/** {head}: starts the conversation in state[{_doc(chat)}].")
+        self.add(" *")
+        self.add(" * Then the model and the tools take turns, one node each:")
+        self.add(f" * - {model}() asks the model, which answers or asks for tool calls;")
+        self.add(f" * - {tool}() runs one tool call (route_{model}() and route_{tool}() pick the next node);")
+        self.add(f" * - {end}() writes the answer. */")
+        self.add(sig)
+        self.add("  const messages: ChatMessage[] = [];")
+        if d.get("system_prompt"): self.add(f"  messages.push({{ role: \"system\", content: render({const}_SYSTEM, state) }});")
+        if d.get("history_field"):
+            self.add(f"  const history: unknown = (state as Record<string, unknown>)[{lit(d['history_field'])}];")
+            self.add("  for (const m of Array.isArray(history) ? history : []) {  // the earlier turns of a chat")
+            self.add("    if (m && (m.role === \"user\" || m.role === \"assistant\") && typeof m.content === \"string\") {")
+            self.add("      messages.push({ role: m.role, content: m.content });")
+            self.add("    }")
+            self.add("  }")
+        self.add(f"  messages.push({{ role: \"user\", content: render({const}_PROMPT, state) }});")
+        self.add(f"  return asUpdate({{ {chat}: {{ messages, pending: [], rounds: 0, steps: [], answer: null }} }});")
+        self.add("}")
+        self.add("")
+        self.add(f"/** {_doc(who)}: one model call. After {const}_MAX_ROUNDS rounds the model gets no tools, so it has to answer. */")
+        self.add(f"async function {model}(state: {cls}): Promise<Update> {{")
+        self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
+        self.add(f"  const last = chat.rounds >= {const}_MAX_ROUNDS;")
+        self.add(f"  const [text, asked] = await callAgent(chat.messages, last ? null : {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')});")
+        self.add("  const calls: ToolCall[] = last ? [] : asked.map((c, i) => ({ id: String(c.id || `call_${i}`), name: String(c.name || \"\"), args: c.args }));")
+        self.add("  if (!last) chat.rounds += 1;")
+        self.add("  chat.messages = [...chat.messages, { role: \"assistant\", content: text, ...(calls.length ? { tool_calls: calls } : {}) }];")
+        self.add("  chat.pending = calls.slice(0, MAX_CALLS_PER_ROUND);")
+        self.add("  for (const c of calls.slice(MAX_CALLS_PER_ROUND)) {  // every call needs an answer, but these never run")
+        self.add("    const why = `Refused: at most ${MAX_CALLS_PER_ROUND} tool calls per round`;")
+        self.add("    chat.messages = [...chat.messages, { role: \"tool\", tool_call_id: c.id, name: c.name, content: why }];")
+        self.add("    chat.steps = [...chat.steps, { tool: c.name, args: c.args, result: why, status: \"refused\", ms: 0 }];")
+        self.add("  }")
+        self.add("  if (!calls.length) chat.answer = text;")
+        self.add(f"  return asUpdate({{ {chat}: chat }});")
+        self.add("}")
+        self.add("")
+        self.add("/** After a model call: \"tool\" while tool calls wait, else \"done\". */")
+        self.add(f"function route_{model}(state: {cls}): string {{")
+        self.add(f"  return state[{chat}]?.pending.length ? \"tool\" : \"done\";")
+        self.add("}")
+        self.agent_calls(d, name, const, cls)
+        self.add("")
+        self.add(f"/** {_doc(who)}: runs the first tool call the model asked for and gives the result back to the model.")
+        if approval:
+            self.add(f" * A tool in {const}_NEEDS_APPROVAL asks first with interrupt(): \"approved\" runs the call; any other answer")
+            self.add(" * rejects it, and the model is told why. On resume the node runs again from the top.")
+        if (d.get("approval") or {}).get("channel") or d.get("deadline"):
+            self.add(" * In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
+        self.add(" */")
+        self.add(f"async function {tool}(state: {cls}): Promise<Update> {{")
+        self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
+        self.add("  const [call, ...rest] = chat.pending;")
+        self.add("  chat.pending = rest;")
+        self.add(f"  const spec = {const}_TOOLS.find((t) => t.name === call.name);")
+        self.add("  const problem = spec ? checkArguments(spec.parameters, call.args) : null;")
+        if approval:
+            self.add("  let answer: string | null = null;")
+            self.add(f"  if (spec && problem === null && {const}_NEEDS_APPROVAL.includes(call.name)) {{")
+            self.add(f"    const question = {lit(who + ' wants to call ')} + call.name + \" with these arguments:\\n\"")
+            self.add("      + JSON.stringify(call.args, null, 2)")
+            self.add("      + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\";")
+            self.add(f"    answer = String(interrupt({{ node: {lit(name)}, question }}));")
+            self.add("  }")
+        self.add("  const started = performance.now();")
+        self.add("  let status: string, result: string;")
+        self.add("  if (!spec) {")
+        self.add(f"    [status, result] = [\"error\", `Unknown tool ${{call.name}}: use one of ${{{const}_TOOLS.map((t) => t.name).sort().join(\", \")}}`];")
+        self.add("  } else if (problem) {")
+        self.add("    [status, result] = [\"error\", `Invalid arguments for ${call.name}: ${problem}`];")
+        if approval:
+            self.add("  } else if (answer !== null && answer.trim().toLowerCase() !== \"approved\") {")
+            self.add("    const comment = answer.trim().toLowerCase() === \"rejected\" ? \"\" : answer.trim();")
+            self.add("    [status, result] = [\"rejected\", \"Rejected by a reviewer\" + (comment ? `: ${comment}` : \"\")];")
+        self.add("  } else {")
+        self.add("    try {")
+        self.add(f"      [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
+        self.add("    } catch (error) {  // the model hears about the failure and can try something else")
+        self.add("      [status, result] = [\"error\", `The tool failed: ${error instanceof Error ? error.message : error}`];")
+        self.add("    }")
+        self.add("  }")
+        self.add("  const step: AgentStep = { tool: call.name, args: call.args, result: shorten(result, STEP_CHARS), status,")
+        self.add("    ms: Math.round((performance.now() - started) * 100) / 100 };")
+        if approval: self.add("  if (answer !== null) step.approval = status === \"rejected\" ? \"rejected\" : \"approved\";")
+        self.add("  chat.messages = [...chat.messages, { role: \"tool\", tool_call_id: call.id, name: call.name, content: shorten(result, RESULT_CHARS) }];")
+        self.add("  chat.steps = [...chat.steps, step];")
+        self.add(f"  return asUpdate({{ {chat}: chat }});")
+        self.add("}")
+        self.add("")
+        self.add("/** After a tool call: the next waiting call, else back to the model with the results. */")
+        self.add(f"function route_{tool}(state: {cls}): string {{")
+        self.add(f"  return state[{chat}]?.pending.length ? \"tool\" : \"model\";")
+        self.add("}")
+        self.add("")
+        self.add(f"/** {_doc(who)}: the model's answer into the state, and the conversation cleared. */")
+        self.add(f"async function {end}(state: {cls}): Promise<Update> {{")
+        self.add(f"  const chat = state[{chat}]!;")
+        out = [f"{lit(d.get('output_field') or '')}: chat.answer || \"\""]
+        if d.get("steps_field"): out.append(f"{lit(d['steps_field'])}: chat.steps")
+        self.add(f"  return asUpdate({{ {', '.join(out)}, {chat}: null }});")
+        self.add("}")
+
+    def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
+        """call_<agent>_tool(): what each of the Agent node's tools does."""
+        self.add("")
+        self.add("/** Runs the tool the model asked for with the model's arguments. */")
+        self.add(f"async function call_{name}_tool(name: string, args: Record<string, unknown>, state: {cls}): Promise<unknown> {{")
+        for t in d.get("tools") or []:
+            if not isinstance(t, dict): continue
+            src, tname = t.get("source"), t.get("name") or ""
+            self.add(f"  if (name === {lit(tname)}) {{")
+            if src == "builtin":
+                fn = t.get("function") or ""
+                self.uses.add("agent_builtin")
+                self.add(f"    // TODO: port the server's Python function {_doc(fn)} to TypeScript (the Python export has its source).")
+                self.add(f"    throw new Error({lit(f'{fn} is a Python function of the Superstep server: not implemented in TS export')});")
+            elif src == "knowledge":
+                self.add(f"    return await retrieve(String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
+            elif src == "mcp":
+                self.add(f"    return await callMcpTool({lit(t.get('tool') or '')}, args);")
+            elif src == "http":
+                method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
+                key = self.http_key(const, t)
+                query = method == "GET" and "args" not in {r.field for r in refs(url) + refs(body)}
+                self.add("    const values = { ...state, args };  // the templates read the arguments as {{state.args.<name>}}")
+                self.add(f"    {'let' if query else 'const'} url = render({key}_URL, values);")
+                if query:
+                    self.add("    // the URL does not use the arguments: they go in the query string")
+                    self.add("    const query = new URLSearchParams(Object.entries(args).map(([k, v]) => [k, toolText(v)])).toString();")
+                    self.add("    if (query) url += (url.includes(\"?\") ? \"&\" : \"?\") + query;")
+                send = "undefined"
+                if not body and method in ("POST", "PUT", "PATCH"): send = "JSON.stringify(args)"  # no body template: the arguments
+                elif method != "GET":
+                    self.add(f"    const body = render({key}_BODY, values);")
+                    send = "body || undefined"
+                self.add("    const response = await fetch(url, {")
+                self.add(f"      method: {lit(method)}, body: {send},")
+                self.add("      headers: { \"Content-Type\": \"application/json\" }, redirect: \"manual\", signal: AbortSignal.timeout(30_000),")
+                self.add("    });")
+                self.add("    const raw = await response.text();")
+                self.add("    try {")
+                self.add("      return JSON.parse(raw);")
+                self.add("    } catch {")
+                self.add("      return raw;")
+                self.add("    }")
+            else:
+                self.add(f"    throw new Error({lit(f'unknown tool source {src!r}')});")
+            self.add("  }")
+        self.add("  throw new Error(`unknown tool ${name}`);")
+        self.add("}")
+
     def build(self, g: Graph, cls: str, build: str, is_main: bool) -> None:
         name = lambda i: "END" if g.nodes[i]["type"] == "end" else lit(g.names[i])  # noqa: E731
+        leave = lambda i: lit(g.agents[i]["exit"]) if i in g.agents else lit(g.names[i])  # an Agent node's edges leave from its end node  # noqa: E731
         cache = any(number((n.get("data") or {}).get("cache_ttl"), int) is not None for n in g.nodes.values())
         self.add("")
         if is_main:
@@ -710,6 +993,8 @@ class _Writer(GraphWriter):
             if (timeout := number(d.get("timeout"))) is not None: opts.append(f"timeout: {round(timeout * 1000)}")
             if self.inputs(g, nid): opts.append(f"input: {camel(g.names[nid])}Input")
             self.add(f"    .addNode({lit(g.names[nid])}, {fn}{', { ' + ', '.join(opts) + ' }' if opts else ''})")
+            if n["type"] == "agent":
+                for step in ("model", "tool", "exit"): self.add(f"    .addNode({lit(g.agents[nid][step])}, {g.agents[nid][step]})")
             if is_main: self.span(nid, s)
         joins = [i for i in g.order() if g.nodes[i]["type"] == "join" and i in reach]
         first_edge = True
@@ -717,8 +1002,14 @@ class _Writer(GraphWriter):
             n = g.nodes[nid]
             if n["type"] in ("end", "note") or nid not in reach: continue
             out = g.out(nid)
-            src = "START" if n["type"] == "start" else lit(g.names[nid])
+            src = "START" if n["type"] == "start" else leave(nid)
             s = len(self.lines) + 1
+            if n["type"] == "agent":
+                a = {k: lit(v) for k, v in g.agents[nid].items()}
+                self.add("    // The Agent node's loop: the model, then each tool call it asks for, then back to the model.")
+                self.add(f"    .addEdge({lit(g.names[nid])}, {a['model']})")
+                self.add(f"    .addConditionalEdges({a['model']}, route_{g.agents[nid]['model']}, {{ tool: {a['tool']}, done: {a['exit']} }})")
+                self.add(f"    .addConditionalEdges({a['tool']}, route_{g.agents[nid]['tool']}, {{ tool: {a['tool']}, model: {a['model']} }})")
             if n["type"] in ("condition", "foreach") and out:
                 if first_edge and n["type"] == "condition":
                     self.add("    // A conditional edge: the router returns a label, and the map says which node it leads to.")
@@ -735,7 +1026,7 @@ class _Writer(GraphWriter):
                 for e in out:
                     if g.nodes[e["target"]]["type"] == "end": self.span(e["target"], len(self.lines))
         for j in joins:
-            srcs = [("START" if g.nodes[e["source"]]["type"] == "start" else lit(g.names[e["source"]]))
+            srcs = [("START" if g.nodes[e["source"]]["type"] == "start" else leave(e["source"]))
                     for e in g.edges if e["target"] == j and e["source"] in reach]
             s = len(self.lines) + 1
             self.add(f"    // Fan-in: {g.names[j]} waits for all of {', '.join(x.strip(chr(34)) for x in srcs)}.")
@@ -817,9 +1108,5 @@ class _Writer(GraphWriter):
 
 def to_typescript(wf: dict, name: str, version: Optional[int] = None, children: Optional[dict] = None,
                   example: Optional[dict] = None) -> Export:
-    """The LangGraph.js TypeScript file for workflow `wf` (same arguments as `python_export.to_python`). Agent nodes are
-    refused for now (TASK-0119, CLAR-0003 Q8): export the workflow as Python."""
-    for g in [wf, *(children or {}).values()]:
-        agent = next((n for n in g.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"), None)
-        if agent: raise AppError("TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED", node=one_line((agent.get("data") or {}).get("label") or agent.get("id"))[:80])
+    """The LangGraph.js TypeScript file for workflow `wf` (same arguments as `python_export.to_python`)."""
     return _Writer(name, version, children or {}, example).write(wf)
