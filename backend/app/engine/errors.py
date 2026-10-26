@@ -15,3 +15,11 @@ class Interrupt(Exception):
     def __init__(self, node: str, prompt: str, extra: Optional[Dict[str, Any]] = None):
         super().__init__(f"Waiting for a human response at {node}")
         self.node, self.prompt, self.extra = node, prompt, extra or {}
+
+
+class AwaitChild(Interrupt):
+    """Raised by an Agent tool step that started a child run for a workflow tool (TASK-0134, DEC-0066): the run waits for
+    the child as it waits for a person (status `waiting`, with `wait` on the event and the checkpoint), and the step gets
+    the child's result when the run service resumes it."""
+    def __init__(self, node: str, child_run_id: str, extra: Optional[Dict[str, Any]] = None):
+        super().__init__(node, "", {**(extra or {}), "wait": {"kind": "child", "run_id": child_run_id}})

@@ -18,6 +18,7 @@ from ..engine.ports import Ports
 from ..engine.runtime import resume_nodes, run_stream
 from ..models import Run
 from ..repositories import RunRepository, StaleLease, WorkflowRepository
+from .job_queue import enqueue_resume
 from .run_bus import InMemoryRunBus, RunBus
 from . import time_travel
 from .telemetry import Telemetry, summarize, trace_url
@@ -141,7 +142,8 @@ class RunService:
     def __init__(self, workflows: WorkflowRepository, runs: RunRepository, credentials=None, bus: RunBus | None = None,
                  telemetry: Telemetry | None = None, versions=None, notifier=None, ledger=None, approvals=None,
                  deliveries: Optional[Callable[[], object]] = None, knowledge=None, mcp=None, access=None, policy=None, quota=None, audit=None,
-                 tests: Optional[Callable[[], object]] = None, chat: Optional[Callable[[], object]] = None):
+                 tests: Optional[Callable[[], object]] = None, chat: Optional[Callable[[], object]] = None,
+                 jobs: Optional[Callable[[], object]] = None):
         """credentials: CredentialService (optional; without it, nodes with credential_id fail clearly).
         bus: RunBus for cross-process cancel + event fan-out (in-memory when not given)."""
         self.workflows, self.runs, self.credentials = workflows, runs, credentials
@@ -160,12 +162,15 @@ class RunService:
         self.quota = quota  # rate_limit.Counter (optional): recipients Send email nodes may reach per owner per hour (TASK-0051)
         self.tests = tests  # -> WorkflowTestService (optional): records a finished test run, answers a waiting one (TASK-0067)
         self.chat = chat  # -> ChatRunService (optional): answers a chat-trigger run in its thread (TASK-0075)
+        self.jobs = jobs  # -> JobQueue (optional): child runs of workflow tools and their parents' resumes (TASK-0134)
 
     # ---- cancel from any API process (POST /api/runs/{id}/cancel) ----
     def cancel(self, rid: str, uid: str) -> None:
         row = self.runs.get(rid) if self.bus.owner(rid) is None else None  # not running here or elsewhere
         if row is not None and row.status == "queued" and row.owner == uid:  # API run not picked up yet: worker skips it
-            return self.runs.set_status(rid, "cancelled")
+            self.runs.set_status(rid, "cancelled")
+            if row.parent_run_id: self.resume_parent(rid)  # a cancelled child still answers its parent (TASK-0134)
+            return None
         if row is not None and row.status == "paused":
             if row.owner != uid: raise AppError("RUN_NOT_FOUND")
             return self._close_waiting(row, {"type": "run_cancelled", "ts": time.time(), "reason": "api"}, "cancelled", uid)
@@ -238,6 +243,84 @@ class RunService:
         org = self.policy.org_allowed(actor or uid) if self.policy is not None else True
         return Ports(retrieve=self.knowledge.retriever(uid) if self.knowledge else None, mcp_call=self.mcp.caller(uid, org) if self.mcp else None,
                      email_quota=self.email_quota(uid), code_audit=self.code_audit(actor or uid))
+
+    # ---- child runs of workflow tools (TASK-0134, DEC-0066) ----
+    def top_run(self, r: Run) -> Run:
+        """The run at the top of a chain of workflow tool calls (the run itself when it has no parent)."""
+        for _ in range(subgraphs.MAX_DEPTH + 2):
+            p = self.runs.get(r.parent_run_id) if r.parent_run_id else None
+            if p is None: return r
+            r = p
+        return r
+
+    def run_resources(self, r: Run, uid: str) -> str:
+        """Whose resources a stored run uses: a child run uses its top parent's, as an inlined subgraph would (DEC-0023)."""
+        top = self.top_run(r) if r.parent_run_id else r
+        return self.resources_of(top.workflow_id, top.owner or uid if top is not r else uid)
+
+    def run_ports(self, r: Run, uid: str) -> Ports:
+        """Ports of a stored run's next segment. A child of a workflow test run keeps the test rules (DEC-0044) without
+        becoming a test run itself."""
+        ports = self.ports(self.run_resources(r, uid), uid)
+        top = self.top_run(r) if r.parent_run_id else None
+        test = self.tests().test_job(top.id) if top is not None and top.source == "test" and self.tests else None
+        if test is not None: ports.test, ports.mock_models = True, bool(test.get("mock"))
+        return ports
+
+    def _child_starter(self, rid: str, plan: RunPlan, uid: str):
+        """ports.start_child of one run: insert the child (once per call key) and queue it."""
+        def start(key: str, wf: dict, version: Optional[int], inp: dict, meta: dict) -> str:
+            if self.jobs is None: raise RuntimeError("workflow tools need the job queue")
+            found = self.runs.child_of(rid, key)
+            if found is not None: return found.id
+            depth, r = 1, self.runs.get(rid)
+            while r is not None and r.parent_run_id: depth += 1; r = self.runs.get(r.parent_run_id)
+            if depth > subgraphs.MAX_DEPTH: raise AppError("WORKFLOW_TOOL_TOO_DEEP", max=subgraphs.MAX_DEPTH)
+            child = self.runs.add_child(Run(id=uuid.uuid4().hex[:10], workflow_id=meta.get("workflow_id") or "adhoc", input=_dumps(inp), events="[]",
+                                            status="queued", started=time.time(), owner=uid or None, source="tool", workflow_version=version,
+                                            parent_run_id=rid, parent_step=key, checkpoint=_dumps({"kind": "child", "workflow": wf})))
+            if child.status == "queued":
+                self.jobs().enqueue({"run_id": child.id, "workflow_id": child.workflow_id, "owner": uid, "input": inp, "source": "tool"})
+            return child.id
+        return start
+
+    def plan_child(self, r: Run) -> RunPlan:
+        """The first segment of a child run: the snapshot its parent's plan took (DEC-0066 decision 2)."""
+        cp = json.loads(r.checkpoint or "{}"); uid = r.owner or ""
+        res = self.run_resources(r, uid)
+        return RunPlan(r.workflow_id, cp.get("workflow") or {}, json.loads(r.input or "{}"), self.credentials.resolver(res) if self.credentials else None,
+                       run_id=r.id, source="tool", version=r.workflow_version, ports=self.run_ports(r, uid))
+
+    def child_value(self, r: Run) -> dict:
+        """What the parent's tool step gets from a finished child: its status, final state or error, and usage."""
+        err = next((e for e in reversed(json.loads(r.events or "[]")) if isinstance(e, dict) and e.get("type") == "error"), None)
+        error = ((err.get("error") or {}).get("message") or "; ".join(err.get("errors") or [])) if err else None
+        usage = None
+        if (r.tokens_in or 0) + (r.tokens_out or 0):
+            usage = {"provider": "workflow", "model": r.workflow_id, "tokens_in": r.tokens_in or 0, "tokens_out": r.tokens_out or 0,
+                     "tokens": (r.tokens_in or 0) + (r.tokens_out or 0), "cost_usd": r.cost_usd, "estimated": False}
+        return {"child_run_id": r.id, "status": r.status, "output": json.loads(r.final_state or "null"),
+                **({"error": error} if error else {}), **({"usage": usage} if usage else {})}
+
+    def resume_parent(self, rid: str) -> bool:
+        """Queue the resume of the run waiting for child `rid`, once the child has ended. Called when the child settles and
+        when the parent records its wait (the child may have ended first). A second resume is dropped by the claim."""
+        r = self.runs.get(rid)
+        if r is None or not r.parent_run_id or r.status in ("queued", "running", "waiting", "paused") or self.jobs is None: return False
+        p = self.runs.get(r.parent_run_id)
+        if p is None or p.status != "waiting" or ((json.loads(p.checkpoint or "{}").get("wait") or {}).get("run_id")) != rid: return False
+        enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "child": self.child_value(r)})
+        return True
+
+    def cancel_children(self, rid: str) -> None:
+        """A parent that ends without its child's result takes its unfinished children (and theirs) with it."""
+        for ch in self.runs.children(rid):
+            try:
+                if ch.status == "queued": self.runs.set_status(ch.id, "cancelled"); self.cancel_children(ch.id)
+                elif ch.status in ("waiting", "paused"):
+                    self._close_waiting(ch, {"type": "run_cancelled", "ts": time.time(), "reason": "parent"}, "cancelled", ch.owner or "")
+                elif ch.status == "running": self.bus.request_cancel(ch.id)
+            except Exception: log.exception("cancelling child run %s failed", ch.id)
 
     @staticmethod
     def apply_test(plan: RunPlan, test: Optional[dict]) -> RunPlan:
@@ -347,6 +430,8 @@ class RunService:
         cp = json.loads(r.checkpoint or "{}")
         self.record(r.id, r.workflow_id, json.loads(r.input or "{}"), json.loads(r.events or "[]") + [ev], None, status, r.started, uid,
                     source=r.source or "ui", version=r.workflow_version, trace_parent=cp.get("trace"), trace_events=[] if cp.get("trace") else None)
+        if (cp.get("wait") or {}).get("kind") == "child": self.cancel_children(r.id)
+        if r.parent_run_id: self.resume_parent(r.id)  # a child that ended this way still answers its parent
 
     def _expire(self, r: Run) -> None:
         self._close_waiting(r, {"type": "run_expired", "ts": time.time(), "ttl_s": config.wait_ttl()}, "expired", r.owner or "")
@@ -359,21 +444,28 @@ class RunService:
         for r in stale: self._expire(r)
         return len(stale)
 
-    def plan_resume(self, uid: str, rid: str, response, via_channel: bool = False, steps: Optional[int] = None, until: Optional[str] = None) -> RunPlan:
+    def plan_resume(self, uid: str, rid: str, response, via_channel: bool = False, steps: Optional[int] = None, until: Optional[str] = None,
+                    child: Optional[dict] = None) -> RunPlan:
+        """child: the finished child run a run waits for (TASK-0134), from the worker only. A run waiting for a child
+        cannot be answered by a person, and a child's result cannot answer a person's question."""
         row = self.runs.get(rid)
         if row is not None and row.status == "paused" and not via_channel:
             if row.owner != uid: raise AppError("RUN_NOT_FOUND")  # owner only, same as a human resume
             return self._plan_paused(row, uid, steps, until)
-        response = human_response(response)
+        if child is None: response = human_response(response)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
-        if self.approvals is not None and not via_channel:  # answered in the studio: the channel buttons stop working (TASK-0022)
+        wait = cp.get("wait") or {}
+        if (child is None) == (wait.get("kind") == "child") or (child is not None and wait.get("run_id") != child.get("child_run_id")):
+            raise AppError("RUN_NOT_WAITING")
+        if child is not None: response = child
+        elif self.approvals is not None and not via_channel:  # answered in the studio: the channel buttons stop working (TASK-0022)
             if self.approvals.decided_elsewhere(rid) or not self.approvals.claim(rid): raise AppError("RUN_NOT_WAITING")  # first answer wins (DEC-0043)
             self.approvals.close_run(rid, "answered")
-        res = self.resources_of(r.workflow_id, uid)
+        res = self.run_resources(r, uid)
         return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
                        self.credentials.resolver(res) if self.credentials else None,
                        run_id=rid, previous=r, resume={**{k: cp[k] for k in RESUME_KEYS if k in cp}, "value": response}, source=r.source or "ui",
-                       version=r.workflow_version, trace_parent=cp.get("trace"), ports=self.ports(res, uid))
+                       version=r.workflow_version, trace_parent=cp.get("trace"), ports=self.run_ports(r, uid))
 
     def _plan_paused(self, r: Run, uid: str, steps: Optional[int], until: Optional[str] = None) -> RunPlan:
         """Continue a one-step pause (TASK-0036). No human response, and no approval notification."""
@@ -381,17 +473,18 @@ class RunService:
         cp = json.loads(r.checkpoint)
         resume = {k: cp[k] for k in RESUME_KEYS if k in cp}
         if not (resume.get("node") or resume.get("nodes")): raise AppError("RUN_NOT_WAITING")
-        res = self.resources_of(r.workflow_id, uid)
+        res = self.run_resources(r, uid)
         return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
                        self.credentials.resolver(res) if self.credentials else None,
                        run_id=r.id, previous=r, resume=resume, source=r.source or "ui", steps=steps, until=until,
-                       version=r.workflow_version, trace_parent=cp.get("trace"), ports=self.ports(res, uid))
+                       version=r.workflow_version, trace_parent=cp.get("trace"), ports=self.run_ports(r, uid))
 
     def plan_recover(self, r: Run, fence: Optional[int] = None, attempt: int = 2) -> RunPlan:
         """A recovered queue job (its worker died or lost its lease mid-run). With a progress checkpoint it continues
         from there (same checkpoint shape as HITL; parallel branches and imported graphs included, TASK-0021);
         without one it starts over. Either way the lost segment's root span is exported first (DEC-0018)."""
         cp = json.loads(r.checkpoint or "null") or {}
+        snapshot = cp.get("workflow") if r.parent_run_id else None  # a child restarts on its parent's snapshot (TASK-0134)
         if cp.get("kind") != "progress": cp = {}
         lost = cp.get("trace")
         if lost:
@@ -399,14 +492,18 @@ class RunService:
             except Exception: log.warning("exporting the lost segment of run %s failed", r.id)
         common = dict(run_id=r.id, source=r.source or "api", trace_parent=lost, checkpointing=True, fence=fence, attempt=attempt)
         if not (cp.get("node") or cp.get("nodes")):  # nothing finished yet: restart from the beginning
+            if snapshot is not None:
+                plan = self.plan_child(r)
+                for k, v in common.items(): setattr(plan, k, v)
+                return plan
             pin = {"version": r.workflow_version} if r.source == "test" and r.workflow_version else {}  # a test run keeps its version
             plan = self.plan(r.owner or "", {"workflow_id": r.workflow_id, "input": json.loads(r.input or "{}"), **pin})
             for k, v in common.items(): setattr(plan, k, v)
             return plan
         return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
-                       self.credentials.resolver(self.resources_of(r.workflow_id, r.owner or "")) if self.credentials else None, previous=r,
+                       self.credentials.resolver(self.run_resources(r, r.owner or "")) if self.credentials else None, previous=r,
                        resume={k: cp[k] for k in RESUME_KEYS if k in cp}, version=r.workflow_version, recovered=True,
-                       ports=self.ports(self.resources_of(r.workflow_id, r.owner or ""), r.owner or ""), **common)
+                       ports=self.run_ports(r, r.owner or ""), **common)
 
     def recovery_job(self, r: Run) -> dict:
         """The queue job that continues an unfinished run after a restart (RunWorker.recover_unfinished)."""
@@ -434,6 +531,7 @@ class RunService:
         out = []; self.expire_waiting()
         for r in self.runs.list_waiting(uid):
             ev = next((e for e in reversed(json.loads(r.events or "[]")) if e.get("type") == "run_waiting"), {})
+            if ev.get("wait"): continue  # waiting for a child run, not for a person (TASK-0134)
             w = self.workflows.get(r.workflow_id) if r.workflow_id and r.workflow_id != "adhoc" else None
             out.append({"id": r.id, "workflow_id": r.workflow_id, "workflow_name": w.name if w else None, "node": ev.get("node"),
                         "label": ev.get("label"), "prompt": ev.get("prompt"), "started": r.started, "waiting_since": r.ended})
@@ -479,6 +577,7 @@ class RunService:
         if trace_id is None and trace_parent: trace_id = trace_parent.get("trace_id")
         root = {"trace_root": trace_root} if trace_root else {}  # later segments keep the first one's
         test = source == "test"  # a workflow test answers its own Human nodes and sends nothing (DEC-0044)
+        if status == "waiting" and checkpoint and checkpoint.get("wait"): test = True  # waiting for a child run: nobody to ask (TASK-0134)
         if self.notifier is not None and uid and status in ("waiting", "expired") and not test:
             ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
             try: self.notifier.run_event("run_waiting" if status == "waiting" else "run_expired", uid, rid, wid, ev)
@@ -536,6 +635,10 @@ class RunService:
         await _write_in_thread(self._settle, rid, source)
 
     def _settle(self, rid: str, source: Optional[str]) -> None:
+        if source == "tool":  # a workflow tool's child run: its parent goes on (TASK-0134)
+            try: self.resume_parent(rid)
+            except Exception: log.exception("resuming the parent of run %s failed", rid)
+            return
         if source == "test":
             if self.tests:
                 try: self.tests().on_settled(rid)
@@ -564,6 +667,7 @@ class RunService:
 
         if plan.ports is not None:  # a Code node's sandbox is killed when the run is cancelled or times out (TASK-0053)
             plan.ports.cancelled = lambda: cancel.is_set() or bus.is_cancelled(rid)
+            plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools (TASK-0134)
         plan.effects = Effects(rid, plan.attempt, ledger=_RunLedger(self.ledger, rid, plan.fence) if self.ledger is not None else None,
                           guard=self._guard(rid, plan.fence))
 
@@ -629,7 +733,7 @@ class RunService:
                     if ev["type"] == "error": status = "error"
                     if ev["type"] in ("run_waiting", "run_paused"):
                         status = "waiting" if ev["type"] == "run_waiting" else "paused"
-                        checkpoint = {**ev.pop("checkpoint"), "workflow": plan.workflow}
+                        checkpoint = {**ev.pop("checkpoint"), "workflow": plan.workflow, **({"wait": ev["wait"]} if ev.get("wait") else {})}
                     await emit(ev); continue
                 get.cancel()
                 if listener in done:
@@ -658,6 +762,8 @@ class RunService:
         try: summary = await _write_in_thread(self.record, rid, plan.workflow_id, plan.input, events, final, status, started, uid, checkpoint,
                                               plan.source, plan.version, span, fence=plan.fence)
         except StaleLease: return self._fenced(rid, span, plan, uid, t0)
+        if checkpoint and (checkpoint.get("wait") or {}).get("kind") == "child":  # the child may have ended before this wait was recorded
+            await _write_in_thread(self.resume_parent, checkpoint["wait"]["run_id"])
         if connected: await send({"type": "run_summary", "run_id": rid, "status": status, "ts": time.time(), **summary})  # not stored as an event
         return status
 

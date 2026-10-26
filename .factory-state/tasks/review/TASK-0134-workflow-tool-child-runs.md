@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0134
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -102,7 +102,40 @@ and retried jobs, and give its result back to the model (DEC-0066 decisions 3 to
 ## Activity Log
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
+- 2026-10-26: started on `factory/task-0134-workflow-tool-child-runs`, stacked on TASK-0133's branch (PR #177, not merged;
+  owner in chat: "Làm tiếp dãy task").
+- 2026-10-26: implemented.
+  - Engine: `AwaitChild` (an `Interrupt` with `wait = {kind: child, run_id}`), `Ports.start_child`, and in the tool
+    step `child_result()` / `child_outcome()`. A finished child skips the tool's approval (it ran after it), and its
+    usage counts on the Agent node.
+  - Data: migration 0040 (`parent_run_id`, `parent_step`, unique together), `RunRepository.child_of`, `children`,
+    `add_child` (an insert race returns the first child).
+  - `RunService`:
+    - `_child_starter` (one child per call key, the run-time depth check, a `tool` queue job);
+    - `plan_child` (the parent's snapshot);
+    - `run_resources` / `run_ports` (a child uses its top parent's resources and test rules);
+    - `child_value`, `resume_parent` (from `settled`, from `_close_waiting`, from a cancelled queued child, and
+      right after the parent records its wait);
+    - `cancel_children`;
+    - `plan_resume(child=...)`: a person cannot answer a run waiting for a child, and a child result cannot answer a
+      person;
+    - recovery restarts a child on its snapshot.
+  - The parent's wait sends no notification or approval request and is left out of the pending list.
+  - `RunWorker` plans child jobs and child resumes. `WORKFLOW_TOOL_TOO_DEEP` is added to the catalog, the API error
+    docs and both locales.
+
+## Validation Results
+
+- See QA-0118.
+
+## Review And QA
+
+- Review: REV-0118. QA: QA-0118.
 
 ## Handoff Notes
 
--
+- TASK-0135: a child's approval request is the child run's own (`ApprovalService.on_waiting` of the child). The parent
+  has `checkpoint.wait` and its `run_waiting` event has `wait`, `tool`, `label` and `workflow_id`. Use
+  `RunService.top_run` for the chain of names.
+- TASK-0136: the parent's `run_waiting` event carries the child run id. The resumed `ag/__tool` step's result comes
+  from `child_value`. `run_resumed.response` is the child value (a dict), not text.
