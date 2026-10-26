@@ -4,7 +4,8 @@
 
 - Project: superstep
 - Task ID: TASK-0130
-- Status: doing
+- Status: done
+- 2026-10-26: PR #170 merged into develop (13c832b) with the owner's approval after CI passed (14 passed, 1 skipped); moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -56,3 +57,9 @@ found that the backend suite takes 205 to 265 s in CI and 346 s locally, against
 - `factory verify run --profile full` with the plain CLI: all 8 checks passed (backend-test 348.06 s, over the old 300 s
   limit).
 - `test_http_client_json_and_sse` 20 times in a row: 20 passed with the fixture fix, 16 passed and 4 failed without it.
+
+## Review And QA
+
+- Review: the owner reviewed PR #170 and approved the merge. No separate REV artifact.
+- QA: the validation above, and CI on #170: Factory verification ran the 8 policy commands, all passed (backend 260 s
+  under the 900 s limit).
