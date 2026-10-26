@@ -39,6 +39,18 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   Superstep plus LangGraph with the code-first frameworks CrewAI and PydanticAI. Both cite each project's docs and
   license file and say when to choose another tool.
 
+### Changed
+
+- **Phone layout.** Below 768px the workflow list and Settings fit the screen, and the editor shows one pane at a
+  time (Canvas, Nodes, Config, Run, Chat) with a tab bar at the bottom. The header keeps Save, Run, Chat and the ⋯
+  menu as icons, a tap on a palette card adds that node, and the run input sits above the logs. Wider screens keep
+  the side-by-side panels.
+- **Node Config tabs.** Every node's Config shows the same three tabs in the same order: **Settings** (what the node
+  does), **Data** (every state field it reads or writes, and its input fields) and **Execution** (retry, timeout,
+  cache, round and item limits). A tab the node does not use stays in place, disabled; the chosen tab stays open
+  when you select another node; a dot marks a missing output field or an Agent without tools. Handbook: Nodes >
+  Config tabs (en, vi).
+
 ## 0.6.0 (2026-10-24)
 
 ### Added
