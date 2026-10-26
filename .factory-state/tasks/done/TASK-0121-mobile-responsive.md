@@ -4,7 +4,9 @@
 
 - Project: superstep
 - Task ID: TASK-0121
-- Status: review
+- Status: done
+- 2026-10-26: PR #150 merged into develop (c4959a7) with the owner's approval; moved to done. The owner asked to
+  merge without a separate review or QA artifact.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
