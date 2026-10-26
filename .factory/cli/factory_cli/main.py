@@ -263,6 +263,17 @@ def build_parser() -> argparse.ArgumentParser:
                 choices=VERIFICATION_KINDS,
                 default=[],
             )
+        if command == "run":
+            verify_command.add_argument(
+                "--timeout",
+                type=_positive_seconds,
+                default=None,
+                metavar="SECONDS",
+                help=(
+                    "Time limit for each command without its own `timeout` in "
+                    "tool-policy.yaml (default 300)."
+                ),
+            )
 
     skills = subcommands.add_parser(
         "skills",
@@ -714,6 +725,16 @@ def apply_dependency_plan_with_review(
     return 0
 
 
+def _positive_seconds(value: str) -> int:
+    try:
+        seconds = int(value)
+    except ValueError:
+        seconds = 0
+    if seconds <= 0:
+        raise argparse.ArgumentTypeError("must be a whole number of seconds above 0")
+    return seconds
+
+
 def handle_verification(args: argparse.Namespace) -> int:
     if not args.verify_command:
         raise FactoryError("Choose a verify command: plan, run, or validate.")
@@ -745,7 +766,7 @@ def handle_verification(args: argparse.Namespace) -> int:
     if not plan.ready:
         return 1
     print("Running deterministic project verification…", file=sys.stderr)
-    results = run_verification_plan(plan)
+    results = run_verification_plan(plan, timeout_seconds=args.timeout)
     for result in results:
         print(
             f"  {result.status.upper():6} {result.check.check_id} "

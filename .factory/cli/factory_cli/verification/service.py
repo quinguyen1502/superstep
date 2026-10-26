@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import os
 import shlex
@@ -8,7 +9,7 @@ import shutil
 import subprocess
 import time
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 import yaml
@@ -160,6 +161,7 @@ def _checks_from_policy(project_dir: Path, plan: VerificationPlan) -> bool:
                 working_dir=working_dir,
                 argv=argv,
                 source=TOOL_POLICY_PATH,
+                timeout_seconds=spec.timeout or None,
             )
         )
     if not found and not plan.errors:
@@ -207,20 +209,34 @@ def _rebase(plan: VerificationPlan) -> VerificationPlan:
     return fresh
 
 
-def _command_name(check: VerificationCheck) -> str:
-    if check.working_dir in {"", "."}:
-        return check.kind
-    slug = check.working_dir.strip("./").replace("\\", "-").replace("/", "-")
-    return f"{slug}-{check.kind}"
+def _command_name(check: VerificationCheck, taken: Iterable[str]) -> str:
+    """A policy name for a discovered check that no other command uses.
+
+    ``<dir>-<kind>`` (``<kind>`` at the root) first. Two checks of one kind in
+    one directory, such as npm and pytest tests at the root, or a name the
+    policy already uses for another command, get the tool from the check ID
+    (``test-python``) and then a number.
+    """
+    taken = set(taken)
+    directory = PurePosixPath(check.working_dir.replace("\\", "/")).as_posix()
+    base = (
+        check.kind
+        if directory in {"", "."}
+        else f"{directory.replace('/', '-')}-{check.kind}"
+    )
+    tool = check.check_id.split(":", 1)[0]
+    candidates = itertools.chain(
+        (base, f"{base}-{tool}"),
+        (f"{base}-{tool}-{number}" for number in itertools.count(2)),
+    )
+    return next(name for name in candidates if name not in taken)
 
 
 def _record_discovered_commands(project_dir: Path, plan: VerificationPlan) -> None:
     policy = load_tool_policy(project_dir)
     for check in plan.checks:
-        name = _command_name(check)
-        existing = policy.commands.get(name)
-        if existing is not None and existing.command.strip():
-            continue
+        taken = [name for name, spec in policy.commands.items() if spec.command.strip()]
+        name = _command_name(check, taken)
         policy.commands[name] = CommandPolicy(
             command=check.command_display,
             evidence="Expected",
@@ -466,8 +482,10 @@ def _discover_go_checks(project_dir: Path, plan: VerificationPlan) -> None:
 def run_verification_plan(
     plan: VerificationPlan,
     *,
-    timeout_seconds: int = VERIFICATION_TIMEOUT_SECONDS,
+    timeout_seconds: Optional[int] = None,
 ) -> List[VerificationResult]:
+    """Run the plan's checks. A check's own ``timeout`` from the tool policy
+    wins over ``timeout_seconds``, which defaults to 300 seconds."""
     if not plan.ready:
         raise VerificationError("Verification plan is not ready; resolve its errors first.")
     plan = _rebase(plan)
@@ -502,7 +520,9 @@ def run_verification_plan(
                 env=_verification_environment(),
                 text=True,
                 capture_output=True,
-                timeout=timeout_seconds,
+                timeout=check.timeout_seconds
+                or timeout_seconds
+                or VERIFICATION_TIMEOUT_SECONDS,
                 check=False,
             )
             output = (completed.stdout + completed.stderr).strip()
@@ -517,6 +537,12 @@ def run_verification_plan(
                 )
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
+            error = str(exc)
+            if isinstance(exc, subprocess.TimeoutExpired):
+                error += (
+                    f". Raise it with `timeout` on this command in {TOOL_POLICY_PATH},"
+                    " or with `factory verify run --timeout`."
+                )
             results.append(
                 VerificationResult(
                     check=check,
@@ -524,7 +550,7 @@ def run_verification_plan(
                     returncode=None,
                     started_at=started,
                     duration_seconds=time.monotonic() - before,
-                    error=str(exc),
+                    error=error,
                 )
             )
     _write_verification_state(project_dir, plan, results)

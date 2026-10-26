@@ -18,7 +18,7 @@ factory tools status|configure|plan|apply|validate -C <project-dir>
 factory tools configure [--no-interactive] [--level LEVEL] [--status proposed|approved] [--tool TOOL] [--command NAME=COMMAND] -C <project-dir>
 factory gc [-C <project-dir>] [--keep N] [--apply] [--no-artifacts]
 factory deps plan|apply|validate -C <project-dir>
-factory verify plan|run|validate -C <project-dir> [--profile quick|full] [--check KIND]
+factory verify plan|run|validate -C <project-dir> [--profile quick|full] [--check KIND] [--timeout SECONDS (run)]
 factory skills plan|apply|validate -C <project-dir> [--skill NAME] [--force]
 factory task create <task-id> <title> [--state backlog|todo|doing|review|qa|done]
 factory task move <task-id> <state>

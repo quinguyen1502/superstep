@@ -12,6 +12,7 @@ class VerificationCheck:
     working_dir: str
     argv: List[str]
     source: str
+    timeout_seconds: Optional[int] = None
 
     @property
     def command_display(self) -> str:
@@ -57,6 +58,8 @@ class VerificationPlan:
                     f"    source: {check.source}",
                 )
             )
+            if check.timeout_seconds:
+                lines.append(f"    timeout: {check.timeout_seconds}s")
         lines.extend(f"  ERROR       {message}" for message in self.errors)
         lines.extend(f"  WARN        {message}" for message in self.warnings)
         return "\n".join(lines)

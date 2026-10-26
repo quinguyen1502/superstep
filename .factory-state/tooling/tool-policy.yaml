@@ -14,6 +14,7 @@ commands:
     evidence: Expected
     cwd: backend
     kind: test
+    timeout: 900
   frontend-build:
     command: npm run build
     evidence: Expected
