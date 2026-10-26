@@ -248,6 +248,40 @@ BUILTINS += [
         "edges": [_e("e1", "start", "agent"), _e("e2", "agent", "end")]}},
 ]
 
+# Workflows as Agent tools (TASK-0137, REQ-0073, DEC-0066): a supervisor Agent calls two specialist workflows, which
+# are created with it ("helpers"). A tool's `helper` names the helper whose new id becomes its `workflow_id`.
+def _desk(label, prompt, *tools):
+    return {"state": _s("message", "answer"),
+            "nodes": [_n("start", "start", 40, 200, label="Start"),
+                      _n("agent", "agent", 280, 200, label=label, model="gpt-4o-mini", max_rounds=4, output_field="answer", prompt=prompt, tools=list(tools)),
+                      _n("end", "end", 560, 200, label="End")],
+            "edges": [_e("e1", "start", "agent"), _e("e2", "agent", "end")]}
+
+
+BUILTINS += [
+    {"id": "builtin-support-team", "name": "Support team",
+     "description": "A supervisor agent hands each question to a specialist workflow: the order desk or the refund desk.",
+     "helpers": [
+         {"key": "orders", "name": "Order desk", "workflow": _desk("Order desk", "Answer this question about an order: {{state.message}}",
+                                                                 _tool("lookup_order", "Find the delivery status of an order", "builtin", function="lookup_order"))},
+         {"key": "refunds", "name": "Refund desk", "workflow": _desk("Refund desk", "Handle this refund request: {{state.message}}",
+                                                                   _tool("request_refund", "Request a refund for an order that arrived broken or late", "builtin",
+                                                                         function="request_refund", approval=True))}],
+     "workflow": {
+        "state": _s("message", "answer", "steps:list"),
+        "nodes": [_n("start", "start", 40, 200, label="Start"),
+                  _n("agent", "agent", 280, 200, label="Supervisor", model="gpt-4o-mini", max_rounds=4, output_field="answer", steps_field="steps",
+                     system_prompt="You lead a support team. Hand each question to the desk that handles it, then answer the customer "
+                                   "with what the desk found.",
+                     prompt="Help this customer. Message: {{state.message}}",
+                     tools=[_tool("order_desk", "Questions about where an order is", "workflow", helper="orders", workflow_id="",
+                                  inputs=["message"], outputs=["answer"]),
+                            _tool("refund_desk", "Refund requests for an order that arrived broken or late", "workflow", helper="refunds",
+                                  workflow_id="", inputs=["message"], outputs=["answer"])]),
+                  _n("end", "end", 560, 200, label="End")],
+        "edges": [_e("e1", "start", "agent"), _e("e2", "agent", "end")]}},
+]
+
 # Test cases of each built-in template (TASK-0069, REQ-0042), in the shape of the workflow tests API. They pass with the
 # offline mock model: a Condition takes the label it finds as a whole word, and the Decision mock the label it finds in the
 # state, so the inputs name their branch. A workflow made from the template gets a copy; saved templates carry none.
@@ -310,6 +344,12 @@ TESTS: dict[str, list[dict]] = {
               _called("agent", "request_refund"), _has("answer", "Refund requested for order A100")),
         _case("Rejected refund is not requested", {"message": "Order A100 arrived broken, please refund it"}, {"agent": NO},
               _called("agent", "request_refund", False), _has("answer", "Rejected by a reviewer"))],
+    "builtin-support-team": [
+        _case("Order questions go to the order desk", {"message": "Where is my order B200?"}, None,
+              _called("agent", "order_desk"), _called("agent", "refund_desk", False), _has("answer", "In transit")),
+        # the refund desk asks a person before a refund; a test run answers no question inside a called workflow
+        _case("Refund requests go to the refund desk", {"message": "Order A100 arrived broken, please refund it"}, None,
+              _called("agent", "refund_desk"), _called("agent", "order_desk", False))],
     "builtin-feedback-digest": [
         _case("Three pieces of feedback make one report", {"feedback": ["Love the new editor", "Runs are slow on Mondays", "Please add a Discord channel"]},
               None, _ran("send"), _filled("report"), _filled("sent"))],

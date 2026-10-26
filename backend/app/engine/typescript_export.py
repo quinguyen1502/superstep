@@ -799,7 +799,7 @@ class _Writer(GraphWriter):
         if d.get("system_prompt"): self.add(f"const {const}_SYSTEM = {lit(d['system_prompt'])};")
         self.add(f"const {const}_PROMPT = {lit(d.get('prompt') or '')};")
         self.add("// The tools the model may call: their names, what they do, and the JSON Schema of their arguments.")
-        self.add(f"const {const}_TOOLS: ToolSpec[] = {lit(agents.specs(d))};")
+        self.add(f"const {const}_TOOLS: ToolSpec[] = {lit(agents.specs(self.tool_spec_data(d)))};")
         if approval: self.add(f"const {const}_NEEDS_APPROVAL = {lit(approval)};  // these ask a person first (interrupt)")
         for t in d.get("tools") or []:
             if isinstance(t, dict) and t.get("source") == "http":
@@ -928,6 +928,19 @@ class _Writer(GraphWriter):
                 self.add(f"    return await retrieve(String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
                 self.add(f"    return await callMcpTool({lit(t.get('tool') or '')}, args);")
+            elif src == "workflow":
+                ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
+                if ref in self.built:
+                    child, build = self.built[ref][0], self.built[ref][1]
+                    self.add(f"    // the workflow \"{_doc(child.title)}\" as its own graph (in the studio: a child run). Inside this graph's run,")
+                    self.add("    // a question for a person in it pauses this graph too.")
+                    self.add(f"    const graph = {build}();")
+                    self.add(f"    const input = Object.fromEntries(Object.entries(args).filter(([k]) => {lit(inputs)}.includes(k)));")
+                    self.add("    const final = (await graph.invoke(input as Parameters<typeof graph.invoke>[0])) as Record<string, unknown>;")
+                    self.add(f"    return Object.fromEntries({lit(outputs)}.map((k) => [k, final[k]]));")
+                else:
+                    self.add(f"    // TODO: the workflow {lit(ref)} was not found (deleted, or not shared with you).")
+                    self.add("    return null;")
             elif src == "http":
                 method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
                 key = self.http_key(const, t)

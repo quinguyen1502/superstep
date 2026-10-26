@@ -258,12 +258,17 @@ class RunService:
         top = self.top_run(r) if r.parent_run_id else r
         return self.resources_of(top.workflow_id, top.owner or uid if top is not r else uid)
 
+    def under_test(self, r: Run) -> bool:
+        """A child run under a workflow test run (TASK-0137): it keeps the test rules, and a question for a person inside it
+        is not sent anywhere; the test cancels it and the parent's tool call fails."""
+        return bool(r.parent_run_id) and self.top_run(r).source == "test"
+
     def run_ports(self, r: Run, uid: str) -> Ports:
         """Ports of a stored run's next segment. A child of a workflow test run keeps the test rules (DEC-0044) without
         becoming a test run itself."""
         ports = self.ports(self.run_resources(r, uid), uid)
-        top = self.top_run(r) if r.parent_run_id else None
-        test = self.tests().test_job(top.id) if top is not None and top.source == "test" and self.tests else None
+        top = self.top_run(r) if r.parent_run_id else r
+        test = self.tests().test_job(top.id) if top.source == "test" and self.tests else None
         if test is not None: ports.test, ports.mock_models = True, bool(test.get("mock"))
         return ports
 
@@ -598,6 +603,7 @@ class RunService:
         root = {"trace_root": trace_root} if trace_root else {}  # later segments keep the first one's
         test = source == "test"  # a workflow test answers its own Human nodes and sends nothing (DEC-0044)
         if status == "waiting" and checkpoint and checkpoint.get("wait"): test = True  # waiting for a child run: nobody to ask (TASK-0134)
+        if source == "tool" and not test and (row := self.runs.get(rid)) is not None and self.under_test(row): test = True  # TASK-0137
         if self.notifier is not None and uid and status in ("waiting", "expired") and not test:
             ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
             try: self.notifier.run_event("run_waiting" if status == "waiting" else "run_expired", uid, rid, wid, ev)
@@ -656,7 +662,11 @@ class RunService:
 
     def _settle(self, rid: str, source: Optional[str]) -> None:
         if source == "tool":  # a workflow tool's child run: its parent goes on (TASK-0134)
-            try: self.resume_parent(rid)
+            try:
+                r = self.runs.get(rid)
+                if r is not None and r.status == "waiting" and self.under_test(r):  # nobody answers a person's question in a test run
+                    return self._close_waiting(r, {"type": "run_cancelled", "ts": time.time(), "reason": "test"}, "cancelled", r.owner or "")
+                self.resume_parent(rid)
             except Exception: log.exception("resuming the parent of run %s failed", rid)
             return
         if source == "test":

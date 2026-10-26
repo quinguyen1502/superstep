@@ -135,9 +135,9 @@ class WorkflowService:
         load = self._loader(uid)
         if (errs := subgraphs.check(wf, load, wid)): raise AppError("WORKFLOW_INVALID", details=errs)
         children: dict = {}
-        def collect(g: dict) -> None:
-            for _, ref in subgraphs.refs(g):
-                if ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
+        def collect(g: dict) -> None:  # subgraphs and workflow tools' workflows (TASK-0137), every level
+            for _, ref in subgraphs.all_refs(g):
+                if ref and ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
         collect(wf)
         case = (self.tests.list_for_workflow(wid) or [None])[0] if self.tests is not None else None
         example = {"input": json.loads(case.input), "answers": json.loads(case.answers)} if case else None

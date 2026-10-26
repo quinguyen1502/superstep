@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { apiToken, N } from './helpers'
 // REQ-0073: an Agent node calls another workflow as a tool. TASK-0135: the parent waits for its child run, the child's
 // approval is in the Approvals inbox with both workflow names, and answering it finishes both runs. TASK-0136: the tool
-// card in the editor, and the child's steps nested under the tool call in the trace.
+// card in the editor, and the child's steps nested under the tool call in the trace. TASK-0137: the Support team template.
 const shot = async (page: Page, name: string, sel = 'body') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const T = {
   vi: { password: 'Mật khẩu', waiting: 'Đang chờ một workflow khác', calledBy: 'Được gọi bởi' },
@@ -58,6 +58,24 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await nested.getByRole('link').click()
     await expect(page).toHaveURL(new RegExp(`/workflows/${desk}\\?run=`))
     await expect(page.locator('#trace-called-by')).toContainText(`Order team ${lang} ${n}`)
+  })
+
+  test(`Support team template: a supervisor and its two desks (${lang})`, async ({ page }) => {
+    await page.goto('/login'); await page.getByLabel(T[lang].password, { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+    await expect(page).toHaveURL(/\/workflows$/)
+    await page.locator('#new-wf').click()
+    const card = page.locator('[data-id=builtin-support-team]')
+    await expect(card).toBeVisible(); await shot(page, `workflow-tool-template-card-${lang}`, '[data-id=builtin-support-team]')
+    await card.locator('button').first().click()
+    await expect(page).toHaveURL(/\/workflows\/[^/]+$/); await expect(page.locator('#validation-errors')).toHaveCount(0)
+    await page.locator('.react-flow__node[data-id="agent"]').click()
+    await expect(page.getByTestId('agent-tool')).toHaveCount(2)
+    await expect(page.locator('#agent-tool-0-workflow')).toContainText('Order desk')  // made with it: "Support team · Order desk"
+    await page.locator('#run-tab').click(); await page.locator('#run-input').fill('{"message": "Where is my order B200?"}')
+    await page.locator('#run-btn').click()
+    await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+    await expect(page.getByTestId('child-steps')).toContainText('lookup_order')
+    await shot(page, `workflow-tool-template-run-${lang}`, '#run-logs-panel')
   })
 
   test(`workflow tool: the parent waits, the child's approval finishes both (${lang})`, async ({ page }) => {
