@@ -263,13 +263,13 @@ class RunService:
         return take
 
     def _expand(self, uid: str, wid: Optional[str], wf: dict) -> tuple[dict, Optional[list]]:
-        """Inline subgraph nodes (TASK-0011) with the workflows this user may read, then Agent nodes' steps (TASK-0116). The
-        expanded graph is what runs and what checkpoints store, so a resumed or recovered run continues on the same graph
-        even if a child changed."""
+        """Inline subgraph nodes (TASK-0011) with the workflows this user may read, copy in the children of workflow tools
+        (TASK-0133, DEC-0066), then add Agent nodes' steps (TASK-0116). The expanded graph is what runs and what checkpoints
+        store, so a resumed or recovered run continues on the same graph even if a child changed."""
         if wf.get("source"): return wf, None
-        if subgraphs.has_subgraphs(wf):
-            try: wf = subgraphs.expand(wf, self.workflow_loader(uid), wid)
-            except ValidationError as e: return wf, e.errors
+        load = self.workflow_loader(uid)
+        try: wf = agents.snapshot(subgraphs.expand(wf, load, wid), load, wid, self._version_of)
+        except ValidationError as e: return wf, e.errors
         return agents.expand(wf), None
 
     def workflow_loader(self, uid: str):

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0133
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -100,7 +100,29 @@ run yet (TASK-0134).
 ## Activity Log
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
+- 2026-10-26: started on `factory/task-0133-workflow-tool-settings` (owner in chat: "Bắt đầu triển khai đi"), from the
+  planning branch of PR #175 with develop bfa096f merged in (TASK-0132's `issues.py`). The planning commits ride this
+  task's PR if #175 is not merged first. DEC-0066 accepted with the start, as DEC-0063 was.
+- 2026-10-26: implemented. `agents.py`: the `workflow` source, `parameters()` from the child's state fields (required),
+  settings checks, `snapshot()`, and the expansion keeps the full snapshot on the tool step only (the other steps keep
+  the child's state fields). `subgraphs.py`: `tool_refs()`, `all_refs()`, and `check()` follows workflow tools, so
+  cycles and depth count both kinds. `RunService._expand` snapshots after subgraph expansion with the version of the
+  child. `WorkflowService.dependents` and `children_changed` count workflow tools. Nine codes in `issues.py` and both
+  locales. A run that calls a workflow tool gets a failed tool call until TASK-0134.
+- 2026-10-26: review fixes before QA. A non-list `inputs` no longer gives one "unknown field" per character, and
+  snapshots sent with a workflow are dropped when planning, so only the planner's snapshots can run.
+
+## Validation Results
+
+- See QA-0117.
+
+## Review And QA
+
+- Review: REV-0117. QA: QA-0117.
 
 ## Handoff Notes
 
-- TASK-0134 replaces the "not available yet" result with the child run.
+- TASK-0134 replaces the "cannot run yet" error in `agents.run_tool` with the child run. The tool step's
+  `tools[i]["snapshot"]` is the child to run (subgraphs expanded, its own workflow tools snapshotted), and
+  `tools[i]["version"]` its version number (None for unsaved edits, as `RunService._version_of` gives).
+- Deleting a workflow used as a tool is now refused with WORKFLOW_IN_USE (as for subgraphs), unless forced.
