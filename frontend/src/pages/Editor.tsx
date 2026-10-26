@@ -1,10 +1,11 @@
+import { useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { EditorLayout } from '@/components/editor-layout'
+import { EditorLayout, type MobileView } from '@/components/editor-layout'
 import { EditorSkeleton } from '@/components/editor/editor-skeleton'
 import { EditorHeader } from '@/components/editor/editor-header'
 import { EditorPalette } from '@/components/editor/editor-palette'
@@ -14,7 +15,7 @@ import { EditorRunPanel } from '@/components/editor/editor-run-panel'
 import { ChatSidePanel } from '@/components/chat/chat-side-panel'
 import { StudioContext } from '@/components/editor/studio-context'
 import { useStudio } from '@/components/editor/use-studio'
-import { useViewportWidth } from '@/lib/use-viewport-width'
+import { useIsMobile, useViewportWidth } from '@/lib/use-viewport-width'
 import { CONFIG_COLLAPSE_BELOW, chatStore } from '@/lib/panel-sizes'
 
 /** Workflow editor page. State and actions live in `useStudio`; the header and panels are in components/editor (TASK-0040). */
@@ -26,6 +27,17 @@ function Studio() {
   // narrow screens (TASK-0085): Config folds away while nothing is selected, so the canvas keeps its room beside the chat
   const vw = useViewportWidth()
   const narrow = vw - (studio.chatOpen ? chatStore.read().width : 0) < CONFIG_COLLAPSE_BELOW
+  // phones (TASK-0121): one pane at a time; a run shows the Run pane, opening the chat shows the chat
+  const mobile = useIsMobile(); const [view, setView] = useState<MobileView>('canvas')
+  const { running, chatOpen, paletteCmds } = studio
+  const [seen, setSeen] = useState({ running, chatOpen })
+  if (seen.running !== running || seen.chatOpen !== chatOpen) {
+    setSeen({ running, chatOpen })
+    if (chatOpen !== seen.chatOpen) setView(chatOpen ? 'chat' : view === 'chat' ? 'canvas' : view)
+    if (running && !seen.running) setView('run')
+  }
+  // a tap on a palette card adds the node in the middle of the canvas, once the canvas is showing again
+  const addFromPalette = (type: string) => { setView('canvas'); requestAnimationFrame(() => paletteCmds.find(c => c.id === `add:${type}`)?.run()) }
   if (!wid && id && !loadErr) return <EditorSkeleton />
 
   if (loadErr) return <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4 text-foreground">
@@ -38,8 +50,9 @@ function Studio() {
   </div>
 
   return <StudioContext.Provider value={studio}>
-    <EditorLayout className="text-foreground text-sm" header={<EditorHeader />} left={<EditorPalette />} canvas={<EditorCanvas />}
+    <EditorLayout className="text-foreground text-sm" header={<EditorHeader />} left={<EditorPalette onAdd={mobile ? addFromPalette : undefined} />} canvas={<EditorCanvas />}
       right={<EditorConfig />} bottom={<EditorRunPanel />} rightCollapsed={narrow && !studio.selNode && !studio.selEdge}
+      mobile={mobile ? { view, onView: setView, selected: !!(studio.selNode || studio.selEdge) } : undefined}
       chat={studio.chatOpen && wid ? <ChatSidePanel wid={wid} canConfigure={studio.access === 'owner'} dirty={studio.edit && studio.isDirty()} onClose={() => studio.setChatOpen(false)} /> : undefined} />
   </StudioContext.Provider>
 }

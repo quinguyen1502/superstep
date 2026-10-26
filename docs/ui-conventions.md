@@ -102,6 +102,14 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
     | `<span className="leading-none">21:07</span><span className="font-mono text-xs leading-none">2959fe</span>` | `<span className="inline-flex items-baseline gap-1.5 text-xs"><span className="tabular-nums">21:07</span><span className="font-mono tabular-nums">2959fe</span></span>` |
     | `<div className="flex gap-3 py-1.5">` toolbar | `<div className="flex h-11 items-center gap-2">` |
 
+12. **Node Config uses the same three tabs for every node** (TASK-0121). `components/editor/editor-config.tsx` shows the node's icon, id and Label above a tab bar with **Settings · Data · Execution** (vi: Cài đặt · Dữ liệu · Thực thi), always in that order, so a builder learns once where a setting lives.
+    - **Settings**: what the node does: credential, model, prompts, tools, mode, code, approvers and deadline, a condition's default label.
+    - **Data**: every picker of a state field: output field, steps and history fields, a loop's items/item/index fields, the field a Condition branches on, a Decision's answer fields, and the input fields switch list.
+    - **Execution**: how the node runs: retry, wait, timeout, cache TTL, and limits (Agent max rounds, For each max items).
+    - A tab the node does not use stays in its place, disabled; never hide it or add a node-specific tab. The chosen tab is kept while another node is selected.
+    - A tab whose content needs attention (a required output field, an Agent without tools) shows a `bg-destructive` dot.
+    - A new node type puts each field in the tab this rule names. A settings component that would span tabs exports one part per tab (as `AgentSettings` / `AgentData` / `AgentExecution`).
+
 ## Review checklist
 
 - [ ] No custom widget where shadcn has a component.
@@ -114,4 +122,5 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
 - [ ] Warning/alert icons: destructive for danger, `variant="warning"` / `text-warning` for cautions; none left in the neutral default colour.
 - [ ] New vi strings follow the glossary (rule 10) and `npm test` passes the locale checks.
 - [ ] Controls in one row use one size variant, with no hand-set `h-*`/`py-*`/`leading-*`/`text-[…]` (`npm run lint` passes; any `ui-class-ok:` opt-out gives a reason), and `e2e/alignment.spec.ts` covers new toolbars.
+- [ ] New node fields sit in the Config tab rule 12 names (Settings, Data or Execution).
 - [ ] Screenshots are taken in both light and dark mode for UI changes.

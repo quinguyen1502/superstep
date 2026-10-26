@@ -37,26 +37,27 @@ export function EditorHeader() {
   const { input, name, setName, wid, setErrors, mode, source, setTab, running, access, ownerEmail, edit, canSave, hist, load, toJSON, save, run, cancelRun, layoutDir, cheat, setCheat, dlg, setDlg, delWf, isDirty, paletteCmds, trace, step, continueRun, selNode, d, runTo, chatOpen, setChatOpen, canChat } = useStudioCtx()
   // ⋯ tooltip: hidden while the menu is open and until the pointer leaves after closing it
   const [moreOpen, setMoreOpen] = useState(false); const [moreTip, setMoreTip] = useState(false); const moreTipBlock = useRef(false)
-  return <header className="h-14 shrink-0 grid grid-cols-[minmax(min-content,1fr)_minmax(0,auto)_minmax(min-content,1fr)] items-center border-b px-4">
-      <div className="mr-3 flex min-w-0 items-center gap-2">
+  // phones (TASK-0121): one row of back, name and icon-only actions; account controls stay on the workflow list
+  return <header className="h-14 shrink-0 grid grid-cols-[minmax(min-content,1fr)_minmax(0,auto)_minmax(min-content,1fr)] items-center border-b px-4 max-md:flex max-md:gap-1 max-md:px-2">
+      <div className="mr-3 flex min-w-0 items-center gap-2 max-md:mr-0">
         <Tip tip={t('editor.backToList')}><Button variant="ghost" size="icon" asChild><Link to="/workflows" id="back-btn"><ArrowLeft /></Link></Button></Tip>
         {/* the product name hides when its column is too narrow instead of running under the name field */}
-        <div className="flex min-w-0 flex-1 items-center gap-2 font-semibold" id="header-brand"><LogoMark />
+        <div className="flex min-w-0 flex-1 items-center gap-2 font-semibold max-md:hidden" id="header-brand"><LogoMark />
           <div className="@container min-w-0 flex-1"><span className="hidden whitespace-nowrap @[8.5rem]:inline">Superstep</span></div></div>
       </div>
-      <div className="flex min-w-0 items-center gap-2">
-      <Input value={name} readOnly={!edit} onChange={e => setName(e.target.value)} className="w-72 min-w-28" aria-label={t('editor.nameLabel')} />
-      {edit && isDirty() && <Badge variant="outline" id="unsaved-badge" className="border-warning text-warning">{t('history.unsaved')}</Badge>}
-      {!canSave && <Tip tip={ownerEmail}><Badge variant="secondary" id="view-only">{t('editor.viewOnly')}</Badge></Tip>}
-      {canSave && ownerEmail && <Tip tip={ownerEmail}><Badge variant="outline" id="shared-editor">{t('list.sharedBy', { email: ownerEmail })}</Badge></Tip>}
-      <Tip tip={t('editor.saveTip')}><Button variant="outline" id="save-btn" onClick={save} disabled={!canSave}><Save />{t('common.save')}</Button></Tip>
-      <Tip tip={t('editor.runTip')}><Button id="run-btn" onClick={run} disabled={running}>{running ? <Loader2 className="animate-spin" /> : <Play />}{t('editor.run')}</Button></Tip>
-      {!source && <Tip tip={t('editor.stepTip')}><Button variant="outline" id="step-btn" onClick={step} disabled={running || trace.status === 'waiting'}>{running ? <Loader2 className="animate-spin" /> : <StepForward />}<span className="max-lg:sr-only">{t('editor.step')}</span></Button></Tip>}
-      {!source && <Tip tip={selNode ? t('editor.runToTip', { node: d.label || selNode.id }) : t('editor.runToNeedNode')}><Button variant="outline" id="run-to-btn" onClick={runTo} disabled={running || trace.status === 'waiting' || !selNode || selNode.type === 'note'}><Crosshair /><span className="max-lg:sr-only">{t('editor.runTo')}</span></Button></Tip>}
-      {!running && trace.paused && <Tip tip={t('editor.continueTip')}><Button variant="outline" id="continue-btn" onClick={continueRun}><FastForward />{t('editor.continueRun')}</Button></Tip>}
+      <div className="flex min-w-0 items-center gap-2 max-md:flex-1 max-md:gap-1">
+      <Input value={name} readOnly={!edit} onChange={e => setName(e.target.value)} className="w-72 min-w-28 max-md:w-auto max-md:min-w-0 max-md:flex-1" aria-label={t('editor.nameLabel')} />
+      {edit && isDirty() && <Badge variant="outline" id="unsaved-badge" className="border-warning text-warning max-md:hidden">{t('history.unsaved')}</Badge>}
+      {!canSave && <Tip tip={ownerEmail}><Badge variant="secondary" id="view-only" className="max-md:hidden">{t('editor.viewOnly')}</Badge></Tip>}
+      {canSave && ownerEmail && <Tip tip={ownerEmail}><Badge variant="outline" id="shared-editor" className="max-md:hidden">{t('list.sharedBy', { email: ownerEmail })}</Badge></Tip>}
+      <Tip tip={t('editor.saveTip')}><Button variant="outline" id="save-btn" onClick={save} disabled={!canSave}><Save /><span className="max-md:sr-only">{t('common.save')}</span></Button></Tip>
+      <Tip tip={t('editor.runTip')}><Button id="run-btn" onClick={run} disabled={running}>{running ? <Loader2 className="animate-spin" /> : <Play />}<span className="max-md:sr-only">{t('editor.run')}</span></Button></Tip>
+      {!source && <Tip tip={t('editor.stepTip')}><Button variant="outline" id="step-btn" className="max-md:hidden" onClick={step} disabled={running || trace.status === 'waiting'}>{running ? <Loader2 className="animate-spin" /> : <StepForward />}<span className="max-lg:sr-only">{t('editor.step')}</span></Button></Tip>}
+      {!source && <Tip tip={selNode ? t('editor.runToTip', { node: d.label || selNode.id }) : t('editor.runToNeedNode')}><Button variant="outline" id="run-to-btn" className="max-md:hidden" onClick={runTo} disabled={running || trace.status === 'waiting' || !selNode || selNode.type === 'note'}><Crosshair /><span className="max-lg:sr-only">{t('editor.runTo')}</span></Button></Tip>}
+      {!running && trace.paused && <Tip tip={t('editor.continueTip')}><Button variant="outline" id="continue-btn" onClick={continueRun}><FastForward /><span className="max-md:sr-only">{t('editor.continueRun')}</span></Button></Tip>}
       {canChat && <Tip tip={t('chat.openTip')}><Button variant={chatOpen ? 'secondary' : 'outline'} id="chat-open" aria-pressed={chatOpen} onClick={() => setChatOpen(!chatOpen)}><MessagesSquare /><span className="max-lg:sr-only">{t('chat.tab')}</span></Button></Tip>}
-      {running && <Tip tip={t('editor.cancelTip')}><Button variant="outline" id="cancel-btn" onClick={cancelRun}><Square />{t('common.cancel')}</Button></Tip>}
-      {edit && <div className="flex items-center" role="group" aria-label={t('history.group')}>
+      {running && <Tip tip={t('editor.cancelTip')}><Button variant="outline" id="cancel-btn" onClick={cancelRun}><Square /><span className="max-md:sr-only">{t('common.cancel')}</span></Button></Tip>}
+      {edit && <div className="flex items-center max-md:hidden" role="group" aria-label={t('history.group')}>
         <Tip tip={t('history.undoTip')}><Button variant="ghost" size="icon" id="undo-btn" aria-label={t('history.undo')} disabled={!hist.canUndo} onClick={hist.undo}><Undo2 /></Button></Tip>
         <Tip tip={t('history.redoTip')}><Button variant="ghost" size="icon" id="redo-btn" aria-label={t('history.redo')} disabled={!hist.canRedo} onClick={hist.redo}><Redo2 /></Button></Tip></div>}
       <DropdownMenu open={moreOpen} onOpenChange={o => { setMoreOpen(o); if (o) setMoreTip(false); else moreTipBlock.current = true }}>
@@ -93,13 +94,13 @@ export function EditorHeader() {
       {delWf.dialog}
       {/* the right column is never narrower than its icons, so it cannot cover the centre actions; the info badges
           take what is left (TASK-0039) and hide whole when they do not fit, never as a clipped half badge */}
-      <div className="@container flex min-w-0 flex-1 items-center justify-end overflow-hidden" id="header-info">
+      <div className="@container flex min-w-0 flex-1 items-center justify-end overflow-hidden max-md:hidden" id="header-info">
       <div className="flex items-center gap-2">
       {source && <Tip tip={t('editor.importedTip', { src: source.repo_url || 'zip', ref: source.ref })}><Badge variant="secondary" className="gap-1"><GitFork className="size-3" />{t('editor.imported')}</Badge></Tip>}
       <Badge variant="secondary" className="hidden @[7rem]:inline-flex" id="llm-mode-badge">{t('editor.llmMode', { mode })}</Badge>
       {wid && <Badge variant="outline" className="hidden @[16rem]:inline-flex" id="wid-badge">{t('editor.idBadge', { id: wid })}</Badge>}
       </div></div>
-      <PendingBadge /><NotificationBell /><LanguageSwitcher /><ThemeToggle /><UserMenu />
+      <div className="contents max-md:hidden"><PendingBadge /><NotificationBell /><LanguageSwitcher /><ThemeToggle /><UserMenu /></div>
       </div>
     </header>
 }

@@ -47,12 +47,17 @@ export function EmailSettings({ data, fields, creds, providers, readOnly, onChan
     </Row>
     <Row label={t('email.body')}>{tpl('body', 6)}</Row>
     {data.format === 'html' && <p className="text-[11px] text-muted-foreground" id="email-html-hint">{t('email.htmlHint', { field: '{{state.…}}' })}</p>}
-    <Row label={t('email.outputField')} htmlFor="email-output">
-      <Select value={data.output_field || 'none'} onValueChange={v => onChange({ output_field: v === 'none' ? '' : v })}>
-        <SelectTrigger className="w-full" id="email-output"><SelectValue /></SelectTrigger>
-        <SelectContent><SelectItem value="none">{t('email.outputNone')}</SelectItem>
-          {fields.filter(f => f.type === 'object' && (!f.reducer || f.reducer === 'replace')).map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
-    </Row>
     <p className="text-[11px] text-muted-foreground" id="email-hint">{t('email.hint')}</p>
   </div>
+}
+
+/** Data tab (TASK-0121): the optional object field that receives the send result. */
+export function EmailData({ data, fields, onChange }: Pick<Props, 'data' | 'fields' | 'onChange'>) {
+  const { t } = useTranslation()
+  return <Row label={t('email.outputField')} htmlFor="email-output">
+    <Select value={data.output_field || 'none'} onValueChange={v => onChange({ output_field: v === 'none' ? '' : v })}>
+      <SelectTrigger className="w-full" id="email-output"><SelectValue /></SelectTrigger>
+      <SelectContent><SelectItem value="none">{t('email.outputNone')}</SelectItem>
+        {fields.filter(f => f.type === 'object' && (!f.reducer || f.reducer === 'replace')).map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
+  </Row>
 }

@@ -34,7 +34,6 @@ export function DecisionSettings({ data, fields, creds, providers, readOnly, onC
   const kind = (c: Credential) => providers.find(p => p.id === c.provider)?.kind
   const usable = creds.filter(c => kind(c) === 'decision')
   const nextId = () => { let n = qs.length + 1; while (qs.some(q => q.id === `q${n}`)) n++; return `q${n}` }
-  const plain = fields.filter(f => !f.reducer || f.reducer === 'replace')
   return <div className="space-y-3" id="decision-settings">
     <Row label={t('decision.credential')} htmlFor="decision-credential">
       <Select value={data.credential_id || 'none'} onValueChange={v => onChange({ credential_id: v === 'none' ? '' : v })}>
@@ -82,21 +81,31 @@ export function DecisionSettings({ data, fields, creds, providers, readOnly, onC
           </div>)}
           <Button variant="outline" size="sm" id={`dq-${i}-add-level`} onClick={() => setQ(i, { levels: [...(q.levels || []), ''] })}><Plus />{t('decision.addLevel')}</Button>
         </Row>}
-        <Row label={t('decision.field')} htmlFor={`dq-${i}-field`}>
-          <Select value={q.field || 'none'} onValueChange={v => setQ(i, { field: v === 'none' ? '' : v })}>
-            <SelectTrigger className="w-full" id={`dq-${i}-field`}><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="none">{t('decision.fieldNone')}</SelectItem>
-              {plain.filter(f => f.type === FIELD_TYPE[q.type]).map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
-        </Row>
       </div>)}
       <Button variant="outline" size="sm" id="dq-add" onClick={() => onChange({ questions: [...qs, blank('choice', nextId())] })}><Plus />{t('decision.addQuestion')}</Button>
     </div>
+    <p className="text-[11px] text-muted-foreground" id="decision-hint">{t('decision.hint')}</p>
+  </div>
+}
+
+/** Data tab (TASK-0121): the field each question's answer goes to, then the field for the whole result. */
+export function DecisionData({ data, fields, onChange }: Pick<Props, 'data' | 'fields' | 'onChange'>) {
+  const { t } = useTranslation()
+  const qs = data.questions || []
+  const plain = fields.filter(f => !f.reducer || f.reducer === 'replace')
+  const setQ = (i: number, patch: Partial<Question>) => onChange({ questions: qs.map((q, k) => k === i ? { ...q, ...patch } : q) })
+  return <div className="space-y-3" id="decision-data">
+    {qs.map((q, i) => <Row key={q.id} label={t('decision.fieldFor', { id: q.id })} htmlFor={`dq-${i}-field`}>
+      <Select value={q.field || 'none'} onValueChange={v => setQ(i, { field: v === 'none' ? '' : v })}>
+        <SelectTrigger className="w-full" id={`dq-${i}-field`}><SelectValue /></SelectTrigger>
+        <SelectContent><SelectItem value="none">{t('decision.fieldNone')}</SelectItem>
+          {plain.filter(f => f.type === FIELD_TYPE[q.type]).map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
+    </Row>)}
     <Row label={t('decision.outputField')} htmlFor="decision-output">
       <Select value={data.output_field || 'none'} onValueChange={v => onChange({ output_field: v === 'none' ? '' : v })}>
         <SelectTrigger className="w-full" id="decision-output"><SelectValue /></SelectTrigger>
         <SelectContent><SelectItem value="none">{t('decision.fieldNone')}</SelectItem>
           {plain.filter(f => f.type === 'object').map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
     </Row>
-    <p className="text-[11px] text-muted-foreground" id="decision-hint">{t('decision.hint')}</p>
   </div>
 }

@@ -17,10 +17,26 @@
 | [Subgraph](#subgraph) | Chạy một workflow đã lưu bên trong workflow này | các trường dùng chung |
 | [Code (imported)](#code-imported) | Node chỉ đọc từ repo đã import | — |
 
+## Các tab cấu hình
+
+Chọn một node, panel **Cấu hình** hiện loại node, id và **Nhãn**, rồi đến ba
+tab giống nhau cho mọi node, luôn theo thứ tự này:
+
+| Tab | Nội dung |
+| --- | --- |
+| **Cài đặt** | Node làm gì: credential, model, prompt, công cụ, chế độ, code, người duyệt và hạn chờ. |
+| **Dữ liệu** | Mọi lựa chọn trường state: trường output, trường các bước và trường lịch sử của Agent, các trường của vòng lặp, trường Condition dùng để rẽ nhánh, trường nhận câu trả lời của Decision, và **Trường input**. |
+| **Thực thi** | Node chạy thế nào: retry, timeout, cache và các giới hạn như số vòng tối đa của Agent hay số phần tử tối đa của vòng lặp. |
+
+Tab mà node không dùng vẫn ở nguyên chỗ, chỉ bị làm mờ. Panel giữ tab bạn đã
+chọn khi bạn chọn node khác, nên bạn có thể mở **Dữ liệu** rồi bấm lần lượt
+các node để xem mỗi node ghi vào đâu. Chấm đỏ trên một tab nghĩa là trong đó
+có chỗ cần xem lại, ví dụ chưa chọn trường output.
+
 ## Cấu hình thực thi
 
-Node LLM, Agent, Decision, Retriever, Tool, MCP tool và Human có mục **Thực
-thi** trong cấu hình:
+Node LLM, Agent, Decision, Retriever, Tool, MCP tool và Human có các cấu hình
+sau trong tab **Thực thi**:
 
 | Cấu hình | Tác dụng |
 | --- | --- |

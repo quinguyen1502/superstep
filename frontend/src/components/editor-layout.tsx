@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Blocks, MessagesSquare, Play, SlidersHorizontal, Workflow, type LucideIcon } from 'lucide-react'
 import { usePanelRef, type PanelSize } from 'react-resizable-panels'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CANVAS_MIN, CHAT_WIDTH, PANEL_MIN, chatStore, panelStore, type PanelSizes } from '@/lib/panel-sizes'
 import { cn } from '@/lib/utils'
 
@@ -9,8 +11,49 @@ import { cn } from '@/lib/utils'
  * borders drag; the canvas takes what is left. Sizes are read once per mount and saved after a user drag only, so the
  * loading skeleton and the next workflow open with the same sizes.
  * Chat (TASK-0085) is a full-height column right of all of it, 340–760px, its width saved the same way. Config stays
- * beside the chat; `rightCollapsed` folds it away (narrow screens with nothing selected) and drags back open. */
-export function EditorLayout({ header, left, canvas, right, bottom, chat, rightCollapsed = false, className, busy }: {
+ * beside the chat; `rightCollapsed` folds it away (narrow screens with nothing selected) and drags back open.
+ * With `mobile` set (phones, TASK-0121) the panes stack instead and a bottom tab bar switches between them. */
+export function EditorLayout({ header, left, canvas, right, bottom, chat, rightCollapsed = false, className, busy, mobile }: {
+  header: ReactNode; left: ReactNode; canvas: ReactNode; right: ReactNode; bottom: ReactNode; chat?: ReactNode; rightCollapsed?: boolean; className?: string; busy?: boolean
+  mobile?: MobileViews
+}) {
+  if (mobile) return <MobileEditorLayout {...{ header, left, canvas, right, bottom, chat, className, busy, ...mobile }} />
+  return <DesktopEditorLayout {...{ header, left, canvas, right, bottom, chat, rightCollapsed, className, busy }} />
+}
+
+export type MobileView = 'canvas' | 'nodes' | 'config' | 'run' | 'chat'
+/** Phone layout: which pane shows, and a dot on Config while a node or edge is selected. */
+export type MobileViews = { view: MobileView; onView: (v: MobileView) => void; selected?: boolean }
+
+/** Phones (TASK-0121): one pane at a time under the header, picked from a tab bar at the bottom. Every pane stays
+ * mounted (only hidden), so the canvas keeps its viewport and the run panel its scroll when you switch. */
+function MobileEditorLayout({ header, left, canvas, right, bottom, chat, className, busy, view, onView, selected }: {
+  header: ReactNode; left: ReactNode; canvas: ReactNode; right: ReactNode; bottom: ReactNode; chat?: ReactNode; className?: string; busy?: boolean
+} & MobileViews) {
+  const { t } = useTranslation()
+  const panes: [MobileView, LucideIcon, string, ReactNode][] = [
+    ['canvas', Workflow, t('editor.mobileNav.canvas'), canvas], ['nodes', Blocks, t('editor.mobileNav.nodes'), left],
+    ['config', SlidersHorizontal, t('editor.config'), right], ['run', Play, t('editor.tabRun'), bottom],
+    ...(chat ? [['chat', MessagesSquare, t('chat.tab'), chat] as [MobileView, LucideIcon, string, ReactNode]] : [])]
+  const current = view === 'chat' && !chat ? 'canvas' : view
+  return <div className={cn('h-dvh flex flex-col bg-background', className)} aria-busy={busy || undefined}>
+    {header}
+    <Tabs value={current} onValueChange={v => onView(v as MobileView)} className="min-h-0 flex-1 gap-0" id="mobile-editor">
+      {panes.map(([id, , , node]) => <TabsContent key={id} value={id} forceMount className="min-h-0 data-[state=inactive]:hidden" id={`mobile-pane-${id}`}>{node}</TabsContent>)}
+      <div className="flex h-14 shrink-0 items-center border-t px-2">
+        <TabsList className="w-full" aria-label={t('editor.mobileNav.label')}>
+          {panes.map(([id, I, label]) => <TabsTrigger key={id} value={id} id={`mobile-tab-${id}`} className="min-w-0">
+            {/* five tabs do not fit a phone with labels: the others keep their icon, the label stays for screen readers */}
+            <I /><span className={cn('truncate', panes.length > 4 && id !== current && 'max-sm:sr-only')}>{label}</span>
+            {id === 'config' && selected && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" data-testid="mobile-config-dot" />}
+          </TabsTrigger>)}
+        </TabsList>
+      </div>
+    </Tabs>
+  </div>
+}
+
+function DesktopEditorLayout({ header, left, canvas, right, bottom, chat, rightCollapsed = false, className, busy }: {
   header: ReactNode; left: ReactNode; canvas: ReactNode; right: ReactNode; bottom: ReactNode; chat?: ReactNode; rightCollapsed?: boolean; className?: string; busy?: boolean
 }) {
   const { t } = useTranslation()

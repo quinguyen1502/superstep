@@ -1,5 +1,6 @@
-/** Agent node settings (TASK-0118, REQ-0072): model, prompts, round limit, fields, the tools the model may call (MCP,
- *  HTTP, built-in, knowledge base) and the approval settings for tools that need approval. The engine is
+/** Agent node settings (TASK-0118, REQ-0072): model, prompts, the tools the model may call (MCP, HTTP, built-in,
+ *  knowledge base) and the approval settings for tools that need approval; its fields (`AgentData`) and round limit
+ *  (`AgentExecution`) sit in the Config panel's Data and Execution tabs (TASK-0121). The engine is
  *  `backend/app/engine/agents.py` (DEC-0063). */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -131,11 +132,35 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
 const F = ({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) =>
   <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor={htmlFor}>{label}</Label>{children}</div>
 
-type Props = { data: Record<string, any>; fields: TemplateField[]; fieldNames: string[]; listFields: string[]; creds: Credential[]
-  providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string
-  onChange: (patch: Record<string, any>) => void }
+type Patch = (patch: Record<string, any>) => void
+type Props = { data: Record<string, any>; fields: TemplateField[]; creds: Credential[]
+  providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch }
 
-export function AgentSettings({ data: d, fields, fieldNames, listFields, creds, providers, channels, builtins, readOnly, nodeId, onChange }: Props) {
+/** Data tab (TASK-0121): the fields the agent writes its answer and steps to, and the history it reads. */
+export function AgentData({ data: d, fieldNames, listFields, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; onChange: Patch }) {
+  const { t } = useTranslation()
+  const optional = (key: string, id: string) => <Select value={d[key] || 'none'} onValueChange={v => onChange({ [key]: v === 'none' ? '' : v })}>
+    <SelectTrigger className="w-full" id={id}><SelectValue /></SelectTrigger>
+    <SelectContent><SelectItem value="none">{t('agent.none')}</SelectItem>{listFields.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+  return <div className="space-y-3" id="agent-data">
+    <F label={t('field.outputField')}><Select value={d.output_field || undefined} onValueChange={v => onChange({ output_field: v })}>
+      <SelectTrigger className="w-full" id="agent-output"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
+      <SelectContent>{fieldNames.filter(Boolean).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></F>
+    <F label={t('agent.stepsField')} htmlFor="agent-steps-field">{optional('steps_field', 'agent-steps-field')}<p className="text-[11px] text-muted-foreground">{t('agent.stepsHint')}</p></F>
+    <F label={t('agent.historyField')} htmlFor="agent-history-field">{optional('history_field', 'agent-history-field')}<p className="text-[11px] text-muted-foreground">{t('agent.historyHint')}</p></F>
+  </div>
+}
+
+/** Execution tab (TASK-0121): the round limit, above the shared retry / timeout / cache settings. */
+export function AgentExecution({ data: d, onChange }: { data: Record<string, any>; onChange: Patch }) {
+  const { t } = useTranslation()
+  return <F label={t('agent.maxRounds')} htmlFor="agent-max-rounds"><Input id="agent-max-rounds" type="number" min={1} max={25} value={d.max_rounds ?? 5}
+    onChange={e => onChange({ max_rounds: e.target.value === '' ? undefined : Math.max(1, Math.min(25, Math.round(Number(e.target.value)) || 1)) })} />
+    <p className="text-[11px] text-muted-foreground">{t('agent.maxRoundsHint')}</p></F>
+}
+
+/** Settings tab: model, prompts, tools and the approval settings for tools that need approval. */
+export function AgentSettings({ data: d, fields, creds, providers, channels, builtins, readOnly, nodeId, onChange }: Props) {
   const { t } = useTranslation()
   const [servers, setServers] = useState<McpServer[] | null>(null); const [kbs, setKbs] = useState<KnowledgeBase[] | null>(null)
   useEffect(() => {
@@ -152,9 +177,6 @@ export function AgentSettings({ data: d, fields, fieldNames, listFields, creds, 
   const setTools = (next: AgentTool[], nextKeys: number[]) => { setKeyed({ keys: nextKeys, next: Math.max(keyed.next, ...nextKeys.map(k => k + 1)) }); onChange({ tools: next }) }
   const provider = providers.find(p => p.id === creds.find(c => c.id === d.credential_id)?.provider)
   const tpl = { fields, readOnly, placeholder: t('template.placeholder', { open: '{{' }) }
-  const optional = (key: string, opts: string[], id: string) => <Select value={d[key] || 'none'} onValueChange={v => onChange({ [key]: v === 'none' ? '' : v })}>
-    <SelectTrigger className="w-full" id={id}><SelectValue /></SelectTrigger>
-    <SelectContent><SelectItem value="none">{t('agent.none')}</SelectItem>{opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
   return <div className="space-y-3" id="agent-settings">
     <F label={t('editor.credential')} htmlFor="agent-credential"><Select value={d.credential_id || 'none'} onValueChange={v => onChange({ credential_id: v === 'none' ? '' : v })}>
       <SelectTrigger className="w-full" id="agent-credential"><SelectValue /></SelectTrigger>
@@ -164,14 +186,6 @@ export function AgentSettings({ data: d, fields, fieldNames, listFields, creds, 
     <F label={t('field.model')}><ModelPicker idp="agent-model" credentialId={d.credential_id || undefined} value={d.model || ''} onChange={v => onChange({ model: v })} placeholder={provider?.default_model || 'gpt-4o-mini'} /></F>
     <F label={t('agent.systemPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={3} id="agent-system-prompt" value={d.system_prompt || ''} onChange={v => onChange({ system_prompt: v })} /></F>
     <F label={t('agent.taskPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={5} id="agent-prompt" value={d.prompt || ''} onChange={v => onChange({ prompt: v })} /></F>
-    <F label={t('agent.maxRounds')} htmlFor="agent-max-rounds"><Input id="agent-max-rounds" type="number" min={1} max={25} value={d.max_rounds ?? 5}
-      onChange={e => onChange({ max_rounds: e.target.value === '' ? undefined : Math.max(1, Math.min(25, Math.round(Number(e.target.value)) || 1)) })} />
-      <p className="text-[11px] text-muted-foreground">{t('agent.maxRoundsHint')}</p></F>
-    <F label={t('field.outputField')}><Select value={d.output_field || undefined} onValueChange={v => onChange({ output_field: v })}>
-      <SelectTrigger className="w-full" id="agent-output"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
-      <SelectContent>{fieldNames.filter(Boolean).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></F>
-    <F label={t('agent.stepsField')} htmlFor="agent-steps-field">{optional('steps_field', listFields, 'agent-steps-field')}<p className="text-[11px] text-muted-foreground">{t('agent.stepsHint')}</p></F>
-    <F label={t('agent.historyField')} htmlFor="agent-history-field">{optional('history_field', listFields, 'agent-history-field')}<p className="text-[11px] text-muted-foreground">{t('agent.historyHint')}</p></F>
     <Separator />
     <div className="flex items-center gap-2">
       <span className="flex-1 text-xs font-semibold uppercase text-muted-foreground">{t('agent.tools')}</span>

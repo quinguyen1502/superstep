@@ -23,6 +23,7 @@ import { EditorTestsPanel, TestCaseDialog, type TestCase } from './editor-tests-
 import { EditorCodePanel } from './editor-code-panel'
 import { TimeTravelDialog } from './time-travel-dialog'
 import { useStudioCtx } from './studio-context'
+import { useIsMobile } from '@/lib/use-viewport-width'
 
 /** Bottom panel (TASK-0085): Run (input | logs side by side, a picker for the last runs and a dialog with all of them),
  * Test (TASK-0067) and Code (TASK-0071). Chat lives in its own side panel (components/chat/chat-side-panel.tsx). */
@@ -31,6 +32,7 @@ export function EditorRunPanel() {
   const { input, setInput, log, setLog, errors, history, tab, setTab, running, traceSel, setTraceSel, replay, setReplay, openRun, respond, fork, trace, traceMeta, wid, source, edit } = useStudioCtx()
   // the "Test runs" switch lists the workflow's test runs instead of its other runs (TASK-0067)
   const [testRuns, setTestRuns] = useState<any[] | null>(null)
+  const mobile = useIsMobile()  // phones (TASK-0121): input above the logs instead of beside them
   const showTests = (on: boolean) => { if (!on || !wid) { setTestRuns(null); return } api<any[]>(`/api/workflows/${wid}/runs?tests=true`).then(setTestRuns).catch(() => setTestRuns([])) }
   const rows = testRuns ?? history
   // Save as test case (TASK-0068): a draft from the run opens in the test case editor; once saved, the Tests tab shows it
@@ -57,16 +59,16 @@ export function EditorRunPanel() {
         </Tabs>
         {mode === 'run' && <>
           <Select value={pick ? pick.id : ''} onValueChange={id => { const h = rows.find(x => x.id === id); if (h) openRun(h) }}>
-            <SelectTrigger variant="ghost" className="w-auto min-w-56" id="run-picker" aria-label={t('editor.pickRun')}><SelectValue placeholder={t('editor.pickRun')} /></SelectTrigger>
+            <SelectTrigger variant="ghost" className="w-auto min-w-56 max-md:min-w-0 max-md:flex-1" id="run-picker" aria-label={t('editor.pickRun')}><SelectValue placeholder={t('editor.pickRun')} /></SelectTrigger>
             <SelectContent>{rows.slice(0, 10).map(h => <SelectItem key={h.id} value={h.id}>
               <Badge variant={h.status === 'ok' ? 'success' : h.status === 'waiting' ? 'outline' : h.status === 'cancelled' ? 'secondary' : 'destructive'}>{t(`status.${h.status}`)}</Badge>
               <span className="inline-flex items-baseline gap-1.5 text-xs"><span className="tabular-nums text-muted-foreground" data-slot="run-time">{new Date(h.started * 1000).toLocaleTimeString(i18n.resolvedLanguage)}</span>
               <span className="font-mono tabular-nums" data-slot="run-id">{h.id}</span></span></SelectItem>)}</SelectContent></Select>
-          <Button variant="ghost" id="history-all" onClick={() => setAllOpen(true)}><History />{t('editor.viewAllRuns')}</Button>
+          <Button variant="ghost" id="history-all" onClick={() => setAllOpen(true)}><History /><span className="max-md:sr-only">{t('editor.viewAllRuns')}</span></Button>
         </>}
         {errors.length > 0 && <Badge variant="destructive">{t('editor.errorsBadge', { count: errors.length })}</Badge>}
       </div>
-      {mode === 'run' && <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+      {mode === 'run' && <ResizablePanelGroup key={mobile ? 'v' : 'h'} orientation={mobile ? 'vertical' : 'horizontal'} className="min-h-0 flex-1">
         <ResizablePanel id="run-input-panel" defaultSize="35%" minSize="20%" className="min-h-0"><div className="flex h-full min-h-0 flex-col gap-2 p-3">
           <span className="text-xs font-medium text-muted-foreground">{t('editor.tabInput')}</span>
           <JsonEditor id="run-input" value={input} onChange={setInput} className="min-h-0 flex-1" />

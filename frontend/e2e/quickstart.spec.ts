@@ -59,7 +59,9 @@ for (const lang of ['en', 'vi'] as Lang[]) {
         await page.locator('#panel-left').getByRole('button', { name: s.addField }).click()
         await page.locator('#panel-left input').last().fill(name)
       }
-      const pickOutput = async (name: string) => { await field(s.output).getByRole('combobox').click(); await page.getByRole('option', { name, exact: true }).click() }
+      // the output field is in the Config panel's Data tab (TASK-0121); back to Settings afterwards
+      const configTab = (k: 'settings' | 'data') => page.locator(`#config-tab-${k}`).click()
+      const pickOutput = async (name: string) => { await configTab('data'); await field(s.output).getByRole('combobox').click(); await page.getByRole('option', { name, exact: true }).click() }
 
       await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
       await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
@@ -119,14 +121,14 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await field(s.label).locator('input').fill(s.draft)
       await page.locator('#llm-prompt').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.insertText(s.prompt)
       await addField('reply'); await pickOutput('reply')
-      await snap('llm-config', { prompt: page.locator('#llm-prompt'), output: field(s.output), state: page.locator('#panel-left input').last(), human: page.locator(human) })
-      await page.locator(human).click()
+      await snap('llm-config', { tabs: page.locator('#config-tabs'), output: field(s.output), state: page.locator('#panel-left input').last(), human: page.locator(human) })
+      await page.locator(human).click(); await configTab('settings')
       await field(s.label).locator('input').fill(s.approve)
       await page.locator('#human-prompt').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.insertText(s.question)
-      await addField('decision'); await pickOutput('decision')
+      await addField('decision'); await pickOutput('decision'); await configTab('settings')
       // Send the request to Slack as well; the studio still shows it to the run's owner
       await page.locator('#approval-channel').scrollIntoViewIfNeeded()
-      await snap('human-config', { prompt: page.locator('#human-prompt'), output: field(s.output), channel: page.locator('#approval-channel') })
+      await snap('human-config', { prompt: page.locator('#human-prompt'), tabs: page.locator('#config-tabs'), channel: page.locator('#approval-channel') })
       await page.locator('#approval-channel').click(); await expect(page.getByRole('option', { name: /Slack/ })).toBeVisible()
       await snap('channels', { list: page.getByRole('listbox'), slack: page.getByRole('option', { name: /Slack/ }) })
       await page.getByRole('option', { name: /Slack/ }).click()
