@@ -197,7 +197,7 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | Tool: function | a stub that throws: the function is Python on the server |
 | Tool: HTTP | `fetch`, without following redirects |
 | Retriever, MCP, Send email | stubs with a `TODO`, as in the Python file |
-| Agent | not exported yet: `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED`; export the workflow as Python |
+| Agent | the entry, model, tool and end steps, as in the Python file; `callAgent` is the mock, or `initChatModel` with `bindTools` when `LLM_PROVIDER` is set. Built-in tools are stubs that throw |
 | Retry, cache, input fields, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` on `addNode` |
 
 API keys and other settings are read from environment variables

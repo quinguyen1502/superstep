@@ -2,6 +2,34 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## 0.8.0 (2026-10-26)
+
+### Added
+
+- **Agent nodes in the TypeScript export** (TASK-0125). A workflow with an Agent node, also inside a subgraph, now
+  exports as LangGraph.js: the entry, model, tool and end steps as in the Python file, the studio's mock agent
+  offline, LangChain.js `initChatModel` with `bindTools` when `LLM_PROVIDER` is set, and `interrupt()` before a tool
+  that needs approval. MCP and knowledge base tools call stubs; built-in tools are Python functions, so they throw
+  and the model is told. The error code `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED` is gone. Handbook: Agent node and
+  Export to Python (en, vi).
+
+### Changed
+
+- **Templates say what they still need** (TASK-0126). A workflow made from a template opens with the list of what it
+  needs before it can run (for example a knowledge base for the RAG and Support agent templates), and a knowledge
+  base picker with nothing chosen shows a hint, on the Retriever node and on an Agent node's knowledge base tool.
+
+### Fixed
+
+- **An answer accepted just before a restart is no longer lost** (TASK-0127). With the in-memory job queue (no
+  `REDIS_URL`), an answer to a waiting run (from the Approvals inbox, a chat channel, a deadline, MCP `resume_run`,
+  `/api/lg` or a workflow test) only existed as a queued job: a restart before a worker took it left the run waiting,
+  and the inbox and channels refused a second answer. The answer is now kept on the run (`runs.resume_job`,
+  migration 0039) until the run moves on, and start-up recovery queues it again; a run cut off right after it took
+  the answer goes back to waiting and resumes, instead of starting over.
+- The Vietnamese label of the function picker (Tool node, an Agent node's built-in tool) is "Hàm", not "Function".
+- "1 error to fix", not "1 errors to fix", in the Run panel.
+
 ## 0.7.0 (2026-10-26)
 
 ### Added

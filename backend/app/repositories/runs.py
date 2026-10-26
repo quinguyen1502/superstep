@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 from sqlalchemy import delete, or_, select, update
 from ..models import Run
@@ -48,16 +49,28 @@ class RunRepository:
             s.execute(update(Run).where(Run.id == rid).values(status=status)); s.commit()
 
     def save_progress(self, rid: str, events: str, checkpoint: str, fence: Optional[int] = None) -> None:
-        """Progress checkpoint of a running queue job (TASK-0020); only while it is still running.
-        Fenced (TASK-0021): raises StaleLease when another worker holds a newer generation."""
+        """Progress checkpoint of a running queue job (TASK-0020); only while it is still running. A kept answer is
+        used up from here on (TASK-0127). Fenced (TASK-0021): raises StaleLease when another worker holds a newer generation."""
         with self.db.session() as s:
             q = update(Run).where(Run.id == rid, Run.status == "running")
             if fence is not None: q = q.where(Run.lease_gen == fence)
-            if s.execute(q.values(events=events, checkpoint=checkpoint)).rowcount != 1 and fence is not None:
+            if s.execute(q.values(events=events, checkpoint=checkpoint, resume_job=None)).rowcount != 1 and fence is not None:
                 s.rollback()
                 if s.scalar(select(Run.lease_gen).where(Run.id == rid)) != fence: raise StaleLease(rid)
                 return
             s.commit()
+
+    def keep_resume(self, job: dict) -> None:
+        """Keep the answer to a waiting run until the resumed segment records progress or a result (TASK-0127)."""
+        with self.db.session() as s:
+            s.execute(update(Run).where(Run.id == job["run_id"], Run.status == "waiting").values(resume_job=json.dumps(job, ensure_ascii=False)))
+            s.commit()
+
+    def list_resumes(self, limit: int = 500) -> list[Run]:
+        """Runs with a kept answer: still waiting (the job was never taken), or claimed with nothing recorded since."""
+        with self.db.session() as s:
+            return list(s.scalars(select(Run).where(Run.resume_job.is_not(None), Run.status.in_(("waiting", "running")))
+                                  .order_by(Run.started).limit(limit)))
 
     def list_waiting(self, owner: str, limit: int = 100) -> list[Run]:
         """Runs waiting for this user's answer; a workflow test answers its own (TASK-0067)."""

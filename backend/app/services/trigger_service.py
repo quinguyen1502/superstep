@@ -7,7 +7,7 @@ from ..core.logging import get_logger
 from ..engine.limits import size
 from ..models import Run, WorkflowToken
 from ..repositories import RunRepository, WorkflowRepository, WorkflowTokenRepository
-from .job_queue import JobQueue
+from .job_queue import JobQueue, enqueue_resume
 from .rate_limit import RateLimiter
 from .run_service import human_response
 from .telemetry import trace_url
@@ -126,7 +126,8 @@ class TriggerService:
         r = self.runs.get(rid)
         if r is None or r.workflow_id != tok.workflow_id or r.owner != tok.owner: raise AppError("RUN_NOT_FOUND")
         if r.status != "waiting": raise AppError("RUN_NOT_WAITING")
-        self.jobs.enqueue({"kind": "resume", "run_id": r.id, "owner": r.owner, "response": human_response(response), "workflow_id": r.workflow_id})
+        enqueue_resume(self.runs, self.jobs.enqueue, {"kind": "resume", "run_id": r.id, "owner": r.owner, "response": human_response(response),
+                                                      "workflow_id": r.workflow_id})
         return r.ended or 0.0
 
     async def wait(self, tok: WorkflowToken, rid: str, timeout: float, since: Optional[float] = None) -> dict:

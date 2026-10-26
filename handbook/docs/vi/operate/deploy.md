@@ -109,6 +109,7 @@ nên khởi động lại hay sập server đều không mất run đang dừng:
 | Run | Sau khi khởi động lại |
 | --- | --- |
 | Đang dừng ở node Human | Vẫn đang chờ. Trả lời trong studio, kênh chat hoặc API như trước; run chạy tiếp từ checkpoint. |
+| Đã được trả lời nhưng chưa chạy tiếp | Chạy tiếp với câu trả lời đó. Câu trả lời được giữ trên run cho tới khi run chạy tiếp, nên câu trả lời nhận ngay trước lúc khởi động lại không bị mất. |
 | Run API, lịch, chat hoặc test đang chờ hoặc đang chạy | Chạy tiếp từ node đã xong cuối cùng. Job trong hàng đợi lưu checkpoint tiến độ sau mỗi node; node đang chạy dở chạy lại, các lần gọi đã xong không lặp lại ([side effect gần như đúng một lần](../reference/architecture.md#side-effect-gan-nhu-ung-mot-lan)). |
 | Đang chạy trong editor | Kết thúc cùng kết nối của trình duyệt; run chỉ được lưu khi xong. Hãy chạy lại. |
 
@@ -118,7 +119,8 @@ Cách các run chưa xong quay lại tùy hàng đợi:
   kỳ nhận lại.
 - **Hàng đợi trong bộ nhớ** (không có `REDIS_URL`, một process): job trong bộ
   nhớ đã mất, nên khi khởi động server đưa mọi run `queued` hoặc `running` vào
-  lại hàng đợi dưới dạng job khôi phục. Chỉ đặt `STUDIO_RECOVER_ON_START=0` khi
+  lại hàng đợi dưới dạng job khôi phục, cùng mọi câu trả lời đang giữ trên run
+  chưa chạy tiếp. Chỉ đặt `STUDIO_RECOVER_ON_START=0` khi
   nhiều process API dùng chung một database mà không có Redis, vì process này
   sẽ nhận mất run của process kia.
 

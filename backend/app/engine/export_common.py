@@ -204,6 +204,17 @@ class GraphWriter:
         ok = n["type"] != "subgraph" and isinstance(names, list) and names and all(x in known for x in names)
         return list(names) if ok else []
 
+    @staticmethod
+    def http_key(const: str, t: dict) -> str:
+        """The constant prefix of an Agent node's HTTP tool (its URL and body templates)."""
+        return f"{const}_{re.sub(r'[^A-Za-z0-9]', '_', t.get('name') or '').upper()}"
+
+    @staticmethod
+    def rounds(d: dict) -> int:
+        """An Agent node's round limit, as the studio reads it."""
+        r = d.get("max_rounds", agents.DEFAULT_ROUNDS)
+        return r if isinstance(r, int) and not isinstance(r, bool) and 1 <= r <= agents.MAX_ROUNDS else agents.DEFAULT_ROUNDS
+
     def questions(self, d: dict) -> List[dict]:
         """A Decision node's questions, reduced to what the exported decide() needs."""
         qs = []

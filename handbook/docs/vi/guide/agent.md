@@ -177,15 +177,16 @@ nó không hoàn tiền thật.
   [Xuất ra Python](python-export.md#mot-node-agent)): node Agent thành đúng các
   bước như trong studio, có `interrupt()` trước công cụ cần duyệt. Khi không
   đặt `LLM_PROVIDER`, file dùng cùng bản mock.
-- **TypeScript** chưa xuất được workflow có node Agent, kể cả trong subgraph:
-  API trả về `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED`.
+- **TypeScript** (LangGraph.js): cũng các bước đó, cùng bản mock và
+  `interrupt()`. Công cụ MCP và kho tri thức gọi stub, như file Python. Công cụ
+  có sẵn là hàm Python trên server nên sẽ ném lỗi: model được báo công cụ lỗi,
+  và bạn cần chuyển các hàm đó sang TypeScript.
 
 ## Lỗi
 
 | Mã | Khi nào |
 | --- | --- |
 | `AGENT_TOOLS_UNSUPPORTED` | Nhà cung cấp của credential không gọi được công cụ (TypeSafe, SMTP). Bước model lỗi khi chạy. |
-| `TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED` | Xuất TypeScript một workflow có node Agent. |
 | `WORKFLOW_INVALID` | Chạy một workflow mà editor đánh dấu chưa hợp lệ: thiếu prompt nhiệm vụ, không có công cụ, số vòng ngoài khoảng cho phép, công cụ thiếu cấu hình (máy chủ và công cụ, hàm, kho tri thức hoặc URL), hai công cụ trùng tên, hoặc trường các bước hay trường lịch sử không phải list. |
 
 Mọi mã lỗi có trong [Mã lỗi](../reference/errors.md).

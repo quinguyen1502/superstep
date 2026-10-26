@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { addEdge, useNodesState, useEdgesState, useReactFlow, type Node, type Edge, type Connection } from '@xyflow/react'
 import { Trash2, Braces, ArrowRight, ArrowDown, History, LayoutTemplate, Share2, Webhook, CalendarClock, MessageSquare, MessagesSquare, Search, FileCode2 } from 'lucide-react'
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
+import { useLocation, useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { freeSpot, openPalette, registerCommands, type PaletteCommand } from '@/lib/palette'
 import { useDeleteWorkflow } from '@/components/delete-workflow'
 import { SHORTCUTS } from '@/lib/shortcuts'
@@ -26,7 +26,7 @@ import { META, INSERTABLE, DEFAULTS, samplePrompt, MENU_OF, MENU_IDS, ACTION_ICO
 
 /** Editor state and actions (TASK-0040: moved out of pages/Editor.tsx). Panels read it through StudioContext. */
 export function useStudio() {
-  const { t } = useTranslation(); const { id } = useParams(); const [params] = useSearchParams()
+  const { t } = useTranslation(); const { id } = useParams(); const [params] = useSearchParams(); const loc = useLocation()
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [state, setState] = useState<Field[]>([])
@@ -76,6 +76,12 @@ export function useStudio() {
   // each workflow id loads the graph, its run history (?run=<id> opens that run), and the editor's lookups
   const openWorkflow = useEffectEvent(() => {
     api(`/api/workflows/${id}`).then(wf => { setLoadErr(null); load(wf)
+      // a workflow just made from a template: what it still needs (a knowledge base, a server...), as a save shows it
+      const pending = (loc.state as { errors?: unknown } | null)?.errors
+      if (Array.isArray(pending) && pending.length) {
+        setErrors(pending.map(String)); setTab('input')
+        nav(`${loc.pathname}${loc.search}`, { replace: true, state: null })  // once: a reload must not bring them back
+      }
       // ?run=<id> (from the pending list) opens that run with its Human panel
       loadHistory(wf.id)?.then((hs: any[]) => { const h = hs?.find(x => x.id === params.get('run')); if (h) openRun(h) }) })
       .catch(e => setLoadErr({ status: e.status ?? 0, msg: e.message }))

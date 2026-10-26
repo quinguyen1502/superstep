@@ -1,4 +1,4 @@
-"""TASK-0082 (REQ-0047, DEC-0051): export a workflow as a runnable LangGraph.js TypeScript file.
+"""TASK-0082 (REQ-0047, DEC-0051): export a workflow as a runnable LangGraph.js TypeScript file; Agent nodes since TASK-0125.
 
 Unit and snapshot tests always run. With Deno on the host (CI installs it for the Code-node tests), the exported files
 are type-checked (`deno check`, npm: specifiers) and run, and must take the studio's mock path to the same final state.
@@ -7,10 +7,10 @@ import json, os, re, shutil, subprocess, uuid
 from collections import Counter
 from pathlib import Path
 import pytest
-from app.engine import exporters, subgraphs
+from app.engine import agents, exporters, subgraphs
 from app.engine import typescript_export as T
 from app.engine.templates import BUILTINS
-from test_python_export import CHILD, KEYS, LOOP, N, E, F, ODD, PARALLEL, PARENT, TOOLS, H, c, save, studio, user  # noqa: F401
+from test_python_export import AGENT, CHILD, KEYS, LOOP, N, E, F, ODD, PARALLEL, PARENT, TOOLS, H, c, save, studio, user, without_ms  # noqa: F401
 
 SNAPSHOT = Path(__file__).parent / "snapshots" / "typescript_export_demo.ts"
 TS_CODE = ('import { z } from "npm:zod@^3"\n\nexport function main(state: State) {\n  console.log("got", state.message)\n'
@@ -98,16 +98,28 @@ def test_registry_and_split_imports():
 # ---- API ----
 
 
-def test_agent_nodes_are_refused_with_a_code(c):
-    from app.core.errors import AppError
-    from tests.test_python_export import AGENT
-    with pytest.raises(AppError) as e: T.to_typescript(AGENT, "Agent")
-    assert e.value.code == "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED" and e.value.details == {"node": 'Helper "one"'}
-    with pytest.raises(AppError): T.to_typescript(PARENT, "P", None, {"child1": AGENT})  # inside a subgraph too
+AGENT_PARENT = {"name": "Agent in a subgraph", "state": [F("message"), F("answer"), F("steps", "list")],
+                "nodes": [N("start", "start"), N("sub", "subgraph", workflow_id="agent1"), N("end", "end")],
+                "edges": [E("start", "sub"), E("sub", "end")]}
+
+
+def test_agent_nodes_are_exported(c):
+    """TASK-0125: the Agent node's steps, as in the Python file, with no credential or id of the studio's."""
+    out = T.to_typescript(AGENT, "Agent")
+    code = out.code
+    assert "SECRET" not in code and "--allow-net" in code and "callAgent" in code
+    assert [out.names[k] for k in ("ag", "ag/__model", "ag/__tool", "ag/__exit")] == ["helper_one", "helper_one_model", "helper_one_tool", "helper_one_end"]
+    assert '"agent_helper_one": Annotation<AgentChat | null>(),  // an Agent node\'s conversation' in code
+    assert 'return await callMcpTool("add", args);' in code and 'return await retrieve(String(args.query || ""), 2);' in code
+    assert "they go in the query string" in code and 'method: "POST", body: body || undefined' in code  # GET: query string; POST: its body template
+    assert 'throw new Error("lookup_order is a Python function' in code and "here they throw" in code
+    assert 'const question = "Helper \\"one\\" wants to call " + call.name' in code and "also go to a channel" in code
+    assert '.addConditionalEdges("helper_one_model", route_helper_one_model, { tool: "helper_one_tool", done: "helper_one_end" })' in code
+    assert '.addEdge("helper_one_end", END)' in code and "recursionLimit: " in code
+    assert "def helper_one" not in code and "helper_one_end" in T.to_typescript(AGENT_PARENT, "P", None, {"agent1": AGENT}).code
     u = user(c); wid = save(c, u, AGENT)
-    r = c.get(f"/api/workflows/{wid}/code?language=typescript", headers=H(u["token"])).json()
-    assert r["error"]["code"] == "TYPESCRIPT_EXPORT_AGENT_UNSUPPORTED" and r["error"]["details"]["node"] == 'Helper "one"'
-    assert "def helper_one_tool" in c.get(f"/api/workflows/{wid}/code?language=python", headers=H(u["token"])).json()["data"]["code"]
+    r = c.get(f"/api/workflows/{wid}/code?language=typescript", headers=H(u["token"])).json()["data"]
+    assert r["language"] == "typescript" and "async function helper_one_tool(" in r["code"]
 
 
 def test_api_language_parameter(c):
@@ -160,7 +172,7 @@ def ts_run(tmp_path, env, code, check=True):
 
 def same_run(tmp_path, env, wf, inp, answers=None, children=None, ordered=True, ignore=()):
     out = T.to_typescript(wf, wf.get("name", "Workflow"), 1, children, {"input": inp, "answers": answers or {}})
-    flat = subgraphs.expand(wf, (children or {}).get) if children else wf
+    flat = agents.expand(subgraphs.expand(wf, (children or {}).get) if children else wf)
     kinds = {n["id"]: n["type"] for n in flat["nodes"]}
     path, state = studio(wf, inp, answers, children)
     want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
@@ -168,8 +180,8 @@ def same_run(tmp_path, env, wf, inp, answers=None, children=None, ordered=True, 
     got, final, _ = ts_run(tmp_path, env, out.code)
     got = [n for n in got if n not in skip]
     assert (got if ordered else Counter(got)) == (want if ordered else Counter(want))
-    final = {k: v for k, v in final.items() if not k.startswith("loop_") and k not in ignore}
-    assert final == {k: v for k, v in state.items() if k not in ignore}
+    final = {k: v for k, v in final.items() if not k.startswith(("loop_", "agent_")) and k not in ignore}
+    assert without_ms(final) == without_ms({k: v for k, v in state.items() if k not in ignore})
     return out
 
 
@@ -185,16 +197,39 @@ def test_parallel_loop_and_subgraph_take_the_studio_path(tmp_path, deno_env):
     same_run(tmp_path, deno_env, ODD, {"message": "x"})
 
 
+def test_agent_takes_the_studio_path(tmp_path, deno_env):
+    """The mock calls the tool the task names: an MCP tool that needs approval (approved, rejected with a reason), a
+    knowledge base, and the same inside a subgraph."""
+    history = [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}]
+    for answer in ("approved", "No, use 2"):
+        same_run(tmp_path, deno_env, AGENT, {"message": "add numbers", "history": history}, {"ag": [answer]})
+    same_run(tmp_path, deno_env, AGENT, {"message": "search the faq"})
+    same_run(tmp_path, deno_env, AGENT_PARENT, {"message": "add numbers"}, {"sub/ag": ["rejected"]}, {"agent1": AGENT})
+
+
+def test_agent_builtin_tools_are_stubs_the_model_hears_about(tmp_path, deno_env):
+    out = T.to_typescript(AGENT, "Agent", 1, None, {"input": {"message": "find order B200"}})
+    _, final, _ = ts_run(tmp_path, deno_env, out.code)
+    assert [s["status"] for s in final["steps"]] == ["error"] and final["steps"][0]["tool"] == "lookup_order"
+    assert final["answer"] == "[mock:gpt-4o-mini] Answer: The tool failed: lookup_order is a Python function of the Superstep server: not implemented in TS export"
+
+
 def test_all_node_types_type_check(tmp_path, deno_env):
-    for wf in (TOOLS, ):
-        ts_run_check = tmp_path / "t.ts"; ts_run_check.write_text(T.to_typescript(wf, wf["name"]).code)
+    support = next(b["workflow"] for b in BUILTINS if any(n["type"] == "agent" for n in b["workflow"]["nodes"]))
+    for wf in (TOOLS, AGENT, support):
+        ts_run_check = tmp_path / "t.ts"; ts_run_check.write_text(T.to_typescript(wf, wf.get("name", "Workflow")).code)
         p = subprocess.run([DENO, "check", "-q", str(ts_run_check)], env=deno_env, capture_output=True, text=True, timeout=300)
         assert p.returncode == 0, p.stderr[-3000:]
 
 
+def python_functions(n: dict) -> bool:
+    d = n.get("data") or {}
+    if n["type"] == "agent": return any(isinstance(t, dict) and t.get("source") == "builtin" for t in d.get("tools") or [])
+    return n["type"] == "tool" and d.get("mode", "function") == "function"
+
+
 RUNNABLE = [(b["id"], i) for b in BUILTINS for i in range(len(b["tests"]))
-            if not any((n["type"] == "tool" and (n.get("data") or {}).get("mode", "function") == "function") or n["type"] == "agent"
-                       for n in b["workflow"]["nodes"])]  # TypeScript has no Python functions and no Agent node yet
+            if not any(python_functions(n) for n in b["workflow"]["nodes"])]  # TypeScript cannot run the server's Python functions
 
 
 @pytest.mark.parametrize("tid,i", RUNNABLE)

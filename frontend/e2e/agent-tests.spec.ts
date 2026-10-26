@@ -12,6 +12,10 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await expect(page).toHaveURL(/\/workflows$/)
   const H = { Authorization: `Bearer ${await apiToken(page)}` }
   const wid = (await (await page.request.post('/api/templates/builtin-support-agent/use', { headers: H, data: {} })).json()).data.id
+  // TASK-0126: the policy search tool says it needs a knowledge base; the built-in tool's label is translated
+  await page.goto(`/workflows/${wid}`); await page.locator('.react-flow__node[data-id="agent"]').click()
+  await expect(page.locator('#agent-tool-1-kb-required')).toContainText('Hãy chọn kho tri thức')
+  await expect(page.locator('label[for="agent-tool-0-function"]')).toHaveText('Hàm')
   // without a knowledge base to pick here, the policy search tool goes; the cases never call it
   const wf = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data
   for (const n of wf.nodes) if (n.type === 'agent') n.data.tools = n.data.tools.filter((t: { source: string }) => t.source !== 'knowledge')
@@ -46,11 +50,11 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await page.getByTestId('test-row').filter({ hasText: 'Tra đơn hàng A100' }).click()
   await expect(page.getByTestId('check-row').nth(1)).toContainText('“Support agent” đã gọi lookup_order')
 
-  // the Code tab: Python has the Agent node's steps; TypeScript refuses it and leaves no Python file behind
+  // the Code tab: both languages have the Agent node's steps (TypeScript since TASK-0125)
   await page.locator('#code-tab').click()
   await page.locator('#code-export-language').click(); await page.locator('#code-export-language-python').click()
   await expect(page.locator('#code-file')).toHaveText(/^support_agent.*\.py$/, { timeout: 30_000 })
   await page.locator('#code-export-language').click(); await page.locator('#code-export-language-typescript').click()
-  await expect(page.getByText(/Chưa xuất được node Agent sang TypeScript \(Support agent\)/)).toBeVisible()
-  await expect(page.locator('#code-file')).toHaveText(''); await expect(page.locator('#code-download')).toBeDisabled()
+  await expect(page.locator('#code-file')).toHaveText(/^support_agent.*\.ts$/, { timeout: 30_000 })
+  await expect(page.locator('#code-download')).toBeEnabled()
 })
