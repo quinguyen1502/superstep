@@ -4,7 +4,8 @@
 
 - Project: superstep
 - Task ID: TASK-0131
-- Status: review
+- Status: done
+- 2026-10-26: PR #172 merged into develop (a76f5bb) with the owner's approval after CI passed (14 passed, 1 skipped); moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -49,5 +50,5 @@ luôn đi").
 
 ## Review And QA
 
-- Review: the owner reviews the PR. No separate REV artifact (framework update, no source change).
-- QA: the validation above and CI on the PR.
+- Review: the owner reviewed PR #172 and approved the merge. No separate REV artifact (framework update, no source change).
+- QA: the validation above, and CI on #172 (14 passed, 1 skipped).
