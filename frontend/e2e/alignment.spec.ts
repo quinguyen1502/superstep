@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
-import { expectRowAligned, expectBaselineAligned } from './helpers/alignment'
+import { expectRowAligned, expectBaselineAligned, settled } from './helpers/alignment'
 
 /** Alignment guardrails (docs/ui-conventions.md, rule 11): the main toolbars and rows share control heights,
  * vertical centres and text baselines, in light and dark, English and Vietnamese. */
@@ -30,10 +30,12 @@ for (const [lang, theme] of [['en', 'light'], ['vi', 'light'], ['en', 'dark'], [
     const wid = await newWorkflow(page, H, WF); await page.reload()
     const row = page.locator('tr', { hasText: 'Align check' }).first()
     await row.locator('.wf-actions').click(); await page.getByRole('menuitem').nth(0).click(); await expect(page.locator('#rename-input')).toBeVisible()
+    await settled(page.locator('[data-slot=dialog-content]'))
     await expectRowAligned(await visible(page, '[data-slot=dialog-footer] button'), { label: 'rename dialog footer' })
     await expectBaselineAligned(await visible(page, '[data-slot=dialog-footer] button'), { label: 'rename dialog footer' })
     await page.keyboard.press('Escape'); await expect(page.locator('#rename-input')).toBeHidden()
     await row.locator('.wf-actions').click(); await page.getByRole('menuitem').nth(2).click(); await expect(page.locator('[data-slot=alert-dialog-footer]')).toBeVisible()
+    await settled(page.locator('[data-slot=alert-dialog-content]'))
     await expectRowAligned(await visible(page, '[data-slot=alert-dialog-footer] button'), { label: 'delete dialog footer' })
     await page.keyboard.press('Escape')
 
