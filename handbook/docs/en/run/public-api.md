@@ -123,6 +123,9 @@ The answer is `202 Accepted`:
 Poll every second or two and back off for long runs; polling is not rate
 limited. A run that ends in `error` carries the failing node's error in
 `error`; one in `waiting` names the Human node and its prompt in `waiting`.
+A run waiting for a [workflow tool](../guide/agent.md#workflows-as-tools)'s
+child run has `waiting.child_run_id` instead, and a child run has
+`parent_run_id`.
 
 ## Run and wait
 

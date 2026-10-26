@@ -31,6 +31,7 @@ a new workflow you own. Built-in names and descriptions follow the UI language.
 | **Support with escalation** | Answers from a knowledge base; a Decision node sends unsure answers to a support agent in the studio. |
 | **Customer feedback digest** | A For each loop labels every piece of feedback, then an LLM writes a report that is e-mailed to the team. |
 | **Support agent** | An [Agent node](agent.md) looks up orders and the refund policy; a person approves each refund it requests. |
+| **Support team** | A supervisor agent hands each question to a specialist [workflow tool](agent.md#workflows-as-tools): the Order desk or the Refund desk. Using it creates all three workflows. |
 
 A template with an approval channel names only the channel. After creating it, pick the
 connection, the target and the approvers on the Human node (see

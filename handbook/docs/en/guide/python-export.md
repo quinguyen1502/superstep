@@ -154,6 +154,19 @@ builder.add_conditional_edges("support_agent_tool", route_support_agent_tool, {"
 The file does not use `create_react_agent`: it cannot ask before one tool
 only, and it would not write the rounds and steps the studio writes.
 
+A [workflow tool](agent.md#workflows-as-tools) (from the Support team
+template) calls the other workflow's own graph, written once in the same file:
+
+```python
+def call_supervisor_tool(name: str, args: dict, state: State) -> Any:
+    if name == "order_desk":
+        final = build_order_desk().invoke({k: args[k] for k in ["message"] if k in args})
+        return {k: final.get(k) for k in ["answer"]}
+```
+
+In the studio the call is a child run; in the file the child graph runs inside
+the tool step, and an `interrupt()` in it pauses the whole graph.
+
 ### A Subgraph
 
 ```python

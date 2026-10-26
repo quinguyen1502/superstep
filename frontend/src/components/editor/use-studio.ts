@@ -72,7 +72,9 @@ export function useStudio() {
     if (wf.source) setInput(defaultInput(wf.state || []))
   }
   const loadHistory = (id?: string) => id ? api<any[]>(`/api/workflows/${id}/runs`).then(hs => { setHistory(hs); return hs }) : undefined
-  const openRun = (h: any) => { setLog(withSummary(h)); setReplay(h.id); setTraceSel(null); setTab('logs') }
+  const openRun = (h: any) => { setLog(withSummary(h)); setReplay(h.id); setTraceSel(null); setTab('logs')
+    // a run that has moved on (a workflow tool's parent after its child, TASK-0138) no longer waits on the canvas
+    if (h.status !== 'waiting') setNodes(ns => ns.some(n => n.data._status === 'waiting') ? ns.map(n => n.data._status === 'waiting' ? { ...n, data: { ...n.data, _status: 'done' } } : n) : ns) }
   // each workflow id loads the graph, its run history (?run=<id> opens that run), and the editor's lookups
   const openWorkflow = useEffectEvent(() => {
     api(`/api/workflows/${id}`).then(wf => { setLoadErr(null); load(wf)

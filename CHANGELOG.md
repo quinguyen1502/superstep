@@ -4,6 +4,22 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Added
+
+- **Workflows as Agent tools** (REQ-0073, TASK-0133 to TASK-0138). An Agent node can list another saved workflow as a
+  tool, "Another workflow" in its tool menu: pick the workflow, the state fields the model fills and the fields it gets
+  back. A workflow with its own Agent node is then a specialist agent, and the calling Agent its supervisor.
+  - Each call runs as a child run of the workflow's latest saved version, linked to the calling run, which waits for
+    it. A restart repeats neither the child nor its finished steps.
+  - An approval inside the child appears on the Approvals page and in the channels with both workflow names
+    ("Support team › Refund desk").
+  - The trace shows the child's steps under the tool call. A child run says who called it.
+  - Cycles and more than 5 levels of workflow tools and subgraphs are refused when saving.
+  - The Python, LangGraph project and TypeScript exports write the called workflow as its own graph.
+  - A new **Support team** template creates a supervisor and its Order desk and Refund desk workflows.
+  - API: `GET /api/runs/{id}`; the public run result has `parent_run_id` and `waiting.child_run_id`.
+  - New error code `WORKFLOW_TOOL_TOO_DEEP`.
+
 ### Changed
 
 - **Workflow checks in Vietnamese** (TASK-0132). The editor shows the problems found when you save, open a template or

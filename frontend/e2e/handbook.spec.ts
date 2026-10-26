@@ -311,5 +311,35 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
       await shot(page, lang, 'agent-trace')
     })
+
+    // Workflows as Agent tools (TASK-0138, REQ-0073): the Support team template's tool card, a run whose trace shows the
+    // order desk's steps under the call, and a run waiting for the refund desk's approval. Run alone with `-g "workflow tools"`.
+    test(`workflow tools ${lang}`, async ({ page }) => {
+      await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
+      await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
+      const H = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+      const vi = lang === 'vi'
+      const wid = (await (await page.request.post('/api/templates/builtin-support-team/use', { headers: H, data: { name: vi ? 'Đội hỗ trợ' : 'Support team' } })).json()).data.id
+      if (vi) {  // the mock picks the tool whose description shares the most words with the message
+        const wf = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data
+        const agent = wf.nodes.find((n: { type: string }) => n.type === 'agent')
+        Object.assign(agent.data, { label: 'Điều phối', prompt: 'Giúp khách hàng này. Tin nhắn: {{state.message}}' })
+        agent.data.tools[0].description = 'Câu hỏi về đơn hàng đang ở đâu'
+        agent.data.tools[1].description = 'Yêu cầu hoàn tiền cho đơn hàng bị vỡ hoặc giao trễ'
+        expect((await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).success).toBe(true)
+      }
+      await page.goto(`/workflows/${wid}`); await expect(page.locator('.react-flow__node')).toHaveCount(3); await fit(page)
+      await page.locator('.react-flow__node[data-id="agent"]').click(); await expect(page.locator('#agent-settings')).toBeVisible()
+      await page.locator('#agent-tool-0-fields').scrollIntoViewIfNeeded()
+      await shot(page, lang, 'workflow-tool-settings')
+      await setInput(page, JSON.stringify({ message: vi ? 'Đơn hàng B200 của tôi đang ở đâu?' : 'Where is my order B200?' }, null, 2))
+      await run(page); await expect(page.getByTestId('child-steps')).toContainText('lookup_order')
+      await shot(page, lang, 'workflow-tool-trace')
+      await setInput(page, JSON.stringify({ message: vi ? 'Đơn A100 của tôi bị vỡ, cho tôi hoàn tiền' : 'Order A100 arrived broken, please refund it' }, null, 2))
+      await run(page, 'waiting'); await expect(page.locator('#child-wait-panel')).toBeVisible()
+      await page.waitForTimeout(2500)  // the refund desk reaches its approval
+      await page.goto('/approvals'); await expect(page.locator('[data-testid=inbox-row]').first()).toBeVisible()
+      await shot(page, lang, 'workflow-tool-approval')
+    })
   })
 }

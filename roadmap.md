@@ -286,7 +286,7 @@ linked child run that the parent's tool step waits for.
 - TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **review** (REV-0120, QA-0120).
 - TASK-0137 "Tool called" test check, "Support team" template, Python, project and TypeScript exports. **review**
   (REV-0121, QA-0121).
-- TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **todo** (after TASK-0135 to TASK-0137).
+- TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **review** (REV-0122, QA-0122).
 
 ## Owner requests
 

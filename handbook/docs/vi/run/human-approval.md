@@ -124,6 +124,15 @@ của nó. **Duyệt** để chạy lần gọi. **Từ chối**, hoặc trả l
 chối, và model được báo như vậy, với đoạn chữ làm lý do. Mỗi lần gọi đều hỏi
 lại.
 
+## Duyệt bên trong workflow được gọi
+
+Khi node Agent gọi một workflow khác làm công cụ (xem
+[Workflow làm công cụ](../guide/agent.md#workflow-lam-cong-cu)), node Human hoặc
+công cụ cần duyệt bên trong workflow đó vẫn hỏi như thường. Yêu cầu ghi tên cả
+hai workflow, ví dụ `Đội hỗ trợ › Refund desk`, ở trang **Duyệt** và trong tin
+nhắn trên kênh. Run gọi nó cũng đứng chờ nhưng không được liệt kê: nó tự chạy
+tiếp khi run được gọi xong.
+
 ## Mẫu thường gặp
 
 ```text

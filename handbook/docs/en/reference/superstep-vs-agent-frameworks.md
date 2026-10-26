@@ -24,7 +24,7 @@ you decide. For visual builders, see
 | | Superstep + LangGraph | CrewAI | PydanticAI |
 | --- | --- | --- | --- |
 | How you build | Draw the graph, or write LangGraph code; export moves from one to the other | Python code (Flows and Crews); no-code Crew Studio in AMP | Python code; YAML/JSON agent specs |
-| Core model | Explicit graph: nodes, edges, typed state, checkpoints; an Agent node runs a model-chosen tool loop inside it | Flows (state, events, branching) that call Crews of role-playing agents | A typed agent loop; Pydantic Graph for graph control flow |
+| Core model | Explicit graph: nodes, edges, typed state, checkpoints; an Agent node runs a model-chosen tool loop inside it, and can call other workflows (their own agents) as tools | Flows (state, events, branching) that call Crews of role-playing agents | A typed agent loop; Pydantic Graph for graph control flow |
 | License | MIT (Superstep and LangGraph) | MIT (framework); AMP is commercial | MIT |
 | Human in the loop | Human nodes, approval before an Agent node's tool calls, and LangGraph interrupts; approve in the studio, Slack, Telegram, WhatsApp, email or Teams | `@human_feedback` in Flows; resume endpoint in AMP | Human approval of tool calls; long waits through durable engines |
 | Durable runs and time travel | Checkpoints in the database (SQLite or Postgres): paused and running queue runs continue after a restart; fork a finished run from a checkpoint | `@persist` flow state, restore from a saved state | Durable execution on Temporal, DBOS, Prefect and others; step persistence to save, resume and fork |
@@ -44,9 +44,12 @@ you decide. For visual builders, see
 - **An agent loop where the model should choose.** The
   [Agent node](../guide/agent.md) lets a model call the tools you list (MCP,
   HTTP, built-in functions, knowledge base search) until it answers, with a
-  round limit and per-tool approval. It is one agent in a graph, not a team of
-  agents: for role-based crews or typed agent code, the frameworks below fit
-  better.
+  round limit and per-tool approval. An Agent can also call other workflows as
+  tools, each with its own agent: a supervisor and its specialists, each
+  built and tested on its own canvas (see
+  [Workflows as tools](../guide/agent.md#workflows-as-tools)). There are no
+  hand-offs between agents and no free conversation among them: for role-based
+  crews or typed agent code, the frameworks below fit better.
 - **Code where you need it.** Python and TypeScript Code nodes cover steps
   that are easier to write than to draw.
 - **Mixing is fine.** A CrewAI or PydanticAI program can start a Superstep

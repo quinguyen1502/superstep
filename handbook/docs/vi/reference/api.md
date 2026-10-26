@@ -91,6 +91,7 @@ WS /ws/run
     ```text
     GET    /api/workflows/{wid}/runs          (?tests=true: các run test)
     GET    /api/runs/pending
+    GET    /api/runs/{run_id}                (một run cùng các sự kiện, như lịch sử liệt kê; run được gọi của công cụ workflow)
     GET    /api/runs/{run_id}/checkpoints   (time travel; fork: WS /ws/run {"fork": {...}})
     POST   /api/runs/{run_id}/cancel
     WS     /ws/run
