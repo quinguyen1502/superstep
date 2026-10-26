@@ -24,10 +24,21 @@ export function errorText(e: ApiErrorBody): string {
   return String(e.code && i18n.exists(key) ? i18n.t(key, params) : e.message || i18n.t("errors.HTTP_ERROR"))
 }
 
+/** The code of one validation message, sent next to the English `errors` (TASK-0132); null when it has none. */
+export type Issue = { code: string; params?: Record<string, unknown> } | null
+
+/** Validation messages in the UI language: `validation.<code>` when the API sent a code we know, else the English text. */
+export function issueTexts(errors: string[], issues?: Issue[]): string[] {
+  return errors.map((message, i) => {
+    const issue = issues?.[i]; const key = `validation.${issue?.code}`
+    return issue?.code && i18n.exists(key) ? i18n.t(key, issue.params ?? {}) : message
+  })
+}
+
 /** Codes whose `errors` list carries the specific (dynamic) messages: validator issues, node exceptions. */
 const DYNAMIC = new Set(['WORKFLOW_INVALID', 'NODE_FAILED', 'RUN_FAILED'])
-export function eventErrors(ev: { error?: ApiErrorBody; errors?: string[] }): string[] {
-  if (!ev.error || DYNAMIC.has(ev.error.code || '')) return ev.errors || (ev.error ? [errorText(ev.error)] : [])
+export function eventErrors(ev: { error?: ApiErrorBody; errors?: string[]; issues?: Issue[] }): string[] {
+  if (!ev.error || DYNAMIC.has(ev.error.code || '')) return ev.errors ? issueTexts(ev.errors, ev.issues) : ev.error ? [errorText(ev.error)] : []
   return [errorText(ev.error)]
 }
 

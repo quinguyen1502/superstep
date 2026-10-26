@@ -22,6 +22,13 @@ Every REST response is an envelope:
 humans and logs. Clients translate by `code` and fall back to `message`. The
 codes are listed in [Error codes](errors.md).
 
+Workflow checks work the same way. `POST /api/validate`, saving a workflow
+(`POST /api/workflows`) and using a template return `errors`, a list of English
+messages, and `issues`, their codes in the same order: `{"code", "params"}`, or
+`null` for a message without one. A run's `error` event over WebSocket carries
+`issues` too when it reports these checks. The editor shows `issues` in the UI
+language.
+
 ## Authentication
 
 | Client | How |

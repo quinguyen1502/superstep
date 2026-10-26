@@ -8,6 +8,7 @@ The same functions back the LangGraph channels (compiler) and the runtime's own 
 """
 from __future__ import annotations
 from typing import Any, Callable, Dict, Optional
+from .issues import Issue
 
 REDUCERS = ("replace", "append", "merge", "add")
 FIELD_TYPES = {"append": "list", "merge": "object", "add": ("number", "integer")}
@@ -40,10 +41,10 @@ def fn_of(field: dict) -> Optional[Callable[[Any, Any], Any]]:
 
 def field_errors(field: dict) -> list[str]:
     r = reducer_of(field); name = field.get("name")
-    if r not in REDUCERS: return [f"State field {name}: unknown reducer '{r}' (use {', '.join(REDUCERS)})"]
+    if r not in REDUCERS: return [Issue("REDUCER_UNKNOWN", field=name, reducer=r, reducers=", ".join(REDUCERS))]
     want = FIELD_TYPES.get(r)
     if want and field.get("type", "string") not in ((want,) if isinstance(want, str) else want):
-        return [f"State field {name}: reducer '{r}' needs type {want if isinstance(want, str) else ' or '.join(want)}"]
+        return [Issue("REDUCER_TYPE", field=name, reducer=r, types=want if isinstance(want, str) else " or ".join(want))]
     return []
 
 

@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from .errors import ValidationError
+from .issues import Issue
 
 MAX_DEPTH = 5
 SEP, EXIT = "/", "__exit"
@@ -33,12 +34,12 @@ def check(wf: Dict[str, Any], load: Loader, self_id: Optional[str] = None) -> Li
     errs: List[str] = []
     def walk(w, stack, depth):
         for nid, ref in refs(w):
-            if not ref: errs.append(f"Subgraph node {nid}: choose a workflow"); continue
-            if ref in stack: errs.append(f"Subgraph node {nid}: workflow {ref} is already in this chain ({' → '.join(stack + [ref])}), cycles are not allowed"); continue
-            if depth >= MAX_DEPTH: errs.append(f"Subgraph node {nid}: subgraphs are nested deeper than {MAX_DEPTH} levels"); continue
+            if not ref: errs.append(Issue("SUBGRAPH_WORKFLOW_MISSING", node=nid)); continue
+            if ref in stack: errs.append(Issue("SUBGRAPH_CYCLE", node=nid, workflow=ref, chain=" → ".join(stack + [ref]))); continue
+            if depth >= MAX_DEPTH: errs.append(Issue("SUBGRAPH_TOO_DEEP", node=nid, max=MAX_DEPTH)); continue
             child = load(ref)
-            if child is None: errs.append(f"Subgraph node {nid}: workflow {ref} was not found"); continue
-            if child.get("source"): errs.append(f"Subgraph node {nid}: imported (code) workflows cannot be used as subgraphs"); continue
+            if child is None: errs.append(Issue("SUBGRAPH_NOT_FOUND", node=nid, workflow=ref)); continue
+            if child.get("source"): errs.append(Issue("SUBGRAPH_IMPORTED", node=nid)); continue
             walk(child, stack + [ref], depth + 1)
     walk(wf, [self_id] if self_id else [], 0)
     return errs
@@ -50,7 +51,7 @@ def _merge_state(parent: list, child: list, nid: str, errs: List[str]) -> list:
         p = known.get(f["name"])
         if p is None: out.append(dict(f)); known[f["name"]] = f
         elif p.get("type", "string") != f.get("type", "string"):
-            errs.append(f"Subgraph node {nid}: state field {f['name']} is {f.get('type', 'string')} in the subgraph but {p.get('type', 'string')} here")
+            errs.append(Issue("SUBGRAPH_FIELD_TYPE", node=nid, field=f["name"], child_type=f.get("type", "string"), parent_type=p.get("type", "string")))
     return out
 
 
@@ -71,7 +72,9 @@ def readable(errors: List[str], expanded: Dict[str, Any]) -> List[str]:
     names = {n["id"]: (n.get("data") or {}).get("label") or n["id"] for n in expanded.get("nodes", []) if SEP in str(n.get("id"))}
     if not names: return errors
     pat = re.compile(r"(?<![\w/])(" + "|".join(re.escape(i) for i in sorted(names, key=len, reverse=True)) + r")(?: \([^)]*\))?(?![\w/])")
-    return [pat.sub(lambda m: f'"{names[m.group(1)]}"', e) for e in errors]
+    name = lambda text: pat.sub(lambda m: f'"{names[m.group(1)]}"', text)
+    return [Issue(e.code, name(e), **{k: name(v) if isinstance(v, str) else v for k, v in e.params.items()})
+            if isinstance(e, Issue) else name(e) for e in errors]
 
 
 def expand(wf: Dict[str, Any], load: Loader, self_id: Optional[str] = None) -> Dict[str, Any]:
@@ -95,7 +98,7 @@ def _expand_once(wf: Dict[str, Any], load: Loader, errs: List[str]) -> Dict[str,
         cn = {n["id"]: n for n in child.get("nodes", [])}
         start = next((i for i, n in cn.items() if n.get("type") == "start"), None)
         ends = {i for i, n in cn.items() if n.get("type") == "end"}
-        if start is None or not ends: errs.append(f"Subgraph node {nid}: workflow {ref} needs a Start and an End node"); continue
+        if start is None or not ends: errs.append(Issue("SUBGRAPH_START_END", node=nid, workflow=ref)); continue
         exit_id = f"{nid}{SEP}{EXIT}"
         pid = lambda i: nid if i == start else exit_id if i in ends else f"{nid}{SEP}{i}"
         sub["data"] = {**sub.get("data", {}), "subgraph_of": ref}

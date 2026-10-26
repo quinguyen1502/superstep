@@ -10,6 +10,7 @@ from __future__ import annotations
 import contextvars, threading
 from typing import Any, Callable, Dict, List, Optional, TypedDict
 from langgraph.errors import NodeTimeoutError
+from .issues import Issue
 from langgraph.types import CachePolicy, RetryPolicy
 from .errors import Interrupt
 
@@ -32,27 +33,27 @@ def errors(nid: str, data: Dict[str, Any], fields: Optional[set] = None) -> List
     if names not in (None, []):
         if (not isinstance(names, list) or not all(isinstance(n, str) and n for n in names)
                 or len(names) != len(set(names))):
-            out.append(f"Node {nid}: input fields must be a list of state field names")
+            out.append(Issue("INPUT_FIELDS_INVALID", node=nid))
         elif fields is not None:
             unknown = [n for n in names if n not in fields]
             if unknown:
-                out.append(f"Node {nid}: input field '{unknown[0]}' is not in the state")
+                out.append(Issue("INPUT_FIELD_UNKNOWN", node=nid, field=unknown[0]))
     retry = data.get("retry")
     if retry not in (None, {}):
         if not isinstance(retry, dict):
-            out.append(f"Node {nid}: retry must be an object with max_attempts and initial_interval")
+            out.append(Issue("RETRY_INVALID", node=nid))
         else:
             attempts, wait = retry.get("max_attempts"), retry.get("initial_interval")
             if isinstance(attempts, bool) or not isinstance(attempts, int) or not ATTEMPTS[0] <= attempts <= ATTEMPTS[1]:
-                out.append(f"Node {nid}: retry attempts must be an integer from {ATTEMPTS[0]} to {ATTEMPTS[1]}")
+                out.append(Issue("RETRY_ATTEMPTS", node=nid, min=ATTEMPTS[0], max=ATTEMPTS[1]))
             if wait is not None and ((n := _num(wait)) is None or not WAIT[0] < n <= WAIT[1]):
-                out.append(f"Node {nid}: retry wait must be a number of seconds greater than 0 and at most {WAIT[1]}")
+                out.append(Issue("RETRY_WAIT", node=nid, max=WAIT[1]))
     timeout = data.get("timeout")
     if timeout is not None and ((n := _num(timeout)) is None or not TIMEOUT[0] < n <= TIMEOUT[1]):
-        out.append(f"Node {nid}: timeout must be a number of seconds greater than 0 and at most {TIMEOUT[1]}")
+        out.append(Issue("TIMEOUT_INVALID", node=nid, max=TIMEOUT[1]))
     ttl = data.get("cache_ttl")
     if ttl is not None and (isinstance(ttl, bool) or not isinstance(ttl, int) or not CACHE_TTL[0] <= ttl <= CACHE_TTL[1]):
-        out.append(f"Node {nid}: cache TTL must be an integer number of seconds from {CACHE_TTL[0]} to {CACHE_TTL[1]}")
+        out.append(Issue("CACHE_TTL_INVALID", node=nid, min=CACHE_TTL[0], max=CACHE_TTL[1]))
     return out
 
 

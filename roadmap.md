@@ -285,6 +285,8 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0130 Per-command `factory verify` timeout (framework 6e66d20); the backend suite gets 900 s. **merged** (PR #170).
 - TASK-0131 Framework fixes (513545e): skills update unedited copies, `gc --no-tasks` / `--no-runs`, `deps` skips build
   output and records portable commands. **merged** (PR #172).
+- TASK-0132 Workflow check messages in the UI language: codes in the API (`issues`), `validation.<CODE>` in
+  both locales, DEC-0065 (REQ-0045). **review** (REV-0116, QA-0116).
 
 ## Releases
 
