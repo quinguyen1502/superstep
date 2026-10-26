@@ -4,7 +4,8 @@
 
 - Project: superstep
 - Task ID: TASK-0129
-- Status: review
+- Status: done
+- 2026-10-26: PR #168 merged into develop (80b95ba) with the owner's approval after CI passed (14 passed, 1 skipped); moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -79,3 +80,8 @@ Clear the factory records debt left after 0.8.0 and the framework update in #162
 - `factory validate`: passed. Warnings: the local `dist/` manifest above, and no todo task.
 - `factory verify validate`: passed, with no legacy-evidence warning. `factory tools validate`, `factory skills validate` (70),
   `factory ids check --all-refs`: passed.
+
+## Review And QA
+
+- Review: the owner reviewed PR #168 and approved the merge. No separate REV artifact (records only, no source change).
+- QA: the validation above, and CI on #168: Factory verification ran the 8 policy commands, all passed (backend 265 s).
