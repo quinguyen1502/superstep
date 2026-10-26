@@ -21,7 +21,8 @@ class InboxService:
         def email(u):
             if u not in emails: x = self.users.get_by_id(u); emails[u] = x.email if x else None
             return emails[u]
-        return [{"run_id": w.run_id, "workflow_id": w.workflow_id, "workflow_name": name(w.workflow_id), "node": w.node_id, "label": w.label,
+        chain = lambda w: self.approvals.workflow_name(w.run_id, w.workflow_id) if self.runs.runs.get(w.run_id) and self.runs.runs.get(w.run_id).parent_run_id else name(w.workflow_id)  # noqa: E731
+        return [{"run_id": w.run_id, "workflow_id": w.workflow_id, "workflow_name": chain(w), "node": w.node_id, "label": w.label,
                  "prompt": w.prompt, "channel": w.channel, "mine": w.owner == uid, "owner_email": None if w.owner == uid else email(w.owner),
                  "waiting_since": w.created, "due_at": w.due_at, "can_open": self._can_open(w, uid)} for w in self.repo.inbox(uid)]
 

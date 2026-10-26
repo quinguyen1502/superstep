@@ -39,6 +39,19 @@ class ApprovalService:
 
     def adapter(self, kind: str) -> ApprovalChannel: return self.channels.adapter(kind)
     def _lang(self, uid: Optional[str]) -> str: return lang_of(self.users.get_by_id(uid)) if uid else "en"
+
+    def workflow_name(self, rid: str, wid: Optional[str]) -> Optional[str]:
+        """The workflow's name, or for a workflow tool's child run the chain from the top run ("Support team › Refund
+        desk", TASK-0135): an approval inside a child is passed up and must say who asked."""
+        names, r, seen = [], self.runs.get(rid), 0
+        w = self.workflows.get(wid) if wid else None
+        names.append(w.name if w else None)
+        while r is not None and r.parent_run_id and seen < 8:
+            r = self.runs.get(r.parent_run_id); seen += 1
+            p = self.workflows.get(r.workflow_id) if r is not None and r.workflow_id and r.workflow_id != "adhoc" else None
+            names.append(p.name if p else None)
+        names = [n for n in reversed(names) if n]
+        return " › ".join(names) if names else None
     def _secrets(self, c) -> dict: return self.channels.secrets(c)
 
     # ---- tokens: "<a|r>.<request id>.<hmac>" (fits Telegram's 64-byte callback_data) ----
@@ -123,8 +136,8 @@ class ApprovalService:
         r = self.repo.add_request(ApprovalRequest(id=uuid.uuid4().hex[:12], run_id=rid, node_id=node["id"], owner=owner, workflow_id=wid, channel_id=c.id,
                                                   kind=kind, target=target, approvers=json.dumps(approvers), nonce=pysecrets.token_hex(8),
                                                   expires=min(time.time() + config.approval_ttl(), due or float("inf")), status="pending", created=time.time()))
-        w = self.workflows.get(wid) if wid else None; lang = self._lang(owner)
-        lines = [w and text(lang, "workflow", v=w.name), text(lang, "step", v=ev.get("label") or node["id"]), ev.get("prompt") and text(lang, "question", v=ev["prompt"]),
+        name = self.workflow_name(rid, wid); lang = self._lang(owner)
+        lines = [name and text(lang, "workflow", v=name), text(lang, "step", v=ev.get("label") or node["id"]), ev.get("prompt") and text(lang, "question", v=ev["prompt"]),
                  text(lang, "run", v=rid), text(lang, "expires", v=time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(r.expires)))]
         link = f"{config.public_url()}/workflows/{wid}?run={rid}" if config.public_url() and wid else None
         msg = ApprovalMessage(text(lang, "title"), [x for x in lines if x], link, self.token(r, "a"), self.token(r, "r"),

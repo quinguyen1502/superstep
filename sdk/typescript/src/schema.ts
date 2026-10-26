@@ -187,6 +187,11 @@ export interface components {
              */
             error?: unknown | null;
             waiting?: components["schemas"]["RunWaiting"] | null;
+            /**
+             * Parent Run Id
+             * @description Set on the child run of a workflow tool: the run whose Agent node called it.
+             */
+            parent_run_id?: string | null;
             metrics?: components["schemas"]["RunMetrics"] | null;
             /** Trace Url */
             trace_url?: string | null;
@@ -252,6 +257,11 @@ export interface components {
              */
             error?: unknown | null;
             waiting?: components["schemas"]["RunWaiting"] | null;
+            /**
+             * Parent Run Id
+             * @description Set on the child run of a workflow tool: the run whose Agent node called it.
+             */
+            parent_run_id?: string | null;
             metrics?: components["schemas"]["RunMetrics"] | null;
             /** Trace Url */
             trace_url?: string | null;
@@ -283,13 +293,18 @@ export interface components {
         };
         /**
          * RunWaiting
-         * @description Set when status is `waiting`: the Human node the run is paused at.
+         * @description Set when status is `waiting`: the Human node the run is paused at, or the child run of a workflow tool it waits for.
          */
         RunWaiting: {
             /** Node */
             node?: string | null;
             /** Prompt */
             prompt?: string | null;
+            /**
+             * Child Run Id
+             * @description Set while an Agent node's workflow tool runs: the child run the run waits for.
+             */
+            child_run_id?: string | null;
         };
         /**
          * StartRunRequest

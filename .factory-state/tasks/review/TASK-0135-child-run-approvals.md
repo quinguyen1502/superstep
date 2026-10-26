@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0135
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
@@ -89,7 +89,33 @@ and child runs in the API, the run page and the history (decision 8, runs part).
 ## Activity Log
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
+- 2026-10-26: started on `factory/task-0135-child-run-approvals`, stacked on TASK-0134 (PR #178).
+- 2026-10-26: implemented.
+  - Backend:
+    - `ApprovalService.workflow_name()`: the chain of names from the top run, used in channel messages and the
+      inbox;
+    - `RunService.links()`: `parent` on child runs and `waiting_for` on a parent waiting for a child, in the run
+      history, with names hidden from people who cannot open the workflow;
+    - the public run result: `parent_run_id` and `waiting.child_run_id`, with the OpenAPI spec, the Python SDK model
+      and the TypeScript schema regenerated.
+  - Frontend:
+    - `ChildWaitPanel` replaces the answer box for a run waiting for a child, and the run panel looks again every
+      2 s until the parent moves on;
+    - the trace summary says "Waiting for another workflow";
+    - child runs have a "Tool call" badge and a "Called by" line with a link to the calling run;
+    - `childRuns.*` and `trace.waitingChild` strings in en and vi.
+  - Tests: `test_child_run_approvals.py` (5), vitest `child-runs.test.ts` (3), e2e `workflow-tools.spec.ts` (vi, en).
+- 2026-10-26: the first screenshots showed "Waiting for a human" in the trace summary of a run waiting for a child;
+  it now has its own label.
+
+## Validation Results
+
+- See QA-0119.
+
+## Review And QA
+
+- Review: REV-0119. QA: QA-0119.
 
 ## Handoff Notes
 
--
+- TASK-0136 nests the child's steps under the tool call in the trace; the "Open that run" link and the badge stay.

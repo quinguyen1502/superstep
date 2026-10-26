@@ -285,6 +285,7 @@
     "usageDetail": "{{model}}: {{tin}} in / {{tout}} out tokens · {{cost}}",
     "estimated": "(estimated)",
     "waiting": "Waiting for a human",
+    "waitingChild": "Waiting for another workflow",
     "paused": "Paused after a step",
     "streaming": "Streaming from the model…",
     "agent": {
@@ -621,6 +622,16 @@
     "prompt": "Answer: {{var}}",
     "greeting": "Hello!",
     "agentPrompt": "Help the user: {{var}}"
+  },
+  "childRuns": {
+    "waitingTitle": "Waiting for another workflow",
+    "waitingFor": "The tool {{tool}} is running the workflow {{name}}. This run goes on by itself when it ends.",
+    "childWaits": "That run waits for an approval: answer it on the Approvals page.",
+    "openChild": "Open that run",
+    "calledBy": "Called by {{name}}",
+    "openParent": "Open the calling run",
+    "badge": "Tool call",
+    "unknown": "a workflow you cannot open"
   },
   "human": {
     "title": "Waiting for your response",

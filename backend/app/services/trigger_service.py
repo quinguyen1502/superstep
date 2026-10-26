@@ -149,7 +149,9 @@ def run_result(r: Run) -> dict:
     wait = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None) if r.status == "waiting" else None
     return {"run_id": r.id, "workflow_id": r.workflow_id, "status": r.status, "source": r.source or "ui",
             "final_state": json.loads(r.final_state or "null") if done else None, "error": err,
-            "waiting": {"node": wait.get("node"), "prompt": wait.get("prompt")} if wait else None,
+            "waiting": {"node": wait.get("node"), "prompt": wait.get("prompt"),
+                        **({"child_run_id": wait["wait"].get("run_id")} if isinstance(wait.get("wait"), dict) else {})} if wait else None,
+            "parent_run_id": r.parent_run_id,
             "metrics": None if r.duration_ms is None else {"duration_ms": r.duration_ms, "tokens_in": r.tokens_in, "tokens_out": r.tokens_out,
                                                            "cost_usd": r.cost_usd, "error_count": r.error_count},
             "trace_url": trace_url(r.trace_id, r.trace_root), "started": r.started, "ended": r.ended if done else None}

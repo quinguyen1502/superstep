@@ -552,8 +552,21 @@ class RunService:
                  "final_state": json.loads(r.final_state or "null"), "status": r.status, "started": r.started, "ended": r.ended, "source": r.source or "ui", "version": r.workflow_version,
                  "metrics": None if r.duration_ms is None else {"duration_ms": r.duration_ms, "tokens_in": r.tokens_in, "tokens_out": r.tokens_out,
                                                                 "tokens": (r.tokens_in or 0) + (r.tokens_out or 0), "cost_usd": r.cost_usd, "error_count": r.error_count},
-                 "trace_id": r.trace_id, "trace_url": trace_url(r.trace_id, r.trace_root), "code_runtime": r.code_runtime, "chat": chat.get(r.id)}
-                for r in rows]
+                 "trace_id": r.trace_id, "trace_url": trace_url(r.trace_id, r.trace_root), "code_runtime": r.code_runtime, "chat": chat.get(r.id),
+                 **self.links(r, uid)} for r in rows]
+
+    def links(self, r: Run, uid: str) -> dict:
+        """A workflow tool's child run names its parent; a parent waiting for a child names the child (TASK-0135). Names of
+        workflows the caller cannot open are left out."""
+        def ref(x: Optional[Run]) -> Optional[dict]:
+            if x is None: return None
+            seen = x.workflow_id and x.workflow_id != "adhoc" and (self.access is None or self.access.may(x.workflow_id, uid))
+            w = self.workflows.get(x.workflow_id) if seen else None
+            return {"run_id": x.id, "workflow_id": x.workflow_id, "workflow_name": w.name if w else None, "status": x.status}
+        out = {}
+        if r.parent_run_id: out["parent"] = ref(self.runs.get(r.parent_run_id))
+        if r.status == "waiting" and r.checkpoint and (wait := json.loads(r.checkpoint).get("wait")): out["waiting_for"] = ref(self.runs.get(wait.get("run_id")))
+        return out
 
     def record(self, rid, wid, inp, events, final, status, t0, uid: str = "", checkpoint: dict | None = None, source: str = "ui",
                version: Optional[int] = None, span=None, trace_parent: Optional[dict] = None, trace_events: Optional[list] = None,
