@@ -4,7 +4,8 @@
 
 - Project: superstep
 - Task ID: TASK-0125
-- Status: doing
+- Status: done
+- 2026-10-26: PR #158 merged into develop (ec36bf5) with the owner's approval after CI passed (15 passed, 2 skipped); moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
