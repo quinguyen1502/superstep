@@ -51,6 +51,8 @@ node retrieve: choose a knowledge base".
 - Tests: `tests/test_validation_messages.py` (7), `src/lib/__tests__/issues.test.ts` (2). The e2e checks in
   `templates.spec.ts` and `runtime.spec.ts` now expect the Vietnamese text.
 - Handbook `reference/api.md` (en, vi), CHANGELOG (Unreleased), DEC-0065.
+- `docker/studio-sandbox/Dockerfile` copies `engine/issues.py` too: `code_runtime.py` imports it (found by the image
+  job on the first CI run).
 
 ## Validation Results
 
