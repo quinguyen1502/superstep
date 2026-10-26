@@ -4,8 +4,8 @@
 import fs from 'node:fs';
 
 const SPEED = Number(process.argv[3] || 1);
-const SR = 44100, DUR = Math.ceil(98 / SPEED), N = SR * DUR;
-const [BRAND, TOUR, PLATFORM, FINALE] = [4.6, 5.4, 88.8, 89.2].map(t => t / SPEED);
+const SR = 44100, DUR = Math.ceil(128 / SPEED), N = SR * DUR;
+const [BRAND, TOUR, PLATFORM, FINALE] = [4.6, 5.4, 118.4, 118.8].map(t => t / SPEED);
 const L = new Float32Array(N), R = new Float32Array(N);
 const BPM = 96, BEAT = 60 / BPM, BAR = BEAT * 4;
 const midi = m => 440 * Math.pow(2, (m - 69) / 12);

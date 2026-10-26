@@ -77,6 +77,13 @@
   .cmd .p { color: #58e5ed; }
   .url2 { margin-top: 26px; font-size: 30px; font-weight: 800; color: var(--brand-deep); }
   #fade { position: absolute; inset: 0; background: #fff; opacity: 0; z-index: 100; }
+
+  /* phone: the editor at 390x844, over a dimmed window */
+  #scrim { position: absolute; left: 296px; top: 96px; width: 1328px; height: 870px; border-radius: 16px; background: rgba(230,227,239,.78); z-index: 40; }
+  #phone { position: absolute; left: 768px; top: 104px; width: 384px; height: 818px; padding: 12px; border-radius: 52px; background: #17151f; z-index: 41;
+           box-shadow: 0 60px 120px -30px rgba(29,27,38,.6), 0 0 0 2px #2c2938 inset; }
+  #phone .scr { position: relative; width: 360px; height: 794px; border-radius: 40px; overflow: hidden; background: #fff; }
+  #phone img { position: absolute; left: 0; top: -1px; width: 360px; height: auto; display: block; }
 </style>
 </head>
 <body>
@@ -112,12 +119,15 @@
   <div class="sub fx" data-a="1.2,4.4" data-t="intro"></div>
 </div>
 
+<div id="scrim" class="fx"></div>
+<div id="phone" class="fx"><div class="scr"><img id="phone-a"><img id="phone-b"></div></div>
+
 <div class="center">
-  <div class="logo fx" data-a="89.4"><img src="../../handbook/docs/en/assets/logo.svg"></div>
-  <div class="word fx" data-a="89.8" style="font-size:96px">Superstep</div>
-  <div class="sub fx" data-a="90.4" data-t="outro"></div>
-  <div class="cmd fx" data-a="91.2"><span class="p">$ </span>git clone …/superstep &amp;&amp; ./dev.sh</div>
-  <div class="url2 fx" data-a="91.8">quinguyen1502.github.io/superstep</div>
+  <div class="logo fx" data-a="119.0"><img src="../../handbook/docs/en/assets/logo.svg"></div>
+  <div class="word fx" data-a="119.4" style="font-size:96px">Superstep</div>
+  <div class="sub fx" data-a="120.0" data-t="outro"></div>
+  <div class="cmd fx" data-a="120.8"><span class="p">$ </span>git clone …/superstep &amp;&amp; ./dev.sh</div>
+  <div class="url2 fx" data-a="121.4">quinguyen1502.github.io/superstep</div>
 </div>
 
 <div id="fade"></div>
@@ -127,13 +137,13 @@ const STRINGS = {
   en: {
     intro: 'From a blank canvas to an HTTP endpoint, in five steps.',
     outro: 'Self-hosted. Built on LangGraph, FastAPI and React Flow.',
-    chapters: ['Create', 'Build', 'Configure', 'Run', 'Ship'],
+    chapters: ['Create', 'Build', 'Configure', 'Run', 'Ship', 'New'],
     create: 'Create a workflow: <b2>New workflow</b2> → <b2>Blank workflow</b2>',
     drag: 'Drag an <code>LLM</code> and a <code>Human</code> node from the palette',
     wire: 'Select the old edge, press <kbd>Del</kbd>, then wire Start → LLM → Human → End',
     tidy: '<kbd>Shift</kbd><kbd>L</kbd> tidies the graph',
     prompt: 'Write the prompt. <code>{{state.message}}</code> reads the run input',
-    output: 'Add a <code>reply</code> field to the state and write the answer to it',
+    output: 'In the <b2>Data</b2> tab: add a <code>reply</code> field and write the answer to it',
     human: 'The Human node asks before the reply goes out',
     channel: 'Send the request to Slack, Telegram, WhatsApp, e-mail or Teams too',
     remote: 'Approvers can answer there: buttons in chat, links in e-mail and Teams',
@@ -146,17 +156,24 @@ const STRINGS = {
     curl: 'That service starts a run over HTTP: <code>202 queued</code>',
     cron: 'Or run it on a cron schedule, in its own time zone',
     history: 'History lists both runs. The API run waits for approval',
+    agent: 'New: the <code>Agent</code> node. Start from the <b2>Support agent</b2> template',
+    tools: 'The model picks among the tools you allow. <b2>Needs approval</b2> guards one',
+    agentWait: 'The refund call waits for a person, like a Human node',
+    rounds: 'The trace shows each round: the model call, then the tool it chose',
+    travel: '<b2>Time travel</b2>: open a checkpoint, edit its state, fork a new run',
+    mcp: 'Serve the workflow as an MCP tool to Cursor, Claude Desktop or Claude Code',
+    phone: 'On a phone, the editor shows one pane at a time',
   },
   vi: {
     intro: 'Từ canvas trống tới một endpoint HTTP, qua năm bước.',
     outro: 'Tự host. Xây trên LangGraph, FastAPI và React Flow.',
-    chapters: ['Tạo', 'Dựng', 'Cấu hình', 'Chạy', 'Đưa vào dùng'],
+    chapters: ['Tạo', 'Dựng', 'Cấu hình', 'Chạy', 'Đưa vào dùng', 'Mới'],
     create: 'Tạo workflow: <b2>Workflow mới</b2> → <b2>Workflow trống</b2>',
     drag: 'Kéo một node <code>LLM</code> và một node <code>Human</code> từ palette',
     wire: 'Chọn cạnh cũ, nhấn <kbd>Del</kbd>, rồi nối Start → LLM → Human → End',
     tidy: '<kbd>Shift</kbd><kbd>L</kbd> sắp xếp lại graph',
     prompt: 'Viết prompt. <code>{{state.message}}</code> đọc từ input của run',
-    output: 'Thêm field <code>reply</code> vào state và ghi câu trả lời vào đó',
+    output: 'Ở tab <b2>Dữ liệu</b2>: thêm field <code>reply</code> và ghi câu trả lời vào đó',
     human: 'Node Human hỏi trước khi câu trả lời được gửi đi',
     channel: 'Gửi yêu cầu duyệt tới cả Slack, Telegram, WhatsApp, e-mail hoặc Teams',
     remote: 'Người duyệt trả lời ngay tại đó: nút trên chat, link trong e-mail và Teams',
@@ -169,6 +186,13 @@ const STRINGS = {
     curl: 'Dịch vụ đó khởi chạy run qua HTTP: <code>202 queued</code>',
     cron: 'Hoặc chạy theo lịch cron, theo múi giờ riêng',
     history: 'Lịch sử có cả hai run. Run qua API đang chờ duyệt',
+    agent: 'Mới: node <code>Agent</code>. Bắt đầu từ template <b2>Agent hỗ trợ khách hàng</b2>',
+    tools: 'Model tự chọn trong các tool bạn cho phép. <b2>Cần duyệt</b2> giữ lại một tool',
+    agentWait: 'Lệnh hoàn tiền chờ người duyệt, như một node Human',
+    rounds: 'Trace hiện từng vòng: lời gọi model, rồi tool nó chọn',
+    travel: '<b2>Du hành thời gian</b2>: mở một checkpoint, sửa state, fork run mới',
+    mcp: 'Đưa workflow thành tool MCP cho Cursor, Claude Desktop hoặc Claude Code',
+    phone: 'Trên điện thoại, editor hiện từng pane một',
   },
 }
 
@@ -218,7 +242,8 @@ camAt(21.7, 22.6, 1.6, (([x, y]) => [x + 150, y])(mid('wired', 'llm')))
 // 3 Configure
 move(mid('wired', 'llm'), 23.1, 23.9); click(24.1); show('llm-selected', 24.3)
 camAt(24.5, 25.5, 1.75, mid('llm-selected', 'prompt')); cap('prompt', 2, 24.5, 29.1)
-show('llm-config', 27.1)
+show('llm-prompt', 27.1)
+move(mid('llm-config', 'tabs'), 28.2, 28.8); click(29.0); show('llm-config', 29.2)  // the middle tab: Data
 camAt(29.1, 30.1, 1.75, mid('llm-config', 'state')); cap('output', 2, 29.1, 32.7)
 camAt(30.9, 31.9, 1.75, mid('llm-config', 'output'))
 camAt(32.3, 33.0, 1, home)
@@ -256,9 +281,31 @@ move(mid('schedule', 'create'), 81.4, 82.1); click(82.3); show('scheduled', 82.5
 camAt(83.4, 84.0, 1, home)
 show('history', 84.0)
 camAt(84.3, 85.1, 1.5, [480, 740]); cap('history', 4, 84.0, 88.4)
-const WIN = { tin: 4.6, tout: 88.8 }, CURSOR = { tin: 5.4, tout: 88.4 }
+camAt(87.8, 88.4, 1, home)
+// 6 New: the Agent node, an approved tool call, its rounds, time travel, MCP, the phone layout
+show('gallery-agent', 88.6); cap('agent', 5, 88.4, 92.6)
+camAt(88.8, 89.6, 1.35, mid('gallery-agent', 'card'))
+move(mid('gallery-agent', 'card'), 89.6, 90.3); click(90.5); show('agent', 90.8)
+camAt(90.9, 91.8, 1.5, mid('agent', 'tool')); cap('tools', 5, 92.6, 96.4)
+move(mid('agent', 'approval'), 92.9, 93.6)
+camAt(95.6, 96.3, 1, home)
+show('agent-waiting', 96.6); cap('agentWait', 5, 96.4, 100.2)
+camAt(96.8, 97.6, 1.3, (([x, y, w, h]) => [x + w * 0.32, y + h / 2])(tg('agent-waiting', 'panel')))
+move(mid('agent-waiting', 'approve'), 98.8, 99.5); click(99.7); show('agent-trace', 100.0)
+camAt(100.2, 101.0, 1.4, (([x, y, w, h]) => [x + w * 0.4, y + 40])(tg('agent-trace', 'round'))); cap('rounds', 5, 100.2, 104.4)
+camAt(103.6, 104.2, 1, home)
+move(mid('agent-trace', 'travel'), 104.0, 104.7); click(104.9); show('time-travel', 105.2); cap('travel', 5, 104.6, 109.0)
+camAt(105.4, 106.2, 1.3, (([x, y, w, h]) => [x + w * 0.25, y + h * 0.4])(tg('time-travel', 'state')))
+move(mid('time-travel', 'fork'), 107.2, 107.9)
+camAt(108.4, 109.0, 1, home)
+show('mcp', 109.2); cap('mcp', 5, 109.0, 113.4)
+move(mid('mcp', 'enabled'), 109.4, 110.0); click(110.2)
+camAt(110.4, 111.2, 1.4, mid('mcp', 'snippet'))
+camAt(112.8, 113.4, 1, home)
+cap('phone', 5, 113.4, 118.0); const PHONE = { tin: 113.4, swap: 114.9, tout: 118.2 }
+const WIN = { tin: 4.6, tout: 118.4 }, CURSOR = { tin: 5.4, tout: 113.2 }
 // The script is written in seconds at 1x; SPEED plays it faster (cursor, camera, captions and fades alike)
-const SPEED = 1.4, BASE = 97.6
+const SPEED = 1.4, BASE = 127.2
 window.SPEED = SPEED
 window.DURATION = +(BASE / SPEED).toFixed(2)
 window.POSTER_AT = 55.6 / SPEED  // the run waiting at the Human node, with the approval channels
@@ -267,6 +314,8 @@ window.POSTER_AT = 55.6 / SPEED  // the run waiting at the Human node, with the 
 document.querySelectorAll('[data-t]').forEach(el => { el.textContent = S[el.dataset.t] })
 const framesEl = document.getElementById('frames')
 const frameEls = FR.map(f => { const img = document.createElement('img'); img.src = `build/frames/${LANG}/${f.name}.png`; img.style.opacity = 0; framesEl.appendChild(img); return img })
+document.getElementById('phone-a').src = `build/frames/${LANG}/phone-canvas.png`
+document.getElementById('phone-b').src = `build/frames/${LANG}/phone-config.png`
 const rail = document.getElementById('rail')
 const chapEls = S.chapters.map((c, i) => { const d = document.createElement('div'); d.className = 'chap'; d.innerHTML = `<b>${i + 1}</b>${c}`; rail.appendChild(d); return d })
 const capEl = document.getElementById('cap')
@@ -351,6 +400,9 @@ window.renderAt = function (seconds) {
   term.typed.textContent = call.slice(0, Math.round(call.length * clamp((t - TERM.type0) / (TERM.type1 - TERM.type0))))
   setFx(term.resp, clamp((t - TERM.resp) / 0.3))
 
+  setFx(document.getElementById('scrim'), fadeIO(t, PHONE.tin, PHONE.tout, 0.5))
+  setFx(document.getElementById('phone'), fadeIO(t, PHONE.tin + 0.1, PHONE.tout, 0.6), 160 * (1 - easeOut(clamp((t - PHONE.tin - 0.1) / 0.6))))
+  document.getElementById('phone-b').style.opacity = easeInOut(clamp((t - PHONE.swap) / 0.45)).toFixed(4)
   for (const f of fixed) setFx(f.el, fadeIO(t, f.a, f.b, 0.6), 30 * (1 - easeOut(clamp((t - f.a) / 0.6))))
   document.getElementById('fade').style.opacity = clamp((t - (BASE - 1.2)) / 1.2).toFixed(4)
 }
