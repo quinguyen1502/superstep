@@ -45,6 +45,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   time (Canvas, Nodes, Config, Run, Chat) with a tab bar at the bottom. The header keeps Save, Run, Chat and the ⋯
   menu as icons, a tap on a palette card adds that node, and the run input sits above the logs. Wider screens keep
   the side-by-side panels.
+- **Intro video.** The handbook home page video (en, vi, 91 s) shows the current editor, with the Config tabs, and
+  ends with a new chapter on the Agent node (Support agent template, an approved tool call, rounds in the trace),
+  time travel, the workflow as an MCP tool and the phone layout. The quickstart screenshots are recaptured.
 - **Node Config tabs.** Every node's Config shows the same three tabs in the same order: **Settings** (what the node
   does), **Data** (every state field it reads or writes, and its input fields) and **Execution** (retry, timeout,
   cache, round and item limits). A tab the node does not use stays in place, disabled; the chosen tab stays open

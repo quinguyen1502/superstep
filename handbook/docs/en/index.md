@@ -15,7 +15,7 @@ FastAPI backend validates it, compiles it into a LangGraph `StateGraph`, and
 runs it with per-node events. The same workflow can be started over HTTP, on a
 cron schedule, or paused for a human decision.
 
-<video id="video" class="home-video" controls playsinline preload="none" poster="assets/video/studio-intro-en.jpg" aria-label="Quickstart video: build, run, approve and trigger a workflow">
+<video id="video" class="home-video" controls playsinline preload="none" poster="assets/video/studio-intro-en.jpg" aria-label="Quickstart video: build, run, approve and trigger a workflow, then the Agent node, time travel, MCP tools and the phone layout">
   <source src="assets/video/studio-intro-en.mp4" type="video/mp4">
 </video>
 

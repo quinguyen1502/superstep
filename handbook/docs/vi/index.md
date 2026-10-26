@@ -15,7 +15,7 @@ FastAPI kiểm tra, biên dịch nó thành `StateGraph` của LangGraph, rồi 
 sự kiện của từng node. Cùng một workflow có thể được khởi chạy qua HTTP, theo
 lịch cron, hoặc dừng lại chờ người quyết định.
 
-<video id="video" class="home-video" controls playsinline preload="none" poster="assets/video/studio-intro-vi.jpg" aria-label="Video bắt đầu nhanh: dựng, chạy, duyệt và gọi một workflow">
+<video id="video" class="home-video" controls playsinline preload="none" poster="assets/video/studio-intro-vi.jpg" aria-label="Video bắt đầu nhanh: dựng, chạy, duyệt và gọi một workflow, rồi node Agent, du hành thời gian, tool MCP và giao diện điện thoại">
   <source src="assets/video/studio-intro-vi.mp4" type="video/mp4">
 </video>
 
