@@ -34,15 +34,15 @@ export function SettingsPage() {
   if (!current) return <Navigate to={`/settings/${SECTIONS[0].id}`} replace />
   const Component = COMPONENTS[current.id]
   return <div className="min-h-dvh bg-background">
-    <header className="flex h-14 items-center gap-3 border-b px-6">
+    <header className="flex h-14 items-center gap-3 border-b px-4 md:px-6">
       <Link to="/workflows"><Logo /></Link>
       <div className="ml-auto flex items-center gap-1"><LanguageSwitcher /><ThemeToggle /><UserMenu /></div>
     </header>
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-6 md:flex-row">
-      <aside className="shrink-0 md:w-56">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 md:flex-row md:p-6">
+      <aside className="min-w-0 shrink-0 md:w-56">
         <Button variant="ghost" size="sm" asChild className="mb-3 -ml-2"><Link to="/workflows" id="settings-back"><ArrowLeft />{t('settings.back')}</Link></Button>
         <h1 className="mb-3 text-2xl font-semibold tracking-tight">{t('settings.title')}</h1>
-        <nav className="flex gap-1 md:flex-col" aria-label={t('settings.title')}>
+        <nav className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0" aria-label={t('settings.title')}>
           {visible.map(s => <Button key={s.id} variant="ghost" asChild className={cn('justify-start', s.id === current.id && 'bg-accent text-accent-foreground')}>
             <Link to={`/settings/${s.id}`} id={`settings-nav-${s.id}`} aria-current={s.id === current.id ? 'page' : undefined}><s.icon />{t(`settings.nav.${s.id}`)}</Link>
           </Button>)}

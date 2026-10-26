@@ -190,7 +190,6 @@
     "inputFields": "Trường input",
     "inputFieldsHint": "Tắt hết để truyền cả state. Bật trường nào thì node chỉ thấy các trường đó.",
     "inputFieldsEmpty": "Thêm trường vào state để chọn phần node được thấy.",
-    "runtime": "Thực thi",
     "retryAttempts": "Số lần thử",
     "retryWait": "Chờ giữa các lần (giây)",
     "nodeTimeout": "Timeout (giây)",
@@ -222,7 +221,21 @@
     "tabRun": "Chạy",
     "pickRun": "Chọn một run…",
     "viewAllRuns": "Xem tất cả",
-    "historyDesc": "Mọi run của workflow này. Mở một run để xem lại trong nhật ký."
+    "historyDesc": "Mọi run của workflow này. Mở một run để xem lại trong nhật ký.",
+    "mobileNav": {
+      "label": "Khu vực làm việc",
+      "canvas": "Canvas",
+      "nodes": "Node",
+      "addHint": "Chạm vào một node để thêm vào canvas."
+    },
+    "configTabs": {
+      "label": "Cấu hình node",
+      "settings": "Cài đặt",
+      "data": "Dữ liệu",
+      "execution": "Thực thi",
+      "issue": "Cần xem lại",
+      "nothing": "Node này không có gì khác để cấu hình."
+    }
   },
   "nodes": {
     "start": "Điểm bắt đầu",
@@ -1588,7 +1601,8 @@
     "removeQuestion": "Xoá câu hỏi {{id}}",
     "removeItem": "Xoá",
     "outputField": "Ghi mọi câu trả lời kèm xác suất vào (trường object)",
-    "hint": "Ghi câu trả lời lựa chọn vào một trường văn bản, rồi dùng Condition trên trường đó để rẽ nhánh. Câu trả lời chấm điểm và có/không cần trường kiểu số. Ctrl+Z để hoàn tác khi lỡ xoá."
+    "hint": "Ghi câu trả lời lựa chọn vào một trường văn bản, rồi dùng Condition trên trường đó để rẽ nhánh. Câu trả lời chấm điểm và có/không cần trường kiểu số. Ctrl+Z để hoàn tác khi lỡ xoá.",
+    "fieldFor": "{{id}}: ghi câu trả lời vào"
   },
   "email": {
     "credential": "Credential SMTP",

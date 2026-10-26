@@ -190,7 +190,6 @@
     "inputFields": "Input fields",
     "inputFieldsHint": "Leave all off to pass the whole state. Turn fields on to pass only those.",
     "inputFieldsEmpty": "Add a state field to choose what this node sees.",
-    "runtime": "Execution",
     "retryAttempts": "Retry attempts",
     "retryWait": "Wait between tries (seconds)",
     "nodeTimeout": "Timeout (seconds)",
@@ -222,7 +221,21 @@
     "tabRun": "Run",
     "pickRun": "Pick a run…",
     "viewAllRuns": "View all",
-    "historyDesc": "Every run of this workflow. Open one to replay it in the logs."
+    "historyDesc": "Every run of this workflow. Open one to replay it in the logs.",
+    "mobileNav": {
+      "label": "Editor views",
+      "canvas": "Canvas",
+      "nodes": "Nodes",
+      "addHint": "Tap a node to add it to the canvas."
+    },
+    "configTabs": {
+      "label": "Node settings",
+      "settings": "Settings",
+      "data": "Data",
+      "execution": "Execution",
+      "issue": "Needs attention",
+      "nothing": "This node has nothing else to set."
+    }
   },
   "nodes": {
     "start": "Start point",
@@ -1588,7 +1601,8 @@
     "removeQuestion": "Remove question {{id}}",
     "removeItem": "Remove",
     "outputField": "All answers with probabilities go to (object field)",
-    "hint": "Write a choice to a text field, then use a Condition on that field to branch. Score and yes/no answers need a number field. Ctrl+Z undoes a removal."
+    "hint": "Write a choice to a text field, then use a Condition on that field to branch. Score and yes/no answers need a number field. Ctrl+Z undoes a removal.",
+    "fieldFor": "{{id}}: write the answer to"
   },
   "email": {
     "credential": "SMTP credential",

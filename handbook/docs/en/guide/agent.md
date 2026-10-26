@@ -21,6 +21,10 @@ approve the whole result.
 
 ## Settings
 
+The settings sit in the [Config tabs](nodes.md#config-tabs): credential,
+model, prompts, tools and approval in **Settings**; the output, steps and
+history fields in **Data**; max rounds and retry/timeout in **Execution**.
+
 | Setting | Notes |
 | --- | --- |
 | Credential, Model | As for the [LLM node](nodes.md#llm). Blank uses `OPENAI_API_KEY`, and without that the offline mock. The provider must support tool calling: OpenAI, Anthropic, OpenRouter, Ollama, LM Studio and OpenAI-compatible servers do. |

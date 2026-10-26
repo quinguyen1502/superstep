@@ -21,6 +21,11 @@ thể duyệt cả kết quả.
 
 ## Cấu hình
 
+Các cấu hình nằm trong [các tab cấu hình](nodes.md#cac-tab-cau-hinh):
+credential, model, prompt, công cụ và duyệt ở **Cài đặt**; trường output,
+trường các bước và trường lịch sử ở **Dữ liệu**; số vòng tối đa và
+retry/timeout ở **Thực thi**.
+
 | Cấu hình | Ghi chú |
 | --- | --- |
 | Credential, Model | Như [node LLM](nodes.md#llm). Để trống thì dùng `OPENAI_API_KEY`, không có nữa thì dùng mock offline. Nhà cung cấp phải hỗ trợ gọi công cụ: OpenAI, Anthropic, OpenRouter, Ollama, LM Studio và các server tương thích OpenAI đều hỗ trợ. |

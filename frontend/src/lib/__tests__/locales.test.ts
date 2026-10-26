@@ -36,6 +36,7 @@ const SAME_OK = new Set([
   'chat.step.input',
   'chat.step.output',
   'chat.tab',
+  'editor.mobileNav.canvas',  // glossary: canvas stays in English
   'approvals.identityPh.whatsapp',
   'approvals.kind.slack',
   'approvals.kind.studio',

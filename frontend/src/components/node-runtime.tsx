@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
 
 /** Blank field clears the setting. A typed number is stored as a number so the compiler can read it. */
 function num(raw: string): number | undefined {
@@ -28,9 +27,8 @@ export function NodeRuntime({ data, onChange }: { data: any; onChange: (patch: R
     if (next.initial_interval === undefined) delete next.initial_interval
     onChange({ retry: next.max_attempts === undefined && next.initial_interval === undefined ? undefined : next })
   }
-  return <div className="space-y-3">
-    <Separator />
-    <div className="text-xs font-semibold uppercase text-muted-foreground">{t('editor.runtime')}</div>
+  // the Config panel's Execution tab names the section (TASK-0121), so no heading of its own
+  return <div className="space-y-3" id="node-runtime">
     <Field id="node-retry-attempts" label={t('editor.retryAttempts')} value={retry.max_attempts} onChange={v => setRetry('max_attempts', v)} />
     <Field id="node-retry-wait" label={t('editor.retryWait')} value={retry.initial_interval} step="0.1" onChange={v => setRetry('initial_interval', v)} />
     <Field id="node-timeout" label={t('editor.nodeTimeout')} value={data.timeout} step="0.1" onChange={v => onChange({ timeout: v })} />
