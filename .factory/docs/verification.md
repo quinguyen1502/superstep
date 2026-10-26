@@ -30,6 +30,7 @@ commands:
   test:
     command: .venv/bin/python -m pytest
     cwd: backend
+    timeout: 900
     evidence: Expected
   frontend-lint:
     command: npm run lint
@@ -43,11 +44,22 @@ script: Factory does not interpret pipes or `&&`. The first argument is a
 command name on `PATH`, or a relative path such as `.venv/bin/python`.
 Absolute paths are rejected.
 
+Each command may run for 300 seconds. A slow suite sets its own `timeout`
+in seconds, as `test` does above. `factory verify run --timeout SECONDS`
+changes the limit for commands without one, for example on a slower
+machine. A command that runs out of time fails and says which setting to
+raise.
+
 When the policy file exists but declares no verification commands, `plan`
 discovers checks from project manifests and `run` records that full set into
 the policy. The policy is then the only source. A later manifest script does
 not become a check until the policy lists it. When the policy file is absent,
 discovery is used for that run and nothing is written back.
+
+Recorded names are `<dir>-<kind>`, or `<kind>` at the project root. When two
+checks would share a name, such as npm and pytest tests at the root, or the
+policy already uses the name for another command, the later one gets the tool
+as well (`test-python`), then a number.
 
 | Evidence | Checks recorded into an empty policy |
 | --- | --- |

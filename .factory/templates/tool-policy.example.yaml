@@ -35,6 +35,7 @@ validate_on_stop: false
 #   evidence: Expected (declared by owner) | Observed (recorded from a real run)
 #   cwd:      optional directory relative to the project root
 #   kind:     optional check|test|lint|typecheck|build|format|analyze
+#   timeout:  optional seconds for factory verify (default 300)
 # `factory verify` runs entries whose name or kind is one of those kinds.
 # Leave the verification commands empty and `factory verify run` records
 # the commands it discovers. After that, edit this file to change them.

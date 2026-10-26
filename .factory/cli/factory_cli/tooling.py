@@ -30,6 +30,7 @@ class CommandPolicy:
     evidence: str = "Expected"
     cwd: str = ""
     kind: str = ""
+    timeout: int = 0  # seconds for factory verify; 0 uses the default
 
     def validate(self) -> None:
         if not isinstance(self.command, str):
@@ -48,6 +49,12 @@ class CommandPolicy:
             raise ValueError(
                 "Command kind must be one of: " + ", ".join(VERIFICATION_KINDS) + "."
             )
+        if (
+            isinstance(self.timeout, bool)
+            or not isinstance(self.timeout, int)
+            or self.timeout < 0
+        ):
+            raise ValueError("Command timeout must be a whole number of seconds.")
 
 
 @dataclass
@@ -121,12 +128,14 @@ class ToolPolicy:
         return policy
 
 
-def _command_payload(command: CommandPolicy) -> Dict[str, str]:
-    payload = {"command": command.command, "evidence": command.evidence}
+def _command_payload(command: CommandPolicy) -> Dict[str, object]:
+    payload: Dict[str, object] = {"command": command.command, "evidence": command.evidence}
     if command.cwd:
         payload["cwd"] = command.cwd
     if command.kind:
         payload["kind"] = command.kind
+    if command.timeout:
+        payload["timeout"] = command.timeout
     return payload
 
 
@@ -193,6 +202,7 @@ def overlay_tool_policy(
                 evidence=existing.evidence if existing else "Expected",
                 cwd=existing.cwd if existing else "",
                 kind=existing.kind if existing else "",
+                timeout=existing.timeout if existing else 0,
             )
     updated.validate()
     return updated
