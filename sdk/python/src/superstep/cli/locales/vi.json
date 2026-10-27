@@ -1,0 +1,19 @@
+{
+  "help.main": "Vận hành một bản Superstep từ dòng lệnh.",
+  "help.version": "In phiên bản CLI và, khi có --url, phiên bản máy chủ.",
+  "help.completion": "In script hoàn thành lệnh cho shell.",
+  "help.json": "In một object JSON ra stdout.",
+  "help.lang": "Ngôn ngữ: en hoặc vi.",
+  "help.shell": "Shell cần hoàn thành lệnh.",
+  "help.url": "URL gốc của máy chủ Superstep.",
+  "example.main": "Ví dụ: superstep version",
+  "example.version": "Ví dụ: superstep version --url http://localhost:8000",
+  "example.completion": "Ví dụ: superstep completion bash",
+  "version.cli": "CLI {version}",
+  "version.server": "Máy chủ {version}",
+  "version.warning_missing": "Máy chủ không trả phiên bản.",
+  "version.warning_mismatch": "CLI là {cli} và máy chủ là {server}.",
+  "error.connection": "Không kết nối được tới máy chủ tại {url}.",
+  "error.bad_response": "Máy chủ tại {url} không trả lời health đúng dạng.",
+  "error.usage": "Đối số không hợp lệ: {message}"
+}

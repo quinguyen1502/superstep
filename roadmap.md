@@ -307,18 +307,33 @@ This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 
 - TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
   2026-10-27. **merged** (PR #191; REV-0128, QA-0128).
 
+## The superstep CLI, phase 1
+
+REQ-0079 phase 1, planned on 2026-10-27 (DEC-0068, CLAR-0010). Phase 2 (login, pull and push, run,
+test in CI, MCP over stdio) is not planned yet.
+
+- TASK-0149 CLI package, help, JSON, en and vi, completion, and the version on `/api/health`. **done**
+  (REV-0129, QA-0129; not merged)
+- TASK-0150 `install`, `adopt`, `start`, `stop`, `restart` and `logs`. **planned**
+- TASK-0151 `status`, `config` and `doctor`. **planned**
+- TASK-0152 `backup`, `restore` and scheduled backups. **planned**
+- TASK-0153 `upgrade` with a backup and automatic rollback. **planned**
+- TASK-0154 `admin` and `uninstall`. **planned**
+- TASK-0155 `deploy` to a Docker host over SSH. **planned**
+- TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **planned**
+
 ## Accepted, not planned yet
 
 Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
-owner answered every CLAR with the recommended options the same day. None is planned into tasks yet.
+owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1 is planned above. The rest
+are not planned into tasks yet.
 
 - REQ-0075 Thumbs up or down on chat answers, seen by builders and sent to LangSmith (CLAR-0006).
 - REQ-0076 An Agent round's tool calls run in parallel, each still checkpointed on its own (CLAR-0007).
 - REQ-0077 File attachments in the chat: documents, and images for vision models (CLAR-0008).
 - REQ-0078 Hand-off from one Agent node to another in the same workflow (CLAR-0009).
-- REQ-0079 The `superstep` CLI (owner request; CLAR-0010). Phase 1: install, deploy over SSH, upgrade with a backup
-  and automatic rollback, backup and restore, status, doctor and admins. Phase 2: login with personal access tokens,
-  pull and push, run, test in CI, and MCP over stdio.
+- REQ-0079 phase 2: login with personal access tokens, pull and push, run, test in CI, and MCP over stdio
+  (CLAR-0010).
 
 ## Owner requests
 

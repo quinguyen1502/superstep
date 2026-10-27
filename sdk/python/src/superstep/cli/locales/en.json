@@ -1,0 +1,19 @@
+{
+  "help.main": "Operate a Superstep instance from the command line.",
+  "help.version": "Print the CLI version and, with --url, the server version.",
+  "help.completion": "Print a shell completion script.",
+  "help.json": "Print one JSON object on stdout.",
+  "help.lang": "Language: en or vi.",
+  "help.shell": "Shell to complete for.",
+  "help.url": "Base URL of the Superstep server.",
+  "example.main": "Example: superstep version",
+  "example.version": "Example: superstep version --url http://localhost:8000",
+  "example.completion": "Example: superstep completion bash",
+  "version.cli": "CLI {version}",
+  "version.server": "Server {version}",
+  "version.warning_missing": "The server did not report a version.",
+  "version.warning_mismatch": "The CLI is {cli} and the server is {server}.",
+  "error.connection": "Could not reach the server at {url}.",
+  "error.bad_response": "The server at {url} did not return a health envelope.",
+  "error.usage": "Invalid arguments: {message}"
+}
