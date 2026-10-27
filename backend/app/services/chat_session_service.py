@@ -6,11 +6,13 @@ A workflow's chat is a chat trigger of kind "web" (channel_id = place = "web"); 
 ChatRunService.on_settled (reply-once per settled state, as for Slack/Telegram) hands it to answer(), which writes the
 assistant turn: the reply field, the Human node's question, or the error.
 
-Phase 1 is the studio: signed-in users with the run right. `access` "anonymous" / "signed_in", `channel` "web" /
-"embed" and attachments are reserved for the published page (phase 2) and later.
+Phase 1 is the studio: signed-in users with the run right. Phase 2 (REQ-0074, DEC-0067) publishes the chat at
+/c/{slug} with `access` "anonymous" or "signed_in" (services/public_chat_service.py); its sessions have `channel`
+"web" or "embed". Attachments are reserved.
 """
 from __future__ import annotations
-import json, time, uuid
+import base64, binascii, hashlib, json, re, time, uuid
+from urllib.parse import urlparse
 from typing import Optional
 from ..core import permissions as P
 from ..core.errors import AppError
@@ -21,12 +23,46 @@ from ..models import ChatMessage, ChatSession, ChatTurn, Run, WorkflowChatTrigge
 from ..repositories import ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
 from ..repositories.chat_triggers import WEB
 
-ACCESS = ("studio",)                   # phase 1
-ACCESS_RESERVED = ("anonymous", "signed_in")  # the published page (phase 2)
+ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish the chat at /c/{slug} (DEC-0067)
+PUBLIC = ("anonymous", "signed_in")
 STEPS = ("none", "labels", "full")
 ANSWERED_BY = ("visitor", "reviewer")
-DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30}
+DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30,
+            "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": ""}
 MAX_TURNS, RETENTION_MAX, TEXT_MAX, TITLE_MAX = 50, 3650, 4000, 60
+INTRO_MAX, SUGGESTIONS_MAX, SUGGESTION_MAX, DAILY_MAX, ORIGINS_MAX = 1000, 4, 120, 100_000, 10
+LOGO_MAX = 256 * 1024
+LOGO_TYPES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"))  # WebP: RIFF....WEBP (logo_of)
+SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
+RESERVED_SLUGS = frozenset({"api", "ws", "new", "admin", "login", "embed", "widget", "static", "assets"})
+
+
+def origin_of(value) -> Optional[str]:
+    """An embed origin as `scheme://host[:port]` (https, or http on localhost), lower-cased; None when it is not one."""
+    if not isinstance(value, str): return None
+    u = urlparse(value.strip().rstrip("/").lower())
+    try: port = u.port
+    except ValueError: return None
+    local = u.hostname in ("localhost", "127.0.0.1")
+    if not u.hostname or u.path or u.query or u.fragment or u.username or u.password or not (u.scheme == "https" or (u.scheme == "http" and local)): return None
+    return f"{u.scheme}://{u.hostname}" + (f":{port}" if port else "")
+
+
+def logo_of(value: str) -> tuple[str, bytes]:
+    """A logo sent as a data: URL (TASK-0145): its type, read from the bytes and not from the URL, and its bytes. No SVG:
+    an SVG can carry script. CHAT_LOGO_INVALID otherwise."""
+    bad = AppError("CHAT_LOGO_INVALID", max_kb=LOGO_MAX // 1024)
+    head, _, body = value.partition(",")
+    if not head.startswith("data:") or not head.endswith(";base64") or len(body) > (LOGO_MAX * 4 // 3) + 4: raise bad
+    try: data = base64.b64decode(body, validate=True)
+    except (binascii.Error, ValueError): raise bad from None
+    mime = next((m for sig, m in LOGO_TYPES if data.startswith(sig)), None)
+    if mime is None and data[:4] == b"RIFF" and data[8:12] == b"WEBP": mime = "image/webp"
+    if mime is None or len(data) > LOGO_MAX: raise bad
+    return mime, data
+
+
+def logo_hash(data: bytes) -> str: return hashlib.sha256(data).hexdigest()[:16]
 STEP_EVENTS = ("node_started", "node_finished", "error", "run_waiting")
 
 
@@ -78,14 +114,28 @@ class ChatSessionService:
         if not isinstance(body, dict): raise AppError("CHAT_SETTINGS_INVALID", field="body")
         t = self.triggers.web(wid)
         cur = self._public(w, t); v = {**cur, **{k: body[k] for k in cur if k in body}}
-        v = self._check(w, v)
-        cols = {"input_field": v["input_field"], "reply_field": v["reply_field"], "enabled": v["enabled"],
-                "settings": json.dumps({k: v[k] for k in DEFAULTS})}
+        v = self._check(w, v, t.command if t else None)
+        logo = None  # (mime, bytes) of a new logo; "" removes it; the current hash keeps it
+        if isinstance(v.get("logo"), str) and v["logo"].startswith("data:"):
+            logo = logo_of(v["logo"]); v["logo"] = logo_hash(logo[1])
+        elif v.get("logo") not in ("", cur["logo"]): raise AppError("CHAT_LOGO_INVALID", max_kb=LOGO_MAX // 1024)
+        taken = self.triggers.find(WEB, WEB, v["slug"])
+        if taken is not None and (t is None or taken.id != t.id): raise AppError("CHAT_SLUG_TAKEN", slug=v["slug"])
+        cols = {"input_field": v["input_field"], "reply_field": v["reply_field"], "enabled": v["enabled"], "command": v["slug"],
+                "settings": json.dumps({k: v[k] for k in DEFAULTS}, ensure_ascii=False)}
         if t is None:
-            self.triggers.add(WorkflowChatTrigger(id=uuid.uuid4().hex[:10], workflow_id=wid, owner=uid, name="Web chat", channel_id=WEB, place=WEB,
-                                                  command=wid.lower(), created=time.time(), **cols))
+            t = self.triggers.add(WorkflowChatTrigger(id=uuid.uuid4().hex[:10], workflow_id=wid, owner=uid, name="Web chat", channel_id=WEB, place=WEB,
+                                                      created=time.time(), **cols))
         else: self.triggers.set_fields(t.id, **cols)
+        if logo is not None or (not v["logo"] and cur["logo"]): self.triggers.set_logo(t.id, *(logo or (None, None)))
         return self._public(w, self.triggers.web(wid))
+
+    def logo(self, wid: str, uid: str):
+        """The chat's logo for the builder (run right), published or not; CHAT_LOGO_NOT_FOUND when it has none."""
+        self._workflow(wid, uid, P.RUN); t = self.triggers.web(wid)
+        logo = self.triggers.logo(t.id) if t else None
+        if logo is None: raise AppError("CHAT_LOGO_NOT_FOUND")
+        return logo
 
     def _public(self, w, t: Optional[WorkflowChatTrigger]) -> dict:
         fields = self._fields(w)
@@ -96,11 +146,13 @@ class ChatSessionService:
                 "input_field": t.input_field if t else guess(("message", "input", "question"), "string"),
                 "reply_field": t.reply_field if t else guess(("reply", "answer", "output"), "string"), **s}
 
-    def _check(self, w, v: dict) -> dict:
+    def _check(self, w, v: dict, slug_now: Optional[str] = None) -> dict:
         def bad(field): return AppError("CHAT_SETTINGS_INVALID", field=field)
         fields = {f["name"]: f for f in self._fields(w)}
-        if v.get("access") in ACCESS_RESERVED: raise AppError("CHAT_ACCESS_NOT_AVAILABLE", access=v["access"])
         if v.get("access") not in ACCESS: raise bad("access")
+        slug = v.get("slug")  # checked when it changes or the chat is published (an old chat keeps its id-based slug)
+        if (slug != slug_now or v["access"] in PUBLIC) and (not isinstance(slug, str) or not SLUG.match(slug) or slug in RESERVED_SLUGS):
+            raise AppError("CHAT_SLUG_INVALID")
         for f in ("input_field", "reply_field"):
             if v.get(f) not in fields: raise bad(f)
         m = v.get("messages_field") or ""
@@ -109,7 +161,23 @@ class ChatSessionService:
         for k, hi in (("max_turns", MAX_TURNS), ("retention_days", RETENTION_MAX)):
             n = v.get(k)
             if isinstance(n, bool) or not isinstance(n, int) or not 1 <= n <= hi: raise bad(k)
-        return {**v, "enabled": bool(v.get("enabled")), "messages_field": m}
+        n = v.get("daily_limit")
+        if isinstance(n, bool) or not isinstance(n, int) or not 0 <= n <= DAILY_MAX: raise bad("daily_limit")
+        title, intro = v.get("title"), v.get("intro")
+        if not isinstance(title, str) or len(title.strip()) > TITLE_MAX: raise bad("title")
+        if not isinstance(intro, str) or len(intro) > INTRO_MAX: raise bad("intro")
+        sug = v.get("suggestions")
+        if not isinstance(sug, list) or len(sug) > SUGGESTIONS_MAX or any(not isinstance(x, str) or not x.strip() or len(x.strip()) > SUGGESTION_MAX for x in sug):
+            raise bad("suggestions")
+        raw = v.get("embed_origins")
+        if not isinstance(raw, list) or len(raw) > ORIGINS_MAX: raise bad("embed_origins")
+        origins = []
+        for x in raw:
+            o = origin_of(x)
+            if o is None: raise AppError("CHAT_EMBED_ORIGIN_INVALID", origin=str(x)[:100])
+            if o not in origins: origins.append(o)
+        return {**v, "enabled": bool(v.get("enabled")), "messages_field": m, "title": title.strip(), "suggestions": [x.strip() for x in sug],
+                "embed_origins": origins}
 
     @staticmethod
     def _fields(w) -> list[dict]:
@@ -130,7 +198,15 @@ class ChatSessionService:
 
     def get(self, sid: str, uid: str, view: str = "builder") -> dict:
         s, t = self._own(sid, uid)
-        mode = "full" if view != "visitor" else (json.loads(t.settings or "{}").get("steps") or DEFAULTS["steps"])
+        return self.view(s, "full" if view != "visitor" else self.steps_mode(t))
+
+    @staticmethod
+    def steps_mode(t: WorkflowChatTrigger) -> str:
+        return json.loads(t.settings or "{}").get("steps") or DEFAULTS["steps"]
+
+    def view(self, s: ChatSession, mode: str) -> dict:
+        """A session's turns, each run's steps (in `mode`) with its first answer."""
+        sid = s.id
         steps: dict[str, list] = {}
         turns = self.sessions.turns(sid)
         for x in turns:
@@ -144,6 +220,16 @@ class ChatSessionService:
             out.append(d)
         return {**self._session(s), "steps_mode": mode, "turns": out}
 
+    def visitors(self, wid: str, uid: str) -> list[dict]:
+        """The published page's chats, for builders with the run right (DEC-0067 decision 8): no visitor ids or names."""
+        self._workflow(wid, uid, P.RUN); t = self.triggers.web(wid)
+        return [self._session(s) for s in self.sessions.list_public(t.id)] if t else []
+
+    def visitor_session(self, wid: str, sid: str, uid: str) -> dict:
+        self._workflow(wid, uid, P.RUN); s = self.sessions.get(sid)
+        if s is None or s.workflow_id != wid or s.channel not in ("web", "embed"): raise AppError("CHAT_SESSION_NOT_FOUND")
+        return self.view(s, "full")
+
     def delete(self, sid: str, uid: str) -> dict:
         self._own(sid, uid); self.sessions.delete(sid); return {"ok": True}
 
@@ -151,6 +237,11 @@ class ChatSessionService:
     def input_for(self, uid: str, sid: str, message) -> dict:
         """{workflow_id, input} for the next message, checked; nothing is written yet."""
         s, t = self._own(sid, uid, P.RUN)
+        return self.prepare(s, t, message)
+
+    def prepare(self, s: ChatSession, t: WorkflowChatTrigger, message) -> dict:
+        """The run input of a message in session `s`, checked: the input field, and the history in the messages field."""
+        sid = s.id
         if not t.enabled: raise AppError("CHAT_NOT_ENABLED")
         if not isinstance(message, str) or not message.strip(): raise AppError("CHAT_MESSAGE_EMPTY")
         if len(message) > TEXT_MAX: raise AppError("CHAT_MESSAGE_TOO_LONG", max=TEXT_MAX)
@@ -172,10 +263,14 @@ class ChatSessionService:
 
     def record(self, uid: str, sid: str, text: str, rid: str) -> None:
         """The person's turn and the reply-once record, once the run is planned."""
-        s, t = self._own(sid, uid, P.RUN); now = time.time()
+        s, t = self._own(sid, uid, P.RUN)
+        self.write(s, t, text, rid, uid)
+
+    def write(self, s: ChatSession, t: WorkflowChatTrigger, text: str, rid: str, sender: str) -> None:
+        sid, now = s.id, time.time()
         turn = self.sessions.add_turn(ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=rid, role="user", text=text, status="ok", created=now))
         self.messages.add_once(ChatMessage(id=uuid.uuid4().hex[:12], channel_id=WEB, key=turn.id, trigger_id=t.id, workflow_id=s.workflow_id, kind=WEB,
-                                           team="", sender=uid, text=text, ref=json.dumps({"session": sid}), status="started", run_id=rid, created=now))
+                                           team="", sender=sender, text=text, ref=json.dumps({"session": sid}), status="started", run_id=rid, created=now))
         self.sessions.set_fields(sid, last_run_id=rid, **({"title": text[:TITLE_MAX]} if not s.title else {}))
         self.triggers.set_fields(t.id, last_message=now, last_run_id=rid)
 

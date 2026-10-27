@@ -1,7 +1,8 @@
 /** The editor's Chat tab (TASK-0085, REQ-0048 phase 1): chat with the saved workflow as a visitor would. Your chats
  *  on the left with "New chat"; the Builder / Visitor switch shows every step (builders always see full) or the steps
- *  the Chat settings give visitors. Runs use the saved workflow, like a chat trigger. */
-import { useEffect, useRef, useState } from 'react'
+ *  the Chat settings give visitors. Runs use the saved workflow, like a chat trigger. When the chat is published, the
+ *  Visitors list shows the page's chats read-only with every step (TASK-0142). */
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, ChevronDown, Eye, Settings2, SquarePen, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -15,8 +16,9 @@ import { api } from '@/lib/api'
 import { fmtDate } from '@/lib/i18n'
 import { useLoadWhen } from '@/lib/use-when'
 import { cn } from '@/lib/utils'
-import { waitingTurn, type ChatSession, type ChatSettings } from '@/lib/chat'
-import { useChatRun, type ChatView } from './use-chat-run'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { published, waitingTurn, type ChatSession, type ChatSettings } from '@/lib/chat'
+import { useChatRun, type ChatEndpoint, type ChatView } from './use-chat-run'
 import { ChatThread } from './chat-thread'
 import { ChatComposer } from './chat-composer'
 import { ChatSettingsDialog } from './chat-settings-dialog'
@@ -26,9 +28,14 @@ export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, a
   const [settings, setSettings] = useState<ChatSettings | null>(null); const [sessions, setSessions] = useState<ChatSession[]>([])
   const [sid, setSid] = useState<string | null>(null); const [view, setView] = useState<ChatView>('builder')
   const [err, setErr] = useState(''); const [cfg, setCfg] = useState(false); const [del, setDel] = useState<ChatSession | null>(null)
+  const [visitors, setVisitors] = useState<ChatSession[]>([]); const [vsid, setVsid] = useState<string | null>(null)   // vsid: a visitor chat is open
   const list = (pick?: string) => api<ChatSession[]>(`/api/workflows/${wid}/chat/sessions`).then(s => { setSessions(s); setSid(c => pick ?? (c && s.some(x => x.id === c) ? c : s[0]?.id ?? null)) })
+  const listVisitors = () => api<ChatSession[]>(`/api/workflows/${wid}/chat/visitors`).then(setVisitors)
+  const visitorEp = useMemo<ChatEndpoint>(() => ({ session: id => `/api/workflows/${wid}/chat/visitors/${id}`, socket: '/ws/run' }), [wid])
   const chat = useChatRun(sid, view, () => { list().catch(() => {}) })   // titles and order change after a message
-  useLoadWhen(active, () => { setErr(''); api<ChatSettings>(`/api/workflows/${wid}/chat`).then(setSettings).catch(e => setErr(e.message)); list().catch(e => setErr(e.message)) }, wid)
+  const read = useChatRun(vsid, 'builder', undefined, visitorEp)
+  useLoadWhen(active, () => { setErr(''); api<ChatSettings>(`/api/workflows/${wid}/chat`).then(setSettings).catch(e => setErr(e.message)); list().catch(e => setErr(e.message)); listVisitors().catch(() => setVisitors([])) }, wid)
+  const showVisitors = !!settings && (published(settings) || visitors.length > 0)
   const fresh = () => api<ChatSession>(`/api/workflows/${wid}/chat/sessions`, { method: 'POST' }).then(s => list(s.id)).catch(e => setErr(e.message))
   // the first message of a new chat creates it, then goes out once the chat is loaded
   const first = useRef(''); const { send: say, session } = chat
@@ -43,8 +50,19 @@ export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, a
   const newChat = <Tip tip={t('chat.new')}><Button size="icon-sm" variant="ghost" id="chat-new" aria-label={t('chat.new')} disabled={!!off} onClick={fresh}><SquarePen /></Button></Tip>
   return <div className="flex h-full min-h-0" id="chat-panel">
     {!compact && <aside className="flex w-56 shrink-0 flex-col border-r">
-      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3" id="chat-sidebar-header"><span className="truncate text-xs font-medium text-muted-foreground">{t('chat.sessions')}</span>{newChat}</div>
-      <ScrollArea className="min-h-0 flex-1"><nav className="space-y-0.5 p-2" aria-label={t('chat.sessions')}>
+      <div className="flex h-11 shrink-0 items-center justify-between gap-2 border-b px-3" id="chat-sidebar-header">
+        {showVisitors ? <Tabs value={vsid === null ? 'mine' : 'visitors'} onValueChange={v => v === 'mine' ? setVsid(null) : setVsid(visitors[0]?.id ?? '')}>
+            <TabsList size="sm"><TabsTrigger value="mine" id="chat-tab-mine">{t('chat.sessions')}</TabsTrigger>
+              <TabsTrigger value="visitors" id="chat-tab-visitors" onClick={() => listVisitors().catch(() => {})}>{t('chat.visitors.tab')}</TabsTrigger></TabsList></Tabs>
+          : <span className="truncate text-xs font-medium text-muted-foreground">{t('chat.sessions')}</span>}
+        {vsid === null && newChat}</div>
+      <ScrollArea className="min-h-0 flex-1">{vsid !== null ? <nav className="space-y-0.5 p-2" aria-label={t('chat.visitors.tab')} id="chat-visitors">
+        {!visitors.length && <p className="px-2 py-1 text-xs text-muted-foreground">{t('chat.visitors.none')}</p>}
+        {visitors.map(s => <button key={s.id} data-testid="chat-visitor-session" aria-current={s.id === vsid || undefined} onClick={() => setVsid(s.id)}
+          className={cn('block w-full rounded-md px-2 py-1.5 text-left hover:bg-accent', s.id === vsid && 'bg-accent')}>
+          <div className="truncate text-xs font-medium">{s.title || t('chat.untitled')}</div>
+          <div className="truncate text-[11px] text-muted-foreground tabular-nums">{t(`chat.visitors.channel.${s.channel}`)} · {fmtDate(s.updated)}</div></button>)}
+      </nav> : <nav className="space-y-0.5 p-2" aria-label={t('chat.sessions')}>
         {!sessions.length && <p className="px-2 py-1 text-xs text-muted-foreground">{t('chat.noSessions')}</p>}
         {sessions.map(s => <div key={s.id} className={cn('group flex items-center gap-1 rounded-md hover:bg-accent', s.id === sid && 'bg-accent')}>
           <button data-testid="chat-session" aria-current={s.id === sid || undefined} onClick={() => setSid(s.id)} className="min-w-0 flex-1 px-2 py-1.5 text-left">
@@ -52,7 +70,7 @@ export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, a
             <div className="truncate text-[11px] text-muted-foreground tabular-nums">{fmtDate(s.updated)}</div></button>
           <Button size="icon-xs" variant="ghost" className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" aria-label={t('chat.delete')} data-testid="chat-delete" onClick={() => setDel(s)}><Trash2 /></Button>
         </div>)}
-      </nav></ScrollArea>
+      </nav>}</ScrollArea>
     </aside>}
     <div className="flex min-w-0 flex-1 flex-col">
       <div className={cn("flex h-11 shrink-0 items-center border-b", compact ? "gap-0.5 px-1.5" : "gap-2 px-3")} id="chat-toolbar">
@@ -77,22 +95,29 @@ export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, a
             </SelectGroup></SelectContent></Select>}
         <span className={cn('truncate text-xs text-muted-foreground', compact && 'hidden')} id="chat-mode-hint">{t(`chat.stepsHint.${mode}`)}</span>
         {dirty && !compact && <span className="truncate text-xs text-warning" id="chat-unsaved">{t('chat.unsaved')}</span>}
-        {compact && <><Select value={sid ?? ''} onValueChange={setSid}><SelectTrigger size="sm" variant="ghost" className="min-w-32 flex-1 justify-start" id="chat-session-picker" aria-label={t('chat.sessions')}><SelectValue placeholder={t('chat.noSessions')} /></SelectTrigger>
-          <SelectContent>{sessions.map(s => <SelectItem key={s.id} value={s.id}>{s.title || t('chat.untitled')}</SelectItem>)}</SelectContent></Select>
-          {newChat}</>}
+        {compact && <><Select value={vsid ? `v:${vsid}` : sid ?? ''} onValueChange={x => { if (x.startsWith('v:')) setVsid(x.slice(2)); else { setVsid(null); setSid(x) } }}>
+          <SelectTrigger size="sm" variant="ghost" className="min-w-32 flex-1 justify-start" id="chat-session-picker" aria-label={t('chat.sessions')} onClick={() => { if (showVisitors) listVisitors().catch(() => {}) }}><SelectValue placeholder={t('chat.noSessions')} /></SelectTrigger>
+          <SelectContent>{sessions.map(s => <SelectItem key={s.id} value={s.id}>{s.title || t('chat.untitled')}</SelectItem>)}
+            {showVisitors && visitors.length > 0 && <SelectGroup><SelectLabel>{t('chat.visitors.tab')}</SelectLabel>
+              {visitors.map(s => <SelectItem key={s.id} value={`v:${s.id}`} data-testid="chat-visitor-option">{s.title || t('chat.untitled')}</SelectItem>)}</SelectGroup>}</SelectContent></Select>
+          {vsid === null && newChat}</>}
         {!compact && <span className="ml-auto" />}
         {canConfigure && !compact && <Tip tip={t('chat.settings.title')}><Button size="icon-sm" variant="ghost" id="chat-settings-btn" aria-label={t('chat.settings.title')} onClick={() => setCfg(true)}><Settings2 /></Button></Tip>}{actions}
       </div>
       {(err || chat.error) && <Alert variant="destructive" className="m-3 w-auto"><AlertCircle /><AlertDescription id="chat-error-banner">{err || chat.error}</AlertDescription></Alert>}
-      {off ? <div className="m-auto max-w-sm space-y-3 p-6 text-center" id="chat-off">
+      {vsid !== null ? <><div className="flex shrink-0 items-center gap-2 border-b bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground" id="chat-visitor-readonly" role="status">
+          <Eye className="size-3.5 shrink-0" /><span className="min-w-0 flex-1 truncate">{t('chat.visitors.readOnly')}</span></div>
+        {vsid ? <ChatThread turns={read.session?.turns ?? []} mode="full" events={[]} trace={read.trace} pending={null} running={false} />
+          : <p className="m-auto p-6 text-sm text-muted-foreground">{t('chat.visitors.none')}</p>}</>
+      : off ? <div className="m-auto max-w-sm space-y-3 p-6 text-center" id="chat-off">
           <p className="text-sm text-muted-foreground">{t('chat.off')}</p>
           {canConfigure && <Button size="sm" id="chat-turn-on" onClick={() => setCfg(true)}><Settings2 />{t('chat.settings.open')}</Button>}</div>
         : settings && <>{view === 'visitor' && <div className="flex shrink-0 items-center gap-2 border-b bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground" id="chat-visitor-banner" role="status">
             <Eye className="size-3.5 shrink-0" /><span className="min-w-0 flex-1 truncate">{t('chat.visitorBanner')}</span>
             <Button size="xs" variant="link" id="chat-visitor-exit" onClick={() => setView('builder')}>{t('chat.visitorExit')}</Button></div>}
-          <ChatThread turns={chat.session?.turns ?? []} mode={mode} settings={settings} events={chat.events} trace={chat.trace}
+          <ChatThread turns={chat.session?.turns ?? []} mode={mode} replyField={settings.reply_field} events={chat.events} trace={chat.trace}
             pending={chat.pending} running={chat.running} onAnswer={chat.answer} /></>}
-      {!off && <ChatComposer disabled={!settings || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
+      {!off && vsid === null && <ChatComposer disabled={!settings || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
         placeholder={waiting ? t(waiting.answered_by === 'reviewer' ? 'chat.waitingReviewer' : 'chat.answerPlaceholder') : undefined}
         onSend={text => waiting?.run_id ? chat.answer(waiting.run_id, text) : send(text)} />}
     </div>

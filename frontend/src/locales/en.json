@@ -229,7 +229,8 @@
       "label": "Editor views",
       "canvas": "Canvas",
       "nodes": "Nodes",
-      "addHint": "Tap a node to add it to the canvas."
+      "add": "Add",
+      "addHint": "Tap Add to put a node on the canvas."
     },
     "configTabs": {
       "label": "Node settings",
@@ -482,6 +483,14 @@
     "CHAT_MESSAGE_TOO_LONG": "The message is longer than {{max}} characters",
     "CHAT_RUN_WAITING": "Answer the question in the chat first",
     "CHAT_ANSWER_BY_REVIEWER": "A reviewer answers this step in the Approvals inbox",
+    "CHAT_NOT_PUBLISHED": "This chat is not available",
+    "CHAT_SLUG_INVALID": "The chat address must be 3 to 64 lowercase letters, digits or hyphens",
+    "CHAT_SLUG_TAKEN": "Another chat already uses the address '{{slug}}'",
+    "CHAT_SIGN_IN_REQUIRED": "Sign in to use this chat",
+    "CHAT_DAILY_LIMIT": "This chat has used its messages for today. Try again tomorrow",
+    "CHAT_EMBED_ORIGIN_INVALID": "'{{origin}}' is not a site address like https://example.com",
+    "CHAT_LOGO_INVALID": "The logo must be a PNG, JPEG or WebP image of at most {{max_kb}} KB",
+    "CHAT_LOGO_NOT_FOUND": "This chat has no logo",
     "TEST_NOT_FOUND": "Test case not found",
     "TEST_CASE_INVALID": "Test case: {{reason}}",
     "TEST_CASES_LIMIT": "A workflow can have at most {{max}} test cases",
@@ -890,6 +899,7 @@
     "platform": "Platform",
     "name": "Name",
     "namePh": "e.g. Acme workspace",
+    "demoReadOnly": "Linking chat accounts is off in the public demo.",
     "noChannels": "No connections yet. Add your own Slack app or Telegram bot below.",
     "orgReadOnly": "Managed by an admin. You can pick it on your Human nodes.",
     "replaceSecrets": "Replace secrets",
@@ -1873,6 +1883,7 @@
     "languageLabel": "Language"
   },
   "demo": {
+    "readOnly": "Changes are off in the public demo.",
     "banner": "This is a public demo. Data resets when the server sleeps, and the first load may take about 30 s. Changes are not saved; Code, HTTP and Send email nodes are off, and models answer with a mock.",
     "hide": "Hide",
     "try": "Try the demo",
@@ -1922,8 +1933,7 @@
       "enabled": "Chat",
       "enabledHint": "Turn chat on for this workflow.",
       "access": "Who can chat",
-      "accessHint": "Now only people who can run this workflow in the studio. Public links come later.",
-      "later": "Later",
+      "accessHint": "Studio users chat in this tab. Anyone with the link, or signed-in users, chat on a public page.",
       "inputField": "Message field",
       "replyField": "Reply field",
       "messagesField": "Conversation field",
@@ -1979,7 +1989,52 @@
       }
     },
     "visitorBanner": "You're previewing what chat visitors see",
-    "visitorExit": "Back to builder view"
+    "visitorExit": "Back to builder view",
+    "publish": {
+      "slug": "Page address",
+      "slugHint": "3 to 64 lowercase letters, digits or hyphens. Changing it breaks the old link.",
+      "copyLink": "Copy link",
+      "openPage": "Open page",
+      "off": "Turn Chat on to publish the page.",
+      "title": "Page title",
+      "titleHint": "Shown at the top of the page. The workflow's name if empty.",
+      "intro": "Intro",
+      "introHint": "What visitors read before the first message. Markdown.",
+      "suggestions": "Suggested messages",
+      "suggestion": "Suggested message {{n}}",
+      "removeSuggestion": "Remove suggested message",
+      "addSuggestion": "Add a suggested message",
+      "suggestionsHint": "Up to 4 buttons a visitor can click to start.",
+      "dailyLimit": "Messages per day",
+      "dailyLimitHint": "Visitor messages per day (UTC) for this chat. 0 means no cap.",
+      "logo": "Logo",
+      "logoHint": "PNG, JPEG or WebP, up to {{max_kb}} KB. Shown on the page and in the browser tab. Without one, the page shows the title's first letter and a picture.",
+      "uploadLogo": "Upload logo",
+      "changeLogo": "Change logo",
+      "removeLogo": "Remove logo"
+    },
+    "page": {
+      "title": "Chat",
+      "goneTitle": "Chat not available",
+      "gone": "This chat is not available. The link may have changed, or the chat was turned off."
+    },
+    "visitors": {
+      "tab": "Visitors",
+      "none": "No visitor chats yet.",
+      "readOnly": "A visitor's chat from the public page. Read-only.",
+      "channel": {
+        "web": "Page",
+        "embed": "Embed"
+      }
+    },
+    "embed": {
+      "origins": "Sites that may embed this chat",
+      "originsHint": "One per line, like https://www.example.com. Other sites cannot show the page in a frame.",
+      "widget": "Chat bubble",
+      "widgetHint": "Paste before </body>. A button opens the chat in a corner, and visitors keep their chats in every browser. The site can read the visitor's chat key.",
+      "iframe": "Frame",
+      "iframeHint": "Shows the chat inside the page. Some browsers (Safari) start a new chat each time in a frame; use the bubble to keep chats."
+    }
   },
   "timeTravel": {
     "open": "Time travel",

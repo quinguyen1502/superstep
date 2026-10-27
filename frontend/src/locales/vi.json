@@ -229,7 +229,8 @@
       "label": "Khu vực làm việc",
       "canvas": "Canvas",
       "nodes": "Node",
-      "addHint": "Chạm vào một node để thêm vào canvas."
+      "add": "Thêm",
+      "addHint": "Chạm Thêm để đặt node lên canvas."
     },
     "configTabs": {
       "label": "Cấu hình node",
@@ -482,6 +483,14 @@
     "CHAT_MESSAGE_TOO_LONG": "Tin nhắn dài hơn {{max}} ký tự",
     "CHAT_RUN_WAITING": "Hãy trả lời câu hỏi trong chat trước",
     "CHAT_ANSWER_BY_REVIEWER": "Bước này do người duyệt trả lời trong trang Duyệt",
+    "CHAT_NOT_PUBLISHED": "Chat này hiện không mở",
+    "CHAT_SLUG_INVALID": "Địa chỉ chat phải dài 3 đến 64 ký tự, chỉ gồm chữ thường, số hoặc dấu gạch ngang",
+    "CHAT_SLUG_TAKEN": "Địa chỉ '{{slug}}' đã có chat khác dùng",
+    "CHAT_SIGN_IN_REQUIRED": "Hãy đăng nhập để dùng chat này",
+    "CHAT_DAILY_LIMIT": "Chat này đã hết lượt tin nhắn hôm nay. Hãy thử lại vào ngày mai",
+    "CHAT_EMBED_ORIGIN_INVALID": "'{{origin}}' không phải địa chỉ trang web dạng https://example.com",
+    "CHAT_LOGO_INVALID": "Logo phải là ảnh PNG, JPEG hoặc WebP, tối đa {{max_kb}} KB",
+    "CHAT_LOGO_NOT_FOUND": "Chat này chưa có logo",
     "TEST_NOT_FOUND": "Không tìm thấy test case",
     "TEST_CASE_INVALID": "Test case: {{reason}}",
     "TEST_CASES_LIMIT": "Một workflow có tối đa {{max}} test case",
@@ -890,6 +899,7 @@
     "platform": "Nền tảng",
     "name": "Tên",
     "namePh": "vd. Workspace Acme",
+    "demoReadOnly": "Bản demo công khai không cho liên kết tài khoản chat.",
     "noChannels": "Chưa có kết nối. Thêm Slack app hoặc Telegram bot của bạn bên dưới.",
     "orgReadOnly": "Do admin quản lý. Bạn vẫn chọn được kết nối này trong node Human.",
     "replaceSecrets": "Thay khoá bí mật",
@@ -1873,6 +1883,7 @@
     "languageLabel": "Ngôn ngữ"
   },
   "demo": {
+    "readOnly": "Bản demo công khai không cho lưu thay đổi.",
     "banner": "Đây là bản demo công khai. Dữ liệu được đặt lại khi máy chủ nghỉ, và lần tải đầu có thể mất khoảng 30 giây. Thay đổi không được lưu; node Code, HTTP và Send email đang tắt, model trả lời bằng mock.",
     "hide": "Ẩn",
     "try": "Dùng thử demo",
@@ -1922,8 +1933,7 @@
       "enabled": "Chat",
       "enabledHint": "Bật chat cho workflow này.",
       "access": "Ai được chat",
-      "accessHint": "Hiện chỉ những người được chạy workflow này trong studio. Link công khai sẽ có sau.",
-      "later": "Sau này",
+      "accessHint": "Người dùng studio chat trong tab này. Ai có link, hoặc người đã đăng nhập, chat trên một trang công khai.",
       "inputField": "Trường tin nhắn",
       "replyField": "Trường trả lời",
       "messagesField": "Trường cuộc trò chuyện",
@@ -1979,7 +1989,52 @@
       }
     },
     "visitorBanner": "Bạn đang xem trước như khách chat",
-    "visitorExit": "Về góc nhìn người dựng"
+    "visitorExit": "Về góc nhìn người dựng",
+    "publish": {
+      "slug": "Địa chỉ trang",
+      "slugHint": "Từ 3 đến 64 ký tự: chữ thường, số hoặc dấu gạch ngang. Đổi địa chỉ thì link cũ không dùng được nữa.",
+      "copyLink": "Sao chép link",
+      "openPage": "Mở trang",
+      "off": "Bật Chat để công khai trang.",
+      "title": "Tiêu đề trang",
+      "titleHint": "Hiện ở đầu trang. Để trống thì dùng tên workflow.",
+      "intro": "Lời giới thiệu",
+      "introHint": "Khách chat đọc trước khi gửi tin nhắn đầu tiên. Dùng được Markdown.",
+      "suggestions": "Tin nhắn gợi ý",
+      "suggestion": "Tin nhắn gợi ý {{n}}",
+      "removeSuggestion": "Xoá tin nhắn gợi ý",
+      "addSuggestion": "Thêm tin nhắn gợi ý",
+      "suggestionsHint": "Tối đa 4 nút để khách chat bấm vào bắt đầu.",
+      "dailyLimit": "Số tin nhắn mỗi ngày",
+      "dailyLimitHint": "Số tin nhắn của khách chat mỗi ngày (giờ UTC) cho chat này. 0 là không giới hạn.",
+      "logo": "Logo",
+      "logoHint": "PNG, JPEG hoặc WebP, tối đa {{max_kb}} KB. Hiện trên trang và trên tab trình duyệt. Khi chưa có logo, trang hiện chữ cái đầu của tiêu đề và một hình minh họa.",
+      "uploadLogo": "Tải logo lên",
+      "changeLogo": "Đổi logo",
+      "removeLogo": "Bỏ logo"
+    },
+    "page": {
+      "title": "Chat",
+      "goneTitle": "Chat không mở",
+      "gone": "Chat này hiện không mở. Có thể link đã đổi, hoặc chat đã bị tắt."
+    },
+    "visitors": {
+      "tab": "Khách",
+      "none": "Chưa có cuộc trò chuyện nào của khách.",
+      "readOnly": "Chat của khách trên trang công khai. Chỉ xem.",
+      "channel": {
+        "web": "Trang",
+        "embed": "Nhúng"
+      }
+    },
+    "embed": {
+      "origins": "Các site được nhúng chat này",
+      "originsHint": "Mỗi dòng một site, ví dụ https://www.example.com. Site khác không hiện được trang trong frame.",
+      "widget": "Bong bóng chat",
+      "widgetHint": "Dán trước </body>. Một nút mở chat ở góc trang, và khách giữ được cuộc trò chuyện trên mọi trình duyệt. Site đó đọc được khoá chat của khách.",
+      "iframe": "Frame",
+      "iframeHint": "Hiện chat ngay trong trang. Một số trình duyệt (Safari) bắt đầu cuộc trò chuyện mới mỗi lần khi ở trong frame; dùng bong bóng chat để giữ cuộc trò chuyện."
+    }
   },
   "timeTravel": {
     "open": "Du hành thời gian",

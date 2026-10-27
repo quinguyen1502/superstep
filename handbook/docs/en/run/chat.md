@@ -21,10 +21,8 @@ kept so the workflow can remember it.
 
 ![Chat in fullscreen](../images/chat-fullscreen.png)
 
-!!! note "Phase 1"
-    Chat works inside the studio for people who may run the workflow. Public
-    chat links, signed-in visitors, attachments and an embeddable widget come
-    later; the settings already reserve room for them.
+To let people outside the studio chat with the workflow, [publish the chat](#publish-a-chat)
+on a page of its own, and [embed it](#embed-the-chat-on-your-site) on your site if you like.
 
 ## Turn chat on
 
@@ -41,7 +39,7 @@ kept so the workflow can remember it.
 
 | Setting | What it does | Default |
 |---|---|---|
-| Who can chat | **Studio users** only for now. *Anyone with the link* and *Signed-in users* are shown but not available yet. | Studio users |
+| Who can chat | **Studio users** chat in this panel. **Anyone with the link** or **Signed-in users** also [publish the chat](#publish-a-chat) on a public page. | Studio users |
 | Messages remembered | How many earlier exchanges (one message and its answer) go to the conversation field. | 10 |
 | Steps shown to visitors | **None**, **Step names** or **Full** (with each step's input and output). | Step names |
 | Retention (days) | Chats with no new message for this long are deleted. | 30 |
@@ -99,16 +97,107 @@ A new message cannot be sent while the chat waits for an answer. The node's
 [deadline](human-approval.md#deadlines) applies in both cases; when it passes,
 its timeout action decides what happens.
 
+## Publish a chat
+
+Set **Who can chat** to **Anyone with the link** or **Signed-in users**, and keep
+**Chat** on. The chat now has a page of its own at `/c/<address>`, where people
+who never open the studio can talk to the workflow.
+
+![Publish settings](../images/chat-publish.png)
+
+| Setting | What it does | Default |
+|---|---|---|
+| Page address | The `<address>` in `/c/<address>`: 3 to 64 lowercase letters, digits or hyphens, not used by another chat. Changing it breaks the old link. | the workflow's id |
+| Page title | Shown at the top of the page. | the workflow's name |
+| Logo | A PNG, JPEG or WebP image of up to 256 KB. **Upload logo** picks it; **Save** stores it. It shows at the top of the page, over the intro and in the browser tab. | the title's first letter, and a picture over the intro |
+| Intro | What visitors read before their first message. Markdown. | empty |
+| Suggested messages | Up to 4 buttons a visitor can click to start. | none |
+| Messages per day | Visitor messages per day (UTC) for this chat, so a busy or abused page cannot run up your model bill. `0` means no cap. | 500 |
+
+**Copy link** and **Open page** appear once the chat is published.
+
+![The public chat page](../images/public-chat.png)
+
+On the page:
+
+- **Anyone with the link**: a visitor needs no account. The browser keeps a
+  private cookie for this chat, so the visitor finds their earlier chats when
+  they come back, and nobody else can read them.
+- **Signed-in users**: any account of this studio can chat, also one that may
+  not open the workflow. A visitor who is not signed in goes to the sign-in page
+  and comes back to the chat.
+- Each message runs the saved workflow as its **owner**: with the owner's
+  credentials, knowledge bases and MCP servers, as Slack and Telegram chats do.
+  The runs are in the workflow's History.
+- The page shows what **Steps shown to visitors** allows. It never shows the
+  workflow, its state or who owns it.
+- [Human nodes](#human-nodes-in-a-chat) work as in the panel: the visitor
+  answers questions for **The person chatting**, and waits for a reviewer
+  otherwise.
+- The page follows the visitor's language (English or Vietnamese) and light or
+  dark setting.
+
+**Limits.** Besides the chat's messages per day, the server limits each visitor
+and each IP address (10 and 30 messages a minute by default). A visitor over a
+limit is told when to try again, and no run starts. Operators change the limits
+with the `STUDIO_PUBLIC_CHAT_RATE_*` settings (see
+[Configuration](../reference/configuration.md)). The public demo publishes no
+chats.
+
+To take the page down, set **Who can chat** back to **Studio users** or turn
+**Chat** off. The page then says the chat is not available.
+
+### Visitor chats
+
+When the chat is published, the panel gets a **Visitors** list (in the narrow
+panel, a group in the session picker). It shows each visitor's chat read-only,
+with every step, until **Retention** deletes it. It shows no names or visitor
+ids. Visitors are not told that chats are kept, so say so in the intro if it
+matters.
+
+## Embed the chat on your site
+
+A chat open to **Anyone with the link** can also appear on another site.
+
+1. Add the site under **Sites that may embed this chat**, one per line, like
+   `https://www.example.com` (`http://localhost:<port>` also works, for testing).
+   Other sites cannot show the page in a frame.
+2. Copy one of the two snippets that appear:
+    - **Chat bubble**: paste it before `</body>`. A round button in the corner
+      opens the chat. Visitors keep their chats on that site in every browser.
+    - **Frame**: shows the chat inside the page, where you put it. Some browsers
+      (Safari) clear what a frame stores, so a visitor may start afresh on each
+      visit; use the bubble to keep chats.
+
+![Embed settings](../images/chat-embed.png)
+
+```html
+<script src="https://studio.example.com/c/widget.js" data-slug="order-help" async></script>
+```
+
+The bubble takes `data-position="left"` to sit on the left, and
+`data-open="true"` to start open. It keeps the visitor's chat key in the site's
+own storage, so scripts on that site can read it and open that visitor's chats:
+embed the bubble only on sites you trust with them.
+
+The rest of the studio cannot be shown in a frame on any site.
+
 ## Errors
 
 | Code | Meaning |
 |---|---|
 | `CHAT_NOT_ENABLED` | Chat is off for this workflow. |
 | `CHAT_SETTINGS_INVALID` | A setting is wrong; `field` names it. |
-| `CHAT_ACCESS_NOT_AVAILABLE` | That *Who can chat* option is not available yet. |
 | `CHAT_SESSION_NOT_FOUND` | The chat does not exist, or is not yours. |
 | `CHAT_MESSAGE_EMPTY` / `CHAT_MESSAGE_TOO_LONG` | The message is empty, or over 4000 characters. |
 | `CHAT_RUN_WAITING` | The chat waits for a Human node's answer. |
 | `CHAT_ANSWER_BY_REVIEWER` | A reviewer answers this step, in Approvals. |
+| `CHAT_NOT_PUBLISHED` | The public page is off, or its address changed. |
+| `CHAT_SLUG_INVALID` / `CHAT_SLUG_TAKEN` | The page address has the wrong form, or another chat uses it. |
+| `CHAT_SIGN_IN_REQUIRED` | The chat is for signed-in users. |
+| `CHAT_DAILY_LIMIT` | The chat has used its messages for today. |
+| `CHAT_EMBED_ORIGIN_INVALID` | An embed site is not an address like `https://example.com`. |
+| `CHAT_LOGO_INVALID` | The logo is not a PNG, JPEG or WebP image, or it is over 256 KB. SVG is not accepted. |
+| `RATE_LIMITED` | Too many messages from this visitor or address; `retry_after` says when to try again. |
 
 See also [Chat triggers](chat-triggers.md) for Slack and Telegram.

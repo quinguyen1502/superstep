@@ -13,6 +13,7 @@ import { DemoBanner } from '@/components/demo-banner'
 // The editor (React Flow, CodeMirror, dagre) and Settings load as their own chunks (TASK-0039).
 const EditorPage = lazy(() => import('@/pages/Editor').then(m => ({ default: m.EditorPage })))
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const PublicChatPage = lazy(() => import('@/pages/PublicChat').then(m => ({ default: m.PublicChatPage })))  // /c/{slug}, no sign-in (TASK-0142)
 
 function Protected({ children }: { children: React.ReactElement }) {
   const loc = useLocation()
@@ -26,6 +27,7 @@ export default function App() {
     <Route path="/register" element={<AuthPage mode="register" />} />
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/c/:slug" element={<PublicChatPage />} />
     <Route path="/workflows" element={<Protected><WorkflowsPage /></Protected>} />
     <Route path="/workflows/:id" element={<Protected><EditorPage /></Protected>} />
     <Route path="/approve" element={<Protected><ApprovePage /></Protected>} />

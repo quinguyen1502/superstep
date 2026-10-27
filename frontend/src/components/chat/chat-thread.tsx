@@ -12,7 +12,7 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Trace, TraceIcon, TraceLine, TraceTitle } from '@/components/ui/trace'
 import { errorText } from '@/lib/i18n'
-import { liveReply, liveSteps, waitingTurn, type ChatSettings, type ChatStep, type ChatTurn, type StepsMode } from '@/lib/chat'
+import { liveReply, liveSteps, waitingTurn, type ChatStep, type ChatTurn, type StepsMode } from '@/lib/chat'
 import type { RunEvent, Trace as RunTrace } from '@/lib/trace'
 import { ChatMarkdown } from './chat-markdown'
 import { ChatSteps } from './chat-steps'
@@ -48,11 +48,14 @@ function Answer({ text, steps, mode, status, code, live, children }: { text: str
 const Mine = ({ text }: { text: string }) => <Message align="end" data-testid="chat-mine">
   <MessageContent><Bubble align="end" variant="muted"><BubbleContent className="whitespace-pre-wrap">{text}</BubbleContent></Bubble></MessageContent></Message>
 
-export function ChatThread({ turns, mode, settings, events, trace, pending, running, onAnswer }: {
-  turns: ChatTurn[]; mode: StepsMode; settings: ChatSettings; events: RunEvent[]; trace: RunTrace; pending: string | null; running: boolean
-  onAnswer: (runId: string, response: string) => void }) {
-  const { t } = useTranslation(); const wait = waitingTurn(turns); const reply = liveReply(events, settings.reply_field)
+/** `replyField`: the field whose tokens are the answer; none on the public page, whose socket sends only those (TASK-0142).
+ *  `empty`: what an empty chat shows instead of the default (the page's intro and suggestions). */
+export function ChatThread({ turns, mode, replyField, events, trace, pending, running, onAnswer, empty }: {
+  turns: ChatTurn[]; mode: StepsMode; replyField?: string; events: RunEvent[]; trace: RunTrace; pending: string | null; running: boolean
+  onAnswer?: (runId: string, response: string) => void; empty?: React.ReactNode }) {
+  const { t } = useTranslation(); const wait = waitingTurn(turns); const reply = liveReply(events, replyField)
   const live = liveSteps(trace.spans, mode)
+  if (!turns.length && pending === null && empty) return <>{empty}</>
   if (!turns.length && pending === null) return <Empty className="flex-1" id="chat-empty">
     <EmptyHeader><EmptyMedia variant="icon"><MessageCircleDashed /></EmptyMedia>
       <EmptyTitle>{t('chat.emptyTitle')}</EmptyTitle><EmptyDescription>{t('chat.empty')}</EmptyDescription></EmptyHeader></Empty>
@@ -61,7 +64,7 @@ export function ChatThread({ turns, mode, settings, events, trace, pending, runn
       {turns.map(x => <MessageScrollerItem key={x.id} messageId={x.id} scrollAnchor={x.role === 'user'}>
         {x.role === 'user' ? <Mine text={x.text} />
           : <Answer text={x.text} steps={x.steps} mode={mode} status={x.status} code={x.code}>
-              {x === wait && !running && <ChatConfirmation turn={x} busy={running} onAnswer={r => onAnswer(x.run_id!, r)} />}</Answer>}
+              {x === wait && !running && onAnswer && <ChatConfirmation turn={x} busy={running} onAnswer={r => onAnswer(x.run_id!, r)} />}</Answer>}
       </MessageScrollerItem>)}
       {pending !== null && <MessageScrollerItem messageId="pending-user" scrollAnchor><Mine text={pending} /></MessageScrollerItem>}
       {pending !== null && <MessageScrollerItem messageId="pending-answer">

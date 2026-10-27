@@ -10,7 +10,7 @@ export const SECTIONS: Section[] = [
   { id: 'channels', icon: MessageSquareShare },
   { id: 'accounts', icon: UserCheck },
   { id: 'audit', icon: ScrollText },
-  { id: 'knowledge', icon: Database },
+  { id: 'knowledge', icon: Database, permission: 'resources.manage' },  // a viewer owns none and cannot create one
   { id: 'mcp', icon: Plug },
   { id: 'users', icon: Users, permission: 'users.manage' },
   { id: 'teams', icon: UsersRound, permission: 'users.manage' },

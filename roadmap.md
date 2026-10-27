@@ -289,6 +289,23 @@ linked child run that the parent's tool step waits for.
   (PR #181; REV-0121, QA-0121).
 - TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **merged** (PR #182; REV-0122, QA-0122).
 
+## Public chat page
+
+REQ-0074, Accepted 2026-10-27. The CLAR-0005 answers take every recommended option, except that the embed has both an
+iframe snippet and a script widget. DEC-0067 holds the design. This is phase 2 of REQ-0048: a published chat at
+`/c/{slug}`. It ships in 0.9.0 with REQ-0073, so the release (TASK-0139, #184) waits for it.
+
+- TASK-0140 Publish settings, public REST API by slug, visitor identity, limits and errors. PR #186 (REV-0123, QA-0123).
+- TASK-0141 Public socket: runs as the owner, a filtered stream, visitor answers, daily cap, and the visitors list.
+  PR #187 (REV-0124, QA-0124).
+- TASK-0142 The `/c/{slug}` page, the publish settings UI, the visitors list in the Chat tab, and e2e. PR #188
+  (REV-0125, QA-0125).
+- TASK-0143 Frame protection for the studio, `?embed=1`, the iframe snippet and the `widget.js` bubble. PR #189
+  (REV-0126, QA-0126).
+- TASK-0144 Handbook (en, vi), comparison pages and CHANGELOG. PR #190 (REV-0127, QA-0127).
+- TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
+  2026-10-27, in 0.9.0. PR #191 (REV-0128, QA-0128).
+
 ## Owner requests
 
 Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.
@@ -306,6 +323,8 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
   output and records portable commands. **merged** (PR #172).
 - TASK-0132 Workflow check messages in the UI language: codes in the API (`issues`), `validation.<CODE>` in
   both locales, DEC-0065 (REQ-0045). **merged** (PR #174; REV-0116, QA-0116).
+- TASK-0146 Run trace layout: the summary bar's items no longer break mid-word, its divider stays short, and a
+  workflow tool's steps sit under the tool call, ending at the duration column.
 
 ## Releases
 

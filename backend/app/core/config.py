@@ -50,6 +50,11 @@ def sync_wait_max() -> float: return max(0.0, float(os.environ.get("STUDIO_SYNC_
 def trigger_rate_limit() -> int: return max(0, _int("STUDIO_TRIGGER_RATE_LIMIT", 60))  # runs per token per window (0 = off)
 def trigger_rate_window() -> int: return max(1, _int("STUDIO_TRIGGER_RATE_WINDOW", 60))  # seconds
 def chat_trigger_rate_limit() -> int: return max(0, _int("STUDIO_CHAT_TRIGGER_RATE_LIMIT", 60))  # runs per sender and chat trigger per STUDIO_TRIGGER_RATE_WINDOW (0 = off)
+# the published chat page (TASK-0140, DEC-0067): fixed windows of STUDIO_PUBLIC_CHAT_RATE_WINDOW seconds, 0 = off
+def public_chat_rate_visitor() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_VISITOR", 10))  # messages per visitor
+def public_chat_rate_ip() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_IP", 30))  # messages per client IP
+def public_chat_rate_read() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_READ", 120))  # page, session reads and new chats per client IP
+def public_chat_rate_window() -> int: return max(1, _int("STUDIO_PUBLIC_CHAT_RATE_WINDOW", 60))
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- TASK-0020 ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))

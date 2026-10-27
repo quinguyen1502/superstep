@@ -20,6 +20,8 @@ servers, approval connections, creating workflows and every admin page. Demo mod
 | Code nodes | Off, enforced by the server (`DEMO_CODE_DISABLED`); the editor says why. |
 | HTTP Tool and Send email nodes | Refused when they run (`DEMO_NODE_DISABLED`), so a run never calls out. |
 | LLM and Decision nodes | Always the offline mock model, even when `OPENAI_API_KEY` is set. No provider is called. Mock replies (and the example `lookup_order` tool) answer in the visitor's UI language, English or Vietnamese. |
+| Privacy between visitors | A visitor's Share dialog lists only the owner and the visitor's own row, so visitors never see each other's (anonymous) accounts. |
+| Read-only UI | `GET /api/me` returns `read_only: true` for a visitor. My accounts, the password form and the notification settings then show a notice and are disabled; the language still changes, in that browser only. |
 | Visitor data | Visitor accounts older than `STUDIO_DEMO_VISITOR_TTL` seconds (default 86400, one day) are removed with their runs and chats, at every boot and every demo sign-in. |
 | Rate limit | `STUDIO_DEMO_RUN_RATE_LIMIT` runs per client IP per minute (default 20; `RATE_LIMITED`). |
 | Samples | The example, Chatbot (the chat-style one: `message` in, `answer` out, with web chat on for the Chat panel), Router and Approval flow are created and shared with the visitor on every boot, because the free plan's SQLite file is wiped when the service sleeps. |
