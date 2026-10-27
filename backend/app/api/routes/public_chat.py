@@ -26,6 +26,7 @@ from ..deps import _same_origin, bearer, current_user, public_chat_service, run_
 router = APIRouter(prefix="/api/public/chat", tags=["public chat"])
 ws_router = APIRouter()
 VISITOR_HEADER = "x-chat-visitor"
+COOKIE_AGE = 400 * 86400  # browsers keep a cookie at most 400 days
 
 
 def cookie_name(slug: str) -> str: return "studio_chat_" + hashlib.sha1(slug.encode()).hexdigest()[:10]
@@ -56,10 +57,11 @@ def answer(request: Request, response: Response, slug: str, data, v: Visitor):
     if not v.token: return data
     if request.headers.get(VISITOR_HEADER) is not None:
         return {**data, "visitor_token": v.token}
-    secure = config.cookie_secure()  # over HTTPS the cookie also works inside an iframe (Chrome, Firefox: partitioned)
+    # over HTTPS the cookie also works inside an iframe (Chrome, Firefox: partitioned). Written by hand: Starlette's
+    # partitioned= needs Python 3.14, and the token is [0-9a-f.] only, so nothing needs quoting
+    flags = "SameSite=None; Secure; Partitioned" if config.cookie_secure() else "SameSite=Lax"
     for path in visitor_paths(slug):
-        response.set_cookie(cookie_name(slug), v.token, max_age=400 * 86400, httponly=True, path=path,
-                            samesite="none" if secure else "lax", secure=secure, partitioned=secure)
+        response.headers.append("set-cookie", f"{cookie_name(slug)}={v.token}; Max-Age={COOKIE_AGE}; Path={path}; HttpOnly; {flags}")
     return data
 
 
