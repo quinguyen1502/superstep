@@ -10,7 +10,9 @@ from urllib.parse import urlparse
 import httpx
 
 import superstep
+from superstep.cli.docker import Docker
 from superstep.cli.i18n import Catalog, lang_flag, resolve_lang
+from superstep.cli.install import add_commands
 
 _TIMEOUT = 5.0
 
@@ -26,7 +28,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     sys.exit(run(argv))
 
 
-def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None) -> int:
+def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None, docker: Optional[Docker] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     json_mode = "--json" in args
     catalog = Catalog.load(resolve_lang(lang_flag(args)))
@@ -36,7 +38,7 @@ def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None)
     except SystemExit as exc:
         code = exc.code
         return code if isinstance(code, int) else (1 if code else 0)
-    return parsed.run(parsed, catalog, json_mode, client, parser)
+    return parsed.run(parsed, catalog, json_mode, client, parser, docker or Docker())
 
 
 def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
@@ -79,6 +81,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     )
     completion.add_argument("shell", choices=("bash", "zsh", "fish"), help=catalog.format("help.shell"))
     completion.set_defaults(run=_cmd_completion)
+    add_commands(commands, common, catalog)
     return parser
 
 
@@ -99,7 +102,7 @@ class _Parser(argparse.ArgumentParser):
         self.exit(2, text + "\n")
 
 
-def _cmd_version(args, catalog: Catalog, json_mode: bool, client: Optional[httpx.Client], _parser) -> int:
+def _cmd_version(args, catalog: Catalog, json_mode: bool, client: Optional[httpx.Client], _parser, _docker) -> int:
     cli_version = superstep.__version__
     server = None
     warning = None
@@ -122,7 +125,7 @@ def _cmd_version(args, catalog: Catalog, json_mode: bool, client: Optional[httpx
     return 0
 
 
-def _cmd_completion(args, catalog: Catalog, json_mode: bool, _client, parser: argparse.ArgumentParser) -> int:
+def _cmd_completion(args, catalog: Catalog, json_mode: bool, _client, parser: argparse.ArgumentParser, _docker) -> int:
     # The script is the command's output, so it stays on stdout. `source <(superstep completion bash)` reads stdout.
     script = _completion(args.shell, _commands(parser), _flags(parser))
     if json_mode:
@@ -190,6 +193,10 @@ def _fail(json_mode: bool, catalog: Catalog, code: str, key: str, **fmt: str) ->
 
 def _write_json(payload: dict) -> None:
     sys.stdout.write(json.dumps(payload) + "\n")
+
+
+def _write_err(text: str) -> None:
+    sys.stderr.write(text)
 
 
 def _commands(parser: argparse.ArgumentParser) -> list[str]:

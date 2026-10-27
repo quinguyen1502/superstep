@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0150
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -101,8 +101,14 @@
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0079 phase 1 (DEC-0068).
+- 2026-10-27: owner asked to start the task. Branch `factory/task-0150-cli-install` from `develop` at `4cd0dc6` (PR #203). Task moved to doing. No source edited.
+- 2026-10-27: implemented `install`, `adopt`, `start`, `stop`, `restart`, and `logs` with `superstep.cli.docker`. Tests were added with the task and were not run.
+- 2026-10-27: validation passed on the uncommitted task changes. Tool policy: backend pytest 773 passed, 57 skipped (331s); sdk/python pytest 52 passed, 2 skipped (0.56s, includes `test_install`); frontend lint exit 0 (5 existing warnings); frontend test 123 passed; frontend build exit 0; TypeScript SDK test 22 passed, build exit 0, typecheck exit 0.
+- 2026-10-27: review REV-0130. No blocking findings. Approved for QA. Task stays in doing.
+- 2026-10-27: QA QA-0130. Pass with follow-up. `test_install.py` and `test_cli.py` 30 passed.
+- 2026-10-27: owner asked to move the task to done. Review REV-0130 has no blocking findings. QA-0130 passed with the documented partial-install risk. Not merged.
 
 ## Handoff Notes
 
 - TASK-0151, TASK-0152 and TASK-0154 can start once this is merged. They share `instance.json` and `superstep.cli.docker`.
-- Do not start a branch until the owner confirms this set. The next skill is `task-start`.
+- Review: `.factory-state/artifacts/REV-0130-task-0150.md`. QA: `.factory-state/artifacts/QA-0130-task-0150.md`.
