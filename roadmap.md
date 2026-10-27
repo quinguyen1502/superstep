@@ -303,7 +303,7 @@ iframe snippet and a script widget. DEC-0067 holds the design. This is phase 2 o
   (REV-0126, QA-0126).
 - TASK-0144 Handbook (en, vi), comparison pages and CHANGELOG. PR #190 (REV-0127, QA-0127).
 - TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
-  2026-10-27, in 0.9.0 (REV-0128, QA-0128).
+  2026-10-27, in 0.9.0. PR #191 (REV-0128, QA-0128).
 
 ## Owner requests
 
