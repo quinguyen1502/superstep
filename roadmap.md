@@ -330,11 +330,11 @@ page, the embed and the studio Chat tab. A thumbs down can carry a short comment
 visitor chats that have a thumbs down, and read 7-day and 30-day totals. A rated answer can become a test case.
 When LangSmith tracing is on, the rating is sent as feedback on the run.
 
-- TASK-0162 Rating storage, public and studio APIs, retention, errors. **done** (PR #204; REV-0131, QA-0131; not merged)
-- TASK-0163 Thumbs on the public page and the embed. **done** (PR #204; REV-0132, QA-0132; not merged)
-- TASK-0164 Chat tab: marks, filter, totals, save as test case, rating one's own chat. **done** (PR #204; REV-0133, QA-0133; not merged)
-- TASK-0165 LangSmith `user_rating` feedback, in the background. **done** (PR #204; REV-0134, QA-0134; not merged)
-- TASK-0166 Handbook (en, vi) and CHANGELOG. **done** (PR #204; REV-0135, QA-0135; not merged)
+- TASK-0162 Rating storage, public and studio APIs, retention, errors. **merged** (PR #204; REV-0131, QA-0131).
+- TASK-0163 Thumbs on the public page and the embed. **merged** (PR #204; REV-0132, QA-0132).
+- TASK-0164 Chat tab: marks, filter, totals, save as test case, rating one's own chat. **merged** (PR #204; REV-0133, QA-0133).
+- TASK-0165 LangSmith `user_rating` feedback, in the background. **merged** (PR #204; REV-0134, QA-0134).
+- TASK-0166 Handbook (en, vi) and CHANGELOG. **merged** (PR #204; REV-0135, QA-0135).
 
 ## Accepted, not planned yet
 
