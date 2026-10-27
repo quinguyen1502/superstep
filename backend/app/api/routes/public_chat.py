@@ -4,6 +4,8 @@ GET  /api/public/chat/{slug}                      the page: title, intro, sugges
 GET  /api/public/chat/{slug}/frame                its frame-ancestors (for the nginx auth_request, TASK-0143)
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
+WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response}: the run
+                                                  streams as public_event()s (TASK-0141); ?visitor= for the widget
 
 An anonymous visitor is the HttpOnly cookie `studio_chat_<hash>`, or the `X-Chat-Visitor` header (the widget, which
 sends "new" when it has no token yet and then gets the new token back as `visitor_token`). signed_in uses the studio
@@ -11,15 +13,18 @@ session as other routes do.
 """
 import hashlib
 from typing import Optional
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPAuthorizationCredentials
-from ...core import config
+from ...core import config, security
 from ...core.client_ip import client_ip
 from ...core.errors import AppError
-from ...services.public_chat_service import Visitor
-from ..deps import bearer, current_user, public_chat_service
+from ...engine import locale
+from ...services.public_chat_service import Visitor, public_event
+from ...services.run_service import error_event
+from ..deps import _same_origin, bearer, current_user, public_chat_service, run_service, ws_user
 
 router = APIRouter(prefix="/api/public/chat", tags=["public chat"])
+ws_router = APIRouter()
 VISITOR_HEADER = "x-chat-visitor"
 
 
@@ -88,3 +93,46 @@ async def create(slug: str, request: Request, response: Response, user=Depends(m
 async def session(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); s, v = svc.get(slug, sid, token_of(request, slug), user)
     return answer(request, response, slug, s, v)
+
+
+@ws_router.websocket("/ws/public/chat/{slug}")
+async def ws_public_chat(ws: WebSocket, slug: str):
+    """One message or answer per connection, as /ws/run: the run streams, then the socket closes. Same origin only (the
+    page and the embed's iframe are served by the studio); a cancel is {"type": "cancel"}."""
+    if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")):
+        await ws.close(code=4403); return
+    await ws.accept()
+    try: req = await ws.receive_json()
+    except (WebSocketDisconnect, ValueError, KeyError): return
+    svc, runs = public_chat_service(), run_service()
+    try: user = ws_user(ws) if ws.cookies.get(security.SESSION_COOKIE) or ws.query_params.get("token") else None
+    except AppError: user = None
+    try:
+        ip = client_ip(ws.client.host if ws.client else None, ws.headers.get("x-forwarded-for"))
+        token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
+        plan, owner, mode, reply = await svc.plan_message(slug, token, user, req, ip, runs.plan)
+        if plan.ports is not None: plan.ports.locale = locale.pick(req.get("locale") if isinstance(req, dict) else None, ws.headers.get("accept-language"))
+    except AppError as e:
+        await ws.send_json(error_event(e.to_dict())); await ws.close(); return
+
+    state = {"connected": True}
+
+    async def send(ev) -> bool:
+        out = public_event(ev, mode, reply)
+        if out is None: return state["connected"]
+        try: await ws.send_json(out); return True
+        except Exception: state["connected"] = False; return False
+
+    async def listen() -> str:
+        try:
+            while True:
+                m = await ws.receive_json()
+                if isinstance(m, dict) and m.get("type") == "cancel": return "cancelled"
+        except (WebSocketDisconnect, RuntimeError, ValueError):
+            state["connected"] = False
+            return "disconnected"
+
+    await runs.execute(plan, send, listen, owner)
+    if state["connected"]:
+        try: await ws.close()
+        except Exception: pass

@@ -68,8 +68,10 @@
    - `GET /api/public/chat/{slug}/sessions` lists the visitor's own sessions. `GET .../sessions/{sid}` returns one,
      always with `view=visitor`.
    - `POST .../sessions` creates a session with `channel = "web"`, or `"embed"` when the page is in a frame.
-   - `WS /ws/public/chat/{slug}` takes `{chat_session_id, message}` or `{chat_session_id, resume_run_id, response}`
-     and nothing else, so it can only start or answer this chat's runs.
+   - `WS /ws/public/chat/{slug}` takes `{chat_session_id, message}` or `{chat_session_id, response}` and nothing
+     else, so it can only start or answer this chat's runs. An answer resumes the run of the session's last turn,
+     which must be waiting for the visitor; a `resume_run_id`, if sent, must be that run. The socket is same-origin
+     only, because the page and the embed's iframe are both served by the studio.
    - A session that belongs to someone else is not found (`CHAT_SESSION_NOT_FOUND`).
 3. **Visitor identity.**
    - *anonymous*: the visitor is a signed token, an HMAC with the studio secret over `{slug, visitor id}`.
@@ -94,8 +96,9 @@
      - step events reduced to the `steps` mode, with the same rules as `steps_of`;
      - the Human question, when the node is answered by the visitor;
      - the final status and error code.
-     - Run ids, state, node input and node output are never sent, except in `full` mode, where steps already show
-       input and output.
+     - The run's own id is kept (`run_started`, `run_summary`), so the page can match the saved answer turn. State,
+       metrics, trace links, usage and node input and output are never sent, except in `full` mode, where steps
+       already show input and output.
    - Human nodes follow DEC-0054 unchanged. An Agent tool approval is always answered by a reviewer.
 5. **Limits.**
    - Before a run is planned, the service checks, in this order:

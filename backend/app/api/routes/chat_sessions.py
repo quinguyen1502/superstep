@@ -4,6 +4,8 @@ the run socket (/ws/run with {chat_session_id, message} or {chat_session_id, res
 GET  /api/workflows/{wid}/chat              the Chat settings (run right)       PUT the same (share right)
 GET  /api/workflows/{wid}/chat/sessions     my chats                            POST a new chat
 GET  /api/chat/sessions/{sid}?view=builder|visitor   turns with their steps     DELETE the chat
+GET  /api/workflows/{wid}/chat/visitors     the published page's chats (run right, TASK-0141)
+GET  /api/workflows/{wid}/chat/visitors/{sid}        one of them, read-only, with full steps
 """
 from fastapi import APIRouter, Depends
 from ...schemas.chat import ChatSettingsIn
@@ -31,3 +33,9 @@ def get_chat_session(sid: str, view: str = "builder", user=Depends(current_user)
 
 @router.delete("/chat/sessions/{sid}")
 def delete_chat_session(sid: str, user=Depends(current_user), svc=Depends(chat_session_service)): return svc.delete(sid, user["id"])
+
+@router.get("/workflows/{wid}/chat/visitors")
+def list_visitor_chats(wid: str, user=Depends(current_user), svc=Depends(chat_session_service)): return svc.visitors(wid, user["id"])
+
+@router.get("/workflows/{wid}/chat/visitors/{sid}")
+def get_visitor_chat(wid: str, sid: str, user=Depends(current_user), svc=Depends(chat_session_service)): return svc.visitor_session(wid, sid, user["id"])

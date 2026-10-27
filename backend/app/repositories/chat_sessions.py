@@ -20,12 +20,11 @@ class ChatSessionRepository:
             return list(s.scalars(q))
 
     def list_public(self, trigger_id: str, owner: Optional[str] = None, visitor: Optional[str] = None, limit: int = 50) -> list[ChatSession]:
-        """A visitor's chats on the published page (DEC-0067): by the studio user for signed_in, else by the visitor id."""
+        """The published page's chats (DEC-0067): one visitor's (the studio user for signed_in, else the visitor id), or all."""
         with self.db.session() as s:
-            who = ChatSession.owner == owner if owner else ChatSession.visitor == visitor
-            q = (select(ChatSession).where(ChatSession.trigger_id == trigger_id, ChatSession.channel.in_(("web", "embed")), who)
-                 .order_by(ChatSession.updated.desc()).limit(limit))
-            return list(s.scalars(q))
+            q = select(ChatSession).where(ChatSession.trigger_id == trigger_id, ChatSession.channel.in_(("web", "embed")))
+            if owner or visitor: q = q.where(ChatSession.owner == owner if owner else ChatSession.visitor == visitor)
+            return list(s.scalars(q.order_by(ChatSession.updated.desc()).limit(limit)))
 
     def set_fields(self, sid: str, **values) -> None:
         with self.db.session() as s: s.execute(update(ChatSession).where(ChatSession.id == sid).values(**values)); s.commit()
