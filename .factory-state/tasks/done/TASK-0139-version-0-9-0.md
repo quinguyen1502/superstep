@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0139
-- Status: doing
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -67,3 +67,5 @@ this release ("Tôi muốn đưa vào chung release luôn"), so this PR waited f
 - 2026-10-27: version bump and CHANGELOG heading; held as a draft while REQ-0074 was built.
 - 2026-10-27: the owner approved merging #186 to #191 ("Merge chuỗi và chuẩn bị release 0.9.0"); develop merged into
   this branch, so 0.9.0 lists the public chat page, the logo and the trace fix. TASK-0140 to TASK-0146 moved to done.
+- 2026-10-27: released with the owner's approval: #184 into develop, release PR #196 into main (585ed72), tag
+  `v0.9.0` and the GitHub Release.
