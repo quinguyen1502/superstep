@@ -107,3 +107,5 @@ Chat tab.
 ## Handoff Notes
 
 - TASK-0143 adds the embed layout to this page.
+- Review: `.factory-state/artifacts/REV-0125-task-0142.md`.
+- QA: `.factory-state/artifacts/QA-0125-task-0142.md`.

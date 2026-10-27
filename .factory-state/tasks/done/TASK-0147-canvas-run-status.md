@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0147
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -92,6 +92,8 @@ steps after the wait never marked the canvas. Opening an older run also left the
 
 - 2026-10-27: asked for by the owner ("Sửa đi: canvas tô trạng thái từ events của run khi mở run, dùng chung với
   luồng live") and fixed on `factory/task-0147-canvas-run-status`.
+- 2026-10-27: merged into develop (PR #198) with the owner's approval; moved to done in TASK-0148's PR, which
+  makes this move part of the task PR from now on.
 
 ## Handoff Notes
 

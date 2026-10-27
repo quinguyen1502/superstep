@@ -62,6 +62,12 @@ this release ("Tôi muốn đưa vào chung release luôn"), so this PR waited f
 - `factory validate`.
 - CI on the bump PR and on the release PR.
 
+## Review And QA
+
+- Review: the owner approved the release in chat ("Ok, merge #196 into main, tag v0.9.0 and publish the GitHub
+  Release"). No separate REV artifact.
+- QA: CI on #184 and #196, main CI after the merge, and the Image workflow on the tag. No separate QA artifact.
+
 ## Activity Log
 
 - 2026-10-27: version bump and CHANGELOG heading; held as a draft while REQ-0074 was built.
