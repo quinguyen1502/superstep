@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0143
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -105,6 +105,7 @@ script widget, whose bubble opens the same iframe and keeps the visitor's histor
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0074.
+- 2026-10-27: merged into develop (PR #189) with the owner's approval.
 
 ## Handoff Notes
 

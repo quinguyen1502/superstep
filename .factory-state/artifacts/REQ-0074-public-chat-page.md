@@ -4,8 +4,8 @@
 
 - Project: superstep
 - Requirement ID: REQ-0074
-- Status: Accepted by the owner on 2026-10-27 with the CLAR-0005 answers. Planned as TASK-0140 to TASK-0144 (DEC-0067). The
-  owner added the logo on 2026-10-27 (TASK-0145).
+- Status: Done (TASK-0140 to TASK-0145, PRs #186 to #191, merged 2026-10-27; ships in 0.9.0). Accepted by the owner on
+  2026-10-27 with the CLAR-0005 answers (DEC-0067); the owner added the logo the same day (TASK-0145).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -222,7 +222,7 @@ None. CLAR-0005 is answered.
 - `.factory-state/decisions/DEC-0053-chat-access-and-steps.md`
 - `.factory-state/decisions/DEC-0054-human-answered-by.md`
 - `.factory-state/artifacts/REQ-0073-agent-workflow-tools.md` (ships in the same release)
-- `.factory-state/tasks/doing/TASK-0139-version-0-9-0.md` (the 0.9.0 release, waiting for this requirement)
+- `.factory-state/tasks/doing/TASK-0139-version-0-9-0.md` (the 0.9.0 release)
 - `.factory-state/decisions/DEC-0067-public-chat-page.md`
 - Tasks: TASK-0140 to TASK-0145
 - `docs/ui-conventions.md`, `docs/backend-architecture.md`

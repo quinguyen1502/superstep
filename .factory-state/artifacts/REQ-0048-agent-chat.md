@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0048
-- Status: Phase 1 implemented (TASK-0084 PR #116, TASK-0085 PR #117); phase 2, the public page `/c/{slug}`, not started
+- Status: Phase 1 implemented (TASK-0084 PR #116, TASK-0085 PR #117); phase 2, the public page `/c/{slug}`, done as REQ-0074 (PRs #186 to #191, 0.9.0)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-23
 - Updated: 2026-10-27

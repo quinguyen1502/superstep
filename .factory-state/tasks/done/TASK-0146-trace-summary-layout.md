@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0146
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -83,6 +83,7 @@ Fix three layout faults in the run trace, from the owner's screenshots on 2026-1
 ## Activity Log
 
 - 2026-10-27: asked for by the owner and fixed on `factory/task-0146-trace-summary-layout`.
+- 2026-10-27: merged into develop (PR #193) with the owner's approval.
 
 ## Handoff Notes
 
