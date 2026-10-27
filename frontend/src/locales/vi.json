@@ -229,7 +229,8 @@
       "label": "Khu vực làm việc",
       "canvas": "Canvas",
       "nodes": "Node",
-      "addHint": "Chạm vào một node để thêm vào canvas."
+      "add": "Thêm",
+      "addHint": "Chạm Thêm để đặt node lên canvas."
     },
     "configTabs": {
       "label": "Cấu hình node",

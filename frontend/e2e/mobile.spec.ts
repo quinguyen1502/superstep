@@ -47,11 +47,30 @@ test('Editor on a phone: tab bar, tap to add a node, Config for the selection, R
   // Nodes: a tap adds the node in the middle of the canvas, selected
   await tab('nodes').click()
   await expect(page.locator('#palette-tap-hint')).toBeVisible()
-  await page.locator('[data-testid=palette-card][data-type=human]').click()
+  // the first card's top border is not clipped by the scroll area
+  const top = await page.locator('#palette-nodes').evaluate(el => el.querySelector('[data-testid=palette-card]')!.getBoundingClientRect().top - el.querySelector('[data-slot=scroll-area-viewport]')!.getBoundingClientRect().top)
+  expect(top).toBeGreaterThan(0)
+  await expect(page.getByTestId('palette-add')).toHaveCount(await page.getByTestId('palette-card').count())
+  await page.locator('[data-testid=palette-card][data-type=human]').getByTestId('palette-add').click()
   await expect(tab('canvas')).toHaveAttribute('data-state', 'active')
   await expect(page.locator('.react-flow__node')).toHaveCount(4)
   await expect(page.locator('.react-flow__node.selected')).toHaveCount(1)
   await tab('config').click(); await expect(page.locator('#human-prompt')).toBeVisible()
+  // Start and End cards add on a tap too (they used to look tappable and do nothing)
+  await tab('nodes').click(); await page.locator('[data-testid=palette-card][data-type=end]').click()
+  await expect(page.locator('.react-flow__node')).toHaveCount(5)
+
+  // the Code tab's toolbar wraps instead of pushing the page sideways
+  await tab('run').click(); await page.locator('#code-tab').click()
+  await expect(page.locator('#code-download-project')).toBeInViewport({ ratio: 1 })
+  await noSideScroll(page)
+
+  // Version history stacks its list above the diff on a phone
+  await tab('canvas').click(); await page.locator('#more-btn').click(); await page.locator('#versions-btn').click()
+  await expect(page.locator('#version-diff')).toBeVisible()
+  const dlg = (await page.getByRole('dialog').boundingBox())!; const diff = (await page.locator('#version-diff').boundingBox())!
+  expect(diff.x + diff.width).toBeLessThanOrEqual(dlg.x + dlg.width)
+  await page.keyboard.press('Escape')
 
   // Chat opens as its own pane and closes back to the canvas
   await page.locator('#chat-open').click()

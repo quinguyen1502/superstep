@@ -36,7 +36,7 @@ function KbFields({ form, set, creds, idp }: { form: Form; set: (f: Form) => voi
   const pickCred = (v: string) => { const cid = v === 'none' ? '' : v; const was = prov(form.credential_id)?.default_embedding_model || 'text-embedding-3-small'
     setProbe({}); set({ ...form, credential_id: cid, model: !form.model || form.model === was ? (prov(cid)?.default_embedding_model || 'text-embedding-3-small') : form.model }) }
   const runProbe = async () => { setProbe({ busy: true }); try { setProbe({ ok: await testEmbedding(form.credential_id, form.model) }) } catch (e: any) { setProbe({ err: e.message }) } }
-  return <div className="grid gap-3 sm:grid-cols-2">
+  return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
     <div className="space-y-1.5"><Label htmlFor={`${idp}-name`}>{t('kb.name')}</Label><Input id={`${idp}-name`} value={form.name} onChange={e => set({ ...form, name: e.target.value })} /></div>
     <div className="space-y-1.5"><Label htmlFor={`${idp}-description`}>{t('kb.description')}</Label><Input id={`${idp}-description`} value={form.description} onChange={e => set({ ...form, description: e.target.value })} /></div>
     <div className="space-y-1.5"><Label htmlFor={`${idp}-credential`}>{t('kb.credential')}</Label>
