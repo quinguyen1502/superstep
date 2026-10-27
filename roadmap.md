@@ -307,6 +307,12 @@ This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 
 - TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
   2026-10-27. **merged** (PR #191; REV-0128, QA-0128).
 
+## Proposed (drafts, waiting on the owner)
+
+- REQ-0079 The `superstep` CLI: install, deploy over SSH, upgrade with a backup and a way back, backup and restore,
+  status, doctor and admins; then workflows from a terminal and CI (login, pull and push, run, test, MCP over stdio).
+  Owner request 2026-10-27; CLAR-0010 has eight questions.
+
 ## Accepted, not planned yet
 
 Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
