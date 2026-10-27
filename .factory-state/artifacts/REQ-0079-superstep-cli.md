@@ -281,7 +281,7 @@ Planned on 2026-10-27. The layout is DEC-0068. Phase 2 is not in this list.
 
 - TASK-0149 CLI package, help, JSON, en and vi, completion, and the version field on `/api/health`. Done (REV-0129, QA-0129).
 - TASK-0150 `install`, `adopt`, `start`, `stop`, `restart`, `logs`. Done (REV-0130, QA-0130).
-- TASK-0151 `status`, `config`, `doctor`.
+- TASK-0151 `status`, `config`, `doctor`. Done (REV-0137, QA-0136).
 - TASK-0152 `backup`, `restore`, scheduled backups.
 - TASK-0153 `upgrade` with automatic rollback.
 - TASK-0154 `admin` and `uninstall`.

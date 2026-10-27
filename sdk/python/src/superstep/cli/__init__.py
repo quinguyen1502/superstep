@@ -13,6 +13,7 @@ import superstep
 from superstep.cli.docker import Docker
 from superstep.cli.i18n import Catalog, lang_flag, resolve_lang
 from superstep.cli.install import add_commands
+from superstep.cli.status import add_commands as add_status_commands
 
 _TIMEOUT = 5.0
 
@@ -82,6 +83,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     completion.add_argument("shell", choices=("bash", "zsh", "fish"), help=catalog.format("help.shell"))
     completion.set_defaults(run=_cmd_completion)
     add_commands(commands, common, catalog)
+    add_status_commands(commands, common, catalog)
     return parser
 
 
