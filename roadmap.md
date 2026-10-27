@@ -316,7 +316,8 @@ test in CI, MCP over stdio) is not planned yet.
   (REV-0129, QA-0129; not merged)
 - TASK-0150 `install`, `adopt`, `start`, `stop`, `restart` and `logs`. **done**
   (REV-0130, QA-0130; not merged)
-- TASK-0151 `status`, `config` and `doctor`. **planned**
+- TASK-0151 `status`, `config` and `doctor`. **done**
+  (REV-0137, QA-0136; not merged)
 - TASK-0152 `backup`, `restore` and scheduled backups. **planned**
 - TASK-0153 `upgrade` with a backup and automatic rollback. **planned**
 - TASK-0154 `admin` and `uninstall`. **planned**

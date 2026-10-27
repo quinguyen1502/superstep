@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0151
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -99,8 +99,16 @@ An operator can see whether the instance is healthy, change its settings, and ge
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0079 phase 1 (DEC-0068).
+- 2026-10-27: owner asked to start the task. Branch `factory/task-0151-cli-status-doctor` from `develop` at `5a37479` (PR #205). Task moved to doing. No source edited.
+- 2026-10-27: implemented `status`, `config`, and `doctor`. Tests were added with the task and were not run.
+- 2026-10-27: validation failed. `sdk/python` pytest: 59 passed, 2 skipped, 1 failed. `test_config_masks_shows_and_restarts` raises `TypeError: Catalog.format() got multiple values for argument 'key'` in `cmd_config` when formatting `config.kept` or `config.restarted`. Backend pytest 773 passed, 57 skipped. Frontend lint, test, and build passed. TypeScript SDK test, build, and typecheck passed.
+- 2026-10-27: `cmd_config` now passes the setting name as `setting`, because `Catalog.format` already uses `key` for the message id. The same change covers `error.config_missing`. Tests were not re-run.
+- 2026-10-27: validation passed after the `cmd_config` fix. Tool policy: sdk/python pytest 60 passed, 2 skipped (0.56s, includes `test_status`); backend pytest 773 passed, 57 skipped (321s); frontend lint exit 0 (5 existing warnings); frontend test 123 passed; frontend build exit 0; TypeScript SDK test 22 passed, build exit 0, typecheck exit 0.
+- 2026-10-27: review REV-0137. No blocking findings. Approved for QA. Task stays in doing. The branch is behind `origin/develop` and must be rebased before the pull request.
+- 2026-10-27: QA QA-0136. Pass with follow-up. `test_status.py` and `test_cli.py` 26 passed.
+- 2026-10-27: owner asked to move the task to done. Review REV-0137 has no blocking findings. QA-0136 passed with the documented changelog and rebase risks. Not merged.
 
 ## Handoff Notes
 
-- TASK-0153 `--check` can reuse the release comparison this task adds.
-- Do not start a branch until the owner confirms this set. The next skill is `task-start`.
+- TASK-0153 `--check` can reuse `registry_version` and the bundled changelog reader.
+- Review: `.factory-state/artifacts/REV-0137-task-0151.md`. QA: `.factory-state/artifacts/QA-0136-task-0151.md`.

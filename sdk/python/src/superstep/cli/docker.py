@@ -1,6 +1,7 @@
 """Subprocess wrapper for `docker` and `docker compose`. Tests pass a fake with the same methods."""
 from __future__ import annotations
 
+import json
 import shutil
 import socket
 import subprocess
@@ -56,6 +57,77 @@ class Docker:
     def compose(self, directory: str, project: str, args: list[str]) -> None:
         _check(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", *args])
 
+    def ps(self, directory: str, project: str) -> list[dict]:
+        proc = _run(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", "ps", "-a", "--format", "json"])
+        services = []
+        for line in proc.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(item, list):
+                rows = item
+            else:
+                rows = [item]
+            for row in rows:
+                services.append({"name": row.get("Service") or row.get("Name") or "", "state": row.get("State") or row.get("Status") or ""})
+        return services
+
+    def volume_bytes(self, name: str) -> int:
+        proc = _run(["docker", "system", "df", "-v"])
+        for line in proc.stdout.splitlines():
+            parts = line.split()
+            if len(parts) >= 3 and parts[0] == name:
+                return _size_bytes(parts[-1])
+        return 0
+
+    def clock_skew_seconds(self, directory: str, project: str, service: str) -> float:
+        import time
+        proc = _run(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", "exec", "-T", service, "date", "+%s"])
+        if proc.returncode != 0 or not proc.stdout.strip():
+            return 0.0
+        return abs(time.time() - float(proc.stdout.strip()))
+
+    def health(self, url: str) -> dict:
+        try:
+            response = httpx.get(_health_url(url), timeout=5.0)
+        except httpx.HTTPError:
+            return {}
+        if response.status_code != 200:
+            return {}
+        try:
+            body = response.json()
+        except ValueError:
+            return {}
+        data = body.get("data") if isinstance(body, dict) else None
+        return data if isinstance(data, dict) else {}
+
+    def registry_version(self) -> Optional[str]:
+        if not _online():
+            return None
+        try:
+            response = httpx.get("https://github.com/quinguyen1502/superstep/releases/latest", follow_redirects=True, timeout=5.0)
+        except httpx.HTTPError:
+            return None
+        marker = "/tag/"
+        url = str(response.url)
+        if marker not in url:
+            return None
+        tag = url.rsplit(marker, 1)[1].strip("/")
+        return tag[1:] if tag.startswith("v") else tag or None
+
+    def probe(self, url: str) -> str:
+        if not _online():
+            return "offline"
+        try:
+            httpx.get(url, timeout=3.0)
+        except httpx.HTTPError:
+            return "unreachable"
+        return "ok"
+
     def wait_healthy(self, url: str, timeout: float = 60.0) -> bool:
         import time
         target = _health_url(url)
@@ -76,6 +148,13 @@ def os_sysconf(name: str) -> int:
     return os.sysconf(name)
 
 
+def _run(args: list[str]) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except OSError as exc:
+        raise DockerError(str(exc))
+
+
 def _rc(args: list[str]) -> int:
     try:
         return subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
@@ -84,12 +163,32 @@ def _rc(args: list[str]) -> int:
 
 
 def _check(args: list[str]) -> None:
-    try:
-        proc = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    except OSError as exc:
-        raise DockerError(str(exc))
+    proc = _run(args)
     if proc.returncode != 0:
         raise DockerError(proc.stderr.strip() or "docker failed")
+
+
+def _online() -> bool:
+    try:
+        with socket.create_connection(("1.1.1.1", 443), 2):
+            return True
+    except OSError:
+        return False
+
+
+def _size_bytes(token: str) -> int:
+    text = token.strip().upper()
+    number = ""
+    suffix = ""
+    for char in text:
+        if char.isdigit() or char == ".":
+            number += char
+        else:
+            suffix += char
+    if not number:
+        return 0
+    scale = {"": 1, "B": 1, "KB": 1000, "MB": 1000 ** 2, "GB": 1000 ** 3, "KIB": 1024, "MIB": 1024 ** 2, "GIB": 1024 ** 3}
+    return int(float(number) * scale.get(suffix, 1))
 
 
 def _listener_name(port: int) -> Optional[str]:
