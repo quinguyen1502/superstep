@@ -44,6 +44,7 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
     ann = {f["name"]: annotation(f) for f in wf.get("state", [])}
     ann.update({foreach.cursor(n["id"]): Optional[int] for n in wf["nodes"] if n.get("type") == "foreach"})  # loop positions (TASK-0049)
     ann.update({agents.private(n["id"]): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent"})  # agent conversations (TASK-0116)
+    ann.update({agents.slot_channel(n): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent_tool"})  # one wave's tool results (DEC-0069)
     State = TypedDict("State", ann, total=False)  # type: ignore
     g = StateGraph(State)
     nodes = {n["id"]: n for n in wf["nodes"] if n.get("type") != "note"}  # notes are canvas comments (REQ-0025)
@@ -68,7 +69,8 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
         elif n["type"] == "foreach":
             g.add_conditional_edges(nid, foreach.router(nid), {e["label"]: e["target"] for e in out})
         elif n["type"] in agents.ROUTERS:
-            g.add_conditional_edges(nid, agents.router(n), {e["label"]: e["target"] for e in out})
+            # unlabeled edges (a model step to its tool slots) exist so the validator can see the slots; Send picks them
+            g.add_conditional_edges(nid, agents.router(n), {e["label"]: e["target"] for e in out if e.get("label")})
         elif n["type"] == "condition":
             field = n["data"]["field"]
             mapping = {e["label"]: e["target"] for e in out}

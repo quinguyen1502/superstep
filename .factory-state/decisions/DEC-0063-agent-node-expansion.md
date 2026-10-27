@@ -7,8 +7,8 @@
 - Status: Accepted (owner, 2026-10-25)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
-- Updated: 2026-10-25
-- Related Requirements: REQ-0072 (CLAR-0003), REQ-0011, REQ-0041, REQ-0042, REQ-0043
+- Updated: 2026-10-27
+- Related Requirements: REQ-0072 (CLAR-0003), REQ-0076 (CLAR-0007, DEC-0069), REQ-0011, REQ-0041, REQ-0042, REQ-0043
 - Related Architecture: DEC-0009 (layers), DEC-0018 (effectively-once), DEC-0032 (provider registry), DEC-0044 (test runs)
 - Related Tasks: TASK-0116, TASK-0117, TASK-0118, TASK-0119, TASK-0120
 
@@ -36,7 +36,7 @@
    - `A` itself (type `agent`): the entry. It builds the conversation (system prompt, the history field's earlier
      turns, the rendered task prompt) into the agent's private field.
    - `A/__model` (type `agent_model`): one model call per step.
-   - `A/__tool` (type `agent_tool`): **one tool call per step**.
+   - `A/__tool` (type `agent_tool`): **one tool call per step**. Superseded for a parallel round by DEC-0069: the calls of one wave share a superstep, on the slots `A/__tool/1` .. `A/__tool/8` and the join `A/__join`. This bullet is the graph from TASK-0116.
    - `A/__exit` (type `agent_exit`): writes the output field and the optional steps field, clears the private field,
      and carries `A`'s outgoing edges.
    - Edges: `A → A/__model`; after `A/__model`, pending calls go to `A/__tool`, otherwise to `A/__exit`; after
@@ -53,7 +53,8 @@
 3. **Effectively-once per step:** `agent_model` and `agent_tool` join `SIDE_EFFECT_TYPES`. Each execution is a
    LangGraph step with its own checkpoint and its own `node_started` iteration, so it gets its own ledger entry and
    idempotency key `(run, A/__tool, iteration)`; HTTP tools send it as `Idempotency-Key`. A pause, crash or restart
-   repeats at most the step that had not finished.
+   repeats at most the step that had not finished. DEC-0069 keeps one ledger entry and one idempotency key per call,
+   keyed by the slot node id, and checkpoints the wave once.
 4. **Model calls go through the provider registry:** a provider method `invoke_tools(messages, tools, model, cred,
    on_token) -> (text, tool_calls, usage)`. The base implementation uses `chat_model(...).bind_tools(...)`
    (OpenAI, OpenAI-compatible, LM Studio, OpenRouter, Ollama). Anthropic implements it over its Messages API `tools`
@@ -100,3 +101,7 @@
   grouped by label.
 - The private field can grow with long conversations; tool results are shortened and the rounds are capped.
 - Several API processes need no extra coordination: the steps use the existing leases and fencing.
+
+## Amendment
+
+DEC-0069 (2026-10-27, REQ-0076) replaces the single looping `A/__tool` of decision 1 for rounds that run in parallel, and replaces decision 3's per-call checkpoint with one checkpoint per wave. Decisions 2, 4 through 7 and 9 still hold. Decision 8 still holds, and `step_budget` also counts the join steps.

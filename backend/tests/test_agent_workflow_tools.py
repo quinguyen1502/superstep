@@ -96,7 +96,7 @@ def test_snapshot_copies_children_recursively():
             assert (t.get("snapshot") or {}).get("name") in (None, "Refund desk") and t.get("version") is None
     x = agents.expand(out)
     data = {n["id"]: n["data"] for n in x["nodes"]}
-    assert data["ag/__tool"]["tools"][0]["snapshot"]["nodes"]  # the tool step runs the child
+    assert data["ag/__tool/1"]["tools"][0]["snapshot"]["nodes"]  # the tool step runs the child
     for nid in ("ag", "ag/__model", "ag/__exit"):  # the other steps keep only the child's state fields
         assert data[nid]["tools"][0]["snapshot"] == {"state": STATE}
 
@@ -136,7 +136,7 @@ def test_save_plan_and_dependents():
     # a planned run carries the child's latest saved version
     plan = run_service().plan(uid, {"workflow_id": sup, "input": {"message": "hi"}})
     assert plan.invalid is None
-    t = next(n for n in plan.workflow["nodes"] if n["id"] == "ag/__tool")["data"]["tools"][0]
+    t = next(n for n in plan.workflow["nodes"] if n["id"] == "ag/__tool/1")["data"]["tools"][0]
     assert t["snapshot"]["nodes"][1]["type"] == "llm" and isinstance(t["version"], int)
     # a workflow used as a tool is in use
     r = c.delete(f"/api/workflows/{child}", headers=H(tok))

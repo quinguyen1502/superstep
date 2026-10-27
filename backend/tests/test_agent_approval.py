@@ -59,7 +59,7 @@ def test_approve_runs_the_call_once(monkeypatch, refunds):
     seen = script(monkeypatch, [("", [call("send_refund", ARGS)]), ("Refunded.", [])])
     flow = wf(tools=[REFUND], steps_field="steps")
     w = waiting_at(list(run_stream(flow, {"message": "Refund B200"}, effects=Effects("r1"))))
-    assert (w["node"], w["label"], w["tool"], w["arguments"]) == ("ag/__tool", "Helper › send_refund", "send_refund", ARGS)
+    assert (w["node"], w["label"], w["tool"], w["arguments"]) == ("ag/__tool/1", "Helper › send_refund", "send_refund", ARGS)
     assert "Helper wants to call send_refund" in w["prompt"] and '"amount": 20' in w["prompt"]
     assert got == [] and "agent:ag" not in w["state"]
     st = final(resume(w, "approved", flow, effects=Effects("r1")))
@@ -84,10 +84,15 @@ def test_calls_before_the_approval_run_once_and_the_rest_after_the_answer(monkey
     script(monkeypatch, [("", [call("lookup_order", {"message": "B200"}, "a"), call("send_refund", ARGS, "b"), call("lookup_order", {"message": "C3"}, "c")]),
                          ("Done.", [])])
     flow = wf(tools=[BUILTIN, REFUND], steps_field="steps")
-    w = waiting_at(list(run_stream(flow, {"message": "x"})))
-    assert looked == ["B200"] and w["tool"] == "send_refund"
-    st = final(resume(w, "approved", flow))
-    assert looked == ["B200", "C3"] and refunds[0] == [ARGS]
+    class Ledger:
+        def __init__(self): self.rows = {}
+        def get(self, nid, it): return self.rows.get((nid, it), (None,))[0]
+        def put(self, nid, it, delta, key): self.rows.setdefault((nid, it), (delta, key))
+    effects = Effects("r-wave", ledger=Ledger())  # finished siblings of the approval come back from the ledger
+    w = waiting_at(list(run_stream(flow, {"message": "x"}, effects=effects)))
+    assert "B200" in looked and set(looked) <= {"B200", "C3"} and w["tool"] == "send_refund"
+    st = final(resume(w, "approved", flow, effects=effects))
+    assert sorted(looked) == ["B200", "C3"] and refunds[0] == [ARGS]
     assert [(s["tool"], s["status"]) for s in st["steps"]] == [("lookup_order", "ok"), ("send_refund", "ok"), ("lookup_order", "ok")]
 
 
@@ -112,13 +117,13 @@ def test_prompt_in_vietnamese(monkeypatch):
 
 def test_expansion_copies_the_approval_settings_and_the_validator_checks_the_deadline():
     flow = wf(tools=[REFUND], approval={"approvers": ["a@example.com"]}, deadline={"after": "1h", "on_timeout": "reject"})
-    step = next(n for n in agents.expand(flow)["nodes"] if n["id"] == "ag/__tool")
+    step = next(n for n in agents.expand(flow)["nodes"] if n["id"] == "ag/__tool/1")
     assert step["data"]["approval"] == {"approvers": ["a@example.com"]} and step["data"]["deadline"]["after"] == "1h"
     assert validate(flow) == []
     assert any("deadline must be a duration" in e for e in validate(wf(tools=[REFUND], deadline={"after": "soon"})))
     assert validate(wf(tools=[BUILTIN], deadline={"after": "soon"})) == []  # no tool needs approval: the settings are not used
     assert answered_by(step["data"]) == "reviewer" and answered_by({"answered_by": "visitor"}) == "visitor"
-    assert agents.agent_of_step("ag/__tool") == "ag" and agents.agent_of_step("ag") is None
+    assert agents.agent_of_step("ag/__tool/1") == "ag" and agents.agent_of_step("ag/__join") == "ag" and agents.agent_of_step("ag") is None
 
 
 # ---- through the services ---------------------------------------------------------------------
@@ -157,7 +162,7 @@ def test_inbox_lists_the_tool_call_and_an_approver_answers(c):
     owner, approver = user(c), user(c)
     wid, rid = start(c, owner, agent_flow(approval={"approvers": [approver["email"]]}))
     row = next(x for x in c.get("/api/approvals/inbox", headers=H(approver["token"])).json()["data"] if x["run_id"] == rid)
-    assert (row["node"], row["label"]) == ("ag/__tool", "Helper › lookup_order") and "lookup_order" in row["prompt"] and "Where is order B200?" in row["prompt"]
+    assert (row["node"], row["label"]) == ("ag/__tool/1", "Helper › lookup_order") and "lookup_order" in row["prompt"] and "Where is order B200?" in row["prompt"]
     assert c.post(f"/api/approvals/inbox/{rid}", json={"response": "approved"}, headers=H(approver["token"])).status_code == 200
     done = until(lambda: (r := run_row(c, owner, wid, rid))["status"] == "ok" and r)
     assert "In transit" in done["final_state"]["answer"] and done["final_state"]["steps"][0]["approval"] == "approved"
@@ -193,6 +198,6 @@ def test_workflow_test_answers_the_agent_by_its_id(c):
     add(c, owner, wid, name="No answer", input={"message": "Where is order B200?"})
     r = by_name(run_all(c, owner, wid, mock=True))
     assert r["Approved"]["status"] == "passed" and r["Rejected"]["status"] == "passed", r
-    assert (r["No answer"]["status"], r["No answer"]["reason"], r["No answer"]["detail"]) == ("failed", "no_answer", "ag/__tool")
+    assert (r["No answer"]["status"], r["No answer"]["reason"], r["No answer"]["detail"]) == ("failed", "no_answer", "ag/__tool/1")
     draft = c.post(f"/api/workflows/{wid}/tests/from-run/{r['Approved']['run_id']}", headers=H(owner["token"])).json()
     assert draft.get("data", {}).get("answers") == {"ag": ["approved"]}, draft
