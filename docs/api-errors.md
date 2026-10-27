@@ -206,6 +206,12 @@
 | `CHAT_MESSAGE_TOO_LONG` | 400 | The message is longer than {max} characters |
 | `CHAT_RUN_WAITING` | 409 | Answer the question in the chat first |
 | `CHAT_ANSWER_BY_REVIEWER` | 409 | A reviewer answers this step in the Approvals inbox |
+| `CHAT_NOT_PUBLISHED` | 404 | This chat is not available |
+| `CHAT_SLUG_INVALID` | 400 | The chat address must be 3 to 64 lowercase letters, digits or hyphens |
+| `CHAT_SLUG_TAKEN` | 409 | Another chat already uses the address '{slug}' |
+| `CHAT_SIGN_IN_REQUIRED` | 401 | Sign in to use this chat |
+| `CHAT_DAILY_LIMIT` | 429 | This chat has used its messages for today. Try again tomorrow |
+| `CHAT_EMBED_ORIGIN_INVALID` | 400 | '{origin}' is not a site address like https://example.com |
 | `TEST_NOT_FOUND` | 404 | Test case not found |
 | `TEST_CASE_INVALID` | 400 | Test case: {reason} |
 | `TEST_CASES_LIMIT` | 400 | A workflow can have at most {max} test cases |
