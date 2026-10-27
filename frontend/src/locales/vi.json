@@ -491,6 +491,9 @@
     "CHAT_EMBED_ORIGIN_INVALID": "'{{origin}}' không phải địa chỉ trang web dạng https://example.com",
     "CHAT_LOGO_INVALID": "Logo phải là ảnh PNG, JPEG hoặc WebP, tối đa {{max_kb}} KB",
     "CHAT_LOGO_NOT_FOUND": "Chat này chưa có logo",
+    "CHAT_TURN_NOT_FOUND": "Không tìm thấy tin nhắn",
+    "CHAT_RATING_NOT_ALLOWED": "Tin nhắn này không đánh giá được",
+    "CHAT_RATING_INVALID": "Đánh giá: {{field}} không hợp lệ",
     "TEST_NOT_FOUND": "Không tìm thấy test case",
     "TEST_CASE_INVALID": "Test case: {{reason}}",
     "TEST_CASES_LIMIT": "Một workflow có tối đa {{max}} test case",
@@ -2018,9 +2021,23 @@
       "goneTitle": "Chat không mở",
       "gone": "Chat này hiện không mở. Có thể link đã đổi, hoặc chat đã bị tắt."
     },
+    "rating": {
+      "up": "Hữu ích",
+      "down": "Chưa hữu ích",
+      "comment": "Chỗ nào chưa đúng?",
+      "commentPlaceholder": "Tuỳ chọn",
+      "sendComment": "Gửi nhận xét",
+      "remove": "Bỏ đánh giá",
+      "runGone": "Run của câu trả lời này đã bị xoá"
+    },
+    "ratings": {
+      "summary": "{{days}} ngày qua: {{up}} thích, {{down}} không thích ({{share}} không thích)",
+      "noShare": "—"
+    },
     "visitors": {
       "tab": "Khách",
       "none": "Chưa có cuộc trò chuyện nào của khách.",
+      "thumbsDown": "Không thích",
       "readOnly": "Chat của khách trên trang công khai. Chỉ xem.",
       "channel": {
         "web": "Trang",

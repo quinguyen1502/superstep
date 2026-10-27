@@ -134,6 +134,15 @@ class PublicChatService:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         return self.chat.view(self.own(t, sid, v), st["steps"]), v
 
+    def rate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict], value, comment) -> tuple[dict, Visitor]:
+        """The visitor rates one of their own finished answers. An unpublished chat refuses it (DEC-0070)."""
+        t, st = self.published(slug); v = self.visitor(slug, st, token, user)
+        return self.chat.rate(self.own(t, sid, v), tid, value, comment), v
+
+    def unrate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:
+        t, st = self.published(slug); v = self.visitor(slug, st, token, user)
+        return self.chat.unrate(self.own(t, sid, v), tid), v
+
     def own(self, t: WorkflowChatTrigger, sid: str, v: Visitor) -> ChatSession:
         """The visitor's session of this chat, else CHAT_SESSION_NOT_FOUND (another visitor's, another chat's, a studio chat)."""
         s = self.chat.sessions.get(sid) if isinstance(sid, str) else None

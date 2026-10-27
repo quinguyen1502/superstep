@@ -19,7 +19,7 @@ from ..core.errors import AppError
 from ..engine import agents
 from ..engine.limits import size
 from ..core import config
-from ..models import ChatMessage, ChatSession, ChatTurn, Run, WorkflowChatTrigger
+from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, WorkflowChatTrigger
 from ..repositories import ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
 from ..repositories.chat_triggers import WEB
 
@@ -30,6 +30,8 @@ ANSWERED_BY = ("visitor", "reviewer")
 DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30,
             "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": ""}
 MAX_TURNS, RETENTION_MAX, TEXT_MAX, TITLE_MAX = 50, 3650, 4000, 60
+COMMENT_MAX = 1000
+RATEABLE = ("ok", "error")  # a waiting question, and a cancelled run, are not an answer to rate (DEC-0070)
 INTRO_MAX, SUGGESTIONS_MAX, SUGGESTION_MAX, DAILY_MAX, ORIGINS_MAX = 1000, 4, 120, 100_000, 10
 LOGO_MAX = 256 * 1024
 LOGO_TYPES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"))  # WebP: RIFF....WEBP (logo_of)
@@ -101,8 +103,9 @@ def steps_of(events: list, mode: str) -> list[dict]:
 
 class ChatSessionService:
     def __init__(self, sessions: ChatSessionRepository, triggers: ChatTriggerRepository, messages: ChatMessageRepository,
-                 workflows: WorkflowRepository, runs: RunRepository, access=None):
+                 workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None):
         self.sessions, self.triggers, self.messages, self.workflows, self.runs, self.access = sessions, triggers, messages, workflows, runs, access
+        self.jobs = jobs  # enqueues chat_rating; None in tests that build the service by hand (TASK-0165)
 
     # ---- settings (the workflow's Chat section) ----
     def settings(self, wid: str, uid: str) -> dict:
@@ -205,25 +208,75 @@ class ChatSessionService:
         return json.loads(t.settings or "{}").get("steps") or DEFAULTS["steps"]
 
     def view(self, s: ChatSession, mode: str) -> dict:
-        """A session's turns, each run's steps (in `mode`) with its first answer."""
+        """A session's turns, each run's steps (in `mode`) with its first answer, and each turn's rating."""
         sid = s.id
         steps: dict[str, list] = {}
+        found: set[str] = set()
         turns = self.sessions.turns(sid)
+        ratings = {r.turn_id: r for r in self.sessions.ratings_of(sid)}
         for x in turns:
             if x.role == "assistant" and x.run_id and x.run_id not in steps:
-                r = self.runs.get(x.run_id); steps[x.run_id] = steps_of(json.loads(r.events or "[]") if r else [], mode)
+                r = self.runs.get(x.run_id)
+                if r is not None: found.add(x.run_id)
+                steps[x.run_id] = steps_of(json.loads(r.events or "[]") if r else [], mode)
         out = []
         for x in turns:
             d = self._turn(x)
+            d["rating"] = self._rating(ratings[x.id]) if x.id in ratings else None
+            if x.role == "assistant": d["run_exists"] = bool(x.run_id and x.run_id in found)
             if x.role == "assistant" and x.run_id in steps:
                 d["steps"] = steps.pop(x.run_id)  # a run's steps go with its first answer
             out.append(d)
         return {**self._session(s), "steps_mode": mode, "turns": out}
 
-    def visitors(self, wid: str, uid: str) -> list[dict]:
-        """The published page's chats, for builders with the run right (DEC-0067 decision 8): no visitor ids or names."""
+    def visitors(self, wid: str, uid: str, thumbs_down: bool = False) -> list[dict]:
+        """The published page's chats, for builders with the run right (DEC-0067 decision 8): no visitor ids or names.
+        `thumbs_down` keeps chats with a thumbs down (DEC-0070)."""
         self._workflow(wid, uid, P.RUN); t = self.triggers.web(wid)
-        return [self._session(s) for s in self.sessions.list_public(t.id)] if t else []
+        if t is None: return []
+        rows = self.sessions.list_public(t.id, thumbs_down=thumbs_down)
+        down = self.sessions.down_sessions([s.id for s in rows])
+        return [{**self._session(s), "thumbs_down": s.id in down} for s in rows]
+
+    def rating_totals(self, wid: str, uid: str) -> dict:
+        """Up and down counts whose rating changed in the last 7 and 30 days (DEC-0070)."""
+        self._workflow(wid, uid, P.RUN); now = time.time()
+        return {"d7": self.sessions.rating_counts(wid, now - 7 * 86400), "d30": self.sessions.rating_counts(wid, now - 30 * 86400)}
+
+    def rate(self, s: ChatSession, tid: str, value, comment) -> dict:
+        """Set the session owner's rating of one finished answer. The last write wins (one row)."""
+        turn = self.sessions.turn(tid) if isinstance(tid, str) else None
+        if turn is None or turn.session_id != s.id: raise AppError("CHAT_TURN_NOT_FOUND")
+        if turn.role != "assistant" or turn.status not in RATEABLE: raise AppError("CHAT_RATING_NOT_ALLOWED")
+        if value not in ("up", "down"): raise AppError("CHAT_RATING_INVALID", field="value")
+        if comment is None:
+            prev = self.sessions.rating(tid)
+            text = prev.comment if prev is not None and value == "down" else ""
+        elif not isinstance(comment, str):
+            raise AppError("CHAT_RATING_INVALID", field="comment")
+        else:
+            text = comment.strip()
+        if value == "up" and text: raise AppError("CHAT_RATING_INVALID", field="comment")
+        if len(text) > COMMENT_MAX: raise AppError("CHAT_RATING_INVALID", field="comment")
+        now = time.time()
+        row = self.sessions.upsert_rating(ChatRating(turn_id=tid, session_id=s.id, workflow_id=s.workflow_id, value=value,
+                                                     comment=text, created=now, updated=now))
+        if self.jobs is not None: self.jobs.enqueue({"kind": "chat_rating", "turn_id": tid})
+        return self._rating(row)
+
+    def unrate(self, s: ChatSession, tid: str) -> dict:
+        turn = self.sessions.turn(tid) if isinstance(tid, str) else None
+        if turn is None or turn.session_id != s.id: raise AppError("CHAT_TURN_NOT_FOUND")
+        self.sessions.delete_rating(tid)
+        return {"ok": True}
+
+    def rate_owned(self, sid: str, tid: str, uid: str, value, comment) -> dict:
+        s, _t = self._own(sid, uid)
+        return self.rate(s, tid, value, comment)
+
+    def unrate_owned(self, sid: str, tid: str, uid: str) -> dict:
+        s, _t = self._own(sid, uid)
+        return self.unrate(s, tid)
 
     def visitor_session(self, wid: str, sid: str, uid: str) -> dict:
         self._workflow(wid, uid, P.RUN); s = self.sessions.get(sid)
@@ -341,3 +394,7 @@ class ChatSessionService:
     def _turn(x: ChatTurn) -> dict:
         return {"id": x.id, "role": x.role, "text": x.text, "status": x.status, "run_id": x.run_id, "node": x.node,
                 "answered_by": x.answered_by, "code": x.code, "created": x.created}
+
+    @staticmethod
+    def _rating(r: ChatRating) -> dict:
+        return {"value": r.value, "comment": r.comment, "updated": r.updated}

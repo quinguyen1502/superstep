@@ -110,7 +110,7 @@ def chat_run_service() -> ChatRunService:
 
 def chat_session_service() -> ChatSessionService:
     db = get_db(); return ChatSessionService(ChatSessionRepository(db), ChatTriggerRepository(db), ChatMessageRepository(db), WorkflowRepository(db),
-                                             RunRepository(db), access=access_service())
+                                             RunRepository(db), access=access_service(), jobs=get_job_queue())
 
 
 def public_chat_service() -> PublicChatService:
@@ -187,7 +187,7 @@ def run_service() -> RunService:
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),
-                                           RunRepository(db), audit=audit_service())
+                                           RunRepository(db), audit=audit_service(), sessions=ChatSessionRepository(db))
 
 def workflow_test_service() -> WorkflowTestService:
     db = get_db(); return WorkflowTestService(WorkflowTestRepository(db), WorkflowRepository(db), RunRepository(db), WorkflowVersionRepository(db),

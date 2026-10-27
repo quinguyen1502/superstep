@@ -37,6 +37,8 @@ class RunWorker:
             return await asyncio.to_thread(self.deliveries().attempt, job["delivery_id"]) if self.deliveries else None
         if job.get("kind") == "langsmith_suite":
             return await asyncio.to_thread(self.langsmith().on_suite_done, job["suite_id"]) if self.langsmith else None
+        if job.get("kind") == "chat_rating":
+            return await asyncio.to_thread(self.langsmith().on_rating, job["turn_id"]) if self.langsmith else None
         if job.get("kind") == "chat_message":
             return await self.chat().handle(job["message_id"]) if self.chat else None
         svc = self.services(); rid = job["run_id"]; row = svc.runs.get(rid); attempt = int(job.get("attempt") or 1)

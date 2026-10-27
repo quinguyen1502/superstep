@@ -51,6 +51,14 @@ export function PublicChatPage() {
     setSessions(d.sessions); setSid(c => pick ?? (c && d.sessions.some(x => x.id === c) ? c : d.sessions[0]?.id ?? null)) })
   const fail = (e: unknown) => { if (e instanceof ApiError && e.code === 'CHAT_NOT_PUBLISHED') setGone(true); else setErr((e as Error).message) }
   const chat = useChatRun(sid, 'visitor', () => { list().catch(() => {}) }, ep)
+  const rate = (turnId: string, value: 'up' | 'down' | null, comment?: string) => {
+    if (!sid) return
+    const path = `${base}/sessions/${sid}/turns/${turnId}/rating`
+    const req = value === null
+      ? api<{ visitor_token?: string }>(path, { method: 'DELETE', headers })
+      : api<{ visitor_token?: string }>(path, { method: 'PUT', json: comment === undefined ? { value } : { value, comment }, headers })
+    req.then(d => { keep(d); return chat.reload() }).catch(fail)
+  }
   useEffect(() => {
     api<Page>(base).then(p => {
       if (p.access === 'signed_in' && !p.signed_in) { location.href = loginUrl(false, `/c/${slug}`); return }
@@ -106,7 +114,7 @@ export function PublicChatPage() {
     </header>
     {(err || chat.error) && <Alert variant="destructive" className="mx-auto mt-3 w-full max-w-3xl"><AlertCircle /><AlertDescription id="public-chat-error">{err || chat.error}</AlertDescription></Alert>}
     {page && <ChatThread turns={sid ? chat.session?.turns ?? [] : []} mode={page.steps_mode} events={chat.events} trace={chat.trace}
-      pending={chat.pending} running={chat.running} onAnswer={chat.answer} empty={intro} />}
+      pending={chat.pending} running={chat.running} onAnswer={chat.answer} onRate={sid ? rate : undefined} empty={intro} />}
     {page && <ChatComposer disabled={!ready || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
       placeholder={waiting ? t(waiting.answered_by === 'reviewer' ? 'chat.waitingReviewer' : 'chat.answerPlaceholder') : undefined}
       onSend={text => waiting?.run_id ? chat.answer(waiting.run_id, text) : send(text)} />}

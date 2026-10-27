@@ -322,13 +322,25 @@ test in CI, MCP over stdio) is not planned yet.
 - TASK-0155 `deploy` to a Docker host over SSH. **planned**
 - TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **planned**
 
+## Chat answer feedback
+
+REQ-0075, planned on 2026-10-27 (DEC-0070, CLAR-0006). Thumbs up or down on a finished chat answer, on the public
+page, the embed and the studio Chat tab. A thumbs down can carry a short comment. Builders see the mark, filter
+visitor chats that have a thumbs down, and read 7-day and 30-day totals. A rated answer can become a test case.
+When LangSmith tracing is on, the rating is sent as feedback on the run.
+
+- TASK-0162 Rating storage, public and studio APIs, retention, errors. **done** (PR #204; REV-0131, QA-0131; not merged)
+- TASK-0163 Thumbs on the public page and the embed. **done** (PR #204; REV-0132, QA-0132; not merged)
+- TASK-0164 Chat tab: marks, filter, totals, save as test case, rating one's own chat. **done** (PR #204; REV-0133, QA-0133; not merged)
+- TASK-0165 LangSmith `user_rating` feedback, in the background. **done** (PR #204; REV-0134, QA-0134; not merged)
+- TASK-0166 Handbook (en, vi) and CHANGELOG. **done** (PR #204; REV-0135, QA-0135; not merged)
+
 ## Accepted, not planned yet
 
 Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
-owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1 is planned above. The rest
-are not planned into tasks yet.
+owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1 and REQ-0075 are planned in the
+sections above. The rest are not planned into tasks yet.
 
-- REQ-0075 Thumbs up or down on chat answers, seen by builders and sent to LangSmith (CLAR-0006).
 - REQ-0076 An Agent round's tool calls run in parallel, each still checkpointed on its own (CLAR-0007).
 - REQ-0077 File attachments in the chat: documents, and images for vision models (CLAR-0008).
 - REQ-0078 Hand-off from one Agent node to another in the same workflow (CLAR-0009).

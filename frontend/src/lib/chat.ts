@@ -22,10 +22,16 @@ export type PublicChatPage = { slug: string; title: string; intro: string; sugge
   steps_mode: StepsMode; signed_in: boolean; embed_origins: string[]; logo: string }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
   duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string }  // child_run_id: a workflow tool's run (TASK-0136)
+export type ChatRating = { value: 'up' | 'down'; comment: string; updated: number }
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
-  node?: string | null; answered_by?: AnsweredBy | null; code?: string | null; created: number; steps?: ChatStep[] }
+  node?: string | null; answered_by?: AnsweredBy | null; code?: string | null; created: number; steps?: ChatStep[]
+  rating?: ChatRating | null; run_exists?: boolean }
 export type ChatSession = { id: string; workflow_id: string; channel: string; title?: string | null; last_run_id?: string | null
-  created: number; updated: number }
+  created: number; updated: number; thumbs_down?: boolean }
+export type RatingCounts = { up: number; down: number }
+export type RatingTotals = { d7: RatingCounts; d30: RatingCounts }
+/** The share of thumbs down, as a whole percent, or null when there are no ratings (DEC-0070). */
+export const downShare = (c: RatingCounts): number | null => { const n = c.up + c.down; return n ? Math.round(100 * c.down / n) : null }
 export type ChatSessionFull = ChatSession & { steps_mode: StepsMode; turns: ChatTurn[] }
 
 /** The chat is published (DEC-0067): on, and open to more than studio users. */

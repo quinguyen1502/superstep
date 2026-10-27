@@ -491,6 +491,9 @@
     "CHAT_EMBED_ORIGIN_INVALID": "'{{origin}}' is not a site address like https://example.com",
     "CHAT_LOGO_INVALID": "The logo must be a PNG, JPEG or WebP image of at most {{max_kb}} KB",
     "CHAT_LOGO_NOT_FOUND": "This chat has no logo",
+    "CHAT_TURN_NOT_FOUND": "Message not found",
+    "CHAT_RATING_NOT_ALLOWED": "This message cannot be rated",
+    "CHAT_RATING_INVALID": "Rating: invalid {{field}}",
     "TEST_NOT_FOUND": "Test case not found",
     "TEST_CASE_INVALID": "Test case: {{reason}}",
     "TEST_CASES_LIMIT": "A workflow can have at most {{max}} test cases",
@@ -2018,9 +2021,23 @@
       "goneTitle": "Chat not available",
       "gone": "This chat is not available. The link may have changed, or the chat was turned off."
     },
+    "rating": {
+      "up": "Helpful",
+      "down": "Not helpful",
+      "comment": "What went wrong?",
+      "commentPlaceholder": "Optional",
+      "sendComment": "Send comment",
+      "remove": "Remove rating",
+      "runGone": "The run behind this answer was deleted"
+    },
+    "ratings": {
+      "summary": "Last {{days}} days: {{up}} up, {{down}} down ({{share}} down)",
+      "noShare": "—"
+    },
     "visitors": {
       "tab": "Visitors",
       "none": "No visitor chats yet.",
+      "thumbsDown": "Thumbs down",
       "readOnly": "A visitor's chat from the public page. Read-only.",
       "channel": {
         "web": "Page",

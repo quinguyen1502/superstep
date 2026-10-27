@@ -4,6 +4,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Added
+
+- **Ratings on chat answers** (REQ-0075). A visitor can mark a finished answer helpful or not, and add a short note
+  when it was not. The same controls are on the embedded chat and in the studio Chat tab, where a builder can also
+  rate their own chat. The Chat tab filters visitor chats that have a thumbs down, shows how the marks split over 7
+  and 30 days, and can save a rated answer as a test case. When LangSmith tracing is on, the mark is sent to the
+  run's trace as `user_rating`.
+
 ### Fixed
 
 - **Run status on the canvas** (TASK-0147). The canvas now shows the run open in the Run panel. After an Agent node
