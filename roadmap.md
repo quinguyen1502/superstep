@@ -288,6 +288,18 @@ linked child run that the parent's tool step waits for.
   (PR #181; REV-0121, QA-0121).
 - TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **merged** (PR #182; REV-0122, QA-0122).
 
+## Public chat page
+
+REQ-0074, Accepted 2026-10-27. The CLAR-0005 answers take every recommended option, except that the embed has both an
+iframe snippet and a script widget. DEC-0067 holds the design. This is phase 2 of REQ-0048: a published chat at
+`/c/{slug}`. It ships in 0.9.0 with REQ-0073, so the release (TASK-0139, #184) waits for it.
+
+- TASK-0140 Publish settings, public REST API by slug, visitor identity, limits and errors.
+- TASK-0141 Public socket: runs as the owner, a filtered stream, visitor answers, daily cap, and the visitors list.
+- TASK-0142 The `/c/{slug}` page, the publish settings UI, the visitors list in the Chat tab, and e2e.
+- TASK-0143 Frame protection for the studio, `?embed=1`, the iframe snippet and the `widget.js` bubble.
+- TASK-0144 Handbook (en, vi), comparison pages and CHANGELOG.
+
 ## Owner requests
 
 Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.
