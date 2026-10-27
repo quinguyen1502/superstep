@@ -34,9 +34,9 @@ const StatusIcon = ({ s, className }: { s: Span['status'] | Trace['status']; cla
 
 function Summary({ trace, replay, onExitReplay, raw, setRaw, actions }: { trace: Trace; replay?: string; onExitReplay?: () => void; raw: boolean; setRaw: (b: boolean) => void; actions?: ReactNode }) {
   const { t } = useTranslation()
-  return <div id="trace-summary" data-status={trace.status} className={cn('flex items-center gap-3 border-b px-3 py-1.5 text-xs', (trace.status === 'error') && 'bg-destructive/5', trace.status === 'timeout' && 'bg-warning/10', trace.status === 'cancelled' && 'bg-muted')}>
+  return <div id="trace-summary" data-status={trace.status} className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1.5 text-xs whitespace-nowrap', (trace.status === 'error') && 'bg-destructive/5', trace.status === 'timeout' && 'bg-warning/10', trace.status === 'cancelled' && 'bg-muted')}>
     <span className="flex items-center gap-1.5 font-medium"><StatusIcon s={trace.status} />{t(trace.waiting?.child ? 'trace.waitingChild' : `trace.${trace.status}`)}</span>
-    <Separator orientation="vertical" className="h-4" />
+    <Separator orientation="vertical" /* ui-class-ok: a short divider; the vertical Separator stretches to the bar's tallest item */ className="data-[orientation=vertical]:h-4 data-[orientation=vertical]:self-center" />
     <span className="flex items-center gap-1 text-muted-foreground"><Clock className="size-3.5" />{fmtMs(trace.total)}</span>
     <span className="flex items-center gap-1 text-muted-foreground"><Layers className="size-3.5" />{t('trace.steps', { count: trace.spans.length })}</span>
     {trace.tokens != null && <span id="trace-tokens" className="flex items-center gap-1 text-muted-foreground"><Coins className="size-3.5" />{t('trace.tokens', { count: trace.tokens })}</span>}
@@ -72,7 +72,7 @@ export function ChildSteps({ runId, name, className }: { runId: string; name?: s
   const { t } = useTranslation()
   const [run, setRun] = useState<{ workflow_id: string; status: string; events: RunEvent[] } | null | 'error'>(null)
   useEffect(() => { api<any>(`/api/runs/${runId}`).then(setRun).catch(() => setRun('error')) }, [runId])
-  const box = cn('ml-9 mr-3 my-0.5 border-l pl-3 py-1 text-[11px]', className)
+  const box = cn('ml-16 mr-3 my-0.5 border-l pl-3 py-1 text-[11px]', className)   // its line under the tool call's icon
   if (run === null) return <div className={cn(box, 'text-muted-foreground')} data-testid="child-steps"><Loader2 className="inline size-3 animate-spin" /> {t('trace.child.loading')}</div>
   if (run === 'error') return <div className={cn(box, 'text-muted-foreground')} data-testid="child-steps">{t('trace.child.unavailable')}</div>
   const tr = buildTrace(run.events)
@@ -169,7 +169,8 @@ export function RunTrace({ trace, events, meta, selected, onSelect, replay, onEx
       <ScrollArea className="flex-1 min-h-0"><div className="py-1" id="trace-timeline">
         {raw ? <div className="px-3 font-mono text-[11px] space-y-0.5" id="raw-events">{events.map((e, i) => <div key={i} className={cn('flex gap-2', e.type === 'error' && 'text-destructive')}><span className="w-6 shrink-0 select-none text-right text-muted-foreground tabular-nums">{i}</span><span className="min-w-0 break-all">{JSON.stringify(e)}</span></div>)}</div>
         : <>{trace.spans.map(s => <Fragment key={s.key}><Row s={s} trace={trace} meta={meta} selected={s.key === selected} onClick={() => onSelect(s.key === selected ? null : s)} />
-            {s.agent?.child_run_id && <ChildSteps runId={s.agent.child_run_id} name={s.agent.tool} />}</Fragment>)}
+            {/* ends at the duration column: the rows' bar column is 30% wide, plus their padding and gap */}
+            {s.agent?.child_run_id && <ChildSteps runId={s.agent.child_run_id} name={s.agent.tool} className="mr-[calc(30%+12px)]" />}</Fragment>)}
           {trace.errors.length > 0 && !trace.spans.some(s => s.error) && <Alert variant={trace.status === 'timeout' ? 'warning' : 'destructive'} id="trace-run-error" className="mx-3 my-1 w-auto">{trace.status === 'timeout' ? <TimerOff /> : <AlertTriangle />}<AlertDescription className="text-xs">{trace.errors.join('; ')}</AlertDescription></Alert>}
           {trace.status === 'cancelled' && <Alert variant="warning" className="mx-3 my-1 w-auto" id="trace-cancelled"><Ban /><AlertDescription className="text-xs">{t(events.some(e => e.reason === 'disconnect') ? 'trace.cancelledDisconnect' : 'trace.cancelledMsg')}</AlertDescription></Alert>}
           {trace.spans.some(s => s.code?.runtime === 'subprocess') && <Alert variant="warning" className="mx-3 my-1 w-auto" id="trace-code-unisolated"><ShieldAlert /><AlertDescription className="text-xs">{t('code.runUnisolated')}</AlertDescription></Alert>}

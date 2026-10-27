@@ -12,7 +12,7 @@ export function UserMenu() {
     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="rounded-full" id="user-menu">
       <Avatar className="size-7"><AvatarFallback className="text-xs">{(u?.email || '?')[0].toUpperCase()}</AvatarFallback></Avatar></Button></DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="w-56">
-      <DropdownMenuLabel className="flex items-center gap-2 font-normal"><User className="size-4" />{u?.email}</DropdownMenuLabel>
+      <DropdownMenuLabel className="flex items-center gap-2 font-normal"><User className="size-4 shrink-0" /><span className="min-w-0 break-all">{u?.email}</span></DropdownMenuLabel>
       <DropdownMenuSeparator />
       <DropdownMenuItem onClick={() => nav('/settings/profile')} id="profile-item"><CircleUser />{t('settings.nav.profile')}</DropdownMenuItem>
       <DropdownMenuItem onClick={() => nav('/settings/channels')} id="settings-item"><Settings />{t('settings.title')}</DropdownMenuItem>

@@ -18,6 +18,7 @@ import { ErrorAlert } from '@/components/approvals/channel-parts'
 import { useAction } from '@/components/approvals/use-action'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api } from '@/lib/api'
+import { can, useMe } from '@/lib/rbac'
 import i18n from '@/lib/i18n'
 import type { McpList, McpServer } from '@/lib/mcp'
 import { cn } from '@/lib/utils'
@@ -113,7 +114,7 @@ function ServerCard({ s, data, reload, defaultOpen }: { s: McpServer; data: McpL
 
 export function McpSection() {
   const { t } = useTranslation()
-  const [data, setData] = useState<McpList | null>(null); const [err, setErr] = useState('')
+  const [data, setData] = useState<McpList | null>(null); const [err, setErr] = useState(''); const manages = can(useMe(), 'resources.manage')
   const [adding, setAdding] = useState(false); const [form, setForm] = useState(toForm())
   const load = () => api<McpList>('/api/mcp/servers').then(d => { setData(d); setErr('') }).catch(e => setErr(e.message))
   const create = useAction(() => { setAdding(false); setForm(toForm()); load() })
@@ -122,7 +123,7 @@ export function McpSection() {
     {err && <ErrorAlert>{err}</ErrorAlert>}
     {data?.org_usable === false && <Alert variant="warning" id="mcp-org-blocked"><ShieldAlert /><AlertDescription>{t('policy.blockedMcp')}</AlertDescription></Alert>}
     {data && <Alert variant="warning" id="mcp-sandbox-note"><ShieldAlert /><AlertDescription>{t(data.stdio_enabled ? 'mcp.stdioOn' : 'mcp.stdioOff')}</AlertDescription></Alert>}
-    {data && (adding ? <Card className="gap-4" id="mcp-new"><CardHeader><CardTitle>{t('mcp.new')}</CardTitle><CardDescription>{t('mcp.newHelp')}</CardDescription></CardHeader>
+    {data && manages && (adding ? <Card className="gap-4" id="mcp-new"><CardHeader><CardTitle>{t('mcp.new')}</CardTitle><CardDescription>{t('mcp.newHelp')}</CardDescription></CardHeader>
       <CardContent className="space-y-3">{create.alerts}
         <ServerFields form={form} set={setForm} idp="mcp-new" fixed={false} data={data} />
         <div className="flex gap-2"><Button size="sm" disabled={create.busy} id="mcp-create" onClick={() => create.run(() => api('/api/mcp/servers', { method: 'POST', json: toBody(form) }), '')}>{t('mcp.create')}</Button>
