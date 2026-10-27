@@ -84,8 +84,9 @@ How you call it and take it elsewhere:
   [Workflow tests](../run/tests.md)), optional LangSmith datasets and
   experiments, OpenTelemetry traces (see [Traces](../run/traces.md)).
 - **Services, not only a studio.** API tokens, signed webhooks, cron schedules,
-  chat triggers, and a public API with Python and TypeScript SDKs (see
-  [Public API and SDKs](../run/public-api.md)).
+  chat triggers, a public chat page with an embeddable chat bubble (see
+  [Chat](../run/chat.md#publish-a-chat)), and a public API with Python and
+  TypeScript SDKs (see [Public API and SDKs](../run/public-api.md)).
 - **Self-hosted, MIT.** SQLite by default or Postgres with pgvector, optional
   Redis and worker, Docker images on GHCR and one-click PaaS deploys (see
   [Deploy](../operate/deploy.md)). Vietnamese and English UI and handbook.

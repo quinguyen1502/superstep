@@ -142,6 +142,27 @@ WS /ws/run
     (owner or admin; {channel_id, place: "dm" | channel or chat id, command, input_field, reply_field, enabled})
     ```
 
+??? abstract "Chat and the public chat page"
+
+    ```text
+    GET    /api/workflows/{wid}/chat                PUT    /api/workflows/{wid}/chat   (settings; PUT needs owner access)
+    GET    /api/workflows/{wid}/chat/sessions       POST   /api/workflows/{wid}/chat/sessions
+    GET    /api/chat/sessions/{sid}?view=builder|visitor   DELETE /api/chat/sessions/{sid}
+    GET    /api/workflows/{wid}/chat/visitors       GET    /api/workflows/{wid}/chat/visitors/{sid}   (read-only)
+    WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
+
+    No sign-in (the published page, by slug):
+    GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins)
+    GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
+    GET    /api/public/chat/{slug}/sessions/{sid}
+    WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
+    GET    /api/public/chat-frame?path=/c/{slug}    (its frame-ancestors, for nginx)
+    ```
+
+    An anonymous visitor is an HttpOnly cookie, or the `X-Chat-Visitor` header
+    (`?visitor=` on the socket) in an embed. Send `X-Chat-Visitor: new` to get a
+    token back as `visitor_token`.
+
 ??? abstract "Workflow tests"
 
     ```text

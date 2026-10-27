@@ -341,5 +341,31 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await page.goto('/approvals'); await expect(page.locator('[data-testid=inbox-row]').first()).toBeVisible()
       await shot(page, lang, 'workflow-tool-approval')
     })
+
+    // The public chat page (TASK-0144, REQ-0074): the publish settings, the embed snippets, and the page a visitor sees.
+    // Run alone with `-g "public chat"`.
+    test(`public chat ${lang}`, async ({ page, browser }) => {
+      await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
+      await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
+      const H = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+      const vi = lang === 'vi'
+      const wf = { name: vi ? 'Hỗ trợ đơn hàng' : 'Order help', state: [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }],
+        nodes: [N('start', 'start', 40), N('bot', 'llm', 300, { label: vi ? 'Trả lời' : 'Reply', model: 'gpt-4o-mini', prompt: 'Answer: {{state.message}}', output_field: 'reply' }), N('end', 'end', 560)],
+        edges: [{ id: '1', source: 'start', target: 'bot' }, { id: '2', source: 'bot', target: 'end' }] }
+      const wid = (await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).data.id
+      const slug = `${vi ? 'ho-tro' : 'order-help'}-${Date.now() % 10000}`
+      await page.request.put(`/api/workflows/${wid}/chat`, { headers: H, data: { enabled: true, access: 'anonymous', slug, title: vi ? 'Hỗ trợ đơn hàng' : 'Order help',
+        intro: vi ? 'Hỏi về **đơn hàng** của bạn: đơn đang ở đâu, đổi trả, hoàn tiền.' : 'Ask about **your order**: where it is, returns, refunds.',
+        suggestions: vi ? ['Đơn A100 của tôi đang ở đâu?', 'Tôi muốn trả hàng'] : ['Where is my order A100?', 'I want to return an item'], embed_origins: ['https://shop.example.com'] } })
+      await page.goto(`/workflows/${wid}`)
+      if (!(await page.locator('#chat-input').isVisible())) await page.locator('#chat-open').click()
+      await page.locator('#chat-view').click(); await page.locator('#chat-settings-btn').click(); await expect(page.locator('#chat-publish')).toBeVisible()
+      await page.locator('#chat-slug').scrollIntoViewIfNeeded(); await shot(page, lang, 'chat-publish')
+      await page.locator('#chat-snippet-iframe').scrollIntoViewIfNeeded(); await shot(page, lang, 'chat-embed')
+      const ctx = await browser.newContext({ locale: vi ? 'vi-VN' : 'en-US', viewport: { width: 1440, height: 900 }, colorScheme: 'light' })
+      const v = await ctx.newPage(); await v.addInitScript(([l]) => localStorage.setItem('lang', l), [lang])
+      await v.goto(`/c/${slug}`); await expect(v.getByTestId('chat-suggestion')).toHaveCount(2)
+      await shot(v, lang, 'public-chat'); await ctx.close()   // what a visitor sees first: the intro and the suggestions
+    })
   })
 }
