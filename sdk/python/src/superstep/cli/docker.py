@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import socket
 import subprocess
+import tempfile
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -55,7 +58,59 @@ class Docker:
         _check(["docker", "pull", image])
 
     def compose(self, directory: str, project: str, args: list[str]) -> None:
-        _check(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", *args])
+        _check(_compose_argv(directory, project, args))
+
+    def exec_bytes(self, directory: str, project: str, service: str, command: list[str]) -> bytes:
+        proc = _run_bytes(_compose_argv(directory, project, ["exec", "-T", service, *command]))
+        if proc.returncode != 0:
+            raise DockerError(proc.stderr.decode("utf-8", "replace").strip() or "docker failed")
+        return proc.stdout
+
+    def copy_from(self, directory: str, project: str, service: str, path: str) -> bytes:
+        target = _temp_path()
+        try:
+            _check(_compose_argv(directory, project, ["cp", f"{service}:{path}", target]))
+            return Path(target).read_bytes()
+        finally:
+            os.unlink(target)
+
+    def copy_to(self, directory: str, project: str, service: str, path: str, data: bytes) -> None:
+        target = _temp_path()
+        try:
+            Path(target).write_bytes(data)
+            _check(_compose_argv(directory, project, ["cp", target, f"{service}:{path}"]))
+        finally:
+            os.unlink(target)
+
+    def systemd_user(self) -> bool:
+        return shutil.which("systemctl") is not None
+
+    def enable_timer(self, unit: str) -> None:
+        _check(["systemctl", "--user", "daemon-reload"])
+        _check(["systemctl", "--user", "enable", "--now", unit])
+
+    def install_cron(self, marker: str, line: str) -> None:
+        try:
+            listed = subprocess.run(["crontab", "-l"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            current = listed.stdout if listed.returncode == 0 else ""
+            start, end = f"# {marker} start", f"# {marker} end"
+            kept = []
+            skip = False
+            for row in current.splitlines():
+                if row == start:
+                    skip = True
+                    continue
+                if row == end:
+                    skip = False
+                    continue
+                if not skip:
+                    kept.append(row)
+            kept.extend([start, line, end])
+            proc = subprocess.run(["crontab", "-"], input="\n".join(kept) + "\n", text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except OSError as exc:
+            raise DockerError(str(exc))
+        if proc.returncode != 0:
+            raise DockerError(proc.stderr.strip() or "crontab failed")
 
     def ps(self, directory: str, project: str) -> list[dict]:
         proc = _run(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", "ps", "-a", "--format", "json"])
@@ -148,9 +203,26 @@ def os_sysconf(name: str) -> int:
     return os.sysconf(name)
 
 
+def _compose_argv(directory: str, project: str, args: list[str]) -> list[str]:
+    return ["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", *args]
+
+
+def _temp_path() -> str:
+    handle = tempfile.NamedTemporaryFile(prefix="superstep-cp-", delete=False)
+    handle.close()
+    return handle.name
+
+
 def _run(args: list[str]) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except OSError as exc:
+        raise DockerError(str(exc))
+
+
+def _run_bytes(args: list[str]) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as exc:
         raise DockerError(str(exc))
 

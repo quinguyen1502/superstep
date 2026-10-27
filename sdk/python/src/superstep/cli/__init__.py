@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import httpx
 
 import superstep
+from superstep.cli.backup import add_commands as add_backup_commands
 from superstep.cli.docker import Docker
 from superstep.cli.i18n import Catalog, lang_flag, resolve_lang
 from superstep.cli.install import add_commands
@@ -84,6 +85,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     completion.set_defaults(run=_cmd_completion)
     add_commands(commands, common, catalog)
     add_status_commands(commands, common, catalog)
+    add_backup_commands(commands, common, catalog)
     return parser
 
 

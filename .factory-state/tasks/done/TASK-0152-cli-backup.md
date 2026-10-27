@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0152
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -96,8 +96,16 @@
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0079 phase 1 (DEC-0068).
+- 2026-10-27: owner asked to start the task. Branch `factory/task-0152-cli-backup` from `origin/develop` at `d836e8f` (PR #206; TASK-0151 is in `6f8351e`). Task moved to doing. No source edited.
+- 2026-10-27: implemented `backup`, `restore`, and `--schedule`. `create_backup` and `restore_archive` are the functions TASK-0153 calls. Tests were added with the task and were not run.
+- 2026-10-28: validation passed on the uncommitted task tree. Tool policy: sdk/python pytest 70 passed, 2 skipped (2.05s, includes `test_backup`); backend pytest 787 passed, 57 skipped (335s); frontend lint exit 0 (5 existing warnings); frontend test 124 passed; frontend build exit 0; TypeScript SDK test 22 passed, build exit 0, typecheck exit 0.
+- 2026-10-28: review REV-0138. No blocking findings. Approved for QA. Task stays in doing.
+- 2026-10-28: QA QA-0138. Pass with follow-up. `test_backup.py` and `test_cli.py` 28 passed. Task stays in doing.
+- 2026-10-28: owner asked to move the task to done. Review REV-0138 has no blocking findings. QA-0138 passed with the documented restore, shell-disk, and real-Docker risks. Not merged.
 
 ## Handoff Notes
 
-- TASK-0153 calls backup before it pulls, and restore on a failed health check.
-- Do not start a branch until the owner confirms this set. The next skill is `task-start`.
+- TASK-0153 calls `superstep.cli.backup.create_backup` before it pulls, and `restore_archive` on a failed health check. Both raise `BackupError` for policy failures and `DockerError` for Docker failures.
+- A successful backup sets `instance.json` `secret_backed_up`, which `doctor` already treats as a backup record.
+- Review: `.factory-state/artifacts/REV-0138-task-0152.md`. QA: `.factory-state/artifacts/QA-0138-task-0152.md`.
+- Not merged. Merge still needs an explicit owner request.

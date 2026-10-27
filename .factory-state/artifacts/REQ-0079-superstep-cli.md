@@ -7,7 +7,7 @@
 - Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is planned (DEC-0068, TASK-0149 to TASK-0156). TASK-0149 is done. Phase 2 is not planned yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-28
 - Source: owner request in chat on 2026-10-27: "Tôi muốn thêm 1 REQ về việc build superstep cli để hỗ trợ deploy,
   install, upgrade,... và nhiều thêm nữa dựa vào bạn đề xuất". The commands beyond install, deploy and upgrade are
   the agent's proposals. The owner accepted them with the CLAR-0010 answers ("Làm theo đề xuất").
@@ -282,7 +282,7 @@ Planned on 2026-10-27. The layout is DEC-0068. Phase 2 is not in this list.
 - TASK-0149 CLI package, help, JSON, en and vi, completion, and the version field on `/api/health`. Done (REV-0129, QA-0129).
 - TASK-0150 `install`, `adopt`, `start`, `stop`, `restart`, `logs`. Done (REV-0130, QA-0130).
 - TASK-0151 `status`, `config`, `doctor`. Done (REV-0137, QA-0136).
-- TASK-0152 `backup`, `restore`, scheduled backups.
+- TASK-0152 `backup`, `restore`, scheduled backups. Done (REV-0138, QA-0138).
 - TASK-0153 `upgrade` with automatic rollback.
 - TASK-0154 `admin` and `uninstall`.
 - TASK-0155 `deploy` over SSH.
