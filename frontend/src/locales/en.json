@@ -1875,6 +1875,7 @@
     "languageLabel": "Language"
   },
   "demo": {
+    "readOnly": "Changes are off in the public demo.",
     "banner": "This is a public demo. Data resets when the server sleeps, and the first load may take about 30 s. Changes are not saved; Code, HTTP and Send email nodes are off, and models answer with a mock.",
     "hide": "Hide",
     "try": "Try the demo",

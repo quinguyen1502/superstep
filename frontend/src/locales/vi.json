@@ -1875,6 +1875,7 @@
     "languageLabel": "Ngôn ngữ"
   },
   "demo": {
+    "readOnly": "Bản demo công khai không cho lưu thay đổi.",
     "banner": "Đây là bản demo công khai. Dữ liệu được đặt lại khi máy chủ nghỉ, và lần tải đầu có thể mất khoảng 30 giây. Thay đổi không được lưu; node Code, HTTP và Send email đang tắt, model trả lời bằng mock.",
     "hide": "Ẩn",
     "try": "Dùng thử demo",
