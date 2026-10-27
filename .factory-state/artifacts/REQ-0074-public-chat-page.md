@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0074
-- Status: Proposed. It waits for the owner's answers to CLAR-0005.
+- Status: Accepted by the owner on 2026-10-27 with the CLAR-0005 answers. Planned as TASK-0140 to TASK-0144 (DEC-0067).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -22,13 +22,27 @@
   - the history window;
   - Human nodes answered in the chat;
   - the step setting.
-- It adds three things: visitor access (`anonymous` or `signed_in`), a public connection to the run, and limits against
-  abuse.
+- It adds four things: visitor access (`anonymous` or `signed_in`), a public connection to the run, limits against
+  abuse, and an embed (an iframe snippet and a script widget).
 - It ships in **0.9.0** together with REQ-0073. The 0.9.0 release PR waits until this requirement is done.
 
 ## Owner Decisions
 
-CLAR-0005 holds them. They are not answered yet.
+The owner answered CLAR-0005 on 2026-10-27. For question 5 they chose both embeds. Every other question takes the
+recommended option.
+
+1. **Access**: both `anonymous` (anyone with the link) and `signed_in` (any account of this studio).
+2. **Anonymous visitor**: an HttpOnly cookie for that chat page, set by the server.
+3. **Limits**: per visitor, per IP and per workflow per day. There is no CAPTCHA.
+4. **Human nodes**: the same as in the studio; the node's "answered by" setting decides.
+5. **Embed in 0.9.0**: two snippets.
+   - A plain iframe snippet. Safari keeps no history inside a frame.
+   - A script widget whose bubble opens the same iframe. It keeps the visitor id on the host site, so Safari keeps the
+     history too.
+   - A widget that draws its own UI is out of scope.
+6. **Page content**: a title, an intro and up to four suggested messages.
+7. **Builders** see visitor chats in a read-only "Visitors" list in the Chat tab.
+8. **Version**: the latest saved version, as for the other triggers.
 
 ## Problem Or Opportunity
 
@@ -81,6 +95,8 @@ CLAR-0005 holds them. They are not answered yet.
 - **Builders**:
   - the Chat tab can list visitor chats, read-only (CLAR-0005 question 7);
   - retention (`retention_days`) applies to visitor sessions too.
+- **Embed** (TASK-0143): a plain iframe snippet, and a script widget whose bubble opens that iframe. The allowed
+  sites are set in Chat settings and sent as `frame-ancestors`. Every other studio page refuses to be framed.
 - Errors in `core/errors.py`, `docs/api-errors.md` and both locales. Glossary rows. Handbook en and vi (the chat guide
   and the public API page). CHANGELOG.
 - Tests: pytest (access, isolation between visitors, limits, published and unpublished), vitest, and an e2e test of an
@@ -90,7 +106,7 @@ CLAR-0005 holds them. They are not answered yet.
 
 - File attachments, feedback (thumbs), and streaming over SSE.
 - Custom domains, custom colours and logos (CLAR-0005 question 6 keeps the page plain).
-- The embed widget, unless CLAR-0005 question 5 brings it in.
+- A widget that draws its own chat UI, and an embed for `signed_in` chats.
 - A visitor deleting their own history (retention handles it), and exporting a chat.
 - Billing or quotas per visitor beyond the limits above.
 
@@ -143,7 +159,7 @@ CLAR-0005 holds them. They are not answered yet.
 - A visitor's session is reachable only with that visitor's id, or for `signed_in`, that user's account.
 - An Agent node's tool approval is always a reviewer's (DEC-0054, `agent_of`). A visitor cannot approve the agent's own
   actions.
-- A published chat is refused in demo mode (`STUDIO_DEMO_MODE`), unless CLAR-0005 says otherwise.
+- A published chat is refused in demo mode (`STUDIO_DEMO_MODE`).
 
 ## Constraints
 
@@ -168,8 +184,7 @@ CLAR-0005 holds them. They are not answered yet.
   - their sessions are their own.
 - Unpublishing makes the page and its API refuse new messages with a `CHAT_*` code, and the page explains why.
 - Going over the per-visitor, per-IP or per-workflow limit is refused with a stated retry time. The run is not started.
-- The runs use the owner's resources and show in the run history. Visitor chats appear read-only in the Chat tab, if
-  CLAR-0005 question 7 says so.
+- The runs use the owner's resources and show in the run history. Visitor chats appear read-only in the Chat tab.
 - The page passes the UI review checklist (`docs/ui-conventions.md`) in light, dark and phone layouts, en and vi.
 - `tests/test_layers.py`, `tests/test_api_envelope.py`, the backend suite, vitest, the new e2e test and the strict
   handbook build pass.
@@ -193,7 +208,7 @@ CLAR-0005 holds them. They are not answered yet.
 
 ## Open Questions
 
-CLAR-0005 holds the eight owner questions.
+None. CLAR-0005 is answered.
 
 ## Related Artifacts
 
@@ -204,4 +219,6 @@ CLAR-0005 holds the eight owner questions.
 - `.factory-state/decisions/DEC-0054-human-answered-by.md`
 - `.factory-state/artifacts/REQ-0073-agent-workflow-tools.md` (ships in the same release)
 - `.factory-state/tasks/doing/TASK-0139-version-0-9-0.md` (the 0.9.0 release, waiting for this requirement)
+- `.factory-state/decisions/DEC-0067-public-chat-page.md`
+- Tasks: TASK-0140 to TASK-0144 under `.factory-state/tasks/todo/`
 - `docs/ui-conventions.md`, `docs/backend-architecture.md`

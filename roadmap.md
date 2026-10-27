@@ -290,9 +290,15 @@ linked child run that the parent's tool step waits for.
 
 ## Public chat page
 
-REQ-0074, Proposed 2026-10-27; it waits for CLAR-0005. It is phase 2 of REQ-0048: a published chat at `/c/{slug}` for
-anonymous or signed-in visitors, with limits against abuse. The owner wants it in 0.9.0 together with REQ-0073, so the
-0.9.0 release (TASK-0139) waits for it. The tasks are planned once CLAR-0005 is answered.
+REQ-0074, Accepted 2026-10-27. The CLAR-0005 answers take every recommended option, except that the embed has both an
+iframe snippet and a script widget. DEC-0067 holds the design. This is phase 2 of REQ-0048: a published chat at
+`/c/{slug}`. It ships in 0.9.0 with REQ-0073, so the release (TASK-0139, #184) waits for it.
+
+- TASK-0140 Publish settings, public REST API by slug, visitor identity, limits and errors.
+- TASK-0141 Public socket: runs as the owner, a filtered stream, visitor answers, daily cap, and the visitors list.
+- TASK-0142 The `/c/{slug}` page, the publish settings UI, the visitors list in the Chat tab, and e2e.
+- TASK-0143 Frame protection for the studio, `?embed=1`, the iframe snippet and the `widget.js` bubble.
+- TASK-0144 Handbook (en, vi), comparison pages and CHANGELOG.
 
 ## Owner requests
 

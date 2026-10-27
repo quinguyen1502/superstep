@@ -2,7 +2,7 @@
 schema_version: 1
 id: CLAR-0005
 task_id: REQ-0074
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0074-public-chat-page.md
   - .factory-state/artifacts/REQ-0048-agent-chat.md
@@ -11,6 +11,7 @@ source_artifacts:
   - .factory-state/decisions/DEC-0054-human-answered-by.md
 created: 2026-10-27
 updated: 2026-10-27
+answered_at: '2026-10-27'
 questions:
   - id: access
     type: single_choice
@@ -101,6 +102,10 @@ questions:
         label: An iframe embed with a list of allowed sites
       - value: widget
         label: A script widget with a floating chat bubble
+      - value: widget-and-iframe
+        label: >-
+          Both: a plain iframe snippet, and a script widget whose bubble opens the same iframe and keeps the visitor
+          id on the host site (so Safari keeps the history)
     depends_on: null
   - id: page-content
     type: single_choice
@@ -152,12 +157,28 @@ questions:
       - value: pinned
         label: A version the builder picks when publishing
     depends_on: null
-answers: {}
+answers:
+  access: both
+  visitor-identity: cookie
+  limits: limits
+  visitor-answers: same-as-studio
+  embed: widget-and-iframe
+  page-content: text
+  builder-review: read-only
+  version: latest
 ---
 # Clarification
 
 Owner questions for REQ-0074, the public chat page (phase 2 of REQ-0048, to ship in 0.9.0). Each question has a
-recommended option. The answers go into REQ-0074 and a new DEC that replaces the "reserved" part of DEC-0053.
+recommended option. The answers go into REQ-0074 and DEC-0067, which replaces the "reserved" part of DEC-0053.
+
+The owner answered in chat on 2026-10-27:
+- "Ok với đề xuất" takes the recommended option for questions 1 to 4 and 6 to 8.
+- For question 5 the owner first asked about the effort of an iframe and of a widget, then chose "tôi chọn widget và
+  chỉ iframe". This is recorded as `widget-and-iframe`:
+  - a plain `<iframe>` snippet, where Safari keeps no history inside the frame;
+  - the script widget (a bubble that opens the same iframe and passes the visitor id from the host page);
+  - not a widget that draws its own chat UI on the host page.
 
 The owner may answer it with:
 
