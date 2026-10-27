@@ -43,8 +43,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 - **Viewers no longer see create buttons they cannot use.** The Knowledge bases tab is hidden for roles without
   `resources.manage` (an old link opens Profile), and so is "Add MCP server"; the API already refused both.
 - **Public demo.** A visitor's Share dialog lists only the owner and the visitor's own row, so visitors no longer see
-  each other's accounts. My accounts says linking is off in the demo and disables its fields; `GET /api/me` has a new
-  `read_only` flag for that.
+  each other's accounts. My accounts, the password form and the notification settings say changes are off in the demo
+  and are disabled, and the language is kept in the browser instead of being sent to a server that refuses it;
+  `GET /api/me` has a new `read_only` flag for that.
 
 ## 0.8.0 (2026-10-26)
 
