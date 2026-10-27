@@ -314,7 +314,8 @@ test in CI, MCP over stdio) is not planned yet.
 
 - TASK-0149 CLI package, help, JSON, en and vi, completion, and the version on `/api/health`. **done**
   (REV-0129, QA-0129; not merged)
-- TASK-0150 `install`, `adopt`, `start`, `stop`, `restart` and `logs`. **planned**
+- TASK-0150 `install`, `adopt`, `start`, `stop`, `restart` and `logs`. **done**
+  (REV-0130, QA-0130; not merged)
 - TASK-0151 `status`, `config` and `doctor`. **planned**
 - TASK-0152 `backup`, `restore` and scheduled backups. **planned**
 - TASK-0153 `upgrade` with a backup and automatic rollback. **planned**
