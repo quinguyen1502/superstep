@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0148
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -36,10 +36,12 @@ then left in review and moved later in a chore PR (TASK-0139's release PR moved 
   They now link REV-0123 to REV-0127 and QA-0123 to QA-0127; TASK-0139 says the owner's approval and CI stand in for
   them, as the earlier release tasks do.
 
+- Upstream sw-ai-factory 338d7a8 (pushed to its `main`): the same framework changes plus a CHANGELOG entry;
+  `.factory` here is vendored at 338d7a8 (byte-identical to that commit's framework files).
+
 ### Out Of Scope
 
 - A GitHub Action that commits the move after a merge: it would write to `develop` without an approved PR.
-- Sending the framework change upstream to sw-ai-factory.
 
 ## Inputs
 
@@ -92,9 +94,13 @@ then left in review and moved later in a chore PR (TASK-0139's release PR moved 
 ## Activity Log
 
 - 2026-10-27: asked for by the owner and written on `factory/task-0148-done-on-merge`.
+- 2026-10-27: the owner asked to send the change upstream, sync it back and merge ("Thay đổi ngược về repo gốc và
+  sync về rồi merge đi"): upstream 338d7a8 (144 unittest tests pass), vendored here; moved to done on PR #199 before
+  the merge, under the rule this task adds.
 
 ## Handoff Notes
 
 - Review: documentation and generated skills only; `skills validate` 70 in sync; `factory validate` and
   `ids check --ref origin/develop` pass.
-- QA: under the new rule, this task moves to done on this PR once the owner approves the merge.
+- QA: all acceptance criteria hold; upstream `python -m unittest discover -s tests` 144 OK and `git diff --check`
+  clean. This task moved to done on its own PR, the first use of the rule.
