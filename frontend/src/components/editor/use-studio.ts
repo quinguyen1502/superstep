@@ -18,11 +18,12 @@ import type { Channels } from '@/lib/approvals'
 import { type Credential } from '@/components/credentials-dialog'
 import { useProviders } from '@/lib/providers'
 import { buildTrace, withSummary } from '@/lib/trace'
+import { canvasId, clearMarks, markEvent, markRun } from '@/lib/run-marks'
 import type { BuiltinTool } from '@/lib/agent'
 import { useShortcuts } from '@/lib/use-shortcuts'
 import { useGraphHistory } from '@/lib/use-graph-history'
 import { removeElements, selectionIds, spliceNode } from '@/lib/graph-ops'
-import { META, INSERTABLE, DEFAULTS, samplePrompt, MENU_OF, MENU_IDS, ACTION_ICONS, canvasId, styleEdges, defaultInput, LOOP_LABELS, type Field, type LogItem } from './meta'
+import { META, INSERTABLE, DEFAULTS, samplePrompt, MENU_OF, MENU_IDS, ACTION_ICONS, styleEdges, defaultInput, LOOP_LABELS, type Field, type LogItem } from './meta'
 
 /** Editor state and actions (TASK-0040: moved out of pages/Editor.tsx). Panels read it through StudioContext. */
 export function useStudio() {
@@ -72,9 +73,8 @@ export function useStudio() {
     if (wf.source) setInput(defaultInput(wf.state || []))
   }
   const loadHistory = (id?: string) => id ? api<any[]>(`/api/workflows/${id}/runs`).then(hs => { setHistory(hs); return hs }) : undefined
-  const openRun = (h: any) => { setLog(withSummary(h)); setReplay(h.id); setTraceSel(null); setTab('logs')
-    // a run that has moved on (a workflow tool's parent after its child, TASK-0138) no longer waits on the canvas
-    if (h.status !== 'waiting') setNodes(ns => ns.some(n => n.data._status === 'waiting') ? ns.map(n => n.data._status === 'waiting' ? { ...n, data: { ...n.data, _status: 'done' } } : n) : ns) }
+  // the canvas shows the opened run, with the steps it took on the server (a workflow tool's parent after its child, TASK-0147)
+  const openRun = (h: any) => { setLog(withSummary(h)); setReplay(h.id); setTraceSel(null); setTab('logs'); setNodes(ns => markRun(ns, h.events || [])) }
   // each workflow id loads the graph, its run history (?run=<id> opens that run), and the editor's lookups
   const openWorkflow = useEffectEvent(() => {
     api(`/api/workflows/${id}`).then(wf => { setLoadErr(null); load(wf)
@@ -111,16 +111,12 @@ export function useStudio() {
     if (!signedIn()) { setErrors([t('editor.expiredRedirect')]); setTab('logs'); setTimeout(sessionExpired, 1500); return }
     setErrors([]); setTab('logs'); setRunning(true); setTraceSel(null)
     if (resume) setLog(l => l.filter(e => e.type !== 'run_summary'))
-    else { setLog([]); setReplay(null); setNodes(ns => ns.map(n => ({ ...n, data: { ...n.data, _status: '', _dur: null } }))) }
+    else { setLog([]); setReplay(null); setNodes(clearMarks) }
     const ws = new WebSocket(wsUrl('/ws/run')); wsRef.current = ws
     ws.onopen = () => ws.send(JSON.stringify({ ...msg, locale: uiLocale() }))  // the mock model answers in the UI language
     ws.onmessage = m => {
-      const ev: LogItem = JSON.parse(m.data); setLog(l => [...l, ev])
-      if (ev.type === 'node_started') mark(canvasId(ev.node!), { _status: 'running' })
-      if (ev.type === 'run_waiting') mark(canvasId(ev.node!), { _status: 'waiting' })
-      if (ev.type === 'node_finished') mark(canvasId(ev.node!), ev.node!.includes('/') ? { _status: 'done' } : { _status: 'done', _dur: ev.duration_ms })
-      if (ev.type === 'error') { setErrors(eventErrors(ev)); if (ev.node) mark(canvasId(ev.node), { _status: 'error' }) }
-      if (ev.type === 'run_cancelled' || (ev.type === 'error' && (ev as any).status === 'timeout')) setNodes(ns => ns.map(n => n.data._status === 'running' ? { ...n, data: { ...n.data, _status: 'cancelled' } } : n))
+      const ev: LogItem = JSON.parse(m.data); setLog(l => [...l, ev]); setNodes(ns => markEvent(ns, ev))
+      if (ev.type === 'error') setErrors(eventErrors(ev))
     }
     ws.onerror = () => setErrors(e => e.length ? e : [t('editor.wsLost')])
     ws.onclose = ev => {

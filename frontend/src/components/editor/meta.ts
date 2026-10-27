@@ -32,8 +32,6 @@ export const INSERTABLE = TYPES.filter(t => t !== 'start' && t !== 'end')
 export const RUNTIME = new Set(['llm', 'agent', 'retriever', 'tool', 'mcp', 'human', 'decision'])
 /** Reducers per field type (TASK-0011): how parallel writes combine. */
 export const REDUCERS: Record<string, string[]> = { list: ['replace', 'append'], object: ['replace', 'merge'], number: ['replace', 'add'], integer: ['replace', 'add'] }
-/** Trace events of nodes inside a subgraph carry `sub/inner` ids: the canvas shows them on the subgraph node. */
-export const canvasId = (nid: string) => nid.split('/')[0]
 
 /** For each edges (TASK-0049): `each` enters the loop body, `done` leaves after the last item. */
 export const LOOP_LABELS = ['each', 'done']

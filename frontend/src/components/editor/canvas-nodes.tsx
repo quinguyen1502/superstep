@@ -39,7 +39,7 @@ function UnisolatedBadge() {
 
 export function StudioNode({ data, type, selected }: NodeProps) {
   const d = data as any; const m = META[type!]; const I = m.icon
-  return <div className="relative">
+  return <div className="relative" data-status={d._status || undefined}>
     {type !== 'start' && <Handle type="target" position={Position.Left} />}
     <div className={cn(type === 'code' && 'border-node-code/60 border-dashed', 'rounded-xl border bg-card text-card-foreground shadow-sm px-3 py-2 min-w-44 transition-all',
       selected && 'ring-2 ring-ring', d._hl && 'ring-4 ring-primary/40 shadow-md', d._status === 'running' && 'border-warning ring-4 ring-warning/30',
