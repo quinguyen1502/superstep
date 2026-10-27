@@ -8,6 +8,8 @@ const T = {
   vi: { password: 'Mật khẩu', waiting: 'Đang chờ một workflow khác', calledBy: 'Được gọi bởi' },
   en: { password: 'Password', waiting: 'Waiting for another workflow', calledBy: 'Called by' },
 }
+/** A canvas node's run mark (TASK-0147). */
+const nodeStatus = (page: Page, id: string) => page.locator(`.react-flow__node[data-id="${id}"] [data-status]`)
 const STATE = [{ name: 'message', type: 'string' }, { name: 'answer', type: 'string' }, { name: 'steps', type: 'list' }]
 const DESK = (name: string) => ({ name, state: STATE,
   nodes: [N('start', 'start', 40), N('ask', 'human', 300, { label: 'Refund approval', prompt: 'Refund for {{state.message}}?', output_field: 'answer' }), N('end', 'end', 560)],
@@ -52,6 +54,8 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await page.locator('#run-tab').click(); await page.locator('#run-input').fill('{"message": "order B200"}')
     await page.locator('#run-btn').click()
     await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+    // the steps the parent took on the server after its child mark the canvas too, End included
+    for (const id of ['start', 'ag', 'end']) await expect(nodeStatus(page, id)).toHaveAttribute('data-status', 'done')
     const nested = page.getByTestId('child-steps')
     await expect(nested).toBeVisible(); await expect(nested.getByTestId('child-step')).toContainText('Look up the order')
     await shot(page, `workflow-tool-nested-trace-${lang}`, '#run-logs-panel')
@@ -74,6 +78,9 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await page.locator('#run-tab').click(); await page.locator('#run-input').fill('{"message": "Where is my order B200?"}')
     await page.locator('#run-btn').click()
     await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+    // the steps the parent took on the server after its child mark the canvas too, End included
+    for (const id of ['start', 'agent', 'end']) await expect(nodeStatus(page, id)).toHaveAttribute('data-status', 'done')
+    await shot(page, `workflow-tool-template-canvas-${lang}`, '.react-flow')
     await expect(page.getByTestId('child-steps')).toContainText('lookup_order')
     await shot(page, `workflow-tool-template-run-${lang}`, '#run-logs-panel')
   })
@@ -96,6 +103,8 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await page.reload(); await page.locator('#run-tab').click()  // the history now knows the child is waiting for an approval
     await page.locator('#history-all').click(); await page.getByTestId('history-row').first().click()
     await expect(page.locator('#child-wait-approval')).toBeVisible({ timeout: 15_000 })
+    // the canvas shows the opened run (TASK-0147): the supervisor waits, the End node has not run
+    await expect(nodeStatus(page, 'ag')).toHaveAttribute('data-status', 'waiting'); await expect(nodeStatus(page, 'end')).toHaveCount(0)
     await shot(page, `workflow-tool-parent-waiting-${lang}`, '#run-logs-panel')
 
     // the Approvals inbox lists the child's question with both workflow names
@@ -110,6 +119,8 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await page.goto(`/workflows/${team}${lang === 'en' ? '?theme=dark' : ''}`)
     await page.locator('#run-tab').click(); await page.locator('#history-all').click(); await page.getByTestId('history-row').first().click()
     await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+    // the steps the parent took on the server after its child mark the canvas too, End included
+    for (const id of ['start', 'ag', 'end']) await expect(nodeStatus(page, id)).toHaveAttribute('data-status', 'done')
     await shot(page, `workflow-tool-parent-done-${lang}`, '#run-logs-panel')
 
     // the child run says who called it
