@@ -224,7 +224,8 @@ items, type-check diagnostics and full IntelliSense, stay out).
 ## Agent chat
 
 REQ-0048, Accepted 2026-10-23 (owner decisions 1-6 on audience, access, memory, Human "answered by", step visibility,
-attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1: the studio Chat tab.
+attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1, the studio Chat tab, is done. Phase 2, the
+public page `/c/{slug}`, is not started.
 
 - TASK-0084 Web chat backend: chat sessions and turns (migration 0035), the `web` chat trigger with its settings, one
   `source="chat"` run per message over the run socket with the history window, reply-once answers, `node_token.field`,
@@ -312,5 +313,6 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
   intro video. **released** (PR #155 to main, tag `v0.7.0`).
 - TASK-0128 Version 0.8.0: the TypeScript export of Agent nodes, template setup hints, an answer kept across a
   restart. **released** (PR #166 to main, tag `v0.8.0`).
+- TASK-0139 Version 0.9.0: workflows as Agent tools, workflow checks in the UI language. **in progress**.
 - Earlier releases (0.3.0 to 0.6.0: TASK-0096, TASK-0098, TASK-0100, TASK-0105, TASK-0111) and the tasks between
   TASK-0087 and TASK-0112 are not listed in this roadmap. Their task files and CHANGELOG.md have the details.

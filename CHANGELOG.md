@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.9.0 (2026-10-27)
+
 ### Added
 
 - **Workflows as Agent tools** (REQ-0073, TASK-0133 to TASK-0138). An Agent node can list another saved workflow as a
