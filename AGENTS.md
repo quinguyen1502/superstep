@@ -30,6 +30,18 @@ Init creates a valid factory skeleton. It is not ready for implementation until 
   - Frontend: call the API only through `lib/api.ts` `api()` (it unwraps the envelope). Show errors via `errorText`/`eventErrors` (`lib/i18n.ts`). Put every UI string in `locales/en.json` + `locales/vi.json` with identical keys; no literal UI text in components.
 - Do not start implementation source work until `factory ready` exits 0, unless the owner explicitly overrides that gate.
 
+## Running The Factory CLI
+
+- `factory` means `.factory/bin/factory`. It needs PyYAML, which the system Python usually lacks, so run it from the backend virtualenv (`./dev.sh` creates `backend/.venv`):
+
+  ```bash
+  PATH="$PWD/backend/.venv/bin:$PATH" .factory/bin/factory validate
+  ```
+
+  Without it, every command fails with `ModuleNotFoundError: No module named 'yaml'`.
+- `.factory/` is vendored from the upstream framework repository `quinguyen1502/sw-ai-factory`. Make framework changes upstream first: commit and push them to its `main`, then copy the same files into `.factory/`, so they stay byte-identical, and record the upstream commit in the task. After a skill template changes, run `factory skills apply` and `factory skills validate`.
+- The upstream tests run with `PYTHONPATH=cli python -m unittest discover -s tests` from the upstream checkout, as its CI does. Plain `pytest` cannot import `factory_cli` there.
+
 ## Workflow Skills
 
 Use the matching installed skill when the user asks for that job. If the skill files are missing, run `factory skills apply`.
