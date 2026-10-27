@@ -29,7 +29,7 @@ function Studio() {
   const narrow = vw - (studio.chatOpen ? chatStore.read().width : 0) < CONFIG_COLLAPSE_BELOW
   // phones (TASK-0121): one pane at a time; a run shows the Run pane, opening the chat shows the chat
   const mobile = useIsMobile(); const [view, setView] = useState<MobileView>('canvas')
-  const { running, chatOpen, paletteCmds } = studio
+  const { running, chatOpen, addCentered } = studio
   const [seen, setSeen] = useState({ running, chatOpen })
   if (seen.running !== running || seen.chatOpen !== chatOpen) {
     setSeen({ running, chatOpen })
@@ -37,7 +37,7 @@ function Studio() {
     if (running && !seen.running) setView('run')
   }
   // a tap on a palette card adds the node in the middle of the canvas, once the canvas is showing again
-  const addFromPalette = (type: string) => { setView('canvas'); requestAnimationFrame(() => paletteCmds.find(c => c.id === `add:${type}`)?.run()) }
+  const addFromPalette = (type: string) => { setView('canvas'); requestAnimationFrame(() => addCentered(type)) }
   if (!wid && id && !loadErr) return <EditorSkeleton />
 
   if (loadErr) return <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4 text-foreground">

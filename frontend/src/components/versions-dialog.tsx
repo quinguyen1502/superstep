@@ -77,14 +77,14 @@ export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => v
   </Select>
   return <Dialog open={open} onOpenChange={setOpen}>
     {!controlled && <DialogTrigger asChild><Button size="sm" variant="outline" id="versions-btn" disabled={!wid}><History />{t('versions.button')}</Button></DialogTrigger>}
-    <DialogContent className="sm:max-w-4xl">
+    <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
       <DialogHeader><DialogTitle>{t('versions.title')}</DialogTitle><DialogDescription>{t('versions.desc')}</DialogDescription></DialogHeader>
       {err && <Alert variant="destructive"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
       {!!children.length && <Alert variant="warning" id="versions-children"><TriangleAlert /><AlertDescription>{t('versions.childrenChanged', { count: children.length })}
         <ul className="mt-1 list-disc pl-4">{children.map(c => <li key={c.id}>{c.name} · v{c.version} · {fmtDate(c.at)}</li>)}</ul></AlertDescription></Alert>}
       {notice && <Alert id="versions-notice"><Info /><AlertDescription>{notice}</AlertDescription></Alert>}
-      <div className="grid grid-cols-[18rem_1fr] gap-4 min-h-0">
-        <ScrollArea className="h-96 rounded-md border">
+      <div className="grid grid-cols-1 gap-4 min-h-0 sm:grid-cols-[18rem_minmax(0,1fr)]">
+        <ScrollArea className="h-48 rounded-md border sm:h-96">
           <div className="p-1">{items.map(v => <div key={v.version} data-testid="version-row" className="rounded-md px-2 py-1.5 text-xs hover:bg-accent space-y-1">
             <div className="flex items-center gap-2">
               <span className="font-mono font-semibold">v{v.version}</span>
@@ -102,7 +102,7 @@ export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => v
         </ScrollArea>
         <div className="space-y-3 min-w-0">
           <div className="flex items-center gap-2 text-xs"><span>{t('versions.compare')}</span>{pick(a, setA)}<span>→</span>{pick(b, setB)}</div>
-          <ScrollArea className="h-80"><div className="space-y-3 pr-3" id="version-diff">
+          <ScrollArea className="h-48 sm:h-80"><div className="space-y-3 pr-3" id="version-diff">
             {diff?.identical && <div className="text-xs text-muted-foreground">{t('versions.identical')}</div>}
             {diff?.name && <div className="text-xs"><Badge variant="warning">{t('versions.renamed')}</Badge> <span className="font-mono">{diff.name.before} → {diff.name.after}</span></div>}
             {diff && <><SectionView title={t('versions.nodesTitle')} s={diff.nodes} kind="nodes" />

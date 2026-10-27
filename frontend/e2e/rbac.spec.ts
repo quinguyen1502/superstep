@@ -31,6 +31,10 @@ test('share as viewer, read-only editor, admin changes the role and deactivates'
   const user = page.locator(`.user-row[data-email="${email}"]`)
   await user.getByRole('combobox').click(); await page.getByRole('option', { name: 'Người xem' }).click()
   await expect(user.getByRole('combobox')).toContainText('Người xem')
+  // a global viewer creates no knowledge bases or MCP servers: no Knowledge tab, no Add button, an old link goes to Profile
+  await other.goto('/settings/mcp'); await expect(other.locator('#mcp-sandbox-note')).toBeVisible()
+  await expect(other.locator('#mcp-add')).toHaveCount(0); await expect(other.locator('#settings-nav-knowledge')).toHaveCount(0)
+  await other.goto('/settings/knowledge'); await expect(other).toHaveURL(/\/settings\/profile$/)
   await expect(page.locator('#roles-matrix')).toContainText('users.manage')
   await user.getByRole('switch').click(); await expect(user).toContainText('Đã vô hiệu hoá')
   await other.reload(); await expect(other).toHaveURL(/\/login/)

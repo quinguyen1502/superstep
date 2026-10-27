@@ -38,3 +38,18 @@ test('profile: account details, then a password change that signs out the other 
   expect(await apiToken(page, email, 'newpass22')).toBeTruthy()
   await other.close()
 })
+
+test('profile of a read-only account (the public demo visitor): language local, password and notifications locked', async ({ page }) => {
+  await register(page, `readonly-${uid()}@example.com`)
+  // what GET /api/me says for the demo visitor (STUDIO_DEMO_MODE is off in these tests)
+  await page.route(u => u.pathname === '/api/me', async r => { const res = await r.fetch(); const body = await res.json(); body.data.read_only = true; await r.fulfill({ response: res, json: body }) })
+  const prefWrites: string[] = []; page.on('request', r => { if (r.method() === 'PUT' && r.url().includes('/api/notifications/preferences')) prefWrites.push(r.url()) })
+  await page.goto('/settings/profile')
+  await expect(page.locator('#password-read-only')).toBeVisible()
+  await expect(page.locator('#current-password')).toBeDisabled(); await expect(page.locator('#password-save')).toBeDisabled()
+  await page.locator('#profile-lang').click(); await page.getByRole('option', { name: 'English' }).click()
+  await expect(page.locator('#profile-notify')).toHaveText('Manage')  // the UI language still changes, in this browser
+  await page.locator('#profile-notify').click()
+  await expect(page.locator('#notify-read-only')).toBeVisible(); await expect(page.locator('#notify-pref-in_app')).toBeDisabled()
+  expect(prefWrites).toEqual([])  // nothing the server would refuse
+})

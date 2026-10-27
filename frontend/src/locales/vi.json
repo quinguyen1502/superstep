@@ -229,7 +229,8 @@
       "label": "Khu vực làm việc",
       "canvas": "Canvas",
       "nodes": "Node",
-      "addHint": "Chạm vào một node để thêm vào canvas."
+      "add": "Thêm",
+      "addHint": "Chạm Thêm để đặt node lên canvas."
     },
     "configTabs": {
       "label": "Cấu hình node",
@@ -896,6 +897,7 @@
     "platform": "Nền tảng",
     "name": "Tên",
     "namePh": "vd. Workspace Acme",
+    "demoReadOnly": "Bản demo công khai không cho liên kết tài khoản chat.",
     "noChannels": "Chưa có kết nối. Thêm Slack app hoặc Telegram bot của bạn bên dưới.",
     "orgReadOnly": "Do admin quản lý. Bạn vẫn chọn được kết nối này trong node Human.",
     "replaceSecrets": "Thay khoá bí mật",
@@ -1879,6 +1881,7 @@
     "languageLabel": "Ngôn ngữ"
   },
   "demo": {
+    "readOnly": "Bản demo công khai không cho lưu thay đổi.",
     "banner": "Đây là bản demo công khai. Dữ liệu được đặt lại khi máy chủ nghỉ, và lần tải đầu có thể mất khoảng 30 giây. Thay đổi không được lưu; node Code, HTTP và Send email đang tắt, model trả lời bằng mock.",
     "hide": "Ẩn",
     "try": "Dùng thử demo",

@@ -2,7 +2,7 @@
  *  every other session of the account (this browser gets a fresh one). */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, CircleCheck, Loader2 } from 'lucide-react'
+import { AlertCircle, CircleCheck, Loader2, ShieldAlert } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,7 +46,7 @@ function AccountCard() {
 }
 
 function PasswordCard() {
-  const { t } = useTranslation()
+  const { t } = useTranslation(); const readOnly = !!useMe()?.read_only  // the demo visitor: the API refuses the change
   const [current, setCurrent] = useState(''); const [password, setPassword] = useState(''); const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [done, setDone] = useState(false)
   const mismatch = confirm.length > 0 && password !== confirm
@@ -59,7 +59,8 @@ function PasswordCard() {
   }
   return <Card id="profile-password"><CardHeader><CardTitle>{t('profile.passwordTitle')}</CardTitle><CardDescription>{t('profile.passwordIntro')}</CardDescription></CardHeader>
     <CardContent>
-      <form onSubmit={submit} noValidate aria-busy={busy} className="max-w-sm space-y-4">
+      {readOnly && <Alert variant="warning" id="password-read-only" className="mb-4 max-w-sm"><ShieldAlert /><AlertDescription>{t('demo.readOnly')}</AlertDescription></Alert>}
+      <form onSubmit={submit} noValidate aria-busy={busy} className="max-w-sm"><fieldset disabled={readOnly} className="min-w-0 space-y-4">
         {done && <div id="password-changed" role="status" className="flex items-start gap-2 rounded-md border bg-muted px-3 py-2 text-sm"><CircleCheck className="mt-0.5 size-4 shrink-0 text-success" />{t('profile.passwordChanged')}</div>}
         {error && <Alert variant="destructive" id="password-error"><AlertCircle /><AlertDescription>{error}</AlertDescription></Alert>}
         <div className="space-y-1.5"><Label htmlFor="current-password">{t('profile.currentPassword')}</Label>
@@ -71,7 +72,7 @@ function PasswordCard() {
           <Input id="new-confirm" type="password" autoComplete="new-password" required disabled={busy} value={confirm} onChange={e => setConfirm(e.target.value)} aria-invalid={mismatch} />
           {mismatch && <p className="text-xs text-destructive">{t('auth.mismatch')}</p>}</div>
         <Button type="submit" id="password-save" disabled={busy || !current || !passwordOk(password) || password !== confirm}>{busy && <Loader2 className="animate-spin" />}{t('reset.save')}</Button>
-      </form>
+      </fieldset></form>
     </CardContent>
   </Card>
 }
