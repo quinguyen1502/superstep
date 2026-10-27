@@ -141,6 +141,27 @@ WS /ws/run
     (chủ hoặc admin; {channel_id, place: "dm" | id kênh hoặc chat, command, input_field, reply_field, enabled})
     ```
 
+??? abstract "Chat và trang chat công khai"
+
+    ```text
+    GET    /api/workflows/{wid}/chat                PUT    /api/workflows/{wid}/chat   (cài đặt; PUT cần quyền chủ sở hữu)
+    GET    /api/workflows/{wid}/chat/sessions       POST   /api/workflows/{wid}/chat/sessions
+    GET    /api/chat/sessions/{sid}?view=builder|visitor   DELETE /api/chat/sessions/{sid}
+    GET    /api/workflows/{wid}/chat/visitors       GET    /api/workflows/{wid}/chat/visitors/{sid}   (chỉ xem)
+    WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
+
+    Không cần đăng nhập (trang công khai, theo slug):
+    GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins)
+    GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
+    GET    /api/public/chat/{slug}/sessions/{sid}
+    WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
+    GET    /api/public/chat-frame?path=/c/{slug}    (frame-ancestors của trang, cho nginx)
+    ```
+
+    Khách chat ẩn danh được nhận diện bằng một cookie HttpOnly, hoặc header
+    `X-Chat-Visitor` (`?visitor=` trên socket) khi trang được nhúng. Gửi
+    `X-Chat-Visitor: new` để nhận token mới trong `visitor_token`.
+
 ??? abstract "Kiểm thử workflow"
 
     ```text

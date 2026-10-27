@@ -20,7 +20,29 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   - API: `GET /api/runs/{id}`; the public run result has `parent_run_id` and `waiting.child_run_id`.
   - New error code `WORKFLOW_TOOL_TOO_DEEP`.
 
+- **Public chat page** (REQ-0074, TASK-0140 to TASK-0144; phase 2 of the web chat). Set **Who can chat** to *Anyone
+  with the link* or *Signed-in users* and the chat gets its own page at `/c/<address>`, for people who never open the
+  studio.
+  - Chat settings: the page address, title, a Markdown intro, up to four suggested messages, and messages per day
+    (500 by default), with Copy link and Open page.
+  - Anonymous visitors are remembered by an HttpOnly cookie and see only their own chats. Signed-in chats send a
+    visitor to the sign-in page and back. Each message runs the saved workflow as its owner, and the page shows only
+    the steps the Chat settings allow.
+  - Limits per visitor and per IP address (`STUDIO_PUBLIC_CHAT_RATE_VISITOR`, `_IP`, `_READ`, `_WINDOW`), plus the
+    chat's daily cap.
+  - The Chat panel lists **Visitors**' chats read-only.
+  - **Embed**: list the sites that may embed the chat, then paste the **chat bubble** (`/c/widget.js`, a round button
+    that opens the chat and keeps the visitor's chats in every browser) or a plain **frame**.
+  - API: `/api/public/chat/{slug}` (page, sessions), `WS /ws/public/chat/{slug}`, `/api/public/chat-frame`, and
+    `GET /api/workflows/{wid}/chat/visitors`.
+  - New error codes `CHAT_NOT_PUBLISHED`, `CHAT_SLUG_INVALID`, `CHAT_SLUG_TAKEN`, `CHAT_SIGN_IN_REQUIRED`,
+    `CHAT_DAILY_LIMIT` and `CHAT_EMBED_ORIGIN_INVALID`.
+
 ### Changed
+
+- **The studio refuses to be framed** (TASK-0143). Every page sends `X-Frame-Options: DENY` and
+  `Content-Security-Policy: frame-ancestors 'none'`, in Compose (nginx) and in the all-in-one image. Only a published
+  chat page may be framed, by the sites listed in its Chat settings.
 
 - **Workflow checks in Vietnamese** (TASK-0132). The editor shows the problems found when you save, open a template or
   run (a missing knowledge base, a node with no outgoing edge, a loop without a Condition…) in the UI language.

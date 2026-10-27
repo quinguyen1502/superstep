@@ -84,8 +84,9 @@ Cách gọi và mang đi nơi khác:
   [Test workflow](../run/tests.md)), tùy chọn dataset và experiment trên
   LangSmith, trace OpenTelemetry (xem [Trace](../run/traces.md)).
 - **Chạy như dịch vụ, không chỉ là studio.** Token API, webhook có ký, lịch
-  cron, trigger qua chat, và API công khai với SDK Python và TypeScript (xem
-  [API công khai và SDK](../run/public-api.md)).
+  cron, trigger qua chat, trang chat công khai kèm bong bóng chat để nhúng (xem
+  [Chat](../run/chat.md#cong-khai-chat)), và API công khai với SDK Python và
+  TypeScript (xem [API công khai và SDK](../run/public-api.md)).
 - **Tự host, MIT.** Mặc định SQLite hoặc Postgres với pgvector, Redis và worker
   tùy chọn, image Docker trên GHCR và triển khai một chạm lên PaaS (xem
   [Triển khai](../operate/deploy.md)). Giao diện và handbook tiếng Việt và

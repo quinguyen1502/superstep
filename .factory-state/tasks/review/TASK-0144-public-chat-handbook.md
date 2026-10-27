@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0144
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
