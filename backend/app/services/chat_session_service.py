@@ -189,6 +189,16 @@ class ChatSessionService:
             out.append(d)
         return {**self._session(s), "steps_mode": mode, "turns": out}
 
+    def visitors(self, wid: str, uid: str) -> list[dict]:
+        """The published page's chats, for builders with the run right (DEC-0067 decision 8): no visitor ids or names."""
+        self._workflow(wid, uid, P.RUN); t = self.triggers.web(wid)
+        return [self._session(s) for s in self.sessions.list_public(t.id)] if t else []
+
+    def visitor_session(self, wid: str, sid: str, uid: str) -> dict:
+        self._workflow(wid, uid, P.RUN); s = self.sessions.get(sid)
+        if s is None or s.workflow_id != wid or s.channel not in ("web", "embed"): raise AppError("CHAT_SESSION_NOT_FOUND")
+        return self.view(s, "full")
+
     def delete(self, sid: str, uid: str) -> dict:
         self._own(sid, uid); self.sessions.delete(sid); return {"ok": True}
 
@@ -196,6 +206,11 @@ class ChatSessionService:
     def input_for(self, uid: str, sid: str, message) -> dict:
         """{workflow_id, input} for the next message, checked; nothing is written yet."""
         s, t = self._own(sid, uid, P.RUN)
+        return self.prepare(s, t, message)
+
+    def prepare(self, s: ChatSession, t: WorkflowChatTrigger, message) -> dict:
+        """The run input of a message in session `s`, checked: the input field, and the history in the messages field."""
+        sid = s.id
         if not t.enabled: raise AppError("CHAT_NOT_ENABLED")
         if not isinstance(message, str) or not message.strip(): raise AppError("CHAT_MESSAGE_EMPTY")
         if len(message) > TEXT_MAX: raise AppError("CHAT_MESSAGE_TOO_LONG", max=TEXT_MAX)
@@ -217,10 +232,14 @@ class ChatSessionService:
 
     def record(self, uid: str, sid: str, text: str, rid: str) -> None:
         """The person's turn and the reply-once record, once the run is planned."""
-        s, t = self._own(sid, uid, P.RUN); now = time.time()
+        s, t = self._own(sid, uid, P.RUN)
+        self.write(s, t, text, rid, uid)
+
+    def write(self, s: ChatSession, t: WorkflowChatTrigger, text: str, rid: str, sender: str) -> None:
+        sid, now = s.id, time.time()
         turn = self.sessions.add_turn(ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=rid, role="user", text=text, status="ok", created=now))
         self.messages.add_once(ChatMessage(id=uuid.uuid4().hex[:12], channel_id=WEB, key=turn.id, trigger_id=t.id, workflow_id=s.workflow_id, kind=WEB,
-                                           team="", sender=uid, text=text, ref=json.dumps({"session": sid}), status="started", run_id=rid, created=now))
+                                           team="", sender=sender, text=text, ref=json.dumps({"session": sid}), status="started", run_id=rid, created=now))
         self.sessions.set_fields(sid, last_run_id=rid, **({"title": text[:TITLE_MAX]} if not s.title else {}))
         self.triggers.set_fields(t.id, last_message=now, last_run_id=rid)
 

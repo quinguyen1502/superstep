@@ -114,7 +114,7 @@ def chat_session_service() -> ChatSessionService:
 
 
 def public_chat_service() -> PublicChatService:
-    return PublicChatService(chat_session_service(), limiter=get_rate_limiter())
+    return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())
 
 
 def trigger_service() -> TriggerService:
