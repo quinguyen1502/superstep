@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0075
-- Status: Draft. Waiting on the owner's answers to CLAR-0006.
+- Status: Accepted on 2026-10-27 with the CLAR-0006 answers (all recommended options). Tasks are not planned yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -19,6 +19,20 @@
 - Builders see the ratings in the Chat tab. They can find the chats with a thumbs down, open the run behind the
   answer, and turn it into a test case.
 - When LangSmith is set up, the rating is also sent there as feedback on the run's trace (CLAR-0006).
+
+## Owner Decisions
+
+The owner answered CLAR-0006 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200").
+
+1. **Where**: the public page, the embed and the studio Chat tab.
+2. **Comment**: optional, with a thumbs down only.
+3. **Builders**: marks on rated answers, a "thumbs down" filter in the Visitors list, and totals for the workflow
+   (up, down, share of down over 7 and 30 days) in the Chat tab.
+4. **LangSmith**: a rating is sent in the background when LangSmith is configured, as the feedback key `user_rating`
+   (1 or 0, with the comment).
+5. **Test cases**: "Save as test case" on rated answers, reusing the draft from the run (REQ-0042).
+6. **Channels**: not now. Slack and Telegram ratings stay out of scope.
 
 ## Problem Or Opportunity
 
@@ -40,13 +54,13 @@
   - a thumbs up and a thumbs down under each finished answer;
   - the person can change or remove their rating;
   - with a thumbs down, an optional comment (CLAR-0006 question 2).
-  - Where the controls appear is set by CLAR-0006 question 1.
+  - The controls appear on the public page, the embed and the studio Chat tab (CLAR-0006 question 1).
 - **Storage**: one rating per answer turn, with its time and the comment. Retention deletes ratings together with
   their session.
 - **Builder view** in the Chat tab:
   - a mark on each rated answer;
   - a filter for chats that have a thumbs down;
-  - totals per workflow, as CLAR-0006 question 3 decides.
+  - totals for the workflow: up, down and the share of down over 7 and 30 days (CLAR-0006 question 3).
 - **From feedback to a test**: "Save as test case" on a rated answer opens the existing draft from that answer's run
   (CLAR-0006 question 5).
 - **LangSmith**: when it is configured, the rating goes to the run's LangSmith trace as feedback, in the background
@@ -130,8 +144,7 @@
 
 ## Open Questions
 
-- CLAR-0006: where the controls appear, the comment, the builder's totals, LangSmith, saving as a test case, and the
-  chat channels.
+None. CLAR-0006 is answered.
 
 ## Related Artifacts
 

@@ -2,14 +2,14 @@
 schema_version: 1
 id: CLAR-0009
 task_id: REQ-0078
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0078-agent-handoff.md
   - .factory-state/decisions/DEC-0063-agent-node-expansion.md
   - .factory-state/decisions/DEC-0052-web-chat-model.md
 created: 2026-10-27
 updated: 2026-10-27
-answered_at: null
+answered_at: '2026-10-27'
 questions:
   - id: targets
     type: single_choice
@@ -98,16 +98,16 @@ questions:
         label: Python, the LangGraph project and TypeScript
       - value: python-first
         label: Python and the LangGraph project; TypeScript refuses with a clear error code for now
-answers: {}
+answers:
+  targets: same-workflow-agents
+  context: messages-without-tools
+  chat-state: keep-last
+  limit: five-setting
+  canvas: dashed-links
+  exports: all
 ---
 # Clarification
 
-Owner questions for REQ-0078, which lets an Agent node hand the conversation off to another Agent node. Each question
-has a recommended option. The owner can answer in chat (for example, "trả lời CLAR-0009 theo đề xuất"), or by editing
-the `answers` map.
-
-The owner may answer it with:
-
-```text
-factory clarify CLAR-0009 -C <project-dir>
-```
+Owner questions for REQ-0078, which lets an Agent node hand the conversation off to another Agent node. The owner answered in chat on 2026-10-27 ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200") and picked the recommended option for every question. The answers are written
+into REQ-0078 under Owner Decisions.

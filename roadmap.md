@@ -307,10 +307,10 @@ This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 
 - TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
   2026-10-27. **merged** (PR #191; REV-0128, QA-0128).
 
-## Proposed (drafts, waiting on the owner)
+## Accepted, not planned yet
 
-Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). Each
-has a CLAR with recommended options. None is planned into tasks yet.
+Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
+owner answered every CLAR with the recommended options the same day. None is planned into tasks yet.
 
 - REQ-0075 Thumbs up or down on chat answers, seen by builders and sent to LangSmith (CLAR-0006).
 - REQ-0076 An Agent round's tool calls run in parallel, each still checkpointed on its own (CLAR-0007).

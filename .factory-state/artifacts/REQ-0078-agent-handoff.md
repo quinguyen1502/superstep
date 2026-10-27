@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0078
-- Status: Draft. Waiting on the owner's answers to CLAR-0009.
+- Status: Accepted on 2026-10-27 with the CLAR-0009 answers (all recommended options). Tasks are not planned yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -18,8 +18,20 @@
 - This is the "swarm" or "triage" pattern:
   - a front agent decides who should help, then steps aside;
   - unlike a supervisor (REQ-0073), it does not wait for the result and rephrase it.
-- In a chat, the agent that holds the conversation can keep it for the next messages, as CLAR-0009 question 3
-  decides.
+- In a chat, the agent that answered last keeps the conversation for the next messages (CLAR-0009 question 3).
+
+## Owner Decisions
+
+The owner answered CLAR-0009 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200").
+
+1. **Targets**: other Agent nodes of the same workflow.
+2. **What the target sees**: the person's messages and the agents' replies, without tool calls and results, plus the
+   hand-off reason.
+3. **Chat**: the agent that answered last keeps the conversation for the next messages, until it hands off again.
+4. **Limit**: 5 hand-offs per run by default; a workflow setting can change it.
+5. **Canvas**: dashed links between agents, kept in sync with each node's target list.
+6. **Exports**: Python, the LangGraph project and TypeScript.
 
 ## Problem Or Opportunity
 
@@ -41,7 +53,8 @@
 - **Engine**:
   - calling a hand-off tool ends the agent's round;
   - its exit routes to the target agent instead of following its own outgoing edge;
-  - the target agent starts from the conversation so far, as CLAR-0009 question 2 decides;
+  - the target agent starts from the person's messages and the agents' replies, without tool calls and results, plus
+    the hand-off reason (CLAR-0009 question 2);
   - the hand-off is a step with its own checkpoint, so a pause, crash or restart neither repeats it nor loses it.
   - The workflow continues from the agent that answers last, following that agent's outgoing edges.
 - **Limit**: a run may hand off at most N times (CLAR-0009 question 4). Past that, the agent must answer itself, and
@@ -52,7 +65,7 @@
   settings adds the link. Saving refuses a target that is not an Agent node of the same workflow.
 - **Trace**: a hand-off step shows "Triage › handed off to Billing" with its reason, and the target agent's steps
   follow.
-- **Exports**: Python, the LangGraph project and TypeScript, as CLAR-0009 question 6 decides.
+- **Exports**: Python, the LangGraph project and TypeScript (CLAR-0009 question 6).
 - **Template**: a "Help desk with hand-offs" template, with a triage agent, Billing and Technical.
 - Errors in CATALOG, `docs/api-errors.md` and both locales. en and vi. Handbook en and vi (the Agent node page and a
   hand-off guide). CHANGELOG. A decision record for the routing and the chat state.
@@ -88,8 +101,7 @@
 
 1. A person writes "I was charged twice". Triage hands off to Billing with the reason "duplicate charge". Billing
    answers. The trace shows the hand-off and then Billing's steps.
-2. The person replies "the second charge was yesterday". Billing answers again without going through Triage, if
-   CLAR-0009 question 3 keeps the conversation with Billing.
+2. The person replies "the second charge was yesterday". Billing answers again without going through Triage.
 3. Billing finds that the problem is technical and hands off to Technical. A third hand-off in the same run, past the
    limit, is refused, and the agent answers itself.
 4. The builder adds Technical as a target of Triage. A dashed link appears from Triage to Technical on the canvas.
@@ -115,8 +127,7 @@
 - The trace has a hand-off step with the target and the reason.
 - The limit stops the (N+1)th hand-off in a run, and the run still finishes with an answer.
 - A restart right after the hand-off step continues with the target, with no step repeated.
-- In a chat, the second message goes to the agent that kept the conversation, or to the entry agent, as CLAR-0009
-  question 3 decides. A test proves it.
+- In a chat, the second message goes to the agent that answered the first one. A test proves it.
 - A target that is not an Agent node of the workflow is refused on save with a translated message.
 - The exports compile and run a hand-off (`deno check`, the Python snapshot and run tests).
 - The backend suite, vitest, e2e, `tests/test_layers.py` and the strict handbook build pass.
@@ -135,7 +146,7 @@
 
 ## Open Questions
 
-- CLAR-0009: the targets, what the target sees, the chat state, the limit, the canvas, and the exports.
+None. CLAR-0009 is answered.
 
 ## Related Artifacts
 

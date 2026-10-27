@@ -2,7 +2,7 @@
 schema_version: 1
 id: CLAR-0007
 task_id: REQ-0076
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0076-parallel-agent-tool-calls.md
   - .factory-state/decisions/DEC-0063-agent-node-expansion.md
@@ -10,7 +10,7 @@ source_artifacts:
   - .factory-state/decisions/DEC-0018-effectively-once.md
 created: 2026-10-27
 updated: 2026-10-27
-answered_at: null
+answered_at: '2026-10-27'
 questions:
   - id: default
     type: single_choice
@@ -87,16 +87,15 @@ questions:
         label: Concurrently in Python, the LangGraph project and TypeScript, honouring the node setting
       - value: sequential
         label: One after another in the exports for now
-answers: {}
+answers:
+  default: on-with-setting
+  cap: four-env
+  approvals: per-call
+  failures: finish-all
+  exports: concurrent
 ---
 # Clarification
 
-Owner questions for REQ-0076, which runs the tool calls of one Agent round at the same time. Each question has a
-recommended option. The owner can answer in chat (for example, "trả lời CLAR-0007 theo đề xuất"), or by editing the
-`answers` map.
-
-The owner may answer it with:
-
-```text
-factory clarify CLAR-0007 -C <project-dir>
-```
+Owner questions for REQ-0076, which runs the tool calls of one Agent round at the same time. The owner answered in chat on 2026-10-27 ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200") and picked the recommended option for every question. The answers are written
+into REQ-0076 under Owner Decisions.

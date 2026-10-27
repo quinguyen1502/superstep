@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0076
-- Status: Draft. Waiting on the owner's answers to CLAR-0007.
+- Status: Accepted on 2026-10-27 with the CLAR-0007 answers (all recommended options). Tasks are not planned yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -22,6 +22,18 @@
   - its own approval.
 - So a pause, a crash or a restart still repeats at most the calls that had not finished.
 - Workflow tools benefit the most. A supervisor that asks two desks starts both child runs at once and waits for both.
+
+## Owner Decisions
+
+The owner answered CLAR-0007 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200").
+
+1. **Default**: on for every Agent node, with a per-node setting to turn it off. Off asks providers for one call at
+   a time and runs the calls one after another.
+2. **Cap**: 4 calls at once per round by default, set by `STUDIO_AGENT_PARALLEL_TOOLS`.
+3. **Approvals**: one approval per call, as today. The other calls of the round run meanwhile.
+4. **Failures**: the other calls finish, and the model gets every result, errors included.
+5. **Exports**: Python, the LangGraph project and TypeScript run the calls concurrently, honouring the node setting.
 
 ## Problem Or Opportunity
 
@@ -42,7 +54,7 @@
   - each step is an `A/__tool` execution with its own iteration, checkpoint, ledger entry and idempotency key;
   - the next model step waits for all of them;
   - results go back into the conversation in the model's order, whatever order they finish in.
-- **Setting** on the Agent node, with its default from CLAR-0007 question 1. With the setting off, providers that
+- **Setting** on the Agent node, on by default (CLAR-0007 question 1). With the setting off, providers that
   support it are asked for one call at a time (`parallel_tool_calls: false`).
 - **Concurrency cap** per round (CLAR-0007 question 2).
 - **Waiting inside a round**:
@@ -55,8 +67,8 @@
   at the same time.
 - **Time travel**: a fork starts from the checkpoint before the round or after it, never between two of its parallel
   calls.
-- **Exports**: the Python, LangGraph project and TypeScript exports run the calls concurrently, or one after another,
-  as CLAR-0007 question 5 decides.
+- **Exports**: the Python, LangGraph project and TypeScript exports run the calls concurrently, honouring the node
+  setting (CLAR-0007 question 5).
 - Handbook en and vi (the Agent node page). CHANGELOG. DEC-0063 is amended by a new decision.
 - Tests:
   - engine: order of results, cap, one call failing, approval in a round, restart in the middle of a round with no
@@ -135,7 +147,7 @@
 
 ## Open Questions
 
-- CLAR-0007: the default, the cap, approvals in a round, failures, and the exports.
+None. CLAR-0007 is answered.
 
 ## Related Artifacts
 

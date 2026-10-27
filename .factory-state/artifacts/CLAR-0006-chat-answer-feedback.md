@@ -2,7 +2,7 @@
 schema_version: 1
 id: CLAR-0006
 task_id: REQ-0075
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0075-chat-answer-feedback.md
   - .factory-state/artifacts/REQ-0074-public-chat-page.md
@@ -10,7 +10,7 @@ source_artifacts:
   - .factory-state/artifacts/REQ-0050-langsmith-evals.md
 created: 2026-10-27
 updated: 2026-10-27
-answered_at: null
+answered_at: '2026-10-27'
 questions:
   - id: where
     type: single_choice
@@ -94,16 +94,16 @@ questions:
         label: Not now, only the web chat
       - value: include
         label: Yes, Slack reactions and Telegram buttons as well
-answers: {}
+answers:
+  where: public-and-studio
+  comment: on-down
+  builder-view: marks-filter-totals
+  langsmith: send
+  to-test: save
+  channels: later
 ---
 # Clarification
 
-Owner questions for REQ-0075, which adds a thumbs up or down to the answers in a chat. Each question has a
-recommended option. The owner can answer in chat (for example, "trả lời CLAR-0006 theo đề xuất"), or by editing the
-`answers` map.
-
-The owner may answer it with:
-
-```text
-factory clarify CLAR-0006 -C <project-dir>
-```
+Owner questions for REQ-0075, which adds a thumbs up or down to the answers in a chat. The owner answered in chat on 2026-10-27 ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200") and picked the recommended option for every question. The answers are written
+into REQ-0075 under Owner Decisions.

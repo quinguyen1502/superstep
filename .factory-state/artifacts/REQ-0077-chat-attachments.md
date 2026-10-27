@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0077
-- Status: Draft. Waiting on the owner's answers to CLAR-0008.
+- Status: Accepted on 2026-10-27 with the CLAR-0008 answers (all recommended options). Tasks are not planned yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -13,12 +13,26 @@
 
 ## Summary
 
-- A person who chats with a workflow can attach files to a message: documents, and images too if CLAR-0008 question 1
-  says so.
+- A person who chats with a workflow can attach files to a message: documents and images (CLAR-0008 question 1).
 - The workflow receives them in a state field that the chat settings name. LLM and Agent nodes can read them:
   - a document's text, extracted as the knowledge bases already do;
   - an image, for models that can see images.
 - Builders choose per chat whether attachments are allowed, and the limits apply.
+
+## Owner Decisions
+
+The owner answered CLAR-0008 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200").
+
+1. **Kinds**: documents (`.txt`, `.md`, `.pdf`, `.csv`) and images (PNG, JPEG, WebP).
+2. **Workflow view**: a list field of file records. LLM and Agent nodes include the files only with "Include
+   attachments" on. A model that cannot see images gets a note in place of the image, and the chat goes on.
+3. **Storage**: in the database, as the chat logo is.
+4. **Limits**: 10 MB per file and 5 files per message by default. A chat can lower them, and the operator sets the
+   ceiling.
+5. **Channels**: not now. Slack and Telegram files stay out of scope.
+6. **Checks**: the type is read from the bytes, and files are served only as downloads with `nosniff`. No virus
+   scanner.
 
 ## Problem Or Opportunity
 
@@ -37,14 +51,15 @@
 ### In Scope
 
 - **Allowing attachments**: a per-chat setting in Chat settings, off by default. It covers:
-  - the allowed kinds, decided by CLAR-0008 question 1;
-  - the number of files and the size per file, decided by CLAR-0008 question 4;
+  - the allowed kinds: documents, images, or both (CLAR-0008 question 1);
+  - the number of files and the size per file, 5 and 10 MB by default, under the operator's ceiling (CLAR-0008
+    question 4);
   - the state field the files go to.
 - **Attaching**:
   - an attach button and drag-and-drop in the composer of the public page, the embed and the studio Chat tab;
   - each file shows as a chip with its name, size and a remove button;
   - images show a thumbnail.
-- **Storage** as CLAR-0008 question 3 decides. A file belongs to its turn. Retention deletes it with its session.
+- **Storage** in the database, as the chat logo is (CLAR-0008 question 3). A file belongs to its turn. Retention deletes it with its session.
 - **The type** is read from the file's bytes, not from its name or the browser's type, as the logo does. A file whose
   type is not allowed is refused with a `CHAT_ATTACHMENT_*` code.
 - **How the workflow sees the files** (CLAR-0008 question 2):
@@ -54,8 +69,8 @@
 - **Models**:
   - for providers that support images (OpenAI, Anthropic, OpenRouter, OpenAI-compatible with vision), image parts in
     the messages;
-  - for a model without vision, the node fails with a clear error code when an image reaches it, or, if CLAR-0008
-    question 2 says so, it skips the image with a note.
+  - for a model without vision, the image is replaced by a note that the model reads, and the run goes on (CLAR-0008
+    question 2).
   - The mock model describes the files it got, so demos and tests work offline.
 - **Showing the files**:
   - the turn shows its attachments;
@@ -125,7 +140,7 @@
   PDF's text. The mock model's answer names both.
 - A file renamed to `.pdf` whose bytes are not a PDF is refused with a `CHAT_ATTACHMENT_*` code.
 - A second visitor cannot download the first visitor's file. A guessed file id returns not found.
-- An image sent to a model without vision behaves as CLAR-0008 question 2 decides, with a translated message.
+- An image sent to a model without vision reaches it as a note, and the run goes on.
 - Retention deletes the session's files. The table holds no orphan files after the cleanup.
 - With attachments off, the API refuses uploads and the composer has no attach button.
 - The backend suite, `tests/test_layers.py`, `tests/test_api_envelope.py`, vitest, e2e and the strict handbook build
@@ -146,7 +161,7 @@
 
 ## Open Questions
 
-- CLAR-0008: the kinds of file, how the workflow sees them, storage, limits, the channels, and scanning.
+None. CLAR-0008 is answered.
 
 ## Related Artifacts
 

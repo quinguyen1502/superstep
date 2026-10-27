@@ -2,14 +2,14 @@
 schema_version: 1
 id: CLAR-0008
 task_id: REQ-0077
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0077-chat-attachments.md
   - .factory-state/artifacts/REQ-0074-public-chat-page.md
   - .factory-state/decisions/DEC-0052-web-chat-model.md
 created: 2026-10-27
 updated: 2026-10-27
-answered_at: null
+answered_at: '2026-10-27'
 questions:
   - id: kinds
     type: single_choice
@@ -106,15 +106,16 @@ questions:
         label: Check the type from the bytes and serve files only as downloads; no virus scanner
       - value: clamav
         label: Also scan with ClamAV when the operator sets one up
-answers: {}
+answers:
+  kinds: documents-and-images
+  workflow-view: field-skip-note
+  storage: database
+  limits: ten-mb-five
+  channels: later
+  scanning: type-check
 ---
 # Clarification
 
-Owner questions for REQ-0077, which adds file attachments to the chat. Each question has a recommended option. The
-owner can answer in chat (for example, "trả lời CLAR-0008 theo đề xuất"), or by editing the `answers` map.
-
-The owner may answer it with:
-
-```text
-factory clarify CLAR-0008 -C <project-dir>
-```
+Owner questions for REQ-0077, which adds file attachments to the chat. The owner answered in chat on 2026-10-27 ("Trả lời CLAR-0006 đến
+CLAR-0009 theo đề xuất, rồi merge #200") and picked the recommended option for every question. The answers are written
+into REQ-0077 under Owner Decisions.
