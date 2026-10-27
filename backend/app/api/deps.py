@@ -45,6 +45,7 @@ from ..services.schedule_service import ScheduleService
 from ..services.chat_trigger_service import ChatTriggerService
 from ..services.chat_run_service import ChatRunService
 from ..services.chat_session_service import ChatSessionService
+from ..services.public_chat_service import PublicChatService
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -110,6 +111,10 @@ def chat_run_service() -> ChatRunService:
 def chat_session_service() -> ChatSessionService:
     db = get_db(); return ChatSessionService(ChatSessionRepository(db), ChatTriggerRepository(db), ChatMessageRepository(db), WorkflowRepository(db),
                                              RunRepository(db), access=access_service())
+
+
+def public_chat_service() -> PublicChatService:
+    return PublicChatService(chat_session_service(), limiter=get_rate_limiter())
 
 
 def trigger_service() -> TriggerService:
