@@ -288,6 +288,12 @@ linked child run that the parent's tool step waits for.
   (PR #181; REV-0121, QA-0121).
 - TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **merged** (PR #182; REV-0122, QA-0122).
 
+## Public chat page
+
+REQ-0074, Proposed 2026-10-27; it waits for CLAR-0005. It is phase 2 of REQ-0048: a published chat at `/c/{slug}` for
+anonymous or signed-in visitors, with limits against abuse. The owner wants it in 0.9.0 together with REQ-0073, so the
+0.9.0 release (TASK-0139) waits for it. The tasks are planned once CLAR-0005 is answered.
+
 ## Owner requests
 
 Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.
