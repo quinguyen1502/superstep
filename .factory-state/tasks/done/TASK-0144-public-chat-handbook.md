@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0144
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -86,6 +86,7 @@ CHANGELOG.
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0074.
+- 2026-10-27: merged into develop (PR #190) with the owner's approval.
 
 ## Handoff Notes
 

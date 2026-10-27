@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0145
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -100,6 +100,7 @@ default illustration"; "Ok, làm TASK-0145 theo đề xuất, đưa vào 0.9.0")
 ## Activity Log
 
 - 2026-10-27: asked for by the owner and planned; implemented on `factory/task-0145-chat-logo`, stacked on TASK-0144.
+- 2026-10-27: merged into develop (PR #191) with the owner's approval.
 
 ## Handoff Notes
 

@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.9.0 (2026-10-27)
+
 ### Added
 
 - **Workflows as Agent tools** (REQ-0073, TASK-0133 to TASK-0138). An Agent node can list another saved workflow as a
@@ -53,6 +55,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **Run trace layout** (TASK-0146). The summary bar's items ("66 ms", "36 tokens") no longer break in two on a narrow
+  panel, its divider is as tall as the text, and a workflow tool's steps sit under the tool call, lined up with the
+  duration column.
 - **Workflow list rows are tidier.** The access badge ("Can view") sits next to the name, and the owner shows as plain
   text after the id ("demo-approval · Shared by …") instead of a badge that ran under the Last run column. On a phone
   the Last run column gives way to a third line under the name.
