@@ -24,7 +24,8 @@ def normalise_email(email: str) -> str:
 
 def public_user(u) -> dict:
     return {"id": u.id, "email": u.email, "role": u.role, "permissions": sorted(P.PERMISSIONS.get(u.role, ())),
-            "is_admin": u.role == "admin", "created": u.created}
+            "is_admin": u.role == "admin", "created": u.created,
+            "read_only": config.demo_mode() and demo_service.is_visitor(u.id)}  # demo visitor: the API refuses its writes (DEMO_READ_ONLY)
 
 
 def _digest(token: str) -> str: return hashlib.sha256(token.encode()).hexdigest()

@@ -15,7 +15,7 @@ import type { Slot, Slots } from './slots'
 
 
 
-export function IdentityRow({ slot, onChange }: { slot: Slot; onChange: (d: Slots) => void }) {
+export function IdentityRow({ slot, onChange, readOnly }: { slot: Slot; onChange: (d: Slots) => void; readOnly?: boolean }) {
   const { t } = useTranslation(); const { kind } = slot; const team = slot.team_id ? { team_id: slot.team_id } : {}
   const idp = `id-${kind}${slot.team_id ? `-${slot.team_id}` : ''}`
   const [ext, setExt] = useState(slot.external_id || ''); const [code, setCode] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
@@ -35,7 +35,7 @@ export function IdentityRow({ slot, onChange }: { slot: Slot; onChange: (d: Slot
       await call(`/api/approvals/identities/${kind}/send-code`, { method: 'POST', json: team })
   }
   const changed = ext.trim() !== (slot.external_id || '')
-  return <div className="space-y-2 rounded-lg border p-4" data-testid={idp}>
+  return <fieldset disabled={readOnly} className="min-w-0 space-y-2 rounded-lg border p-4" data-testid={idp}>
     <div className="flex flex-wrap items-center gap-2">
       <Label htmlFor={idp}><ChannelLogo kind={kind} />{t(`approvals.identity.${kind}`)}</Label>
       {slot.team_id && <Badge variant="outline">{slot.team_name || slot.team_id}</Badge>}
@@ -61,5 +61,5 @@ export function IdentityRow({ slot, onChange }: { slot: Slot; onChange: (d: Slot
     </div>}
     {err && <ErrorAlert>{err}</ErrorAlert>}
     {confirmDel.dialog}
-  </div>
+  </fieldset>
 }

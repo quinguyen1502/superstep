@@ -891,6 +891,7 @@
     "platform": "Nền tảng",
     "name": "Tên",
     "namePh": "vd. Workspace Acme",
+    "demoReadOnly": "Bản demo công khai không cho liên kết tài khoản chat.",
     "noChannels": "Chưa có kết nối. Thêm Slack app hoặc Telegram bot của bạn bên dưới.",
     "orgReadOnly": "Do admin quản lý. Bạn vẫn chọn được kết nối này trong node Human.",
     "replaceSecrets": "Thay khoá bí mật",
