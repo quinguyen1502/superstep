@@ -1,11 +1,12 @@
 """The published chat page's API (TASK-0140, REQ-0074, DEC-0067), by slug and without the run right.
 
 GET  /api/public/chat/{slug}                      the page: title, intro, suggestions, access, steps mode
-GET  /api/public/chat/{slug}/frame                its frame-ancestors (for the nginx auth_request, TASK-0143)
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
 WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response}: the run
                                                   streams as public_event()s (TASK-0141); ?visitor= for the widget
+GET  /api/public/chat-frame?path=/c/{slug}        the page's frame-ancestors in Content-Security-Policy (TASK-0143):
+                                                  nginx asks it with auth_request (X-Original-URI) before serving /c/
 
 An anonymous visitor is the HttpOnly cookie `studio_chat_<hash>`, or the `X-Chat-Visitor` header (the widget, which
 sends "new" when it has no token yet and then gets the new token back as `visitor_token`). signed_in uses the studio
@@ -21,10 +22,11 @@ from ...core.errors import AppError
 from ...engine import locale
 from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
+from ..static import CHAT_PAGE
 from ..deps import _same_origin, bearer, current_user, public_chat_service, run_service, ws_user
 
 router = APIRouter(prefix="/api/public/chat", tags=["public chat"])
-ws_router = APIRouter()
+root_router = APIRouter()  # the socket and the frame check, outside the prefix
 VISITOR_HEADER = "x-chat-visitor"
 
 
@@ -68,12 +70,6 @@ async def page(slug: str, request: Request, user=Depends(maybe_user), svc=Depend
     await checked(request, svc); return svc.page(slug, user)
 
 
-@router.get("/{slug}/frame")
-def frame(slug: str, response: Response, svc=Depends(public_chat_service)):
-    v = svc.frame_ancestors(slug); response.headers["Content-Security-Policy"] = f"frame-ancestors {v}"
-    return {"frame_ancestors": v}
-
-
 @router.get("/{slug}/sessions")
 async def sessions(slug: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); rows, v = svc.sessions(slug, token_of(request, slug), user)
@@ -95,7 +91,18 @@ async def session(slug: str, sid: str, request: Request, response: Response, use
     return answer(request, response, slug, s, v)
 
 
-@ws_router.websocket("/ws/public/chat/{slug}")
+@root_router.get("/api/public/chat-frame")
+def frame(request: Request, response: Response, path: Optional[str] = None, svc=Depends(public_chat_service)):
+    """Always 200 (auth_request only passes 2xx through): `frame-ancestors` of the chat page in `path`, or of the page nginx
+    is serving (X-Original-URI); 'none' for anything that is not a published chat page."""
+    target = (path if path is not None else request.headers.get("x-original-uri") or "").split("?", 1)[0]
+    m = CHAT_PAGE.match(target)
+    v = svc.frame_ancestors(m.group(1)) if m else "'none'"
+    response.headers["Content-Security-Policy"] = f"frame-ancestors {v}"
+    return {"frame_ancestors": v}
+
+
+@root_router.websocket("/ws/public/chat/{slug}")
 async def ws_public_chat(ws: WebSocket, slug: str):
     """One message or answer per connection, as /ws/run: the run streams, then the socket closes. Same origin only (the
     page and the embed's iframe are served by the studio); a cancel is {"type": "cancel"}."""

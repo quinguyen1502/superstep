@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.routing import Route
-from .api.deps import get_db, run_service, run_worker
+from .api.deps import get_db, public_chat_service, run_service, run_worker
 from .core.logging import get_logger, redact_tokens
 from .core import config, crypto
 from .api.error_handlers import register_error_handlers
@@ -55,7 +55,8 @@ def create_app() -> FastAPI:
     for r in ROUTERS: app.include_router(r)
     app.router.routes.append(Route(MCP_PATH, endpoint=mcp_app))  # Streamable HTTP, all methods
     install_public_docs(app)  # GET /openapi.public.json + /docs/public: the workflow-trigger API only
-    mount_frontend(app, config.static_dir())  # all-in-one image (TASK-PaaS): the built UI on the same origin, after the API routes
+    # all-in-one image (TASK-PaaS): the built UI on the same origin, after the API routes; frame headers (TASK-0143)
+    mount_frontend(app, config.static_dir(), lambda slug: public_chat_service().frame_ancestors(slug))
     return app
 
 

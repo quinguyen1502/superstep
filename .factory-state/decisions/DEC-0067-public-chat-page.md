@@ -113,15 +113,24 @@
      except `/c/{slug}`.
    - `/c/{slug}` sends `frame-ancestors 'self' <embed_origins>`, or `'none'` when the list is empty, and no
      `X-Frame-Options`.
-   - Compose: nginx gets `location /c/`. It uses `auth_request` on `GET /api/public/chat/{slug}/frame`, which only
-     returns the header, then copies the header (`auth_request_set`) and serves `index.html`. The other locations
-     add the deny headers.
-   - All-in-one image: a small middleware in `api/static.py` does the same.
-   - Vite dev server: no frame headers.
-7. **Embed.** `?embed=1` gives a compact layout: no studio header, a transparent outer background, and the
-   `channel = "embed"` session.
-   - **iframe snippet**: `<iframe src=".../c/{slug}?embed=1">`. In Safari, which blocks cookies in frames, the chat
-     works for the page view but the history is not kept.
+   - Compose: nginx gets a location for `/c/{slug}`. It sends an `auth_request` to `GET /api/public/chat-frame` with
+     the page's address in `X-Original-URI` (or `?path=`). That route always answers 200 and only returns the
+     header. nginx copies the header (`auth_request_set`) and serves `index.html`. The `/` location adds the deny
+     headers, and `/c/widget.js` is served as a static file.
+     - TASK-0143 moved the route from `/api/public/chat/{slug}/frame`. nginx cannot pass the slug to the
+       subrequest without a variable in `proxy_pass`, and that would need a resolver.
+   - All-in-one image: an ASGI middleware in `api/static.py` (`FrameHeaders`) does the same, but only when the API
+     serves the UI.
+   - Vite dev server: a dev-only plugin asks the same route for `/c/{slug}` and builds `/c/widget.js` on request. The
+     studio's other pages get no deny headers in dev.
+7. **Embed.** `?embed=1` is the same page (it never has a studio header), and its sessions have `channel = "embed"`.
+   - **iframe snippet**: `<iframe src=".../c/{slug}?embed=1">`.
+     - The cookie of a page in a frame is a third-party cookie. Safari drops it, and so does Chrome over plain HTTP.
+       Without it every request would be a new visitor, so the chat would not work at all.
+     - Embedded pages therefore always send the token as `X-Chat-Visitor` and `?visitor=`.
+     - A plain iframe keeps the token in the frame's own localStorage. Browsers partition that storage by host site,
+       and Safari may clear it, so the chat works in every browser but its history may not last there. This changed
+       during TASK-0143.
    - **widget**: `<script src=".../c/widget.js" data-slug="{slug}" async>`.
      - `widget.js` is a separate Vite entry, plain TypeScript, with no React. It draws a bubble that opens and closes
        the iframe, with the options `data-position` and `data-open`.
@@ -160,5 +169,5 @@
 - The run socket and the studio REST API are unchanged. The public surface is one router, one socket and one
   service.
 - Frame protection for the whole studio comes with this work.
-- A deployment over plain HTTP gets no `Partitioned` cookie. The iframe then keeps no history in any browser, but the
-  direct link and the widget keep it.
+- Embedded pages do not use the cookie (decision 7), so plain HTTP or a browser that blocks third-party cookies still
+  works. Only how long a plain iframe's history lasts depends on the browser.

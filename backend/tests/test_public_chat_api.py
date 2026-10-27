@@ -52,7 +52,7 @@ def test_a_chat_that_is_not_published_says_nothing():
     tok = user(); wid, slug = publish(tok)
     v = visitor()
     page = v.get(f"/api/public/chat/{slug}").json()["data"]
-    assert page == {"slug": slug, "title": "Echo chat", "intro": "", "suggestions": [], "access": "anonymous", "steps_mode": "labels", "signed_in": False}
+    assert page == {"slug": slug, "title": "Echo chat", "intro": "", "suggestions": [], "access": "anonymous", "steps_mode": "labels", "signed_in": False, "embed_origins": []}
     c.put(f"/api/workflows/{wid}/chat", json={"access": "studio"}, headers=H(tok))
     r = v.get(f"/api/public/chat/{slug}"); assert (err(r), r.status_code) == ("CHAT_NOT_PUBLISHED", 404)
     assert wid not in r.text and "Echo" not in r.text
@@ -108,11 +108,12 @@ def test_signed_in_chats_need_an_account_but_not_the_run_right():
 
 def test_frame_ancestors_follow_the_allowed_sites():
     tok = user(); wid, slug = publish(tok, embed_origins=["https://shop.example.com"])
-    r = visitor().get(f"/api/public/chat/{slug}/frame")
-    assert r.headers["content-security-policy"] == "frame-ancestors 'self' https://shop.example.com"
+    csp = lambda **kw: visitor().get("/api/public/chat-frame", **kw).headers["content-security-policy"]  # noqa: E731
+    assert csp(params={"path": f"/c/{slug}"}) == "frame-ancestors 'self' https://shop.example.com"
+    assert csp(headers={"X-Original-URI": f"/c/{slug}?embed=1"}) == "frame-ancestors 'self' https://shop.example.com"  # nginx auth_request
     c.put(f"/api/workflows/{wid}/chat", json={"embed_origins": []}, headers=H(tok))
-    assert visitor().get(f"/api/public/chat/{slug}/frame").headers["content-security-policy"] == "frame-ancestors 'none'"
-    assert visitor().get("/api/public/chat/nope-nope/frame").headers["content-security-policy"] == "frame-ancestors 'none'"
+    assert csp(params={"path": f"/c/{slug}"}) == "frame-ancestors 'none'"
+    for other in ("/c/nope-nope", "/workflows", "/c/a/b", ""): assert csp(params={"path": other}) == "frame-ancestors 'none'", other
 
 
 def test_page_loads_are_limited_per_ip(monkeypatch):

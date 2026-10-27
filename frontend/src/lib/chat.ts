@@ -16,7 +16,7 @@ export type ChatSettings = { enabled: boolean; slug: string; access: string; inp
   title: string; intro: string; suggestions: string[]; daily_limit: number; embed_origins: string[] }
 /** The published page's settings (GET /api/public/chat/{slug}, TASK-0140): what a visitor may know of the chat. */
 export type PublicChatPage = { slug: string; title: string; intro: string; suggestions: string[]; access: 'anonymous' | 'signed_in'
-  steps_mode: StepsMode; signed_in: boolean }
+  steps_mode: StepsMode; signed_in: boolean; embed_origins: string[] }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
   duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string }  // child_run_id: a workflow tool's run (TASK-0136)
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
@@ -29,6 +29,11 @@ export type ChatSessionFull = ChatSession & { steps_mode: StepsMode; turns: Chat
 export const published = (s: Pick<ChatSettings, 'enabled' | 'access'>) => s.enabled && s.access !== 'studio'
 /** The page's address on this studio. */
 export const pageUrl = (slug: string, origin = location.origin) => `${origin}/c/${slug}`
+/** The embed snippets (TASK-0143): the page in an iframe, or the widget's bubble that opens it and keeps the history. */
+export const iframeSnippet = (slug: string, origin = location.origin) =>
+  `<iframe src="${pageUrl(slug, origin)}?embed=1" title="Chat" style="width:100%;height:600px;border:0"></iframe>`
+export const widgetSnippet = (slug: string, origin = location.origin) =>
+  `<script src="${origin}/c/widget.js" data-slug="${slug}" async></script>`
 
 /** The reply streamed so far: the `node_token` deltas of the nodes that write the reply field. A node that streams
  *  again (an Agent's next model call, a loop) replaces its earlier text, as its field is replaced (TASK-0118). */

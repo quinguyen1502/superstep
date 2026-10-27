@@ -79,6 +79,8 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
     | intro (the page's text before the first message) | lời giới thiệu | |
     | suggested message | tin nhắn gợi ý | |
     | Visitors (the Chat tab's list of public chats) | Khách | "Chat của khách", read-only |
+    | embed, frame (iframe) | nhúng, frame | "Các site được nhúng chat này" (TASK-0143) |
+    | chat bubble (the embed widget) | bong bóng chat | |
     | answered by | người trả lời | the option "A reviewer" is "Người duyệt" |
     | round (an Agent node's model call and the tool calls it asks for) | vòng | "Số vòng tối đa", "Vòng 2" in the trace (TASK-0118) |
     | tool call | lần gọi công cụ | |

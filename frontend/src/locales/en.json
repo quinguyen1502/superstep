@@ -2016,6 +2016,14 @@
         "web": "Page",
         "embed": "Embed"
       }
+    },
+    "embed": {
+      "origins": "Sites that may embed this chat",
+      "originsHint": "One per line, like https://www.example.com. Other sites cannot show the page in a frame.",
+      "widget": "Chat bubble",
+      "widgetHint": "Paste before </body>. A button opens the chat in a corner, and visitors keep their chats in every browser. The site can read the visitor's chat key.",
+      "iframe": "Frame",
+      "iframeHint": "Shows the chat inside the page. Some browsers (Safari) start a new chat each time in a frame; use the bubble to keep chats."
     }
   },
   "timeTravel": {
