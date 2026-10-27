@@ -229,7 +229,8 @@
       "label": "Editor views",
       "canvas": "Canvas",
       "nodes": "Nodes",
-      "addHint": "Tap a node to add it to the canvas."
+      "add": "Add",
+      "addHint": "Tap Add to put a node on the canvas."
     },
     "configTabs": {
       "label": "Node settings",
@@ -896,6 +897,7 @@
     "platform": "Platform",
     "name": "Name",
     "namePh": "e.g. Acme workspace",
+    "demoReadOnly": "Linking chat accounts is off in the public demo.",
     "noChannels": "No connections yet. Add your own Slack app or Telegram bot below.",
     "orgReadOnly": "Managed by an admin. You can pick it on your Human nodes.",
     "replaceSecrets": "Replace secrets",
@@ -1879,6 +1881,7 @@
     "languageLabel": "Language"
   },
   "demo": {
+    "readOnly": "Changes are off in the public demo.",
     "banner": "This is a public demo. Data resets when the server sleeps, and the first load may take about 30 s. Changes are not saved; Code, HTTP and Send email nodes are off, and models answer with a mock.",
     "hide": "Hide",
     "try": "Try the demo",

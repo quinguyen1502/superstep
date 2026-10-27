@@ -68,6 +68,9 @@ export function WorkflowsPage() {
   const del = useDeleteWorkflow(load)
   const askDelete = (w: W) => del.ask(w)
   const shown = useMemo(() => { const k = q.trim().toLowerCase(); return k ? items.filter(w => w.name.toLowerCase().includes(k) || w.id.includes(k)) : items }, [items, q])
+  const lastRun = (w: W) => w.last_run_status ? <div className="flex items-center gap-2">
+    <Badge variant={w.last_run_status === 'ok' ? 'success' : w.last_run_status === 'timeout' ? 'warning' : w.last_run_status === 'cancelled' ? 'secondary' : 'destructive'}>{t(`status.${w.last_run_status}`)}</Badge>
+    <span className="text-xs text-muted-foreground">{fmt(w.last_run_at!)}</span></div> : <span className="text-xs text-muted-foreground">{t('list.neverRun')}</span>
   const empty = (icon: React.ReactNode, title: string, body: React.ReactNode, id: string) =>
     <TableRow className="hover:bg-transparent"><TableCell /* ui-class-ok: empty/loading table row spacing, layout not control sizing */ colSpan={5} className="py-14" id={id}><div className="flex flex-col items-center gap-2 text-center">
       <div className="rounded-full bg-muted p-3 text-muted-foreground">{icon}</div><div className="font-medium">{title}</div><div className="text-sm text-muted-foreground">{body}</div></div></TableCell></TableRow>
@@ -95,17 +98,18 @@ export function WorkflowsPage() {
       <PendingRuns />
       <Card className="p-0 overflow-hidden">
         <Table>
-          <TableHeader><TableRow><TableHead className="pl-4">{t('list.colName')}</TableHead><TableHead className="max-md:hidden">{t('list.colNodes')}</TableHead><TableHead className="max-md:hidden">{t('list.colUpdated')}</TableHead><TableHead>{t('list.colLastRun')}</TableHead><TableHead className="w-12" /></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead className="pl-4">{t('list.colName')}</TableHead><TableHead className="max-md:hidden">{t('list.colNodes')}</TableHead><TableHead className="max-md:hidden">{t('list.colUpdated')}</TableHead><TableHead className="max-sm:hidden">{t('list.colLastRun')}</TableHead><TableHead className="w-12" /></TableRow></TableHeader>
           <TableBody>
             {shown.map(w => <TableRow key={w.id} className="cursor-pointer" onClick={() => nav(`/workflows/${w.id}`)}>
-              <TableCell className="pl-4 font-medium max-w-0 w-1/2"><Tip tip={w.name}><div className="truncate">{w.name}</div></Tip><div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"><span className="font-mono">{w.id}</span>
-                {!w.mine && <Tip tip={w.owner_email}><Badge variant="outline" className="wf-shared">{t('list.sharedBy', { email: w.owner_email ?? '?' })}</Badge></Tip>}
-                {w.access !== 'owner' && <Badge variant="secondary" className="wf-access">{t(`share.access.${w.access}`)}</Badge>}</div></TableCell>
+              {/* name + access badge, then id · owner as plain text; phones drop the Last run column and show it as a third line */}
+              <TableCell className="pl-4 max-w-0 sm:w-1/2"><div className="flex min-w-0 items-center gap-2"><Tip tip={w.name}><span className="truncate font-medium">{w.name}</span></Tip>
+                  {w.access !== 'owner' && <Badge variant="secondary" className="wf-access">{t(`share.access.${w.access}`)}</Badge>}</div>
+                <div className="flex min-w-0 items-baseline gap-1.5 text-xs text-muted-foreground"><span className="shrink-0 font-mono">{w.id}</span>
+                  {!w.mine && <><span aria-hidden>·</span><Tip tip={w.owner_email}><span className="wf-shared truncate">{t('list.sharedBy', { email: w.owner_email ?? '?' })}</span></Tip></>}</div>
+                <div className="mt-1 sm:hidden">{lastRun(w)}</div></TableCell>
               <TableCell className="max-md:hidden"><Badge variant="secondary">{w.node_count}</Badge></TableCell>
               <TableCell className="text-muted-foreground max-md:hidden">{fmt(w.updated)}</TableCell>
-              <TableCell>{w.last_run_status ? <div className="flex items-center gap-2">
-                <Badge variant={w.last_run_status === 'ok' ? 'success' : w.last_run_status === 'timeout' ? 'warning' : w.last_run_status === 'cancelled' ? 'secondary' : 'destructive'}>{t(`status.${w.last_run_status}`)}</Badge>
-                <span className="text-xs text-muted-foreground max-sm:hidden">{fmt(w.last_run_at!)}</span></div> : <span className="text-xs text-muted-foreground">{t('list.neverRun')}</span>}</TableCell>
+              <TableCell className="max-sm:hidden">{lastRun(w)}</TableCell>
               <TableCell onClick={e => e.stopPropagation()}>
                 <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={t('list.actionsFor', { name: w.name })} className="wf-actions"><MoreHorizontal /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -120,7 +124,7 @@ export function WorkflowsPage() {
               <TableCell className="pl-4">{i === 0 && <span className="sr-only">{t('list.loadingList')}</span>}<Skeleton className="h-4 w-48" /><Skeleton className="mt-2 h-3 w-24" /></TableCell>
               <TableCell className="max-md:hidden"><Skeleton className="h-5 w-8" /></TableCell>
               <TableCell className="max-md:hidden"><Skeleton className="h-4 w-24" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+              <TableCell className="max-sm:hidden"><Skeleton className="h-4 w-28" /></TableCell>
               <TableCell><Skeleton className="size-8" /></TableCell>
             </TableRow>)}
             {!loading && !loadErr && !items.length && empty(<FolderOpen className="size-5" />, t('list.emptyTitle'), <>{creates ? <>{t('list.emptyBody')} <Button size="sm" className="ml-2" onClick={create}><Plus />{t('common.newWorkflow')}</Button></> : t('list.emptyViewer')}</>, 'wf-empty')}
