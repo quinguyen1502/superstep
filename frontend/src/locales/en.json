@@ -1928,8 +1928,7 @@
       "enabled": "Chat",
       "enabledHint": "Turn chat on for this workflow.",
       "access": "Who can chat",
-      "accessHint": "Now only people who can run this workflow in the studio. Public links come later.",
-      "later": "Later",
+      "accessHint": "Studio users chat in this tab. Anyone with the link, or signed-in users, chat on a public page.",
       "inputField": "Message field",
       "replyField": "Reply field",
       "messagesField": "Conversation field",
@@ -1985,7 +1984,39 @@
       }
     },
     "visitorBanner": "You're previewing what chat visitors see",
-    "visitorExit": "Back to builder view"
+    "visitorExit": "Back to builder view",
+    "publish": {
+      "slug": "Page address",
+      "slugHint": "3 to 64 lowercase letters, digits or hyphens. Changing it breaks the old link.",
+      "copyLink": "Copy link",
+      "openPage": "Open page",
+      "off": "Turn Chat on to publish the page.",
+      "title": "Page title",
+      "titleHint": "Shown at the top of the page. The workflow's name if empty.",
+      "intro": "Intro",
+      "introHint": "What visitors read before the first message. Markdown.",
+      "suggestions": "Suggested messages",
+      "suggestion": "Suggested message {{n}}",
+      "removeSuggestion": "Remove suggested message",
+      "addSuggestion": "Add a suggested message",
+      "suggestionsHint": "Up to 4 buttons a visitor can click to start.",
+      "dailyLimit": "Messages per day",
+      "dailyLimitHint": "Visitor messages per day (UTC) for this chat. 0 means no cap."
+    },
+    "page": {
+      "title": "Chat",
+      "goneTitle": "Chat not available",
+      "gone": "This chat is not available. The link may have changed, or the chat was turned off."
+    },
+    "visitors": {
+      "tab": "Visitors",
+      "none": "No visitor chats yet.",
+      "readOnly": "A visitor's chat from the public page. Read-only.",
+      "channel": {
+        "web": "Page",
+        "embed": "Embed"
+      }
+    }
   },
   "timeTravel": {
     "open": "Time travel",

@@ -74,6 +74,11 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
     | Chat visitor (View as option: the public chat preview) | Khách chat | "người chat" stays for the Human node's Answered by |
     | Builder / Visitor (short View as labels on the compact chat toolbar) | Người dựng / Khách | |
     | You're previewing what chat visitors see (visitor view banner) | Bạn đang xem trước như khách chat | |
+    | public page, publish (a chat open to anyone with the link or signed-in users) | trang công khai, công khai | "Bật Chat để công khai trang" (TASK-0142) |
+    | page address (the chat's slug) | địa chỉ trang | |
+    | intro (the page's text before the first message) | lời giới thiệu | |
+    | suggested message | tin nhắn gợi ý | |
+    | Visitors (the Chat tab's list of public chats) | Khách | "Chat của khách", read-only |
     | answered by | người trả lời | the option "A reviewer" is "Người duyệt" |
     | round (an Agent node's model call and the tool calls it asks for) | vòng | "Số vòng tối đa", "Vòng 2" in the trace (TASK-0118) |
     | tool call | lần gọi công cụ | |
