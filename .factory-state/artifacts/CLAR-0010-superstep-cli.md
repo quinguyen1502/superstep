@@ -2,7 +2,7 @@
 schema_version: 1
 id: CLAR-0010
 task_id: REQ-0079
-status: open
+status: answered
 source_artifacts:
   - .factory-state/artifacts/REQ-0079-superstep-cli.md
   - .factory-state/artifacts/REQ-0008-postgres-redis-compose.md
@@ -11,7 +11,7 @@ source_artifacts:
   - docs/deploy/README.md
 created: 2026-10-27
 updated: 2026-10-27
-answered_at: null
+answered_at: '2026-10-27'
 questions:
   - id: packaging
     type: single_choice
@@ -149,16 +149,18 @@ questions:
         label: The same version as the server, released on each `v*` tag
       - value: own-version
         label: Its own version and tags, with a list of the server versions it supports
-answers: {}
+answers:
+  packaging: python
+  first-version: phased
+  topologies: single-default-and-full
+  deploy-targets: ssh
+  rollback: automatic
+  scheduled-backups: host-timer
+  auth: pat-browser
+  versioning: same-as-server
 ---
 # Clarification
 
-Owner questions for REQ-0079, the `superstep` command-line tool for installing, deploying, upgrading and operating
-Superstep, and for working with workflows from a terminal and CI. Each question has a recommended option. The owner
-can answer in chat (for example, "trả lời CLAR-0010 theo đề xuất"), or by editing the `answers` map.
-
-The owner may answer it with:
-
-```text
-factory clarify CLAR-0010 -C <project-dir>
-```
+Owner questions for REQ-0079, the `superstep` command-line tool. The owner answered in chat on 2026-10-27 ("Làm theo
+đề xuất") and picked the recommended option for every question. The answers are written into REQ-0079 under Owner
+Decisions.

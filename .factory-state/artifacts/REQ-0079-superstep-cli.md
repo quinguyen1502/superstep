@@ -4,13 +4,13 @@
 
 - Project: superstep
 - Requirement ID: REQ-0079
-- Status: Draft. Waiting on the owner's answers to CLAR-0010.
+- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Tasks are not planned yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
 - Source: owner request in chat on 2026-10-27: "Tôi muốn thêm 1 REQ về việc build superstep cli để hỗ trợ deploy,
   install, upgrade,... và nhiều thêm nữa dựa vào bạn đề xuất". The commands beyond install, deploy and upgrade are
-  the agent's proposals, and CLAR-0010 asks which of them the first version takes.
+  the agent's proposals. The owner accepted them with the CLAR-0010 answers ("Làm theo đề xuất").
 
 ## Summary
 
@@ -28,7 +28,30 @@
   - run a workflow and follow its trace;
   - run test suites with an exit code for CI;
   - expose workflows to MCP clients over stdio.
-- The first version's scope, the packaging and the deploy targets are set by CLAR-0010.
+- It ships in two phases: the instance commands first, the workflow commands in the next release.
+
+## Owner Decisions
+
+The owner answered CLAR-0010 on 2026-10-27 with the recommended option for every question ("Làm theo đề xuất").
+
+1. **Packaging**:
+   - written in Python, as a `superstep` command in the `superstep` package (`cli` extra);
+   - installed with uv or pipx, or with a one-line `install.sh` that installs uv when Python is missing;
+   - runs on macOS and Linux, and on Windows through WSL.
+2. **Phases**:
+   - phase 1: the instance commands (groups A, B and D), the version endpoint (E) and delivery (F);
+   - phase 2, in the next release: the workflow commands (C), with the personal access tokens and the browser sign-in
+     (E).
+3. **Topologies**: both. The single image with SQLite is the default; the full stack (Postgres, Redis, a worker, nginx,
+   and the Code-node sandbox as an option) is offered on request.
+4. **Deploy targets**: a Docker host over SSH. The platforms' one-click configs stay as they are, outside the CLI.
+5. **Rollback**: automatic. When the new version fails its health check, the backup and the previous version are
+   restored, and the failed upgrade's logs are kept.
+6. **Scheduled backups**: `superstep backup --schedule <period> --keep <n>` installs a systemd timer, or a cron entry
+   where systemd is missing, and prunes old archives.
+7. **Authentication**: personal access tokens. They come from a browser sign-in (`superstep login`), or from Settings
+   for CI (`SUPERSTEP_TOKEN`).
+8. **Versioning**: the same version as the server, released on each `v*` tag.
 
 ## Problem Or Opportunity
 
@@ -57,13 +80,15 @@
 
 ### In Scope
 
-The groups below are proposals. CLAR-0010 question 2 decides which groups the first version takes.
+Phase 1 is groups A, B and D, the version endpoint in E, and F. Phase 2 is group C, with the tokens and the browser
+sign-in in E (CLAR-0010 question 2).
 
 **A. Instance lifecycle** (on the machine where Docker runs, or a remote one over SSH):
 
 - `superstep install`:
   - checks the host (Docker and Compose versions, free ports, memory, disk);
-  - asks for the topology (CLAR-0010 question 3), the public URL and the first admin's e-mail;
+  - asks for the topology (the single image by default, or the full stack with the sandbox as an option; CLAR-0010
+    question 3), the public URL and the first admin's e-mail;
   - generates the secrets and writes them to an `.env` file with mode `0600`, next to a Compose file pinned to the
     current release;
   - pulls or builds the images, including the sandbox images when the topology uses them;
@@ -85,13 +110,15 @@ The groups below are proposals. CLAR-0010 question 2 decides which groups the fi
   3. pulls the new images;
   4. restarts, so Alembic migrates;
   5. waits for health;
-  6. if health fails, restores the backup and the previous version (CLAR-0010 question 5).
+  6. if health fails, restores the backup and the previous version automatically, and keeps the failed upgrade's logs
+     (CLAR-0010 question 5).
   - `--check` only reports whether an upgrade is available.
 - `superstep backup [--to <dir>]` and `superstep restore <archive>`:
   - one archive holds the database (the SQLite file, or `pg_dump` of Postgres), the secret key, the `.env` and the
     Compose file, and a manifest with the version;
   - restore refuses an archive from a newer version;
-  - backups can be scheduled (CLAR-0010 question 6).
+  - `--schedule <period> --keep <n>` installs a systemd timer, or cron where systemd is missing, and prunes old
+    archives (CLAR-0010 question 6).
 - `superstep admin create | reset-password | list`, which works when nobody can sign in.
 - `superstep config get | set | list` for the installation's settings, with a restart when one needs it. Secrets are
   shown masked.
@@ -102,8 +129,6 @@ The groups below are proposals. CLAR-0010 question 2 decides which groups the fi
 
 - `superstep deploy ssh://user@host` runs `install` or `upgrade` on a remote Docker host over SSH, with Docker's own
   `ssh://` context, so nothing besides Docker has to be installed there.
-- Platform deploys (Fly.io, Render, Railway, Zeabur, Heroku) reuse the repository's existing configs (`fly.toml`,
-  `render.yaml`, `railway.json`, `deploy/zeabur`, `heroku.yml`) and the platform's own CLI, if the owner takes them.
 
 **C. Workflows from a terminal and CI**:
 
@@ -132,20 +157,22 @@ The groups below are proposals. CLAR-0010 question 2 decides which groups the fi
 **E. Server side**, where the CLI needs it:
 
 - `GET /api/version`, or the version in `/api/health`.
-- Personal access tokens, if CLAR-0010 question 7 chooses them: create, list and revoke in Settings, scoped to the
-  user's rights, with only a hash stored, as for workflow tokens.
+- Personal access tokens (CLAR-0010 question 7): create, list and revoke in Settings, scoped to the user's rights,
+  with only a hash stored, as for workflow tokens.
 - A browser sign-in flow for the CLI.
 
 **F. Delivery**:
 
-- Packaging and distribution as CLAR-0010 question 1 decides, released with every Superstep tag (CLAR-0010
-  question 8).
+- A Python command in the `superstep` package (`cli` extra), installed with uv, pipx or `install.sh` (CLAR-0010
+  question 1), released with every `v*` tag under the server's version (CLAR-0010 question 8).
 - Handbook en and vi: a "CLI" section (install, upgrade, backup, CI recipes), and the deploy pages updated to start
   from the CLI. CHANGELOG. A decision record for the packaging and the install layout.
 
 ### Out Of Scope
 
-- Kubernetes and Helm charts, unless CLAR-0010 question 4 adds them.
+- Kubernetes and Helm charts.
+- Deploying to Fly.io, Render, Railway, Zeabur or Heroku through the CLI. Their one-click configs stay as they are
+  (CLAR-0010 question 4).
 - A hosted Superstep service. The vision lists "public multi-tenant SaaS" as a non-goal.
 - Managing several instances as a fleet from one command.
 - A terminal UI for editing workflows. The canvas stays the editor.
@@ -222,9 +249,9 @@ The groups below are proposals. CLAR-0010 question 2 decides which groups the fi
   decrypt, so the secret key travelled with the backup.
 - `superstep doctor` reports a missing `STUDIO_ENV=production`, a placeholder secret, and a missing Docker socket for
   sandboxed Code nodes.
-- `superstep login`, `pull`, `push`, `run --follow` and `test --all` work against a test instance. `test` exits
+- Phase 2: `superstep login`, `pull`, `push`, `run --follow` and `test --all` work against a test instance. `test` exits
   non-zero on a failing case and writes JUnit XML.
-- `superstep mcp` serves a workflow to an MCP client over stdio. An integration test uses the MCP SDK's client.
+- Phase 2: `superstep mcp` serves a workflow to an MCP client over stdio. An integration test uses the MCP SDK's client.
 - Every command has `--help` and `--json`, and its messages exist in en and vi.
 - CI runs the CLI's unit tests, and an install-and-upgrade smoke test on Docker, in the same way as `compose_smoke.py`.
 
@@ -246,15 +273,7 @@ The groups below are proposals. CLAR-0010 question 2 decides which groups the fi
 
 ## Open Questions
 
-- CLAR-0010:
-  - the packaging and the platforms;
-  - which command groups go in the first version;
-  - the topologies;
-  - the deploy targets;
-  - the upgrade rollback;
-  - scheduled backups;
-  - authentication for workflow commands;
-  - versioning.
+None. CLAR-0010 is answered.
 
 ## Related Artifacts
 
