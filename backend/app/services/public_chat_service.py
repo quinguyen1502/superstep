@@ -79,7 +79,7 @@ class PublicChatService:
         t, st = self.published(slug)
         w = self.chat.workflows.get(t.workflow_id)
         return {"slug": slug, "title": st["title"] or w.name, "intro": st["intro"], "suggestions": st["suggestions"], "access": st["access"],
-                "steps_mode": st["steps"], "signed_in": user is not None}
+                "steps_mode": st["steps"], "signed_in": user is not None, "embed_origins": st["embed_origins"]}  # the widget's iframe checks its host
 
     def frame_ancestors(self, slug: str) -> str:
         """The page's `frame-ancestors` source list (decision 6): this studio and the allowed sites, or 'none'."""

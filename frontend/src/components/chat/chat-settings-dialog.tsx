@@ -1,6 +1,7 @@
 /** A workflow's Chat settings (TASK-0085, REQ-0048): on/off, who may chat, the input / reply / messages fields, the memory
  *  window, which steps visitors see and how long chats are kept. Anyone with the link or signed-in users publish the chat
- *  at /c/{slug} (TASK-0142, DEC-0067): its address, title, intro, suggested messages and daily limit. */
+ *  at /c/{slug} (TASK-0142, DEC-0067): its address, title, intro, suggested messages and daily limit. An anonymous chat
+ *  can be embedded (TASK-0143): the sites allowed to frame it, and an iframe and a widget snippet to copy. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Check, Copy, ExternalLink, Plus, Save, X } from 'lucide-react'
@@ -15,7 +16,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { api, ApiError } from '@/lib/api'
-import { ACCESS, MAX_SUGGESTIONS, pageUrl, published, STEPS, type ChatSettings } from '@/lib/chat'
+import { ACCESS, iframeSnippet, MAX_SUGGESTIONS, pageUrl, published, STEPS, widgetSnippet, type ChatSettings } from '@/lib/chat'
 import { useLoadWhen } from '@/lib/use-when'
 
 type Field = { name: string; type: string }
@@ -31,11 +32,12 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
   })
   const set = (p: Partial<ChatSettings>) => setV(x => x && { ...x, ...p })
   const save = () => { if (!v) return; setBusy(true); setErr(''); setBad('')
-    const body = { ...v, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean) }
+    const body = { ...v, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean), embed_origins: v.embed_origins.map(x => x.trim()).filter(Boolean) }
     api<ChatSettings>(`/api/workflows/${wid}/chat`, { method: 'PUT', json: body }).then(s => { setV(s); onSaved?.(s); onOpenChange(false) })
-      .catch(e => { setErr(e.message); if (e instanceof ApiError) setBad(e.code?.startsWith('CHAT_SLUG') ? 'slug' : e.details?.field ?? '') }).finally(() => setBusy(false)) }
-  const [copied, setCopied] = useState(false)
-  const copy = () => v && navigator.clipboard.writeText(pageUrl(v.slug)).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) }).catch(() => {})
+      .catch(e => { setErr(e.message); if (e instanceof ApiError) setBad(e.code?.startsWith('CHAT_SLUG') ? 'slug' : e.code === 'CHAT_EMBED_ORIGIN_INVALID' ? 'embed_origins' : e.details?.field ?? '') }).finally(() => setBusy(false)) }
+  const [copied, setCopied] = useState('')
+  const copy = (what: string, text: string) => navigator.clipboard.writeText(text).then(() => { setCopied(what); setTimeout(() => setCopied(''), 2000) }).catch(() => {})
+  const snippet = (s: ChatSettings) => ({ iframe: iframeSnippet(s.slug), widget: widgetSnippet(s.slug) })
   const names = (pred: (f: Field) => boolean) => fields.filter(pred).map(f => f.name)
   const pick = (id: keyof ChatSettings, opts: string[], none = false) => <Select value={(v?.[id] as string) || (none ? NONE : '')} onValueChange={x => set({ [id]: x === NONE ? '' : x } as any)}>
     <SelectTrigger className="w-full" id={`chat-${id}`} aria-invalid={bad === id || undefined}><SelectValue placeholder={t('chat.settings.pickField')} /></SelectTrigger>
@@ -58,7 +60,7 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
             <InputGroupAddon><InputGroupText>/c/</InputGroupText></InputGroupAddon>
             <InputGroupInput id="chat-slug" value={v.slug} aria-invalid={bad === 'slug' || undefined} onChange={e => set({ slug: e.target.value.toLowerCase() })} /></InputGroup>)}
           {published(v) && <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" id="chat-copy-link" onClick={copy}>{copied ? <Check /> : <Copy />}{t(copied ? 'chat.copied' : 'chat.publish.copyLink')}</Button>
+            <Button size="sm" variant="outline" id="chat-copy-link" onClick={() => copy('link', pageUrl(v.slug))}>{copied === 'link' ? <Check /> : <Copy />}{t(copied === 'link' ? 'chat.copied' : 'chat.publish.copyLink')}</Button>
             <Button size="sm" variant="outline" id="chat-open-page" asChild><a href={pageUrl(v.slug)} target="_blank" rel="noreferrer"><ExternalLink />{t('chat.publish.openPage')}</a></Button></div>}
           {!v.enabled && <p className="text-xs text-muted-foreground" id="chat-publish-off">{t('chat.publish.off')}</p>}
           <Separator />
@@ -73,6 +75,14 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
             <p className="text-xs text-muted-foreground">{t('chat.publish.suggestionsHint')}</p></div>
           {row('daily_limit', t('chat.publish.dailyLimit'), t('chat.publish.dailyLimitHint'), <Input id="chat-daily_limit" type="number" min={0} max={100000}
             aria-invalid={bad === 'daily_limit' || undefined} value={v.daily_limit} onChange={e => set({ daily_limit: Number(e.target.value) })} />)}
+          {v.access === 'anonymous' && <><Separator />
+            {row('embed_origins', t('chat.embed.origins'), t('chat.embed.originsHint'), <Textarea id="chat-embed_origins" rows={2} placeholder="https://www.example.com"
+              aria-invalid={bad === 'embed_origins' || undefined} value={v.embed_origins.join('\n')} onChange={e => set({ embed_origins: e.target.value.split('\n') })} />)}
+            {published(v) && v.embed_origins.some(x => x.trim()) && (['widget', 'iframe'] as const).map(k => <div key={k} className="grid gap-1.5" id={`chat-snippet-${k}`}>
+              <div className="flex items-center justify-between gap-2"><Label htmlFor={`chat-snippet-${k}-code`}>{t(`chat.embed.${k}`)}</Label>
+                <Button size="xs" variant="ghost" id={`chat-copy-${k}`} onClick={() => copy(k, snippet(v)[k])}>{copied === k ? <Check /> : <Copy />}{t(copied === k ? 'chat.copied' : 'chat.copy')}</Button></div>
+              <Textarea id={`chat-snippet-${k}-code`} readOnly rows={2} className="font-mono text-xs" value={snippet(v)[k]} onFocus={e => e.currentTarget.select()} />
+              <p className="text-xs text-muted-foreground">{t(`chat.embed.${k}Hint`)}</p></div>)}</>}
         </div>}
         <div className="grid grid-cols-2 gap-3">
           {row('input_field', t('chat.settings.inputField'), null, pick('input_field', names(f => f.type === 'string' || f.type === 'list')))}

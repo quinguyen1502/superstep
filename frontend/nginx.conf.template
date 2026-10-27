@@ -37,5 +37,29 @@ server {
   }
 
   location /assets/ { expires 1y; add_header Cache-Control "public, immutable"; try_files $uri =404; }
-  location / { try_files $uri /index.html; }  # SPA routes
+
+  # Frames (TASK-0143, DEC-0067): a published chat page may be framed by the sites in its embed_origins, which the api
+  # gives as a Content-Security-Policy; every other page refuses frames. add_header is not inherited by locations that
+  # set their own, so each HTML location sets it.
+  location ~ ^/c/[a-z0-9-]+/?$ {
+    auth_request /_chat_frame;
+    auth_request_set $chat_frame $upstream_http_content_security_policy;
+    add_header Content-Security-Policy $chat_frame always;
+    try_files /index.html =404;
+  }
+  location = /_chat_frame {
+    internal;
+    rewrite ^ /api/public/chat-frame break;
+    proxy_pass http://${API_UPSTREAM};
+    proxy_pass_request_body off;
+    proxy_set_header Content-Length "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Original-URI $request_uri;
+  }
+  location = /c/widget.js { add_header Cache-Control "no-cache"; try_files $uri =404; }  # the embed widget: a stable URL, so no long cache
+  location / {  # SPA routes
+    add_header X-Frame-Options "DENY" always;
+    add_header Content-Security-Policy "frame-ancestors 'none'" always;
+    try_files $uri /index.html;
+  }
 }

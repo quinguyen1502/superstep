@@ -2019,6 +2019,14 @@
         "web": "Trang",
         "embed": "Nhúng"
       }
+    },
+    "embed": {
+      "origins": "Các site được nhúng chat này",
+      "originsHint": "Mỗi dòng một site, ví dụ https://www.example.com. Site khác không hiện được trang trong frame.",
+      "widget": "Bong bóng chat",
+      "widgetHint": "Dán trước </body>. Một nút mở chat ở góc trang, và khách giữ được cuộc trò chuyện trên mọi trình duyệt. Site đó đọc được khoá chat của khách.",
+      "iframe": "Frame",
+      "iframeHint": "Hiện chat ngay trong trang. Một số trình duyệt (Safari) bắt đầu cuộc trò chuyện mới mỗi lần khi ở trong frame; dùng bong bóng chat để giữ cuộc trò chuyện."
     }
   },
   "timeTravel": {
