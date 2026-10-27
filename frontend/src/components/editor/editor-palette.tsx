@@ -7,11 +7,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
-import { META, TYPES, REDUCERS, INSERTABLE } from './meta'
+import { META, TYPES, REDUCERS } from './meta'
 import { useStudioCtx } from './studio-context'
 
-/** Left panel: node palette and the state schema (TASK-0040). `onAdd` (phones, TASK-0121): a tap on a card adds that
- *  node, since touch screens cannot drag a card onto the canvas. */
+/** Left panel: node palette and the state schema (TASK-0040). `onAdd` (phones, TASK-0121): a tap on any card adds that
+ *  node, Start and End included as a drag does on desktop, since touch screens cannot drag a card onto the canvas. */
 export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
   const { t } = useTranslation()
   const { state, setState, edit, editable } = useStudioCtx()
@@ -21,14 +21,16 @@ export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
       <section className="flex min-h-0 flex-1 basis-0 flex-col" id="palette-nodes">
         <div className="px-3 pt-3 pb-2 text-xs font-semibold uppercase text-muted-foreground">{t('editor.palette')}</div>
         {tap && <p className="px-3 pb-2 text-[11px] text-muted-foreground" id="palette-tap-hint">{t('editor.mobileNav.addHint')}</p>}
-        <ScrollArea className="min-h-0 flex-1"><div className="px-3 pb-3 space-y-2">{TYPES.map(t_ => { const m = META[t_]; const I = m.icon
-            const add = tap && INSERTABLE.includes(t_) ? () => tap(t_) : undefined
+        <ScrollArea className="min-h-0 flex-1"><div className="px-3 pt-1 pb-3 space-y-2">{/* pt-1: room for the first card's ring, which the viewport would clip */}{TYPES.map(t_ => { const m = META[t_]; const I = m.icon
+            const add = tap ? () => tap(t_) : undefined
+            // phones: the Add button is the explicit (and focusable) control; a tap anywhere on the card does the same
             return <Card key={t_} draggable={edit} onDragStart={e => { e.dataTransfer.setData('nodetype', t_); e.dataTransfer.effectAllowed = 'move' }}
-              {...(add ? { role: 'button', tabIndex: 0, onClick: add, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); add() } } } : {})}
-              data-testid="palette-card" data-type={t_}
+              onClick={add} data-testid="palette-card" data-type={t_}
               className={cn('flex-row items-center gap-3 p-2.5 cursor-grab hover:bg-accent transition-colors', add && 'cursor-pointer')}>
               <div className={cn('rounded-md p-1.5', m.color)}><I className="size-4" /></div>
-              <div><div className="font-medium leading-tight">{m.label}</div><div className="text-[11px] text-muted-foreground">{t(`nodes.${t_}`)}</div></div>
+              <div className="min-w-0 flex-1"><div className="font-medium leading-tight">{m.label}</div><div className="text-[11px] text-muted-foreground">{t(`nodes.${t_}`)}</div></div>
+              {add && <Button variant="outline" size="sm" data-testid="palette-add" aria-label={t('palette.addNode', { type: m.label })}
+                onClick={e => { e.stopPropagation(); add() }}><Plus />{t('editor.mobileNav.add')}</Button>}
             </Card> })}</div></ScrollArea>
       </section>
       <Separator />

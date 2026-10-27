@@ -320,6 +320,8 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
   output and records portable commands. **merged** (PR #172).
 - TASK-0132 Workflow check messages in the UI language: codes in the API (`issues`), `validation.<CODE>` in
   both locales, DEC-0065 (REQ-0045). **merged** (PR #174; REV-0116, QA-0116).
+- TASK-0146 Run trace layout: the summary bar's items no longer break mid-word, its divider stays short, and a
+  workflow tool's steps sit under the tool call, ending at the duration column.
 
 ## Releases
 

@@ -1,10 +1,11 @@
 """Workflow sharing (TASK-0014, teams TASK-0029): the owner (or an admin) shares a workflow with users or teams as viewer or editor."""
 from __future__ import annotations
 import time
-from ..core import permissions as P
+from ..core import config, permissions as P
 from ..core.errors import AppError
 from ..models import WorkflowShare, WorkflowTeamShare
 from ..repositories import UserRepository, WorkflowShareRepository
+from . import demo_service
 from .access import AccessService
 from .auth_service import normalise_email
 
@@ -19,9 +20,12 @@ class ShareService:
     def list(self, wid: str, uid: str) -> dict:
         w = self.access.workflow(wid, uid, P.VIEW)
         owner = self.users.get_by_id(w.owner)
+        shares = self.shares.for_workflow(wid)
+        # the public demo: anonymous visitors share the samples, so a visitor sees only the owner and their own row
+        if config.demo_mode() and demo_service.is_visitor(uid): shares = [(s, e) for s, e in shares if s.user_id == uid]
         return {"owner": {"id": w.owner, "email": owner.email if owner else None},
                 "can_share": self.access.may(wid, uid, P.SHARE), "can_transfer": self.access.may(wid, uid, P.TRANSFER),
-                "shares": [{"user_id": s.user_id, "email": e, "role": s.role, "created": s.created} for s, e in self.shares.for_workflow(wid)],
+                "shares": [{"user_id": s.user_id, "email": e, "role": s.role, "created": s.created} for s, e in shares],
                 "teams": [{"team_id": s.team_id, "name": n, "role": s.role, "created": s.created} for s, n in self.teams.shares_for_workflow(wid)]
                          if self.teams is not None else []}
 
