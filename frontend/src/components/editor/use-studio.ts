@@ -212,6 +212,8 @@ export function useStudio() {
       data: { ...DEFAULTS[type], ...samplePrompt(type) } }])
     if (select) setSel({ kind: 'node', id })
   }
+  /** A node of `type` on a free spot in the middle of the canvas (command palette, phone palette taps). */
+  const addCentered = (type: string) => { const c = rf.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); addNode(type, freeSpot(c, nodes.map(n => n.position)), true) }
   const addNote = (pos: { x: number; y: number }) => {
     const id = `note_${Date.now().toString(36)}${idc.current++}`
     setNodes(ns => [...ns.map(n => n.selected ? { ...n, selected: false } : n),
@@ -248,7 +250,7 @@ export function useStudio() {
       icon: ACTION_ICONS[x.id], menu: MENU_OF[x.id], elementId: MENU_IDS[x.id], run: () => { handlers[x.id]() } })),
     ...menuExtras,
     ...(editable ? INSERTABLE.map(x => ({ id: `add:${x}`, group: 'add' as const, label: t('palette.addNode', { type: META[x].label }), hint: t(`nodes.${x}`), icon: META[x].icon, keywords: [x],
-      run: () => { const c = rf.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); addNode(x, freeSpot(c, nodes.map(n => n.position)), true) } })) : []),
+      run: () => addCentered(x) })) : []),
     ...nodes.filter(n => n.type !== 'note').map(n => ({ id: `node:${n.id}`, group: 'nodes' as const, label: String((n.data as any)?.label || n.id), hint: `${META[n.type!]?.label ?? n.type} · ${n.id}`, icon: META[n.type!]?.icon, keywords: [n.id, n.type!],
       run: () => { setNodes(ns => ns.map(x => ({ ...x, selected: x.id === n.id }))); setSel({ kind: 'node', id: n.id }); rf.fitView({ nodes: [{ id: n.id }], duration: 300, maxZoom: 1.2 }) } })),
   ]
@@ -314,7 +316,7 @@ export function useStudio() {
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,
     hist, load, openRun, toJSON, save, mark, run, respond, fork, cancelRun, removeIds,
     clipNote, note, insert, editable, layoutDir, cheat, setCheat, insertAround, addNode, addNote, dlg, setDlg, ctx, setCtx,
-    delWf, isDirty, saves, paletteCmds, trace, traceMeta, step, continueRun, nodesView, onNodeClick, onConnect, onDrop,
+    delWf, isDirty, saves, paletteCmds, addCentered, trace, traceMeta, step, continueRun, nodesView, onNodeClick, onConnect, onDrop,
     selNode, selEdge, upd, setRuntime, d, runTo, fieldNames, canvasLock, setCanvasLock, copyIds, chatOpen: chatOpen && canChat, setChatOpen, canChat,
   }
 }

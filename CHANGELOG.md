@@ -27,6 +27,26 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   `POST /api/validate`, saving a workflow and using a template now also return `issues`, the code of each message in
   `errors`; a run's `error` event carries them too. `errors` is unchanged.
 
+### Fixed
+
+- **Workflow list rows are tidier.** The access badge ("Can view") sits next to the name, and the owner shows as plain
+  text after the id ("demo-approval · Shared by …") instead of a badge that ran under the Last run column. On a phone
+  the Last run column gives way to a third line under the name.
+- **Phone layout fixes.** Dialogs (Share, Version history, delete confirmations) stay inside the screen with long
+  emails or names, and Version history stacks the list above the diff. The Code tab's toolbar wraps
+  instead of pushing the page sideways. The new knowledge base form fits its card. On My accounts the Link & send code,
+  Verify and Resend buttons match the input height. The user menu shows a long email in full.
+- **Adding nodes on a phone.** Each Node palette card has an **Add** button; a tap on the card still works. Start and
+  End now add too, as a drag does on desktop; before, a tap on them did nothing. The first card's top border is no
+  longer cut off by the scroll area.
+- **Demo banner in the phone editor** sits above the tab bar instead of covering it.
+- **Viewers no longer see create buttons they cannot use.** The Knowledge bases tab is hidden for roles without
+  `resources.manage` (an old link opens Profile), and so is "Add MCP server"; the API already refused both.
+- **Public demo.** A visitor's Share dialog lists only the owner and the visitor's own row, so visitors no longer see
+  each other's accounts. My accounts, the password form and the notification settings say changes are off in the demo
+  and are disabled, and the language is kept in the browser instead of being sent to a server that refuses it;
+  `GET /api/me` has a new `read_only` flag for that.
+
 ## 0.8.0 (2026-10-26)
 
 ### Added
