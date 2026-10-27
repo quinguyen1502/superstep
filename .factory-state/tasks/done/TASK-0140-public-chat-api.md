@@ -118,3 +118,5 @@ not stream yet; that is TASK-0141.
 ## Handoff Notes
 
 - TASK-0141 adds the socket on top of `PublicChatService`.
+- Review: `.factory-state/artifacts/REV-0123-task-0140.md`.
+- QA: `.factory-state/artifacts/QA-0123-task-0140.md`.

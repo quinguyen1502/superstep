@@ -110,3 +110,5 @@ script widget, whose bubble opens the same iframe and keeps the visitor's histor
 ## Handoff Notes
 
 - TASK-0144 documents the snippets and the token note.
+- Review: `.factory-state/artifacts/REV-0126-task-0143.md`.
+- QA: `.factory-state/artifacts/QA-0126-task-0143.md`.

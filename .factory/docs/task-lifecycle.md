@@ -36,6 +36,11 @@ The default delivery sequence is:
 10. Push rewritten history with `--force-with-lease` and mark the existing PR
     Ready for review.
 11. Wait for explicit human approval before merge.
+12. When the owner approves the merge and the task is not in done yet (the owner
+    approved straight from review or QA), move it to done on the same task PR:
+    one commit that sets `Status: done` and logs the approval, then wait for the
+    required checks and merge. Never open a separate pull request only to move a
+    task to done.
 
 Agents must not merge a task branch into the integration branch without explicit human approval. If PR tooling or remote access is unavailable for an active delivery task, leave the work committed on the task branch and document the blocker in the task or a blocker artifact.
 
@@ -148,3 +153,5 @@ Exit criteria:
 Done means approved, validated, and ready to merge. It does not assert that the
 task commit is already present on the integration branch, so no separate
 post-merge administrative commit is required only to change lifecycle state.
+A task PR therefore carries its own move to done (step 12 above). If the PR is
+closed without merging, move the task back to the state it left.
