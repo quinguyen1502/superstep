@@ -1931,8 +1931,7 @@
       "enabled": "Chat",
       "enabledHint": "Bật chat cho workflow này.",
       "access": "Ai được chat",
-      "accessHint": "Hiện chỉ những người được chạy workflow này trong studio. Link công khai sẽ có sau.",
-      "later": "Sau này",
+      "accessHint": "Người dùng studio chat trong tab này. Ai có link, hoặc người đã đăng nhập, chat trên một trang công khai.",
       "inputField": "Trường tin nhắn",
       "replyField": "Trường trả lời",
       "messagesField": "Trường cuộc trò chuyện",
@@ -1988,7 +1987,39 @@
       }
     },
     "visitorBanner": "Bạn đang xem trước như khách chat",
-    "visitorExit": "Về góc nhìn người dựng"
+    "visitorExit": "Về góc nhìn người dựng",
+    "publish": {
+      "slug": "Địa chỉ trang",
+      "slugHint": "Từ 3 đến 64 ký tự: chữ thường, số hoặc dấu gạch ngang. Đổi địa chỉ thì link cũ không dùng được nữa.",
+      "copyLink": "Sao chép link",
+      "openPage": "Mở trang",
+      "off": "Bật Chat để công khai trang.",
+      "title": "Tiêu đề trang",
+      "titleHint": "Hiện ở đầu trang. Để trống thì dùng tên workflow.",
+      "intro": "Lời giới thiệu",
+      "introHint": "Khách chat đọc trước khi gửi tin nhắn đầu tiên. Dùng được Markdown.",
+      "suggestions": "Tin nhắn gợi ý",
+      "suggestion": "Tin nhắn gợi ý {{n}}",
+      "removeSuggestion": "Xoá tin nhắn gợi ý",
+      "addSuggestion": "Thêm tin nhắn gợi ý",
+      "suggestionsHint": "Tối đa 4 nút để khách chat bấm vào bắt đầu.",
+      "dailyLimit": "Số tin nhắn mỗi ngày",
+      "dailyLimitHint": "Số tin nhắn của khách chat mỗi ngày (giờ UTC) cho chat này. 0 là không giới hạn."
+    },
+    "page": {
+      "title": "Chat",
+      "goneTitle": "Chat không mở",
+      "gone": "Chat này hiện không mở. Có thể link đã đổi, hoặc chat đã bị tắt."
+    },
+    "visitors": {
+      "tab": "Khách",
+      "none": "Chưa có cuộc trò chuyện nào của khách.",
+      "readOnly": "Chat của khách trên trang công khai. Chỉ xem.",
+      "channel": {
+        "web": "Trang",
+        "embed": "Nhúng"
+      }
+    }
   },
   "timeTravel": {
     "open": "Du hành thời gian",

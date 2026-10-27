@@ -16,6 +16,7 @@ const vars = (s: string) => [...s.matchAll(/{{\s*([\w.]+)\s*}}/g)].map((m) => m[
 const SAME_OK = new Set([
   'activity.types.workflow',
   'agent.workflow',
+  'chat.page.title',
   'langsmith.title',
   'tests.langsmith',
   'api.button',
