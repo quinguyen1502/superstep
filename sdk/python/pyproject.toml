@@ -18,9 +18,15 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# Phase 1 adds no third-party package. The extra is the install path (`pip install superstep[cli]`);
+# phase 2 puts the MCP SDK here. The console script cannot be gated on an extra, so it ships with the base package.
+cli = []
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 # `factory deps apply` installs `.[test]`, so verification has pytest without it in base deps.
 test = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+superstep = "superstep.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/quinguyen1502/superstep"
@@ -31,6 +37,10 @@ path = "src/superstep/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/superstep"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/superstep/cli/locales/en.json" = "superstep/cli/locales/en.json"
+"src/superstep/cli/locales/vi.json" = "superstep/cli/locales/vi.json"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

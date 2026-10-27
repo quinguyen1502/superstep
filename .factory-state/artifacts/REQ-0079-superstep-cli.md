@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0079
-- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Tasks are not planned yet.
+- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is planned (DEC-0068, TASK-0149 to TASK-0156). TASK-0149 is done. Phase 2 is not planned yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -275,8 +275,22 @@ sign-in in E (CLAR-0010 question 2).
 
 None. CLAR-0010 is answered.
 
+## Phase 1 Tasks
+
+Planned on 2026-10-27. The layout is DEC-0068. Phase 2 is not in this list.
+
+- TASK-0149 CLI package, help, JSON, en and vi, completion, and the version field on `/api/health`. Done (REV-0129, QA-0129).
+- TASK-0150 `install`, `adopt`, `start`, `stop`, `restart`, `logs`.
+- TASK-0151 `status`, `config`, `doctor`.
+- TASK-0152 `backup`, `restore`, scheduled backups.
+- TASK-0153 `upgrade` with automatic rollback.
+- TASK-0154 `admin` and `uninstall`.
+- TASK-0155 `deploy` over SSH.
+- TASK-0156 `install.sh`, image and package release, CI smoke, handbook and changelog.
+
 ## Related Artifacts
 
+- `.factory-state/decisions/DEC-0068-superstep-cli.md`
 - `.factory-state/artifacts/CLAR-0010-superstep-cli.md`
 - `.factory-state/artifacts/REQ-0008-postgres-redis-compose.md`, `.factory-state/artifacts/REQ-0042-workflow-tests.md`,
   `.factory-state/artifacts/REQ-0070-workflows-as-mcp-tools.md`, `.factory-state/artifacts/REQ-0004-api-webhook-trigger.md`
