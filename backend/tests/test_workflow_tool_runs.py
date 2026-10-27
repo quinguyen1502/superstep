@@ -131,14 +131,15 @@ def test_people_and_children_cannot_answer_for_each_other():
     drain()
 
 
-def test_a_call_starts_one_child_and_a_second_settle_resumes_once():
+def test_a_call_starts_one_child_and_a_second_settle_resumes_once(monkeypatch):
     tok = user(); _, sup = setup(tok, specialist("Desk", llm()))
     rid, evs = start(tok, sup); cid = next(e for e in evs if e["type"] == "run_waiting")["wait"]["run_id"]
     svc = run_service(); parent = svc.runs.get(rid)
     # a recovered or retried tool step asks again with the same call key: the same child, nothing queued
     starter = svc._child_starter(rid, None, parent.owner)
-    q = get_job_queue(); before = q._q.qsize()
-    assert starter(svc.runs.get(cid).parent_step, {}, None, {}, {}) == cid and q._q.qsize() == before
+    q, queued = get_job_queue(), []; enqueue = q.enqueue
+    monkeypatch.setattr(q, "enqueue", lambda job: (queued.append(job), enqueue(job)))  # in memory or Redis alike
+    assert starter(svc.runs.get(cid).parent_step, {}, None, {}, {}) == cid and queued == []
     drain()
     assert svc.runs.get(rid).status == "ok"
     assert svc.resume_parent(cid) is False  # settled again: the parent is no longer waiting for it
