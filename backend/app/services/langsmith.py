@@ -75,8 +75,9 @@ def _iso(ts: Optional[float]) -> Optional[datetime]:
 
 
 class LangSmithService:
-    def __init__(self, settings, access, tests, workflows, runs, audit=None):
+    def __init__(self, settings, access, tests, workflows, runs, audit=None, sessions=None):
         self.settings, self.access, self.tests, self.workflows, self.runs, self.audit = settings, access, tests, workflows, runs, audit
+        self.sessions = sessions  # chat ratings sent as feedback on the run's trace (TASK-0165)
 
     # ---- the studio setting (admins) ----
     def evals_on(self) -> bool:
@@ -151,3 +152,25 @@ class LangSmithService:
         if not self.evals_enabled(): return
         try: self.push_suite(sid)
         except AppError as e: log.warning("suite %s not sent to LangSmith: %s", sid, e.code)
+
+    def on_rating(self, turn_id: str) -> None:
+        """Send one chat rating to the run's LangSmith trace (DEC-0070). A missing key, no trace, or a down
+        LangSmith leaves the rating in the studio and does not raise, so the worker does not retry it into a second feedback."""
+        if not configured() or not tracing() or self.sessions is None: return
+        rating = self.sessions.rating(turn_id)
+        if rating is None: return
+        turn = self.sessions.turn(turn_id)
+        run = self.runs.get(turn.run_id) if turn is not None and turn.run_id else None
+        if run is None or not run.trace_root: return
+        score = 1.0 if rating.value == "up" else 0.0
+        comment = rating.comment or None
+        try:
+            c = client_factory()
+            if rating.feedback_id:
+                c.update_feedback(rating.feedback_id, score=score, comment=comment)
+            else:
+                fb = c.create_feedback(run_id_of(run.trace_root), "user_rating", score=score, comment=comment)
+                fid = str(getattr(fb, "id", "") or "")
+                if fid: self.sessions.set_rating_feedback(turn_id, fid)
+        except Exception as e:  # noqa: BLE001
+            log.warning("rating %s not sent to LangSmith: %s", turn_id, type(e).__name__)

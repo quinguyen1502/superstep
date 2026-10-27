@@ -17,24 +17,43 @@ import { fmtDate } from '@/lib/i18n'
 import { useLoadWhen } from '@/lib/use-when'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { published, waitingTurn, type ChatSession, type ChatSettings } from '@/lib/chat'
+import { downShare, published, waitingTurn, type ChatSession, type ChatSettings, type RatingTotals } from '@/lib/chat'
 import { useChatRun, type ChatEndpoint, type ChatView } from './use-chat-run'
 import { ChatThread } from './chat-thread'
 import { ChatComposer } from './chat-composer'
 import { ChatSettingsDialog } from './chat-settings-dialog'
+import { TestCaseDialog, type TestCase } from '@/components/editor/editor-tests-panel'
+import { useStudioCtx } from '@/components/editor/studio-context'
 
-export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, actions }: { wid: string; active: boolean; canConfigure: boolean; dirty: boolean; compact?: boolean; actions?: React.ReactNode }) {
-  const { t } = useTranslation()
+export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact = false, actions }: { wid: string; active: boolean; canConfigure: boolean; canEdit: boolean; dirty: boolean; compact?: boolean; actions?: React.ReactNode }) {
+  const { t } = useTranslation(); const { setTab } = useStudioCtx()
   const [settings, setSettings] = useState<ChatSettings | null>(null); const [sessions, setSessions] = useState<ChatSession[]>([])
   const [sid, setSid] = useState<string | null>(null); const [view, setView] = useState<ChatView>('builder')
   const [err, setErr] = useState(''); const [cfg, setCfg] = useState(false); const [del, setDel] = useState<ChatSession | null>(null)
   const [visitors, setVisitors] = useState<ChatSession[]>([]); const [vsid, setVsid] = useState<string | null>(null)   // vsid: a visitor chat is open
+  const [downOnly, setDownOnly] = useState(false); const [totals, setTotals] = useState<RatingTotals | null>(null)
+  const [draft, setDraft] = useState<TestCase | null>(null); const [draftErr, setDraftErr] = useState('')
   const list = (pick?: string) => api<ChatSession[]>(`/api/workflows/${wid}/chat/sessions`).then(s => { setSessions(s); setSid(c => pick ?? (c && s.some(x => x.id === c) ? c : s[0]?.id ?? null)) })
-  const listVisitors = () => api<ChatSession[]>(`/api/workflows/${wid}/chat/visitors`).then(setVisitors)
+  const listVisitors = (only = downOnly) => api<ChatSession[]>(`/api/workflows/${wid}/chat/visitors${only ? '?thumbs_down=1' : ''}`).then(rows => {
+    setVisitors(rows)
+    // Keep the open chat when it is still listed. A filter that hides it moves to the first match.
+    // Filtering while a builder's own chat is open (vsid is null) does not switch to a visitor.
+    if (only) setVsid(c => c !== null && !rows.some(s => s.id === c) ? (rows[0]?.id ?? null) : c)
+  })
+  const loadTotals = () => api<RatingTotals>(`/api/workflows/${wid}/chat/ratings`).then(setTotals).catch(() => {})
+  const share = (c: RatingTotals['d7'], days: number) => t('chat.ratings.summary', { days, up: c.up, down: c.down, share: downShare(c) === null ? t('chat.ratings.noShare') : `${downShare(c)}%` })
   const visitorEp = useMemo<ChatEndpoint>(() => ({ session: id => `/api/workflows/${wid}/chat/visitors/${id}`, socket: '/ws/run' }), [wid])
   const chat = useChatRun(sid, view, () => { list().catch(() => {}) })   // titles and order change after a message
   const read = useChatRun(vsid, 'builder', undefined, visitorEp)
-  useLoadWhen(active, () => { setErr(''); api<ChatSettings>(`/api/workflows/${wid}/chat`).then(setSettings).catch(e => setErr(e.message)); list().catch(e => setErr(e.message)); listVisitors().catch(() => setVisitors([])) }, wid)
+  useLoadWhen(active, () => { setErr(''); api<ChatSettings>(`/api/workflows/${wid}/chat`).then(setSettings).catch(e => setErr(e.message)); list().catch(e => setErr(e.message)); listVisitors().catch(() => setVisitors([])); loadTotals() }, wid)
+  const rate = (turnId: string, value: 'up' | 'down' | null, comment?: string) => {
+    if (!sid) return
+    const path = `/api/chat/sessions/${sid}/turns/${turnId}/rating`
+    const req = value === null ? api(path, { method: 'DELETE' }) : api(path, { method: 'PUT', json: comment === undefined ? { value } : { value, comment } })
+    req.then(() => { chat.reload(); loadTotals() }).catch(e => setErr(e.message))
+  }
+  const saveCase = (rid: string) => api<Omit<TestCase, 'id' | 'last'>>(`/api/workflows/${wid}/tests/from-run/${rid}`, { method: 'POST' })
+    .then(d => { setDraftErr(''); setDraft({ ...d, id: '', last: null }) }).catch(e => setDraftErr(e.message))
   const showVisitors = !!settings && (published(settings) || visitors.length > 0)
   const fresh = () => api<ChatSession>(`/api/workflows/${wid}/chat/sessions`, { method: 'POST' }).then(s => list(s.id)).catch(e => setErr(e.message))
   // the first message of a new chat creates it, then goes out once the chat is loaded
@@ -57,6 +76,8 @@ export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, a
           : <span className="truncate text-xs font-medium text-muted-foreground">{t('chat.sessions')}</span>}
         {vsid === null && newChat}</div>
       <ScrollArea className="min-h-0 flex-1">{vsid !== null ? <nav className="space-y-0.5 p-2" aria-label={t('chat.visitors.tab')} id="chat-visitors">
+        <Button size="sm" variant={downOnly ? 'secondary' : 'ghost'} className="mb-1 w-full justify-start" id="chat-thumbs-down" aria-pressed={downOnly}
+          onClick={() => { const next = !downOnly; setDownOnly(next); listVisitors(next).catch(() => setVisitors([])) }}>{t('chat.visitors.thumbsDown')}</Button>
         {!visitors.length && <p className="px-2 py-1 text-xs text-muted-foreground">{t('chat.visitors.none')}</p>}
         {visitors.map(s => <button key={s.id} data-testid="chat-visitor-session" aria-current={s.id === vsid || undefined} onClick={() => setVsid(s.id)}
           className={cn('block w-full rounded-md px-2 py-1.5 text-left hover:bg-accent', s.id === vsid && 'bg-accent')}>
@@ -102,12 +123,17 @@ export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, a
               {visitors.map(s => <SelectItem key={s.id} value={`v:${s.id}`} data-testid="chat-visitor-option">{s.title || t('chat.untitled')}</SelectItem>)}</SelectGroup>}</SelectContent></Select>
           {vsid === null && newChat}</>}
         {!compact && <span className="ml-auto" />}
+        {showVisitors && compact && <Button size="sm" variant={downOnly ? 'secondary' : 'ghost'} className="px-1.5" id="chat-thumbs-down" aria-pressed={downOnly}
+          onClick={() => { const next = !downOnly; setDownOnly(next); listVisitors(next).catch(() => setVisitors([])) }}>{t('chat.visitors.thumbsDown')}</Button>}
         {canConfigure && !compact && <Tip tip={t('chat.settings.title')}><Button size="icon-sm" variant="ghost" id="chat-settings-btn" aria-label={t('chat.settings.title')} onClick={() => setCfg(true)}><Settings2 /></Button></Tip>}{actions}
       </div>
+      {totals && <p id="chat-rating-totals" className="shrink-0 truncate border-b px-3 py-1 text-xs text-muted-foreground">{share(totals.d7, 7)}{' · '}{share(totals.d30, 30)}</p>}
       {(err || chat.error) && <Alert variant="destructive" className="m-3 w-auto"><AlertCircle /><AlertDescription id="chat-error-banner">{err || chat.error}</AlertDescription></Alert>}
+      {draftErr && <Alert variant="destructive" className="m-3 w-auto"><AlertDescription>{draftErr}</AlertDescription></Alert>}
       {vsid !== null ? <><div className="flex shrink-0 items-center gap-2 border-b bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground" id="chat-visitor-readonly" role="status">
           <Eye className="size-3.5 shrink-0" /><span className="min-w-0 flex-1 truncate">{t('chat.visitors.readOnly')}</span></div>
-        {vsid ? <ChatThread turns={read.session?.turns ?? []} mode="full" events={[]} trace={read.trace} pending={null} running={false} />
+        {vsid ? <ChatThread turns={read.session?.turns ?? []} mode="full" events={[]} trace={read.trace} pending={null} running={false}
+          onSaveTest={canEdit ? saveCase : undefined} />
           : <p className="m-auto p-6 text-sm text-muted-foreground">{t('chat.visitors.none')}</p>}</>
       : off ? <div className="m-auto max-w-sm space-y-3 p-6 text-center" id="chat-off">
           <p className="text-sm text-muted-foreground">{t('chat.off')}</p>
@@ -116,12 +142,14 @@ export function ChatPanel({ wid, active, canConfigure, dirty, compact = false, a
             <Eye className="size-3.5 shrink-0" /><span className="min-w-0 flex-1 truncate">{t('chat.visitorBanner')}</span>
             <Button size="xs" variant="link" id="chat-visitor-exit" onClick={() => setView('builder')}>{t('chat.visitorExit')}</Button></div>}
           <ChatThread turns={chat.session?.turns ?? []} mode={mode} replyField={settings.reply_field} events={chat.events} trace={chat.trace}
-            pending={chat.pending} running={chat.running} onAnswer={chat.answer} /></>}
+            pending={chat.pending} running={chat.running} onAnswer={chat.answer} onRate={vsid === null ? rate : undefined}
+            onSaveTest={canEdit ? saveCase : undefined} /></>}
       {!off && vsid === null && <ChatComposer disabled={!settings || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
         placeholder={waiting ? t(waiting.answered_by === 'reviewer' ? 'chat.waitingReviewer' : 'chat.answerPlaceholder') : undefined}
         onSend={text => waiting?.run_id ? chat.answer(waiting.run_id, text) : send(text)} />}
     </div>
     <ChatSettingsDialog wid={wid} open={cfg} onOpenChange={setCfg} onSaved={setSettings} />
+    {draft && <TestCaseDialog wid={wid} value={draft} onClose={() => setDraft(null)} onSaved={() => { setDraft(null); setTab('tests') }} />}
     <AlertDialog open={!!del} onOpenChange={o => { if (!o) setDel(null) }}><AlertDialogContent>
       <AlertDialogHeader><AlertDialogTitle>{t('chat.deleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('chat.deleteBody', { title: del?.title || t('chat.untitled') })}</AlertDialogDescription></AlertDialogHeader>
       <AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>

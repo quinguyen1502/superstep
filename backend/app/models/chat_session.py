@@ -36,3 +36,18 @@ class ChatTurn(Base):
     code: Mapped[Optional[str]] = mapped_column(Text)  # the error code of a failed turn
     attachments: Mapped[Optional[str]] = mapped_column(Text)  # JSON, reserved for attachments (phase 3)
     created: Mapped[float] = mapped_column(Float, nullable=False)
+
+
+class ChatRating(Base):
+    """One thumbs up or down on a finished answer (TASK-0162, REQ-0075, DEC-0070). The turn id is the key, so a
+    second rating replaces the first."""
+    __tablename__ = "chat_ratings"
+    __table_args__ = (Index("ix_chat_ratings_workflow_updated", "workflow_id", "updated"),)
+    turn_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    session_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
+    workflow_id: Mapped[str] = mapped_column(Text, nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)  # up | down
+    comment: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    feedback_id: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")  # LangSmith, once sent
+    created: Mapped[float] = mapped_column(Float, nullable=False)
+    updated: Mapped[float] = mapped_column(Float, nullable=False)

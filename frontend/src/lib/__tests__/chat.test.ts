@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildTrace, type RunEvent } from '@/lib/trace'
-import { answers, liveReply, liveSteps, safeUrl, waitingTurn, type ChatTurn } from '@/lib/chat'
+import { answers, downShare, liveReply, liveSteps, safeUrl, waitingTurn, type ChatTurn } from '@/lib/chat'
 
 const EVENTS: RunEvent[] = [
   { type: 'run_started', run_id: 'r1' },
@@ -23,6 +23,11 @@ describe('chat (TASK-0085)', () => {
     expect(liveSteps(spans, 'none')).toEqual([])
     expect(liveSteps(spans, 'labels')).toEqual([{ node: 'bot', label: 'Bot', type: 'llm', status: 'ok' }])
     expect(liveSteps(spans, 'full')[0]).toMatchObject({ node: 'bot', duration_ms: 12, input: { q: 'hi' }, delta: { reply: 'Hello' } })
+  })
+  it('rounds the share of thumbs down', () => {
+    expect(downShare({ up: 0, down: 0 })).toBeNull()
+    expect(downShare({ up: 1, down: 1 })).toBe(50)
+    expect(downShare({ up: 1, down: 2 })).toBe(67)
   })
   it('finds the waiting turn and counts a run’s answers', () => {
     const turns: ChatTurn[] = [{ id: 'a', role: 'user', text: 'refund', created: 1 },

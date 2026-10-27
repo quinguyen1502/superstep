@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0075
-- Status: Accepted on 2026-10-27 with the CLAR-0006 answers (all recommended options). Tasks are not planned yet.
+- Status: Accepted on 2026-10-27 with the CLAR-0006 answers (all recommended options). Planned on 2026-10-27. Done on 2026-10-27, not merged (PR #204, DEC-0070, TASK-0162 to TASK-0166).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -149,6 +149,8 @@ None. CLAR-0006 is answered.
 ## Related Artifacts
 
 - `.factory-state/artifacts/CLAR-0006-chat-answer-feedback.md`
+- `.factory-state/decisions/DEC-0070-chat-answer-feedback.md`
+- TASK-0162 rating API, TASK-0163 public thumbs, TASK-0164 Chat tab, TASK-0165 LangSmith, TASK-0166 handbook
 - `.factory-state/artifacts/REQ-0074-public-chat-page.md`, `.factory-state/artifacts/REQ-0048-agent-chat.md`
 - `.factory-state/artifacts/REQ-0042-workflow-tests.md`, `.factory-state/artifacts/REQ-0050-langsmith-evals.md`
 - `.factory-state/decisions/DEC-0052-web-chat-model.md`, `.factory-state/decisions/DEC-0067-public-chat-page.md`

@@ -153,6 +153,18 @@ của khách ở chế độ chỉ xem, có đủ mọi bước, cho tới khi *
 nó. Danh sách không hiện tên hay id của khách. Khách không được báo rằng cuộc
 trò chuyện được lưu, nên hãy ghi điều đó trong lời giới thiệu nếu cần.
 
+Dưới mỗi câu trả lời đã xong, khách có thể đánh dấu hữu ích hoặc chưa hữu ích.
+Đánh dấu chưa hữu ích có thể kèm một câu ngắn về chỗ chưa đúng. Khách đổi hoặc
+bỏ đánh dấu được. Chat nhúng cũng có các nút này, vì đó chính là trang này.
+
+Trong tab Chat, người dựng thấy đánh dấu và câu nhận xét trên câu trả lời.
+**Không thích** trong danh sách Khách chỉ giữ các cuộc trò chuyện có đánh dấu
+đó. Một dòng phía trên cuộc trò chuyện cho biết số lượt thích, số lượt không
+thích, và tỷ lệ không thích, trong 7 ngày và 30 ngày gần nhất. **Lưu thành test
+case** trên câu trả lời đã được đánh dấu mở một test nháp của run đó. Khi bật
+theo dõi LangSmith, đánh dấu cũng được gửi lên trace của run dưới tên
+`user_rating`.
+
 ## Nhúng chat vào site của bạn
 
 Chat mở cho **Ai có link** cũng hiện được trên một site khác.

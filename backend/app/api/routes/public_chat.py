@@ -21,6 +21,7 @@ from ...core import config, security
 from ...core.client_ip import client_ip
 from ...core.errors import AppError
 from ...engine import locale
+from ...schemas.chat import ChatRatingIn
 from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
 from ..static import CHAT_PAGE
@@ -103,6 +104,20 @@ async def create(slug: str, request: Request, response: Response, user=Depends(m
 async def session(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); s, v = svc.get(slug, sid, token_of(request, slug), user)
     return answer(request, response, slug, s, v)
+
+
+@router.put("/{slug}/sessions/{sid}/turns/{tid}/rating")
+async def rate(slug: str, sid: str, tid: str, body: ChatRatingIn, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
+    await checked(request, svc)
+    data, v = svc.rate(slug, sid, tid, token_of(request, slug), user, body.value, body.comment)
+    return answer(request, response, slug, data, v)
+
+
+@router.delete("/{slug}/sessions/{sid}/turns/{tid}/rating")
+async def unrate(slug: str, sid: str, tid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
+    await checked(request, svc)
+    data, v = svc.unrate(slug, sid, tid, token_of(request, slug), user)
+    return answer(request, response, slug, data, v)
 
 
 @root_router.get("/api/public/chat-frame")

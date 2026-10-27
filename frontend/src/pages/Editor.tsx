@@ -53,6 +53,6 @@ function Studio() {
     <EditorLayout className="text-foreground text-sm" header={<EditorHeader />} left={<EditorPalette onAdd={mobile ? addFromPalette : undefined} />} canvas={<EditorCanvas />}
       right={<EditorConfig />} bottom={<EditorRunPanel />} rightCollapsed={narrow && !studio.selNode && !studio.selEdge}
       mobile={mobile ? { view, onView: setView, selected: !!(studio.selNode || studio.selEdge) } : undefined}
-      chat={studio.chatOpen && wid ? <ChatSidePanel wid={wid} canConfigure={studio.access === 'owner'} dirty={studio.edit && studio.isDirty()} onClose={() => studio.setChatOpen(false)} /> : undefined} />
+      chat={studio.chatOpen && wid ? <ChatSidePanel wid={wid} canConfigure={studio.access === 'owner'} canEdit={studio.edit && !studio.source} dirty={studio.edit && studio.isDirty()} onClose={() => studio.setChatOpen(false)} /> : undefined} />
   </StudioContext.Provider>
 }

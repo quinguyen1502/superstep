@@ -39,6 +39,7 @@ const SAME_OK = new Set([
   'chat.settings.enabled',
   'chat.step.input',
   'chat.step.output',
+  'chat.ratings.noShare',  // an em dash when there are no ratings, in both languages
   'chat.tab',
   'editor.mobileNav.canvas',  // glossary: canvas stays in English
   'approvals.identityPh.whatsapp',

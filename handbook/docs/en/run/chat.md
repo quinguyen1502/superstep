@@ -155,6 +155,19 @@ with every step, until **Retention** deletes it. It shows no names or visitor
 ids. Visitors are not told that chats are kept, so say so in the intro if it
 matters.
 
+Under each finished answer, the visitor can mark it helpful or not. A "not
+helpful" mark can include a short note about what went wrong. They can change
+the mark or remove it. The same controls are on the embedded chat, because
+that is this page.
+
+In the Chat tab the builder sees the mark and the note on the answer. **Thumbs
+down** in the Visitors list keeps only the chats that have one. A line above
+the conversation shows how many marks were up, how many were down, and the
+share of down, over the last 7 days and the last 30 days. **Save as test
+case** on a rated answer opens a draft test of that run. When LangSmith
+tracing is on, the mark is also sent to that run's trace as feedback named
+`user_rating`.
+
 ## Embed the chat on your site
 
 A chat open to **Anyone with the link** can also appear on another site.

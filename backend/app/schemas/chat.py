@@ -19,3 +19,9 @@ class ChatSettingsIn(BaseModel):
     daily_limit: Optional[int] = None     # visitor messages per day (UTC), 0 = no cap
     embed_origins: Optional[List[str]] = None  # sites that may embed the page (https://host[:port])
     logo: Optional[str] = None            # a data: URL (PNG, JPEG or WebP, 256 KB) sets the logo, "" removes it, its hash keeps it
+
+
+class ChatRatingIn(BaseModel):
+    """A thumbs up or down on one finished answer (DEC-0070). `comment` is only kept with a thumbs down."""
+    value: str
+    comment: Optional[str] = None
