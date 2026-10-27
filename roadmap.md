@@ -225,7 +225,7 @@ items, type-check diagnostics and full IntelliSense, stay out).
 
 REQ-0048, Accepted 2026-10-23 (owner decisions 1-6 on audience, access, memory, Human "answered by", step visibility,
 attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1, the studio Chat tab, is done. Phase 2, the
-public page `/c/{slug}`, is not started.
+public page `/c/{slug}`, is done as REQ-0074 (0.9.0).
 
 - TASK-0084 Web chat backend: chat sessions and turns (migration 0035), the `web` chat trigger with its settings, one
   `source="chat"` run per message over the run socket with the history window, reply-once answers, `node_token.field`,
@@ -307,6 +307,16 @@ This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 
 - TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
   2026-10-27. **merged** (PR #191; REV-0128, QA-0128).
 
+## Proposed (drafts, waiting on the owner)
+
+Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). Each
+has a CLAR with recommended options. None is planned into tasks yet.
+
+- REQ-0075 Thumbs up or down on chat answers, seen by builders and sent to LangSmith (CLAR-0006).
+- REQ-0076 An Agent round's tool calls run in parallel, each still checkpointed on its own (CLAR-0007).
+- REQ-0077 File attachments in the chat: documents, and images for vision models (CLAR-0008).
+- REQ-0078 Hand-off from one Agent node to another in the same workflow (CLAR-0009).
+
 ## Owner requests
 
 Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.
@@ -326,6 +336,10 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
   both locales, DEC-0065 (REQ-0045). **merged** (PR #174; REV-0116, QA-0116).
 - TASK-0146 Run trace layout: the summary bar's items no longer break mid-word, its divider stays short, and a
   workflow tool's steps sit under the tool call, ending at the duration column. **merged** (PR #193).
+- TASK-0147 The canvas marks nodes from the open run's events, so the steps a parent run takes on the server after
+  its workflow tool's child (End included) show as done (REQ-0073). **merged** (PR #198).
+- TASK-0148 A task PR moves its own task to done when the owner approves the merge (framework 338d7a8); TASK-0139 to
+  TASK-0144 link their review and QA. **merged** (PR #199).
 
 ## Releases
 

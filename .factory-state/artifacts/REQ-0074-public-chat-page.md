@@ -222,7 +222,7 @@ None. CLAR-0005 is answered.
 - `.factory-state/decisions/DEC-0053-chat-access-and-steps.md`
 - `.factory-state/decisions/DEC-0054-human-answered-by.md`
 - `.factory-state/artifacts/REQ-0073-agent-workflow-tools.md` (ships in the same release)
-- `.factory-state/tasks/doing/TASK-0139-version-0-9-0.md` (the 0.9.0 release)
+- `.factory-state/tasks/done/TASK-0139-version-0-9-0.md` (the 0.9.0 release)
 - `.factory-state/decisions/DEC-0067-public-chat-page.md`
 - Tasks: TASK-0140 to TASK-0145
 - `docs/ui-conventions.md`, `docs/backend-architecture.md`
