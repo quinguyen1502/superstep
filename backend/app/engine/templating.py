@@ -8,6 +8,7 @@ from __future__ import annotations
 import json, re
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
 from ..core.errors import AppError
+from .issues import Issue
 
 _NAME = r"[A-Za-z_][A-Za-z0-9_]*"
 _ARG = r"\"[^\"]*\"|'[^']*'|-?\d+"
@@ -65,10 +66,10 @@ def ref_errors(ref: Ref) -> List[str]:
     """Problems with a reference's filters (unknown name, missing or wrong argument)."""
     out = []
     for name, arg in ref.filters:
-        if name not in FILTERS: out.append(f"unknown filter '{name}'"); continue
+        if name not in FILTERS: out.append(Issue("FILTER_UNKNOWN", filter=name)); continue
         kind = FILTERS[name][1]
-        if kind is None and arg is not None: out.append(f"filter '{name}' takes no argument")
-        elif kind is not None and not isinstance(arg, kind): out.append(f"filter '{name}' needs a {'text' if kind is str else 'number'} argument")
+        if kind is None and arg is not None: out.append(Issue("FILTER_NO_ARGUMENT", filter=name))
+        elif kind is not None and not isinstance(arg, kind): out.append(Issue("FILTER_NEEDS_TEXT" if kind is str else "FILTER_NEEDS_NUMBER", filter=name))
     return out
 
 

@@ -8,4 +8,45 @@ enabled_tools:
 - grok
 protect_factory_assets: false
 validate_on_stop: false
-commands: {}
+commands:
+  backend-test:
+    command: .venv/bin/python -m pytest
+    evidence: Expected
+    cwd: backend
+    kind: test
+    timeout: 900
+  frontend-build:
+    command: npm run build
+    evidence: Expected
+    cwd: frontend
+    kind: build
+  frontend-lint:
+    command: npm run lint
+    evidence: Expected
+    cwd: frontend
+    kind: lint
+  frontend-test:
+    command: npm run test
+    evidence: Expected
+    cwd: frontend
+    kind: test
+  sdk-python-test:
+    command: .venv/bin/python -m pytest
+    evidence: Expected
+    cwd: sdk/python
+    kind: test
+  sdk-typescript-build:
+    command: npm run build
+    evidence: Expected
+    cwd: sdk/typescript
+    kind: build
+  sdk-typescript-test:
+    command: npm run test
+    evidence: Expected
+    cwd: sdk/typescript
+    kind: test
+  sdk-typescript-typecheck:
+    command: npm run typecheck
+    evidence: Expected
+    cwd: sdk/typescript
+    kind: typecheck

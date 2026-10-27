@@ -1,18 +1,24 @@
-/** A workflow's Chat settings (TASK-0085, REQ-0048): on/off, who may chat (studio now; anonymous and signed-in are
- *  reserved), the input / reply / messages fields, the memory window, which steps visitors see and how long chats are kept. */
-import { useState } from 'react'
+/** A workflow's Chat settings (TASK-0085, REQ-0048): on/off, who may chat, the input / reply / messages fields, the memory
+ *  window, which steps visitors see and how long chats are kept. Anyone with the link or signed-in users publish the chat
+ *  at /c/{slug} (TASK-0142, DEC-0067): its address, title, intro, suggested messages and daily limit. An anonymous chat
+ *  can be embedded (TASK-0143): the sites allowed to frame it, and an iframe and a widget snippet to copy. Its logo
+ *  (TASK-0145) is read here and goes with Save as a data: URL; Remove clears it on Save too. */
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, Save } from 'lucide-react'
+import { AlertCircle, Check, Copy, ExternalLink, ImageUp, Plus, Save, Trash2, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
+import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { api, ApiError } from '@/lib/api'
-import { ACCESS, ACCESS_RESERVED, STEPS, type ChatSettings } from '@/lib/chat'
+import { ACCESS, iframeSnippet, LOGO_MAX_KB, LOGO_TYPES, logoUrl, MAX_SUGGESTIONS, pageUrl, published, STEPS, widgetSnippet, type ChatSettings } from '@/lib/chat'
+import { ChatLogo } from '@/components/chat/chat-logo'
 import { useLoadWhen } from '@/lib/use-when'
 
 type Field = { name: string; type: string }
@@ -27,10 +33,17 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
       .then(([s, wf]) => { setV(s); setFields(wf.state || []) }).catch(e => setErr(e.message))
   })
   const set = (p: Partial<ChatSettings>) => setV(x => x && { ...x, ...p })
+  const file = useRef<HTMLInputElement>(null)
+  const pickLogo = (f?: File) => { if (!f) return
+    if (!LOGO_TYPES.includes(f.type) || f.size > LOGO_MAX_KB * 1024) { setErr(t('errors.CHAT_LOGO_INVALID', { max_kb: LOGO_MAX_KB })); setBad('logo'); return }
+    const r = new FileReader(); r.onload = () => { setErr(''); setBad(''); set({ logo: String(r.result) }) }; r.readAsDataURL(f) }
   const save = () => { if (!v) return; setBusy(true); setErr(''); setBad('')
-    const { slug: _slug, ...body } = v
+    const body = { ...v, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean), embed_origins: v.embed_origins.map(x => x.trim()).filter(Boolean) }
     api<ChatSettings>(`/api/workflows/${wid}/chat`, { method: 'PUT', json: body }).then(s => { setV(s); onSaved?.(s); onOpenChange(false) })
-      .catch(e => { setErr(e.message); if (e instanceof ApiError) setBad(e.details?.field ?? '') }).finally(() => setBusy(false)) }
+      .catch(e => { setErr(e.message); if (e instanceof ApiError) setBad(e.code?.startsWith('CHAT_SLUG') ? 'slug' : e.code === 'CHAT_EMBED_ORIGIN_INVALID' ? 'embed_origins' : e.code === 'CHAT_LOGO_INVALID' ? 'logo' : e.details?.field ?? '') }).finally(() => setBusy(false)) }
+  const [copied, setCopied] = useState('')
+  const copy = (what: string, text: string) => navigator.clipboard.writeText(text).then(() => { setCopied(what); setTimeout(() => setCopied(''), 2000) }).catch(() => {})
+  const snippet = (s: ChatSettings) => ({ iframe: iframeSnippet(s.slug), widget: widgetSnippet(s.slug) })
   const names = (pred: (f: Field) => boolean) => fields.filter(pred).map(f => f.name)
   const pick = (id: keyof ChatSettings, opts: string[], none = false) => <Select value={(v?.[id] as string) || (none ? NONE : '')} onValueChange={x => set({ [id]: x === NONE ? '' : x } as any)}>
     <SelectTrigger className="w-full" id={`chat-${id}`} aria-invalid={bad === id || undefined}><SelectValue placeholder={t('chat.settings.pickField')} /></SelectTrigger>
@@ -47,8 +60,44 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
           <Switch id="chat-enabled" checked={v.enabled} onCheckedChange={enabled => set({ enabled })} /></div>
         {row('access', t('chat.settings.access'), t('chat.settings.accessHint'), <Select value={v.access} onValueChange={access => set({ access })}>
           <SelectTrigger className="w-full" id="chat-access"><SelectValue /></SelectTrigger>
-          <SelectContent>{ACCESS.map(a => <SelectItem key={a} value={a}>{t(`chat.access.${a}`)}</SelectItem>)}
-            {ACCESS_RESERVED.map(a => <SelectItem key={a} value={a} disabled>{t(`chat.access.${a}`)} <Badge variant="secondary" className="ml-1">{t('chat.settings.later')}</Badge></SelectItem>)}</SelectContent></Select>)}
+          <SelectContent>{ACCESS.map(a => <SelectItem key={a} value={a}>{t(`chat.access.${a}`)}</SelectItem>)}</SelectContent></Select>)}
+        {v.access !== 'studio' && <div className="grid gap-4 rounded-lg border p-3" id="chat-publish">
+          {row('slug', t('chat.publish.slug'), t('chat.publish.slugHint'), <InputGroup aria-invalid={bad === 'slug' || undefined}>
+            <InputGroupAddon><InputGroupText>/c/</InputGroupText></InputGroupAddon>
+            <InputGroupInput id="chat-slug" value={v.slug} aria-invalid={bad === 'slug' || undefined} onChange={e => set({ slug: e.target.value.toLowerCase() })} /></InputGroup>)}
+          {published(v) && <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" id="chat-copy-link" onClick={() => copy('link', pageUrl(v.slug))}>{copied === 'link' ? <Check /> : <Copy />}{t(copied === 'link' ? 'chat.copied' : 'chat.publish.copyLink')}</Button>
+            <Button size="sm" variant="outline" id="chat-open-page" asChild><a href={pageUrl(v.slug)} target="_blank" rel="noreferrer"><ExternalLink />{t('chat.publish.openPage')}</a></Button></div>}
+          {!v.enabled && <p className="text-xs text-muted-foreground" id="chat-publish-off">{t('chat.publish.off')}</p>}
+          <Separator />
+          {row('title', t('chat.publish.title'), t('chat.publish.titleHint'), <Input id="chat-title" maxLength={60} aria-invalid={bad === 'title' || undefined} value={v.title} onChange={e => set({ title: e.target.value })} />)}
+          <div className="grid gap-1.5" id="chat-logo"><Label htmlFor="chat-logo-file">{t('chat.publish.logo')}</Label>
+            <div className="flex items-center gap-3">
+              <ChatLogo src={logoUrl(wid ?? '', v.logo)} title={v.title || v.slug} className="size-12 rounded-xl" id="chat-logo-preview" />
+              <input ref={file} id="chat-logo-file" type="file" accept={LOGO_TYPES.join(',')} className="sr-only" aria-invalid={bad === 'logo' || undefined}
+                onChange={e => { pickLogo(e.target.files?.[0]); e.target.value = '' }} />
+              <Button size="sm" variant="outline" id="chat-logo-upload" onClick={() => file.current?.click()}><ImageUp />{t(v.logo ? 'chat.publish.changeLogo' : 'chat.publish.uploadLogo')}</Button>
+              {v.logo && <Button size="sm" variant="ghost" id="chat-logo-remove" onClick={() => set({ logo: '' })}><Trash2 />{t('chat.publish.removeLogo')}</Button>}</div>
+            <p className="text-xs text-muted-foreground">{t('chat.publish.logoHint', { max_kb: LOGO_MAX_KB })}</p></div>
+          {row('intro', t('chat.publish.intro'), t('chat.publish.introHint'), <Textarea id="chat-intro" rows={3} maxLength={1000} aria-invalid={bad === 'intro' || undefined} value={v.intro} onChange={e => set({ intro: e.target.value })} />)}
+          <div className="grid gap-1.5"><Label>{t('chat.publish.suggestions')}</Label>
+            {v.suggestions.map((x, i) => <div key={i} className="flex gap-2">
+              <Input id={`chat-suggestion-${i}`} maxLength={120} aria-label={t('chat.publish.suggestion', { n: i + 1 })} aria-invalid={bad === 'suggestions' || undefined} value={x}
+                onChange={e => set({ suggestions: v.suggestions.map((y, j) => j === i ? e.target.value : y) })} />
+              <Button size="icon" variant="ghost" aria-label={t('chat.publish.removeSuggestion')} onClick={() => set({ suggestions: v.suggestions.filter((_, j) => j !== i) })}><X /></Button></div>)}
+            {v.suggestions.length < MAX_SUGGESTIONS && <Button size="sm" variant="ghost" className="justify-self-start" id="chat-add-suggestion" onClick={() => set({ suggestions: [...v.suggestions, ''] })}><Plus />{t('chat.publish.addSuggestion')}</Button>}
+            <p className="text-xs text-muted-foreground">{t('chat.publish.suggestionsHint')}</p></div>
+          {row('daily_limit', t('chat.publish.dailyLimit'), t('chat.publish.dailyLimitHint'), <Input id="chat-daily_limit" type="number" min={0} max={100000}
+            aria-invalid={bad === 'daily_limit' || undefined} value={v.daily_limit} onChange={e => set({ daily_limit: Number(e.target.value) })} />)}
+          {v.access === 'anonymous' && <><Separator />
+            {row('embed_origins', t('chat.embed.origins'), t('chat.embed.originsHint'), <Textarea id="chat-embed_origins" rows={2} placeholder="https://www.example.com"
+              aria-invalid={bad === 'embed_origins' || undefined} value={v.embed_origins.join('\n')} onChange={e => set({ embed_origins: e.target.value.split('\n') })} />)}
+            {published(v) && v.embed_origins.some(x => x.trim()) && (['widget', 'iframe'] as const).map(k => <div key={k} className="grid gap-1.5" id={`chat-snippet-${k}`}>
+              <div className="flex items-center justify-between gap-2"><Label htmlFor={`chat-snippet-${k}-code`}>{t(`chat.embed.${k}`)}</Label>
+                <Button size="xs" variant="ghost" id={`chat-copy-${k}`} onClick={() => copy(k, snippet(v)[k])}>{copied === k ? <Check /> : <Copy />}{t(copied === k ? 'chat.copied' : 'chat.copy')}</Button></div>
+              <Textarea id={`chat-snippet-${k}-code`} readOnly rows={2} className="font-mono text-xs" value={snippet(v)[k]} onFocus={e => e.currentTarget.select()} />
+              <p className="text-xs text-muted-foreground">{t(`chat.embed.${k}Hint`)}</p></div>)}</>}
+        </div>}
         <div className="grid grid-cols-2 gap-3">
           {row('input_field', t('chat.settings.inputField'), null, pick('input_field', names(f => f.type === 'string' || f.type === 'list')))}
           {row('reply_field', t('chat.settings.replyField'), null, pick('reply_field', names(() => true)))}

@@ -34,9 +34,10 @@ class RunMetrics(BaseModel):
 
 
 class RunWaiting(BaseModel):
-    """Set when status is `waiting`: the Human node the run is paused at."""
+    """Set when status is `waiting`: the Human node the run is paused at, or the child run of a workflow tool it waits for."""
     node: Optional[str] = None
     prompt: Optional[str] = None
+    child_run_id: Optional[str] = Field(None, description="Set while an Agent node's workflow tool runs: the child run the run waits for.")
 
 
 class RunResult(BaseModel):
@@ -51,6 +52,7 @@ class RunResult(BaseModel):
     final_state: Optional[dict[str, Any]] = Field(None, description="State at the end; set once the run has finished.")
     error: Optional[Any] = Field(None, description="The last error event of a failed run (an object with `code` and `message`).")
     waiting: Optional[RunWaiting] = None
+    parent_run_id: Optional[str] = Field(None, description="Set on the child run of a workflow tool: the run whose Agent node called it.")
     metrics: Optional[RunMetrics] = None
     trace_url: Optional[str] = None
     started: Optional[float] = Field(None, description="Unix time (seconds).")

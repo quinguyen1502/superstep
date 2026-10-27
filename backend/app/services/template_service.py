@@ -78,7 +78,14 @@ class TemplateService:
 
     def use(self, tid: str, uid: str, name: str | None = None) -> dict:
         tname, _, graph = self._load(tid, uid)
-        wf = self.workflows.save({**T.sanitize(graph), "name": name or tname}, uid)  # new id, unique name, WORKFLOWS_CREATE check
+        graph = T.sanitize(graph)
+        helpers = next((b.get("helpers") or [] for b in T.BUILTINS if b["id"] == tid), [])
+        if helpers:  # the workflows its Agent tools call are created first (TASK-0137)
+            ids = {h["key"]: self.workflows.save({**T.sanitize(h["workflow"]), "name": f"{name or tname} · {h['name']}"}, uid)["id"] for h in helpers}
+            for n in graph["nodes"]:
+                for t in (n.get("data") or {}).get("tools") or []:
+                    if isinstance(t, dict) and t.get("helper") in ids: t["workflow_id"] = ids[t.pop("helper")]
+        wf = self.workflows.save({**graph, "name": name or tname}, uid)  # new id, unique name, WORKFLOWS_CREATE check
         cases = next((b["tests"] for b in T.BUILTINS if b["id"] == tid), [])
         for case in cases[:config.test_cases_max()] if self.tests else []: self.tests().create(wf["id"], uid, case)
         return wf

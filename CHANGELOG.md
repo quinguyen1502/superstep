@@ -2,6 +2,80 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## Unreleased
+
+## 0.9.0 (2026-10-27)
+
+### Added
+
+- **Workflows as Agent tools** (REQ-0073, TASK-0133 to TASK-0138). An Agent node can list another saved workflow as a
+  tool, "Another workflow" in its tool menu: pick the workflow, the state fields the model fills and the fields it gets
+  back. A workflow with its own Agent node is then a specialist agent, and the calling Agent its supervisor.
+  - Each call runs as a child run of the workflow's latest saved version, linked to the calling run, which waits for
+    it. A restart repeats neither the child nor its finished steps.
+  - An approval inside the child appears on the Approvals page and in the channels with both workflow names
+    ("Support team › Refund desk").
+  - The trace shows the child's steps under the tool call. A child run says who called it.
+  - Cycles and more than 5 levels of workflow tools and subgraphs are refused when saving.
+  - The Python, LangGraph project and TypeScript exports write the called workflow as its own graph.
+  - A new **Support team** template creates a supervisor and its Order desk and Refund desk workflows.
+  - API: `GET /api/runs/{id}`; the public run result has `parent_run_id` and `waiting.child_run_id`.
+  - New error code `WORKFLOW_TOOL_TOO_DEEP`.
+
+- **Public chat page** (REQ-0074, TASK-0140 to TASK-0145; phase 2 of the web chat). Set **Who can chat** to *Anyone
+  with the link* or *Signed-in users* and the chat gets its own page at `/c/<address>`, for people who never open the
+  studio.
+  - Chat settings: the page address, title, a Markdown intro, up to four suggested messages, and messages per day
+    (500 by default), with Copy link and Open page.
+  - Anonymous visitors are remembered by an HttpOnly cookie and see only their own chats. Signed-in chats send a
+    visitor to the sign-in page and back. Each message runs the saved workflow as its owner, and the page shows only
+    the steps the Chat settings allow.
+  - Limits per visitor and per IP address (`STUDIO_PUBLIC_CHAT_RATE_VISITOR`, `_IP`, `_READ`, `_WINDOW`), plus the
+    chat's daily cap.
+  - The Chat panel lists **Visitors**' chats read-only.
+  - A **logo** (PNG, JPEG or WebP, up to 256 KB) for the page header, the welcome and the browser tab. Without one,
+    the page shows the title's first letter and a picture.
+  - **Embed**: list the sites that may embed the chat, then paste the **chat bubble** (`/c/widget.js`, a round button
+    that opens the chat and keeps the visitor's chats in every browser) or a plain **frame**.
+  - API: `/api/public/chat/{slug}` (page, sessions, logo), `WS /ws/public/chat/{slug}`, `/api/public/chat-frame`, and
+    `GET /api/workflows/{wid}/chat/visitors`.
+  - New error codes `CHAT_NOT_PUBLISHED`, `CHAT_SLUG_INVALID`, `CHAT_SLUG_TAKEN`, `CHAT_SIGN_IN_REQUIRED`,
+    `CHAT_DAILY_LIMIT`, `CHAT_EMBED_ORIGIN_INVALID`, `CHAT_LOGO_INVALID` and `CHAT_LOGO_NOT_FOUND`.
+
+### Changed
+
+- **The studio refuses to be framed** (TASK-0143). Every page sends `X-Frame-Options: DENY` and
+  `Content-Security-Policy: frame-ancestors 'none'`, in Compose (nginx) and in the all-in-one image. Only a published
+  chat page may be framed, by the sites listed in its Chat settings.
+
+- **Workflow checks in Vietnamese** (TASK-0132). The editor shows the problems found when you save, open a template or
+  run (a missing knowledge base, a node with no outgoing edge, a loop without a Condition…) in the UI language.
+  `POST /api/validate`, saving a workflow and using a template now also return `issues`, the code of each message in
+  `errors`; a run's `error` event carries them too. `errors` is unchanged.
+
+### Fixed
+
+- **Run trace layout** (TASK-0146). The summary bar's items ("66 ms", "36 tokens") no longer break in two on a narrow
+  panel, its divider is as tall as the text, and a workflow tool's steps sit under the tool call, lined up with the
+  duration column.
+- **Workflow list rows are tidier.** The access badge ("Can view") sits next to the name, and the owner shows as plain
+  text after the id ("demo-approval · Shared by …") instead of a badge that ran under the Last run column. On a phone
+  the Last run column gives way to a third line under the name.
+- **Phone layout fixes.** Dialogs (Share, Version history, delete confirmations) stay inside the screen with long
+  emails or names, and Version history stacks the list above the diff. The Code tab's toolbar wraps
+  instead of pushing the page sideways. The new knowledge base form fits its card. On My accounts the Link & send code,
+  Verify and Resend buttons match the input height. The user menu shows a long email in full.
+- **Adding nodes on a phone.** Each Node palette card has an **Add** button; a tap on the card still works. Start and
+  End now add too, as a drag does on desktop; before, a tap on them did nothing. The first card's top border is no
+  longer cut off by the scroll area.
+- **Demo banner in the phone editor** sits above the tab bar instead of covering it.
+- **Viewers no longer see create buttons they cannot use.** The Knowledge bases tab is hidden for roles without
+  `resources.manage` (an old link opens Profile), and so is "Add MCP server"; the API already refused both.
+- **Public demo.** A visitor's Share dialog lists only the owner and the visitor's own row, so visitors no longer see
+  each other's accounts. My accounts, the password form and the notification settings say changes are off in the demo
+  and are disabled, and the language is kept in the browser instead of being sent to a server that refuses it;
+  `GET /api/me` has a new `read_only` flag for that.
+
 ## 0.8.0 (2026-10-26)
 
 ### Added

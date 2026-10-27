@@ -87,6 +87,15 @@ CATALOG: dict[str, tuple[int, str]] = {
     "CHAT_MESSAGE_TOO_LONG": (400, "The message is longer than {max} characters"),
     "CHAT_RUN_WAITING": (409, "Answer the question in the chat first"),
     "CHAT_ANSWER_BY_REVIEWER": (409, "A reviewer answers this step in the Approvals inbox"),
+    # the published chat page (TASK-0140, DEC-0067)
+    "CHAT_NOT_PUBLISHED": (404, "This chat is not available"),
+    "CHAT_SLUG_INVALID": (400, "The chat address must be 3 to 64 lowercase letters, digits or hyphens"),
+    "CHAT_SLUG_TAKEN": (409, "Another chat already uses the address '{slug}'"),
+    "CHAT_SIGN_IN_REQUIRED": (401, "Sign in to use this chat"),
+    "CHAT_DAILY_LIMIT": (429, "This chat has used its messages for today. Try again tomorrow"),
+    "CHAT_EMBED_ORIGIN_INVALID": (400, "'{origin}' is not a site address like https://example.com"),
+    "CHAT_LOGO_INVALID": (400, "The logo must be a PNG, JPEG or WebP image of at most {max_kb} KB"),
+    "CHAT_LOGO_NOT_FOUND": (404, "This chat has no logo"),
     # workflow tests (TASK-0067)
     "TEST_NOT_FOUND": (404, "Test case not found"),
     "TEST_CASE_INVALID": (400, "Test case: {reason}"),
@@ -199,6 +208,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "MODEL_NOT_FOUND": (400, "{provider} has no model named {model}"),
     "PROVIDER_EMBEDDINGS_UNSUPPORTED": (400, "{provider} does not provide embeddings; choose another credential for this knowledge base"),
     "AGENT_TOOLS_UNSUPPORTED": (400, "{provider} cannot call tools; choose a credential with tool calling for this Agent node"),
+    "WORKFLOW_TOOL_TOO_DEEP": (400, "Workflow tools nest more than {max} runs deep; this call was not started"),
     "KB_EMBEDDING_DIMENSION_MISMATCH": (409, "The embedding model returns {got}-dimensional vectors but this knowledge base stores {expected}-dimensional ones; re-index the knowledge base"),
     "CREDENTIAL_HEADER_UNSUPPORTED": (400, "{provider} does not accept the header {header}"),
     # Send email nodes and SMTP credentials (TASK-0051)

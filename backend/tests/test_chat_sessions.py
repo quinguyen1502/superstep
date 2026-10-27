@@ -48,17 +48,17 @@ def wait_turns(tok, sid, n, view="builder"):
     raise AssertionError(f"timed out: {turns(tok, sid, view)}")
 
 
-def test_settings_defaults_validation_and_reserved_access():
+def test_settings_defaults_and_validation():
     tok = user(); wid = c.post("/api/workflows", json=ECHO, headers=H(tok)).json()["data"]["id"]
     d = c.get(f"/api/workflows/{wid}/chat", headers=H(tok)).json()["data"]
     assert d == {"enabled": False, "slug": wid.lower(), "input_field": "message", "reply_field": "reply", "access": "studio",
-                 "messages_field": "messages", "max_turns": 10, "steps": "labels", "retention_days": 30}
+                 "messages_field": "messages", "max_turns": 10, "steps": "labels", "retention_days": 30,
+                 "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": ""}
     assert c.post(f"/api/workflows/{wid}/chat/sessions", headers=H(tok)).json()["error"]["code"] == "CHAT_NOT_ENABLED"
     for body, field in [({"steps": "all"}, "steps"), ({"max_turns": 0}, "max_turns"), ({"retention_days": 99999}, "retention_days"),
                         ({"messages_field": "reply"}, "messages_field"), ({"input_field": "nope"}, "input_field")]:
         e = c.put(f"/api/workflows/{wid}/chat", json=body, headers=H(tok)).json()["error"]
         assert (e["code"], e["details"]["field"]) == ("CHAT_SETTINGS_INVALID", field), e
-    assert c.put(f"/api/workflows/{wid}/chat", json={"access": "anonymous"}, headers=H(tok)).json()["error"]["code"] == "CHAT_ACCESS_NOT_AVAILABLE"
     d = c.put(f"/api/workflows/{wid}/chat", json={"enabled": True, "steps": "none", "max_turns": 3}, headers=H(tok)).json()["data"]
     assert (d["enabled"], d["steps"], d["max_turns"]) == (True, "none", 3)
     assert c.get(f"/api/workflows/{wid}/chat-triggers", headers=H(tok)).json()["data"] == []  # the web chat is not a Slack/Telegram trigger

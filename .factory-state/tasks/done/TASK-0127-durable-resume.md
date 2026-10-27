@@ -59,3 +59,8 @@ takes its resume job (owner request in chat on 2026-10-26: "Làm thêm phần r�
 - Without the recovery change: 3 of the new unit tests fail and the real-server test ends `waiting`; with it,
   all pass.
 - Full backend `pytest`: 722 passed, 56 skipped.
+
+## Review And QA
+
+- Review: REV-0115, QA: QA-0115. Both were written after the merge, by TASK-0129 on 2026-10-26: the PR was merged on CI and the
+  validation above, without them.

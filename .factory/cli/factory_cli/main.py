@@ -1,42 +1,26 @@
 from __future__ import annotations
 
 import argparse
-import difflib
-import shutil
 import sys
 from hashlib import sha256
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .adapters import detect_tools
-from .clarification import load_clarification, resolve_clarification, save_clarification
-from .configuration import (
-    ConfigurationError,
-    ConfigurationOutput,
-    ConfigurationPlan,
-    apply_configuration_plan,
-    configuration_problems,
-    create_configuration_plan,
-)
 from .constants import (
     GC_DEFAULT_KEEP,
-    INTAKE_ROOT,
     PROJECT_PRESET_IDS,
     TASK_STATES,
     TOOL_IDS,
     TOOL_KIT_LEVELS,
-    TOOL_POLICY_PATH,
-    USAGE_SCOPES,
+    VERIFICATION_KINDS,
 )
-from . import metrics, registry
-from .storage import StoreError, open_store
+from .storage import StoreError
 from .dependencies import (
     DependencyError,
     DependencyPlan,
     apply_dependency_plan,
     create_dependency_plan,
     dependency_problems,
-    render_dependency_review,
 )
 from .guidance import apply_project_preset, refinement_headings
 from .intake import (
@@ -50,7 +34,6 @@ from .readiness import inspect_readiness, render_readiness
 from .project import (
     FactoryError,
     apply_import,
-    build_config,
     framework_root,
     initialize_project,
     load_config,
@@ -58,22 +41,10 @@ from .project import (
     plan_import,
     publish_specs,
     refine_specs,
-    render_project_files,
     validate_factory_source,
     validate_project_name,
 )
-from .renderers import render_confidence_review, render_project_specs
-from .scaffold import (
-    ScaffoldAction,
-    ScaffoldError,
-    ScaffoldOutput,
-    ScaffoldPublishPlan,
-    apply_scaffold_plan,
-    create_scaffold_plan,
-    default_scaffold_registry,
-    scaffold_problems,
-    stage_scaffold,
-)
+from .renderers import render_project_specs
 from .skills import (
     SkillError,
     apply_plan as apply_skills_plan,
@@ -84,22 +55,6 @@ from .spec_sections import changed_sections, merge_sections
 from .ids import configure_ids_parser, run_ids
 from .gc import run_gc
 from .tasks import archive_tasks, create_task, move_task
-from .tui import (
-    BoardApp,
-    ClarificationApp,
-    DashboardApp,
-    DraftReviewApp,
-    ImportReviewApp,
-    ProjectsApp,
-    ProjectWizardApp,
-    RefinementConfigApp,
-    RefinementApp,
-    ReviewApp,
-    SectionReviewApp,
-    ScaffoldReviewApp,
-    ToolingConfigApp,
-    ToolingReviewApp,
-)
 from .tooling import (
     apply_tooling_plan,
     default_tool_policy,
@@ -113,18 +68,8 @@ from .tooling import (
 from .verification import (
     VerificationError,
     create_verification_plan,
-    render_verification_review,
     run_verification_plan,
     verification_problems,
-)
-from .orchestrator import (
-    OrchestratorError,
-    apply_orchestrator_plan,
-    cleanup_worktrees,
-    create_orchestrator_plan,
-    load_state,
-    orchestrator_problems,
-    render_orchestrator_review,
 )
 from .validation import validate_project
 
@@ -132,50 +77,26 @@ from .validation import validate_project
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
     raw_argv = list(sys.argv[1:] if argv is None else argv)
-    if not raw_argv and is_interactive():
-        # Bare `factory` in a TTY drops into the interactive shell; keep the
-        # help path for non-interactive contexts below.
-        raw_argv = ["shell"]
     args = parser.parse_args(raw_argv)
     try:
-        if args.command == "shell":
-            return handle_shell(args, parser)
         if args.command == "init":
             return handle_init(args)
         if args.command == "import":
             return handle_import(args)
         if args.command == "specs":
             return handle_specs(args)
-        if args.command == "clarify":
-            return handle_clarify(args)
         if args.command == "validate":
             return validate_project(Path(args.project_dir).resolve())
         if args.command == "ready":
             return handle_ready(args)
         if args.command == "tools":
             return handle_tools(args)
-        if args.command == "scaffold":
-            return handle_scaffold(args)
         if args.command == "deps":
             return handle_dependencies(args)
         if args.command == "verify":
             return handle_verification(args)
-        if args.command == "stack":
-            return handle_stack_configuration(args)
         if args.command == "skills":
             return handle_skills(args)
-        if args.command == "orchestrate":
-            return handle_orchestrate(args)
-        if args.command == "projects":
-            return handle_projects(args)
-        if args.command == "board":
-            return handle_board(args)
-        if args.command == "usage":
-            return handle_usage(args)
-        if args.command == "budget":
-            return handle_budget(args)
-        if args.command == "dashboard":
-            return handle_dashboard(args)
         if args.command == "ids":
             return run_ids(args)
         if args.command == "gc":
@@ -184,6 +105,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                 keep=args.keep,
                 with_artifacts=args.with_artifacts,
                 apply=args.apply,
+                with_tasks=args.with_tasks,
+                with_runs=args.with_runs,
             )
         if args.command == "task":
             if args.task_command == "create":
@@ -206,11 +129,9 @@ def main(argv: Optional[List[str]] = None) -> int:
                     task_id=args.task_id,
                 )
     except (
-        ConfigurationError,
         FactoryError,
         DependencyError,
         VerificationError,
-        OrchestratorError,
         SkillError,
         StoreError,
     ) as exc:
@@ -294,11 +215,11 @@ def build_parser() -> argparse.ArgumentParser:
     specs.add_argument("-C", "--project-dir", default=".")
     specs.add_argument("--refiner", choices=TOOL_IDS)
     specs.add_argument("--no-ai", action="store_true")
-    specs.add_argument("--no-interactive", action="store_true")
-
-    clarify = subcommands.add_parser("clarify", help="Answer one clarification artifact.")
-    clarify.add_argument("identifier", help="Clarification ID or artifact path.")
-    clarify.add_argument("-C", "--project-dir", default=".")
+    specs.add_argument(
+        "--no-interactive",
+        action="store_true",
+        help="Accepted for compatibility. Specs always publish without a prompt.",
+    )
 
     validate = subcommands.add_parser("validate", help="Validate a project repository structure.")
     validate.add_argument("project_dir", nargs="?", default=".")
@@ -308,23 +229,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Check whether a project is ready for implementation task work.",
     )
     ready.add_argument("-C", "--project-dir", default=".")
-
-    scaffold = subcommands.add_parser(
-        "scaffold", help="Plan, apply, or validate source scaffolding."
-    )
-    scaffold_subcommands = scaffold.add_subparsers(dest="scaffold_command")
-    for command, help_text in (
-        ("plan", "Preview adapters, commands, and expected source paths."),
-        ("apply", "Run approved adapters in staging and publish reviewed output."),
-        ("validate", "Validate managed scaffold output and source decisions."),
-    ):
-        scaffold_command = scaffold_subcommands.add_parser(command, help=help_text)
-        scaffold_command.add_argument("-C", "--project-dir", default=".")
-        if command == "apply":
-            dependency_mode = scaffold_command.add_mutually_exclusive_group()
-            dependency_mode.add_argument("--with-deps", action="store_true")
-            dependency_mode.add_argument("--skip-deps", action="store_true")
-            scaffold_command.add_argument("--allow-network", action="store_true")
 
     deps = subcommands.add_parser(
         "deps", help="Plan, install, or validate project-local dependencies."
@@ -345,8 +249,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_subcommands = verify.add_subparsers(dest="verify_command")
     for command, help_text in (
-        ("plan", "Preview deterministic project validation checks."),
-        ("run", "Run reviewed checks and record verification evidence."),
+        ("plan", "Preview the verification commands that would run."),
+        ("run", "Run verification commands and record the result."),
         ("validate", "Validate the latest verification evidence."),
     ):
         verify_command = verify_subcommands.add_parser(command, help=help_text)
@@ -358,21 +262,20 @@ def build_parser() -> argparse.ArgumentParser:
             verify_command.add_argument(
                 "--check",
                 action="append",
-                choices=("check", "test", "lint", "typecheck", "build"),
+                choices=VERIFICATION_KINDS,
                 default=[],
             )
-
-    stack = subcommands.add_parser(
-        "stack", help="Plan, apply, or validate approved stack configuration."
-    )
-    stack_subcommands = stack.add_subparsers(dest="stack_command")
-    for command, help_text in (
-        ("plan", "Preview configuration derived from Approved stack choices."),
-        ("apply", "Publish reviewed stack configuration without overwriting conflicts."),
-        ("validate", "Validate managed stack configuration and decision drift."),
-    ):
-        stack_command = stack_subcommands.add_parser(command, help=help_text)
-        stack_command.add_argument("-C", "--project-dir", default=".")
+        if command == "run":
+            verify_command.add_argument(
+                "--timeout",
+                type=_positive_seconds,
+                default=None,
+                metavar="SECONDS",
+                help=(
+                    "Time limit for each command without its own `timeout` in "
+                    "tool-policy.yaml (default 300)."
+                ),
+            )
 
     skills = subcommands.add_parser(
         "skills",
@@ -415,7 +318,7 @@ def build_parser() -> argparse.ArgumentParser:
             tools_command.add_argument(
                 "--no-interactive",
                 action="store_true",
-                help="Write policy from flags (or the current/default policy) without the TUI.",
+                help="Accepted for compatibility. Configure always publishes without a prompt.",
             )
             tools_command.add_argument("--level", choices=TOOL_KIT_LEVELS)
             tools_command.add_argument("--status", choices=("proposed", "approved"))
@@ -444,31 +347,6 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Merge a named validation command. Repeatable.",
             )
 
-    orchestrate = subcommands.add_parser(
-        "orchestrate",
-        help="Dispatch todo tasks to multiple AI tools in parallel git worktrees.",
-    )
-    orchestrate_subcommands = orchestrate.add_subparsers(dest="orchestrate_command")
-    for command, help_text in (
-        ("plan", "Preview task-to-tool assignments and worktree layout."),
-        ("run", "Create worktrees, write briefs, and move tasks to doing."),
-        ("status", "Show recorded orchestration worktrees and tools."),
-        ("validate", "Validate orchestration state against live worktrees."),
-        ("cleanup", "Remove clean factory-created worktrees and prune state."),
-    ):
-        orchestrate_command = orchestrate_subcommands.add_parser(command, help=help_text)
-        orchestrate_command.add_argument("-C", "--project-dir", default=".")
-        orchestrate_command.add_argument(
-            "--tool", action="append", choices=TOOL_IDS, dest="tools"
-        )
-        if command in {"plan", "run"}:
-            orchestrate_command.add_argument("--max-parallel", type=int, default=None)
-        if command == "run":
-            orchestrate_command.add_argument("--launch", action="store_true")
-            orchestrate_command.add_argument("--yes", action="store_true")
-        if command == "cleanup":
-            orchestrate_command.add_argument("--force", action="store_true")
-
     configure_ids_parser(
         subcommands.add_parser(
             "ids", help="Check artifact ID uniqueness or print next free IDs."
@@ -487,7 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
     task_move.add_argument("state", choices=TASK_STATES)
     task_move.add_argument("-C", "--project-dir", default=".")
     task_archive = task_subcommands.add_parser(
-        "archive", help="Move finished tasks out of the board into the archive."
+        "archive", help="Move finished tasks out of the lifecycle folders into the archive."
     )
     task_archive.add_argument(
         "task_id", nargs="?", default=None, help="Archive one task ID or prefix."
@@ -497,20 +375,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     gc = subcommands.add_parser(
         "gc",
-        help="Archive old done tasks and companion REV/QA/SUM artifacts.",
+        help="Archive old done tasks and delete timestamped verification runs.",
     )
     gc.add_argument("-C", "--project-dir", default=".")
     gc.add_argument(
         "--apply",
         action="store_true",
-        help="Write the archive. Default is a dry-run inventory and plan.",
+        help="Move archived tasks and delete verification runs. Default is a dry-run.",
     )
     gc.add_argument(
         "--keep",
         type=int,
         default=GC_DEFAULT_KEEP,
         metavar="N",
-        help="Keep the N highest-numbered done tasks on the board (default 20).",
+        help="Keep the N highest-numbered done tasks in the lifecycle folders (default 20).",
     )
     gc.add_argument(
         "--no-artifacts",
@@ -518,96 +396,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_false",
         help="Move tasks only; leave REV/QA/SUM artifacts in place.",
     )
-    gc.set_defaults(with_artifacts=True)
-
-    projects = subcommands.add_parser(
-        "projects", help="Register and open factory projects."
+    gc.add_argument(
+        "--no-tasks",
+        dest="with_tasks",
+        action="store_false",
+        help="Leave done tasks and their artifacts in place; only delete verification runs.",
     )
-    projects_subcommands = projects.add_subparsers(dest="projects_command")
-    projects_subcommands.add_parser("list", help="List registered projects.")
-    projects_add = projects_subcommands.add_parser("add", help="Register a project.")
-    projects_add.add_argument("path", nargs="?", default=".")
-    projects_add.add_argument("--name")
-    projects_remove = projects_subcommands.add_parser(
-        "remove", help="Unregister a project by name."
+    gc.add_argument(
+        "--no-runs",
+        dest="with_runs",
+        action="store_false",
+        help="Keep verification/runs/; only archive done tasks.",
     )
-    projects_remove.add_argument("name")
-
-    board = subcommands.add_parser("board", help="Open the Kanban task board (TUI).")
-    board.add_argument("-C", "--project-dir", default=".")
-    board.add_argument("--project", help="Open a registered project by name.")
-
-    usage = subcommands.add_parser(
-        "usage", help="Record and report token/cost usage metrics."
-    )
-    usage_subcommands = usage.add_subparsers(dest="usage_command")
-    usage_record = usage_subcommands.add_parser("record", help="Record a usage entry.")
-    usage_record.add_argument("-C", "--project-dir", default=".")
-    usage_record.add_argument("--scope", choices=USAGE_SCOPES, required=True)
-    usage_record.add_argument("--ref", required=True)
-    usage_record.add_argument("--tool", default="", dest="tool_id")
-    usage_record.add_argument("--in", type=int, default=0, dest="input_tokens")
-    usage_record.add_argument("--out", type=int, default=0, dest="output_tokens")
-    usage_record.add_argument("--cost", type=float, default=0.0, dest="cost_usd")
-    usage_record.add_argument("--note")
-    usage_list = usage_subcommands.add_parser("list", help="Summarize usage.")
-    usage_list.add_argument("-C", "--project-dir", default=".")
-    usage_list.add_argument(
-        "--by", choices=("ref", "tool", "scope", "budget"), default="ref"
-    )
-    usage_import = usage_subcommands.add_parser(
-        "import", help="Bulk-import usage records from a JSONL or CSV file."
-    )
-    usage_import.add_argument("path", help="Path to a .jsonl/.json or .csv file.")
-    usage_import.add_argument("-C", "--project-dir", default=".")
-    usage_capture = usage_subcommands.add_parser(
-        "capture",
-        help="Parse a coding tool's JSON output and record one usage entry.",
-    )
-    usage_capture.add_argument("--tool", required=True, dest="tool_id")
-    usage_capture.add_argument("--ref", required=True)
-    usage_capture.add_argument("--scope", choices=USAGE_SCOPES, default="task")
-    usage_capture.add_argument(
-        "--from", dest="source", default=None, help="Read output from a file (else stdin)."
-    )
-    usage_capture.add_argument("--note")
-    usage_capture.add_argument("-C", "--project-dir", default=".")
-
-    budget = subcommands.add_parser("budget", help="Manage token budgets.")
-    budget_subcommands = budget.add_subparsers(dest="budget_command")
-    budget_list = budget_subcommands.add_parser(
-        "list", help="List budgets and current usage."
-    )
-    budget_list.add_argument("-C", "--project-dir", default=".")
-    budget_set = budget_subcommands.add_parser("set", help="Set a token budget.")
-    budget_set.add_argument("key", help="e.g. task:TASK-0001 or agent:developer")
-    budget_set.add_argument("limit", type=int)
-    budget_set.add_argument("-C", "--project-dir", default=".")
-    budget_remove = budget_subcommands.add_parser("remove", help="Remove a budget.")
-    budget_remove.add_argument("key")
-    budget_remove.add_argument("-C", "--project-dir", default=".")
-
-    dashboard = subcommands.add_parser(
-        "dashboard", help="Open the metrics dashboard (TUI)."
-    )
-    dashboard.add_argument("-C", "--project-dir", default=".")
-    dashboard.add_argument("--project", help="Open a registered project by name.")
-
-    shell = subcommands.add_parser(
-        "shell",
-        help="Open the interactive REPL (discover and launch commands).",
-    )
-    shell.add_argument(
-        "-C",
-        "--project-dir",
-        default=None,
-        help="Pre-select a project by path.",
-    )
-    shell.add_argument(
-        "--project",
-        default=None,
-        help="Pre-select a registered project by name.",
-    )
+    gc.set_defaults(with_artifacts=True, with_tasks=True, with_runs=True)
     return parser
 
 
@@ -645,62 +446,20 @@ def handle_init(args: argparse.Namespace) -> int:
         merge_specs_into_intake(intake, specs_source)
     if args.preset:
         apply_project_preset(intake, args.preset)
-    tool_availability = detect_tools()
-    git_available = shutil.which("git") is not None
-    interactive = is_interactive() and not args.no_interactive
-    if interactive:
-        result = ProjectWizardApp(intake, tool_availability=tool_availability).run()
-        if result is None:
-            print("Project initialization cancelled; no files were created.")
-            return 0
-        intake = result
-        if not configure_refinement_after_draft(
-            intake,
-            tool_availability,
-        ):
-            print("Project initialization cancelled; no files were created.")
-            return 0
+    # --no-interactive is accepted and ignored. Init always publishes directly.
+    del args.no_interactive
 
-    preserve_owner_specs = (
-        specs_source is not None and not interactive and not intake.use_ai
-    )
-    if preserve_owner_specs:
+    if specs_source is not None and not intake.use_ai:
         specs_markdown = specs_source
     else:
-        refinement = refine_with_feedback(
+        specs_markdown, warning = refine_with_feedback(
             intake,
             timeout=intake.refinement_timeout_seconds,
-            interactive=interactive,
         )
-        if refinement is None:
-            print("Project initialization cancelled; no files were created.")
-            return 0
-        specs_markdown, warning = refinement
         if warning:
             print(f"Warning: {warning}", file=sys.stderr)
             print("Using deterministic project specs draft.", file=sys.stderr)
-        specs_markdown = review_refined_sections(intake, specs_markdown, interactive)
-
-    if interactive:
-        preview_link = "copy" if args.copy or not git_available else "submodule"
-        config = build_config(intake, link_mode=preview_link)
-        bundle = render_project_files(intake, config, specs_markdown=specs_markdown)
-        review = render_init_review(
-            bundle,
-            intake,
-            specs_markdown,
-            render_project_specs(intake),
-            (
-                "copy"
-                if args.copy
-                else "submodule with copy fallback"
-                if git_available
-                else "copy (Git CLI not found)"
-            ),
-        )
-        if not ReviewApp(review, accept_label="Create project").run():
-            print("Project initialization cancelled; no files were created.")
-            return 0
+        specs_markdown = review_refined_sections(intake, specs_markdown)
 
     project_dir, link_result = initialize_project(
         project_name=intake.project_name,
@@ -712,11 +471,6 @@ def handle_init(args: argparse.Namespace) -> int:
     )
     print(f"Created project: {project_dir}")
     print(f"Factory link: {link_result}")
-    try:
-        registry.add_project(project_dir)
-        print(f"Registered project: {project_dir.name}")
-    except FactoryError as exc:
-        print(f"Warning: could not register project: {exc}", file=sys.stderr)
     result = validate_project(project_dir)
     if result == 0 and getattr(args, "with_skills", False):
         apply_result = _apply_skills_after_init(project_dir, intake.tools)
@@ -766,21 +520,15 @@ def handle_import(args: argparse.Namespace) -> int:
     print(plan.render())
     if plan.invalid:
         return 1
-    interactive = is_interactive() and not args.no_interactive
-    should_apply = args.apply
-    conflict_resolutions = None
-    if interactive:
-        import_review = ImportReviewApp(plan, project_dir, render_import_review(plan, project_dir))
-        conflict_resolutions = import_review.run()
-        should_apply = conflict_resolutions is not None
-    if not should_apply:
+    # --no-interactive is accepted and ignored. Apply still requires --apply.
+    del args.no_interactive
+    if not args.apply:
         print("Import preview complete; no files were changed.")
         return 0
     link_result = apply_import(
         plan,
         factory_source,
         force_copy=args.copy,
-        conflict_resolutions=conflict_resolutions,
     )
     print(f"Import applied. Factory link: {link_result}")
     result = validate_project(project_dir)
@@ -811,63 +559,16 @@ def handle_specs(args: argparse.Namespace) -> int:
     intake.use_ai = bool(intake.refiner) and not args.no_ai
     intake.refinement_timeout_seconds = config.refinement_timeout_seconds
     intake.refinement = {}
-    interactive = is_interactive() and not args.no_interactive
-    if interactive:
-        intake_path = project_dir / INTAKE_ROOT / "project-specs-input.yaml"
-        tool_availability = detect_tools()
-        wizard = ProjectWizardApp(
-            intake,
-            save_path=intake_path,
-            tool_availability=tool_availability,
-        )
-        result = wizard.run()
-        if result is None:
-            if wizard.saved:
-                print(f"Specs draft saved: {intake_path}")
-                return 0
-            print("Specs editing cancelled; no files were changed.")
-            return 0
-        intake = result
-        if not configure_refinement_after_draft(
-            intake,
-            tool_availability,
-            allow_ai=not args.no_ai,
-        ):
-            print("Specs editing cancelled; no files were changed.")
-            return 0
-    refinement = refine_with_feedback(
+    # --no-interactive is accepted and ignored. Specs always publish directly.
+    del args.no_interactive
+    markdown, warning = refine_with_feedback(
         intake,
         timeout=intake.refinement_timeout_seconds,
-        interactive=interactive,
     )
-    if refinement is None:
-        print("Specs refinement cancelled; no files were changed.")
-        return 0
-    markdown, warning = refinement
     if warning:
         print(f"Warning: {warning}", file=sys.stderr)
         print("Using deterministic project specs draft.", file=sys.stderr)
-    markdown = review_refined_sections(intake, markdown, interactive)
-    previous_markdown = ""
-    specs_path = project_dir / "project-specs.md"
-    if specs_path.is_file():
-        previous_markdown = specs_path.read_text(encoding="utf-8")
-    specs_review = (
-        "# Project specs review\n\n"
-        + render_confidence_review(intake, heading_level=2)
-        + "\n"
-        + render_diff(
-            previous_markdown,
-            markdown,
-            "current/project-specs.md",
-            "proposed/project-specs.md",
-        )
-        + "\n\n## Proposed specification\n\n"
-        + markdown
-    )
-    if interactive and not ReviewApp(specs_review, accept_label="Publish specs").run():
-        print("Specs editing cancelled; no files were changed.")
-        return 0
+    markdown = review_refined_sections(intake, markdown)
     publish_specs(project_dir, intake, markdown, config=config)
     print(f"Published project specs: {project_dir / 'project-specs.md'}")
     return 0
@@ -897,12 +598,14 @@ def handle_skills(args: argparse.Namespace) -> int:
             return 0
         drifts = plan.conflicts
         missing = plan.creates
-        if not drifts and not missing:
+        if not drifts and not missing and not plan.updates:
             print(f"Skills validation passed: {len(plan.keeps)} in sync.")
             return 0
         print("Skills validation failed:")
         for entry in missing:
             print(f"  missing  {entry.asset.path}")
+        for entry in plan.updates:
+            print(f"  update   {entry.asset.path}  (run factory skills apply)")
         for entry in drifts:
             print(f"  drift    {entry.asset.path}  ({entry.reason})")
         return 1
@@ -951,32 +654,12 @@ def handle_tools(args: argparse.Namespace) -> int:
         raise FactoryError(f"Project directory does not exist: {project_dir}")
 
     if args.tools_command == "configure":
-        if args.no_interactive or not is_interactive():
-            if not args.no_interactive:
-                raise FactoryError(
-                    "factory tools configure requires an interactive terminal. "
-                    "Pass --no-interactive to apply flags or the current/default policy."
-                )
-            policy = configure_policy_from_args(project_dir, args)
-            plan = plan_tooling(project_dir, policy)
-            print(plan.render().replace("Import plan:", "Tooling plan:", 1))
-            return publish_tooling_plan(project_dir, policy, plan, None)
-        try:
-            policy = load_tool_policy(project_dir)
-        except ValueError:
-            config = load_config(project_dir)
-            policy = default_tool_policy(config.enabled_tools)
-        configured = ToolingConfigApp(policy).run()
-        if configured is None:
-            print("Tool kit configuration cancelled; no files were changed.")
-            return 0
-        plan = plan_tooling(project_dir, configured)
-        review = render_tooling_review(project_dir, configured.to_yaml(), plan)
-        resolutions = ToolingReviewApp(plan, review).run()
-        if resolutions is None:
-            print("Tool kit configuration cancelled; no files were changed.")
-            return 0
-        return publish_tooling_plan(project_dir, configured, plan, resolutions)
+        # --no-interactive is accepted and ignored.
+        del args.no_interactive
+        policy = configure_policy_from_args(project_dir, args)
+        plan = plan_tooling(project_dir, policy)
+        print(plan.render().replace("Import plan:", "Tooling plan:", 1))
+        return publish_tooling_plan(project_dir, policy, plan, None)
 
     try:
         policy = load_tool_policy(project_dir)
@@ -1007,98 +690,7 @@ def handle_tools(args: argparse.Namespace) -> int:
         return 1 if plan.invalid else 0
     if plan.invalid:
         return 1
-    resolutions = None
-    if is_interactive():
-        resolutions = ToolingReviewApp(
-            plan,
-            render_tooling_review(project_dir, policy.to_yaml(), plan),
-        ).run()
-        if resolutions is None:
-            print("Tool kit apply cancelled; no files were changed.")
-            return 0
-    return publish_tooling_plan(project_dir, policy, plan, resolutions)
-
-
-def handle_scaffold(args: argparse.Namespace) -> int:
-    if not args.scaffold_command:
-        raise FactoryError("Choose a scaffold command: plan, apply, or validate.")
-    if (
-        args.scaffold_command == "apply"
-        and args.allow_network
-        and not args.with_deps
-    ):
-        raise FactoryError("--allow-network requires --with-deps for scaffold apply.")
-    project_dir = Path(args.project_dir).resolve()
-    if not project_dir.is_dir():
-        raise FactoryError(f"Project directory does not exist: {project_dir}")
-
-    if args.scaffold_command == "validate":
-        errors, warnings = scaffold_problems(project_dir)
-        if errors:
-            print("Scaffold validation failed:")
-            for error in errors:
-                print(f"  - {error}")
-        else:
-            print(f"Scaffold validation passed: {project_dir}")
-        if warnings:
-            print("Warnings:")
-            for warning in warnings:
-                print(f"  - {warning}")
-        return 1 if errors else 0
-
-    registry = default_scaffold_registry()
-    try:
-        plan = create_scaffold_plan(project_dir, registry)
-    except ScaffoldError as exc:
-        raise FactoryError(str(exc)) from exc
-    print(plan.render())
-    if args.scaffold_command == "plan":
-        return 0 if plan.ready else 1
-    if not plan.ready:
-        return 1
-
-    print("Running scaffold adapters in an isolated staging directory…", file=sys.stderr)
-    try:
-        publish_plan = stage_scaffold(plan, registry)
-    except ScaffoldError as exc:
-        raise FactoryError(str(exc)) from exc
-    print(publish_plan.render())
-    resolutions = None
-    if is_interactive():
-        review = render_scaffold_review(publish_plan)
-        resolutions = ScaffoldReviewApp(publish_plan, review).run()
-        if resolutions is None:
-            print("Scaffold apply cancelled; no project source files were changed.")
-            return 0
-    try:
-        unresolved = apply_scaffold_plan(publish_plan, resolutions)
-    except ScaffoldError as exc:
-        raise FactoryError(str(exc)) from exc
-    if unresolved:
-        print("Applied non-conflicting scaffold output; existing source was preserved.")
-        print("Resolve scaffold proposals:")
-        for path in unresolved:
-            print(f"  - {path}")
-        return 1
-    print(f"Scaffold applied: {project_dir}")
-    if args.skip_deps:
-        print("Dependency installation skipped by owner request.")
-        return 0
-    if args.with_deps:
-        return apply_dependencies_with_review(
-            project_dir,
-            allow_network=args.allow_network,
-            source_already_published=True,
-            require_install=True,
-        )
-    if is_interactive():
-        return apply_dependencies_with_review(
-            project_dir,
-            allow_network=False,
-            source_already_published=True,
-            require_install=False,
-        )
-    return 0
+    return publish_tooling_plan(project_dir, policy, plan, None)
 
 
 def handle_dependencies(args: argparse.Namespace) -> int:
@@ -1132,28 +724,6 @@ def handle_dependencies(args: argparse.Namespace) -> int:
     return apply_dependency_plan_with_review(
         plan,
         allow_network=args.allow_network,
-        source_already_published=False,
-    )
-
-
-def apply_dependencies_with_review(
-    project_dir: Path,
-    *,
-    allow_network: bool,
-    source_already_published: bool,
-    require_install: bool,
-) -> int:
-    plan = create_dependency_plan(project_dir)
-    print(plan.render())
-    if not plan.ready:
-        if require_install:
-            return 1
-        print("Dependency phase skipped because its plan is not ready.")
-        return 0
-    return apply_dependency_plan_with_review(
-        plan,
-        allow_network=allow_network,
-        source_already_published=source_already_published,
     )
 
 
@@ -1161,25 +731,24 @@ def apply_dependency_plan_with_review(
     plan: DependencyPlan,
     *,
     allow_network: bool,
-    source_already_published: bool,
 ) -> int:
-    if is_interactive():
-        accepted = ReviewApp(
-            render_dependency_review(plan),
-            accept_label="Install dependencies",
-        ).run()
-        if not accepted:
-            print("Dependency installation skipped; source files were preserved.")
-            return 0
-        allow_network = True
     try:
         print("Installing project-local dependencies…", file=sys.stderr)
         apply_dependency_plan(plan, allow_network=allow_network)
     except DependencyError as exc:
-        prefix = "Source scaffold was published, but " if source_already_published else ""
-        raise FactoryError(prefix + str(exc)) from exc
+        raise FactoryError(str(exc)) from exc
     print(f"Dependencies installed: {plan.project_dir}")
     return 0
+
+
+def _positive_seconds(value: str) -> int:
+    try:
+        seconds = int(value)
+    except ValueError:
+        seconds = 0
+    if seconds <= 0:
+        raise argparse.ArgumentTypeError("must be a whole number of seconds above 0")
+    return seconds
 
 
 def handle_verification(args: argparse.Namespace) -> int:
@@ -1212,16 +781,8 @@ def handle_verification(args: argparse.Namespace) -> int:
         return 0 if plan.ready else 1
     if not plan.ready:
         return 1
-    if is_interactive():
-        accepted = ReviewApp(
-            render_verification_review(plan),
-            accept_label="Run verification",
-        ).run()
-        if not accepted:
-            print("Project verification cancelled; no checks were run.")
-            return 0
     print("Running deterministic project verification…", file=sys.stderr)
-    results = run_verification_plan(plan)
+    results = run_verification_plan(plan, timeout_seconds=args.timeout)
     for result in results:
         print(
             f"  {result.status.upper():6} {result.check.check_id} "
@@ -1236,323 +797,6 @@ def handle_verification(args: argparse.Namespace) -> int:
         return 1
     print(f"Project verification passed: {project_dir}")
     return 0
-
-
-def handle_orchestrate(args: argparse.Namespace) -> int:
-    if not args.orchestrate_command:
-        raise FactoryError(
-            "Choose an orchestrate command: plan, run, status, validate, or cleanup."
-        )
-    project_dir = Path(args.project_dir).resolve()
-    if not project_dir.is_dir():
-        raise FactoryError(f"Project directory does not exist: {project_dir}")
-
-    if args.orchestrate_command == "status":
-        records = load_state(project_dir)
-        if not records:
-            print(f"No active orchestration recorded: {project_dir}")
-            return 0
-        for record in records:
-            print(f"  {record.status.upper():9} {record.task_id} -> {record.tool_id}")
-            print(f"    branch:   {record.branch}")
-            print(f"    worktree: {record.worktree_path}")
-            if record.launch_command:
-                print(f"    launch:   {record.launch_command}")
-        return 0
-
-    if args.orchestrate_command == "validate":
-        errors, warnings = orchestrator_problems(project_dir, require_state=True)
-        if errors:
-            print("Orchestration validation failed:")
-            for error in errors:
-                print(f"  - {error}")
-        else:
-            print(f"Orchestration validation passed: {project_dir}")
-        if warnings:
-            print("Warnings:")
-            for warning in warnings:
-                print(f"  - {warning}")
-        return 1 if errors else 0
-
-    if args.orchestrate_command == "cleanup":
-        removed, skipped = cleanup_worktrees(project_dir, force=args.force)
-        for task_id in removed:
-            print(f"  removed   {task_id}")
-        for message in skipped:
-            print(f"  skipped   {message}")
-        if not removed and not skipped:
-            print("No orchestration worktrees to clean.")
-        return 0
-
-    plan = create_orchestrator_plan(
-        project_dir,
-        tools=args.tools,
-        max_parallel=args.max_parallel,
-    )
-    print(plan.render())
-    if args.orchestrate_command == "plan":
-        return 0 if plan.ready else 1
-    if not plan.ready:
-        return 1
-    if is_interactive() and not args.yes:
-        accepted = ReviewApp(
-            render_orchestrator_review(plan),
-            accept_label="Create worktrees",
-        ).run()
-        if not accepted:
-            print("Orchestration cancelled; no worktrees were created.")
-            return 0
-    print("Preparing task worktrees…", file=sys.stderr)
-    records = apply_orchestrator_plan(
-        plan,
-        launch=args.launch,
-        max_parallel=args.max_parallel,
-    )
-    for record in records:
-        print(f"  {record.status.upper():9} {record.task_id} -> {record.tool_id}")
-        print(f"    worktree: {record.worktree_path}")
-        if record.launch_command and not args.launch:
-            print(f"    run:      (cd {record.worktree_path} && {record.launch_command})")
-    incomplete = project_dir / ".factory-state/orchestration/INCOMPLETE"
-    if incomplete.exists():
-        print(
-            "Some assignments failed; see "
-            ".factory-state/orchestration/INCOMPLETE and rerun.",
-            file=sys.stderr,
-        )
-        return 1
-    print(f"Prepared {len(records)} task worktree(s): {project_dir}")
-    return 0
-
-
-def resolve_project_dir(args: argparse.Namespace) -> Path:
-    name = getattr(args, "project", None)
-    if name:
-        project_dir = registry.resolve_project(name).resolve()
-    else:
-        project_dir = Path(args.project_dir).resolve()
-    if not project_dir.is_dir():
-        raise FactoryError(f"Project directory does not exist: {project_dir}")
-    return project_dir
-
-
-def handle_projects(args: argparse.Namespace) -> int:
-    command = getattr(args, "projects_command", None)
-    if command == "add":
-        entry = registry.add_project(Path(args.path).resolve(), name=args.name)
-        print(f"Registered project: {entry.name} -> {entry.path}")
-        return 0
-    if command == "remove":
-        if registry.remove_project(args.name):
-            print(f"Unregistered project: {args.name}")
-            return 0
-        raise FactoryError(f"No registered project named: {args.name}")
-
-    entries = registry.list_projects()
-    if command == "list":
-        if not entries:
-            print("No projects registered. Run `factory init` or `factory projects add`.")
-            return 0
-        for entry in entries:
-            print(f"  {entry.name}\t{entry.path}")
-        return 0
-
-    # No subcommand: interactive picker that opens the board, else list.
-    if not is_interactive():
-        return handle_projects(argparse.Namespace(projects_command="list"))
-    selected = ProjectsApp(entries).run()
-    if selected is None:
-        return 0
-    name, action = selected
-    project_dir = registry.resolve_project(name).resolve()
-    if action == "dashboard":
-        return open_dashboard(project_dir)
-    return open_board(project_dir)
-
-
-def open_board(project_dir: Path) -> int:
-    config = load_config(project_dir)
-    store = open_store(project_dir, config)
-    assignments = {}
-    try:
-        for record in load_state(project_dir):
-            if record.status in {"prepared", "launched"}:
-                assignments[record.task_id] = (record.tool_id, record.created_at)
-    except OrchestratorError:
-        assignments = {}
-    BoardApp(store, project_dir.name, assignments=assignments).run()
-    return 0
-
-
-def handle_board(args: argparse.Namespace) -> int:
-    project_dir = resolve_project_dir(args)
-    if not is_interactive():
-        raise FactoryError("factory board requires an interactive terminal.")
-    return open_board(project_dir)
-
-
-def handle_usage(args: argparse.Namespace) -> int:
-    command = getattr(args, "usage_command", None)
-    if not command:
-        raise FactoryError("Choose a usage command: record or list.")
-    project_dir = Path(args.project_dir).resolve()
-    if not project_dir.is_dir():
-        raise FactoryError(f"Project directory does not exist: {project_dir}")
-    if command == "record":
-        return metrics.record_usage(
-            project_dir,
-            scope=args.scope,
-            ref=args.ref,
-            tool_id=args.tool_id,
-            input_tokens=args.input_tokens,
-            output_tokens=args.output_tokens,
-            cost_usd=args.cost_usd,
-            note=args.note,
-        )
-    if command == "import":
-        return metrics.import_usage(project_dir, args.path)
-    if command == "capture":
-        return metrics.capture_usage(
-            project_dir,
-            args.tool_id,
-            args.ref,
-            scope=args.scope,
-            source=args.source,
-            note=args.note,
-        )
-    print(metrics.render_usage_text(project_dir, args.by))
-    return 0
-
-
-def handle_budget(args: argparse.Namespace) -> int:
-    command = getattr(args, "budget_command", None)
-    if not command:
-        raise FactoryError("Choose a budget command: set, list, or remove.")
-    project_dir = Path(args.project_dir).resolve()
-    if not project_dir.is_dir():
-        raise FactoryError(f"Project directory does not exist: {project_dir}")
-    if command == "set":
-        return metrics.set_budget(project_dir, args.key, args.limit)
-    if command == "remove":
-        return metrics.remove_budget(project_dir, args.key)
-    return metrics.list_budgets(project_dir)
-
-
-def open_dashboard(project_dir: Path) -> int:
-    DashboardApp(
-        lambda granularity: metrics.build_dashboard(project_dir, granularity),
-        project_dir.name,
-    ).run()
-    return 0
-
-
-def handle_dashboard(args: argparse.Namespace) -> int:
-    project_dir = resolve_project_dir(args)
-    if not is_interactive():
-        print(metrics.render_dashboard_text(project_dir))
-        return 0
-    return open_dashboard(project_dir)
-
-
-def handle_stack_configuration(args: argparse.Namespace) -> int:
-    if not args.stack_command:
-        raise FactoryError("Choose a stack command: plan, apply, or validate.")
-    project_dir = Path(args.project_dir).resolve()
-    if not project_dir.is_dir():
-        raise FactoryError(f"Project directory does not exist: {project_dir}")
-    if args.stack_command == "validate":
-        errors, warnings = configuration_problems(project_dir, require_state=True)
-        if errors:
-            print("Stack configuration validation failed:")
-            for error in errors:
-                print(f"  - {error}")
-        else:
-            print(f"Stack configuration validation passed: {project_dir}")
-        if warnings:
-            print("Warnings:")
-            for warning in warnings:
-                print(f"  - {warning}")
-        return 1 if errors else 0
-
-    plan = create_configuration_plan(project_dir)
-    print(plan.render())
-    if args.stack_command == "plan":
-        return 0 if plan.ready else 1
-    if not plan.ready:
-        return 1
-
-    resolutions = None
-    if is_interactive():
-        review_plan = ScaffoldPublishPlan(
-            project_dir=plan.project_dir,
-            source_sha256=plan.source_sha256,
-            adapters=[],
-            actions=[
-                ScaffoldAction(
-                    path=action.path,
-                    status=action.status,
-                    reason=action.reason,
-                    output=(
-                        ScaffoldOutput(
-                            path=action.output.path,
-                            content=action.output.content,
-                            adapter_id=action.output.configurator_id,
-                        )
-                        if action.output is not None
-                        else None
-                    ),
-                    existing_sha256=action.existing_sha256,
-                )
-                for action in plan.actions
-            ],
-        )
-        reviewed = ScaffoldReviewApp(
-            review_plan,
-            render_stack_configuration_review(plan),
-            noun="configuration",
-        ).run()
-        if reviewed is None:
-            print("Stack configuration cancelled; no project files were changed.")
-            return 0
-        resolutions = {
-            path: ConfigurationOutput(
-                path=output.path,
-                content=output.content,
-                configurator_id=output.adapter_id,
-            )
-            for path, output in reviewed.items()
-        }
-    unresolved = apply_configuration_plan(plan, resolutions)
-    if unresolved:
-        print("Applied safe stack configuration; existing files were preserved.")
-        print("Resolve configuration proposals:")
-        for path in unresolved:
-            print(f"  - {path}")
-        return 1
-    print(f"Stack configuration applied: {project_dir}")
-    return 0
-
-
-def render_stack_configuration_review(plan: ConfigurationPlan) -> str:
-    lines = [
-        "# Stack configuration review",
-        "",
-        "Factory derived these deterministic files from Approved stack decisions.",
-        "Existing files are never replaced without explicit conflict review.",
-        "",
-        "## Configurators",
-        "",
-    ]
-    lines.extend(f"- `{item}`" for item in plan.configurators)
-    lines.extend(("", "## Files", ""))
-    lines.extend(
-        f"- **{action.status}** `{action.path}` — {action.reason}"
-        for action in plan.actions
-    )
-    if plan.warnings:
-        lines.extend(("", "## Boundaries", ""))
-        lines.extend(f"- {warning}" for warning in plan.warnings)
-    return "\n".join(lines) + "\n"
 
 
 def publish_tooling_plan(
@@ -1584,74 +828,10 @@ def publish_tooling_plan(
     return 1 if errors else 0
 
 
-def handle_clarify(args: argparse.Namespace) -> int:
-    project_dir = Path(args.project_dir).resolve()
-    if not is_interactive():
-        raise FactoryError("factory clarify requires an interactive terminal.")
-    path = resolve_clarification(project_dir, args.identifier)
-    try:
-        clarification = load_clarification(path)
-    except (OSError, ValueError) as exc:
-        raise FactoryError(str(exc)) from exc
-    clarification_app = ClarificationApp(clarification)
-    result = clarification_app.run()
-    if result == "review":
-        answers = clarification_app.pending_answers or {}
-        review = render_clarification_review(clarification, answers)
-        if ReviewApp(review, accept_label="Submit answers").run():
-            save_clarification(clarification, answers, submit=True)
-            print(f"Clarification submitted: {path}")
-        else:
-            print("Clarification submission cancelled; no answers were changed.")
-    elif result == "saved":
-        print(f"Clarification progress saved: {path}")
-    else:
-        print("Clarification cancelled; no answers were changed.")
-    return 0
-
-
-def render_init_review(
-    bundle: dict,
-    intake: ProjectIntake,
-    specs_markdown: str,
-    deterministic_markdown: str,
-    link_mode: str,
-) -> str:
-    files = "\n".join(f"- `{path}`" for path in sorted(bundle))
-    diff = render_diff(
-        deterministic_markdown,
-        specs_markdown,
-        "deterministic/project-specs.md",
-        "refined/project-specs.md",
-    )
-    return (
-        "# Project initialization review\n\n"
-        f"- Factory link: {link_mode}\n"
-        f"- AI tool kit: {intake.tool_kit_level}\n"
-        "- No application source or dependencies will be generated.\n\n"
-        f"{render_confidence_review(intake, heading_level=2)}\n"
-        f"## Generated files\n\n{files}\n\n"
-        f"## Refinement diff\n\n{diff}\n\n"
-        f"## Project specs\n\n{specs_markdown}"
-    )
-
-
 def refine_with_feedback(
     intake: ProjectIntake,
     timeout: int,
-    interactive: bool,
-) -> Optional[Tuple[str, Optional[str]]]:
-    if interactive and intake.use_ai and intake.refiner:
-        return RefinementApp(
-            intake.refiner,
-            lambda progress, cancel_event: refine_specs(
-                intake,
-                timeout=timeout,
-                progress=progress,
-                cancel_event=cancel_event,
-            ),
-        ).run()
-
+) -> Tuple[str, Optional[str]]:
     progress = None
     if intake.use_ai and intake.refiner:
         print(f"Refining project specs with {intake.refiner}…", file=sys.stderr)
@@ -1663,53 +843,11 @@ def refine_with_feedback(
     return refine_specs(intake, timeout=timeout, progress=progress)
 
 
-def configure_refinement_after_draft(
-    intake: ProjectIntake,
-    tool_availability: dict,
-    allow_ai: bool = True,
-) -> bool:
-    """Review the deterministic draft before choosing optional AI refinement."""
-    while True:
-        draft = render_project_specs(intake)
-        review = (
-            "# Draft review\n\n"
-            + render_confidence_review(intake, heading_level=2)
-            + "\n## Project specs\n\n"
-            + draft
-        )
-        decision = DraftReviewApp(
-            review,
-            can_refine=allow_ai and bool(intake.tools),
-        ).run()
-        if decision is None:
-            return False
-        if decision == "publish":
-            intake.use_ai = False
-            return True
-
-        settings = RefinementConfigApp(
-            enabled_tools=list(intake.tools),
-            default_refiner=intake.refiner,
-            sections=list(intake.refinement_sections),
-            timeout_seconds=intake.refinement_timeout_seconds,
-            tool_availability=tool_availability,
-        ).run()
-        if settings is None:
-            continue
-        intake.refiner = settings.tool_id
-        intake.use_ai = True
-        intake.refinement_sections = list(settings.sections)
-        intake.refinement_timeout_seconds = settings.timeout_seconds
-        intake.validate()
-        return True
-
-
 def review_refined_sections(
     intake: ProjectIntake,
     refined_markdown: str,
-    interactive: bool,
 ) -> str:
-    """Apply only owner-selected, in-scope AI section changes."""
+    """Apply in-scope AI section changes without a review prompt."""
     if intake.refinement.get("status") != "refined":
         return refined_markdown
     deterministic = render_project_specs(intake)
@@ -1721,15 +859,6 @@ def review_refined_sections(
         selected_markdown = deterministic
         accepted: List[str] = []
         rejected: List[str] = []
-    elif interactive:
-        review = SectionReviewApp(
-            deterministic,
-            refined_markdown,
-            target_headings or None,
-        )
-        selected_markdown = review.run() or deterministic
-        accepted = list(review.accepted_sections)
-        rejected = list(review.rejected_sections)
     elif target_headings:
         selected_markdown = merge_sections(deterministic, refined_markdown, changed)
         accepted = list(changed)
@@ -1745,174 +874,6 @@ def review_refined_sections(
         selected_markdown.encode("utf-8")
     ).hexdigest()
     return selected_markdown
-
-
-def render_import_review(plan, project_dir: Path) -> str:
-    sections = ["# Import review", "", "```text", plan.render(), "```"]
-    for action in plan.conflicts:
-        path = project_dir / action.path
-        if not path.is_file():
-            continue
-        if action.proposed_content is None:
-            sections.extend(
-                (
-                    "",
-                    f"## Deactivation: `{action.path}`",
-                    "",
-                    "This previously generated file is no longer active in the proposed "
-                    "policy. Removal requires an explicit choice in the Existing files tab.",
-                )
-            )
-            continue
-        sections.extend(
-            (
-                "",
-                f"## Conflict: `{action.path}`",
-                "",
-                render_diff(
-                    path.read_text(encoding="utf-8"),
-                    action.proposed_content,
-                    f"existing/{action.path}",
-                    f"proposed/{action.path}",
-                ),
-            )
-        )
-    return "\n".join(sections)
-
-
-def render_tooling_review(project_dir: Path, policy_yaml: str, plan) -> str:
-    policy_path = project_dir / TOOL_POLICY_PATH
-    current_policy = (
-        policy_path.read_text(encoding="utf-8") if policy_path.is_file() else ""
-    )
-    sections = [
-        "# AI tool kit review",
-        "",
-        "Provider files are project-local. Factory does not change global settings, "
-        "credentials, model selection, telemetry, or provider endpoints.",
-        "",
-        "## Canonical policy",
-        "",
-        render_diff(
-            current_policy,
-            policy_yaml,
-            f"current/{TOOL_POLICY_PATH}",
-            f"proposed/{TOOL_POLICY_PATH}",
-        ),
-        "",
-        "## File plan",
-        "",
-        "```text",
-        plan.render().replace("Import plan:", "Tooling plan:", 1),
-        "```",
-    ]
-    for action in plan.conflicts:
-        path = project_dir / action.path
-        if not path.is_file() or action.proposed_content is None:
-            continue
-        sections.extend(
-            (
-                "",
-                f"## Conflict: `{action.path}`",
-                "",
-                render_diff(
-                    path.read_text(encoding="utf-8"),
-                    action.proposed_content,
-                    f"existing/{action.path}",
-                    f"proposed/{action.path}",
-                ),
-            )
-        )
-    return "\n".join(sections)
-
-
-def render_scaffold_review(plan) -> str:
-    project_dir = Path(plan.project_dir)
-    sections = [
-        "# Source scaffold review",
-        "",
-        "Generators ran only in an isolated staging directory. No dependencies "
-        "were installed globally and no project source has been changed yet.",
-        "",
-        "## Publish plan",
-        "",
-        "```text",
-        plan.render(),
-        "```",
-    ]
-    for action in plan.conflicts:
-        output = action.output
-        existing = project_dir / action.path
-        if output is None or not existing.is_file():
-            continue
-        sections.extend(("", f"## Conflict: `{action.path}`", ""))
-        proposed_text = output.text
-        try:
-            existing_text = existing.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            existing_text = None
-        if proposed_text is None or existing_text is None:
-            sections.append(
-                f"Binary conflict. Proposed size: {len(output.content)} bytes; "
-                f"sha256: `{sha256(output.content).hexdigest()}`."
-            )
-        else:
-            sections.append(
-                render_diff(
-                    existing_text,
-                    proposed_text,
-                    f"existing/{action.path}",
-                    f"scaffold/{action.path}",
-                )
-            )
-    return "\n".join(sections)
-
-
-def render_diff(before: str, after: str, before_name: str, after_name: str) -> str:
-    if before == after:
-        return "_No content changes._"
-    lines = difflib.unified_diff(
-        before.splitlines(),
-        after.splitlines(),
-        fromfile=before_name,
-        tofile=after_name,
-        lineterm="",
-    )
-    return "```diff\n" + "\n".join(lines) + "\n```"
-
-
-def render_clarification_review(clarification, answers: dict) -> str:
-    lines = ["# Clarification review", ""]
-    for question in clarification.questions:
-        if not clarification.is_active(question, answers):
-            continue
-        answer = answers.get(question.question_id)
-        if isinstance(answer, list):
-            rendered = ", ".join(str(item) for item in answer)
-        else:
-            rendered = str(answer)
-        lines.extend((f"## {question.prompt}", "", rendered or "_No answer_", ""))
-    return "\n".join(lines)
-
-
-def handle_shell(args: argparse.Namespace, parser: argparse.ArgumentParser) -> int:
-    """Launch the interactive REPL (or print help outside a TTY)."""
-    if not is_interactive():
-        parser.print_help()
-        return 0
-
-    from .shell import run_shell
-
-    preselected: Optional[Path] = None
-    if getattr(args, "project", None):
-        preselected = registry.resolve_project(args.project).resolve()
-    elif getattr(args, "project_dir", None):
-        preselected = Path(args.project_dir).resolve()
-    return run_shell(preselected=preselected)
-
-
-def is_interactive() -> bool:
-    return bool(sys.stdin.isatty() and sys.stdout.isatty())
 
 
 if __name__ == "__main__":

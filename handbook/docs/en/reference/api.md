@@ -22,6 +22,13 @@ Every REST response is an envelope:
 humans and logs. Clients translate by `code` and fall back to `message`. The
 codes are listed in [Error codes](errors.md).
 
+Workflow checks work the same way. `POST /api/validate`, saving a workflow
+(`POST /api/workflows`) and using a template return `errors`, a list of English
+messages, and `issues`, their codes in the same order: `{"code", "params"}`, or
+`null` for a message without one. A run's `error` event over WebSocket carries
+`issues` too when it reports these checks. The editor shows `issues` in the UI
+language.
+
 ## Authentication
 
 | Client | How |
@@ -85,6 +92,7 @@ WS /ws/run
     ```text
     GET    /api/workflows/{wid}/runs          (?tests=true: test runs)
     GET    /api/runs/pending
+    GET    /api/runs/{run_id}                (one run with its events, as the history lists it; a workflow tool's child run)
     GET    /api/runs/{run_id}/checkpoints   (time travel; fork: WS /ws/run {"fork": {...}})
     POST   /api/runs/{run_id}/cancel
     WS     /ws/run
@@ -133,6 +141,29 @@ WS /ws/run
     PATCH  /api/workflows/{wid}/chat-triggers/{tid} DELETE /api/workflows/{wid}/chat-triggers/{tid}
     (owner or admin; {channel_id, place: "dm" | channel or chat id, command, input_field, reply_field, enabled})
     ```
+
+??? abstract "Chat and the public chat page"
+
+    ```text
+    GET    /api/workflows/{wid}/chat                PUT    /api/workflows/{wid}/chat   (settings; PUT needs owner access)
+    GET    /api/workflows/{wid}/chat/sessions       POST   /api/workflows/{wid}/chat/sessions
+    GET    /api/chat/sessions/{sid}?view=builder|visitor   DELETE /api/chat/sessions/{sid}
+    GET    /api/workflows/{wid}/chat/visitors       GET    /api/workflows/{wid}/chat/visitors/{sid}   (read-only)
+    GET    /api/workflows/{wid}/chat/logo?v=      (logo: a data: URL in PUT sets it, "" removes it)
+    WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
+
+    No sign-in (the published page, by slug):
+    GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins, logo)
+    GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
+    GET    /api/public/chat/{slug}/sessions/{sid}
+    GET    /api/public/chat/{slug}/logo?v=<logo>
+    WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
+    GET    /api/public/chat-frame?path=/c/{slug}    (its frame-ancestors, for nginx)
+    ```
+
+    An anonymous visitor is an HttpOnly cookie, or the `X-Chat-Visitor` header
+    (`?visitor=` on the socket) in an embed. Send `X-Chat-Visitor: new` to get a
+    token back as `visitor_token`.
 
 ??? abstract "Workflow tests"
 

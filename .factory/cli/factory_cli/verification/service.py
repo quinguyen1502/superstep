@@ -1,27 +1,36 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import time
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 import yaml
 
-from ..constants import VERIFICATION_METADATA_PATH, VERIFICATION_ROOT
+from ..constants import (
+    TOOL_POLICY_PATH,
+    VERIFICATION_KINDS,
+    VERIFICATION_METADATA_PATH,
+    VERIFICATION_QUICK_KINDS,
+    VERIFICATION_ROOT,
+)
 from ..project import atomic_write
+from ..tooling import CommandPolicy, load_tool_policy
 from .models import VerificationCheck, VerificationPlan, VerificationResult
 
 
 VERIFICATION_SCHEMA_VERSION = 1
 VERIFICATION_TIMEOUT_SECONDS = 300
 PROFILES = {"quick", "full"}
-CHECK_KINDS = {"check", "test", "lint", "typecheck", "build"}
-QUICK_KINDS = {"check", "test", "lint", "typecheck"}
+CHECK_KINDS = set(VERIFICATION_KINDS)
+QUICK_KINDS = set(VERIFICATION_QUICK_KINDS)
 IGNORED_DIRECTORIES = {
     ".dart_tool",
     ".factory",
@@ -38,39 +47,10 @@ IGNORED_DIRECTORIES = {
     "obj",
     "target",
 }
-INPUT_NAMES = {
-    "angular.json",
-    "go.mod",
-    "go.sum",
-    "package.json",
-    "package-lock.json",
-    "pnpm-lock.yaml",
-    "yarn.lock",
-    "bun.lock",
-    "bun.lockb",
-    "pom.xml",
-    "pubspec.yaml",
-    "pubspec.lock",
-    "pyproject.toml",
-    "requirements.txt",
-}
-INPUT_SUFFIXES = {
-    ".cs",
-    ".csproj",
-    ".dart",
-    ".go",
-    ".html",
-    ".java",
-    ".js",
-    ".jsx",
-    ".json",
-    ".kt",
-    ".py",
-    ".svelte",
-    ".ts",
-    ".tsx",
-    ".vue",
-}
+LEGACY_EVIDENCE_WARNING = (
+    "verification evidence still records input hashes or absolute executable "
+    "paths; re-run factory verify to replace it"
+)
 
 
 class VerificationError(Exception):
@@ -83,6 +63,7 @@ def create_verification_plan(
     profile: str = "quick",
     selected_kinds: Sequence[str] = (),
 ) -> VerificationPlan:
+    project_dir = project_dir.resolve()
     if not project_dir.is_dir():
         raise VerificationError(f"Project directory does not exist: {project_dir}")
     if profile not in PROFILES:
@@ -90,20 +71,20 @@ def create_verification_plan(
     invalid = sorted(set(selected_kinds) - CHECK_KINDS)
     if invalid:
         raise VerificationError(f"Unsupported verification checks: {', '.join(invalid)}")
-    inputs = _verification_inputs(project_dir)
     plan = VerificationPlan(
         project_dir=str(project_dir),
-        source_sha256=_input_sha256(project_dir, inputs),
+        source_sha256="",
         profile=profile,
+        selected_kinds=tuple(selected_kinds),
     )
     requested = set(selected_kinds) if selected_kinds else None
-
-    _discover_node_checks(project_dir, plan)
-    _discover_python_checks(project_dir, plan)
-    _discover_flutter_checks(project_dir, plan)
-    _discover_maven_checks(project_dir, plan)
-    _discover_dotnet_checks(project_dir, plan)
-    _discover_go_checks(project_dir, plan)
+    if not _checks_from_policy(project_dir, plan):
+        _discover_node_checks(project_dir, plan)
+        _discover_python_checks(project_dir, plan)
+        _discover_flutter_checks(project_dir, plan)
+        _discover_maven_checks(project_dir, plan)
+        _discover_dotnet_checks(project_dir, plan)
+        _discover_go_checks(project_dir, plan)
 
     allowed = CHECK_KINDS if profile == "full" else QUICK_KINDS
     plan.checks = [
@@ -113,8 +94,167 @@ def create_verification_plan(
     ]
     plan.checks.sort(key=lambda item: (item.working_dir, item.kind, item.check_id))
     if not plan.checks and not plan.errors:
-        plan.errors.append("no supported verification checks were discovered")
+        if plan.origin == "policy":
+            plan.errors.append(
+                "no verification commands in tool-policy.yaml match this profile"
+            )
+        else:
+            plan.errors.append("no supported verification checks were discovered")
+    if plan.origin == "discovery" and plan.checks and not plan.errors:
+        if (project_dir / TOOL_POLICY_PATH).is_file():
+            plan.warnings.append(
+                "tool-policy.yaml has no verification commands; verify run will "
+                "record the discovered commands there"
+            )
+        else:
+            plan.warnings.append(
+                "no tool-policy.yaml; discovered commands are used for this run only"
+            )
+    plan.fingerprint = _fingerprint(plan.checks)
     return plan
+
+
+def _checks_from_policy(project_dir: Path, plan: VerificationPlan) -> bool:
+    """Use tool-policy commands when the file declares any verification command.
+
+    An empty command map returns False so discovery can fill it. A broken
+    policy is an error and does not fall through to discovery.
+    """
+    path = project_dir / TOOL_POLICY_PATH
+    if not path.is_file():
+        return False
+    try:
+        policy = load_tool_policy(project_dir)
+    except ValueError as exc:
+        plan.origin = "policy"
+        plan.errors.append(f"invalid tool policy: {exc}")
+        return True
+    found = False
+    for name, spec in policy.commands.items():
+        kind = spec.kind.strip() or (name if name in CHECK_KINDS else "")
+        if kind not in CHECK_KINDS or not spec.command.strip():
+            continue
+        found = True
+        working_dir = spec.cwd.strip() or "."
+        cwd = project_dir / working_dir
+        try:
+            argv = shlex.split(spec.command)
+        except ValueError as exc:
+            plan.errors.append(f"invalid verification command {name}: {exc}")
+            continue
+        if not argv:
+            plan.errors.append(f"invalid verification command {name}: command is empty")
+            continue
+        if not cwd.is_dir():
+            plan.errors.append(
+                f"{name}: working directory does not exist: {working_dir}"
+            )
+            continue
+        problem = _portable_command_problem(cwd, argv)
+        if problem:
+            plan.errors.append(f"{name}: {problem}")
+            continue
+        plan.checks.append(
+            VerificationCheck(
+                check_id=f"policy:{name}",
+                kind=kind,
+                working_dir=working_dir,
+                argv=argv,
+                source=TOOL_POLICY_PATH,
+                timeout_seconds=spec.timeout or None,
+            )
+        )
+    if not found and not plan.errors:
+        return False
+    plan.origin = "policy"
+    return True
+
+
+def _portable_command_problem(cwd: Path, argv: Sequence[str]) -> Optional[str]:
+    token = argv[0]
+    if Path(token).is_absolute():
+        return f"verification command must not use an absolute path: {token}"
+    if "/" in token or token.startswith("."):
+        if not (cwd / token).is_file():
+            return f"{token} was not found in {cwd}"
+        return None
+    if shutil.which(token) is None:
+        return f"{token} was not found on PATH"
+    return None
+
+
+def _fingerprint(checks: Sequence[VerificationCheck]) -> str:
+    payload = [
+        {
+            "command": check.command_display,
+            "kind": check.kind,
+            "working_dir": check.working_dir,
+        }
+        for check in checks
+    ]
+    rendered = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(rendered.encode("utf-8")).hexdigest()
+
+
+def _rebase(plan: VerificationPlan) -> VerificationPlan:
+    fresh = create_verification_plan(
+        Path(plan.project_dir),
+        profile=plan.profile,
+        selected_kinds=plan.selected_kinds,
+    )
+    if fresh.fingerprint != plan.fingerprint:
+        raise VerificationError(
+            "Verification commands changed after planning; create a new plan."
+        )
+    return fresh
+
+
+def _command_name(check: VerificationCheck, taken: Iterable[str]) -> str:
+    """A policy name for a discovered check that no other command uses.
+
+    ``<dir>-<kind>`` (``<kind>`` at the root) first. Two checks of one kind in
+    one directory, such as npm and pytest tests at the root, or a name the
+    policy already uses for another command, get the tool from the check ID
+    (``test-python``) and then a number.
+    """
+    taken = set(taken)
+    directory = PurePosixPath(check.working_dir.replace("\\", "/")).as_posix()
+    base = (
+        check.kind
+        if directory in {"", "."}
+        else f"{directory.replace('/', '-')}-{check.kind}"
+    )
+    tool = check.check_id.split(":", 1)[0]
+    candidates = itertools.chain(
+        (base, f"{base}-{tool}"),
+        (f"{base}-{tool}-{number}" for number in itertools.count(2)),
+    )
+    return next(name for name in candidates if name not in taken)
+
+
+def _record_discovered_commands(project_dir: Path, plan: VerificationPlan) -> None:
+    policy = load_tool_policy(project_dir)
+    for check in plan.checks:
+        taken = [name for name, spec in policy.commands.items() if spec.command.strip()]
+        name = _command_name(check, taken)
+        policy.commands[name] = CommandPolicy(
+            command=check.command_display,
+            evidence="Expected",
+            cwd="" if check.working_dir in {"", "."} else check.working_dir,
+            kind="" if name == check.kind else check.kind,
+        )
+    policy.validate()
+    atomic_write(project_dir / TOOL_POLICY_PATH, policy.to_yaml())
+
+
+def _resolved_argv(argv: Sequence[str]) -> List[str]:
+    token = argv[0]
+    if "/" in token or token.startswith("."):
+        return list(argv)
+    resolved = shutil.which(token)
+    if not resolved:
+        raise VerificationError(f"{token} was not found on PATH")
+    return [resolved, *list(argv[1:])]
 
 
 def _discover_node_checks(project_dir: Path, plan: VerificationPlan) -> None:
@@ -143,8 +283,7 @@ def _discover_node_checks(project_dir: Path, plan: VerificationPlan) -> None:
                 f"package manager is unknown for {relative}; add packageManager or a lockfile"
             )
             continue
-        executable = shutil.which(manager)
-        if executable is None:
+        if shutil.which(manager) is None:
             plan.errors.append(f"{manager} was not found on PATH for {relative}")
             continue
         for kind, candidates in (
@@ -157,9 +296,9 @@ def _discover_node_checks(project_dir: Path, plan: VerificationPlan) -> None:
             if script is None:
                 continue
             argv = (
-                [executable, script]
+                [manager, script]
                 if manager == "yarn"
-                else [executable, "run", script]
+                else [manager, "run", script]
             )
             plan.checks.append(
                 VerificationCheck(
@@ -235,8 +374,7 @@ def _discover_flutter_checks(project_dir: Path, plan: VerificationPlan) -> None:
     for manifest in _find_name(project_dir, "pubspec.yaml"):
         relative = manifest.relative_to(project_dir).as_posix()
         working_dir = manifest.parent.relative_to(project_dir).as_posix() or "."
-        executable = shutil.which("flutter")
-        if executable is None:
+        if shutil.which("flutter") is None:
             plan.errors.append(f"flutter was not found on PATH for {relative}")
             continue
         for kind, arguments in (
@@ -248,7 +386,7 @@ def _discover_flutter_checks(project_dir: Path, plan: VerificationPlan) -> None:
                     check_id=f"flutter:{working_dir}:{kind}",
                     kind=kind,
                     working_dir=working_dir,
-                    argv=[executable, *arguments],
+                    argv=["flutter", *arguments],
                     source=relative,
                 )
             )
@@ -292,8 +430,7 @@ def _discover_dotnet_checks(project_dir: Path, plan: VerificationPlan) -> None:
     manifests = list(_find_suffix(project_dir, ".csproj"))
     if not manifests:
         return
-    executable = shutil.which("dotnet")
-    if executable is None:
+    if shutil.which("dotnet") is None:
         plan.errors.append("dotnet was not found on PATH for .NET verification")
         return
     for manifest in manifests:
@@ -305,14 +442,14 @@ def _discover_dotnet_checks(project_dir: Path, plan: VerificationPlan) -> None:
                     f"dotnet:{working_dir}:test",
                     "test",
                     working_dir,
-                    [executable, "test", manifest.name, "--no-restore"],
+                    ["dotnet", "test", manifest.name, "--no-restore"],
                     relative,
                 ),
                 VerificationCheck(
                     f"dotnet:{working_dir}:build",
                     "build",
                     working_dir,
-                    [executable, "build", manifest.name, "--no-restore"],
+                    ["dotnet", "build", manifest.name, "--no-restore"],
                     relative,
                 ),
             )
@@ -323,8 +460,7 @@ def _discover_go_checks(project_dir: Path, plan: VerificationPlan) -> None:
     for manifest in _find_name(project_dir, "go.mod"):
         relative = manifest.relative_to(project_dir).as_posix()
         working_dir = manifest.parent.relative_to(project_dir).as_posix() or "."
-        executable = shutil.which("go")
-        if executable is None:
+        if shutil.which("go") is None:
             plan.errors.append(f"go was not found on PATH for {relative}")
             continue
         for kind, arguments in (
@@ -337,7 +473,7 @@ def _discover_go_checks(project_dir: Path, plan: VerificationPlan) -> None:
                     f"go:{working_dir}:{kind}",
                     kind,
                     working_dir,
-                    [executable, *arguments],
+                    ["go", *arguments],
                     relative,
                 )
             )
@@ -346,27 +482,47 @@ def _discover_go_checks(project_dir: Path, plan: VerificationPlan) -> None:
 def run_verification_plan(
     plan: VerificationPlan,
     *,
-    timeout_seconds: int = VERIFICATION_TIMEOUT_SECONDS,
+    timeout_seconds: Optional[int] = None,
 ) -> List[VerificationResult]:
+    """Run the plan's checks. A check's own ``timeout`` from the tool policy
+    wins over ``timeout_seconds``, which defaults to 300 seconds."""
     if not plan.ready:
         raise VerificationError("Verification plan is not ready; resolve its errors first.")
+    plan = _rebase(plan)
     project_dir = Path(plan.project_dir)
-    if _input_sha256(project_dir, _verification_inputs(project_dir)) != plan.source_sha256:
-        raise VerificationError(
-            "Project verification inputs changed after planning; create a new plan."
-        )
+    if plan.origin == "discovery" and (project_dir / TOOL_POLICY_PATH).is_file():
+        full = create_verification_plan(project_dir, profile="full")
+        if full.origin == "discovery" and full.ready:
+            _record_discovered_commands(project_dir, full)
+            plan = _rebase(plan)
     results: List[VerificationResult] = []
     for check in plan.checks:
         started = datetime.now(timezone.utc).isoformat()
         before = time.monotonic()
         try:
+            argv = _resolved_argv(check.argv)
+        except VerificationError as exc:
+            results.append(
+                VerificationResult(
+                    check=check,
+                    status="failed",
+                    returncode=None,
+                    started_at=started,
+                    duration_seconds=time.monotonic() - before,
+                    error=str(exc),
+                )
+            )
+            continue
+        try:
             completed = subprocess.run(
-                check.argv,
+                argv,
                 cwd=project_dir / check.working_dir,
                 env=_verification_environment(),
                 text=True,
                 capture_output=True,
-                timeout=timeout_seconds,
+                timeout=check.timeout_seconds
+                or timeout_seconds
+                or VERIFICATION_TIMEOUT_SECONDS,
                 check=False,
             )
             output = (completed.stdout + completed.stderr).strip()
@@ -381,6 +537,12 @@ def run_verification_plan(
                 )
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
+            error = str(exc)
+            if isinstance(exc, subprocess.TimeoutExpired):
+                error += (
+                    f". Raise it with `timeout` on this command in {TOOL_POLICY_PATH},"
+                    " or with `factory verify run --timeout`."
+                )
             results.append(
                 VerificationResult(
                     check=check,
@@ -388,7 +550,7 @@ def run_verification_plan(
                     returncode=None,
                     started_at=started,
                     duration_seconds=time.monotonic() - before,
-                    error=str(exc),
+                    error=error,
                 )
             )
     _write_verification_state(project_dir, plan, results)
@@ -417,9 +579,6 @@ def verification_problems(
             raise ValueError("unsupported verification metadata schema")
         if data.get("status") not in {"passed", "failed"}:
             raise ValueError("status must be passed or failed")
-        inputs = data.get("inputs")
-        if not isinstance(inputs, dict):
-            raise ValueError("inputs must be a mapping")
         results = data.get("results")
         if not isinstance(results, list):
             raise ValueError("results must be a list")
@@ -428,27 +587,38 @@ def verification_problems(
         return errors, warnings
     if data.get("status") == "failed":
         errors.append("latest project verification failed")
-    current = _hash_mapping(project_dir, _verification_inputs(project_dir))
-    if current != inputs:
-        warnings.append("project inputs changed after the latest verification run")
+    legacy = isinstance(data.get("inputs"), dict) and bool(data.get("inputs"))
     for result in results:
         if not isinstance(result, dict) or result.get("status") not in {"passed", "failed"}:
             errors.append("invalid verification result metadata")
+            continue
+        argv = result.get("argv")
+        if isinstance(argv, list) and any(
+            isinstance(item, str) and Path(item).is_absolute() for item in argv
+        ):
+            legacy = True
+    if legacy:
+        warnings.append(LEGACY_EVIDENCE_WARNING)
     return errors, warnings
 
 
 def render_verification_review(plan: VerificationPlan) -> str:
+    if plan.origin == "policy":
+        intro = "Factory will run the verification commands declared in tool-policy.yaml."
+    else:
+        intro = (
+            "Factory will run deterministic validation checks discovered from "
+            "project manifests. verify run records them into tool-policy.yaml when "
+            "that file exists and does not yet declare verification commands."
+        )
     return "\n".join(
         (
             "# Project verification review",
             "",
+            intro,
             (
-                "Factory will run only deterministic validation checks discovered "
-                "from project manifests."
-            ),
-            (
-                "No expected free-text command, formatter, migration, server, or "
-                "deployment action is included."
+                "Commands are argument lists, not shell scripts. Install, run, "
+                "migration, server, and deployment commands are not included."
             ),
             (
                 "Build and test tools may create their normal project-local caches "
@@ -467,29 +637,19 @@ def _write_verification_state(
     plan: VerificationPlan,
     results: List[VerificationResult],
 ) -> None:
-    now = datetime.now(timezone.utc)
+    # The committed record is the command and its outcome. Absolute paths,
+    # per-file hashes, output hashes, and timestamped run copies change on
+    # every machine and every edit, so they are not written.
     status = "passed" if all(result.status == "passed" for result in results) else "failed"
-    serialized = []
-    for result in results:
-        item = result.to_dict()
-        output = result.output or result.error
-        item["output_sha256"] = hashlib.sha256(output.encode("utf-8")).hexdigest()
-        serialized.append(item)
     data = {
         "schema_version": VERIFICATION_SCHEMA_VERSION,
-        "run_id": now.strftime("%Y%m%dT%H%M%S%fZ"),
         "status": status,
         "profile": plan.profile,
-        "updated_at": now.isoformat(),
-        "source_sha256": plan.source_sha256,
-        "inputs": _hash_mapping(project_dir, _verification_inputs(project_dir)),
-        "results": serialized,
+        "results": [result.to_dict() for result in results],
     }
-    rendered = yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
-    atomic_write(project_dir / VERIFICATION_METADATA_PATH, rendered)
     atomic_write(
-        project_dir / VERIFICATION_ROOT / "runs" / f"{data['run_id']}.yaml",
-        rendered,
+        project_dir / VERIFICATION_METADATA_PATH,
+        yaml.safe_dump(data, sort_keys=False, allow_unicode=True),
     )
 
 
@@ -514,28 +674,6 @@ def _find_name(project_dir: Path, filename: str) -> Iterable[Path]:
 
 def _find_suffix(project_dir: Path, suffix: str) -> Iterable[Path]:
     return (path for path in _walk_project_files(project_dir) if path.name.endswith(suffix))
-
-
-def _verification_inputs(project_dir: Path) -> List[Path]:
-    return [
-        path
-        for path in _walk_project_files(project_dir)
-        if path.name in INPUT_NAMES or path.suffix in INPUT_SUFFIXES
-    ]
-
-
-def _hash_mapping(project_dir: Path, paths: List[Path]) -> Dict[str, str]:
-    return {
-        path.relative_to(project_dir).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in paths
-    }
-
-
-def _input_sha256(project_dir: Path, paths: List[Path]) -> str:
-    rendered = yaml.safe_dump(
-        _hash_mapping(project_dir, paths), sort_keys=True, allow_unicode=True
-    )
-    return hashlib.sha256(rendered.encode("utf-8")).hexdigest()
 
 
 def _verification_environment() -> Dict[str, str]:
@@ -603,4 +741,6 @@ def _maven_executable(directory: Path) -> Optional[str]:
     wrapper_name = "mvnw.cmd" if os.name == "nt" else "mvnw"
     if (directory / wrapper_name).is_file():
         return wrapper_name if os.name == "nt" else f"./{wrapper_name}"
-    return shutil.which("mvn")
+    if shutil.which("mvn") is None:
+        return None
+    return "mvn"

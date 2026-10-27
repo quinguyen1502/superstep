@@ -65,6 +65,9 @@ Cách gọi và mang đi nơi khác:
   trong số vòng đã đặt; công cụ nào cũng có thể cần duyệt trước mỗi lần gọi.
   Mỗi lần gọi model hay công cụ là một bước có checkpoint, nên hiện trong trace
   và không chạy lại sau khi khởi động lại (xem [Node Agent](../guide/agent.md)).
+  Agent gọi được một workflow khác làm công cụ, nên một agent điều phối giao
+  việc cho các agent chuyên trách, và các bước của agent chuyên trách hiện ngay
+  dưới lần gọi.
 - **Xuất code và tương thích LangGraph.** Mọi workflow xuất được thành dự án
   LangGraph chạy được (`langgraph.json`, chạy bằng `langgraph dev`, xem
   [Xuất ra Python](../guide/python-export.md)), và một phần Agent Server API
@@ -81,8 +84,9 @@ Cách gọi và mang đi nơi khác:
   [Test workflow](../run/tests.md)), tùy chọn dataset và experiment trên
   LangSmith, trace OpenTelemetry (xem [Trace](../run/traces.md)).
 - **Chạy như dịch vụ, không chỉ là studio.** Token API, webhook có ký, lịch
-  cron, trigger qua chat, và API công khai với SDK Python và TypeScript (xem
-  [API công khai và SDK](../run/public-api.md)).
+  cron, trigger qua chat, trang chat công khai kèm bong bóng chat để nhúng (xem
+  [Chat](../run/chat.md#cong-khai-chat)), và API công khai với SDK Python và
+  TypeScript (xem [API công khai và SDK](../run/public-api.md)).
 - **Tự host, MIT.** Mặc định SQLite hoặc Postgres với pgvector, Redis và worker
   tùy chọn, image Docker trên GHCR và triển khai một chạm lên PaaS (xem
   [Triển khai](../operate/deploy.md)). Giao diện và handbook tiếng Việt và
@@ -90,9 +94,9 @@ Cách gọi và mang đi nơi khác:
 
 Những gì Superstep không cố trở thành: số tích hợp có sẵn ít hơn nhiều so với
 bốn công cụ kia (kết nối qua HTTP, MCP server, email và các kênh chat), không
-có dịch vụ cloud host sẵn và không có marketplace. Node Agent của Superstep là
-một agent với các công cụ bạn liệt kê: không có nhóm nhiều agent hay chuyển
-việc giữa các agent, và chưa xuất được sang TypeScript.
+có dịch vụ cloud host sẵn và không có marketplace. Nhiều agent chỉ làm việc cùng
+nhau theo cách một agent điều phối gọi workflow khác làm công cụ: không có
+chuyển việc giữa các agent, cũng không có các agent tự trò chuyện với nhau.
 
 ## n8n
 

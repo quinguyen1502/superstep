@@ -1,12 +1,10 @@
 # Factory CLI
 
 The `factory` CLI initializes and operates artifact-driven project
-repositories. Initialization is artifact-only; source scaffolding is an
-explicit later command with a separate review boundary.
+repositories. Initialization publishes artifacts directly. Dependency
+installation and verification are later commands.
 
 For a step-by-step introduction, follow [`quickstart.md`](quickstart.md).
-For the interactive REPL that removes the need to memorize commands, see
-[`shell.md`](shell.md).
 
 ## Commands
 
@@ -14,36 +12,25 @@ For the interactive REPL that removes the need to memorize commands, see
 factory init <project-name> [--tool codex|cursor|claude-code|grok] [--refiner TOOL] [--tool-kit LEVEL] [--preset PRESET] [--intake FILE] [--from-specs FILE] [--with-skills|--no-skills] [--no-interactive]
 factory import [project-dir] [--apply] [--tool-kit LEVEL] [--with-skills|--no-skills] [--no-interactive]
 factory ready -C <project-dir>
-factory specs -C <project-dir> [--refiner TOOL] [--no-ai]
-factory clarify <clarification-id-or-path> -C <project-dir>
+factory specs -C <project-dir> [--refiner TOOL] [--no-ai] [--no-interactive]
 factory validate [project-dir]
 factory tools status|configure|plan|apply|validate -C <project-dir>
-factory tools configure --no-interactive [--level LEVEL] [--status proposed|approved] [--tool TOOL] [--command NAME=COMMAND] -C <project-dir>
-factory gc [-C <project-dir>] [--keep N] [--apply] [--no-artifacts]
-factory scaffold plan|apply|validate -C <project-dir>
+factory tools configure [--no-interactive] [--level LEVEL] [--status proposed|approved] [--tool TOOL] [--command NAME=COMMAND] -C <project-dir>
+factory gc [-C <project-dir>] [--keep N] [--apply] [--no-artifacts] [--no-tasks] [--no-runs]
 factory deps plan|apply|validate -C <project-dir>
-factory verify plan|run|validate -C <project-dir> [--profile quick|full] [--check KIND]
-factory stack plan|apply|validate -C <project-dir>
+factory verify plan|run|validate -C <project-dir> [--profile quick|full] [--check KIND] [--timeout SECONDS (run)]
 factory skills plan|apply|validate -C <project-dir> [--skill NAME] [--force]
-factory orchestrate plan|run|status|validate|cleanup -C <project-dir> [--tool TOOL] [--max-parallel N] [--launch] [--yes] [--force]
 factory task create <task-id> <title> [--state backlog|todo|doing|review|qa|done]
 factory task move <task-id> <state>
 factory task archive [task-id] [--state STATE] -C <project-dir>
 factory ids check [--ref REF ...] [--all-refs] -C <project-dir>
 factory ids next [TYPE ...] [--ref REF ...] [--all-refs] -C <project-dir>
-factory projects list|add [path] [--name NAME]|remove <name>
-factory board -C <project-dir> | --project <name>
-factory usage record -C <project-dir> --scope task|agent --ref REF [--tool TOOL] [--in N] [--out N] [--cost USD] [--note TEXT]
-factory usage list -C <project-dir> [--by ref|tool|scope|budget]
-factory usage import <path> -C <project-dir>
-factory usage capture --tool TOOL --ref REF [--scope task|agent] [--from FILE] -C <project-dir>
-factory budget set <key> <limit> | list | remove <key> -C <project-dir>
-factory dashboard -C <project-dir> | --project <name>
-factory shell [-C <project-dir> | --project <name>]
 ```
 
-Running `factory` with no arguments in a terminal is equivalent to
-`factory shell`.
+Running `factory` with no arguments prints this help. `--no-interactive`
+is accepted on `init`, `import`, `specs`, and `tools configure` so
+existing scripts keep working. Those commands always publish without a
+prompt.
 
 ## Artifact ID Allocation
 
@@ -97,7 +84,7 @@ so `factory ids` is dispatched before the rest of the CLI is imported:
 python3 bin/factory ids next TASK --all-refs -C <project-dir>
 ```
 
-Every other command imports the adapter, model, storage and TUI stack and
+Every other command imports the adapter, model, and storage stack and
 needs `pip install -e .` first.
 
 IDs are compared by full filename rather than by number, so a task
@@ -107,20 +94,12 @@ collision and 2 when the directory is not a project repository. On a
 collision, renumber the unmerged side and keep the number already on the
 integration branch.
 
-## Interactive Behavior
-
-When stdin and stdout are terminals, `init`, `import`, and `specs` open
-a Textual interface. It uses light mode by default; press `Ctrl+T` to
-toggle between light and dark themes. Project setup is divided into
-Overview, Scope & Flows, Technology, and Delivery tabs. Optional
-sections collapse when empty and reopen automatically when saved data
-exists. Use `--no-interactive` for scripts and CI.
-
 ## Project Initialization
 
-Interactive initialization collects project intent, enabled AI coding
-tools, explicit technology statuses, and expected commands. It always
-renders a deterministic specification before optional AI refinement.
+`factory init` publishes project intent, enabled AI coding tools,
+explicit technology statuses, and expected commands from flags,
+`--intake`, `--from-specs`, and `--preset`. It renders a deterministic
+specification before optional AI refinement. There is no setup wizard.
 
 **Presets.** Web App, API Service, CLI, and Mobile App projects have
 starter values that fill blank fields only, mark inserted technology
@@ -132,7 +111,7 @@ the selected stack but remain free-text and are not `Observed` evidence.
 **Technology statuses.**
 
 - `Approved` — explicitly selected by the owner. Only Approved choices
-  drive scaffold, dependency, and stack configurators.
+  drive dependency installation and stack configurators.
 - `Preferred` — favored but not fixed.
 - `Proposed` — suggested and awaiting a decision.
 - `Unknown` — requires discovery.
@@ -140,9 +119,9 @@ the selected stack but remain free-text and are not `Observed` evidence.
 Commands entered before source exists are marked `Expected`, never
 `Observed`.
 
-**Catalog.** The Technology field is a dropdown of common options plus
-`Other…` for custom values; each catalog option states its available
-Factory capabilities (scaffold, dependencies, verification,
+**Catalog.** Intake technology values come from a catalog of common
+options plus free-text custom values. Each catalog option states its
+available Factory capabilities (dependencies, verification,
 configuration). Options without automation remain specification-only.
 The current source catalog includes React, Vue, Angular, Next.js,
 SvelteKit, Flutter, FastAPI, Django, Python CLI, NestJS, Spring Boot,
@@ -262,13 +241,14 @@ a project backfill, not a framework defect.
 
 ## Factory-state gc
 
-`factory gc` compacts a large `.factory-state/` without deleting
-history. It moves old `done` tasks to
-`.factory-state/archive/tasks/done/` and, by default, companion
+`factory gc` compacts a large `.factory-state/`. It moves old `done`
+tasks to `.factory-state/archive/tasks/done/` and, by default, companion
 `REV` / `QA` / `SUM` artifacts that only reference those tasks to
 `.factory-state/archive/artifacts/`. Requirements, decisions,
 standards, and live tasks stay put. Archived IDs remain reserved, so
-`factory ids` will not reuse them.
+`factory ids` will not reuse them. It also deletes timestamped files
+under `.factory-state/verification/runs/`. The current
+`verification/latest.yaml` stays.
 
 ```text
 factory gc -C project
@@ -276,11 +256,14 @@ factory gc --apply --keep 20 -C project
 factory gc --apply --keep 0 -C project
 ```
 
-The default is a dry-run inventory and plan. `--apply` writes.
-`--keep N` leaves the N highest-numbered done tasks on the board
-(default 20). `--keep 0` archives every done task. `--no-artifacts`
-moves tasks only. `factory task archive` remains the primitive for one
-task or a whole column.
+The default is a dry-run inventory and plan. `--apply` moves tasks and
+deletes verification runs.
+`--keep N` leaves the N highest-numbered done tasks in the lifecycle
+folders (default 20). `--keep 0` archives every done task. `--no-artifacts`
+moves tasks only. `--no-tasks` leaves every task and artifact in place and
+only deletes verification runs; `--no-runs` keeps `verification/runs/`
+(for example when a QA artifact cites a run file) and only archives tasks.
+`factory task archive` remains the primitive for one task or a whole column.
 
 `factory validate` checks review/QA references on `tasks/done/` only,
 so archiving historical done tasks also drops those files out of that
@@ -304,12 +287,14 @@ import. Credential or network failure stops the import instead of
 replacing the configured submodule with a copy.
 
 `factory validate` checks the required structure, config schema,
-enabled tool bridges, tooling policy and hashes, scaffold, dependency,
-verification, and stack-configuration provenance, standards, task
-lifecycle folders, import completion, done-task review/QA references,
-and clarification schemas. Unanswered clarification questions are
-warnings rather than automatic lifecycle locks in v1. Implementation
-readiness gaps are also warnings on `validate`.
+enabled tool bridges, tooling policy and hashes, dependency and
+verification state, standards, task lifecycle folders, import
+completion, done-task review/QA references, and clarification schemas.
+Retired `factory.yaml` keys
+(`storage_backend`, `storage_dsn`, `budget_enforcement`, `budgets`)
+still load and are reported as warnings. Unanswered clarification
+questions are warnings rather than automatic lifecycle locks in v1.
+Implementation readiness gaps are also warnings on `validate`.
 
 `factory ready` is the implementation gate. It exits 0 only when discovery
 `TASK-0001` has left backlog, at least one `REQ-*` artifact exists, a
@@ -329,18 +314,11 @@ python3 -m venv .venv
 
 Per-command details live in dedicated docs:
 
-- Scaffolding: [`scaffolding.md`](scaffolding.md)
 - Dependencies: [`dependencies.md`](dependencies.md)
 - Verification: [`verification.md`](verification.md)
-- Stack configuration: [`stack-configuration.md`](stack-configuration.md)
-- Multi-tool orchestration: [`orchestration.md`](orchestration.md)
-- Project registry: [`project-registry.md`](project-registry.md)
-- Kanban board: [`kanban-board.md`](kanban-board.md)
-- Storage backends & metrics & budgets:
-  [`metrics-and-budget.md`](metrics-and-budget.md)
+- CI workflow: [`stack-configuration.md`](stack-configuration.md)
 - Task lifecycle: [`task-lifecycle.md`](task-lifecycle.md)
 - Clarifications: [`clarifications.md`](clarifications.md)
 - Tool kits: [`tool-kits.md`](tool-kits.md)
-- Interactive REPL: [`shell.md`](shell.md)
 - Pipeline milestones: [`pipeline.md`](pipeline.md)
 - 0.3 migration: [`migration-0.3.md`](migration-0.3.md)

@@ -127,6 +127,15 @@ the Agent node, with its approvers and deadline. **Approve** runs the call.
 **Reject**, or a text reply, rejects it, and the model is told so, with the
 text as the reason. Each call asks again.
 
+## Approvals inside a called workflow
+
+When an Agent node calls another workflow as a tool
+(see [Workflows as tools](../guide/agent.md#workflows-as-tools)), a Human node
+or a tool approval inside that workflow asks as usual. The request names both
+workflows, for example `Support team › Refund desk`, on the **Approvals** page
+and in the channel message. The calling run waits too, but it is not listed:
+it goes on by itself once the called run ends.
+
 ## A typical pattern
 
 ```text

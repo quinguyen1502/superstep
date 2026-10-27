@@ -11,6 +11,12 @@ def pending_runs(user=Depends(current_user)):
     return run_service().pending(user["id"])
 
 
+@router.get("/{run_id}")
+def run_detail(run_id: str, user=Depends(current_user)):
+    """One run with its events, as the run history lists it (a workflow tool's child run in its parent's trace)."""
+    return run_service().run_detail(run_id, user["id"])
+
+
 @router.get("/{run_id}/checkpoints")
 def run_checkpoints(run_id: str, user=Depends(current_user)):
     """Time travel: the checkpoints of a run (nodes that ran next and the state before them), then its final state."""

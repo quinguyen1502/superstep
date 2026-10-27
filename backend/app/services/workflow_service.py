@@ -7,6 +7,7 @@ from ..core import permissions as P
 from ..core.errors import AppError
 from ..engine import exporters, project_export, subgraphs
 from ..engine.export_common import slug
+from ..engine.issues import issues_of
 from ..engine.examples import EXAMPLE
 from ..models import Workflow, WorkflowVersion
 from ..repositories import RunRepository, WorkflowRepository, WorkflowVersionRepository
@@ -79,12 +80,12 @@ class WorkflowService:
         return {"items": items, "total": repo.count(wid), "limit": limit, "offset": offset, "children_changed": self.children_changed(wid, uid)}
 
     def children_changed(self, wid: str, uid: str) -> list[dict]:
-        """Subgraph children saved after this workflow's latest version (their changes apply to its next runs)."""
+        """Subgraph and workflow tool children saved after this workflow's latest version (their changes apply to its next runs)."""
         if self.versions is None: return []
         w = self.repo.get(wid); mine = self.versions.latest(wid)
         if w is None or mine is None: return []
         out = []
-        for _, ref in subgraphs.refs(json.loads(w.data or "{}")):
+        for ref in dict.fromkeys(ref for _, ref in subgraphs.all_refs(json.loads(w.data or "{}"))):
             c = self.versions.latest(ref) if ref else None
             if c is not None and c.created > mine.created and (self.access is None or self.access.may(ref, uid)):
                 out.append({"id": ref, "name": c.name, "version": c.version, "at": c.created})
@@ -134,9 +135,9 @@ class WorkflowService:
         load = self._loader(uid)
         if (errs := subgraphs.check(wf, load, wid)): raise AppError("WORKFLOW_INVALID", details=errs)
         children: dict = {}
-        def collect(g: dict) -> None:
-            for _, ref in subgraphs.refs(g):
-                if ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
+        def collect(g: dict) -> None:  # subgraphs and workflow tools' workflows (TASK-0137), every level
+            for _, ref in subgraphs.all_refs(g):
+                if ref and ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
         collect(wf)
         case = (self.tests.list_for_workflow(wid) or [None])[0] if self.tests is not None else None
         example = {"input": json.loads(case.input), "answers": json.loads(case.answers)} if case else None
@@ -196,11 +197,16 @@ class WorkflowService:
         wf.pop("source", None)  # never trust client-provided source metadata
         if old.get("source"): wf["source"] = old["source"]
         self._write(wid, wf.get("name", "Untitled"), wf, uid, new=not ex, before=old)  # the owner never changes
-        return {"id": wid, "errors": [] if wf.get("source") else self.validate(wf, uid, wid)}
+        return {"id": wid, **({"errors": [], "issues": []} if wf.get("source") else self.checked(wf, uid, wid))}
 
     def validate(self, wf: dict, uid: str, wid=None):
         """Static checks, with subgraph references resolved against this user's workflows (TASK-0011)."""
         return subgraphs.validate_with(wf, self._loader(uid), wid or wf.get("id"))
+
+    def checked(self, wf: dict, uid: str, wid=None) -> dict:
+        """The static checks as the API sends them: English `errors`, and their codes for the editor (TASK-0132)."""
+        errs = self.validate(wf, uid, wid)
+        return {"errors": errs, "issues": issues_of(errs)}
 
     def _loader(self, uid: str):
         """Subgraph references resolve to workflows this user can open (own, shared, any for admins; TASK-0014)."""
@@ -224,10 +230,11 @@ class WorkflowService:
         return {"id": nid, "name": d["name"]}
 
     def dependents(self, wid: str, uid: str) -> list[dict]:
-        """Workflows that embed `wid` as a subgraph. Names are shown only where the caller has access (TASK-0029)."""
+        """Workflows that embed `wid` as a subgraph or call it as an Agent tool. Names are shown only where the caller has
+        access (TASK-0029)."""
         out = []
         for w in self.repo.referencing(wid):
-            if any(ref == wid for _, ref in subgraphs.refs(json.loads(w.data or "{}"))):
+            if any(ref == wid for _, ref in subgraphs.all_refs(json.loads(w.data or "{}"))):
                 vis = self.access is None or self.access.may(w.id, uid)
                 out.append({"id": w.id if vis else None, "name": w.name if vis else None})
         return out

@@ -15,7 +15,7 @@ import yaml
 
 from ..constants import DEPENDENCY_METADATA_PATH, DEPENDENCY_ROOT
 from ..project import atomic_write
-from .models import DependencyCommand, DependencyPlan
+from .models import DependencyCommand, DependencyPlan, portable_argv
 
 
 DEPENDENCY_SCHEMA_VERSION = 1
@@ -38,13 +38,20 @@ INPUT_FILENAMES = {
     "go.sum",
     "packages.lock.json",
 }
+# Build output and tool caches: a manifest copied into them (such as a
+# package.json under dist/) is not a project manifest.
 IGNORED_PARTS = {
     ".factory",
     ".factory-state",
     ".git",
+    ".next",
+    ".svelte-kit",
     ".venv",
     "node_modules",
     ".dart_tool",
+    "build",
+    "coverage",
+    "dist",
     "target",
     "obj",
 }
@@ -467,7 +474,7 @@ def apply_dependency_plan(
                     check=False,
                 )
                 result["integrity"] = {
-                    "argv": list(command.integrity_argv),
+                    "argv": portable_argv(command.integrity_argv),
                     "returncode": integrity.returncode,
                     "status": (
                         "observed" if integrity.returncode == 0 else "failed"

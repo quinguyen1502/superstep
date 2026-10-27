@@ -1,12 +1,12 @@
 schema_version: 1
 status: installed
-updated_at: '2026-10-25T05:24:27.074696+00:00'
-source_sha256: 929d96d653d048060ce06a264a701c268ea3528040643adb5fe99de2797c84f8
+updated_at: '2026-10-26T13:09:19.392593+00:00'
+source_sha256: c2da4514ec4ce2df088cacc5e26dd6f09be4a896853de7583472bda3d74b6ef4
 inputs:
-  backend/pyproject.toml: aaf11f0572d99f073c8eb187ddee56d332542461dec0a1d00a5b555d9ce771fb
+  backend/pyproject.toml: 3fc5b5fc0f4c42491cf96e42ca73792c2b65cd97b7f51d3bf80314745631ae01
   backend/requirements.txt: f8b6ca5ea80ef1411634725432f2a85a9bf7223eae6bc54ba6dc7c390526a6ff
-  frontend/package-lock.json: cc885a8be263e12bda71df6af101733fb9cb6ac9b0b3070872d2e241bbf8b7a6
-  frontend/package.json: f64a9c9c819ced4a3af9448c56a201a75a055b4f38574e973ffbdc0e4eac314a
+  frontend/package-lock.json: d083a7223801335461cb96b765c94247ee00311beca81f40056339b2a186a47a
+  frontend/package.json: 5890afce262070c249590f27baf7c5d72467d26433f6f83894b3decd2fae3953
   handbook/requirements.txt: 58b3379a8c8a1f8ee2acc05126743ab404dcc6f96d045c25313dd18313b079c7
   sdk/python/pyproject.toml: 5f766d84dc3a56a8f84d4119588270e81fd25925abaac3fe8126b679b473011b
   sdk/typescript/package-lock.json: b573d609c377f28df630a8d4b8025393650a0023ff0d8a74f37eec2e61692982
@@ -16,7 +16,7 @@ commands:
   manager: npm
   working_dir: frontend
   argv:
-  - /usr/local/bin/npm
+  - npm
   - ci
   - --include=dev
   manifest: frontend/package.json
@@ -24,16 +24,16 @@ commands:
   expected_paths:
   - frontend/node_modules
   integrity_argv:
-  - /usr/local/bin/npm
+  - npm
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-25T05:24:14.571396+00:00'
+  started_at: '2026-10-26T13:08:53.689378+00:00'
   returncode: 0
   status: observed
   integrity:
     argv:
-    - /usr/local/bin/npm
+    - npm
     - ls
     - --depth=0
     - --include=dev
@@ -43,7 +43,7 @@ commands:
   manager: npm
   working_dir: sdk/typescript
   argv:
-  - /usr/local/bin/npm
+  - npm
   - ci
   - --include=dev
   manifest: sdk/typescript/package.json
@@ -51,16 +51,16 @@ commands:
   expected_paths:
   - sdk/typescript/node_modules
   integrity_argv:
-  - /usr/local/bin/npm
+  - npm
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-25T05:24:21.141206+00:00'
+  started_at: '2026-10-26T13:09:05.010756+00:00'
   returncode: 0
   status: observed
   integrity:
     argv:
-    - /usr/local/bin/npm
+    - npm
     - ls
     - --depth=0
     - --include=dev
@@ -81,7 +81,7 @@ commands:
   expected_paths:
   - backend/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-25T05:24:23.037339+00:00'
+  started_at: '2026-10-26T13:09:08.109729+00:00'
   returncode: 0
   status: observed
 - target_id: python:sdk/python
@@ -99,7 +99,7 @@ commands:
   expected_paths:
   - sdk/python/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-25T05:24:25.162476+00:00'
+  started_at: '2026-10-26T13:09:13.590706+00:00'
   returncode: 0
   status: observed
 - target_id: python:handbook
@@ -117,7 +117,7 @@ commands:
   expected_paths:
   - handbook/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-25T05:24:26.774504+00:00'
+  started_at: '2026-10-26T13:09:18.717198+00:00'
   returncode: 0
   status: observed
 failure: null

@@ -15,6 +15,10 @@ const vars = (s: string) => [...s.matchAll(/{{\s*([\w.]+)\s*}}/g)].map((m) => m[
 /** vi strings that may stay identical to en: brand names, IDs, examples, and glossary terms kept in English. */
 const SAME_OK = new Set([
   'activity.types.workflow',
+  'agent.workflow',
+  'chat.page.title',
+  'chat.embed.iframe',
+  'chat.publish.logo',
   'langsmith.title',
   'tests.langsmith',
   'api.button',
@@ -125,6 +129,7 @@ const SAME_OK = new Set([
   'transfer.kinds.credential',
   'transfer.kinds.subgraph',
   'users.email',
+  'validation.NODE_PROBLEM',
   'versions.nodes_one',
   'versions.stateTitle',
 ])

@@ -1,9 +1,10 @@
-"""Static workflow validation: returns a list of human-readable errors (empty = valid)."""
+"""Static workflow validation: returns a list of human-readable errors (empty = valid), each an `issues.Issue`."""
 from __future__ import annotations
 
 from typing import Any, Dict, List
 from ..core import config
 from . import agents, code_languages, code_runtime, deadlines, decisions, emails, foreach
+from .issues import Issue, at_node
 from .node_policy import errors as policy_errors
 from .templating import ref_errors, refs
 from .reducers import field_errors, reducer_of
@@ -51,8 +52,8 @@ def template_errors(nid: str, t: Any, d: Dict[str, Any], fields: set) -> List[st
     extra = {"args"} if t == "agent" else set()  # an agent's HTTP tool reads the model's arguments (TASK-0116)
     for text in templates_of(t, d):
         for r in refs(text):
-            if fields and r.field not in fields | extra: out.append(f"Node {nid}: variable state.{r.field} is not in the state")
-            out += [f"Node {nid}: {e} in {{{{state.{r.field}}}}}" for e in ref_errors(r)]
+            if fields and r.field not in fields | extra: out.append(Issue("VARIABLE_UNKNOWN", node=nid, field=r.field))
+            out += [at_node(nid, e, f"{{{{state.{r.field}}}}}") for e in ref_errors(r)]
     return list(dict.fromkeys(out))
 
 
@@ -60,32 +61,32 @@ def validate(wf: Dict[str, Any]) -> List[str]:
     errs: List[str] = []
     nodes = [n for n in wf.get("nodes", []) if isinstance(n, dict)]
     edges = [e for e in wf.get("edges", []) if isinstance(e, dict)]
-    if any(not n.get("id") for n in nodes): return ["Every node needs an id"]
-    if any(not e.get("source") or not e.get("target") for e in edges): return ["Every edge needs a source and a target"]
+    if any(not n.get("id") for n in nodes): return [Issue("NODE_ID_MISSING")]
+    if any(not e.get("source") or not e.get("target") for e in edges): return [Issue("EDGE_ENDS_MISSING")]
     for kind, items in (("node", nodes), ("edge", edges)):
         seen_ids, dup = set(), set()
         for x in items:
             if x.get("id") in seen_ids: dup.add(str(x.get("id")))
             seen_ids.add(x.get("id"))
-        if dup: errs.append(f"Duplicate {kind} id: {', '.join(sorted(dup))}")
+        if dup: errs.append(Issue(f"DUPLICATE_{kind.upper()}_ID", ids=", ".join(sorted(dup))))
     ids = {n["id"] for n in nodes}
     types = {n["id"]: n.get("type") for n in nodes}
     starts = [n for n in nodes if n.get("type") == "start"]
     ends = [n for n in nodes if n.get("type") == "end"]
-    if not starts: errs.append("Exactly one Start node is required (none found)")
-    elif len(starts) > 1: errs.append(f"Only one Start node is allowed (found {len(starts)}: {', '.join(n['id'] for n in starts)})")
-    if not ends: errs.append("At least one End node is required")
+    if not starts: errs.append(Issue("START_MISSING"))
+    elif len(starts) > 1: errs.append(Issue("START_MANY", count=len(starts), ids=", ".join(n["id"] for n in starts)))
+    if not ends: errs.append(Issue("END_MISSING"))
     schema = [f for f in wf.get("state", []) if isinstance(f, dict) and f.get("name")]
     fields = {f["name"] for f in schema}
     for f in schema: errs += field_errors(f)
-    errs += [f"State field {n}: names starting with '{foreach.PREFIX}' are reserved for For each loops" for n in sorted(fields) if n.startswith(foreach.PREFIX)]
-    errs += [f"State field {n}: names starting with '{agents.PREFIX}' are reserved for Agent nodes" for n in sorted(fields) if n.startswith(agents.PREFIX)]
+    errs += [Issue("FIELD_RESERVED_FOREACH", field=n, prefix=foreach.PREFIX) for n in sorted(fields) if n.startswith(foreach.PREFIX)]
+    errs += [Issue("FIELD_RESERVED_AGENT", field=n, prefix=agents.PREFIX) for n in sorted(fields) if n.startswith(agents.PREFIX)]
     for e in edges:
         missing = [x for x in (e["source"], e["target"]) if x not in ids]
         if missing:
-            errs.append(f"Edge {e.get('id')} points to a missing node: {', '.join(missing)}")
+            errs.append(Issue("EDGE_NODE_MISSING", edge=e.get("id"), nodes=", ".join(missing)))
         elif e["source"] == e["target"] and types.get(e["source"]) not in ("condition",) + agents.ROUTERS:
-            errs.append(f"Node {e['source']}: cannot connect to itself (only a Condition may create a loop)")
+            errs.append(Issue("NODE_SELF_LOOP", node=e["source"]))
     edges = [e for e in edges if e["source"] in ids and e["target"] in ids]
     out = {i: [e for e in edges if e["source"] == i] for i in ids}
     def reaches(a: str, b: str) -> bool:
@@ -99,56 +100,56 @@ def validate(wf: Dict[str, Any]) -> List[str]:
     for n in nodes:
         t, d, nid = n.get("type"), n.get("data", {}), n["id"]
         if t not in TYPES:
-            errs.append(f"Node {nid}: invalid type '{t}'")
+            errs.append(Issue("NODE_TYPE_INVALID", node=nid, type=t))
         if t in STEPS: continue
         if t == "note":  # a comment on the canvas: no edges, and it is not part of the run (REQ-0025)
             if any(e["source"] == nid or e["target"] == nid for e in edges):
-                errs.append(f"Note {nid} ({d.get('label') or nid}) cannot be connected")
+                errs.append(Issue("NOTE_CONNECTED", node=nid, label=d.get("label") or nid))
             continue
         if t != "end" and not out.get(nid):
-            errs.append(f"Node {nid} ({d.get('label', t)}) has no outgoing edge")
+            errs.append(Issue("NODE_NO_OUTGOING", node=nid, label=d.get("label", t)))
         if t == "end" and out.get(nid):
-            errs.append(f"End node {nid} must not have outgoing edges")
+            errs.append(Issue("END_OUTGOING", node=nid))
         if t == "start" and any(e["target"] == nid for e in edges):
-            errs.append("Start must not have incoming edges")
+            errs.append(Issue("START_INCOMING"))
         if t in WRITERS:
             of = d.get("output_field")
-            if not of: errs.append(f"Node {nid}: output_field is missing")
-            elif fields and of not in fields: errs.append(f"Node {nid}: output_field '{of}' is not in the state")
+            if not of: errs.append(Issue("OUTPUT_FIELD_MISSING", node=nid))
+            elif fields and of not in fields: errs.append(Issue("OUTPUT_FIELD_UNKNOWN", node=nid, field=of))
         if t == "tool":
             if d.get("mode", "function") == "function" and d.get("function") not in TOOLS:
-                errs.append(f"Node {nid}: function '{d.get('function')}' is not registered")
+                errs.append(Issue("FUNCTION_UNKNOWN", node=nid, function=d.get("function")))
             if d.get("mode") == "http" and not d.get("url"):
-                errs.append(f"Node {nid}: URL is missing")
+                errs.append(Issue("URL_MISSING", node=nid))
             if d.get("mode") == "code":
-                errs.extend(f"Node {nid}: {why}" for why in code_runtime.problems(d.get("code"), code_languages.language_of(d)))
+                errs.extend(at_node(nid, why) for why in code_runtime.problems(d.get("code"), code_languages.language_of(d)))
         if t == "join":
             inc = [e for e in edges if e["target"] == nid]
-            if len(inc) < 2: errs.append(f"Join node {nid}: needs at least two incoming edges (the branches it waits for)")
+            if len(inc) < 2: errs.append(Issue("JOIN_FEW_INPUTS", node=nid))
             if any(types.get(e["source"]) == "condition" for e in inc):
-                errs.append(f"Join node {nid}: a Condition cannot feed a Join directly (the Join would wait for a branch that may never run)")
+                errs.append(Issue("JOIN_AFTER_CONDITION", node=nid))
         if t == "retriever":
-            if not d.get("knowledge_base_id"): errs.append(f"Retriever node {nid}: choose a knowledge base")
+            if not d.get("knowledge_base_id"): errs.append(Issue("RETRIEVER_KB_MISSING", node=nid))
             k = d.get("top_k", 4)
-            if not isinstance(k, int) or isinstance(k, bool) or not 1 <= k <= 20: errs.append(f"Retriever node {nid}: top_k must be 1-20")
+            if not isinstance(k, int) or isinstance(k, bool) or not 1 <= k <= 20: errs.append(Issue("RETRIEVER_TOP_K", node=nid))
         if t == "mcp":
-            if not d.get("server_id"): errs.append(f"MCP node {nid}: choose a server")
-            if not d.get("tool"): errs.append(f"MCP node {nid}: choose a tool")
-            if not isinstance(d.get("arguments", {}), dict): errs.append(f"MCP node {nid}: arguments must be an object")
+            if not d.get("server_id"): errs.append(Issue("MCP_SERVER_MISSING", node=nid))
+            if not d.get("tool"): errs.append(Issue("MCP_TOOL_MISSING", node=nid))
+            if not isinstance(d.get("arguments", {}), dict): errs.append(Issue("MCP_ARGUMENTS", node=nid))
         if t == "subgraph" and not d.get("workflow_id"):
-            errs.append(f"Subgraph node {nid}: choose a workflow")
+            errs.append(Issue("SUBGRAPH_WORKFLOW_MISSING", node=nid))
         if t == "foreach": errs += foreach.errors(nid, d, out.get(nid, []), schema, reaches)
         if t == "decision": errs += decisions.errors(nid, d, schema)
         if t == "agent": errs += agents.errors(nid, d, schema)
         if t == "email": errs += emails.errors(nid, d, schema)
         if t == "human" or (t == "agent" and agents.needs_approval(d)): errs += deadlines.errors(nid, d, config.wait_ttl())
         if t == "human" and d.get("answered_by") not in (None, "visitor", "reviewer"):
-            errs.append(f"Human node {nid}: answered by must be visitor or reviewer")
+            errs.append(Issue("HUMAN_ANSWERED_BY", node=nid))
         if t == "condition":
-            if not d.get("field"): errs.append(f"Node {nid}: Condition field is missing")
+            if not d.get("field"): errs.append(Issue("CONDITION_FIELD_MISSING", node=nid))
             labels = [e.get("label") for e in out.get(nid, [])]
-            if any(not l for l in labels): errs.append(f"Node {nid}: every outgoing Condition edge needs a label")
-            if len(set(labels)) != len(labels): errs.append(f"Node {nid}: duplicate labels")
+            if any(not l for l in labels): errs.append(Issue("CONDITION_LABEL_MISSING", node=nid))
+            if len(set(labels)) != len(labels): errs.append(Issue("CONDITION_LABEL_DUPLICATE", node=nid))
         errs += template_errors(nid, t, d, fields)
         errs += policy_errors(nid, d, fields)
     # parallel branches (several outgoing edges, no Condition) that write the same field need a reducer
@@ -161,7 +162,7 @@ def validate(wf: Dict[str, Any]) -> List[str]:
             for of in dict.fromkeys(written(tgt or {})): writes.setdefault(of, []).append(tgt["id"])
         for of, who in writes.items():
             if len(who) > 1 and red.get(of, "replace") == "replace":
-                errs.append(f"Parallel nodes {', '.join(who)} all write state.{of}: give the field a reducer (append, merge or add) or use different fields")
+                errs.append(Issue("PARALLEL_WRITES", nodes=", ".join(who), field=of))
     # cycles must pass through a Condition or For each node (otherwise the loop can never exit)
     exits = ROUTES
     plain = {i: [e["target"] for e in out.get(i, []) if types.get(e["target"]) not in exits and e["target"] != i] for i in ids if types.get(i) not in exits}
@@ -171,7 +172,7 @@ def validate(wf: Dict[str, Any]) -> List[str]:
         for v in plain.get(u, []):
             if state_.get(v) == 1:
                 cyc = path[path.index(v):] + [v]
-                errs.append(f"Loop without a Condition or For each: {' → '.join(cyc)}")
+                errs.append(Issue("LOOP_WITHOUT_EXIT", path=" → ".join(cyc)))
                 return True
             elif not state_.get(v) and dfs(v, path): return True
         path.pop(); state_[u] = 2; return False
@@ -186,13 +187,13 @@ def validate(wf: Dict[str, Any]) -> List[str]:
             seen.add(x); stack += [e["target"] for e in out.get(x, [])]
         for n in nodes:
             if n.get("type") == "note": continue
-            if n["id"] not in seen: errs.append(f"Node {n['id']} is not reachable from Start")
+            if n["id"] not in seen: errs.append(Issue("NODE_UNREACHABLE", node=n["id"]))
     used = sorted({code_languages.language_of(n.get("data")) for n in nodes
                    if n.get("type") == "tool" and (n.get("data") or {}).get("mode") == "code"})
     for lang in used:  # per language: Docker and its image, checked at most every 30 s (TASK-0053, TASK-0079)
         why = code_runtime.unavailable(lang)
-        if why == "demo": errs.append("Code nodes are turned off in the public demo"); break
-        if why == "off": errs.append("Code nodes are turned off on this server (set STUDIO_ENABLE_CODE_NODES=1)"); break
-        elif why: errs.append(f"Code nodes cannot run on this server: {why}" if lang == code_languages.DEFAULT
-                              else f"{lang} Code nodes cannot run on this server: {why}")
+        if why == "demo": errs.append(Issue("CODE_OFF_DEMO")); break
+        if why == "off": errs.append(Issue("CODE_OFF")); break
+        elif why: errs.append(Issue("CODE_UNAVAILABLE", reason=why) if lang == code_languages.DEFAULT
+                              else Issue("CODE_LANGUAGE_UNAVAILABLE", language=lang, reason=why))
     return errs

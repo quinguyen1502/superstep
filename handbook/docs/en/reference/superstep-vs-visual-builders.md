@@ -65,7 +65,9 @@ How you call it and take it elsewhere:
   search) for up to a set number of rounds; any tool can need an approval
   before each call. Each model and tool call is a checkpointed step, so it
   shows in the trace and is not repeated after a restart (see
-  [Agent node](../guide/agent.md)).
+  [Agent node](../guide/agent.md)). An Agent can call another workflow as a
+  tool, so a supervisor agent hands work to specialist agents, and the
+  specialist's steps show under the call.
 - **Code export and LangGraph interop.** Any workflow exports as a runnable
   LangGraph project (`langgraph.json`, served by `langgraph dev`, see
   [Export to Python](../guide/python-export.md)), and a subset of the Agent
@@ -82,17 +84,18 @@ How you call it and take it elsewhere:
   [Workflow tests](../run/tests.md)), optional LangSmith datasets and
   experiments, OpenTelemetry traces (see [Traces](../run/traces.md)).
 - **Services, not only a studio.** API tokens, signed webhooks, cron schedules,
-  chat triggers, and a public API with Python and TypeScript SDKs (see
-  [Public API and SDKs](../run/public-api.md)).
+  chat triggers, a public chat page with an embeddable chat bubble (see
+  [Chat](../run/chat.md#publish-a-chat)), and a public API with Python and
+  TypeScript SDKs (see [Public API and SDKs](../run/public-api.md)).
 - **Self-hosted, MIT.** SQLite by default or Postgres with pgvector, optional
   Redis and worker, Docker images on GHCR and one-click PaaS deploys (see
   [Deploy](../operate/deploy.md)). Vietnamese and English UI and handbook.
 
 What Superstep does not try to be: it has far fewer ready integrations than the
 other four (it connects through HTTP, MCP servers, email and its chat
-channels), no hosted cloud service and no marketplace. Its Agent node is one
-agent with the tools you list: no multi-agent teams or hand-offs, and no
-TypeScript export of it yet.
+channels), no hosted cloud service and no marketplace. Several agents work
+together only as a supervisor calling other workflows as tools: there are no
+hand-offs between agents and no agents that talk freely to each other.
 
 ## n8n
 

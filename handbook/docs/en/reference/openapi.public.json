@@ -579,6 +579,18 @@
               }
             ]
           },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id",
+            "description": "Set on the child run of a workflow tool: the run whose Agent node called it."
+          },
           "metrics": {
             "anyOf": [
               {
@@ -722,6 +734,18 @@
               }
             ]
           },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id",
+            "description": "Set on the child run of a workflow tool: the run whose Agent node called it."
+          },
           "metrics": {
             "anyOf": [
               {
@@ -845,11 +869,23 @@
               }
             ],
             "title": "Prompt"
+          },
+          "child_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Child Run Id",
+            "description": "Set while an Agent node's workflow tool runs: the child run the run waits for."
           }
         },
         "type": "object",
         "title": "RunWaiting",
-        "description": "Set when status is `waiting`: the Human node the run is paused at."
+        "description": "Set when status is `waiting`: the Human node the run is paused at, or the child run of a workflow tool it waits for."
       },
       "StartRunRequest": {
         "properties": {

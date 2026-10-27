@@ -22,6 +22,12 @@ Mọi response REST đều là một envelope:
 tiếng Anh, cho người đọc và log. Client dịch theo `code` và dùng `message` khi
 không có bản dịch. Danh sách mã ở [Mã lỗi](errors.md).
 
+Phần kiểm tra workflow cũng vậy. `POST /api/validate`, lưu workflow
+(`POST /api/workflows`) và dùng một mẫu đều trả về `errors`, danh sách thông báo
+tiếng Anh, và `issues`, mã của chúng theo cùng thứ tự: `{"code", "params"}`, hoặc
+`null` với thông báo không có mã. Sự kiện `error` của run qua WebSocket cũng có
+`issues` khi báo các lỗi kiểm tra này. Editor hiện `issues` theo ngôn ngữ giao diện.
+
 ## Xác thực
 
 | Client | Cách |
@@ -85,6 +91,7 @@ WS /ws/run
     ```text
     GET    /api/workflows/{wid}/runs          (?tests=true: các run test)
     GET    /api/runs/pending
+    GET    /api/runs/{run_id}                (một run cùng các sự kiện, như lịch sử liệt kê; run được gọi của công cụ workflow)
     GET    /api/runs/{run_id}/checkpoints   (time travel; fork: WS /ws/run {"fork": {...}})
     POST   /api/runs/{run_id}/cancel
     WS     /ws/run
@@ -133,6 +140,29 @@ WS /ws/run
     PATCH  /api/workflows/{wid}/chat-triggers/{tid} DELETE /api/workflows/{wid}/chat-triggers/{tid}
     (chủ hoặc admin; {channel_id, place: "dm" | id kênh hoặc chat, command, input_field, reply_field, enabled})
     ```
+
+??? abstract "Chat và trang chat công khai"
+
+    ```text
+    GET    /api/workflows/{wid}/chat                PUT    /api/workflows/{wid}/chat   (cài đặt; PUT cần quyền chủ sở hữu)
+    GET    /api/workflows/{wid}/chat/sessions       POST   /api/workflows/{wid}/chat/sessions
+    GET    /api/chat/sessions/{sid}?view=builder|visitor   DELETE /api/chat/sessions/{sid}
+    GET    /api/workflows/{wid}/chat/visitors       GET    /api/workflows/{wid}/chat/visitors/{sid}   (chỉ xem)
+    GET    /api/workflows/{wid}/chat/logo?v=      (logo: data: URL trong PUT để đặt, "" để bỏ)
+    WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
+
+    Không cần đăng nhập (trang công khai, theo slug):
+    GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins, logo)
+    GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
+    GET    /api/public/chat/{slug}/sessions/{sid}
+    GET    /api/public/chat/{slug}/logo?v=<logo>
+    WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
+    GET    /api/public/chat-frame?path=/c/{slug}    (frame-ancestors của trang, cho nginx)
+    ```
+
+    Khách chat ẩn danh được nhận diện bằng một cookie HttpOnly, hoặc header
+    `X-Chat-Visitor` (`?visitor=` trên socket) khi trang được nhúng. Gửi
+    `X-Chat-Visitor: new` để nhận token mới trong `visitor_token`.
 
 ??? abstract "Kiểm thử workflow"
 

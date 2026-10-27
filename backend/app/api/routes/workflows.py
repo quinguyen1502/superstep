@@ -27,7 +27,7 @@ def del_wf(wid: str, force: bool = Query(False), user=Depends(current_user), svc
 def runs(wid: str, tests: bool = Query(False), user=Depends(current_user), svc=Depends(run_service)): return svc.history(wid, user["id"], tests)
 
 @router.post("/validate", dependencies=[Depends(limit_body)])
-def validate_wf(body: WorkflowIn, user=Depends(current_user), svc=Depends(workflow_service)): return {"errors": svc.validate(body.as_dict(), user["id"])}
+def validate_wf(body: WorkflowIn, user=Depends(current_user), svc=Depends(workflow_service)): return svc.checked(body.as_dict(), user["id"])
 
 # ---- versions (TASK-0008) ----
 @router.get("/workflows/{wid}/versions")

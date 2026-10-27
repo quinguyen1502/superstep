@@ -7,6 +7,7 @@ from .compiler import compile_workflow
 from . import agents, foreach
 from .effects import Effects
 from .errors import Interrupt, ValidationError
+from .issues import Issue
 from .limits import safe_error
 from .reducers import apply as apply_delta
 from .usage import merge as merge_usage
@@ -30,13 +31,13 @@ PY_TYPES = {"number": (int, float), "integer": (int,), "boolean": (bool,), "list
 
 def check_input(wf: Dict[str, Any], inputs: Any) -> List[str]:
     """Run input must be a JSON object whose known fields match the state schema types."""
-    if not isinstance(inputs, dict): return ["Input must be a JSON object, e.g. {\"message\": \"hi\"}"]
+    if not isinstance(inputs, dict): return [Issue("INPUT_NOT_OBJECT")]
     errs = []
     for f in wf.get("state", []) or []:
         name, typ = f.get("name"), f.get("type", "string")
         if name in inputs and inputs[name] is not None and typ in PY_TYPES:
             v = inputs[name]; ok = isinstance(v, PY_TYPES[typ]) and not (typ in ("number", "integer") and isinstance(v, bool))
-            if not ok: errs.append(f"Input '{name}' must be of type {typ} (got {type(v).__name__})")
+            if not ok: errs.append(Issue("INPUT_TYPE", field=name, type=typ, got=type(v).__name__))
     return errs
 
 

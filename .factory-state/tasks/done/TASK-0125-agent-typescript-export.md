@@ -77,3 +77,8 @@ clear error until a later task"); the owner picked it as the next task in chat o
   - `test_all_node_types_type_check` now covers the Agent workflow and the Support agent template.
 - Full backend `pytest` (without Deno on PATH): 717 passed, 56 skipped.
 - Not run: the LLM_PROVIDER path (it needs a real model). `deno check` type-checks it against LangChain.js.
+
+## Review And QA
+
+- Review: REV-0113, QA: QA-0113. Both were written after the merge, by TASK-0129 on 2026-10-26: the PR was merged on CI and the
+  validation above, without them.

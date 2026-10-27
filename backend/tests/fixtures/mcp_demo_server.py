@@ -44,9 +44,12 @@ class H(BaseHTTPRequestHandler):
         self.send_response(200); self.end_headers()
 
     def do_POST(self):
+        # read the body first, also for a 401: closing with it unread resets the connection, and the client may then
+        # see a ReadError instead of the 401 (TASK-0130)
+        raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
         if os.environ.get("MCP_REQUIRE_TOKEN") and self.headers.get("Authorization") != f"Bearer {os.environ['MCP_REQUIRE_TOKEN']}":
             self.send_response(401); self.end_headers(); return
-        msg = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)))
+        msg = json.loads(raw)
         out = handle(msg)
         if out is None:
             self.send_response(202); self.end_headers(); return

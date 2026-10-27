@@ -1,12 +1,12 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.9.0",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --config vite.widget.config.ts",
     "lint": "oxlint && npm run lint:ui",
     "lint:ui": "node scripts/check-ui-classes.mjs --strict",
     "preview": "vite preview",

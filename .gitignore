@@ -30,3 +30,6 @@ frontend/test-results/
 frontend/playwright-report/
 backend/.venv
 .coverage
+
+# factory CLI install artifacts
+.factory/build/

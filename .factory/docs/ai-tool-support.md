@@ -38,15 +38,6 @@ command fields as `Proposed` only. Skills are emitted by default; pass
 A created project is valid (`factory validate`) before it is ready for
 implementation (`factory ready`).
 
-## Parallel Dispatch
-
-`factory orchestrate` can dispatch multiple `todo` tasks to different tools at once, one
-tool per task, each in an isolated git worktree on its own `factory/task-<id>-<short-name>`
-branch. It is dispatch-and-supervise only: it prepares worktrees and a context brief and
-moves tasks `todo -> doing`, but never writes application code, opens pull requests, or
-merges. Write permissions inside a launched session remain governed by the project tool
-kit. See `docs/orchestration.md`.
-
 ## Branch Names
 
 New task branches use the tool-neutral convention `factory/task-<id>-<short-name>`. Existing `codex/task-*` branches remain historical and valid.

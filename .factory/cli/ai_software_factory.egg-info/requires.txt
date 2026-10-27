@@ -1,5 +1,0 @@
-PyYAML<7,>=6
-prompt_toolkit<4,>=3.0
-rich<15,>=13
-textual<9,>=8.2
-textual-plotext<2,>=1

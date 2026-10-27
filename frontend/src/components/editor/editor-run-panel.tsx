@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ExternalLink, AlertTriangle, FlaskConical, GitBranch, ShieldAlert, History } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ExternalLink, AlertTriangle, FlaskConical, GitBranch, ShieldAlert, History, Workflow } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -11,6 +11,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { HumanPanel } from '@/components/human-panel'
+import { ChildWaitPanel } from '@/components/child-wait-panel'
+import { TextLink } from '@/components/text-link'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import i18n from '@/lib/i18n'
 import { useTranslation } from 'react-i18next'
@@ -48,6 +50,14 @@ export function EditorRunPanel() {
   const canTravel = !!wid && !source && !running && !!trace.runId && finished(trace.status) && trace.status !== 'waiting'
   const pick = rows.find(h => h.id === trace.runId)
   const forkedFrom = (log as any[]).find(e => e.type === 'run_started')?.forked_from as { run_id: string; checkpoint: number } | undefined
+  // a run waiting for a workflow tool's child (TASK-0135) goes on by itself in the worker: look again until it moves on
+  const child = !running ? trace.waiting?.child : undefined
+  useEffect(() => {
+    if (!child || !wid) return
+    const id = window.setInterval(() => api<any[]>(`/api/workflows/${wid}/runs`).then(rs => {
+      const h = rs.find(r => r.id === trace.runId); if (h && h.status !== 'waiting') openRun(h) }).catch(() => {}), 2000)
+    return () => window.clearInterval(id)
+  }, [child?.runId, wid, trace.runId])  // eslint-disable-line react-hooks/exhaustive-deps
   return <section className="h-full min-h-0 flex flex-col">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b px-3" id="run-toolbar">
         <Tabs value={mode} onValueChange={v => setTab(v === 'test' ? 'tests' : v === 'code' ? 'code' : 'logs')}>
@@ -79,7 +89,12 @@ export function EditorRunPanel() {
         <ResizablePanel id="run-logs-panel" minSize="30%" className="min-h-0"><div className="flex h-full min-h-0 flex-col">
           {forkedFrom && <p className="flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 text-xs text-muted-foreground" id="trace-forked-from">
             <GitBranch className="size-3.5" />{t('timeTravel.forkedFrom', { run: forkedFrom.run_id, n: forkedFrom.checkpoint + 1 })}</p>}
-          {trace.waiting?.runId && !running && <HumanPanel waiting={trace.waiting} onRespond={r => respond(trace.waiting!.runId!, r)} />}
+          {pick?.parent && <p className="flex shrink-0 items-center gap-1.5 border-b px-3 py-1.5 text-xs text-muted-foreground" id="trace-called-by">
+            <Workflow className="size-3.5" />{t('childRuns.calledBy', { name: pick.parent.workflow_name || t('childRuns.unknown') })}
+            {pick.parent.workflow_name && <TextLink to={`/workflows/${pick.parent.workflow_id}?run=${pick.parent.run_id}`} id="trace-open-parent">{t('childRuns.openParent')}</TextLink>}</p>}
+          {trace.waiting?.runId && !running && (trace.waiting.child
+            ? <ChildWaitPanel child={trace.waiting.child} name={pick?.waiting_for?.workflow_name} status={pick?.waiting_for?.status} />
+            : <HumanPanel waiting={trace.waiting} onRespond={r => respond(trace.waiting!.runId!, r)} />)}
           <RunTrace trace={trace} events={log as any} meta={traceMeta} selected={traceSel} onSelect={sp => setTraceSel(sp?.key ?? null)}
             replay={replay ?? undefined} onExitReplay={() => { setReplay(null); setLog([]); setTraceSel(null) }}
             actions={canTravel || (canSave && !running && trace.runId && finished(trace.status)) ? <>
@@ -112,6 +127,8 @@ export function EditorRunPanel() {
               {h.source === 'chat' && <Tip tip={t('chatTriggers.from', { sender: h.chat?.sender ?? '?', trigger: h.chat?.trigger ?? '—' })}>
                 <Badge variant="outline" data-testid="history-source">{h.chat?.kind && <ChannelLogo kind={h.chat.kind} className="size-3" />}{t('chatTriggers.badge')}</Badge></Tip>}
               {h.source === 'test' && <Badge variant="outline" data-testid="history-source">{t('tests.badge')}</Badge>}
+              {h.source === 'tool' && <Tip tip={t('childRuns.calledBy', { name: h.parent?.workflow_name || t('childRuns.unknown') })}>
+                <Badge variant="outline" data-testid="history-source"><Workflow className="size-3" />{t('childRuns.badge')}</Badge></Tip>}
               {h.code_runtime === 'subprocess' && <Tip tip={t('code.runUnisolated')}><Badge variant="warning" data-testid="history-unisolated"><ShieldAlert className="size-3" /></Badge></Tip>}
               <Tip tip={h.version ? t('versions.runVersion', { n: h.version }) : t('versions.runUnsaved')}>
                 <Badge variant="secondary" data-testid="history-version">{h.version ? `v${h.version}` : t('versions.unsaved')}</Badge></Tip></span>

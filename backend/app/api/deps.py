@@ -45,6 +45,7 @@ from ..services.schedule_service import ScheduleService
 from ..services.chat_trigger_service import ChatTriggerService
 from ..services.chat_run_service import ChatRunService
 from ..services.chat_session_service import ChatSessionService
+from ..services.public_chat_service import PublicChatService
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -112,6 +113,10 @@ def chat_session_service() -> ChatSessionService:
                                              RunRepository(db), access=access_service())
 
 
+def public_chat_service() -> PublicChatService:
+    return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())
+
+
 def trigger_service() -> TriggerService:
     db = get_db(); return TriggerService(WorkflowRepository(db), RunRepository(db), WorkflowTokenRepository(db), get_job_queue(), get_rate_limiter(),
                                          access=access_service())
@@ -177,7 +182,8 @@ def demo_service() -> DemoService:
 def run_service() -> RunService:
     db = get_db(); return RunService(WorkflowRepository(db), RunRepository(db), credential_service(), get_run_bus(), get_telemetry(), WorkflowVersionRepository(db), notification_service(), NodeResultRepository(db), approval_service(), delivery_service,
                       knowledge=knowledge_service(), mcp=mcp_service(), access=access_service(),
-                      policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service)
+                      policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service,
+                      jobs=get_job_queue)
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),

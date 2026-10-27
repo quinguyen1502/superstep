@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0048
-- Status: Accepted (phase 1: TASK-0084, TASK-0085 in stacked draft PRs)
+- Status: Phase 1 implemented (TASK-0084 PR #116, TASK-0085 PR #117); phase 2, the public page `/c/{slug}`, done as REQ-0074 (PRs #186 to #191, 0.9.0)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-23
-- Updated: 2026-10-23
+- Updated: 2026-10-27
 - Source: owner request in chat, 2026-10-23, after the agent chat UI research (`/workspace/scratch/agent-chat-ui-research.md`,
   recommendation (a): our own UI on the shadcn chat components over our run protocol). The owner approved phase 1 with
   decisions (1)-(6) below.

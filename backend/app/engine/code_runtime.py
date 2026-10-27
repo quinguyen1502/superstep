@@ -13,6 +13,7 @@ from __future__ import annotations
 import json, os, queue, re, signal, subprocess, sys, tempfile, threading, time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
+from .issues import Issue
 from ..core import config
 from ..core.errors import AppError
 from ..core.logging import get_logger
@@ -51,9 +52,9 @@ class CodeFailure(AppError):
 def problems(source: Any, language: Optional[str] = None) -> List[str]:
     """Why this source cannot run, from reading it alone (it is never executed here). Empty when it can."""
     lang = language or langs.DEFAULT
-    if lang not in langs.enabled(): return [f"{lang} is not available on this server"]
-    if not isinstance(source, str) or not source.strip(): return ["the code is empty"]
-    if len(source.encode()) > SOURCE_MAX: return [f"the code is larger than {SOURCE_MAX // 1024} KB"]
+    if lang not in langs.enabled(): return [Issue("CODE_LANGUAGE_OFF", language=lang)]
+    if not isinstance(source, str) or not source.strip(): return [Issue("CODE_EMPTY")]
+    if len(source.encode()) > SOURCE_MAX: return [Issue("CODE_TOO_LARGE", kb=SOURCE_MAX // 1024)]
     return langs.LANGUAGES[lang].problems(source)
 
 

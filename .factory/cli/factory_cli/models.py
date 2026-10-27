@@ -9,10 +9,8 @@ from .constants import (
     PROJECT_PRESET_IDS,
     REFINEMENT_SECTION_IDS,
     STACK_STATUSES,
-    STORAGE_BACKENDS,
     TOOL_KIT_LEVELS,
     TOOL_IDS,
-    USAGE_SCOPES,
 )
 
 
@@ -247,30 +245,32 @@ class FactoryConfig:
             raise ValueError("Factory link mode must be copy or submodule.")
         if not isinstance(self.integration_branch, str) or not self.integration_branch.strip():
             raise ValueError("Integration branch must not be empty.")
-        if self.storage_backend not in STORAGE_BACKENDS:
-            raise ValueError(
-                f"Storage backend must be one of: {', '.join(STORAGE_BACKENDS)}."
-            )
+        if not isinstance(self.storage_backend, str) or not self.storage_backend.strip():
+            raise ValueError("Storage backend must be a string.")
         if self.storage_dsn is not None and not isinstance(self.storage_dsn, str):
             raise ValueError("Storage DSN must be a connection string or null.")
-        if self.storage_backend == "folder+postgres" and not (self.storage_dsn or "").strip():
-            raise ValueError("The folder+postgres backend requires storage_dsn.")
-        if self.budget_enforcement not in {"warn", "block"}:
-            raise ValueError("Budget enforcement must be warn or block.")
+        if not isinstance(self.budget_enforcement, str) or not self.budget_enforcement.strip():
+            raise ValueError("Budget enforcement must be a string.")
         if not isinstance(self.budgets, dict):
-            raise ValueError("Budgets must be a mapping of scope keys to token limits.")
-        for key, limit in self.budgets.items():
-            if not isinstance(key, str) or ":" not in key:
-                raise ValueError(
-                    "Budget keys must look like 'task:TASK-0001' or 'agent:developer'."
-                )
-            scope = key.split(":", 1)[0]
-            if scope not in USAGE_SCOPES:
-                raise ValueError(
-                    f"Budget scope must be one of: {', '.join(USAGE_SCOPES)}."
-                )
-            if type(limit) is not int or limit < 0:
-                raise ValueError(f"Budget limit for '{key}' must be a non-negative integer.")
+            raise ValueError("Budgets must be a mapping.")
+
+    def ignored_setting_warnings(self) -> List[str]:
+        """Retired settings still accepted so older factory.yaml files load."""
+        warnings: List[str] = []
+        if self.storage_backend != "folder":
+            warnings.append(
+                f"storage_backend={self.storage_backend!r} is ignored; "
+                "task state stays in Markdown files."
+            )
+        if (self.storage_dsn or "").strip():
+            warnings.append("storage_dsn is ignored.")
+        if self.budget_enforcement != "warn":
+            warnings.append(
+                f"budget_enforcement={self.budget_enforcement!r} is ignored."
+            )
+        if self.budgets:
+            warnings.append("budgets are ignored.")
+        return warnings
 
     def to_yaml(self) -> str:
         self.validate()

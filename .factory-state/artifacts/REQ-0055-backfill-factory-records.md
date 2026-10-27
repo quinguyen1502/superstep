@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0055
-- Status: In review (TASK-0093)
+- Status: Done (TASK-0093, PR #135)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-24
 - Updated: 2026-10-24

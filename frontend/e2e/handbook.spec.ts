@@ -311,5 +311,61 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
       await shot(page, lang, 'agent-trace')
     })
+
+    // Workflows as Agent tools (TASK-0138, REQ-0073): the Support team template's tool card, a run whose trace shows the
+    // order desk's steps under the call, and a run waiting for the refund desk's approval. Run alone with `-g "workflow tools"`.
+    test(`workflow tools ${lang}`, async ({ page }) => {
+      await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
+      await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
+      const H = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+      const vi = lang === 'vi'
+      const wid = (await (await page.request.post('/api/templates/builtin-support-team/use', { headers: H, data: { name: vi ? 'Đội hỗ trợ' : 'Support team' } })).json()).data.id
+      if (vi) {  // the mock picks the tool whose description shares the most words with the message
+        const wf = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data
+        const agent = wf.nodes.find((n: { type: string }) => n.type === 'agent')
+        Object.assign(agent.data, { label: 'Điều phối', prompt: 'Giúp khách hàng này. Tin nhắn: {{state.message}}' })
+        agent.data.tools[0].description = 'Câu hỏi về đơn hàng đang ở đâu'
+        agent.data.tools[1].description = 'Yêu cầu hoàn tiền cho đơn hàng bị vỡ hoặc giao trễ'
+        expect((await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).success).toBe(true)
+      }
+      await page.goto(`/workflows/${wid}`); await expect(page.locator('.react-flow__node')).toHaveCount(3); await fit(page)
+      await page.locator('.react-flow__node[data-id="agent"]').click(); await expect(page.locator('#agent-settings')).toBeVisible()
+      await page.locator('#agent-tool-0-fields').scrollIntoViewIfNeeded()
+      await shot(page, lang, 'workflow-tool-settings')
+      await setInput(page, JSON.stringify({ message: vi ? 'Đơn hàng B200 của tôi đang ở đâu?' : 'Where is my order B200?' }, null, 2))
+      await run(page); await expect(page.getByTestId('child-steps')).toContainText('lookup_order')
+      await shot(page, lang, 'workflow-tool-trace')
+      await setInput(page, JSON.stringify({ message: vi ? 'Đơn A100 của tôi bị vỡ, cho tôi hoàn tiền' : 'Order A100 arrived broken, please refund it' }, null, 2))
+      await run(page, 'waiting'); await expect(page.locator('#child-wait-panel')).toBeVisible()
+      await page.waitForTimeout(2500)  // the refund desk reaches its approval
+      await page.goto('/approvals'); await expect(page.locator('[data-testid=inbox-row]').first()).toBeVisible()
+      await shot(page, lang, 'workflow-tool-approval')
+    })
+
+    // The public chat page (TASK-0144, REQ-0074): the publish settings, the embed snippets, and the page a visitor sees.
+    // Run alone with `-g "public chat"`.
+    test(`public chat ${lang}`, async ({ page, browser }) => {
+      await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
+      await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
+      const H = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+      const vi = lang === 'vi'
+      const wf = { name: vi ? 'Hỗ trợ đơn hàng' : 'Order help', state: [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }],
+        nodes: [N('start', 'start', 40), N('bot', 'llm', 300, { label: vi ? 'Trả lời' : 'Reply', model: 'gpt-4o-mini', prompt: 'Answer: {{state.message}}', output_field: 'reply' }), N('end', 'end', 560)],
+        edges: [{ id: '1', source: 'start', target: 'bot' }, { id: '2', source: 'bot', target: 'end' }] }
+      const wid = (await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).data.id
+      const slug = `${vi ? 'ho-tro' : 'order-help'}-${Date.now() % 10000}`
+      await page.request.put(`/api/workflows/${wid}/chat`, { headers: H, data: { enabled: true, access: 'anonymous', slug, title: vi ? 'Hỗ trợ đơn hàng' : 'Order help',
+        intro: vi ? 'Hỏi về **đơn hàng** của bạn: đơn đang ở đâu, đổi trả, hoàn tiền.' : 'Ask about **your order**: where it is, returns, refunds.',
+        suggestions: vi ? ['Đơn A100 của tôi đang ở đâu?', 'Tôi muốn trả hàng'] : ['Where is my order A100?', 'I want to return an item'], embed_origins: ['https://shop.example.com'] } })
+      await page.goto(`/workflows/${wid}`)
+      if (!(await page.locator('#chat-input').isVisible())) await page.locator('#chat-open').click()
+      await page.locator('#chat-view').click(); await page.locator('#chat-settings-btn').click(); await expect(page.locator('#chat-publish')).toBeVisible()
+      await page.locator('#chat-slug').scrollIntoViewIfNeeded(); await shot(page, lang, 'chat-publish')
+      await page.locator('#chat-snippet-iframe').scrollIntoViewIfNeeded(); await shot(page, lang, 'chat-embed')
+      const ctx = await browser.newContext({ locale: vi ? 'vi-VN' : 'en-US', viewport: { width: 1440, height: 900 }, colorScheme: 'light' })
+      const v = await ctx.newPage(); await v.addInitScript(([l]) => localStorage.setItem('lang', l), [lang])
+      await v.goto(`/c/${slug}`); await expect(v.getByTestId('chat-suggestion')).toHaveCount(2)
+      await shot(v, lang, 'public-chat'); await ctx.close()   // what a visitor sees first: the intro and the suggestions
+    })
   })
 }

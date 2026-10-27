@@ -11,6 +11,8 @@ McpCall = Callable[[str, str, Dict[str, Any]], Any]          # (server_id, tool,
 EmailQuota = Callable[[int], None]                           # (recipients) -> None, raises EMAIL_RATE_LIMITED (TASK-0051)
 Cancelled = Callable[[], bool]                               # True once the run was cancelled or timed out (TASK-0053)
 CodeAudit = Callable[[], None]                               # records that Code nodes ran without isolation (TASK-0056)
+# (call key, child workflow, its version, input, {workflow_id, label}) -> child run id; at most one child per key (TASK-0134)
+StartChild = Callable[[str, Dict[str, Any], Optional[int], Dict[str, Any], Dict[str, Any]], str]
 
 
 @dataclass
@@ -20,6 +22,7 @@ class Ports:
     email_quota: Optional[EmailQuota] = None
     cancelled: Optional[Cancelled] = None
     code_audit: Optional[CodeAudit] = None
+    start_child: Optional[StartChild] = None  # workflow tools of Agent nodes (DEC-0066); bound by the run service per run
     test: bool = False         # a workflow test run (TASK-0067, DEC-0044): Send email nodes do a dry run
     mock_models: bool = False  # a test run with the offline mock model: LLM and Decision nodes never call a provider
     locale: str = "en"         # language of offline answers: the mock model and the example tools (engine/locale)

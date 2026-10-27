@@ -1,0 +1,33 @@
+# Factory verification workflow.
+#
+# Copy to .github/workflows/factory-verify.yml in a project that links
+# this framework at .factory/. Edit branches to match the integration
+# branch. Add runtime setup for Node, Java, .NET, Go, or Flutter before
+# "Install Factory CLI" when the project needs those tools.
+
+name: Factory verification
+
+on:
+  pull_request:
+  push:
+    branches: ["main", "develop"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Factory CLI
+        run: python -m pip install ./.factory
+      - name: Install project dependencies
+        run: factory deps apply --allow-network
+      - name: Verify project
+        run: factory verify run --profile full

@@ -224,7 +224,8 @@ items, type-check diagnostics and full IntelliSense, stay out).
 ## Agent chat
 
 REQ-0048, Accepted 2026-10-23 (owner decisions 1-6 on audience, access, memory, Human "answered by", step visibility,
-attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1: the studio Chat tab.
+attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1, the studio Chat tab, is done. Phase 2, the
+public page `/c/{slug}`, is not started.
 
 - TASK-0084 Web chat backend: chat sessions and turns (migration 0035), the `web` chat trigger with its settings, one
   `source="chat"` run per message over the run socket with the history window, reply-once answers, `node_token.field`,
@@ -233,17 +234,106 @@ attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1: t
   chats list and New chat, Builder / Visitor view by the step setting, Human nodes answered in the chat or waiting for
   a reviewer, the Chat settings dialog, the Human "Answered by" option, handbook pages. merged in #117 (REV-0078, QA-0078).
 
+## Comparison pages
+
+REQ-0069, Done.
+
+- TASK-0113 Handbook: Superstep vs visual builders and vs agent frameworks (en, vi). **merged** (PR #141, REV-0105, QA-0105).
+
+## Workflows as MCP tools
+
+REQ-0070, Done. DEC-0061.
+
+- TASK-0114 Opted-in workflows as MCP tools at `/mcp` (Streamable HTTP), migration 0038. **merged** (PR #142, REV-0106, QA-0106).
+
+## Runs across restarts
+
+REQ-0071, Done. DEC-0062.
+
+- TASK-0115 Start-up recovery for the in-memory queue, and restart tests. **merged** (PR #143, REV-0107, QA-0107).
+- TASK-0127 An answer to a waiting run is kept on the run until the resumed segment records something, so a restart
+  does not lose it (migration 0039). **merged** (PR #163, REV-0115, QA-0115).
+
 ## Agent node
 
-REQ-0072, Accepted 2026-10-25 (CLAR-0003: all recommended options; inline tools, approval as for Human nodes,
+REQ-0072, Accepted 2026-10-25, Done 2026-10-26 (CLAR-0003: all recommended options; inline tools, approval as for Human nodes,
 approve or reject, a rejection is told to the model, a last call without tools at the round limit, answer plus
 optional steps, optional history field, Python and LangGraph project exports first). DEC-0063 (accepted 2026-10-25): the node is
 expanded into LangGraph model and tool steps, one tool call per step.
 
 - TASK-0116 Engine: expansion, model calls with tools through the provider registry (Anthropic over plain HTTP),
-  MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **review** (PR #144, REV-0108, QA-0108)
-- TASK-0117 Approval before a tool call through the Human approval path; restart tests (needs #143). **todo**
-- TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **review** (PR #145, stacked on #144, REV-0109, QA-0109)
+  MCP / HTTP / built-in / knowledge base tools, round limit, mock, validator, errors. **merged** (PR #144, REV-0108, QA-0108).
+- TASK-0117 Approval before a tool call through the Human approval path; restart tests. **merged** (PR #146, REV-0110, QA-0110).
+- TASK-0118 Editor settings, trace grouping by round, chat steps, e2e. **merged** (PR #145, REV-0109, QA-0109).
 - TASK-0119 "Tool called" test check, Support agent template with tests, Python and project export, TypeScript
-  refusal. **todo**
-- TASK-0120 Handbook (en, vi), comparison pages, CHANGELOG. **todo**
+  refusal. **merged** (PR #147, REV-0111, QA-0111).
+- TASK-0120 Handbook (en, vi), comparison pages, CHANGELOG. **merged** (PR #148, REV-0112, QA-0112).
+- TASK-0125 LangGraph.js export of Agent nodes (CLAR-0003 question 8, also REQ-0047); the TypeScript refusal is
+  removed. **merged** (PR #158, REV-0113, QA-0113).
+
+## Agent workflow tools
+
+REQ-0073, Accepted 2026-10-26, Done 2026-10-27 (CLAR-0004: all recommended options; another workflow as an Agent tool, the supervisor
+pattern for several agents; a linked child run; approvals inside the child passed up; the child's latest saved
+version; a nested trace; Python, project and TypeScript exports). DEC-0066 (accepted 2026-10-26): a workflow tool is a
+linked child run that the parent's tool step waits for.
+
+- TASK-0133 Tool settings, parameters and results from the child's state fields, the snapshot at planning, cycle
+  and depth checks across subgraphs and workflow tools, validator codes. **merged** (PR #177; REV-0117, QA-0117).
+- TASK-0134 Linked child runs: migration, `AwaitChild`, `start_child`, resume of the parent when a child settles,
+  cancel cascade, restart tests. **merged** (PR #178; REV-0118, QA-0118).
+- TASK-0135 Approvals inside a child with both workflow names; parent and children in the API, run page and history.
+  **merged** (PR #179; REV-0119, QA-0119).
+- TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **merged** (PR #180; REV-0120, QA-0120).
+- TASK-0137 "Tool called" test check, "Support team" template, Python, project and TypeScript exports. **merged**
+  (PR #181; REV-0121, QA-0121).
+- TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **merged** (PR #182; REV-0122, QA-0122).
+
+## Public chat page
+
+REQ-0074, **Done** (TASK-0140 to TASK-0145, PRs #186 to #191, merged 2026-10-27). The CLAR-0005 answers take every
+recommended option, except that the embed has both an iframe snippet and a script widget. DEC-0067 holds the design.
+This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 with REQ-0073 (TASK-0139, #184).
+
+- TASK-0140 Publish settings, public REST API by slug, visitor identity, limits and errors. **merged** (PR #186;
+  REV-0123, QA-0123).
+- TASK-0141 Public socket: runs as the owner, a filtered stream, visitor answers, daily cap, and the visitors list.
+  **merged** (PR #187; REV-0124, QA-0124).
+- TASK-0142 The `/c/{slug}` page, the publish settings UI, the visitors list in the Chat tab, and e2e. **merged**
+  (PR #188; REV-0125, QA-0125).
+- TASK-0143 Frame protection for the studio, `?embed=1`, the iframe snippet and the `widget.js` bubble. **merged**
+  (PR #189; REV-0126, QA-0126).
+- TASK-0144 Handbook (en, vi), comparison pages and CHANGELOG. **merged** (PR #190; REV-0127, QA-0127).
+- TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
+  2026-10-27. **merged** (PR #191; REV-0128, QA-0128).
+
+## Owner requests
+
+Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.
+
+- TASK-0121 Phone layout, and one fixed set of Config tabs for every node. **merged** (PR #150).
+- TASK-0122 Intro video remade with the new features (en, vi). **merged** (PR #152).
+- TASK-0123 Fixes: time travel after a Condition (REQ-0051), and restart recovery counting resumes (REQ-0071).
+  **merged** (PR #153).
+- TASK-0126 Vietnamese "Hàm" label, a "choose a knowledge base" hint, and the template's missing setup listed when
+  it opens (REQ-0007, REQ-0015, REQ-0072). **merged** (PR #160, REV-0114, QA-0114).
+- TASK-0129 Factory housekeeping: review and QA records for TASK-0125 to TASK-0128, requirement statuses, this
+  roadmap, DEC-0064, verification commands in the tool policy. **merged** (PR #168).
+- TASK-0130 Per-command `factory verify` timeout (framework 6e66d20); the backend suite gets 900 s. **merged** (PR #170).
+- TASK-0131 Framework fixes (513545e): skills update unedited copies, `gc --no-tasks` / `--no-runs`, `deps` skips build
+  output and records portable commands. **merged** (PR #172).
+- TASK-0132 Workflow check messages in the UI language: codes in the API (`issues`), `validation.<CODE>` in
+  both locales, DEC-0065 (REQ-0045). **merged** (PR #174; REV-0116, QA-0116).
+- TASK-0146 Run trace layout: the summary bar's items no longer break mid-word, its divider stays short, and a
+  workflow tool's steps sit under the tool call, ending at the duration column. **merged** (PR #193).
+
+## Releases
+
+- TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,
+  intro video. **released** (PR #155 to main, tag `v0.7.0`).
+- TASK-0128 Version 0.8.0: the TypeScript export of Agent nodes, template setup hints, an answer kept across a
+  restart. **released** (PR #166 to main, tag `v0.8.0`).
+- TASK-0139 Version 0.9.0: workflows as Agent tools, the public chat page, workflow checks in the UI language.
+  **in progress** (#184).
+- Earlier releases (0.3.0 to 0.6.0: TASK-0096, TASK-0098, TASK-0100, TASK-0105, TASK-0111) and the tasks between
+  TASK-0087 and TASK-0112 are not listed in this roadmap. Their task files and CHANGELOG.md have the details.

@@ -63,6 +63,25 @@ def test_seed_is_idempotent_and_shares_samples_read_only(tmp_path, demo):
     assert opts == {"email": demo_service.VISITOR_EMAIL, "password": demo_service.VISITOR_PASSWORD}
 
 
+def test_visitor_is_read_only_and_sees_only_owner_and_self_in_shares(tmp_path, monkeypatch):
+    from app.repositories import TeamRepository
+    from app.services.access import AccessService
+    from app.services.auth_service import public_user
+    from app.services.share_service import ShareService
+    monkeypatch.setenv("STUDIO_DEMO_MODE", "true")
+    d = Database(f"sqlite:///{tmp_path}/demo.db"); seed.bootstrap(d)
+    users, wfs, shares = UserRepository(d), WorkflowRepository(d), WorkflowShareRepository(d)
+    a, b = demo_service.start_visit(d), demo_service.start_visit(d)
+    svc = ShareService(shares, users, AccessService(users, wfs, shares, TeamRepository(d)), TeamRepository(d))
+    listed = svc.list("demo-approval", a)
+    assert [s["user_id"] for s in listed["shares"]] == [a] and listed["owner"]["email"]  # not b, not the template account
+    owner = wfs.get("demo-approval").owner
+    assert {s["user_id"] for s in svc.list("demo-approval", owner)["shares"]} >= {a, b, demo_service.VISITOR_ID}  # the admin sees all
+    assert public_user(users.get_by_id(a))["read_only"] is True and public_user(users.get_by_id(owner))["read_only"] is False
+    monkeypatch.setenv("STUDIO_DEMO_MODE", "")  # outside demo mode nobody is read-only and every collaborator is listed
+    assert public_user(users.get_by_id(a))["read_only"] is False and len(svc.list("demo-approval", a)["shares"]) >= 3
+
+
 def test_code_nodes_are_refused_with_an_error_code(demo, monkeypatch):
     monkeypatch.setenv("STUDIO_ENABLE_CODE_NODES", "1"); monkeypatch.setenv("STUDIO_CODE_RUNTIME", "subprocess")
     assert config.code_runtime() == "off" and code_runtime.unavailable() == "demo"
