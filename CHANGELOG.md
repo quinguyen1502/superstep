@@ -4,6 +4,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Fixed
+
+- **Run status on the canvas** (TASK-0147). The canvas now shows the run open in the Run panel. After an Agent node
+  waited for a workflow tool's child run, the steps its run took afterwards, End included, are marked done. Opening a
+  run from the history shows that run's marks instead of the last live run's.
+
 ## 0.9.0 (2026-10-27)
 
 ### Added
