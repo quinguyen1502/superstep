@@ -37,7 +37,7 @@ export function EditorCodePanel() {
     const a = document.createElement('a'); a.href = url; a.download = out.filename; a.click(); URL.revokeObjectURL(url)
   }
   return <div className="h-full min-h-0 flex flex-col gap-2 p-3">
-    <div className="flex min-w-0 items-center gap-2 text-xs">
+    <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
       <Select value={language} onValueChange={v => pick(v as ExportLanguage)}>
         <SelectTrigger size="sm" className="w-32 shrink-0" id="code-export-language" aria-label={t('codeView.languageLabel')}><SelectValue /></SelectTrigger>
         <SelectContent>{EXPORT_LANGUAGES.map(l => <SelectItem key={l} value={l} id={`code-export-language-${l}`}>{t(`code.languages.${l}`)}</SelectItem>)}</SelectContent>
@@ -45,7 +45,7 @@ export function EditorCodePanel() {
       <span className="truncate font-mono" id="code-file">{out?.filename}</span>
       {out?.version != null && <Badge variant="secondary" id="code-version">{t('codeView.version', { n: out.version })}</Badge>}
       {isDirty() && <Badge variant="outline" className="border-warning text-warning" id="code-unsaved">{t('codeView.unsaved')}</Badge>}
-      <span className="ml-auto truncate text-muted-foreground" id="code-hint">
+      <span className="ml-auto min-w-0 max-w-full truncate text-muted-foreground" id="code-hint">
         {selNode ? (marks.length ? t('codeView.showing', { node: (selNode.data as any)?.label || selNode.id }) : t('codeView.noCode')) : t('codeView.selectHint')}</span>
       <Button size="sm" variant="outline" id="code-copy" disabled={!out} onClick={copy}>{copied ? <Check /> : <Copy />}{t('common.copy')}</Button>
       <Button size="sm" variant="outline" id="code-download" disabled={!out} onClick={download}><Download />{t('codeView.download', { ext: fileExtension(language) })}</Button>

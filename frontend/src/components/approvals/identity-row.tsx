@@ -44,7 +44,7 @@ export function IdentityRow({ slot, onChange }: { slot: Slot; onChange: (d: Slot
     </div>
     <div className="flex gap-2">
       <Input id={idp} className="font-mono" value={ext} placeholder={t(`approvals.identityPh.${kind}`)} onChange={e => setExt(e.target.value)} />
-      <Button size="sm" variant={changed ? 'default' : 'outline'} id={`${idp}-link`} disabled={busy || !changed && (slot.verified || !ext.trim())}
+      <Button variant={changed ? 'default' : 'outline'} id={`${idp}-link`} disabled={busy || !changed && (slot.verified || !ext.trim())}
         onClick={linkAndSend}><Send />{ext.trim() || !slot.external_id ? t('approvals.linkSend') : t('approvals.unlink')}</Button>
     </div>
     <p className="text-xs text-muted-foreground">{t(`approvals.identityHow.${kind}`)}</p>
@@ -52,9 +52,9 @@ export function IdentityRow({ slot, onChange }: { slot: Slot; onChange: (d: Slot
       <Label htmlFor={`${idp}-code`} className="text-xs">{slot.code_pending ? t('approvals.codeSent') : t('approvals.codeNeeded')}</Label>
       <div className="flex flex-wrap gap-2">
         <Input id={`${idp}-code`} className="w-36 font-mono tracking-widest" inputMode="numeric" maxLength={6} placeholder="123456" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} />
-        <Button size="sm" id={`${idp}-verify`} disabled={busy || code.length !== 6}
+        <Button id={`${idp}-verify`} disabled={busy || code.length !== 6}
           onClick={async () => { if (await call(`/api/approvals/identities/${kind}/verify`, { method: 'POST', json: { code, ...team } })) setCode('') }}><ShieldCheck />{t('approvals.verify')}</Button>
-        <Button size="sm" variant="ghost" id={`${idp}-resend`} disabled={busy || !slot.available} onClick={() => call(`/api/approvals/identities/${kind}/send-code`, { method: 'POST', json: team })}><RotateCw />{t('approvals.resend')}</Button>
+        <Button variant="ghost" id={`${idp}-resend`} disabled={busy || !slot.available} onClick={() => call(`/api/approvals/identities/${kind}/send-code`, { method: 'POST', json: team })}><RotateCw />{t('approvals.resend')}</Button>
       </div>
       {kind === 'telegram' && <p className="text-xs text-muted-foreground">{t('approvals.telegramStart')}</p>}
       {kind === 'whatsapp' && <p className="text-xs text-muted-foreground">{t('approvals.whatsappWindow')}</p>}

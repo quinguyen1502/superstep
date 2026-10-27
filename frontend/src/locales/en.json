@@ -229,7 +229,8 @@
       "label": "Editor views",
       "canvas": "Canvas",
       "nodes": "Nodes",
-      "addHint": "Tap a node to add it to the canvas."
+      "add": "Add",
+      "addHint": "Tap Add to put a node on the canvas."
     },
     "configTabs": {
       "label": "Node settings",
