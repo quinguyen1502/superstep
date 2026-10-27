@@ -141,12 +141,24 @@ def exported(tmp_path, code):
     return names, final
 
 
+def export_steps(path, kinds, names):
+    """Studio slot ids (`ag/__tool/1`) and the join, compared with the export's single sequential tool node (TASK-0160)."""
+    skip = ("start", "end", "subgraph", "subgraph_exit", "agent_join")
+    out = []
+    for i in path:
+        kind = kinds.get(i)
+        if kind in skip: continue
+        key = i.rsplit("/", 1)[0] if kind == "agent_tool" and i.rsplit("/", 1)[-1].isdigit() else i
+        out.append(names[key])
+    return out
+
+
 def same_run(tmp_path, wf, inp, answers=None, children=None, ordered=True, ignore=()):
     out = X.to_python(wf, wf.get("name", "Workflow"), 1, children, {"input": inp, "answers": answers or {}})
     flat = agents.expand(subgraphs.expand(wf, (children or {}).get) if children else wf)
     kinds = {n["id"]: n["type"] for n in flat["nodes"]}
     path, state = studio(wf, inp, answers, children)
-    want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
+    want = export_steps(path, kinds, out.names)
     skip = {out.names[i] for i, t in kinds.items() if t == "subgraph"}
     got, final = exported(tmp_path, out.code)
     got = [n for n in got if n not in skip and n in out.names.values()]  # a workflow tool's own graph prints its steps too

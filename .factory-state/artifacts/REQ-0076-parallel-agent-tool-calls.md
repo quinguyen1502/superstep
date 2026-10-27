@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0076
-- Status: Accepted on 2026-10-27 with the CLAR-0007 answers (all recommended options). Tasks are not planned yet.
+- Status: Accepted on 2026-10-27 with the CLAR-0007 answers (all recommended options). Planned on 2026-10-27 (DEC-0069, TASK-0157 to TASK-0161).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -153,6 +153,8 @@ None. CLAR-0007 is answered.
 
 - `.factory-state/artifacts/CLAR-0007-parallel-agent-tool-calls.md`
 - `.factory-state/artifacts/REQ-0072-agent-node.md`, `.factory-state/artifacts/REQ-0073-agent-workflow-tools.md`
-- `.factory-state/decisions/DEC-0063-agent-node-expansion.md`, `.factory-state/decisions/DEC-0066-workflow-tools-child-runs.md`
+- `.factory-state/decisions/DEC-0069-parallel-agent-tool-calls.md`, `.factory-state/decisions/DEC-0063-agent-node-expansion.md`, `.factory-state/decisions/DEC-0066-workflow-tools-child-runs.md`
+- `.factory-state/tasks/done/TASK-0157-parallel-tool-waves.md`, `.factory-state/tasks/todo/TASK-0158-parallel-tool-waits.md`, `.factory-state/tasks/todo/TASK-0159-parallel-tool-trace.md`, `.factory-state/tasks/todo/TASK-0160-parallel-tool-exports.md`, `.factory-state/tasks/todo/TASK-0161-parallel-tool-handbook.md`
+- `.factory-state/artifacts/REV-0136-task-0157.md`, `.factory-state/artifacts/QA-0137-task-0157.md`
 - `.factory-state/decisions/DEC-0018-effectively-once.md`
 - `docs/backend-architecture.md`

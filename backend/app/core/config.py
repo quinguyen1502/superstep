@@ -42,6 +42,13 @@ def run_max() -> int: return _int("STUDIO_RUN_MAX_BYTES", 2 * 1024 * 1024)
 def input_max() -> int: return _int("STUDIO_INPUT_MAX_BYTES", 256 * 1024)
 def workflow_max() -> int: return _int("STUDIO_WORKFLOW_MAX_BYTES", 1024 * 1024)
 def recursion_limit() -> int: return _int("STUDIO_RECURSION_LIMIT", 25)
+def agent_parallel_tools() -> int:
+    """Tool calls of one Agent round that may run at once (REQ-0076). Invalid values fall back to 4; the rest clamp to 1..8."""
+    raw = os.environ.get("STUDIO_AGENT_PARALLEL_TOOLS")
+    if raw is None or not str(raw).strip(): return 4
+    try: n = int(raw)
+    except ValueError: return 4
+    return min(8, max(1, n))
 def allow_private_callbacks() -> bool: return os.environ.get("STUDIO_ALLOW_PRIVATE_CALLBACKS") == "1"
 def worker_enabled() -> bool: return os.environ.get("STUDIO_WORKER", "1") != "0"  # run queued jobs in this API process
 def worker_concurrency() -> int: return max(1, _int("STUDIO_WORKER_CONCURRENCY", 2))

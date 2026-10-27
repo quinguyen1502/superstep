@@ -337,13 +337,23 @@ When LangSmith tracing is on, the rating is sent as feedback on the run.
 - TASK-0165 LangSmith `user_rating` feedback, in the background. **merged** (PR #204; REV-0134, QA-0134).
 - TASK-0166 Handbook (en, vi) and CHANGELOG. **merged** (PR #204; REV-0135, QA-0135).
 
+## Parallel Agent tool calls
+
+REQ-0076, planned on 2026-10-27 (DEC-0069, CLAR-0007). Medium-task workflow. A round's tool calls run together.
+Each call keeps its own ledger entry. The owner confirmed this set on 2026-10-27. TASK-0157 is done and not merged. The others are not started.
+
+- TASK-0157 Engine: one wave of tool slots, the cap, result order, the node setting off, and one checkpoint per wave. **done** (REV-0136, QA-0137; PR #206, not merged)
+- TASK-0158 Approvals and child runs inside a wave: the other calls finish, and the parent resumes once. **planned**
+- TASK-0159 The per-node switch and overlapping trace bars. **planned**
+- TASK-0160 Python, LangGraph project and TypeScript exports run the calls concurrently. **planned**
+- TASK-0161 Handbook (en, vi), env var, CHANGELOG, and the Support team e2e. **planned**
+
 ## Accepted, not planned yet
 
 Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
-owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1 and REQ-0075 are planned in the
+owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1, REQ-0075, and REQ-0076 are planned in the
 sections above. The rest are not planned into tasks yet.
 
-- REQ-0076 An Agent round's tool calls run in parallel, each still checkpointed on its own (CLAR-0007).
 - REQ-0077 File attachments in the chat: documents, and images for vision models (CLAR-0008).
 - REQ-0078 Hand-off from one Agent node to another in the same workflow (CLAR-0009).
 - REQ-0079 phase 2: login with personal access tokens, pull and push, run, test in CI, and MCP over stdio

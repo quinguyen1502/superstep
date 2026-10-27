@@ -83,7 +83,7 @@ def steps_of(events: list, mode: str) -> list[dict]:
     out: dict[str, dict] = {}
     for e in events:
         t, nid = e.get("type"), e.get("node")
-        hidden = ("start", "end", "agent", "agent_exit") + (() if mode == "full" else ("agent_model",))  # an Agent shows its tool calls
+        hidden = ("start", "end", "agent", "agent_exit", "agent_join") + (() if mode == "full" else ("agent_model",))  # an Agent shows its tool calls; the join only orders them
         if t not in STEP_EVENTS or not nid or e.get("node_type") in hidden: continue
         key = f"{nid}:{e.get('iteration') or 1}"
         s = out.setdefault(key, {"node": nid, "label": e.get("label") or nid, "type": e.get("node_type") or e.get("kind"), "status": "running"})

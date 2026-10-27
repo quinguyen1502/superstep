@@ -59,7 +59,7 @@ def test_a_supervisor_calls_a_specialist():
     st = json.loads(parent.final_state)
     assert st["steps"][0]["status"] == "ok" and json.loads(st["steps"][0]["result"])["answer"].startswith("[mock:")
     assert "Answer" in st["answer"]
-    tool_step = [e for e in json.loads(parent.events) if e.get("type") == "node_finished" and e["node"] == "ag/__tool"][-1]
+    tool_step = [e for e in json.loads(parent.events) if e.get("type") == "node_finished" and e["node"] == "ag/__tool/1"][-1]
     assert tool_step["usage"]["provider"] == "workflow" and tool_step["usage"]["tokens"] == (child.tokens_in or 0) + (child.tokens_out or 0) > 0
     assert parent.tokens_in >= child.tokens_in  # the child's tokens count in the parent's totals
 

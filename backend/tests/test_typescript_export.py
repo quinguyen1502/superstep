@@ -10,7 +10,7 @@ import pytest
 from app.engine import agents, exporters, subgraphs
 from app.engine import typescript_export as T
 from app.engine.templates import BUILTINS
-from test_python_export import AGENT, CHILD, KEYS, LOOP, N, E, F, ODD, PARALLEL, PARENT, TOOLS, H, c, save, studio, user, without_ms  # noqa: F401
+from test_python_export import AGENT, CHILD, KEYS, LOOP, N, E, F, ODD, PARALLEL, PARENT, TOOLS, H, c, export_steps, save, studio, user, without_ms  # noqa: F401
 
 SNAPSHOT = Path(__file__).parent / "snapshots" / "typescript_export_demo.ts"
 TS_CODE = ('import { z } from "npm:zod@^3"\n\nexport function main(state: State) {\n  console.log("got", state.message)\n'
@@ -175,7 +175,7 @@ def same_run(tmp_path, env, wf, inp, answers=None, children=None, ordered=True, 
     flat = agents.expand(subgraphs.expand(wf, (children or {}).get) if children else wf)
     kinds = {n["id"]: n["type"] for n in flat["nodes"]}
     path, state = studio(wf, inp, answers, children)
-    want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
+    want = export_steps(path, kinds, out.names)
     skip = {out.names[i] for i, t in kinds.items() if t == "subgraph"}
     got, final, _ = ts_run(tmp_path, env, out.code)
     got = [n for n in got if n not in skip and n in out.names.values()]  # a workflow tool's own graph prints its steps too

@@ -129,14 +129,19 @@ class Provider:
             make_usage(self.id, model, estimate_tokens(prompt), estimate_tokens(out), estimated=True)
         return out.strip(), usage
 
+    parallel_tool_calls_flag: ClassVar[bool] = False  # OpenAI-compatible servers accept parallel_tool_calls=false (DEC-0069)
+
     def invoke_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], model: str, cred: Dict[str, Any],
-                     on_token: Optional[Callable[[str], None]] = None) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
+                     on_token: Optional[Callable[[str], None]] = None, parallel: Optional[bool] = None) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
         """One Agent node model call (TASK-0116): (text, tool calls [{id, name, args}], usage). `messages` are plain dicts
-        {role: system|user|assistant|tool, content, tool_calls?, tool_call_id?}; `tools` [{name, description, parameters}]."""
+        {role: system|user|assistant|tool, content, tool_calls?, tool_call_id?}; `tools` [{name, description, parameters}].
+        `parallel` False asks a server that supports it for one call at a time (DEC-0069)."""
         model = model or self.default_model
         try:
             m = self.chat_model(cred, model, **(self.stream_kwargs if on_token else {}))
-            if tools: m = m.bind_tools([{"type": "function", "function": t} for t in tools])
+            if tools:
+                extra = {"parallel_tool_calls": False} if parallel is False and self.parallel_tool_calls_flag else {}
+                m = m.bind_tools([{"type": "function", "function": t} for t in tools], **extra)
             if on_token is None: msg = m.invoke(_lc_messages(messages))
             else:
                 msg = None
@@ -212,6 +217,7 @@ def _map_http_error(e: Exception, provider: str, model: str, base_url: str = "")
 class OpenAICompatible(Provider):
     """Any server speaking the OpenAI Chat Completions API (vLLM, llama.cpp server, LocalAI, ...)."""
     id, label, default_base_url = "openai_compatible", "OpenAI-compatible (vLLM / llama.cpp / LocalAI)", "http://localhost:8000/v1"
+    parallel_tool_calls_flag = True
     local = True
     stream_kwargs = {"stream_usage": True}  # final chunk carries token usage (ignored by servers that do not send it)
 
@@ -268,6 +274,7 @@ class OpenAI(PlainHTTP):
     """Hosted OpenAI (kept on plain HTTP like before TASK-0030; `ChatOpenAI` handles the same base URL for tools)."""
     id, label, default_base_url, default_model, key_required = "openai", "OpenAI / OpenAI-compatible", "https://api.openai.com/v1", "gpt-4o-mini", True
     stream_kwargs = {"stream_usage": True}  # Agent node calls go through ChatOpenAI (invoke_tools)
+    parallel_tool_calls_flag = True
 
     def chat_model(self, cred, model, **kw): return OpenAICompatible.chat_model(self, cred, model, **kw)
 
@@ -289,7 +296,7 @@ class Anthropic(PlainHTTP):
 
     def auth_headers(self, cred): return {"x-api-key": cred.get("api_key") or "", "anthropic-version": "2023-06-01"}
 
-    def invoke_tools(self, messages, tools, model, cred, on_token=None):
+    def invoke_tools(self, messages, tools, model, cred, on_token=None, parallel=None):
         """The Messages API with `tools` over plain HTTP (no LangChain package for Anthropic): tool results go back as
         `tool_result` blocks in one user turn."""
         model = model or self.default_model
@@ -309,7 +316,9 @@ class Anthropic(PlainHTTP):
             else: turns.append({"role": "user", "content": text})
         body: Dict[str, Any] = {"model": model, "max_tokens": 1024, "messages": turns}
         if system: body["system"] = system
-        if tools: body["tools"] = [{"name": t["name"], "description": t.get("description") or "", "input_schema": t.get("parameters") or {"type": "object"}} for t in tools]
+        if tools:
+            body["tools"] = [{"name": t["name"], "description": t.get("description") or "", "input_schema": t.get("parameters") or {"type": "object"}} for t in tools]
+            if parallel is False: body["tool_choice"] = {"type": "auto", "disable_parallel_tool_use": True}
         data = request(self.id, "POST", self.base(cred, self.default_base_url) + "/v1/messages", self.auth_headers(cred), body, model=model)
         try:
             blocks = data["content"]

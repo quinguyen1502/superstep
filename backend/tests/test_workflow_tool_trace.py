@@ -16,7 +16,7 @@ def test_the_tool_step_names_its_child_and_the_run_api_returns_it():
     tok = user(); child_id, sup = setup(tok, specialist("Desk", llm()))
     rid, _ = start(tok, sup); drain()
     events = json.loads(run_service().runs.get(rid).events)
-    step = [e for e in events if e.get("type") == "node_finished" and e["node"] == "ag/__tool"][-1]["agent"]
+    step = [e for e in events if e.get("type") == "node_finished" and e["node"] == "ag/__tool/1"][-1]["agent"]
     cid = step["child_run_id"]
     assert step["child_workflow_id"] == child_id and step["status"] == "ok"
     d = c.get(f"/api/runs/{cid}", headers=H(tok)).json()
@@ -26,5 +26,5 @@ def test_the_tool_step_names_its_child_and_the_run_api_returns_it():
     r = c.get(f"/api/runs/{cid}", headers=H(other))
     assert r.status_code == 404 and r.json()["error"]["code"] == "RUN_NOT_FOUND"
     full = steps_of(events, "full"); labels = steps_of(events, "labels")
-    assert next(s for s in full if s["node"] == "ag/__tool")["child_run_id"] == cid
-    assert next(s for s in labels if s["node"] == "ag/__tool") == {"node": "ag/__tool", "label": "Supervisor › desk", "type": "agent_tool", "status": "ok"}
+    assert next(s for s in full if s["node"] == "ag/__tool/1")["child_run_id"] == cid
+    assert next(s for s in labels if s["node"] == "ag/__tool/1") == {"node": "ag/__tool/1", "label": "Supervisor › desk", "type": "agent_tool", "status": "ok"}

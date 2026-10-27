@@ -71,30 +71,49 @@ def _task(messages: List[Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
     return (messages[last].get("content") or "") if last >= 0 else "", [m for m in messages[last + 1:] if m.get("role") == "tool"]
 
 
+def _mock_call(tool: Dict[str, Any], task: str, n: int) -> Dict[str, Any]:
+    """One mock tool call: string arguments are the task text, other JSON types are empty."""
+    params = tool.get("parameters") or {}
+    props, required = params.get("properties") or {}, set(params.get("required") or [])
+    empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
+    args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
+            for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+    return {"id": f"mock_call_{n}", "name": tool["name"], "args": args}
+
+
+def _named_tools(tools: List[Dict[str, Any]], task: str) -> List[Dict[str, Any]]:
+    """Tools whose name the task contains as a whole token, in tool-list order (underscores may be spaces)."""
+    text = task.lower()
+    found = []
+    for t in tools:
+        name = str(t.get("name") or "")
+        if not name: continue
+        forms = {name.lower(), name.lower().replace("_", " ")}
+        if any(re.search(rf"(?<!\w){re.escape(form)}(?!\w)", text) for form in forms): found.append(t)
+    return found
+
+
 def mock_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]], model: str, locale: str = "en") -> Tuple[str, List[Dict[str, Any]]]:
-    """Deterministic offline agent (TASK-0116, DEC-0063): with no tool result yet it calls the tool whose name and description
-    share the most words with the task (the first tool on a tie), string parameters filled with the task text; then it
-    answers with the last tool result."""
+    """Deterministic offline agent (TASK-0116, DEC-0063). With no tool result yet it calls the tool whose name and
+    description share the most words with the task (the first tool on a tie). When the task names two or more tools,
+    it calls each of them (DEC-0069). String parameters are the task text. Then it answers with the last tool result."""
     task, results = _task(messages)
     if tools and not results:
+        named = _named_tools(tools, task)
+        if len(named) >= 2: return "", [_mock_call(t, task, i) for i, t in enumerate(named, 1)]
         words = set(re.findall(r"\w+", task.lower()))
         score = lambda t: len(words & set(re.findall(r"\w+", f"{t['name'].replace('_', ' ')} {t.get('description') or ''}".lower())))
-        best = max(tools, key=score)  # max keeps the first of equal scores
-        params = best.get("parameters") or {}
-        props, required = params.get("properties") or {}, set(params.get("required") or [])
-        empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
-        args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
-                for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
-        return "", [{"id": "mock_call_1", "name": best["name"], "args": args}]
+        return "", [_mock_call(max(tools, key=score), task, 1)]  # max keeps the first of equal scores
     said = (results[-1].get("content") or "") if results else (task.strip().splitlines() or [""])[-1]
     return f"[mock:{model}] {MOCK_ANSWER.get(locale, MOCK_ANSWER['en'])}: {said[:200]}", []
 
 
 def call_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]], model: str, cred: Optional[Dict[str, Any]] = None,
                on_usage=None, on_token: Optional[Callable[[str], None]] = None, mock: bool = False,
-               locale: str = "en") -> Tuple[str, List[Dict[str, Any]]]:
+               locale: str = "en", parallel: Optional[bool] = None) -> Tuple[str, List[Dict[str, Any]]]:
     """One Agent node model call (TASK-0116): (text, tool calls [{id, name, args}]). `tools` [{name, description, parameters}];
-    None or [] asks for an answer without tools. Credentials, the env key and the mock as for `call_llm`."""
+    None or [] asks for an answer without tools. Credentials, the env key and the mock as for `call_llm`.
+    `parallel` False asks the provider for one call at a time when it supports that flag (DEC-0069)."""
     report = on_usage or (lambda u: None)
     if cred is None or mock:
         key = None if mock else os.environ.get("OPENAI_API_KEY")
@@ -108,7 +127,7 @@ def call_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, An
     p = providers.get(cred["provider"])
     if p is None: raise LLMError(f"Unsupported provider: {cred['provider']}")
     if not p.supports_tools: raise ProviderError("AGENT_TOOLS_UNSUPPORTED", p.label)
-    out, calls, usage = p.invoke_tools(messages, tools or [], model, cred, on_token)
+    out, calls, usage = p.invoke_tools(messages, tools or [], model, cred, on_token, parallel=parallel)
     report(usage)
     return out, calls
 
