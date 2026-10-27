@@ -148,12 +148,14 @@ WS /ws/run
     GET    /api/workflows/{wid}/chat/sessions       POST   /api/workflows/{wid}/chat/sessions
     GET    /api/chat/sessions/{sid}?view=builder|visitor   DELETE /api/chat/sessions/{sid}
     GET    /api/workflows/{wid}/chat/visitors       GET    /api/workflows/{wid}/chat/visitors/{sid}   (chỉ xem)
+    GET    /api/workflows/{wid}/chat/logo?v=      (logo: data: URL trong PUT để đặt, "" để bỏ)
     WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
 
     Không cần đăng nhập (trang công khai, theo slug):
-    GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins)
+    GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins, logo)
     GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
     GET    /api/public/chat/{slug}/sessions/{sid}
+    GET    /api/public/chat/{slug}/logo?v=<logo>
     WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
     GET    /api/public/chat-frame?path=/c/{slug}    (frame-ancestors của trang, cho nginx)
     ```

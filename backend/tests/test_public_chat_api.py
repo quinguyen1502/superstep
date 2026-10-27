@@ -1,6 +1,6 @@
 """The published chat page's API (TASK-0140, REQ-0074, DEC-0067): publish settings, the page by slug, visitor identity
 and isolation, signed_in, frame-ancestors and the per-IP limit."""
-import uuid
+import base64, uuid
 import pytest
 from fastapi.testclient import TestClient
 from app.core import config
@@ -52,7 +52,7 @@ def test_a_chat_that_is_not_published_says_nothing():
     tok = user(); wid, slug = publish(tok)
     v = visitor()
     page = v.get(f"/api/public/chat/{slug}").json()["data"]
-    assert page == {"slug": slug, "title": "Echo chat", "intro": "", "suggestions": [], "access": "anonymous", "steps_mode": "labels", "signed_in": False, "embed_origins": []}
+    assert page == {"slug": slug, "title": "Echo chat", "intro": "", "suggestions": [], "access": "anonymous", "steps_mode": "labels", "signed_in": False, "embed_origins": [], "logo": ""}
     c.put(f"/api/workflows/{wid}/chat", json={"access": "studio"}, headers=H(tok))
     r = v.get(f"/api/public/chat/{slug}"); assert (err(r), r.status_code) == ("CHAT_NOT_PUBLISHED", 404)
     assert wid not in r.text and "Echo" not in r.text
@@ -127,3 +127,38 @@ def test_demo_mode_publishes_nothing(monkeypatch):
     tok = user(); _, slug = publish(tok)
     monkeypatch.setenv("STUDIO_DEMO_MODE", "1")
     assert err(visitor().get(f"/api/public/chat/{slug}")) == "CHAT_NOT_PUBLISHED"
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 64
+def data_url(raw: bytes, mime="image/png"): return f"data:{mime};base64," + base64.b64encode(raw).decode()
+
+
+def test_a_logo_is_checked_kept_served_and_removed():
+    """TASK-0145: the logo comes as a data: URL in the settings; its type is read from the bytes; no SVG."""
+    tok = user(); wid, slug = publish(tok)
+    put = lambda body: c.put(f"/api/workflows/{wid}/chat", json=body, headers=H(tok))  # noqa: E731
+    for bad in (data_url(b"<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>", "image/svg+xml"),
+                data_url(b"GIF89a" + b"\0" * 10, "image/gif"), data_url(b"\x89PNG\r\n\x1a\n" + b"\0" * (256 * 1024)),
+                "data:image/png;base64,not base64!", "https://example.com/logo.png", "1234567890abcdef"):
+        r = put({"logo": bad}); assert (err(r), r.status_code) == ("CHAT_LOGO_INVALID", 400), bad[:40]
+    d = put({"logo": data_url(PNG, "image/jpeg")}).json()["data"]   # the type comes from the bytes, not the URL
+    h = d["logo"]; assert len(h) == 16
+    assert put({"title": "Help", "logo": h}).json()["data"]["logo"] == h   # sending its hash back keeps it
+    v = visitor()
+    assert v.get(f"/api/public/chat/{slug}").json()["data"]["logo"] == h
+    r = v.get(f"/api/public/chat/{slug}/logo?v={h}")
+    assert (r.status_code, r.content, r.headers["content-type"]) == (200, PNG, "image/png")
+    assert "immutable" in r.headers["cache-control"] and r.headers["x-content-type-options"] == "nosniff"
+    assert "immutable" not in v.get(f"/api/public/chat/{slug}/logo").headers["cache-control"]   # the widget asks without v
+    # the builder sees it before the chat is published; a visitor does not
+    put({"access": "studio"})
+    assert c.get(f"/api/workflows/{wid}/chat/logo", headers=H(tok)).content == PNG
+    assert err(v.get(f"/api/public/chat/{slug}/logo")) == "CHAT_NOT_PUBLISHED"
+    assert c.get(f"/api/workflows/{wid}/chat/logo", headers=H(user())).status_code in (403, 404)   # another user has no run right
+    # replaced, then removed
+    webp = b"RIFF\0\0\0\0WEBPVP8 " + b"\0" * 32
+    h2 = put({"access": "anonymous", "logo": data_url(webp, "image/webp")}).json()["data"]["logo"]
+    assert h2 != h and v.get(f"/api/public/chat/{slug}/logo?v={h2}").headers["content-type"] == "image/webp"
+    assert put({"logo": ""}).json()["data"]["logo"] == ""
+    r = v.get(f"/api/public/chat/{slug}/logo"); assert (err(r), r.status_code) == ("CHAT_LOGO_NOT_FOUND", 404)
+    r = c.get(f"/api/workflows/{wid}/chat/logo", headers=H(tok)); assert err(r) == "CHAT_LOGO_NOT_FOUND"

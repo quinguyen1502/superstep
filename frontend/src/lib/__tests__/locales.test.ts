@@ -18,6 +18,7 @@ const SAME_OK = new Set([
   'agent.workflow',
   'chat.page.title',
   'chat.embed.iframe',
+  'chat.publish.logo',
   'langsmith.title',
   'tests.langsmith',
   'api.button',

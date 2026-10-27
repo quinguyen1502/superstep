@@ -8,15 +8,18 @@ export const MAX_SUGGESTIONS = 4
 export const STEPS = ['none', 'labels', 'full'] as const
 export const ANSWERED_BY = ['visitor', 'reviewer'] as const
 export const MAX_MESSAGE = 4000
+export const LOGO_MAX_KB = 256   // PNG, JPEG or WebP (TASK-0145); the server checks it again
+export const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp']
 export type StepsMode = typeof STEPS[number]
 export type AnsweredBy = typeof ANSWERED_BY[number]
 
 export type ChatSettings = { enabled: boolean; slug: string; access: string; input_field: string; reply_field: string
   messages_field: string; max_turns: number; steps: StepsMode; retention_days: number
-  title: string; intro: string; suggestions: string[]; daily_limit: number; embed_origins: string[] }
+  title: string; intro: string; suggestions: string[]; daily_limit: number; embed_origins: string[]
+  logo: string }   // the logo's hash, "" for none; a data: URL sets a new one, "" removes it (TASK-0145)
 /** The published page's settings (GET /api/public/chat/{slug}, TASK-0140): what a visitor may know of the chat. */
 export type PublicChatPage = { slug: string; title: string; intro: string; suggestions: string[]; access: 'anonymous' | 'signed_in'
-  steps_mode: StepsMode; signed_in: boolean; embed_origins: string[] }
+  steps_mode: StepsMode; signed_in: boolean; embed_origins: string[]; logo: string }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
   duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string }  // child_run_id: a workflow tool's run (TASK-0136)
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
@@ -29,6 +32,11 @@ export type ChatSessionFull = ChatSession & { steps_mode: StepsMode; turns: Chat
 export const published = (s: Pick<ChatSettings, 'enabled' | 'access'>) => s.enabled && s.access !== 'studio'
 /** The page's address on this studio. */
 export const pageUrl = (slug: string, origin = location.origin) => `${origin}/c/${slug}`
+/** A chat's logo image (TASK-0145): the published one, or the builder's (published or not), or a new one not saved yet. */
+export const publicLogoUrl = (slug: string, hash: string) => hash ? `/api/public/chat/${slug}/logo?v=${hash}` : undefined
+export const logoUrl = (wid: string, logo: string) => !logo ? undefined : logo.startsWith('data:') ? logo : `/api/workflows/${wid}/chat/logo?v=${logo}`
+/** The letter a chat without a logo shows: the first letter of its title. */
+export const initialOf = (title: string) => (Array.from(title.trim())[0] ?? '?').toLocaleUpperCase()
 /** The embed snippets (TASK-0143): the page in an iframe, or the widget's bubble that opens it and keeps the history. */
 export const iframeSnippet = (slug: string, origin = location.origin) =>
   `<iframe src="${pageUrl(slug, origin)}?embed=1" title="Chat" style="width:100%;height:600px;border:0"></iframe>`

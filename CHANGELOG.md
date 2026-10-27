@@ -20,7 +20,7 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   - API: `GET /api/runs/{id}`; the public run result has `parent_run_id` and `waiting.child_run_id`.
   - New error code `WORKFLOW_TOOL_TOO_DEEP`.
 
-- **Public chat page** (REQ-0074, TASK-0140 to TASK-0144; phase 2 of the web chat). Set **Who can chat** to *Anyone
+- **Public chat page** (REQ-0074, TASK-0140 to TASK-0145; phase 2 of the web chat). Set **Who can chat** to *Anyone
   with the link* or *Signed-in users* and the chat gets its own page at `/c/<address>`, for people who never open the
   studio.
   - Chat settings: the page address, title, a Markdown intro, up to four suggested messages, and messages per day
@@ -31,12 +31,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   - Limits per visitor and per IP address (`STUDIO_PUBLIC_CHAT_RATE_VISITOR`, `_IP`, `_READ`, `_WINDOW`), plus the
     chat's daily cap.
   - The Chat panel lists **Visitors**' chats read-only.
+  - A **logo** (PNG, JPEG or WebP, up to 256 KB) for the page header, the welcome and the browser tab. Without one,
+    the page shows the title's first letter and a picture.
   - **Embed**: list the sites that may embed the chat, then paste the **chat bubble** (`/c/widget.js`, a round button
     that opens the chat and keeps the visitor's chats in every browser) or a plain **frame**.
-  - API: `/api/public/chat/{slug}` (page, sessions), `WS /ws/public/chat/{slug}`, `/api/public/chat-frame`, and
+  - API: `/api/public/chat/{slug}` (page, sessions, logo), `WS /ws/public/chat/{slug}`, `/api/public/chat-frame`, and
     `GET /api/workflows/{wid}/chat/visitors`.
   - New error codes `CHAT_NOT_PUBLISHED`, `CHAT_SLUG_INVALID`, `CHAT_SLUG_TAKEN`, `CHAT_SIGN_IN_REQUIRED`,
-    `CHAT_DAILY_LIMIT` and `CHAT_EMBED_ORIGIN_INVALID`.
+    `CHAT_DAILY_LIMIT`, `CHAT_EMBED_ORIGIN_INVALID`, `CHAT_LOGO_INVALID` and `CHAT_LOGO_NOT_FOUND`.
 
 ### Changed
 

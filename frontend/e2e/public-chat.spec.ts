@@ -1,8 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
+import path from 'node:path'
 import { apiToken, newWorkflow, N } from './helpers'
+const LOGO = path.resolve(import.meta.dirname, '../public/apple-touch-icon.png')
 // REQ-0074 (TASK-0142): the published chat page /c/{slug}. The builder publishes it in Chat settings; an anonymous browser
 // chats there and comes back to its chat; another browser sees none of it; the builder reads it under Visitors.
 // signed_in sends a visitor to the login page; a chat that is turned off, and the daily cap, say so on the page.
+// The logo (TASK-0145) shows in the header, over the welcome and in the tab; a chat without one shows its initial and a picture.
 const shot = async (page: Page, name: string, sel = 'body') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const STATE = [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }]
 const ECHO = (name: string) => ({ name, state: STATE,
@@ -39,6 +42,8 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await page.locator('#chat-title').fill('Order help')
     await page.locator('#chat-intro').fill('Ask about **your order**.')
     await page.locator('#chat-add-suggestion').click(); await page.locator('#chat-suggestion-0').fill('Where is my order?')
+    await page.locator('#chat-logo-file').setInputFiles(LOGO)
+    await expect(page.locator('#chat-logo-preview img')).toBeVisible(); await expect(page.locator('#chat-logo-remove')).toBeVisible()
     await shot(page, `public-chat-settings-${lang}`, '#chat-settings')
     await page.locator('#chat-settings-save').click(); await expect(page.locator('#chat-settings')).toHaveCount(0)
 
@@ -48,6 +53,9 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await v.goto(`/c/${slug}`)
     await expect(v.locator('#public-chat-title')).toHaveText('Order help')
     await expect(v.locator('#public-chat-intro')).toContainText('your order')
+    await expect(v.locator('#public-chat-logo img')).toBeVisible(); await expect(v.locator('#public-chat-hero img')).toBeVisible()
+    await expect(v.locator('#public-chat-illustration')).toHaveCount(0)
+    await expect(v.locator('#public-chat-favicon')).toHaveAttribute('href', /\/api\/public\/chat\/.+\/logo\?v=[0-9a-f]{16}$/)
     await shot(v, `public-chat-empty-${lang}`)
     await v.getByTestId('chat-suggestion').click()
     await expect(v.getByTestId('chat-mine').last()).toHaveText('Where is my order?')
@@ -86,6 +94,10 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     // signed in, the visitor comes back to the chat
     await signIn(v, new RegExp(`/c/${slug}$`))
     await expect(v.locator('#public-chat-intro')).toBeVisible()
+    // no logo: the title's first letter and the picture
+    await expect(v.locator('#public-chat-logo')).toHaveText('M'); await expect(v.locator('#public-chat-illustration')).toBeVisible()
+    await expect(v.locator('#public-chat-favicon')).toHaveCount(0)
+    await shot(v, `public-chat-default-${lang}`)
 
     // the daily cap: one message, then the page says so
     await put({ access: 'anonymous', daily_limit: 1 })

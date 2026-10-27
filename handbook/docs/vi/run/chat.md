@@ -108,6 +108,7 @@ studio cũng chat được với workflow.
 |---|---|---|
 | Địa chỉ trang | Phần `<địa-chỉ>` trong `/c/<địa-chỉ>`: từ 3 đến 64 ký tự gồm chữ thường, số hoặc dấu gạch ngang, chưa có chat khác dùng. Đổi địa chỉ thì link cũ không dùng được nữa. | id của workflow |
 | Tiêu đề trang | Hiện ở đầu trang. | tên workflow |
+| Logo | Ảnh PNG, JPEG hoặc WebP, tối đa 256 KB. Bấm **Tải logo lên** để chọn, rồi **Lưu**. Logo hiện ở đầu trang, phía trên lời giới thiệu và trên tab trình duyệt. | chữ cái đầu của tiêu đề, và một hình minh họa phía trên lời giới thiệu |
 | Lời giới thiệu | Khách chat đọc trước khi gửi tin nhắn đầu tiên. Dùng được Markdown. | trống |
 | Tin nhắn gợi ý | Tối đa 4 nút để khách chat bấm vào bắt đầu. | không có |
 | Số tin nhắn mỗi ngày | Số tin nhắn của khách chat mỗi ngày (giờ UTC) cho chat này, để một trang đông khách hay bị lạm dụng không đẩy chi phí model lên quá cao. `0` là không giới hạn. | 500 |
@@ -194,6 +195,7 @@ Phần còn lại của studio không hiện được trong frame trên bất k�
 | `CHAT_SIGN_IN_REQUIRED` | Chat này dành cho người đã đăng nhập. |
 | `CHAT_DAILY_LIMIT` | Chat đã hết lượt tin nhắn hôm nay. |
 | `CHAT_EMBED_ORIGIN_INVALID` | Một site nhúng không phải địa chỉ dạng `https://example.com`. |
+| `CHAT_LOGO_INVALID` | Logo không phải ảnh PNG, JPEG hoặc WebP, hoặc lớn hơn 256 KB. Không nhận SVG. |
 | `RATE_LIMITED` | Khách hoặc địa chỉ IP này gửi quá nhiều tin nhắn; `retry_after` cho biết khi nào thử lại. |
 
 Xem thêm [Chạy từ chat](chat-triggers.md) cho Slack và Telegram.

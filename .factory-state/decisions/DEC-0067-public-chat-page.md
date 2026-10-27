@@ -15,7 +15,7 @@
   - DEC-0052 (web chat model)
   - DEC-0053 (access and steps): this decision replaces its "reserved" part
   - DEC-0054 (answered by)
-- Related Tasks: TASK-0140, TASK-0141, TASK-0142, TASK-0143, TASK-0144
+- Related Tasks: TASK-0140, TASK-0141, TASK-0142, TASK-0143, TASK-0144, TASK-0145
 
 ## Context
 
@@ -154,6 +154,21 @@
    - `CHAT_EMBED_ORIGIN_INVALID`
    - Each goes in CATALOG, `docs/api-errors.md` and both locales.
    - `CHAT_ACCESS_NOT_AVAILABLE` stays in the catalog. It is no longer raised for these values.
+10. **Logo** (TASK-0145, the owner's request after CLAR-0005).
+    - The Chat settings `PUT` takes `logo`: a `data:` URL sets it, `""` removes it, and the current value keeps it.
+      One form and one Save, so removing it is a field change and not a delete with a typed confirmation.
+    - The server reads the type from the bytes: PNG, JPEG or WebP, at most 256 KB. No SVG, because an SVG can carry
+      script on the public page. Otherwise `CHAT_LOGO_INVALID`.
+    - The bytes live in `chat_logos` (one row per web chat trigger, deleted with it). The settings keep the image's
+      hash as `logo`, so the page knows the address without reading the image.
+    - `GET /api/public/chat/{slug}/logo?v=<hash>` serves it to anyone while the chat is published, cached for good
+      because the address changes with the image. `GET /api/workflows/{wid}/chat/logo` serves it to the builder
+      (run right), published or not. No logo: `CHAT_LOGO_NOT_FOUND`.
+    - The widget's bubble keeps its chat icon (the owner's choice); the logo shows in the frame's header. A request
+      without `v` is cached for 5 minutes only.
+    - The logo is a square with rounded corners, and the welcome block is centred (the owner's review).
+    - Without a logo the page shows the title's first letter and a built-in picture drawn with theme tokens. No
+      AI-made picture: it needs a credential, costs per picture and changes every time.
 
 ## Alternatives Considered
 

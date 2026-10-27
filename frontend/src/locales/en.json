@@ -489,6 +489,8 @@
     "CHAT_SIGN_IN_REQUIRED": "Sign in to use this chat",
     "CHAT_DAILY_LIMIT": "This chat has used its messages for today. Try again tomorrow",
     "CHAT_EMBED_ORIGIN_INVALID": "'{{origin}}' is not a site address like https://example.com",
+    "CHAT_LOGO_INVALID": "The logo must be a PNG, JPEG or WebP image of at most {{max_kb}} KB",
+    "CHAT_LOGO_NOT_FOUND": "This chat has no logo",
     "TEST_NOT_FOUND": "Test case not found",
     "TEST_CASE_INVALID": "Test case: {{reason}}",
     "TEST_CASES_LIMIT": "A workflow can have at most {{max}} test cases",
@@ -2004,7 +2006,12 @@
       "addSuggestion": "Add a suggested message",
       "suggestionsHint": "Up to 4 buttons a visitor can click to start.",
       "dailyLimit": "Messages per day",
-      "dailyLimitHint": "Visitor messages per day (UTC) for this chat. 0 means no cap."
+      "dailyLimitHint": "Visitor messages per day (UTC) for this chat. 0 means no cap.",
+      "logo": "Logo",
+      "logoHint": "PNG, JPEG or WebP, up to {{max_kb}} KB. Shown on the page and in the browser tab. Without one, the page shows the title's first letter and a picture.",
+      "uploadLogo": "Upload logo",
+      "changeLogo": "Change logo",
+      "removeLogo": "Remove logo"
     },
     "page": {
       "title": "Chat",
