@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, newWorkflow, N } from './helpers'
 // REQ-0074 (TASK-0143): a published chat embedded on another site. The widget's bubble opens the chat in an iframe and
@@ -7,6 +9,7 @@ import { apiToken, newWorkflow, N } from './helpers'
 const shot = async (page: Page, name: string) => { if (process.env.REVIEW_SHOTS) await page.screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const STUDIO = `http://127.0.0.1:${process.env.E2E_UI_PORT || 5190}`
 const HOST = 'http://localhost:5999', OTHER = 'http://localhost:5998'
+const LOGO = 'data:image/png;base64,' + fs.readFileSync(path.resolve(import.meta.dirname, '../public/icon-192.png')).toString('base64')
 const STATE = [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }]
 const ECHO = (name: string) => ({ name, state: STATE,
   nodes: [N('s', 'start', 40), N('bot', 'llm', 300, { label: 'Bot', model: 'gpt-4o-mini', prompt: 'History:\n{{state.messages}}', output_field: 'reply' }), N('e', 'end', 560)],
@@ -20,18 +23,18 @@ test.use({ launchOptions: { ...(process.env.PW_CHROME ? { executablePath: proces
 const site = (page: Page, origin: string, html: string) =>
   page.route(`${origin}/**`, r => r.fulfill({ contentType: 'text/html', body: `<!doctype html><html lang="en"><body><h1>Shop</h1>${html}</body></html>` }))
 
-async function publish(page: Page) {
+async function publish(page: Page, extra: Record<string, unknown> = {}) {
   await page.goto('/login'); await page.locator('#email').fill('admin@example.com'); await page.locator('#password').fill('admin123')
   await page.locator('#auth-submit').click(); await expect(page).toHaveURL(/\/workflows$/)
   const H = { Authorization: `Bearer ${await apiToken(page)}` }; const n = Date.now() % 100000
   const wid = await newWorkflow(page, H, ECHO(`Shop help ${n}`)); const slug = `shop-${n}`
-  const r = await page.request.put(`/api/workflows/${wid}/chat`, { headers: H, data: { enabled: true, access: 'anonymous', slug, title: 'Shop help', embed_origins: [HOST] } })
+  const r = await page.request.put(`/api/workflows/${wid}/chat`, { headers: H, data: { enabled: true, access: 'anonymous', slug, title: 'Shop help', embed_origins: [HOST], ...extra } })
   expect((await r.json()).success).toBe(true)
   return { slug, wid }
 }
 
 test('the widget opens the chat and keeps it across a reload', async ({ page, browser }) => {
-  const { slug, wid } = await publish(page)
+  const { slug, wid } = await publish(page, { logo: LOGO })   // the logo shows in the frame's header (TASK-0145)
   // the builder copies the snippets from the Chat settings
   await page.goto(`/workflows/${wid}`)
   if (await page.locator('#chat-open').getAttribute('aria-pressed') !== 'true') await page.locator('#chat-open').click()
@@ -47,7 +50,7 @@ test('the widget opens the chat and keeps it across a reload', async ({ page, br
   const bubble = host.locator('#superstep-chat-button')
   await expect(bubble).toHaveAttribute('aria-label', 'Open chat'); await bubble.click()
   const chat = host.frameLocator('#superstep-chat-panel iframe')
-  await expect(chat.locator('#public-chat-title')).toHaveText('Shop help')
+  await expect(chat.locator('#public-chat-title')).toHaveText('Shop help'); await expect(chat.locator('#public-chat-logo img')).toBeVisible()
   await chat.locator('#chat-input').fill('Where is my order?'); await chat.locator('#chat-input').press('Enter')
   await expect(chat.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok', { timeout: 20_000 })
   await shot(host, 'chat-embed-widget')

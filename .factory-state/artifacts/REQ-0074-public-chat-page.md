@@ -4,7 +4,8 @@
 
 - Project: superstep
 - Requirement ID: REQ-0074
-- Status: Accepted by the owner on 2026-10-27 with the CLAR-0005 answers. Planned as TASK-0140 to TASK-0144 (DEC-0067).
+- Status: Accepted by the owner on 2026-10-27 with the CLAR-0005 answers. Planned as TASK-0140 to TASK-0144 (DEC-0067). The
+  owner added the logo on 2026-10-27 (TASK-0145).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -97,6 +98,9 @@ recommended option.
   - retention (`retention_days`) applies to visitor sessions too.
 - **Embed** (TASK-0143): a plain iframe snippet, and a script widget whose bubble opens that iframe. The allowed
   sites are set in Chat settings and sent as `frame-ancestors`. Every other studio page refuses to be framed.
+- **Logo** (TASK-0145, owner request 2026-10-27, after CLAR-0005): the builder uploads a PNG, JPEG or WebP image of up
+  to 256 KB. It shows in the page header, over the welcome and in the browser tab (the widget's bubble keeps its chat icon). Without
+  one, the header shows the title's first letter and the welcome a built-in picture.
 - Errors in `core/errors.py`, `docs/api-errors.md` and both locales. Glossary rows. Handbook en and vi (the chat guide
   and the public API page). CHANGELOG.
 - Tests: pytest (access, isolation between visitors, limits, published and unpublished), vitest, and an e2e test of an
@@ -105,7 +109,7 @@ recommended option.
 ### Out Of Scope
 
 - File attachments, feedback (thumbs), and streaming over SSE.
-- Custom domains, custom colours and logos (CLAR-0005 question 6 keeps the page plain).
+- Custom domains and custom colours (CLAR-0005 question 6 keeps the page plain; the owner later added the logo).
 - A widget that draws its own chat UI, and an embed for `signed_in` chats.
 - A visitor deleting their own history (retention handles it), and exporting a chat.
 - Billing or quotas per visitor beyond the limits above.
@@ -220,5 +224,5 @@ None. CLAR-0005 is answered.
 - `.factory-state/artifacts/REQ-0073-agent-workflow-tools.md` (ships in the same release)
 - `.factory-state/tasks/doing/TASK-0139-version-0-9-0.md` (the 0.9.0 release, waiting for this requirement)
 - `.factory-state/decisions/DEC-0067-public-chat-page.md`
-- Tasks: TASK-0140 to TASK-0144 under `.factory-state/tasks/todo/`
+- Tasks: TASK-0140 to TASK-0145
 - `docs/ui-conventions.md`, `docs/backend-architecture.md`

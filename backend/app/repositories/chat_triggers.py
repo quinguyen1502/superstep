@@ -1,6 +1,7 @@
+import time
 from typing import Optional
 from sqlalchemy import delete, select, update
-from ..models import WorkflowChatTrigger
+from ..models import ChatLogo, WorkflowChatTrigger
 from ..models.database import Database
 
 
@@ -47,7 +48,21 @@ class ChatTriggerRepository:
             s.commit(); return n or 0
 
     def delete(self, tid: str) -> None:
-        with self.db.session() as s: s.execute(delete(WorkflowChatTrigger).where(WorkflowChatTrigger.id == tid)); s.commit()
+        with self.db.session() as s:
+            s.execute(delete(ChatLogo).where(ChatLogo.trigger_id == tid)); s.execute(delete(WorkflowChatTrigger).where(WorkflowChatTrigger.id == tid)); s.commit()
 
     def delete_for_workflow(self, wid: str) -> None:
-        with self.db.session() as s: s.execute(delete(WorkflowChatTrigger).where(WorkflowChatTrigger.workflow_id == wid)); s.commit()
+        with self.db.session() as s:
+            s.execute(delete(ChatLogo).where(ChatLogo.trigger_id.in_(select(WorkflowChatTrigger.id).where(WorkflowChatTrigger.workflow_id == wid))))
+            s.execute(delete(WorkflowChatTrigger).where(WorkflowChatTrigger.workflow_id == wid)); s.commit()
+
+    # ---- a web chat's logo (TASK-0145) ----
+    def logo(self, tid: str) -> Optional[ChatLogo]:
+        with self.db.session() as s: return s.get(ChatLogo, tid)
+
+    def set_logo(self, tid: str, mime: Optional[str], data: Optional[bytes]) -> None:
+        """Replaces the logo, or removes it when `data` is None."""
+        with self.db.session() as s:
+            s.execute(delete(ChatLogo).where(ChatLogo.trigger_id == tid))
+            if data is not None: s.add(ChatLogo(trigger_id=tid, mime=mime, data=data, created=time.time()))
+            s.commit()

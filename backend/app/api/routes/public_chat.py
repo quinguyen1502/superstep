@@ -3,6 +3,7 @@
 GET  /api/public/chat/{slug}                      the page: title, intro, suggestions, access, steps mode
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
+GET  /api/public/chat/{slug}/logo?v=<hash>        the chat's logo image (TASK-0145)
 WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response}: the run
                                                   streams as public_event()s (TASK-0141); ?visitor= for the widget
 GET  /api/public/chat-frame?path=/c/{slug}        the page's frame-ancestors in Content-Security-Policy (TASK-0143):
@@ -54,6 +55,12 @@ async def checked(request: Request, svc) -> None:
     await svc.check_read(client_ip(request.client.host if request.client else None, request.headers.get("x-forwarded-for")))
 
 
+def logo_response(logo, versioned: bool, scope: str = "public") -> Response:
+    """A chat's logo. With ?v=<hash> its address changes with the image, so it is cached for good."""
+    age = "max-age=31536000, immutable" if versioned else "max-age=300"
+    return Response(logo.data, media_type=logo.mime, headers={"Cache-Control": f"{scope}, {age}", "X-Content-Type-Options": "nosniff"})
+
+
 def answer(request: Request, response: Response, slug: str, data, v: Visitor):
     """Keeps a new anonymous visitor: the cookie on a direct visit, `visitor_token` in the answer for the widget."""
     if not v.token: return data
@@ -70,6 +77,11 @@ def answer(request: Request, response: Response, slug: str, data, v: Visitor):
 @router.get("/{slug}")
 async def page(slug: str, request: Request, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); return svc.page(slug, user)
+
+
+@router.get("/{slug}/logo")
+async def logo(slug: str, request: Request, v: Optional[str] = None, svc=Depends(public_chat_service)):
+    await checked(request, svc); return logo_response(svc.logo(slug), v is not None)
 
 
 @router.get("/{slug}/sessions")

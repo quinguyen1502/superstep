@@ -109,6 +109,7 @@ who never open the studio can talk to the workflow.
 |---|---|---|
 | Page address | The `<address>` in `/c/<address>`: 3 to 64 lowercase letters, digits or hyphens, not used by another chat. Changing it breaks the old link. | the workflow's id |
 | Page title | Shown at the top of the page. | the workflow's name |
+| Logo | A PNG, JPEG or WebP image of up to 256 KB. **Upload logo** picks it; **Save** stores it. It shows at the top of the page, over the intro and in the browser tab. | the title's first letter, and a picture over the intro |
 | Intro | What visitors read before their first message. Markdown. | empty |
 | Suggested messages | Up to 4 buttons a visitor can click to start. | none |
 | Messages per day | Visitor messages per day (UTC) for this chat, so a busy or abused page cannot run up your model bill. `0` means no cap. | 500 |
@@ -196,6 +197,7 @@ The rest of the studio cannot be shown in a frame on any site.
 | `CHAT_SIGN_IN_REQUIRED` | The chat is for signed-in users. |
 | `CHAT_DAILY_LIMIT` | The chat has used its messages for today. |
 | `CHAT_EMBED_ORIGIN_INVALID` | An embed site is not an address like `https://example.com`. |
+| `CHAT_LOGO_INVALID` | The logo is not a PNG, JPEG or WebP image, or it is over 256 KB. SVG is not accepted. |
 | `RATE_LIMITED` | Too many messages from this visitor or address; `retry_after` says when to try again. |
 
 See also [Chat triggers](chat-triggers.md) for Slack and Telegram.

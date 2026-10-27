@@ -1,10 +1,11 @@
 /** A workflow's Chat settings (TASK-0085, REQ-0048): on/off, who may chat, the input / reply / messages fields, the memory
  *  window, which steps visitors see and how long chats are kept. Anyone with the link or signed-in users publish the chat
  *  at /c/{slug} (TASK-0142, DEC-0067): its address, title, intro, suggested messages and daily limit. An anonymous chat
- *  can be embedded (TASK-0143): the sites allowed to frame it, and an iframe and a widget snippet to copy. */
-import { useState } from 'react'
+ *  can be embedded (TASK-0143): the sites allowed to frame it, and an iframe and a widget snippet to copy. Its logo
+ *  (TASK-0145) is read here and goes with Save as a data: URL; Remove clears it on Save too. */
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, Check, Copy, ExternalLink, Plus, Save, X } from 'lucide-react'
+import { AlertCircle, Check, Copy, ExternalLink, ImageUp, Plus, Save, Trash2, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,7 +17,8 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { api, ApiError } from '@/lib/api'
-import { ACCESS, iframeSnippet, MAX_SUGGESTIONS, pageUrl, published, STEPS, widgetSnippet, type ChatSettings } from '@/lib/chat'
+import { ACCESS, iframeSnippet, LOGO_MAX_KB, LOGO_TYPES, logoUrl, MAX_SUGGESTIONS, pageUrl, published, STEPS, widgetSnippet, type ChatSettings } from '@/lib/chat'
+import { ChatLogo } from '@/components/chat/chat-logo'
 import { useLoadWhen } from '@/lib/use-when'
 
 type Field = { name: string; type: string }
@@ -31,10 +33,14 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
       .then(([s, wf]) => { setV(s); setFields(wf.state || []) }).catch(e => setErr(e.message))
   })
   const set = (p: Partial<ChatSettings>) => setV(x => x && { ...x, ...p })
+  const file = useRef<HTMLInputElement>(null)
+  const pickLogo = (f?: File) => { if (!f) return
+    if (!LOGO_TYPES.includes(f.type) || f.size > LOGO_MAX_KB * 1024) { setErr(t('errors.CHAT_LOGO_INVALID', { max_kb: LOGO_MAX_KB })); setBad('logo'); return }
+    const r = new FileReader(); r.onload = () => { setErr(''); setBad(''); set({ logo: String(r.result) }) }; r.readAsDataURL(f) }
   const save = () => { if (!v) return; setBusy(true); setErr(''); setBad('')
     const body = { ...v, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean), embed_origins: v.embed_origins.map(x => x.trim()).filter(Boolean) }
     api<ChatSettings>(`/api/workflows/${wid}/chat`, { method: 'PUT', json: body }).then(s => { setV(s); onSaved?.(s); onOpenChange(false) })
-      .catch(e => { setErr(e.message); if (e instanceof ApiError) setBad(e.code?.startsWith('CHAT_SLUG') ? 'slug' : e.code === 'CHAT_EMBED_ORIGIN_INVALID' ? 'embed_origins' : e.details?.field ?? '') }).finally(() => setBusy(false)) }
+      .catch(e => { setErr(e.message); if (e instanceof ApiError) setBad(e.code?.startsWith('CHAT_SLUG') ? 'slug' : e.code === 'CHAT_EMBED_ORIGIN_INVALID' ? 'embed_origins' : e.code === 'CHAT_LOGO_INVALID' ? 'logo' : e.details?.field ?? '') }).finally(() => setBusy(false)) }
   const [copied, setCopied] = useState('')
   const copy = (what: string, text: string) => navigator.clipboard.writeText(text).then(() => { setCopied(what); setTimeout(() => setCopied(''), 2000) }).catch(() => {})
   const snippet = (s: ChatSettings) => ({ iframe: iframeSnippet(s.slug), widget: widgetSnippet(s.slug) })
@@ -65,6 +71,14 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
           {!v.enabled && <p className="text-xs text-muted-foreground" id="chat-publish-off">{t('chat.publish.off')}</p>}
           <Separator />
           {row('title', t('chat.publish.title'), t('chat.publish.titleHint'), <Input id="chat-title" maxLength={60} aria-invalid={bad === 'title' || undefined} value={v.title} onChange={e => set({ title: e.target.value })} />)}
+          <div className="grid gap-1.5" id="chat-logo"><Label htmlFor="chat-logo-file">{t('chat.publish.logo')}</Label>
+            <div className="flex items-center gap-3">
+              <ChatLogo src={logoUrl(wid ?? '', v.logo)} title={v.title || v.slug} className="size-12 rounded-xl" id="chat-logo-preview" />
+              <input ref={file} id="chat-logo-file" type="file" accept={LOGO_TYPES.join(',')} className="sr-only" aria-invalid={bad === 'logo' || undefined}
+                onChange={e => { pickLogo(e.target.files?.[0]); e.target.value = '' }} />
+              <Button size="sm" variant="outline" id="chat-logo-upload" onClick={() => file.current?.click()}><ImageUp />{t(v.logo ? 'chat.publish.changeLogo' : 'chat.publish.uploadLogo')}</Button>
+              {v.logo && <Button size="sm" variant="ghost" id="chat-logo-remove" onClick={() => set({ logo: '' })}><Trash2 />{t('chat.publish.removeLogo')}</Button>}</div>
+            <p className="text-xs text-muted-foreground">{t('chat.publish.logoHint', { max_kb: LOGO_MAX_KB })}</p></div>
           {row('intro', t('chat.publish.intro'), t('chat.publish.introHint'), <Textarea id="chat-intro" rows={3} maxLength={1000} aria-invalid={bad === 'intro' || undefined} value={v.intro} onChange={e => set({ intro: e.target.value })} />)}
           <div className="grid gap-1.5"><Label>{t('chat.publish.suggestions')}</Label>
             {v.suggestions.map((x, i) => <div key={i} className="flex gap-2">

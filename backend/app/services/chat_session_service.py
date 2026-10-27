@@ -11,7 +11,7 @@ Phase 1 is the studio: signed-in users with the run right. Phase 2 (REQ-0074, DE
 "web" or "embed". Attachments are reserved.
 """
 from __future__ import annotations
-import json, re, time, uuid
+import base64, binascii, hashlib, json, re, time, uuid
 from urllib.parse import urlparse
 from typing import Optional
 from ..core import permissions as P
@@ -28,9 +28,11 @@ PUBLIC = ("anonymous", "signed_in")
 STEPS = ("none", "labels", "full")
 ANSWERED_BY = ("visitor", "reviewer")
 DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30,
-            "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": []}
+            "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": ""}
 MAX_TURNS, RETENTION_MAX, TEXT_MAX, TITLE_MAX = 50, 3650, 4000, 60
 INTRO_MAX, SUGGESTIONS_MAX, SUGGESTION_MAX, DAILY_MAX, ORIGINS_MAX = 1000, 4, 120, 100_000, 10
+LOGO_MAX = 256 * 1024
+LOGO_TYPES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"))  # WebP: RIFF....WEBP (logo_of)
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$")
 RESERVED_SLUGS = frozenset({"api", "ws", "new", "admin", "login", "embed", "widget", "static", "assets"})
 
@@ -44,6 +46,23 @@ def origin_of(value) -> Optional[str]:
     local = u.hostname in ("localhost", "127.0.0.1")
     if not u.hostname or u.path or u.query or u.fragment or u.username or u.password or not (u.scheme == "https" or (u.scheme == "http" and local)): return None
     return f"{u.scheme}://{u.hostname}" + (f":{port}" if port else "")
+
+
+def logo_of(value: str) -> tuple[str, bytes]:
+    """A logo sent as a data: URL (TASK-0145): its type, read from the bytes and not from the URL, and its bytes. No SVG:
+    an SVG can carry script. CHAT_LOGO_INVALID otherwise."""
+    bad = AppError("CHAT_LOGO_INVALID", max_kb=LOGO_MAX // 1024)
+    head, _, body = value.partition(",")
+    if not head.startswith("data:") or not head.endswith(";base64") or len(body) > (LOGO_MAX * 4 // 3) + 4: raise bad
+    try: data = base64.b64decode(body, validate=True)
+    except (binascii.Error, ValueError): raise bad from None
+    mime = next((m for sig, m in LOGO_TYPES if data.startswith(sig)), None)
+    if mime is None and data[:4] == b"RIFF" and data[8:12] == b"WEBP": mime = "image/webp"
+    if mime is None or len(data) > LOGO_MAX: raise bad
+    return mime, data
+
+
+def logo_hash(data: bytes) -> str: return hashlib.sha256(data).hexdigest()[:16]
 STEP_EVENTS = ("node_started", "node_finished", "error", "run_waiting")
 
 
@@ -96,15 +115,27 @@ class ChatSessionService:
         t = self.triggers.web(wid)
         cur = self._public(w, t); v = {**cur, **{k: body[k] for k in cur if k in body}}
         v = self._check(w, v, t.command if t else None)
+        logo = None  # (mime, bytes) of a new logo; "" removes it; the current hash keeps it
+        if isinstance(v.get("logo"), str) and v["logo"].startswith("data:"):
+            logo = logo_of(v["logo"]); v["logo"] = logo_hash(logo[1])
+        elif v.get("logo") not in ("", cur["logo"]): raise AppError("CHAT_LOGO_INVALID", max_kb=LOGO_MAX // 1024)
         taken = self.triggers.find(WEB, WEB, v["slug"])
         if taken is not None and (t is None or taken.id != t.id): raise AppError("CHAT_SLUG_TAKEN", slug=v["slug"])
         cols = {"input_field": v["input_field"], "reply_field": v["reply_field"], "enabled": v["enabled"], "command": v["slug"],
                 "settings": json.dumps({k: v[k] for k in DEFAULTS}, ensure_ascii=False)}
         if t is None:
-            self.triggers.add(WorkflowChatTrigger(id=uuid.uuid4().hex[:10], workflow_id=wid, owner=uid, name="Web chat", channel_id=WEB, place=WEB,
-                                                  created=time.time(), **cols))
+            t = self.triggers.add(WorkflowChatTrigger(id=uuid.uuid4().hex[:10], workflow_id=wid, owner=uid, name="Web chat", channel_id=WEB, place=WEB,
+                                                      created=time.time(), **cols))
         else: self.triggers.set_fields(t.id, **cols)
+        if logo is not None or (not v["logo"] and cur["logo"]): self.triggers.set_logo(t.id, *(logo or (None, None)))
         return self._public(w, self.triggers.web(wid))
+
+    def logo(self, wid: str, uid: str):
+        """The chat's logo for the builder (run right), published or not; CHAT_LOGO_NOT_FOUND when it has none."""
+        self._workflow(wid, uid, P.RUN); t = self.triggers.web(wid)
+        logo = self.triggers.logo(t.id) if t else None
+        if logo is None: raise AppError("CHAT_LOGO_NOT_FOUND")
+        return logo
 
     def _public(self, w, t: Optional[WorkflowChatTrigger]) -> dict:
         fields = self._fields(w)

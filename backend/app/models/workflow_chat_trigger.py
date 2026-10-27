@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import Boolean, Float, Index, Text, true
+from sqlalchemy import Boolean, Float, Index, LargeBinary, Text, true
 from sqlalchemy.orm import Mapped, mapped_column
 from .base import Base
 
@@ -24,3 +24,13 @@ class WorkflowChatTrigger(Base):
     last_run_id: Mapped[Optional[str]] = mapped_column(Text)
     created: Mapped[float] = mapped_column(Float, nullable=False)
     settings: Mapped[Optional[str]] = mapped_column(Text)  # JSON: the web chat's settings (TASK-0084); None for Slack/Telegram
+
+
+class ChatLogo(Base):
+    """A published chat's logo (TASK-0145, REQ-0074): one PNG, JPEG or WebP image per web chat trigger. Its settings keep
+    the image's hash as `logo`, which versions the logo's address."""
+    __tablename__ = "chat_logos"
+    trigger_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    mime: Mapped[str] = mapped_column(Text, nullable=False)
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created: Mapped[float] = mapped_column(Float, nullable=False)

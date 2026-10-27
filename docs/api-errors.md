@@ -212,6 +212,8 @@
 | `CHAT_SIGN_IN_REQUIRED` | 401 | Sign in to use this chat |
 | `CHAT_DAILY_LIMIT` | 429 | This chat has used its messages for today. Try again tomorrow |
 | `CHAT_EMBED_ORIGIN_INVALID` | 400 | '{origin}' is not a site address like https://example.com |
+| `CHAT_LOGO_INVALID` | 400 | The logo must be a PNG, JPEG or WebP image of at most {max_kb} KB |
+| `CHAT_LOGO_NOT_FOUND` | 404 | This chat has no logo |
 | `TEST_NOT_FOUND` | 404 | Test case not found |
 | `TEST_CASE_INVALID` | 400 | Test case: {reason} |
 | `TEST_CASES_LIMIT` | 400 | A workflow can have at most {max} test cases |
