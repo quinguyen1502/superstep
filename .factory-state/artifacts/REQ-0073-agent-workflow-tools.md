@@ -4,7 +4,8 @@
 
 - Project: superstep
 - Requirement ID: REQ-0073
-- Status: Accepted (owner, 2026-10-26; CLAR-0004 answered with all recommended options)
+- Status: Done (TASK-0133 to TASK-0138, PRs #177 to #182, merged 2026-10-27); accepted by the owner 2026-10-26 with the
+  CLAR-0004 answers
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26

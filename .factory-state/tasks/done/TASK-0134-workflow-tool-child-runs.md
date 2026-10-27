@@ -4,10 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0134
-- Status: review
+- Status: done
+- 2026-10-27: PR #178 merged into develop (9fafaaa) with the owner's approval ("Ok làm đi") after CI passed; moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
-- Updated: 2026-10-26
+- Updated: 2026-10-27
 - Requirement IDs: REQ-0073
 - Design IDs: none
 - Architecture IDs: DEC-0066, DEC-0063, DEC-0018, DEC-0023

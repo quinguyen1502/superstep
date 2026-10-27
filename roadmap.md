@@ -272,21 +272,21 @@ expanded into LangGraph model and tool steps, one tool call per step.
 
 ## Agent workflow tools
 
-REQ-0073, Accepted 2026-10-26 (CLAR-0004: all recommended options; another workflow as an Agent tool, the supervisor
+REQ-0073, Accepted 2026-10-26, Done 2026-10-27 (CLAR-0004: all recommended options; another workflow as an Agent tool, the supervisor
 pattern for several agents; a linked child run; approvals inside the child passed up; the child's latest saved
 version; a nested trace; Python, project and TypeScript exports). DEC-0066 (accepted 2026-10-26): a workflow tool is a
 linked child run that the parent's tool step waits for.
 
 - TASK-0133 Tool settings, parameters and results from the child's state fields, the snapshot at planning, cycle
-  and depth checks across subgraphs and workflow tools, validator codes. **review** (REV-0117, QA-0117).
+  and depth checks across subgraphs and workflow tools, validator codes. **merged** (PR #177; REV-0117, QA-0117).
 - TASK-0134 Linked child runs: migration, `AwaitChild`, `start_child`, resume of the parent when a child settles,
-  cancel cascade, restart tests. **review** (REV-0118, QA-0118).
+  cancel cascade, restart tests. **merged** (PR #178; REV-0118, QA-0118).
 - TASK-0135 Approvals inside a child with both workflow names; parent and children in the API, run page and history.
-  **review** (REV-0119, QA-0119).
-- TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **review** (REV-0120, QA-0120).
-- TASK-0137 "Tool called" test check, "Support team" template, Python, project and TypeScript exports. **review**
-  (REV-0121, QA-0121).
-- TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **review** (REV-0122, QA-0122).
+  **merged** (PR #179; REV-0119, QA-0119).
+- TASK-0136 Editor tool card, nested trace in the studio and the chat, e2e. **merged** (PR #180; REV-0120, QA-0120).
+- TASK-0137 "Tool called" test check, "Support team" template, Python, project and TypeScript exports. **merged**
+  (PR #181; REV-0121, QA-0121).
+- TASK-0138 Handbook (en, vi), comparison pages, CHANGELOG. **merged** (PR #182; REV-0122, QA-0122).
 
 ## Owner requests
 
