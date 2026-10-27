@@ -31,7 +31,8 @@ export function SettingsPage() {
   const { t } = useTranslation(); const { section } = useParams(); const me = useMe()
   const visible = SECTIONS.filter(s => !s.permission || can(me, s.permission))
   const current = SECTIONS.find(s => s.id === section)
-  if (!current) return <Navigate to={`/settings/${SECTIONS[0].id}`} replace />
+  // an unknown section, or one the role may not open (a bookmarked link): the first section instead
+  if (!current || (me && current.permission && !can(me, current.permission))) return <Navigate to={`/settings/${SECTIONS[0].id}`} replace />
   const Component = COMPONENTS[current.id]
   return <div className="min-h-dvh bg-background">
     <header className="flex h-14 items-center gap-3 border-b px-4 md:px-6">

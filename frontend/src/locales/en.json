@@ -891,6 +891,7 @@
     "platform": "Platform",
     "name": "Name",
     "namePh": "e.g. Acme workspace",
+    "demoReadOnly": "Linking chat accounts is off in the public demo.",
     "noChannels": "No connections yet. Add your own Slack app or Telegram bot below.",
     "orgReadOnly": "Managed by an admin. You can pick it on your Human nodes.",
     "replaceSecrets": "Replace secrets",
