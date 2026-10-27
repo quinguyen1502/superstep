@@ -316,6 +316,9 @@ owner answered every CLAR with the recommended options the same day. None is pla
 - REQ-0076 An Agent round's tool calls run in parallel, each still checkpointed on its own (CLAR-0007).
 - REQ-0077 File attachments in the chat: documents, and images for vision models (CLAR-0008).
 - REQ-0078 Hand-off from one Agent node to another in the same workflow (CLAR-0009).
+- REQ-0079 The `superstep` CLI (owner request; CLAR-0010). Phase 1: install, deploy over SSH, upgrade with a backup
+  and automatic rollback, backup and restore, status, doctor and admins. Phase 2: login with personal access tokens,
+  pull and push, run, test in CI, and MCP over stdio.
 
 ## Owner requests
 
