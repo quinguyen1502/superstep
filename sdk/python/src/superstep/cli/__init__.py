@@ -12,6 +12,7 @@ import httpx
 import superstep
 from superstep.cli.admin import add_commands as add_admin_commands
 from superstep.cli.backup import add_commands as add_backup_commands
+from superstep.cli.deploy import add_commands as add_deploy_commands
 from superstep.cli.docker import Docker
 from superstep.cli.i18n import Catalog, lang_flag, resolve_lang
 from superstep.cli.install import add_commands
@@ -32,7 +33,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     sys.exit(run(argv))
 
 
-def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None, docker: Optional[Docker] = None) -> int:
+def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None, docker: Optional[Docker] = None, ssh=None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     json_mode = "--json" in args
     catalog = Catalog.load(resolve_lang(lang_flag(args)))
@@ -42,7 +43,10 @@ def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None,
     except SystemExit as exc:
         code = exc.code
         return code if isinstance(code, int) else (1 if code else 0)
-    return parsed.run(parsed, catalog, json_mode, client, parser, docker or Docker())
+    engine = docker or Docker()
+    if ssh is not None:
+        engine.ssh_client = ssh
+    return parsed.run(parsed, catalog, json_mode, client, parser, engine)
 
 
 def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
@@ -90,6 +94,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     add_backup_commands(commands, common, catalog)
     add_upgrade_commands(commands, common, catalog)
     add_admin_commands(commands, common, catalog)
+    add_deploy_commands(commands, common, catalog)
     return parser
 
 

@@ -125,5 +125,13 @@
   "uninstall.purged": "Removed {name}, its volumes, and the instance directory.",
   "prompt.uninstall": "Type {name} to remove the instance and its volumes",
   "error.uninstall_name": "Type the instance name to remove it. With --yes, pass a matching --name.",
-  "error.admin_output": "The admin command did not return a usable result."
+  "error.admin_output": "The admin command did not return a usable result.",
+  "help.deploy": "Install or upgrade an instance on a remote Docker host.",
+  "help.deploy_target": "SSH URL of the Docker host, such as ssh://user@host.",
+  "help.force_upgrade": "Upgrade an existing remote instance. Fail when it is absent.",
+  "example.deploy": "Example: superstep deploy ssh://user@host --yes --url http://localhost:8000 --admin-email you@example.com",
+  "deploy.installed": "Installed {name} on {url}.",
+  "error.ssh": "SSH failed: {message}",
+  "error.ssh_target": "Pass an ssh://user@host URL.",
+  "error.no_remote": "There is no instance on this host, so --upgrade cannot run."
 }

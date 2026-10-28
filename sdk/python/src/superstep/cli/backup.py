@@ -175,19 +175,15 @@ def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path
     _write_private(directory / "instance.json", json.dumps(record, indent=2) + "\n")
 
 
-def install_schedule(directory: Path, record: dict, docker: Docker, dest: Path, period: str, keep: int) -> str:
-    """Write the docker-only script and a user timer, or cron when systemd is missing."""
-    dest.mkdir(parents=True, exist_ok=True)
-    script = directory / "backup.sh"
-    _write_private(script, _shell(directory, dest, record, keep))
-    os.chmod(script, 0o700)
+def schedule_units(directory: Path, record: dict, period: str) -> tuple[str, str, str]:
+    """Systemd unit text. ExecStart is the backup script inside `directory`."""
     unit = f"superstep-backup-{record['name']}"
     service = (
         "[Unit]\n"
         f"Description=Superstep backup ({record['name']})\n\n"
         "[Service]\n"
         "Type=oneshot\n"
-        f"ExecStart={script}\n\n"
+        f"ExecStart={directory / 'backup.sh'}\n\n"
         "[Install]\n"
         "WantedBy=default.target\n"
     )
@@ -200,6 +196,16 @@ def install_schedule(directory: Path, record: dict, docker: Docker, dest: Path, 
         "[Install]\n"
         "WantedBy=timers.target\n"
     )
+    return unit, service, timer
+
+
+def install_schedule(directory: Path, record: dict, docker: Docker, dest: Path, period: str, keep: int) -> str:
+    """Write the docker-only script and a user timer, or cron when systemd is missing."""
+    dest.mkdir(parents=True, exist_ok=True)
+    script = directory / "backup.sh"
+    _write_private(script, _shell(directory, dest, record, keep))
+    os.chmod(script, 0o700)
+    unit, service, timer = schedule_units(directory, record, period)
     _write_private(directory / f"{unit}.service", service)
     _write_private(directory / f"{unit}.timer", timer)
     if docker.systemd_user():

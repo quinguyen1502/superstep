@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0155
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-28
 - Requirement IDs: REQ-0079
 - Design IDs: none
 - Architecture IDs: DEC-0068
@@ -96,8 +96,16 @@
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0079 phase 1 (DEC-0068).
+- 2026-10-28: task-start. Branch `factory/task-0155-cli-deploy-ssh` cut from `origin/develop` at `8a6b91d` (merge of PR #210). No source edited.
+- 2026-10-28: implemented `deploy` on this branch.
+- 2026-10-28: tool policy passed on the uncommitted tree. Backend pytest 790 passed, 57 skipped (335.63s). sdk/python pytest 99 passed, 2 skipped (4.24s). Frontend lint exit 0 with 5 existing warnings, frontend test 124 passed, frontend build exit 0. TypeScript SDK test 22 passed, build exit 0, typecheck exit 0.
+- 2026-10-28: REV-0141 approved for QA. No blocking findings. QA-0141 pass with follow-up.
+- 2026-10-28: owner asked to take the task through done and open the PR. Not merged.
 
 ## Handoff Notes
 
 - TASK-0156 documents this command and does not change its transport.
-- Do not start a branch until the owner confirms this set. The next skill is `task-start`.
+- `superstep deploy ssh://user@host` probes SSH before any write. An absent remote `instance.json` runs install. A present one runs upgrade. `--upgrade` fails when the instance is absent. `DOCKER_HOST` is the SSH URL. The remote directory is `~/.superstep/instances/<name>/` unless `--dir` is set. `instance.json` `remote` is that URL. `.env` is mode `0600`. The admin password is printed once and is not stored in `instance.json`.
+- Compose reads a temporary local cache because the compose client is local. The cache is deleted at the end. The timer script from TASK-0152 is written on the remote host and calls `docker` there.
+- Review: `.factory-state/artifacts/REV-0141-task-0155.md`. QA: `.factory-state/artifacts/QA-0141-task-0155.md`.
+- Not merged. Merge still needs an explicit owner request.
