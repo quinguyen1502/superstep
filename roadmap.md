@@ -324,7 +324,8 @@ test in CI, MCP over stdio) is not planned yet.
   (REV-0139, QA-0139; not merged)
 - TASK-0154 `admin` and `uninstall`. **done**
   (REV-0140, QA-0140; not merged)
-- TASK-0155 `deploy` to a Docker host over SSH. **planned**
+- TASK-0155 `deploy` to a Docker host over SSH. **done**
+  (REV-0141, QA-0141; not merged)
 - TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **planned**
 
 ## Chat answer feedback

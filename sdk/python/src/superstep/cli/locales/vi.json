@@ -125,5 +125,13 @@
   "uninstall.purged": "Đã xóa {name}, các volume và thư mục instance.",
   "prompt.uninstall": "Gõ {name} để xóa instance và các volume",
   "error.uninstall_name": "Gõ tên instance để xóa. Với --yes, truyền --name trùng tên đó.",
-  "error.admin_output": "Lệnh admin không trả về kết quả dùng được."
+  "error.admin_output": "Lệnh admin không trả về kết quả dùng được.",
+  "help.deploy": "Cài hoặc nâng một instance trên Docker host từ xa.",
+  "help.deploy_target": "URL SSH của Docker host, dạng ssh://user@host.",
+  "help.force_upgrade": "Nâng instance remote đã có. Báo lỗi nếu chưa có.",
+  "example.deploy": "Ví dụ: superstep deploy ssh://user@host --yes --url http://localhost:8000 --admin-email you@example.com",
+  "deploy.installed": "Đã cài {name} trên {url}.",
+  "error.ssh": "SSH thất bại: {message}",
+  "error.ssh_target": "Cần một URL dạng ssh://user@host.",
+  "error.no_remote": "Host này chưa có instance, nên --upgrade không chạy."
 }

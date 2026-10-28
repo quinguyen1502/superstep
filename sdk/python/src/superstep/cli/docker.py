@@ -20,11 +20,14 @@ class DockerError(Exception):
 
 
 class Docker:
+    def __init__(self, host: Optional[str] = None):
+        self.host = host
+
     def docker_ok(self) -> bool:
-        return _rc(["docker", "version"]) == 0
+        return _rc(["docker", "version"], self.host) == 0
 
     def compose_v2(self) -> bool:
-        return _rc(["docker", "compose", "version"]) == 0
+        return _rc(["docker", "compose", "version"], self.host) == 0
 
     def memory_bytes(self) -> int:
         try:
@@ -52,23 +55,23 @@ class Docker:
         return _listener_name(port) or "unknown"
 
     def load(self, tar: str) -> None:
-        _check(["docker", "load", "-i", tar])
+        _check(["docker", "load", "-i", tar], self.host)
 
     def pull(self, image: str) -> None:
-        _check(["docker", "pull", image])
+        _check(["docker", "pull", image], self.host)
 
     def compose(self, directory: str, project: str, args: list[str]) -> None:
-        _check(_compose_argv(directory, project, args))
+        _check(_compose_argv(directory, project, args), self.host)
 
     def compose_logs(self, directory: str, project: str) -> str:
         try:
-            proc = _run(_compose_argv(directory, project, ["logs", "--no-color"]))
+            proc = _run(_compose_argv(directory, project, ["logs", "--no-color"]), self.host)
         except DockerError as exc:
             return exc.message
         return proc.stdout + proc.stderr
 
     def exec_bytes(self, directory: str, project: str, service: str, command: list[str]) -> bytes:
-        proc = _run_bytes(_compose_argv(directory, project, ["exec", "-T", service, *command]))
+        proc = _run_bytes(_compose_argv(directory, project, ["exec", "-T", service, *command]), self.host)
         if proc.returncode != 0:
             raise DockerError(proc.stderr.decode("utf-8", "replace").strip() or "docker failed")
         return proc.stdout
@@ -76,7 +79,7 @@ class Docker:
     def copy_from(self, directory: str, project: str, service: str, path: str) -> bytes:
         target = _temp_path()
         try:
-            _check(_compose_argv(directory, project, ["cp", f"{service}:{path}", target]))
+            _check(_compose_argv(directory, project, ["cp", f"{service}:{path}", target]), self.host)
             return Path(target).read_bytes()
         finally:
             os.unlink(target)
@@ -85,7 +88,7 @@ class Docker:
         target = _temp_path()
         try:
             Path(target).write_bytes(data)
-            _check(_compose_argv(directory, project, ["cp", target, f"{service}:{path}"]))
+            _check(_compose_argv(directory, project, ["cp", target, f"{service}:{path}"]), self.host)
         finally:
             os.unlink(target)
 
@@ -120,7 +123,7 @@ class Docker:
             raise DockerError(proc.stderr.strip() or "crontab failed")
 
     def ps(self, directory: str, project: str) -> list[dict]:
-        proc = _run(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", "ps", "-a", "--format", "json"])
+        proc = _run(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", "ps", "-a", "--format", "json"], self.host)
         services = []
         for line in proc.stdout.splitlines():
             line = line.strip()
@@ -139,7 +142,7 @@ class Docker:
         return services
 
     def remove_volume(self, name: str) -> None:
-        proc = _run(["docker", "volume", "rm", name])
+        proc = _run(["docker", "volume", "rm", name], self.host)
         if proc.returncode == 0:
             return
         message = (proc.stderr or "").strip()
@@ -148,7 +151,7 @@ class Docker:
         raise DockerError(message or "docker failed")
 
     def volume_bytes(self, name: str) -> int:
-        proc = _run(["docker", "system", "df", "-v"])
+        proc = _run(["docker", "system", "df", "-v"], self.host)
         for line in proc.stdout.splitlines():
             parts = line.split()
             if len(parts) >= 3 and parts[0] == name:
@@ -157,7 +160,7 @@ class Docker:
 
     def clock_skew_seconds(self, directory: str, project: str, service: str) -> float:
         import time
-        proc = _run(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", "exec", "-T", service, "date", "+%s"])
+        proc = _run(["docker", "compose", "-p", project, "--project-directory", directory, "-f", f"{directory}/compose.yml", "exec", "-T", service, "date", "+%s"], self.host)
         if proc.returncode != 0 or not proc.stdout.strip():
             return 0.0
         return abs(time.time() - float(proc.stdout.strip()))
@@ -229,29 +232,38 @@ def _temp_path() -> str:
     return handle.name
 
 
-def _run(args: list[str]) -> subprocess.CompletedProcess:
+def _env(host: Optional[str]):
+    """Pass DOCKER_HOST only when the caller set one. Other calls inherit the process environment."""
+    if not host:
+        return None
+    env = os.environ.copy()
+    env["DOCKER_HOST"] = host
+    return env
+
+
+def _run(args: list[str], host: Optional[str] = None) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=_env(host))
     except OSError as exc:
         raise DockerError(str(exc))
 
 
-def _run_bytes(args: list[str]) -> subprocess.CompletedProcess:
+def _run_bytes(args: list[str], host: Optional[str] = None) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_env(host))
     except OSError as exc:
         raise DockerError(str(exc))
 
 
-def _rc(args: list[str]) -> int:
+def _rc(args: list[str], host: Optional[str] = None) -> int:
     try:
-        return subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
+        return subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=_env(host)).returncode
     except OSError:
         return 1
 
 
-def _check(args: list[str]) -> None:
-    proc = _run(args)
+def _check(args: list[str], host: Optional[str] = None) -> None:
+    proc = _run(args, host)
     if proc.returncode != 0:
         raise DockerError(proc.stderr.strip() or "docker failed")
 
