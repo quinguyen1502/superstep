@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0154
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-28
 - Requirement IDs: REQ-0079
 - Design IDs: none
 - Architecture IDs: DEC-0068
@@ -96,8 +96,15 @@ An operator can create an admin, reset a password, or list admins when nobody ca
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0079 phase 1 (DEC-0068).
+- 2026-10-28: task-start. Branch `factory/task-0154-cli-admin-uninstall` cut from `origin/develop` at `6c20a42` (merge of PR #209). No source edited.
+- 2026-10-28: implemented `admin` and `uninstall` on this branch. Not committed.
+- 2026-10-28: tool policy passed on the uncommitted tree. Backend pytest 790 passed, 57 skipped (339.14s). sdk/python pytest 88 passed, 2 skipped (4.44s). Frontend lint exit 0 with 5 existing warnings, frontend test 124 passed, frontend build exit 0. TypeScript SDK test 22 passed, build exit 0, typecheck exit 0.
+- 2026-10-28: REV-0140 approved for QA. No blocking findings. QA-0140 pass with follow-up.
+- 2026-10-28: owner asked to move the task to `done` and open the PR. Not merged.
 
 ## Handoff Notes
 
 - The smoke test in TASK-0156 can call `admin list` against a started instance.
-- Do not start a branch until the owner confirms this set. The next skill is `task-start`.
+- `superstep admin create|reset-password|list` execs `python -m app.admin_cmd` (`superstep` on single, `api` on full). The password is printed once and is not stored. `uninstall` is `compose down` without `-v`. `uninstall --purge` needs the typed name, or `--yes` with a matching `--name`, then `down -v`, `docker volume rm` for recorded names, and removal of the instance directory.
+- Review: `.factory-state/artifacts/REV-0140-task-0154.md`. QA: `.factory-state/artifacts/QA-0140-task-0154.md`.
+- Not merged. Merge still needs an explicit owner request.

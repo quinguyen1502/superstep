@@ -39,6 +39,12 @@ class UserRepository:
     def set_role(self, uid: str, role: str) -> None:
         with self.db.session() as s: s.execute(update(User).where(User.id == uid).values(role=role)); s.commit()
 
+    def set_password(self, uid: str, password_hash: str, changed: float) -> None:
+        """Replace the hash. Tokens issued before `changed` stop working."""
+        with self.db.session() as s:
+            s.execute(update(User).where(User.id == uid).values(password=password_hash, password_changed=changed))
+            s.commit()
+
     def set_active(self, uid: str, active: bool) -> None:
         with self.db.session() as s: s.execute(update(User).where(User.id == uid).values(active=active)); s.commit()
 
