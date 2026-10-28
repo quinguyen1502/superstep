@@ -108,6 +108,7 @@
 - 2026-10-28: review REV-0139. No blocking findings. Approved for QA.
 - 2026-10-28: QA QA-0139. Pass with follow-up. `test_upgrade.py` 10 passed inside the SDK run above.
 - 2026-10-28: owner asked to finish the task through done, including validation, review, and QA. Not merged.
+- 2026-10-28: CI `python -m build` failed. The wheel force-include pointed outside the sdist. A hatch build hook now copies `CHANGELOG.md` into the sdist and the wheel. Owner asked to merge after this fix.
 
 ## Handoff Notes
 
