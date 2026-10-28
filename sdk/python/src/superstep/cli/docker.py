@@ -138,6 +138,15 @@ class Docker:
                 services.append({"name": row.get("Service") or row.get("Name") or "", "state": row.get("State") or row.get("Status") or ""})
         return services
 
+    def remove_volume(self, name: str) -> None:
+        proc = _run(["docker", "volume", "rm", name])
+        if proc.returncode == 0:
+            return
+        message = (proc.stderr or "").strip()
+        if "no such volume" in message.lower():
+            return
+        raise DockerError(message or "docker failed")
+
     def volume_bytes(self, name: str) -> int:
         proc = _run(["docker", "system", "df", "-v"])
         for line in proc.stdout.splitlines():
