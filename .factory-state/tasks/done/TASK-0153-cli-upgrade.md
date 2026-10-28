@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0153
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-28
 - Requirement IDs: REQ-0079
 - Design IDs: none
 - Architecture IDs: DEC-0068
@@ -102,8 +102,16 @@
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0079 phase 1 (DEC-0068).
+- 2026-10-28: owner asked to start the task. Branch `factory/task-0153-cli-upgrade` from `origin/develop` at `f3c2171` (PR #208). TASK-0152 is merged. Task moved to doing. No source edited.
+- 2026-10-28: implemented `upgrade`. `upgrade_instance` calls `create_backup` before pull or load, and `restore_archive` on a failed health check. Tests were added with the task.
+- 2026-10-28: validation passed on the uncommitted task tree. Tool policy: sdk/python pytest 80 passed, 2 skipped (3.08s, includes `test_upgrade`); backend pytest 787 passed, 57 skipped (333s); frontend lint exit 0 (5 existing warnings); frontend test 124 passed; frontend build exit 0; TypeScript SDK test 22 passed, build exit 0, typecheck exit 0.
+- 2026-10-28: review REV-0139. No blocking findings. Approved for QA.
+- 2026-10-28: QA QA-0139. Pass with follow-up. `test_upgrade.py` 10 passed inside the SDK run above.
+- 2026-10-28: owner asked to finish the task through done, including validation, review, and QA. Not merged.
 
 ## Handoff Notes
 
-- TASK-0155 runs this command against a remote Docker host.
-- Do not start a branch until the owner confirms this set. The next skill is `task-start`.
+- TASK-0155 calls `upgrade_instance` against a remote Docker host. A failed health check restores the archive from that run and writes `<dir>/upgrade-failed-<utc>.log`.
+- `instance.json` `version` changes only after health passes. A target older than the running version exits before any backup.
+- Review: `.factory-state/artifacts/REV-0139-task-0153.md`. QA: `.factory-state/artifacts/QA-0139-task-0153.md`.
+- Not merged. Merge still needs an explicit owner request.

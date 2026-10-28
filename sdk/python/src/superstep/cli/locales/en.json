@@ -95,5 +95,15 @@
   "error.confirm_name": "Type the instance name to restore. With --yes, pass a matching --name.",
   "error.schedule": "Pass --schedule daily or weekly together with --keep.",
   "error.archive": "The archive could not be read.",
-  "prompt.restore": "Type {name} to restore"
+  "prompt.restore": "Type {name} to restore",
+  "help.upgrade": "Move an instance to a pinned version, with a backup and automatic rollback.",
+  "help.to_version": "Version to install. The default is this CLI's version.",
+  "help.check": "Report whether the target differs. Do not pull, back up, or restart.",
+  "example.upgrade": "Example: superstep upgrade --to 0.9.0",
+  "upgrade.check": "Running {current}. Target {target}.",
+  "upgrade.changelog_missing": "The bundled changelog has no entry for this range.",
+  "upgrade.current": "Already running {version}.",
+  "upgrade.done": "Upgraded to {version}. Backup: {archive}.",
+  "error.downgrade": "Target {target} is older than the running version {current}.",
+  "error.rolled_back": "The upgrade failed and the previous version was restored. Log: {log}."
 }
