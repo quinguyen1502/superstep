@@ -38,6 +38,12 @@ path = "src/superstep/_version.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/superstep"]
 
+[tool.hatch.build.targets.sdist.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
 [tool.hatch.build.targets.wheel.force-include]
 "src/superstep/cli/locales/en.json" = "superstep/cli/locales/en.json"
 "src/superstep/cli/locales/vi.json" = "superstep/cli/locales/vi.json"

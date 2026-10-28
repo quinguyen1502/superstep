@@ -281,7 +281,14 @@ def _image_list(topology: str, sandbox: bool, version: str) -> list[str]:
     return images
 
 
-def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, volumes: dict) -> str:
+def _named_volume(alias: str, volume_name: str, external_names: Optional[set] = None) -> str:
+    text = f"  {alias}:\n    name: {volume_name}\n"
+    if external_names and volume_name in external_names:
+        text += "    external: true\n"
+    return text
+
+
+def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, volumes: dict, external_names: Optional[set] = None) -> str:
     if topology == "single":
         return (
             f"name: {name}\n"
@@ -299,8 +306,7 @@ def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, v
             f"    volumes: [\"{volumes['data']}:/data\"]\n"
             "    restart: unless-stopped\n"
             "volumes:\n"
-            "  data:\n"
-            f"    name: {volumes['data']}\n"
+            + _named_volume("data", volumes["data"], external_names)
         )
     text = (
         f"name: {name}\n"
@@ -358,12 +364,9 @@ def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, v
         )
     text += (
         "volumes:\n"
-        "  pgdata:\n"
-        f"    name: {volumes['pgdata']}\n"
-        "  redisdata:\n"
-        f"    name: {volumes['redisdata']}\n"
-        "  apidata:\n"
-        f"    name: {volumes['apidata']}\n"
+        + _named_volume("pgdata", volumes["pgdata"], external_names)
+        + _named_volume("redisdata", volumes["redisdata"], external_names)
+        + _named_volume("apidata", volumes["apidata"], external_names)
     )
     return text
 

@@ -320,7 +320,8 @@ test in CI, MCP over stdio) is not planned yet.
   (REV-0137, QA-0136; not merged)
 - TASK-0152 `backup`, `restore` and scheduled backups. **done**
   (REV-0138, QA-0138; not merged)
-- TASK-0153 `upgrade` with a backup and automatic rollback. **planned**
+- TASK-0153 `upgrade` with a backup and automatic rollback. **done**
+  (REV-0139, QA-0139; not merged)
 - TASK-0154 `admin` and `uninstall`. **planned**
 - TASK-0155 `deploy` to a Docker host over SSH. **planned**
 - TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **planned**

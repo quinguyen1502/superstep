@@ -15,6 +15,7 @@ from superstep.cli.docker import Docker
 from superstep.cli.i18n import Catalog, lang_flag, resolve_lang
 from superstep.cli.install import add_commands
 from superstep.cli.status import add_commands as add_status_commands
+from superstep.cli.upgrade import add_commands as add_upgrade_commands
 
 _TIMEOUT = 5.0
 
@@ -86,6 +87,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     add_commands(commands, common, catalog)
     add_status_commands(commands, common, catalog)
     add_backup_commands(commands, common, catalog)
+    add_upgrade_commands(commands, common, catalog)
     return parser
 
 

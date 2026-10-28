@@ -95,5 +95,15 @@
   "error.confirm_name": "Gõ tên instance để khôi phục. Với --yes, truyền --name trùng tên đó.",
   "error.schedule": "Cần --schedule daily hoặc weekly cùng với --keep.",
   "error.archive": "Không đọc được archive.",
-  "prompt.restore": "Gõ {name} để khôi phục"
+  "prompt.restore": "Gõ {name} để khôi phục",
+  "help.upgrade": "Đưa instance lên một phiên bản đã ghim, có sao lưu và tự quay lại khi lỗi.",
+  "help.to_version": "Phiên bản cần cài. Mặc định là phiên bản của CLI này.",
+  "help.check": "Chỉ báo target có khác không. Không kéo image, không sao lưu, không khởi động lại.",
+  "example.upgrade": "Ví dụ: superstep upgrade --to 0.9.0",
+  "upgrade.check": "Đang chạy {current}. Target {target}.",
+  "upgrade.changelog_missing": "Changelog đóng kèm không có mục cho khoảng này.",
+  "upgrade.current": "Đang chạy {version} rồi.",
+  "upgrade.done": "Đã nâng lên {version}. Bản sao lưu: {archive}.",
+  "error.downgrade": "Target {target} cũ hơn bản đang chạy {current}.",
+  "error.rolled_back": "Nâng cấp thất bại và bản trước đã được khôi phục. Log: {log}."
 }

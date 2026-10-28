@@ -60,6 +60,13 @@ class Docker:
     def compose(self, directory: str, project: str, args: list[str]) -> None:
         _check(_compose_argv(directory, project, args))
 
+    def compose_logs(self, directory: str, project: str) -> str:
+        try:
+            proc = _run(_compose_argv(directory, project, ["logs", "--no-color"]))
+        except DockerError as exc:
+            return exc.message
+        return proc.stdout + proc.stderr
+
     def exec_bytes(self, directory: str, project: str, service: str, command: list[str]) -> bytes:
         proc = _run_bytes(_compose_argv(directory, project, ["exec", "-T", service, *command]))
         if proc.returncode != 0:
