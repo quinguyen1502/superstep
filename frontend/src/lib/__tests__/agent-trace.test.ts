@@ -47,6 +47,17 @@ describe('Agent node in traces and chats (TASK-0118)', () => {
   it('the streamed reply is the last model call, not the text of a tool round', () => {
     expect(liveReply(EVENTS, 'answer')).toBe('In transit')
   })
+  it('tool calls of one superstep share a start and use each call\'s own duration', () => {
+    const wave = (node: string, ms: number, ts: number): RunEvent => ({
+      type: 'node_finished', node, node_type: 'agent_tool', superstep: 3, ts, duration_ms: 10,
+      agent: { kind: 'tool', round: 1, tool: node, status: 'ok', ms },
+    })
+    const spans = buildTrace([wave('ag/__tool/1', 100, 2), wave('ag/__tool/2', 400, 2.3), wave('ag/__tool/3', 400, 2.1)]).spans
+    expect(spans.map(s => s.start)).toEqual([spans[0].start, spans[0].start, spans[0].start])
+    expect(spans.map(s => s.duration)).toEqual([100, 400, 400])
+    expect(spans[0].duration!).toBeLessThan(spans[1].duration!)
+    expect(agentOf('ag/__model')).toBe('ag')
+  })
   it('new tools get provider-safe, unique names', () => {
     expect(toolName('get weather!', [])).toBe('get_weather'); expect(toolName('add', ['add', 'add_2'])).toBe('add_3')
     expect(newTool('http', ['http_request'])).toMatchObject({ name: 'http_request_2', source: 'http', method: 'GET' })

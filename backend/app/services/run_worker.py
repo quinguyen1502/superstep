@@ -80,9 +80,11 @@ class RunWorker:
         """Continue a waiting run with a decision from an approval channel (TASK-0022). The claim (waiting -> running,
         compare-and-set) makes sure only one resume happens, however many jobs or clicks there were."""
         rid, owner = job["run_id"], job["owner"]
-        try: plan = svc.plan_resume(owner, rid, job.get("response"), via_channel=True, child=job.get("child"))
+        try: plan = svc.plan_resume(owner, rid, job.get("response"), via_channel=True, child=job.get("child"),
+                                    node=job.get("node"), wave=bool(job.get("wave")))
         except AppError as e:
             log.info("approval resume of run %s skipped: %s", rid, e.code); return None
+        if plan.pending_wave: return None  # one slot of the wave was stored; the run stays waiting
         gen = svc.runs.claim(rid, ("waiting",))
         if gen is None: return None
         plan.fence, plan.checkpointing, plan.resumed_by = gen, True, job.get("by")

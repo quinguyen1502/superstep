@@ -85,6 +85,35 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await shot(page, `workflow-tool-template-run-${lang}`, '#run-logs-panel')
   })
 
+  test(`Support team template: both desks start in one round (${lang})`, async ({ page }) => {
+    await page.goto('/login'); await page.getByLabel(T[lang].password, { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+    await expect(page).toHaveURL(/\/workflows$/)
+    await page.locator('#new-wf').click()
+    await page.locator('[data-id=builtin-support-team]').locator('button').first().click()
+    await expect(page).toHaveURL(/\/workflows\/[^/]+$/)
+    const team = page.url()
+    const teamId = team.match(/workflows\/([^/?]+)/)![1]
+    const H = { Authorization: `Bearer ${await apiToken(page)}` }
+    const teamName = (await (await page.request.get(`/api/workflows/${teamId}`, { headers: H })).json()).data.name as string
+    await page.locator('#run-tab').click()
+    await page.locator('#run-input').fill('{"message": "Ask order_desk about A100 and refund_desk about B200"}')
+    await page.locator('#run-btn').click()
+    // the refund desk waits for a person; the order desk is the other call of the same round
+    await expect(page.locator('[data-span^="agent/__tool/"]').first()).toBeVisible({ timeout: 30_000 })
+    await page.goto('/approvals')
+    const row = page.locator('[data-testid=inbox-row]', { hasText: teamName })
+    await expect(row).toBeVisible()
+    await row.getByTestId('answer-approve').click()
+    await expect(row).toHaveCount(0)
+    await page.goto(team)
+    await page.locator('#run-tab').click(); await page.locator('#history-all').click(); await page.getByTestId('history-row').first().click()
+    await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+    const bars = page.locator('[data-span^="agent/__tool/"]')
+    await expect(bars).toHaveCount(2)
+    const left = await bars.evaluateAll(rows => rows.map(row => (row.querySelector('span.absolute') as HTMLElement | null)?.style.left ?? ''))
+    expect(left[0]).toBeTruthy(); expect(left[0]).toBe(left[1])
+  })
+
   test(`workflow tool: the parent waits, the child's approval finishes both (${lang})`, async ({ page }) => {
     await page.goto('/login'); await page.getByLabel(T[lang].password, { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
     await expect(page).toHaveURL(/\/workflows$/)

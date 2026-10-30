@@ -137,8 +137,13 @@ mỗi agent được dựng và test trên canvas riêng của nó.
 ## Vòng và giới hạn
 
 Một **vòng** gồm một lần gọi model và các lần gọi công cụ mà model yêu cầu.
-Các lần gọi trong một vòng chạy lần lượt, theo thứ tự của model; tối đa 8 lần
-được chạy, các lần còn lại nhận kết quả "refused".
+Các lần gọi trong một vòng chạy cùng lúc, và kết quả trả về model theo thứ tự
+của model. Mặc định là 4 lần cùng lúc (`STUDIO_AGENT_PARALLEL_TOOLS`, từ 1 đến
+8). **Gọi các tool song song** trên node Agent tắt việc đó cho một node, nên
+các lần gọi chạy lần lượt. Tối đa 8 lần được chạy, các lần còn lại nhận kết
+quả "refused". Một lần gọi lỗi, hoặc một lần đang chờ duyệt hay chờ workflow
+khác, không dừng các lần gọi còn lại. Run tiếp tục khi mọi lần chờ trong vòng
+đã xong. Trace vẽ các lần gọi của một vòng thành các thanh bắt đầu cùng lúc.
 
 Vòng lặp kết thúc khi model trả lời mà không gọi công cụ nào. Khi tới **Số
 vòng tối đa**, model được gọi thêm một lần không kèm công cụ để đưa ra câu trả

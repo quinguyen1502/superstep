@@ -1,6 +1,7 @@
 """Engine-level errors (no web/HTTP knowledge)."""
 from __future__ import annotations
 from typing import Any, Dict, List, Optional
+from langgraph.errors import GraphBubbleUp
 
 
 class ValidationError(Exception):
@@ -9,8 +10,9 @@ class ValidationError(Exception):
         self.errors = errors
 
 
-class Interrupt(Exception):
+class Interrupt(GraphBubbleUp):
     """Raised by a Human node that has no response yet: the run pauses (status `waiting`) at `node` (TASK-0006).
+    A GraphBubbleUp so a parallel sibling in the same superstep still finishes (TASK-0158).
     extra: more fields for the `run_waiting` event (an Agent tool approval adds label, tool and arguments, TASK-0117)."""
     def __init__(self, node: str, prompt: str, extra: Optional[Dict[str, Any]] = None):
         super().__init__(f"Waiting for a human response at {node}")

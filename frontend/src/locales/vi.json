@@ -2089,7 +2089,7 @@
     "tools": "Công cụ",
     "toolsHint": "Model chỉ gọi được các công cụ này. Model đọc tên và mô tả của từng công cụ để chọn.",
     "parallelTools": "Gọi các tool song song",
-    "parallelToolsHint": "Nhiều lời gọi trong một vòng có thể chạy cùng lúc. Tắt để chạy lần lượt. Máy chủ vẫn chạy lần lượt nếu STUDIO_AGENT_PARALLEL_TOOLS không lớn hơn 1.",
+    "parallelToolsHint": "Nhiều lời gọi trong một vòng có thể chạy cùng lúc. Tắt để chạy lần lượt. Máy chủ chạy tối đa 4 lời gọi cùng lúc, hoặc theo STUDIO_AGENT_PARALLEL_TOOLS (từ 1 đến 8).",
     "noToolsYet": "Hãy thêm ít nhất một công cụ.",
     "addTool": "Thêm công cụ",
     "sources": {

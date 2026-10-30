@@ -32,6 +32,7 @@ Các biến quan trọng với image all-in-one. Danh sách đầy đủ (kênh 
 | `STUDIO_DB` | `/data/studio.db` | File SQLite. Đặt `/data` trên volume lưu trữ lâu dài. |
 | `REDIS_URL` | rỗng | Tuỳ chọn. Rỗng = bus và hàng đợi run nằm trong bộ nhớ của process web (một instance). Đặt biến này để chạy worker riêng (`python -m app.worker`) hoặc nhiều instance web. |
 | `STUDIO_WORKER` | `1` | `0` = process web không nhận run trong hàng đợi (để worker xử lý). |
+| `STUDIO_AGENT_PARALLEL_TOOLS` | `4` | Số lời gọi công cụ trong một vòng của Agent được chạy cùng lúc. Kẹp trong 1..8. Giá trị không hợp lệ giữ ở 1. Một node Agent có thể tắt gọi song song. |
 
 ## Node Code
 

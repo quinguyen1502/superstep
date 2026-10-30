@@ -2089,7 +2089,7 @@
     "tools": "Tools",
     "toolsHint": "The model can call only these tools. It reads each tool's name and description to choose.",
     "parallelTools": "Run tool calls in parallel",
-    "parallelToolsHint": "Several calls in one round can run together. Turn this off to run them one at a time. The server still runs one at a time unless STUDIO_AGENT_PARALLEL_TOOLS is above 1.",
+    "parallelToolsHint": "Several calls in one round can run together. Turn this off to run them one at a time. The server runs up to 4 at once, or the value of STUDIO_AGENT_PARALLEL_TOOLS (1 to 8).",
     "noToolsYet": "Add at least one tool.",
     "addTool": "Add tool",
     "sources": {

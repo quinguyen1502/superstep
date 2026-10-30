@@ -61,6 +61,20 @@ class RunRepository:
                 return
             s.commit()
 
+    def update_waiting(self, rid: str, fn):
+        """Apply `fn(checkpoint) -> result` to a waiting run and store the checkpoint. None when the run is not waiting.
+        Postgres locks the row. Two settles of one wave then cannot drop each other's answer."""
+        with self.db.session() as s:
+            q = select(Run).where(Run.id == rid, Run.status == "waiting")
+            if s.get_bind().dialect.name != "sqlite": q = q.with_for_update()
+            row = s.scalars(q).first()
+            if row is None: return None
+            cp = json.loads(row.checkpoint or "{}")
+            result = fn(cp)
+            row.checkpoint = json.dumps(cp, ensure_ascii=False, default=str)
+            s.commit()
+            return result
+
     def keep_resume(self, job: dict) -> None:
         """Keep the answer to a waiting run until the resumed segment records progress or a result (TASK-0127)."""
         with self.db.session() as s:

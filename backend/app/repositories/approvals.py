@@ -131,6 +131,12 @@ class ApprovalRepository:
             s.add(w); s.add_all(ApprovalWaitApprover(wait_id=w.id, user_id=u) for u in dict.fromkeys(approvers) if u != w.owner)
             s.commit(); return w
 
+    def open_wait(self, rid: str, node: str) -> Optional[ApprovalWait]:
+        """The open waiting step of this node, if the run still has one."""
+        with self.db.session() as s:
+            return s.scalars(select(ApprovalWait).where(ApprovalWait.run_id == rid, ApprovalWait.node_id == node,
+                                                       ApprovalWait.status == "waiting")).first()
+
     def latest_wait(self, rid: str) -> Optional[ApprovalWait]:
         """The run's most recent waiting step, open or closed."""
         with self.db.session() as s:

@@ -50,6 +50,7 @@ class RunPlan:
     steps: Optional[int] = None  # stop after this many working supersteps (TASK-0036); None runs to the end
     until: Optional[str] = None  # pause after this node finishes (TASK-0036); None runs to the end
     forked: Optional[dict] = None  # {run_id, checkpoint, nodes, edited}: a new run forked from a checkpoint of another one
+    pending_wave: bool = False  # an answer of one wait in a wave was stored; the run stays waiting (TASK-0158)
 
     @property
     def imported(self) -> bool:
@@ -307,13 +308,55 @@ class RunService:
         return {"child_run_id": r.id, "status": r.status, "output": json.loads(r.final_state or "null"),
                 **({"error": error} if error else {}), **({"usage": usage} if usage else {})}
 
+    def absorb_wave(self, rid: str, node: Optional[str] = None, value=None, child: Optional[dict] = None) -> str:
+        """Store one settled wait of a wave. 'plain' when this run is not waiting on a wave, 'stay' when other waits
+        remain, 'go' when this was the last and the checkpoint is ready for the one resume (TASK-0158)."""
+        def apply(cp: dict) -> str:
+            waits = cp.get("waits")
+            if not isinstance(waits, list): return "plain"
+            if not waits: return "go" if cp.get("wave_ready") else "plain"
+            if child is not None:
+                cid = child.get("child_run_id")
+                hit = next((w for w in waits if w.get("kind") == "child" and w.get("run_id") == cid), None)
+                if hit is None: return "go" if cp.get("wave_ready") else "stay"
+                cp.setdefault("children", {})[hit["node"]] = child
+            else:
+                hit = next((w for w in waits if w.get("kind") == "approval" and w.get("node") == node), None)
+                if hit is None: return "go" if cp.get("wave_ready") else "stay"
+                cp.setdefault("answers", {})[hit["node"]] = value
+            cp["waits"] = [w for w in waits if w is not hit]
+            if cp["waits"]: return "stay"
+            cp["wave_ready"] = True
+            return "go"
+        got = self.runs.update_waiting(rid, apply)
+        return got if got is not None else "plain"
+
+    def _wave_plan(self, r: Run, steps: Optional[int], until: Optional[str]) -> RunPlan:
+        """The one resume of a settled wave: every stored answer and child result, re-entering every slot."""
+        cp = json.loads(r.checkpoint or "{}"); uid = r.owner or ""
+        res = self.run_resources(r, uid)
+        resume = {k: cp[k] for k in RESUME_KEYS if k in cp}
+        resume["answers"] = dict(cp.get("answers") or {})
+        resume["children"] = dict(cp.get("children") or {})
+        return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
+                       self.credentials.resolver(res) if self.credentials else None,
+                       run_id=r.id, previous=r, resume=resume, source=r.source or "ui", version=r.workflow_version,
+                       trace_parent=cp.get("trace"), ports=self.run_ports(r, uid), steps=steps, until=until)
+
     def resume_parent(self, rid: str) -> bool:
         """Queue the resume of the run waiting for child `rid`, once the child has ended. Called when the child settles and
-        when the parent records its wait (the child may have ended first). A second resume is dropped by the claim."""
+        when the parent records its wait (the child may have ended first). A wave resumes once, after every child and
+        approval of that superstep has settled. A second resume is dropped by the claim."""
         r = self.runs.get(rid)
         if r is None or not r.parent_run_id or r.status in ("queued", "running", "waiting", "paused") or self.jobs is None: return False
         p = self.runs.get(r.parent_run_id)
-        if p is None or p.status != "waiting" or ((json.loads(p.checkpoint or "{}").get("wait") or {}).get("run_id")) != rid: return False
+        if p is None or p.status != "waiting": return False
+        cp = json.loads(p.checkpoint or "{}")
+        if isinstance(cp.get("waits"), list):
+            if self.absorb_wave(p.id, child=self.child_value(r)) != "go": return False
+            enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "wave": True})
+            return True
+        if ((cp.get("wait") or {}).get("run_id")) != rid: return False
         enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "child": self.child_value(r)})
         return True
 
@@ -435,7 +478,8 @@ class RunService:
         cp = json.loads(r.checkpoint or "{}")
         self.record(r.id, r.workflow_id, json.loads(r.input or "{}"), json.loads(r.events or "[]") + [ev], None, status, r.started, uid,
                     source=r.source or "ui", version=r.workflow_version, trace_parent=cp.get("trace"), trace_events=[] if cp.get("trace") else None)
-        if (cp.get("wait") or {}).get("kind") == "child": self.cancel_children(r.id)
+        if (cp.get("wait") or {}).get("kind") == "child" or any(
+                isinstance(w, dict) and w.get("kind") == "child" for w in cp.get("waits") or []): self.cancel_children(r.id)
         if r.parent_run_id: self.resume_parent(r.id)  # a child that ended this way still answers its parent
 
     def _expire(self, r: Run) -> None:
@@ -450,13 +494,29 @@ class RunService:
         return len(stale)
 
     def plan_resume(self, uid: str, rid: str, response, via_channel: bool = False, steps: Optional[int] = None, until: Optional[str] = None,
-                    child: Optional[dict] = None) -> RunPlan:
+                    child: Optional[dict] = None, node: Optional[str] = None, wave: bool = False) -> RunPlan:
         """child: the finished child run a run waits for (TASK-0134), from the worker only. A run waiting for a child
-        cannot be answered by a person, and a child's result cannot answer a person's question."""
+        cannot be answered by a person, and a child's result cannot answer a person's question.
+        wave: the checkpoint already holds every answer of a settled wave (TASK-0158). node: which approval this answer is for."""
         row = self.runs.get(rid)
         if row is not None and row.status == "paused" and not via_channel:
             if row.owner != uid: raise AppError("RUN_NOT_FOUND")  # owner only, same as a human resume
             return self._plan_paused(row, uid, steps, until)
+        if wave:
+            r = self.waiting_run(rid, uid)
+            if not json.loads(r.checkpoint or "{}").get("wave_ready"): raise AppError("RUN_NOT_WAITING")
+            return self._wave_plan(r, steps, until)
+        if child is None and response is not None: response = human_response(response)
+        r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
+        if isinstance(cp.get("waits"), list):
+            if child is not None: outcome = self.absorb_wave(rid, child=child)
+            else:
+                node = node or next((w.get("node") for w in cp["waits"] if w.get("kind") == "approval"), None)
+                if node is None or response is None: raise AppError("RUN_NOT_WAITING")
+                outcome = self.absorb_wave(rid, node=node, value=response)
+            if outcome == "stay":
+                return RunPlan(r.workflow_id, cp.get("workflow") or {}, {}, run_id=rid, pending_wave=True)
+            if outcome == "go": return self._wave_plan(self.runs.get(rid), steps, until)
         if child is None: response = human_response(response)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         wait = cp.get("wait") or {}
@@ -602,7 +662,9 @@ class RunService:
         if trace_id is None and trace_parent: trace_id = trace_parent.get("trace_id")
         root = {"trace_root": trace_root} if trace_root else {}  # later segments keep the first one's
         test = source == "test"  # a workflow test answers its own Human nodes and sends nothing (DEC-0044)
+        wave_waits = (checkpoint or {}).get("waits") if isinstance((checkpoint or {}).get("waits"), list) else []
         if status == "waiting" and checkpoint and checkpoint.get("wait"): test = True  # waiting for a child run: nobody to ask (TASK-0134)
+        elif status == "waiting" and wave_waits and all(w.get("kind") == "child" for w in wave_waits): test = True
         if source == "tool" and not test and (row := self.runs.get(rid)) is not None and self.under_test(row): test = True  # TASK-0137
         if self.notifier is not None and uid and status in ("waiting", "expired") and not test:
             ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
@@ -611,8 +673,14 @@ class RunService:
         if self.approvals is not None and uid and not test:
             try:
                 if status == "waiting":
-                    ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
-                    if ev and checkpoint: self.approvals.on_waiting(rid, uid, wid, checkpoint.get("workflow") or {}, ev)
+                    asked = [{"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt"), "label": w.get("label"),
+                              "tool": w.get("tool"), "arguments": w.get("arguments")}
+                             for w in wave_waits if w.get("kind") == "approval"]
+                    if not asked:
+                        ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
+                        if ev and not ev.get("wait"): asked = [ev]
+                    wf = (checkpoint or {}).get("workflow") or {}
+                    for ev in asked: self.approvals.on_waiting(rid, uid, wid, wf, ev)
                 elif status in ("cancelled", "expired", "error", "timeout"): self.approvals.close_run(rid, status)
             except Exception: log.exception("approval request for run %s failed", rid)  # never fails a run
         events = cap_run([cap_event(e) for e in events])
@@ -642,6 +710,9 @@ class RunService:
         """Stream events through `send` (returns False once the client is gone). `listen` resolves to
         "cancelled" or "disconnected"; a cancel can also arrive through the RunBus (reason "api").
         Returns the final status: ok | error | cancelled | timeout."""
+        if plan.pending_wave:  # one slot of a wave was answered; the other waits are still open
+            await send({"type": "run_summary", "run_id": plan.run_id, "status": "waiting", "ts": time.time()})
+            return "waiting"
         rid = plan.run_id or uuid.uuid4().hex[:10]; await self.bus.astart(rid, uid)  # registered so REST/other workers can cancel it
         status = None
         try:
@@ -792,8 +863,12 @@ class RunService:
         try: summary = await _write_in_thread(self.record, rid, plan.workflow_id, plan.input, events, final, status, started, uid, checkpoint,
                                               plan.source, plan.version, span, fence=plan.fence)
         except StaleLease: return self._fenced(rid, span, plan, uid, t0)
-        if checkpoint and (checkpoint.get("wait") or {}).get("kind") == "child":  # the child may have ended before this wait was recorded
-            await _write_in_thread(self.resume_parent, checkpoint["wait"]["run_id"])
+        child_ids = []
+        if checkpoint and (checkpoint.get("wait") or {}).get("kind") == "child": child_ids.append(checkpoint["wait"]["run_id"])
+        for w in (checkpoint or {}).get("waits") or []:
+            if isinstance(w, dict) and w.get("kind") == "child" and w.get("run_id"): child_ids.append(w["run_id"])
+        for cid in child_ids:  # a child may have ended before this wait was recorded
+            await _write_in_thread(self.resume_parent, cid)
         if connected: await send({"type": "run_summary", "run_id": rid, "status": status, "ts": time.time(), **summary})  # not stored as an event
         return status
 
