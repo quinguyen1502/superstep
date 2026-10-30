@@ -25,6 +25,8 @@ from ..repositories import ChatAttachmentRepository, ChatMessageRepository, Chat
 from ..repositories.chat_sessions import feedback_is_pending
 from ..repositories.chat_triggers import WEB
 from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS, KINDS, UNSENT_TTL, public as file_public, settings_of
+from .attachment_files import AttachmentFiles
+from .. import storage
 
 ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish the chat at /c/{slug} (DEC-0067)
 PUBLIC = ("anonymous", "signed_in")
@@ -129,9 +131,11 @@ def steps_of(events: list, mode: str) -> list[dict]:
 
 class ChatSessionService:
     def __init__(self, sessions: ChatSessionRepository, triggers: ChatTriggerRepository, messages: ChatMessageRepository,
-                 workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None, attachments: Optional[ChatAttachmentRepository] = None):
+                 workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None, attachments: Optional[ChatAttachmentRepository] = None,
+                 files: Optional[AttachmentFiles] = None):
         self.sessions, self.triggers, self.messages, self.workflows, self.runs, self.access = sessions, triggers, messages, workflows, runs, access
         self.attachments = attachments  # chat files (TASK-0174); None in tests that build the service by hand
+        self.files = files or (AttachmentFiles(attachments, storage.default(attachments)) if attachments is not None else None)  # their bytes (TASK-0191)
         self.jobs = jobs  # enqueues chat_rating; None in tests that build the service by hand (TASK-0165)
 
     # ---- settings (the workflow's Chat section) ----
@@ -353,7 +357,9 @@ class ChatSessionService:
     def delete(self, sid: str, uid: str) -> dict:
         self._own(sid, uid)
         fids = self.sessions.feedback_ids_for_session(sid)
+        refs = self.files.refs_of_sessions([sid]) if self.files is not None else []
         self.sessions.delete(sid)
+        if self.files is not None: self.files.drop(refs)  # after the row (TASK-0191)
         enqueue_feedback_deletes(self.jobs, fids)
         return {"ok": True}
 
@@ -456,7 +462,7 @@ class ChatSessionService:
             a = self.attachments.get(aid) if self.attachments is not None and isinstance(aid, str) else None
             s = self.sessions.get(a.session_id) if a is not None else None
             w = self.workflows.get(s.workflow_id) if s is not None else None
-            return (a.mime, a.data) if w is not None and w.owner == owner else None
+            return (a.mime, self.files.read(a)) if w is not None and w.owner == owner else None
         return load
 
     # ---- retention (the worker's maintenance loop) ----
@@ -464,13 +470,14 @@ class ChatSessionService:
         """Deletes sessions idle for longer than their chat's retention_days (DEC-0052), with their files, and files
         uploaded but never sent within an hour (TASK-0174)."""
         n, now = 0, time.time()
-        if self.attachments is not None: self.attachments.delete_stale(now - UNSENT_TTL)
+        if self.files is not None: self.files.sweep_stale(now - UNSENT_TTL)
         for t in self.triggers.webs():
             days = int((json.loads(t.settings or "{}") or {}).get("retention_days") or DEFAULTS["retention_days"])
             cutoff = now - days * 86400
             fids = self.sessions.feedback_ids_idle(t.id, cutoff)
             n += self.sessions.delete_idle(t.id, cutoff)
             enqueue_feedback_deletes(self.jobs, fids)
+        if self.files is not None: self.files.sweep_orphans(now)  # the objects of the chats just deleted, and any crash leftovers
         return n
 
     # ---- helpers ----

@@ -74,6 +74,9 @@ def chat_attachment_max_mb() -> int:
 def chat_attachment_max_files() -> int:
     """The ceiling on files per chat message (DEC-0072 decision 3); each chat may only lower it."""
     return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_FILES", 5))
+def attachment_storage() -> str:
+    """Where new chat attachment bytes go (TASK-0191, REQ-0080, DEC-0074): db (default), fs or s3."""
+    return (os.environ.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip().lower()
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- TASK-0020 ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))

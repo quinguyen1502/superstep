@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0191
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -88,6 +88,9 @@ Storage port and the `db` backend. Introduce the `AttachmentStore` port and move
 
 - 2026-10-31: planned from REQ-0080 (DEC-0074, accepted by the owner). Status todo. Not started.
 
+- 2026-10-30: implemented on `factory/task-0191-attachment-store-port` from `develop`. Storage port `app/storage` (`AttachmentStore`, `Stores`, `DbStore`), `storage`/`key` columns (migration 0047), `AttachmentFiles` service (object before row, row before object on delete, orphan sweep in the retention loop), streamed downloads with the DEC-0072 headers, health fields, error `CHAT_ATTACHMENT_STORAGE`, shared contract suite (`tests/storage_contract.py`). `factory verify run --profile full` passed. The owner authorized merging the REQ-0080 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0191-attachment-store-port` from `develop`.
+- Review: `.factory-state/artifacts/REV-0180-task-0191.md`. QA: `.factory-state/artifacts/QA-0180-task-0191.md`.

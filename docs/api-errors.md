@@ -229,6 +229,7 @@
 | `CHAT_ATTACHMENT_TOO_MANY` | 400 | A message may carry at most {max} files |
 | `CHAT_ATTACHMENT_NOT_FOUND` | 404 | File not found |
 | `CHAT_ATTACHMENT_DEMO` | 403 | Attachments are turned off in the public demo |
+| `CHAT_ATTACHMENT_STORAGE` | 503 | Attachment storage is not available: {reason} |
 | `CHAT_ATTACHMENT_LIMIT` | 400 | Attachment limits may be at most {max_files} files and {max_mb} MB per file |
 | `CHAT_TURN_NOT_FOUND` | 404 | Message not found |
 | `CHAT_RATING_NOT_ALLOWED` | 409 | This message cannot be rated |

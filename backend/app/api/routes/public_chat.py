@@ -19,6 +19,7 @@ import hashlib
 from urllib.parse import quote
 from typing import Optional
 from fastapi import APIRouter, Depends, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from ...core import config, security
 from ...core.client_ip import client_ip
@@ -85,11 +86,12 @@ async def read_upload(request: Request) -> tuple[str, bytes]:
     return f.filename or "", data
 
 
-def file_response(a) -> Response:
-    """A chat file, always as a download that the browser must not sniff or render (REQ-0077)."""
+def file_response(a, chunks) -> Response:
+    """A chat file, always as a download that the browser must not sniff or render (REQ-0077). The bytes are streamed
+    from the attachment storage through the backend, whatever the backend: never a bucket URL (DEC-0074 decision 3)."""
     ascii_name = a.name.encode("ascii", "ignore").decode().replace('"', "") or "file"
-    return Response(a.data, media_type=a.mime, headers={
-        "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(a.name)}",
+    return StreamingResponse(chunks, media_type=a.mime, headers={
+        "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(a.name)}", "Content-Length": str(a.size),
         "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store", "Content-Security-Policy": "sandbox"})
 
 
@@ -150,7 +152,7 @@ async def upload(slug: str, sid: str, request: Request, response: Response, user
 async def download(slug: str, sid: str, aid: str, request: Request, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     a, _v = svc.public_file(slug, sid, aid, token_of(request, slug), user)
-    return file_response(a)
+    return file_response(a, svc.chunks(a))
 
 
 @router.delete("/{slug}/sessions/{sid}/attachments/{aid}")

@@ -506,6 +506,7 @@
     "CHAT_ATTACHMENT_TOO_MANY": "Mỗi tin nhắn đính kèm tối đa {{max}} tệp",
     "CHAT_ATTACHMENT_NOT_FOUND": "Không tìm thấy tệp",
     "CHAT_ATTACHMENT_DEMO": "Bản demo công khai không cho đính kèm tệp",
+    "CHAT_ATTACHMENT_STORAGE": "Không dùng được nơi lưu tệp đính kèm: {{reason}}",
     "CHAT_ATTACHMENT_LIMIT": "Giới hạn tệp đính kèm tối đa là {{max_files}} tệp và {{max_mb}} MB mỗi tệp",
     "CHAT_TURN_NOT_FOUND": "Không tìm thấy tin nhắn",
     "CHAT_RATING_NOT_ALLOWED": "Tin nhắn này không đánh giá được",
