@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0182
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -85,7 +85,9 @@ Edit hand-off targets in the Agent node Config, draw them as dashed links on the
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0182-agent-handoff-ui` from `develop`. Builders set up hand-offs on the canvas and in Config, and see them in the trace `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0182-agent-handoff-ui` from `develop`.
+- Review: `.factory-state/artifacts/REV-0159-task-0182.md`. QA: `.factory-state/artifacts/QA-0159-task-0182.md`.

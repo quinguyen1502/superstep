@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
-import { AlertTriangle, Ban, CheckCircle2, Clock, Hand, Pause, TimerOff, Coins, DollarSign, ExternalLink, Layers, Loader2, X, XCircle, type LucideIcon, ShieldAlert, Workflow } from 'lucide-react'
+import { ArrowRightLeft, AlertTriangle, Ban, CheckCircle2, Clock, Hand, Pause, TimerOff, Coins, DollarSign, ExternalLink, Layers, Loader2, X, XCircle, type LucideIcon, ShieldAlert, Workflow } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -54,12 +54,14 @@ function Summary({ trace, replay, onExitReplay, raw, setRaw, actions }: { trace:
 /** What an Agent node's step did, on its trace row: the round, the tools the model called or its answer, or one tool call. */
 function AgentSummary({ a }: { a: AgentStep }) {
   const { t } = useTranslation()
-  const text = a.kind === 'tool' ? `${a.tool} → ${a.result ?? ''}`
+  const text = a.kind === 'handoff' ? t(a.reason ? 'trace.agent.handoffReason' : 'trace.agent.handoff', { to: a.to_label || a.to, reason: a.reason })
+    : a.kind === 'tool' ? `${a.tool} → ${a.result ?? ''}`
     : a.tool_calls?.length ? t('trace.agent.calls', { tools: a.tool_calls.map(c => c.name).join(', ') }) : t('trace.agent.answer', { text: a.text || '—' })
   return <>
     {/* what happened first: a narrow row clips the badges at its end (TASK-0117 statuses) */}
     {a.approval === 'approved' && <Badge variant="success" size="sm" data-testid="span-approved">{t('trace.agent.approved')}</Badge>}
-    {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' ? 'secondary' : a.status === 'rejected' ? 'warning' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
+    {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' || a.status === 'not_run' ? 'secondary' : a.status === 'rejected' ? 'warning' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
+    {a.kind === 'handoff' && <Badge variant="outline" size="sm" data-testid="span-handoff"><ArrowRightLeft />{t('trace.agent.handedOff')}</Badge>}
     {a.limit_hit && <Badge variant="warning" size="sm" data-testid="span-limit">{t('trace.agent.limit')}</Badge>}
     {a.round > 0 && <Badge variant="outline" size="sm" data-testid="span-round">{t('trace.agent.round', { n: a.round })}</Badge>}
     <Tip tip={text}><span className="truncate min-w-0 flex-1 text-muted-foreground text-[11px]" data-testid="span-agent">{text}</span></Tip>

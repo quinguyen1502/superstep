@@ -117,6 +117,7 @@ def steps_of(events: list, mode: str) -> list[dict]:
         if t == "run_waiting": s["status"] = "waiting"  # a Human node that waits for its answer
         step = e.get("agent") if isinstance(e.get("agent"), dict) else None  # what an Agent step did (TASK-0116)
         if step and step.get("kind") == "tool" and step.get("tool"): s["label"] = f"{s['label'].rsplit(' › ', 1)[0]} › {step['tool']}"
+        if step and step.get("kind") == "handoff": s["handoff_to"] = step.get("to_label") or step.get("to")  # TASK-0182
         if mode == "full":
             for k in ("duration_ms", "input", "delta", "errors", "code"):
                 if k in e: s[k] = e[k]

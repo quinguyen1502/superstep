@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0183
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -83,7 +83,9 @@ Export hand-offs to Python, the LangGraph project and TypeScript.
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0183-handoff-exports` from `develop`. Hand-offs export to Python, the LangGraph project and TypeScript `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0183-agent-handoff-exports` from `develop`.
+- Review: `.factory-state/artifacts/REV-0160-task-0183.md`. QA: `.factory-state/artifacts/QA-0160-task-0183.md`.
