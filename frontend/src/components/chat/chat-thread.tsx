@@ -12,12 +12,13 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Trace, TraceIcon, TraceLine, TraceTitle } from '@/components/ui/trace'
 import { errorText } from '@/lib/i18n'
-import { liveReply, liveSteps, waitingTurn, type ChatStep, type ChatTurn, type StepsMode } from '@/lib/chat'
+import { liveReply, liveSteps, waitingTurn, type ChatAttachment, type ChatStep, type ChatTurn, type StepsMode } from '@/lib/chat'
 import type { RunEvent, Trace as RunTrace } from '@/lib/trace'
 import { ChatMarkdown } from './chat-markdown'
 import { ChatRatingBar } from './chat-rating'
 import { ChatSteps } from './chat-steps'
 import { ChatConfirmation } from './chat-confirmation'
+import { TurnFiles } from './chat-attachments'
 
 /** The Message pattern's action: a ghost icon button with a tooltip, its label as the aria-label. */
 function MessageAction({ label, children, ...props }: React.ComponentProps<typeof Button> & { label: string }) {
@@ -54,13 +55,19 @@ function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTes
   </Message>
 }
 
-const Mine = ({ text }: { text: string }) => <Message align="end" data-testid="chat-mine">
-  <MessageContent><Bubble align="end" variant="muted"><BubbleContent className="whitespace-pre-wrap">{text}</BubbleContent></Bubble></MessageContent></Message>
+/** Where a chat's files are downloaded from (TASK-0177): a file's address, and the headers the chat sends. */
+export type FileLinks = { url: (id: string) => string; headers?: Record<string, string> }
+
+const Mine = ({ text, files, links }: { text: string; files?: ChatAttachment[]; links?: FileLinks }) => <Message align="end" data-testid="chat-mine">
+  <MessageContent>
+    {!!files?.length && <TurnFiles files={files} url={links?.url} headers={links?.headers} />}
+    {text && <Bubble align="end" variant="muted"><BubbleContent className="whitespace-pre-wrap">{text}</BubbleContent></Bubble>}</MessageContent></Message>
 
 /** `replyField`: the field whose tokens are the answer; none on the public page, whose socket sends only those (TASK-0142).
  *  `empty`: what an empty chat shows instead of the default (the page's intro and suggestions). */
-export function ChatThread({ turns, mode, replyField, events, trace, pending, running, onAnswer, onRate, onSaveTest, empty }: {
+export function ChatThread({ turns, mode, replyField, events, trace, pending, pendingFiles, running, onAnswer, onRate, onSaveTest, empty, files }: {
   turns: ChatTurn[]; mode: StepsMode; replyField?: string; events: RunEvent[]; trace: RunTrace; pending: string | null; running: boolean
+  pendingFiles?: ChatAttachment[]; files?: FileLinks
   onAnswer?: (runId: string, response: string) => void
   onRate?: (turnId: string, value: 'up' | 'down' | null, comment?: string) => void
   onSaveTest?: (runId: string) => void; empty?: React.ReactNode }) {
@@ -73,11 +80,11 @@ export function ChatThread({ turns, mode, replyField, events, trace, pending, ru
   return <MessageScrollerProvider autoScroll><MessageScroller className="min-h-0 flex-1">
     <MessageScrollerViewport><MessageScrollerContent /* ui-class-ok: reading padding of the message column, a layout container, not a control */ aria-busy={running} className="mx-auto max-w-3xl gap-6 px-4 py-4" id="chat-thread">
       {turns.map(x => <MessageScrollerItem key={x.id} messageId={x.id} scrollAnchor={x.role === 'user'}>
-        {x.role === 'user' ? <Mine text={x.text} />
+        {x.role === 'user' ? <Mine text={x.text} files={x.attachments} links={files} />
           : <Answer text={x.text} steps={x.steps} mode={mode} status={x.status} code={x.code} turn={x} onRate={onRate} onSaveTest={onSaveTest}>
               {x === wait && !running && onAnswer && <ChatConfirmation turn={x} busy={running} onAnswer={r => onAnswer(x.run_id!, r)} />}</Answer>}
       </MessageScrollerItem>)}
-      {pending !== null && <MessageScrollerItem messageId="pending-user" scrollAnchor><Mine text={pending} /></MessageScrollerItem>}
+      {pending !== null && <MessageScrollerItem messageId="pending-user" scrollAnchor><Mine text={pending} files={pendingFiles} /></MessageScrollerItem>}
       {pending !== null && <MessageScrollerItem messageId="pending-answer">
         <Answer text={reply} steps={live} mode={mode} live={!running ? t('chat.saving') : !live.some(s => s.status === 'running') ? t('chat.thinking') : undefined} />
       </MessageScrollerItem>}
