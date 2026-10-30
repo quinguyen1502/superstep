@@ -457,7 +457,6 @@
     "IMPORT_NOT_READY": "Import job is not ready or the graph is invalid",
     "IMPORT_DISABLED": "Repo import is disabled (set STUDIO_ENABLE_IMPORT=1 to enable this experimental feature)",
     "RUN_NOT_WAITING": "This run is not waiting for a response",
-    "RUN_STILL_WAITING": "The answer is saved. The run is still waiting for another step",
     "CHECKPOINT_NOT_FOUND": "Checkpoint not found in this run, or it cannot be forked",
     "RUN_FORK_UNSUPPORTED": "Runs of imported LangGraph graphs cannot be forked",
     "RUN_RESPONSE_INVALID": "The response must be text (max {{max}} characters)",

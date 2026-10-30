@@ -148,18 +148,6 @@ class ApprovalRepository:
                           .values(status="closed", outcome=outcome, closed_at=time.time())).rowcount
             s.commit(); return n == 1
 
-    def close_node(self, rid: str, node_id: str, outcome: str) -> bool:
-        """Close the open wait of one node. A sibling wait of the same run stays open."""
-        with self.db.session() as s:
-            n = s.execute(update(ApprovalWait).where(ApprovalWait.run_id == rid, ApprovalWait.node_id == node_id,
-                                                     ApprovalWait.status == "waiting")
-                          .values(status="closed", outcome=outcome, closed_at=time.time())).rowcount
-            s.commit(); return n >= 1
-
-    def open_count(self, rid: str) -> int:
-        with self.db.session() as s:
-            return len(list(s.scalars(select(ApprovalWait.id).where(ApprovalWait.run_id == rid, ApprovalWait.status == "waiting"))))
-
     def due_waits(self, now: float, limit: int = 200) -> list[ApprovalWait]:
         """Open steps of waiting runs whose deadline or next reminder has come (TASK-0066)."""
         with self.db.session() as s:

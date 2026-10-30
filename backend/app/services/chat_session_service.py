@@ -22,13 +22,6 @@ from ..core import config
 from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, WorkflowChatTrigger
 from ..repositories import ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
 from ..repositories.chat_sessions import feedback_is_pending
-
-
-def enqueue_feedback_deletes(jobs, ids) -> None:
-    """Ask the worker to delete these LangSmith feedback objects. Pending claims have no id yet."""
-    if jobs is None: return
-    for fid in ids:
-        if fid and not feedback_is_pending(fid): jobs.enqueue({"kind": "chat_rating_delete", "feedback_id": fid})
 from ..repositories.chat_triggers import WEB
 
 ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish the chat at /c/{slug} (DEC-0067)
@@ -38,6 +31,13 @@ ANSWERED_BY = ("visitor", "reviewer")
 DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30,
             "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": ""}
 MAX_TURNS, RETENTION_MAX, TEXT_MAX, TITLE_MAX = 50, 3650, 4000, 60
+
+
+def enqueue_feedback_deletes(jobs, ids) -> None:
+    """Ask the worker to delete these LangSmith feedback objects. Pending claims have no id yet."""
+    if jobs is None: return
+    for fid in ids:
+        if fid and not feedback_is_pending(fid): jobs.enqueue({"kind": "chat_rating_delete", "feedback_id": fid})
 COMMENT_MAX = 1000
 RATEABLE = ("ok", "error")  # a waiting question, and a cancelled run, are not an answer to rate (DEC-0070)
 INTRO_MAX, SUGGESTIONS_MAX, SUGGESTION_MAX, DAILY_MAX, ORIGINS_MAX = 1000, 4, 120, 100_000, 10

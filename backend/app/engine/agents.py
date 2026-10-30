@@ -336,20 +336,14 @@ def router(node: Dict[str, Any]):
 
 def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
     """The approver's answer for this step, consumed once (as for a Human node) so a later call to the tool asks again."""
-    if resume is None: return None
-    bag = resume.get("answers")
-    if isinstance(bag, dict) and nid in bag and bag[nid] is not None: return str(bag.pop(nid))
-    if resume.get("node") == nid and "value" in resume: return str(resume.pop("value"))
+    if resume is not None and resume.get("node") == nid and "value" in resume: return str(resume.pop("value"))
     return None
 
 
 def child_result(resume: Optional[Dict[str, Any]], nid: str) -> Optional[Dict[str, Any]]:
     """The finished child run of a workflow tool call, consumed once: {child_run_id, status, output, error, usage}. The
     run service sends it as a dict; a person's answer is always text, so it can never pass for one (TASK-0134)."""
-    if resume is None: return None
-    bag = resume.get("children")
-    if isinstance(bag, dict) and isinstance(bag.get(nid), dict) and "child_run_id" in bag[nid]: return bag.pop(nid)
-    v = resume.get("value") if resume.get("node") == nid else None
+    v = resume.get("value") if resume is not None and resume.get("node") == nid else None
     if isinstance(v, dict) and "child_run_id" in v: return resume.pop("value")
     return None
 
@@ -452,7 +446,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                     call_key = f"{effects.key(nid) if effects else nid}#{call['id']}"
                     inp = {f: args[f] for f in field_list(tool.get("inputs")) if f in args}
                     cid = ports.start_child(call_key, tool.get("snapshot") or {}, tool.get("version"), inp,
-                                            {"workflow_id": tool.get("workflow_id"), "tool": call["name"], "node": nid})
+                                            {"workflow_id": tool.get("workflow_id"), "tool": call["name"]})
                 except Exception as e:
                     if getattr(e, "fenced", False): raise
                     status, result = "error", f"{FAILED}: {safe_error(e)}"

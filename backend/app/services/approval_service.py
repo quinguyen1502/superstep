@@ -123,20 +123,6 @@ class ApprovalService:
         paused before waiting steps existed (no row at all)."""
         return self.repo.close_wait(rid, "answered") or self.repo.latest_wait(rid) is None
 
-    def claim_node(self, rid: str, node_id: str) -> bool:
-        """Close one node's wait. Another open wait of the run stays open."""
-        return self.repo.close_node(rid, node_id, "answered") or self.repo.latest_wait(rid) is None
-
-    def keep_answer(self, rid: str, node_id: str, response) -> None:
-        """Remember an answer while a sibling step of the same run is still waiting."""
-        self.runs.merge_checkpoint(rid, {"answers": {node_id: response}})
-
-    def wave_settled(self, rid: str) -> bool:
-        """True when this run has no open approval and no child run still going."""
-        if self.repo.open_count(rid): return False
-        active = ("queued", "running", "waiting", "paused")
-        return not any(ch.status in active for ch in self.runs.children(rid))
-
     def _request(self, rid, owner, wid, node, cfg, target, ev, due: Optional[float] = None) -> Optional[ApprovalRequest]:
         """Send one approval message. Its buttons expire after STUDIO_APPROVAL_TTL, or at the step's deadline if sooner."""
         if self.channels.org_denied(owner, cfg):  # admin policy (TASK-0029)
@@ -244,13 +230,10 @@ class ApprovalService:
             self._audit(r.owner, kind, "denied", r, code=code, actor=uid, external=external); return code, r, None
         if uid != r.owner and uid not in json.loads(r.approvers or "[]"): return refuse("APPROVAL_FORBIDDEN")
         run = self.runs.get(r.run_id)
-        if run is None or run.status != "waiting" or not self.claim_node(r.run_id, r.node_id):
+        if run is None or run.status != "waiting" or not self.claim(r.run_id):
             self.repo.decide(r.id, "superseded"); return refuse("APPROVAL_ALREADY_DECIDED")
         if not self.repo.decide(r.id, decision, uid, external): return refuse("APPROVAL_ALREADY_DECIDED")  # lost the race: single use
         self._audit(r.owner, kind, decision, r, actor=uid, external=external)
-        if not self.wave_settled(r.run_id):
-            self.keep_answer(r.run_id, r.node_id, decision)
-            return None, self.repo.request(r.id), decision
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": r.run_id, "owner": r.owner, "response": decision,
                                        "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
         return None, self.repo.request(r.id), decision
@@ -299,13 +282,10 @@ class ApprovalService:
 
     # ---- the Approvals inbox (TASK-0065) ----
     def answered_in_studio(self, w: ApprovalWait, uid: str, response: str) -> None:
-        """An inbox answer whose waiting step the caller already closed: close that node's channel requests, audit it
-        and resume the run when no other step of the run is still waiting."""
-        self._close_requests(w.run_id, "superseded", "answered", w.node_id)
+        """An inbox answer whose waiting step the caller already closed: close the channel requests, audit it and resume
+        the run like a channel decision (the run stays its owner's)."""
+        self.close_run(w.run_id, "answered")
         self._audit(w.owner, "studio", response if response in DECISIONS.values() else "answered", actor=uid, run_id=w.run_id, wid=w.workflow_id)
-        if not self.wave_settled(w.run_id):
-            self.keep_answer(w.run_id, w.node_id, response)
-            return
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
                                        "by": {"channel": "studio", "user_id": uid}})
 
@@ -322,12 +302,10 @@ class ApprovalService:
         self.repo.close_wait(rid, reason)
         return self._close_requests(rid, "expired" if reason == "expired" else "superseded", reason if reason in CLOSE_TEXTS else "finished")
 
-    def _close_requests(self, rid: str, action: str, key: str, node_id: Optional[str] = None) -> int:
-        """Close the run's pending channel requests and edit their messages to `key` (a chat text).
-        `node_id` limits that to one step, so a sibling approval keeps its buttons."""
+    def _close_requests(self, rid: str, action: str, key: str) -> int:
+        """Close the run's pending channel requests and edit their messages to `key` (a chat text)."""
         closed = []
         for r in self.repo.requests_for_run(rid, "pending"):
-            if node_id is not None and r.node_id != node_id: continue
             if self.repo.decide(r.id, action): closed.append(r); self._audit(r.owner, r.kind, action, r)
         if closed:
             def edit():
@@ -377,11 +355,8 @@ class ApprovalService:
         response = deadlines.RESPONSES.get(action, "rejected")  # a second deadline after an escalation rejects
         if not self.repo.close_wait(w.run_id, "deadline", w.id): return 0  # this step only: the run may wait at a later one by now
         log_skipped()
-        self._close_requests(w.run_id, "superseded", f"deadline_{response}", w.node_id)
+        self.close_run(w.run_id, f"deadline_{response}")
         self._audit(w.owner, kind, "timed_out", run_id=w.run_id, wid=w.workflow_id)
-        if not self.wave_settled(w.run_id):
-            self.keep_answer(w.run_id, w.node_id, response)
-            return 1
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
                                        "by": {"channel": "deadline", "on_timeout": action}})
         return 1

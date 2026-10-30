@@ -175,7 +175,7 @@ def share_service() -> ShareService:
 
 def auth_service() -> AuthService:
     db = get_db(); return AuthService(UserRepository(db), workflow_service(), AuthSecurityRepository(db), audit=audit_service(),
-                                      visit=lambda: start_visit(db))
+                                      visit=lambda: start_visit(db, jobs=get_job_queue()))
 
 def demo_service() -> DemoService:
     return DemoService(get_rate_limiter())

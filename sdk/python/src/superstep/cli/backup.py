@@ -88,7 +88,7 @@ def cmd_restore(args, catalog, json_mode, _client, _parser, docker: Docker) -> i
     try:
         directory, record = _load(args)
         archive = Path(args.archive)
-        manifest = _manifest(_read_archive(archive))
+        manifest = _peek_manifest(archive)
         _accept(manifest)
         _confirm(args, catalog, record)
         restore_archive(directory, record, docker, archive)
@@ -112,7 +112,7 @@ def create_backup(directory: Path, record: dict, docker: Docker, dest: Path) -> 
         raise BackupError("ARCHIVE", "error.archive")
     if docker.disk_free_bytes(str(parent)) < _estimate(docker, directory, record):
         raise BackupError("DISK", "error.disk")
-    member, blob = _dump(docker, str(directory), record)
+    member, blob = _dump(docker, str(directory), record, parent)
     try:
         env_text = (directory / ".env").read_text(encoding="utf-8") if (directory / ".env").is_file() else ""
         compose = (directory / "compose.yml").read_text(encoding="utf-8") if (directory / "compose.yml").is_file() else ""
@@ -146,7 +146,7 @@ def create_backup(directory: Path, record: dict, docker: Docker, dest: Path) -> 
 
 def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path) -> None:
     """Replace instance data from an archive. The caller has already confirmed the name."""
-    members = _read_archive(archive)
+    members = _read_archive(archive, directory)
     try:
         _restore_members(directory, record, docker, members)
     finally:
@@ -163,14 +163,15 @@ def _restore_members(directory: Path, record: dict, docker: Docker, members: dic
     if db_name not in members:
         raise BackupError("ARCHIVE", "error.archive")
     secret = members["secret.key"]
-    _write_private(directory / ".env", _env_with_secret(members[".env"].decode("utf-8"), secret))
-    _write_private(directory / "compose.yml", members["compose.yml"].decode("utf-8"))
-    _write_private_bytes(directory / "secret.key", secret)
     folder = str(directory)
     project = record["name"]
     topology = manifest.get("topology") or record.get("topology") or "single"
     docker.compose(folder, project, ["stop"])
     try:
+        # Host files change only after the stack has stopped, so a failed stop leaves the instance as it was.
+        _write_private(directory / ".env", _env_with_secret(members[".env"].decode("utf-8"), secret))
+        _write_private(directory / "compose.yml", members["compose.yml"].decode("utf-8"))
+        _write_private_bytes(directory / "secret.key", secret)
         if topology == "full":
             docker.compose(folder, project, ["up", "-d", "postgres"])
             docker.copy_to(folder, project, "postgres", "/tmp/superstep-restore.dump", members[db_name])
@@ -239,16 +240,16 @@ def install_schedule(directory: Path, record: dict, docker: Docker, dest: Path, 
     return "cron"
 
 
-def _dump(docker: Docker, directory: str, record: dict):
+def _dump(docker: Docker, directory: str, record: dict, spill: Path):
     project = record["name"]
     if (record.get("topology") or "single") == "full":
         try:
-            return _pg_dump(docker, directory, project)
+            return _pg_dump(docker, directory, project, spill)
         except DockerError:
             try:
                 docker.compose(directory, project, ["stop"])
                 docker.compose(directory, project, ["up", "-d", "postgres"])
-                return _pg_dump(docker, directory, project)
+                return _pg_dump(docker, directory, project, spill)
             finally:
                 docker.compose(directory, project, ["up", "-d"])
     try:
@@ -262,14 +263,20 @@ def _dump(docker: Docker, directory: str, record: dict):
             docker.compose(directory, project, ["up", "-d"])
 
 
-def _pg_dump(docker: Docker, directory: str, project: str):
+def _spill_file(directory: Path, suffix: str) -> Path:
+    """A temp file in `directory`, the folder whose free space was checked."""
+    directory.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(prefix=".superstep-", suffix=suffix, dir=directory)
+    os.close(fd)
+    return Path(name)
+
+
+def _pg_dump(docker: Docker, directory: str, project: str, spill: Path):
     """A Postgres custom dump. `exec_to_file` writes it to disk; a fake Docker still returns bytes."""
     sink = getattr(docker, "exec_to_file", None)
     if sink is None:
         return "database.dump", docker.exec_bytes(directory, project, "postgres", _PG_DUMP)
-    fd, name = tempfile.mkstemp(prefix="superstep-dump-", suffix=".dump")
-    os.close(fd)
-    target = Path(name)
+    target = _spill_file(spill, ".dump")
     try:
         sink(directory, project, "postgres", list(_PG_DUMP), target)
     except Exception:
@@ -374,7 +381,25 @@ def _manifest(members: dict) -> dict:
     return manifest
 
 
-def _read_archive(path: Path) -> dict:
+def _peek_manifest(path: Path) -> dict:
+    """Read only manifest.json. The database stays in the archive until restore has a place to spill it."""
+    if not path.is_file():
+        raise BackupError("ARCHIVE", "error.archive")
+    try:
+        with tarfile.open(path, "r:gz") as tar:
+            for info in tar.getmembers():
+                if Path(info.name).name != "manifest.json" or not info.isfile():
+                    continue
+                handle = tar.extractfile(info)
+                if handle is None:
+                    break
+                return _manifest({"manifest.json": handle.read()})
+    except (tarfile.TarError, OSError, EOFError):
+        raise BackupError("ARCHIVE", "error.archive")
+    raise BackupError("ARCHIVE", "error.archive")
+
+
+def _read_archive(path: Path, spill: Path) -> dict:
     if not path.is_file():
         raise BackupError("ARCHIVE", "error.archive")
     found = {}
@@ -388,9 +413,7 @@ def _read_archive(path: Path) -> dict:
                 if handle is None:
                     continue
                 if name == "database.dump":
-                    fd, tmp = tempfile.mkstemp(prefix="superstep-restore-", suffix=".dump")
-                    os.close(fd)
-                    dest = Path(tmp)
+                    dest = _spill_file(spill, ".dump")
                     try:
                         with dest.open("wb") as out:
                             shutil.copyfileobj(handle, out)
