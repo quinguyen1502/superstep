@@ -215,5 +215,21 @@
   "runs.none": "Không có lượt chạy.",
   "error.workflow_not_found": "Không có workflow với id hoặc tên đó.",
   "error.run_not_found": "Không có lượt chạy đó.",
-  "error.input": "Đầu vào phải là một object JSON."
+  "error.input": "Đầu vào phải là một object JSON.",
+  "help.test": "Chạy bộ kiểm tra của một workflow và ghi JUnit XML.",
+  "help.test_workflow": "Id hoặc tên chính xác của workflow.",
+  "help.mock": "Chạy các nút LLM bằng mock ngoại tuyến.",
+  "help.junit": "Đường dẫn file JUnit XML. Mặc định là ./superstep-junit.xml.",
+  "help.all": "Chạy mọi workflow có ít nhất một bài kiểm tra.",
+  "example.test": "Ví dụ: superstep test Support --junit out.xml",
+  "test.summary": "Ca {name} của {workflow} là {status}.",
+  "test.skip": "Bỏ qua {name}: không có bài kiểm tra.",
+  "test.timeout": "Bộ kiểm tra {name} vẫn đang chạy sau {seconds} giây.",
+  "error.no_tests": "Không có bài kiểm tra nào để chạy.",
+  "error.workflow_forbidden": "Bạn không được chạy kiểm tra trên workflow này.",
+  "error.test_not_found": "Không tìm thấy bài kiểm tra.",
+  "error.suite_not_found": "Không tìm thấy lần chạy bộ kiểm tra.",
+  "error.suite_running": "Bộ kiểm tra của workflow này đang chạy.",
+  "error.test_target": "Truyền một workflow, hoặc --all.",
+  "help.suite_timeout": "Số giây chờ bộ kiểm tra. Mặc định là 300."
 }

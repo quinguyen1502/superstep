@@ -215,5 +215,21 @@
   "runs.none": "No runs.",
   "error.workflow_not_found": "No workflow has that id or name.",
   "error.run_not_found": "No run has that id.",
-  "error.input": "Input must be one JSON object."
+  "error.input": "Input must be one JSON object.",
+  "help.test": "Run a workflow's test suite and write JUnit XML.",
+  "help.test_workflow": "Workflow id or exact name.",
+  "help.mock": "Run LLM nodes with the offline mock.",
+  "help.junit": "JUnit XML path. The default is ./superstep-junit.xml.",
+  "help.all": "Run every workflow that has at least one test.",
+  "example.test": "Example: superstep test Support --junit out.xml",
+  "test.summary": "Case {name} on {workflow} is {status}.",
+  "test.skip": "Skipping {name}: no tests.",
+  "test.timeout": "Suite {name} was still running after {seconds} seconds.",
+  "error.no_tests": "No tests to run.",
+  "error.workflow_forbidden": "You cannot run tests on this workflow.",
+  "error.test_not_found": "Test case not found.",
+  "error.suite_not_found": "Test suite not found.",
+  "error.suite_running": "The tests of this workflow are already running.",
+  "error.test_target": "Pass a workflow, or --all.",
+  "help.suite_timeout": "Seconds to wait for the suite. The default is 300."
 }
