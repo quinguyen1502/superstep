@@ -155,13 +155,14 @@ class PublicChatService:
         """(RunPlan, owner, steps mode, reply field) for `{chat_session_id, message}` or `{chat_session_id, response, node?}`.
         `plan` is RunService.plan; the run is the owner's and the session's, nothing else can be asked for.
         `node` is the question on the page. Another slot of the same wave is not accepted."""
-        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node"}:
+        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node", "attachment_ids"}:
             raise AppError("RUN_REQUEST_INVALID")
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         s = self.own(t, req.get("chat_session_id"), v)
         w = self.chat.workflows.get(t.workflow_id); owner = w.owner or t.owner
         answering = "response" in req
         await self.check_message(t, st, v, ip, daily=not answering)
+        if answering and req.get("attachment_ids"): raise AppError("RUN_REQUEST_INVALID")  # a Human node's answer is text only
         if answering:
             turns = self.chat.sessions.turns(s.id); last = turns[-1] if turns else None
             if last is None or last.role != "assistant" or last.status != "waiting" or not last.run_id: raise AppError("RUN_NOT_WAITING")
@@ -174,10 +175,10 @@ class PublicChatService:
             if node or shown: body["node"] = node or shown
             p = await asyncio.to_thread(plan, owner, body)
         else:
-            prep = self.chat.prepare(s, t, req.get("message"))
+            prep = self.chat.prepare(s, t, req.get("message"), req.get("attachment_ids"))
             p = await asyncio.to_thread(plan, owner, {"workflow_id": t.workflow_id, "input": prep["input"]})
             p.run_id, p.source = uuid.uuid4().hex[:10], "chat"
-            self.chat.write(s, t, prep["text"], p.run_id, v.owner or "visitor")
+            self.chat.write(s, t, prep["text"], p.run_id, v.owner or "visitor", prep["attachment_ids"])
         return p, owner, st["steps"], t.reply_field
 
     async def check_message(self, t: WorkflowChatTrigger, st: dict, v: Visitor, ip: str, daily: bool = True) -> None:
