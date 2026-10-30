@@ -128,6 +128,7 @@ const SAME_OK = new Set([
   'trace.output',
   'trace.tokensShort',
   'transfer.kinds.credential',
+  'aiReview.badge',  // "AI" in both languages (TASK-0188)
   'transfer.kinds.subgraph',
   'users.email',
   'validation.NODE_PROBLEM',
