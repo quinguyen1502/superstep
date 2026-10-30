@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0168
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -98,7 +98,10 @@ A builder can keep a folder of workflow JSON in Git: `pull` writes it, `push` up
 ## Activity Log
 
 - 2026-10-30: planned from REQ-0079 phase 2 (DEC-0071). Not started.
+- 2026-10-30: implementation started.
+
+- 2026-10-30: owner asked to finish the phase 2 chain in one pass. Review REV-0144. QA QA-0144. Task moved to done. Not merged.
 
 ## Handoff Notes
 
-- Start only after TASK-0167 is merged. The HTTP helper and the token loader belong to that task; call them, do not copy them.
+- TASK-0167 is merged. Review REV-0144. QA QA-0144. Not merged. TASK-0169, TASK-0170 and TASK-0171 are separate branches.

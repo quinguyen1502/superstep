@@ -96,7 +96,7 @@ def join_uri(base: str, uri: str) -> str:
 
 
 def call(method: str, base: str, path: str, client: Optional[httpx.Client] = None, body: Optional[dict] = None,
-         token: Optional[str] = None, phase2: bool = False):
+         token: Optional[str] = None, phase2: bool = False, errors: Optional[dict] = None):
     """One envelope call. `phase2` turns a missing route into SERVER_TOO_OLD."""
     url = base.rstrip("/") + path
     headers = {"Accept": "application/json", "User-Agent": "superstep-cli/" + superstep.__version__}
@@ -128,6 +128,8 @@ def call(method: str, base: str, path: str, client: Optional[httpx.Client] = Non
     key = _AUTH.get(code)
     if key:
         raise SessionError(code, key)
+    if errors is not None and code in errors:
+        raise SessionError(code, errors[code])
     raise SessionError("BAD_RESPONSE", "error.bad_response", url=base)
 
 
