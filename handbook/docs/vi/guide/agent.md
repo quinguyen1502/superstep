@@ -39,6 +39,7 @@ retry/timeout ở **Thực thi**.
 | Đưa tệp đính kèm vào | Thêm các tệp của chat vào tin nhắn nhiệm vụ, như ở [node LLM](nodes.md#llm). Xem [Tệp đính kèm](../run/chat.md#tep-inh-kem). |
 | Công cụ | Ít nhất một. Xem bên dưới. |
 | Duyệt | Hiện khi có công cụ cần duyệt: kênh duyệt, người duyệt và hạn chờ, như ở node Human. |
+| AI duyệt | Hiện cùng mục Duyệt: một mô hình có thể xem từng lệnh gọi công cụ trước (gợi ý, hoặc tự trả lời). Xem [AI duyệt yêu cầu phê duyệt](../run/ai-review.md). |
 | Thực thi | Số lần thử, thời gian chờ giữa các lần và timeout áp dụng cho từng lần gọi model và từng lần gọi công cụ. Cache TTL không bao giờ dùng cho chúng, vì một bước lấy từ cache sẽ bỏ qua lần gọi hoặc bước duyệt. |
 
 ## Công cụ

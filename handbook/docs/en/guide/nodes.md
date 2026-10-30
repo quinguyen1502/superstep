@@ -206,6 +206,8 @@ up `STUDIO_RECURSION_LIMIT`, which only bounds the other loops.
 `prompt` (a template) and `output_field`. The run waits in status `waiting`
 until someone answers **Approve** (`approved`), **Reject** (`rejected`) or
 free text. See [Human approval](../run/human-approval.md).
+A model can review the request first, as a suggestion or answering on its own: see
+[AI review of approvals](../run/ai-review.md).
 
 ## Join
 

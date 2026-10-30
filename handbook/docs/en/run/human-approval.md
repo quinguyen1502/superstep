@@ -127,6 +127,12 @@ the Agent node, with its approvers and deadline. **Approve** runs the call.
 **Reject**, or a text reply, rejects it, and the model is told so, with the
 text as the reason. Each call asks again.
 
+## AI review
+
+A model can review a request before people see it: as a suggestion shown next
+to the request, or approving on its own when it is sure. See
+[AI review of approvals](ai-review.md).
+
 ## Approvals inside a called workflow
 
 When an Agent node calls another workflow as a tool
