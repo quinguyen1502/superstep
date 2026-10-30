@@ -8,7 +8,7 @@ outputs:
   .agents/skills/create-requirement/agents/openai.yaml: 50561120e961ebe8963f99e8525651dd5577060b5814d4e5ce73c7a970e62f2a
   .agents/skills/discuss/SKILL.md: f82028503a76789457aa3e1af4109505e0588e05042bf1affdcc19f98f76ba69
   .agents/skills/discuss/agents/openai.yaml: 89293532ab257ff9bfbcfc765225896892d4e05437b75fa255e803e4889566b7
-  .agents/skills/finish-pr/SKILL.md: 9651b3138fcdbc6b9d30b6b7b4f8f4bae4e73a94cbcdfb47c81ad87ee39ff318
+  .agents/skills/finish-pr/SKILL.md: 711a5e760c01e8a017e7796ab6bc33b0a2abfa189cd7c0abca7556fc09f29d31
   .agents/skills/finish-pr/agents/openai.yaml: fd493419bdab3b49faffab4b2e06fd5fcc7846c04749e18866c166dafa73c98d
   .agents/skills/import-project/SKILL.md: 30f2eee87b8c380ff5dba7d175543e37434e02566ae78347cc71d9e85e710088
   .agents/skills/import-project/agents/openai.yaml: f2721a4589dc11629947b097e7b67d4e7db93643d4031e8717e988fef558a5dc
@@ -32,7 +32,7 @@ outputs:
   .claude/skills/create-project/SKILL.md: 0b9c58ef8a765341d881cac0cb3c4fc2e8ff19ab5968a862baf217cb73b2d4f1
   .claude/skills/create-requirement/SKILL.md: 573b912b194128217688a4e3f13c43bc2f87bae254f2ee71035e46a69e5cfbb5
   .claude/skills/discuss/SKILL.md: f82028503a76789457aa3e1af4109505e0588e05042bf1affdcc19f98f76ba69
-  .claude/skills/finish-pr/SKILL.md: 9651b3138fcdbc6b9d30b6b7b4f8f4bae4e73a94cbcdfb47c81ad87ee39ff318
+  .claude/skills/finish-pr/SKILL.md: 711a5e760c01e8a017e7796ab6bc33b0a2abfa189cd7c0abca7556fc09f29d31
   .claude/skills/import-project/SKILL.md: 30f2eee87b8c380ff5dba7d175543e37434e02566ae78347cc71d9e85e710088
   .claude/skills/next-task/SKILL.md: c5f9afa7046de58453cb762071e8c902b9e0995abfb2c4c7e7a7f70dd3e771d8
   .claude/skills/onboard-specs/SKILL.md: f92bb9d026dbf6d545c47ce7cd72a3a6b789f313401f335a89dc17f230ccfb2a
@@ -46,7 +46,7 @@ outputs:
   .cursor/rules/create-project.mdc: e2031f962a64748f5c66e4a9a7a5290644cead93b17548fc1544fcea0798f2b8
   .cursor/rules/create-requirement.mdc: d7eafb66598c1836c3eaa974cb399c45c1e5a584f3ed03a7f2522ba1f6768f94
   .cursor/rules/discuss.mdc: 8808e35adc645726739fd422d28fa5d7e644176504cf19e8d2a8bd726f6ad7af
-  .cursor/rules/finish-pr.mdc: fbc0ab7fd81a7908f3121c232d130881d4c450ec11ca30b7e888804f72ba1579
+  .cursor/rules/finish-pr.mdc: 4b81b626a0df3cf455b665b1e31d982f6088d50b814cb9c0d2fdfb45d4542150
   .cursor/rules/import-project.mdc: d4543ba301e9ae4fc3c9b09092d100f7b19b87b3b3c487d905ebab8011dee794
   .cursor/rules/next-task.mdc: 68e355565006f0664a76e8976514bb198eed7402bf0fb5e3c148f795730db586
   .cursor/rules/onboard-specs.mdc: 1b5f5bcd7ebfbbfdc828b93f08809471251d0c1df7d8ad230a7a04f1d062aaf7
@@ -60,7 +60,7 @@ outputs:
   .grok/skills/create-project/SKILL.md: 0b9c58ef8a765341d881cac0cb3c4fc2e8ff19ab5968a862baf217cb73b2d4f1
   .grok/skills/create-requirement/SKILL.md: 573b912b194128217688a4e3f13c43bc2f87bae254f2ee71035e46a69e5cfbb5
   .grok/skills/discuss/SKILL.md: f82028503a76789457aa3e1af4109505e0588e05042bf1affdcc19f98f76ba69
-  .grok/skills/finish-pr/SKILL.md: 9651b3138fcdbc6b9d30b6b7b4f8f4bae4e73a94cbcdfb47c81ad87ee39ff318
+  .grok/skills/finish-pr/SKILL.md: 711a5e760c01e8a017e7796ab6bc33b0a2abfa189cd7c0abca7556fc09f29d31
   .grok/skills/import-project/SKILL.md: 30f2eee87b8c380ff5dba7d175543e37434e02566ae78347cc71d9e85e710088
   .grok/skills/next-task/SKILL.md: c5f9afa7046de58453cb762071e8c902b9e0995abfb2c4c7e7a7f70dd3e771d8
   .grok/skills/onboard-specs/SKILL.md: f92bb9d026dbf6d545c47ce7cd72a3a6b789f313401f335a89dc17f230ccfb2a

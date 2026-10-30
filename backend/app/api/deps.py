@@ -7,7 +7,7 @@ from ..core import config, security
 from ..core.errors import AppError
 from ..services.notification_hub import NotificationHub, make_notification_hub
 from ..models.database import Database
-from ..repositories import AgentThreadRepository, ChatSessionRepository, CredentialRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
+from ..repositories import AgentThreadRepository, ChatAttachmentRepository, ChatSessionRepository, CliDeviceRepository, CredentialRepository, PersonalAccessTokenRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
 from ..services.audit_service import AuditService
 from ..services.code_service import CodeService
 from ..services.inbox_service import InboxService
@@ -16,6 +16,8 @@ from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
 from ..core import permissions as P
 from ..services.access import AccessService
+from ..services.auto_approval_service import AutoApprovalService
+from ..services.auto_review_service import AutoReviewService
 from ..services.share_service import ShareService
 from ..services.user_service import UserService
 from ..services.template_service import TemplateService
@@ -27,6 +29,7 @@ from ..services.identity_service import IdentityService
 from ..services.channel_service import ChannelService
 from ..services.approval_channels import ADAPTERS
 from ..services.auth_service import AuthService
+from ..services.pat_service import PatService
 from ..services.credential_service import CredentialService
 from ..services.import_service import ImportService
 from ..services.run_bus import RunBus, make_run_bus
@@ -46,6 +49,7 @@ from ..services.chat_trigger_service import ChatTriggerService
 from ..services.chat_run_service import ChatRunService
 from ..services.chat_session_service import ChatSessionService
 from ..services.public_chat_service import PublicChatService
+from ..services.chat_attachment_service import ChatAttachmentService
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -110,11 +114,15 @@ def chat_run_service() -> ChatRunService:
 
 def chat_session_service() -> ChatSessionService:
     db = get_db(); return ChatSessionService(ChatSessionRepository(db), ChatTriggerRepository(db), ChatMessageRepository(db), WorkflowRepository(db),
-                                             RunRepository(db), access=access_service())
+                                             RunRepository(db), access=access_service(), jobs=get_job_queue(), attachments=ChatAttachmentRepository(db))
 
 
 def public_chat_service() -> PublicChatService:
     return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())
+
+
+def chat_attachment_service() -> ChatAttachmentService:
+    pub = public_chat_service(); return ChatAttachmentService(pub.chat.attachments, pub.chat, pub)
 
 
 def trigger_service() -> TriggerService:
@@ -140,7 +148,8 @@ def workflow_service() -> WorkflowService:
     db = get_db(); return WorkflowService(WorkflowRepository(db), RunRepository(db), WorkflowVersionRepository(db),
                                           access=access_service(), shares=WorkflowShareRepository(db), users=UserRepository(db),
                                           teams=TeamRepository(db), audit=audit_service(), tests=WorkflowTestRepository(db),
-                                          chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db))
+                                          chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db),
+                                          jobs=get_job_queue())
 
 def template_service() -> TemplateService:
     return TemplateService(TemplateRepository(get_db()), workflow_service(), access_service(), tests=workflow_test_service)
@@ -157,6 +166,13 @@ def audit_service() -> AuditService:
 def policy_service() -> PolicyService:
     return PolicyService(SettingsRepository(get_db()), access_service(), audit_service())
 
+def auto_approval_service() -> AutoApprovalService:
+    db = get_db(); return AutoApprovalService(SettingsRepository(db), access_service(), audit_service(), reviews=auto_review_service, workflows=WorkflowRepository(db))
+
+def auto_review_service() -> AutoReviewService:
+    db = get_db(); creds = credential_service()
+    return AutoReviewService(ApprovalRepository(db), AutoApprovalService(SettingsRepository(db)), creds.resolve)
+
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())
 
@@ -172,9 +188,15 @@ def user_service() -> UserService:
 def share_service() -> ShareService:
     db = get_db(); return ShareService(WorkflowShareRepository(db), UserRepository(db), access_service(), TeamRepository(db), audit_service())
 
+def pat_service() -> PatService:
+    db = get_db(); return PatService(PersonalAccessTokenRepository(db), CliDeviceRepository(db), UserRepository(db))
+
+def _auth() -> AuthService:
+    db = get_db(); return AuthService(UserRepository(db), pats=PersonalAccessTokenRepository(db))
+
 def auth_service() -> AuthService:
     db = get_db(); return AuthService(UserRepository(db), workflow_service(), AuthSecurityRepository(db), audit=audit_service(),
-                                      visit=lambda: start_visit(db))
+                                      visit=lambda: start_visit(db, jobs=get_job_queue()), pats=PersonalAccessTokenRepository(db))
 
 def demo_service() -> DemoService:
     return DemoService(get_rate_limiter())
@@ -187,7 +209,7 @@ def run_service() -> RunService:
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),
-                                           RunRepository(db), audit=audit_service())
+                                           RunRepository(db), audit=audit_service(), sessions=ChatSessionRepository(db))
 
 def workflow_test_service() -> WorkflowTestService:
     db = get_db(); return WorkflowTestService(WorkflowTestRepository(db), WorkflowRepository(db), RunRepository(db), WorkflowVersionRepository(db),
@@ -198,7 +220,8 @@ def channel_service() -> ChannelService:
 
 def approval_service() -> ApprovalService:
     db = get_db(); return ApprovalService(ApprovalRepository(db), UserRepository(db), WorkflowRepository(db), RunRepository(db), channel_service(), get_job_queue().enqueue,
-                                         limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service)
+                                         limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service,
+                                         reviewer=auto_review_service())
 
 def inbox_service() -> InboxService:
     return InboxService(approval_service(), run_service(), access_service())
@@ -232,7 +255,7 @@ def current_user(request: Request, cred: HTTPAuthorizationCredentials | None = D
     token = cred.credentials if cred else None
     if token is None and (token := request.cookies.get(security.SESSION_COOKIE)):
         if request.method in UNSAFE and request.headers.get(security.CSRF_HEADER) != security.CSRF_VALUE: raise AppError("AUTH_CSRF")
-    return AuthService(UserRepository(get_db())).current(token)
+    return _auth().current(token)
 
 
 def _same_origin(origin: str | None, host: str | None) -> bool:
@@ -245,7 +268,7 @@ def ws_user(ws: WebSocket) -> dict:
     token = ws.query_params.get("token")
     if not token and (token := ws.cookies.get(security.SESSION_COOKIE)):
         if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")): raise AppError("AUTH_CSRF")
-    return AuthService(UserRepository(get_db())).current(token)
+    return _auth().current(token)
 
 
 def need(permission: str):

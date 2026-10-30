@@ -18,9 +18,17 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# `pip install superstep[cli]`. `run` needs websockets, pinned to the newest release whose
+# Requires-Python still allows 3.9 (15.0.1 is `>=3.9`; 16.0 is `>=3.10`). The MCP SDK is not a
+# dependency: `superstep mcp` speaks stdio itself (DEC-0071). The console script ships with the base package.
+cli = ["websockets==15.0.1"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 # `factory deps apply` installs `.[test]`, so verification has pytest without it in base deps.
 test = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[project.scripts]
+superstep = "superstep.cli:main"
+sstep = "superstep.cli:main"  # the short alias (TASK-0185)
 
 [project.urls]
 Homepage = "https://github.com/quinguyen1502/superstep"
@@ -31,6 +39,16 @@ path = "src/superstep/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/superstep"]
+
+[tool.hatch.build.targets.sdist.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/superstep/cli/locales/en.json" = "superstep/cli/locales/en.json"
+"src/superstep/cli/locales/vi.json" = "superstep/cli/locales/vi.json"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

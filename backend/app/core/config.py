@@ -42,9 +42,22 @@ def run_max() -> int: return _int("STUDIO_RUN_MAX_BYTES", 2 * 1024 * 1024)
 def input_max() -> int: return _int("STUDIO_INPUT_MAX_BYTES", 256 * 1024)
 def workflow_max() -> int: return _int("STUDIO_WORKFLOW_MAX_BYTES", 1024 * 1024)
 def recursion_limit() -> int: return _int("STUDIO_RECURSION_LIMIT", 25)
+def agent_parallel_tools() -> int:
+    """Tool calls of one Agent round that may run at once (REQ-0076, DEC-0069).
+
+    Default 4. The Agent setting `parallel_tool_calls` false forces one call. Set
+    STUDIO_AGENT_PARALLEL_TOOLS to 1..8 to change the cap. Invalid values stay at 1. Other integers clamp to 1..8.
+    """
+    raw = os.environ.get("STUDIO_AGENT_PARALLEL_TOOLS")
+    if raw is None or not str(raw).strip(): return 4
+    try: n = int(raw)
+    except ValueError: return 1
+    return min(8, max(1, n))
 def allow_private_callbacks() -> bool: return os.environ.get("STUDIO_ALLOW_PRIVATE_CALLBACKS") == "1"
 def worker_enabled() -> bool: return os.environ.get("STUDIO_WORKER", "1") != "0"  # run queued jobs in this API process
 def worker_concurrency() -> int: return max(1, _int("STUDIO_WORKER_CONCURRENCY", 2))
+def auto_approval_enabled() -> bool:  # STUDIO_AUTO_APPROVAL=off: AI review of approvals never answers (REQ-0081)
+    return (os.environ.get("STUDIO_AUTO_APPROVAL") or "on").strip().lower() not in ("0", "off", "false", "no")
 def wait_ttl() -> float: return max(0.0, float(os.environ.get("STUDIO_WAIT_TTL", 7 * 86400)))  # waiting runs expire (0 = never)
 def sync_wait_max() -> float: return max(0.0, float(os.environ.get("STUDIO_SYNC_WAIT_MAX", 30)))  # sync trigger: then 202 + poll URL
 def trigger_rate_limit() -> int: return max(0, _int("STUDIO_TRIGGER_RATE_LIMIT", 60))  # runs per token per window (0 = off)
@@ -55,6 +68,12 @@ def public_chat_rate_visitor() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RA
 def public_chat_rate_ip() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_IP", 30))  # messages per client IP
 def public_chat_rate_read() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_READ", 120))  # page, session reads and new chats per client IP
 def public_chat_rate_window() -> int: return max(1, _int("STUDIO_PUBLIC_CHAT_RATE_WINDOW", 60))
+def chat_attachment_max_mb() -> int:
+    """The ceiling on a chat attachment's size in MB (REQ-0077, DEC-0072 decision 3); each chat may only lower it."""
+    return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_MB", 10))
+def chat_attachment_max_files() -> int:
+    """The ceiling on files per chat message (DEC-0072 decision 3); each chat may only lower it."""
+    return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_FILES", 5))
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- TASK-0020 ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))

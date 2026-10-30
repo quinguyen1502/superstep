@@ -62,7 +62,11 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     if until and any(n["id"] == until and n.get("type") == "agent" for n in wf["nodes"]): until = f"{until}{agents.SEP}{agents.EXIT}"  # the whole agent
     usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished (TASK-0010)
     code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished (TASK-0053)
-    held = {"node": resume["node"], "value": resume["value"]} if resume and "value" in resume else None
+    held = None
+    if resume and ("value" in resume or resume.get("answers") or resume.get("children")):
+        held = {k: resume[k] for k in ("node", "value", "answers", "children") if k in resume}
+        if isinstance(held.get("answers"), dict): held["answers"] = dict(held["answers"])
+        if isinstance(held.get("children"), dict): held["children"] = dict(held["children"])
     counts: Dict[str, int] = {k: int(v) for k, v in ((resume or {}).get("counts") or {}).items()}
     if effects is not None: effects.counts = counts  # node iterations feed the idempotency keys
     app = compile_workflow(wf, resolve, lambda nid, u: usage.__setitem__(nid, merge_usage(usage.get(nid), u)),
@@ -71,6 +75,10 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     if until is not None and until not in nodes:
         raise ValidationError([f"Node '{until}' is not in the workflow"])
     if resume: inputs = dict(resume.get("state") or {})
+    elif agents.START_INPUT in inputs:  # private from here on, so the state and the trace never show it
+        go = inputs[agents.START_INPUT]
+        inputs = {k: v for k, v in inputs.items() if k != agents.START_INPUT}
+        if isinstance(go, str) and go: inputs[agents.START_KEY] = go
     state = dict(inputs); cp_state, cp_counts = dict(state), dict(counts); first = True
 
     def meta(nid):
@@ -127,9 +135,16 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                        **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
                        **({"code_output": cap_payload(code_out.pop(nid))} if nid in code_out else {})}
     except Interrupt as i:  # a Human node or an Agent tool approval is waiting: hand back a checkpoint instead of an error
-        # parallel siblings of the Human node resume with it (their results come from the ledger when recorded)
-        yield {"type": "run_waiting", **meta(i.node), "prompt": i.prompt, **{k: cap_payload(v) for k, v in i.extra.items()}, "state": cap_payload(agents.visible(state)),
-               "checkpoint": {"node": i.node, "nodes": pending or [i.node], "state": cp_state, "counts": cp_counts}}
+        # parallel siblings finish first (Interrupt is a GraphBubbleUp) and come back from the ledger on resume
+        holds = _holds(effects, i)
+        primary = next((h for h in holds if h["kind"] == "approval"), holds[0])
+        cp = {"node": primary["node"], "nodes": pending or [primary["node"]], "state": cp_state, "counts": cp_counts}
+        if len(holds) > 1: cp["waits"] = holds  # one resume after every wait of this superstep (TASK-0158)
+        elif holds[0]["kind"] == "child": cp["wait"] = {"kind": "child", "run_id": holds[0]["run_id"]}
+        extra = {k: primary[k] for k in ("label", "tool", "arguments", "workflow_id") if primary.get(k) is not None}
+        if len(holds) == 1 and primary["kind"] == "child": extra["wait"] = {"kind": "child", "run_id": primary["run_id"]}
+        yield {"type": "run_waiting", **meta(primary["node"]), "prompt": primary.get("prompt") or "",
+               **{k: cap_payload(v) for k, v in extra.items()}, "state": cap_payload(agents.visible(state)), "checkpoint": cp}
         return
     except Exception as e:  # attribute runtime failures to the node that was running
         if getattr(e, "fenced", False): raise  # this worker lost the run: the service layer stops without writing
@@ -145,6 +160,24 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                "error": {"code": "RUN_NODE_NOT_REACHED", "message": msg, "details": {"node": until}}}
         return
     yield {"type": "run_finished", "state": agents.visible(foreach.visible(state))}
+
+
+def _holds(effects, i: Interrupt) -> List[dict]:
+    """Every pause of the superstep. Slots record theirs before raising; the exception covers a pause that did not."""
+    found: Dict[str, dict] = {}
+    if effects is not None:
+        for h in effects.holds:
+            if isinstance(h, dict) and h.get("node"): found[str(h["node"])] = h
+    if i.node not in found:
+        extra = i.extra or {}
+        wait = extra.get("wait") if isinstance(extra.get("wait"), dict) else {}
+        if wait.get("kind") == "child":
+            found[i.node] = {"node": i.node, "kind": "child", "run_id": wait.get("run_id"), "prompt": i.prompt,
+                             **{k: extra[k] for k in ("label", "tool", "arguments", "workflow_id") if k in extra}}
+        else:
+            found[i.node] = {"node": i.node, "kind": "approval", "prompt": i.prompt,
+                             **{k: extra[k] for k in ("label", "tool", "arguments") if k in extra}}
+    return list(found.values())
 
 
 def resume_nodes(resume: Dict[str, Any]) -> List[str]:

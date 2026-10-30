@@ -2,10 +2,11 @@
 until it answers.
 
 An Agent node `A` is expanded before compilation, as subgraph nodes are, into ordinary LangGraph steps:
-    A (entry: builds the conversation) → A/__model (one model call) ⇄ A/__tool (one tool call) → A/__exit (the answer)
-so every model call and every tool call checkpoints, recovers and uses the side-effect ledger on its own: a pause, a
-crash or a restart repeats at most the step that had not finished. The conversation lives in the hidden state field
-`agent:A` (plain JSON): {messages, pending, rounds, limit_hit, steps, answer, last}.
+    A (entry: builds the conversation) → A/__model ⇄ a wave of A/__tool/1 .. A/__tool/8 → A/__join → A/__exit
+A wave is one superstep (LangGraph Send): the calls run together, up to the cap, and the join puts their results back
+in the model's order (DEC-0069). Each slot has its own ledger entry. The conversation lives in the hidden state field
+`agent:A` (plain JSON): {messages, pending, rounds, limit_hit, steps, answer, last}. A slot writes `agent:A#<n>`, not
+that object.
 
 Node data: credential_id, model, system_prompt, prompt, output_field, steps_field?, history_field?, max_rounds and
 `tools`, each {name, description, source: mcp | http | builtin | knowledge | workflow, approval?} plus its source's settings:
@@ -28,6 +29,7 @@ from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlencode
 from ..core import config
 from ..core.errors import AppError
+from langgraph.types import Send
 from .effects import Effects, call_tool
 from .errors import AwaitChild, Interrupt, ValidationError
 from .issues import Issue
@@ -35,14 +37,20 @@ from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
-from . import subgraphs
+from . import attachments, subgraphs
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
 PREFIX, SEP = "agent:", "/"
-MODEL, TOOL, EXIT = "__model", "__tool", "__exit"
-TYPES = ("agent", "agent_model", "agent_tool", "agent_exit")
-ROUTERS = ("agent_model", "agent_tool")  # steps that pick the next step (they may loop)
+MODEL, TOOL, JOIN, EXIT, HANDOFF = "__model", "__tool", "__join", "__exit", "__handoff"
+# hand-offs (REQ-0078, DEC-0073): the pending hand-off {from, to, reason, messages, last} and the run's count
+HANDOFF_KEY, COUNT_KEY = PREFIX + "__handoff", PREFIX + "__handoffs"
+START_INPUT, START_KEY = "__start_agent", PREFIX + "__start"  # a chat continues with the agent that answered last (TASK-0181)
+NOT_RUN = "Not run: the conversation was handed off"
+HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Continue it and answer the person yourself."
+NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
+TYPES = ("agent", "agent_model", "agent_tool", "agent_exit", "agent_join", "agent_handoff")
+ROUTERS = ("agent_model", "agent_join", "agent_handoff")  # steps that pick the next step (they may loop)
 SOURCES = ("mcp", "http", "builtin", "knowledge", "workflow")
 DEFAULT_ROUNDS, MAX_ROUNDS, MAX_CALLS_PER_ROUND = 5, 25, 8
 RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
@@ -71,9 +79,33 @@ def owner(node: Dict[str, Any]) -> str:
 
 
 def agent_of_step(nid: str) -> Optional[str]:
-    """`A` for the tool step `A/__tool`, whose approvals test cases answer under the Agent node's id (TASK-0117)."""
-    tail = SEP + TOOL
-    return nid[:-len(tail)] if nid.endswith(tail) else None
+    """`A` for `A/__tool`, `A/__tool/2` or `A/__join`. Approvals and test answers use the Agent node's id (TASK-0117)."""
+    if not isinstance(nid, str): return None
+    if nid.endswith(SEP + JOIN): return nid[:-(len(SEP) + len(JOIN))] or None
+    head, _, rest = nid.rpartition(SEP + TOOL)
+    if head and (rest == "" or (rest[:1] == SEP and rest[1:].isdigit())): return head
+    return None
+
+
+def slot_index(nid: str) -> int:
+    """1 for `A/__tool/1`. A bare `A/__tool` is slot 1."""
+    rest = nid.rpartition(SEP + TOOL)[2] if isinstance(nid, str) else ""
+    return int(rest[1:]) if rest[:1] == SEP and rest[1:].isdigit() else 1
+
+
+def slot_id(agent: str, n: int) -> str:
+    return f"{agent}{SEP}{TOOL}{SEP}{n}"
+
+
+def slot_channel(node: Dict[str, Any]) -> str:
+    """State key a tool slot writes. Parallel slots must not share `agent:A`."""
+    return f"{private(owner(node))}#{slot_index(node['id'])}"
+
+
+def wave_size(data: Dict[str, Any]) -> int:
+    """Calls of this round that start together. The node setting off forces one, whatever the env cap says."""
+    if data.get("parallel_tool_calls") is False: return 1
+    return config.agent_parallel_tools()
 
 
 def step_of(delta: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -98,6 +130,30 @@ def specs(d: Dict[str, Any]) -> List[Dict[str, Any]]:
     """The tools as the model sees them."""
     return [{"name": t.get("name") or "", "description": t.get("description") or "", "parameters": parameters(t)}
             for t in d.get("tools") or [] if isinstance(t, dict)]
+
+
+REASON = {"type": "object", "properties": {"reason": {"type": "string", "description": "Why the conversation is handed off"}}}
+
+
+def handoff_specs(d: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The hand-off tools as the model sees them: `transfer_to_<target>` with an optional reason (TASK-0180)."""
+    return [{"name": h["name"], "description": h.get("description") or f"Hand the conversation to {h['label']}", "parameters": REASON}
+            for h in d.get("handoff_tools") or []]
+
+
+def _handoff_tools(nid: str, d: Dict[str, Any], labels: Dict[str, str], taken: set) -> List[Dict[str, Any]]:
+    """[{name, target, label, description}] for the node's valid targets; names are unique among its tools."""
+    from . import handoffs
+    out, used = [], set(taken)
+    for h in handoffs.targets(d):
+        t = h["target"]
+        if t == nid or t not in labels: continue
+        base = "transfer_to_" + (re.sub(r"[^A-Za-z0-9_-]+", "_", labels[t]).strip("_").lower() or re.sub(r"[^A-Za-z0-9_-]+", "_", t))
+        base = base[:60]; name, i = base, 2
+        while name in used: name, i = f"{base[:58]}_{i}", i + 1
+        used.add(name)
+        out.append({"name": name, "target": t, "label": labels[t], "description": str(h.get("description") or "")})
+    return out
 
 
 def arg_error(schema: Dict[str, Any], args: Any) -> Optional[str]:
@@ -225,6 +281,9 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
     """The workflow with each Agent node followed by its model, tool and exit steps (idempotent; the input is not changed)."""
     if not has_agents(wf): return wf
     out = copy.deepcopy(wf); nodes, edges = out["nodes"], out.get("edges") or []
+    from . import handoffs
+    labels = {n["id"]: (n.get("data") or {}).get("label") or n["id"] for n in nodes if isinstance(n, dict) and n.get("type") == "agent"}
+    cap = handoffs.limit(wf)
     for n in [n for n in nodes if isinstance(n, dict) and n.get("type") == "agent" and not (n.get("data") or {}).get("agent_expanded")]:
         a, d = n["id"], n.get("data") or {}
         label = d.get("label") or a
@@ -232,6 +291,8 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         # a cached step would skip its model or tool call (and its approval) on a run with the same state: only the
         # entry step keeps the node's cache and input fields; retry and timeout apply to each step
         inner = {k: v for k, v in d.items() if k not in ("label", "cache_ttl", "input_fields")}
+        hand = _handoff_tools(a, d, labels, {t.get("name") for t in d.get("tools") or [] if isinstance(t, dict)})
+        if hand: inner = {**inner, "handoff_tools": hand, "max_handoffs": cap}
         # a workflow tool's child snapshot is run by the tool step only: the other steps keep its state fields (the
         # parameter types), which keeps the checkpoint small
         lean = {**inner, "tools": [{**t, "snapshot": {"state": t["snapshot"].get("state") or []}}
@@ -239,14 +300,23 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         step = lambda suffix, typ, name, data: {"id": f"{a}{SEP}{suffix}", "type": typ, "position": n.get("position"),
                                                 "data": {**data, "label": f"{label} › {name}", "agent_of": a, "agent_label": label}}
         n["data"] = {**n["data"], "tools": lean["tools"]} if "tools" in d else n["data"]
-        nodes += [step(MODEL, "agent_model", "model", lean), step(TOOL, "agent_tool", "tool", inner), step(EXIT, "agent_exit", "end", lean)]
-        m, t, x = f"{a}{SEP}{MODEL}", f"{a}{SEP}{TOOL}", f"{a}{SEP}{EXIT}"
+        slots = [step(f"{TOOL}{SEP}{i}", "agent_tool", "tool", inner) for i in range(1, MAX_CALLS_PER_ROUND + 1)]
+        if hand: lean = {**lean, "handoff_tools": hand, "max_handoffs": cap}
+        nodes += [step(MODEL, "agent_model", "model", lean), *slots, step(JOIN, "agent_join", "join", lean), step(EXIT, "agent_exit", "end", lean)]
+        m, j, x = f"{a}{SEP}{MODEL}", f"{a}{SEP}{JOIN}", f"{a}{SEP}{EXIT}"
         edges[:] = [{**e, "source": x} if e.get("source") == a else e for e in edges]  # the agent's way out
         edges += [{"id": f"{a}{SEP}e-model", "source": a, "target": m},
-                  {"id": f"{a}{SEP}e-call", "source": m, "target": t, "label": "tool"},
                   {"id": f"{a}{SEP}e-done", "source": m, "target": x, "label": "done"},
-                  {"id": f"{a}{SEP}e-next", "source": t, "target": t, "label": "tool"},
-                  {"id": f"{a}{SEP}e-back", "source": t, "target": m, "label": "model"}]
+                  {"id": f"{a}{SEP}e-back", "source": j, "target": m, "label": "model"}]
+        if hand:  # a hand-off is its own step, then a jump to the target's entry (DEC-0073 decision 2)
+            h = f"{a}{SEP}{HANDOFF}"
+            nodes.append(step(HANDOFF, "agent_handoff", "hand-off", lean))
+            edges += [{"id": f"{a}{SEP}e-handoff", "source": m, "target": h, "label": "handoff"}]
+            edges += [{"id": f"{a}{SEP}e-to-{x['target']}", "source": h, "target": x["target"], "label": x["target"]} for x in hand]
+        for i in range(1, MAX_CALLS_PER_ROUND + 1):  # the model reaches every slot (the router Sends only the wave)
+            sid = slot_id(a, i)
+            edges += [{"id": f"{a}{SEP}e-slot-{i}", "source": m, "target": sid},
+                      {"id": f"{a}{SEP}e-join-{i}", "source": sid, "target": j}]
     out["edges"] = edges
     return out
 
@@ -278,37 +348,66 @@ def snapshot(wf: Dict[str, Any], load: subgraphs.Loader, self_id: Optional[str] 
 
 
 def step_budget(wf: Dict[str, Any]) -> int:
-    """Extra LangGraph steps the Agent nodes may need: each round is a model call plus up to MAX_CALLS_PER_ROUND tool calls,
-    and the last call without tools, the entry and the exit come on top."""
-    total = 0
+    """Extra LangGraph steps the Agent nodes may need. A round is a model call plus, at cap 1, a slot and a join per
+    tool call. The last call without tools, the entry and the exit come on top."""
+    from . import handoffs
+    total, most, any_hand = 0, 0, False
     for n in wf.get("nodes", []):
         if isinstance(n, dict) and n.get("type") == "agent":
             r = (n.get("data") or {}).get("max_rounds", DEFAULT_ROUNDS)
             r = r if isinstance(r, int) and not isinstance(r, bool) and 1 <= r <= MAX_ROUNDS else DEFAULT_ROUNDS
-            total += r * (1 + MAX_CALLS_PER_ROUND) + 3
+            cost = r * (1 + 2 * MAX_CALLS_PER_ROUND) + 3
+            total += cost; most = max(most, cost)
+            any_hand = any_hand or bool(handoffs.targets(n.get("data") or {}))
+    if any_hand: total += handoffs.limit(wf) * (most + 2)  # each hand-off may run an agent again (TASK-0180)
     return total
 
 
-def router(node: Dict[str, Any]) -> Callable[[dict], str]:
-    """After a model step: `tool` while calls are pending, else `done`. After a tool step: `tool` or back to `model`."""
-    key, back = private(owner(node)), "done" if node["type"] == "agent_model" else "model"
-    return lambda state: "tool" if ((state.get(key) or {}).get("pending")) else back
+def router(node: Dict[str, Any]):
+    """After the model: Send the first wave, or `done` when nothing is pending. After the join: Send the next wave,
+    or back to `model`."""
+    key, agent, data = private(owner(node)), owner(node), node.get("data") or {}
+    back = "done" if node["type"] == "agent_model" else "model"
+    if node["type"] == "agent_handoff":
+        return lambda state: (state.get(HANDOFF_KEY) or {}).get("to")
+
+    def route(state):
+        if node["type"] == "agent_model" and (state.get(key) or {}).get("handoff"): return "handoff"
+        pending = ((state.get(key) or {}).get("pending")) or []
+        if not pending: return back
+        n = min(len(pending), wave_size(data))
+        return [Send(slot_id(agent, i), dict(state)) for i in range(1, n + 1)]
+    return route
 
 
 # ---- steps ------------------------------------------------------------------------------------
 
 def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
-    """The approver's answer for this step, consumed once (as for a Human node) so a later call to the tool asks again."""
-    if resume is not None and resume.get("node") == nid and "value" in resume: return str(resume.pop("value"))
+    """The approver's answer for this step, consumed once (as for a Human node) so a later call to the tool asks again.
+    A wave keeps one answer per slot in `answers` (TASK-0158)."""
+    if resume is None: return None
+    bag = resume.get("answers")
+    if isinstance(bag, dict) and nid in bag: return str(bag.pop(nid))
+    if resume.get("node") == nid and "value" in resume and not isinstance(resume.get("value"), dict): return str(resume.pop("value"))
     return None
 
 
 def child_result(resume: Optional[Dict[str, Any]], nid: str) -> Optional[Dict[str, Any]]:
     """The finished child run of a workflow tool call, consumed once: {child_run_id, status, output, error, usage}. The
-    run service sends it as a dict; a person's answer is always text, so it can never pass for one (TASK-0134)."""
-    v = resume.get("value") if resume is not None and resume.get("node") == nid else None
+    run service sends it as a dict; a person's answer is always text, so it can never pass for one (TASK-0134).
+    A wave keeps one result per slot in `children` until every wait has settled (TASK-0158)."""
+    if resume is None: return None
+    bag = resume.get("children")
+    if isinstance(bag, dict) and isinstance(bag.get(nid), dict) and "child_run_id" in bag[nid]: return bag.pop(nid)
+    v = resume.get("value") if resume.get("node") == nid else None
     if isinstance(v, dict) and "child_run_id" in v: return resume.pop("value")
     return None
+
+
+def _pause(effects: Optional[Effects], item: dict, exc: Exception) -> None:
+    """Record the pause, then raise it. Parallel slots all record before the superstep stops (TASK-0158)."""
+    if effects is not None: effects.hold(item)
+    raise exc
 
 
 def child_outcome(t: Dict[str, Any], got: Dict[str, Any]) -> tuple:
@@ -335,12 +434,24 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
 
     if t == "agent":
         def fn(state):
-            msgs = [{"role": "system", "content": render(d["system_prompt"], state)}] if d.get("system_prompt") else []
-            for m in (state.get(d["history_field"]) or []) if d.get("history_field") else []:
-                if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str):
-                    msgs.append({"role": m["role"], "content": m["content"]})
-            msgs.append({"role": "user", "content": render(d.get("prompt") or "", state)})
-            return {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
+            got = state.get(HANDOFF_KEY) if isinstance(state.get(HANDOFF_KEY), dict) else None
+            got = got if got and got.get("to") == nid else None  # a hand-off to this agent (TASK-0180)
+            system = render(d["system_prompt"], state) if d.get("system_prompt") else ""
+            if got:
+                why = f" Reason: {got['reason']}." if got.get("reason") else ""
+                system = "\n\n".join(x for x in (system, HANDOFF_NOTE.format(source=got.get("from_label") or got.get("from"), reason=why)) if x)
+            msgs = [{"role": "system", "content": system}] if system else []
+            if got:  # the person's messages and the agents' replies, without tool traffic (DEC-0073 decision 3)
+                msgs += [{"role": m["role"], "content": m["content"]} for m in got.get("messages") or []]
+            else:
+                for m in (state.get(d["history_field"]) or []) if d.get("history_field") else []:
+                    if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str):
+                        msgs.append({"role": m["role"], "content": m["content"]})
+            files = attachments.records(state, d)  # chat attachments (TASK-0176): records only, image bytes are read per call
+            msgs.append({"role": "user", "content": render(d.get("prompt") or "", state), **({"files": files} if files else {})})
+            out = {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
+            if got: out[HANDOFF_KEY] = None
+            return out
         return fn
 
     if t == "agent_model":
@@ -353,9 +464,20 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 if resolve is None: raise RuntimeError("Node uses a credential but no resolver is available")
                 cred = resolve(d["credential_id"])
             buf = tokens(nid) if tokens else None
+            hand = {h["name"]: h for h in d.get("handoff_tools") or []}
+            can = bool(hand) and not hit and (state.get(COUNT_KEY) or 0) < d.get("max_handoffs", 5)
+            if hand and not can and not hit and not p.get("no_more"):  # past the limit: the model is told to answer itself
+                ms = p.setdefault("messages", [])
+                if ms and ms[0].get("role") == "system": ms[0] = {**ms[0], "content": f"{ms[0]['content']}\n\n{NO_MORE}"}
+                else: ms.insert(0, {"role": "system", "content": NO_MORE})
+                p["no_more"] = True
             try:
-                out, calls = call_agent(p.get("messages") or [], None if hit else specs(d), d.get("model") or "gpt-4o-mini", cred,
-                                        (lambda u: usage(nid, u)) if usage else None, buf, mock=offline, locale=ports.locale)
+                msgs = p.get("messages") or []
+                extra = {"load": ports.attachment} if any(m.get("files") for m in msgs) else {}  # the file loader only when files are sent
+                tools = None if hit else specs(d) + (handoff_specs(d) if can else [])
+                out, calls = call_agent(msgs, tools, d.get("model") or "gpt-4o-mini", cred,
+                                        (lambda u: usage(nid, u)) if usage else None, buf, mock=offline, locale=ports.locale,
+                                        parallel=False if d.get("parallel_tool_calls") is False else None, **extra)
             finally:
                 if buf: buf.flush()
             calls = [] if hit else [{"id": str(c.get("id") or f"call_{i}"), "name": str(c.get("name") or ""), "args": c.get("args")}
@@ -363,6 +485,19 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             if not hit: p["rounds"] = p.get("rounds", 0) + 1
             p["limit_hit"] = hit
             p.setdefault("messages", []).append({"role": "assistant", "content": out, **({"tool_calls": calls} if calls else {})})
+            first = next((c for c in calls if c["name"] in hand), None) if can else None
+            if first is not None:  # the hand-off wins: the other calls of the round are answered, not run (TASK-0180)
+                h = hand[first["name"]]; args = first.get("args") if isinstance(first.get("args"), dict) else {}
+                reason = str(args.get("reason") or "")[:500]
+                for c in calls:
+                    done = c is first
+                    msg = f"Handed off to {h['label']}" if done else NOT_RUN
+                    p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": msg})
+                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": c["args"], "result": NOT_RUN, "status": "not_run", "ms": 0})
+                p["pending"], p["handoff"] = [], {"to": h["target"], "label": h["label"], "reason": reason, "tool": first["name"]}
+                p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": False,
+                             "tool_calls": [{"name": c["name"], "args": c["args"]} for c in calls]}
+                return {key: p}
             p["pending"] = calls[:MAX_CALLS_PER_ROUND]
             for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run
                 why = f"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round"
@@ -376,10 +511,11 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
 
     if t == "agent_tool":
         by_name = {x.get("name"): x for x in d.get("tools") or [] if isinstance(x, dict)}
+        index, channel = slot_index(nid), slot_channel(node)
         def fn(state):
-            p = copy.deepcopy(state.get(key) or {})
-            if not p.get("pending"): return {}
-            call = p["pending"][0]
+            pending = ((state.get(key) or {}).get("pending")) or []
+            if index > len(pending): return {}  # a slot the router did not Send
+            call = pending[index - 1]
             tool, args = by_name.get(call["name"]), call.get("args")
             bad = None if tool is None else arg_error(parameters(tool), args)
             decided = None
@@ -389,9 +525,10 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 decided = answer(resume, nid)
                 if decided is None:
                     who = d.get("agent_label") or owner(node)
-                    raise Interrupt(nid, ASK.get(ports.locale, ASK["en"]).format(agent=who, tool=call["name"], args=json.dumps(args, ensure_ascii=False, indent=2)),
-                                    {"label": f"{who} › {call['name']}", "tool": call["name"], "arguments": args})
-            p["pending"], t0 = p["pending"][1:], time.perf_counter()
+                    prompt = ASK.get(ports.locale, ASK["en"]).format(agent=who, tool=call["name"], args=json.dumps(args, ensure_ascii=False, indent=2))
+                    extra = {"label": f"{who} › {call['name']}", "tool": call["name"], "arguments": args}
+                    _pause(effects, {"node": nid, "kind": "approval", "prompt": prompt, **extra}, Interrupt(nid, prompt, extra))
+            t0 = time.perf_counter()
             if tool is None:
                 status, result = "error", f"Unknown tool {call['name']}: use one of {', '.join(sorted(n for n in by_name if n))}"
             elif bad:
@@ -413,21 +550,56 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                     status, result = "error", f"{FAILED}: {safe_error(e)}"
                 else:
                     who = d.get("agent_label") or owner(node)
-                    raise AwaitChild(nid, cid, {"label": f"{who} › {call['name']}", "tool": call["name"], "arguments": args,
-                                                "workflow_id": tool.get("workflow_id")})
+                    extra = {"label": f"{who} › {call['name']}", "tool": call["name"], "arguments": args,
+                             "workflow_id": tool.get("workflow_id")}
+                    _pause(effects, {"node": nid, "kind": "child", "run_id": cid, **extra}, AwaitChild(nid, cid, extra))
             else:
                 try: status, result = "ok", text(run_tool(nid, tool, args, state, ports, effects))
                 except Exception as e:
                     if getattr(e, "fenced", False): raise  # this worker lost the run
                     status, result = "error", f"{FAILED}: {safe_error(e)}"
             ms = round((time.perf_counter() - t0) * 1000, 2)
-            p.setdefault("messages", []).append({"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": shorten(result, RESULT_CHARS)})
             step = {"tool": call["name"], "args": args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
                     **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),
                     **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {})}
-            p.setdefault("steps", []).append(step)
-            p["last"] = {"kind": "tool", "round": p.get("rounds", 0), **step}
-            return {key: p}
+            message = {"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": shorten(result, RESULT_CHARS)}
+            # the join appends this onto the conversation, in the model's order, whatever order the slots finish in
+            return {channel: {"index": index, "message": message, "step": step,
+                              "last": {"kind": "tool", "round": (state.get(key) or {}).get("rounds", 0), **step}}}
+        return fn
+
+    if t == "agent_join":
+        def fn(state):
+            p = copy.deepcopy(state.get(key) or {})
+            found, clear = [], {}
+            for i in range(1, MAX_CALLS_PER_ROUND + 1):
+                ch = f"{key}#{i}"
+                slot = state.get(ch)
+                if isinstance(slot, dict) and slot.get("message"): found.append(slot)
+                clear[ch] = None  # a later, smaller wave must not see a previous slot
+            for s in sorted(found, key=lambda s: s.get("index") or 0):
+                p.setdefault("messages", []).append(s["message"])
+                p.setdefault("steps", []).append(s["step"])
+            if found: p["pending"] = (p.get("pending") or [])[len(found):]
+            p["last"] = None
+            return {key: p, **clear}
+        return fn
+
+    if t == "agent_handoff":
+        def fn(state):
+            p = state.get(key) or {}
+            h = p.get("handoff") or {}
+            carried = [{"role": m["role"], "content": m["content"]} for m in p.get("messages") or []
+                       if isinstance(m, dict) and isinstance(m.get("content"), str) and m["content"]
+                       and (m.get("role") == "user" or (m.get("role") == "assistant" and not m.get("tool_calls")))]
+            src = d.get("agent_label") or owner(node)
+            last = {"kind": "handoff", "from": owner(node), "from_label": src, "to": h.get("to"), "to_label": h.get("label"), "reason": h.get("reason") or ""}
+            out: Dict[str, Any] = {key: None, COUNT_KEY: (state.get(COUNT_KEY) or 0) + 1,
+                                   HANDOFF_KEY: {"from": owner(node), "from_label": src, "to": h.get("to"), "reason": h.get("reason") or "",
+                                                 "messages": carried, "last": last}}
+            if d.get("steps_field"): out[d["steps_field"]] = (p.get("steps") or []) + [{"tool": h.get("tool"), "args": {"reason": h.get("reason") or ""},
+                                                                                       "result": f"Handed off to {h.get('label')}", "status": "handoff", "ms": 0}]
+            return out
         return fn
 
     # agent_exit

@@ -20,6 +20,8 @@ Use this workflow for broad, high-risk, cross-cutting, multi-agent, or multi-sta
     task into one commit, reruns validation, pushes with
     `--force-with-lease`, and marks the existing PR Ready for review.
 11. Human owner approves each Ready PR before merge.
+    If the task is not in done yet, it moves to done on that PR before the merge;
+    no separate PR only for the move.
 12. Planner tracks phase completion.
 13. PO confirms final requirement completion from done artifacts.
 

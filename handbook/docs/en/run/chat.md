@@ -64,6 +64,48 @@ images from other sites are not shown, and links open in a new tab.
   badge, so you can open its full trace there.
 - Chat uses the saved workflow: save your changes before you try them.
 
+## Attachments
+
+Turn on **Allow attachments** in Chat settings to let people add files to a
+message, in the Chat panel, on the published page and in the widget. It is off
+by default.
+
+![Attaching files](../images/chat-attachments.png)
+
+- **File types**: documents (PDF, TXT, MD, CSV) and images (PNG, JPEG, WebP).
+  The server reads the type from the file's content, not from its name.
+- **Files per message** and **Max size (MB)**: 5 files and 10 MB by default.
+  They cannot go over the server's ceiling, `STUDIO_CHAT_ATTACHMENT_MAX_FILES`
+  and `STUDIO_CHAT_ATTACHMENT_MAX_MB` (see
+  [Configuration](../reference/configuration.md)).
+- **State field**: a `list` field of the workflow that receives the files of
+  each message, `files` by default. It cannot be the message or conversation
+  field.
+
+Use the paperclip button or drop files on the message box. Each file is
+checked in the page before it uploads (type, size, count), shows as a chip
+with its size and a thumbnail for images, and can be removed before sending.
+Send waits until every upload is done. A message may carry files only.
+
+The run gets one record per file in the state field:
+
+```json
+[{"id": "…", "name": "invoice.pdf", "type": "application/pdf", "size": 5120,
+  "text": "Invoice 42 …", "text_cut": false}]
+```
+
+`text` holds the text of a document (up to 50,000 characters, `text_cut` says
+when it was cut). The bytes never enter the run state. To give the files to a
+model, turn on **Include attachments** on an [LLM](../guide/nodes.md#llm) or
+[Agent](../guide/agent.md#settings) node.
+
+Sent messages list their files with a download button. Only the person who
+sent them, and builders under [Visitor chats](#visitor-chats), can download
+them; files always download and never open in the page. Files are kept with
+the chat and deleted with it (retention or **Delete**); files that were
+uploaded but never sent are deleted after an hour. The public demo does not
+accept uploads.
+
 ## Memory
 
 With a conversation field set, each run gets the last *n* exchanges plus the
@@ -155,6 +197,19 @@ with every step, until **Retention** deletes it. It shows no names or visitor
 ids. Visitors are not told that chats are kept, so say so in the intro if it
 matters.
 
+Under each finished answer, the visitor can mark it helpful or not. A "not
+helpful" mark can include a short note about what went wrong. They can change
+the mark or remove it. The same controls are on the embedded chat, because
+that is this page.
+
+In the Chat tab the builder sees the mark and the note on the answer. **Thumbs
+down** in the Visitors list keeps only the chats that have one. A line above
+the conversation shows how many marks were up, how many were down, and the
+share of down, over the last 7 days and the last 30 days. **Save as test
+case** on a rated answer opens a draft test of that run. When LangSmith
+tracing is on, the mark is also sent to that run's trace as feedback named
+`user_rating`.
+
 ## Embed the chat on your site
 
 A chat open to **Anyone with the link** can also appear on another site.
@@ -198,6 +253,13 @@ The rest of the studio cannot be shown in a frame on any site.
 | `CHAT_DAILY_LIMIT` | The chat has used its messages for today. |
 | `CHAT_EMBED_ORIGIN_INVALID` | An embed site is not an address like `https://example.com`. |
 | `CHAT_LOGO_INVALID` | The logo is not a PNG, JPEG or WebP image, or it is over 256 KB. SVG is not accepted. |
+| `CHAT_ATTACHMENTS_OFF` | This chat does not accept attachments. |
+| `CHAT_ATTACHMENT_TYPE` | The file type is not allowed in this chat, or its content does not match a PDF, image or UTF-8 text. |
+| `CHAT_ATTACHMENT_TOO_LARGE` | The file is over the chat's size limit. |
+| `CHAT_ATTACHMENT_TOO_MANY` | The message has more files than the chat allows. |
+| `CHAT_ATTACHMENT_NOT_FOUND` | The file does not exist, or is not yours. |
+| `CHAT_ATTACHMENT_LIMIT` | A limit in Chat settings is over the server's ceiling. |
+| `CHAT_ATTACHMENT_DEMO` | The public demo does not accept uploads. |
 | `RATE_LIMITED` | Too many messages from this visitor or address; `retry_after` says when to try again. |
 
 See also [Chat triggers](chat-triggers.md) for Slack and Telegram.

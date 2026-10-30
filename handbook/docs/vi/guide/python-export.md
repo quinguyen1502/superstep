@@ -145,9 +145,13 @@ builder.add_conditional_edges("support_agent_tool", route_support_agent_tool, {"
 
 - `support_agent_model` gọi `call_agent(messages, tools, model)`: bản mock, hoặc
   khi đặt `LLM_PROVIDER` thì một chat model của LangChain với `bind_tools`.
-- `support_agent_tool` chạy một lần gọi công cụ. Công cụ trong
-  `SUPPORT_AGENT_NEEDS_APPROVAL` hỏi trước bằng `interrupt()`; "approved" thì
-  chạy, mọi câu trả lời khác được báo cho model làm lý do.
+- `support_agent_tool` chạy các lời gọi công cụ đang chờ. Khi `SUPPORT_AGENT_PARALLEL`
+  bật, chúng chạy cùng lúc, tối đa `wave_cap()` (4, hoặc `STUDIO_AGENT_PARALLEL_TOOLS`
+  khi giá trị đó từ 1 đến 8), và kết quả trả về theo thứ tự của model. Khi tắt,
+  chúng chạy lần lượt. Công cụ trong `SUPPORT_AGENT_NEEDS_APPROVAL` chạy một mình
+  và hỏi trước bằng `interrupt()`; "approved" thì chạy, mọi câu trả lời khác được
+  báo cho model làm lý do. Lời gọi lỗi thành kết quả của lời gọi đó. Các lời gọi
+  khác trong đợt vẫn chạy xong.
 - `SUPPORT_AGENT_TOOLS` chứa tên, mô tả và JSON Schema của từng công cụ, còn
   `SUPPORT_AGENT_MAX_ROUNDS` là giới hạn số vòng.
 

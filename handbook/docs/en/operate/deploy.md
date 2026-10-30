@@ -1,5 +1,19 @@
 # Deploy with Compose
 
+## Install with the CLI
+
+On a Docker host, install the command and start an instance from the
+[CLI](cli.md):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/quinguyen1502/superstep/develop/scripts/install.sh | sh
+superstep install
+```
+
+The sections below are the Compose layout behind the `full` topology, and the
+production checklist. Platform buttons for a hosted deploy stay in the
+repository deploy docs.
+
 ## Services
 
 | Service | Image | Role |

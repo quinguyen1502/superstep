@@ -18,6 +18,8 @@ import { Switch } from '@/components/ui/switch'
 import { TextLink } from '@/components/text-link'
 import { TemplateEditor, type TemplateField } from '@/components/template-editor'
 import { ModelPicker } from '@/components/model-picker'
+import { IncludeAttachments } from '@/components/include-attachments'
+import { AutoApprovalSettings } from '@/components/auto-approval-settings'
 import { HumanApprovalSettings } from '@/components/human-approval-settings'
 import { HumanDeadlineSettings } from '@/components/human-deadline-settings'
 import type { Credential } from '@/components/credentials-dialog'
@@ -184,7 +186,7 @@ const F = ({ label, htmlFor, children }: { label: string; htmlFor?: string; chil
 
 type Patch = (patch: Record<string, any>) => void
 type Props = { data: Record<string, any>; fields: TemplateField[]; creds: Credential[]
-  providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch; wid?: string }
+  providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch; wid?: string; canAuto?: boolean }
 
 /** Data tab (TASK-0121): the fields the agent writes its answer and steps to, and the history it reads. */
 export function AgentData({ data: d, fieldNames, listFields, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; onChange: Patch }) {
@@ -210,7 +212,7 @@ export function AgentExecution({ data: d, onChange }: { data: Record<string, any
 }
 
 /** Settings tab: model, prompts, tools and the approval settings for tools that need approval. */
-export function AgentSettings({ data: d, fields, creds, providers, channels, builtins, readOnly, nodeId, onChange, wid }: Props) {
+export function AgentSettings({ data: d, fields, creds, providers, channels, builtins, readOnly, nodeId, onChange, wid, canAuto = false }: Props) {
   const { t } = useTranslation()
   const [servers, setServers] = useState<McpServer[] | null>(null); const [kbs, setKbs] = useState<KnowledgeBase[] | null>(null)
   useEffect(() => {
@@ -240,6 +242,13 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
     <F label={t('agent.taskPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={5} id="agent-prompt" value={d.prompt || ''} onChange={v => onChange({ prompt: v })} /></F>
     <Separator />
     <div className="flex items-center gap-2">
+      <Switch id="agent-parallel" size="sm" checked={d.parallel_tool_calls !== false} disabled={readOnly}
+        onCheckedChange={c => onChange({ parallel_tool_calls: c === true })} />
+      <Label htmlFor="agent-parallel" className="text-xs font-normal">{t('agent.parallelTools')}</Label>
+    </div>
+    <p className="text-[11px] text-muted-foreground">{t('agent.parallelToolsHint')}</p>
+    <IncludeAttachments idp="agent" data={d} fields={fields} readOnly={readOnly} onChange={onChange} />
+    <div className="flex items-center gap-2">
       <span className="flex-1 text-xs font-semibold uppercase text-muted-foreground">{t('agent.tools')}</span>
       <DropdownMenu><DropdownMenuTrigger asChild disabled={readOnly}><Button variant="outline" size="sm" id="agent-add-tool"><Plus />{t('agent.addTool')}</Button></DropdownMenuTrigger>
         <DropdownMenuContent align="end">{SOURCES.map(s => { const I = ICONS[s]
@@ -256,6 +265,7 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
     {tools.some(x => x.approval) && <>
       <p className="text-[11px] text-muted-foreground" id="agent-approval-hint">{t('agent.approvalHint')}</p>
       <HumanApprovalSettings key={`${nodeId}-approval`} value={d.approval} channels={channels} onChange={v => onChange({ approval: v })} />
+      <AutoApprovalSettings key={`${nodeId}-auto`} idp="agent" value={d.approval?.auto} wid={wid} creds={creds} canAuto={canAuto} readOnly={readOnly} onChange={a => onChange({ approval: { ...(d.approval || {}), auto: a } })} />
       <HumanDeadlineSettings key={`${nodeId}-deadline`} value={d.deadline} onChange={v => onChange({ deadline: v })} />
     </>}
   </div>

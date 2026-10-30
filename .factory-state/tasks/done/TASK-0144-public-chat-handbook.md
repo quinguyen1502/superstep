@@ -91,3 +91,5 @@ CHANGELOG.
 ## Handoff Notes
 
 - After this task, the 0.9.0 release (TASK-0139, #184) updates its contents and is taken out of draft.
+- Review: `.factory-state/artifacts/REV-0127-task-0144.md`.
+- QA: `.factory-state/artifacts/QA-0127-task-0144.md`.

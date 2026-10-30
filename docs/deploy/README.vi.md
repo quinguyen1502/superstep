@@ -7,6 +7,19 @@ Một container phục vụ giao diện, `/api` và WebSocket `/ws/run` trên `$
 tuyến một cổng cho mỗi dịch vụ. `docker-compose.yml` của repo (Postgres, Redis, api, worker, nginx) vẫn là cách
 triển khai đầy đủ tính năng trên máy chủ của bạn.
 
+## Máy chủ Docker của bạn
+
+Trên máy có Docker, cài CLI rồi chạy `superstep install`. Lệnh này ghi một
+project Compose cho image all-in-one hoặc stack đầy đủ. Các nút nền tảng bên
+dưới giữ nguyên.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/quinguyen1502/superstep/develop/scripts/install.sh | sh
+superstep install
+```
+
+Trang handbook là Vận hành → CLI.
+
 | | Image all-in-one (PaaS) | `docker-compose.yml` (máy chủ riêng) |
 |---|---|---|
 | Cơ sở dữ liệu | SQLite trong `/data` (cần volume lưu trữ lâu dài), hoặc Postgres qua `DATABASE_URL` | Postgres 17 + pgvector |

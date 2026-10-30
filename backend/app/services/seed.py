@@ -29,7 +29,7 @@ def create_admin(users: UserRepository, email: str) -> None:
     else: log.warning("Created the admin account %s with the password from STUDIO_ADMIN_PASSWORD.", email)
 
 
-def bootstrap(db: Database) -> None:
+def bootstrap(db: Database, jobs=None) -> None:
     db.migrate()
     users, wfs = UserRepository(db), WorkflowRepository(db)
     u = users.get_by_email(config.DEMO_EMAIL)
@@ -51,4 +51,4 @@ def bootstrap(db: Database) -> None:
     wfs.adopt_unowned(uid)  # legacy rows created before multi-user support
     if not wfs.exists("example"):
         WorkflowService(wfs, RunRepository(db), WorkflowVersionRepository(db)).seed_example(uid, "example")
-    if config.demo_mode(): demo_service.seed(db, uid)  # every boot: the free plan wipes SQLite when it sleeps
+    if config.demo_mode(): demo_service.seed(db, uid, jobs=jobs)  # every boot: the free plan wipes SQLite when it sleeps

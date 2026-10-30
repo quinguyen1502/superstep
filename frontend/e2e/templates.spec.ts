@@ -28,7 +28,7 @@ test('blank and built-in templates from the New workflow gallery', async ({ page
 test('process templates: 13 built-ins, names in the UI language (TASK-0064)', async ({ page }) => {
   await login(page)
   await page.locator('#new-wf').click(); const g = page.locator('#template-gallery'); await expect(g).toBeVisible()
-  await expect(g.locator('[data-testid=tpl-card][data-id^=builtin-]')).toHaveCount(14)  // TASK-0119 added the Support agent template, TASK-0137 the Support team
+  await expect(g.locator('[data-testid=tpl-card][data-id^=builtin-]')).toHaveCount(15)  // TASK-0119 added the Support agent template, TASK-0137 the Support team, TASK-0184 the Help desk
   await expect(g.locator('[data-id=builtin-support-agent]')).toBeVisible()
   await expect(g.locator('[data-id=builtin-refund-approval]')).toContainText('Duyệt hoàn tiền')  // the e2e browser runs in Vietnamese
   await expect(g.locator('[data-channel-logo]')).toHaveCount(0)  // the owner chose names without channel logos on cards

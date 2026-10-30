@@ -4,6 +4,74 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.10.0 (2026-10-31)
+
+### Added
+
+- **Help desk template and the hand-off guide** (REQ-0078). New built-in template **Help desk**: Triage answers order questions and hands billing and technical questions to Billing and Technical, with test cases for the offline model. New handbook page "Agent hand-offs" (en, vi) with a comparison of hand-offs, supervisors with workflow tools and routing nodes, and Playwright coverage of the template in the Chat tab and on the public page.
+- **AI review of approvals: handbook and e2e** (TASK-0189, REQ-0081, DEC-0075). A new handbook page, "AI review of
+  approvals" (en, vi), covers the modes, settings, rules, when people are asked anyway, pausing, the audit, the risks
+  (overconfidence, prompt injection, cost) and exports; the Human node, Agent node and Human approval pages link to it.
+  A Playwright spec runs in en and vi: the settings on a Human node and an Agent's tool approval, the AI's opinion in
+  the Approvals inbox, the agreement rate after a person answers, and the pause switch.
+- **AI review of approvals in the editor and on the Approvals page** (TASK-0188, REQ-0081, DEC-0075). Human nodes and
+  Agent tool approval have an AI review section: mode (off, suggest, answer automatically; the last only for the
+  workflow owner or an admin), judge credential, model and instructions, minimum confidence, daily cap, notify and
+  rules, with the AI/human agreement rate. The Approvals page shows the AI's opinion on a waiting request, and an AI
+  review panel lists your workflows that use it with counts, the agreement rate and a pause switch; admins also get
+  the organisation pause (`GET /api/approvals/auto/workflows`). Python, TypeScript and LangGraph project exports note
+  AI review; workflow export and templates keep the policy without the judge's credential.
+- **AI review of approvals** (TASK-0187, REQ-0081, DEC-0075). With `approval.auto` on, a waiting Human node or Agent tool call is reviewed before anyone is asked: rules first (a `reject` rule rejects, a `human` rule asks people), then a separate model call (any chat credential) that returns approve, reject or escalate with a confidence and a reason. In auto mode only a confident approval (default 0.8) answers, within a per-workflow daily cap; the AI never rejects, and errors, timeouts, invalid answers, suspected injected instructions, the demo and the cap send the request to people. Suggest mode only shows the opinion (inbox `ai`, channel messages) and records whether people agreed. Automatic answers are audited (`kind: auto`) and the run owner alone gets a `run_auto_answered` notification. `GET /api/approvals/auto/workflows/{id}` returns the 30-day counts and agreement rate.
+- **Hand-offs in the code exports** (REQ-0078, DEC-0073). The Python file, the LangGraph project and the TypeScript file export Agent hand-offs with the same steps as the studio: `transfer_to_<agent>` tools, a hand-off node routed to the target agent, `MAX_HANDOFFS`, and a `start_agent` input that starts a run at a hand-off target.
+- **Hand-offs in the studio** (REQ-0078). The Agent node Config lists its hand-off targets with a description for the model, and sets the workflow hand-off limit. The canvas draws each hand-off as a dashed link from the Agent's hand-off handle; drawing one adds a target and deleting one removes it. The run trace and the chat steps name the agent a hand-off went to. English and Vietnamese.
+- **AI review of approvals: policy and switches** (TASK-0186, REQ-0081, DEC-0075). Human nodes and Agent tool approval accept `approval.auto` (`mode` off, suggest or auto; field `rules` that send to people or reject; `max_per_day`; `judge`; `min_confidence`; `notify`), checked on save. Only the workflow owner or an admin can turn auto on (`AUTO_APPROVAL_FORBIDDEN`). Kill switches: `STUDIO_AUTO_APPROVAL=off`, an organisation switch for admins and a per-workflow switch (`/api/approvals/auto`, `AUTO_APPROVAL_DISABLED`). Alembic 0045 adds the review columns to the approval audit and waiting steps.
+- **Chats stay with the agent that answered** (REQ-0078, DEC-0073). After a hand-off, the next message of the same chat session starts at the agent that answered last (new `chat_sessions.active_agent` column). If that agent was removed or is no longer a hand-off target, the chat starts at the entry again; a new session always starts at the entry.
+- **Agent hand-offs run** (REQ-0078, DEC-0073). An Agent with targets gets one `transfer_to_<name>` tool per target. Calling it ends the agent through a hand-off step and the target agent continues with the conversation and the reason; the run-wide hand-off limit removes the tools once reached, and other calls in the same round are answered as not run. Restarts, time travel and subgraphs keep the hand-off.
+- **Agent hand-offs: targets and the limit** (REQ-0078, DEC-0073). An Agent node can list `handoffs` (`[{target, description}]`): other Agent nodes of the same workflow or subgraph that it may hand the conversation to. The workflow's `max_handoffs` (default 5, 0 to 20) bounds the hand-offs of a run. A hand-off target counts as reachable. Saving refuses a target that is not another Agent node of the workflow (`AGENT_HANDOFF_TARGET_INVALID`) and a limit out of range (`AGENT_HANDOFF_LIMIT`); deleting an Agent node in the editor removes it from other nodes' targets.
+- **Chat attachments: handbook and e2e** (REQ-0077). The Chat page has an Attachments section (types, limits, the state field, the file record, downloads, retention) and the error codes; the LLM and Agent node pages describe Include attachments. A Playwright spec covers attaching a PDF and an image on the published page in en and vi.
+
+- **`sstep` alias for the CLI** (TASK-0185). The `superstep` package also installs `sstep`, which runs the same command. The installer and the handbook CLI page mention it.
+- **Chat attachments in the studio and on the page** (REQ-0077). With attachments on, the message box has an attach button and takes dropped files. Each file is checked against the chat's kinds, size and count before upload, shows as a chip with its size (a thumbnail for images) and can be removed; Send waits for uploads. Sent messages list their files with a download action, in the Chat tab, on the published page and the widget, and in the builder's Visitors list. Chat settings gain an Attachments section bounded by the server ceiling. LLM and Agent node settings gain "Include attachments" with the files field. The published page's settings (`GET /api/public/chat/{slug}`) include `attachments` (`enabled`, `kinds`, `max_files`, `max_mb`).
+
+- **Chat attachments reach the model** (REQ-0077, DEC-0072). LLM and Agent nodes have "Include attachments" (`include_attachments`, field `attachments_field`, default `files`). Documents go to the model as labelled text after the prompt. Images go as image parts to OpenAI, OpenRouter and OpenAI-compatible servers (`image_url`) and to Anthropic (`image` blocks) when the model can see images; other models get a note naming the image, and the run goes on. Image bytes are read at call time and never enter the run state. The offline mock names each file it got. The Python, LangGraph project and TypeScript exports take the same field: document text when the setting is on, and an image only when its record carries a `data_url`.
+
+- **Chat attachments: settings and the workflow field** (REQ-0077, DEC-0072). Chat settings gain `attachments` (`enabled`, `kinds`, `max_files`, `max_mb`, `field`), off by default and checked against the operator ceilings (`CHAT_ATTACHMENT_LIMIT`). A message sends `attachment_ids` with its text, on the public socket and on the studio run socket. The run gets the files in the named list field as `{id, name, type, size, text?, text_cut?}`, never their bytes. Each turn lists its files. With attachments off, uploads and sends with files get `CHAT_ATTACHMENTS_OFF`. An answer to a Human node stays text only.
+
+- **Chat attachments: storage** (REQ-0077, DEC-0072). A chat stores the files of a message in the database (`chat_attachments`). One file per upload, before the message is sent: `POST /api/public/chat/{slug}/sessions/{sid}/attachments` on the published page and `POST /api/chat/sessions/{sid}/attachments` in the studio, with download and delete beside them. The type is read from the bytes (PDF, PNG, JPEG, WebP, and UTF-8 `.txt`, `.md`, `.csv`). Files are served only as downloads with `nosniff`. Only the session's owner, and the builder from the Visitors list, can download them. Limits are 10 MB per file and 5 files per message, under the operator ceilings `STUDIO_CHAT_ATTACHMENT_MAX_MB` and `STUDIO_CHAT_ATTACHMENT_MAX_FILES`. Retention deletes a session's files, and files never sent are deleted after an hour. The public demo refuses uploads.
+
+- **superstep CLI phase 2** (REQ-0079, DEC-0071). `login`, `logout` and `whoami` sign the CLI in with a personal access token. `pull` and `push` keep workflow JSON in a folder and refuse a studio edit since the last pull unless `--force` is set. `run` follows the run-panel socket. `test` writes JUnit XML for CI. `mcp` speaks MCP on stdio and calls the studio with that token. No new package version and no new image: the next `v*` tag ships this.
+
+- **superstep CLI release** (REQ-0079, DEC-0068). `scripts/install.sh` installs the `superstep` command (`install`, `upgrade`, `backup`, `restore`, `deploy`, `doctor`, `status`, `admin`, `uninstall`). A `v*` tag publishes the Python package at the server version, and the package version moves from the `0.1.0` line to the server version. The same tag rules publish `ghcr.io/quinguyen1502/superstep-api` and `superstep-web`. The handbook Operate section starts from the CLI.
+
+- **Agent tool calls can run together** (REQ-0076, DEC-0069). One round may run up to eight tool calls, then join their results in the model's order. The default is 4 at a time (`STUDIO_AGENT_PARALLEL_TOOLS`, clamped to 1–8). An Agent node can turn parallel calls off. A wave that pauses for an approval or a child run lets the other calls finish, and the parent resumes once, after every wait in that wave. The trace draws those calls as overlapping bars. The Python, LangGraph project and TypeScript exports run the round together when the setting is on.
+
+- **Ratings on chat answers** (REQ-0075). A visitor can mark a finished answer helpful or not, and add a short note
+  when it was not. The same controls are on the embedded chat and in the studio Chat tab, where a builder can also
+  rate their own chat. The Chat tab filters visitor chats that have a thumbs down, shows how the marks split over 7
+  and 30 days, and can save a rated answer as a test case. When LangSmith tracing is on, the mark is sent to the
+  run's trace as `user_rating`.
+
+### Fixed
+
+- **Run trace of a tool wave that waits in two slots** (DEC-0069). When two calls of one round both waited (for
+  example two workflow tools), the trace kept an empty row for the second slot after the run resumed. Each slot now
+  keeps one row. Stale e2e specs (tool slot names, translated save errors, the template count) are updated.
+
+- **SQLite restore and a failed upgrade rollback** (REQ-0079). Restore deletes leftover `studio.db-wal` and `studio.db-shm` before replacing `studio.db`, so an unclean stop cannot replay old pages onto the restored file. If restoring the backup itself fails, `upgrade` reports that the rollback failed instead of saying the previous version is back. A Postgres dump is written to a file and packed from that file.
+
+- **Chat rating races** (REQ-0075). Two ratings of the same answer at once keep the last one. Removing a rating also removes its LangSmith feedback. Two send jobs share one feedback object.
+- **Agent trace steps** (REQ-0076). A tool slot `A/__tool/1` and the join `A/__join` sit under the Agent node. A chat hides the join step.
+
+- **CLI secrets on a process list** (REQ-0079). `admin create` and `admin reset-password` take a password from a prompt (`--password`) or from stdin (`--password-stdin`). `--password secret` is no longer accepted: the flag does not take a value. The password is not an argument of `superstep` or of `docker exec`. `deploy` puts `--` before the SSH host. No release tag has shipped the old flag.
+
+- **Approval of the same node** (REQ-0076). A new pause closes only the open wait of that node. Answering one wait of a wave leaves the others open, and the run resumes once when the last of them settles. The studio names the question it is showing, stores that answer, then closes that slot's inbox row and channel buttons, and the panel then shows the next question. The Approvals page remembers each sent row on its own. A published chat does the same with the question on the page, and the page then shows the next one. Two answers at once on SQLite both stick. The TypeScript export reads `STUDIO_AGENT_PARALLEL_TOOLS` through the same `env()` helper as the rest of the file.
+
+- **Rating removal and LangSmith** (REQ-0075). Deleting a chat, a workflow, or chats past the retention window also deletes the LangSmith feedback for those ratings.
+
+- **Run status on the canvas** (TASK-0147). The canvas now shows the run open in the Run panel. After an Agent node
+  waited for a workflow tool's child run, the steps its run took afterwards, End included, are marked done. Opening a
+  run from the history shows that run's marks instead of the last live run's.
+
 ## 0.9.0 (2026-10-27)
 
 ### Added

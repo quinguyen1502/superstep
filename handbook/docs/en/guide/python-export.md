@@ -145,9 +145,13 @@ builder.add_conditional_edges("support_agent_tool", route_support_agent_tool, {"
 
 - `support_agent_model` calls `call_agent(messages, tools, model)`: the mock,
   or with `LLM_PROVIDER` set a LangChain chat model with `bind_tools`.
-- `support_agent_tool` runs one tool call. A tool in
-  `SUPPORT_AGENT_NEEDS_APPROVAL` asks first with `interrupt()`; "approved" runs
-  it, any other answer is told to the model as the reason.
+- `support_agent_tool` runs the waiting tool calls. When `SUPPORT_AGENT_PARALLEL`
+  is on they run together, up to `wave_cap()` (4, or `STUDIO_AGENT_PARALLEL_TOOLS`
+  when that is 1–8), and the results go back in the model's order. When it is
+  off they run one after another. A tool in `SUPPORT_AGENT_NEEDS_APPROVAL` runs
+  on its own and asks first with `interrupt()`; "approved" runs it, any other
+  answer is told to the model as the reason. A call that fails becomes that
+  call's result. The other calls of the batch still finish.
 - `SUPPORT_AGENT_TOOLS` holds each tool's name, description and JSON Schema,
   and `SUPPORT_AGENT_MAX_ROUNDS` the limit.
 

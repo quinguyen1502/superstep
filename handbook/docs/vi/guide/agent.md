@@ -36,8 +36,10 @@ retry/timeout ở **Thực thi**.
 | Trường output | Nhận câu trả lời cuối cùng. |
 | Trường các bước | Tuỳ chọn, một trường list. Nhận từng lần gọi công cụ: `{tool, args, result, status, ms}`, thêm `approval` khi có người trả lời. |
 | Trường lịch sử | Tuỳ chọn, một trường list gồm các tin nhắn `{role, content}` (`user` hoặc `assistant`) được thêm trước prompt nhiệm vụ, ví dụ trường `messages` của chat. |
+| Đưa tệp đính kèm vào | Thêm các tệp của chat vào tin nhắn nhiệm vụ, như ở [node LLM](nodes.md#llm). Xem [Tệp đính kèm](../run/chat.md#tep-inh-kem). |
 | Công cụ | Ít nhất một. Xem bên dưới. |
 | Duyệt | Hiện khi có công cụ cần duyệt: kênh duyệt, người duyệt và hạn chờ, như ở node Human. |
+| AI duyệt | Hiện cùng mục Duyệt: một mô hình có thể xem từng lệnh gọi công cụ trước (gợi ý, hoặc tự trả lời). Xem [AI duyệt yêu cầu phê duyệt](../run/ai-review.md). |
 | Thực thi | Số lần thử, thời gian chờ giữa các lần và timeout áp dụng cho từng lần gọi model và từng lần gọi công cụ. Cache TTL không bao giờ dùng cho chúng, vì một bước lấy từ cache sẽ bỏ qua lần gọi hoặc bước duyệt. |
 
 ## Công cụ
@@ -137,8 +139,13 @@ mỗi agent được dựng và test trên canvas riêng của nó.
 ## Vòng và giới hạn
 
 Một **vòng** gồm một lần gọi model và các lần gọi công cụ mà model yêu cầu.
-Các lần gọi trong một vòng chạy lần lượt, theo thứ tự của model; tối đa 8 lần
-được chạy, các lần còn lại nhận kết quả "refused".
+Các lần gọi trong một vòng chạy cùng lúc, và kết quả trả về model theo thứ tự
+của model. Mặc định là 4 lần cùng lúc (`STUDIO_AGENT_PARALLEL_TOOLS`, từ 1 đến
+8). **Gọi các tool song song** trên node Agent tắt việc đó cho một node, nên
+các lần gọi chạy lần lượt. Tối đa 8 lần được chạy, các lần còn lại nhận kết
+quả "refused". Một lần gọi lỗi, hoặc một lần đang chờ duyệt hay chờ workflow
+khác, không dừng các lần gọi còn lại. Run tiếp tục khi mọi lần chờ trong vòng
+đã xong. Trace vẽ các lần gọi của một vòng thành các thanh bắt đầu cùng lúc.
 
 Vòng lặp kết thúc khi model trả lời mà không gọi công cụ nào. Khi tới **Số
 vòng tối đa**, model được gọi thêm một lần không kèm công cụ để đưa ra câu trả
@@ -232,6 +239,15 @@ workflow, `order_desk` và `refund_desk`, và giao mỗi câu hỏi cho bàn ph�
 Các test case kiểm rằng câu hỏi về đơn hàng tới bàn đơn hàng, còn yêu cầu hoàn
 tiền tới bàn hoàn tiền.
 
+## Mẫu Bàn hỗ trợ
+
+Mẫu **Bàn hỗ trợ** minh hoạ [chuyển giao giữa các agent](handoffs.md). Triage
+trả lời câu hỏi về đơn hàng bằng `lookup_order`, chuyển câu hỏi thanh toán cho
+**Billing** và sự cố kỹ thuật cho **Kỹ thuật**; Billing có thể chuyển sự cố kỹ
+thuật cho Kỹ thuật. Giới hạn chuyển giao là 3. Các test case kiểm rằng câu hỏi
+về đơn hàng ở lại với Triage, thanh toán trùng tới Billing và lỗi ứng dụng tới
+Kỹ thuật. Trong chat, tin nhắn tiếp theo ở lại với agent vừa trả lời.
+
 ## Xuất code
 
 - **Python và dự án LangGraph** (xem
@@ -253,6 +269,8 @@ tiền tới bàn hoàn tiền.
 | --- | --- |
 | `AGENT_TOOLS_UNSUPPORTED` | Nhà cung cấp của credential không gọi được công cụ (TypeSafe, SMTP). Bước model lỗi khi chạy. |
 | `WORKFLOW_INVALID` | Chạy một workflow mà editor đánh dấu chưa hợp lệ: thiếu prompt nhiệm vụ, không có công cụ, số vòng ngoài khoảng cho phép, công cụ thiếu cấu hình (máy chủ và công cụ, hàm, kho tri thức, URL hoặc workflow), hai công cụ trùng tên, hoặc trường các bước hay trường lịch sử không phải list. Riêng công cụ workflow: workflow không có hoặc không được chia sẻ với bạn, workflow nhập từ code, tạo vòng, lồng quá 5 cấp, hoặc trường tham số hay kết quả mà workflow không có. |
+| `AGENT_HANDOFF_TARGET_INVALID` | Đích chuyển giao không phải node Agent khác trong workflow này, hoặc bị liệt kê hai lần. Xem [Chuyển giao giữa các agent](handoffs.md). |
+| `AGENT_HANDOFF_LIMIT` | `max_handoffs` của workflow không phải số nguyên từ 0 đến 20. |
 | `WORKFLOW_TOOL_TOO_DEEP` | Lúc chạy, công cụ workflow lồng nhau quá 5 run; lần gọi không được chạy và model nhận lỗi. |
 
 Mọi mã lỗi có trong [Mã lỗi](../reference/errors.md).

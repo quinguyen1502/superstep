@@ -22,6 +22,7 @@ from ..models import ChatSession, WorkflowChatTrigger
 from ..repositories.chat_triggers import WEB
 from ..engine import agents
 from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService
+from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS
 
 SIG_LEN = 32
 DAY = 86400
@@ -79,7 +80,14 @@ class PublicChatService:
         t, st = self.published(slug)
         w = self.chat.workflows.get(t.workflow_id)
         return {"slug": slug, "title": st["title"] or w.name, "intro": st["intro"], "suggestions": st["suggestions"], "access": st["access"],
-                "steps_mode": st["steps"], "signed_in": user is not None, "embed_origins": st["embed_origins"], "logo": st["logo"]}  # the widget's iframe checks its host
+                "steps_mode": st["steps"], "signed_in": user is not None, "embed_origins": st["embed_origins"], "logo": st["logo"],  # the widget's iframe checks its host
+                "attachments": self.attachment_limits(st)}
+
+    @staticmethod
+    def attachment_limits(st: dict) -> dict:
+        """What the page's composer checks before an upload (TASK-0177): on or off, kinds, count and size; never the field."""
+        a = {**ATTACH_DEFAULTS, **(st.get("attachments") or {})}
+        return {k: a[k] for k in ("enabled", "kinds", "max_files", "max_mb")}
 
     def logo(self, slug: str):
         t, _ = self.published(slug)
@@ -134,6 +142,15 @@ class PublicChatService:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         return self.chat.view(self.own(t, sid, v), st["steps"]), v
 
+    def rate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict], value, comment) -> tuple[dict, Visitor]:
+        """The visitor rates one of their own finished answers. An unpublished chat refuses it (DEC-0070)."""
+        t, st = self.published(slug); v = self.visitor(slug, st, token, user)
+        return self.chat.rate(self.own(t, sid, v), tid, value, comment), v
+
+    def unrate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:
+        t, st = self.published(slug); v = self.visitor(slug, st, token, user)
+        return self.chat.unrate(self.own(t, sid, v), tid), v
+
     def own(self, t: WorkflowChatTrigger, sid: str, v: Visitor) -> ChatSession:
         """The visitor's session of this chat, else CHAT_SESSION_NOT_FOUND (another visitor's, another chat's, a studio chat)."""
         s = self.chat.sessions.get(sid) if isinstance(sid, str) else None
@@ -143,26 +160,33 @@ class PublicChatService:
 
     # ---- a message or an answer (the public socket) ----
     async def plan_message(self, slug: str, token: Optional[str], user: Optional[dict], req, ip: str, plan: Callable):
-        """(RunPlan, owner, steps mode, reply field) for `{chat_session_id, message}` or `{chat_session_id, response}`.
-        `plan` is RunService.plan; the run is the owner's and the session's, nothing else can be asked for."""
-        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale"}:
+        """(RunPlan, owner, steps mode, reply field) for `{chat_session_id, message}` or `{chat_session_id, response, node?}`.
+        `plan` is RunService.plan; the run is the owner's and the session's, nothing else can be asked for.
+        `node` is the question on the page. Another slot of the same wave is not accepted."""
+        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node", "attachment_ids"}:
             raise AppError("RUN_REQUEST_INVALID")
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         s = self.own(t, req.get("chat_session_id"), v)
         w = self.chat.workflows.get(t.workflow_id); owner = w.owner or t.owner
         answering = "response" in req
         await self.check_message(t, st, v, ip, daily=not answering)
+        if answering and req.get("attachment_ids"): raise AppError("RUN_REQUEST_INVALID")  # a Human node's answer is text only
         if answering:
             turns = self.chat.sessions.turns(s.id); last = turns[-1] if turns else None
             if last is None or last.role != "assistant" or last.status != "waiting" or not last.run_id: raise AppError("RUN_NOT_WAITING")
             if last.answered_by == "reviewer": raise AppError("CHAT_ANSWER_BY_REVIEWER")
             if req.get("resume_run_id") not in (None, last.run_id): raise AppError("RUN_NOT_WAITING")
-            p = await asyncio.to_thread(plan, owner, {"resume_run_id": last.run_id, "response": req.get("response")})
+            shown = last.node if isinstance(last.node, str) and last.node else None
+            node = req.get("node") if isinstance(req.get("node"), str) and req.get("node") else None
+            if node and shown and node != shown: raise AppError("RUN_NOT_WAITING")
+            body = {"resume_run_id": last.run_id, "response": req.get("response")}
+            if node or shown: body["node"] = node or shown
+            p = await asyncio.to_thread(plan, owner, body)
         else:
-            prep = self.chat.prepare(s, t, req.get("message"))
+            prep = self.chat.prepare(s, t, req.get("message"), req.get("attachment_ids"))
             p = await asyncio.to_thread(plan, owner, {"workflow_id": t.workflow_id, "input": prep["input"]})
             p.run_id, p.source = uuid.uuid4().hex[:10], "chat"
-            self.chat.write(s, t, prep["text"], p.run_id, v.owner or "visitor")
+            self.chat.write(s, t, prep["text"], p.run_id, v.owner or "visitor", prep["attachment_ids"])
         return p, owner, st["steps"], t.reply_field
 
     async def check_message(self, t: WorkflowChatTrigger, st: dict, v: Visitor, ip: str, daily: bool = True) -> None:

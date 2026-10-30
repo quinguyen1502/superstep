@@ -225,7 +225,7 @@ items, type-check diagnostics and full IntelliSense, stay out).
 
 REQ-0048, Accepted 2026-10-23 (owner decisions 1-6 on audience, access, memory, Human "answered by", step visibility,
 attachments/embed later and retention; DEC-0052, DEC-0053, DEC-0054). Phase 1, the studio Chat tab, is done. Phase 2, the
-public page `/c/{slug}`, is not started.
+public page `/c/{slug}`, is done as REQ-0074 (0.9.0).
 
 - TASK-0084 Web chat backend: chat sessions and turns (migration 0035), the `web` chat trigger with its settings, one
   `source="chat"` run per message over the run socket with the history window, reply-once answers, `node_token.field`,
@@ -307,6 +307,80 @@ This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 
 - TASK-0145 The chat's logo, with the title's first letter and a picture when there is none. Owner request
   2026-10-27. **merged** (PR #191; REV-0128, QA-0128).
 
+## The superstep CLI, phase 1
+
+REQ-0079 phase 1, planned on 2026-10-27 (DEC-0068, CLAR-0010). Merged on 2026-10-30
+(PR #203, #205, and #207 to #212). Phase 2 is planned in the next section (DEC-0071).
+
+- TASK-0149 CLI package, help, JSON, en and vi, completion, and the version on `/api/health`. **merged**
+  (PR #203; REV-0129, QA-0129).
+- TASK-0150 `install`, `adopt`, `start`, `stop`, `restart` and `logs`. **merged**
+  (PR #205; REV-0130, QA-0130).
+- TASK-0151 `status`, `config` and `doctor`. **merged**
+  (PR #207; REV-0137, QA-0136).
+- TASK-0152 `backup`, `restore` and scheduled backups. **merged**
+  (PR #208; REV-0138, QA-0138).
+- TASK-0153 `upgrade` with a backup and automatic rollback. **merged**
+  (PR #209; REV-0139, QA-0139).
+- TASK-0154 `admin` and `uninstall`. **merged**
+  (PR #210; REV-0140, QA-0140).
+- TASK-0155 `deploy` to a Docker host over SSH. **merged**
+  (PR #211; REV-0141, QA-0141).
+- TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **merged**
+  (PR #212; REV-0142, QA-0142).
+
+## The superstep CLI, phase 2
+
+REQ-0079 phase 2, planned on 2026-10-30 (DEC-0071, CLAR-0010). Medium-task workflow. Personal access
+tokens, browser sign-in, pull and push, run, test in CI, and MCP over stdio. The owner confirmed this
+set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). TASK-0168 is merged (PR #215, merge `575386c`). TASK-0169 is merged (PR #216, merge `b66ac50`). TASK-0170 is merged (PR #217, merge `1898f9f`). TASK-0171 is merged (PR #218, merge `f8b3aa1`).
+
+- TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout` and `whoami`. **merged**
+  (PR #214; REV-0143, QA-0143; merge `4d0ed17`).
+- TASK-0168 `workflows list`, `export`, `import`, `pull` and `push`. **merged**
+  (PR #215; REV-0144, QA-0144; merge `575386c`).
+- TASK-0169 `run` and `runs list`, `show`, `cancel`. **merged**
+  (PR #216; REV-0145, QA-0145; merge `b66ac50`).
+- TASK-0170 `test` and JUnit XML. **merged**
+  (PR #217; REV-0146, QA-0146; merge `1898f9f`).
+- TASK-0171 `mcp` over stdio. **merged**
+  (PR #218; REV-0147, QA-0147; merge `f8b3aa1`).
+- TASK-0172 Handbook (en, vi) and CHANGELOG. **done**
+  (REV-0148, QA-0148). Not merged.
+
+## Chat answer feedback
+
+REQ-0075, planned on 2026-10-27 (DEC-0070, CLAR-0006). Thumbs up or down on a finished chat answer, on the public
+page, the embed and the studio Chat tab. A thumbs down can carry a short comment. Builders see the mark, filter
+visitor chats that have a thumbs down, and read 7-day and 30-day totals. A rated answer can become a test case.
+When LangSmith tracing is on, the rating is sent as feedback on the run.
+
+- TASK-0162 Rating storage, public and studio APIs, retention, errors. **merged** (PR #204; REV-0131, QA-0131).
+- TASK-0163 Thumbs on the public page and the embed. **merged** (PR #204; REV-0132, QA-0132).
+- TASK-0164 Chat tab: marks, filter, totals, save as test case, rating one's own chat. **merged** (PR #204; REV-0133, QA-0133).
+- TASK-0165 LangSmith `user_rating` feedback, in the background. **merged** (PR #204; REV-0134, QA-0134).
+- TASK-0166 Handbook (en, vi) and CHANGELOG. **merged** (PR #204; REV-0135, QA-0135).
+
+## Parallel Agent tool calls
+
+REQ-0076, planned on 2026-10-27 (DEC-0069, CLAR-0007). Medium-task workflow. A round's tool calls run together.
+Each call keeps its own ledger entry. The owner confirmed this set on 2026-10-27. All five tasks are merged.
+
+- TASK-0157 Engine: one wave of tool slots, the cap, result order, the node setting off, and one checkpoint per wave. **merged** (PR #206; REV-0136, QA-0137).
+- TASK-0158 Approvals and child runs inside a wave: the other calls finish, and the parent resumes once. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
+- TASK-0159 The per-node switch and overlapping trace bars. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
+- TASK-0160 Python, LangGraph project and TypeScript exports run the calls concurrently. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
+- TASK-0161 Handbook (en, vi), env var, CHANGELOG, and the Support team e2e. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
+
+## Accepted, not planned yet
+
+Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
+owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1, REQ-0079 phase 2, REQ-0075, and REQ-0076 are planned in the
+sections above. The rest are not planned into tasks yet.
+
+- REQ-0077 File attachments in the chat: documents, and images for vision models (CLAR-0008).
+- REQ-0078 Hand-off from one Agent node to another in the same workflow (CLAR-0009).
+
 ## Owner requests
 
 Asked for in chat, with no requirement of their own. Review and QA are in each task file unless an artifact is named.
@@ -326,6 +400,10 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
   both locales, DEC-0065 (REQ-0045). **merged** (PR #174; REV-0116, QA-0116).
 - TASK-0146 Run trace layout: the summary bar's items no longer break mid-word, its divider stays short, and a
   workflow tool's steps sit under the tool call, ending at the duration column. **merged** (PR #193).
+- TASK-0147 The canvas marks nodes from the open run's events, so the steps a parent run takes on the server after
+  its workflow tool's child (End included) show as done (REQ-0073). **merged** (PR #198).
+- TASK-0148 A task PR moves its own task to done when the owner approves the merge (framework 338d7a8); TASK-0139 to
+  TASK-0144 link their review and QA. **merged** (PR #199).
 
 ## Releases
 
@@ -334,6 +412,8 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0128 Version 0.8.0: the TypeScript export of Agent nodes, template setup hints, an answer kept across a
   restart. **released** (PR #166 to main, tag `v0.8.0`).
 - TASK-0139 Version 0.9.0: workflows as Agent tools, the public chat page, workflow checks in the UI language.
-  **in progress** (#184).
+  **released** (PR #196 to main, tag `v0.9.0`).
+- TASK-0190 Version 0.10.0: chat attachments, agent hand-offs and the Help desk template, AI review of approvals,
+  the `sstep` alias. **in progress** (#241).
 - Earlier releases (0.3.0 to 0.6.0: TASK-0096, TASK-0098, TASK-0100, TASK-0105, TASK-0111) and the tasks between
   TASK-0087 and TASK-0112 are not listed in this roadmap. Their task files and CHANGELOG.md have the details.

@@ -60,6 +60,7 @@ deleted or copied. Start receives the run input as the initial state.
 | Model | Picked from the provider's model list, or typed. |
 | Prompt template | Text with `{{state.field}}` references and filters. |
 | Output field | The state field that receives the reply. |
+| Include attachments | Sends the chat's files in the files field (`files` by default) to the model: documents as text after the prompt, images as images when the model can see them (other models get a note naming the image). See [Attachments](../run/chat.md#attachments). |
 
 While a run is going, token deltas arrive as `node_token` events and show in
 the Logs row and the Output tab. They are not stored in run history; the final
@@ -205,6 +206,8 @@ up `STUDIO_RECURSION_LIMIT`, which only bounds the other loops.
 `prompt` (a template) and `output_field`. The run waits in status `waiting`
 until someone answers **Approve** (`approved`), **Reject** (`rejected`) or
 free text. See [Human approval](../run/human-approval.md).
+A model can review the request first, as a suggestion or answering on its own: see
+[AI review of approvals](../run/ai-review.md).
 
 ## Join
 

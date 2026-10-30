@@ -141,12 +141,24 @@ def exported(tmp_path, code):
     return names, final
 
 
+def export_steps(path, kinds, names):
+    """Studio slot ids (`ag/__tool/1`) and the join, compared with the export's single sequential tool node (TASK-0160)."""
+    skip = ("start", "end", "subgraph", "subgraph_exit", "agent_join")
+    out = []
+    for i in path:
+        kind = kinds.get(i)
+        if kind in skip: continue
+        key = i.rsplit("/", 1)[0] if kind == "agent_tool" and i.rsplit("/", 1)[-1].isdigit() else i
+        out.append(names[key])
+    return out
+
+
 def same_run(tmp_path, wf, inp, answers=None, children=None, ordered=True, ignore=()):
     out = X.to_python(wf, wf.get("name", "Workflow"), 1, children, {"input": inp, "answers": answers or {}})
     flat = agents.expand(subgraphs.expand(wf, (children or {}).get) if children else wf)
     kinds = {n["id"]: n["type"] for n in flat["nodes"]}
     path, state = studio(wf, inp, answers, children)
-    want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
+    want = export_steps(path, kinds, out.names)
     skip = {out.names[i] for i, t in kinds.items() if t == "subgraph"}
     got, final = exported(tmp_path, out.code)
     got = [n for n in got if n not in skip and n in out.names.values()]  # a workflow tool's own graph prints its steps too
@@ -247,6 +259,7 @@ def test_agent_with_every_tool_source(tmp_path):
     assert "params=query or None" in code and "body = json.dumps(args" not in code  # GET: query string; POST with a body template
     assert 'question = ("Helper \\"one\\" wants to call "' in code and "also go to a channel" in code
     assert 'builder.add_conditional_edges("helper_one_model", route_helper_one_model, {"tool": "helper_one_tool", "done": "helper_one_end"})' in code
+    assert "def wave_cap(enabled: bool)" in code and "HELPER_ONE_PARALLEL = True" in code
     assert "agent_helper_one: Optional[dict]  # an Agent node's conversation" in code and '"recursion_limit": ' in code
     # the mock calls the MCP tool when the task names it, which needs approval: approve and reject both follow the studio
     for answer in ("approved", "No, use 2"):
@@ -399,3 +412,64 @@ def test_graph_values_never_become_code():
     tree = ast.parse(code)
     assert not any(isinstance(n, ast.Name) and n.id == "__import__" for n in ast.walk(tree))
     assert "initial_interval=0.5" in code and "cache_policy" not in code and "top_k=4" in code
+
+
+MCP_STUB = '''def call_mcp_tool(tool: str, arguments: dict) -> Any:
+    """MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
+    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters."""
+    return None'''
+
+MCP_SLOW = '''def call_mcp_tool(tool: str, arguments: dict) -> Any:
+    t0 = time.perf_counter()
+    time.sleep({"alpha": 0.2, "beta": 0.05, "gamma": 0.12}[tool])
+    t1 = time.perf_counter()
+    with open("spans.txt", "a") as fh:
+        fh.write(f"{tool} {t0:.6f} {t1:.6f}\\n")
+    if tool == "beta" and os.environ.get("WAVE_FAIL") == "1":
+        raise RuntimeError("down")
+    return tool'''
+
+
+def _wave_workflow(parallel=True):
+    tool = lambda name: {"name": name, "description": name, "source": "mcp", "server_id": "s", "tool": name,  # noqa: E731
+                         "parameters": {"type": "object", "properties": {}}}
+    data = {"prompt": "{{state.message}}", "output_field": "answer", "steps_field": "steps",
+            "tools": [tool("alpha"), tool("beta"), tool("gamma")]}
+    if not parallel: data["parallel_tool_calls"] = False
+    return {"name": "Wave", "state": [{"name": "message", "type": "string"}, {"name": "answer", "type": "string"}, {"name": "steps", "type": "list"}],
+            "nodes": [N("start", "start"), N("ag", "agent", **data), N("end", "end")],
+            "edges": [E("start", "ag"), E("ag", "end")]}
+
+
+def _run_wave(tmp_path, parallel=True, cap=None, fail=False):
+    code = X.to_python(_wave_workflow(parallel), "Wave", 1, example={"input": {"message": "ask alpha beta and gamma"}}).code
+    assert MCP_STUB in code
+    f = tmp_path / f"wave_{uuid.uuid4().hex[:6]}.py"
+    f.write_text(code.replace(MCP_STUB, MCP_SLOW))
+    env = {k: v for k, v in os.environ.items() if k not in KEYS and k != "PYTHONPATH"}
+    env.pop("STUDIO_AGENT_PARALLEL_TOOLS", None)
+    if cap is not None: env["STUDIO_AGENT_PARALLEL_TOOLS"] = str(cap)
+    if fail: env["WAVE_FAIL"] = "1"
+    (tmp_path / "spans.txt").unlink(missing_ok=True)
+    p = subprocess.run([sys.executable, "-I", str(f)], cwd=tmp_path, env=env, capture_output=True, text=True, timeout=60)
+    assert p.returncode == 0, p.stderr[-3000:]
+    rows = []
+    span = tmp_path / "spans.txt"
+    if span.exists():
+        rows = [(a, float(b), float(c)) for a, b, c in (line.split() for line in span.read_text().splitlines())]
+    final = json.loads(p.stdout.split("Final state:", 1)[1])
+    return rows, final
+
+
+def test_exported_calls_overlap_in_model_order_and_a_failure_leaves_the_others(tmp_path):
+    rows, final = _run_wave(tmp_path)
+    assert [s["tool"] for s in final["steps"]] == ["alpha", "beta", "gamma"]
+    assert max(s for _, s, _ in rows) < min(e for _, _, e in rows)
+    rows, final = _run_wave(tmp_path, cap=2)
+    gamma = min(s for name, s, _ in rows if name == "gamma")
+    assert gamma >= min(e for name, _, e in rows if name in ("alpha", "beta"))
+    rows, final = _run_wave(tmp_path, parallel=False)
+    ordered = sorted(rows, key=lambda r: r[1])
+    assert all(ordered[i][1] >= ordered[i - 1][2] for i in range(1, len(ordered)))
+    rows, final = _run_wave(tmp_path, fail=True)
+    assert [s["status"] for s in final["steps"]] == ["ok", "error", "ok"] and "down" in final["steps"][1]["result"]

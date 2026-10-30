@@ -38,6 +38,7 @@ nav:
       - The editor: guide/editor.md
       - Nodes: guide/nodes.md
       - Agent node: guide/agent.md
+      - Agent hand-offs: guide/handoffs.md
       - State and references: guide/state.md
       - Code mode: guide/code-mode.md
       - Knowledge bases: guide/knowledge.md
@@ -49,6 +50,7 @@ nav:
       - run/index.md
       - Runs and traces: run/traces.md
       - Human approval: run/human-approval.md
+      - AI review of approvals: run/ai-review.md
       - API triggers and webhooks: run/api-triggers.md
       - Public API and SDKs: run/public-api.md
       - LangGraph-compatible API: run/agent-server-api.md
@@ -59,6 +61,7 @@ nav:
       - Workflow tests: run/tests.md
   - Operate:
       - operate/index.md
+      - CLI: operate/cli.md
       - Deploy with Compose: operate/deploy.md
       - Accounts and security: operate/accounts.md
       - Roles and sharing: operate/access.md

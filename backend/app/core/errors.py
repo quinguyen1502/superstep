@@ -18,6 +18,11 @@ CATALOG: dict[str, tuple[int, str]] = {
     # auth
     "AUTH_REQUIRED": (401, "Authentication required"),
     "AUTH_TOKEN_INVALID": (401, "Invalid token"),
+    "PAT_NAME_TAKEN": (409, "You already have an active token named {name}"),
+    "PAT_NOT_FOUND": (404, "Token not found"),
+    "CLI_DEVICE_INVALID": (400, "This sign-in code is not valid"),
+    "CLI_DEVICE_EXPIRED": (400, "This sign-in code has expired"),
+    "CLI_DEVICE_DENIED": (400, "This sign-in was denied"),
     "AUTH_TOKEN_EXPIRED": (401, "Session expired, please sign in again"),
     "AUTH_INVALID_CREDENTIALS": (401, "Incorrect email or password"),
     "AUTH_EMAIL_INVALID": (400, "Invalid email address"),
@@ -36,6 +41,8 @@ CATALOG: dict[str, tuple[int, str]] = {
     "WORKFLOW_NAME_REQUIRED": (400, "Workflow name is required"),
     "WORKFLOW_NAME_TOO_LONG": (400, "Workflow name must be at most {max} characters"),
     "WORKFLOW_NAME_TAKEN": (409, "A workflow with this name already exists"),
+    "AGENT_HANDOFF_TARGET_INVALID": (400, "Agent node {node}: hand-off target {target} must be another Agent node of this workflow, listed once"),
+    "AGENT_HANDOFF_LIMIT": (400, "Max hand-offs per run must be 0-{max}"),
     "WORKFLOW_TOO_LARGE": (413, "Workflow is too large (max {max_kb} KB)"),
     "WORKFLOW_INVALID": (400, "Workflow is invalid"),
     # templates (TASK-0025)
@@ -96,6 +103,16 @@ CATALOG: dict[str, tuple[int, str]] = {
     "CHAT_EMBED_ORIGIN_INVALID": (400, "'{origin}' is not a site address like https://example.com"),
     "CHAT_LOGO_INVALID": (400, "The logo must be a PNG, JPEG or WebP image of at most {max_kb} KB"),
     "CHAT_LOGO_NOT_FOUND": (404, "This chat has no logo"),
+    "CHAT_ATTACHMENTS_OFF": (403, "This chat does not accept attachments"),
+    "CHAT_ATTACHMENT_TYPE": (400, "This file type is not allowed here. Allowed: {allowed}"),
+    "CHAT_ATTACHMENT_TOO_LARGE": (413, "A file may be at most {max_mb} MB"),
+    "CHAT_ATTACHMENT_TOO_MANY": (400, "A message may carry at most {max} files"),
+    "CHAT_ATTACHMENT_NOT_FOUND": (404, "File not found"),
+    "CHAT_ATTACHMENT_DEMO": (403, "Attachments are turned off in the public demo"),
+    "CHAT_ATTACHMENT_LIMIT": (400, "Attachment limits may be at most {max_files} files and {max_mb} MB per file"),
+    "CHAT_TURN_NOT_FOUND": (404, "Message not found"),
+    "CHAT_RATING_NOT_ALLOWED": (409, "This message cannot be rated"),
+    "CHAT_RATING_INVALID": (400, "Rating: invalid {field}"),
     # workflow tests (TASK-0067)
     "TEST_NOT_FOUND": (404, "Test case not found"),
     "TEST_CASE_INVALID": (400, "Test case: {reason}"),
@@ -236,6 +253,8 @@ CATALOG: dict[str, tuple[int, str]] = {
     "CODE_TOO_LARGE": (413, "Code node {node}: the {what} is larger than {max_kb} KB"),
     "CODE_LANGUAGE_UNSUPPORTED": (400, "Code node {node}: {language} is not available on this server"),
     "CODE_WRITE_FORBIDDEN": (403, "Your role may not add Code nodes or change their code (code.write)"),
+    "AUTO_APPROVAL_FORBIDDEN": (403, "Only the workflow owner or an admin can turn on automatic AI approval"),
+    "AUTO_APPROVAL_DISABLED": (409, "AI auto-approval is turned off on this server"),
 }
 
 

@@ -6,7 +6,7 @@ import httpx
 from ..core import config
 from ..core.errors import AppError
 from ..core.net import pinned_request, public_address
-from . import agents, code_languages, code_runtime, decisions, emails, foreach
+from . import agents, attachments, code_languages, code_runtime, decisions, emails, foreach
 from .effects import Effects, call_tool
 from .errors import Interrupt
 from .llm import LLMError, TokenBuffer, call_llm
@@ -73,16 +73,25 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
                 cred = resolve(d["credential_id"])
             report = (lambda u: usage(node["id"], u)) if usage else None
             tokens = token_stream(node["id"])
+            files = attachments.records(state, d)
+            extra = {"files": files, "load": ports.attachment} if files else {}  # only when the node sends files
             try: return {d["output_field"]: call_llm(render(d.get("prompt", ""), state), d.get("model", "gpt-4o-mini"), cred, report, tokens,
-                                                     mock=offline, locale=ports.locale)}
+                                                     mock=offline, locale=ports.locale, **extra)}
             finally:
                 if tokens: tokens.flush()
     elif t == "human":
         def fn(state):
-            # resume = {"node", "value"} for the node the run paused at; consumed once so a loop back here pauses again
+            # resume = {"node", "value"} for the node the run paused at; consumed once so a loop back here pauses again.
+            # A wave keeps one answer per node in `answers` (TASK-0158).
+            bag = (resume or {}).get("answers")
+            if isinstance(bag, dict) and node["id"] in bag:
+                return {d["output_field"]: bag.pop(node["id"])}
             if resume is not None and resume.get("node") == node["id"] and "value" in resume:
                 return {d["output_field"]: resume.pop("value")}
-            raise Interrupt(node["id"], render(d.get("prompt", ""), state))
+            prompt = render(d.get("prompt", ""), state)
+            if effects is not None:
+                effects.hold({"node": node["id"], "kind": "approval", "prompt": prompt, "label": d.get("label") or node["id"]})
+            raise Interrupt(node["id"], prompt)
     elif t == "tool":
         def fn(state):
             if d.get("mode") == "http":

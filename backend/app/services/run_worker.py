@@ -37,6 +37,14 @@ class RunWorker:
             return await asyncio.to_thread(self.deliveries().attempt, job["delivery_id"]) if self.deliveries else None
         if job.get("kind") == "langsmith_suite":
             return await asyncio.to_thread(self.langsmith().on_suite_done, job["suite_id"]) if self.langsmith else None
+        if job.get("kind") == "chat_rating":
+            state = await asyncio.to_thread(self.langsmith().on_rating, job["turn_id"]) if self.langsmith else None
+            if state == "busy" and int(job.get("tries") or 0) < 8:
+                self.jobs.enqueue_at({**job, "tries": int(job.get("tries") or 0) + 1}, time.time() + 1)
+            return None
+        if job.get("kind") == "chat_rating_delete":
+            if self.langsmith: await asyncio.to_thread(self.langsmith().on_rating_removed, str(job.get("feedback_id") or ""))
+            return None
         if job.get("kind") == "chat_message":
             return await self.chat().handle(job["message_id"]) if self.chat else None
         svc = self.services(); rid = job["run_id"]; row = svc.runs.get(rid); attempt = int(job.get("attempt") or 1)
@@ -72,9 +80,11 @@ class RunWorker:
         """Continue a waiting run with a decision from an approval channel (TASK-0022). The claim (waiting -> running,
         compare-and-set) makes sure only one resume happens, however many jobs or clicks there were."""
         rid, owner = job["run_id"], job["owner"]
-        try: plan = svc.plan_resume(owner, rid, job.get("response"), via_channel=True, child=job.get("child"))
+        try: plan = svc.plan_resume(owner, rid, job.get("response"), via_channel=True, child=job.get("child"),
+                                    node=job.get("node"), wave=bool(job.get("wave")))
         except AppError as e:
             log.info("approval resume of run %s skipped: %s", rid, e.code); return None
+        if plan.pending_wave: return None  # one slot of the wave was stored; the run stays waiting
         gen = svc.runs.claim(rid, ("waiting",))
         if gen is None: return None
         plan.fence, plan.checkpointing, plan.resumed_by = gen, True, job.get("by")

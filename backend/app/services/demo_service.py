@@ -68,7 +68,7 @@ class DemoService:
         if not ok: raise AppError("RATE_LIMITED", headers={"Retry-After": str(retry)}, retry_after=retry)
 
 
-def seed(db: Database, owner: str) -> None:
+def seed(db: Database, owner: str, jobs=None) -> None:
     """Idempotent: the visitor account (viewer, the public password) and the samples owned by `owner` (an admin)."""
     from .workflow_service import WorkflowService
     from .chat_session_service import ChatSessionService
@@ -86,15 +86,15 @@ def seed(db: Database, owner: str) -> None:
         if wid == CHAT_SAMPLE and triggers.web(wid) is None: chats.save_settings(wid, owner, {"enabled": True})
         if shares.role_of(wid, VISITOR_ID) is None:
             shares.upsert(WorkflowShare(workflow_id=wid, user_id=VISITOR_ID, role="viewer", created=time.time(), shared_by=owner))
-    purge_expired(db)
+    purge_expired(db, jobs=jobs)
     log.info("Demo mode: %d sample workflows shared with %s", len(samples), VISITOR_EMAIL)
 
 
-def start_visit(db: Database, now: Optional[float] = None) -> str:
+def start_visit(db: Database, now: Optional[float] = None, jobs=None) -> str:
     """A fresh anonymous visitor account (viewer, no password: only reachable through this session) with the template's
     sample shares, after removing expired visitors. Returns its id."""
     now = time.time() if now is None else now
-    purge_expired(db, now)
+    purge_expired(db, now, jobs=jobs)
     users, shares, wfs = UserRepository(db), WorkflowShareRepository(db), WorkflowRepository(db)
     vid = VISITOR_PREFIX + secrets.token_hex(8)
     users.add(vid, f"visitor-{vid.removeprefix(VISITOR_PREFIX)}@demo.superstep.dev", "", now)
@@ -105,12 +105,16 @@ def start_visit(db: Database, now: Optional[float] = None) -> str:
     return vid
 
 
-def purge_expired(db: Database, now: Optional[float] = None) -> int:
-    """Remove visitors created more than STUDIO_DEMO_VISITOR_TTL ago, with their runs, chats, notifications and shares."""
+def purge_expired(db: Database, now: Optional[float] = None, jobs=None) -> int:
+    """Remove visitors created more than STUDIO_DEMO_VISITOR_TTL ago, with their runs, chats, notifications and shares.
+    `jobs` deletes the LangSmith feedback for those chats. The caller passes the queue; this module does not import the API."""
     now = time.time() if now is None else now
+    from .chat_session_service import enqueue_feedback_deletes
     users, data, chats = UserRepository(db), UserDataRepository(db), ChatSessionRepository(db)
     gone = users.ids_created_before(VISITOR_PREFIX, now - config.demo_visitor_ttl())
     for vid in gone:
+        fids = chats.feedback_ids_for_owner(vid)
         chats.delete_for_owner(vid); data.purge(vid, runs=True); data.delete_user(vid)
+        enqueue_feedback_deletes(jobs, fids)
     if gone: log.info("Demo mode: removed %d expired visitors", len(gone))
     return len(gone)

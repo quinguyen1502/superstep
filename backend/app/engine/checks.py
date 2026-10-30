@@ -118,7 +118,8 @@ def evaluate(checks: List[dict], run: Dict[str, Any], workflow: Dict[str, Any]) 
 def tool_ran(e: dict, agent: str, tool: str) -> bool:
     """Whether this `node_finished` event is a call of `tool` by Agent node `agent` that ran (engine/agents step summary)."""
     a = e.get("agent") if isinstance(e.get("agent"), dict) else {}
-    return e.get("node") == f"{agent}{agents.SEP}{agents.TOOL}" and a.get("kind") == "tool" and a.get("tool") == tool and outcome(a) in RAN
+    # a slot is `agent/__tool/1` (DEC-0069); older events used `agent/__tool`
+    return agents.agent_of_step(str(e.get("node") or "")) == agent and a.get("kind") == "tool" and a.get("tool") == tool and outcome(a) in RAN
 
 
 def outcome(a: dict) -> str:

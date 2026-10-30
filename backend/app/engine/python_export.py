@@ -16,7 +16,7 @@ The output is a pure function of its input: the same graph gives the same bytes.
 from __future__ import annotations
 import ast, builtins, inspect, io, json, keyword, re, tokenize
 from typing import Any, Dict, List, Optional
-from . import agents, foreach
+from . import agents, approval_policy, attachments, foreach
 from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWriter, camel as _camel, number as _number,
                             one_line as _one_line, slug)
 from .templating import VAR_RE, _ONE_FILTER, refs
@@ -32,7 +32,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
     "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
-    "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
+    "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 
 
 RULE = re.compile(r"# --- (.+?) -+")
@@ -188,6 +188,73 @@ def call_llm(prompt: str, model: str) -> str:
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
 '''
 
+FILES = '''
+# --- Attachments ---------------------------------------------------------------------------------------------
+# Files a chat sent with the message, for nodes with "Include attachments": a list of {name, type, text?, text_cut?,
+# data_url?}. A document reaches the model as text after the prompt. An image reaches it only when its record carries
+# a data_url ("data:image/png;base64,...") that you supply; otherwise the model gets a note.
+
+
+def is_image(f: dict) -> bool:
+    return str(f.get("type") or "").startswith("image/")
+
+
+def with_files(prompt: str, files: Any) -> tuple:
+    """(text, image parts) of one user message with its files."""
+    text, images = [prompt], []
+    for f in files if isinstance(files, list) else []:
+        if not isinstance(f, dict):
+            continue
+        name = f.get("name")
+        if is_image(f):
+            url = f.get("data_url")
+            if isinstance(url, str) and url.startswith("data:"):
+                images.append({"type": "image_url", "image_url": {"url": url}})
+            else:
+                text.append(f"An image named {name} was attached, but no image data was given.")
+        else:
+            body, cut = f.get("text") or "", " (cut)" if f.get("text_cut") else ""
+            text.append(f'Attached document "{name}"{cut}:\\n{body}' if body else f'Attached document "{name}" has no text.')
+    return "\\n\\n".join(t for t in text if t), images
+
+
+def files_note(files: Any) -> str:
+    """What the offline mock says it received: each file's kind and name."""
+    return "Attachments: " + ", ".join(f"{'image' if is_image(f) else 'document'} {f.get('name')}" for f in files if isinstance(f, dict))
+
+
+def call_llm_files(prompt: str, model: str, files: Any) -> str:
+    """call_llm() with the files sent with the message."""
+    files = files if isinstance(files, list) else []
+    if not LLM_PROVIDER:
+        return mock_llm(prompt, model) + (f"\\n{files_note(files)}" if files else "")
+    from langchain.chat_models import init_chat_model
+    from langchain_core.messages import HumanMessage
+
+    text, images = with_files(prompt, files)
+    reply = init_chat_model(model, model_provider=LLM_PROVIDER).invoke([HumanMessage([{"type": "text", "text": text}] + images)] if images else text)
+    if isinstance(reply.content, str):
+        return reply.content
+    return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
+'''
+
+AGENT_FILES = '''
+
+def call_agent_files(messages: list, tools: Optional[list], model: str) -> tuple:
+    """call_agent() for a conversation whose user message carries `files`."""
+    files = [f for m in messages if m["role"] == "user" for f in m.get("files") or []]
+    if not LLM_PROVIDER:
+        text, calls = mock_agent(messages, tools, model)
+        return (f"{text}\\n{files_note(files)}" if text and files else text), calls
+    out = []
+    for m in messages:
+        if m.get("files"):
+            text, images = with_files(m["content"], m["files"])
+            m = {"role": "user", "content": text, "images": images}
+        out.append(m)
+    return call_agent(out, tools, model)
+'''
+
 ROUTING = '''
 # --- Routing -------------------------------------------------------------------------------------------------
 
@@ -237,14 +304,44 @@ def decide(text: str, question: dict) -> Any:
     return float(found.group()) if found else 0.0
 '''
 
+HANDOFF = r'''
+# --- Hand-offs -----------------------------------------------------------------------------------------------
+# An Agent node with hand-off targets offers the model one transfer_to_<agent> tool per target. Calling one ends the
+# agent: its hand-off node records who takes over, and a conditional edge goes to that agent, which continues the
+# conversation. MAX_HANDOFFS bounds a run; past it the tools are gone and the agent answers itself.
+HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Continue it and answer the person yourself."
+NOT_RUN = "Not run: the conversation was handed off"
+NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
+
+
+def carried(messages: list) -> list:
+    """What the next agent sees: the person's messages and the agents' replies, without tool calls and results."""
+    return [{"role": m["role"], "content": m["content"]} for m in messages
+            if m.get("role") == "user" or (m.get("role") == "assistant" and not m.get("tool_calls") and m.get("content"))]
+'''
+
 AGENT = r'''
 # --- Agents --------------------------------------------------------------------------------------------------
 # An Agent node is a loop of two nodes: the model node asks the model, which answers or asks for tool calls, and the
-# tool node runs one call and gives the result back. Without LLM_PROVIDER, call_agent() is an offline mock: it calls
-# the tool that best matches the task once, then answers with its result (the studio's mock agent).
+# tool node runs that round's calls. They run together unless the node turns that off. Without LLM_PROVIDER,
+# call_agent() is an offline mock: it calls the tools the task names, then answers with the last result.
 MAX_CALLS_PER_ROUND = 8
 RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
 STEP_CHARS = 2000  # ... and into the steps field shortened to this
+
+
+def wave_cap(enabled: bool) -> int:
+    """Calls of one round that run together. Off is one. Otherwise 4, or STUDIO_AGENT_PARALLEL_TOOLS when it is 1..8."""
+    if not enabled:
+        return 1
+    raw = os.environ.get("STUDIO_AGENT_PARALLEL_TOOLS")
+    if raw is None or not str(raw).strip():
+        return 4
+    try:
+        n = int(str(raw).strip())
+    except ValueError:
+        return 4
+    return n if 1 <= n <= 8 else 4
 JSON_TYPES = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
 
 
@@ -255,19 +352,22 @@ def agent_task(messages: list) -> tuple:
 
 
 def mock_agent(messages: list, tools: Optional[list], model: str) -> tuple:
-    """Offline agent: with no tool result yet it calls the tool whose name and description share the most words with
-    the task (the first one on a tie), string arguments filled with the task; then it answers with the last result."""
+    """Offline agent: with no tool result yet it calls every tool the task names (or the best match), then answers."""
     task, results = agent_task(messages)
     if tools and not results:
         words = set(re.findall(r"\w+", task.lower()))
         score = lambda t: len(words & set(re.findall(r"\w+", f"{t['name'].replace('_', ' ')} {t.get('description') or ''}".lower())))  # noqa: E731
-        best = max(tools, key=score)
-        params = best.get("parameters") or {}
-        props, required = params.get("properties") or {}, set(params.get("required") or [])
-        empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
-        args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
-                for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
-        return "", [{"id": "mock_call_1", "name": best["name"], "args": args}]
+        named = [t for t in tools if re.search(r"(?<!\w)" + re.escape(str(t.get("name") or "").lower()) + r"(?!\w)", task.lower())]
+        picked = named if len(named) >= 2 else [max(tools, key=score)]
+        calls = []
+        for i, best in enumerate(picked, 1):
+            params = best.get("parameters") or {}
+            props, required = params.get("properties") or {}, set(params.get("required") or [])
+            empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
+            args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
+                    for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+            calls.append({"id": f"mock_call_{i}", "name": best["name"], "args": args})
+        return "", calls
     said = (results[-1].get("content") or "") if results else (task.strip().splitlines() or [""])[-1]
     return f"[mock:{model}] Answer: {said[:200]}", []
 
@@ -287,7 +387,9 @@ def call_agent(messages: list, tools: Optional[list], model: str) -> tuple:
         elif m["role"] == "tool":
             history.append(ToolMessage(m["content"], tool_call_id=m["tool_call_id"]))
         else:
-            history.append(SystemMessage(m["content"]) if m["role"] == "system" else HumanMessage(m["content"]))
+            images = m.get("images") or []
+            content = [{"type": "text", "text": m["content"]}] + images if images else m["content"]
+            history.append(SystemMessage(m["content"]) if m["role"] == "system" else HumanMessage(content))
     llm = init_chat_model(model, model_provider=LLM_PROVIDER)
     if tools:
         llm = llm.bind_tools([{"type": "function", "function": t} for t in tools])
@@ -453,6 +555,8 @@ class _Writer(GraphWriter):
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
+        if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
+        if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
         if "routing" in self.uses: self.add("\n" + ROUTING.rstrip())
         if "decide" in self.uses: self.add("\n" + DECIDE.rstrip())
         stubs = [k for k in STUBS if k in self.uses]
@@ -507,10 +611,14 @@ class _Writer(GraphWriter):
             self.add("# in, and the fields the subgraph changed come back when it ends.")
         chats = [a["chat"] for a in g.agents.values()]
         rows = [(f["name"], self.ann(f)) for f in fields] + [(c, "int") for c in g.cursors.values()] + [(c, "Optional[dict]") for c in chats]
+        if self.has_handoffs(g):  # the pending hand-off, the run's count, and the agent a chat continues with (TASK-0183)
+            rows += [(self.HANDOFF_FIELD, "Optional[dict]"), (self.COUNT_FIELD, "int"), (self.START_FIELD, "str")]
         if rows and all(n.isidentifier() and not keyword.iskeyword(n) for n, _ in rows):
             self.add(f"class {cls}(TypedDict, total=False):")
             for n, a in rows:
-                why = "  # loop position of a For each node" if n in g.cursors.values() else "  # an Agent node's conversation" if n in chats else ""
+                why = "  # loop position of a For each node" if n in g.cursors.values() else "  # an Agent node's conversation" if n in chats else \
+                    {self.HANDOFF_FIELD: "  # a hand-off on its way to the next agent", self.COUNT_FIELD: "  # hand-offs so far in this run",
+                     self.START_FIELD: "  # input: start at this agent (a chat continues with the agent that answered last)"}.get(n, "")
                 self.add(f"    {n}: {a}{why}")
         else:
             body = ", ".join(f"{lit(n)}: {a}" for n, a in rows)
@@ -537,7 +645,9 @@ class _Writer(GraphWriter):
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}."""')
             self.add(f"    prompt = render({const}_PROMPT, state)")
-            self.add(ret(f"call_llm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
+            files = attachments.field_of(d)
+            self.add(ret(f"call_llm_files(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, state.get({lit(files)}))" if files
+                         else f"call_llm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
         elif t == "human":
             self.add(f"{const}_PROMPT = {lit(d.get('prompt') or '')}")
             self.add("")
@@ -550,6 +660,7 @@ class _Writer(GraphWriter):
             extra = []
             if (d.get("approval") or {}).get("channel"): extra.append(f"also asks on {str(d['approval']['channel']).title()}")
             if d.get("deadline"): extra.append("has a deadline with reminders")
+            if approval_policy.mode(d) != "off": extra.append("has AI review of the request (people answer every request here)")
             if extra: self.add(f"    In Superstep this node {' and '.join(extra)}; that is not part of LangGraph.")
             self.add('    """')
             self.add(f"    answer = interrupt({{\"node\": {lit(name)}, \"question\": render({const}_PROMPT, state)}})")
@@ -746,7 +857,13 @@ class _Writer(GraphWriter):
             if isinstance(t, dict) and t.get("source") == "http":
                 self.add(f"{self.http_key(const, t)}_URL = {lit(t.get('url') or '')}")
                 self.add(f"{self.http_key(const, t)}_BODY = {lit(t.get('body') or '')}")
+        hs = self.handoff_tools(g, nid) if "handoff" in a else []
+        if hs:
+            self.add(f"# Hand-offs: the transfer tools the model may call, and the agent each one leads to.")
+            self.add(f"{const}_HANDOFF_TOOLS = {lit(self.handoff_specs(hs))}")
+            self.add(f"{const}_HANDOFFS = {lit({h['name']: {'to': h['node'], 'label': h['label']} for h in hs})}")
         self.add(f"{const}_MAX_ROUNDS = {self.rounds(d)}")
+        self.add(f"{const}_PARALLEL = {d.get('parallel_tool_calls') is not False}")
         self.add("")
         self.add("")
         self.add(f"def {name}(state: {cls}) -> dict:")
@@ -754,15 +871,26 @@ class _Writer(GraphWriter):
         self.add("")
         self.add("    Then the model and the tools take turns, one node each:")
         self.add(f"    - {model}() asks the model, which answers or asks for tool calls;")
-        self.add(f"    - {tool}() runs one tool call (route_{model}() and route_{tool}() pick the next node);")
+        self.add(f"    - {tool}() runs the waiting tool calls (route_{model}() and route_{tool}() pick the next node);")
         self.add(f"    - {end}() writes the answer.\"\"\"")
+        receiver = nid in self.receivers(g)
+        if receiver:
+            self.add(f"    got = state.get({lit(self.HANDOFF_FIELD)}) or {{}}")
+            self.add(f"    if got.get(\"to\") == {lit(name)}:  # handed off to this agent: the note, then the conversation so far")
+            self.add("        reason = f\" Reason: {got['reason']}.\" if got.get(\"reason\") else \"\"")
+            sys_ = f"render({const}_SYSTEM, state), " if d.get("system_prompt") else ""
+            self.add(f"        system = \"\\n\\n\".join(x for x in ({sys_}HANDOFF_NOTE.format(source=got[\"from\"], reason=reason)) if x)")
+            self.add(f"        messages = [{{\"role\": \"system\", \"content\": system}}] + got[\"messages\"] + [{{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}}]")
+            self.add(f"        return {{{chat}: {{\"messages\": messages, \"pending\": [], \"rounds\": 0, \"steps\": [], \"answer\": None}}, {lit(self.HANDOFF_FIELD)}: None}}")
         self.add("    messages = []")
         if d.get("system_prompt"): self.add(f"    messages.append({{\"role\": \"system\", \"content\": render({const}_SYSTEM, state)}})")
         if d.get("history_field"):
             self.add(f"    for m in state.get({lit(d['history_field'])}) or []:  # the earlier turns of a chat")
             self.add("        if isinstance(m, dict) and m.get(\"role\") in (\"user\", \"assistant\") and isinstance(m.get(\"content\"), str):")
             self.add("            messages.append({\"role\": m[\"role\"], \"content\": m[\"content\"]})")
-        self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}})")
+        files = attachments.field_of(d)
+        if files: self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state), \"files\": state.get({lit(files)}) or []}})")
+        else: self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}})")
         self.add(f"    return {{{chat}: {{\"messages\": messages, \"pending\": [], \"rounds\": 0, \"steps\": [], \"answer\": None}}}}")
         self.add("")
         self.add("")
@@ -770,12 +898,33 @@ class _Writer(GraphWriter):
         self.add(f'    """{_doc(who)}: one model call. After {const}_MAX_ROUNDS rounds the model gets no tools, so it has to answer."""')
         self.add(f"    chat = dict(state[{chat}])")
         self.add(f"    last = chat[\"rounds\"] >= {const}_MAX_ROUNDS")
-        self.add(f"    text, calls = call_agent(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
+        call = "call_agent_files" if attachments.field_of(d) else "call_agent"
+        if hs:
+            self.add(f"    can = state.get({lit(self.COUNT_FIELD)}, 0) < MAX_HANDOFFS")
+            self.add("    if not can and not chat.get(\"no_more\"):  # the run's hand-offs are used up: say so once")
+            self.add("        chat[\"messages\"] = [{\"role\": \"system\", \"content\": NO_MORE}] + chat[\"messages\"]")
+            self.add("        chat[\"no_more\"] = True")
+            self.add(f"    tools = {const}_TOOLS + ({const}_HANDOFF_TOOLS if can else [])")
+            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else tools, {lit(d.get('model') or 'gpt-4o-mini')})")
+        else:
+            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
         self.add("    calls = [] if last else [{\"id\": str(c.get(\"id\") or f\"call_{i}\"), \"name\": str(c.get(\"name\") or \"\"), \"args\": c.get(\"args\")}")
         self.add("                             for i, c in enumerate(calls)]")
         self.add("    if not last:")
         self.add("        chat[\"rounds\"] += 1")
         self.add("    chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"assistant\", \"content\": text, **({\"tool_calls\": calls} if calls else {})}]")
+        if hs:
+            self.add(f"    first = next((c for c in calls if c[\"name\"] in {const}_HANDOFFS), None) if can else None")
+            self.add("    if first is not None:  # the hand-off wins: the other calls of the round are answered, not run")
+            self.add(f"        h = {const}_HANDOFFS[first[\"name\"]]")
+            self.add("        for c in calls:")
+            self.add("            said = f\"Handed off to {h['label']}\" if c is first else NOT_RUN")
+            self.add("            chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"tool\", \"tool_call_id\": c[\"id\"], \"name\": c[\"name\"], \"content\": said}]")
+            self.add("            if c is not first:")
+            self.add("                chat[\"steps\"] = chat[\"steps\"] + [{\"tool\": c[\"name\"], \"args\": c[\"args\"], \"result\": NOT_RUN, \"status\": \"not_run\", \"ms\": 0}]")
+            self.add("        reason = str((first[\"args\"] if isinstance(first[\"args\"], dict) else {}).get(\"reason\") or \"\")[:500]")
+            self.add("        chat[\"pending\"], chat[\"handoff\"] = [], {\"to\": h[\"to\"], \"reason\": reason}")
+            self.add(f"        return {{{chat}: chat}}")
         self.add("    chat[\"pending\"] = calls[:MAX_CALLS_PER_ROUND]")
         self.add("    for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run")
         self.add("        why = f\"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round\"")
@@ -787,57 +936,95 @@ class _Writer(GraphWriter):
         self.add("")
         self.add("")
         self.add(f"def route_{model}(state: {cls}) -> str:")
-        self.add("    \"\"\"After a model call: \"tool\" while tool calls wait, else \"done\".\"\"\"")
+        if hs:
+            self.add("    \"\"\"After a model call: \"handoff\" when it handed off, \"tool\" while tool calls wait, else \"done\".\"\"\"")
+            self.add(f"    if state[{chat}].get(\"handoff\"):")
+            self.add("        return \"handoff\"")
+        else:
+            self.add("    \"\"\"After a model call: \"tool\" while tool calls wait, else \"done\".\"\"\"")
         self.add(f"    return \"tool\" if state[{chat}][\"pending\"] else \"done\"")
+        if hs:
+            hn = a["handoff"]
+            self.add("")
+            self.add("")
+            self.add(f"def {hn}(state: {cls}) -> dict:")
+            self.add(f'    """{_doc(who)} hands off: the conversation so far goes to the next agent, and this one ends without answering."""')
+            self.add(f"    chat = state[{chat}]")
+            self.add(f"    handoff = {{\"from\": {lit(who)}, \"to\": chat[\"handoff\"][\"to\"], \"reason\": chat[\"handoff\"][\"reason\"], \"messages\": carried(chat[\"messages\"])}}")
+            self.add(f"    return {{{chat}: None, {lit(self.HANDOFF_FIELD)}: handoff, {lit(self.COUNT_FIELD)}: state.get({lit(self.COUNT_FIELD)}, 0) + 1}}")
+            self.add("")
+            self.add("")
+            self.add(f"def route_{hn}(state: {cls}) -> str:")
+            self.add("    \"\"\"The agent the hand-off goes to.\"\"\"")
+            self.add(f"    return state[{lit(self.HANDOFF_FIELD)}][\"to\"]")
         self.agent_calls(d, name, const, cls)
         self.add("")
         self.add("")
         self.add(f"def {tool}(state: {cls}) -> dict:")
-        self.add(f'    """{_doc(who)}: runs the first tool call the model asked for and gives the result back to the model.')
+        self.add(f'    """{_doc(who)}: runs the tool calls waiting from the model and gives the results back, in the model\'s order.')
+        self.add(f"    With {const}_PARALLEL on, up to wave_cap() calls run together. A failure becomes that call's result;")
+        self.add("    the others still finish.")
         if approval:
-            self.add(f"    A tool in {const}_NEEDS_APPROVAL asks first with interrupt(): \"approved\" runs the call; any other answer")
-            self.add("    rejects it, and the model is told why. On resume the node runs again from the top.")
+            self.add(f"    A tool in {const}_NEEDS_APPROVAL runs on its own and asks first with interrupt(): \"approved\" runs the call;")
+            self.add("    any other answer rejects it, and the model is told why. On resume the node runs again from the top.")
         if (d.get("approval") or {}).get("channel") or d.get("deadline"):
             self.add("    In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
+        if approval_policy.mode(d) != "off":
+            self.add("    In Superstep a model can review the request first (AI review); here people answer every request.")
         self.add('    """')
         self.add(f"    chat = dict(state[{chat}])")
-        self.add("    call, chat[\"pending\"] = chat[\"pending\"][0], chat[\"pending\"][1:]")
-        self.add(f"    spec = next((t for t in {const}_TOOLS if t[\"name\"] == call[\"name\"]), None)")
-        self.add("    problem = None if spec is None else check_arguments(spec[\"parameters\"], call[\"args\"])")
+        self.add("    pending = list(chat[\"pending\"])")
+        self.add(f"    n = min(wave_cap({const}_PARALLEL), len(pending))")
         if approval:
-            self.add("    answer = None")
-            self.add(f"    if spec is not None and problem is None and call[\"name\"] in {const}_NEEDS_APPROVAL:")
-            self.add(f"        question = ({lit(who + ' wants to call ')} + call[\"name\"] + \" with these arguments:\\n\"")
-            self.add("                    + json.dumps(call[\"args\"], ensure_ascii=False, indent=2)")
-            self.add("                    + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\")")
-            self.add(f"        answer = str(interrupt({{\"node\": {lit(name)}, \"question\": question}}))")
-        self.add("    started = time.perf_counter()")
-        self.add("    if spec is None:")
-        self.add(f"        status, result = \"error\", f\"Unknown tool {{call['name']}}: use one of {{', '.join(sorted(t['name'] for t in {const}_TOOLS))}}\"")
-        self.add("    elif problem:")
-        self.add("        status, result = \"error\", f\"Invalid arguments for {call['name']}: {problem}\"")
+            self.add("    for i, call in enumerate(pending[:n]):")
+            self.add(f"        if call[\"name\"] in {const}_NEEDS_APPROVAL:")
+            self.add("            n = 1 if i == 0 else i")
+            self.add("            break")
+        self.add("    batch, chat[\"pending\"] = pending[:n], pending[n:]")
+        self.add("    def one(call: dict) -> tuple:")
+        self.add(f"        spec = next((t for t in {const}_TOOLS if t[\"name\"] == call[\"name\"]), None)")
+        self.add("        problem = None if spec is None else check_arguments(spec[\"parameters\"], call[\"args\"])")
         if approval:
-            self.add("    elif answer is not None and answer.strip().lower() != \"approved\":")
-            self.add("        comment = \"\" if answer.strip().lower() == \"rejected\" else answer.strip()")
-            self.add("        status, result = \"rejected\", \"Rejected by a reviewer\" + (f\": {comment}\" if comment else \"\")")
+            self.add("        answer = None")
+            self.add(f"        if spec is not None and problem is None and call[\"name\"] in {const}_NEEDS_APPROVAL:")
+            self.add(f"            question = ({lit(who + ' wants to call ')} + call[\"name\"] + \" with these arguments:\\n\"")
+            self.add("                        + json.dumps(call[\"args\"], ensure_ascii=False, indent=2)")
+            self.add("                        + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\")")
+            self.add(f"            answer = str(interrupt({{\"node\": {lit(name)}, \"question\": question}}))")
+        self.add("        started = time.perf_counter()")
+        self.add("        if spec is None:")
+        self.add(f"            status, result = \"error\", f\"Unknown tool {{call['name']}}: use one of {{', '.join(sorted(t['name'] for t in {const}_TOOLS))}}\"")
+        self.add("        elif problem:")
+        self.add("            status, result = \"error\", f\"Invalid arguments for {call['name']}: {problem}\"")
+        if approval:
+            self.add("        elif answer is not None and answer.strip().lower() != \"approved\":")
+            self.add("            comment = \"\" if answer.strip().lower() == \"rejected\" else answer.strip()")
+            self.add("            status, result = \"rejected\", \"Rejected by a reviewer\" + (f\": {comment}\" if comment else \"\")")
+        self.add("        else:")
+        self.add("            try:")
+        self.add(f"                status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
+        self.add("            except Exception as error:  # the model hears about the failure and can try something else")
+        self.add("                status, result = \"error\", f\"The tool failed: {error}\"")
+        self.add("        step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
+        self.add("                \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
+        if approval:
+            self.add("        if answer is not None:")
+            self.add("            step[\"approval\"] = \"rejected\" if status == \"rejected\" else \"approved\"")
+        self.add("        return ({\"role\": \"tool\", \"tool_call_id\": call[\"id\"], \"name\": call[\"name\"], \"content\": shorten(result, RESULT_CHARS)}, step)")
+        self.add("    if n <= 1:")
+        self.add("        pairs = [one(batch[0])]")
         self.add("    else:")
-        self.add("        try:")
-        self.add(f"            status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
-        self.add("        except Exception as error:  # the model hears about the failure and can try something else")
-        self.add("            status, result = \"error\", f\"The tool failed: {error}\"")
-        self.add("    step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
-        self.add("            \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
-        if approval:
-            self.add("    if answer is not None:")
-            self.add("        step[\"approval\"] = \"rejected\" if status == \"rejected\" else \"approved\"")
-        self.add("    chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"tool\", \"tool_call_id\": call[\"id\"], \"name\": call[\"name\"],")
-        self.add("                                          \"content\": shorten(result, RESULT_CHARS)}]")
-        self.add("    chat[\"steps\"] = chat[\"steps\"] + [step]")
+        self.add("        from concurrent.futures import ThreadPoolExecutor")
+        self.add("        with ThreadPoolExecutor(max_workers=n) as pool:")
+        self.add("            pairs = list(pool.map(one, batch))  # map keeps the model's order")
+        self.add("    for message, step in pairs:")
+        self.add("        chat[\"messages\"] = chat[\"messages\"] + [message]")
+        self.add("        chat[\"steps\"] = chat[\"steps\"] + [step]")
         self.add(f"    return {{{chat}: chat}}")
         self.add("")
         self.add("")
         self.add(f"def route_{tool}(state: {cls}) -> str:")
-        self.add("    \"\"\"After a tool call: the next waiting call, else back to the model with the results.\"\"\"")
+        self.add("    \"\"\"After a batch of tool calls: another batch if any remain, else back to the model.\"\"\"")
         self.add(f"    return \"tool\" if state[{chat}][\"pending\"] else \"model\"")
         self.add("")
         self.add("")
@@ -899,10 +1086,25 @@ class _Writer(GraphWriter):
                 self.add(f"        raise ValueError({lit(f'unknown tool source {src!r}')})")
         self.add("    raise ValueError(f\"unknown tool {name}\")")
 
+    @staticmethod
+    def start_router(build: str, is_main: bool) -> str: return "route_start" if is_main else f"route_start_{build}"
+
     def build(self, g: _Graph, cls: str, build: str, is_main: bool) -> None:
         name = lambda i: "END" if g.nodes[i]["type"] == "end" else lit(g.names[i])  # noqa: E731
         leave = lambda i: lit(g.agents[i]["exit"]) if i in g.agents else lit(g.names[i])  # an Agent node's edges leave from its end node  # noqa: E731
         cache = any(_number((n.get("data") or {}).get("cache_ttl"), int) is not None for n in g.nodes.values())
+        if (rec := self.receivers(g)):
+            first = [name(e["target"]) for s in g.nodes if g.nodes[s]["type"] == "start" for e in g.out(s) if g.nodes[e["target"]]["type"] != "join"]
+            self.add("")
+            self.add("")
+            self.add(f"{self.start_router(build, is_main).upper()}_AGENTS = {lit([g.names[r] for r in rec])}  # the agents a chat may continue with")
+            self.add("")
+            self.add("")
+            self.add(f"def {self.start_router(build, is_main)}(state: {cls}) -> list:")
+            self.add(f"    \"\"\"Where the run starts: the agent named in {self.START_FIELD}, if it is one a hand-off reaches, else the first node.\"\"\"")
+            self.add(f"    if state.get({lit(self.START_FIELD)}) in {self.start_router(build, is_main).upper()}_AGENTS:")
+            self.add(f"        return [state[{lit(self.START_FIELD)}]]")
+            self.add(f"    return [{', '.join(first)}]")
         self.add("")
         self.add("")
         if is_main:
@@ -931,7 +1133,8 @@ class _Writer(GraphWriter):
                 kw.append(f"input_schema={_camel(g.names[nid])}Input")
             self.add(f"    builder.add_node({lit(g.names[nid])}, {fn}{''.join(', ' + k for k in kw)})")
             if n["type"] == "agent":
-                for step in ("model", "tool", "exit"): self.add(f"    builder.add_node({lit(g.agents[nid][step])}, {g.agents[nid][step]})")
+                for step in ("model", "tool", "exit", "handoff"):
+                    if step in g.agents[nid]: self.add(f"    builder.add_node({lit(g.agents[nid][step])}, {g.agents[nid][step]})")
             if (timeout := _number(d.get("timeout"))) is not None:
                 self.add(f"    # The studio stops {g.names[nid]} after {timeout} s; LangGraph has no timeout for a node that blocks.")
             if is_main: self.span(nid, s)
@@ -948,14 +1151,23 @@ class _Writer(GraphWriter):
                 a = {k: lit(v) for k, v in g.agents[nid].items()}
                 self.add("    # The Agent node's loop: the model, then each tool call it asks for, then back to the model.")
                 self.add(f"    builder.add_edge({lit(g.names[nid])}, {a['model']})")
-                self.add(f"    builder.add_conditional_edges({a['model']}, route_{g.agents[nid]['model']}, {{\"tool\": {a['tool']}, \"done\": {a['exit']}}})")
+                more = f", \"handoff\": {a['handoff']}" if "handoff" in a else ""
+                self.add(f"    builder.add_conditional_edges({a['model']}, route_{g.agents[nid]['model']}, {{\"tool\": {a['tool']}, \"done\": {a['exit']}{more}}})")
                 self.add(f"    builder.add_conditional_edges({a['tool']}, route_{g.agents[nid]['tool']}, {{\"tool\": {a['tool']}, \"model\": {a['model']}}})")
+                if "handoff" in a:
+                    to = ", ".join(f"{lit(h['node'])}: {lit(h['node'])}" for h in self.handoff_tools(g, nid))
+                    self.add(f"    builder.add_conditional_edges({a['handoff']}, route_{g.agents[nid]['handoff']}, {{{to}}})  # hand-offs")
             if n["type"] in ("condition", "foreach") and out:
                 if first_edge and n["type"] == "condition":
                     self.add("    # A conditional edge: the router returns a label, and the map says which node it leads to.")
                     first_edge = False
                 mapping = ", ".join(f"{lit(e.get('label'))}: {name(e['target'])}" for e in out)
                 self.add(f"    builder.add_conditional_edges({src}, route_{g.names[nid]}, {{{mapping}}})")
+            elif n["type"] == "start" and self.receivers(g):
+                targets = [e["target"] for e in out if g.nodes[e["target"]]["type"] != "join"]
+                every = ", ".join(dict.fromkeys([name(t) for t in targets] + [lit(g.names[r]) for r in self.receivers(g)]))
+                self.add(f"    # A chat continues with the agent that answered last: {self.START_FIELD} in the input starts there.")
+                self.add(f"    builder.add_conditional_edges(START, {self.start_router(build, is_main)}, [{every}])")
             else:
                 targets = [e["target"] for e in out if g.nodes[e["target"]]["type"] != "join"]
                 if len(targets) > 1:

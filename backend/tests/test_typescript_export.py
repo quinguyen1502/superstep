@@ -10,7 +10,7 @@ import pytest
 from app.engine import agents, exporters, subgraphs
 from app.engine import typescript_export as T
 from app.engine.templates import BUILTINS
-from test_python_export import AGENT, CHILD, KEYS, LOOP, N, E, F, ODD, PARALLEL, PARENT, TOOLS, H, c, save, studio, user, without_ms  # noqa: F401
+from test_python_export import AGENT, CHILD, KEYS, LOOP, N, E, F, ODD, PARALLEL, PARENT, TOOLS, H, c, export_steps, save, studio, user, without_ms  # noqa: F401
 
 SNAPSHOT = Path(__file__).parent / "snapshots" / "typescript_export_demo.ts"
 TS_CODE = ('import { z } from "npm:zod@^3"\n\nexport function main(state: State) {\n  console.log("got", state.message)\n'
@@ -116,6 +116,8 @@ def test_agent_nodes_are_exported(c):
     assert 'const question = "Helper \\"one\\" wants to call " + call.name' in code and "also go to a channel" in code
     assert '.addConditionalEdges("helper_one_model", route_helper_one_model, { tool: "helper_one_tool", done: "helper_one_end" })' in code
     assert '.addEdge("helper_one_end", END)' in code and "recursionLimit: " in code
+    wave = code.split("function waveCap", 1)[1].split("type Schema", 1)[0]
+    assert 'env("STUDIO_AGENT_PARALLEL_TOOLS")' in wave and "Deno" not in wave
     assert "def helper_one" not in code and "helper_one_end" in T.to_typescript(AGENT_PARENT, "P", None, {"agent1": AGENT}).code
     u = user(c); wid = save(c, u, AGENT)
     r = c.get(f"/api/workflows/{wid}/code?language=typescript", headers=H(u["token"])).json()["data"]
@@ -175,7 +177,7 @@ def same_run(tmp_path, env, wf, inp, answers=None, children=None, ordered=True, 
     flat = agents.expand(subgraphs.expand(wf, (children or {}).get) if children else wf)
     kinds = {n["id"]: n["type"] for n in flat["nodes"]}
     path, state = studio(wf, inp, answers, children)
-    want = [out.names[i] for i in path if kinds[i] not in ("start", "end", "subgraph", "subgraph_exit")]
+    want = export_steps(path, kinds, out.names)
     skip = {out.names[i] for i, t in kinds.items() if t == "subgraph"}
     got, final, _ = ts_run(tmp_path, env, out.code)
     got = [n for n in got if n not in skip and n in out.names.values()]  # a workflow tool's own graph prints its steps too
@@ -263,3 +265,14 @@ def test_workflow_tools_are_written_without_deno():
 def test_builtin_templates_take_the_studio_path(tmp_path, deno_env, tid, i):
     b = next(x for x in BUILTINS if x["id"] == tid); case = b["tests"][i]
     same_run(tmp_path, deno_env, b["workflow"], case["input"], case.get("answers"))
+
+
+def test_attachments_take_the_studio_path(tmp_path, deno_env):
+    """TASK-0176: "Include attachments" on LLM and Agent nodes; the mock names the files, as in the studio."""
+    from tests.test_attachment_models import B64, IMG_REC, PDF_REC, wf
+    files = [PDF_REC, {**IMG_REC, "data_url": f"data:image/png;base64,{B64}"}]
+    same_run(tmp_path, deno_env, wf("llm"), {"message": "Summarise this", "files": files})
+    # an Agent's built-in tool is a stub here, so only the files note is compared
+    out = T.to_typescript(wf("agent"), "Files", 1, None, {"input": {"message": "Summarise this", "files": files}, "answers": {}})
+    _, final, _ = ts_run(tmp_path, deno_env, out.code)
+    assert final["reply"].endswith("\nAttachments: document invoice.pdf, image shot.png")

@@ -18,6 +18,8 @@ Use this workflow for narrow, low-risk work with clear requirements and limited 
    into one commit, reruns validation, pushes with `--force-with-lease`, and
    marks the existing PR Ready for review.
 9. Human owner approves the Ready PR before merge.
+   If the task is not in done yet, it moves to done on that PR before the merge;
+   no separate PR only for the move.
 
 ## Required Artifacts
 

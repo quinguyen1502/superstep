@@ -35,8 +35,10 @@ history fields in **Data**; max rounds and retry/timeout in **Execution**.
 | Output field | Receives the final answer. |
 | Steps field | Optional, a list field. Receives every tool call: `{tool, args, result, status, ms}`, plus `approval` when a person answered. |
 | History field | Optional, a list field of `{role, content}` messages (`user` or `assistant`) added before the task prompt, such as a chat's `messages` field. |
+| Include attachments | Adds the chat's files to the task message, as on the [LLM node](nodes.md#llm). See [Attachments](../run/chat.md#attachments). |
 | Tools | At least one. See below. |
 | Approval | Shown when a tool needs approval: channel, approvers and deadline, as on a Human node. |
+| AI review | Shown with Approval: a model can review each tool call first (suggest, or answer automatically). See [AI review of approvals](../run/ai-review.md). |
 | Execution | Retry, wait between tries and timeout apply to each model call and each tool call. A cache TTL is never used for them, since a cached step would skip a call or an approval. |
 
 ## Tools
@@ -138,8 +140,14 @@ and each one is built and tested on its own canvas.
 ## Rounds and the limit
 
 One **round** is a model call plus the tool calls it asks for. Calls in one
-round run one after another, in the model's order; at most 8 run, and the
-others get "refused" as their result.
+round run together, and their results go back to the model in the model's
+order. The default is 4 at a time (`STUDIO_AGENT_PARALLEL_TOOLS`, from 1 to 8).
+**Run tool calls in parallel** on the Agent node turns that off for one node,
+so its calls run one after another. At most 8 run, and the others get
+"refused" as their result. A call that fails, or one that waits for approval
+or for another workflow, does not stop the other calls. The run continues
+once every wait in the round is done. The trace draws the calls of a round
+as bars that start together.
 
 The loop ends when the model answers without calling a tool. When **Max
 rounds** is reached, the model is called once more without tools to give its
@@ -230,6 +238,15 @@ supervisor has two workflow tools, `order_desk` and `refund_desk`, and hands
 each question to the desk that handles it. Its test cases check that an order
 question goes to the order desk and a refund request to the refund desk.
 
+## The Help desk template
+
+**Help desk** shows [agent hand-offs](handoffs.md). Triage answers order
+questions with `lookup_order` and hands billing questions to **Billing** and
+technical problems to **Technical**; Billing can hand a technical problem to
+Technical. The hand-off limit is 3. Its test cases check that an order
+question stays with Triage, a duplicate charge goes to Billing and a crash to
+Technical. In a chat, the next message stays with the agent that answered.
+
 ## Export
 
 - **Python and the LangGraph project** (see
@@ -251,6 +268,8 @@ question goes to the order desk and a refund request to the refund desk.
 | --- | --- |
 | `AGENT_TOOLS_UNSUPPORTED` | The credential's provider cannot call tools (TypeSafe, SMTP). The model step fails when it runs. |
 | `WORKFLOW_INVALID` | A run of a workflow the editor marks invalid: no task prompt, no tool, max rounds out of range, a tool without its settings (server and tool, function, knowledge base, URL or workflow), two tools with one name, or a steps or history field that is not a list. For workflow tools also: a workflow that is missing or not shared with you, an imported (code) workflow, a cycle, more than 5 levels, or a parameter or result field the workflow does not have. |
+| `AGENT_HANDOFF_TARGET_INVALID` | A hand-off target is not another Agent node of this workflow, or is listed twice. See [Agent hand-offs](handoffs.md). |
+| `AGENT_HANDOFF_LIMIT` | The workflow's `max_handoffs` is not a whole number from 0 to 20. |
 | `WORKFLOW_TOOL_TOO_DEEP` | At run time, workflow tools are nested more than 5 runs deep; the call is not started and the model gets an error. |
 
 All codes are in [Error codes](../reference/errors.md).

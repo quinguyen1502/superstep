@@ -33,6 +33,7 @@ mẫu có sẵn hiện theo ngôn ngữ giao diện.
 | **Tổng hợp phản hồi khách hàng** | Vòng For each gắn nhãn từng phản hồi, rồi LLM viết báo cáo và gửi email cho team. |
 | **Agent hỗ trợ khách hàng** | Một [node Agent](agent.md) tra cứu đơn hàng và chính sách hoàn tiền; mỗi yêu cầu hoàn tiền của agent đều cần người duyệt. |
 | **Đội hỗ trợ** | Một agent điều phối giao mỗi câu hỏi cho một [công cụ workflow](agent.md#workflow-lam-cong-cu) chuyên trách: Order desk hoặc Refund desk. Dùng mẫu sẽ tạo cả ba workflow. |
+| **Bàn hỗ trợ** | Triage trả lời câu hỏi về đơn hàng và [chuyển giao](handoffs.md) câu hỏi thanh toán cho Billing, sự cố kỹ thuật cho Kỹ thuật. Trong chat, tin nhắn tiếp theo ở lại với agent vừa trả lời. |
 
 Mẫu có kênh duyệt chỉ ghi loại kênh. Sau khi tạo, chọn kết nối, người nhận và
 người duyệt trên node Human (xem [Kênh duyệt](../operate/channels.md)). Trước

@@ -1,5 +1,5 @@
 import { type Edge } from '@xyflow/react'
-import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Brain, Wrench, GitBranch, Flag, CirclePlay, Trash2, Code2, UserCheck, Merge, Layers, Database, Plug, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square, Repeat, Scale, Mail, Bot } from 'lucide-react'
+import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Brain, Wrench, GitBranch, Flag, CirclePlay, Trash2, Code2, UserCheck, Merge, Layers, Database, Plug, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square, Repeat, Scale, Mail, Bot, ArrowRightLeft } from 'lucide-react'
 import i18n from '@/lib/i18n'
 
 export type Field = { name: string; type: string; reducer?: string }
@@ -23,17 +23,17 @@ META.decision = { label: 'Decision (Jev)', icon: Scale, color: 'bg-node-decision
 META.email = { label: 'Send email', icon: Mail, color: 'bg-node-email-muted text-node-email', accent: 'bg-node-email' }
 META.code = { label: 'Code', icon: Code2, color: 'bg-node-code-muted text-node-code', accent: 'bg-node-code' }
 META.agent = { label: 'Agent', icon: Bot, color: 'bg-node-agent-muted text-node-agent', accent: 'bg-node-agent' }
-/** An Agent node's expanded steps (TASK-0116, DEC-0063) appear in traces only: `ag/__model`, `ag/__tool`, `ag/__exit`. */
+/** An Agent node's expanded steps appear in traces only: `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join`, `ag/__exit`. */
 META.agent_model = { ...META.agent, icon: Brain }
 META.agent_tool = { ...META.agent, icon: Wrench }
 META.agent_exit = META.agent
+META.agent_join = { ...META.agent, icon: Merge }
+META.agent_handoff = { ...META.agent, icon: ArrowRightLeft }  // TASK-0180
 export const TYPES = ['start', 'llm', 'agent', 'decision', 'retriever', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
 export const INSERTABLE = TYPES.filter(t => t !== 'start' && t !== 'end')
 export const RUNTIME = new Set(['llm', 'agent', 'retriever', 'tool', 'mcp', 'human', 'decision'])
 /** Reducers per field type (TASK-0011): how parallel writes combine. */
 export const REDUCERS: Record<string, string[]> = { list: ['replace', 'append'], object: ['replace', 'merge'], number: ['replace', 'add'], integer: ['replace', 'add'] }
-/** Trace events of nodes inside a subgraph carry `sub/inner` ids: the canvas shows them on the subgraph node. */
-export const canvasId = (nid: string) => nid.split('/')[0]
 
 /** For each edges (TASK-0049): `each` enters the loop body, `done` leaves after the last item. */
 export const LOOP_LABELS = ['each', 'done']

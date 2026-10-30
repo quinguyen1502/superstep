@@ -30,7 +30,7 @@ def final(evs): return next(e for e in evs if e["type"] == "run_finished")["stat
 def script(monkeypatch, replies):
     """Replace the model: each call returns the next (text, calls) and records (messages, tools)."""
     seen, it = [], iter(replies)
-    def fake(messages, tools, model, cred=None, on_usage=None, on_token=None, mock=False, locale="en"):
+    def fake(messages, tools, model, cred=None, on_usage=None, on_token=None, mock=False, locale="en", parallel=None):
         seen.append((json.loads(json.dumps(messages)), tools)); return next(it)
     monkeypatch.setattr(agents, "call_agent", fake)
     return seen
@@ -66,15 +66,17 @@ def test_steps_are_never_cached():
     state (TASK-0116 review fix)."""
     x = agents.expand(wf(cache_ttl=60, timeout=30, retry={"max_attempts": 2, "initial_interval": 1}))
     data = {n["id"]: n["data"] for n in x["nodes"]}
-    assert data["ag"]["cache_ttl"] == 60 and all("cache_ttl" not in data[f"ag/{s}"] for s in ("__model", "__tool", "__exit"))
-    assert data["ag/__tool"]["timeout"] == 30 and data["ag/__model"]["retry"]["max_attempts"] == 2
+    slots = [k for k in data if k.startswith("ag/__tool/")]
+    assert data["ag"]["cache_ttl"] == 60 and all("cache_ttl" not in data[k] for k in data if k != "ag")
+    assert data["ag/__tool/1"]["timeout"] == 30 and data["ag/__model"]["retry"]["max_attempts"] == 2 and len(slots) == 8
 
 
 def test_expansion_is_idempotent_and_leaves_the_input_alone():
     w = wf(); x = agents.expand(w)
     assert [n["id"] for n in w["nodes"]] == ["start", "ag", "end"]
-    assert {n["id"]: n["type"] for n in x["nodes"]}["ag/__tool"] == "agent_tool" and agents.expand(x) == x
-    assert {(e["source"], e["target"]) for e in x["edges"]} >= {("ag", "ag/__model"), ("ag/__tool", "ag/__tool"), ("ag/__exit", "end")}
+    kinds = {n["id"]: n["type"] for n in x["nodes"]}
+    assert kinds["ag/__tool/1"] == "agent_tool" and kinds["ag/__join"] == "agent_join" and agents.expand(x) == x
+    assert {(e["source"], e["target"]) for e in x["edges"]} >= {("ag", "ag/__model"), ("ag/__tool/1", "ag/__join"), ("ag/__join", "ag/__model"), ("ag/__exit", "end")}
     assert validate(x) == []
 
 
@@ -88,8 +90,8 @@ def test_mock_calls_a_tool_then_answers(monkeypatch):
     assert st["steps"][0]["tool"] == "lookup_order" and st["steps"][0]["status"] == "ok"
     assert not any(k.startswith(agents.PREFIX) for k in st)
     done = [e for e in evs if e["type"] == "node_finished"]
-    assert [e["node"] for e in done] == ["start", "ag", "ag/__model", "ag/__tool", "ag/__model", "ag/__exit", "end"]
-    tool = next(e for e in done if e["node"] == "ag/__tool")
+    assert [e["node"] for e in done] == ["start", "ag", "ag/__model", "ag/__tool/1", "ag/__join", "ag/__model", "ag/__exit", "end"]
+    tool = next(e for e in done if e["node"] == "ag/__tool/1")
     assert tool["agent"]["kind"] == "tool" and tool["label"] == "Helper › tool" and agents.PREFIX + "ag" not in tool["delta"]
     assert any(e["type"] == "node_token" and e["node"] == "ag/__model" for e in evs)  # the answer streams
 
@@ -149,7 +151,7 @@ def test_too_many_calls_in_one_round_are_refused(monkeypatch):
     calls = [call("add", {"a": i, "b": 0}, str(i)) for i in range(agents.MAX_CALLS_PER_ROUND + 2)]
     seen = script(monkeypatch, [("", calls), ("ok", [])])
     st = final(list(run_stream(wf(tools=[MCP], steps_field="steps"), {"message": "x"}, ports=Ports(mcp_call=lambda s, t, a: ran.append(a["a"]) or 0))))
-    assert ran == list(range(agents.MAX_CALLS_PER_ROUND)) and sum(s["status"] == "refused" for s in st["steps"]) == 2
+    assert sorted(ran) == list(range(agents.MAX_CALLS_PER_ROUND)) and sum(s["status"] == "refused" for s in st["steps"]) == 2
     assert len([m for m in seen[1][0] if m["role"] == "tool"]) == len(calls)  # every call has an answer
 
 
@@ -164,6 +166,7 @@ def test_round_limit_asks_for_an_answer_without_tools(monkeypatch):
 
 
 def test_each_tool_call_is_its_own_ledger_entry(monkeypatch):
+    monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")  # the wave checkpoint lists every slot
     class DictLedger:
         def __init__(self): self.rows = {}
         def get(self, nid, it): return self.rows.get((nid, it), (None,))[0]
@@ -172,15 +175,15 @@ def test_each_tool_call_is_its_own_ledger_entry(monkeypatch):
     replies = [("", [call("add", {"a": 1, "b": 1}, "1"), call("add", {"a": 2, "b": 2}, "2")]), ("Done", [])]
     script(monkeypatch, replies)
     evs = list(run_stream(wf(tools=[MCP]), {"message": "x"}, ports=Ports(mcp_call=lambda s, t, a: ran.append(a["a"]) or 0), effects=Effects("r2", ledger=led)))
-    keys = {k for (nid, _), (_, k) in led.rows.items() if nid == "ag/__tool"}
-    assert ran == [1, 2] and len(keys) == 2  # one idempotency key per tool call
-    # the job is retried from the checkpoint before the second tool call: the first call and the model call are not repeated
-    cp = [e for e in evs if e["type"] == "_checkpoint" and e["node"] == "ag/__tool"][1]
+    keys = {k for (nid, _), (_, k) in led.rows.items() if str(nid).startswith("ag/__tool/")}
+    assert sorted(ran) == [1, 2] and len(keys) == 2  # one idempotency key per tool call, even in one wave
+    # resumed from the checkpoint before the wave: both calls come back from the ledger
+    cp = next(e for e in evs if e["type"] == "_checkpoint" and set(e["nodes"]) == {"ag/__tool/1", "ag/__tool/2"})
     script(monkeypatch, replies[1:])
-    evs2 = list(run_stream(wf(tools=[MCP]), {}, resume={"node": cp["node"], "state": cp["state"], "counts": cp["counts"]},
+    evs2 = list(run_stream(wf(tools=[MCP]), {}, resume={"node": cp["node"], "nodes": cp["nodes"], "state": cp["state"], "counts": cp["counts"]},
                            ports=Ports(mcp_call=lambda s, t, a: ran.append(a["a"]) or 0), effects=Effects("r2", ledger=led)))
-    assert final(evs2)["answer"] == "Done" and ran == [1, 2]  # the second call came from the ledger
-    assert [e.get("reused") for e in evs2 if e["type"] == "node_finished" and e["node"] == "ag/__tool"] == [True]
+    assert final(evs2)["answer"] == "Done" and sorted(ran) == [1, 2]
+    assert [e.get("reused") for e in evs2 if e["type"] == "node_finished" and e.get("node_type") == "agent_tool"] == [True, True]
 
 
 def test_provider_without_tool_calling(monkeypatch):
@@ -258,8 +261,9 @@ def test_model_arguments_are_never_rendered_as_templates(monkeypatch):
     evil = "{{state.message}}"
     script(monkeypatch, [("", [call("post", {"note": evil}, "1"), call("get", {"q": evil}, "2")]), ("ok", [])])
     list(run_stream(wf(tools=[post, get]), {"message": "secret"}))
-    assert sent[0] == ("POST", "https://x.test/p", '{"note": "{{state.message}}"}')
-    assert sent[1] == ("GET", "https://x.test/g?q={{state.message}}&m=secret", "")  # the builder's template is rendered once
+    by = {m: (u, b) for m, u, b in sent}  # the two calls of the round run together, so finish order is not the model's order
+    assert by["POST"] == ("https://x.test/p", '{"note": "{{state.message}}"}')
+    assert by["GET"] == ("https://x.test/g?q={{state.message}}&m=secret", "")  # the builder's template is rendered once
 
 
 def test_type_lists_in_schemas_are_accepted():
@@ -284,11 +288,11 @@ def test_saved_workflow_run_and_fork_inside_the_loop(monkeypatch):
     rid = evs[0]["run_id"]
     assert next(e for e in evs if e["type"] == "run_finished")["state"]["steps"][0]["tool"] == "lookup_order"
     cps = c.get(f"/api/runs/{rid}/checkpoints", headers=H(tok)).json()["data"]["checkpoints"]
-    at = next(cp for cp in cps if cp["nodes"] == ["ag/__tool"])
+    at = next(cp for cp in cps if cp["nodes"] == ["ag/__tool/1"])
     assert at["forkable"] and at["labels"] == ["Helper › tool"]
     evs = ws(tok, {"fork": {"run_id": rid, "checkpoint": at["index"]}}, until=("run_summary",))
     ran = [e["node"] for e in evs if e["type"] == "node_finished"]
-    assert ran[:2] == ["ag/__tool", "ag/__model"] and "In transit" in next(e for e in evs if e["type"] == "run_finished")["state"]["answer"]
+    assert ran[:3] == ["ag/__tool/1", "ag/__join", "ag/__model"] and "In transit" in next(e for e in evs if e["type"] == "run_finished")["state"]["answer"]
 
 
 def test_chat_steps_show_tool_calls_by_name(monkeypatch):

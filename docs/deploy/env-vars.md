@@ -32,6 +32,7 @@ The variables that matter for the all-in-one image. The full list, including cha
 | `STUDIO_DB` | `/data/studio.db` | SQLite file. Put `/data` on a persistent volume. |
 | `REDIS_URL` | empty | Optional. Empty = in-memory run bus and queue in the web process (one instance). Set it to run a separate worker (`python -m app.worker`) or more than one web instance. |
 | `STUDIO_WORKER` | `1` | `0` = the web process does not take queued runs (leave them to the worker). |
+| `STUDIO_AGENT_PARALLEL_TOOLS` | `4` | How many tool calls of one Agent round may run at once. Clamped to 1..8. An invalid value stays at 1. An Agent node can turn parallel calls off. |
 
 ## Code nodes
 

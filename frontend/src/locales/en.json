@@ -303,9 +303,13 @@
       "status": {
         "error": "error",
         "refused": "refused",
-        "rejected": "rejected by a reviewer"
+        "rejected": "rejected by a reviewer",
+        "not_run": "not run"
       },
-      "approved": "approved"
+      "approved": "approved",
+      "handoff": "hands off to {{to}}",
+      "handoffReason": "hands off to {{to}}: {{reason}}",
+      "handedOff": "hand-off"
     }
   },
   "import": {
@@ -410,6 +414,11 @@
     "HTTP_ERROR": "Request failed",
     "AUTH_REQUIRED": "Please sign in",
     "AUTH_TOKEN_INVALID": "Invalid session, please sign in again",
+    "PAT_NAME_TAKEN": "You already have an active token named {{name}}",
+    "PAT_NOT_FOUND": "Token not found",
+    "CLI_DEVICE_INVALID": "This sign-in code is not valid",
+    "CLI_DEVICE_EXPIRED": "This sign-in code has expired",
+    "CLI_DEVICE_DENIED": "This sign-in was denied",
     "AUTH_TOKEN_EXPIRED": "Your session has expired",
     "AUTH_INVALID_CREDENTIALS": "Incorrect email or password",
     "AUTH_EMAIL_INVALID": "Invalid email address",
@@ -491,6 +500,16 @@
     "CHAT_EMBED_ORIGIN_INVALID": "'{{origin}}' is not a site address like https://example.com",
     "CHAT_LOGO_INVALID": "The logo must be a PNG, JPEG or WebP image of at most {{max_kb}} KB",
     "CHAT_LOGO_NOT_FOUND": "This chat has no logo",
+    "CHAT_ATTACHMENTS_OFF": "This chat does not accept attachments",
+    "CHAT_ATTACHMENT_TYPE": "This file type is not allowed here. Allowed: {{allowed}}",
+    "CHAT_ATTACHMENT_TOO_LARGE": "A file may be at most {{max_mb}} MB",
+    "CHAT_ATTACHMENT_TOO_MANY": "A message may carry at most {{max}} files",
+    "CHAT_ATTACHMENT_NOT_FOUND": "File not found",
+    "CHAT_ATTACHMENT_DEMO": "Attachments are turned off in the public demo",
+    "CHAT_ATTACHMENT_LIMIT": "Attachment limits may be at most {{max_files}} files and {{max_mb}} MB per file",
+    "CHAT_TURN_NOT_FOUND": "Message not found",
+    "CHAT_RATING_NOT_ALLOWED": "This message cannot be rated",
+    "CHAT_RATING_INVALID": "Rating: invalid {{field}}",
     "TEST_NOT_FOUND": "Test case not found",
     "TEST_CASE_INVALID": "Test case: {{reason}}",
     "TEST_CASES_LIMIT": "A workflow can have at most {{max}} test cases",
@@ -609,7 +628,11 @@
     "CODE_RESULT_NOT_JSON": "Code node {{node}}: main() returned {{type}}, which cannot be stored as JSON",
     "CODE_TOO_LARGE": "Code node {{node}}: the {{what}} is larger than {{max_kb}} KB",
     "CODE_LANGUAGE_UNSUPPORTED": "Code node {{node}}: {{language}} is not available on this server",
-    "CODE_WRITE_FORBIDDEN": "Your role may not add Code nodes or change their code (code.write)"
+    "CODE_WRITE_FORBIDDEN": "Your role may not add Code nodes or change their code (code.write)",
+    "AGENT_HANDOFF_TARGET_INVALID": "Agent node {{node}}: hand-off target {{target}} must be another Agent node of this workflow, listed once",
+    "AGENT_HANDOFF_LIMIT": "Max hand-offs per run must be 0-{{max}}",
+    "AUTO_APPROVAL_FORBIDDEN": "Only the workflow owner or an admin can turn on automatic AI approval",
+    "AUTO_APPROVAL_DISABLED": "AI auto-approval is turned off on this server"
   },
   "lang": {
     "en": "English",
@@ -766,7 +789,8 @@
     "run_expired": "A waiting run of {{workflow}} expired",
     "unknownWorkflow": "A workflow",
     "run_reminder": "{{workflow}} is still waiting for you: {{label}}",
-    "run_escalated": "{{workflow}} was handed to you: {{label}}"
+    "run_escalated": "{{workflow}} was handed to you: {{label}}",
+    "run_auto_answered": "{{workflow}}: AI review answered {{label}}"
   },
   "notifyPrefs": {
     "open": "Notification settings",
@@ -922,6 +946,33 @@
       "unknown": "Press Test to check the scopes chat triggers need."
     }
   },
+  "tokens": {
+    "name": "Name",
+    "namePh": "CI, laptop",
+    "create": "Create token",
+    "secretOnce": "Copy this token now. It will not be shown again.",
+    "secretHint": "Use it as SUPERSTEP_TOKEN, or run superstep login on a machine you trust.",
+    "empty": "No active tokens.",
+    "prefix": "Prefix",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "never": "Never",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke {{name}}?",
+    "revokeBody": "Commands using this token stop working. This cannot be undone.",
+    "readOnly": "The public demo cannot create access tokens."
+  },
+  "cliAuth": {
+    "title": "Approve the superstep command",
+    "intro": "This gives the command on your computer the same access as your account. Nothing is approved until you press the button.",
+    "code": "Code",
+    "name": "Token name",
+    "approve": "Approve",
+    "deny": "Deny",
+    "approved": "Approved. You can close this page and return to the terminal.",
+    "denied": "Denied. The terminal will stop waiting.",
+    "missing": "This page needs a sign-in code from superstep login."
+  },
   "settings": {
     "title": "Settings",
     "open": "Open settings",
@@ -937,7 +988,8 @@
       "mcp": "MCP servers",
       "users": "Users",
       "teams": "Teams",
-      "activity": "Activity"
+      "activity": "Activity",
+      "tokens": "Access tokens"
     },
     "intro": {
       "profile": "Your account, language and password.",
@@ -948,7 +1000,8 @@
       "mcp": "Tools from Model Context Protocol servers, used by MCP tool nodes. Secrets are encrypted and never shown again.",
       "users": "Who can sign in and what their role allows. Workflows are shared from the editor.",
       "teams": "Groups of people to share workflows with. Members get the access the team was given.",
-      "activity": "Changes to roles, shares, teams, ownership, accounts and policy, newest first."
+      "activity": "Changes to roles, shares, teams, ownership, accounts and policy, newest first.",
+      "tokens": "Personal access tokens for the superstep command and CI. A token is shown once, and it has the same access as you."
     },
     "status": {
       "connected": "Connected",
@@ -1410,6 +1463,10 @@
       "builtin-support-team": {
         "name": "Support team",
         "description": "A supervisor agent hands each question to a specialist workflow: the order desk or the refund desk. Both are created with it."
+      },
+      "builtin-help-desk": {
+        "name": "Help desk",
+        "description": "A triage agent answers order questions and hands billing or technical questions to the agent for them. In a chat, the next message stays with the agent that answered."
       }
     }
   },
@@ -1719,7 +1776,7 @@
     "since": "Waiting since {{when}}",
     "openRun": "Open run",
     "open": "Open approvals",
-    "sent": "Answer sent. The run continues.",
+    "sent": "Answer sent.",
     "due": "Due {{when}}",
     "overdue": "Overdue"
   },
@@ -1924,7 +1981,8 @@
       "running": "Running {{label}}",
       "input": "Input",
       "output": "Output",
-      "errorDetail": "Error"
+      "errorDetail": "Error",
+      "handoff": "to {{to}}"
     },
     "settings": {
       "title": "Chat settings",
@@ -2018,9 +2076,23 @@
       "goneTitle": "Chat not available",
       "gone": "This chat is not available. The link may have changed, or the chat was turned off."
     },
+    "rating": {
+      "up": "Helpful",
+      "down": "Not helpful",
+      "comment": "What went wrong?",
+      "commentPlaceholder": "Optional",
+      "sendComment": "Send comment",
+      "remove": "Remove rating",
+      "runGone": "The run behind this answer was deleted"
+    },
+    "ratings": {
+      "summary": "Last {{days}} days: {{up}} up, {{down}} down ({{share}} down)",
+      "noShare": "—"
+    },
     "visitors": {
       "tab": "Visitors",
       "none": "No visitor chats yet.",
+      "thumbsDown": "Thumbs down",
       "readOnly": "A visitor's chat from the public page. Read-only.",
       "channel": {
         "web": "Page",
@@ -2034,6 +2106,31 @@
       "widgetHint": "Paste before </body>. A button opens the chat in a corner, and visitors keep their chats in every browser. The site can read the visitor's chat key.",
       "iframe": "Frame",
       "iframeHint": "Shows the chat inside the page. Some browsers (Safari) start a new chat each time in a frame; use the bubble to keep chats."
+    },
+    "files": {
+      "attach": "Attach files (up to {{max}}, {{max_mb}} MB each)",
+      "attachLabel": "Attach files",
+      "remove": "Remove {{name}}",
+      "download": "Download {{name}}",
+      "uploading": "Waiting for files to upload",
+      "kinds": {
+        "document": "Documents (PDF, TXT, MD, CSV)",
+        "image": "Images (PNG, JPEG, WebP)"
+      },
+      "include": "Include attachments",
+      "includeHint": "Send the chat's files to the model: documents as text, images as images when the model can see them.",
+      "includeField": "Files field",
+      "settings": {
+        "enabled": "Allow attachments",
+        "enabledHint": "People can add files to a message. Files are stored with the chat and deleted with it.",
+        "kinds": "File types",
+        "kindsHint": "The server checks each file's content, not only its name.",
+        "maxFiles": "Files per message",
+        "maxMb": "Max size (MB)",
+        "ceiling": "At most {{max}} on this server.",
+        "field": "State field",
+        "fieldHint": "The list field that receives the file records for each run."
+      }
     }
   },
   "timeTravel": {
@@ -2071,6 +2168,8 @@
     "historyHint": "A list of earlier messages ({role, content}) added before the task prompt, such as a chat's messages field.",
     "tools": "Tools",
     "toolsHint": "The model can call only these tools. It reads each tool's name and description to choose.",
+    "parallelTools": "Run tool calls in parallel",
+    "parallelToolsHint": "Several calls in one round can run together. Turn this off to run them one at a time. The server runs up to 4 at once, or the value of STUDIO_AGENT_PARALLEL_TOOLS (1 to 8).",
     "noToolsYet": "Add at least one tool.",
     "addTool": "Add tool",
     "sources": {
@@ -2175,12 +2274,21 @@
     "DEADLINE_ESCALATE_MISSING": "Human node {{node}}: add who to escalate to",
     "DEADLINE_ESCALATE_EMAILS": "Human node {{node}}: escalate to needs e-mail addresses",
     "DEADLINE_TOO_LONG": "Human node {{node}}: the deadline is longer than the wait limit (STUDIO_WAIT_TTL, {{hours}} h)",
+    "AUTO_APPROVAL_MODE": "Node {{node}}: AI review mode must be one of {{modes}}",
+    "AUTO_APPROVAL_RULE_INVALID": "Node {{node}}: AI review rule {{index}} is not valid (field, operator, value and effect)",
+    "AUTO_APPROVAL_JUDGE_REQUIRED": "Node {{node}}: AI review needs a model credential",
+    "AUTO_APPROVAL_CONFIDENCE": "Node {{node}}: the minimum confidence must be between 0 and 1",
+    "AUTO_APPROVAL_CAP": "Node {{node}}: the daily limit must be a whole number from 1 to {{max}}",
     "AGENT_PROMPT_MISSING": "Agent node {{node}}: the task prompt is missing",
     "AGENT_ROUNDS": "Agent node {{node}}: max rounds must be 1-{{max}}",
     "AGENT_FIELD_UNKNOWN": "Agent node {{node}}: {{key}} '{{field}}' is not in the state",
     "AGENT_FIELD_NOT_LIST": "Agent node {{node}}: {{key}} '{{field}}' must be a list field",
+    "ATTACHMENTS_FIELD_UNKNOWN": "Node {{node}}: the attachments field '{{field}}' is not in the state",
+    "ATTACHMENTS_FIELD_NOT_LIST": "Node {{node}}: the attachments field '{{field}}' must be a list field",
     "AGENT_TOOLS_MISSING": "Agent node {{node}}: add at least one tool",
     "AGENT_TOOL_NOT_OBJECT": "Agent node {{node}}: tool {{index}} is not an object",
+    "AGENT_HANDOFF_TARGET_INVALID": "Agent node {{node}}: hand-off target {{target}} must be another Agent node of this workflow, listed once",
+    "AGENT_HANDOFF_LIMIT": "Max hand-offs per run must be 0-{{max}}",
     "AGENT_TOOL_DUPLICATE": "Agent node {{node}}: two tools are named {{tool}}",
     "AGENT_TOOL_NAME": "Agent node {{node}}: tool {{tool}}: the name must be 1-64 letters, digits, _ or -",
     "AGENT_TOOL_SOURCE": "Agent node {{node}}: tool {{tool}}: unknown source '{{source}}'",
@@ -2251,5 +2359,84 @@
     "NODE_REF_FILTER_NO_ARGUMENT": "Node {{node}}: filter '{{filter}}' takes no argument in {{ref}}",
     "NODE_REF_FILTER_NEEDS_TEXT": "Node {{node}}: filter '{{filter}}' needs a text argument in {{ref}}",
     "NODE_REF_FILTER_NEEDS_NUMBER": "Node {{node}}: filter '{{filter}}' needs a number argument in {{ref}}"
+  },
+  "handoff": {
+    "title": "Hand-offs",
+    "add": "Add hand-off",
+    "hint": "The agent can hand the conversation to these agents. The description tells the model when to do it.",
+    "noAgents": "Add another Agent node to hand the conversation to.",
+    "description": "When to hand off",
+    "descriptionPlaceholder": "e.g. Charges, refunds and invoices",
+    "remove": "Remove hand-off to {{name}}",
+    "max": "Hand-off limit per run (whole workflow)",
+    "maxHint": "Empty uses {{n}}. 0 to {{max}}; past it the agents must answer themselves.",
+    "handle": "Drag to another Agent to add a hand-off"
+  },
+  "aiReview": {
+    "title": "AI review",
+    "mode": "Mode",
+    "modes": {
+      "off": "Off",
+      "suggest": "Suggest",
+      "auto": "Answer automatically"
+    },
+    "modeHelp": {
+      "off": "People answer every request.",
+      "suggest": "A model gives its opinion next to each request. People still answer.",
+      "auto": "A model approves requests it is sure about. It never rejects: anything else goes to people."
+    },
+    "autoOwnerOnly": "Only the workflow owner or an admin can turn on automatic answers.",
+    "credential": "Judge credential",
+    "credentialPick": "Choose a chat credential",
+    "instructions": "Instructions for the judge",
+    "instructionsPh": "Refunds up to 50 USD for existing customers are fine.",
+    "minConfidence": "Minimum confidence (0-1)",
+    "cap": "Automatic answers per day",
+    "notify": "Tell the run owner about automatic answers",
+    "rules": "Rules",
+    "rulesHelp": "Checked before the model. A rule can send a request to people or reject it; a rule never approves.",
+    "ruleField": "Field",
+    "ruleOp": "Operator",
+    "ruleValue": "Value",
+    "ruleEffect": "Then",
+    "ruleAdd": "Add rule",
+    "ruleRemove": "Remove rule",
+    "ops": {
+      "equals": "equals",
+      "not_equals": "does not equal",
+      "contains": "contains",
+      "not_contains": "does not contain",
+      "matches": "matches (regex)",
+      "gt": "greater than",
+      "lt": "less than",
+      "empty": "is empty"
+    },
+    "effects": {
+      "human": "Ask people",
+      "reject": "Reject"
+    },
+    "agreement": "People agreed with the AI {{rate}} of the time ({{n}} answers, last {{days}} days).",
+    "agreementNone": "No agreement rate yet: try suggest mode and answer a few requests.",
+    "agreementShort": "Agreement {{rate}}",
+    "pausedHint": "AI review is paused. Requests go to people.",
+    "badge": "AI",
+    "confidence": "confidence {{rate}}",
+    "decision": {
+      "approve": "Suggests approve",
+      "reject": "Suggests reject",
+      "escalate": "Not sure"
+    },
+    "panelTitle": "AI review",
+    "panelIntro": "Workflows where a model reviews approvals. Pausing sends every request to people.",
+    "operatorOff": "Automatic answers are turned off on this server.",
+    "pauseOrg": "Pause AI review for every workflow",
+    "pause": "Paused",
+    "none": "No workflow uses AI review yet.",
+    "stats": {
+      "today": "{{n}} today",
+      "approved": "{{n}} approved",
+      "escalated": "{{n}} to people",
+      "suggested": "{{n}} suggested"
+    }
   }
 }

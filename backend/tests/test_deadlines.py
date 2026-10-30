@@ -55,7 +55,12 @@ def waiting(c, owner, deadline, approvers=()):
 def run_row(c, owner, wid, rid): return next(r for r in c.get(f"/api/workflows/{wid}/runs", headers=H(owner["token"])).json()["data"] if r["id"] == rid)
 def audit(c, owner, rid): return [e["action"] for e in c.get("/api/approvals/audit", headers=H(owner["token"])).json()["data"] if e["run_id"] == rid][::-1]
 def notes(c, u, kind): return [n for n in c.get("/api/notifications", headers=H(u["token"])).json()["data"]["items"] if n["kind"] == kind]
-def fire(m, w): return approval_service().fire_deadlines(w.created + m * 60)  # m minutes after the step started waiting
+def fire(m, w):
+    """Fire deadlines m minutes after the step started waiting, for this run only: waits left open by other tests of the
+    same database would be due too and change the count."""
+    svc = approval_service(); due = svc.repo.due_waits
+    svc.repo.due_waits = lambda now, limit=200: [x for x in due(now, limit) if x.run_id == w.run_id]
+    return svc.fire_deadlines(w.created + m * 60)
 
 
 def test_durations_and_validation(monkeypatch):

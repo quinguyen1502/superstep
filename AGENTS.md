@@ -20,6 +20,7 @@ Init creates a valid factory skeleton. It is not ready for implementation until 
 - Allocate new artifact IDs after `git fetch --all --prune` with `factory ids next <TYPE> --all-refs`. Do not guess the next number.
 - Use task branches named `factory/task-<id>-<short-name>` unless project standards define another convention.
 - Do not merge without explicit human approval.
+- When the owner approves a merge and the task is not in `done` yet, move it to `done` on that same PR (one commit), wait for the checks, then merge. Never open a separate PR only to move a task to `done`.
 - UI work: use shadcn/ui components and theme tokens only; no hard-coded colours; new status colours go in as shadcn-style CSS variables (`--success`, `--warning`, `--info`). Follow `docs/ui-conventions.md` (DEC-0008) and run its review checklist.
 - Every delete feature (delete, remove, revoke, unlink) must make the user type the item's name to confirm: use the shared `ConfirmDeleteDialog` / `useConfirmDelete` (button disabled until the exact name is typed, en+vi strings). The confirmation is UI-only: the API stays a plain DELETE with no confirm field (`docs/ui-conventions.md` rule 7, DEC-0025).
 - Backend work: keep the layers in `docs/backend-architecture.md` (DEC-0009): routers call services, services call repositories/engine, no FastAPI in services, no raw SQL (SQLAlchemy models + Alembic migrations for every schema change). `tests/test_layers.py` must pass.
@@ -28,6 +29,18 @@ Init creates a valid factory skeleton. It is not ready for implementation until 
   - Errors: add new codes only to `core/errors.py` `CATALOG` (English message), `docs/api-errors.md`, and both `frontend/src/locales/*.json` (`errors.<CODE>`). `tests/test_api_envelope.py` enforces this.
   - Frontend: call the API only through `lib/api.ts` `api()` (it unwraps the envelope). Show errors via `errorText`/`eventErrors` (`lib/i18n.ts`). Put every UI string in `locales/en.json` + `locales/vi.json` with identical keys; no literal UI text in components.
 - Do not start implementation source work until `factory ready` exits 0, unless the owner explicitly overrides that gate.
+
+## Running The Factory CLI
+
+- `factory` means `.factory/bin/factory`. It needs PyYAML, which the system Python usually lacks, so run it from the backend virtualenv (`./dev.sh` creates `backend/.venv`):
+
+  ```bash
+  PATH="$PWD/backend/.venv/bin:$PATH" .factory/bin/factory validate
+  ```
+
+  Without it, every command fails with `ModuleNotFoundError: No module named 'yaml'`.
+- `.factory/` is vendored from the upstream framework repository `quinguyen1502/sw-ai-factory`. Make framework changes upstream first: commit and push them to its `main`, then copy the same files into `.factory/`, so they stay byte-identical, and record the upstream commit in the task. After a skill template changes, run `factory skills apply` and `factory skills validate`.
+- The upstream tests run with `PYTHONPATH=cli python -m unittest discover -s tests` from the upstream checkout, as its CI does. Plain `pytest` cannot import `factory_cli` there.
 
 ## Workflow Skills
 

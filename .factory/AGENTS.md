@@ -71,6 +71,10 @@ Each task must have enough context for the next agent to continue without relyin
   `--force-with-lease`, and mark the existing PR Ready for review.
 - Done means approved, validated, and ready to merge. It does not mean the
   task commit is already present on the integration branch.
+- The task PR carries its own move to done. If the owner approves the merge
+  while the task is still in review or QA, push one commit on that PR that moves
+  it to done and logs the approval, wait for the required checks, then merge.
+  Never open a separate pull request only to move a task to done.
 - Dependent tasks should start only after the previous task has been approved and merged, or must explicitly document that they are stacked on an unmerged task branch.
 - If local-only work is necessary because remote access or PR tooling is unavailable, record the blocker and stop at a committed task branch instead of merging into the integration branch.
 - If PR tooling, authentication, network access, or other local execution mechanics fail outside an active delivery task, report the issue to the human owner instead of creating durable project artifacts.

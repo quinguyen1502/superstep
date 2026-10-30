@@ -24,7 +24,8 @@ class InboxService:
         chain = lambda w: self.approvals.workflow_name(w.run_id, w.workflow_id) if self.runs.runs.get(w.run_id) and self.runs.runs.get(w.run_id).parent_run_id else name(w.workflow_id)  # noqa: E731
         return [{"run_id": w.run_id, "workflow_id": w.workflow_id, "workflow_name": chain(w), "node": w.node_id, "label": w.label,
                  "prompt": w.prompt, "channel": w.channel, "mine": w.owner == uid, "owner_email": None if w.owner == uid else email(w.owner),
-                 "waiting_since": w.created, "due_at": w.due_at, "can_open": self._can_open(w, uid)} for w in self.repo.inbox(uid)]
+                 "waiting_since": w.created, "due_at": w.due_at, "can_open": self._can_open(w, uid),
+                 "ai": {"decision": w.ai_decision, "confidence": w.ai_confidence, "reason": w.ai_reason} if w.ai_decision else None} for w in self.repo.inbox(uid)]
 
     def _can_open(self, w: ApprovalWait, uid: str) -> bool:
         """Only users who may already read the run: its owner, and the workflow's owner or an admin (run history rule)."""
@@ -33,14 +34,14 @@ class InboxService:
         row = self.workflows.get(w.workflow_id)
         return row is not None and self.access.access_of(row, uid) == "owner"
 
-    def answer(self, uid: str, rid: str, response) -> dict:
+    def answer(self, uid: str, rid: str, response, node: Optional[str] = None) -> dict:
         response = human_response(response)
-        w: Optional[ApprovalWait] = self.repo.latest_wait(rid)
+        w: Optional[ApprovalWait] = self.repo.open_wait(rid, node) if node else self.repo.latest_wait(rid)
         if w is None or not self.approvals.may_answer(uid, w): raise AppError("RUN_NOT_FOUND")  # ids are not disclosed
         if w.status != "waiting": raise AppError("APPROVAL_ALREADY_DECIDED")
         run = self.runs.runs.get(rid)
         if run is None or run.status != "waiting": raise AppError("RUN_NOT_WAITING")
         if self.runs.expire_if_stale(run): raise AppError("RUN_EXPIRED")
-        if self.approvals.decided_elsewhere(rid) or not self.repo.close_wait(rid, "answered"): raise AppError("APPROVAL_ALREADY_DECIDED")
+        if self.approvals.decided_elsewhere(rid) or not self.repo.close_wait(rid, "answered", w.id): raise AppError("APPROVAL_ALREADY_DECIDED")
         self.approvals.answered_in_studio(w, uid, response)
         return {"run_id": rid, "response": response}

@@ -37,6 +37,7 @@ nav:
       - Trình soạn thảo: guide/editor.md
       - Các loại node: guide/nodes.md
       - Node Agent: guide/agent.md
+      - Chuyển giao giữa các agent: guide/handoffs.md
       - State và tham chiếu: guide/state.md
       - Chế độ Code: guide/code-mode.md
       - Kho tri thức: guide/knowledge.md
@@ -48,6 +49,7 @@ nav:
       - run/index.md
       - Run và trace: run/traces.md
       - Duyệt bởi người: run/human-approval.md
+      - AI duyệt yêu cầu phê duyệt: run/ai-review.md
       - API trigger và webhook: run/api-triggers.md
       - API công khai và SDK: run/public-api.md
       - API tương thích LangGraph: run/agent-server-api.md
@@ -58,6 +60,7 @@ nav:
       - Kiểm thử workflow: run/tests.md
   - Vận hành:
       - operate/index.md
+      - CLI: operate/cli.md
       - Triển khai bằng Compose: operate/deploy.md
       - Tài khoản và bảo mật: operate/accounts.md
       - Vai trò và chia sẻ: operate/access.md

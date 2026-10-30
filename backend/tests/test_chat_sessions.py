@@ -53,7 +53,9 @@ def test_settings_defaults_and_validation():
     d = c.get(f"/api/workflows/{wid}/chat", headers=H(tok)).json()["data"]
     assert d == {"enabled": False, "slug": wid.lower(), "input_field": "message", "reply_field": "reply", "access": "studio",
                  "messages_field": "messages", "max_turns": 10, "steps": "labels", "retention_days": 30,
-                 "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": ""}
+                 "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": "",
+                 "attachments": {"enabled": False, "kinds": ["document", "image"], "max_files": 5, "max_mb": 10, "field": "files"},
+                 "attachment_ceiling": {"max_mb": 10, "max_files": 5}}
     assert c.post(f"/api/workflows/{wid}/chat/sessions", headers=H(tok)).json()["error"]["code"] == "CHAT_NOT_ENABLED"
     for body, field in [({"steps": "all"}, "steps"), ({"max_turns": 0}, "max_turns"), ({"retention_days": 99999}, "retention_days"),
                         ({"messages_field": "reply"}, "messages_field"), ({"input_field": "nope"}, "input_field")]:

@@ -10,7 +10,7 @@ Execution is at-least-once (a crashed worker's job runs again). To make side eff
 The engine stays storage-agnostic: the service layer passes a `Ledger` (get/put) and the guard.
 """
 from __future__ import annotations
-import hashlib, inspect
+import hashlib, inspect, threading
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Protocol
 
@@ -36,6 +36,12 @@ class Effects:
     guard: Optional[Callable[[], None]] = None  # raises when this worker may no longer act for the run (fencing)
     counts: Dict[str, int] = field(default_factory=dict)  # node id -> iteration, kept by the runtime
     reused: set = field(default_factory=set)              # node ids whose last result came from the ledger
+    holds: list = field(default_factory=list)            # pauses raised in this superstep (TASK-0158); siblings are not cancelled
+    _hold_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+
+    def hold(self, item: dict) -> None:
+        """Remember a pause. Parallel slots append before they raise, so the runtime sees every wait of the wave."""
+        with self._hold_lock: self.holds.append(item)
 
     def key(self, node_id: str) -> str: return idempotency_key(self.run_id, node_id, self.counts.get(node_id, 1))
 

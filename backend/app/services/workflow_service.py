@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from ..core import config
 from ..core import permissions as P
 from ..core.errors import AppError
-from ..engine import exporters, project_export, subgraphs
+from ..engine import exporters, handoffs, project_export, subgraphs
 from ..engine.export_common import slug
 from ..engine.issues import issues_of
 from ..engine.examples import EXAMPLE
@@ -17,7 +17,7 @@ from .naming import clean_name, unique_name
 
 VERSION_RETRIES = 3
 PAGE_MAX = 200
-READ_ONLY = ("id", "access", "mine", "owner_email")  # response-only fields, never stored
+READ_ONLY = ("id", "access", "mine", "owner_email", "version", "updated")  # response-only fields, never stored
 
 
 def _dumps(d) -> str: return json.dumps(d, ensure_ascii=False)
@@ -26,13 +26,15 @@ def new_id() -> str: return uuid.uuid4().hex[:8]
 
 class WorkflowService:
     def __init__(self, workflows: WorkflowRepository, runs: RunRepository, versions: WorkflowVersionRepository | None = None,
-                 access=None, shares=None, users=None, teams=None, audit=None, tests=None, chat_triggers=None, chat_sessions=None):
+                 access=None, shares=None, users=None, teams=None, audit=None, tests=None, chat_triggers=None, chat_sessions=None,
+                 jobs=None):
         self.repo, self.runs, self.versions = workflows, runs, versions
         self.access, self.shares, self.users = access, shares, users
         self.teams, self.audit = teams, audit  # TeamRepository, AuditService (TASK-0029)  # AccessService etc. (TASK-0014); None = owner-only
         self.tests = tests  # WorkflowTestRepository (optional): test cases and results go with the workflow (TASK-0067)
         self.chat_sessions = chat_sessions  # ChatSessionRepository (optional): and its chats (TASK-0084)
         self.chat_triggers = chat_triggers  # ChatTriggerRepository (optional): so do its chat triggers (TASK-0074)
+        self.jobs = jobs  # deletes LangSmith feedback when the workflow's ratings go (optional)
 
     # -- persistence: every write goes through here so versions stay in sync (TASK-0008) --
     def _write(self, wid: str, name: str, wf: dict, uid: str, *, new: bool = True, note: str | None = None,
@@ -41,6 +43,7 @@ class WorkflowService:
         if self.access is not None:
             if before is None and not new: before = json.loads((self.repo.get(wid) or Workflow(data="{}")).data or "{}")
             self.access.require_code(uid, before, wf)
+            self.access.require_auto(uid, uid if new else (self.repo.get(wid) or Workflow(owner=uid)).owner, before, wf)
         data, now = _dumps(wf), time.time()
         if new: self.repo.save(wid, name, data, now, uid)
         else: self.repo.update_name(wid, name, data, now)
@@ -165,6 +168,12 @@ class WorkflowService:
     def _emails(self, ids) -> dict[str, str]:
         return {i: u.email for i, u in self.users.by_ids(list(set(ids))).items()} if self.users is not None else {}
 
+    def _version_number(self, wid: str) -> int:
+        """Latest stored version, or 0 when this workflow has no version row."""
+        if self.versions is None: return 0
+        latest = self.versions.latest(wid)
+        return latest.version if latest else 0
+
     def list(self, uid: str, all_: bool = False) -> list[dict]:
         """Own and shared workflows with the caller's access; `all_` lists every workflow for admins."""
         rows = self.access.visible(uid, all_) if self.access is not None else [(w, "owner") for w in self.repo.list_for_owner(uid)]
@@ -174,14 +183,16 @@ class WorkflowService:
             last = self.runs.last_for_workflow(w.id); d = json.loads(w.data or "{}")
             out.append({"id": w.id, "name": w.name, "updated": w.updated, "node_count": len(d.get("nodes", [])),
                         "last_run_status": last.status if last else None, "last_run_at": last.started if last else None,
-                        "access": acc, "mine": w.owner == uid, "owner_email": emails.get(w.owner)})
+                        "access": acc, "mine": w.owner == uid, "owner_email": emails.get(w.owner),
+                        "version": self._version_number(w.id)})
         return out
 
     def get(self, wid: str, uid: str) -> dict:
         w = self.owned(wid, uid)
         acc = self.access.access_of(w, uid) if self.access is not None else "owner"
         return {"id": w.id, **json.loads(w.data or "{}"), "access": acc, "mine": w.owner == uid,
-                "owner_email": self._emails([w.owner]).get(w.owner)}
+                "owner_email": self._emails([w.owner]).get(w.owner), "updated": w.updated,
+                "version": self._version_number(w.id)}
 
     def save(self, wf: dict, uid: str) -> dict:
         wid = wf.get("id") or new_id()
@@ -194,6 +205,7 @@ class WorkflowService:
         old = json.loads(ex.data or "{}") if ex else {}
         wf["name"] = clean_name(wf.get("name", "Untitled workflow"))
         if not ex: wf["name"] = unique_name(self.repo.names_for_owner(uid), wf["name"])
+        if (bad := handoffs.refusal(wf)): raise AppError(bad[0], **bad[1])  # hand-off targets (TASK-0179)
         wf.pop("source", None)  # never trust client-provided source metadata
         if old.get("source"): wf["source"] = old["source"]
         self._write(wid, wf.get("name", "Untitled"), wf, uid, new=not ex, before=old)  # the owner never changes
@@ -251,7 +263,11 @@ class WorkflowService:
         if self.versions is not None: self.versions.delete_for_workflow(wid)
         if self.tests is not None: self.tests.delete_for_workflow(wid)
         if self.chat_triggers is not None: self.chat_triggers.delete_for_workflow(wid)
-        if self.chat_sessions is not None: self.chat_sessions.delete_for_workflow(wid)
+        if self.chat_sessions is not None:
+            from .chat_session_service import enqueue_feedback_deletes
+            fids = self.chat_sessions.feedback_ids_for_workflow(wid)
+            self.chat_sessions.delete_for_workflow(wid)
+            enqueue_feedback_deletes(self.jobs, fids)
         return {"ok": True}
 
     def create(self, wf: dict, uid: str) -> str:

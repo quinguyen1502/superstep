@@ -65,6 +65,46 @@ từ trang khác không hiện, link mở ở tab mới.
   *Chat*, nên bạn mở được trace đầy đủ ở đó.
 - Chat dùng workflow đã lưu: hãy lưu thay đổi trước khi thử.
 
+## Tệp đính kèm
+
+Bật **Cho phép đính kèm tệp** trong Cài đặt chat để người dùng thêm tệp vào tin
+nhắn, trong khung Chat, trên trang công khai và trong widget. Mặc định tắt.
+
+![Đính kèm tệp](../images/chat-attachments.png)
+
+- **Loại tệp**: tài liệu (PDF, TXT, MD, CSV) và hình ảnh (PNG, JPEG, WebP).
+  Máy chủ đọc loại tệp từ nội dung, không theo tên tệp.
+- **Số tệp mỗi tin nhắn** và **Dung lượng tối đa (MB)**: mặc định 5 tệp và
+  10 MB. Không được vượt mức trần của máy chủ, `STUDIO_CHAT_ATTACHMENT_MAX_FILES`
+  và `STUDIO_CHAT_ATTACHMENT_MAX_MB` (xem
+  [Cấu hình](../reference/configuration.md)).
+- **Trường state**: một trường `list` của workflow nhận các tệp của mỗi tin
+  nhắn, mặc định là `files`. Không được trùng trường tin nhắn hay trường hội
+  thoại.
+
+Bấm nút kẹp giấy hoặc thả tệp vào ô tin nhắn. Mỗi tệp được kiểm tra ngay trên
+trang trước khi tải lên (loại, dung lượng, số lượng), hiện thành một thẻ có
+dung lượng và ảnh thu nhỏ với hình ảnh, và gỡ được trước khi gửi. Nút Gửi chờ
+mọi tệp tải lên xong. Tin nhắn có thể chỉ có tệp.
+
+Mỗi run nhận một bản ghi cho mỗi tệp trong trường state:
+
+```json
+[{"id": "…", "name": "invoice.pdf", "type": "application/pdf", "size": 5120,
+  "text": "Invoice 42 …", "text_cut": false}]
+```
+
+`text` chứa nội dung chữ của tài liệu (tối đa 50.000 ký tự, `text_cut` cho biết
+có bị cắt không). Nội dung nhị phân của tệp không bao giờ vào state của run. Để
+đưa tệp cho mô hình, bật **Đưa tệp đính kèm vào** ở node
+[LLM](../guide/nodes.md#llm) hoặc [Agent](../guide/agent.md#cau-hinh).
+
+Tin nhắn đã gửi liệt kê các tệp kèm nút tải xuống. Chỉ người gửi, và người
+xây dựng trong [Chat của khách](#chat-cua-khach), mới tải được; tệp luôn được
+tải xuống, không mở trong trang. Tệp được lưu cùng cuộc chat và bị xoá cùng
+cuộc chat (theo thời gian lưu hoặc khi **Xoá**); tệp đã tải lên mà không gửi
+bị xoá sau một giờ. Bản demo công khai không nhận tệp tải lên.
+
 ## Bộ nhớ
 
 Khi có trường cuộc trò chuyện, mỗi run nhận *n* lượt hỏi–đáp gần nhất cùng tin
@@ -153,6 +193,18 @@ của khách ở chế độ chỉ xem, có đủ mọi bước, cho tới khi *
 nó. Danh sách không hiện tên hay id của khách. Khách không được báo rằng cuộc
 trò chuyện được lưu, nên hãy ghi điều đó trong lời giới thiệu nếu cần.
 
+Dưới mỗi câu trả lời đã xong, khách có thể đánh dấu hữu ích hoặc chưa hữu ích.
+Đánh dấu chưa hữu ích có thể kèm một câu ngắn về chỗ chưa đúng. Khách đổi hoặc
+bỏ đánh dấu được. Chat nhúng cũng có các nút này, vì đó chính là trang này.
+
+Trong tab Chat, người dựng thấy đánh dấu và câu nhận xét trên câu trả lời.
+**Không thích** trong danh sách Khách chỉ giữ các cuộc trò chuyện có đánh dấu
+đó. Một dòng phía trên cuộc trò chuyện cho biết số lượt thích, số lượt không
+thích, và tỷ lệ không thích, trong 7 ngày và 30 ngày gần nhất. **Lưu thành test
+case** trên câu trả lời đã được đánh dấu mở một test nháp của run đó. Khi bật
+theo dõi LangSmith, đánh dấu cũng được gửi lên trace của run dưới tên
+`user_rating`.
+
 ## Nhúng chat vào site của bạn
 
 Chat mở cho **Ai có link** cũng hiện được trên một site khác.
@@ -196,6 +248,13 @@ Phần còn lại của studio không hiện được trong frame trên bất k�
 | `CHAT_DAILY_LIMIT` | Chat đã hết lượt tin nhắn hôm nay. |
 | `CHAT_EMBED_ORIGIN_INVALID` | Một site nhúng không phải địa chỉ dạng `https://example.com`. |
 | `CHAT_LOGO_INVALID` | Logo không phải ảnh PNG, JPEG hoặc WebP, hoặc lớn hơn 256 KB. Không nhận SVG. |
+| `CHAT_ATTACHMENTS_OFF` | Chat này không nhận tệp đính kèm. |
+| `CHAT_ATTACHMENT_TYPE` | Loại tệp không được phép trong chat này, hoặc nội dung không phải PDF, ảnh hay văn bản UTF-8. |
+| `CHAT_ATTACHMENT_TOO_LARGE` | Tệp vượt giới hạn dung lượng của chat. |
+| `CHAT_ATTACHMENT_TOO_MANY` | Tin nhắn có nhiều tệp hơn mức chat cho phép. |
+| `CHAT_ATTACHMENT_NOT_FOUND` | Tệp không tồn tại, hoặc không phải của bạn. |
+| `CHAT_ATTACHMENT_LIMIT` | Một giới hạn trong Cài đặt chat vượt mức trần của máy chủ. |
+| `CHAT_ATTACHMENT_DEMO` | Bản demo công khai không nhận tệp tải lên. |
 | `RATE_LIMITED` | Khách hoặc địa chỉ IP này gửi quá nhiều tin nhắn; `retry_after` cho biết khi nào thử lại. |
 
 Xem thêm [Chạy từ chat](chat-triggers.md) cho Slack và Telegram.

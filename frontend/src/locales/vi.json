@@ -303,9 +303,13 @@
       "status": {
         "error": "lỗi",
         "refused": "bị từ chối",
-        "rejected": "người duyệt từ chối"
+        "rejected": "người duyệt từ chối",
+        "not_run": "không chạy"
       },
-      "approved": "đã duyệt"
+      "approved": "đã duyệt",
+      "handoff": "chuyển giao cho {{to}}",
+      "handoffReason": "chuyển giao cho {{to}}: {{reason}}",
+      "handedOff": "chuyển giao"
     }
   },
   "import": {
@@ -410,6 +414,11 @@
     "HTTP_ERROR": "Yêu cầu thất bại",
     "AUTH_REQUIRED": "Chưa đăng nhập",
     "AUTH_TOKEN_INVALID": "Phiên không hợp lệ, vui lòng đăng nhập lại",
+    "PAT_NAME_TAKEN": "Bạn đã có token đang dùng với tên {{name}}",
+    "PAT_NOT_FOUND": "Không tìm thấy token",
+    "CLI_DEVICE_INVALID": "Mã đăng nhập này không hợp lệ",
+    "CLI_DEVICE_EXPIRED": "Mã đăng nhập này đã hết hạn",
+    "CLI_DEVICE_DENIED": "Lượt đăng nhập này đã bị từ chối",
     "AUTH_TOKEN_EXPIRED": "Phiên đăng nhập đã hết hạn",
     "AUTH_INVALID_CREDENTIALS": "Sai email hoặc mật khẩu",
     "AUTH_EMAIL_INVALID": "Email không hợp lệ",
@@ -491,6 +500,16 @@
     "CHAT_EMBED_ORIGIN_INVALID": "'{{origin}}' không phải địa chỉ trang web dạng https://example.com",
     "CHAT_LOGO_INVALID": "Logo phải là ảnh PNG, JPEG hoặc WebP, tối đa {{max_kb}} KB",
     "CHAT_LOGO_NOT_FOUND": "Chat này chưa có logo",
+    "CHAT_ATTACHMENTS_OFF": "Chat này không nhận tệp đính kèm",
+    "CHAT_ATTACHMENT_TYPE": "Loại tệp này không được phép ở đây. Được phép: {{allowed}}",
+    "CHAT_ATTACHMENT_TOO_LARGE": "Mỗi tệp tối đa {{max_mb}} MB",
+    "CHAT_ATTACHMENT_TOO_MANY": "Mỗi tin nhắn đính kèm tối đa {{max}} tệp",
+    "CHAT_ATTACHMENT_NOT_FOUND": "Không tìm thấy tệp",
+    "CHAT_ATTACHMENT_DEMO": "Bản demo công khai không cho đính kèm tệp",
+    "CHAT_ATTACHMENT_LIMIT": "Giới hạn tệp đính kèm tối đa là {{max_files}} tệp và {{max_mb}} MB mỗi tệp",
+    "CHAT_TURN_NOT_FOUND": "Không tìm thấy tin nhắn",
+    "CHAT_RATING_NOT_ALLOWED": "Tin nhắn này không đánh giá được",
+    "CHAT_RATING_INVALID": "Đánh giá: {{field}} không hợp lệ",
     "TEST_NOT_FOUND": "Không tìm thấy test case",
     "TEST_CASE_INVALID": "Test case: {{reason}}",
     "TEST_CASES_LIMIT": "Một workflow có tối đa {{max}} test case",
@@ -609,7 +628,11 @@
     "CODE_RESULT_NOT_JSON": "Node Code {{node}}: main() trả về {{type}}, không lưu được dưới dạng JSON",
     "CODE_TOO_LARGE": "Node Code {{node}}: {{what}} lớn hơn {{max_kb}} KB",
     "CODE_LANGUAGE_UNSUPPORTED": "Node Code {{node}}: máy chủ này không hỗ trợ {{language}}",
-    "CODE_WRITE_FORBIDDEN": "Vai trò của bạn không được thêm node Code hay sửa code của nó (code.write)"
+    "CODE_WRITE_FORBIDDEN": "Vai trò của bạn không được thêm node Code hay sửa code của nó (code.write)",
+    "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
+    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
+    "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
+    "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này"
   },
   "lang": {
     "en": "English",
@@ -766,7 +789,8 @@
     "run_expired": "Một run đang chờ của {{workflow}} đã hết hạn",
     "unknownWorkflow": "Một workflow",
     "run_reminder": "{{workflow}} vẫn đang chờ bạn: {{label}}",
-    "run_escalated": "{{workflow}} được chuyển cho bạn duyệt: {{label}}"
+    "run_escalated": "{{workflow}} được chuyển cho bạn duyệt: {{label}}",
+    "run_auto_answered": "{{workflow}}: AI đã tự trả lời bước {{label}}"
   },
   "notifyPrefs": {
     "open": "Cài đặt thông báo",
@@ -922,6 +946,33 @@
       "unknown": "Bấm Kiểm tra để xem app có đủ quyền cho chat trigger không."
     }
   },
+  "tokens": {
+    "name": "Tên",
+    "namePh": "CI, máy tính",
+    "create": "Tạo token",
+    "secretOnce": "Hãy chép token này ngay. Nó sẽ không hiện lại.",
+    "secretHint": "Dùng làm SUPERSTEP_TOKEN, hoặc chạy superstep login trên máy bạn tin.",
+    "empty": "Chưa có token đang dùng.",
+    "prefix": "Tiền tố",
+    "created": "Tạo lúc",
+    "lastUsed": "Dùng lần cuối",
+    "never": "Chưa dùng",
+    "revoke": "Thu hồi",
+    "revokeTitle": "Thu hồi {{name}}?",
+    "revokeBody": "Các lệnh đang dùng token này sẽ ngừng hoạt động. Không hoàn tác được.",
+    "readOnly": "Bản demo công khai không tạo được token truy cập."
+  },
+  "cliAuth": {
+    "title": "Duyệt lệnh superstep",
+    "intro": "Lệnh trên máy bạn sẽ có cùng quyền với tài khoản này. Chưa có gì được duyệt cho đến khi bạn bấm nút.",
+    "code": "Mã",
+    "name": "Tên token",
+    "approve": "Duyệt",
+    "deny": "Từ chối",
+    "approved": "Đã duyệt. Bạn có thể đóng trang này và quay lại terminal.",
+    "denied": "Đã từ chối. Terminal sẽ ngừng chờ.",
+    "missing": "Trang này cần mã đăng nhập từ superstep login."
+  },
   "settings": {
     "title": "Cài đặt",
     "open": "Mở cài đặt",
@@ -937,7 +988,8 @@
       "mcp": "Máy chủ MCP",
       "users": "Người dùng",
       "teams": "Nhóm",
-      "activity": "Hoạt động"
+      "activity": "Hoạt động",
+      "tokens": "Token truy cập"
     },
     "intro": {
       "profile": "Tài khoản, ngôn ngữ và mật khẩu của bạn.",
@@ -948,7 +1000,8 @@
       "mcp": "Công cụ từ máy chủ Model Context Protocol, dùng trong node MCP. Secret được mã hoá và không hiển thị lại.",
       "users": "Ai được đăng nhập và mỗi vai trò được làm gì. Chia sẻ workflow trong trình soạn thảo.",
       "teams": "Nhóm người để chia sẻ workflow. Thành viên nhận quyền đã cấp cho nhóm.",
-      "activity": "Thay đổi về vai trò, chia sẻ, nhóm, quyền sở hữu, tài khoản và chính sách, mới nhất ở trên."
+      "activity": "Thay đổi về vai trò, chia sẻ, nhóm, quyền sở hữu, tài khoản và chính sách, mới nhất ở trên.",
+      "tokens": "Token cá nhân cho lệnh superstep và CI. Token chỉ hiện một lần và có cùng quyền với bạn."
     },
     "status": {
       "connected": "Đã kết nối",
@@ -1410,6 +1463,10 @@
       "builtin-support-team": {
         "name": "Đội hỗ trợ",
         "description": "Một agent điều phối giao mỗi câu hỏi cho một workflow chuyên trách: bàn đơn hàng hoặc bàn hoàn tiền. Cả hai được tạo cùng lúc."
+      },
+      "builtin-help-desk": {
+        "name": "Bàn hỗ trợ",
+        "description": "Agent phân loại trả lời câu hỏi về đơn hàng và chuyển câu hỏi thanh toán hoặc kỹ thuật cho agent phụ trách. Trong chat, tin nhắn tiếp theo ở lại với agent vừa trả lời."
       }
     }
   },
@@ -1719,7 +1776,7 @@
     "since": "Chờ từ {{when}}",
     "openRun": "Mở run",
     "open": "Mở trang Duyệt",
-    "sent": "Đã gửi câu trả lời. Run tiếp tục.",
+    "sent": "Đã gửi câu trả lời.",
     "due": "Hạn {{when}}",
     "overdue": "Quá hạn"
   },
@@ -1924,7 +1981,8 @@
       "running": "Đang chạy {{label}}",
       "input": "Input",
       "output": "Output",
-      "errorDetail": "Lỗi"
+      "errorDetail": "Lỗi",
+      "handoff": "cho {{to}}"
     },
     "settings": {
       "title": "Cài đặt Chat",
@@ -2018,9 +2076,23 @@
       "goneTitle": "Chat không mở",
       "gone": "Chat này hiện không mở. Có thể link đã đổi, hoặc chat đã bị tắt."
     },
+    "rating": {
+      "up": "Hữu ích",
+      "down": "Chưa hữu ích",
+      "comment": "Chỗ nào chưa đúng?",
+      "commentPlaceholder": "Tuỳ chọn",
+      "sendComment": "Gửi nhận xét",
+      "remove": "Bỏ đánh giá",
+      "runGone": "Run của câu trả lời này đã bị xoá"
+    },
+    "ratings": {
+      "summary": "{{days}} ngày qua: {{up}} thích, {{down}} không thích ({{share}} không thích)",
+      "noShare": "—"
+    },
     "visitors": {
       "tab": "Khách",
       "none": "Chưa có cuộc trò chuyện nào của khách.",
+      "thumbsDown": "Không thích",
       "readOnly": "Chat của khách trên trang công khai. Chỉ xem.",
       "channel": {
         "web": "Trang",
@@ -2034,6 +2106,31 @@
       "widgetHint": "Dán trước </body>. Một nút mở chat ở góc trang, và khách giữ được cuộc trò chuyện trên mọi trình duyệt. Site đó đọc được khoá chat của khách.",
       "iframe": "Frame",
       "iframeHint": "Hiện chat ngay trong trang. Một số trình duyệt (Safari) bắt đầu cuộc trò chuyện mới mỗi lần khi ở trong frame; dùng bong bóng chat để giữ cuộc trò chuyện."
+    },
+    "files": {
+      "attach": "Đính kèm tệp (tối đa {{max}} tệp, mỗi tệp {{max_mb}} MB)",
+      "attachLabel": "Đính kèm tệp",
+      "remove": "Gỡ {{name}}",
+      "download": "Tải {{name}}",
+      "uploading": "Đang chờ tải tệp lên",
+      "kinds": {
+        "document": "Tài liệu (PDF, TXT, MD, CSV)",
+        "image": "Hình ảnh (PNG, JPEG, WebP)"
+      },
+      "include": "Đưa tệp đính kèm vào",
+      "includeHint": "Gửi các tệp của cuộc chat cho mô hình: tài liệu dưới dạng văn bản, hình ảnh dưới dạng ảnh nếu mô hình xem được ảnh.",
+      "includeField": "Trường chứa tệp",
+      "settings": {
+        "enabled": "Cho phép đính kèm tệp",
+        "enabledHint": "Người dùng có thể thêm tệp vào tin nhắn. Tệp được lưu cùng cuộc chat và bị xoá cùng cuộc chat.",
+        "kinds": "Loại tệp",
+        "kindsHint": "Máy chủ kiểm tra nội dung của từng tệp, không chỉ tên tệp.",
+        "maxFiles": "Số tệp mỗi tin nhắn",
+        "maxMb": "Dung lượng tối đa (MB)",
+        "ceiling": "Máy chủ này cho phép tối đa {{max}}.",
+        "field": "Trường state",
+        "fieldHint": "Trường danh sách nhận thông tin các tệp trong mỗi run."
+      }
     }
   },
   "timeTravel": {
@@ -2071,6 +2168,8 @@
     "historyHint": "Danh sách tin nhắn trước đó ({role, content}) được thêm trước prompt nhiệm vụ, ví dụ trường messages của chat.",
     "tools": "Công cụ",
     "toolsHint": "Model chỉ gọi được các công cụ này. Model đọc tên và mô tả của từng công cụ để chọn.",
+    "parallelTools": "Gọi các tool song song",
+    "parallelToolsHint": "Nhiều lời gọi trong một vòng có thể chạy cùng lúc. Tắt để chạy lần lượt. Máy chủ chạy tối đa 4 lời gọi cùng lúc, hoặc theo STUDIO_AGENT_PARALLEL_TOOLS (từ 1 đến 8).",
     "noToolsYet": "Hãy thêm ít nhất một công cụ.",
     "addTool": "Thêm công cụ",
     "sources": {
@@ -2175,12 +2274,21 @@
     "DEADLINE_ESCALATE_MISSING": "Node Human {{node}}: hãy thêm người nhận khi chuyển cấp",
     "DEADLINE_ESCALATE_EMAILS": "Node Human {{node}}: người nhận khi chuyển cấp phải là địa chỉ email",
     "DEADLINE_TOO_LONG": "Node Human {{node}}: hạn chót dài hơn giới hạn chờ (STUDIO_WAIT_TTL, {{hours}} giờ)",
+    "AUTO_APPROVAL_MODE": "Node {{node}}: chế độ AI duyệt phải là một trong {{modes}}",
+    "AUTO_APPROVAL_RULE_INVALID": "Node {{node}}: quy tắc AI duyệt số {{index}} không hợp lệ (trường, phép so sánh, giá trị và kết quả)",
+    "AUTO_APPROVAL_JUDGE_REQUIRED": "Node {{node}}: AI duyệt cần một credential mô hình",
+    "AUTO_APPROVAL_CONFIDENCE": "Node {{node}}: độ tin cậy tối thiểu phải từ 0 đến 1",
+    "AUTO_APPROVAL_CAP": "Node {{node}}: giới hạn mỗi ngày phải là số nguyên từ 1 đến {{max}}",
     "AGENT_PROMPT_MISSING": "Node Agent {{node}}: chưa có prompt nhiệm vụ",
     "AGENT_ROUNDS": "Node Agent {{node}}: số vòng tối đa phải từ 1 đến {{max}}",
     "AGENT_FIELD_UNKNOWN": "Node Agent {{node}}: {{key}} '{{field}}' không có trong state",
     "AGENT_FIELD_NOT_LIST": "Node Agent {{node}}: {{key}} '{{field}}' phải là trường kiểu list",
+    "ATTACHMENTS_FIELD_UNKNOWN": "Node {{node}}: trường tệp đính kèm '{{field}}' không có trong state",
+    "ATTACHMENTS_FIELD_NOT_LIST": "Node {{node}}: trường tệp đính kèm '{{field}}' phải là trường kiểu list",
     "AGENT_TOOLS_MISSING": "Node Agent {{node}}: hãy thêm ít nhất một công cụ",
     "AGENT_TOOL_NOT_OBJECT": "Node Agent {{node}}: công cụ {{index}} không phải object",
+    "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
+    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
     "AGENT_TOOL_DUPLICATE": "Node Agent {{node}}: có hai công cụ cùng tên {{tool}}",
     "AGENT_TOOL_NAME": "Node Agent {{node}}, công cụ {{tool}}: tên phải dài 1-64 ký tự, gồm chữ, số, _ hoặc -",
     "AGENT_TOOL_SOURCE": "Node Agent {{node}}, công cụ {{tool}}: không có nguồn '{{source}}'",
@@ -2251,5 +2359,84 @@
     "NODE_REF_FILTER_NO_ARGUMENT": "Node {{node}}: filter '{{filter}}' không nhận tham số, trong {{ref}}",
     "NODE_REF_FILTER_NEEDS_TEXT": "Node {{node}}: filter '{{filter}}' cần tham số dạng văn bản, trong {{ref}}",
     "NODE_REF_FILTER_NEEDS_NUMBER": "Node {{node}}: filter '{{filter}}' cần tham số dạng số, trong {{ref}}"
+  },
+  "handoff": {
+    "title": "Chuyển giao",
+    "add": "Thêm chuyển giao",
+    "hint": "Agent có thể chuyển cuộc trò chuyện cho các agent này. Mô tả cho mô hình biết khi nào nên chuyển.",
+    "noAgents": "Thêm một node Agent khác để chuyển cuộc trò chuyện tới.",
+    "description": "Khi nào chuyển giao",
+    "descriptionPlaceholder": "vd. Thanh toán, hoàn tiền và hoá đơn",
+    "remove": "Bỏ chuyển giao tới {{name}}",
+    "max": "Giới hạn chuyển giao mỗi run (toàn workflow)",
+    "maxHint": "Để trống dùng {{n}}. Từ 0 đến {{max}}; vượt quá thì các agent phải tự trả lời.",
+    "handle": "Kéo tới một Agent khác để thêm chuyển giao"
+  },
+  "aiReview": {
+    "title": "AI duyệt",
+    "mode": "Chế độ",
+    "modes": {
+      "off": "Tắt",
+      "suggest": "Gợi ý",
+      "auto": "Tự trả lời"
+    },
+    "modeHelp": {
+      "off": "Mọi yêu cầu do người trả lời.",
+      "suggest": "Một mô hình nêu ý kiến bên cạnh mỗi yêu cầu. Người vẫn trả lời.",
+      "auto": "Mô hình duyệt các yêu cầu mà nó chắc chắn. Nó không bao giờ từ chối: các trường hợp khác chuyển cho người."
+    },
+    "autoOwnerOnly": "Chỉ chủ workflow hoặc quản trị viên mới bật được tự trả lời.",
+    "credential": "Credential của mô hình duyệt",
+    "credentialPick": "Chọn một credential chat",
+    "instructions": "Hướng dẫn cho mô hình duyệt",
+    "instructionsPh": "Hoàn tiền đến 50 USD cho khách hàng cũ là được.",
+    "minConfidence": "Độ tin cậy tối thiểu (0-1)",
+    "cap": "Số lần tự trả lời mỗi ngày",
+    "notify": "Báo cho người sở hữu run khi tự trả lời",
+    "rules": "Quy tắc",
+    "rulesHelp": "Được kiểm tra trước mô hình. Quy tắc có thể chuyển yêu cầu cho người hoặc từ chối; quy tắc không bao giờ duyệt.",
+    "ruleField": "Trường",
+    "ruleOp": "Phép so sánh",
+    "ruleValue": "Giá trị",
+    "ruleEffect": "Thì",
+    "ruleAdd": "Thêm quy tắc",
+    "ruleRemove": "Xoá quy tắc",
+    "ops": {
+      "equals": "bằng",
+      "not_equals": "khác",
+      "contains": "chứa",
+      "not_contains": "không chứa",
+      "matches": "khớp (regex)",
+      "gt": "lớn hơn",
+      "lt": "nhỏ hơn",
+      "empty": "trống"
+    },
+    "effects": {
+      "human": "Hỏi người",
+      "reject": "Từ chối"
+    },
+    "agreement": "Người đồng ý với AI {{rate}} số lần ({{n}} câu trả lời, {{days}} ngày qua).",
+    "agreementNone": "Chưa có tỉ lệ đồng ý: hãy thử chế độ gợi ý và trả lời vài yêu cầu.",
+    "agreementShort": "Đồng ý {{rate}}",
+    "pausedHint": "AI duyệt đang tạm dừng. Yêu cầu được chuyển cho người.",
+    "badge": "AI",
+    "confidence": "độ tin cậy {{rate}}",
+    "decision": {
+      "approve": "Gợi ý duyệt",
+      "reject": "Gợi ý từ chối",
+      "escalate": "Chưa chắc"
+    },
+    "panelTitle": "AI duyệt",
+    "panelIntro": "Các workflow có mô hình duyệt yêu cầu. Tạm dừng sẽ chuyển mọi yêu cầu cho người.",
+    "operatorOff": "Tự trả lời đã bị tắt trên máy chủ này.",
+    "pauseOrg": "Tạm dừng AI duyệt cho mọi workflow",
+    "pause": "Tạm dừng",
+    "none": "Chưa có workflow nào dùng AI duyệt.",
+    "stats": {
+      "today": "{{n}} hôm nay",
+      "approved": "{{n}} đã duyệt",
+      "escalated": "{{n}} chuyển cho người",
+      "suggested": "{{n}} đã gợi ý"
+    }
   }
 }

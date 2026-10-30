@@ -79,6 +79,8 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_PUBLIC_CHAT_RATE_IP` | `30` | Public chat page: messages per client IP per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_READ` | `120` | Public chat page: page loads, chat reads and new chats per client IP per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | The public chat page's window (s). Each chat's own daily cap is in its Chat settings |
+| `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Chat attachments: the largest file in MB; each chat may only lower it |
+| `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Chat attachments: the most files per message; each chat may only lower it |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Longest `sync` wait (s) |
 | `STUDIO_ALLOW_PRIVATE_CALLBACKS` | `0` | Allow callbacks to private addresses |
 | `STUDIO_WEBHOOK_MAX_ATTEMPTS` | `5` | Delivery attempts |

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0139
-- Status: doing
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
@@ -62,8 +62,16 @@ this release ("Tôi muốn đưa vào chung release luôn"), so this PR waited f
 - `factory validate`.
 - CI on the bump PR and on the release PR.
 
+## Review And QA
+
+- Review: the owner approved the release in chat ("Ok, merge #196 into main, tag v0.9.0 and publish the GitHub
+  Release"). No separate REV artifact.
+- QA: CI on #184 and #196, main CI after the merge, and the Image workflow on the tag. No separate QA artifact.
+
 ## Activity Log
 
 - 2026-10-27: version bump and CHANGELOG heading; held as a draft while REQ-0074 was built.
 - 2026-10-27: the owner approved merging #186 to #191 ("Merge chuỗi và chuẩn bị release 0.9.0"); develop merged into
   this branch, so 0.9.0 lists the public chat page, the logo and the trace fix. TASK-0140 to TASK-0146 moved to done.
+- 2026-10-27: released with the owner's approval: #184 into develop, release PR #196 into main (585ed72), tag
+  `v0.9.0` and the GitHub Release.

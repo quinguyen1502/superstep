@@ -5,7 +5,7 @@ import { api, wsUrl } from '@/lib/api'
 import { useOnChange } from '@/lib/use-when'
 import { eventErrors, uiLocale } from '@/lib/i18n'
 import { buildTrace, type RunEvent } from '@/lib/trace'
-import { answers, type ChatSessionFull } from '@/lib/chat'
+import { answers, waitingTurn, type ChatAttachment, type ChatSessionFull } from '@/lib/chat'
 
 export type ChatView = 'builder' | 'visitor'
 /** Where a chat is read and where its messages go: the studio (default), or the public page's API and socket. Callers
@@ -48,8 +48,14 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
     sock.onclose = () => { setRunning(false); if (runId) settle(sid, runId, resumeOf ? before : 0); else setPending(null) }
   }, [sid, settle, ep])
 
-  const send = useCallback((text: string) => stream({ message: text }, text, 0), [stream])
-  const answer = (runId: string, response: string) => stream({ resume_run_id: runId, response }, response, answers(session?.turns ?? [], runId), runId)
+  /** Sends a message, with the files already uploaded for it (TASK-0177): shown on the pending turn until the answer. */
+  const [pendingFiles, setPendingFiles] = useState<ChatAttachment[]>([])
+  const send = useCallback((text: string, files: ChatAttachment[] = []) => { setPendingFiles(files)
+    stream(files.length ? { message: text, attachment_ids: files.map(f => f.id) } : { message: text }, text, 0) }, [stream])
+  const answer = (runId: string, response: string) => { setPendingFiles([])
+    const node = buildTrace(events).waiting?.node || waitingTurn(session?.turns ?? [])?.node || undefined
+    stream({ resume_run_id: runId, response, ...(node ? { node } : {}) }, response, answers(session?.turns ?? [], runId), runId)
+  }
   const cancel = () => ws.current?.readyState === WebSocket.OPEN && ws.current.send(JSON.stringify({ type: 'cancel' }))
-  return { session, events, trace: buildTrace(events), pending, running, error, send, answer, cancel, reload: () => load().then(setSession) }
+  return { session, events, trace: buildTrace(events), pending, pendingFiles, running, error, send, answer, cancel, reload: () => load().then(setSession) }
 }

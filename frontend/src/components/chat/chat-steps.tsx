@@ -16,6 +16,7 @@ function Line({ s }: { s: ChatStep }) {
   const { t } = useTranslation(); const I = META[s.type ?? '']?.icon ?? Workflow
   return <TraceLine status={s.status === 'error' ? 'error' : s.status === 'running' ? 'running' : undefined} data-testid="chat-step" data-status={s.status}>
     <TraceIcon><I /></TraceIcon><TraceTitle>{t(`chat.step.${s.status}`, { label: s.label })}</TraceTitle>
+    {s.handoff_to && <TraceDescription data-testid="chat-step-handoff">{t('chat.step.handoff', { to: s.handoff_to })}</TraceDescription>}
     {s.duration_ms != null && <TraceDescription>{fmtMs(s.duration_ms)}</TraceDescription>}
   </TraceLine>
 }

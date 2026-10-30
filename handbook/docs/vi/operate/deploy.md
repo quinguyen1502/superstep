@@ -1,5 +1,18 @@
 # Triển khai bằng Compose
 
+## Cài bằng CLI
+
+Trên máy có Docker, cài lệnh rồi tạo instance từ trang [CLI](cli.md):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/quinguyen1502/superstep/develop/scripts/install.sh | sh
+superstep install
+```
+
+Các mục bên dưới là layout Compose của topology `full` và danh sách kiểm tra
+cho production. Nút triển khai lên nền tảng vẫn nằm trong tài liệu deploy của
+repo.
+
 ## Các dịch vụ
 
 | Dịch vụ | Image | Vai trò |

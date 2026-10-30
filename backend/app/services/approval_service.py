@@ -11,17 +11,17 @@ from typing import Callable, Optional
 from ..core import config, crypto
 from ..core.errors import AppError
 from ..core.logging import get_logger
-from ..engine import deadlines
+from ..engine import approval_policy, deadlines
 from ..models import ApprovalAudit, ApprovalRequest, ApprovalWait
 from ..repositories import ApprovalRepository, RunRepository, UserRepository, WorkflowRepository
 from .approval_channels import ApprovalChannel, ApprovalMessage
-from .approval_channels.messages import lang_of, text
+from .approval_channels.messages import lang_of, opinion_text, text
 from .channel_service import ChannelService
 from .job_queue import enqueue_resume
 
 log = get_logger("approvals")
 DECISIONS = {"a": "approved", "r": "rejected"}
-CLOSE_TEXTS = ("answered", "cancelled", "expired", "deadline_approved", "deadline_rejected")  # chat texts close_run edits messages to
+CLOSE_TEXTS = ("answered", "cancelled", "expired", "deadline_approved", "deadline_rejected", "auto_approved", "auto_rejected")  # chat texts close_run edits messages to
 PROMPT_MAX = 4000  # characters of the question kept on a waiting step (the inbox shows it)
 BACKGROUND = True  # send/edit messages off the request thread; tests switch it off for determinism
 
@@ -29,11 +29,12 @@ BACKGROUND = True  # send/edit messages off the request thread; tests switch it 
 class ApprovalService:
     def __init__(self, repo: ApprovalRepository, users: UserRepository, workflows: WorkflowRepository, runs: RunRepository, channels: ChannelService,
                  enqueue: Optional[Callable[[dict], None]] = None, background: Optional[bool] = None, limiter=None, notifier=None,
-                 chat: Optional[Callable[[], object]] = None):
+                 chat: Optional[Callable[[], object]] = None, reviewer=None):
         self.repo, self.users, self.workflows, self.runs, self.channels, self.enqueue = repo, users, workflows, runs, channels, enqueue
         self.notifier = notifier  # NotificationService (optional): deadline reminders and escalations (TASK-0066)
         self.limiter = limiter  # RateLimiter for the public callbacks (None = no limit)
         self.chat = chat  # -> ChatRunService (optional): messages on the same webhook start chat-trigger runs (TASK-0075)
+        self.reviewer = reviewer  # AutoReviewService (optional): AI review before people are asked (TASK-0187, REQ-0081)
         self.adapters = channels.adapters
         self.background = BACKGROUND if background is None else background
 
@@ -70,10 +71,17 @@ class ApprovalService:
         return r, DECISIONS[parts[0]]
 
     # ---- audit ----
-    def _audit(self, owner, kind, action, r: Optional[ApprovalRequest] = None, code=None, actor=None, external=None, run_id=None, wid=None):
+    def _audit(self, owner, kind, action, r: Optional[ApprovalRequest] = None, code=None, actor=None, external=None, run_id=None, wid=None,
+               auto: Optional[dict] = None, agreed: Optional[bool] = None):
+        """auto: an AI review (TASK-0187): its outcome, confidence, model, reason, matched rules and policy hash."""
+        a = auto or {}
         try: self.repo.audit(ApprovalAudit(id=uuid.uuid4().hex[:12], owner=owner, request_id=r.id if r else None, run_id=r.run_id if r else run_id,
                                            workflow_id=r.workflow_id if r else wid, kind=kind, action=action, code=code, actor_id=actor,
-                                           external_id=external, created=time.time()))
+                                           external_id=external, created=time.time(), auto_outcome=a.get("outcome"),
+                                           auto_confidence=a.get("confidence"), auto_model=a.get("model"),
+                                           auto_reason=(a.get("reason") or None) and str(a["reason"])[:500],
+                                           auto_rules=json.dumps(a["rules"]) if a.get("rules") else None, policy_hash=a.get("policy_hash"),
+                                           agreed=agreed))
         except Exception: log.exception("writing an approval audit entry failed")
 
     def audit_log(self, uid: str) -> list[dict]:
@@ -85,19 +93,73 @@ class ApprovalService:
             if u and u not in emails: x = self.users.get_by_id(u); emails[u] = x.email if x else None
             return emails.get(u)
         return [{"id": e.id, "at": e.created, "kind": e.kind, "action": e.action, "code": e.code, "run_id": e.run_id, "workflow_id": e.workflow_id,
-                 "workflow_name": name(e.workflow_id), "actor": email(e.actor_id), "external_id": e.external_id} for e in self.repo.audit_for(uid)]
+                 "workflow_name": name(e.workflow_id), "actor": email(e.actor_id), "external_id": e.external_id,
+                 "auto": {"outcome": e.auto_outcome, "confidence": e.auto_confidence, "model": e.auto_model, "reason": e.auto_reason,
+                          "rules": json.loads(e.auto_rules) if e.auto_rules else [], "policy_hash": e.policy_hash} if e.auto_outcome else None,
+                 "agreed": e.agreed} for e in self.repo.audit_for(uid)]
 
     # ---- producer: a run paused at a Human node ----
-    def on_waiting(self, rid: str, owner: str, wid: Optional[str], workflow: dict, ev: dict) -> None:
-        node = next((n for n in workflow.get("nodes") or [] if n.get("id") == ev.get("node")), None)
+    def _policy(self, wid: Optional[str], node: Optional[dict]) -> Optional[dict]:
+        """The node's AI review policy when it applies now (TASK-0187): set, valid, and not paused."""
+        if self.reviewer is None or node is None: return None
+        p = approval_policy.parse((node.get("data") or {}))
+        return p if p is not None and not self.reviewer.paused(wid) else None
+
+    @staticmethod
+    def _node(workflow: dict, ev: dict) -> Optional[dict]:
+        return next((n for n in workflow.get("nodes") or [] if n.get("id") == ev.get("node")), None)
+
+    def answers_itself(self, wid: Optional[str], workflow: dict, ev: Optional[dict]) -> bool:
+        """True when AI review in auto mode may answer this step: the run owner is told after the review instead of now."""
+        p = self._policy(wid, self._node(workflow or {}, ev or {})) if ev else None
+        return bool(p and p["mode"] == "auto")
+
+    def on_waiting(self, rid: str, owner: str, wid: Optional[str], workflow: dict, ev: dict, state: Optional[dict] = None, start: bool = True):
+        """Writes the waiting step now; the request (AI review, channel message) is a job. start=False returns the job
+        for the caller to start() once the run row is stored, so an answer AI review gives at once finds the run
+        waiting, while a crash before that still leaves the waiting step (TASK-0187)."""
+        node = self._node(workflow, ev)
         cfg = ((node or {}).get("data") or {}).get("approval") or {}
         target = str(cfg.get("target") or "").strip()
         kind = cfg.get("channel"); needs_target = self.adapters[kind].target_required if kind in self.adapters else True
         external = bool(cfg.get("channel_id") or kind) and not (needs_target and not target)
         w = self._wait(rid, owner, wid, ev, cfg, external, (node or {}).get("data") or {})
-        if not external: return  # this node does not use an external channel
-        job = lambda: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)  # noqa: E731
+        policy = self._policy(wid, node)
+        if policy is not None:  # AI review first; people are asked only when it does not answer (DEC-0075 decision 1)
+            job = lambda: self._reviewed(rid, owner, wid, node, cfg, target, ev, w, policy, external, state)  # noqa: E731
+        elif external: job = lambda: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)  # noqa: E731
+        else: return None  # this node does not use an external channel
+        if not start: return job
+        self.start(job); return None
+
+    def start(self, job) -> None:
         threading.Thread(target=job, daemon=True).start() if self.background else job()
+
+    def _reviewed(self, rid, owner, wid, node, cfg, target, ev, w: ApprovalWait, policy: dict, external: bool, state: Optional[dict]) -> None:
+        request = {"tool": ev.get("tool"), "args": ev.get("arguments") if isinstance(ev.get("arguments"), dict) else {},
+                   "prompt": ev.get("prompt") or "", "state": state if isinstance(state, dict) else {}}
+        try: r = self.reviewer.review(owner, wid, policy, request)
+        except Exception: log.exception("AI review of run %s failed", rid); r = {"mode": policy["mode"], "outcome": "escalated", "cause": "error"}
+        if r is None:  # paused meanwhile: as if AI review were off
+            if external: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)
+            return
+        if r.get("decision"): self.repo.set_opinion(w.id, r["decision"], r.get("confidence"), r.get("reason"))
+        self._audit(owner, "auto", f"auto_{r['outcome']}", code=r.get("cause"), run_id=rid, wid=wid, auto=r)
+        if r["outcome"] in ("approved", "rejected"):
+            if not self.repo.close_wait(rid, "auto", w.id): return  # someone answered first
+            self._close_requests(rid, "superseded", f"auto_{r['outcome']}", node=w.node_id)
+            if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": rid, "owner": owner, "response": r["outcome"],
+                                           "node": w.node_id, "workflow_id": wid, "by": {"channel": "auto", "policy": r.get("policy_hash")}})
+            if policy["notify"]: self._notify(owner, "run_auto_answered", rid, wid, ev, r)  # the run owner only (owner decision 7)
+            return
+        if policy["mode"] == "auto": self._notify(owner, "run_waiting", rid, wid, ev, r)  # the run service left this to the review
+        if external: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at, opinion=r)
+
+    def _notify(self, uid: str, kind: str, rid: str, wid: Optional[str], ev: dict, r: dict) -> None:
+        if self.notifier is None: return
+        try: self.notifier.run_event(kind, uid, rid, wid, ev, extra={"ai_decision": r.get("outcome") if kind == "run_auto_answered" else r.get("decision"),
+                                                                     "ai_confidence": r.get("confidence"), "ai_reason": r.get("reason")})
+        except Exception: log.exception("AI review notification for run %s failed", rid)
 
     def _approver_ids(self, cfg: dict) -> list[str]:
         """The node's approvers (e-mails) as studio user ids; unknown addresses are dropped."""
@@ -118,12 +180,24 @@ class ApprovalService:
     def may_answer(self, uid: str, w: ApprovalWait) -> bool:
         return uid == w.owner or uid in self.repo.wait_approvers(w.id)
 
-    def claim(self, rid: str) -> bool:
+    def claim(self, rid: str, node: Optional[str] = None) -> bool:
         """First answer wins (DEC-0043): close the run's open waiting step. True when this caller closed it, or when the run
-        paused before waiting steps existed (no row at all)."""
+        paused before waiting steps existed (no row at all). `node` closes only that step, so a sibling wait of the same
+        wave stays open (TASK-0158)."""
+        if node:
+            w = self.repo.open_wait(rid, node)
+            if w is None: return self.repo.latest_wait(rid) is None
+            return self.repo.close_wait(rid, "answered", w.id)
         return self.repo.close_wait(rid, "answered") or self.repo.latest_wait(rid) is None
 
-    def _request(self, rid, owner, wid, node, cfg, target, ev, due: Optional[float] = None) -> Optional[ApprovalRequest]:
+    def answered_slot(self, rid: str, node: str) -> bool:
+        """The studio answered this slot: close its waiting step and its channel buttons. Other slots of the wave stay
+        open. False when another answer already closed this step."""
+        if not self.claim(rid, node): return False
+        self._close_requests(rid, "superseded", "answered", node=node)
+        return True
+
+    def _request(self, rid, owner, wid, node, cfg, target, ev, due: Optional[float] = None, opinion: Optional[dict] = None) -> Optional[ApprovalRequest]:
         """Send one approval message. Its buttons expire after STUDIO_APPROVAL_TTL, or at the step's deadline if sooner."""
         if self.channels.org_denied(owner, cfg):  # admin policy (TASK-0029)
             self._audit(owner, cfg.get("channel") or "channel", "not_configured", code="ORG_RESOURCE_NOT_ALLOWED", run_id=rid, wid=wid); return None
@@ -138,7 +212,8 @@ class ApprovalService:
                                                   expires=min(time.time() + config.approval_ttl(), due or float("inf")), status="pending", created=time.time()))
         name = self.workflow_name(rid, wid); lang = self._lang(owner)
         lines = [name and text(lang, "workflow", v=name), text(lang, "step", v=ev.get("label") or node["id"]), ev.get("prompt") and text(lang, "question", v=ev["prompt"]),
-                 text(lang, "run", v=rid), text(lang, "expires", v=time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(r.expires)))]
+                 text(lang, "run", v=rid), text(lang, "expires", v=time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(r.expires))),
+                 opinion_text(lang, opinion)]
         link = f"{config.public_url()}/workflows/{wid}?run={rid}" if config.public_url() and wid else None
         msg = ApprovalMessage(text(lang, "title"), [x for x in lines if x], link, self.token(r, "a"), self.token(r, "r"),
                               text(lang, "approve"), text(lang, "reject"), text(lang, "open"))
@@ -230,12 +305,12 @@ class ApprovalService:
             self._audit(r.owner, kind, "denied", r, code=code, actor=uid, external=external); return code, r, None
         if uid != r.owner and uid not in json.loads(r.approvers or "[]"): return refuse("APPROVAL_FORBIDDEN")
         run = self.runs.get(r.run_id)
-        if run is None or run.status != "waiting" or not self.claim(r.run_id):
+        if run is None or run.status != "waiting" or not self.claim(r.run_id, r.node_id):
             self.repo.decide(r.id, "superseded"); return refuse("APPROVAL_ALREADY_DECIDED")
         if not self.repo.decide(r.id, decision, uid, external): return refuse("APPROVAL_ALREADY_DECIDED")  # lost the race: single use
-        self._audit(r.owner, kind, decision, r, actor=uid, external=external)
+        self._audit(r.owner, kind, decision, r, actor=uid, external=external, agreed=self._agreed(self.repo.latest_wait(r.run_id), decision))
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": r.run_id, "owner": r.owner, "response": decision,
-                                       "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
+                                       "node": r.node_id, "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
         return None, self.repo.request(r.id), decision
 
     # ---- link channels: the studio's /approve page (TASK-0047) ----
@@ -282,12 +357,20 @@ class ApprovalService:
 
     # ---- the Approvals inbox (TASK-0065) ----
     def answered_in_studio(self, w: ApprovalWait, uid: str, response: str) -> None:
-        """An inbox answer whose waiting step the caller already closed: close the channel requests, audit it and resume
-        the run like a channel decision (the run stays its owner's)."""
-        self.close_run(w.run_id, "answered")
-        self._audit(w.owner, "studio", response if response in DECISIONS.values() else "answered", actor=uid, run_id=w.run_id, wid=w.workflow_id)
-        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
-                                       "by": {"channel": "studio", "user_id": uid}})
+        """An inbox answer whose waiting step the caller already closed: close that step's channel requests, audit it and
+        resume the run like a channel decision (the run stays its owner's). Other open steps of the run stay open."""
+        self._close_requests(w.run_id, "superseded", "answered", node=w.node_id)
+        self._audit(w.owner, "studio", response if response in DECISIONS.values() else "answered", actor=uid, run_id=w.run_id, wid=w.workflow_id,
+                    agreed=self._agreed(self.repo.wait_of(w.id), response))
+        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response,
+                                       "node": w.node_id, "workflow_id": w.workflow_id, "by": {"channel": "studio", "user_id": uid}})
+
+    @staticmethod
+    def _agreed(w: Optional[ApprovalWait], response: str) -> Optional[bool]:
+        """After an AI opinion of approve or reject, whether the person answered the same (suggest mode's agreement)."""
+        ai = w.ai_decision if w is not None else None
+        if ai not in ("approve", "reject") or response not in DECISIONS.values(): return None
+        return (ai == "approve") == (response == "approved")
 
     # ---- the run went on without the channel (answered in the studio, cancelled, expired) ----
     def decided_elsewhere(self, rid: str) -> bool:
@@ -302,10 +385,11 @@ class ApprovalService:
         self.repo.close_wait(rid, reason)
         return self._close_requests(rid, "expired" if reason == "expired" else "superseded", reason if reason in CLOSE_TEXTS else "finished")
 
-    def _close_requests(self, rid: str, action: str, key: str) -> int:
-        """Close the run's pending channel requests and edit their messages to `key` (a chat text)."""
+    def _close_requests(self, rid: str, action: str, key: str, node: Optional[str] = None) -> int:
+        """Close the run's pending channel requests and edit their messages to `key` (a chat text). `node` closes only that step."""
         closed = []
         for r in self.repo.requests_for_run(rid, "pending"):
+            if node is not None and r.node_id != node: continue
             if self.repo.decide(r.id, action): closed.append(r); self._audit(r.owner, r.kind, action, r)
         if closed:
             def edit():
@@ -355,10 +439,10 @@ class ApprovalService:
         response = deadlines.RESPONSES.get(action, "rejected")  # a second deadline after an escalation rejects
         if not self.repo.close_wait(w.run_id, "deadline", w.id): return 0  # this step only: the run may wait at a later one by now
         log_skipped()
-        self.close_run(w.run_id, f"deadline_{response}")
+        self._close_requests(w.run_id, "superseded", f"deadline_{response}", node=w.node_id)
         self._audit(w.owner, kind, "timed_out", run_id=w.run_id, wid=w.workflow_id)
-        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
-                                       "by": {"channel": "deadline", "on_timeout": action}})
+        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response,
+                                       "node": w.node_id, "workflow_id": w.workflow_id, "by": {"channel": "deadline", "on_timeout": action}})
         return 1
 
     def _reach(self, w: ApprovalWait, kind: str, uids: list[str], key: str, extra: list[str] = (), due: Optional[float] = None) -> None:

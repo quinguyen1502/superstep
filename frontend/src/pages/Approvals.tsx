@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AiOpinionNote, AiReviewPanel } from '@/components/approvals/ai-review-panel'
 import { ChannelLogo } from '@/components/approvals/channel-logo'
 import { HumanAnswer } from '@/components/human-answer'
 import { LanguageSwitcher } from '@/components/language-switcher'
@@ -24,6 +25,7 @@ export function ApprovalsPage() {
   const { t } = useTranslation()
   const [items, setItems] = useState<InboxItem[] | null>(null); const [err, setErr] = useState('')
   const [busy, setBusy] = useState<string | null>(null); const [sent, setSent] = useState<string[]>([])
+  const rowKey = (it: InboxItem) => `${it.run_id}:${it.node}`
   const [now, setNow] = useState(() => Date.now())
   const load = () => api<InboxItem[]>('/api/approvals/inbox').then(xs => { setItems(xs); setErr(''); setNow(Date.now()) }).catch(e => setErr(e.message))
   useEffect(() => {
@@ -32,8 +34,8 @@ export function ApprovalsPage() {
     return () => { clearInterval(id); window.removeEventListener('focus', load) }
   }, [])
   const answer = async (it: InboxItem, response: string) => {
-    setBusy(it.run_id); setErr('')
-    try { await api(`/api/approvals/inbox/${it.run_id}`, { method: 'POST', json: { response } }); setSent(s => [...s, it.run_id]) }
+    const key = rowKey(it); setBusy(key); setErr('')
+    try { await api(`/api/approvals/inbox/${it.run_id}`, { method: 'POST', json: { response, node: it.node } }); setSent(s => s.includes(key) ? s : [...s, key]) }
     catch (e: any) { setErr(e.message) } finally { setBusy(null); load() }
   }
   return <div className="min-h-dvh bg-background text-foreground">
@@ -51,7 +53,7 @@ export function ApprovalsPage() {
       {items && !items.length && <div id="inbox-empty" className="flex flex-col items-center gap-2 py-14 text-center">
         <div className="rounded-full bg-muted p-3 text-muted-foreground"><Inbox className="size-5" /></div>
         <div className="font-medium">{t('inbox.empty')}</div><div className="text-sm text-muted-foreground">{t('inbox.emptyHelp')}</div></div>}
-      {items?.map(it => <Card key={it.run_id} data-testid="inbox-row" data-run={it.run_id} className="gap-3">
+      {items?.map(it => <Card key={`${it.run_id}:${it.node}`} data-testid="inbox-row" data-run={it.run_id} data-node={it.node} className="gap-3">
         <CardHeader className="px-4">
           <CardTitle className="text-base">{it.workflow_name || it.workflow_id || it.run_id}</CardTitle>
           <CardDescription className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -68,9 +70,11 @@ export function ApprovalsPage() {
         </CardHeader>
         <CardContent className="space-y-3 px-4">
           {it.prompt && <p className="whitespace-pre-wrap text-sm" data-testid="inbox-question">{it.prompt}</p>}
-          <HumanAnswer busy={busy === it.run_id} onRespond={r => answer(it, r)} />
+          {it.ai && <AiOpinionNote ai={it.ai} />}
+          <HumanAnswer busy={busy === rowKey(it)} onRespond={r => answer(it, r)} />
         </CardContent>
       </Card>)}
+      <AiReviewPanel onError={setErr} />
     </main>
   </div>
 }

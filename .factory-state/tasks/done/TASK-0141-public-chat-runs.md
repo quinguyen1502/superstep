@@ -106,3 +106,5 @@ read-only list of visitor chats.
 ## Handoff Notes
 
 - TASK-0142 builds the page on this socket.
+- Review: `.factory-state/artifacts/REV-0124-task-0141.md`.
+- QA: `.factory-state/artifacts/QA-0124-task-0141.md`.

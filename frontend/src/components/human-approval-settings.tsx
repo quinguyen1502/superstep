@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { ChannelLogo } from '@/components/approvals/channel-logo'
 import { channelLabel, type Channels } from '@/lib/approvals'
+import type { AutoPolicy } from '@/lib/auto-approval'
 
 /** channel_id: the connection (personal or org); channel: its kind (kept for labels and older workflows). */
-export type Approval = { channel_id?: string; channel?: string; target?: string; approvers?: string[] }
+export type Approval = { channel_id?: string; channel?: string; target?: string; approvers?: string[]; auto?: AutoPolicy }  // auto: AI review (TASK-0188)
 
 /** Per-Human-node approval channel (TASK-0022): where the Approve/Reject message goes, and who may answer it, on any
  * Human node, from the channel or the Approvals inbox (TASK-0065). */

@@ -88,11 +88,17 @@ class TriggerService:
         self.tokens.set_fields(t.id, last_used=time.time())
         return t
 
-    async def check_rate(self, tok: WorkflowToken) -> None:
+    @staticmethod
+    def rate_key(tok: Optional[WorkflowToken] = None, *, pat_id: Optional[str] = None, workflow_id: Optional[str] = None) -> str:
+        """`token:{id}` for a workflow token; `pat:{pat id}:{workflow id}` for a personal access token (TASK-0171)."""
+        if pat_id is not None: return f"pat:{pat_id}:{workflow_id}"
+        return f"token:{tok.id}"
+
+    async def check_rate(self, tok: Optional[WorkflowToken] = None, *, key: Optional[str] = None) -> None:
         """Per-token fixed-window limit on starting runs (STUDIO_TRIGGER_RATE_LIMIT per STUDIO_TRIGGER_RATE_WINDOW s)."""
         limit = config.trigger_rate_limit()
         if self.limiter is None or not limit: return
-        ok, retry = await self.limiter.hit(f"token:{tok.id}", limit, config.trigger_rate_window())
+        ok, retry = await self.limiter.hit(key if key is not None else self.rate_key(tok), limit, config.trigger_rate_window())
         if not ok: raise AppError("RATE_LIMITED", headers={"Retry-After": str(retry)}, retry_after=retry)
 
     def start(self, tok: WorkflowToken, inp, callback_url: Optional[str]) -> str:
@@ -115,27 +121,36 @@ class TriggerService:
         self.jobs.enqueue({"run_id": rid, "workflow_id": wid, "owner": owner, "input": inp, "callback_url": callback_url, "token_id": token_id})
         return rid
 
-    def result(self, tok: WorkflowToken, rid: str) -> dict:
+    @staticmethod
+    def _scope(tok: Optional[WorkflowToken], wid: Optional[str], owner: Optional[str]) -> tuple[str, str]:
+        """A workflow token scopes by its row; a personal access token passes the workflow id and the user id."""
+        if tok is not None: return tok.workflow_id, tok.owner
+        return wid or "", owner or ""
+
+    def result(self, tok: Optional[WorkflowToken], rid: str, wid: Optional[str] = None, owner: Optional[str] = None) -> dict:
+        workflow_id, owner_id = self._scope(tok, wid, owner)
         r = self.runs.get(rid)
-        if r is None or r.workflow_id != tok.workflow_id or r.owner != tok.owner: raise AppError("RUN_NOT_FOUND")
+        if r is None or r.workflow_id != workflow_id or r.owner != owner_id: raise AppError("RUN_NOT_FOUND")
         return run_result(r)
 
-    def resume(self, tok: WorkflowToken, rid: str, response) -> float:
-        """Answer the Human node a run of this token's workflow waits at; the worker continues it from its checkpoint.
+    def resume(self, tok: Optional[WorkflowToken], rid: str, response, wid: Optional[str] = None, owner: Optional[str] = None) -> float:
+        """Answer the Human node a run of this workflow waits at; the worker continues it from its checkpoint.
         Returns the end of the paused segment (`since` for `wait`)."""
+        workflow_id, owner_id = self._scope(tok, wid, owner)
         r = self.runs.get(rid)
-        if r is None or r.workflow_id != tok.workflow_id or r.owner != tok.owner: raise AppError("RUN_NOT_FOUND")
+        if r is None or r.workflow_id != workflow_id or r.owner != owner_id: raise AppError("RUN_NOT_FOUND")
         if r.status != "waiting": raise AppError("RUN_NOT_WAITING")
         enqueue_resume(self.runs, self.jobs.enqueue, {"kind": "resume", "run_id": r.id, "owner": r.owner, "response": human_response(response),
                                                       "workflow_id": r.workflow_id})
         return r.ended or 0.0
 
-    async def wait(self, tok: WorkflowToken, rid: str, timeout: float, since: Optional[float] = None) -> dict:
+    async def wait(self, tok: Optional[WorkflowToken], rid: str, timeout: float, since: Optional[float] = None,
+                   wid: Optional[str] = None, owner: Optional[str] = None) -> dict:
         """Sync mode: poll the shared runs table (works across worker processes) until the run settles (a resumed
         run: settles again after `since`, the end of its paused segment)."""
         deadline = time.time() + timeout
         while True:
-            res = await asyncio.to_thread(self.result, tok, rid)
+            res = await asyncio.to_thread(self.result, tok, rid, wid, owner)
             settled = res["status"] in FINAL and (since is None or (res["ended"] or 0) > since)
             if settled or time.time() >= deadline: return res
             await asyncio.sleep(0.2)
