@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0172
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -64,7 +64,7 @@ The handbook tells an operator how to sign in, keep workflows in Git, fail CI on
 
 ## Dependencies
 
-- TASK-0167, TASK-0168, TASK-0169, TASK-0170 and TASK-0171 merged into `develop`. Document the commands that shipped, not the plan, if a flag moved during review.
+- Documented the commands merged in PR #214 through PR #218. Review REV-0148. QA QA-0148. Not merged.
 
 ## Acceptance Criteria
 
@@ -90,6 +90,7 @@ The handbook tells an operator how to sign in, keep workflows in Git, fail CI on
 ## Activity Log
 
 - 2026-10-30: planned from REQ-0079 phase 2 (DEC-0071). Not started.
+- 2026-10-30: owner asked to finish the phase 2 chain in one pass. Handbook pages and CHANGELOG updated from the merged commands. Review REV-0148. QA QA-0148. Task moved to done. Not merged.
 
 ## Handoff Notes
 

@@ -6,6 +6,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **superstep CLI phase 2** (REQ-0079, DEC-0071). `login`, `logout` and `whoami` sign the CLI in with a personal access token. `pull` and `push` keep workflow JSON in a folder and refuse a studio edit since the last pull unless `--force` is set. `run` follows the run-panel socket. `test` writes JUnit XML for CI. `mcp` speaks MCP on stdio and calls the studio with that token. No new package version and no new image: the next `v*` tag ships this.
+
 - **superstep CLI release** (REQ-0079, DEC-0068). `scripts/install.sh` installs the `superstep` command (`install`, `upgrade`, `backup`, `restore`, `deploy`, `doctor`, `status`, `admin`, `uninstall`). A `v*` tag publishes the Python package at the server version, and the package version moves from the `0.1.0` line to the server version. The same tag rules publish `ghcr.io/quinguyen1502/superstep-api` and `superstep-web`. The handbook Operate section starts from the CLI.
 
 - **Agent tool calls can run together** (REQ-0076, DEC-0069). One round may run up to eight tool calls, then join their results in the model's order. The default is 4 at a time (`STUDIO_AGENT_PARALLEL_TOOLS`, clamped to 1–8). An Agent node can turn parallel calls off. A wave that pauses for an approval or a child run lets the other calls finish, and the parent resumes once, after every wait in that wave. The trace draws those calls as overlapping bars. The Python, LangGraph project and TypeScript exports run the round together when the setting is on.
