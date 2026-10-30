@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0078
-- Status: Accepted on 2026-10-27 with the CLAR-0009 answers (all recommended options). Tasks are not planned yet.
+- Status: Accepted on 2026-10-27 with the CLAR-0009 answers (all recommended options). Planned on 2026-10-30 (DEC-0073, TASK-0179 to TASK-0184); the owner confirmed the task set and DEC-0073 on 2026-10-30.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Source: owner request in chat on 2026-10-27 ("3 hướng có thể làm thì bạn viết REQ trước đi"). REQ-0073 left
   "Hand-off between agents" out of scope (CLAR-0004 question 1 chose workflow tools first).
 
@@ -147,6 +147,17 @@ CLAR-0009 theo đề xuất, rồi merge #200").
 ## Open Questions
 
 None. CLAR-0009 is answered.
+
+## Planned Tasks
+
+Planned on 2026-10-30. The layout is DEC-0073. The owner confirmed the set and DEC-0073 on 2026-10-30.
+
+- TASK-0179 Hand-off targets and the limit in the model, save validation.
+- TASK-0180 Engine routing, checkpointed hand-off step, limit, trace.
+- TASK-0181 Chat session keeps the active agent.
+- TASK-0182 Agent Config targets, dashed canvas links, trace label (en, vi).
+- TASK-0183 Python, LangGraph project and TypeScript exports.
+- TASK-0184 Help desk template, handbook (en, vi), e2e, CHANGELOG.
 
 ## Related Artifacts
 

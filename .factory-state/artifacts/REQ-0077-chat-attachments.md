@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0077
-- Status: Accepted on 2026-10-27 with the CLAR-0008 answers (all recommended options). Tasks are not planned yet.
+- Status: Accepted on 2026-10-27 with the CLAR-0008 answers (all recommended options). Planned on 2026-10-30 (DEC-0072, TASK-0174 to TASK-0178); the owner confirmed the task set and DEC-0072 on 2026-10-30.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Source: owner request in chat on 2026-10-27 ("3 hướng có thể làm thì bạn viết REQ trước đi"). REQ-0048 and
   REQ-0074 left attachments for a later phase, and `chat_turns.attachments` is reserved for them.
 
@@ -162,6 +162,16 @@ CLAR-0009 theo đề xuất, rồi merge #200").
 ## Open Questions
 
 None. CLAR-0008 is answered.
+
+## Planned Tasks
+
+Planned on 2026-10-30. The layout is DEC-0072. The owner confirmed the set and DEC-0072 on 2026-10-30.
+
+- TASK-0174 Storage, upload and download routes, type checks, limits, retention.
+- TASK-0175 Chat settings and the workflow list field.
+- TASK-0176 "Include attachments" on LLM and Agent nodes, image parts, vision note, mock.
+- TASK-0177 Composer, settings and Visitors list UI (en, vi).
+- TASK-0178 Handbook (en, vi), API errors, Playwright e2e, CHANGELOG.
 
 ## Related Artifacts
 
