@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0081
-- Status: Accepted on 2026-10-30 with the DEC-0075 owner decisions (all recommended options). Not planned into tasks yet.
+- Status: Accepted on 2026-10-30 with the DEC-0075 owner decisions (all recommended options). Planned on 2026-10-30 (TASK-0186 to TASK-0189).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -173,6 +173,15 @@ The owner approved the recommended answers on 2026-10-30. They are recorded in D
 ## Open Questions
 
 None. The DEC-0075 questions are answered.
+
+## Planned Tasks
+
+Planned on 2026-10-30. The layout is DEC-0075. The owner approved the implementation for 0.10.0 on 2026-10-30.
+
+- TASK-0186 Policy model, validation, roles, kill switches, audit columns.
+- TASK-0187 Auto-review service: rules, cap, judge, fail-safe, auto-answer, owner notification, suggest, metrics API.
+- TASK-0188 Editor settings, Approvals page (badge, opinion, rates, kill switch), export notes.
+- TASK-0189 Handbook (en, vi), e2e (en, vi), screenshots, CHANGELOG.
 
 ## Related Artifacts
 
