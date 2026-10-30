@@ -4,7 +4,7 @@
 # Started as non-root already (e.g. `--user`, Railway RAILWAY_RUN_UID): run the command as is.
 set -e
 if [ "$(id -u)" = 0 ]; then
-  mkdir -p /data && chown studio:studio /data 2>/dev/null || echo "warning: cannot chown /data; it must be writable by uid 10001" >&2
+  mkdir -p /data && chown -R studio:studio /data 2>/dev/null || echo "warning: cannot chown /data; it must be writable by uid 10001" >&2
   exec setpriv --reuid=studio --regid=studio --init-groups -- "$@"
 fi
 exec "$@"

@@ -286,7 +286,7 @@ Planned on 2026-10-27. The layout is DEC-0068. Phase 2 is not in this list.
 - TASK-0153 `upgrade` with automatic rollback. Done (REV-0139, QA-0139).
 - TASK-0154 `admin` and `uninstall`. Done (REV-0140, QA-0140).
 - TASK-0155 `deploy` over SSH. Done (REV-0141, QA-0141).
-- TASK-0156 `install.sh`, image and package release, CI smoke, handbook and changelog.
+- TASK-0156 `install.sh`, image and package release, CI smoke, handbook and changelog. Done (REV-0142, QA-0142).
 
 ## Related Artifacts
 

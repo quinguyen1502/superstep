@@ -59,6 +59,7 @@ nav:
       - Workflow tests: run/tests.md
   - Operate:
       - operate/index.md
+      - CLI: operate/cli.md
       - Deploy with Compose: operate/deploy.md
       - Accounts and security: operate/accounts.md
       - Roles and sharing: operate/access.md

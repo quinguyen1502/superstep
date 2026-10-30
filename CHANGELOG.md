@@ -6,6 +6,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **superstep CLI release** (REQ-0079, DEC-0068). `scripts/install.sh` installs the `superstep` command. A `v*` tag publishes the Python package at the server version, and the package version moves from the `0.1.0` line to the server version. The same tag rules publish `ghcr.io/quinguyen1502/superstep-api` and `superstep-web`. The handbook Operate section starts from the CLI.
+
 - **Ratings on chat answers** (REQ-0075). A visitor can mark a finished answer helpful or not, and add a short note
   when it was not. The same controls are on the embedded chat and in the studio Chat tab, where a builder can also
   rate their own chat. The Chat tab filters visitor chats that have a thumbs down, shows how the marks split over 7

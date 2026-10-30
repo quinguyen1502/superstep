@@ -1,9 +1,11 @@
 name: Publish SDKs
 
 # Publishes an SDK when a tag is pushed:
+#   v<version>          sdk/python      -> PyPI   "superstep" (same number as the server)
 #   sdk-py-v<version>   sdk/python      -> PyPI   "superstep"
 #   sdk-ts-v<version>   sdk/typescript  -> npm    "@superstep/sdk"
-# The tag version must equal the package version. Nothing is published from branches or pull requests.
+# The tag version must equal the package version. A v* tag must also equal
+# backend/pyproject.toml. Nothing is published from branches or pull requests.
 #
 # Setup (once, by a maintainer; see sdk/README.md):
 #   PyPI: add a trusted publisher for this repository, workflow "sdk-publish.yml", environment "pypi"
@@ -12,12 +14,42 @@ name: Publish SDKs
 #         environment "npm". Provenance uses the id-token permission.
 on:
   push:
-    tags: ["sdk-py-v*", "sdk-ts-v*"]
+    tags: ["v*", "sdk-py-v*", "sdk-ts-v*"]
 
 permissions:
   contents: read
 
 jobs:
+  # Server release. Refuses the tag unless it matches the CLI and the server.
+  # sdk-py-v* below is unchanged.
+  python-release:
+    if: startsWith(github.ref_name, 'v')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: sdk/python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -e ".[dev]" build
+      - name: Tag matches the CLI and the server
+        run: |
+          py=$(python -c "import superstep; print(superstep.__version__)")
+          server=$(python -c "import pathlib,re; text=pathlib.Path('../../backend/pyproject.toml').read_text(); print(re.search(r'(?m)^version = \"([^\"]+)\"', text).group(1))")
+          tag="${GITHUB_REF_NAME#v}"
+          [ "$tag" = "$py" ] && [ "$tag" = "$server" ] || { echo "tag $GITHUB_REF_NAME cli $py server $server"; exit 1; }
+      - run: python -m pytest -q
+      - run: python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/python/dist
+
   python:
     if: startsWith(github.ref_name, 'sdk-py-v')
     runs-on: ubuntu-latest

@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0156
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-28
 - Requirement IDs: REQ-0079
 - Design IDs: none
 - Architecture IDs: DEC-0068
@@ -103,8 +103,18 @@ An operator can install the CLI with one command, the `v*` release publishes it 
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0079 phase 1 (DEC-0068).
+- 2026-10-28: task-start. Branch `factory/task-0156-cli-handbook-release` cut from `origin/develop` at `0a02a88` (merge of PR #211). TASK-0149 through TASK-0155 are on that commit. No source edited.
+- 2026-10-28: implemented. Tool-policy checks passed (backend pytest 793 passed / 54 skipped; SDK pytest 105 passed / 2 skipped; frontend lint, test, and build; TypeScript SDK test, build, and typecheck). Handbook strict build passed for en and vi. `scripts/cli_smoke.py` passed against the local all-in-one image `superstep:ci`.
+- 2026-10-28: REV-0142 no blocking findings. QA-0142 pass with follow-up. Owner asked to move the task to done and open the PR. Not merged.
 
 ## Handoff Notes
 
 - After this task, phase 1 of REQ-0079 is complete. Phase 2 is still not planned.
-- Do not start a branch until the owner confirms this set. The next skill is `task-start`.
+- `scripts/install.sh` pins `superstep[cli]==0.9.0` unless `SUPERSTEP_VERSION` is set. It refuses native Windows and installs uv when `uv` is missing.
+- `sdk/python` version is `0.9.0`, the same number as `backend/pyproject.toml`. The `v*` job in `sdk-publish.yml` refuses a tag that differs from either file. `sdk-py-v*` is unchanged. Nothing publishes from a pull request.
+- `image.yml` adds `superstep-api` and `superstep-web` to the publish matrix with the same tag rules. The pull-request job does not push.
+- `SUPERSTEP_UPGRADE_HEALTH_FAIL=1` forces upgrade rollback. It is not an operator flag.
+- Generated Compose mounts the alias (`data`, `pgdata`, `redisdata`, `apidata`) and keeps the Docker volume name on `name:`. Restore `chown`s copied files to `studio` because `docker compose cp` writes them as root.
+- Smoke evidence: install, `INSTALLED` on the second run, backup, purge, install into a new directory with the same name, restore, credential decrypt, forced rollback to `0.9.0`, and the three doctor findings.
+- Not merged. Merge still needs an explicit owner request.
+- Local `develop` stays checked out in `/Users/quinguyen/workspace/superstep-req-0075`. Do not fast-forward that worktree. REQ-0076 stays on `factory/task-0157-parallel-tool-waves`.

@@ -5,6 +5,12 @@ accounts, access, providers, channels and the optional runtimes.
 
 <div class="grid cards" markdown>
 
+-   :material-console-line:{ .lg .middle } **[CLI](cli.md)**
+
+    ---
+
+    Install, upgrade, backup and the CI smoke test.
+
 -   :material-docker:{ .lg .middle } **[Deploy with Compose](deploy.md)**
 
     ---

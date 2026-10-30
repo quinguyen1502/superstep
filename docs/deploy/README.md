@@ -7,6 +7,19 @@ One container serves the UI, `/api` and the `/ws/run` WebSocket on `$PORT`, so i
 port per service. The repository's `docker-compose.yml` (Postgres, Redis, api, worker, nginx) is still the
 full-featured setup for your own server.
 
+## Your own Docker host
+
+On a machine with Docker, install the CLI and run `superstep install`. That
+writes a Compose project for the all-in-one image or the full stack. The
+platform buttons below stay as they are.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/quinguyen1502/superstep/develop/scripts/install.sh | sh
+superstep install
+```
+
+The handbook page is Operate → CLI.
+
 | | All-in-one image (PaaS) | `docker-compose.yml` (own server) |
 |---|---|---|
 | Database | SQLite in `/data` (needs a persistent volume), or Postgres via `DATABASE_URL` | Postgres 17 + pgvector |
