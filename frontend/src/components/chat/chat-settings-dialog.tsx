@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { api, ApiError } from '@/lib/api'
 import { ACCESS, iframeSnippet, LOGO_MAX_KB, LOGO_TYPES, logoUrl, MAX_SUGGESTIONS, pageUrl, published, STEPS, widgetSnippet, type ChatSettings } from '@/lib/chat'
 import { ChatLogo } from '@/components/chat/chat-logo'
+import { ChatAttachmentSettings } from '@/components/chat/chat-attachment-settings'
 import { useLoadWhen } from '@/lib/use-when'
 
 type Field = { name: string; type: string }
@@ -38,7 +39,8 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
     if (!LOGO_TYPES.includes(f.type) || f.size > LOGO_MAX_KB * 1024) { setErr(t('errors.CHAT_LOGO_INVALID', { max_kb: LOGO_MAX_KB })); setBad('logo'); return }
     const r = new FileReader(); r.onload = () => { setErr(''); setBad(''); set({ logo: String(r.result) }) }; r.readAsDataURL(f) }
   const save = () => { if (!v) return; setBusy(true); setErr(''); setBad('')
-    const body = { ...v, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean), embed_origins: v.embed_origins.map(x => x.trim()).filter(Boolean) }
+    const { attachment_ceiling: _ceiling, ...rest } = v   // read only
+    const body = { ...rest, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean), embed_origins: v.embed_origins.map(x => x.trim()).filter(Boolean) }
     api<ChatSettings>(`/api/workflows/${wid}/chat`, { method: 'PUT', json: body }).then(s => { setV(s); onSaved?.(s); onOpenChange(false) })
       .catch(e => { setErr(e.message); if (e instanceof ApiError) setBad(e.code?.startsWith('CHAT_SLUG') ? 'slug' : e.code === 'CHAT_EMBED_ORIGIN_INVALID' ? 'embed_origins' : e.code === 'CHAT_LOGO_INVALID' ? 'logo' : e.details?.field ?? '') }).finally(() => setBusy(false)) }
   const [copied, setCopied] = useState('')
@@ -112,6 +114,8 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
         {row('steps', t('chat.settings.steps'), t('chat.settings.stepsHint'), <Select value={v.steps} onValueChange={steps => set({ steps: steps as ChatSettings['steps'] })}>
           <SelectTrigger className="w-full" id="chat-steps"><SelectValue /></SelectTrigger>
           <SelectContent>{STEPS.map(s => <SelectItem key={s} value={s}>{t(`chat.steps.${s}`)}</SelectItem>)}</SelectContent></Select>)}
+        <ChatAttachmentSettings value={v.attachments} ceiling={v.attachment_ceiling} lists={names(f => f.type === 'list' && f.name !== v.messages_field)} bad={bad}
+          onChange={p => setV(x => x && { ...x, attachments: { ...x.attachments, ...p } })} />
       </div>}
       <DialogFooter><Button id="chat-settings-save" disabled={!v || busy} onClick={save}><Save />{t('common.save')}</Button></DialogFooter>
     </DialogContent>
