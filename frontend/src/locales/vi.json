@@ -410,6 +410,11 @@
     "HTTP_ERROR": "Yêu cầu thất bại",
     "AUTH_REQUIRED": "Chưa đăng nhập",
     "AUTH_TOKEN_INVALID": "Phiên không hợp lệ, vui lòng đăng nhập lại",
+    "PAT_NAME_TAKEN": "Bạn đã có token đang dùng với tên {{name}}",
+    "PAT_NOT_FOUND": "Không tìm thấy token",
+    "CLI_DEVICE_INVALID": "Mã đăng nhập này không hợp lệ",
+    "CLI_DEVICE_EXPIRED": "Mã đăng nhập này đã hết hạn",
+    "CLI_DEVICE_DENIED": "Lượt đăng nhập này đã bị từ chối",
     "AUTH_TOKEN_EXPIRED": "Phiên đăng nhập đã hết hạn",
     "AUTH_INVALID_CREDENTIALS": "Sai email hoặc mật khẩu",
     "AUTH_EMAIL_INVALID": "Email không hợp lệ",
@@ -925,6 +930,33 @@
       "unknown": "Bấm Kiểm tra để xem app có đủ quyền cho chat trigger không."
     }
   },
+  "tokens": {
+    "name": "Tên",
+    "namePh": "CI, máy tính",
+    "create": "Tạo token",
+    "secretOnce": "Hãy chép token này ngay. Nó sẽ không hiện lại.",
+    "secretHint": "Dùng làm SUPERSTEP_TOKEN, hoặc chạy superstep login trên máy bạn tin.",
+    "empty": "Chưa có token đang dùng.",
+    "prefix": "Tiền tố",
+    "created": "Tạo lúc",
+    "lastUsed": "Dùng lần cuối",
+    "never": "Chưa dùng",
+    "revoke": "Thu hồi",
+    "revokeTitle": "Thu hồi {{name}}?",
+    "revokeBody": "Các lệnh đang dùng token này sẽ ngừng hoạt động. Không hoàn tác được.",
+    "readOnly": "Bản demo công khai không tạo được token truy cập."
+  },
+  "cliAuth": {
+    "title": "Duyệt lệnh superstep",
+    "intro": "Lệnh trên máy bạn sẽ có cùng quyền với tài khoản này. Chưa có gì được duyệt cho đến khi bạn bấm nút.",
+    "code": "Mã",
+    "name": "Tên token",
+    "approve": "Duyệt",
+    "deny": "Từ chối",
+    "approved": "Đã duyệt. Bạn có thể đóng trang này và quay lại terminal.",
+    "denied": "Đã từ chối. Terminal sẽ ngừng chờ.",
+    "missing": "Trang này cần mã đăng nhập từ superstep login."
+  },
   "settings": {
     "title": "Cài đặt",
     "open": "Mở cài đặt",
@@ -940,7 +972,8 @@
       "mcp": "Máy chủ MCP",
       "users": "Người dùng",
       "teams": "Nhóm",
-      "activity": "Hoạt động"
+      "activity": "Hoạt động",
+      "tokens": "Token truy cập"
     },
     "intro": {
       "profile": "Tài khoản, ngôn ngữ và mật khẩu của bạn.",
@@ -951,7 +984,8 @@
       "mcp": "Công cụ từ máy chủ Model Context Protocol, dùng trong node MCP. Secret được mã hoá và không hiển thị lại.",
       "users": "Ai được đăng nhập và mỗi vai trò được làm gì. Chia sẻ workflow trong trình soạn thảo.",
       "teams": "Nhóm người để chia sẻ workflow. Thành viên nhận quyền đã cấp cho nhóm.",
-      "activity": "Thay đổi về vai trò, chia sẻ, nhóm, quyền sở hữu, tài khoản và chính sách, mới nhất ở trên."
+      "activity": "Thay đổi về vai trò, chia sẻ, nhóm, quyền sở hữu, tài khoản và chính sách, mới nhất ở trên.",
+      "tokens": "Token cá nhân cho lệnh superstep và CI. Token chỉ hiện một lần và có cùng quyền với bạn."
     },
     "status": {
       "connected": "Đã kết nối",

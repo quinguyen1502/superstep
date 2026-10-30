@@ -6,6 +6,7 @@ import { AuthPage } from '@/pages/Auth'
 import { WorkflowsPage } from '@/pages/Workflows'
 import { ForgotPasswordPage, ResetPasswordPage } from '@/pages/PasswordReset'
 import { ApprovePage } from '@/pages/Approve'
+import { CliAuthorizePage } from '@/pages/CliAuthorize'
 import { ApprovalsPage } from '@/pages/Approvals'
 import { CommandPalette } from '@/components/command-palette'
 import { DemoBanner } from '@/components/demo-banner'
@@ -31,6 +32,7 @@ export default function App() {
     <Route path="/workflows" element={<Protected><WorkflowsPage /></Protected>} />
     <Route path="/workflows/:id" element={<Protected><EditorPage /></Protected>} />
     <Route path="/approve" element={<Protected><ApprovePage /></Protected>} />
+    <Route path="/cli/authorize" element={<Protected><CliAuthorizePage /></Protected>} />
     <Route path="/approvals" element={<Protected><ApprovalsPage /></Protected>} />
     <Route path="/settings/:section?" element={<Protected><SettingsPage /></Protected>} />
     <Route path="*" element={<Navigate to="/workflows" replace />} />

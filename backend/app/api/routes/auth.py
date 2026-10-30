@@ -1,8 +1,8 @@
 import time
 from fastapi import APIRouter, Depends, Response
 from ...core import config, permissions as P, security
-from ...schemas.auth import Credentials, PasswordChange, ResetConfirm, ResetRequest
-from ..deps import auth_service, current_user, need
+from ...schemas.auth import Credentials, DeviceDecision, DeviceStart, PasswordChange, ResetConfirm, ResetRequest, TokenName
+from ..deps import auth_service, current_user, need, pat_service
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -40,6 +40,29 @@ def admin_reset_link(target: str, user=Depends(need(P.USERS_MANAGE)), svc=Depend
 
 @router.get("/me")
 def me(user=Depends(current_user)): return user
+
+@router.get("/me/tokens")
+def list_tokens(user=Depends(current_user), svc=Depends(pat_service)): return svc.list(user["id"])
+
+@router.post("/me/tokens")
+def create_token(body: TokenName, user=Depends(current_user), svc=Depends(pat_service)): return svc.create(user["id"], body.name)
+
+@router.delete("/me/tokens/{tid}")
+def revoke_token(tid: str, user=Depends(current_user), svc=Depends(pat_service)): return svc.revoke(user["id"], tid)
+
+@router.post("/auth/cli/devices")
+def start_cli_device(body: DeviceStart, svc=Depends(pat_service)): return svc.start_device(body.name)
+
+@router.get("/auth/cli/devices/{device_code}")
+def poll_cli_device(device_code: str, svc=Depends(pat_service)): return svc.poll(device_code)
+
+@router.post("/auth/cli/devices/approve")
+def approve_cli_device(body: DeviceDecision, user=Depends(current_user), svc=Depends(pat_service)):
+    return svc.approve(user["id"], body.user_code, body.name)
+
+@router.post("/auth/cli/devices/deny")
+def deny_cli_device(body: DeviceDecision, user=Depends(current_user), svc=Depends(pat_service)):
+    return svc.deny(body.user_code)
 
 @router.post("/me/password")
 def change_password(body: PasswordChange, response: Response, user=Depends(current_user), svc=Depends(auth_service)):

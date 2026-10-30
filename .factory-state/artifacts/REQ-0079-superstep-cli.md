@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0079
-- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is planned (DEC-0068, TASK-0149 to TASK-0156). TASK-0149 is done. Phase 2 is not planned yet.
+- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is merged (DEC-0068, TASK-0149 to TASK-0156). Phase 2 is planned (DEC-0071, TASK-0167 to TASK-0172). The owner confirmed the set on 2026-10-30. TASK-0167 is done (PR #214, REV-0143, QA-0143) and not merged.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-28
+- Updated: 2026-10-30
 - Source: owner request in chat on 2026-10-27: "Tôi muốn thêm 1 REQ về việc build superstep cli để hỗ trợ deploy,
   install, upgrade,... và nhiều thêm nữa dựa vào bạn đề xuất". The commands beyond install, deploy and upgrade are
   the agent's proposals. The owner accepted them with the CLAR-0010 answers ("Làm theo đề xuất").
@@ -288,9 +288,21 @@ Planned on 2026-10-27. The layout is DEC-0068. Phase 2 is not in this list.
 - TASK-0155 `deploy` over SSH. Done (REV-0141, QA-0141).
 - TASK-0156 `install.sh`, image and package release, CI smoke, handbook and changelog. Done (REV-0142, QA-0142).
 
+## Phase 2 Tasks
+
+Planned on 2026-10-30. The layout is DEC-0071. The owner confirmed this set on 2026-10-30. TASK-0167 is done on PR #214 and not merged. The other tasks are not started.
+
+- TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout`, `whoami`.
+- TASK-0168 `workflows list`, `export`, `import`, `pull`, `push`.
+- TASK-0169 `run` and `runs list`, `show`, `cancel`.
+- TASK-0170 `test` and JUnit XML.
+- TASK-0171 `mcp` over stdio.
+- TASK-0172 Handbook (en, vi) and CHANGELOG.
+
 ## Related Artifacts
 
 - `.factory-state/decisions/DEC-0068-superstep-cli.md`
+- `.factory-state/decisions/DEC-0071-cli-workflows.md`
 - `.factory-state/artifacts/CLAR-0010-superstep-cli.md`
 - `.factory-state/artifacts/REQ-0008-postgres-redis-compose.md`, `.factory-state/artifacts/REQ-0042-workflow-tests.md`,
   `.factory-state/artifacts/REQ-0070-workflows-as-mcp-tools.md`, `.factory-state/artifacts/REQ-0004-api-webhook-trigger.md`

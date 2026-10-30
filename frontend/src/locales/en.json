@@ -410,6 +410,11 @@
     "HTTP_ERROR": "Request failed",
     "AUTH_REQUIRED": "Please sign in",
     "AUTH_TOKEN_INVALID": "Invalid session, please sign in again",
+    "PAT_NAME_TAKEN": "You already have an active token named {{name}}",
+    "PAT_NOT_FOUND": "Token not found",
+    "CLI_DEVICE_INVALID": "This sign-in code is not valid",
+    "CLI_DEVICE_EXPIRED": "This sign-in code has expired",
+    "CLI_DEVICE_DENIED": "This sign-in was denied",
     "AUTH_TOKEN_EXPIRED": "Your session has expired",
     "AUTH_INVALID_CREDENTIALS": "Incorrect email or password",
     "AUTH_EMAIL_INVALID": "Invalid email address",
@@ -925,6 +930,33 @@
       "unknown": "Press Test to check the scopes chat triggers need."
     }
   },
+  "tokens": {
+    "name": "Name",
+    "namePh": "CI, laptop",
+    "create": "Create token",
+    "secretOnce": "Copy this token now. It will not be shown again.",
+    "secretHint": "Use it as SUPERSTEP_TOKEN, or run superstep login on a machine you trust.",
+    "empty": "No active tokens.",
+    "prefix": "Prefix",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "never": "Never",
+    "revoke": "Revoke",
+    "revokeTitle": "Revoke {{name}}?",
+    "revokeBody": "Commands using this token stop working. This cannot be undone.",
+    "readOnly": "The public demo cannot create access tokens."
+  },
+  "cliAuth": {
+    "title": "Approve the superstep command",
+    "intro": "This gives the command on your computer the same access as your account. Nothing is approved until you press the button.",
+    "code": "Code",
+    "name": "Token name",
+    "approve": "Approve",
+    "deny": "Deny",
+    "approved": "Approved. You can close this page and return to the terminal.",
+    "denied": "Denied. The terminal will stop waiting.",
+    "missing": "This page needs a sign-in code from superstep login."
+  },
   "settings": {
     "title": "Settings",
     "open": "Open settings",
@@ -940,7 +972,8 @@
       "mcp": "MCP servers",
       "users": "Users",
       "teams": "Teams",
-      "activity": "Activity"
+      "activity": "Activity",
+      "tokens": "Access tokens"
     },
     "intro": {
       "profile": "Your account, language and password.",
@@ -951,7 +984,8 @@
       "mcp": "Tools from Model Context Protocol servers, used by MCP tool nodes. Secrets are encrypted and never shown again.",
       "users": "Who can sign in and what their role allows. Workflows are shared from the editor.",
       "teams": "Groups of people to share workflows with. Members get the access the team was given.",
-      "activity": "Changes to roles, shares, teams, ownership, accounts and policy, newest first."
+      "activity": "Changes to roles, shares, teams, ownership, accounts and policy, newest first.",
+      "tokens": "Personal access tokens for the superstep command and CI. A token is shown once, and it has the same access as you."
     },
     "status": {
       "connected": "Connected",

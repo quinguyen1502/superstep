@@ -28,3 +28,16 @@ class ResetConfirm(BaseModel):
 class PasswordChange(BaseModel):  # TASK-0052
     current_password: str
     new_password: str
+
+
+class TokenName(BaseModel):  # TASK-0167
+    name: str
+
+
+class DeviceStart(BaseModel):
+    name: str | None = None
+
+
+class DeviceDecision(BaseModel):
+    user_code: str
+    name: str | None = None

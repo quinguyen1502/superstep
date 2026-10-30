@@ -10,6 +10,7 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { UserMenu } from '@/components/user-menu'
 import { cn } from '@/lib/utils'
 import { ProfileSection } from './ProfileSection'
+import { TokensSection } from './TokensSection'
 import { ChannelsSection } from './ChannelsSection'
 import { AccountsSection } from './AccountsSection'
 import { AuditSection } from './AuditSection'
@@ -23,7 +24,7 @@ import { SECTIONS, type SectionId } from './sections'
 import { Logo } from '@/components/logo'
 
 const COMPONENTS: Record<SectionId, ComponentType> = {
-  profile: ProfileSection, channels: ChannelsSection, accounts: AccountsSection, audit: AuditSection, knowledge: KnowledgeSection,
+  profile: ProfileSection, tokens: TokensSection, channels: ChannelsSection, accounts: AccountsSection, audit: AuditSection, knowledge: KnowledgeSection,
   mcp: McpSection, users: UsersSection, teams: TeamsSection, activity: ActivitySection,
 }
 

@@ -7,7 +7,7 @@
 - Status: Accepted. The owner answered CLAR-0010 on 2026-10-27 ("Làm theo đề xuất"). This record is the install layout the phase 1 tasks implement.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Related Requirements: REQ-0079 (CLAR-0010)
 - Related Architecture:
   - DEC-0009 (layers, for the admin process and the health field)
@@ -31,7 +31,7 @@
 
 1. **Packaging and version.**
    - The command lives in the SDK tree: `sdk/python/src/superstep/cli/`. The console script is `superstep = superstep.cli:main`.
-   - The extra `cli` is declared now. Phase 1 adds no third-party dependency: the command uses the standard library and httpx, which the SDK already depends on. Phase 2 adds the MCP SDK to that extra. `pipx install 'superstep[cli]'` and `uv tool install 'superstep[cli]'` are the install commands. The script is installed with the base package as well, because a console script cannot be gated by an extra.
+   - The extra `cli` is declared now. Phase 1 adds no third-party dependency: the command uses the standard library and httpx, which the SDK already depends on. Phase 2 does not add the MCP SDK to this extra (DEC-0071); it adds `websockets` for `run`. `pipx install 'superstep[cli]'` and `uv tool install 'superstep[cli]'` are the install commands. The script is installed with the base package as well, because a console script cannot be gated by an extra.
    - Python stays `>=3.9`, the SDK's floor. The CLI does not use `tomllib`.
    - The CLI version and the server version are the same number on a `v*` release. Until TASK-0156, `sdk/python` may stay at `0.1.0` while the server stays at `0.9.0`. Tests inject both versions. The release workflow, not a day-to-day test, checks that the tag, `_version.py` and `backend/pyproject.toml` match.
    - `scripts/install.sh` is the one-line installer (TASK-0156). It installs uv when `python` is missing, then installs the extra. It refuses native Windows and tells the operator to use WSL.
@@ -106,7 +106,7 @@ The owner chose a Python extra on the package that already exists, the same vers
 - SDK users who `pip install superstep` gain a `superstep` command. It does not import the server.
 - TASK-0156 publishes two images and publishes the Python package on `v*` tags. `sdk-py-v*` stays valid, and its version must be greater than the latest `v*` release once those tags share the package.
 - `~/.superstep/instances/` is new. Existing `~/.superstep/` server files stay where they are.
-- Phase 2 tasks, when planned, add the token store under `~/.superstep/cli.json` and the `mcp` dependency on the `cli` extra. They do not get a second package.
+- Phase 2 is planned in DEC-0071. The token store is `url`, `token` and `account` in `~/.superstep/cli.json`. The `mcp` dependency on the `cli` extra is withdrawn there: the stdio bridge uses the standard library so Python 3.9 can still install the extra. The extra gains `websockets` instead. There is still no second package.
 
 ## Risks
 
@@ -118,10 +118,10 @@ The owner chose a Python extra on the package that already exists, the same vers
 
 - Approved By: Thái Quí Nguyễn, by the CLAR-0010 answers on 2026-10-27
 - Approved On: 2026-10-27
-- Scope And Limits: Phase 1 of REQ-0079. The layout in decisions 3 to 10 is the planning record for those answers. Phase 2 is not approved for implementation by this record.
+- Scope And Limits: Phase 1 of REQ-0079. The layout in decisions 3 to 10 is the planning record for those answers. Phase 2 is DEC-0071. The sentence in decision 1 that put the MCP SDK on the `cli` extra is withdrawn by DEC-0071.
 
 ## Review Or Revisit Trigger
 
-- A phase 2 task needs a different token path or a CLI dependency the extra cannot carry.
+- A phase 2 task needs a different token path than DEC-0071, or a CLI dependency the extra cannot carry on Python 3.9.
 - A release has to step through more than the v0.1 volume gate.
 - The full-stack images cannot be published from `backend/Dockerfile` and `frontend/Dockerfile` without a change to those Dockerfiles.
