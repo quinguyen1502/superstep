@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0175
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -90,7 +90,9 @@ Let a builder turn attachments on per chat, choose kinds, limits and the state f
 
 - 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0175-chat-attachment-settings-state` from `develop`. Chat settings gain `attachments` (kinds, limits under the ceilings, list field); messages send `attachment_ids` on both sockets; the run gets file records without bytes; turns list their files; `CHAT_ATTACHMENT_LIMIT`. `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0175-chat-attachment-settings-state` from `develop`.
+- Review: `.factory-state/artifacts/REV-0151-task-0175.md`. QA: `.factory-state/artifacts/QA-0151-task-0175.md`.

@@ -8,7 +8,8 @@ assistant turn: the reply field, the Human node's question, or the error.
 
 Phase 1 is the studio: signed-in users with the run right. Phase 2 (REQ-0074, DEC-0067) publishes the chat at
 /c/{slug} with `access` "anonymous" or "signed_in" (services/public_chat_service.py); its sessions have `channel`
-"web" or "embed". Attachments are reserved.
+"web" or "embed". A message may carry files uploaded before it (REQ-0077, DEC-0072): the run gets them in the chat's
+`attachments.field` as [{id, name, type, size, text?, text_cut?}], never their bytes.
 """
 from __future__ import annotations
 import base64, binascii, hashlib, json, re, time, uuid
@@ -23,14 +24,15 @@ from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, Workfl
 from ..repositories import ChatAttachmentRepository, ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
 from ..repositories.chat_sessions import feedback_is_pending
 from ..repositories.chat_triggers import WEB
-from .chat_attachment_service import UNSENT_TTL
+from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS, KINDS, UNSENT_TTL, public as file_public, settings_of
 
 ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish the chat at /c/{slug} (DEC-0067)
 PUBLIC = ("anonymous", "signed_in")
 STEPS = ("none", "labels", "full")
 ANSWERED_BY = ("visitor", "reviewer")
 DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30,
-            "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": ""}
+            "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": "",
+            "attachments": ATTACH_DEFAULTS}
 MAX_TURNS, RETENTION_MAX, TEXT_MAX, TITLE_MAX = 50, 3650, 4000, 60
 
 
@@ -75,6 +77,13 @@ def logo_of(value: str) -> tuple[str, bytes]:
 
 def logo_hash(data: bytes) -> str: return hashlib.sha256(data).hexdigest()[:16]
 STEP_EVENTS = ("node_started", "node_finished", "error", "run_waiting")
+
+
+def state_record(a) -> dict:
+    """A file as the workflow sees it (DEC-0072 decision 2): no bytes; a document's text, and whether it was cut."""
+    out = {"id": a.id, "name": a.name, "type": a.mime, "size": a.size}
+    if a.kind == "document": out.update(text=a.text or "", text_cut=bool(a.text_cut))
+    return out
 
 
 def answered_by(node_data: Optional[dict]) -> str:
@@ -127,6 +136,7 @@ class ChatSessionService:
         if not isinstance(body, dict): raise AppError("CHAT_SETTINGS_INVALID", field="body")
         t = self.triggers.web(wid)
         cur = self._public(w, t); v = {**cur, **{k: body[k] for k in cur if k in body}}
+        if isinstance(body.get("attachments"), dict): v["attachments"] = {**cur["attachments"], **body["attachments"]}  # a partial change keeps the rest
         v = self._check(w, v, t.command if t else None)
         logo = None  # (mime, bytes) of a new logo; "" removes it; the current hash keeps it
         if isinstance(v.get("logo"), str) and v["logo"].startswith("data:"):
@@ -155,6 +165,10 @@ class ChatSessionService:
         guess = lambda names, typ: next((f["name"] for f in fields if f["name"] in names), next((f["name"] for f in fields if f.get("type") == typ), ""))  # noqa: E731
         s = {**DEFAULTS, **(json.loads(t.settings or "{}") if t else {})}
         if t is None: s["messages_field"] = guess(("messages", "history"), "list")
+        s["attachments"] = {**ATTACH_DEFAULTS, **(s.get("attachments") or {})}
+        if t is None or not s["attachments"].get("field"):
+            s["attachments"]["field"] = next((f["name"] for f in fields if f["name"] in ("files", "attachments") and f.get("type") == "list"), "files")
+        s["attachment_ceiling"] = {"max_mb": config.chat_attachment_max_mb(), "max_files": config.chat_attachment_max_files()}  # read only
         return {"enabled": bool(t.enabled) if t else False, "slug": t.command if t else w.id.lower(),
                 "input_field": t.input_field if t else guess(("message", "input", "question"), "string"),
                 "reply_field": t.reply_field if t else guess(("reply", "answer", "output"), "string"), **s}
@@ -189,8 +203,26 @@ class ChatSessionService:
             o = origin_of(x)
             if o is None: raise AppError("CHAT_EMBED_ORIGIN_INVALID", origin=str(x)[:100])
             if o not in origins: origins.append(o)
-        return {**v, "enabled": bool(v.get("enabled")), "messages_field": m, "title": title.strip(), "suggestions": [x.strip() for x in sug],
+        att = self._check_attachments(v.get("attachments"), fields, {v["input_field"], v["reply_field"], m})
+        return {**v, "attachments": att, "enabled": bool(v.get("enabled")), "messages_field": m, "title": title.strip(), "suggestions": [x.strip() for x in sug],
                 "embed_origins": origins}
+
+    @staticmethod
+    def _check_attachments(a, fields: dict, taken: set) -> dict:
+        """The attachment settings (TASK-0175): kinds, limits under the operator's ceilings, and a list field for the files."""
+        def bad(field): return AppError("CHAT_SETTINGS_INVALID", field=f"attachments.{field}")
+        if not isinstance(a, dict): raise bad("enabled")
+        a = {**ATTACH_DEFAULTS, **{k: a[k] for k in ATTACH_DEFAULTS if k in a}}
+        kinds = a["kinds"]
+        if not isinstance(kinds, list) or not kinds or any(k not in KINDS for k in kinds): raise bad("kinds")
+        hi = {"max_files": config.chat_attachment_max_files(), "max_mb": config.chat_attachment_max_mb()}
+        for k in ("max_files", "max_mb"):
+            n = a[k]
+            if isinstance(n, bool) or not isinstance(n, int) or n < 1: raise bad(k)
+            if n > hi[k]: raise AppError("CHAT_ATTACHMENT_LIMIT", **hi)
+        enabled, field = bool(a["enabled"]), a["field"]
+        if not isinstance(field, str) or (enabled and (field not in fields or fields[field].get("type") != "list" or field in taken)): raise bad("field")
+        return {"enabled": enabled, "kinds": [k for k in KINDS if k in kinds], "max_files": a["max_files"], "max_mb": a["max_mb"], "field": field}
 
     @staticmethod
     def _fields(w) -> list[dict]:
@@ -233,9 +265,11 @@ class ChatSessionService:
                 r = self.runs.get(x.run_id)
                 if r is not None: found.add(x.run_id)
                 steps[x.run_id] = steps_of(json.loads(r.events or "[]") if r else [], mode)
+        files = self._files(turns)
         out = []
         for x in turns:
             d = self._turn(x)
+            d["attachments"] = [files[i] for i in self._ids(x) if i in files]
             d["rating"] = self._rating(ratings[x.id]) if x.id in ratings else None
             if x.role == "assistant": d["run_exists"] = bool(x.run_id and x.run_id in found)
             if x.role == "assistant" and x.run_id in steps:
@@ -308,16 +342,19 @@ class ChatSessionService:
         return {"ok": True}
 
     # ---- a message (RunService.plan, over the run socket) ----
-    def input_for(self, uid: str, sid: str, message) -> dict:
+    def input_for(self, uid: str, sid: str, message, attachment_ids=None) -> dict:
         """{workflow_id, input} for the next message, checked; nothing is written yet."""
         s, t = self._own(sid, uid, P.RUN)
-        return self.prepare(s, t, message)
+        return self.prepare(s, t, message, attachment_ids)
 
-    def prepare(self, s: ChatSession, t: WorkflowChatTrigger, message) -> dict:
-        """The run input of a message in session `s`, checked: the input field, and the history in the messages field."""
+    def prepare(self, s: ChatSession, t: WorkflowChatTrigger, message, attachment_ids=None) -> dict:
+        """The run input of a message in session `s`, checked: the input field, the history in the messages field, and
+        the files sent with it in the attachments field (TASK-0175)."""
         sid = s.id
         if not t.enabled: raise AppError("CHAT_NOT_ENABLED")
-        if not isinstance(message, str) or not message.strip(): raise AppError("CHAT_MESSAGE_EMPTY")
+        files = self.files_for(s, t, attachment_ids)
+        if message is None and files: message = ""
+        if not isinstance(message, str) or (not message.strip() and not files): raise AppError("CHAT_MESSAGE_EMPTY")
         if len(message) > TEXT_MAX: raise AppError("CHAT_MESSAGE_TOO_LONG", max=TEXT_MAX)
         last = self._turns(sid)
         if last and last[-1].status == "waiting": raise AppError("CHAT_RUN_WAITING")  # answer the question first
@@ -326,8 +363,22 @@ class ChatSessionService:
         text = message.strip()
         inp = {t.input_field: [text] if (fields.get(t.input_field) or {}).get("type") == "list" else text}
         if (mf := st.get("messages_field")): inp[mf] = self.history(sid, int(st.get("max_turns") or DEFAULTS["max_turns"])) + [{"role": "user", "content": text}]
-        if size(inp) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
-        return {"workflow_id": s.workflow_id, "input": inp, "text": text}
+        a = settings_of(st)
+        if a["enabled"] and a["field"] in fields: inp[a["field"]] = [state_record(x) for x in files]
+        if size({k: v for k, v in inp.items() if k != a["field"]}) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
+        return {"workflow_id": s.workflow_id, "input": inp, "text": text, "attachment_ids": [x.id for x in files]}
+
+    def files_for(self, s: ChatSession, t: WorkflowChatTrigger, ids) -> list:
+        """The unsent files of session `s` named by `ids`, in that order (without bytes). CHAT_ATTACHMENTS_OFF when the chat
+        takes none; CHAT_ATTACHMENT_NOT_FOUND for another session's, a sent one, or a guessed id."""
+        if ids is None or ids == []: return []
+        a = settings_of(self.settings_json(t))
+        if not a["enabled"] or self.attachments is None: raise AppError("CHAT_ATTACHMENTS_OFF")
+        if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids) or len(set(ids)) != len(ids): raise AppError("CHAT_ATTACHMENT_NOT_FOUND")
+        if len(ids) > a["max_files"]: raise AppError("CHAT_ATTACHMENT_TOO_MANY", max=a["max_files"])
+        rows = self.attachments.meta(ids)
+        if len(rows) != len(ids) or any(r.session_id != s.id or r.turn_id is not None for r in rows): raise AppError("CHAT_ATTACHMENT_NOT_FOUND")
+        return rows
 
     def history(self, sid: str, max_turns: int) -> list[dict]:
         """The last `max_turns` exchanges as [{role, content}] (DEC-0052): the person's messages and the finished answers."""
@@ -335,14 +386,17 @@ class ChatSessionService:
         msgs = [{"role": x.role, "content": x.text} for x in rows]
         return msgs[-2 * max_turns:]
 
-    def record(self, uid: str, sid: str, text: str, rid: str) -> None:
+    def record(self, uid: str, sid: str, text: str, rid: str, attachment_ids: Optional[list] = None) -> None:
         """The person's turn and the reply-once record, once the run is planned."""
         s, t = self._own(sid, uid, P.RUN)
-        self.write(s, t, text, rid, uid)
+        self.write(s, t, text, rid, uid, attachment_ids)
 
-    def write(self, s: ChatSession, t: WorkflowChatTrigger, text: str, rid: str, sender: str) -> None:
+    def write(self, s: ChatSession, t: WorkflowChatTrigger, text: str, rid: str, sender: str, attachment_ids: Optional[list] = None) -> None:
         sid, now = s.id, time.time()
-        turn = self.sessions.add_turn(ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=rid, role="user", text=text, status="ok", created=now))
+        ids = list(attachment_ids or [])
+        turn = self.sessions.add_turn(ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=rid, role="user", text=text, status="ok", created=now,
+                                               attachments=json.dumps(ids) if ids else None))
+        if ids and self.attachments is not None: self.attachments.link(ids, sid, turn.id)  # the files now belong to the message
         self.messages.add_once(ChatMessage(id=uuid.uuid4().hex[:12], channel_id=WEB, key=turn.id, trigger_id=t.id, workflow_id=s.workflow_id, kind=WEB,
                                            team="", sender=sender, text=text, ref=json.dumps({"session": sid}), status="started", run_id=rid, created=now))
         self.sessions.set_fields(sid, last_run_id=rid, **({"title": text[:TITLE_MAX]} if not s.title else {}))
@@ -410,6 +464,18 @@ class ChatSessionService:
         return s, t
 
     def _turns(self, sid: str) -> list[ChatTurn]: return self.sessions.turns(sid)
+
+    @staticmethod
+    def _ids(x: ChatTurn) -> list:
+        try: ids = json.loads(x.attachments or "[]")
+        except ValueError: return []
+        return ids if isinstance(ids, list) else []
+
+    def _files(self, turns: list) -> dict:
+        """The files of these turns (id, name, kind, MIME, size), in one read."""
+        ids = [i for x in turns for i in self._ids(x)]
+        if not ids or self.attachments is None: return {}
+        return {r.id: file_public(r) for r in self.attachments.meta(ids)}
 
     @staticmethod
     def _session(s: ChatSession) -> dict:
