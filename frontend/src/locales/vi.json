@@ -625,6 +625,8 @@
     "CODE_TOO_LARGE": "Node Code {{node}}: {{what}} lớn hơn {{max_kb}} KB",
     "CODE_LANGUAGE_UNSUPPORTED": "Node Code {{node}}: máy chủ này không hỗ trợ {{language}}",
     "CODE_WRITE_FORBIDDEN": "Vai trò của bạn không được thêm node Code hay sửa code của nó (code.write)",
+    "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
+    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
     "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
     "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này"
   },
@@ -2275,6 +2277,8 @@
     "ATTACHMENTS_FIELD_NOT_LIST": "Node {{node}}: trường tệp đính kèm '{{field}}' phải là trường kiểu list",
     "AGENT_TOOLS_MISSING": "Node Agent {{node}}: hãy thêm ít nhất một công cụ",
     "AGENT_TOOL_NOT_OBJECT": "Node Agent {{node}}: công cụ {{index}} không phải object",
+    "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
+    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
     "AGENT_TOOL_DUPLICATE": "Node Agent {{node}}: có hai công cụ cùng tên {{tool}}",
     "AGENT_TOOL_NAME": "Node Agent {{node}}, công cụ {{tool}}: tên phải dài 1-64 ký tự, gồm chữ, số, _ hoặc -",
     "AGENT_TOOL_SOURCE": "Node Agent {{node}}, công cụ {{tool}}: không có nguồn '{{source}}'",

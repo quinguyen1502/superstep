@@ -21,6 +21,7 @@ import { buildTrace, withSummary } from '@/lib/trace'
 import { canvasId, clearMarks, markEvent, markRun } from '@/lib/run-marks'
 import type { BuiltinTool } from '@/lib/agent'
 import { useShortcuts } from '@/lib/use-shortcuts'
+import { pruneHandoffs } from '@/lib/handoffs'
 import { useGraphHistory } from '@/lib/use-graph-history'
 import { removeElements, selectionIds, spliceNode } from '@/lib/graph-ops'
 import { META, INSERTABLE, DEFAULTS, samplePrompt, MENU_OF, MENU_IDS, ACTION_ICONS, styleEdges, defaultInput, LOOP_LABELS, type Field, type LogItem } from './meta'
@@ -32,6 +33,7 @@ export function useStudio() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [state, setState] = useState<Field[]>([])
   const [name, setName] = useState('Untitled')
+  const [maxHandoffs, setMaxHandoffs] = useState<number | undefined>()   // the workflow's hand-off limit (TASK-0179); unset: the default
   const [wid, setWid] = useState<string | undefined>()
   const [sel, setSel] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null)
   const [input, setInput] = useState(() => i18n.t('samples.input'))
@@ -63,10 +65,13 @@ export function useStudio() {
   const hist = useGraphHistory(nodes, edges, state, h => { setNodes(h.nodes.map(n => ({ ...n }))); setEdges(styleEdges(h.edges)); setState(h.state) })
   // after a load, the first graph that renders becomes the saved snapshot and the start of the undo history
   const takeSnapshot = useEffectEvent(() => { if (takeBaseline.current) { takeBaseline.current = false; savedSnap.current = snap(); hist.reset(nodes, edges, state) } })
-  useEffect(() => { takeSnapshot() }, [nodes, edges, name, state])
+  useEffect(() => { takeSnapshot() }, [nodes, edges, name, state, maxHandoffs])
+  // a deleted Agent node leaves no hand-off pointing at it (TASK-0179); the same array when nothing changes
+  const nodeKey = nodes.map(n => `${n.id}:${n.type}`).join('|')
+  useEffect(() => { setNodes(ns => pruneHandoffs(ns)) }, [nodeKey, setNodes])
   const load = (wf: any) => {
     takeBaseline.current = true
-    setName(wf.name); setWid(wf.id); setState(wf.state || [])
+    setName(wf.name); setWid(wf.id); setState(wf.state || []); setMaxHandoffs(typeof wf.max_handoffs === 'number' ? wf.max_handoffs : undefined)
     setSource(wf.source || null)
     if (wf.access) { setAccess(wf.access); setOwnerEmail(wf.mine ? null : wf.owner_email ?? null) }
     setNodes(wf.needs_layout ? layoutGraph(wf.nodes, wf.edges, 'LR', false) : wf.nodes); setEdges(styleEdges(wf.edges))
@@ -95,7 +100,7 @@ export function useStudio() {
   useEffect(() => { openWorkflow() }, [id])
 
   const toJSON = () => ({
-    id: wid, name, state,
+    id: wid, name, state, ...(maxHandoffs === undefined ? {} : { max_handoffs: maxHandoffs }),
     nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: Object.fromEntries(Object.entries(n.data).filter(([k]) => !k.startsWith('_'))) })),
     edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, ...(e.label ? { label: String(e.label) } : {}), ...((e as any).conditional ? { conditional: true } : {}) })),
   })
@@ -306,7 +311,7 @@ export function useStudio() {
   }
   const fieldNames = state.map(f => f.name)
   const [canvasLock, setCanvasLock] = useState(false)
-  return {
+  return { maxHandoffs, setMaxHandoffs,
     id, nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, state, setState, name, setName, wid, setSel,
     input, setInput, log, setLog, errors, setErrors, tools, mode, source, creds, setCreds, providers, channels, history,
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,

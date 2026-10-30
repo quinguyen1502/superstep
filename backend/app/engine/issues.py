@@ -122,6 +122,8 @@ MESSAGES: Dict[str, str] = {
     "ATTACHMENTS_FIELD_NOT_LIST": "Node {node}: the attachments field '{field}' must be a list field",
     "AGENT_TOOLS_MISSING": "Agent node {node}: add at least one tool",
     "AGENT_TOOL_NOT_OBJECT": "Agent node {node}: tool {index} is not an object",
+    "AGENT_HANDOFF_TARGET_INVALID": "Agent node {node}: hand-off target {target} must be another Agent node of this workflow, listed once",
+    "AGENT_HANDOFF_LIMIT": "Max hand-offs per run must be 0-{max}",
     "AGENT_TOOL_DUPLICATE": "Agent node {node}: two tools are named {tool}",
     "AGENT_TOOL_NAME": _AGENT_TOOL + "the name must be 1-64 letters, digits, _ or -",
     "AGENT_TOOL_SOURCE": _AGENT_TOOL + "unknown source '{source}'",

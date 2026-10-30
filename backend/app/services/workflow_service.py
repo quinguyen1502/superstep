@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from ..core import config
 from ..core import permissions as P
 from ..core.errors import AppError
-from ..engine import exporters, project_export, subgraphs
+from ..engine import exporters, handoffs, project_export, subgraphs
 from ..engine.export_common import slug
 from ..engine.issues import issues_of
 from ..engine.examples import EXAMPLE
@@ -205,6 +205,7 @@ class WorkflowService:
         old = json.loads(ex.data or "{}") if ex else {}
         wf["name"] = clean_name(wf.get("name", "Untitled workflow"))
         if not ex: wf["name"] = unique_name(self.repo.names_for_owner(uid), wf["name"])
+        if (bad := handoffs.refusal(wf)): raise AppError(bad[0], **bad[1])  # hand-off targets (TASK-0179)
         wf.pop("source", None)  # never trust client-provided source metadata
         if old.get("source"): wf["source"] = old["source"]
         self._write(wid, wf.get("name", "Untitled"), wf, uid, new=not ex, before=old)  # the owner never changes
