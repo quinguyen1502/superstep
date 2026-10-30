@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0170
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -94,7 +94,10 @@
 ## Activity Log
 
 - 2026-10-30: planned from REQ-0079 phase 2 (DEC-0071). Not started.
+- 2026-10-30: implementation started.
+
+- 2026-10-30: owner asked to finish the phase 2 chain in one pass. Review REV-0146. QA QA-0146. Task moved to done. Not merged.
 
 ## Handoff Notes
 
-- The JUnit file is the CI artifact. A test that only checks the exit code is not enough; open the XML.
+- Review REV-0146. QA QA-0146. Not merged.
