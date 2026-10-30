@@ -17,6 +17,9 @@ curl -fsSL https://raw.githubusercontent.com/quinguyen1502/superstep/develop/scr
 superstep install
 ```
 
+The package also installs `sstep`, a short alias that runs the same command:
+`sstep status` is `superstep status`.
+
 `superstep install` asks for the topology (`single` or `full`), the public URL
 and the admin e-mail. `--yes` with those flags skips the questions. The
 all-in-one image is `ghcr.io/quinguyen1502/superstep`. The full stack uses

@@ -52,7 +52,8 @@ def test_a_chat_that_is_not_published_says_nothing():
     tok = user(); wid, slug = publish(tok)
     v = visitor()
     page = v.get(f"/api/public/chat/{slug}").json()["data"]
-    assert page == {"slug": slug, "title": "Echo chat", "intro": "", "suggestions": [], "access": "anonymous", "steps_mode": "labels", "signed_in": False, "embed_origins": [], "logo": ""}
+    assert page == {"slug": slug, "title": "Echo chat", "intro": "", "suggestions": [], "access": "anonymous", "steps_mode": "labels", "signed_in": False, "embed_origins": [], "logo": "",
+                    "attachments": {"enabled": False, "kinds": ["document", "image"], "max_files": 5, "max_mb": 10}}
     c.put(f"/api/workflows/{wid}/chat", json={"access": "studio"}, headers=H(tok))
     r = v.get(f"/api/public/chat/{slug}"); assert (err(r), r.status_code) == ("CHAT_NOT_PUBLISHED", 404)
     assert wid not in r.text and "Echo" not in r.text

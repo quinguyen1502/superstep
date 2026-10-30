@@ -41,4 +41,4 @@ if ! command -v superstep >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "superstep ${VERSION} is on PATH." >&2
+echo "superstep ${VERSION} is on PATH (also as sstep)." >&2
