@@ -713,27 +713,32 @@ class RunService:
         if source == "tool" and not test and (row := self.runs.get(rid)) is not None and self.under_test(row): test = True  # TASK-0137
         if self.notifier is not None and uid and status in ("waiting", "expired") and not test:
             ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
-            try: self.notifier.run_event("run_waiting" if status == "waiting" else "run_expired", uid, rid, wid, ev)
+            try:  # a step AI review may answer is announced by the review instead (TASK-0187)
+                reviewed = status == "waiting" and self.approvals is not None and self.approvals.answers_itself(wid, (checkpoint or {}).get("workflow") or {}, ev)
+                if not reviewed: self.notifier.run_event("run_waiting" if status == "waiting" else "run_expired", uid, rid, wid, ev)
             except Exception: log.exception("notification for run %s failed", rid)  # never fails a run
-        if self.approvals is not None and uid and not test:
-            try:
-                if status == "waiting":
-                    asked = [{"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt"), "label": w.get("label"),
-                              "tool": w.get("tool"), "arguments": w.get("arguments")}
-                             for w in wave_waits if w.get("kind") == "approval"]
-                    if not asked:
-                        ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
-                        if ev and not ev.get("wait"): asked = [ev]
-                    wf = (checkpoint or {}).get("workflow") or {}
-                    for ev in asked: self.approvals.on_waiting(rid, uid, wid, wf, ev)
-                elif status in ("cancelled", "expired", "error", "timeout"): self.approvals.close_run(rid, status)
-            except Exception: log.exception("approval request for run %s failed", rid)  # never fails a run
+        state, all_events = (final if isinstance(final, dict) else None), events
+        def approvals() -> None:  # after the run row is stored, so an answer AI review gives at once finds it waiting (TASK-0187)
+            if self.approvals is not None and uid and not test:
+                try:
+                    if status == "waiting":
+                        asked = [{"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt"), "label": w.get("label"),
+                                  "tool": w.get("tool"), "arguments": w.get("arguments")}
+                                 for w in wave_waits if w.get("kind") == "approval"]
+                        if not asked:
+                            ev = next((e for e in reversed(all_events) if e.get("type") == "run_waiting"), None)
+                            if ev and not ev.get("wait"): asked = [ev]
+                        wf = (checkpoint or {}).get("workflow") or {}
+                        for ev in asked: self.approvals.on_waiting(rid, uid, wid, wf, ev, state)
+                    elif status in ("cancelled", "expired", "error", "timeout"): self.approvals.close_run(rid, status)
+                except Exception: log.exception("approval request for run %s failed", rid)  # never fails a run
         events = cap_run([cap_event(e) for e in events])
         final = cap_event({"state": final})["state"] if final is not None else None
         self.runs.add(Run(id=rid, workflow_id=wid or "adhoc", input=_dumps(inp), events=_dumps(events), code_runtime=code_runtime_of(events),
                           final_state=_dumps(final), status=status, started=t0, ended=t1, trace_id=trace_id, owner=uid or None, source=source, workflow_version=version,
                           checkpoint=_dumps(checkpoint) if checkpoint else None, resume_job=None, **root, **metrics),
                       **({"fence": fence} if fence is not None else {}))  # resume_job: a kept answer is used up (TASK-0127)
+        approvals()
         if self.ledger is not None and status not in ("waiting", "paused"):
             try: self.ledger.purge(rid)  # finished: the ledger only matters while the run can still be recovered
             except Exception: log.warning("purging the node ledger of run %s failed", rid)

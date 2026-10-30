@@ -785,7 +785,8 @@
     "run_expired": "Một run đang chờ của {{workflow}} đã hết hạn",
     "unknownWorkflow": "Một workflow",
     "run_reminder": "{{workflow}} vẫn đang chờ bạn: {{label}}",
-    "run_escalated": "{{workflow}} được chuyển cho bạn duyệt: {{label}}"
+    "run_escalated": "{{workflow}} được chuyển cho bạn duyệt: {{label}}",
+    "run_auto_answered": "{{workflow}}: AI đã tự trả lời bước {{label}}"
   },
   "notifyPrefs": {
     "open": "Cài đặt thông báo",

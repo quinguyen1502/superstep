@@ -785,7 +785,8 @@
     "run_expired": "A waiting run of {{workflow}} expired",
     "unknownWorkflow": "A workflow",
     "run_reminder": "{{workflow}} is still waiting for you: {{label}}",
-    "run_escalated": "{{workflow}} was handed to you: {{label}}"
+    "run_escalated": "{{workflow}} was handed to you: {{label}}",
+    "run_auto_answered": "{{workflow}}: AI review answered {{label}}"
   },
   "notifyPrefs": {
     "open": "Notification settings",

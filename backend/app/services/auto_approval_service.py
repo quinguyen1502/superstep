@@ -20,8 +20,9 @@ def _wkey(wid: str) -> str: return f"{ORG_KEY}:{wid}"
 
 
 class AutoApprovalService:
-    def __init__(self, settings: SettingsRepository, access=None, audit=None):
-        self.settings, self.access, self.audit = settings, access, audit
+    def __init__(self, settings: SettingsRepository, access=None, audit=None, reviews=None):
+        """reviews: -> AutoReviewService, for the per-workflow counts (TASK-0187)."""
+        self.settings, self.access, self.audit, self.reviews = settings, access, audit, reviews
 
     def org_paused(self) -> bool: return bool(self.settings.get(ORG_KEY, False))
     def workflow_paused(self, wid: Optional[str]) -> bool: return bool(wid) and bool(self.settings.get(_wkey(wid), False))
@@ -46,7 +47,11 @@ class AutoApprovalService:
 
     def workflow_status(self, uid: str, wid: str) -> dict:
         if self.access is not None: self.access.workflow(wid, uid)
-        return {"workflow_id": wid, "paused": self.workflow_paused(wid), "org_paused": self.org_paused(), "enabled": config.auto_approval_enabled()}
+        out = {"workflow_id": wid, "paused": self.workflow_paused(wid), "org_paused": self.org_paused(), "enabled": config.auto_approval_enabled()}
+        if self.reviews is not None: out["stats"] = self.reviews().stats(wid)
+        if self.access is not None:
+            w = self.access.workflow(wid, uid); out["can_manage"] = w.owner == uid or self.access.role(uid) == "admin"
+        return out
 
     def set_workflow_paused(self, uid: str, wid: str, paused) -> dict:
         """Owner or admin (owner decision 3): the people who may turn auto on may also pause it."""

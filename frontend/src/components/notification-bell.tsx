@@ -10,7 +10,7 @@ import { NotificationSettingsDialog } from '@/components/notification-settings-d
 import i18n from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-type Note = { id: string; kind: 'run_waiting' | 'run_expired' | 'run_reminder' | 'run_escalated'; title: string; link: string | null; created: number; read: boolean
+type Note = { id: string; kind: 'run_waiting' | 'run_expired' | 'run_reminder' | 'run_escalated' | 'run_auto_answered'; title: string; link: string | null; created: number; read: boolean
   params: { workflow_name?: string | null; label?: string | null; prompt?: string | null } }
 const POLL_MS = 30_000
 
