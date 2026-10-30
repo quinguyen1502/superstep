@@ -2329,9 +2329,9 @@
     "hint": "Agent có thể chuyển cuộc trò chuyện cho các agent này. Mô tả cho mô hình biết khi nào nên chuyển.",
     "noAgents": "Thêm một node Agent khác để chuyển cuộc trò chuyện tới.",
     "description": "Khi nào chuyển giao",
-    "descriptionPlaceholder": "vd. Thanh toán, hoàn tiền và hóa đơn",
+    "descriptionPlaceholder": "vd. Thanh toán, hoàn tiền và hoá đơn",
     "remove": "Bỏ chuyển giao tới {{name}}",
-    "max": "Giới hạn chuyển giao mỗi lần chạy (toàn workflow)",
+    "max": "Giới hạn chuyển giao mỗi run (toàn workflow)",
     "maxHint": "Để trống dùng {{n}}. Từ 0 đến {{max}}; vượt quá thì các agent phải tự trả lời.",
     "handle": "Kéo tới một Agent khác để thêm chuyển giao"
   }
