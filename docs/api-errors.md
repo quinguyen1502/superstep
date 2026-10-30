@@ -71,6 +71,8 @@
 | `WORKFLOW_NAME_REQUIRED` | 400 | Workflow name is required |
 | `WORKFLOW_NAME_TOO_LONG` | 400 | Workflow name must be at most {max} characters |
 | `WORKFLOW_NAME_TAKEN` | 409 | A workflow with this name already exists |
+| `AGENT_HANDOFF_TARGET_INVALID` | 400 | Agent node {node}: hand-off target {target} must be another Agent node of this workflow, listed once |
+| `AGENT_HANDOFF_LIMIT` | 400 | Max hand-offs per run must be 0-{max} |
 | `WORKFLOW_TOO_LARGE` | 413 | Workflow is too large (max {max_kb} KB) |
 | `WORKFLOW_INVALID` | 400 | Workflow is invalid |
 | `TEMPLATE_NOT_FOUND` | 404 | Template not found |
