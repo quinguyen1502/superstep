@@ -17,10 +17,11 @@ import { fmtDate } from '@/lib/i18n'
 import { useLoadWhen } from '@/lib/use-when'
 import { cn } from '@/lib/utils'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { downShare, published, waitingTurn, type ChatSession, type ChatSettings, type RatingTotals } from '@/lib/chat'
+import { downShare, published, waitingTurn, type ChatAttachment, type ChatSession, type ChatSettings, type RatingTotals } from '@/lib/chat'
 import { useChatRun, type ChatEndpoint, type ChatView } from './use-chat-run'
-import { ChatThread } from './chat-thread'
-import { ChatComposer } from './chat-composer'
+import { ChatThread, type FileLinks } from './chat-thread'
+import { ChatComposer, type ComposerFiles } from './chat-composer'
+import { uploadChatFile } from '@/lib/chat-files'
 import { ChatSettingsDialog } from './chat-settings-dialog'
 import { TestCaseDialog, type TestCase } from '@/components/editor/editor-tests-panel'
 import { useStudioCtx } from '@/components/editor/studio-context'
@@ -56,13 +57,23 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
     .then(d => { setDraftErr(''); setDraft({ ...d, id: '', last: null }) }).catch(e => setDraftErr(e.message))
   const showVisitors = !!settings && (published(settings) || visitors.length > 0)
   const fresh = () => api<ChatSession>(`/api/workflows/${wid}/chat/sessions`, { method: 'POST' }).then(s => list(s.id)).catch(e => setErr(e.message))
+  const waiting = waitingTurn(chat.session?.turns ?? [])   // a typed message answers the waiting Human node
   // the first message of a new chat creates it, then goes out once the chat is loaded
   const first = useRef(''); const { send: say, session } = chat
-  const send = (text: string) => { if (sid) { say(text); return } first.current = text
+  const send = (text: string, files: ChatAttachment[] = []) => { if (sid) { say(text, files); return } first.current = text
     api<ChatSession>(`/api/workflows/${wid}/chat/sessions`, { method: 'POST' }).then(s => list(s.id)).catch(e => { first.current = ''; setErr(e.message) }) }
+  // files (TASK-0177): the first file of a new chat creates it; a typed answer to a Human node takes none
+  const made = useRef<Promise<string> | null>(null)
+  const ensure = () => sid ? Promise.resolve(sid) : made.current ??= api<ChatSession>(`/api/workflows/${wid}/chat/sessions`, { method: 'POST' })
+    .then(async s => { await list(s.id); return s.id }).finally(() => { made.current = null })
+  const files = useMemo<ComposerFiles | null>(() => settings && !waiting ? { ...settings.attachments,
+    upload: f => ensure().then(id => uploadChatFile(`/api/chat/sessions/${id}/attachments`, f)),
+    remove: id => sid ? api(`/api/chat/sessions/${sid}/attachments/${id}`, { method: 'DELETE' }) : Promise.resolve() } : null,
+  [settings, waiting, sid])   // eslint-disable-line react-hooks/exhaustive-deps -- ensure follows sid
+  const links = useMemo<FileLinks | undefined>(() => sid ? { url: id => `/api/chat/sessions/${sid}/attachments/${id}` } : undefined, [sid])
+  const visitorLinks = useMemo<FileLinks | undefined>(() => vsid ? { url: id => `/api/workflows/${wid}/chat/visitors/${vsid}/attachments/${id}` } : undefined, [wid, vsid])
   useEffect(() => { if (first.current && sid && session?.id === sid) { const x = first.current; first.current = ''; say(x) } }, [sid, session, say])
   const remove = (s: ChatSession) => api(`/api/chat/sessions/${s.id}`, { method: 'DELETE' }).then(() => { if (sid === s.id) setSid(null); list() }).catch(e => setErr(e.message))
-  const waiting = waitingTurn(chat.session?.turns ?? [])   // a typed message answers the waiting Human node
   const mode = view === 'builder' ? 'full' : chat.session?.steps_mode ?? settings?.steps ?? 'labels'
   const off = settings && !settings.enabled
   // one icon-only New chat button: next to the session Select (compact) or in the sidebar header (fullscreen)
@@ -133,7 +144,7 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
       {vsid !== null ? <><div className="flex shrink-0 items-center gap-2 border-b bg-muted/60 px-3 py-1.5 text-xs text-muted-foreground" id="chat-visitor-readonly" role="status">
           <Eye className="size-3.5 shrink-0" /><span className="min-w-0 flex-1 truncate">{t('chat.visitors.readOnly')}</span></div>
         {vsid ? <ChatThread turns={read.session?.turns ?? []} mode="full" events={[]} trace={read.trace} pending={null} running={false}
-          onSaveTest={canEdit ? saveCase : undefined} />
+          onSaveTest={canEdit ? saveCase : undefined} files={visitorLinks} />
           : <p className="m-auto p-6 text-sm text-muted-foreground">{t('chat.visitors.none')}</p>}</>
       : off ? <div className="m-auto max-w-sm space-y-3 p-6 text-center" id="chat-off">
           <p className="text-sm text-muted-foreground">{t('chat.off')}</p>
@@ -142,11 +153,12 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
             <Eye className="size-3.5 shrink-0" /><span className="min-w-0 flex-1 truncate">{t('chat.visitorBanner')}</span>
             <Button size="xs" variant="link" id="chat-visitor-exit" onClick={() => setView('builder')}>{t('chat.visitorExit')}</Button></div>}
           <ChatThread turns={chat.session?.turns ?? []} mode={mode} replyField={settings.reply_field} events={chat.events} trace={chat.trace}
-            pending={chat.pending} running={chat.running} onAnswer={chat.answer} onRate={vsid === null ? rate : undefined}
-            onSaveTest={canEdit ? saveCase : undefined} /></>}
+            pending={chat.pending} pendingFiles={chat.pendingFiles} running={chat.running} onAnswer={chat.answer} onRate={vsid === null ? rate : undefined}
+            onSaveTest={canEdit ? saveCase : undefined} files={links} /></>}
       {!off && vsid === null && <ChatComposer disabled={!settings || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
         placeholder={waiting ? t(waiting.answered_by === 'reviewer' ? 'chat.waitingReviewer' : 'chat.answerPlaceholder') : undefined}
-        onSend={text => waiting?.run_id ? chat.answer(waiting.run_id, text) : send(text)} />}
+        files={files} onError={setErr}
+        onSend={(text, f) => waiting?.run_id ? chat.answer(waiting.run_id, text) : send(text, f)} />}
     </div>
     <ChatSettingsDialog wid={wid} open={cfg} onOpenChange={setCfg} onSaved={setSettings} />
     {draft && <TestCaseDialog wid={wid} value={draft} onClose={() => setDraft(null)} onSaved={() => { setDraft(null); setTab('tests') }} />}

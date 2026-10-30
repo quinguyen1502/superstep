@@ -30,6 +30,7 @@ ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish t
 PUBLIC = ("anonymous", "signed_in")
 STEPS = ("none", "labels", "full")
 ANSWERED_BY = ("visitor", "reviewer")
+FILE_FIELDS = ("files", "attachments")  # state list fields that hold chat files, not the history (TASK-0177)
 DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30,
             "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": "",
             "attachments": ATTACH_DEFAULTS}
@@ -164,10 +165,12 @@ class ChatSessionService:
         fields = self._fields(w)
         guess = lambda names, typ: next((f["name"] for f in fields if f["name"] in names), next((f["name"] for f in fields if f.get("type") == typ), ""))  # noqa: E731
         s = {**DEFAULTS, **(json.loads(t.settings or "{}") if t else {})}
-        if t is None: s["messages_field"] = guess(("messages", "history"), "list")
+        if t is None:  # the history: a messages-like list, never the list named for files (TASK-0177)
+            s["messages_field"] = next((f["name"] for f in fields if f["name"] in ("messages", "history")),
+                                       next((f["name"] for f in fields if f.get("type") == "list" and f["name"] not in FILE_FIELDS), ""))
         s["attachments"] = {**ATTACH_DEFAULTS, **(s.get("attachments") or {})}
         if t is None or not s["attachments"].get("field"):
-            s["attachments"]["field"] = next((f["name"] for f in fields if f["name"] in ("files", "attachments") and f.get("type") == "list"), "files")
+            s["attachments"]["field"] = next((f["name"] for f in fields if f["name"] in FILE_FIELDS and f.get("type") == "list"), "files")
         s["attachment_ceiling"] = {"max_mb": config.chat_attachment_max_mb(), "max_files": config.chat_attachment_max_files()}  # read only
         return {"enabled": bool(t.enabled) if t else False, "slug": t.command if t else w.id.lower(),
                 "input_field": t.input_field if t else guess(("message", "input", "question"), "string"),
@@ -219,7 +222,7 @@ class ChatSessionService:
         for k in ("max_files", "max_mb"):
             n = a[k]
             if isinstance(n, bool) or not isinstance(n, int) or n < 1: raise bad(k)
-            if n > hi[k]: raise AppError("CHAT_ATTACHMENT_LIMIT", **hi)
+            if n > hi[k]: raise AppError("CHAT_ATTACHMENT_LIMIT", field=f"attachments.{k}", **hi)  # the field marks the input (TASK-0177)
         enabled, field = bool(a["enabled"]), a["field"]
         if not isinstance(field, str) or (enabled and (field not in fields or fields[field].get("type") != "list" or field in taken)): raise bad("field")
         return {"enabled": enabled, "kinds": [k for k in KINDS if k in kinds], "max_files": a["max_files"], "max_mb": a["max_mb"], "field": field}

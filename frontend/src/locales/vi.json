@@ -2094,6 +2094,31 @@
       "widgetHint": "Dán trước </body>. Một nút mở chat ở góc trang, và khách giữ được cuộc trò chuyện trên mọi trình duyệt. Site đó đọc được khoá chat của khách.",
       "iframe": "Frame",
       "iframeHint": "Hiện chat ngay trong trang. Một số trình duyệt (Safari) bắt đầu cuộc trò chuyện mới mỗi lần khi ở trong frame; dùng bong bóng chat để giữ cuộc trò chuyện."
+    },
+    "files": {
+      "attach": "Đính kèm tệp (tối đa {{max}} tệp, mỗi tệp {{max_mb}} MB)",
+      "attachLabel": "Đính kèm tệp",
+      "remove": "Gỡ {{name}}",
+      "download": "Tải {{name}}",
+      "uploading": "Đang chờ tải tệp lên",
+      "kinds": {
+        "document": "Tài liệu (PDF, TXT, MD, CSV)",
+        "image": "Hình ảnh (PNG, JPEG, WebP)"
+      },
+      "include": "Đưa tệp đính kèm vào",
+      "includeHint": "Gửi các tệp của cuộc chat cho mô hình: tài liệu dưới dạng văn bản, hình ảnh dưới dạng ảnh nếu mô hình xem được ảnh.",
+      "includeField": "Trường chứa tệp",
+      "settings": {
+        "enabled": "Cho phép đính kèm tệp",
+        "enabledHint": "Người dùng có thể thêm tệp vào tin nhắn. Tệp được lưu cùng cuộc chat và bị xoá cùng cuộc chat.",
+        "kinds": "Loại tệp",
+        "kindsHint": "Máy chủ kiểm tra nội dung của từng tệp, không chỉ tên tệp.",
+        "maxFiles": "Số tệp mỗi tin nhắn",
+        "maxMb": "Dung lượng tối đa (MB)",
+        "ceiling": "Máy chủ này cho phép tối đa {{max}}.",
+        "field": "Trường state",
+        "fieldHint": "Trường danh sách nhận thông tin các tệp trong mỗi run."
+      }
     }
   },
   "timeTravel": {

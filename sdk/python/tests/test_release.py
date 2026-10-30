@@ -151,3 +151,9 @@ def test_handbook_cli_pages_share_heading_levels():
     assert all(b - a <= 1 for a, b in zip(en_levels, en_levels[1:]))
     for nav in (ROOT / "handbook" / "mkdocs.yml", ROOT / "handbook" / "mkdocs.vi.yml"):
         assert "operate/cli.md" in nav.read_text(encoding="utf-8")
+
+
+def test_sstep_is_an_alias_of_superstep():
+    """TASK-0185: the short command runs the same entry point."""
+    text = (ROOT / "sdk" / "python" / "pyproject.toml").read_text()  # no tomllib on Python 3.9
+    assert 'superstep = "superstep.cli:main"' in text and 'sstep = "superstep.cli:main"' in text

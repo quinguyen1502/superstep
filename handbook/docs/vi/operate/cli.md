@@ -17,6 +17,9 @@ curl -fsSL https://raw.githubusercontent.com/quinguyen1502/superstep/develop/scr
 superstep install
 ```
 
+Gói cũng cài `sstep`, tên ngắn chạy đúng lệnh đó: `sstep status` giống
+`superstep status`.
+
 `superstep install` hỏi topology (`single` hoặc `full`), URL công khai và email
 admin. `--yes` cùng các cờ đó thì bỏ qua câu hỏi. Image all-in-one là
 `ghcr.io/quinguyen1502/superstep`. Stack đầy đủ dùng `superstep-api` và
