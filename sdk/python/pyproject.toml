@@ -28,6 +28,7 @@ test = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 [project.scripts]
 superstep = "superstep.cli:main"
+sstep = "superstep.cli:main"  # the short alias (TASK-0185)
 
 [project.urls]
 Homepage = "https://github.com/quinguyen1502/superstep"
