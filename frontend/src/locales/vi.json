@@ -303,9 +303,13 @@
       "status": {
         "error": "lỗi",
         "refused": "bị từ chối",
-        "rejected": "người duyệt từ chối"
+        "rejected": "người duyệt từ chối",
+        "not_run": "không chạy"
       },
-      "approved": "đã duyệt"
+      "approved": "đã duyệt",
+      "handoff": "chuyển giao cho {{to}}",
+      "handoffReason": "chuyển giao cho {{to}}: {{reason}}",
+      "handedOff": "chuyển giao"
     }
   },
   "import": {
@@ -1973,7 +1977,8 @@
       "running": "Đang chạy {{label}}",
       "input": "Input",
       "output": "Output",
-      "errorDetail": "Lỗi"
+      "errorDetail": "Lỗi",
+      "handoff": "cho {{to}}"
     },
     "settings": {
       "title": "Cài đặt Chat",
@@ -2350,6 +2355,18 @@
     "NODE_REF_FILTER_NO_ARGUMENT": "Node {{node}}: filter '{{filter}}' không nhận tham số, trong {{ref}}",
     "NODE_REF_FILTER_NEEDS_TEXT": "Node {{node}}: filter '{{filter}}' cần tham số dạng văn bản, trong {{ref}}",
     "NODE_REF_FILTER_NEEDS_NUMBER": "Node {{node}}: filter '{{filter}}' cần tham số dạng số, trong {{ref}}"
+  },
+  "handoff": {
+    "title": "Chuyển giao",
+    "add": "Thêm chuyển giao",
+    "hint": "Agent có thể chuyển cuộc trò chuyện cho các agent này. Mô tả cho mô hình biết khi nào nên chuyển.",
+    "noAgents": "Thêm một node Agent khác để chuyển cuộc trò chuyện tới.",
+    "description": "Khi nào chuyển giao",
+    "descriptionPlaceholder": "vd. Thanh toán, hoàn tiền và hoá đơn",
+    "remove": "Bỏ chuyển giao tới {{name}}",
+    "max": "Giới hạn chuyển giao mỗi run (toàn workflow)",
+    "maxHint": "Để trống dùng {{n}}. Từ 0 đến {{max}}; vượt quá thì các agent phải tự trả lời.",
+    "handle": "Kéo tới một Agent khác để thêm chuyển giao"
   },
   "aiReview": {
     "title": "AI duyệt",

@@ -10,19 +10,20 @@ import { CanvasEdit } from './canvas-edit'
 import { nodeTypes } from './node-types'
 import { Tip } from '@/components/tip'
 import { removable } from '@/lib/graph-ops'
+import { isHandoffEdge } from '@/lib/handoffs'
 import { useIsMobile } from '@/lib/use-viewport-width'
 
 /** Canvas with its context menu (TASK-0040). */
 export function EditorCanvas() {
   const { t } = useTranslation()
   const mobile = useIsMobile()  // phones (TASK-0121): zoom out further so a whole workflow fits the narrow screen
-  const { nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, setSel, source, edit, dark, rf, removeIds, clipNote, copyIds, insert, editable, insertAround, addNode, addNote, ctx, setCtx, nodesView, onNodeClick, onConnect, onDrop, canvasLock, setCanvasLock } = useStudioCtx()
+  const { nodes, setNodes, onNodesChange, edges, setEdges, setSel, source, edit, dark, rf, removeIds, clipNote, copyIds, insert, editable, insertAround, addNode, addNote, ctx, setCtx, nodesView, edgesView, onEdgesView, onNodeClick, onConnect, onDrop, canvasLock, setCanvasLock } = useStudioCtx()
   return <ContextMenu>
     <ContextMenuTrigger asChild>
     <main className="h-full min-h-0" onDrop={onDrop} onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }}>
       {clipNote && <div role="status" id="clip-notice" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-md border bg-popover text-popover-foreground shadow-md px-3 py-1.5 text-sm">{clipNote}</div>}
       <CanvasEdit.Provider value={editable}>
-      <ReactFlow nodes={nodesView} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+      <ReactFlow nodes={nodesView} edges={edgesView} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesView}
         colorMode={dark ? 'dark' : 'light'} onConnect={edit && !canvasLock ? onConnect : undefined} nodesConnectable={edit && !canvasLock} nodesDraggable={edit && !canvasLock} edgesReconnectable={edit && !canvasLock} elementsSelectable
         onNodeClick={(_, n) => onNodeClick(n.id)}
         onNodeContextMenu={(e, n) => {
@@ -55,8 +56,8 @@ export function EditorCanvas() {
         onCut={() => copyIds([ctx.id], true)}
         onDuplicate={() => { const c = copySelection(nodes, edges, [ctx.id]); if (c) insert(c, 1) }} onDelete={() => removeIds([ctx.id])} />}
       {ctx?.kind === 'edge' && <>
-        <InsertMenu id="edge" label={t('editor.insertHere')} icon={Plus} onPick={type => ctx && insertAround(type, { dir: 'edge', edgeId: ctx.id })} />
-        <ContextMenuSeparator />
+        {!isHandoffEdge(ctx.id) && <><InsertMenu id="edge" label={t('editor.insertHere')} icon={Plus} onPick={type => ctx && insertAround(type, { dir: 'edge', edgeId: ctx.id })} />
+        <ContextMenuSeparator /></>}
         <ContextMenuItem id="delete-edge" variant="destructive" onSelect={() => ctx && removeIds([], [ctx.id])}><Trash2 />{t('editor.deleteEdge')}</ContextMenuItem>
       </>}
     </ContextMenuContent>

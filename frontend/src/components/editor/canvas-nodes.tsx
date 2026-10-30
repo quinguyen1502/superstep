@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { META } from './meta'
+import { HANDOFF_HANDLE } from '@/lib/handoffs'
 import { CanvasEdit } from './canvas-edit'
 import { Tip } from '@/components/tip'
 import { useCodeRuntime } from '@/lib/code-runtime'
@@ -58,7 +59,15 @@ export function StudioNode({ data, type, selected }: NodeProps) {
       <StatusBadge s={d._status} />{d._dur != null && <span className="text-[10px] text-muted-foreground">{d._dur} ms</span>}</div>}
     </div>
     {type !== 'end' && <Handle type="source" position={Position.Right} />}
+    {type === 'agent' && <HandoffHandle />}
   </div>
+}
+
+/** An Agent node's hand-off handle (TASK-0182): a link drawn from it to another Agent adds a hand-off target. */
+function HandoffHandle() {
+  const { t } = useTranslation()
+  return <Handle type="source" id={HANDOFF_HANDLE} position={Position.Bottom} aria-label={t('handoff.handle')} data-testid="handoff-handle"
+    style={{ background: 'var(--background)', borderStyle: 'dashed', borderColor: 'var(--node-agent)' }} />
 }
 export function Sticky({ id, data, selected }: NodeProps) {
   const { t } = useTranslation()
