@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0076
-- Status: Accepted on 2026-10-27 with the CLAR-0007 answers (all recommended options). Planned on 2026-10-27. Merged on 2026-10-30 (PR #206 and PR #213, DEC-0069, TASK-0157 to TASK-0161).
+- Status: Done (TASK-0157 to TASK-0161, PR #206 and follow-ups in PR #213, merged 2026-10-30; on `develop`, not released yet). Accepted by the owner on 2026-10-27 with the CLAR-0007 answers (DEC-0069).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
