@@ -4,12 +4,12 @@
 
 - Project: superstep
 - Requirement ID: REQ-0081
-- Status: Proposed (draft for the owner's decision; not accepted, not planned into tasks)
+- Status: Accepted on 2026-10-30 with the DEC-0075 owner decisions (all recommended options). Not planned into tasks yet.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
 - Source: owner idea in chat on 2026-10-30 ("cho phép dùng 1 llm/agent để auto approve và chỉ thông báo về cho owner, vẫn có chấm điểm confident và các rule như chỉ duyệt theo khung giờ, ko quá max số lượng, có chứa 1 số thông tin gì đó"). The owner said the rule ideas are examples only. Research: Copilot Studio AI approval stages, UiPath tool guardrails, OpenAI Agents SDK `needs_approval`, LangChain `HumanInTheLoopMiddleware` (links in DEC-0075).
-- Related Decision: DEC-0075 (Proposed)
+- Related Decision: DEC-0075 (Accepted)
 
 ## Summary
 
@@ -64,7 +64,7 @@
   - the run resumes with the same value a person would send (`approved` or the rejection text);
   - waiting messages are edited.
 - **Audit**: one `ApprovalAudit` entry per auto-review, with actor `auto`, the outcome, the policy version (hash of `approval.auto`), the model, the confidence, the reason and the rules that matched. Suggest mode is audited too.
-- **Owner notification** through the existing notifier and channel: "Auto-approved by AI (0.92): <reason>", with a link to the run.
+- **Owner notification** (run owner only) through the existing notifier and channel: "Auto-approved by AI (0.92): <reason>", with a link to the run.
 - **Approvals page**:
   - an "AI" badge on auto-answered and suggested items;
   - per-workflow counts (auto-approved, escalated, and in suggest mode how often people agreed);
@@ -156,11 +156,23 @@
 
 ## Assumptions
 
-- The judge uses the existing provider credentials (OpenAI, Anthropic, OpenRouter, compatible). TypeSafe/Jev may also be offered (DEC-0075 question).
+- The judge uses the existing provider credentials (OpenAI, Anthropic, OpenRouter, compatible). Any configured chat credential can be the judge (owner decision 4).
+
+## Owner Decisions
+
+The owner approved the recommended answers on 2026-10-30. They are recorded in DEC-0075 "Owner Decisions":
+
+1. Default `min_confidence` 0.8. The editor shows the AI/human agreement rate from suggest mode.
+2. Only rules may reject. The AI judge never auto-rejects.
+3. Only the workflow owner and admins can turn on `auto`. Editors can turn on `suggest`.
+4. Any configured chat credential can be the reviewer model.
+5. The daily cap counts per workflow per day.
+6. No undo delay in the MVP (later).
+7. Only the run owner is notified of automatic answers.
 
 ## Open Questions
 
-See DEC-0075 "Open Questions": the default `min_confidence`, auto-reject by rule, who may enable auto, the judge model choice, the cap scope, and whether the delay-and-undo moves into the MVP.
+None. The DEC-0075 questions are answered.
 
 ## Related Artifacts
 

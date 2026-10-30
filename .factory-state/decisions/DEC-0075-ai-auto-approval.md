@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Decision ID: DEC-0075
-- Status: Proposed. Not accepted; waiting for the owner's decision. Nothing is implemented.
+- Status: Accepted. The owner approved decisions 1 to 8 and the recommended answer to every open question on 2026-10-30. Not planned into tasks yet; nothing is implemented.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
-- Related Requirements: REQ-0081 (Proposed), REQ-0041, REQ-0072, REQ-0073
+- Related Requirements: REQ-0081, REQ-0041, REQ-0072, REQ-0073
 - Related Architecture: DEC-0019 (approval channels), DEC-0063 (Agent node, tool approval), DEC-0039 (Decision node), DEC-0009 (layers)
 
 ## Context
@@ -28,7 +28,7 @@
   - OWASP LLM06 Excessive Agency: approval enforced outside the LLM (https://genai.owasp.org/llmrisk/llm062025-excessive-agency/).
 - Verbalized LLM confidence is often overconfident (arXiv 2306.13063), hence suggest mode first and a threshold treated as only one signal.
 
-## Decision (proposed)
+## Decision
 
 1. **Where it runs.** A new `AutoReviewService` is called by `ApprovalService.on_waiting` before any channel message, with the same input for Human nodes and Agent tool steps.
    - Outcomes: `approved`, `rejected` (rule only), `escalated` or `suggested`.
@@ -49,7 +49,7 @@
 5. **Defaults.**
    - `mode` off (the editor preselects suggest when turned on);
    - `min_confidence` 0.8;
-   - `max_per_day` 50 per workflow;
+   - `max_per_day` 50 per workflow per day;
    - the judge's reject means escalate;
    - errors escalate;
    - mock, test run and demo never approve;
@@ -76,7 +76,7 @@
 - **A new "AI Review" node on the canvas** (Decision → Condition → Human): visible in the graph and exportable, but it does nothing for Agent tool calls, and it duplicates audit and notification. Not chosen.
 - **A policy inside the engine before raising `Interrupt`** (like LangChain's `when`): no wait record and no inbox entry for suggest mode, and the LLM call would sit in the engine's step and be repeated on resume. Not chosen.
 - **An expression language** (JSONLogic or Python-like) for rules: more power, harder to validate and show. Later, if needed.
-- **The Decision node's Jev as the only judge**: typed probabilities are attractive, but tie it to one provider. Offer it as a judge option instead (question 4).
+- **The Decision node's Jev as the only judge**: typed probabilities are attractive, but tie it to one provider. Not chosen; any configured chat credential can be the judge (owner decision 4).
 
 ## Impacts
 
@@ -88,22 +88,24 @@
 - Prompt injection in the reviewed content, which rules first, delimited data, no tools, escalate on a flag and the handbook warning mitigate.
 - Owners trusting auto too early. The editor shows suggest-mode agreement before enabling auto.
 
-## Open Questions (owner)
+## Owner Decisions
 
-1. **Default `min_confidence`**: recommend 0.8, with the editor showing suggest-mode agreement.
-2. **Auto-reject**: only by rule (recommended), or also by a confident judge?
-3. **Who can enable auto**: the workflow owner and admins (recommended), or any editor?
-4. **Judge models**: any configured chat credential (recommended), plus TypeSafe/Jev as an option?
-5. **Cap scope**: per workflow per day (recommended), or per node, or per organisation as well?
-6. **Delay and undo** (for example, a 2-minute hold before resuming with an Undo button): later (recommended), or in the MVP?
-7. **Notification target**: the run owner only (recommended), or also the listed approvers?
+The owner approved the recommended answer to every question on 2026-10-30.
+
+1. **Default `min_confidence`**: 0.8. The editor shows the AI/human agreement rate from suggest mode next to the setting.
+2. **Auto-reject**: only rules (effect `reject`) can reject. The AI judge never auto-rejects; its reject escalates to people.
+3. **Who can enable**: only the workflow owner and admins can set `mode: auto`; any editor can set `suggest`.
+4. **Judge models**: any configured chat credential can be the reviewer model.
+5. **Cap scope**: `max_per_day` counts automatic answers per workflow per day.
+6. **Delay and undo**: not in the MVP; it stays in the later phase.
+7. **Notification target**: only the run owner is notified of automatic answers.
 
 ## Approval
 
-- Approved By: (pending)
-- Approved On: (pending)
-- Scope And Limits: (pending)
+- Approved By: Thái Quí Nguyễn
+- Approved On: 2026-10-30
+- Scope And Limits: Decisions 1 to 8 and the owner decisions 1 to 7 as written, for the MVP in REQ-0081. Tasks are not planned yet; the task set needs the owner's confirmation.
 
 ## Review Or Revisit Trigger
 
-- The owner answers the questions, or the human override rate on auto-approvals exceeds a set level.
+- The human override rate on auto-approvals exceeds a set level.
