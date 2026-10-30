@@ -3,7 +3,8 @@
 `superstep` installs, upgrades and backs up one instance on a machine that has
 Docker and Compose v2. The package version is the server version. On the `0.1.0`
 line the Python package was the SDK only; a `v*` release moves that package to
-the server version.
+the server version. Sign-in, `pull`, `push`, `run`, `test` and `mcp` are in
+the sections below. Those commands use a personal access token, not Docker.
 
 ## Install
 
@@ -49,6 +50,103 @@ superstep backup --schedule daily --keep 7
 `--name` is the same name. The archive carries the database, `.env`,
 `compose.yml` and the secret key, so a stored credential still decrypts after a
 restore onto a new directory.
+
+## Sign in
+
+Workflow commands do not read `instance.json`.
+
+```bash
+superstep login --url http://localhost:8000
+superstep whoami
+superstep logout
+```
+
+`login` prints a URL and a code, and opens the browser. Approve or deny on
+`/cli/authorize` while you are signed in to the studio. Nothing is sent until
+you press a button. The command writes `url`, `token` and `account` to
+`~/.superstep/cli.json` and sets that file to mode `0600`. It does not print
+the token. `logout` removes `token` and `account` from that file. It does not
+revoke the token. Revoke it in Settings, under Tokens (`/settings/tokens`).
+
+For a script or CI, create a token in Settings and export the two variables.
+The environment wins over the file. Do not commit the token.
+
+```bash
+export SUPERSTEP_URL=http://localhost:8000
+export SUPERSTEP_TOKEN
+```
+
+## Workflows in Git
+
+```bash
+superstep pull ./workflows
+superstep push ./workflows
+superstep push ./workflows --force
+```
+
+`pull` writes one `<id>.json` per visible workflow and `.superstep/lock.json`.
+It does not delete a local file the server no longer has. `push` updates the
+studio. If a workflow changed in the studio after the pull, `push` exits
+non-zero and writes nothing. `--force` overwrites that edit. A lock from a
+different server is refused the same way, unless `--force` is set. `push` does
+not delete a remote workflow that has no local file.
+
+```bash
+superstep workflows list
+superstep workflows export demo --format json
+superstep workflows import ./demo.json
+```
+
+`import` accepts workflow JSON. A `.py`, `.ts` or `.zip` file is refused and
+the server is not called.
+
+## Run
+
+```bash
+superstep run inbox --input sample.json --follow
+superstep runs list
+superstep runs show RUN_ID
+superstep runs cancel RUN_ID
+```
+
+`run` opens the same socket as the run panel and keeps it open until the run
+ends. Exit 0 is `ok` or `paused`. Exit 1 is `error`. Exit 2 is `waiting`: the
+prompt is printed and the CLI does not answer it. Exit 3 is a timeout. The
+default is 300 seconds, then the CLI sends cancel. Exit 4 is `cancelled`.
+
+## Tests in CI
+
+Install the CLI, export `SUPERSTEP_URL` and `SUPERSTEP_TOKEN`, then run the
+suite. `--mock` runs LLM nodes offline. The JUnit file is
+`superstep-junit.xml` unless `--junit` names another path. The process exits 1
+when a case fails or a suite is cancelled or errors.
+
+```bash
+pip install 'superstep[cli]'
+export SUPERSTEP_URL=http://localhost:8000
+export SUPERSTEP_TOKEN
+superstep test --all --mock --junit superstep-junit.xml
+```
+
+## MCP
+
+`superstep mcp` speaks MCP on standard input and output. Run `superstep login`
+first, or set `SUPERSTEP_URL` and `SUPERSTEP_TOKEN`. Turn MCP on for the
+workflow in the studio. The command does not create a workflow token and does
+not put a token in the client config.
+
+```json
+{
+  "mcpServers": {
+    "superstep": {
+      "command": "superstep",
+      "args": ["mcp", "Support"]
+    }
+  }
+}
+```
+
+Replace `Support` with the workflow name. Several names are one process.
 
 ## CI smoke test
 
