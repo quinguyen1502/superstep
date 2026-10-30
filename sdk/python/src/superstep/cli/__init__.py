@@ -19,6 +19,7 @@ from superstep.cli.install import add_commands
 from superstep.cli.login import add_commands as add_login_commands
 from superstep.cli.status import add_commands as add_status_commands
 from superstep.cli.upgrade import add_commands as add_upgrade_commands
+from superstep.cli.workflows import add_commands as add_workflow_commands
 
 _TIMEOUT = 5.0
 
@@ -97,6 +98,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     add_admin_commands(commands, common, catalog)
     add_deploy_commands(commands, common, catalog)
     add_login_commands(commands, common, catalog)
+    add_workflow_commands(commands, common, catalog)
     return parser
 
 

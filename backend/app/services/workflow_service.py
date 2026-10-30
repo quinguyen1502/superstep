@@ -17,7 +17,7 @@ from .naming import clean_name, unique_name
 
 VERSION_RETRIES = 3
 PAGE_MAX = 200
-READ_ONLY = ("id", "access", "mine", "owner_email")  # response-only fields, never stored
+READ_ONLY = ("id", "access", "mine", "owner_email", "version", "updated")  # response-only fields, never stored
 
 
 def _dumps(d) -> str: return json.dumps(d, ensure_ascii=False)
@@ -167,6 +167,12 @@ class WorkflowService:
     def _emails(self, ids) -> dict[str, str]:
         return {i: u.email for i, u in self.users.by_ids(list(set(ids))).items()} if self.users is not None else {}
 
+    def _version_number(self, wid: str) -> int:
+        """Latest stored version, or 0 when this workflow has no version row."""
+        if self.versions is None: return 0
+        latest = self.versions.latest(wid)
+        return latest.version if latest else 0
+
     def list(self, uid: str, all_: bool = False) -> list[dict]:
         """Own and shared workflows with the caller's access; `all_` lists every workflow for admins."""
         rows = self.access.visible(uid, all_) if self.access is not None else [(w, "owner") for w in self.repo.list_for_owner(uid)]
@@ -176,14 +182,16 @@ class WorkflowService:
             last = self.runs.last_for_workflow(w.id); d = json.loads(w.data or "{}")
             out.append({"id": w.id, "name": w.name, "updated": w.updated, "node_count": len(d.get("nodes", [])),
                         "last_run_status": last.status if last else None, "last_run_at": last.started if last else None,
-                        "access": acc, "mine": w.owner == uid, "owner_email": emails.get(w.owner)})
+                        "access": acc, "mine": w.owner == uid, "owner_email": emails.get(w.owner),
+                        "version": self._version_number(w.id)})
         return out
 
     def get(self, wid: str, uid: str) -> dict:
         w = self.owned(wid, uid)
         acc = self.access.access_of(w, uid) if self.access is not None else "owner"
         return {"id": w.id, **json.loads(w.data or "{}"), "access": acc, "mine": w.owner == uid,
-                "owner_email": self._emails([w.owner]).get(w.owner)}
+                "owner_email": self._emails([w.owner]).get(w.owner), "updated": w.updated,
+                "version": self._version_number(w.id)}
 
     def save(self, wf: dict, uid: str) -> dict:
         wid = wf.get("id") or new_id()

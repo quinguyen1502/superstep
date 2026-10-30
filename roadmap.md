@@ -337,7 +337,8 @@ set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). The other fiv
 
 - TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout` and `whoami`. **merged**
   (PR #214; REV-0143, QA-0143; merge `4d0ed17`).
-- TASK-0168 `workflows list`, `export`, `import`, `pull` and `push`. **todo**
+- TASK-0168 `workflows list`, `export`, `import`, `pull` and `push`. **done**
+  (REV-0144, QA-0144). Not merged.
 - TASK-0169 `run` and `runs list`, `show`, `cancel`. **todo**
 - TASK-0170 `test` and JUnit XML. **todo**
 - TASK-0171 `mcp` over stdio. **todo**
