@@ -309,25 +309,26 @@ This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 
 
 ## The superstep CLI, phase 1
 
-REQ-0079 phase 1, planned on 2026-10-27 (DEC-0068, CLAR-0010). Phase 2 (login, pull and push, run,
-test in CI, MCP over stdio) is not planned yet.
+REQ-0079 phase 1, planned on 2026-10-27 (DEC-0068, CLAR-0010). Merged on 2026-10-30
+(PR #203, #205, and #207 to #212). Phase 2 (login, pull and push, run, test in CI, MCP over stdio)
+is not planned yet.
 
-- TASK-0149 CLI package, help, JSON, en and vi, completion, and the version on `/api/health`. **done**
-  (REV-0129, QA-0129; not merged)
-- TASK-0150 `install`, `adopt`, `start`, `stop`, `restart` and `logs`. **done**
-  (REV-0130, QA-0130; not merged)
-- TASK-0151 `status`, `config` and `doctor`. **done**
-  (REV-0137, QA-0136; not merged)
-- TASK-0152 `backup`, `restore` and scheduled backups. **done**
-  (REV-0138, QA-0138; not merged)
-- TASK-0153 `upgrade` with a backup and automatic rollback. **done**
-  (REV-0139, QA-0139; not merged)
-- TASK-0154 `admin` and `uninstall`. **done**
-  (REV-0140, QA-0140; not merged)
-- TASK-0155 `deploy` to a Docker host over SSH. **done**
-  (REV-0141, QA-0141; not merged)
-- TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **done**
-  (REV-0142, QA-0142; not merged)
+- TASK-0149 CLI package, help, JSON, en and vi, completion, and the version on `/api/health`. **merged**
+  (PR #203; REV-0129, QA-0129).
+- TASK-0150 `install`, `adopt`, `start`, `stop`, `restart` and `logs`. **merged**
+  (PR #205; REV-0130, QA-0130).
+- TASK-0151 `status`, `config` and `doctor`. **merged**
+  (PR #207; REV-0137, QA-0136).
+- TASK-0152 `backup`, `restore` and scheduled backups. **merged**
+  (PR #208; REV-0138, QA-0138).
+- TASK-0153 `upgrade` with a backup and automatic rollback. **merged**
+  (PR #209; REV-0139, QA-0139).
+- TASK-0154 `admin` and `uninstall`. **merged**
+  (PR #210; REV-0140, QA-0140).
+- TASK-0155 `deploy` to a Docker host over SSH. **merged**
+  (PR #211; REV-0141, QA-0141).
+- TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **merged**
+  (PR #212; REV-0142, QA-0142).
 
 ## Chat answer feedback
 
