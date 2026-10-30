@@ -1,5 +1,6 @@
 /** Approval channels API types (TASK-0022). */
 import type { TFunction } from 'i18next'
+import type { AiOpinion } from '@/lib/auto-approval'
 
 // link_based: e-mail / Teams, answered on the studio's /approve page; target_required false: the connection is the destination (TASK-0047)
 export type ChannelKind = { kind: string; fields: string[]; optional: string[]; link_based?: boolean; target_required?: boolean }
@@ -16,6 +17,7 @@ export function channelLabel(t: TFunction, c: Channel) {
 
 /** A waiting step in the Approvals inbox (TASK-0065): the request only, never the run's state or trace (DEC-0043). */
 export type InboxItem = { run_id: string; workflow_id: string | null; workflow_name: string | null; node: string; label: string | null; prompt: string | null
-  channel: string | null; mine: boolean; owner_email: string | null; waiting_since: number; due_at: number | null; can_open: boolean }
+  channel: string | null; mine: boolean; owner_email: string | null; waiting_since: number; due_at: number | null; can_open: boolean
+  ai?: AiOpinion | null }  // the AI's opinion in suggest mode (TASK-0188)
 
 export const INBOX_POLL_MS = 30_000

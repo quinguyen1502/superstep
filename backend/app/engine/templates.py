@@ -24,7 +24,11 @@ def sanitize(wf: dict) -> dict:
             d["tools"] = [{k: "" if k in REF_FIELDS else v for k, v in t.items() if not k.startswith("_") and k.lower() not in SECRET_KEYS}
                           if isinstance(t, dict) else t for t in d["tools"]]
         if isinstance(d.get("approval"), dict):  # a Human node keeps only the channel kind, not the connection, target or approvers (TASK-0064)
-            d["approval"] = {"channel": d["approval"]["channel"]} if d["approval"].get("channel") else {}
+            a = d["approval"]; d["approval"] = {"channel": a["channel"]} if a.get("channel") else {}
+            if isinstance(a.get("auto"), dict):  # AI review (TASK-0188): the policy stays, the judge's credential goes
+                auto = copy.deepcopy(a["auto"]); judge = auto.get("judge")
+                if isinstance(judge, dict): auto["judge"] = {**judge, "credential_id": ""}
+                d["approval"]["auto"] = auto
         if isinstance(d.get("deadline"), dict):  # the timing stays, the escalation addresses go, like approvers (TASK-0066)
             d["deadline"] = {k: v for k, v in d["deadline"].items() if k != "escalate_to"}
         out["nodes"].append({"id": n["id"], "type": n["type"], "position": n.get("position") or {"x": 0, "y": 0}, "data": d})

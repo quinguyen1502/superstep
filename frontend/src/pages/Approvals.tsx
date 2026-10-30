@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { AiOpinionNote, AiReviewPanel } from '@/components/approvals/ai-review-panel'
 import { ChannelLogo } from '@/components/approvals/channel-logo'
 import { HumanAnswer } from '@/components/human-answer'
 import { LanguageSwitcher } from '@/components/language-switcher'
@@ -69,9 +70,11 @@ export function ApprovalsPage() {
         </CardHeader>
         <CardContent className="space-y-3 px-4">
           {it.prompt && <p className="whitespace-pre-wrap text-sm" data-testid="inbox-question">{it.prompt}</p>}
+          {it.ai && <AiOpinionNote ai={it.ai} />}
           <HumanAnswer busy={busy === rowKey(it)} onRespond={r => answer(it, r)} />
         </CardContent>
       </Card>)}
+      <AiReviewPanel onError={setErr} />
     </main>
   </div>
 }

@@ -2371,5 +2371,72 @@
     "max": "Giới hạn chuyển giao mỗi run (toàn workflow)",
     "maxHint": "Để trống dùng {{n}}. Từ 0 đến {{max}}; vượt quá thì các agent phải tự trả lời.",
     "handle": "Kéo tới một Agent khác để thêm chuyển giao"
+  },
+  "aiReview": {
+    "title": "AI duyệt",
+    "mode": "Chế độ",
+    "modes": {
+      "off": "Tắt",
+      "suggest": "Gợi ý",
+      "auto": "Tự trả lời"
+    },
+    "modeHelp": {
+      "off": "Mọi yêu cầu do người trả lời.",
+      "suggest": "Một mô hình nêu ý kiến bên cạnh mỗi yêu cầu. Người vẫn trả lời.",
+      "auto": "Mô hình duyệt các yêu cầu mà nó chắc chắn. Nó không bao giờ từ chối: các trường hợp khác chuyển cho người."
+    },
+    "autoOwnerOnly": "Chỉ chủ workflow hoặc quản trị viên mới bật được tự trả lời.",
+    "credential": "Credential của mô hình duyệt",
+    "credentialPick": "Chọn một credential chat",
+    "instructions": "Hướng dẫn cho mô hình duyệt",
+    "instructionsPh": "Hoàn tiền đến 50 USD cho khách hàng cũ là được.",
+    "minConfidence": "Độ tin cậy tối thiểu (0-1)",
+    "cap": "Số lần tự trả lời mỗi ngày",
+    "notify": "Báo cho người sở hữu run khi tự trả lời",
+    "rules": "Quy tắc",
+    "rulesHelp": "Được kiểm tra trước mô hình. Quy tắc có thể chuyển yêu cầu cho người hoặc từ chối; quy tắc không bao giờ duyệt.",
+    "ruleField": "Trường",
+    "ruleOp": "Phép so sánh",
+    "ruleValue": "Giá trị",
+    "ruleEffect": "Thì",
+    "ruleAdd": "Thêm quy tắc",
+    "ruleRemove": "Xoá quy tắc",
+    "ops": {
+      "equals": "bằng",
+      "not_equals": "khác",
+      "contains": "chứa",
+      "not_contains": "không chứa",
+      "matches": "khớp (regex)",
+      "gt": "lớn hơn",
+      "lt": "nhỏ hơn",
+      "empty": "trống"
+    },
+    "effects": {
+      "human": "Hỏi người",
+      "reject": "Từ chối"
+    },
+    "agreement": "Người đồng ý với AI {{rate}} số lần ({{n}} câu trả lời, {{days}} ngày qua).",
+    "agreementNone": "Chưa có tỉ lệ đồng ý: hãy thử chế độ gợi ý và trả lời vài yêu cầu.",
+    "agreementShort": "Đồng ý {{rate}}",
+    "pausedHint": "AI duyệt đang tạm dừng. Yêu cầu được chuyển cho người.",
+    "badge": "AI",
+    "confidence": "độ tin cậy {{rate}}",
+    "decision": {
+      "approve": "Gợi ý duyệt",
+      "reject": "Gợi ý từ chối",
+      "escalate": "Chưa chắc"
+    },
+    "panelTitle": "AI duyệt",
+    "panelIntro": "Các workflow có mô hình duyệt yêu cầu. Tạm dừng sẽ chuyển mọi yêu cầu cho người.",
+    "operatorOff": "Tự trả lời đã bị tắt trên máy chủ này.",
+    "pauseOrg": "Tạm dừng AI duyệt cho mọi workflow",
+    "pause": "Tạm dừng",
+    "none": "Chưa có workflow nào dùng AI duyệt.",
+    "stats": {
+      "today": "{{n}} hôm nay",
+      "approved": "{{n}} đã duyệt",
+      "escalated": "{{n}} chuyển cho người",
+      "suggested": "{{n}} đã gợi ý"
+    }
   }
 }

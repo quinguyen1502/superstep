@@ -13,6 +13,7 @@ import { applyMode, codeChoices, modeValue, nodeLanguage, type ToolModeValue } f
 import { api } from '@/lib/api'
 import { useTranslation } from 'react-i18next'
 import { ANSWERED_BY } from '@/lib/chat'
+import { AutoApprovalSettings } from '@/components/auto-approval-settings'
 import { HumanApprovalSettings } from '@/components/human-approval-settings'
 import { HumanDeadlineSettings } from '@/components/human-deadline-settings'
 import { CredentialsDialog, type Credential } from '@/components/credentials-dialog'
@@ -49,8 +50,9 @@ export function EditorConfig() {
   const [kept, setKept] = useState<string | null>(null)  // node whose edited code was kept on a language switch
   const [tab, setTab] = useState<ConfigTab>('settings')  // kept while another node is selected
   const { t } = useTranslation()
-  const { nodes, setEdges, maxHandoffs, setMaxHandoffs, wid, tools, creds, setCreds, providers, channels, edit, mark, selNode, selEdge, upd, setRuntime, d, fieldNames, state, input } = useStudioCtx()
-  const codeRt = useCodeRuntime(); const canCode = can(useMe(), 'code.write')  // Tool node Code mode (TASK-0055)
+  const { access, nodes, setEdges, maxHandoffs, setMaxHandoffs, wid, tools, creds, setCreds, providers, channels, edit, mark, selNode, selEdge, upd, setRuntime, d, fieldNames, state, input } = useStudioCtx()
+  const codeRt = useCodeRuntime(); const me = useMe(); const canCode = can(me, 'code.write')  // Tool node Code mode (TASK-0055)
+  const canAuto = access === 'owner' || !!me?.is_admin  // AI review answering on its own: owner or admin (TASK-0188, DEC-0075)
   const chatCreds = creds.filter(c => (providers.find(p => p.id === c.provider)?.kind ?? 'chat') === 'chat')  // TypeSafe keys: Decision nodes; SMTP: Send email
   const tpl = { fields: state, readOnly: !edit, placeholder: t('template.placeholder', { open: '{{' }) }
   const type = selNode?.type || ''
@@ -74,7 +76,7 @@ export function EditorConfig() {
       <F label={t('field.promptTemplate', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={7} id="llm-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>
       {selNode && <IncludeAttachments idp="llm" data={d} fields={state} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
     </>}
-    {type === 'agent' && selNode && <AgentSettings key={selNode.id} wid={wid} data={d} nodeId={selNode.id} fields={state} creds={chatCreds} providers={providers} channels={channels}
+    {type === 'agent' && selNode && <AgentSettings key={selNode.id} wid={wid} data={d} nodeId={selNode.id} fields={state} creds={chatCreds} providers={providers} channels={channels} canAuto={canAuto}
       builtins={tools} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
     {type === 'agent' && selNode && <><Separator /><AgentHandoffs nodeId={selNode.id} data={d} readOnly={!edit} onChange={p => mark(selNode.id, p)}
       agents={nodes.filter(n => n.type === 'agent').map(n => ({ id: n.id, label: String((n.data as any)?.label || n.id) }))}
@@ -86,6 +88,7 @@ export function EditorConfig() {
         <SelectContent>{ANSWERED_BY.map(a => <SelectItem key={a} value={a}>{t(`chat.answeredByOpt.${a}`)}</SelectItem>)}</SelectContent></Select>
         <p className="text-[11px] text-muted-foreground" id="human-answered-by-hint">{t(`chat.answeredByHint.${d.answered_by || 'visitor'}`)}</p></F>
       <HumanApprovalSettings key={selNode.id} value={d.approval} channels={channels} onChange={v => upd('approval', v)} />
+      <AutoApprovalSettings key={`${selNode.id}-auto`} idp="human" value={d.approval?.auto} wid={wid} creds={chatCreds} canAuto={canAuto} readOnly={!edit} onChange={a => upd('approval', { ...(d.approval || {}), auto: a })} />
       <HumanDeadlineSettings key={`${selNode.id}-deadline`} value={d.deadline} onChange={v => upd('deadline', v)} />
     </>}
     {type === 'tool' && selNode && <>
