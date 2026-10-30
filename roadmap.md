@@ -414,6 +414,6 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0139 Version 0.9.0: workflows as Agent tools, the public chat page, workflow checks in the UI language.
   **released** (PR #196 to main, tag `v0.9.0`).
 - TASK-0190 Version 0.10.0: chat attachments, agent hand-offs and the Help desk template, AI review of approvals,
-  the `sstep` alias. **in progress** (#241).
+  the `sstep` alias. **released** (PR #242 to main, tag `v0.10.0`).
 - Earlier releases (0.3.0 to 0.6.0: TASK-0096, TASK-0098, TASK-0100, TASK-0105, TASK-0111) and the tasks between
   TASK-0087 and TASK-0112 are not listed in this roadmap. Their task files and CHANGELOG.md have the details.

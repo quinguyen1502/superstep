@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0190
-- Status: doing
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -57,3 +57,5 @@ release (TASK-0139):
 
 - 2026-10-31: full verify on develop 59836bb2 passed; the full e2e run failed 6 tests (stale specs and a trace bug).
   Fixed here; version bump and CHANGELOG heading.
+- 2026-10-31: released: #241 into develop (4aca15c), release PR #242 into main (d1f5583), tag `v0.10.0` and the
+  GitHub Release.
