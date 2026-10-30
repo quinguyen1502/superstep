@@ -6,6 +6,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Proposal: external storage for chat attachments** (REQ-0080, DEC-0074, both Proposed). Planning records only: a storage port with database, folder and S3-compatible backends, migration, backup and CLI prompts. Nothing is implemented.
+
 - **Chat attachments reach the model** (REQ-0077, DEC-0072). LLM and Agent nodes have "Include attachments" (`include_attachments`, field `attachments_field`, default `files`). Documents go to the model as labelled text after the prompt. Images go as image parts to OpenAI, OpenRouter and OpenAI-compatible servers (`image_url`) and to Anthropic (`image` blocks) when the model can see images; other models get a note naming the image, and the run goes on. Image bytes are read at call time and never enter the run state. The offline mock names each file it got. The Python, LangGraph project and TypeScript exports take the same field: document text when the setting is on, and an image only when its record carries a `data_url`.
 
 - **Chat attachments: settings and the workflow field** (REQ-0077, DEC-0072). Chat settings gain `attachments` (`enabled`, `kinds`, `max_files`, `max_mb`, `field`), off by default and checked against the operator ceilings (`CHAT_ATTACHMENT_LIMIT`). A message sends `attachment_ids` with its text, on the public socket and on the studio run socket. The run gets the files in the named list field as `{id, name, type, size, text?, text_cut?}`, never their bytes. Each turn lists its files. With attachments off, uploads and sends with files get `CHAT_ATTACHMENTS_OFF`. An answer to a Human node stays text only.
