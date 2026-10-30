@@ -14,7 +14,7 @@ thuật.
    Start, và mỗi agent tới nơi workflow đi tiếp sau khi nó trả lời.
 2. Chọn agent tiếp nhận. Ở mục **Chuyển giao** trong **Cài đặt**, chọn
    **Thêm chuyển giao** rồi chọn agent đích.
-3. Mô tả khi nào nên chuyển, ví dụ "Thanh toán trùng, hoàn tiền và hóa đơn".
+3. Mô tả khi nào nên chuyển, ví dụ "Thanh toán trùng, hoàn tiền và hoá đơn".
    Model đọc mô tả này để quyết định.
 4. Hoặc kéo từ chấm nét đứt ở cạnh dưới node Agent tới một node Agent khác.
    Xóa đường nét đứt sẽ bỏ chuyển giao đó.
@@ -33,7 +33,7 @@ Agent chỉ được tới bằng chuyển giao không cần cạnh đi vào.
 
 ## Giới hạn chuyển giao
 
-**Giới hạn chuyển giao mỗi lần chạy** (thiết lập workflow `max_handoffs`, từ 0
+**Giới hạn chuyển giao mỗi run** (thiết lập workflow `max_handoffs`, từ 0
 đến 20, mặc định 5) giới hạn số lần chuyển giao trong một run. Khi đạt giới
 hạn, công cụ chuyển giao bị bỏ và agent hiện tại phải tự trả lời. Đặt giá trị
 này dưới danh sách chuyển giao của bất kỳ node Agent nào, hoặc trong bảng Cấu
