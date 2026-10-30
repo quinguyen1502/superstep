@@ -4,6 +4,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Added
+
+- **Plan: external storage for chat attachments** (REQ-0080, DEC-0074, Accepted 2026-10-31). Planning records only: a storage
+  port with database (default), folder and S3-compatible backends, a migrate command and backup coverage, planned as
+  TASK-0191 to TASK-0195. Nothing is implemented yet.
+
 ## 0.10.0 (2026-10-31)
 
 ### Added
