@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0171
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -100,8 +100,10 @@
 ## Activity Log
 
 - 2026-10-30: planned from REQ-0079 phase 2 (DEC-0071). Not started.
+- 2026-10-30: implementation started. PAT plus `X-Superstep-Workflow` on `/mcp`, and the stdio bridge.
+
+- 2026-10-30: owner asked to finish the phase 2 chain in one pass. Review REV-0147. QA QA-0147. Task moved to done. Not merged.
 
 ## Handoff Notes
 
-- Do not add `mcp` to `sdk/python/pyproject.toml`. The CLI job installs it next to `.[dev]`.
-- A workflow-token test from REQ-0070 must still pass unchanged.
+- Review REV-0147. QA QA-0147. Not merged. `mcp` stays out of the package.

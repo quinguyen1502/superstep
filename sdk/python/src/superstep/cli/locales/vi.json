@@ -231,5 +231,9 @@
   "error.suite_not_found": "Không tìm thấy lần chạy bộ kiểm tra.",
   "error.suite_running": "Bộ kiểm tra của workflow này đang chạy.",
   "error.test_target": "Truyền một workflow, hoặc --all.",
-  "help.suite_timeout": "Số giây chờ bộ kiểm tra. Mặc định là 300."
+  "help.suite_timeout": "Số giây chờ bộ kiểm tra. Mặc định là 300.",
+  "help.mcp": "Phục vụ các workflow đã nêu như công cụ MCP. Tiến trình này nói MCP trên stdio.",
+  "help.mcp_workflow": "Id của workflow hoặc tên chính xác.",
+  "example.mcp": "Ví dụ: superstep mcp invoices",
+  "error.mcp_disabled": "MCP đang tắt với {name}, hoặc bạn không mở được workflow này."
 }

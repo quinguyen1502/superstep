@@ -333,7 +333,7 @@ REQ-0079 phase 1, planned on 2026-10-27 (DEC-0068, CLAR-0010). Merged on 2026-10
 
 REQ-0079 phase 2, planned on 2026-10-30 (DEC-0071, CLAR-0010). Medium-task workflow. Personal access
 tokens, browser sign-in, pull and push, run, test in CI, and MCP over stdio. The owner confirmed this
-set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). TASK-0168 is merged (PR #215, merge `575386c`). TASK-0169 is merged (PR #216, merge `b66ac50`).
+set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). TASK-0168 is merged (PR #215, merge `575386c`). TASK-0169 is merged (PR #216, merge `b66ac50`). TASK-0170 is merged (PR #217, merge `1898f9f`).
 
 - TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout` and `whoami`. **merged**
   (PR #214; REV-0143, QA-0143; merge `4d0ed17`).
@@ -341,9 +341,10 @@ set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). TASK-0168 is 
   (PR #215; REV-0144, QA-0144; merge `575386c`).
 - TASK-0169 `run` and `runs list`, `show`, `cancel`. **merged**
   (PR #216; REV-0145, QA-0145; merge `b66ac50`).
-- TASK-0170 `test` and JUnit XML. **done**
-  (REV-0146, QA-0146). Not merged.
-- TASK-0171 `mcp` over stdio. **todo**
+- TASK-0170 `test` and JUnit XML. **merged**
+  (PR #217; REV-0146, QA-0146; merge `1898f9f`).
+- TASK-0171 `mcp` over stdio. **done**
+  (REV-0147, QA-0147). Not merged.
 - TASK-0172 Handbook (en, vi) and CHANGELOG. **todo**
 
 ## Chat answer feedback

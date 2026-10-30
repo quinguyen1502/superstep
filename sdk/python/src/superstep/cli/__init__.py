@@ -20,6 +20,7 @@ from superstep.cli.login import add_commands as add_login_commands
 from superstep.cli.run import add_commands as add_run_commands
 from superstep.cli.status import add_commands as add_status_commands
 from superstep.cli.upgrade import add_commands as add_upgrade_commands
+from superstep.cli.mcp_bridge import add_commands as add_mcp_commands
 from superstep.cli.suite import add_commands as add_suite_commands
 from superstep.cli.workflows import add_commands as add_workflow_commands
 
@@ -106,6 +107,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     add_workflow_commands(commands, common, catalog)
     add_run_commands(commands, common, catalog)
     add_suite_commands(commands, common, catalog)
+    add_mcp_commands(commands, common, catalog)
     return parser
 
 
