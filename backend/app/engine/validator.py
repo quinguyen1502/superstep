@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 from ..core import config
-from . import agents, attachments, code_languages, code_runtime, deadlines, decisions, emails, foreach
+from . import agents, attachments, handoffs, code_languages, code_runtime, deadlines, decisions, emails, foreach
 from .issues import Issue, at_node
 from .node_policy import errors as policy_errors
 from .templating import ref_errors, refs
@@ -140,7 +140,7 @@ def validate(wf: Dict[str, Any]) -> List[str]:
             errs.append(Issue("SUBGRAPH_WORKFLOW_MISSING", node=nid))
         if t == "foreach": errs += foreach.errors(nid, d, out.get(nid, []), schema, reaches)
         if t == "decision": errs += decisions.errors(nid, d, schema)
-        if t == "agent": errs += agents.errors(nid, d, schema)
+        if t == "agent": errs += agents.errors(nid, d, schema) + handoffs.errors(nid, d, types)
         if t in ("llm", "agent"): errs += attachments.errors(nid, d, schema)
         if t == "email": errs += emails.errors(nid, d, schema)
         if t == "human" or (t == "agent" and agents.needs_approval(d)): errs += deadlines.errors(nid, d, config.wait_ttl())
@@ -179,13 +179,16 @@ def validate(wf: Dict[str, Any]) -> List[str]:
         path.pop(); state_[u] = 2; return False
     for i in sorted(plain):
         if not state_.get(i) and dfs(i, []): break
-    # reachability
+    errs += handoffs.limit_errors(wf)
+    # reachability (a hand-off target is reached through its source agent, TASK-0179)
     if len(starts) == 1:
+        jumps: Dict[str, List[str]] = {}
+        for a, b in handoffs.links(nodes): jumps.setdefault(a, []).append(b)
         seen, stack = set(), [starts[0]["id"]]
         while stack:
             x = stack.pop()
             if x in seen: continue
-            seen.add(x); stack += [e["target"] for e in out.get(x, [])]
+            seen.add(x); stack += [e["target"] for e in out.get(x, [])] + jumps.get(x, [])
         for n in nodes:
             if n.get("type") == "note": continue
             if n["id"] not in seen: errs.append(Issue("NODE_UNREACHABLE", node=n["id"]))

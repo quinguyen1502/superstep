@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0179
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -87,7 +87,9 @@ Add hand-off targets to the Agent node and the hand-off limit to the workflow, w
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0179-agent-handoff-model` from `develop`. Agent hand-off targets and the max_handoffs limit are part of the workflow model and validated on save `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0179-agent-handoff-model` from `develop`.
+- Review: `.factory-state/artifacts/REV-0156-task-0179.md`. QA: `.factory-state/artifacts/QA-0156-task-0179.md`.

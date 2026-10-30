@@ -624,7 +624,9 @@
     "CODE_RESULT_NOT_JSON": "Code node {{node}}: main() returned {{type}}, which cannot be stored as JSON",
     "CODE_TOO_LARGE": "Code node {{node}}: the {{what}} is larger than {{max_kb}} KB",
     "CODE_LANGUAGE_UNSUPPORTED": "Code node {{node}}: {{language}} is not available on this server",
-    "CODE_WRITE_FORBIDDEN": "Your role may not add Code nodes or change their code (code.write)"
+    "CODE_WRITE_FORBIDDEN": "Your role may not add Code nodes or change their code (code.write)",
+    "AGENT_HANDOFF_TARGET_INVALID": "Agent node {{node}}: hand-off target {{target}} must be another Agent node of this workflow, listed once",
+    "AGENT_HANDOFF_LIMIT": "Max hand-offs per run must be 0-{{max}}"
   },
   "lang": {
     "en": "English",
@@ -2268,6 +2270,8 @@
     "ATTACHMENTS_FIELD_NOT_LIST": "Node {{node}}: the attachments field '{{field}}' must be a list field",
     "AGENT_TOOLS_MISSING": "Agent node {{node}}: add at least one tool",
     "AGENT_TOOL_NOT_OBJECT": "Agent node {{node}}: tool {{index}} is not an object",
+    "AGENT_HANDOFF_TARGET_INVALID": "Agent node {{node}}: hand-off target {{target}} must be another Agent node of this workflow, listed once",
+    "AGENT_HANDOFF_LIMIT": "Max hand-offs per run must be 0-{{max}}",
     "AGENT_TOOL_DUPLICATE": "Agent node {{node}}: two tools are named {{tool}}",
     "AGENT_TOOL_NAME": "Agent node {{node}}: tool {{tool}}: the name must be 1-64 letters, digits, _ or -",
     "AGENT_TOOL_SOURCE": "Agent node {{node}}: tool {{tool}}: unknown source '{{source}}'",
