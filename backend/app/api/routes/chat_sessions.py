@@ -10,12 +10,16 @@ GET  /api/workflows/{wid}/chat/visitors/{sid}        one of them, read-only, wit
 GET  /api/workflows/{wid}/chat/ratings      up and down over 7 and 30 days (TASK-0162)
 PUT  /api/chat/sessions/{sid}/turns/{tid}/rating     the session owner's thumb, and an optional comment on down
 DELETE /api/chat/sessions/{sid}/turns/{tid}/rating
+POST /api/chat/sessions/{sid}/attachments            one file (multipart `file`) before the message (TASK-0174)
+GET  /api/chat/sessions/{sid}/attachments/{aid}      download it                DELETE it while unsent
+GET  /api/workflows/{wid}/chat/visitors/{sid}/attachments/{aid}   a visitor's file, for the builder (run right)
 """
 from typing import Optional
-from fastapi import APIRouter, Depends
+import asyncio
+from fastapi import APIRouter, Depends, Request
 from ...schemas.chat import ChatRatingIn, ChatSettingsIn
-from ..deps import chat_session_service, current_user
-from .public_chat import logo_response
+from ..deps import chat_attachment_service, chat_session_service, current_user
+from .public_chat import file_response, logo_response, read_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
@@ -61,3 +65,19 @@ def unrate_turn(sid: str, tid: str, user=Depends(current_user), svc=Depends(chat
 
 @router.get("/workflows/{wid}/chat/visitors/{sid}")
 def get_visitor_chat(wid: str, sid: str, user=Depends(current_user), svc=Depends(chat_session_service)): return svc.visitor_session(wid, sid, user["id"])
+
+@router.post("/chat/sessions/{sid}/attachments")
+async def upload_attachment(sid: str, request: Request, user=Depends(current_user), svc=Depends(chat_attachment_service)):
+    name, data = await read_upload(request)
+    return await asyncio.to_thread(svc.upload_owned, sid, user["id"], name, data)
+
+@router.get("/chat/sessions/{sid}/attachments/{aid}")
+def get_attachment(sid: str, aid: str, user=Depends(current_user), svc=Depends(chat_attachment_service)):
+    return file_response(svc.file_owned(sid, aid, user["id"]))
+
+@router.delete("/chat/sessions/{sid}/attachments/{aid}")
+def delete_attachment(sid: str, aid: str, user=Depends(current_user), svc=Depends(chat_attachment_service)): return svc.delete_owned(sid, aid, user["id"])
+
+@router.get("/workflows/{wid}/chat/visitors/{sid}/attachments/{aid}")
+def get_visitor_attachment(wid: str, sid: str, aid: str, user=Depends(current_user), svc=Depends(chat_attachment_service)):
+    return file_response(svc.visitor_file(wid, sid, aid, user["id"]))

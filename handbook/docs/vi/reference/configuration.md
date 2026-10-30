@@ -79,6 +79,8 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_PUBLIC_CHAT_RATE_IP` | `30` | Trang chat công khai: số tin nhắn của mỗi IP trong một khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_READ` | `120` | Trang chat công khai: số lần mở trang, đọc chat và tạo chat mới của mỗi IP trong một khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | Độ dài khung (giây) của trang chat công khai. Giới hạn theo ngày của từng chat nằm trong Cài đặt Chat |
+| `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Tệp đính kèm trong chat: dung lượng tối đa mỗi tệp (MB); mỗi chat chỉ được đặt thấp hơn |
+| `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Tệp đính kèm trong chat: số tệp tối đa mỗi tin nhắn; mỗi chat chỉ được đặt thấp hơn |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Thời gian chờ `sync` tối đa (giây) |
 | `STUDIO_ALLOW_PRIVATE_CALLBACKS` | `0` | Cho phép callback tới địa chỉ private |
 | `STUDIO_WEBHOOK_MAX_ATTEMPTS` | `5` | Số lần gửi |

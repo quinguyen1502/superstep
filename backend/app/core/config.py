@@ -66,6 +66,12 @@ def public_chat_rate_visitor() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RA
 def public_chat_rate_ip() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_IP", 30))  # messages per client IP
 def public_chat_rate_read() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_READ", 120))  # page, session reads and new chats per client IP
 def public_chat_rate_window() -> int: return max(1, _int("STUDIO_PUBLIC_CHAT_RATE_WINDOW", 60))
+def chat_attachment_max_mb() -> int:
+    """The ceiling on a chat attachment's size in MB (REQ-0077, DEC-0072 decision 3); each chat may only lower it."""
+    return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_MB", 10))
+def chat_attachment_max_files() -> int:
+    """The ceiling on files per chat message (DEC-0072 decision 3); each chat may only lower it."""
+    return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_FILES", 5))
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- TASK-0020 ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))

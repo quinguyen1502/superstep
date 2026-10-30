@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0174
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -100,7 +100,9 @@ Store chat attachments in the database and expose upload and download routes for
 
 - 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0174-chat-attachment-storage` from `develop`. Table `chat_attachments` (Alembic 0044), repository, service and routes for upload, download and delete (public page, studio Chat tab, builder from Visitors), type from the bytes, limits under the operator ceilings, retention and the one-hour sweep of unsent files. `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0174-chat-attachment-storage` from `develop`.
+- Review: `.factory-state/artifacts/REV-0150-task-0174.md`. QA: `.factory-state/artifacts/QA-0150-task-0174.md`.

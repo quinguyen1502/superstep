@@ -2,7 +2,7 @@ import time
 from typing import Optional
 from sqlalchemy import case, delete, func, select, update
 from sqlalchemy.exc import IntegrityError
-from ..models import ChatRating, ChatSession, ChatTurn
+from ..models import ChatAttachment, ChatRating, ChatSession, ChatTurn
 from ..models.database import Database
 
 _PENDING = "pending:"  # one worker owns the LangSmith create; not a real feedback id
@@ -162,6 +162,7 @@ class ChatSessionRepository:
             return list(s.scalars(q.order_by(ChatSession.updated.desc()).limit(limit)))
 
     def _drop_session(self, s, ids) -> None:
+        s.execute(delete(ChatAttachment).where(ChatAttachment.session_id.in_(ids)))  # a file goes with its session (TASK-0174)
         s.execute(delete(ChatRating).where(ChatRating.session_id.in_(ids)))
         s.execute(delete(ChatTurn).where(ChatTurn.session_id.in_(ids)))
 
