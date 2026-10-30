@@ -22,6 +22,8 @@ import { SubgraphSettings } from '@/components/subgraph-settings'
 import { RetrieverSettings } from '@/components/retriever-settings'
 import { McpSettings } from '@/components/mcp-settings'
 import { AgentData, AgentExecution, AgentSettings } from '@/components/agent-settings'
+import { AgentHandoffs, MaxHandoffs } from '@/components/agent-handoffs'
+import { Separator } from '@/components/ui/separator'
 import { DecisionData, DecisionSettings } from '@/components/decision-settings'
 import { EmailData, EmailSettings } from '@/components/email-settings'
 import { TemplateEditor } from '@/components/template-editor'
@@ -46,7 +48,7 @@ export function EditorConfig() {
   const [kept, setKept] = useState<string | null>(null)  // node whose edited code was kept on a language switch
   const [tab, setTab] = useState<ConfigTab>('settings')  // kept while another node is selected
   const { t } = useTranslation()
-  const { nodes, setEdges, wid, tools, creds, setCreds, providers, channels, edit, mark, selNode, selEdge, upd, setRuntime, d, fieldNames, state, input } = useStudioCtx()
+  const { nodes, setEdges, maxHandoffs, setMaxHandoffs, wid, tools, creds, setCreds, providers, channels, edit, mark, selNode, selEdge, upd, setRuntime, d, fieldNames, state, input } = useStudioCtx()
   const codeRt = useCodeRuntime(); const canCode = can(useMe(), 'code.write')  // Tool node Code mode (TASK-0055)
   const chatCreds = creds.filter(c => (providers.find(p => p.id === c.provider)?.kind ?? 'chat') === 'chat')  // TypeSafe keys: Decision nodes; SMTP: Send email
   const tpl = { fields: state, readOnly: !edit, placeholder: t('template.placeholder', { open: '{{' }) }
@@ -72,6 +74,9 @@ export function EditorConfig() {
     </>}
     {type === 'agent' && selNode && <AgentSettings key={selNode.id} wid={wid} data={d} nodeId={selNode.id} fields={state} creds={chatCreds} providers={providers} channels={channels}
       builtins={tools} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
+    {type === 'agent' && selNode && <><Separator /><AgentHandoffs nodeId={selNode.id} data={d} readOnly={!edit} onChange={p => mark(selNode.id, p)}
+      agents={nodes.filter(n => n.type === 'agent').map(n => ({ id: n.id, label: String((n.data as any)?.label || n.id) }))}
+      maxHandoffs={maxHandoffs} setMaxHandoffs={setMaxHandoffs} /></>}
     {type === 'human' && selNode && <>
       <F label={t('field.humanPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={4} id="human-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>
       <F label={t('chat.answeredBy')}><Select value={d.answered_by || 'visitor'} onValueChange={v => upd('answered_by', v)} disabled={!edit}>
@@ -149,6 +154,8 @@ export function EditorConfig() {
       <ScrollArea className="h-full"><fieldset disabled={!edit} className="contents"><div className="p-4 space-y-4 min-w-0">
         {title}
         {!selNode && !selEdge && <p className="text-muted-foreground text-xs">{t('editor.selectHint')}</p>}
+        {!selNode && !selEdge && nodes.some(n => n.type === 'agent' && Array.isArray((n.data as any)?.handoffs) && (n.data as any).handoffs.length > 0) &&
+          <div id="workflow-handoffs"><MaxHandoffs value={maxHandoffs} onChange={setMaxHandoffs} /></div>}
         {selNode?.type === 'note' && <p className="text-muted-foreground text-xs" id="note-hint">{t('editor.noteHint')}</p>}
         {selEdge && <div className="space-y-3">
           <Badge variant="outline">Edge {selEdge.source} → {selEdge.target}</Badge>

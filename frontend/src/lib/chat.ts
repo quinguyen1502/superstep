@@ -21,7 +21,7 @@ export type ChatSettings = { enabled: boolean; slug: string; access: string; inp
 export type PublicChatPage = { slug: string; title: string; intro: string; suggestions: string[]; access: 'anonymous' | 'signed_in'
   steps_mode: StepsMode; signed_in: boolean; embed_origins: string[]; logo: string }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
-  duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string }  // child_run_id: a workflow tool's run (TASK-0136)
+  duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string; handoff_to?: string }  // child_run_id: a workflow tool's run (TASK-0136); handoff_to: the agent a hand-off went to (TASK-0182)
 export type ChatRating = { value: 'up' | 'down'; comment: string; updated: number }
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
   node?: string | null; answered_by?: AnsweredBy | null; code?: string | null; created: number; steps?: ChatStep[]
@@ -69,7 +69,7 @@ export function liveSteps(spans: Span[], mode: StepsMode): ChatStep[] {
   if (mode === 'none') return []
   return spans.filter(s => !HIDDEN.has(s.type) && (mode === 'full' || s.type !== 'agent_model')).map(s => {
     const status: ChatStep['status'] = s.status === 'done' ? 'ok' : s.status === 'error' ? 'error' : s.status === 'waiting' ? 'waiting' : 'running'
-    const base: ChatStep = { node: s.node, label: stepLabel(s), type: s.type, status }
+    const base: ChatStep = { node: s.node, label: stepLabel(s), type: s.type, status, ...(s.agent?.kind === 'handoff' ? { handoff_to: s.agent.to_label || s.agent.to } : {}) }
     return mode === 'full' ? { ...base, duration_ms: s.duration, input: s.input, delta: s.agent ?? s.output, errors: s.error ? [s.error] : undefined,
       ...(s.agent?.child_run_id ? { child_run_id: s.agent.child_run_id } : {}) } : base
   })
