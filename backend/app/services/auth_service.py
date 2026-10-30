@@ -12,6 +12,7 @@ from ..models import PasswordReset
 from ..repositories import AuthSecurityRepository, UserRepository
 from . import demo_service
 from . import mailer
+from .pat_service import PAT_PREFIX, digest as pat_digest
 
 log = get_logger("auth")
 
@@ -33,10 +34,11 @@ def _digest(token: str) -> str: return hashlib.sha256(token.encode()).hexdigest(
 
 class AuthService:
     def __init__(self, users: UserRepository, workflows=None, sec: Optional[AuthSecurityRepository] = None, background: bool = True, audit=None,
-                 visit: Optional[Callable[[], str]] = None):
+                 visit: Optional[Callable[[], str]] = None, pats=None):
         # workflows: WorkflowService (seeds the example for new users); sec: lockout + reset links (None: neither)
         # visit: demo mode, a fresh visitor account for each "Try the demo" sign-in (demo_service.start_visit)
-        self.users, self.workflows, self.sec, self.background, self.audit, self.visit = users, workflows, sec, background, audit, visit
+        # pats: PersonalAccessTokenRepository. A `pat_` bearer is checked here and is not cut off by a password change.
+        self.users, self.workflows, self.sec, self.background, self.audit, self.visit, self.pats = users, workflows, sec, background, audit, visit, pats
 
     def _session(self, uid: str) -> dict:
         u = self.users.get_by_id(uid); token = security.make_token(uid, u.email)
@@ -143,7 +145,9 @@ class AuthService:
         return {"id": p["sub"], "email": p["email"]}
 
     def current(self, token: str | None) -> dict:
-        """The signed-in user, checked against the database: deleted or deactivated accounts lose access at once."""
+        """The signed-in user, checked against the database: deleted or deactivated accounts lose access at once.
+        A `pat_` secret is a personal access token. Anything else is a session JWT."""
+        if token and token.startswith(PAT_PREFIX): return self._from_pat(token)
         uid = self.user_from_token(token)["id"]
         u = self.users.get_by_id(uid)
         if u is None: raise AppError("AUTH_TOKEN_INVALID")
@@ -151,3 +155,12 @@ class AuthService:
         changed = getattr(u, "password_changed", None)
         if changed and security.decode_token(token).get("iat", 0) < int(changed): raise AppError("AUTH_TOKEN_EXPIRED", headers={"X-Auth-Error": "expired"})
         return public_user(u)
+
+    def _from_pat(self, token: str) -> dict:
+        row = self.pats.by_hash(pat_digest(token)) if self.pats is not None else None
+        if row is None or row.revoked is not None: raise AppError("AUTH_TOKEN_INVALID")
+        user = self.users.get_by_id(row.user_id)
+        if user is None: raise AppError("AUTH_TOKEN_INVALID")
+        if not user.active: raise AppError("AUTH_ACCOUNT_DISABLED")
+        self.pats.set_fields(row.id, last_used=time.time())
+        return public_user(user)

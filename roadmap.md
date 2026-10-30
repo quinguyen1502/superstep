@@ -310,8 +310,7 @@ This is phase 2 of REQ-0048: a published chat at `/c/{slug}`. It ships in 0.9.0 
 ## The superstep CLI, phase 1
 
 REQ-0079 phase 1, planned on 2026-10-27 (DEC-0068, CLAR-0010). Merged on 2026-10-30
-(PR #203, #205, and #207 to #212). Phase 2 (login, pull and push, run, test in CI, MCP over stdio)
-is not planned yet.
+(PR #203, #205, and #207 to #212). Phase 2 is planned in the next section (DEC-0071).
 
 - TASK-0149 CLI package, help, JSON, en and vi, completion, and the version on `/api/health`. **merged**
   (PR #203; REV-0129, QA-0129).
@@ -329,6 +328,20 @@ is not planned yet.
   (PR #211; REV-0141, QA-0141).
 - TASK-0156 `install.sh`, the package and image release, CI smoke, handbook and CHANGELOG. **merged**
   (PR #212; REV-0142, QA-0142).
+
+## The superstep CLI, phase 2
+
+REQ-0079 phase 2, planned on 2026-10-30 (DEC-0071, CLAR-0010). Medium-task workflow. Personal access
+tokens, browser sign-in, pull and push, run, test in CI, and MCP over stdio. The owner confirmed this
+set on 2026-10-30. TASK-0167 is done and not merged (PR #214). The other five are not started.
+
+- TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout` and `whoami`. **done**
+  (PR #214; REV-0143, QA-0143). Not merged.
+- TASK-0168 `workflows list`, `export`, `import`, `pull` and `push`. **todo**
+- TASK-0169 `run` and `runs list`, `show`, `cancel`. **todo**
+- TASK-0170 `test` and JUnit XML. **todo**
+- TASK-0171 `mcp` over stdio. **todo**
+- TASK-0172 Handbook (en, vi) and CHANGELOG. **todo**
 
 ## Chat answer feedback
 
@@ -357,13 +370,11 @@ Each call keeps its own ledger entry. The owner confirmed this set on 2026-10-27
 ## Accepted, not planned yet
 
 Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
-owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1, REQ-0075, and REQ-0076 are planned in the
+owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1, REQ-0079 phase 2, REQ-0075, and REQ-0076 are planned in the
 sections above. The rest are not planned into tasks yet.
 
 - REQ-0077 File attachments in the chat: documents, and images for vision models (CLAR-0008).
 - REQ-0078 Hand-off from one Agent node to another in the same workflow (CLAR-0009).
-- REQ-0079 phase 2: login with personal access tokens, pull and push, run, test in CI, and MCP over stdio
-  (CLAR-0010).
 
 ## Owner requests
 

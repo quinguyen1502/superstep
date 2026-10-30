@@ -7,7 +7,7 @@ from ..core import config, security
 from ..core.errors import AppError
 from ..services.notification_hub import NotificationHub, make_notification_hub
 from ..models.database import Database
-from ..repositories import AgentThreadRepository, ChatSessionRepository, CredentialRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
+from ..repositories import AgentThreadRepository, ChatSessionRepository, CliDeviceRepository, CredentialRepository, PersonalAccessTokenRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
 from ..services.audit_service import AuditService
 from ..services.code_service import CodeService
 from ..services.inbox_service import InboxService
@@ -27,6 +27,7 @@ from ..services.identity_service import IdentityService
 from ..services.channel_service import ChannelService
 from ..services.approval_channels import ADAPTERS
 from ..services.auth_service import AuthService
+from ..services.pat_service import PatService
 from ..services.credential_service import CredentialService
 from ..services.import_service import ImportService
 from ..services.run_bus import RunBus, make_run_bus
@@ -173,9 +174,15 @@ def user_service() -> UserService:
 def share_service() -> ShareService:
     db = get_db(); return ShareService(WorkflowShareRepository(db), UserRepository(db), access_service(), TeamRepository(db), audit_service())
 
+def pat_service() -> PatService:
+    db = get_db(); return PatService(PersonalAccessTokenRepository(db), CliDeviceRepository(db), UserRepository(db))
+
+def _auth() -> AuthService:
+    db = get_db(); return AuthService(UserRepository(db), pats=PersonalAccessTokenRepository(db))
+
 def auth_service() -> AuthService:
     db = get_db(); return AuthService(UserRepository(db), workflow_service(), AuthSecurityRepository(db), audit=audit_service(),
-                                      visit=lambda: start_visit(db, jobs=get_job_queue()))
+                                      visit=lambda: start_visit(db, jobs=get_job_queue()), pats=PersonalAccessTokenRepository(db))
 
 def demo_service() -> DemoService:
     return DemoService(get_rate_limiter())
@@ -233,7 +240,7 @@ def current_user(request: Request, cred: HTTPAuthorizationCredentials | None = D
     token = cred.credentials if cred else None
     if token is None and (token := request.cookies.get(security.SESSION_COOKIE)):
         if request.method in UNSAFE and request.headers.get(security.CSRF_HEADER) != security.CSRF_VALUE: raise AppError("AUTH_CSRF")
-    return AuthService(UserRepository(get_db())).current(token)
+    return _auth().current(token)
 
 
 def _same_origin(origin: str | None, host: str | None) -> bool:
@@ -246,7 +253,7 @@ def ws_user(ws: WebSocket) -> dict:
     token = ws.query_params.get("token")
     if not token and (token := ws.cookies.get(security.SESSION_COOKIE)):
         if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")): raise AppError("AUTH_CSRF")
-    return AuthService(UserRepository(get_db())).current(token)
+    return _auth().current(token)
 
 
 def need(permission: str):

@@ -49,6 +49,11 @@
 | `INTERNAL_ERROR` | 500 | Internal server error |
 | `AUTH_REQUIRED` | 401 | Authentication required |
 | `AUTH_TOKEN_INVALID` | 401 | Invalid token |
+| `PAT_NAME_TAKEN` | 409 | You already have an active token named {name} |
+| `PAT_NOT_FOUND` | 404 | Token not found |
+| `CLI_DEVICE_INVALID` | 400 | This sign-in code is not valid |
+| `CLI_DEVICE_EXPIRED` | 400 | This sign-in code has expired |
+| `CLI_DEVICE_DENIED` | 400 | This sign-in was denied |
 | `AUTH_TOKEN_EXPIRED` | 401 | Session expired, please sign in again |
 | `AUTH_INVALID_CREDENTIALS` | 401 | Incorrect email or password |
 | `AUTH_EMAIL_INVALID` | 400 | Invalid email address |

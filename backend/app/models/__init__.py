@@ -16,6 +16,8 @@ from .team import Team, TeamMember, WorkflowTeamShare
 from .audit_event import AuditEvent, StudioSetting
 from .template import WorkflowTemplate
 from .auth_security import LoginThrottle, PasswordReset
+from .personal_access_token import PersonalAccessToken
+from .cli_device import CliDevice
 from .workflow_schedule import WorkflowSchedule
 from .workflow_chat_trigger import ChatLogo, WorkflowChatTrigger
 from .chat_message import ChatMessage
@@ -24,4 +26,4 @@ from .workflow_test import WorkflowTest, WorkflowTestResult, WorkflowTestSuite
 from .agent_thread import AgentThread, AgentThreadRun
 from .approval import ApprovalAudit, ApprovalChannel, ApprovalRequest, ApprovalWait, ApprovalWaitApprover, ChannelIdentity
 
-__all__ = ["Base", "User", "Workflow", "Run", "Credential", "WorkflowToken", "WorkflowVersion", "Notification", "WebhookDelivery", "NodeResult", "ApprovalChannel", "ChannelIdentity", "ApprovalRequest", "ApprovalAudit", "ApprovalWait", "ApprovalWaitApprover", "KnowledgeBase", "KbDocument", "KbChunk", "McpServer", "WorkflowShare", "Team", "TeamMember", "WorkflowTeamShare", "AuditEvent", "StudioSetting", "WorkflowTemplate", "LoginThrottle", "PasswordReset", "WorkflowSchedule", "WorkflowChatTrigger", "ChatLogo", "ChatMessage", "ChatRating", "ChatSession", "ChatTurn", "WorkflowTest", "WorkflowTestSuite", "WorkflowTestResult", "AgentThread", "AgentThreadRun"]
+__all__ = ["Base", "User", "Workflow", "Run", "Credential", "WorkflowToken", "WorkflowVersion", "Notification", "WebhookDelivery", "NodeResult", "ApprovalChannel", "ChannelIdentity", "ApprovalRequest", "ApprovalAudit", "ApprovalWait", "ApprovalWaitApprover", "KnowledgeBase", "KbDocument", "KbChunk", "McpServer", "WorkflowShare", "Team", "TeamMember", "WorkflowTeamShare", "AuditEvent", "StudioSetting", "WorkflowTemplate", "LoginThrottle", "PasswordReset", "PersonalAccessToken", "CliDevice", "WorkflowSchedule", "WorkflowChatTrigger", "ChatLogo", "ChatMessage", "ChatRating", "ChatSession", "ChatTurn", "WorkflowTest", "WorkflowTestSuite", "WorkflowTestResult", "AgentThread", "AgentThreadRun"]
