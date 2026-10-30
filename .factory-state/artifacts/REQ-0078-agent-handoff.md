@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0078
-- Status: Accepted on 2026-10-27 with the CLAR-0009 answers (all recommended options). Planned on 2026-10-30 (DEC-0073, TASK-0179 to TASK-0184); the owner confirmed the task set and DEC-0073 on 2026-10-30.
+- Status: Done. Accepted on 2026-10-27 with the CLAR-0009 answers (all recommended options). Planned on 2026-10-30 (DEC-0073, TASK-0179 to TASK-0184); the owner confirmed the task set and DEC-0073 on 2026-10-30. Done on 2026-10-30: TASK-0179 to TASK-0184 implemented.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
