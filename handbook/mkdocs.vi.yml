@@ -37,6 +37,7 @@ nav:
       - Trình soạn thảo: guide/editor.md
       - Các loại node: guide/nodes.md
       - Node Agent: guide/agent.md
+      - Chuyển giao giữa các agent: guide/handoffs.md
       - State và tham chiếu: guide/state.md
       - Chế độ Code: guide/code-mode.md
       - Kho tri thức: guide/knowledge.md

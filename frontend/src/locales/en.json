@@ -1463,6 +1463,10 @@
       "builtin-support-team": {
         "name": "Support team",
         "description": "A supervisor agent hands each question to a specialist workflow: the order desk or the refund desk. Both are created with it."
+      },
+      "builtin-help-desk": {
+        "name": "Help desk",
+        "description": "A triage agent answers order questions and hands billing or technical questions to the agent for them. In a chat, the next message stays with the agent that answered."
       }
     }
   },

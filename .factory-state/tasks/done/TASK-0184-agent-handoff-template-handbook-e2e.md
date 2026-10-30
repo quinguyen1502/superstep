@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0184
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -85,7 +85,9 @@ Add the "Help desk with hand-offs" template, document hand-offs, and add e2e tes
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0184-help-desk-template-docs` from `develop`. Help desk template, hand-off handbook page and e2e; REQ-0078 Done `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0184-agent-handoff-template-handbook-e2e` from `develop`.
+- Review: `.factory-state/artifacts/REV-0161-task-0184.md`. QA: `.factory-state/artifacts/QA-0161-task-0184.md`.

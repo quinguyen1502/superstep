@@ -1463,6 +1463,10 @@
       "builtin-support-team": {
         "name": "Đội hỗ trợ",
         "description": "Một agent điều phối giao mỗi câu hỏi cho một workflow chuyên trách: bàn đơn hàng hoặc bàn hoàn tiền. Cả hai được tạo cùng lúc."
+      },
+      "builtin-help-desk": {
+        "name": "Bàn hỗ trợ",
+        "description": "Agent phân loại trả lời câu hỏi về đơn hàng và chuyển câu hỏi thanh toán hoặc kỹ thuật cho agent phụ trách. Trong chat, tin nhắn tiếp theo ở lại với agent vừa trả lời."
       }
     }
   },

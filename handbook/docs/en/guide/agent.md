@@ -238,6 +238,15 @@ supervisor has two workflow tools, `order_desk` and `refund_desk`, and hands
 each question to the desk that handles it. Its test cases check that an order
 question goes to the order desk and a refund request to the refund desk.
 
+## The Help desk template
+
+**Help desk** shows [agent hand-offs](handoffs.md). Triage answers order
+questions with `lookup_order` and hands billing questions to **Billing** and
+technical problems to **Technical**; Billing can hand a technical problem to
+Technical. The hand-off limit is 3. Its test cases check that an order
+question stays with Triage, a duplicate charge goes to Billing and a crash to
+Technical. In a chat, the next message stays with the agent that answered.
+
 ## Export
 
 - **Python and the LangGraph project** (see
@@ -259,6 +268,8 @@ question goes to the order desk and a refund request to the refund desk.
 | --- | --- |
 | `AGENT_TOOLS_UNSUPPORTED` | The credential's provider cannot call tools (TypeSafe, SMTP). The model step fails when it runs. |
 | `WORKFLOW_INVALID` | A run of a workflow the editor marks invalid: no task prompt, no tool, max rounds out of range, a tool without its settings (server and tool, function, knowledge base, URL or workflow), two tools with one name, or a steps or history field that is not a list. For workflow tools also: a workflow that is missing or not shared with you, an imported (code) workflow, a cycle, more than 5 levels, or a parameter or result field the workflow does not have. |
+| `AGENT_HANDOFF_TARGET_INVALID` | A hand-off target is not another Agent node of this workflow, or is listed twice. See [Agent hand-offs](handoffs.md). |
+| `AGENT_HANDOFF_LIMIT` | The workflow's `max_handoffs` is not a whole number from 0 to 20. |
 | `WORKFLOW_TOOL_TOO_DEEP` | At run time, workflow tools are nested more than 5 runs deep; the call is not started and the model gets an error. |
 
 All codes are in [Error codes](../reference/errors.md).
