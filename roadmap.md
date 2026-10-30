@@ -333,13 +333,14 @@ REQ-0079 phase 1, planned on 2026-10-27 (DEC-0068, CLAR-0010). Merged on 2026-10
 
 REQ-0079 phase 2, planned on 2026-10-30 (DEC-0071, CLAR-0010). Medium-task workflow. Personal access
 tokens, browser sign-in, pull and push, run, test in CI, and MCP over stdio. The owner confirmed this
-set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). The other five are not started.
+set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). TASK-0168 is merged (PR #215, merge `575386c`).
 
 - TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout` and `whoami`. **merged**
   (PR #214; REV-0143, QA-0143; merge `4d0ed17`).
-- TASK-0168 `workflows list`, `export`, `import`, `pull` and `push`. **done**
-  (REV-0144, QA-0144). Not merged.
-- TASK-0169 `run` and `runs list`, `show`, `cancel`. **todo**
+- TASK-0168 `workflows list`, `export`, `import`, `pull` and `push`. **merged**
+  (PR #215; REV-0144, QA-0144; merge `575386c`).
+- TASK-0169 `run` and `runs list`, `show`, `cancel`. **done**
+  (REV-0145, QA-0145). Not merged.
 - TASK-0170 `test` and JUnit XML. **todo**
 - TASK-0171 `mcp` over stdio. **todo**
 - TASK-0172 Handbook (en, vi) and CHANGELOG. **todo**

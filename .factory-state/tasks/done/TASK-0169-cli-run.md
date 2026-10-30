@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0169
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -96,8 +96,11 @@
 ## Activity Log
 
 - 2026-10-30: planned from REQ-0079 phase 2 (DEC-0071). Not started.
+- 2026-10-30: implementation started. websockets pin `15.0.1`, Requires-Python `>=3.9` (PyPI release 15.0.1; newest release that still allows 3.9. 16.0 requires `>=3.10`). Recorded before the pyproject change.
+- 2026-10-30: implemented `run` and `runs` on this branch. `tests/test_cli_run.py` and `tests/test_cli_login.py`: 19 passed. Full `sdk/python` pytest: 125 passed, 2 skipped. Not pushed. Task stays in doing.
+
+- 2026-10-30: owner asked to finish the phase 2 chain in one pass. Review REV-0145. QA QA-0145. Task moved to done. Not merged.
 
 ## Handoff Notes
 
-- Register the command from its own module, as `admin.py` does, so a parallel task can add another module without editing the same lines.
-- The websockets pin is part of the commit. Do not leave it floating.
+- Review REV-0145. QA QA-0145. Not merged. `websockets==15.0.1` (`Requires-Python >=3.9`).

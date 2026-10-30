@@ -18,9 +18,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# Phase 1 adds no third-party package. The extra is the install path (`pip install superstep[cli]`);
-# phase 2 puts the MCP SDK here. The console script cannot be gated on an extra, so it ships with the base package.
-cli = []
+# The console script ships with the base package. `run` is the only command that needs websockets,
+# pinned to the newest release whose Requires-Python still allows 3.9 (15.0.1 is `>=3.9`; 16.0 is `>=3.10`).
+cli = ["websockets==15.0.1"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 # `factory deps apply` installs `.[test]`, so verification has pytest without it in base deps.
 test = ["pytest>=8", "pytest-asyncio>=0.23"]

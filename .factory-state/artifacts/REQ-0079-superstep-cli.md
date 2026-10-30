@@ -290,11 +290,11 @@ Planned on 2026-10-27. The layout is DEC-0068. Phase 2 is not in this list.
 
 ## Phase 2 Tasks
 
-Planned on 2026-10-30. The layout is DEC-0071. The owner confirmed this set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). The other tasks are not started.
+Planned on 2026-10-30. The layout is DEC-0071. The owner confirmed this set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). TASK-0168 is merged (PR #215, merge `575386c`).
 
 - TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout`, `whoami`. Merged (PR #214).
-- TASK-0168 `workflows list`, `export`, `import`, `pull`, `push`. Done (REV-0144, QA-0144). Not merged.
-- TASK-0169 `run` and `runs list`, `show`, `cancel`.
+- TASK-0168 `workflows list`, `export`, `import`, `pull`, `push`. Merged (PR #215, REV-0144, QA-0144).
+- TASK-0169 `run` and `runs list`, `show`, `cancel`. Done (REV-0145, QA-0145). Not merged.
 - TASK-0170 `test` and JUnit XML.
 - TASK-0171 `mcp` over stdio.
 - TASK-0172 Handbook (en, vi) and CHANGELOG.

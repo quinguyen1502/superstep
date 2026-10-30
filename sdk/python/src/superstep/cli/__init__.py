@@ -17,6 +17,7 @@ from superstep.cli.docker import Docker
 from superstep.cli.i18n import Catalog, lang_flag, resolve_lang
 from superstep.cli.install import add_commands
 from superstep.cli.login import add_commands as add_login_commands
+from superstep.cli.run import add_commands as add_run_commands
 from superstep.cli.status import add_commands as add_status_commands
 from superstep.cli.upgrade import add_commands as add_upgrade_commands
 from superstep.cli.workflows import add_commands as add_workflow_commands
@@ -35,7 +36,8 @@ def main(argv: Optional[list[str]] = None) -> None:
     sys.exit(run(argv))
 
 
-def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None, docker: Optional[Docker] = None, ssh=None) -> int:
+def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None, docker: Optional[Docker] = None, ssh=None,
+        connect: Optional[Callable] = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     json_mode = "--json" in args
     catalog = Catalog.load(resolve_lang(lang_flag(args)))
@@ -48,6 +50,8 @@ def run(argv: Optional[list[str]] = None, client: Optional[httpx.Client] = None,
     engine = docker or Docker()
     if ssh is not None:
         engine.ssh_client = ssh
+    if connect is not None:
+        parsed.connect = connect
     return parsed.run(parsed, catalog, json_mode, client, parser, engine)
 
 
@@ -99,6 +103,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     add_deploy_commands(commands, common, catalog)
     add_login_commands(commands, common, catalog)
     add_workflow_commands(commands, common, catalog)
+    add_run_commands(commands, common, catalog)
     return parser
 
 
