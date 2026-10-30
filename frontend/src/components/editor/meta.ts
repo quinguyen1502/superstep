@@ -1,5 +1,5 @@
 import { type Edge } from '@xyflow/react'
-import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Brain, Wrench, GitBranch, Flag, CirclePlay, Trash2, Code2, UserCheck, Merge, Layers, Database, Plug, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square, Repeat, Scale, Mail, Bot } from 'lucide-react'
+import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Brain, Wrench, GitBranch, Flag, CirclePlay, Trash2, Code2, UserCheck, Merge, Layers, Database, Plug, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square, Repeat, Scale, Mail, Bot, ArrowRightLeft } from 'lucide-react'
 import i18n from '@/lib/i18n'
 
 export type Field = { name: string; type: string; reducer?: string }
@@ -28,6 +28,7 @@ META.agent_model = { ...META.agent, icon: Brain }
 META.agent_tool = { ...META.agent, icon: Wrench }
 META.agent_exit = META.agent
 META.agent_join = { ...META.agent, icon: Merge }
+META.agent_handoff = { ...META.agent, icon: ArrowRightLeft }  // TASK-0180
 export const TYPES = ['start', 'llm', 'agent', 'decision', 'retriever', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
 export const INSERTABLE = TYPES.filter(t => t !== 'start' && t !== 'end')
 export const RUNTIME = new Set(['llm', 'agent', 'retriever', 'tool', 'mcp', 'human', 'decision'])

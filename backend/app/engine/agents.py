@@ -42,9 +42,14 @@ from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
 PREFIX, SEP = "agent:", "/"
-MODEL, TOOL, JOIN, EXIT = "__model", "__tool", "__join", "__exit"
-TYPES = ("agent", "agent_model", "agent_tool", "agent_exit", "agent_join")
-ROUTERS = ("agent_model", "agent_join")  # steps that pick the next step (they may loop)
+MODEL, TOOL, JOIN, EXIT, HANDOFF = "__model", "__tool", "__join", "__exit", "__handoff"
+# hand-offs (REQ-0078, DEC-0073): the pending hand-off {from, to, reason, messages, last} and the run's count
+HANDOFF_KEY, COUNT_KEY = PREFIX + "__handoff", PREFIX + "__handoffs"
+NOT_RUN = "Not run: the conversation was handed off"
+HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Continue it and answer the person yourself."
+NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
+TYPES = ("agent", "agent_model", "agent_tool", "agent_exit", "agent_join", "agent_handoff")
+ROUTERS = ("agent_model", "agent_join", "agent_handoff")  # steps that pick the next step (they may loop)
 SOURCES = ("mcp", "http", "builtin", "knowledge", "workflow")
 DEFAULT_ROUNDS, MAX_ROUNDS, MAX_CALLS_PER_ROUND = 5, 25, 8
 RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
@@ -124,6 +129,30 @@ def specs(d: Dict[str, Any]) -> List[Dict[str, Any]]:
     """The tools as the model sees them."""
     return [{"name": t.get("name") or "", "description": t.get("description") or "", "parameters": parameters(t)}
             for t in d.get("tools") or [] if isinstance(t, dict)]
+
+
+REASON = {"type": "object", "properties": {"reason": {"type": "string", "description": "Why the conversation is handed off"}}}
+
+
+def handoff_specs(d: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """The hand-off tools as the model sees them: `transfer_to_<target>` with an optional reason (TASK-0180)."""
+    return [{"name": h["name"], "description": h.get("description") or f"Hand the conversation to {h['label']}", "parameters": REASON}
+            for h in d.get("handoff_tools") or []]
+
+
+def _handoff_tools(nid: str, d: Dict[str, Any], labels: Dict[str, str], taken: set) -> List[Dict[str, Any]]:
+    """[{name, target, label, description}] for the node's valid targets; names are unique among its tools."""
+    from . import handoffs
+    out, used = [], set(taken)
+    for h in handoffs.targets(d):
+        t = h["target"]
+        if t == nid or t not in labels: continue
+        base = "transfer_to_" + (re.sub(r"[^A-Za-z0-9_-]+", "_", labels[t]).strip("_").lower() or re.sub(r"[^A-Za-z0-9_-]+", "_", t))
+        base = base[:60]; name, i = base, 2
+        while name in used: name, i = f"{base[:58]}_{i}", i + 1
+        used.add(name)
+        out.append({"name": name, "target": t, "label": labels[t], "description": str(h.get("description") or "")})
+    return out
 
 
 def arg_error(schema: Dict[str, Any], args: Any) -> Optional[str]:
@@ -251,6 +280,9 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
     """The workflow with each Agent node followed by its model, tool and exit steps (idempotent; the input is not changed)."""
     if not has_agents(wf): return wf
     out = copy.deepcopy(wf); nodes, edges = out["nodes"], out.get("edges") or []
+    from . import handoffs
+    labels = {n["id"]: (n.get("data") or {}).get("label") or n["id"] for n in nodes if isinstance(n, dict) and n.get("type") == "agent"}
+    cap = handoffs.limit(wf)
     for n in [n for n in nodes if isinstance(n, dict) and n.get("type") == "agent" and not (n.get("data") or {}).get("agent_expanded")]:
         a, d = n["id"], n.get("data") or {}
         label = d.get("label") or a
@@ -258,6 +290,8 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         # a cached step would skip its model or tool call (and its approval) on a run with the same state: only the
         # entry step keeps the node's cache and input fields; retry and timeout apply to each step
         inner = {k: v for k, v in d.items() if k not in ("label", "cache_ttl", "input_fields")}
+        hand = _handoff_tools(a, d, labels, {t.get("name") for t in d.get("tools") or [] if isinstance(t, dict)})
+        if hand: inner = {**inner, "handoff_tools": hand, "max_handoffs": cap}
         # a workflow tool's child snapshot is run by the tool step only: the other steps keep its state fields (the
         # parameter types), which keeps the checkpoint small
         lean = {**inner, "tools": [{**t, "snapshot": {"state": t["snapshot"].get("state") or []}}
@@ -266,12 +300,18 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
                                                 "data": {**data, "label": f"{label} › {name}", "agent_of": a, "agent_label": label}}
         n["data"] = {**n["data"], "tools": lean["tools"]} if "tools" in d else n["data"]
         slots = [step(f"{TOOL}{SEP}{i}", "agent_tool", "tool", inner) for i in range(1, MAX_CALLS_PER_ROUND + 1)]
+        if hand: lean = {**lean, "handoff_tools": hand, "max_handoffs": cap}
         nodes += [step(MODEL, "agent_model", "model", lean), *slots, step(JOIN, "agent_join", "join", lean), step(EXIT, "agent_exit", "end", lean)]
         m, j, x = f"{a}{SEP}{MODEL}", f"{a}{SEP}{JOIN}", f"{a}{SEP}{EXIT}"
         edges[:] = [{**e, "source": x} if e.get("source") == a else e for e in edges]  # the agent's way out
         edges += [{"id": f"{a}{SEP}e-model", "source": a, "target": m},
                   {"id": f"{a}{SEP}e-done", "source": m, "target": x, "label": "done"},
                   {"id": f"{a}{SEP}e-back", "source": j, "target": m, "label": "model"}]
+        if hand:  # a hand-off is its own step, then a jump to the target's entry (DEC-0073 decision 2)
+            h = f"{a}{SEP}{HANDOFF}"
+            nodes.append(step(HANDOFF, "agent_handoff", "hand-off", lean))
+            edges += [{"id": f"{a}{SEP}e-handoff", "source": m, "target": h, "label": "handoff"}]
+            edges += [{"id": f"{a}{SEP}e-to-{x['target']}", "source": h, "target": x["target"], "label": x["target"]} for x in hand]
         for i in range(1, MAX_CALLS_PER_ROUND + 1):  # the model reaches every slot (the router Sends only the wave)
             sid = slot_id(a, i)
             edges += [{"id": f"{a}{SEP}e-slot-{i}", "source": m, "target": sid},
@@ -309,12 +349,16 @@ def snapshot(wf: Dict[str, Any], load: subgraphs.Loader, self_id: Optional[str] 
 def step_budget(wf: Dict[str, Any]) -> int:
     """Extra LangGraph steps the Agent nodes may need. A round is a model call plus, at cap 1, a slot and a join per
     tool call. The last call without tools, the entry and the exit come on top."""
-    total = 0
+    from . import handoffs
+    total, most, any_hand = 0, 0, False
     for n in wf.get("nodes", []):
         if isinstance(n, dict) and n.get("type") == "agent":
             r = (n.get("data") or {}).get("max_rounds", DEFAULT_ROUNDS)
             r = r if isinstance(r, int) and not isinstance(r, bool) and 1 <= r <= MAX_ROUNDS else DEFAULT_ROUNDS
-            total += r * (1 + 2 * MAX_CALLS_PER_ROUND) + 3
+            cost = r * (1 + 2 * MAX_CALLS_PER_ROUND) + 3
+            total += cost; most = max(most, cost)
+            any_hand = any_hand or bool(handoffs.targets(n.get("data") or {}))
+    if any_hand: total += handoffs.limit(wf) * (most + 2)  # each hand-off may run an agent again (TASK-0180)
     return total
 
 
@@ -323,8 +367,11 @@ def router(node: Dict[str, Any]):
     or back to `model`."""
     key, agent, data = private(owner(node)), owner(node), node.get("data") or {}
     back = "done" if node["type"] == "agent_model" else "model"
+    if node["type"] == "agent_handoff":
+        return lambda state: (state.get(HANDOFF_KEY) or {}).get("to")
 
     def route(state):
+        if node["type"] == "agent_model" and (state.get(key) or {}).get("handoff"): return "handoff"
         pending = ((state.get(key) or {}).get("pending")) or []
         if not pending: return back
         n = min(len(pending), wave_size(data))
@@ -386,13 +433,24 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
 
     if t == "agent":
         def fn(state):
-            msgs = [{"role": "system", "content": render(d["system_prompt"], state)}] if d.get("system_prompt") else []
-            for m in (state.get(d["history_field"]) or []) if d.get("history_field") else []:
-                if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str):
-                    msgs.append({"role": m["role"], "content": m["content"]})
+            got = state.get(HANDOFF_KEY) if isinstance(state.get(HANDOFF_KEY), dict) else None
+            got = got if got and got.get("to") == nid else None  # a hand-off to this agent (TASK-0180)
+            system = render(d["system_prompt"], state) if d.get("system_prompt") else ""
+            if got:
+                why = f" Reason: {got['reason']}." if got.get("reason") else ""
+                system = "\n\n".join(x for x in (system, HANDOFF_NOTE.format(source=got.get("from_label") or got.get("from"), reason=why)) if x)
+            msgs = [{"role": "system", "content": system}] if system else []
+            if got:  # the person's messages and the agents' replies, without tool traffic (DEC-0073 decision 3)
+                msgs += [{"role": m["role"], "content": m["content"]} for m in got.get("messages") or []]
+            else:
+                for m in (state.get(d["history_field"]) or []) if d.get("history_field") else []:
+                    if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str):
+                        msgs.append({"role": m["role"], "content": m["content"]})
             files = attachments.records(state, d)  # chat attachments (TASK-0176): records only, image bytes are read per call
             msgs.append({"role": "user", "content": render(d.get("prompt") or "", state), **({"files": files} if files else {})})
-            return {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
+            out = {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
+            if got: out[HANDOFF_KEY] = None
+            return out
         return fn
 
     if t == "agent_model":
@@ -405,10 +463,18 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 if resolve is None: raise RuntimeError("Node uses a credential but no resolver is available")
                 cred = resolve(d["credential_id"])
             buf = tokens(nid) if tokens else None
+            hand = {h["name"]: h for h in d.get("handoff_tools") or []}
+            can = bool(hand) and not hit and (state.get(COUNT_KEY) or 0) < d.get("max_handoffs", 5)
+            if hand and not can and not hit and not p.get("no_more"):  # past the limit: the model is told to answer itself
+                ms = p.setdefault("messages", [])
+                if ms and ms[0].get("role") == "system": ms[0] = {**ms[0], "content": f"{ms[0]['content']}\n\n{NO_MORE}"}
+                else: ms.insert(0, {"role": "system", "content": NO_MORE})
+                p["no_more"] = True
             try:
                 msgs = p.get("messages") or []
                 extra = {"load": ports.attachment} if any(m.get("files") for m in msgs) else {}  # the file loader only when files are sent
-                out, calls = call_agent(msgs, None if hit else specs(d), d.get("model") or "gpt-4o-mini", cred,
+                tools = None if hit else specs(d) + (handoff_specs(d) if can else [])
+                out, calls = call_agent(msgs, tools, d.get("model") or "gpt-4o-mini", cred,
                                         (lambda u: usage(nid, u)) if usage else None, buf, mock=offline, locale=ports.locale,
                                         parallel=False if d.get("parallel_tool_calls") is False else None, **extra)
             finally:
@@ -418,6 +484,19 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             if not hit: p["rounds"] = p.get("rounds", 0) + 1
             p["limit_hit"] = hit
             p.setdefault("messages", []).append({"role": "assistant", "content": out, **({"tool_calls": calls} if calls else {})})
+            first = next((c for c in calls if c["name"] in hand), None) if can else None
+            if first is not None:  # the hand-off wins: the other calls of the round are answered, not run (TASK-0180)
+                h = hand[first["name"]]; args = first.get("args") if isinstance(first.get("args"), dict) else {}
+                reason = str(args.get("reason") or "")[:500]
+                for c in calls:
+                    done = c is first
+                    msg = f"Handed off to {h['label']}" if done else NOT_RUN
+                    p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": msg})
+                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": c["args"], "result": NOT_RUN, "status": "not_run", "ms": 0})
+                p["pending"], p["handoff"] = [], {"to": h["target"], "label": h["label"], "reason": reason, "tool": first["name"]}
+                p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": False,
+                             "tool_calls": [{"name": c["name"], "args": c["args"]} for c in calls]}
+                return {key: p}
             p["pending"] = calls[:MAX_CALLS_PER_ROUND]
             for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run
                 why = f"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round"
@@ -503,6 +582,23 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             if found: p["pending"] = (p.get("pending") or [])[len(found):]
             p["last"] = None
             return {key: p, **clear}
+        return fn
+
+    if t == "agent_handoff":
+        def fn(state):
+            p = state.get(key) or {}
+            h = p.get("handoff") or {}
+            carried = [{"role": m["role"], "content": m["content"]} for m in p.get("messages") or []
+                       if isinstance(m, dict) and isinstance(m.get("content"), str) and m["content"]
+                       and (m.get("role") == "user" or (m.get("role") == "assistant" and not m.get("tool_calls")))]
+            src = d.get("agent_label") or owner(node)
+            last = {"kind": "handoff", "from": owner(node), "from_label": src, "to": h.get("to"), "to_label": h.get("label"), "reason": h.get("reason") or ""}
+            out: Dict[str, Any] = {key: None, COUNT_KEY: (state.get(COUNT_KEY) or 0) + 1,
+                                   HANDOFF_KEY: {"from": owner(node), "from_label": src, "to": h.get("to"), "reason": h.get("reason") or "",
+                                                 "messages": carried, "last": last}}
+            if d.get("steps_field"): out[d["steps_field"]] = (p.get("steps") or []) + [{"tool": h.get("tool"), "args": {"reason": h.get("reason") or ""},
+                                                                                       "result": f"Handed off to {h.get('label')}", "status": "handoff", "ms": 0}]
+            return out
         return fn
 
     # agent_exit
