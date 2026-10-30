@@ -1,6 +1,6 @@
 """Human-in-the-loop approval through external channels (TASK-0022, DEC-0019)."""
 from typing import Optional
-from sqlalchemy import text, Float, Index, Integer, Text
+from sqlalchemy import text, Boolean, Float, Index, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from .base import Base
 
@@ -67,6 +67,7 @@ class ApprovalRequest(Base):
 class ApprovalAudit(Base):
     """Append-only log of every approval request, decision and refused attempt."""
     __tablename__ = "approval_audit"
+    __table_args__ = (Index("ix_approval_audit_workflow_created", "workflow_id", "created"),)
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     owner: Mapped[str] = mapped_column(Text, index=True)  # run owner (who may read the entry)
     request_id: Mapped[Optional[str]] = mapped_column(Text)
@@ -78,6 +79,14 @@ class ApprovalAudit(Base):
     actor_id: Mapped[Optional[str]] = mapped_column(Text)     # studio user id (when mapped)
     external_id: Mapped[Optional[str]] = mapped_column(Text)  # channel user id
     created: Mapped[float] = mapped_column(Float, index=True)
+    # AI review (TASK-0186, DEC-0075 decision 7): set on the entry of an AI review and on a human answer after a suggestion
+    auto_outcome: Mapped[Optional[str]] = mapped_column(Text)       # approved | rejected | escalated | suggested
+    auto_confidence: Mapped[Optional[float]] = mapped_column(Float)
+    auto_model: Mapped[Optional[str]] = mapped_column(Text)
+    auto_reason: Mapped[Optional[str]] = mapped_column(Text)
+    auto_rules: Mapped[Optional[str]] = mapped_column(Text)         # JSON list of the rule numbers that matched
+    policy_hash: Mapped[Optional[str]] = mapped_column(Text)
+    agreed: Mapped[Optional[bool]] = mapped_column(Boolean)         # a human answer after a suggestion: same as the AI's?
 
 
 class ApprovalWait(Base):
@@ -104,6 +113,10 @@ class ApprovalWait(Base):
     next_remind_at: Mapped[Optional[float]] = mapped_column(Float, index=True)
     reminders: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     escalated_at: Mapped[Optional[float]] = mapped_column(Float)
+    # AI review (TASK-0186): the opinion shown to people (suggest mode, or auto mode that escalated)
+    ai_decision: Mapped[Optional[str]] = mapped_column(Text)     # approve | reject | escalate
+    ai_confidence: Mapped[Optional[float]] = mapped_column(Float)
+    ai_reason: Mapped[Optional[str]] = mapped_column(Text)
 
 
 class ApprovalWaitApprover(Base):

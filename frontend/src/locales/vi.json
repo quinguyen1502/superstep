@@ -630,7 +630,9 @@
     "CODE_LANGUAGE_UNSUPPORTED": "Node Code {{node}}: máy chủ này không hỗ trợ {{language}}",
     "CODE_WRITE_FORBIDDEN": "Vai trò của bạn không được thêm node Code hay sửa code của nó (code.write)",
     "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
-    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}"
+    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
+    "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
+    "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này"
   },
   "lang": {
     "en": "English",
@@ -2271,6 +2273,11 @@
     "DEADLINE_ESCALATE_MISSING": "Node Human {{node}}: hãy thêm người nhận khi chuyển cấp",
     "DEADLINE_ESCALATE_EMAILS": "Node Human {{node}}: người nhận khi chuyển cấp phải là địa chỉ email",
     "DEADLINE_TOO_LONG": "Node Human {{node}}: hạn chót dài hơn giới hạn chờ (STUDIO_WAIT_TTL, {{hours}} giờ)",
+    "AUTO_APPROVAL_MODE": "Node {{node}}: chế độ AI duyệt phải là một trong {{modes}}",
+    "AUTO_APPROVAL_RULE_INVALID": "Node {{node}}: quy tắc AI duyệt số {{index}} không hợp lệ (trường, phép so sánh, giá trị và kết quả)",
+    "AUTO_APPROVAL_JUDGE_REQUIRED": "Node {{node}}: AI duyệt cần một credential mô hình",
+    "AUTO_APPROVAL_CONFIDENCE": "Node {{node}}: độ tin cậy tối thiểu phải từ 0 đến 1",
+    "AUTO_APPROVAL_CAP": "Node {{node}}: giới hạn mỗi ngày phải là số nguyên từ 1 đến {{max}}",
     "AGENT_PROMPT_MISSING": "Node Agent {{node}}: chưa có prompt nhiệm vụ",
     "AGENT_ROUNDS": "Node Agent {{node}}: số vòng tối đa phải từ 1 đến {{max}}",
     "AGENT_FIELD_UNKNOWN": "Node Agent {{node}}: {{key}} '{{field}}' không có trong state",
