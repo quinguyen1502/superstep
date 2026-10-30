@@ -35,6 +35,7 @@ history fields in **Data**; max rounds and retry/timeout in **Execution**.
 | Output field | Receives the final answer. |
 | Steps field | Optional, a list field. Receives every tool call: `{tool, args, result, status, ms}`, plus `approval` when a person answered. |
 | History field | Optional, a list field of `{role, content}` messages (`user` or `assistant`) added before the task prompt, such as a chat's `messages` field. |
+| Include attachments | Adds the chat's files to the task message, as on the [LLM node](nodes.md#llm). See [Attachments](../run/chat.md#attachments). |
 | Tools | At least one. See below. |
 | Approval | Shown when a tool needs approval: channel, approvers and deadline, as on a Human node. |
 | Execution | Retry, wait between tries and timeout apply to each model call and each tool call. A cache TTL is never used for them, since a cached step would skip a call or an approval. |

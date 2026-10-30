@@ -19,11 +19,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tip } from '@/components/tip'
 import { api, ApiError, loginUrl } from '@/lib/api'
 import { useSystemTheme } from '@/lib/theme'
-import { publicLogoUrl, waitingTurn, type ChatSession, type PublicChatPage as Page } from '@/lib/chat'
+import { publicLogoUrl, waitingTurn, type ChatAttachment, type ChatSession, type PublicChatPage as Page } from '@/lib/chat'
 import { ChatIllustration, ChatLogo } from '@/components/chat/chat-logo'
 import { useChatRun, type ChatEndpoint } from '@/components/chat/use-chat-run'
-import { ChatThread } from '@/components/chat/chat-thread'
-import { ChatComposer } from '@/components/chat/chat-composer'
+import { ChatThread, type FileLinks } from '@/components/chat/chat-thread'
+import { ChatComposer, type ComposerFiles } from '@/components/chat/chat-composer'
+import { uploadChatFile } from '@/lib/chat-files'
 import { ChatMarkdown } from '@/components/chat/chat-markdown'
 import { MSG } from '@/widget/protocol'
 
@@ -87,9 +88,17 @@ export function PublicChatPage() {
   // the first message of a new chat creates it, then goes out once the chat is loaded (as in the studio Chat tab)
   const first = useRef(''); const { send: say, session } = chat
   const create = () => api<ChatSession & { visitor_token?: string }>(`${base}/sessions`, { method: 'POST', json: { embed }, headers }).then(s => { keep(s); return s })
-  const send = (text: string) => { if (sid) { say(text); return } first.current = text
+  const send = (text: string, files: ChatAttachment[] = []) => { if (sid) { say(text, files); return } first.current = text
     create().then(s => list(s.id)).catch(e => { first.current = ''; fail(e) }) }
   useEffect(() => { if (first.current && sid && session?.id === sid) { const x = first.current; first.current = ''; say(x) } }, [sid, session, say])
+  // files (TASK-0177): the first file of a new chat creates it; the visitor token goes with every request
+  const made = useRef<Promise<string> | null>(null)
+  const ensure = () => sid ? Promise.resolve(sid) : made.current ??= create().then(async s => { await list(s.id); return s.id }).finally(() => { made.current = null })
+  const lim = page?.attachments
+  const files: ComposerFiles | null = lim && !waitingTurn(chat.session?.turns ?? []) ? { ...lim,
+    upload: f => ensure().then(id => uploadChatFile<ChatAttachment & { visitor_token?: string }>(`${base}/sessions/${id}/attachments`, f, headers)).then(d => { keep(d); return d }),
+    remove: id => sid ? api<{ visitor_token?: string }>(`${base}/sessions/${sid}/attachments/${id}`, { method: 'DELETE', headers }).then(keep) : Promise.resolve() } : null
+  const links = useMemo<FileLinks | undefined>(() => sid ? { url: id => `${base}/sessions/${sid}/attachments/${id}`, headers } : undefined, [base, sid, headers])
   const fresh = () => setSid(null)   // the next message starts a new chat
 
   if (gone) return <main className="flex min-h-svh items-center justify-center bg-background p-4" id="public-chat-gone">
@@ -114,9 +123,10 @@ export function PublicChatPage() {
     </header>
     {(err || chat.error) && <Alert variant="destructive" className="mx-auto mt-3 w-full max-w-3xl"><AlertCircle /><AlertDescription id="public-chat-error">{err || chat.error}</AlertDescription></Alert>}
     {page && <ChatThread turns={sid ? chat.session?.turns ?? [] : []} mode={page.steps_mode} events={chat.events} trace={chat.trace}
-      pending={chat.pending} running={chat.running} onAnswer={chat.answer} onRate={sid ? rate : undefined} empty={intro} />}
+      pending={chat.pending} pendingFiles={chat.pendingFiles} running={chat.running} onAnswer={chat.answer} onRate={sid ? rate : undefined} empty={intro} files={links} />}
     {page && <ChatComposer disabled={!ready || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
       placeholder={waiting ? t(waiting.answered_by === 'reviewer' ? 'chat.waitingReviewer' : 'chat.answerPlaceholder') : undefined}
-      onSend={text => waiting?.run_id ? chat.answer(waiting.run_id, text) : send(text)} />}
+      files={files} onError={setErr}
+      onSend={(text, f) => waiting?.run_id ? chat.answer(waiting.run_id, text) : send(text, f)} />}
   </main>
 }
