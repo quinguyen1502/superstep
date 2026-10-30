@@ -32,7 +32,7 @@ def _install_default() -> str:
 
 def test_cli_server_and_installer_share_one_version():
     version = _version_py()
-    assert version == _server_version() == _install_default() == "0.9.0"
+    assert version == _server_version() == _install_default() == "0.10.0"
 
 
 def _env(home: Path, bin_dir: Path) -> dict:
@@ -40,7 +40,7 @@ def _env(home: Path, bin_dir: Path) -> dict:
         "HOME": str(home),
         "PATH": f"{bin_dir}{os.pathsep}/bin",
         "TMPDIR": str(home.parent),
-        "SUPERSTEP_VERSION": "0.9.0",
+        "SUPERSTEP_VERSION": "0.10.0",
     }
 
 
@@ -77,7 +77,7 @@ def test_install_sh_with_uv_installs_the_extra(tmp_path):
     )
     proc = _run(home, bin_dir)
     assert proc.returncode == 0, proc.stderr
-    assert "superstep[cli]==0.9.0" in (home / "uv-args").read_text(encoding="utf-8")
+    assert "superstep[cli]==0.10.0" in (home / "uv-args").read_text(encoding="utf-8")
     assert (home / ".local" / "bin" / "superstep").is_file()
     assert not (home / "uv-installer-ran").exists()
     assert "WSL" not in proc.stderr
@@ -111,7 +111,7 @@ def test_install_sh_without_python_or_uv_installs_uv(tmp_path):
     proc = _run(home, bin_dir)
     assert proc.returncode == 0, proc.stderr
     assert (home / "uv-installer-ran").is_file()
-    assert "superstep[cli]==0.9.0" in (home / "uv-args").read_text(encoding="utf-8")
+    assert "superstep[cli]==0.10.0" in (home / "uv-args").read_text(encoding="utf-8")
     assert (home / ".local" / "bin" / "superstep").is_file()
 
 

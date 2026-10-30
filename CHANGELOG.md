@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.10.0 (2026-10-31)
+
 ### Added
 
 - **Help desk template and the hand-off guide** (REQ-0078). New built-in template **Help desk**: Triage answers order questions and hands billing and technical questions to Billing and Technical, with test cases for the offline model. New handbook page "Agent hand-offs" (en, vi) with a comparison of hand-offs, supervisors with workflow tools and routing nodes, and Playwright coverage of the template in the Chat tab and on the public page.
@@ -50,6 +52,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   run's trace as `user_rating`.
 
 ### Fixed
+
+- **Run trace of a tool wave that waits in two slots** (DEC-0069). When two calls of one round both waited (for
+  example two workflow tools), the trace kept an empty row for the second slot after the run resumed. Each slot now
+  keeps one row. Stale e2e specs (tool slot names, translated save errors, the template count) are updated.
 
 - **SQLite restore and a failed upgrade rollback** (REQ-0079). Restore deletes leftover `studio.db-wal` and `studio.db-shm` before replacing `studio.db`, so an unclean stop cannot replay old pages onto the restored file. If restoring the backup itself fails, `upgrade` reports that the rollback failed instead of saying the previous version is back. A Postgres dump is written to a file and packed from that file.
 
