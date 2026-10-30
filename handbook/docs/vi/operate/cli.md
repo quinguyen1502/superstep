@@ -2,7 +2,9 @@
 
 `superstep` cài, nâng cấp và sao lưu một instance trên máy có Docker và
 Compose v2. Phiên bản gói là phiên bản server. Trên dòng `0.1.0` gói Python chỉ
-là SDK; bản phát hành `v*` chuyển gói đó sang phiên bản server.
+là SDK; bản phát hành `v*` chuyển gói đó sang phiên bản server. Đăng nhập,
+`pull`, `push`, `run`, `test` và `mcp` nằm ở các mục bên dưới. Các lệnh đó dùng
+personal access token, không dùng Docker.
 
 ## Cài đặt
 
@@ -46,6 +48,102 @@ superstep backup --schedule daily --keep 7
 `restore` yêu cầu gõ đúng tên instance. `--yes` chỉ bỏ qua khi `--name` trùng
 tên đó. Archive mang database, `.env`, `compose.yml` và secret key, nên
 credential đã lưu vẫn giải mã được sau khi restore vào một thư mục mới.
+
+## Đăng nhập
+
+Các lệnh workflow không đọc `instance.json`.
+
+```bash
+superstep login --url http://localhost:8000
+superstep whoami
+superstep logout
+```
+
+`login` in một URL và một mã, rồi mở trình duyệt. Duyệt hoặc từ chối trên
+`/cli/authorize` khi bạn đã đăng nhập studio. Không có gì được gửi cho đến khi
+bạn bấm nút. Lệnh ghi `url`, `token` và `account` vào `~/.superstep/cli.json`
+và đặt file ở mode `0600`. Lệnh không in token. `logout` xóa `token` và
+`account` khỏi file đó. Lệnh không thu hồi token. Thu hồi trong Settings, mục
+Tokens (`/settings/tokens`).
+
+Với script hoặc CI, tạo token trong Settings rồi export hai biến. Biến môi
+trường thắng file. Đừng commit token.
+
+```bash
+export SUPERSTEP_URL=http://localhost:8000
+export SUPERSTEP_TOKEN
+```
+
+## Workflow trong Git
+
+```bash
+superstep pull ./workflows
+superstep push ./workflows
+superstep push ./workflows --force
+```
+
+`pull` ghi một file `<id>.json` cho mỗi workflow nhìn thấy và
+`.superstep/lock.json`. Lệnh không xóa file local mà server không còn. `push`
+cập nhật studio. Nếu workflow bị sửa trên studio sau lần `pull`, `push` thoát
+khác 0 và không ghi gì. `--force` ghi đè sửa đó. Lock từ server khác cũng bị
+từ chối, trừ khi có `--force`. `push` không xóa workflow trên server mà không
+có file local.
+
+```bash
+superstep workflows list
+superstep workflows export demo --format json
+superstep workflows import ./demo.json
+```
+
+`import` chỉ nhận JSON của workflow. File `.py`, `.ts` hoặc `.zip` bị từ chối
+và server không được gọi.
+
+## Chạy
+
+```bash
+superstep run inbox --input sample.json --follow
+superstep runs list
+superstep runs show RUN_ID
+superstep runs cancel RUN_ID
+```
+
+`run` mở cùng socket với bảng chạy và giữ socket đến khi lần chạy kết thúc.
+Thoát 0 là `ok` hoặc `paused`. Thoát 1 là `error`. Thoát 2 là `waiting`: câu
+hỏi được in ra và CLI không trả lời. Thoát 3 là hết giờ. Mặc định là 300 giây,
+rồi CLI gửi cancel. Thoát 4 là `cancelled`.
+
+## Kiểm tra trên CI
+
+Cài CLI, export `SUPERSTEP_URL` và `SUPERSTEP_TOKEN`, rồi chạy bộ kiểm tra.
+`--mock` chạy nút LLM ngoại tuyến. File JUnit là `superstep-junit.xml` trừ khi
+`--junit` chỉ đường khác. Tiến trình thoát 1 khi một ca thất bại hoặc suite bị
+hủy hay lỗi.
+
+```bash
+pip install 'superstep[cli]'
+export SUPERSTEP_URL=http://localhost:8000
+export SUPERSTEP_TOKEN
+superstep test --all --mock --junit superstep-junit.xml
+```
+
+## MCP
+
+`superstep mcp` nói MCP trên stdin và stdout. Chạy `superstep login` trước, hoặc
+đặt `SUPERSTEP_URL` và `SUPERSTEP_TOKEN`. Bật MCP cho workflow trong studio.
+Lệnh không tạo workflow token và không nhét token vào cấu hình client.
+
+```json
+{
+  "mcpServers": {
+    "superstep": {
+      "command": "superstep",
+      "args": ["mcp", "Support"]
+    }
+  }
+}
+```
+
+Thay `Support` bằng tên workflow. Nhiều tên là một tiến trình.
 
 ## Smoke test trên CI
 
