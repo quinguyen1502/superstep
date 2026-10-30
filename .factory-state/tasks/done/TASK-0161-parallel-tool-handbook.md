@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0161
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Requirement IDs: REQ-0076
 - Design IDs: none
 - Architecture IDs: DEC-0069
@@ -97,8 +97,8 @@ The handbook, the changelog and the operator docs describe parallel tool calls, 
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0076 (DEC-0069). Medium-task workflow.
+- 2026-10-30: delivered with TASK-0158 to TASK-0160 on PR #213 (`69d55a2`). Review of that PR left no blockers after `b16c468`. QA: the handbook build and the Support team e2e passed, and CI on `b16c468` was green. Owner merged. Moved to done. REQ-0076's tasks are all done.
 
 ## Handoff Notes
 
-- Do not start a branch until the owner confirms this set and TASK-0157 to TASK-0160 have merged. The next skill is `task-start`.
-- This task closes the requirement's docs and e2e criteria. It does not mark REQ-0076 done. That waits until every task is done.
+- The handbook (en, vi), `STUDIO_AGENT_PARALLEL_TOOLS`, and the CHANGELOG describe the default of 4 and the per-node switch.

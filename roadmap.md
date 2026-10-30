@@ -345,13 +345,13 @@ When LangSmith tracing is on, the rating is sent as feedback on the run.
 ## Parallel Agent tool calls
 
 REQ-0076, planned on 2026-10-27 (DEC-0069, CLAR-0007). Medium-task workflow. A round's tool calls run together.
-Each call keeps its own ledger entry. The owner confirmed this set on 2026-10-27. TASK-0157 is done and not merged. The others are not started.
+Each call keeps its own ledger entry. The owner confirmed this set on 2026-10-27. All five tasks are merged.
 
-- TASK-0157 Engine: one wave of tool slots, the cap, result order, the node setting off, and one checkpoint per wave. **done** (REV-0136, QA-0137; PR #206, not merged)
-- TASK-0158 Approvals and child runs inside a wave: the other calls finish, and the parent resumes once. **planned**
-- TASK-0159 The per-node switch and overlapping trace bars. **planned**
-- TASK-0160 Python, LangGraph project and TypeScript exports run the calls concurrently. **planned**
-- TASK-0161 Handbook (en, vi), env var, CHANGELOG, and the Support team e2e. **planned**
+- TASK-0157 Engine: one wave of tool slots, the cap, result order, the node setting off, and one checkpoint per wave. **merged** (PR #206; REV-0136, QA-0137).
+- TASK-0158 Approvals and child runs inside a wave: the other calls finish, and the parent resumes once. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
+- TASK-0159 The per-node switch and overlapping trace bars. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
+- TASK-0160 Python, LangGraph project and TypeScript exports run the calls concurrently. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
+- TASK-0161 Handbook (en, vi), env var, CHANGELOG, and the Support team e2e. **merged** (PR #213). Review of PR #213. QA: CI on `b16c468`.
 
 ## Accepted, not planned yet
 

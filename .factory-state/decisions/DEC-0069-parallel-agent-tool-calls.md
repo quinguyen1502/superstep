@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Decision ID: DEC-0069
-- Status: Accepted. The owner answered CLAR-0007 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến CLAR-0009 theo đề xuất, rồi merge #200"). This record is the graph those answers run on.
+- Status: Accepted. The owner answered CLAR-0007 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến CLAR-0009 theo đề xuất, rồi merge #200"). Delivered on 2026-10-30 (PR #206 and PR #213).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Related Requirements: REQ-0076 (CLAR-0007), REQ-0072, REQ-0073
 - Related Architecture:
   - DEC-0009 (layers)

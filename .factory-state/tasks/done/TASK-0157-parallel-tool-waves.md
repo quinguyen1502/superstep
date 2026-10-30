@@ -7,7 +7,7 @@
 - Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Requirement IDs: REQ-0076
 - Design IDs: none
 - Architecture IDs: DEC-0069, DEC-0063, DEC-0018
@@ -108,6 +108,7 @@ An Agent round runs its tool calls as one superstep of distinct slots, capped, o
 - 2026-10-27: REV-0136. Approved for QA. No blocking findings. `roadmap.md` conflicts with `origin/develop` and is resolved on the later rebase.
 - 2026-10-27: QA-0137. Pass with follow-up. `cd backend && .venv/bin/python -m pytest -q` on `2a41b76` — 781 passed, 57 skipped. No acceptance criterion failed. The task stays in review.
 - 2026-10-27: owner asked to finish the PR. Moved to done. REV-0136 approved for QA. QA-0137 passed with follow-up. Not merged.
+- 2026-10-30: merged in PR #206. TASK-0158 to TASK-0161 are done in PR #213.
 
 ## Handoff Notes
 

@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0076
-- Status: Accepted on 2026-10-27 with the CLAR-0007 answers (all recommended options). Planned on 2026-10-27 (DEC-0069, TASK-0157 to TASK-0161).
+- Status: Accepted on 2026-10-27 with the CLAR-0007 answers (all recommended options). Planned on 2026-10-27. Merged on 2026-10-30 (PR #206 and PR #213, DEC-0069, TASK-0157 to TASK-0161).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Source: owner request in chat on 2026-10-27 ("3 hướng có thể làm thì bạn viết REQ trước đi"), from what REQ-0073
   left out: "A round's tool calls still run one after another".
 

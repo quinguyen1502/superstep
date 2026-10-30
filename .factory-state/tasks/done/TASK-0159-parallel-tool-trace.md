@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0159
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Requirement IDs: REQ-0076
 - Design IDs: none
 - Architecture IDs: DEC-0069
@@ -93,8 +93,8 @@ A builder can turn parallel tool calls off on one Agent node, and a round's call
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0076 (DEC-0069). Medium-task workflow. No design artifact: CLAR-0007 fixes the setting and the overlapping bars.
+- 2026-10-30: delivered with TASK-0158, TASK-0160 and TASK-0161 on PR #213 (`69d55a2`). Review of that PR left no blockers after `b16c468`. QA: the bar test and the Support team e2e passed, and CI on `b16c468` was green. Owner merged. Moved to done.
 
 ## Handoff Notes
 
-- Do not start a branch until the owner confirms this set and TASK-0157 has merged. The next skill is `task-start`.
-- Verify the switch and the bars in the browser when implementing. A unit test of the bar geometry is required here; the Support team e2e is TASK-0161.
+- The Agent setting `parallel_tool_calls: false` forces one call. Tool bars of one superstep share a start.

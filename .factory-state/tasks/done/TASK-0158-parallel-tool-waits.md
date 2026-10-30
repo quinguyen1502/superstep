@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0158
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Requirement IDs: REQ-0076
 - Design IDs: none
 - Architecture IDs: DEC-0069, DEC-0066, DEC-0063, DEC-0018
@@ -100,8 +100,9 @@ A wave that pauses for an approval or a child run lets the other calls finish, a
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0076 (DEC-0069). Medium-task workflow.
+- 2026-10-30: delivered with TASK-0159 to TASK-0161 on PR #213 (`69d55a2`). Review of that PR left no blockers after `b16c468`. QA: CI on `b16c468` was green, including backend pytest on SQLite and Postgres. Owner merged. Moved to done.
 
 ## Handoff Notes
 
-- Do not start a branch until the owner confirms this set and TASK-0157 has merged. The next skill is `task-start`.
-- TASK-0161's e2e waits on this task for two desks in one round.
+- A wave stores every approval and child wait and resumes the parent once. Answering one slot leaves the others open.
+- The studio, the inbox, and a published chat name the question on screen. The answer is stored before that slot's wait is closed.

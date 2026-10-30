@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0160
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
-- Updated: 2026-10-27
+- Updated: 2026-10-30
 - Requirement IDs: REQ-0076
 - Design IDs: none
 - Architecture IDs: DEC-0069, DEC-0063
@@ -97,8 +97,8 @@ The Python, LangGraph project and TypeScript exports run one round's tool calls 
 ## Activity Log
 
 - 2026-10-27: planned from REQ-0076 (DEC-0069). Medium-task workflow.
+- 2026-10-30: delivered with TASK-0158, TASK-0159 and TASK-0161 on PR #213 (`69d55a2`). Review of that PR left no blockers after `b16c468`. QA: the Python overlap test passed, and CI on `b16c468` was green. The TypeScript `waveCap` reads the cap through `env()`. Owner merged. Moved to done.
 
 ## Handoff Notes
 
-- Do not start a branch until the owner confirms this set and TASK-0157 has merged. The next skill is `task-start`.
-- TASK-0161 updates the handbook samples that quote the generated graph.
+- Python, the LangGraph project and TypeScript run a round together when the Agent setting is on, and one call at a time when it is off.
