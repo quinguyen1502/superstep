@@ -60,6 +60,7 @@ không sao chép được hai node này. Start nhận input của run làm state
 | Model | Chọn trong danh sách model của nhà cung cấp, hoặc gõ tay. |
 | Prompt template | Văn bản có tham chiếu `{{state.field}}` và filter. |
 | Trường output | Trường của state nhận câu trả lời. |
+| Đưa tệp đính kèm vào | Gửi các tệp của chat trong trường chứa tệp (mặc định `files`) cho mô hình: tài liệu dưới dạng văn bản sau prompt, hình ảnh dưới dạng ảnh nếu mô hình xem được ảnh (mô hình khác nhận một ghi chú nêu tên ảnh). Xem [Tệp đính kèm](../run/chat.md#tep-inh-kem). |
 
 Trong lúc chạy, từng đoạn token tới dưới dạng sự kiện `node_token` và hiện ở
 dòng Logs lẫn tab Output. Các đoạn này không lưu vào lịch sử run; văn bản cuối
