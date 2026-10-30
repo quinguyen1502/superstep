@@ -82,4 +82,5 @@ Bring the factory records in line with what is merged on `develop`. Records only
 
 ## Handoff Notes
 
+- Review: `.factory-state/artifacts/REV-0149-task-0173.md`. QA: `.factory-state/artifacts/QA-0149-task-0173.md`.
 - Stale branches found by the audit are listed in the PR description; none were deleted.
