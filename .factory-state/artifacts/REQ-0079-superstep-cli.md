@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0079
-- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is merged (DEC-0068, TASK-0149 to TASK-0156). Phase 2 is planned (DEC-0071, TASK-0167 to TASK-0172). The owner confirmed the set on 2026-10-30. TASK-0167 is merged (PR #214, REV-0143, QA-0143, merge `4d0ed17`).
+- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is merged (DEC-0068, TASK-0149 to TASK-0156, PRs #203, #205 and #207 to #212). Phase 2 is planned (DEC-0071, TASK-0167 to TASK-0172), confirmed by the owner on 2026-10-30. TASK-0167 to TASK-0171 are merged (PRs #214 to #218). TASK-0172 (handbook) is in PR #219, not merged. Not released; the next `v*` release ships it.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30

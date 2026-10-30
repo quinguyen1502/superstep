@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0071
-- Status: Accepted. The owner confirmed the task set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`).
+- Status: Accepted. The owner confirmed the task set on 2026-10-30. TASK-0167 to TASK-0171 are merged (PRs #214 to #218). TASK-0172 is in PR #219.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
