@@ -163,9 +163,11 @@ def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path
             docker.copy_to(folder, project, "postgres", "/tmp/superstep-restore.dump", members[db_name])
             docker.exec_bytes(folder, project, "postgres", _PG_RESTORE)
             docker.copy_to(folder, project, "api", "/data/secret.key", secret)
+            _own(docker, folder, project, "api", "/data/secret.key")
         else:
             docker.copy_to(folder, project, "superstep", "/data/studio.db", members[db_name])
             docker.copy_to(folder, project, "superstep", "/data/secret.key", secret)
+            _own(docker, folder, project, "superstep", "/data/studio.db", "/data/secret.key")
     finally:
         docker.compose(folder, project, ["up", "-d"])
     url = record.get("public_url") or ""
@@ -242,6 +244,14 @@ def _dump(docker: Docker, directory: str, record: dict) -> tuple[str, bytes]:
             return "database.sqlite", docker.copy_from(directory, project, "superstep", "/data/studio.db")
         finally:
             docker.compose(directory, project, ["up", "-d"])
+
+
+def _own(docker: Docker, directory: str, project: str, service: str, *paths: str) -> None:
+    """`docker compose cp` writes as root. The image process is `studio` and must be able to open the files."""
+    docker.compose(directory, project, [
+        "run", "--rm", "--no-deps", "--user", "root", "--entrypoint", "chown",
+        service, "studio:studio", *paths,
+    ])
 
 
 def _secret_bytes(docker: Docker, directory: Path, record: dict, env: dict) -> bytes:

@@ -5,6 +5,12 @@ khoản, phân quyền, nhà cung cấp, kênh duyệt và các môi trường c
 
 <div class="grid cards" markdown>
 
+-   :material-console-line:{ .lg .middle } **[CLI](cli.md)**
+
+    ---
+
+    Cài đặt, nâng cấp, sao lưu và smoke test trên CI.
+
 -   :material-docker:{ .lg .middle } **[Triển khai bằng Compose](deploy.md)**
 
     ---

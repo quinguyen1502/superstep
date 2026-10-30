@@ -58,6 +58,7 @@ nav:
       - Kiểm thử workflow: run/tests.md
   - Vận hành:
       - operate/index.md
+      - CLI: operate/cli.md
       - Triển khai bằng Compose: operate/deploy.md
       - Tài khoản và bảo mật: operate/accounts.md
       - Vai trò và chia sẻ: operate/access.md

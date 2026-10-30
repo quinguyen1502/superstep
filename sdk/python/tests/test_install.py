@@ -94,7 +94,12 @@ def test_install_single_and_full_pin_images_and_modes(tmp_path):
         assert code == 0 and err == "" and body["admin_password"]
         compose = (directory / "compose.yml").read_text(encoding="utf-8")
         assert marker in compose and "build:" not in compose and ":latest" not in compose
-        if topology == "full":
+        if topology == "single":
+            assert 'volumes: ["data:/data"]' in compose
+        else:
+            assert 'volumes: ["pgdata:/var/lib/postgresql/data"]' in compose
+            assert 'volumes: ["redisdata:/data"]' in compose
+            assert 'volumes: ["apidata:/data"]' in compose
             assert "inst_pgdata" not in compose
             assert f"{directory.name}_pgdata" in compose
         assert stat.S_IMODE((directory / ".env").stat().st_mode) == 0o600

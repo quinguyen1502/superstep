@@ -163,6 +163,24 @@ def test_failed_health_restores_the_previous_tag(tmp_path, monkeypatch, mode):
     assert any(call[0] == "compose" and call[2] == ("up", "-d") for call in docker.calls[log_at + 1:])
 
 
+def test_health_fail_hook_rolls_back_a_healthy_target(tmp_path, monkeypatch):
+    monkeypatch.setenv("SUPERSTEP_UPGRADE_HEALTH_FAIL", "1")
+    monkeypatch.setattr(superstep, "__version__", "1.2.4")
+    directory = layout(tmp_path)
+    docker = UpgradeDocker(wait=True, ok=True)
+    code, out, _err = invoke(
+        ["--json", "upgrade", "--dir", str(directory), "--to", "1.2.4"],
+        docker,
+    )
+    assert code != 0 and out
+    body = json.loads(out)
+    assert body["ok"] is False and body["error"]["code"] == "ROLLED_BACK"
+    assert saved(directory)["version"] == "1.2.3"
+    compose = (directory / "compose.yml").read_text(encoding="utf-8")
+    assert f"{APP}:1.2.3" in compose and f"{APP}:1.2.4" not in compose
+    assert not any(call[0] == "health" for call in docker.calls)
+
+
 def test_check_prints_the_difference_and_changes_nothing(tmp_path):
     directory = layout(tmp_path)
     before = (directory / "instance.json").read_text(encoding="utf-8")

@@ -1,6 +1,7 @@
 """`upgrade`. Backs up, moves to a pinned version, and restores that backup on a failed health check."""
 from __future__ import annotations
 
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -151,7 +152,12 @@ def _rollback(directory: Path, record: dict, docker: Docker, archive: Path) -> P
 
 
 def _healthy(docker: Docker, url: str) -> bool:
-    """Same wait as install, then `data.ok`. A timeout or `ok` other than true is a failure."""
+    """Same wait as install, then `data.ok`. A timeout or `ok` other than true is a failure.
+
+    `SUPERSTEP_UPGRADE_HEALTH_FAIL=1` is the smoke-test hook. It is not an operator flag.
+    """
+    if os.environ.get("SUPERSTEP_UPGRADE_HEALTH_FAIL") == "1":
+        return False
     if not url:
         return False
     if not docker.wait_healthy(url):
