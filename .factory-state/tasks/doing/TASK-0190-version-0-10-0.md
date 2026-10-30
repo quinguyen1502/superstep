@@ -55,5 +55,5 @@ release (TASK-0139):
 
 ## Activity Log
 
-- 2026-10-31: full verify on develop 59836bb2 passed; the full e2e run failed 6 tests (4 stale specs, 1 trace bug).
+- 2026-10-31: full verify on develop 59836bb2 passed; the full e2e run failed 6 tests (stale specs and a trace bug).
   Fixed here; version bump and CHANGELOG heading.
