@@ -24,6 +24,7 @@ export function ApprovalsPage() {
   const { t } = useTranslation()
   const [items, setItems] = useState<InboxItem[] | null>(null); const [err, setErr] = useState('')
   const [busy, setBusy] = useState<string | null>(null); const [sent, setSent] = useState<string[]>([])
+  const rowKey = (it: InboxItem) => `${it.run_id}:${it.node}`
   const [now, setNow] = useState(() => Date.now())
   const load = () => api<InboxItem[]>('/api/approvals/inbox').then(xs => { setItems(xs); setErr(''); setNow(Date.now()) }).catch(e => setErr(e.message))
   useEffect(() => {
@@ -32,8 +33,8 @@ export function ApprovalsPage() {
     return () => { clearInterval(id); window.removeEventListener('focus', load) }
   }, [])
   const answer = async (it: InboxItem, response: string) => {
-    setBusy(it.run_id); setErr('')
-    try { await api(`/api/approvals/inbox/${it.run_id}`, { method: 'POST', json: { response, node: it.node } }); setSent(s => [...s, it.run_id]) }
+    const key = rowKey(it); setBusy(key); setErr('')
+    try { await api(`/api/approvals/inbox/${it.run_id}`, { method: 'POST', json: { response, node: it.node } }); setSent(s => s.includes(key) ? s : [...s, key]) }
     catch (e: any) { setErr(e.message) } finally { setBusy(null); load() }
   }
   return <div className="min-h-dvh bg-background text-foreground">
@@ -68,7 +69,7 @@ export function ApprovalsPage() {
         </CardHeader>
         <CardContent className="space-y-3 px-4">
           {it.prompt && <p className="whitespace-pre-wrap text-sm" data-testid="inbox-question">{it.prompt}</p>}
-          <HumanAnswer busy={busy === it.run_id} onRespond={r => answer(it, r)} />
+          <HumanAnswer busy={busy === rowKey(it)} onRespond={r => answer(it, r)} />
         </CardContent>
       </Card>)}
     </main>

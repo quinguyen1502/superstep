@@ -1722,7 +1722,7 @@
     "since": "Chờ từ {{when}}",
     "openRun": "Mở run",
     "open": "Mở trang Duyệt",
-    "sent": "Đã gửi câu trả lời. Run tiếp tục.",
+    "sent": "Đã gửi câu trả lời.",
     "due": "Hạn {{when}}",
     "overdue": "Quá hạn"
   },

@@ -90,6 +90,18 @@ def test_the_panel_answers_the_slot_it_shows_and_the_next_question_follows(c):
     assert {r.status for r in approval_service().repo.requests_for_run(rid)} == {"superseded"}
 
 
+def test_a_lost_checkpoint_write_leaves_the_wait_open(c, monkeypatch):
+    uid = user(c)["id"]; rid = waiting(uid); svc = run_service()
+    monkeypatch.setattr(svc.runs, "update_waiting", lambda rid, fn: None)
+    with pytest.raises(AppError) as e:
+        svc.plan(uid, {"resume_run_id": rid, "response": "approved", "node": A})
+    assert e.value.code == "RUN_NOT_WAITING"
+    assert approval_service().repo.open_wait(rid, A) and approval_service().repo.open_wait(rid, B)
+    assert {r.status for r in approval_service().repo.requests_for_run(rid)} == {"pending"}
+    cp = checkpoint(rid)
+    assert [w["node"] for w in cp["waits"]] == [A, B] and "answers" not in cp
+
+
 def test_the_inbox_answers_the_row_it_shows(c):
     u = user(c); rid = waiting(u["id"])
     r = c.post(f"/api/approvals/inbox/{rid}", json={"response": "rejected", "node": B}, headers=H(u["token"]))

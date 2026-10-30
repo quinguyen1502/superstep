@@ -340,30 +340,32 @@ class RunService:
         return {"child_run_id": r.id, "status": r.status, "output": json.loads(r.final_state or "null"),
                 **({"error": error} if error else {}), **({"usage": usage} if usage else {})}
 
-    def absorb_wave(self, rid: str, node: Optional[str] = None, value=None, child: Optional[dict] = None) -> str:
-        """Store one settled wait of a wave. 'plain' when this run is not waiting on a wave, 'stay' when other waits
-        remain, 'go' when this was the last and the checkpoint is ready for the one resume (TASK-0158)."""
-        def apply(cp: dict) -> str:
+    def absorb_wave(self, rid: str, node: Optional[str] = None, value=None, child: Optional[dict] = None) -> tuple[str, bool]:
+        """Store one settled wait of a wave. The string is 'plain' when this run is not waiting on a wave, 'stay' when
+        other waits remain, 'go' when this was the last and the checkpoint is ready for the one resume (TASK-0158).
+        The bool is whether this call stored the settle. A lost compare-and-set stores nothing, so the caller must not
+        close the wait first."""
+        def apply(cp: dict) -> tuple[str, bool]:
             waits = cp.get("waits")
-            if not isinstance(waits, list): return "plain"
-            if not waits: return "go" if cp.get("wave_ready") else "plain"
+            if not isinstance(waits, list): return "plain", False
+            if not waits: return ("go" if cp.get("wave_ready") else "plain"), False
             if child is not None:
                 cid = child.get("child_run_id")
                 hit = next((w for w in waits if w.get("kind") == "child" and w.get("run_id") == cid), None)
-                if hit is None: return "go" if cp.get("wave_ready") else "stay"
+                if hit is None: return ("go" if cp.get("wave_ready") else "stay"), False
                 cp.setdefault("children", {})[hit["node"]] = child
             else:
                 hit = next((w for w in waits if w.get("kind") == "approval" and w.get("node") == node), None)
-                if hit is None: return "go" if cp.get("wave_ready") else "stay"
+                if hit is None: return ("go" if cp.get("wave_ready") else "stay"), False
                 cp.setdefault("answers", {})[hit["node"]] = value
             cp["waits"] = [w for w in waits if w is not hit]
             if cp["waits"]:
                 cp["_next_wait"] = _follow_up_wait(cp)  # the panel's next question; update_waiting appends it and drops the key
-                return "stay"
+                return "stay", True
             cp["wave_ready"] = True
-            return "go"
+            return "go", True
         got = self.runs.update_waiting(rid, apply)
-        return got if got is not None else "plain"
+        return got if isinstance(got, tuple) else ("plain", False)
 
     def _wave_plan(self, r: Run, steps: Optional[int], until: Optional[str]) -> RunPlan:
         """The one resume of a settled wave: every stored answer and child result, re-entering every slot."""
@@ -387,7 +389,7 @@ class RunService:
         if p is None or p.status != "waiting": return False
         cp = json.loads(p.checkpoint or "{}")
         if isinstance(cp.get("waits"), list):
-            if self.absorb_wave(p.id, child=self.child_value(r)) != "go": return False
+            if self.absorb_wave(p.id, child=self.child_value(r))[0] != "go": return False
             enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "wave": True})
             return True
         if ((cp.get("wait") or {}).get("run_id")) != rid: return False
@@ -543,13 +545,13 @@ class RunService:
         if child is None and response is not None: response = human_response(response)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         if isinstance(cp.get("waits"), list):
-            if child is not None: outcome = self.absorb_wave(rid, child=child)
+            if child is not None: outcome, wrote = self.absorb_wave(rid, child=child)
             else:
                 node = _approval_node(cp, node)  # never guess among several: the panel names the question it is showing
                 if node is None or response is None: raise AppError("RUN_NOT_WAITING")
-                if self.approvals is not None and not via_channel and not self.approvals.answered_slot(rid, node):
-                    raise AppError("RUN_NOT_WAITING")  # this slot was already answered; a sibling stays open
-                outcome = self.absorb_wave(rid, node=node, value=response)
+                outcome, wrote = self.absorb_wave(rid, node=node, value=response)
+                if wrote and self.approvals is not None and not via_channel:
+                    self.approvals.answered_slot(rid, node)  # stored first: a lost claim does not drop the answer
             if outcome == "stay":
                 fresh = self.runs.get(rid)
                 evs = json.loads(fresh.events or "[]") if fresh is not None else []
