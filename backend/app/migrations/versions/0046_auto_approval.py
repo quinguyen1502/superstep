@@ -2,8 +2,8 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0045_auto_approval"
-down_revision = "0044_chat_attachments"
+revision = "0046_auto_approval"
+down_revision = "0045_chat_active_agent"
 
 AUDIT = (("auto_outcome", sa.Text()), ("auto_confidence", sa.Float()), ("auto_model", sa.Text()), ("auto_reason", sa.Text()),
          ("auto_rules", sa.Text()), ("policy_hash", sa.Text()), ("agreed", sa.Boolean()))
