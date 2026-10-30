@@ -17,6 +17,7 @@ class ChatSession(Base):
     visitor: Mapped[Optional[str]] = mapped_column(Text)  # an anonymous visitor's id (phase 2)
     title: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     last_run_id: Mapped[Optional[str]] = mapped_column(Text)
+    active_agent: Mapped[Optional[str]] = mapped_column(Text)  # the Agent a hand-off left the conversation with (TASK-0181)
     created: Mapped[float] = mapped_column(Float, nullable=False)
     updated: Mapped[float] = mapped_column(Float, nullable=False, index=True)  # the retention clock
 

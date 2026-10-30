@@ -75,6 +75,10 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     if until is not None and until not in nodes:
         raise ValidationError([f"Node '{until}' is not in the workflow"])
     if resume: inputs = dict(resume.get("state") or {})
+    elif agents.START_INPUT in inputs:  # private from here on, so the state and the trace never show it
+        go = inputs[agents.START_INPUT]
+        inputs = {k: v for k, v in inputs.items() if k != agents.START_INPUT}
+        if isinstance(go, str) and go: inputs[agents.START_KEY] = go
     state = dict(inputs); cp_state, cp_counts = dict(state), dict(counts); first = True
 
     def meta(nid):
