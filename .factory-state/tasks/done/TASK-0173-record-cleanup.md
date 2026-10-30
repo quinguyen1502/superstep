@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0173
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -78,6 +78,7 @@ Bring the factory records in line with what is merged on `develop`. Records only
 ## Activity Log
 
 - 2026-10-30: owner approved the record cleanup after the audit. Branch `factory/task-0173-record-cleanup` from `develop` at `f8b3aa1`. Status lines updated. Moved to review with the PR.
+- 2026-10-30: owner approved the merge of PR #220. CI green (15 pass). Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
