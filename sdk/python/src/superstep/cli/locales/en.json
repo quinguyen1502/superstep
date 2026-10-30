@@ -231,5 +231,9 @@
   "error.suite_not_found": "Test suite not found.",
   "error.suite_running": "The tests of this workflow are already running.",
   "error.test_target": "Pass a workflow, or --all.",
-  "help.suite_timeout": "Seconds to wait for the suite. The default is 300."
+  "help.suite_timeout": "Seconds to wait for the suite. The default is 300.",
+  "help.mcp": "Serve the named workflows as MCP tools. This process speaks MCP on stdio.",
+  "help.mcp_workflow": "Workflow id or exact name.",
+  "example.mcp": "Example: superstep mcp invoices",
+  "error.mcp_disabled": "MCP is off for {name}, or you cannot open it."
 }

@@ -25,4 +25,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
+      - run: python -m pip install 'mcp>=1.12,<2'
       - run: python -m pytest -q
+        env:
+          SUPERSTEP_MCP_TEST: "1"

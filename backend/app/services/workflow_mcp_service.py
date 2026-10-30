@@ -1,11 +1,12 @@
-"""Workflows as MCP tools (TASK-0114, DEC-0061): what the MCP server at /mcp lists and calls for a workflow token.
+"""Workflows as MCP tools (TASK-0114, DEC-0061): what the MCP server at /mcp lists and calls.
 
-A workflow token (`wft_…`, the public API's credential) scopes a client to one workflow, so the server it sees has
-three tools: `run_<workflow>` (input schema = the workflow's state fields), `get_run` and `resume_run`. The owner opts
-the workflow in (`mcp_enabled`, under API in the editor); otherwise every call answers MCP_SERVER_DISABLED. Runs are
-ordinary queued API runs (history source `api`, same rate limit and input checks as POST /api/hooks/.../runs).
-A run that pauses at a Human node returns `status: waiting` with its `run_id` and prompt; `resume_run` answers it.
-This module has no MCP dependency: `api/mcp_server.py` adapts it to the SDK."""
+A workflow token (`wft_…`) scopes a client to one workflow. A personal access token does not: the API layer checks
+that the user can open the workflow named by `X-Superstep-Workflow` and calls `tools_for` / `call_for` with the user
+id, the workflow id and the PAT id (TASK-0171). No `WorkflowToken` row is created for a PAT. Either way the client
+sees three tools: `run_<workflow>` (input schema = the workflow's state fields), `get_run` and `resume_run`. The owner
+opts the workflow in (`mcp_enabled`); otherwise every call answers MCP_SERVER_DISABLED. Runs are ordinary queued API
+runs (history source `api`). A run that pauses at a Human node returns `status: waiting`; `resume_run` answers it.
+This module has no MCP or FastAPI dependency: `api/mcp_server.py` adapts it to the SDK."""
 from __future__ import annotations
 import asyncio, json, re
 from typing import Any, Optional
@@ -48,8 +49,12 @@ class WorkflowMcpService:
         if w is None or not w.mcp_enabled: raise AppError("MCP_SERVER_DISABLED")
         return tok
 
-    def tools(self, tok: WorkflowToken) -> list[dict]:
-        w = self.workflows.get(tok.workflow_id)
+    def _open(self, wid: str):
+        w = self.workflows.get(wid)
+        if w is None or not w.mcp_enabled: raise AppError("MCP_SERVER_DISABLED")
+        return w
+
+    def _definitions(self, w) -> list[dict]:
         wf = json.loads(w.data or "{}")
         desc = (wf.get("description") or "").strip()
         run = {"name": tool_name(w.name), "title": w.name or "Workflow",
@@ -65,6 +70,14 @@ class WorkflowMcpService:
                  "input_schema": {"type": "object", "properties": {**RUN_ID, "response": {"type": ["string", "boolean"], "description": "The answer."}},
                                   "required": ["run_id", "response"]}}]
 
+    def tools(self, tok: WorkflowToken) -> list[dict]:
+        return self._definitions(self.workflows.get(tok.workflow_id))
+
+    def tools_for(self, uid: str, wid: str, pat_id: str) -> list[dict]:
+        """The same three tools as `tools`, for a personal access token that the API layer already admitted."""
+        if not uid or not pat_id: raise AppError("TRIGGER_TOKEN_INVALID")
+        return self._definitions(self._open(wid))
+
     async def call(self, tok: WorkflowToken, name: str, args: dict[str, Any]) -> dict:
         """Run the tool; the public run result (`hooks` GET shape). Raises AppError."""
         timeout = min(config.sync_wait_max(), config.run_timeout() + 5)
@@ -75,6 +88,22 @@ class WorkflowMcpService:
             return await self.triggers.wait(tok, rid, timeout, since)
         w = await asyncio.to_thread(self.workflows.get, tok.workflow_id)
         if name != tool_name(w.name): raise AppError("MCP_TOOL_NOT_FOUND", tool=name)
-        await self.triggers.check_rate(tok)
+        await self.triggers.check_rate(key=self.triggers.rate_key(tok))
         rid = await asyncio.to_thread(self.triggers.start, tok, args, None)
         return await self.triggers.wait(tok, rid, timeout)
+
+    async def call_for(self, uid: str, wid: str, pat_id: str, name: str, args: dict[str, Any]) -> dict:
+        """`call` for a personal access token: the run owner is the user, the rate key is `pat:{id}:{workflow}`."""
+        if not uid or not pat_id: raise AppError("TRIGGER_TOKEN_INVALID")
+        timeout = min(config.sync_wait_max(), config.run_timeout() + 5)
+        if name == GET_RUN: return await asyncio.to_thread(self.triggers.result, None, str(args.get("run_id") or ""), wid, uid)
+        if name == RESUME_RUN:
+            rid = str(args.get("run_id") or "")
+            since = await asyncio.to_thread(self.triggers.resume, None, rid, args.get("response"), wid, uid)
+            return await self.triggers.wait(None, rid, timeout, since, wid, uid)
+        w = await asyncio.to_thread(self._open, wid)
+        if name != tool_name(w.name): raise AppError("MCP_TOOL_NOT_FOUND", tool=name)
+        await self.triggers.check_rate(key=self.triggers.rate_key(pat_id=pat_id, workflow_id=wid))
+        self.triggers.check_input(args)
+        rid = await asyncio.to_thread(self.triggers.queue, wid, uid, args)
+        return await self.triggers.wait(None, rid, timeout, None, wid, uid)

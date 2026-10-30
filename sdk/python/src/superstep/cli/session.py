@@ -97,7 +97,10 @@ def join_uri(base: str, uri: str) -> str:
 
 def call(method: str, base: str, path: str, client: Optional[httpx.Client] = None, body: Optional[dict] = None,
          token: Optional[str] = None, phase2: bool = False, errors: Optional[dict] = None):
-    """One envelope call. `phase2` turns a missing route into SERVER_TOO_OLD."""
+    """One envelope call. `phase2` turns a missing route into SERVER_TOO_OLD.
+
+    `errors` maps a server code to a catalog key. Omitted, unknown codes stay BAD_RESPONSE, and `_AUTH` still wins.
+    """
     url = base.rstrip("/") + path
     headers = {"Accept": "application/json", "User-Agent": "superstep-cli/" + superstep.__version__}
     if token:
