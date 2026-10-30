@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0189
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -88,6 +88,9 @@ Handbook pages, Playwright e2e in en and vi, screenshots and CHANGELOG for AI au
 - 2026-10-30: planned from REQ-0081 (DEC-0075). Status todo. Not started.
 - 2026-10-30: owner approved implementing REQ-0081 for 0.10.0 and merging the task PRs when CI is green.
 
+- 2026-10-30: implemented on `factory/task-0189-auto-approval-handbook-e2e` from `develop`. Handbook page `run/ai-review.md` in en and vi with links from the Human node, Agent node and Human approval pages; Playwright `e2e/auto-approval.spec.ts` in en and vi with a fixed judge verdict from the fake Ollama API; review screenshots. `factory verify run --profile full` passed. The owner authorized merging the REQ-0081 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0189-auto-approval-handbook-e2e` from `develop`.
+- Review: `.factory-state/artifacts/REV-0173-task-0189.md`. QA: `.factory-state/artifacts/QA-0173-task-0189.md`.

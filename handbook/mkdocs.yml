@@ -49,6 +49,7 @@ nav:
       - run/index.md
       - Runs and traces: run/traces.md
       - Human approval: run/human-approval.md
+      - AI review of approvals: run/ai-review.md
       - API triggers and webhooks: run/api-triggers.md
       - Public API and SDKs: run/public-api.md
       - LangGraph-compatible API: run/agent-server-api.md
