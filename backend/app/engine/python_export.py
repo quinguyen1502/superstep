@@ -304,6 +304,22 @@ def decide(text: str, question: dict) -> Any:
     return float(found.group()) if found else 0.0
 '''
 
+HANDOFF = r'''
+# --- Hand-offs -----------------------------------------------------------------------------------------------
+# An Agent node with hand-off targets offers the model one transfer_to_<agent> tool per target. Calling one ends the
+# agent: its hand-off node records who takes over, and a conditional edge goes to that agent, which continues the
+# conversation. MAX_HANDOFFS bounds a run; past it the tools are gone and the agent answers itself.
+HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Continue it and answer the person yourself."
+NOT_RUN = "Not run: the conversation was handed off"
+NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
+
+
+def carried(messages: list) -> list:
+    """What the next agent sees: the person's messages and the agents' replies, without tool calls and results."""
+    return [{"role": m["role"], "content": m["content"]} for m in messages
+            if m.get("role") == "user" or (m.get("role") == "assistant" and not m.get("tool_calls") and m.get("content"))]
+'''
+
 AGENT = r'''
 # --- Agents --------------------------------------------------------------------------------------------------
 # An Agent node is a loop of two nodes: the model node asks the model, which answers or asks for tool calls, and the
@@ -539,6 +555,7 @@ class _Writer(GraphWriter):
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
+        if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
         if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
         if "routing" in self.uses: self.add("\n" + ROUTING.rstrip())
         if "decide" in self.uses: self.add("\n" + DECIDE.rstrip())
@@ -594,10 +611,14 @@ class _Writer(GraphWriter):
             self.add("# in, and the fields the subgraph changed come back when it ends.")
         chats = [a["chat"] for a in g.agents.values()]
         rows = [(f["name"], self.ann(f)) for f in fields] + [(c, "int") for c in g.cursors.values()] + [(c, "Optional[dict]") for c in chats]
+        if self.has_handoffs(g):  # the pending hand-off, the run's count, and the agent a chat continues with (TASK-0183)
+            rows += [(self.HANDOFF_FIELD, "Optional[dict]"), (self.COUNT_FIELD, "int"), (self.START_FIELD, "str")]
         if rows and all(n.isidentifier() and not keyword.iskeyword(n) for n, _ in rows):
             self.add(f"class {cls}(TypedDict, total=False):")
             for n, a in rows:
-                why = "  # loop position of a For each node" if n in g.cursors.values() else "  # an Agent node's conversation" if n in chats else ""
+                why = "  # loop position of a For each node" if n in g.cursors.values() else "  # an Agent node's conversation" if n in chats else \
+                    {self.HANDOFF_FIELD: "  # a hand-off on its way to the next agent", self.COUNT_FIELD: "  # hand-offs so far in this run",
+                     self.START_FIELD: "  # input: start at this agent (a chat continues with the agent that answered last)"}.get(n, "")
                 self.add(f"    {n}: {a}{why}")
         else:
             body = ", ".join(f"{lit(n)}: {a}" for n, a in rows)
@@ -835,6 +856,11 @@ class _Writer(GraphWriter):
             if isinstance(t, dict) and t.get("source") == "http":
                 self.add(f"{self.http_key(const, t)}_URL = {lit(t.get('url') or '')}")
                 self.add(f"{self.http_key(const, t)}_BODY = {lit(t.get('body') or '')}")
+        hs = self.handoff_tools(g, nid) if "handoff" in a else []
+        if hs:
+            self.add(f"# Hand-offs: the transfer tools the model may call, and the agent each one leads to.")
+            self.add(f"{const}_HANDOFF_TOOLS = {lit(self.handoff_specs(hs))}")
+            self.add(f"{const}_HANDOFFS = {lit({h['name']: {'to': h['node'], 'label': h['label']} for h in hs})}")
         self.add(f"{const}_MAX_ROUNDS = {self.rounds(d)}")
         self.add(f"{const}_PARALLEL = {d.get('parallel_tool_calls') is not False}")
         self.add("")
@@ -846,6 +872,15 @@ class _Writer(GraphWriter):
         self.add(f"    - {model}() asks the model, which answers or asks for tool calls;")
         self.add(f"    - {tool}() runs the waiting tool calls (route_{model}() and route_{tool}() pick the next node);")
         self.add(f"    - {end}() writes the answer.\"\"\"")
+        receiver = nid in self.receivers(g)
+        if receiver:
+            self.add(f"    got = state.get({lit(self.HANDOFF_FIELD)}) or {{}}")
+            self.add(f"    if got.get(\"to\") == {lit(name)}:  # handed off to this agent: the note, then the conversation so far")
+            self.add("        reason = f\" Reason: {got['reason']}.\" if got.get(\"reason\") else \"\"")
+            sys_ = f"render({const}_SYSTEM, state), " if d.get("system_prompt") else ""
+            self.add(f"        system = \"\\n\\n\".join(x for x in ({sys_}HANDOFF_NOTE.format(source=got[\"from\"], reason=reason)) if x)")
+            self.add(f"        messages = [{{\"role\": \"system\", \"content\": system}}] + got[\"messages\"] + [{{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}}]")
+            self.add(f"        return {{{chat}: {{\"messages\": messages, \"pending\": [], \"rounds\": 0, \"steps\": [], \"answer\": None}}, {lit(self.HANDOFF_FIELD)}: None}}")
         self.add("    messages = []")
         if d.get("system_prompt"): self.add(f"    messages.append({{\"role\": \"system\", \"content\": render({const}_SYSTEM, state)}})")
         if d.get("history_field"):
@@ -863,12 +898,32 @@ class _Writer(GraphWriter):
         self.add(f"    chat = dict(state[{chat}])")
         self.add(f"    last = chat[\"rounds\"] >= {const}_MAX_ROUNDS")
         call = "call_agent_files" if attachments.field_of(d) else "call_agent"
-        self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
+        if hs:
+            self.add(f"    can = state.get({lit(self.COUNT_FIELD)}, 0) < MAX_HANDOFFS")
+            self.add("    if not can and not chat.get(\"no_more\"):  # the run's hand-offs are used up: say so once")
+            self.add("        chat[\"messages\"] = [{\"role\": \"system\", \"content\": NO_MORE}] + chat[\"messages\"]")
+            self.add("        chat[\"no_more\"] = True")
+            self.add(f"    tools = {const}_TOOLS + ({const}_HANDOFF_TOOLS if can else [])")
+            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else tools, {lit(d.get('model') or 'gpt-4o-mini')})")
+        else:
+            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
         self.add("    calls = [] if last else [{\"id\": str(c.get(\"id\") or f\"call_{i}\"), \"name\": str(c.get(\"name\") or \"\"), \"args\": c.get(\"args\")}")
         self.add("                             for i, c in enumerate(calls)]")
         self.add("    if not last:")
         self.add("        chat[\"rounds\"] += 1")
         self.add("    chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"assistant\", \"content\": text, **({\"tool_calls\": calls} if calls else {})}]")
+        if hs:
+            self.add(f"    first = next((c for c in calls if c[\"name\"] in {const}_HANDOFFS), None) if can else None")
+            self.add("    if first is not None:  # the hand-off wins: the other calls of the round are answered, not run")
+            self.add(f"        h = {const}_HANDOFFS[first[\"name\"]]")
+            self.add("        for c in calls:")
+            self.add("            said = f\"Handed off to {h['label']}\" if c is first else NOT_RUN")
+            self.add("            chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"tool\", \"tool_call_id\": c[\"id\"], \"name\": c[\"name\"], \"content\": said}]")
+            self.add("            if c is not first:")
+            self.add("                chat[\"steps\"] = chat[\"steps\"] + [{\"tool\": c[\"name\"], \"args\": c[\"args\"], \"result\": NOT_RUN, \"status\": \"not_run\", \"ms\": 0}]")
+            self.add("        reason = str((first[\"args\"] if isinstance(first[\"args\"], dict) else {}).get(\"reason\") or \"\")[:500]")
+            self.add("        chat[\"pending\"], chat[\"handoff\"] = [], {\"to\": h[\"to\"], \"reason\": reason}")
+            self.add(f"        return {{{chat}: chat}}")
         self.add("    chat[\"pending\"] = calls[:MAX_CALLS_PER_ROUND]")
         self.add("    for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run")
         self.add("        why = f\"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round\"")
@@ -880,8 +935,27 @@ class _Writer(GraphWriter):
         self.add("")
         self.add("")
         self.add(f"def route_{model}(state: {cls}) -> str:")
-        self.add("    \"\"\"After a model call: \"tool\" while tool calls wait, else \"done\".\"\"\"")
+        if hs:
+            self.add("    \"\"\"After a model call: \"handoff\" when it handed off, \"tool\" while tool calls wait, else \"done\".\"\"\"")
+            self.add(f"    if state[{chat}].get(\"handoff\"):")
+            self.add("        return \"handoff\"")
+        else:
+            self.add("    \"\"\"After a model call: \"tool\" while tool calls wait, else \"done\".\"\"\"")
         self.add(f"    return \"tool\" if state[{chat}][\"pending\"] else \"done\"")
+        if hs:
+            hn = a["handoff"]
+            self.add("")
+            self.add("")
+            self.add(f"def {hn}(state: {cls}) -> dict:")
+            self.add(f'    """{_doc(who)} hands off: the conversation so far goes to the next agent, and this one ends without answering."""')
+            self.add(f"    chat = state[{chat}]")
+            self.add(f"    handoff = {{\"from\": {lit(who)}, \"to\": chat[\"handoff\"][\"to\"], \"reason\": chat[\"handoff\"][\"reason\"], \"messages\": carried(chat[\"messages\"])}}")
+            self.add(f"    return {{{chat}: None, {lit(self.HANDOFF_FIELD)}: handoff, {lit(self.COUNT_FIELD)}: state.get({lit(self.COUNT_FIELD)}, 0) + 1}}")
+            self.add("")
+            self.add("")
+            self.add(f"def route_{hn}(state: {cls}) -> str:")
+            self.add("    \"\"\"The agent the hand-off goes to.\"\"\"")
+            self.add(f"    return state[{lit(self.HANDOFF_FIELD)}][\"to\"]")
         self.agent_calls(d, name, const, cls)
         self.add("")
         self.add("")
@@ -1009,10 +1083,25 @@ class _Writer(GraphWriter):
                 self.add(f"        raise ValueError({lit(f'unknown tool source {src!r}')})")
         self.add("    raise ValueError(f\"unknown tool {name}\")")
 
+    @staticmethod
+    def start_router(build: str, is_main: bool) -> str: return "route_start" if is_main else f"route_start_{build}"
+
     def build(self, g: _Graph, cls: str, build: str, is_main: bool) -> None:
         name = lambda i: "END" if g.nodes[i]["type"] == "end" else lit(g.names[i])  # noqa: E731
         leave = lambda i: lit(g.agents[i]["exit"]) if i in g.agents else lit(g.names[i])  # an Agent node's edges leave from its end node  # noqa: E731
         cache = any(_number((n.get("data") or {}).get("cache_ttl"), int) is not None for n in g.nodes.values())
+        if (rec := self.receivers(g)):
+            first = [name(e["target"]) for s in g.nodes if g.nodes[s]["type"] == "start" for e in g.out(s) if g.nodes[e["target"]]["type"] != "join"]
+            self.add("")
+            self.add("")
+            self.add(f"{self.start_router(build, is_main).upper()}_AGENTS = {lit([g.names[r] for r in rec])}  # the agents a chat may continue with")
+            self.add("")
+            self.add("")
+            self.add(f"def {self.start_router(build, is_main)}(state: {cls}) -> list:")
+            self.add(f"    \"\"\"Where the run starts: the agent named in {self.START_FIELD}, if it is one a hand-off reaches, else the first node.\"\"\"")
+            self.add(f"    if state.get({lit(self.START_FIELD)}) in {self.start_router(build, is_main).upper()}_AGENTS:")
+            self.add(f"        return [state[{lit(self.START_FIELD)}]]")
+            self.add(f"    return [{', '.join(first)}]")
         self.add("")
         self.add("")
         if is_main:
@@ -1041,7 +1130,8 @@ class _Writer(GraphWriter):
                 kw.append(f"input_schema={_camel(g.names[nid])}Input")
             self.add(f"    builder.add_node({lit(g.names[nid])}, {fn}{''.join(', ' + k for k in kw)})")
             if n["type"] == "agent":
-                for step in ("model", "tool", "exit"): self.add(f"    builder.add_node({lit(g.agents[nid][step])}, {g.agents[nid][step]})")
+                for step in ("model", "tool", "exit", "handoff"):
+                    if step in g.agents[nid]: self.add(f"    builder.add_node({lit(g.agents[nid][step])}, {g.agents[nid][step]})")
             if (timeout := _number(d.get("timeout"))) is not None:
                 self.add(f"    # The studio stops {g.names[nid]} after {timeout} s; LangGraph has no timeout for a node that blocks.")
             if is_main: self.span(nid, s)
@@ -1058,14 +1148,23 @@ class _Writer(GraphWriter):
                 a = {k: lit(v) for k, v in g.agents[nid].items()}
                 self.add("    # The Agent node's loop: the model, then each tool call it asks for, then back to the model.")
                 self.add(f"    builder.add_edge({lit(g.names[nid])}, {a['model']})")
-                self.add(f"    builder.add_conditional_edges({a['model']}, route_{g.agents[nid]['model']}, {{\"tool\": {a['tool']}, \"done\": {a['exit']}}})")
+                more = f", \"handoff\": {a['handoff']}" if "handoff" in a else ""
+                self.add(f"    builder.add_conditional_edges({a['model']}, route_{g.agents[nid]['model']}, {{\"tool\": {a['tool']}, \"done\": {a['exit']}{more}}})")
                 self.add(f"    builder.add_conditional_edges({a['tool']}, route_{g.agents[nid]['tool']}, {{\"tool\": {a['tool']}, \"model\": {a['model']}}})")
+                if "handoff" in a:
+                    to = ", ".join(f"{lit(h['node'])}: {lit(h['node'])}" for h in self.handoff_tools(g, nid))
+                    self.add(f"    builder.add_conditional_edges({a['handoff']}, route_{g.agents[nid]['handoff']}, {{{to}}})  # hand-offs")
             if n["type"] in ("condition", "foreach") and out:
                 if first_edge and n["type"] == "condition":
                     self.add("    # A conditional edge: the router returns a label, and the map says which node it leads to.")
                     first_edge = False
                 mapping = ", ".join(f"{lit(e.get('label'))}: {name(e['target'])}" for e in out)
                 self.add(f"    builder.add_conditional_edges({src}, route_{g.names[nid]}, {{{mapping}}})")
+            elif n["type"] == "start" and self.receivers(g):
+                targets = [e["target"] for e in out if g.nodes[e["target"]]["type"] != "join"]
+                every = ", ".join(dict.fromkeys([name(t) for t in targets] + [lit(g.names[r]) for r in self.receivers(g)]))
+                self.add(f"    # A chat continues with the agent that answered last: {self.START_FIELD} in the input starts there.")
+                self.add(f"    builder.add_conditional_edges(START, {self.start_router(build, is_main)}, [{every}])")
             else:
                 targets = [e["target"] for e in out if g.nodes[e["target"]]["type"] != "join"]
                 if len(targets) > 1:
