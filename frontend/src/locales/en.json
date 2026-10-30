@@ -303,9 +303,13 @@
       "status": {
         "error": "error",
         "refused": "refused",
-        "rejected": "rejected by a reviewer"
+        "rejected": "rejected by a reviewer",
+        "not_run": "not run"
       },
-      "approved": "approved"
+      "approved": "approved",
+      "handoff": "hands off to {{to}}",
+      "handoffReason": "hands off to {{to}}: {{reason}}",
+      "handedOff": "hand-off"
     }
   },
   "import": {
@@ -1972,7 +1976,8 @@
       "running": "Running {{label}}",
       "input": "Input",
       "output": "Output",
-      "errorDetail": "Error"
+      "errorDetail": "Error",
+      "handoff": "to {{to}}"
     },
     "settings": {
       "title": "Chat settings",
@@ -2349,5 +2354,17 @@
     "NODE_REF_FILTER_NO_ARGUMENT": "Node {{node}}: filter '{{filter}}' takes no argument in {{ref}}",
     "NODE_REF_FILTER_NEEDS_TEXT": "Node {{node}}: filter '{{filter}}' needs a text argument in {{ref}}",
     "NODE_REF_FILTER_NEEDS_NUMBER": "Node {{node}}: filter '{{filter}}' needs a number argument in {{ref}}"
+  },
+  "handoff": {
+    "title": "Hand-offs",
+    "add": "Add hand-off",
+    "hint": "The agent can hand the conversation to these agents. The description tells the model when to do it.",
+    "noAgents": "Add another Agent node to hand the conversation to.",
+    "description": "When to hand off",
+    "descriptionPlaceholder": "e.g. Charges, refunds and invoices",
+    "remove": "Remove hand-off to {{name}}",
+    "max": "Hand-off limit per run (whole workflow)",
+    "maxHint": "Empty uses {{n}}. 0 to {{max}}; past it the agents must answer themselves.",
+    "handle": "Drag to another Agent to add a hand-off"
   }
 }

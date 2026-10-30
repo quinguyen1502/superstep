@@ -1,5 +1,5 @@
 schema_version: 1
-status: passed
+status: failed
 profile: full
 results:
 - check_id: policy:backend-test
@@ -28,8 +28,8 @@ results:
   working_dir: frontend
   command: npm run test
   source: .factory-state/tooling/tool-policy.yaml
-  status: passed
-  returncode: 0
+  status: failed
+  returncode: 1
 - check_id: policy:sdk-python-test
   kind: test
   working_dir: sdk/python
