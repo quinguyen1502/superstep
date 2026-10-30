@@ -27,7 +27,7 @@ test('template filters: suggestions, tags, bad filter, edit as text, rendered ru
   await page.keyboard.type(' {{state.order.id | shout}}')
   await expect(prompt.locator('.template-tag').nth(2)).toHaveAttribute('data-known', 'false')
   await page.locator('#save-btn').click()
-  await expect(page.getByText("unknown filter 'shout'").first()).toBeVisible()
+  await expect(page.getByText("không có filter 'shout'").first()).toBeVisible()
 
   // double-click turns the tag back into text; fix it, leave, and it is a tag again
   await prompt.locator('.template-tag').nth(2).dblclick()

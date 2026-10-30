@@ -60,9 +60,9 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     const model = page.locator('.trace-row[data-span="ag/__model#1"]')
     await expect(model.getByTestId('span-round')).toHaveText(T[lang].round)
     await expect(model.getByTestId('span-agent')).toHaveText(T[lang].calls)
-    await expect(page.locator('.trace-row[data-span="ag/__tool#1"]').getByTestId('span-agent')).toContainText('lookup_order → ')
+    await expect(page.locator('.trace-row[data-span="ag/__tool/1#1"]').getByTestId('span-agent')).toContainText('lookup_order → ')
     await shot(page, `agent-trace-${lang}`, '#trace-timeline')
-    await page.locator('.trace-row[data-span="ag/__tool#1"]').click()
+    await page.locator('.trace-row[data-span="ag/__tool/1#1"]').click()
     await expect(page.locator('#trace-detail')).not.toContainText('agent:ag')  // the conversation stays hidden
     await shot(page, `agent-trace-detail-${lang}`, '#trace-detail')
   })

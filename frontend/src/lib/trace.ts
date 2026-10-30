@@ -56,15 +56,15 @@ function alignAgentWave(spans: Span[]) {
 
 export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: string; type?: string } = () => ({})): Trace {
   const spans: Span[] = []; const counts: Record<string, number> = {}; const errors: string[] = []; let summary: RunEvent | undefined
-  let runId: string | undefined; let waitingEv: RunEvent | undefined; let resumed: string | undefined
+  let runId: string | undefined; let waitingEv: RunEvent | undefined; const resumed = new Set<string>()
   const st = { v: (events.length ? 'running' : 'idle') as Trace['status'] }; let final: any
   const open = (n: string) => [...spans].reverse().find(s => s.node === n && s.status === 'running')
   const t = (e: RunEvent, i: number) => e.ts ?? i / 1000
   events.forEach((e, i) => {
     const n = e.node
     if ((e.type === 'run_started' || e.type === 'run_resumed') && e.run_id) runId = e.run_id
-    if (e.type === 'node_started' && n && n === resumed) {
-      resumed = undefined
+    if (e.type === 'node_started' && n && resumed.has(n)) {
+      resumed.delete(n)
       if ([...spans].reverse().some(s => s.node === n && s.status === 'running')) return // resumed Human node keeps its span
     }
     if (e.type === 'node_started' && n) {
@@ -86,8 +86,9 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
     } else if (e.type === 'run_summary') { summary = e
     } else if (e.type === 'run_waiting') { st.v = 'waiting'; waitingEv = e; const s = n ? open(n) : undefined; if (s) { s.status = 'waiting'; s.events.push(e) }
     } else if (e.type === 'run_paused') { st.v = 'paused'; waitingEv = undefined
-    } else if (e.type === 'run_resumed' || e.type === 'run_recovered') { st.v = 'running'; waitingEv = undefined; resumed = n
-      const s = n ? [...spans].reverse().find(x => x.node === n && x.status === 'waiting') : undefined; if (s) { s.status = 'running'; s.events.push(e) } }
+    } else if (e.type === 'run_resumed' || e.type === 'run_recovered') { st.v = 'running'; waitingEv = undefined; resumed.clear(); if (n) resumed.add(n)
+      // a tool wave resumes once for every slot that waited (DEC-0069): each waiting span is reopened and keeps its row
+      spans.forEach(x => { if (x.status === 'waiting') { x.status = 'running'; x.events.push(e); resumed.add(x.node) } }) }
   })
   // Speculative "started" rows (predicted next nodes) that never ran are dropped once the run ends.
   const status = st.v; const done = status !== 'running' && status !== 'idle'

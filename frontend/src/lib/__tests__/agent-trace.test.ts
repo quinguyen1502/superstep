@@ -64,3 +64,21 @@ describe('Agent node in traces and chats (TASK-0118)', () => {
     expect(newTool('knowledge', [])).toMatchObject({ name: 'search_knowledge', top_k: 4 })
   })
 })
+
+describe('a tool wave that waits in two slots (DEC-0069)', () => {
+  it('resumes once and keeps one row per slot', () => {
+    const tool = (slot: number, type: string, extra: Partial<RunEvent> = {}) =>
+      ({ type, node: `agent/__tool/${slot}`, node_type: 'agent_tool', label: 'Supervisor › tool', iteration: 1, ...extra }) as RunEvent
+    const done = (slot: number) => tool(slot, 'node_finished', { superstep: 1, delta: {}, agent: { kind: 'tool', round: 1, tool: `desk_${slot}`, result: 'ok', status: 'ok', ms: 2 } } as Partial<RunEvent>)
+    const trace = buildTrace([
+      tool(1, 'node_started'), tool(2, 'node_started'),
+      { type: 'run_waiting', node: 'agent/__tool/1' }, { type: 'run_waiting', node: 'agent/__tool/2' },
+      { type: 'run_resumed', node: 'agent/__tool/1' },
+      tool(1, 'node_started'), tool(2, 'node_started'), done(2), done(1),
+      { type: 'run_finished', state: {} },
+    ] as RunEvent[])
+    const slots = trace.spans.filter(s => s.node.startsWith('agent/__tool/'))
+    expect(slots.map(s => s.key)).toEqual(['agent/__tool/1#1', 'agent/__tool/2#1'])
+    expect(slots.every(s => s.status === 'done')).toBe(true)
+  })
+})
