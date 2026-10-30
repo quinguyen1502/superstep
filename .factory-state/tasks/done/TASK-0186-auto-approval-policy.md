@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0186
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -90,6 +90,8 @@ Add the `approval.auto` policy to Human nodes and Agent tool approval, with save
 
 - 2026-10-30: planned from REQ-0081 (DEC-0075). Status todo. Not started.
 - 2026-10-30: owner approved implementing REQ-0081 for 0.10.0 and merging the task PRs when CI is green.
+
+- 2026-10-30: implemented on `factory/task-0186-auto-approval-policy` from `develop`. Pure `engine/approval_policy.py` (modes, rules with eight operators and effects human or reject, daily cap, judge settings, min confidence, policy hash), validation issues on Human and Agent nodes, `AUTO_APPROVAL_FORBIDDEN` on saves that turn auto on or change an auto policy by someone other than the owner or an admin, kill switches (`STUDIO_AUTO_APPROVAL`, organisation and per-workflow settings with endpoints under `/api/approvals/auto`), and Alembic revision 0045 with the audit and waiting-step columns. `factory verify run --profile full` passed. The owner authorized merging the REQ-0081 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
