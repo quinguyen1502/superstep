@@ -4,7 +4,7 @@ import re, string
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 from langgraph.cache.memory import InMemoryCache
 from langgraph.graph import StateGraph, START, END
-from . import agents, foreach
+from . import agents, foreach, handoffs
 from .errors import ValidationError
 from .node_policy import add_node_kwargs, input_schema, limit, needs_cache
 from .nodes import node_fn
@@ -46,7 +46,8 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
     ann.update({agents.private(n["id"]): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent"})  # agent conversations (TASK-0116)
     ann.update({agents.slot_channel(n): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent_tool"})  # one wave's tool results (DEC-0069)
     if any(n.get("type") == "agent_handoff" for n in wf["nodes"]):  # the pending hand-off and the run's count (TASK-0180)
-        ann.update({agents.HANDOFF_KEY: Optional[dict], agents.COUNT_KEY: Optional[int]})
+        ann.update({agents.HANDOFF_KEY: Optional[dict], agents.COUNT_KEY: Optional[int], agents.START_KEY: Optional[str]})
+    receivers = handoffs.receivers(wf) if agents.HANDOFF_KEY in ann else set()
     State = TypedDict("State", ann, total=False)  # type: ignore
     g = StateGraph(State)
     nodes = {n["id"]: n for n in wf["nodes"] if n.get("type") != "note"}  # notes are canvas comments (REQ-0025)
@@ -66,7 +67,13 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
         out = [e for e in wf["edges"] if e["source"] == nid and e["target"] in nodes]
         if nid in entries or (not entries and n["type"] == "start"):
             g.add_edge(START, nid)
-        if n["type"] == "end":
+        if n["type"] == "start" and receivers and not entries:  # start router: a chat goes back to its agent (TASK-0181)
+            plain = [e["target"] for e in out]
+            def start(state, plain=plain, receivers=receivers):
+                to = state.get(agents.START_KEY)
+                return to if to in receivers else plain
+            g.add_conditional_edges(nid, start, sorted(set(plain) | receivers))
+        elif n["type"] == "end":
             g.add_edge(nid, END)
         elif n["type"] == "foreach":
             g.add_conditional_edges(nid, foreach.router(nid), {e["label"]: e["target"] for e in out})
