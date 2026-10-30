@@ -3,8 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0182
-- Status: todo
+- Task ID: TASK-0183
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -14,25 +14,24 @@
 
 ## Objective
 
-Edit hand-off targets in the Agent node Config, draw them as dashed links on the canvas, and show hand-off steps in the trace.
+Export hand-offs to Python, the LangGraph project and TypeScript.
 
 ## Scope
 
 ### In Scope
 
-- Agent node Config: target list (picker of other Agent nodes in the same graph level, description), workflow setting `max_handoffs` in workflow settings.
-- Canvas: dashed agent-to-agent links derived from the target lists; drawing a link from an Agent's hand-off handle to another Agent adds a target; deleting the link removes it.
-- Run panel and trace: the hand-off step label and reason; canvas run marks follow the target agent.
-- en and vi strings; shadcn components and theme tokens; vitest for the link sync.
+- Python export and the LangGraph project: transfer tools and the router after the agent's exit, the limit, and the start-agent input.
+- TypeScript export: the same with LangGraph.js.
+- Snapshot tests, the Python run test with a fake model, and `deno check` for TypeScript.
 
 ### Out Of Scope
 
-- Exports (TASK-0183).
-- Template and handbook (TASK-0184).
+- Engine (TASK-0180).
 
 ## Inputs
 
-- REQ-0078 'Canvas', 'Trace'; DEC-0073 decision 1; `docs/ui-conventions.md`.
+- REQ-0078 'Exports'; DEC-0073 decision 5.
+- `engine/python_export.py`, `engine/project_export.py`, `engine/typescript_export.py`, `engine/export_common.py`.
 
 ## Related Artifacts
 
@@ -45,11 +44,11 @@ Edit hand-off targets in the Agent node Config, draw them as dashed links on the
 
 ## Expected Outputs
 
-- Builders can set up hand-offs on the canvas.
+- Exported code compiles and runs a hand-off.
 
 ## Implementation Notes
 
-- Links are view-only data derived from the node targets; they are not stored as workflow edges.
+- Mirror the engine's expansion so the exported graph and the studio trace match step names.
 
 ## Constraints
 
@@ -61,17 +60,16 @@ Edit hand-off targets in the Agent node Config, draw them as dashed links on the
 
 ## Dependencies
 
-- TASK-0179; TASK-0180 for the trace step.
+- TASK-0180.
 
 ## Acceptance Criteria
 
-- Adding a target in Config draws the dashed link, and drawing the link adds the target.
-- A non-Agent target cannot be picked.
-- vitest, lint and build pass; en and vi keys match.
+- A Triage → Billing workflow exports to Python, the LangGraph project and TypeScript; the Python run test hands off with a fake model; `deno check` passes; snapshots updated.
 
 ## Validation Plan
 
-- `cd frontend && npm run lint && npm test && npm run build`
+- `cd backend && .venv/bin/python -m pytest -q`
+- `cd backend && .venv/bin/python -m pytest -q tests/test_layers.py tests/test_api_envelope.py`
 
 ## Assumptions
 
@@ -85,7 +83,9 @@ Edit hand-off targets in the Agent node Config, draw them as dashed links on the
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0183-handoff-exports` from `develop`. Hand-offs export to Python, the LangGraph project and TypeScript `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
-- Branch `factory/task-0182-agent-handoff-ui` from `develop`.
+- Branch `factory/task-0183-agent-handoff-exports` from `develop`.
+- Review: `.factory-state/artifacts/REV-0160-task-0183.md`. QA: `.factory-state/artifacts/QA-0160-task-0183.md`.

@@ -3,8 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0181
-- Status: todo
+- Task ID: TASK-0182
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -14,26 +14,25 @@
 
 ## Objective
 
-Keep the conversation with the agent that answered last across messages of one chat session.
+Edit hand-off targets in the Agent node Config, draw them as dashed links on the canvas, and show hand-off steps in the trace.
 
 ## Scope
 
 ### In Scope
 
-- Chat session column `active_agent` (Alembic revision), set when a run that answers a chat message ends at an Agent node reached by a hand-off.
-- The next message's run starts at that agent: the run input carries `__start_agent`, and a start router added by the compiler routes there when it names an existing Agent node (DEC-0073 decision 4).
-- If the agent was deleted or is no longer a hand-off target, the run starts at the entry and the column is cleared.
-- Public chat, studio Chat tab and Slack/Telegram chat triggers share the behaviour through the chat session services.
+- Agent node Config: target list (picker of other Agent nodes in the same graph level, description), workflow setting `max_handoffs` in workflow settings.
+- Canvas: dashed agent-to-agent links derived from the target lists; drawing a link from an Agent's hand-off handle to another Agent adds a target; deleting the link removes it.
+- Run panel and trace: the hand-off step label and reason; canvas run marks follow the target agent.
+- en and vi strings; shadcn components and theme tokens; vitest for the link sync.
 
 ### Out Of Scope
 
-- Engine hand-off (TASK-0180).
-- UI (TASK-0182).
+- Exports (TASK-0183).
+- Template and handbook (TASK-0184).
 
 ## Inputs
 
-- REQ-0078 'Chat'; DEC-0073 decision 4.
-- `services/chat_session_service.py`, `services/public_chat_service.py`, `services/chat_run_service.py`, `models/chat_session.py`.
+- REQ-0078 'Canvas', 'Trace'; DEC-0073 decision 1; `docs/ui-conventions.md`.
 
 ## Related Artifacts
 
@@ -46,11 +45,11 @@ Keep the conversation with the agent that answered last across messages of one c
 
 ## Expected Outputs
 
-- A test proves the second message goes to the agent that answered the first.
+- Builders can set up hand-offs on the canvas.
 
 ## Implementation Notes
 
-- Keep the start router a no-op when `__start_agent` is absent so runs outside chats are unchanged.
+- Links are view-only data derived from the node targets; they are not stored as workflow edges.
 
 ## Constraints
 
@@ -62,18 +61,17 @@ Keep the conversation with the agent that answered last across messages of one c
 
 ## Dependencies
 
-- TASK-0180.
+- TASK-0179; TASK-0180 for the trace step.
 
 ## Acceptance Criteria
 
-- Second message of a session runs at Billing after a hand-off in the first.
-- Deleted target falls back to the entry agent.
-- A new session starts at the entry.
+- Adding a target in Config draws the dashed link, and drawing the link adds the target.
+- A non-Agent target cannot be picked.
+- vitest, lint and build pass; en and vi keys match.
 
 ## Validation Plan
 
-- `cd backend && .venv/bin/python -m pytest -q`
-- `cd backend && .venv/bin/python -m pytest -q tests/test_layers.py tests/test_api_envelope.py`
+- `cd frontend && npm run lint && npm test && npm run build`
 
 ## Assumptions
 
@@ -87,7 +85,9 @@ Keep the conversation with the agent that answered last across messages of one c
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0182-agent-handoff-ui` from `develop`. Builders set up hand-offs on the canvas and in Config, and see them in the trace `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
-- Branch `factory/task-0181-agent-handoff-chat-state` from `develop`.
+- Branch `factory/task-0182-agent-handoff-ui` from `develop`.
+- Review: `.factory-state/artifacts/REV-0159-task-0182.md`. QA: `.factory-state/artifacts/QA-0159-task-0182.md`.
