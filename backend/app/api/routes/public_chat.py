@@ -4,6 +4,8 @@ GET  /api/public/chat/{slug}                      the page: title, intro, sugges
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
 GET  /api/public/chat/{slug}/logo?v=<hash>        the chat's logo image (TASK-0145)
+POST /api/public/chat/{slug}/sessions/{sid}/attachments        one file (multipart `file`), before the message (TASK-0174)
+GET  /api/public/chat/{slug}/sessions/{sid}/attachments/{aid}  download it      DELETE it while unsent
 WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response, node?}: the run
                                                   streams as public_event()s (TASK-0141); ?visitor= for the widget
 GET  /api/public/chat-frame?path=/c/{slug}        the page's frame-ancestors in Content-Security-Policy (TASK-0143):
@@ -14,6 +16,7 @@ sends "new" when it has no token yet and then gets the new token back as `visito
 session as other routes do.
 """
 import hashlib
+from urllib.parse import quote
 from typing import Optional
 from fastapi import APIRouter, Depends, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPAuthorizationCredentials
@@ -25,7 +28,7 @@ from ...schemas.chat import ChatRatingIn
 from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
 from ..static import CHAT_PAGE
-from ..deps import _same_origin, bearer, current_user, public_chat_service, run_service, ws_user
+from ..deps import _same_origin, bearer, chat_attachment_service, current_user, public_chat_service, run_service, ws_user
 
 router = APIRouter(prefix="/api/public/chat", tags=["public chat"])
 root_router = APIRouter()  # the socket and the frame check, outside the prefix
@@ -60,6 +63,34 @@ def logo_response(logo, versioned: bool, scope: str = "public") -> Response:
     """A chat's logo. With ?v=<hash> its address changes with the image, so it is cached for good."""
     age = "max-age=31536000, immutable" if versioned else "max-age=300"
     return Response(logo.data, media_type=logo.mime, headers={"Cache-Control": f"{scope}, {age}", "X-Content-Type-Options": "nosniff"})
+
+
+MULTIPART_SLACK = 64 * 1024  # the multipart envelope around one file
+
+
+async def read_upload(request: Request) -> tuple[str, bytes]:
+    """(file name, bytes) of a one-file multipart upload, read at most one byte past the operator's ceiling: a body that
+    says it is larger is refused before it is read (TASK-0174, DEC-0072 decision 3)."""
+    ceiling = config.chat_attachment_max_mb() * 1024 * 1024
+    too_large = AppError("CHAT_ATTACHMENT_TOO_LARGE", max_mb=config.chat_attachment_max_mb())
+    try: declared = int(request.headers.get("content-length") or 0)
+    except ValueError: declared = 0
+    if declared > ceiling + MULTIPART_SLACK: raise too_large
+    form = await request.form(max_files=1, max_fields=1)
+    f = form.get("file")
+    if f is None or isinstance(f, str): raise AppError("CHAT_ATTACHMENT_TYPE", allowed="")
+    data = await f.read(ceiling + 1)
+    await form.close()
+    if len(data) > ceiling: raise too_large
+    return f.filename or "", data
+
+
+def file_response(a) -> Response:
+    """A chat file, always as a download that the browser must not sniff or render (REQ-0077)."""
+    ascii_name = a.name.encode("ascii", "ignore").decode().replace('"', "") or "file"
+    return Response(a.data, media_type=a.mime, headers={
+        "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(a.name)}",
+        "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store", "Content-Security-Policy": "sandbox"})
 
 
 def answer(request: Request, response: Response, slug: str, data, v: Visitor):
@@ -104,6 +135,29 @@ async def create(slug: str, request: Request, response: Response, user=Depends(m
 async def session(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); s, v = svc.get(slug, sid, token_of(request, slug), user)
     return answer(request, response, slug, s, v)
+
+
+@router.post("/{slug}/sessions/{sid}/attachments")
+async def upload(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
+    await checked(request, svc.pub)
+    name, data = await read_upload(request)
+    ip = client_ip(request.client.host if request.client else None, request.headers.get("x-forwarded-for"))
+    out, v = await svc.public_upload(slug, sid, token_of(request, slug), user, ip, name, data)
+    return answer(request, response, slug, out, v)
+
+
+@router.get("/{slug}/sessions/{sid}/attachments/{aid}")
+async def download(slug: str, sid: str, aid: str, request: Request, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
+    await checked(request, svc.pub)
+    a, _v = svc.public_file(slug, sid, aid, token_of(request, slug), user)
+    return file_response(a)
+
+
+@router.delete("/{slug}/sessions/{sid}/attachments/{aid}")
+async def remove(slug: str, sid: str, aid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
+    await checked(request, svc.pub)
+    data, v = svc.public_delete(slug, sid, aid, token_of(request, slug), user)
+    return answer(request, response, slug, data, v)
 
 
 @router.put("/{slug}/sessions/{sid}/turns/{tid}/rating")

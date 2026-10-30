@@ -219,6 +219,12 @@
 | `CHAT_EMBED_ORIGIN_INVALID` | 400 | '{origin}' is not a site address like https://example.com |
 | `CHAT_LOGO_INVALID` | 400 | The logo must be a PNG, JPEG or WebP image of at most {max_kb} KB |
 | `CHAT_LOGO_NOT_FOUND` | 404 | This chat has no logo |
+| `CHAT_ATTACHMENTS_OFF` | 403 | This chat does not accept attachments |
+| `CHAT_ATTACHMENT_TYPE` | 400 | This file type is not allowed here. Allowed: {allowed} |
+| `CHAT_ATTACHMENT_TOO_LARGE` | 413 | A file may be at most {max_mb} MB |
+| `CHAT_ATTACHMENT_TOO_MANY` | 400 | A message may carry at most {max} files |
+| `CHAT_ATTACHMENT_NOT_FOUND` | 404 | File not found |
+| `CHAT_ATTACHMENT_DEMO` | 403 | Attachments are turned off in the public demo |
 | `CHAT_TURN_NOT_FOUND` | 404 | Message not found |
 | `CHAT_RATING_NOT_ALLOWED` | 409 | This message cannot be rated |
 | `CHAT_RATING_INVALID` | 400 | Rating: invalid {field} |

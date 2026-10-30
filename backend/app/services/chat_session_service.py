@@ -20,9 +20,10 @@ from ..engine import agents
 from ..engine.limits import size
 from ..core import config
 from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, WorkflowChatTrigger
-from ..repositories import ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
+from ..repositories import ChatAttachmentRepository, ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
 from ..repositories.chat_sessions import feedback_is_pending
 from ..repositories.chat_triggers import WEB
+from .chat_attachment_service import UNSENT_TTL
 
 ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish the chat at /c/{slug} (DEC-0067)
 PUBLIC = ("anonymous", "signed_in")
@@ -111,8 +112,9 @@ def steps_of(events: list, mode: str) -> list[dict]:
 
 class ChatSessionService:
     def __init__(self, sessions: ChatSessionRepository, triggers: ChatTriggerRepository, messages: ChatMessageRepository,
-                 workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None):
+                 workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None, attachments: Optional[ChatAttachmentRepository] = None):
         self.sessions, self.triggers, self.messages, self.workflows, self.runs, self.access = sessions, triggers, messages, workflows, runs, access
+        self.attachments = attachments  # chat files (TASK-0174); None in tests that build the service by hand
         self.jobs = jobs  # enqueues chat_rating; None in tests that build the service by hand (TASK-0165)
 
     # ---- settings (the workflow's Chat section) ----
@@ -210,6 +212,10 @@ class ChatSessionService:
     def get(self, sid: str, uid: str, view: str = "builder") -> dict:
         s, t = self._own(sid, uid)
         return self.view(s, "full" if view != "visitor" else self.steps_mode(t))
+
+    @staticmethod
+    def settings_json(t: WorkflowChatTrigger) -> dict:
+        return {**DEFAULTS, **json.loads(t.settings or "{}")}
 
     @staticmethod
     def steps_mode(t: WorkflowChatTrigger) -> str:
@@ -371,8 +377,10 @@ class ChatSessionService:
 
     # ---- retention (the worker's maintenance loop) ----
     def cleanup(self) -> int:
-        """Deletes sessions idle for longer than their chat's retention_days (DEC-0052)."""
+        """Deletes sessions idle for longer than their chat's retention_days (DEC-0052), with their files, and files
+        uploaded but never sent within an hour (TASK-0174)."""
         n, now = 0, time.time()
+        if self.attachments is not None: self.attachments.delete_stale(now - UNSENT_TTL)
         for t in self.triggers.webs():
             days = int((json.loads(t.settings or "{}") or {}).get("retention_days") or DEFAULTS["retention_days"])
             cutoff = now - days * 86400

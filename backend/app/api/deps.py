@@ -7,7 +7,7 @@ from ..core import config, security
 from ..core.errors import AppError
 from ..services.notification_hub import NotificationHub, make_notification_hub
 from ..models.database import Database
-from ..repositories import AgentThreadRepository, ChatSessionRepository, CliDeviceRepository, CredentialRepository, PersonalAccessTokenRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
+from ..repositories import AgentThreadRepository, ChatAttachmentRepository, ChatSessionRepository, CliDeviceRepository, CredentialRepository, PersonalAccessTokenRepository, RunRepository, UserRepository, WorkflowRepository, WorkflowTokenRepository, WorkflowVersionRepository, NotificationRepository, WebhookDeliveryRepository, NodeResultRepository, ApprovalRepository, KnowledgeRepository, McpServerRepository, WorkflowShareRepository, TeamRepository, AuditRepository, SettingsRepository, UserDataRepository, TemplateRepository, AuthSecurityRepository, ScheduleRepository, ChatTriggerRepository, ChatMessageRepository, WorkflowTestRepository, CredentialRepository as _Creds
 from ..services.audit_service import AuditService
 from ..services.code_service import CodeService
 from ..services.inbox_service import InboxService
@@ -47,6 +47,7 @@ from ..services.chat_trigger_service import ChatTriggerService
 from ..services.chat_run_service import ChatRunService
 from ..services.chat_session_service import ChatSessionService
 from ..services.public_chat_service import PublicChatService
+from ..services.chat_attachment_service import ChatAttachmentService
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -111,11 +112,15 @@ def chat_run_service() -> ChatRunService:
 
 def chat_session_service() -> ChatSessionService:
     db = get_db(); return ChatSessionService(ChatSessionRepository(db), ChatTriggerRepository(db), ChatMessageRepository(db), WorkflowRepository(db),
-                                             RunRepository(db), access=access_service(), jobs=get_job_queue())
+                                             RunRepository(db), access=access_service(), jobs=get_job_queue(), attachments=ChatAttachmentRepository(db))
 
 
 def public_chat_service() -> PublicChatService:
     return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())
+
+
+def chat_attachment_service() -> ChatAttachmentService:
+    pub = public_chat_service(); return ChatAttachmentService(pub.chat.attachments, pub.chat, pub)
 
 
 def trigger_service() -> TriggerService:
