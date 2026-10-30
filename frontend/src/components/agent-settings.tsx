@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch'
 import { TextLink } from '@/components/text-link'
 import { TemplateEditor, type TemplateField } from '@/components/template-editor'
 import { ModelPicker } from '@/components/model-picker'
+import { IncludeAttachments } from '@/components/include-attachments'
 import { HumanApprovalSettings } from '@/components/human-approval-settings'
 import { HumanDeadlineSettings } from '@/components/human-deadline-settings'
 import type { Credential } from '@/components/credentials-dialog'
@@ -245,6 +246,7 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
       <Label htmlFor="agent-parallel" className="text-xs font-normal">{t('agent.parallelTools')}</Label>
     </div>
     <p className="text-[11px] text-muted-foreground">{t('agent.parallelToolsHint')}</p>
+    <IncludeAttachments idp="agent" data={d} fields={fields} readOnly={readOnly} onChange={onChange} />
     <div className="flex items-center gap-2">
       <span className="flex-1 text-xs font-semibold uppercase text-muted-foreground">{t('agent.tools')}</span>
       <DropdownMenu><DropdownMenuTrigger asChild disabled={readOnly}><Button variant="outline" size="sm" id="agent-add-tool"><Plus />{t('agent.addTool')}</Button></DropdownMenuTrigger>

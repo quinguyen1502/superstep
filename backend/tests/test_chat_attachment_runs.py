@@ -38,7 +38,7 @@ def test_settings_are_off_by_default_and_checked():
     assert d["attachments"] == {"enabled": False, "kinds": ["document", "image"], "max_files": 5, "max_mb": 10, "field": "files"}
     assert d["attachment_ceiling"] == {"max_mb": 10, "max_files": 5}
     put = lambda a: c.put(f"/api/workflows/{wid}/chat", json={"attachments": a}, headers=H(tok))  # noqa: E731
-    r = put({"enabled": True, "max_mb": 11}); assert (err(r), r.json()["error"]["details"]) == ("CHAT_ATTACHMENT_LIMIT", {"max_files": 5, "max_mb": 10})
+    r = put({"enabled": True, "max_mb": 11}); assert (err(r), r.json()["error"]["details"]) == ("CHAT_ATTACHMENT_LIMIT", {"field": "attachments.max_mb", "max_files": 5, "max_mb": 10})
     assert "MB" in r.json()["error"]["message"]
     for a, field in [({"kinds": []}, "kinds"), ({"kinds": ["audio"]}, "kinds"), ({"max_files": 0}, "max_files"),
                      ({"enabled": True, "field": "message"}, "field"), ({"enabled": True, "field": "nope"}, "field")]:

@@ -22,6 +22,7 @@ from ..models import ChatSession, WorkflowChatTrigger
 from ..repositories.chat_triggers import WEB
 from ..engine import agents
 from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService
+from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS
 
 SIG_LEN = 32
 DAY = 86400
@@ -79,7 +80,14 @@ class PublicChatService:
         t, st = self.published(slug)
         w = self.chat.workflows.get(t.workflow_id)
         return {"slug": slug, "title": st["title"] or w.name, "intro": st["intro"], "suggestions": st["suggestions"], "access": st["access"],
-                "steps_mode": st["steps"], "signed_in": user is not None, "embed_origins": st["embed_origins"], "logo": st["logo"]}  # the widget's iframe checks its host
+                "steps_mode": st["steps"], "signed_in": user is not None, "embed_origins": st["embed_origins"], "logo": st["logo"],  # the widget's iframe checks its host
+                "attachments": self.attachment_limits(st)}
+
+    @staticmethod
+    def attachment_limits(st: dict) -> dict:
+        """What the page's composer checks before an upload (TASK-0177): on or off, kinds, count and size; never the field."""
+        a = {**ATTACH_DEFAULTS, **(st.get("attachments") or {})}
+        return {k: a[k] for k in ("enabled", "kinds", "max_files", "max_mb")}
 
     def logo(self, slug: str):
         t, _ = self.published(slug)
