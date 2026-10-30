@@ -4,11 +4,12 @@
 
 - Project: superstep
 - Decision ID: DEC-0075
-- Status: Accepted. The owner approved decisions 1 to 8 and the recommended answer to every open question on 2026-10-30. Not planned into tasks yet; nothing is implemented.
+- Status: Accepted. The owner approved decisions 1 to 8 and the recommended answer to every open question on 2026-10-30. Planned on 2026-10-30 (TASK-0186 to TASK-0189).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
 - Related Requirements: REQ-0081, REQ-0041, REQ-0072, REQ-0073
+- Related Tasks: TASK-0186, TASK-0187, TASK-0188, TASK-0189
 - Related Architecture: DEC-0019 (approval channels), DEC-0063 (Agent node, tool approval), DEC-0039 (Decision node), DEC-0009 (layers)
 
 ## Context
