@@ -406,9 +406,11 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 cred = resolve(d["credential_id"])
             buf = tokens(nid) if tokens else None
             try:
-                out, calls = call_agent(p.get("messages") or [], None if hit else specs(d), d.get("model") or "gpt-4o-mini", cred,
+                msgs = p.get("messages") or []
+                extra = {"load": ports.attachment} if any(m.get("files") for m in msgs) else {}  # the file loader only when files are sent
+                out, calls = call_agent(msgs, None if hit else specs(d), d.get("model") or "gpt-4o-mini", cred,
                                         (lambda u: usage(nid, u)) if usage else None, buf, mock=offline, locale=ports.locale,
-                                        parallel=False if d.get("parallel_tool_calls") is False else None, load=ports.attachment)
+                                        parallel=False if d.get("parallel_tool_calls") is False else None, **extra)
             finally:
                 if buf: buf.flush()
             calls = [] if hit else [{"id": str(c.get("id") or f"call_{i}"), "name": str(c.get("name") or ""), "args": c.get("args")}

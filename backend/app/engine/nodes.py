@@ -73,9 +73,10 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
                 cred = resolve(d["credential_id"])
             report = (lambda u: usage(node["id"], u)) if usage else None
             tokens = token_stream(node["id"])
+            files = attachments.records(state, d)
+            extra = {"files": files, "load": ports.attachment} if files else {}  # only when the node sends files
             try: return {d["output_field"]: call_llm(render(d.get("prompt", ""), state), d.get("model", "gpt-4o-mini"), cred, report, tokens,
-                                                     mock=offline, locale=ports.locale, files=attachments.records(state, d) or None,
-                                                     load=ports.attachment)}
+                                                     mock=offline, locale=ports.locale, **extra)}
             finally:
                 if tokens: tokens.flush()
     elif t == "human":
