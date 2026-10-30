@@ -457,6 +457,7 @@
     "IMPORT_NOT_READY": "Job chưa sẵn sàng hoặc graph không hợp lệ",
     "IMPORT_DISABLED": "Import repo đang tắt (đặt STUDIO_ENABLE_IMPORT=1 để bật tính năng thử nghiệm)",
     "RUN_NOT_WAITING": "Run này không ở trạng thái chờ phản hồi",
+    "RUN_STILL_WAITING": "Đã lưu câu trả lời. Run vẫn đang chờ một bước khác",
     "CHECKPOINT_NOT_FOUND": "Không tìm thấy checkpoint trong run này, hoặc không thể fork từ nó",
     "RUN_FORK_UNSUPPORTED": "Không thể fork run của graph LangGraph được import",
     "RUN_RESPONSE_INVALID": "Phản hồi phải là văn bản (tối đa {{max}} ký tự)",
@@ -2088,6 +2089,8 @@
     "historyHint": "Danh sách tin nhắn trước đó ({role, content}) được thêm trước prompt nhiệm vụ, ví dụ trường messages của chat.",
     "tools": "Công cụ",
     "toolsHint": "Model chỉ gọi được các công cụ này. Model đọc tên và mô tả của từng công cụ để chọn.",
+    "parallelTools": "Gọi các tool song song",
+    "parallelToolsHint": "Nhiều lời gọi trong một vòng có thể chạy cùng lúc. Tắt để chạy lần lượt. Máy chủ vẫn chạy lần lượt nếu STUDIO_AGENT_PARALLEL_TOOLS không lớn hơn 1.",
     "noToolsYet": "Hãy thêm ít nhất một công cụ.",
     "addTool": "Thêm công cụ",
     "sources": {

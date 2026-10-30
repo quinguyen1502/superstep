@@ -26,7 +26,8 @@ const EVENTS: RunEvent[] = [
 
 describe('Agent node in traces and chats (TASK-0118)', () => {
   it('knows the Agent node of a step and hides the conversation', () => {
-    expect(agentOf('ag/__tool')).toBe('ag'); expect(agentOf('sub/ag/__model')).toBe('sub/ag'); expect(agentOf('ag')).toBeUndefined()
+    expect(agentOf('ag/__tool')).toBe('ag'); expect(agentOf('ag/__tool/2')).toBe('ag'); expect(agentOf('sub/ag/__join')).toBe('sub/ag')
+    expect(agentOf('sub/ag/__model')).toBe('sub/ag'); expect(agentOf('ag')).toBeUndefined()
     expect(hideAgents({ a: 1, 'agent:x': {} })).toEqual({ a: 1 }); expect(hideAgents({ _truncated: true })).toEqual({ _truncated: true })
   })
   it('spans carry what each step did, without the conversation', () => {

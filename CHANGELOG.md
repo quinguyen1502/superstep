@@ -6,7 +6,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
-- **superstep CLI release** (REQ-0079, DEC-0068). `scripts/install.sh` installs the `superstep` command. A `v*` tag publishes the Python package at the server version, and the package version moves from the `0.1.0` line to the server version. The same tag rules publish `ghcr.io/quinguyen1502/superstep-api` and `superstep-web`. The handbook Operate section starts from the CLI.
+- **superstep CLI release** (REQ-0079, DEC-0068). `scripts/install.sh` installs the `superstep` command (`install`, `upgrade`, `backup`, `restore`, `deploy`, `doctor`, `status`, `admin`, `uninstall`). A `v*` tag publishes the Python package at the server version, and the package version moves from the `0.1.0` line to the server version. The same tag rules publish `ghcr.io/quinguyen1502/superstep-api` and `superstep-web`. The handbook Operate section starts from the CLI.
+
+- **Agent tool calls can run together** (REQ-0076, DEC-0069). One round may run up to eight tool calls, then join their results in the model's order. The default is one at a time (`STUDIO_AGENT_PARALLEL_TOOLS=1`) until a wave can hold more than one approval and the Agent settings can turn the feature off. Set the variable to `2`–`8` to opt in.
 
 - **Ratings on chat answers** (REQ-0075). A visitor can mark a finished answer helpful or not, and add a short note
   when it was not. The same controls are on the embedded chat and in the studio Chat tab, where a builder can also
@@ -15,6 +17,17 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   run's trace as `user_rating`.
 
 ### Fixed
+
+- **SQLite restore and a failed upgrade rollback** (REQ-0079). Restore deletes leftover `studio.db-wal` and `studio.db-shm` before replacing `studio.db`, so an unclean stop cannot replay old pages onto the restored file. If restoring the backup itself fails, `upgrade` reports that the rollback failed instead of saying the previous version is back. A Postgres dump is written to a file and packed from that file.
+
+- **Chat rating races** (REQ-0075). Two ratings of the same answer at once keep the last one. Removing a rating also removes its LangSmith feedback. Two send jobs share one feedback object.
+- **Agent trace steps** (REQ-0076). A tool slot `A/__tool/1` and the join `A/__join` sit under the Agent node. A chat hides the join step.
+
+- **CLI secrets on a process list** (REQ-0079). `admin create` and `admin reset-password` take a password from a prompt (`--password`) or from stdin (`--password-stdin`). The password is not an argument of `superstep` or of `docker exec`. `deploy` puts `--` before the SSH host.
+
+- **Parallel tool waits** (REQ-0076). A new approval no longer closes another open wait of the same run. Answering one step leaves the others waiting, and the parent of several workflow tools resumes once, after every child has finished. An Agent node has a switch to turn parallel calls off.
+
+- **Rating removal and LangSmith** (REQ-0075). Deleting a chat, a workflow, or chats past the retention window also deletes the LangSmith feedback for those ratings.
 
 - **Run status on the canvas** (TASK-0147). The canvas now shows the run open in the Run panel. After an Agent node
   waited for a workflow tool's child run, the steps its run took afterwards, End included, are marked done. Opening a

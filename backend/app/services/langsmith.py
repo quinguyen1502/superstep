@@ -15,6 +15,7 @@ from typing import Any, Callable, Optional
 from ..core import permissions as P
 from ..core.errors import AppError
 from ..core.logging import get_logger
+from ..repositories.chat_sessions import feedback_is_pending
 
 log = get_logger("langsmith")
 SETTING = "langsmith"
@@ -153,24 +154,61 @@ class LangSmithService:
         try: self.push_suite(sid)
         except AppError as e: log.warning("suite %s not sent to LangSmith: %s", sid, e.code)
 
-    def on_rating(self, turn_id: str) -> None:
-        """Send one chat rating to the run's LangSmith trace (DEC-0070). A missing key, no trace, or a down
-        LangSmith leaves the rating in the studio and does not raise, so the worker does not retry it into a second feedback."""
-        if not configured() or not tracing() or self.sessions is None: return
+    def on_rating(self, turn_id: str) -> Optional[str]:
+        """Send one chat rating to the run's LangSmith trace (DEC-0070).
+
+        Returns "busy" when another worker is creating the feedback, so the caller can try again.
+        A missing key, no trace, or a down LangSmith leaves the rating in the studio and does not raise.
+        A failed create releases the claim. A second job updates the same feedback instead of creating one.
+        """
+        if not configured() or not tracing() or self.sessions is None: return None
         rating = self.sessions.rating(turn_id)
-        if rating is None: return
+        if rating is None: return None
         turn = self.sessions.turn(turn_id)
         run = self.runs.get(turn.run_id) if turn is not None and turn.run_id else None
-        if run is None or not run.trace_root: return
+        if run is None or not run.trace_root: return None
+        claim = self.sessions.claim_feedback(turn_id)
+        if claim == "busy": return "busy"
+        if claim == "gone": return None
+        rating = self.sessions.rating(turn_id)
+        if rating is None:
+            if claim != "create": self._delete_feedback(claim)
+            return None
         score = 1.0 if rating.value == "up" else 0.0
         comment = rating.comment or None
         try:
             c = client_factory()
-            if rating.feedback_id:
-                c.update_feedback(rating.feedback_id, score=score, comment=comment)
-            else:
+            if claim == "create":
                 fb = c.create_feedback(run_id_of(run.trace_root), "user_rating", score=score, comment=comment)
                 fid = str(getattr(fb, "id", "") or "")
-                if fid: self.sessions.set_rating_feedback(turn_id, fid)
+                if not fid:
+                    self.sessions.release_feedback_claim(turn_id)
+                    return None
+                if self.sessions.rating(turn_id) is None:
+                    self._delete_feedback(fid, c)
+                    return None
+                self.sessions.set_rating_feedback(turn_id, fid)
+            else:
+                fid = claim
+                c.update_feedback(fid, score=score, comment=comment)
+            latest = self.sessions.rating(turn_id)
+            if latest is None:
+                self._delete_feedback(fid, c)
+                return None
+            if latest.value != rating.value or (latest.comment or "") != (rating.comment or ""):
+                c.update_feedback(fid, score=1.0 if latest.value == "up" else 0.0, comment=latest.comment or None)
         except Exception as e:  # noqa: BLE001
+            if claim == "create": self.sessions.release_feedback_claim(turn_id)
             log.warning("rating %s not sent to LangSmith: %s", turn_id, type(e).__name__)
+        return None
+
+    def on_rating_removed(self, feedback_id: str) -> None:
+        """Drop the LangSmith feedback after the studio rating is gone. No key means there is nothing to call."""
+        if not feedback_id or feedback_is_pending(feedback_id) or not configured(): return
+        self._delete_feedback(feedback_id)
+
+    def _delete_feedback(self, feedback_id: str, client=None) -> None:
+        try:
+            (client or client_factory()).delete_feedback(feedback_id)
+        except Exception as e:  # noqa: BLE001
+            log.warning("rating feedback %s not deleted: %s", feedback_id, type(e).__name__)

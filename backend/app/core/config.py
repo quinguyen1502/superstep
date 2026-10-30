@@ -43,11 +43,17 @@ def input_max() -> int: return _int("STUDIO_INPUT_MAX_BYTES", 256 * 1024)
 def workflow_max() -> int: return _int("STUDIO_WORKFLOW_MAX_BYTES", 1024 * 1024)
 def recursion_limit() -> int: return _int("STUDIO_RECURSION_LIMIT", 25)
 def agent_parallel_tools() -> int:
-    """Tool calls of one Agent round that may run at once (REQ-0076). Invalid values fall back to 4; the rest clamp to 1..8."""
+    """Tool calls of one Agent round that may run at once (REQ-0076).
+
+    Default 1. One superstep still pauses at the first approval or child run. A second open wait of the
+    run is kept, and the Agent setting `parallel_tool_calls` false forces one call. Set
+    STUDIO_AGENT_PARALLEL_TOOLS to 2..8 to opt in.
+    Invalid values stay at 1. Other integers clamp to 1..8.
+    """
     raw = os.environ.get("STUDIO_AGENT_PARALLEL_TOOLS")
-    if raw is None or not str(raw).strip(): return 4
+    if raw is None or not str(raw).strip(): return 1
     try: n = int(raw)
-    except ValueError: return 4
+    except ValueError: return 1
     return min(8, max(1, n))
 def allow_private_callbacks() -> bool: return os.environ.get("STUDIO_ALLOW_PRIVATE_CALLBACKS") == "1"
 def worker_enabled() -> bool: return os.environ.get("STUDIO_WORKER", "1") != "0"  # run queued jobs in this API process

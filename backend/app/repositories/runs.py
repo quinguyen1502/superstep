@@ -78,6 +78,18 @@ class RunRepository:
         with self.db.session() as s:
             return s.scalars(select(Run).where(Run.parent_run_id == parent, Run.parent_step == step)).first()
 
+    def merge_checkpoint(self, rid: str, patch: dict) -> None:
+        """Merge `patch` into the run's checkpoint. Dict values merge one level down (answers, children)."""
+        with self.db.session() as s:
+            row = s.get(Run, rid)
+            if row is None: return
+            cp = json.loads(row.checkpoint or "{}")
+            if not isinstance(cp, dict): cp = {}
+            for key, value in patch.items():
+                if isinstance(value, dict) and isinstance(cp.get(key), dict): cp[key] = {**cp[key], **value}
+                else: cp[key] = value
+            s.execute(update(Run).where(Run.id == rid).values(checkpoint=json.dumps(cp))); s.commit()
+
     def children(self, parent: str) -> list[Run]:
         with self.db.session() as s:
             return list(s.scalars(select(Run).where(Run.parent_run_id == parent).order_by(Run.started)))

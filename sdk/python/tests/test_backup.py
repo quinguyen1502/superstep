@@ -47,7 +47,8 @@ class BackupDocker:
         return self.dump
 
     def copy_to(self, directory, project, service, path, data):
-        self.calls.append(("copy_to", service, path))
+        blob = data.read_bytes() if hasattr(data, "read_bytes") else data
+        self.calls.append(("copy_to", service, path, blob))
 
     def compose(self, directory, project, args):
         self.calls.append(("compose", tuple(args)))
@@ -208,6 +209,25 @@ def test_restore_yes_name_writes_the_archive_key(tmp_path, monkeypatch):
     assert json.loads(out)["ok"] is True
     assert setting((directory / ".env").read_text(encoding="utf-8"), "STUDIO_SECRET_KEY") == key
     assert SECRET not in out and SECRET not in err
+    assert any(call[0] == "compose" and "studio.db-wal" in " ".join(call[1]) for call in docker.calls)
+
+
+def test_full_restore_streams_the_dump_and_calls_pg_restore(tmp_path, monkeypatch):
+    monkeypatch.setattr(superstep, "__version__", "1.2.3")
+    directory = layout(tmp_path, "full")
+    dump = b"PGDMP" + b"\x00" * 32
+    docker = BackupDocker(dump=dump)
+    code, out, _err = invoke(["backup", "--dir", str(directory), "--json"], docker)
+    archive = json.loads(out)["archive"]
+    docker.calls.clear()
+    code, out, err = invoke(
+        ["restore", archive, "--dir", str(directory), "--yes", "--name", "inst", "--json"],
+        docker,
+    )
+    assert code == 0 and err == "" and json.loads(out)["ok"] is True
+    copied = [call for call in docker.calls if call[0] == "copy_to" and call[1] == "postgres"]
+    assert copied and copied[0][2] == "/tmp/superstep-restore.dump" and copied[0][3] == dump
+    assert ("exec", "postgres", ("pg_restore", "-U", "studio", "-d", "studio", "--clean", "--if-exists", "/tmp/superstep-restore.dump")) in docker.calls
 
 
 def test_schedule_systemd_prunes_to_two(tmp_path):

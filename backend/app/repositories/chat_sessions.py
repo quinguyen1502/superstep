@@ -1,7 +1,24 @@
+import time
 from typing import Optional
 from sqlalchemy import case, delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from ..models import ChatRating, ChatSession, ChatTurn
 from ..models.database import Database
+
+_PENDING = "pending:"  # one worker owns the LangSmith create; not a real feedback id
+_PENDING_TTL = 60.0
+
+
+def feedback_is_pending(value: str) -> bool:
+    return (value or "").startswith(_PENDING)
+
+
+def _pending_stale(value: str) -> bool:
+    try:
+        started = float(value[len(_PENDING):])
+    except ValueError:
+        return True
+    return time.time() - started > _PENDING_TTL
 
 
 class ChatSessionRepository:
@@ -41,14 +58,55 @@ class ChatSessionRepository:
         with self.db.session() as s: return s.get(ChatRating, tid)
 
     def upsert_rating(self, row: ChatRating) -> ChatRating:
-        """Insert or replace the one rating of a turn. `created` and `feedback_id` stay on a later write."""
+        """Insert or replace the one rating of a turn. The last write wins. `created` and `feedback_id` stay."""
+        with self.db.session() as s:
+            cur = s.get(ChatRating, row.turn_id)
+            if cur is not None:
+                return self._replace_rating(s, cur, row)
+            try:
+                s.add(row); s.commit(); s.refresh(row); return row
+            except IntegrityError:
+                s.rollback()
         with self.db.session() as s:
             cur = s.get(ChatRating, row.turn_id)
             if cur is None:
                 s.add(row); s.commit(); s.refresh(row); return row
-            cur.value, cur.comment, cur.updated = row.value, row.comment, row.updated
-            cur.session_id, cur.workflow_id = row.session_id, row.workflow_id
-            s.commit(); s.refresh(cur); return cur
+            return self._replace_rating(s, cur, row)
+
+    def _replace_rating(self, s, cur: ChatRating, row: ChatRating) -> ChatRating:
+        cur.value, cur.comment, cur.updated = row.value, row.comment, row.updated
+        cur.session_id, cur.workflow_id = row.session_id, row.workflow_id
+        s.commit(); s.refresh(cur); return cur
+
+    def claim_feedback(self, tid: str) -> str:
+        """'create' if this caller sends the first feedback, 'busy' if another send is in flight,
+        'gone' if the rating was removed, otherwise the LangSmith id to update.
+
+        A claim older than a minute is stolen. A worker that died mid-create must not block every later send.
+        """
+        with self.db.session() as s:
+            row = s.get(ChatRating, tid)
+            if row is None:
+                return "gone"
+            current = row.feedback_id or ""
+            if feedback_is_pending(current) and not _pending_stale(current):
+                return "busy"
+            if current and not feedback_is_pending(current):
+                return current
+            token = f"{_PENDING}{time.time()}"
+            n = s.execute(update(ChatRating).where(ChatRating.turn_id == tid, ChatRating.feedback_id == current)
+                          .values(feedback_id=token)).rowcount
+            s.commit()
+            return "create" if n == 1 else "busy"
+
+    def release_feedback_claim(self, tid: str) -> None:
+        """A create that did not store an id may be tried again on a later rating."""
+        with self.db.session() as s:
+            row = s.get(ChatRating, tid)
+            if row is not None and feedback_is_pending(row.feedback_id or ""):
+                s.execute(update(ChatRating).where(ChatRating.turn_id == tid, ChatRating.feedback_id == row.feedback_id)
+                          .values(feedback_id=""))
+                s.commit()
 
     def set_rating_feedback(self, tid: str, feedback_id: str) -> None:
         with self.db.session() as s:
@@ -57,6 +115,26 @@ class ChatSessionRepository:
     def delete_rating(self, tid: str) -> None:
         with self.db.session() as s:
             s.execute(delete(ChatRating).where(ChatRating.turn_id == tid)); s.commit()
+
+    def _feedback_ids(self, s, *where) -> list[str]:
+        q = select(ChatRating.feedback_id).where(ChatRating.feedback_id != "", *where)
+        return [fid for fid in s.scalars(q) if fid and not feedback_is_pending(fid)]
+
+    def feedback_ids_for_session(self, sid: str) -> list[str]:
+        with self.db.session() as s: return self._feedback_ids(s, ChatRating.session_id == sid)
+
+    def feedback_ids_idle(self, trigger_id: str, before: float) -> list[str]:
+        with self.db.session() as s:
+            ids = select(ChatSession.id).where(ChatSession.trigger_id == trigger_id, ChatSession.updated < before)
+            return self._feedback_ids(s, ChatRating.session_id.in_(ids))
+
+    def feedback_ids_for_workflow(self, wid: str) -> list[str]:
+        with self.db.session() as s: return self._feedback_ids(s, ChatRating.workflow_id == wid)
+
+    def feedback_ids_for_owner(self, owner: str) -> list[str]:
+        with self.db.session() as s:
+            ids = select(ChatSession.id).where(ChatSession.owner == owner)
+            return self._feedback_ids(s, ChatRating.session_id.in_(ids))
 
     def rating_counts(self, wid: str, since: float) -> dict:
         """How many up and down ratings of one workflow were updated since `since`."""

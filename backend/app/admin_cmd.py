@@ -18,9 +18,11 @@ def main(argv: list[str] | None = None) -> int:
     create = commands.add_parser("create")
     create.add_argument("--email", required=True)
     create.add_argument("--password")
+    create.add_argument("--password-stdin", action="store_true")
     reset = commands.add_parser("reset-password")
     reset.add_argument("--email", required=True)
     reset.add_argument("--password")
+    reset.add_argument("--password-stdin", action="store_true")
     commands.add_parser("list")
     args = parser.parse_args(argv)
     db = get_db()
@@ -31,7 +33,8 @@ def main(argv: list[str] | None = None) -> int:
             for email, role in service.list_admins():
                 sys.stdout.write(f"{email}\t{role}\n")
             return 0
-        password = service.create(args.email, args.password) if args.command == "create" else service.reset_password(args.email, args.password)
+        chosen = sys.stdin.readline().rstrip("\n") if args.password_stdin else args.password
+        password = service.create(args.email, chosen) if args.command == "create" else service.reset_password(args.email, chosen)
     except AppError as exc:
         sys.stderr.write(exc.code + "\n")
         return 1

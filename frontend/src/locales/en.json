@@ -457,6 +457,7 @@
     "IMPORT_NOT_READY": "Import job is not ready or the graph is invalid",
     "IMPORT_DISABLED": "Repo import is disabled (set STUDIO_ENABLE_IMPORT=1 to enable this experimental feature)",
     "RUN_NOT_WAITING": "This run is not waiting for a response",
+    "RUN_STILL_WAITING": "The answer is saved. The run is still waiting for another step",
     "CHECKPOINT_NOT_FOUND": "Checkpoint not found in this run, or it cannot be forked",
     "RUN_FORK_UNSUPPORTED": "Runs of imported LangGraph graphs cannot be forked",
     "RUN_RESPONSE_INVALID": "The response must be text (max {{max}} characters)",
@@ -2088,6 +2089,8 @@
     "historyHint": "A list of earlier messages ({role, content}) added before the task prompt, such as a chat's messages field.",
     "tools": "Tools",
     "toolsHint": "The model can call only these tools. It reads each tool's name and description to choose.",
+    "parallelTools": "Run tool calls in parallel",
+    "parallelToolsHint": "Several calls in one round can run together. Turn this off to run them one at a time. The server still runs one at a time unless STUDIO_AGENT_PARALLEL_TOOLS is above 1.",
     "noToolsYet": "Add at least one tool.",
     "addTool": "Add tool",
     "sources": {

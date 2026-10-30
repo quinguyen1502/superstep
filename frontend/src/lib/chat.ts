@@ -61,7 +61,7 @@ export function liveReply(events: RunEvent[], replyField?: string): string {
   return [...parts.values()].map(p => p.text).join('')
 }
 
-const HIDDEN = new Set(['start', 'end', 'agent', 'agent_exit'])  // an Agent node shows its tool calls (and model calls in full)
+const HIDDEN = new Set(['start', 'end', 'agent', 'agent_exit', 'agent_join'])  // an Agent node shows its tool calls (and model calls in full); the join only orders them
 /** A step's label in a chat: an Agent's tool step names the tool ("Support › lookup_order"). */
 const stepLabel = (s: Span) => s.agent?.kind === 'tool' && s.agent.tool ? `${s.label.replace(/ › [^›]*$/, '')} › ${s.agent.tool}` : s.label
 /** A live run's steps as a chat shows them (DEC-0053), from the trace spans: none, labels or full. Same rules as the server. */

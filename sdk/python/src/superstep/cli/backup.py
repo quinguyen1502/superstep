@@ -5,7 +5,9 @@ import io
 import json
 import os
 import shlex
+import shutil
 import tarfile
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -111,36 +113,47 @@ def create_backup(directory: Path, record: dict, docker: Docker, dest: Path) -> 
     if docker.disk_free_bytes(str(parent)) < _estimate(docker, directory, record):
         raise BackupError("DISK", "error.disk")
     member, blob = _dump(docker, str(directory), record)
-    env_text = (directory / ".env").read_text(encoding="utf-8") if (directory / ".env").is_file() else ""
-    compose = (directory / "compose.yml").read_text(encoding="utf-8") if (directory / "compose.yml").is_file() else ""
-    secret = _secret_bytes(docker, directory, record, _read_env(directory / ".env"))
-    created = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    manifest = {
-        "format": _FORMAT,
-        "server_version": str(record.get("version") or ""),
-        "topology": record.get("topology") or "single",
-        "name": record["name"],
-        "created": created,
-        "database": member,
-    }
-    dest.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    archive = dest / f"superstep-backup-{record['name']}-{stamp}.tar.gz"
-    _write_archive(archive, {
-        "manifest.json": json.dumps(manifest).encode("utf-8"),
-        member: blob,
-        "secret.key": secret,
-        ".env": _env_with_secret(env_text, secret).encode("utf-8"),
-        "compose.yml": compose.encode("utf-8"),
-    })
-    record["secret_backed_up"] = True
-    _write_private(directory / "instance.json", json.dumps(record, indent=2) + "\n")
-    return archive
+    try:
+        env_text = (directory / ".env").read_text(encoding="utf-8") if (directory / ".env").is_file() else ""
+        compose = (directory / "compose.yml").read_text(encoding="utf-8") if (directory / "compose.yml").is_file() else ""
+        secret = _secret_bytes(docker, directory, record, _read_env(directory / ".env"))
+        created = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        manifest = {
+            "format": _FORMAT,
+            "server_version": str(record.get("version") or ""),
+            "topology": record.get("topology") or "single",
+            "name": record["name"],
+            "created": created,
+            "database": member,
+        }
+        dest.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        archive = dest / f"superstep-backup-{record['name']}-{stamp}.tar.gz"
+        _write_archive(archive, {
+            "manifest.json": json.dumps(manifest).encode("utf-8"),
+            member: blob,
+            "secret.key": secret,
+            ".env": _env_with_secret(env_text, secret).encode("utf-8"),
+            "compose.yml": compose.encode("utf-8"),
+        })
+        record["secret_backed_up"] = True
+        _write_private(directory / "instance.json", json.dumps(record, indent=2) + "\n")
+        return archive
+    finally:
+        if isinstance(blob, Path):
+            blob.unlink(missing_ok=True)
 
 
 def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path) -> None:
     """Replace instance data from an archive. The caller has already confirmed the name."""
     members = _read_archive(archive)
+    try:
+        _restore_members(directory, record, docker, members)
+    finally:
+        _drop_spill(members)
+
+
+def _restore_members(directory: Path, record: dict, docker: Docker, members: dict) -> None:
     manifest = _manifest(members)
     _accept(manifest)
     for name in ("manifest.json", ".env", "compose.yml", "secret.key"):
@@ -165,6 +178,9 @@ def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path
             docker.copy_to(folder, project, "api", "/data/secret.key", secret)
             _own(docker, folder, project, "api", "/data/secret.key")
         else:
+            # WAL mode replays studio.db-wal onto studio.db at the next open. Drop the sidecars
+            # before the copy, or an unclean stop applies the old pages to the restored file.
+            _remove_sqlite_sidecars(docker, folder, project)
             docker.copy_to(folder, project, "superstep", "/data/studio.db", members[db_name])
             docker.copy_to(folder, project, "superstep", "/data/secret.key", secret)
             _own(docker, folder, project, "superstep", "/data/studio.db", "/data/secret.key")
@@ -223,16 +239,16 @@ def install_schedule(directory: Path, record: dict, docker: Docker, dest: Path, 
     return "cron"
 
 
-def _dump(docker: Docker, directory: str, record: dict) -> tuple[str, bytes]:
+def _dump(docker: Docker, directory: str, record: dict):
     project = record["name"]
     if (record.get("topology") or "single") == "full":
         try:
-            return "database.dump", docker.exec_bytes(directory, project, "postgres", _PG_DUMP)
+            return _pg_dump(docker, directory, project)
         except DockerError:
             try:
                 docker.compose(directory, project, ["stop"])
                 docker.compose(directory, project, ["up", "-d", "postgres"])
-                return "database.dump", docker.exec_bytes(directory, project, "postgres", _PG_DUMP)
+                return _pg_dump(docker, directory, project)
             finally:
                 docker.compose(directory, project, ["up", "-d"])
     try:
@@ -244,6 +260,38 @@ def _dump(docker: Docker, directory: str, record: dict) -> tuple[str, bytes]:
             return "database.sqlite", docker.copy_from(directory, project, "superstep", "/data/studio.db")
         finally:
             docker.compose(directory, project, ["up", "-d"])
+
+
+def _pg_dump(docker: Docker, directory: str, project: str):
+    """A Postgres custom dump. `exec_to_file` writes it to disk; a fake Docker still returns bytes."""
+    sink = getattr(docker, "exec_to_file", None)
+    if sink is None:
+        return "database.dump", docker.exec_bytes(directory, project, "postgres", _PG_DUMP)
+    fd, name = tempfile.mkstemp(prefix="superstep-dump-", suffix=".dump")
+    os.close(fd)
+    target = Path(name)
+    try:
+        sink(directory, project, "postgres", list(_PG_DUMP), target)
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+    return "database.dump", target
+
+
+def _remove_sqlite_sidecars(docker: Docker, directory: str, project: str) -> None:
+    """Delete `studio.db-wal` and `studio.db-shm` if they are still on the volume. Missing files are fine."""
+    script = (
+        "import os\n"
+        "for name in ('studio.db-wal', 'studio.db-shm'):\n"
+        "    try:\n"
+        "        os.remove('/data/' + name)\n"
+        "    except FileNotFoundError:\n"
+        "        pass\n"
+    )
+    docker.compose(directory, project, [
+        "run", "--rm", "--no-deps", "--user", "root", "--entrypoint", "python",
+        "superstep", "-c", script,
+    ])
 
 
 def _own(docker: Docker, directory: str, project: str, service: str, *paths: str) -> None:
@@ -337,13 +385,34 @@ def _read_archive(path: Path) -> dict:
                 if not info.isfile() or name not in _MEMBERS:
                     continue
                 handle = tar.extractfile(info)
-                if handle is not None:
+                if handle is None:
+                    continue
+                if name == "database.dump":
+                    fd, tmp = tempfile.mkstemp(prefix="superstep-restore-", suffix=".dump")
+                    os.close(fd)
+                    dest = Path(tmp)
+                    try:
+                        with dest.open("wb") as out:
+                            shutil.copyfileobj(handle, out)
+                    except Exception:
+                        dest.unlink(missing_ok=True)
+                        raise
+                    found[name] = dest
+                else:
                     found[name] = handle.read()
     except (tarfile.TarError, OSError, EOFError):
+        _drop_spill(found)
         raise BackupError("ARCHIVE", "error.archive")
     if "manifest.json" not in found:
+        _drop_spill(found)
         raise BackupError("ARCHIVE", "error.archive")
     return found
+
+
+def _drop_spill(members: dict) -> None:
+    for value in members.values():
+        if isinstance(value, Path):
+            value.unlink(missing_ok=True)
 
 
 def _write_archive(path: Path, members: dict) -> None:
@@ -352,10 +421,15 @@ def _write_archive(path: Path, members: dict) -> None:
         with tarfile.open(fileobj=raw, mode="w:gz") as tar:
             for name, data in members.items():
                 info = tarfile.TarInfo(name)
-                info.size = len(data)
                 info.mode = 0o600
                 info.mtime = int(datetime.now(timezone.utc).timestamp())
-                tar.addfile(info, io.BytesIO(data))
+                if isinstance(data, Path):
+                    info.size = data.stat().st_size
+                    with data.open("rb") as handle:
+                        tar.addfile(info, handle)
+                else:
+                    info.size = len(data)
+                    tar.addfile(info, io.BytesIO(data))
     os.chmod(path, 0o600)
 
 

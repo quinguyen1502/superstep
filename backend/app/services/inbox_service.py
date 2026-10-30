@@ -41,6 +41,6 @@ class InboxService:
         run = self.runs.runs.get(rid)
         if run is None or run.status != "waiting": raise AppError("RUN_NOT_WAITING")
         if self.runs.expire_if_stale(run): raise AppError("RUN_EXPIRED")
-        if self.approvals.decided_elsewhere(rid) or not self.repo.close_wait(rid, "answered"): raise AppError("APPROVAL_ALREADY_DECIDED")
+        if self.approvals.decided_elsewhere(rid) or not self.repo.close_node(rid, w.node_id, "answered"): raise AppError("APPROVAL_ALREADY_DECIDED")
         self.approvals.answered_in_studio(w, uid, response)
         return {"run_id": rid, "response": response}

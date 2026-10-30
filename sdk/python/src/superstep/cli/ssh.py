@@ -76,7 +76,7 @@ class Ssh:
         ]
         if self.port:
             command.extend(["-p", str(self.port)])
-        command.extend([self.destination, remote])
+        command.extend(["--", self.destination, remote])
         try:
             proc = subprocess.run(command, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except OSError as exc:

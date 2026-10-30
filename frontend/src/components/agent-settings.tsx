@@ -240,6 +240,12 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
     <F label={t('agent.taskPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={5} id="agent-prompt" value={d.prompt || ''} onChange={v => onChange({ prompt: v })} /></F>
     <Separator />
     <div className="flex items-center gap-2">
+      <Switch id="agent-parallel" size="sm" checked={d.parallel_tool_calls !== false} disabled={readOnly}
+        onCheckedChange={c => onChange({ parallel_tool_calls: c === true })} />
+      <Label htmlFor="agent-parallel" className="text-xs font-normal">{t('agent.parallelTools')}</Label>
+    </div>
+    <p className="text-[11px] text-muted-foreground">{t('agent.parallelToolsHint')}</p>
+    <div className="flex items-center gap-2">
       <span className="flex-1 text-xs font-semibold uppercase text-muted-foreground">{t('agent.tools')}</span>
       <DropdownMenu><DropdownMenuTrigger asChild disabled={readOnly}><Button variant="outline" size="sm" id="agent-add-tool"><Plus />{t('agent.addTool')}</Button></DropdownMenuTrigger>
         <DropdownMenuContent align="end">{SOURCES.map(s => { const I = ICONS[s]

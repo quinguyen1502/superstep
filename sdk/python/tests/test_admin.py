@@ -1,4 +1,5 @@
 """admin and uninstall (TASK-0154)."""
+import io
 import json
 from pathlib import Path
 
@@ -23,8 +24,9 @@ class AdminDocker:
         self.stdout = stdout
         self.calls = []
 
-    def exec_bytes(self, directory, project, service, command):
+    def exec_bytes(self, directory, project, service, command, stdin=None):
         self.calls.append(("exec", project, service, tuple(command)))
+        self.stdin = stdin
         return self.stdout
 
     def compose(self, directory, project, args):
@@ -60,7 +62,7 @@ def layout(tmp_path, topology="single"):
     return directory
 
 
-def test_create_shows_the_exec_password_once_and_leaves_instance_json(tmp_path):
+def test_create_shows_the_exec_password_once_and_leaves_instance_json(tmp_path, monkeypatch):
     directory = layout(tmp_path)
     before = (directory / "instance.json").read_text(encoding="utf-8")
     docker = AdminDocker()
@@ -81,6 +83,18 @@ def test_create_shows_the_exec_password_once_and_leaves_instance_json(tmp_path):
         "superstep",
         ("python", "-m", "app.admin_cmd", "create", "--email", "you@example.com"),
     )]
+    assert docker.stdin is None
+    docker.calls.clear()
+    monkeypatch.setattr("sys.stdin", io.StringIO(PASSWORD + "\n"))
+    code, out, err = invoke(
+        ["admin", "reset-password", "--email", "you@example.com", "--password-stdin", "--dir", str(directory), "--json"],
+        docker,
+    )
+    assert code == 0 and err == ""
+    argv = docker.calls[0][3]
+    assert "--password" not in argv and PASSWORD not in argv
+    assert argv[-1] == "--password-stdin"
+    assert docker.stdin == (PASSWORD + "\n").encode("utf-8")
     code, out, err = invoke(
         ["admin", "create", "--email", "you@example.com", "--dir", str(directory)],
         docker,

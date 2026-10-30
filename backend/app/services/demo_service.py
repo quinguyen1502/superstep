@@ -111,6 +111,12 @@ def purge_expired(db: Database, now: Optional[float] = None) -> int:
     users, data, chats = UserRepository(db), UserDataRepository(db), ChatSessionRepository(db)
     gone = users.ids_created_before(VISITOR_PREFIX, now - config.demo_visitor_ttl())
     for vid in gone:
+        fids = chats.feedback_ids_for_owner(vid)
         chats.delete_for_owner(vid); data.purge(vid, runs=True); data.delete_user(vid)
+        try:
+            from ..api.deps import get_job_queue
+            from .chat_session_service import enqueue_feedback_deletes
+            enqueue_feedback_deletes(get_job_queue(), fids)
+        except Exception: log.warning("LangSmith feedback for visitor %s was not queued", vid)
     if gone: log.info("Demo mode: removed %d expired visitors", len(gone))
     return len(gone)

@@ -180,6 +180,7 @@
 | `CODE_LANGUAGE_UNSUPPORTED` | 400 | Code node {node}: {language} is not available on this server |
 | `CODE_WRITE_FORBIDDEN` | 403 | Your role may not add Code nodes or change their code (code.write) |
 | `RUN_NOT_WAITING` | 409 | This run is not waiting for a response |
+| `RUN_STILL_WAITING` | 409 | The answer is saved. The run is still waiting for another step |
 | `CHECKPOINT_NOT_FOUND` | 404 | Checkpoint not found in this run, or it cannot be forked |
 | `RUN_FORK_UNSUPPORTED` | 400 | Runs of imported LangGraph graphs cannot be forked |
 | `RUN_RESPONSE_INVALID` | 400 | The response must be text (max {max} characters) |

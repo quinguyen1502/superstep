@@ -59,6 +59,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "LANGSMITH_NOT_CONFIGURED": (400, "LangSmith is not configured: set LANGSMITH_API_KEY on the server"),
     "LANGSMITH_PUSH_FAILED": (502, "Sending to LangSmith failed ({reason})"),
     "RUN_NOT_WAITING": (409, "This run is not waiting for a response"),
+    "RUN_STILL_WAITING": (409, "The answer is saved. The run is still waiting for another step"),
     "CHECKPOINT_NOT_FOUND": (404, "Checkpoint not found in this run, or it cannot be forked"),
     "RUN_FORK_UNSUPPORTED": (400, "Runs of imported LangGraph graphs cannot be forked"),
     "RUN_RESPONSE_INVALID": (400, "The response must be text (max {max} characters)"),

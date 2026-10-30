@@ -10,8 +10,8 @@ export type AgentStep = { kind: 'model' | 'tool'; round: number; text?: string; 
   tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected'; ms?: number
   approval?: 'approved' | 'rejected'  // a tool that needed approval (TASK-0117)
   child_run_id?: string; child_workflow_id?: string }  // a workflow tool's child run (TASK-0136)
-/** An Agent node `ag` runs as the steps `ag/__model`, `ag/__tool` and `ag/__exit`: the Agent node's id, else undefined. */
-export const agentOf = (node: string) => /^(.+)\/__(model|tool|exit)$/.exec(node)?.[1]
+/** An Agent node `ag` runs as `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join` and `ag/__exit`. */
+export const agentOf = (node: string) => /^(.+)\/__(model|tool(?:\/\d+)?|join|exit)$/.exec(node)?.[1]
 /** State without the agents' conversations (`agent:<id>`), which the engine keeps for time travel only. */
 export const hideAgents = (state: any) => state && typeof state === 'object' && !Array.isArray(state) && !state._truncated
   ? Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('agent:'))) : state

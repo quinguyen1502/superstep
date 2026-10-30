@@ -283,7 +283,7 @@ class RunService:
             if depth > subgraphs.MAX_DEPTH: raise AppError("WORKFLOW_TOOL_TOO_DEEP", max=subgraphs.MAX_DEPTH)
             child = self.runs.add_child(Run(id=uuid.uuid4().hex[:10], workflow_id=meta.get("workflow_id") or "adhoc", input=_dumps(inp), events="[]",
                                             status="queued", started=time.time(), owner=uid or None, source="tool", workflow_version=version,
-                                            parent_run_id=rid, parent_step=key, checkpoint=_dumps({"kind": "child", "workflow": wf})))
+                                            parent_run_id=rid, parent_step=key, checkpoint=_dumps({"kind": "child", "workflow": wf, "node": meta.get("node")})))
             if child.status == "queued":
                 self.jobs().enqueue({"run_id": child.id, "workflow_id": child.workflow_id, "owner": uid, "input": inp, "source": "tool"})
             return child.id
@@ -308,13 +308,27 @@ class RunService:
                 **({"error": error} if error else {}), **({"usage": usage} if usage else {})}
 
     def resume_parent(self, rid: str) -> bool:
-        """Queue the resume of the run waiting for child `rid`, once the child has ended. Called when the child settles and
-        when the parent records its wait (the child may have ended first). A second resume is dropped by the claim."""
+        """Queue the resume of the run waiting for child `rid`, once every child of that parent has ended. Called when a
+        child settles and when the parent records its wait (a child may have ended first). A second resume is dropped
+        by the claim."""
         r = self.runs.get(rid)
-        if r is None or not r.parent_run_id or r.status in ("queued", "running", "waiting", "paused") or self.jobs is None: return False
+        active = ("queued", "running", "waiting", "paused")
+        if r is None or not r.parent_run_id or r.status in active or self.jobs is None: return False
         p = self.runs.get(r.parent_run_id)
-        if p is None or p.status != "waiting" or ((json.loads(p.checkpoint or "{}").get("wait") or {}).get("run_id")) != rid: return False
-        enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "child": self.child_value(r)})
+        if p is None or p.status != "waiting": return False
+        kids = self.runs.children(p.id)
+        cp = json.loads(p.checkpoint or "{}")
+        named = (cp.get("wait") or {}).get("run_id")
+        children = {}
+        for ch in kids:
+            node = (json.loads(ch.checkpoint or "{}") or {}).get("node")
+            if isinstance(node, str) and node and ch.status not in active: children[node] = self.child_value(ch)
+        if children: self.runs.merge_checkpoint(p.id, {"children": children})
+        if any(ch.status in active for ch in kids): return False
+        if self.approvals is not None and self.approvals.repo.open_count(p.id): return False
+        if not named or not any(ch.id == named for ch in kids): return False
+        chosen = next(ch for ch in kids if ch.id == named)
+        enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "child": self.child_value(chosen)})
         return True
 
     def cancel_children(self, rid: str) -> None:
@@ -462,15 +476,27 @@ class RunService:
         wait = cp.get("wait") or {}
         if (child is None) == (wait.get("kind") == "child") or (child is not None and wait.get("run_id") != child.get("child_run_id")):
             raise AppError("RUN_NOT_WAITING")
+        node = str(cp.get("node") or "")
         if child is not None: response = child
         elif self.approvals is not None and not via_channel:  # answered in the studio: the channel buttons stop working (TASK-0022)
-            if self.approvals.decided_elsewhere(rid) or not self.approvals.claim(rid): raise AppError("RUN_NOT_WAITING")  # first answer wins (DEC-0043)
-            self.approvals.close_run(rid, "answered")
+            if self.approvals.decided_elsewhere(rid) or not self.approvals.claim_node(rid, node): raise AppError("RUN_NOT_WAITING")
+            self.approvals._close_requests(rid, "superseded", "answered", node or None)
+            if not self.approvals.wave_settled(rid):
+                self.approvals.keep_answer(rid, node, response)
+                raise AppError("RUN_STILL_WAITING")
+        elif self.approvals is not None and not self.approvals.wave_settled(rid):
+            self.approvals.keep_answer(rid, node, response)
+            raise AppError("RUN_STILL_WAITING")
+        answers = dict(cp.get("answers") or {})
+        if child is None and node: answers[node] = response
+        children = cp.get("children") if isinstance(cp.get("children"), dict) else {}
         res = self.run_resources(r, uid)
         return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
                        self.credentials.resolver(res) if self.credentials else None,
-                       run_id=rid, previous=r, resume={**{k: cp[k] for k in RESUME_KEYS if k in cp}, "value": response}, source=r.source or "ui",
-                       version=r.workflow_version, trace_parent=cp.get("trace"), ports=self.run_ports(r, uid))
+                       run_id=rid, previous=r, resume={**{k: cp[k] for k in RESUME_KEYS if k in cp}, "value": response,
+                                                       **({"answers": answers} if answers else {}),
+                                                       **({"children": children} if children else {})},
+                       source=r.source or "ui", version=r.workflow_version, trace_parent=cp.get("trace"), ports=self.run_ports(r, uid))
 
     def _plan_paused(self, r: Run, uid: str, steps: Optional[int], until: Optional[str] = None) -> RunPlan:
         """Continue a one-step pause (TASK-0036). No human response, and no approval notification."""

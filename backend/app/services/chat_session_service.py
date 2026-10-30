@@ -21,6 +21,14 @@ from ..engine.limits import size
 from ..core import config
 from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, WorkflowChatTrigger
 from ..repositories import ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
+from ..repositories.chat_sessions import feedback_is_pending
+
+
+def enqueue_feedback_deletes(jobs, ids) -> None:
+    """Ask the worker to delete these LangSmith feedback objects. Pending claims have no id yet."""
+    if jobs is None: return
+    for fid in ids:
+        if fid and not feedback_is_pending(fid): jobs.enqueue({"kind": "chat_rating_delete", "feedback_id": fid})
 from ..repositories.chat_triggers import WEB
 
 ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish the chat at /c/{slug} (DEC-0067)
@@ -267,7 +275,10 @@ class ChatSessionService:
     def unrate(self, s: ChatSession, tid: str) -> dict:
         turn = self.sessions.turn(tid) if isinstance(tid, str) else None
         if turn is None or turn.session_id != s.id: raise AppError("CHAT_TURN_NOT_FOUND")
+        rating = self.sessions.rating(tid)
+        feedback_id = rating.feedback_id if rating is not None else ""
         self.sessions.delete_rating(tid)
+        enqueue_feedback_deletes(self.jobs, [feedback_id])
         return {"ok": True}
 
     def rate_owned(self, sid: str, tid: str, uid: str, value, comment) -> dict:
@@ -284,7 +295,11 @@ class ChatSessionService:
         return self.view(s, "full")
 
     def delete(self, sid: str, uid: str) -> dict:
-        self._own(sid, uid); self.sessions.delete(sid); return {"ok": True}
+        self._own(sid, uid)
+        fids = self.sessions.feedback_ids_for_session(sid)
+        self.sessions.delete(sid)
+        enqueue_feedback_deletes(self.jobs, fids)
+        return {"ok": True}
 
     # ---- a message (RunService.plan, over the run socket) ----
     def input_for(self, uid: str, sid: str, message) -> dict:
@@ -360,7 +375,10 @@ class ChatSessionService:
         n, now = 0, time.time()
         for t in self.triggers.webs():
             days = int((json.loads(t.settings or "{}") or {}).get("retention_days") or DEFAULTS["retention_days"])
-            n += self.sessions.delete_idle(t.id, now - days * 86400)
+            cutoff = now - days * 86400
+            fids = self.sessions.feedback_ids_idle(t.id, cutoff)
+            n += self.sessions.delete_idle(t.id, cutoff)
+            enqueue_feedback_deletes(self.jobs, fids)
         return n
 
     # ---- helpers ----

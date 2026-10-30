@@ -115,9 +115,9 @@ def test_setting_off_is_sequential_even_when_the_model_returns_three(monkeypatch
 
 def test_parallel_cap_env(monkeypatch):
     monkeypatch.delenv("STUDIO_AGENT_PARALLEL_TOOLS", raising=False)
-    assert config.agent_parallel_tools() == 4
+    assert config.agent_parallel_tools() == 1
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "nope")
-    assert config.agent_parallel_tools() == 4
+    assert config.agent_parallel_tools() == 1
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "0")
     assert config.agent_parallel_tools() == 1
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "9")

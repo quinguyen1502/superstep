@@ -1,7 +1,9 @@
 """`admin` and `uninstall` for one instance."""
 from __future__ import annotations
 
+import getpass
 import shutil
+import sys
 
 from superstep.cli.docker import Docker, DockerError
 from superstep.cli.i18n import Catalog
@@ -32,7 +34,8 @@ def add_commands(commands, common, catalog: Catalog) -> None:
     listing = _sub(subs, common, catalog, "list", "help.admin_list", "example.admin_list")
     for command in (create, reset):
         command.add_argument("--email", required=True, help=catalog.format("help.account_email"))
-        command.add_argument("--password", help=catalog.format("help.admin_password"))
+        command.add_argument("--password", action="store_true", help=catalog.format("help.admin_password"))
+        command.add_argument("--password-stdin", action="store_true", help=catalog.format("help.admin_password_stdin"))
     for command in (create, reset, listing):
         command.add_argument("--name", help=catalog.format("help.name"))
         command.add_argument("--dir", help=catalog.format("help.dir"))
@@ -51,11 +54,15 @@ def cmd_admin(args, catalog, json_mode, _client, _parser, docker: Docker) -> int
         directory, record = _load(args)
         service = "api" if record.get("topology") == "full" else "superstep"
         command = ["python", "-m", "app.admin_cmd", args.admin_command]
+        stdin = None
         if args.admin_command != "list":
             command.extend(["--email", args.email])
-            if args.password:
-                command.extend(["--password", args.password])
-        raw = docker.exec_bytes(str(directory), str(record["name"]), service, command)
+            secret = _cli_password(args, catalog)
+            if secret is not None:
+                # Neither this process nor `docker exec` carries the password on argv.
+                command.append("--password-stdin")
+                stdin = secret.encode("utf-8") + b"\n"
+        raw = docker.exec_bytes(str(directory), str(record["name"]), service, command, stdin=stdin)
         if args.admin_command == "list":
             rows = _rows(raw)
             payload = {"ok": True, "name": record["name"], "admins": rows}
@@ -108,6 +115,23 @@ def cmd_uninstall(args, catalog, json_mode, _client, _parser, docker: Docker) ->
     else:
         _write_err(message + "\n")
     return 0
+
+
+def _cli_password(args, catalog: Catalog) -> str | None:
+    """A typed password comes from a prompt or from stdin, never from argv."""
+    if args.password and args.password_stdin:
+        raise AdminError("PASSWORD", "error.admin_password_both")
+    if args.password_stdin:
+        return sys.stdin.readline().rstrip("\n")
+    if not args.password:
+        return None
+    try:
+        value = getpass.getpass(catalog.format("prompt.admin_password") + " ")
+    except (EOFError, OSError):
+        value = ""
+    if not value:
+        raise AdminError("PASSWORD", "error.admin_password_empty")
+    return value
 
 
 def _confirm(args, catalog: Catalog, record: dict) -> None:
