@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 from ..core import config
-from . import agents, attachments, code_languages, code_runtime, deadlines, decisions, emails, foreach
+from . import agents, approval_policy, attachments, code_languages, code_runtime, deadlines, decisions, emails, foreach
 from .issues import Issue, at_node
 from .node_policy import errors as policy_errors
 from .templating import ref_errors, refs
@@ -143,7 +143,7 @@ def validate(wf: Dict[str, Any]) -> List[str]:
         if t == "agent": errs += agents.errors(nid, d, schema)
         if t in ("llm", "agent"): errs += attachments.errors(nid, d, schema)
         if t == "email": errs += emails.errors(nid, d, schema)
-        if t == "human" or (t == "agent" and agents.needs_approval(d)): errs += deadlines.errors(nid, d, config.wait_ttl())
+        if t == "human" or (t == "agent" and agents.needs_approval(d)): errs += deadlines.errors(nid, d, config.wait_ttl()) + approval_policy.errors(nid, d)
         if t == "human" and d.get("answered_by") not in (None, "visitor", "reviewer"):
             errs.append(Issue("HUMAN_ANSWERED_BY", node=nid))
         if t == "condition":

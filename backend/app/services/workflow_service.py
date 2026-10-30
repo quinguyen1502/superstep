@@ -43,6 +43,7 @@ class WorkflowService:
         if self.access is not None:
             if before is None and not new: before = json.loads((self.repo.get(wid) or Workflow(data="{}")).data or "{}")
             self.access.require_code(uid, before, wf)
+            self.access.require_auto(uid, uid if new else (self.repo.get(wid) or Workflow(owner=uid)).owner, before, wf)
         data, now = _dumps(wf), time.time()
         if new: self.repo.save(wid, name, data, now, uid)
         else: self.repo.update_name(wid, name, data, now)
