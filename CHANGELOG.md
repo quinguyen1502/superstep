@@ -6,6 +6,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Chat attachments: handbook and e2e** (REQ-0077). The Chat page has an Attachments section (types, limits, the state field, the file record, downloads, retention) and the error codes; the LLM and Agent node pages describe Include attachments. A Playwright spec covers attaching a PDF and an image on the published page in en and vi.
+
 - **`sstep` alias for the CLI** (TASK-0185). The `superstep` package also installs `sstep`, which runs the same command. The installer and the handbook CLI page mention it.
 - **Chat attachments in the studio and on the page** (REQ-0077). With attachments on, the message box has an attach button and takes dropped files. Each file is checked against the chat's kinds, size and count before upload, shows as a chip with its size (a thumbnail for images) and can be removed; Send waits for uploads. Sent messages list their files with a download action, in the Chat tab, on the published page and the widget, and in the builder's Visitors list. Chat settings gain an Attachments section bounded by the server ceiling. LLM and Agent node settings gain "Include attachments" with the files field. The published page's settings (`GET /api/public/chat/{slug}`) include `attachments` (`enabled`, `kinds`, `max_files`, `max_mb`).
 
