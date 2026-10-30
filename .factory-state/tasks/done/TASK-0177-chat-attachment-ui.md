@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0177
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -90,7 +90,9 @@ Add attachment controls to the chat composer (public page, embed, studio Chat ta
 
 - 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0177-chat-attachment-ui` from `develop`. Composer attach button, drag-and-drop, pre-upload checks, chips with thumbnails and remove; turns list files with downloads (fetch + blob, so the widget's visitor header is sent); Chat settings Attachments section bounded by the server ceiling; Visitors downloads; Include attachments switch on LLM and Agent nodes; the page settings expose the limits. `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0177-chat-attachment-ui` from `develop`.
+- Review: `.factory-state/artifacts/REV-0153-task-0177.md`. QA: `.factory-state/artifacts/QA-0153-task-0177.md`.
