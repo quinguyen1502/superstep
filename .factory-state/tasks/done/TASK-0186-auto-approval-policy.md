@@ -96,3 +96,4 @@ Add the `approval.auto` policy to Human nodes and Agent tool approval, with save
 ## Handoff Notes
 
 - Branch `factory/task-0186-auto-approval-policy` from `develop`.
+- Review: `.factory-state/artifacts/REV-0170-task-0186.md`. QA: `.factory-state/artifacts/QA-0170-task-0186.md`.

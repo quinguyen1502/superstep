@@ -103,3 +103,4 @@ Review waiting approvals with rules, the daily cap and an LLM judge before peopl
 ## Handoff Notes
 
 - Branch `factory/task-0187-auto-review-service` from `develop`.
+- Review: `.factory-state/artifacts/REV-0171-task-0187.md`. QA: `.factory-state/artifacts/QA-0171-task-0187.md`.
