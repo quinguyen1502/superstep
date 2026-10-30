@@ -240,11 +240,25 @@ def decide(text: str, question: dict) -> Any:
 AGENT = r'''
 # --- Agents --------------------------------------------------------------------------------------------------
 # An Agent node is a loop of two nodes: the model node asks the model, which answers or asks for tool calls, and the
-# tool node runs one call and gives the result back. Without LLM_PROVIDER, call_agent() is an offline mock: it calls
-# the tool that best matches the task once, then answers with its result (the studio's mock agent).
+# tool node runs that round's calls. They run together unless the node turns that off. Without LLM_PROVIDER,
+# call_agent() is an offline mock: it calls the tools the task names, then answers with the last result.
 MAX_CALLS_PER_ROUND = 8
 RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
 STEP_CHARS = 2000  # ... and into the steps field shortened to this
+
+
+def wave_cap(enabled: bool) -> int:
+    """Calls of one round that run together. Off is one. Otherwise 4, or STUDIO_AGENT_PARALLEL_TOOLS when it is 1..8."""
+    if not enabled:
+        return 1
+    raw = os.environ.get("STUDIO_AGENT_PARALLEL_TOOLS")
+    if raw is None or not str(raw).strip():
+        return 4
+    try:
+        n = int(str(raw).strip())
+    except ValueError:
+        return 4
+    return n if 1 <= n <= 8 else 4
 JSON_TYPES = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
 
 
@@ -255,19 +269,22 @@ def agent_task(messages: list) -> tuple:
 
 
 def mock_agent(messages: list, tools: Optional[list], model: str) -> tuple:
-    """Offline agent: with no tool result yet it calls the tool whose name and description share the most words with
-    the task (the first one on a tie), string arguments filled with the task; then it answers with the last result."""
+    """Offline agent: with no tool result yet it calls every tool the task names (or the best match), then answers."""
     task, results = agent_task(messages)
     if tools and not results:
         words = set(re.findall(r"\w+", task.lower()))
         score = lambda t: len(words & set(re.findall(r"\w+", f"{t['name'].replace('_', ' ')} {t.get('description') or ''}".lower())))  # noqa: E731
-        best = max(tools, key=score)
-        params = best.get("parameters") or {}
-        props, required = params.get("properties") or {}, set(params.get("required") or [])
-        empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
-        args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
-                for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
-        return "", [{"id": "mock_call_1", "name": best["name"], "args": args}]
+        named = [t for t in tools if re.search(r"(?<!\w)" + re.escape(str(t.get("name") or "").lower()) + r"(?!\w)", task.lower())]
+        picked = named if len(named) >= 2 else [max(tools, key=score)]
+        calls = []
+        for i, best in enumerate(picked, 1):
+            params = best.get("parameters") or {}
+            props, required = params.get("properties") or {}, set(params.get("required") or [])
+            empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
+            args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
+                    for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+            calls.append({"id": f"mock_call_{i}", "name": best["name"], "args": args})
+        return "", calls
     said = (results[-1].get("content") or "") if results else (task.strip().splitlines() or [""])[-1]
     return f"[mock:{model}] Answer: {said[:200]}", []
 
@@ -747,6 +764,7 @@ class _Writer(GraphWriter):
                 self.add(f"{self.http_key(const, t)}_URL = {lit(t.get('url') or '')}")
                 self.add(f"{self.http_key(const, t)}_BODY = {lit(t.get('body') or '')}")
         self.add(f"{const}_MAX_ROUNDS = {self.rounds(d)}")
+        self.add(f"{const}_PARALLEL = {d.get('parallel_tool_calls') is not False}")
         self.add("")
         self.add("")
         self.add(f"def {name}(state: {cls}) -> dict:")
@@ -754,7 +772,7 @@ class _Writer(GraphWriter):
         self.add("")
         self.add("    Then the model and the tools take turns, one node each:")
         self.add(f"    - {model}() asks the model, which answers or asks for tool calls;")
-        self.add(f"    - {tool}() runs one tool call (route_{model}() and route_{tool}() pick the next node);")
+        self.add(f"    - {tool}() runs the waiting tool calls (route_{model}() and route_{tool}() pick the next node);")
         self.add(f"    - {end}() writes the answer.\"\"\"")
         self.add("    messages = []")
         if d.get("system_prompt"): self.add(f"    messages.append({{\"role\": \"system\", \"content\": render({const}_SYSTEM, state)}})")
@@ -793,51 +811,68 @@ class _Writer(GraphWriter):
         self.add("")
         self.add("")
         self.add(f"def {tool}(state: {cls}) -> dict:")
-        self.add(f'    """{_doc(who)}: runs the first tool call the model asked for and gives the result back to the model.')
+        self.add(f'    """{_doc(who)}: runs the tool calls waiting from the model and gives the results back, in the model\'s order.')
+        self.add(f"    With {const}_PARALLEL on, up to wave_cap() calls run together. A failure becomes that call's result;")
+        self.add("    the others still finish.")
         if approval:
-            self.add(f"    A tool in {const}_NEEDS_APPROVAL asks first with interrupt(): \"approved\" runs the call; any other answer")
-            self.add("    rejects it, and the model is told why. On resume the node runs again from the top.")
+            self.add(f"    A tool in {const}_NEEDS_APPROVAL runs on its own and asks first with interrupt(): \"approved\" runs the call;")
+            self.add("    any other answer rejects it, and the model is told why. On resume the node runs again from the top.")
         if (d.get("approval") or {}).get("channel") or d.get("deadline"):
             self.add("    In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
         self.add('    """')
         self.add(f"    chat = dict(state[{chat}])")
-        self.add("    call, chat[\"pending\"] = chat[\"pending\"][0], chat[\"pending\"][1:]")
-        self.add(f"    spec = next((t for t in {const}_TOOLS if t[\"name\"] == call[\"name\"]), None)")
-        self.add("    problem = None if spec is None else check_arguments(spec[\"parameters\"], call[\"args\"])")
+        self.add("    pending = list(chat[\"pending\"])")
+        self.add(f"    n = min(wave_cap({const}_PARALLEL), len(pending))")
         if approval:
-            self.add("    answer = None")
-            self.add(f"    if spec is not None and problem is None and call[\"name\"] in {const}_NEEDS_APPROVAL:")
-            self.add(f"        question = ({lit(who + ' wants to call ')} + call[\"name\"] + \" with these arguments:\\n\"")
-            self.add("                    + json.dumps(call[\"args\"], ensure_ascii=False, indent=2)")
-            self.add("                    + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\")")
-            self.add(f"        answer = str(interrupt({{\"node\": {lit(name)}, \"question\": question}}))")
-        self.add("    started = time.perf_counter()")
-        self.add("    if spec is None:")
-        self.add(f"        status, result = \"error\", f\"Unknown tool {{call['name']}}: use one of {{', '.join(sorted(t['name'] for t in {const}_TOOLS))}}\"")
-        self.add("    elif problem:")
-        self.add("        status, result = \"error\", f\"Invalid arguments for {call['name']}: {problem}\"")
+            self.add("    for i, call in enumerate(pending[:n]):")
+            self.add(f"        if call[\"name\"] in {const}_NEEDS_APPROVAL:")
+            self.add("            n = 1 if i == 0 else i")
+            self.add("            break")
+        self.add("    batch, chat[\"pending\"] = pending[:n], pending[n:]")
+        self.add("    def one(call: dict) -> tuple:")
+        self.add(f"        spec = next((t for t in {const}_TOOLS if t[\"name\"] == call[\"name\"]), None)")
+        self.add("        problem = None if spec is None else check_arguments(spec[\"parameters\"], call[\"args\"])")
         if approval:
-            self.add("    elif answer is not None and answer.strip().lower() != \"approved\":")
-            self.add("        comment = \"\" if answer.strip().lower() == \"rejected\" else answer.strip()")
-            self.add("        status, result = \"rejected\", \"Rejected by a reviewer\" + (f\": {comment}\" if comment else \"\")")
+            self.add("        answer = None")
+            self.add(f"        if spec is not None and problem is None and call[\"name\"] in {const}_NEEDS_APPROVAL:")
+            self.add(f"            question = ({lit(who + ' wants to call ')} + call[\"name\"] + \" with these arguments:\\n\"")
+            self.add("                        + json.dumps(call[\"args\"], ensure_ascii=False, indent=2)")
+            self.add("                        + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\")")
+            self.add(f"            answer = str(interrupt({{\"node\": {lit(name)}, \"question\": question}}))")
+        self.add("        started = time.perf_counter()")
+        self.add("        if spec is None:")
+        self.add(f"            status, result = \"error\", f\"Unknown tool {{call['name']}}: use one of {{', '.join(sorted(t['name'] for t in {const}_TOOLS))}}\"")
+        self.add("        elif problem:")
+        self.add("            status, result = \"error\", f\"Invalid arguments for {call['name']}: {problem}\"")
+        if approval:
+            self.add("        elif answer is not None and answer.strip().lower() != \"approved\":")
+            self.add("            comment = \"\" if answer.strip().lower() == \"rejected\" else answer.strip()")
+            self.add("            status, result = \"rejected\", \"Rejected by a reviewer\" + (f\": {comment}\" if comment else \"\")")
+        self.add("        else:")
+        self.add("            try:")
+        self.add(f"                status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
+        self.add("            except Exception as error:  # the model hears about the failure and can try something else")
+        self.add("                status, result = \"error\", f\"The tool failed: {error}\"")
+        self.add("        step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
+        self.add("                \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
+        if approval:
+            self.add("        if answer is not None:")
+            self.add("            step[\"approval\"] = \"rejected\" if status == \"rejected\" else \"approved\"")
+        self.add("        return ({\"role\": \"tool\", \"tool_call_id\": call[\"id\"], \"name\": call[\"name\"], \"content\": shorten(result, RESULT_CHARS)}, step)")
+        self.add("    if n <= 1:")
+        self.add("        pairs = [one(batch[0])]")
         self.add("    else:")
-        self.add("        try:")
-        self.add(f"            status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
-        self.add("        except Exception as error:  # the model hears about the failure and can try something else")
-        self.add("            status, result = \"error\", f\"The tool failed: {error}\"")
-        self.add("    step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
-        self.add("            \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
-        if approval:
-            self.add("    if answer is not None:")
-            self.add("        step[\"approval\"] = \"rejected\" if status == \"rejected\" else \"approved\"")
-        self.add("    chat[\"messages\"] = chat[\"messages\"] + [{\"role\": \"tool\", \"tool_call_id\": call[\"id\"], \"name\": call[\"name\"],")
-        self.add("                                          \"content\": shorten(result, RESULT_CHARS)}]")
-        self.add("    chat[\"steps\"] = chat[\"steps\"] + [step]")
+        self.add("        from concurrent.futures import ThreadPoolExecutor")
+        self.add("        with ThreadPoolExecutor(max_workers=n) as pool:")
+        self.add("            pairs = list(pool.map(one, batch))  # map keeps the model's order")
+        self.add("    for message, step in pairs:")
+        self.add("        chat[\"messages\"] = chat[\"messages\"] + [message]")
+        self.add("        chat[\"steps\"] = chat[\"steps\"] + [step]")
         self.add(f"    return {{{chat}: chat}}")
         self.add("")
         self.add("")
         self.add(f"def route_{tool}(state: {cls}) -> str:")
-        self.add("    \"\"\"After a tool call: the next waiting call, else back to the model with the results.\"\"\"")
+        self.add("    \"\"\"After a batch of tool calls: another batch if any remain, else back to the model.\"\"\"")
         self.add(f"    return \"tool\" if state[{chat}][\"pending\"] else \"model\"")
         self.add("")
         self.add("")

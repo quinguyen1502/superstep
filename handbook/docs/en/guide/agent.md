@@ -138,8 +138,14 @@ and each one is built and tested on its own canvas.
 ## Rounds and the limit
 
 One **round** is a model call plus the tool calls it asks for. Calls in one
-round run one after another, in the model's order; at most 8 run, and the
-others get "refused" as their result.
+round run together, and their results go back to the model in the model's
+order. The default is 4 at a time (`STUDIO_AGENT_PARALLEL_TOOLS`, from 1 to 8).
+**Run tool calls in parallel** on the Agent node turns that off for one node,
+so its calls run one after another. At most 8 run, and the others get
+"refused" as their result. A call that fails, or one that waits for approval
+or for another workflow, does not stop the other calls. The run continues
+once every wait in the round is done. The trace draws the calls of a round
+as bars that start together.
 
 The loop ends when the model answers without calling a tool. When **Max
 rounds** is reached, the model is called once more without tools to give its

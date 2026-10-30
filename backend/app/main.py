@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.routing import Route
-from .api.deps import get_db, public_chat_service, run_service, run_worker
+from .api.deps import get_db, get_job_queue, public_chat_service, run_service, run_worker
 from .core.logging import get_logger, redact_tokens
 from .core import config, crypto
 from .api.error_handlers import register_error_handlers
@@ -33,7 +33,7 @@ async def expire_waiting_loop() -> None:
 def create_app() -> FastAPI:
     check_secret(); crypto.check_key()
     code_runtime.warn_if_unisolated()  # TASK-0056: once at start-up
-    bootstrap(get_db())  # alembic upgrade head + demo user + example workflow
+    bootstrap(get_db(), jobs=get_job_queue())  # alembic upgrade head + demo user + example workflow
     mcp_app = McpApp()  # MCP server for workflow tokens (TASK-0114)
     @asynccontextmanager
     async def lifespan(_app):

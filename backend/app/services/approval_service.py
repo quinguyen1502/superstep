@@ -118,10 +118,22 @@ class ApprovalService:
     def may_answer(self, uid: str, w: ApprovalWait) -> bool:
         return uid == w.owner or uid in self.repo.wait_approvers(w.id)
 
-    def claim(self, rid: str) -> bool:
+    def claim(self, rid: str, node: Optional[str] = None) -> bool:
         """First answer wins (DEC-0043): close the run's open waiting step. True when this caller closed it, or when the run
-        paused before waiting steps existed (no row at all)."""
+        paused before waiting steps existed (no row at all). `node` closes only that step, so a sibling wait of the same
+        wave stays open (TASK-0158)."""
+        if node:
+            w = self.repo.open_wait(rid, node)
+            if w is None: return self.repo.latest_wait(rid) is None
+            return self.repo.close_wait(rid, "answered", w.id)
         return self.repo.close_wait(rid, "answered") or self.repo.latest_wait(rid) is None
+
+    def answered_slot(self, rid: str, node: str) -> bool:
+        """The studio answered this slot: close its waiting step and its channel buttons. Other slots of the wave stay
+        open. False when another answer already closed this step."""
+        if not self.claim(rid, node): return False
+        self._close_requests(rid, "superseded", "answered", node=node)
+        return True
 
     def _request(self, rid, owner, wid, node, cfg, target, ev, due: Optional[float] = None) -> Optional[ApprovalRequest]:
         """Send one approval message. Its buttons expire after STUDIO_APPROVAL_TTL, or at the step's deadline if sooner."""
@@ -230,12 +242,12 @@ class ApprovalService:
             self._audit(r.owner, kind, "denied", r, code=code, actor=uid, external=external); return code, r, None
         if uid != r.owner and uid not in json.loads(r.approvers or "[]"): return refuse("APPROVAL_FORBIDDEN")
         run = self.runs.get(r.run_id)
-        if run is None or run.status != "waiting" or not self.claim(r.run_id):
+        if run is None or run.status != "waiting" or not self.claim(r.run_id, r.node_id):
             self.repo.decide(r.id, "superseded"); return refuse("APPROVAL_ALREADY_DECIDED")
         if not self.repo.decide(r.id, decision, uid, external): return refuse("APPROVAL_ALREADY_DECIDED")  # lost the race: single use
         self._audit(r.owner, kind, decision, r, actor=uid, external=external)
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": r.run_id, "owner": r.owner, "response": decision,
-                                       "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
+                                       "node": r.node_id, "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
         return None, self.repo.request(r.id), decision
 
     # ---- link channels: the studio's /approve page (TASK-0047) ----
@@ -282,12 +294,12 @@ class ApprovalService:
 
     # ---- the Approvals inbox (TASK-0065) ----
     def answered_in_studio(self, w: ApprovalWait, uid: str, response: str) -> None:
-        """An inbox answer whose waiting step the caller already closed: close the channel requests, audit it and resume
-        the run like a channel decision (the run stays its owner's)."""
-        self.close_run(w.run_id, "answered")
+        """An inbox answer whose waiting step the caller already closed: close that step's channel requests, audit it and
+        resume the run like a channel decision (the run stays its owner's). Other open steps of the run stay open."""
+        self._close_requests(w.run_id, "superseded", "answered", node=w.node_id)
         self._audit(w.owner, "studio", response if response in DECISIONS.values() else "answered", actor=uid, run_id=w.run_id, wid=w.workflow_id)
-        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
-                                       "by": {"channel": "studio", "user_id": uid}})
+        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response,
+                                       "node": w.node_id, "workflow_id": w.workflow_id, "by": {"channel": "studio", "user_id": uid}})
 
     # ---- the run went on without the channel (answered in the studio, cancelled, expired) ----
     def decided_elsewhere(self, rid: str) -> bool:
@@ -302,10 +314,11 @@ class ApprovalService:
         self.repo.close_wait(rid, reason)
         return self._close_requests(rid, "expired" if reason == "expired" else "superseded", reason if reason in CLOSE_TEXTS else "finished")
 
-    def _close_requests(self, rid: str, action: str, key: str) -> int:
-        """Close the run's pending channel requests and edit their messages to `key` (a chat text)."""
+    def _close_requests(self, rid: str, action: str, key: str, node: Optional[str] = None) -> int:
+        """Close the run's pending channel requests and edit their messages to `key` (a chat text). `node` closes only that step."""
         closed = []
         for r in self.repo.requests_for_run(rid, "pending"):
+            if node is not None and r.node_id != node: continue
             if self.repo.decide(r.id, action): closed.append(r); self._audit(r.owner, r.kind, action, r)
         if closed:
             def edit():
@@ -355,10 +368,10 @@ class ApprovalService:
         response = deadlines.RESPONSES.get(action, "rejected")  # a second deadline after an escalation rejects
         if not self.repo.close_wait(w.run_id, "deadline", w.id): return 0  # this step only: the run may wait at a later one by now
         log_skipped()
-        self.close_run(w.run_id, f"deadline_{response}")
+        self._close_requests(w.run_id, "superseded", f"deadline_{response}", node=w.node_id)
         self._audit(w.owner, kind, "timed_out", run_id=w.run_id, wid=w.workflow_id)
-        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response, "workflow_id": w.workflow_id,
-                                       "by": {"channel": "deadline", "on_timeout": action}})
+        if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response,
+                                       "node": w.node_id, "workflow_id": w.workflow_id, "by": {"channel": "deadline", "on_timeout": action}})
         return 1
 
     def _reach(self, w: ApprovalWait, kind: str, uids: list[str], key: str, extra: list[str] = (), due: Optional[float] = None) -> None:

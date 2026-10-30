@@ -140,7 +140,8 @@ def workflow_service() -> WorkflowService:
     db = get_db(); return WorkflowService(WorkflowRepository(db), RunRepository(db), WorkflowVersionRepository(db),
                                           access=access_service(), shares=WorkflowShareRepository(db), users=UserRepository(db),
                                           teams=TeamRepository(db), audit=audit_service(), tests=WorkflowTestRepository(db),
-                                          chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db))
+                                          chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db),
+                                          jobs=get_job_queue())
 
 def template_service() -> TemplateService:
     return TemplateService(TemplateRepository(get_db()), workflow_service(), access_service(), tests=workflow_test_service)
@@ -174,7 +175,7 @@ def share_service() -> ShareService:
 
 def auth_service() -> AuthService:
     db = get_db(); return AuthService(UserRepository(db), workflow_service(), AuthSecurityRepository(db), audit=audit_service(),
-                                      visit=lambda: start_visit(db))
+                                      visit=lambda: start_visit(db, jobs=get_job_queue()))
 
 def demo_service() -> DemoService:
     return DemoService(get_rate_limiter())

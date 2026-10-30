@@ -4,7 +4,7 @@ GET  /api/public/chat/{slug}                      the page: title, intro, sugges
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
 GET  /api/public/chat/{slug}/logo?v=<hash>        the chat's logo image (TASK-0145)
-WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response}: the run
+WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response, node?}: the run
                                                   streams as public_event()s (TASK-0141); ?visitor= for the widget
 GET  /api/public/chat-frame?path=/c/{slug}        the page's frame-ancestors in Content-Security-Policy (TASK-0143):
                                                   nginx asks it with auth_request (X-Original-URI) before serving /c/

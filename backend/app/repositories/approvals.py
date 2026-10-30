@@ -123,12 +123,19 @@ class ApprovalRepository:
 
     # ---- waiting steps (TASK-0065, DEC-0043) ----
     def add_wait(self, w: ApprovalWait, approvers: list[str]) -> ApprovalWait:
-        """A new pause of the run: any older open step of the same run is closed first (a run waits at one node)."""
+        """A new pause at this node. An older open wait of the same node is closed. Other nodes of the run keep theirs."""
         with self.db.session() as s:
-            s.execute(update(ApprovalWait).where(ApprovalWait.run_id == w.run_id, ApprovalWait.status == "waiting")
+            s.execute(update(ApprovalWait).where(ApprovalWait.run_id == w.run_id, ApprovalWait.node_id == w.node_id,
+                                                 ApprovalWait.status == "waiting")
                       .values(status="closed", outcome="superseded", closed_at=time.time()))
             s.add(w); s.add_all(ApprovalWaitApprover(wait_id=w.id, user_id=u) for u in dict.fromkeys(approvers) if u != w.owner)
             s.commit(); return w
+
+    def open_wait(self, rid: str, node: str) -> Optional[ApprovalWait]:
+        """The open waiting step of this node, if the run still has one."""
+        with self.db.session() as s:
+            return s.scalars(select(ApprovalWait).where(ApprovalWait.run_id == rid, ApprovalWait.node_id == node,
+                                                       ApprovalWait.status == "waiting")).first()
 
     def latest_wait(self, rid: str) -> Optional[ApprovalWait]:
         """The run's most recent waiting step, open or closed."""

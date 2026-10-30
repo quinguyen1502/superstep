@@ -70,11 +70,27 @@ class Docker:
             return exc.message
         return proc.stdout + proc.stderr
 
-    def exec_bytes(self, directory: str, project: str, service: str, command: list[str]) -> bytes:
-        proc = _run_bytes(_compose_argv(directory, project, ["exec", "-T", service, *command]), self.host)
+    def exec_bytes(self, directory: str, project: str, service: str, command: list[str], stdin: Optional[bytes] = None) -> bytes:
+        flags = ["-i", "-T"] if stdin is not None else ["-T"]
+        proc = _run_bytes(_compose_argv(directory, project, ["exec", *flags, service, *command]), self.host, stdin)
         if proc.returncode != 0:
             raise DockerError(proc.stderr.decode("utf-8", "replace").strip() or "docker failed")
         return proc.stdout
+
+    def exec_to_file(self, directory: str, project: str, service: str, command: list[str], dest: Path) -> None:
+        """Stream a command's stdout to `dest`. A database dump must not sit in this process."""
+        try:
+            with dest.open("wb") as handle:
+                proc = subprocess.run(
+                    _compose_argv(directory, project, ["exec", "-T", service, *command]),
+                    stdout=handle,
+                    stderr=subprocess.PIPE,
+                    env=_env(self.host),
+                )
+        except OSError as exc:
+            raise DockerError(str(exc))
+        if proc.returncode != 0:
+            raise DockerError(proc.stderr.decode("utf-8", "replace").strip() or "docker failed")
 
     def copy_from(self, directory: str, project: str, service: str, path: str) -> bytes:
         target = _temp_path()
@@ -84,13 +100,16 @@ class Docker:
         finally:
             os.unlink(target)
 
-    def copy_to(self, directory: str, project: str, service: str, path: str, data: bytes) -> None:
-        target = _temp_path()
+    def copy_to(self, directory: str, project: str, service: str, path: str, data) -> None:
+        owned = not isinstance(data, Path)
+        target = _temp_path() if owned else str(data)
         try:
-            Path(target).write_bytes(data)
+            if owned:
+                Path(target).write_bytes(data)
             _check(_compose_argv(directory, project, ["cp", target, f"{service}:{path}"]), self.host)
         finally:
-            os.unlink(target)
+            if owned:
+                os.unlink(target)
 
     def systemd_user(self) -> bool:
         return shutil.which("systemctl") is not None
@@ -248,9 +267,9 @@ def _run(args: list[str], host: Optional[str] = None) -> subprocess.CompletedPro
         raise DockerError(str(exc))
 
 
-def _run_bytes(args: list[str], host: Optional[str] = None) -> subprocess.CompletedProcess:
+def _run_bytes(args: list[str], host: Optional[str] = None, stdin: Optional[bytes] = None) -> subprocess.CompletedProcess:
     try:
-        return subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_env(host))
+        return subprocess.run(args, input=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_env(host))
     except OSError as exc:
         raise DockerError(str(exc))
 

@@ -44,6 +44,7 @@ def run(monkeypatch, calls, tools, sleeps, **data):
 
 
 def test_three_calls_overlap_and_keep_the_model_order(monkeypatch):
+    monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")
     tools = [tool("a"), tool("b"), tool("c")]
     sleeps = {"a": 0.2, "b": 0.05, "c": 0.12}
     calls = iter([("", [call("a", {"n": 1}, "1"), call("b", {"n": 2}, "2"), call("c", {"n": 3}, "3")]), ("Done", [])])
@@ -117,7 +118,7 @@ def test_parallel_cap_env(monkeypatch):
     monkeypatch.delenv("STUDIO_AGENT_PARALLEL_TOOLS", raising=False)
     assert config.agent_parallel_tools() == 4
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "nope")
-    assert config.agent_parallel_tools() == 4
+    assert config.agent_parallel_tools() == 1
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "0")
     assert config.agent_parallel_tools() == 1
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "9")

@@ -283,11 +283,21 @@ async function decide(text: string, question: Question): Promise<unknown> {
 AGENT = r'''
 // --- Agents --------------------------------------------------------------------------------------------------
 // An Agent node is a loop of two nodes: the model node asks the model, which answers or asks for tool calls, and the
-// tool node runs one call and gives the result back. Without LLM_PROVIDER, callAgent() is an offline mock: it calls
-// the tool that best matches the task once, then answers with its result (the studio's mock agent).
+// tool node runs that round's calls. They run together unless the node turns that off. Without LLM_PROVIDER,
+// callAgent() is an offline mock: it calls the tools the task names, then answers with the last result.
 const MAX_CALLS_PER_ROUND = 8;
 const RESULT_CHARS = 8000;  // a tool result goes back to the model shortened to this
 const STEP_CHARS = 2000;  // ... and into the steps field shortened to this
+
+/** Calls of one round that run together. Off is one. Otherwise 4, or STUDIO_AGENT_PARALLEL_TOOLS when it is 1..8.
+ * env() is the reader above: Node has no Deno, and Deno without --allow-env must stay at the default. */
+function waveCap(enabled: boolean): number {
+  if (!enabled) return 1;
+  const raw = env("STUDIO_AGENT_PARALLEL_TOOLS");
+  if (raw == null || !raw.trim()) return 4;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= 8 ? n : 4;
+}
 
 type Schema = { type?: string; properties?: Record<string, unknown>; required?: string[] };
 type ToolSpec = { name: string; description: string; parameters: Schema };
@@ -305,24 +315,27 @@ function agentTask(messages: ChatMessage[]): [string, ChatMessage[]] {
   return [last >= 0 ? messages[last].content || "" : "", messages.slice(last + 1).filter((m) => m.role === "tool")];
 }
 
-/** Offline agent: with no tool result yet it calls the tool whose name and description share the most words with
- * the task (the first one on a tie), string arguments filled with the task; then it answers with the last result. */
+/** Offline agent: with no tool result yet it calls every tool the task names (or the best match), then answers. */
 function mockAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): [string, ToolCall[]] {
   const [task, results] = agentTask(messages);
   if (tools?.length && !results.length) {
     const words = new Set(task.toLowerCase().match(WORDS));
     const score = (t: ToolSpec) =>
       [...new Set(`${t.name.replaceAll("_", " ")} ${t.description || ""}`.toLowerCase().match(WORDS))].filter((w) => words.has(w)).length;
-    const best = tools.reduce((a, t) => (score(t) > score(a) ? t : a));
-    const required = best.parameters?.required ?? [];
-    const empty: Record<string, unknown> = { number: 0, integer: 0, boolean: false, array: [], object: {} };
-    const args: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(best.parameters?.properties ?? {})) {
-      const type = v !== null && typeof v === "object" && "type" in v ? v.type : "string";
-      if (type === "string") args[k] = task;
-      else if (required.includes(k)) args[k] = empty[String(type)] ?? null;
-    }
-    return ["", [{ id: "mock_call_1", name: best.name, args }]];
+    const named = tools.filter((t) => new RegExp("(^|[^a-z0-9_])" + t.name.toLowerCase() + "([^a-z0-9_]|$)").test(task.toLowerCase()));
+    const picked = named.length >= 2 ? named : [tools.reduce((a, t) => (score(t) > score(a) ? t : a))];
+    const calls: ToolCall[] = picked.map((best, i) => {
+      const required = best.parameters?.required ?? [];
+      const empty: Record<string, unknown> = { number: 0, integer: 0, boolean: false, array: [], object: {} };
+      const args: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(best.parameters?.properties ?? {})) {
+        const type = v !== null && typeof v === "object" && "type" in v ? v.type : "string";
+        if (type === "string") args[k] = task;
+        else if (required.includes(k)) args[k] = empty[String(type)] ?? null;
+      }
+      return { id: `mock_call_${i + 1}`, name: best.name, args };
+    });
+    return ["", calls];
   }
   const said = results.length ? results.at(-1)!.content || "" : task.trim() ? task.trim().split(/\r?\n/).at(-1)! : "";
   return [`[mock:${model}] Answer: ${[...said].slice(0, 200).join("")}`, []];
@@ -800,6 +813,7 @@ class _Writer(GraphWriter):
         self.add(f"const {const}_PROMPT = {lit(d.get('prompt') or '')};")
         self.add("// The tools the model may call: their names, what they do, and the JSON Schema of their arguments.")
         self.add(f"const {const}_TOOLS: ToolSpec[] = {lit(agents.specs(self.tool_spec_data(d)))};")
+        self.add(f"const {const}_PARALLEL = {str(d.get('parallel_tool_calls') is not False).lower()};")
         if approval: self.add(f"const {const}_NEEDS_APPROVAL = {lit(approval)};  // these ask a person first (interrupt)")
         for t in d.get("tools") or []:
             if isinstance(t, dict) and t.get("source") == "http":
@@ -851,53 +865,68 @@ class _Writer(GraphWriter):
         self.add("}")
         self.agent_calls(d, name, const, cls)
         self.add("")
-        self.add(f"/** {_doc(who)}: runs the first tool call the model asked for and gives the result back to the model.")
+        self.add(f"/** {_doc(who)}: runs the tool calls waiting from the model and gives the results back, in the model's order.")
+        self.add(f" * With {const}_PARALLEL on, up to waveCap() calls run together. A failure becomes that call's result;")
+        self.add(" * the others still finish.")
         if approval:
-            self.add(f" * A tool in {const}_NEEDS_APPROVAL asks first with interrupt(): \"approved\" runs the call; any other answer")
-            self.add(" * rejects it, and the model is told why. On resume the node runs again from the top.")
+            self.add(f" * A tool in {const}_NEEDS_APPROVAL runs on its own and asks first with interrupt(): \"approved\" runs the call;")
+            self.add(" * any other answer rejects it, and the model is told why. On resume the node runs again from the top.")
         if (d.get("approval") or {}).get("channel") or d.get("deadline"):
             self.add(" * In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
         self.add(" */")
         self.add(f"async function {tool}(state: {cls}): Promise<Update> {{")
         self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
-        self.add("  const [call, ...rest] = chat.pending;")
-        self.add("  chat.pending = rest;")
-        self.add(f"  const spec = {const}_TOOLS.find((t) => t.name === call.name);")
-        self.add("  const problem = spec ? checkArguments(spec.parameters, call.args) : null;")
+        self.add("  const pending = [...chat.pending];")
+        self.add(f"  let n = Math.min(waveCap({const}_PARALLEL), pending.length);")
         if approval:
-            self.add("  let answer: string | null = null;")
-            self.add(f"  if (spec && problem === null && {const}_NEEDS_APPROVAL.includes(call.name)) {{")
-            self.add(f"    const question = {lit(who + ' wants to call ')} + call.name + \" with these arguments:\\n\"")
-            self.add("      + JSON.stringify(call.args, null, 2)")
-            self.add("      + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\";")
-            self.add(f"    answer = String(interrupt({{ node: {lit(name)}, question }}));")
+            self.add("  for (let i = 0; i < n; i++) {")
+            self.add(f"    if ({const}_NEEDS_APPROVAL.includes(pending[i].name)) {{ n = i === 0 ? 1 : i; break; }}")
             self.add("  }")
-        self.add("  const started = performance.now();")
-        self.add("  let status: string, result: string;")
-        self.add("  if (!spec) {")
-        self.add(f"    [status, result] = [\"error\", `Unknown tool ${{call.name}}: use one of ${{{const}_TOOLS.map((t) => t.name).sort().join(\", \")}}`];")
-        self.add("  } else if (problem) {")
-        self.add("    [status, result] = [\"error\", `Invalid arguments for ${call.name}: ${problem}`];")
+        self.add("  const batch = pending.slice(0, n);")
+        self.add("  chat.pending = pending.slice(n);")
+        self.add("  async function one(call: ToolCall): Promise<[ChatMessage, AgentStep]> {")
+        self.add(f"    const spec = {const}_TOOLS.find((t) => t.name === call.name);")
+        self.add("    const problem = spec ? checkArguments(spec.parameters, call.args) : null;")
         if approval:
-            self.add("  } else if (answer !== null && answer.trim().toLowerCase() !== \"approved\") {")
-            self.add("    const comment = answer.trim().toLowerCase() === \"rejected\" ? \"\" : answer.trim();")
-            self.add("    [status, result] = [\"rejected\", \"Rejected by a reviewer\" + (comment ? `: ${comment}` : \"\")];")
-        self.add("  } else {")
-        self.add("    try {")
-        self.add(f"      [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
-        self.add("    } catch (error) {  // the model hears about the failure and can try something else")
-        self.add("      [status, result] = [\"error\", `The tool failed: ${error instanceof Error ? error.message : error}`];")
+            self.add("    let answer: string | null = null;")
+            self.add(f"    if (spec && problem === null && {const}_NEEDS_APPROVAL.includes(call.name)) {{")
+            self.add(f"      const question = {lit(who + ' wants to call ')} + call.name + \" with these arguments:\\n\"")
+            self.add("        + JSON.stringify(call.args, null, 2)")
+            self.add("        + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\";")
+            self.add(f"      answer = String(interrupt({{ node: {lit(name)}, question }}));")
+            self.add("    }")
+        self.add("    const started = performance.now();")
+        self.add("    let status: string, result: string;")
+        self.add("    if (!spec) {")
+        self.add(f"      [status, result] = [\"error\", `Unknown tool ${{call.name}}: use one of ${{{const}_TOOLS.map((t) => t.name).sort().join(\", \")}}`];")
+        self.add("    } else if (problem) {")
+        self.add("      [status, result] = [\"error\", `Invalid arguments for ${call.name}: ${problem}`];")
+        if approval:
+            self.add("    } else if (answer !== null && answer.trim().toLowerCase() !== \"approved\") {")
+            self.add("      const comment = answer.trim().toLowerCase() === \"rejected\" ? \"\" : answer.trim();")
+            self.add("      [status, result] = [\"rejected\", \"Rejected by a reviewer\" + (comment ? `: ${comment}` : \"\")];")
+        self.add("    } else {")
+        self.add("      try {")
+        self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
+        self.add("      } catch (error) {  // the model hears about the failure and can try something else")
+        self.add("        [status, result] = [\"error\", `The tool failed: ${error instanceof Error ? error.message : error}`];")
+        self.add("      }")
         self.add("    }")
+        self.add("    const step: AgentStep = { tool: call.name, args: call.args, result: shorten(result, STEP_CHARS), status,")
+        self.add("      ms: Math.round((performance.now() - started) * 100) / 100 };")
+        if approval: self.add("    if (answer !== null) step.approval = status === \"rejected\" ? \"rejected\" : \"approved\";")
+        self.add("    const message: ChatMessage = { role: \"tool\", tool_call_id: call.id, name: call.name, content: shorten(result, RESULT_CHARS) };")
+        self.add("    return [message, step];")
         self.add("  }")
-        self.add("  const step: AgentStep = { tool: call.name, args: call.args, result: shorten(result, STEP_CHARS), status,")
-        self.add("    ms: Math.round((performance.now() - started) * 100) / 100 };")
-        if approval: self.add("  if (answer !== null) step.approval = status === \"rejected\" ? \"rejected\" : \"approved\";")
-        self.add("  chat.messages = [...chat.messages, { role: \"tool\", tool_call_id: call.id, name: call.name, content: shorten(result, RESULT_CHARS) }];")
-        self.add("  chat.steps = [...chat.steps, step];")
+        self.add("  const pairs = n <= 1 ? [await one(batch[0])] : await Promise.all(batch.map((call) => one(call)));")
+        self.add("  for (const [message, step] of pairs) {")
+        self.add("    chat.messages = [...chat.messages, message];")
+        self.add("    chat.steps = [...chat.steps, step];")
+        self.add("  }")
         self.add(f"  return asUpdate({{ {chat}: chat }});")
         self.add("}")
         self.add("")
-        self.add("/** After a tool call: the next waiting call, else back to the model with the results. */")
+        self.add("/** After a batch of tool calls: another batch if any remain, else back to the model. */")
         self.add(f"function route_{tool}(state: {cls}): string {{")
         self.add(f"  return state[{chat}]?.pending.length ? \"tool\" : \"model\";")
         self.add("}")

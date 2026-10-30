@@ -166,6 +166,7 @@ def test_round_limit_asks_for_an_answer_without_tools(monkeypatch):
 
 
 def test_each_tool_call_is_its_own_ledger_entry(monkeypatch):
+    monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")  # the wave checkpoint lists every slot
     class DictLedger:
         def __init__(self): self.rows = {}
         def get(self, nid, it): return self.rows.get((nid, it), (None,))[0]

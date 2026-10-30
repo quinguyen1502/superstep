@@ -50,6 +50,8 @@ class RunPlan:
     steps: Optional[int] = None  # stop after this many working supersteps (TASK-0036); None runs to the end
     until: Optional[str] = None  # pause after this node finishes (TASK-0036); None runs to the end
     forked: Optional[dict] = None  # {run_id, checkpoint, nodes, edited}: a new run forked from a checkpoint of another one
+    pending_wave: bool = False  # an answer of one wait in a wave was stored; the run stays waiting (TASK-0158)
+    pending_event: Optional[dict] = None  # the next slot's run_waiting, so the panel stops showing the one just answered
 
     @property
     def imported(self) -> bool:
@@ -87,6 +89,37 @@ def human_response(response) -> str:
     if isinstance(response, bool): response = "approved" if response else "rejected"
     if not isinstance(response, str) or len(response) > RESPONSE_MAX: raise AppError("RUN_RESPONSE_INVALID", max=RESPONSE_MAX)
     return response
+
+
+def _request_node(req: dict) -> Optional[str]:
+    """The slot a studio answer names. Missing or blank means the caller did not say which question it showed."""
+    node = req.get("node")
+    return node if isinstance(node, str) and node else None
+
+
+def _approval_node(cp: dict, node: Optional[str]) -> Optional[str]:
+    """Which approval this answer is for. One open approval can be unnamed. Several cannot: naming none would
+    answer the first, which may not be the question on screen."""
+    approvals = [w.get("node") for w in cp.get("waits") or [] if isinstance(w, dict) and w.get("kind") == "approval" and w.get("node")]
+    if node:
+        if node not in approvals: raise AppError("RUN_NOT_WAITING")
+        return node
+    if len(approvals) > 1: raise AppError("RUN_NOT_WAITING")
+    return approvals[0] if approvals else None
+
+
+def _follow_up_wait(cp: dict) -> Optional[dict]:
+    """The run_waiting event for the next open slot, after one of a wave was stored. An approval comes before a child."""
+    waits = [w for w in cp.get("waits") or [] if isinstance(w, dict)]
+    w = next((x for x in waits if x.get("kind") == "approval"), None) or (waits[0] if waits else None)
+    if not w: return None
+    ev = {"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt") or "", "ts": time.time()}
+    for k in ("label", "tool", "arguments"):
+        if w.get(k) is not None: ev[k] = w[k]
+    if w.get("kind") == "child" and w.get("run_id"):
+        ev["wait"] = {"kind": "child", "run_id": w["run_id"]}
+        if w.get("workflow_id") is not None: ev["workflow_id"] = w["workflow_id"]
+    return cap_event(ev)
 
 log = get_logger("runs")
 def code_runtime_of(events: list) -> Optional[str]:
@@ -184,7 +217,7 @@ class RunService:
         steps = _parse_steps(req); until = _parse_until(req)
         if req.get("chat_session_id"): return self._plan_chat(uid, req, steps, until)
         if req.get("fork") is not None: return self._plan_fork(uid, req["fork"], steps, until)
-        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until)
+        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
         wid = req.get("workflow_id"); row = None
         if wid: row = self._workflow(wid, uid, P.RUN)
         elif self.access is not None: self.access.require(uid, P.WORKFLOWS_CREATE)  # ad-hoc graphs: viewers only run saved workflows
@@ -219,7 +252,7 @@ class RunService:
         if web is None or not isinstance(sid, str): raise AppError("CHAT_NOT_ENABLED")
         if req.get("resume_run_id"):
             web.check_answer(uid, sid, str(req["resume_run_id"]))
-            return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until)
+            return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
         prep = web.input_for(uid, sid, req.get("message"))
         plan = self.plan(uid, {"workflow_id": prep["workflow_id"], "input": prep["input"]})
         plan.run_id, plan.source = uuid.uuid4().hex[:10], "chat"
@@ -307,13 +340,59 @@ class RunService:
         return {"child_run_id": r.id, "status": r.status, "output": json.loads(r.final_state or "null"),
                 **({"error": error} if error else {}), **({"usage": usage} if usage else {})}
 
+    def absorb_wave(self, rid: str, node: Optional[str] = None, value=None, child: Optional[dict] = None) -> tuple[str, bool]:
+        """Store one settled wait of a wave. The string is 'plain' when this run is not waiting on a wave, 'stay' when
+        other waits remain, 'go' when this was the last and the checkpoint is ready for the one resume (TASK-0158).
+        The bool is whether this call stored the settle. A lost compare-and-set stores nothing, so the caller must not
+        close the wait first."""
+        def apply(cp: dict) -> tuple[str, bool]:
+            waits = cp.get("waits")
+            if not isinstance(waits, list): return "plain", False
+            if not waits: return ("go" if cp.get("wave_ready") else "plain"), False
+            if child is not None:
+                cid = child.get("child_run_id")
+                hit = next((w for w in waits if w.get("kind") == "child" and w.get("run_id") == cid), None)
+                if hit is None: return ("go" if cp.get("wave_ready") else "stay"), False
+                cp.setdefault("children", {})[hit["node"]] = child
+            else:
+                hit = next((w for w in waits if w.get("kind") == "approval" and w.get("node") == node), None)
+                if hit is None: return ("go" if cp.get("wave_ready") else "stay"), False
+                cp.setdefault("answers", {})[hit["node"]] = value
+            cp["waits"] = [w for w in waits if w is not hit]
+            if cp["waits"]:
+                cp["_next_wait"] = _follow_up_wait(cp)  # the panel's next question; update_waiting appends it and drops the key
+                return "stay", True
+            cp["wave_ready"] = True
+            return "go", True
+        got = self.runs.update_waiting(rid, apply)
+        return got if isinstance(got, tuple) else ("plain", False)
+
+    def _wave_plan(self, r: Run, steps: Optional[int], until: Optional[str]) -> RunPlan:
+        """The one resume of a settled wave: every stored answer and child result, re-entering every slot."""
+        cp = json.loads(r.checkpoint or "{}"); uid = r.owner or ""
+        res = self.run_resources(r, uid)
+        resume = {k: cp[k] for k in RESUME_KEYS if k in cp}
+        resume["answers"] = dict(cp.get("answers") or {})
+        resume["children"] = dict(cp.get("children") or {})
+        return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
+                       self.credentials.resolver(res) if self.credentials else None,
+                       run_id=r.id, previous=r, resume=resume, source=r.source or "ui", version=r.workflow_version,
+                       trace_parent=cp.get("trace"), ports=self.run_ports(r, uid), steps=steps, until=until)
+
     def resume_parent(self, rid: str) -> bool:
         """Queue the resume of the run waiting for child `rid`, once the child has ended. Called when the child settles and
-        when the parent records its wait (the child may have ended first). A second resume is dropped by the claim."""
+        when the parent records its wait (the child may have ended first). A wave resumes once, after every child and
+        approval of that superstep has settled. A second resume is dropped by the claim."""
         r = self.runs.get(rid)
         if r is None or not r.parent_run_id or r.status in ("queued", "running", "waiting", "paused") or self.jobs is None: return False
         p = self.runs.get(r.parent_run_id)
-        if p is None or p.status != "waiting" or ((json.loads(p.checkpoint or "{}").get("wait") or {}).get("run_id")) != rid: return False
+        if p is None or p.status != "waiting": return False
+        cp = json.loads(p.checkpoint or "{}")
+        if isinstance(cp.get("waits"), list):
+            if self.absorb_wave(p.id, child=self.child_value(r))[0] != "go": return False
+            enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "wave": True})
+            return True
+        if ((cp.get("wait") or {}).get("run_id")) != rid: return False
         enqueue_resume(self.runs, self.jobs().enqueue, {"kind": "resume", "run_id": p.id, "owner": p.owner, "child": self.child_value(r)})
         return True
 
@@ -435,7 +514,8 @@ class RunService:
         cp = json.loads(r.checkpoint or "{}")
         self.record(r.id, r.workflow_id, json.loads(r.input or "{}"), json.loads(r.events or "[]") + [ev], None, status, r.started, uid,
                     source=r.source or "ui", version=r.workflow_version, trace_parent=cp.get("trace"), trace_events=[] if cp.get("trace") else None)
-        if (cp.get("wait") or {}).get("kind") == "child": self.cancel_children(r.id)
+        if (cp.get("wait") or {}).get("kind") == "child" or any(
+                isinstance(w, dict) and w.get("kind") == "child" for w in cp.get("waits") or []): self.cancel_children(r.id)
         if r.parent_run_id: self.resume_parent(r.id)  # a child that ended this way still answers its parent
 
     def _expire(self, r: Run) -> None:
@@ -450,13 +530,35 @@ class RunService:
         return len(stale)
 
     def plan_resume(self, uid: str, rid: str, response, via_channel: bool = False, steps: Optional[int] = None, until: Optional[str] = None,
-                    child: Optional[dict] = None) -> RunPlan:
+                    child: Optional[dict] = None, node: Optional[str] = None, wave: bool = False) -> RunPlan:
         """child: the finished child run a run waits for (TASK-0134), from the worker only. A run waiting for a child
-        cannot be answered by a person, and a child's result cannot answer a person's question."""
+        cannot be answered by a person, and a child's result cannot answer a person's question.
+        wave: the checkpoint already holds every answer of a settled wave (TASK-0158). node: which approval this answer is for."""
         row = self.runs.get(rid)
         if row is not None and row.status == "paused" and not via_channel:
             if row.owner != uid: raise AppError("RUN_NOT_FOUND")  # owner only, same as a human resume
             return self._plan_paused(row, uid, steps, until)
+        if wave:
+            r = self.waiting_run(rid, uid)
+            if not json.loads(r.checkpoint or "{}").get("wave_ready"): raise AppError("RUN_NOT_WAITING")
+            return self._wave_plan(r, steps, until)
+        if child is None and response is not None: response = human_response(response)
+        r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
+        if isinstance(cp.get("waits"), list):
+            if child is not None: outcome, wrote = self.absorb_wave(rid, child=child)
+            else:
+                node = _approval_node(cp, node)  # never guess among several: the panel names the question it is showing
+                if node is None or response is None: raise AppError("RUN_NOT_WAITING")
+                outcome, wrote = self.absorb_wave(rid, node=node, value=response)
+                if wrote and self.approvals is not None and not via_channel:
+                    self.approvals.answered_slot(rid, node)  # stored first: a lost claim does not drop the answer
+            if outcome == "stay":
+                fresh = self.runs.get(rid)
+                evs = json.loads(fresh.events or "[]") if fresh is not None else []
+                pending = evs[-1] if evs and isinstance(evs[-1], dict) and evs[-1].get("type") == "run_waiting" else None
+                return RunPlan(r.workflow_id, cp.get("workflow") or {}, {}, run_id=rid, pending_wave=True, pending_event=pending)
+            if outcome == "go": return self._wave_plan(self.runs.get(rid), steps, until)
+            raise AppError("RUN_NOT_WAITING")  # the wave changed under this answer; do not close the other slots
         if child is None: response = human_response(response)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         wait = cp.get("wait") or {}
@@ -602,7 +704,9 @@ class RunService:
         if trace_id is None and trace_parent: trace_id = trace_parent.get("trace_id")
         root = {"trace_root": trace_root} if trace_root else {}  # later segments keep the first one's
         test = source == "test"  # a workflow test answers its own Human nodes and sends nothing (DEC-0044)
+        wave_waits = (checkpoint or {}).get("waits") if isinstance((checkpoint or {}).get("waits"), list) else []
         if status == "waiting" and checkpoint and checkpoint.get("wait"): test = True  # waiting for a child run: nobody to ask (TASK-0134)
+        elif status == "waiting" and wave_waits and all(w.get("kind") == "child" for w in wave_waits): test = True
         if source == "tool" and not test and (row := self.runs.get(rid)) is not None and self.under_test(row): test = True  # TASK-0137
         if self.notifier is not None and uid and status in ("waiting", "expired") and not test:
             ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
@@ -611,8 +715,14 @@ class RunService:
         if self.approvals is not None and uid and not test:
             try:
                 if status == "waiting":
-                    ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
-                    if ev and checkpoint: self.approvals.on_waiting(rid, uid, wid, checkpoint.get("workflow") or {}, ev)
+                    asked = [{"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt"), "label": w.get("label"),
+                              "tool": w.get("tool"), "arguments": w.get("arguments")}
+                             for w in wave_waits if w.get("kind") == "approval"]
+                    if not asked:
+                        ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
+                        if ev and not ev.get("wait"): asked = [ev]
+                    wf = (checkpoint or {}).get("workflow") or {}
+                    for ev in asked: self.approvals.on_waiting(rid, uid, wid, wf, ev)
                 elif status in ("cancelled", "expired", "error", "timeout"): self.approvals.close_run(rid, status)
             except Exception: log.exception("approval request for run %s failed", rid)  # never fails a run
         events = cap_run([cap_event(e) for e in events])
@@ -642,6 +752,12 @@ class RunService:
         """Stream events through `send` (returns False once the client is gone). `listen` resolves to
         "cancelled" or "disconnected"; a cancel can also arrive through the RunBus (reason "api").
         Returns the final status: ok | error | cancelled | timeout."""
+        if plan.pending_wave:  # one slot of a wave was answered; the other waits are still open
+            if plan.pending_event: await send(cap_event(plan.pending_event))  # the next question, not the one just answered
+            if plan.pending_event and self.chat is not None and plan.run_id:
+                await _write_in_thread(self._note_chat, plan.run_id)  # the published page then shows that question
+            await send({"type": "run_summary", "run_id": plan.run_id, "status": "waiting", "ts": time.time()})
+            return "waiting"
         rid = plan.run_id or uuid.uuid4().hex[:10]; await self.bus.astart(rid, uid)  # registered so REST/other workers can cancel it
         status = None
         try:
@@ -659,6 +775,11 @@ class RunService:
         right after the run ends (the client closes the socket on run_summary), and a cancelled plain to_thread would drop
         the queued job, so the chat reply or callback would silently never happen (TASK-0083)."""
         await _write_in_thread(self._settle, rid, source)
+
+    def _note_chat(self, rid: str) -> None:
+        """A chat run stayed waiting after one slot of a wave. Record the next question as its own turn."""
+        try: self.chat().on_settled(rid)
+        except Exception: log.exception("noting the next question of chat run %s failed", rid)
 
     def _settle(self, rid: str, source: Optional[str]) -> None:
         if source == "tool":  # a workflow tool's child run: its parent goes on (TASK-0134)
@@ -792,8 +913,12 @@ class RunService:
         try: summary = await _write_in_thread(self.record, rid, plan.workflow_id, plan.input, events, final, status, started, uid, checkpoint,
                                               plan.source, plan.version, span, fence=plan.fence)
         except StaleLease: return self._fenced(rid, span, plan, uid, t0)
-        if checkpoint and (checkpoint.get("wait") or {}).get("kind") == "child":  # the child may have ended before this wait was recorded
-            await _write_in_thread(self.resume_parent, checkpoint["wait"]["run_id"])
+        child_ids = []
+        if checkpoint and (checkpoint.get("wait") or {}).get("kind") == "child": child_ids.append(checkpoint["wait"]["run_id"])
+        for w in (checkpoint or {}).get("waits") or []:
+            if isinstance(w, dict) and w.get("kind") == "child" and w.get("run_id"): child_ids.append(w["run_id"])
+        for cid in child_ids:  # a child may have ended before this wait was recorded
+            await _write_in_thread(self.resume_parent, cid)
         if connected: await send({"type": "run_summary", "run_id": rid, "status": status, "ts": time.time(), **summary})  # not stored as an event
         return status
 

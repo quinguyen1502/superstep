@@ -127,7 +127,7 @@ export function useStudio() {
     let inp: any; try { inp = JSON.parse(input) } catch { setErrors([t('editor.badInput')]); setTab('input'); return }
     stream({ workflow_id: wid, workflow: toJSON(), input: inp })
   }
-  const respond = (runId: string, response: string) => stream({ resume_run_id: runId, response }, true)
+  const respond = (runId: string, response: string, node?: string) => stream({ resume_run_id: runId, response, ...(node ? { node } : {}) }, true)
   /** Time travel: a new run from a checkpoint of `runId`, with its state or an edited one. */
   const fork = (runId: string, checkpoint: number, state?: Record<string, unknown>) => stream({ fork: { run_id: runId, checkpoint, ...(state ? { state } : {}) } })
   const cancelRun = () => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'cancel' }))

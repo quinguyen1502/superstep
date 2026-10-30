@@ -14,7 +14,7 @@ router = APIRouter()
 async def ws_run(ws: WebSocket):
     """Connect with the session cookie (same origin) or ?token=JWT. Client sends {workflow_id, workflow?, input, steps?, until?, locale?}; server streams events.
     steps: 1 pauses after one working superstep (status paused). until: a node id pauses after that node finishes.
-    Resume with {resume_run_id, steps?} or {resume_run_id, until?} and no response.
+    Resume with {resume_run_id, response, node?} (node is the question on screen), or {resume_run_id, steps?} / {resume_run_id, until?} and no response.
     While running, the client may send {"type": "cancel"}; closing the socket also cancels.
     locale (en | vi, else Accept-Language): the language of the mock model's and example tools' offline answers.
     Final status: ok | error | cancelled | timeout | waiting | paused (stored in run history)."""

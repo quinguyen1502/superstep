@@ -26,13 +26,15 @@ def new_id() -> str: return uuid.uuid4().hex[:8]
 
 class WorkflowService:
     def __init__(self, workflows: WorkflowRepository, runs: RunRepository, versions: WorkflowVersionRepository | None = None,
-                 access=None, shares=None, users=None, teams=None, audit=None, tests=None, chat_triggers=None, chat_sessions=None):
+                 access=None, shares=None, users=None, teams=None, audit=None, tests=None, chat_triggers=None, chat_sessions=None,
+                 jobs=None):
         self.repo, self.runs, self.versions = workflows, runs, versions
         self.access, self.shares, self.users = access, shares, users
         self.teams, self.audit = teams, audit  # TeamRepository, AuditService (TASK-0029)  # AccessService etc. (TASK-0014); None = owner-only
         self.tests = tests  # WorkflowTestRepository (optional): test cases and results go with the workflow (TASK-0067)
         self.chat_sessions = chat_sessions  # ChatSessionRepository (optional): and its chats (TASK-0084)
         self.chat_triggers = chat_triggers  # ChatTriggerRepository (optional): so do its chat triggers (TASK-0074)
+        self.jobs = jobs  # deletes LangSmith feedback when the workflow's ratings go (optional)
 
     # -- persistence: every write goes through here so versions stay in sync (TASK-0008) --
     def _write(self, wid: str, name: str, wf: dict, uid: str, *, new: bool = True, note: str | None = None,
@@ -251,7 +253,11 @@ class WorkflowService:
         if self.versions is not None: self.versions.delete_for_workflow(wid)
         if self.tests is not None: self.tests.delete_for_workflow(wid)
         if self.chat_triggers is not None: self.chat_triggers.delete_for_workflow(wid)
-        if self.chat_sessions is not None: self.chat_sessions.delete_for_workflow(wid)
+        if self.chat_sessions is not None:
+            from .chat_session_service import enqueue_feedback_deletes
+            fids = self.chat_sessions.feedback_ids_for_workflow(wid)
+            self.chat_sessions.delete_for_workflow(wid)
+            enqueue_feedback_deletes(self.jobs, fids)
         return {"ok": True}
 
     def create(self, wf: dict, uid: str) -> str:

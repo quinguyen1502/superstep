@@ -33,14 +33,14 @@ class InboxService:
         row = self.workflows.get(w.workflow_id)
         return row is not None and self.access.access_of(row, uid) == "owner"
 
-    def answer(self, uid: str, rid: str, response) -> dict:
+    def answer(self, uid: str, rid: str, response, node: Optional[str] = None) -> dict:
         response = human_response(response)
-        w: Optional[ApprovalWait] = self.repo.latest_wait(rid)
+        w: Optional[ApprovalWait] = self.repo.open_wait(rid, node) if node else self.repo.latest_wait(rid)
         if w is None or not self.approvals.may_answer(uid, w): raise AppError("RUN_NOT_FOUND")  # ids are not disclosed
         if w.status != "waiting": raise AppError("APPROVAL_ALREADY_DECIDED")
         run = self.runs.runs.get(rid)
         if run is None or run.status != "waiting": raise AppError("RUN_NOT_WAITING")
         if self.runs.expire_if_stale(run): raise AppError("RUN_EXPIRED")
-        if self.approvals.decided_elsewhere(rid) or not self.repo.close_wait(rid, "answered"): raise AppError("APPROVAL_ALREADY_DECIDED")
+        if self.approvals.decided_elsewhere(rid) or not self.repo.close_wait(rid, "answered", w.id): raise AppError("APPROVAL_ALREADY_DECIDED")
         self.approvals.answered_in_studio(w, uid, response)
         return {"run_id": rid, "response": response}

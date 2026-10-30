@@ -6,7 +6,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
-- **superstep CLI release** (REQ-0079, DEC-0068). `scripts/install.sh` installs the `superstep` command. A `v*` tag publishes the Python package at the server version, and the package version moves from the `0.1.0` line to the server version. The same tag rules publish `ghcr.io/quinguyen1502/superstep-api` and `superstep-web`. The handbook Operate section starts from the CLI.
+- **superstep CLI release** (REQ-0079, DEC-0068). `scripts/install.sh` installs the `superstep` command (`install`, `upgrade`, `backup`, `restore`, `deploy`, `doctor`, `status`, `admin`, `uninstall`). A `v*` tag publishes the Python package at the server version, and the package version moves from the `0.1.0` line to the server version. The same tag rules publish `ghcr.io/quinguyen1502/superstep-api` and `superstep-web`. The handbook Operate section starts from the CLI.
+
+- **Agent tool calls can run together** (REQ-0076, DEC-0069). One round may run up to eight tool calls, then join their results in the model's order. The default is 4 at a time (`STUDIO_AGENT_PARALLEL_TOOLS`, clamped to 1–8). An Agent node can turn parallel calls off. A wave that pauses for an approval or a child run lets the other calls finish, and the parent resumes once, after every wait in that wave. The trace draws those calls as overlapping bars. The Python, LangGraph project and TypeScript exports run the round together when the setting is on.
 
 - **Ratings on chat answers** (REQ-0075). A visitor can mark a finished answer helpful or not, and add a short note
   when it was not. The same controls are on the embedded chat and in the studio Chat tab, where a builder can also
@@ -15,6 +17,17 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   run's trace as `user_rating`.
 
 ### Fixed
+
+- **SQLite restore and a failed upgrade rollback** (REQ-0079). Restore deletes leftover `studio.db-wal` and `studio.db-shm` before replacing `studio.db`, so an unclean stop cannot replay old pages onto the restored file. If restoring the backup itself fails, `upgrade` reports that the rollback failed instead of saying the previous version is back. A Postgres dump is written to a file and packed from that file.
+
+- **Chat rating races** (REQ-0075). Two ratings of the same answer at once keep the last one. Removing a rating also removes its LangSmith feedback. Two send jobs share one feedback object.
+- **Agent trace steps** (REQ-0076). A tool slot `A/__tool/1` and the join `A/__join` sit under the Agent node. A chat hides the join step.
+
+- **CLI secrets on a process list** (REQ-0079). `admin create` and `admin reset-password` take a password from a prompt (`--password`) or from stdin (`--password-stdin`). `--password secret` is no longer accepted: the flag does not take a value. The password is not an argument of `superstep` or of `docker exec`. `deploy` puts `--` before the SSH host. No release tag has shipped the old flag.
+
+- **Approval of the same node** (REQ-0076). A new pause closes only the open wait of that node. Answering one wait of a wave leaves the others open, and the run resumes once when the last of them settles. The studio names the question it is showing, stores that answer, then closes that slot's inbox row and channel buttons, and the panel then shows the next question. The Approvals page remembers each sent row on its own. A published chat does the same with the question on the page, and the page then shows the next one. Two answers at once on SQLite both stick. The TypeScript export reads `STUDIO_AGENT_PARALLEL_TOOLS` through the same `env()` helper as the rest of the file.
+
+- **Rating removal and LangSmith** (REQ-0075). Deleting a chat, a workflow, or chats past the retention window also deletes the LangSmith feedback for those ratings.
 
 - **Run status on the canvas** (TASK-0147). The canvas now shows the run open in the Run panel. After an Agent node
   waited for a workflow tool's child run, the steps its run took afterwards, End included, are marked done. Opening a

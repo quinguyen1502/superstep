@@ -26,7 +26,8 @@ const EVENTS: RunEvent[] = [
 
 describe('Agent node in traces and chats (TASK-0118)', () => {
   it('knows the Agent node of a step and hides the conversation', () => {
-    expect(agentOf('ag/__tool')).toBe('ag'); expect(agentOf('sub/ag/__model')).toBe('sub/ag'); expect(agentOf('ag')).toBeUndefined()
+    expect(agentOf('ag/__tool')).toBe('ag'); expect(agentOf('ag/__tool/2')).toBe('ag'); expect(agentOf('sub/ag/__join')).toBe('sub/ag')
+    expect(agentOf('sub/ag/__model')).toBe('sub/ag'); expect(agentOf('ag')).toBeUndefined()
     expect(hideAgents({ a: 1, 'agent:x': {} })).toEqual({ a: 1 }); expect(hideAgents({ _truncated: true })).toEqual({ _truncated: true })
   })
   it('spans carry what each step did, without the conversation', () => {
@@ -45,6 +46,17 @@ describe('Agent node in traces and chats (TASK-0118)', () => {
   })
   it('the streamed reply is the last model call, not the text of a tool round', () => {
     expect(liveReply(EVENTS, 'answer')).toBe('In transit')
+  })
+  it('tool calls of one superstep share a start and use each call\'s own duration', () => {
+    const wave = (node: string, ms: number, ts: number): RunEvent => ({
+      type: 'node_finished', node, node_type: 'agent_tool', superstep: 3, ts, duration_ms: 10,
+      agent: { kind: 'tool', round: 1, tool: node, status: 'ok', ms },
+    })
+    const spans = buildTrace([wave('ag/__tool/1', 100, 2), wave('ag/__tool/2', 400, 2.3), wave('ag/__tool/3', 400, 2.1)]).spans
+    expect(spans.map(s => s.start)).toEqual([spans[0].start, spans[0].start, spans[0].start])
+    expect(spans.map(s => s.duration)).toEqual([100, 400, 400])
+    expect(spans[0].duration!).toBeLessThan(spans[1].duration!)
+    expect(agentOf('ag/__model')).toBe('ag')
   })
   it('new tools get provider-safe, unique names', () => {
     expect(toolName('get weather!', [])).toBe('get_weather'); expect(toolName('add', ['add', 'add_2'])).toBe('add_3')

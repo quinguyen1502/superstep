@@ -3,15 +3,15 @@ import i18n, { eventErrors, type ApiErrorBody } from '@/lib/i18n'
 export type RunEvent = { type: string; node?: string; label?: string; node_type?: string; iteration?: number; duration_ms?: number
   input?: any; delta?: any; state?: any; errors?: string[]; error?: ApiErrorBody; ts?: number; tokens?: number; usage?: Usage & { total_tokens?: number }; run_id?: string; status?: string; reason?: string
   metrics?: RunMetrics | null; trace_id?: string | null; trace_url?: string | null; prompt?: string; response?: string
-  code_output?: CodeOutput; agent?: AgentStep
+  code_output?: CodeOutput; agent?: AgentStep; superstep?: number
   wait?: { kind: 'child'; run_id: string }; tool?: string; workflow_id?: string }  // a run waiting for a workflow tool's child run (TASK-0134)
 /** What one step of an Agent node did (TASK-0116, DEC-0063): a model call (`model`) or one tool call (`tool`). */
 export type AgentStep = { kind: 'model' | 'tool'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
   tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected'; ms?: number
   approval?: 'approved' | 'rejected'  // a tool that needed approval (TASK-0117)
   child_run_id?: string; child_workflow_id?: string }  // a workflow tool's child run (TASK-0136)
-/** An Agent node `ag` runs as the steps `ag/__model`, `ag/__tool` and `ag/__exit`: the Agent node's id, else undefined. */
-export const agentOf = (node: string) => /^(.+)\/__(model|tool|exit)$/.exec(node)?.[1]
+/** An Agent node `ag` runs as `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join` and `ag/__exit`. */
+export const agentOf = (node: string) => /^(.+)\/__(model|tool(?:\/\d+)?|join|exit)$/.exec(node)?.[1]
 /** State without the agents' conversations (`agent:<id>`), which the engine keeps for time travel only. */
 export const hideAgents = (state: any) => state && typeof state === 'object' && !Array.isArray(state) && !state._truncated
   ? Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('agent:'))) : state
@@ -22,11 +22,36 @@ export type Usage = { provider?: string; model?: string; tokens?: number; tokens
 export type RunMetrics = { duration_ms: number; tokens: number; tokens_in: number; tokens_out: number; cost_usd: number | null; error_count: number }
 export type Span = { key: string; node: string; label: string; type: string; iter: number; status: 'running' | 'done' | 'error' | 'cancelled' | 'waiting'
   start: number; end?: number; duration?: number; input?: any; output?: any; error?: string; tokens?: number; cost?: number | null; usage?: Usage; events: RunEvent[]
-  live?: string; code?: CodeOutput; agent?: AgentStep }  // TASK-0030: LLM text streamed so far (node_token deltas; not stored in run history)
+  live?: string; code?: CodeOutput; agent?: AgentStep; superstep?: number }  // TASK-0030: LLM text streamed so far (node_token deltas; not stored in run history)
 export type Trace = { runId?: string; spans: Span[]; status: 'idle' | 'running' | 'ok' | 'error' | 'cancelled' | 'timeout' | 'waiting' | 'expired' | 'paused'; start?: number; end?: number; total?: number
   tokens?: number; errors: string[]; final?: any; metrics?: RunMetrics; traceUrl?: string
   waiting?: { runId?: string; node?: string; label?: string; prompt?: string; child?: { runId: string; workflowId?: string; tool?: string } }
   paused?: { runId?: string } }  // TASK-0036: one-step pause, not a human approval
+
+/** Tool calls of one Agent superstep share a start. A tool bar's width is that call's own `agent.ms` (TASK-0159). */
+function alignAgentWave(spans: Span[]) {
+  for (const s of spans) {
+    if (s.agent?.kind === 'tool' && typeof s.agent.ms === 'number') {
+      s.duration = s.agent.ms
+      if (s.end == null) s.end = s.start + s.agent.ms / 1000
+    }
+  }
+  const waves = new Map<number, Span[]>()
+  for (const s of spans) {
+    if (s.agent?.kind !== 'tool' || s.superstep == null) continue
+    const list = waves.get(s.superstep) ?? []
+    list.push(s)
+    waves.set(s.superstep, list)
+  }
+  for (const list of waves.values()) {
+    if (list.length < 2) continue
+    const start = Math.min(...list.map(s => s.start))
+    for (const s of list) {
+      s.start = start
+      if (typeof s.duration === 'number') s.end = start + s.duration / 1000
+    }
+  }
+}
 
 export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: string; type?: string } = () => ({})): Trace {
   const spans: Span[] = []; const counts: Record<string, number> = {}; const errors: string[] = []; let summary: RunEvent | undefined
@@ -48,7 +73,7 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
     } else if (e.type === 'node_finished' && n) {
       let s = open(n)
       if (!s) { const it = (counts[n] = (counts[n] || 0) + 1); s = { key: `${n}#${it}`, node: n, label: e.label || meta(n).label || n, type: e.node_type || meta(n).type || 'code', iter: it, status: 'running', start: t(e, i) - (e.duration_ms || 0) / 1000, events: [] }; spans.push(s) }
-      Object.assign(s, { status: 'done', end: t(e, i), duration: e.duration_ms, input: hideAgents(e.input), output: e.delta, agent: e.agent, tokens: e.tokens ?? e.usage?.tokens ?? e.usage?.total_tokens, cost: e.usage?.cost_usd, usage: e.usage, code: e.code_output })
+      Object.assign(s, { status: 'done', end: t(e, i), duration: e.duration_ms, input: hideAgents(e.input), output: e.delta, agent: e.agent, superstep: e.superstep, tokens: e.tokens ?? e.usage?.tokens ?? e.usage?.total_tokens, cost: e.usage?.cost_usd, usage: e.usage, code: e.code_output })
       s.events.push(e)
     } else if (e.type === 'error') {
       st.v = e.status === 'timeout' ? 'timeout' : 'error'; const msg = eventErrors(e).join('; ') || i18n.t('trace.error'); errors.push(msg)
@@ -69,6 +94,7 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
   // "started" rows (predicted next nodes) are dropped once a run finishes normally.
   if (status === 'cancelled' || status === 'timeout') spans.forEach(s => { if (s.status === 'running') s.status = 'cancelled' })
   const kept = done ? spans.filter(s => s.status !== 'running') : spans
+  alignAgentWave(kept)
   const stamped = events.filter(e => e.ts != null && e.type !== 'run_summary')
   const start = stamped.length ? stamped[0].ts : kept[0]?.start
   const end = stamped.length ? stamped[stamped.length - 1].ts : kept[kept.length - 1]?.end

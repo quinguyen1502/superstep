@@ -100,6 +100,7 @@ def upgrade_instance(directory: Path, record: dict, docker: Docker, target: str,
     else:
         for image in _image_list(topology, bool(record.get("sandbox")), target):
             docker.pull(image)
+    failed: Optional[BaseException] = None
     try:
         _restart(directory, record, docker, target)
         url = record.get("public_url") or ""
@@ -108,11 +109,12 @@ def upgrade_instance(directory: Path, record: dict, docker: Docker, target: str,
     except UpgradeError as exc:
         if exc.code != "UNHEALTHY":
             raise
+        failed = exc
+    except (DockerError, BackupError) as exc:
+        failed = exc
+    if failed is not None:
         log_path = _rollback(directory, record, docker, archive)
-        raise UpgradeError("ROLLED_BACK", "error.rolled_back", log=str(log_path)) from exc
-    except (DockerError, BackupError):
-        log_path = _rollback(directory, record, docker, archive)
-        raise UpgradeError("ROLLED_BACK", "error.rolled_back", log=str(log_path))
+        raise UpgradeError("ROLLED_BACK", "error.rolled_back", log=str(log_path)) from failed
     record["version"] = target
     _write_private(directory / "instance.json", _dump_record(record))
     return archive
@@ -139,15 +141,18 @@ def _restart(directory: Path, record: dict, docker: Docker, target: str) -> None
 
 
 def _rollback(directory: Path, record: dict, docker: Docker, archive: Path) -> Path:
+    """Restore the backup. A failed restore is not reported as a successful rollback.
+
+    `UNHEALTHY` means the files were put back and the stack started, but health did not pass.
+    """
     log_path = _write_failure_log(directory, docker, record)
     try:
         restore_archive(directory, record, docker, archive)
-    except (BackupError, DockerError, OSError):
-        pass
-    try:
-        docker.compose(str(directory), record["name"], ["up", "-d"])
-    except DockerError:
-        pass
+    except BackupError as exc:
+        if exc.code != "UNHEALTHY":
+            raise UpgradeError("ROLLBACK_FAILED", "error.rollback_failed", log=str(log_path)) from exc
+    except (DockerError, OSError) as exc:
+        raise UpgradeError("ROLLBACK_FAILED", "error.rollback_failed", log=str(log_path)) from exc
     return log_path
 
 

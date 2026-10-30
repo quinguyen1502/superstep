@@ -122,4 +122,6 @@ def inbox(user=Depends(current_user), svc=Depends(inbox_service)): return svc.li
 
 @router.post("/inbox/{run_id}")
 def answer(run_id: str, body=Body(None), user=Depends(current_user), svc=Depends(inbox_service)):
-    return svc.answer(user["id"], run_id, body.get("response") if isinstance(body, dict) else None)
+    data = body if isinstance(body, dict) else {}
+    node = data.get("node")
+    return svc.answer(user["id"], run_id, data.get("response"), node if isinstance(node, str) and node else None)

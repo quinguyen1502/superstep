@@ -79,10 +79,17 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
                 if tokens: tokens.flush()
     elif t == "human":
         def fn(state):
-            # resume = {"node", "value"} for the node the run paused at; consumed once so a loop back here pauses again
+            # resume = {"node", "value"} for the node the run paused at; consumed once so a loop back here pauses again.
+            # A wave keeps one answer per node in `answers` (TASK-0158).
+            bag = (resume or {}).get("answers")
+            if isinstance(bag, dict) and node["id"] in bag:
+                return {d["output_field"]: bag.pop(node["id"])}
             if resume is not None and resume.get("node") == node["id"] and "value" in resume:
                 return {d["output_field"]: resume.pop("value")}
-            raise Interrupt(node["id"], render(d.get("prompt", ""), state))
+            prompt = render(d.get("prompt", ""), state)
+            if effects is not None:
+                effects.hold({"node": node["id"], "kind": "approval", "prompt": prompt, "label": d.get("label") or node["id"]})
+            raise Interrupt(node["id"], prompt)
     elif t == "tool":
         def fn(state):
             if d.get("mode") == "http":

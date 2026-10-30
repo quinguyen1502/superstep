@@ -152,9 +152,10 @@ class PublicChatService:
 
     # ---- a message or an answer (the public socket) ----
     async def plan_message(self, slug: str, token: Optional[str], user: Optional[dict], req, ip: str, plan: Callable):
-        """(RunPlan, owner, steps mode, reply field) for `{chat_session_id, message}` or `{chat_session_id, response}`.
-        `plan` is RunService.plan; the run is the owner's and the session's, nothing else can be asked for."""
-        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale"}:
+        """(RunPlan, owner, steps mode, reply field) for `{chat_session_id, message}` or `{chat_session_id, response, node?}`.
+        `plan` is RunService.plan; the run is the owner's and the session's, nothing else can be asked for.
+        `node` is the question on the page. Another slot of the same wave is not accepted."""
+        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node"}:
             raise AppError("RUN_REQUEST_INVALID")
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         s = self.own(t, req.get("chat_session_id"), v)
@@ -166,7 +167,12 @@ class PublicChatService:
             if last is None or last.role != "assistant" or last.status != "waiting" or not last.run_id: raise AppError("RUN_NOT_WAITING")
             if last.answered_by == "reviewer": raise AppError("CHAT_ANSWER_BY_REVIEWER")
             if req.get("resume_run_id") not in (None, last.run_id): raise AppError("RUN_NOT_WAITING")
-            p = await asyncio.to_thread(plan, owner, {"resume_run_id": last.run_id, "response": req.get("response")})
+            shown = last.node if isinstance(last.node, str) and last.node else None
+            node = req.get("node") if isinstance(req.get("node"), str) and req.get("node") else None
+            if node and shown and node != shown: raise AppError("RUN_NOT_WAITING")
+            body = {"resume_run_id": last.run_id, "response": req.get("response")}
+            if node or shown: body["node"] = node or shown
+            p = await asyncio.to_thread(plan, owner, body)
         else:
             prep = self.chat.prepare(s, t, req.get("message"))
             p = await asyncio.to_thread(plan, owner, {"workflow_id": t.workflow_id, "input": prep["input"]})

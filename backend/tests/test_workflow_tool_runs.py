@@ -82,6 +82,82 @@ def test_a_failed_child_gives_the_model_an_error():
     assert parent.status == "ok" and step["status"] == "error" and "ended with error" in step["result"]
 
 
+def test_two_children_of_one_wave_resume_the_parent_once(monkeypatch):
+    from app.engine import agents
+    replies = iter([("", [{"id": "a", "name": "desk", "args": {"message": "one"}}, {"id": "b", "name": "desk", "args": {"message": "two"}}]),
+                    ("done", [])])
+    monkeypatch.setattr(agents, "call_agent", lambda *a, **k: next(replies))
+    monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")
+    tok = user(); _, sup = setup(tok, specialist("Echo desk"))
+    rid, evs = start(tok, sup)
+    svc = run_service(); kids = svc.runs.children(rid)
+    assert evs[-1]["status"] == "waiting" and len(kids) == 2
+    assert all(k.status == "queued" for k in kids)
+    drain()
+    parent = svc.runs.get(rid)
+    assert parent.status == "ok"
+    assert len([e for e in json.loads(parent.events) if e.get("type") == "run_resumed"]) == 1
+    assert svc.resume_parent(kids[0].id) is False and svc.resume_parent(kids[1].id) is False
+
+
+def test_cancelling_one_child_keeps_the_other(monkeypatch):
+    from app.engine import agents
+    replies = iter([("", [{"id": "a", "name": "desk", "args": {"message": "one"}}, {"id": "b", "name": "desk", "args": {"message": "two"}}]),
+                    ("done", [])])
+    monkeypatch.setattr(agents, "call_agent", lambda *a, **k: next(replies))
+    monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")
+    tok = user(); _, sup = setup(tok, specialist("Echo desk"))
+    rid, _ = start(tok, sup)
+    svc = run_service(); kids = svc.runs.children(rid)
+    assert c.post(f"/api/runs/{kids[0].id}/cancel", headers=H(tok)).json()["success"]
+    drain()
+    steps = json.loads(svc.runs.get(rid).final_state)["steps"]
+    assert {s["status"] for s in steps} == {"ok", "error"} and any("cancelled" in s["result"] for s in steps)
+
+
+def test_cancelling_the_parent_cancels_both_children_of_the_wave(monkeypatch):
+    from app.engine import agents
+    replies = iter([("", [{"id": "a", "name": "desk", "args": {"message": "one"}}, {"id": "b", "name": "desk", "args": {"message": "two"}}]), ("done", [])])
+    monkeypatch.setattr(agents, "call_agent", lambda *a, **k: next(replies))
+    monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")
+    tok = user(); _, sup = setup(tok, specialist("Echo desk"))
+    rid, _ = start(tok, sup)
+    svc = run_service(); kids = svc.runs.children(rid)
+    assert c.post(f"/api/runs/{rid}/cancel", headers=H(tok)).json()["success"]
+    assert svc.runs.get(rid).status == "cancelled" and all(svc.runs.get(k.id).status == "cancelled" for k in kids)
+    drain()
+    assert svc.runs.get(rid).status == "cancelled"
+
+
+def test_a_deadline_answers_one_slot_and_leaves_the_child_running(monkeypatch):
+    from app.api.deps import approval_service
+    from app.engine import agents
+    from tests.test_agent_approval import REFUND
+    replies = iter([("", [{"id": "a", "name": "desk", "args": {"message": "one"}},
+                          {"id": "b", "name": "pay", "args": {"order": "B200", "amount": 1}}]), ("done", [])])
+    monkeypatch.setattr(agents, "call_agent", lambda *a, **k: next(replies))
+    monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")
+    tok = user()
+    child_id = c.post("/api/workflows", json={**specialist("Desk"), "name": f"Desk {uuid.uuid4().hex[:4]}"}, headers=H(tok)).json()["data"]["id"]
+    pay = {**REFUND, "name": "pay"}
+    flow = supervisor(tool(wid=child_id), pay, name=f"Wave {uuid.uuid4().hex[:4]}")
+    flow["nodes"][1]["data"]["deadline"] = {"after": "1h", "on_timeout": "reject"}
+    for n in flow["nodes"]: n["position"] = {"x": 0, "y": 0}
+    sup = c.post("/api/workflows", json=flow, headers=H(tok)).json()["data"]["id"]
+    rid, evs = start(tok, sup, "ask desk and pay")
+    assert evs[-1]["status"] == "waiting"
+    svc = run_service(); kids = svc.runs.children(rid)
+    assert len(kids) == 1 and kids[0].status == "queued"
+    w = approval_service().repo.latest_wait(rid)
+    assert w is not None and w.node_id == "ag/__tool/2"
+    assert approval_service().fire_deadlines(w.created + 3601) == 1
+    assert svc.runs.get(kids[0].id).status == "queued" and svc.runs.get(rid).status == "waiting"
+    drain()
+    steps = json.loads(svc.runs.get(rid).final_state)["steps"]
+    assert svc.runs.get(rid).status == "ok"
+    assert [s["status"] for s in steps] == ["ok", "rejected"]
+
+
 def test_two_calls_in_one_round_start_two_children(monkeypatch):
     from app.engine import agents
     replies = iter([("", [{"id": "a", "name": "desk", "args": {"message": "one"}}, {"id": "b", "name": "desk", "args": {"message": "two"}}]),
