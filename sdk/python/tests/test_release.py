@@ -140,6 +140,14 @@ def test_handbook_cli_pages_share_heading_levels():
 
     en = ROOT / "handbook" / "docs" / "en" / "operate" / "cli.md"
     vi = ROOT / "handbook" / "docs" / "vi" / "operate" / "cli.md"
-    assert levels(en) == levels(vi) == [1, 2, 2, 2, 2]
+    # The rule (TASK-0156) is that the en and vi pages share one heading structure: a single
+    # page title, then sections without skipped levels. The section count grows with the CLI.
+    en_levels, vi_levels = levels(en), levels(vi)
+    assert en_levels == vi_levels
+    assert en_levels[0] == 1 and en_levels.count(1) == 1
+    assert {"Install", "Upgrade", "Backup"} <= {
+        line[3:].strip() for line in en.read_text(encoding="utf-8").splitlines() if line.startswith("## ")
+    }
+    assert all(b - a <= 1 for a, b in zip(en_levels, en_levels[1:]))
     for nav in (ROOT / "handbook" / "mkdocs.yml", ROOT / "handbook" / "mkdocs.vi.yml"):
         assert "operate/cli.md" in nav.read_text(encoding="utf-8")
