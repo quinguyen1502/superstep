@@ -6,6 +6,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **AI review of approvals in the editor and on the Approvals page** (TASK-0188, REQ-0081, DEC-0075). Human nodes and
+  Agent tool approval have an AI review section: mode (off, suggest, answer automatically; the last only for the
+  workflow owner or an admin), judge credential, model and instructions, minimum confidence, daily cap, notify and
+  rules, with the AI/human agreement rate. The Approvals page shows the AI's opinion on a waiting request, and an AI
+  review panel lists your workflows that use it with counts, the agreement rate and a pause switch; admins also get
+  the organisation pause (`GET /api/approvals/auto/workflows`). Python, TypeScript and LangGraph project exports note
+  AI review; workflow export and templates keep the policy without the judge's credential.
 - **AI review of approvals** (TASK-0187, REQ-0081, DEC-0075). With `approval.auto` on, a waiting Human node or Agent tool call is reviewed before anyone is asked: rules first (a `reject` rule rejects, a `human` rule asks people), then a separate model call (any chat credential) that returns approve, reject or escalate with a confidence and a reason. In auto mode only a confident approval (default 0.8) answers, within a per-workflow daily cap; the AI never rejects, and errors, timeouts, invalid answers, suspected injected instructions, the demo and the cap send the request to people. Suggest mode only shows the opinion (inbox `ai`, channel messages) and records whether people agreed. Automatic answers are audited (`kind: auto`) and the run owner alone gets a `run_auto_answered` notification. `GET /api/approvals/auto/workflows/{id}` returns the 30-day counts and agreement rate.
 - **AI review of approvals: policy and switches** (TASK-0186, REQ-0081, DEC-0075). Human nodes and Agent tool approval accept `approval.auto` (`mode` off, suggest or auto; field `rules` that send to people or reject; `max_per_day`; `judge`; `min_confidence`; `notify`), checked on save. Only the workflow owner or an admin can turn auto on (`AUTO_APPROVAL_FORBIDDEN`). Kill switches: `STUDIO_AUTO_APPROVAL=off`, an organisation switch for admins and a per-workflow switch (`/api/approvals/auto`, `AUTO_APPROVAL_DISABLED`). Alembic 0045 adds the review columns to the approval audit and waiting steps.
 - **Chats stay with the agent that answered** (REQ-0078, DEC-0073). After a hand-off, the next message of the same chat session starts at the agent that answered last (new `chat_sessions.active_agent` column). If that agent was removed or is no longer a hand-off target, the chat starts at the entry again; a new session always starts at the entry.

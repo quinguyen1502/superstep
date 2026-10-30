@@ -7,7 +7,7 @@ Link channels (e-mail, Teams, TASK-0047): GET /api/approvals/link?token= shows t
 records the signed-in user's decision.
 Approvals inbox (TASK-0065, DEC-0043): GET /api/approvals/inbox lists the waiting steps the user owns or may answer,
 POST /api/approvals/inbox/{run_id} {response} answers one.
-AI review kill switches (TASK-0186, REQ-0081): GET/PUT /api/approvals/auto (organisation, admin), GET/PUT /api/approvals/auto/workflows/{wid} (owner or admin).
+AI review kill switches (TASK-0186, REQ-0081): GET/PUT /api/approvals/auto (organisation, admin), GET /api/approvals/auto/workflows (the user's workflows with AI review, TASK-0188), GET/PUT /api/approvals/auto/workflows/{wid} (owner or admin).
 """
 import asyncio
 from typing import Optional
@@ -135,6 +135,9 @@ def auto_status(user=Depends(current_user), svc=Depends(auto_approval_service)):
 @router.put("/auto")
 def auto_set_org(body=Body(None), user=Depends(current_user), svc=Depends(auto_approval_service)):
     return svc.set_org_paused(user["id"], bool((body or {}).get("paused")))
+
+@router.get("/auto/workflows")
+def auto_workflows(user=Depends(current_user), svc=Depends(auto_approval_service)): return svc.reviewed_workflows(user["id"])
 
 @router.get("/auto/workflows/{wid}")
 def auto_workflow(wid: str, user=Depends(current_user), svc=Depends(auto_approval_service)): return svc.workflow_status(user["id"], wid)

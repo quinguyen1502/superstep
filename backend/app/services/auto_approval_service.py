@@ -7,10 +7,11 @@
 While paused, requests go to people as if AI review were off; the opinion is not asked for either.
 """
 from __future__ import annotations
-import time
+import json, time
 from typing import Optional
 from ..core import config, permissions as P
 from ..core.errors import AppError
+from ..engine import approval_policy
 from ..repositories import SettingsRepository
 
 ORG_KEY = "auto_approval_paused"
@@ -20,9 +21,10 @@ def _wkey(wid: str) -> str: return f"{ORG_KEY}:{wid}"
 
 
 class AutoApprovalService:
-    def __init__(self, settings: SettingsRepository, access=None, audit=None, reviews=None):
-        """reviews: -> AutoReviewService, for the per-workflow counts (TASK-0187)."""
-        self.settings, self.access, self.audit, self.reviews = settings, access, audit, reviews
+    def __init__(self, settings: SettingsRepository, access=None, audit=None, reviews=None, workflows=None):
+        """reviews: -> AutoReviewService, for the per-workflow counts (TASK-0187); workflows: WorkflowRepository, for
+        the Approvals page list (TASK-0188)."""
+        self.settings, self.access, self.audit, self.reviews, self.workflows = settings, access, audit, reviews, workflows
 
     def org_paused(self) -> bool: return bool(self.settings.get(ORG_KEY, False))
     def workflow_paused(self, wid: Optional[str]) -> bool: return bool(wid) and bool(self.settings.get(_wkey(wid), False))
@@ -61,3 +63,19 @@ class AutoApprovalService:
         self._enabled()
         self.settings.set(_wkey(wid), bool(paused), uid, time.time())
         return self.workflow_status(uid, wid)
+
+    def reviewed_workflows(self, uid: str) -> list:
+        """The Approvals page (TASK-0188): workflows the user may manage (their own; every one for an admin) with AI
+        review in suggest or auto mode on some node, with the pause switch and the last 30 days' counts."""
+        if self.workflows is None: return []
+        admin = self.access is not None and self.access.role(uid) == "admin"
+        rows = self.workflows.list_all() if admin else self.workflows.list_for_owner(uid)
+        out = []
+        for w in rows:
+            try: wf = json.loads(w.data or "{}")
+            except ValueError: continue
+            modes = sorted({approval_policy.mode(n.get("data") or {}) for n in wf.get("nodes") or [] if isinstance(n, dict)} - {"off"})
+            if not modes: continue
+            out.append({"workflow_id": w.id, "name": w.name, "modes": modes, "paused": self.workflow_paused(w.id),
+                        "stats": self.reviews().stats(w.id) if self.reviews is not None else None})
+        return sorted(out, key=lambda x: (x["name"] or "").lower())

@@ -134,3 +134,34 @@ def test_service_paused_combines_switches(monkeypatch):
     store["auto_approval_paused:w1"] = True; assert svc.paused("w1") and not svc.paused("w2")
     store.clear(); store["auto_approval_paused"] = True; assert svc.paused("w2")
     store.clear(); monkeypatch.setenv("STUDIO_AUTO_APPROVAL", "off"); assert svc.paused("w2")
+
+
+# ---- the Approvals page list (TASK-0188) ----
+def test_reviewed_workflows_lists_own_with_ai_review():
+    u = register(); other = register()
+    on = data(c.post("/api/workflows", json=wf(auto("suggest")), headers=H(u.token)))["id"]
+    off = data(c.post("/api/workflows", json=wf(), headers=H(u.token)))["id"]
+    theirs = data(c.post("/api/workflows", json=wf(auto("suggest")), headers=H(other.token)))["id"]
+    rows = data(c.get("/api/approvals/auto/workflows", headers=H(u.token)))
+    ids = [r["workflow_id"] for r in rows]
+    assert on in ids and off not in ids and theirs not in ids
+    row = next(r for r in rows if r["workflow_id"] == on)
+    assert row["modes"] == ["suggest"] and row["paused"] is False and row["stats"]["agreement"] is None
+    assert theirs in [r["workflow_id"] for r in data(c.get("/api/approvals/auto/workflows", headers=H(admin().token)))]
+
+
+# ---- exports (TASK-0188): a note, never the judge's credential or instructions ----
+def test_exports_note_ai_review_without_secrets():
+    from app.engine import python_export, typescript_export, project_export
+    w = wf(auto())
+    py, ts = python_export.to_python(w, "AA").code, typescript_export.to_typescript(w, "AA").code
+    for code in (py, ts):
+        assert "AI review" in code and "cred1" not in code and "Small refunds" not in code
+    assert "AI review" not in python_export.to_python(wf(), "AA").code
+    assert "AI review" in project_export._readme("AA", "aa", "agent.py", True)
+
+
+def test_sanitize_keeps_the_policy_without_the_credential():
+    from app.engine.templates import sanitize
+    a = sanitize(wf(auto()))["nodes"][1]["data"]["approval"]["auto"]
+    assert a["mode"] == "auto" and a["rules"] and a["judge"]["credential_id"] == "" and a["judge"]["model"] == "gpt-x"

@@ -15,7 +15,7 @@ The output is a pure function of its input: the same graph gives the same bytes.
 from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
-from . import agents, attachments, foreach
+from . import agents, approval_policy, attachments, foreach
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .templating import VAR_RE, _ONE_FILTER, refs
 
@@ -676,6 +676,7 @@ class _Writer(GraphWriter):
             extra = []
             if (d.get("approval") or {}).get("channel"): extra.append(f"also asks on {_doc(str(d['approval']['channel']).title())}")
             if d.get("deadline"): extra.append("has a deadline with reminders")
+            if approval_policy.mode(d) != "off": extra.append("has AI review of the request (people answer every request here)")
             if extra: self.add(f" * In Superstep this node {' and '.join(extra)}; that is not part of LangGraph.")
             self.add(" */")
             self.add(sig)
@@ -950,6 +951,8 @@ class _Writer(GraphWriter):
             self.add(" * any other answer rejects it, and the model is told why. On resume the node runs again from the top.")
         if (d.get("approval") or {}).get("channel") or d.get("deadline"):
             self.add(" * In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
+        if approval_policy.mode(d) != "off":
+            self.add(" * In Superstep a model can review the request first (AI review); here people answer every request.")
         self.add(" */")
         self.add(f"async function {tool}(state: {cls}): Promise<Update> {{")
         self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
