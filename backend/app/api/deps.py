@@ -167,7 +167,7 @@ def policy_service() -> PolicyService:
     return PolicyService(SettingsRepository(get_db()), access_service(), audit_service())
 
 def auto_approval_service() -> AutoApprovalService:
-    db = get_db(); return AutoApprovalService(SettingsRepository(db), access_service(), audit_service(), reviews=auto_review_service)
+    db = get_db(); return AutoApprovalService(SettingsRepository(db), access_service(), audit_service(), reviews=auto_review_service, workflows=WorkflowRepository(db))
 
 def auto_review_service() -> AutoReviewService:
     db = get_db(); creds = credential_service()

@@ -2367,5 +2367,72 @@
     "max": "Hand-off limit per run (whole workflow)",
     "maxHint": "Empty uses {{n}}. 0 to {{max}}; past it the agents must answer themselves.",
     "handle": "Drag to another Agent to add a hand-off"
+  },
+  "aiReview": {
+    "title": "AI review",
+    "mode": "Mode",
+    "modes": {
+      "off": "Off",
+      "suggest": "Suggest",
+      "auto": "Answer automatically"
+    },
+    "modeHelp": {
+      "off": "People answer every request.",
+      "suggest": "A model gives its opinion next to each request. People still answer.",
+      "auto": "A model approves requests it is sure about. It never rejects: anything else goes to people."
+    },
+    "autoOwnerOnly": "Only the workflow owner or an admin can turn on automatic answers.",
+    "credential": "Judge credential",
+    "credentialPick": "Choose a chat credential",
+    "instructions": "Instructions for the judge",
+    "instructionsPh": "Refunds up to 50 USD for existing customers are fine.",
+    "minConfidence": "Minimum confidence (0-1)",
+    "cap": "Automatic answers per day",
+    "notify": "Tell the run owner about automatic answers",
+    "rules": "Rules",
+    "rulesHelp": "Checked before the model. A rule can send a request to people or reject it; a rule never approves.",
+    "ruleField": "Field",
+    "ruleOp": "Operator",
+    "ruleValue": "Value",
+    "ruleEffect": "Then",
+    "ruleAdd": "Add rule",
+    "ruleRemove": "Remove rule",
+    "ops": {
+      "equals": "equals",
+      "not_equals": "does not equal",
+      "contains": "contains",
+      "not_contains": "does not contain",
+      "matches": "matches (regex)",
+      "gt": "greater than",
+      "lt": "less than",
+      "empty": "is empty"
+    },
+    "effects": {
+      "human": "Ask people",
+      "reject": "Reject"
+    },
+    "agreement": "People agreed with the AI {{rate}} of the time ({{n}} answers, last {{days}} days).",
+    "agreementNone": "No agreement rate yet: try suggest mode and answer a few requests.",
+    "agreementShort": "Agreement {{rate}}",
+    "pausedHint": "AI review is paused. Requests go to people.",
+    "badge": "AI",
+    "confidence": "confidence {{rate}}",
+    "decision": {
+      "approve": "Suggests approve",
+      "reject": "Suggests reject",
+      "escalate": "Not sure"
+    },
+    "panelTitle": "AI review",
+    "panelIntro": "Workflows where a model reviews approvals. Pausing sends every request to people.",
+    "operatorOff": "Automatic answers are turned off on this server.",
+    "pauseOrg": "Pause AI review for every workflow",
+    "pause": "Paused",
+    "none": "No workflow uses AI review yet.",
+    "stats": {
+      "today": "{{n}} today",
+      "approved": "{{n}} approved",
+      "escalated": "{{n}} to people",
+      "suggested": "{{n}} suggested"
+    }
   }
 }
