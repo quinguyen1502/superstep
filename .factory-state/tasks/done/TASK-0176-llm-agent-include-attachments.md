@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0176
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -92,7 +92,9 @@ Add "Include attachments" to LLM and Agent nodes so documents reach the model as
 
 - 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0176-llm-agent-include-attachments` from `develop`. LLM and Agent nodes with include_attachments send document text and, for vision models, image parts loaded through the run's attachment port; exports carry the same; mock names the files. `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0176-llm-agent-include-attachments` from `develop`.
+- Review: `.factory-state/artifacts/REV-0152-task-0176.md`. QA: `.factory-state/artifacts/QA-0152-task-0176.md`.

@@ -265,3 +265,14 @@ def test_workflow_tools_are_written_without_deno():
 def test_builtin_templates_take_the_studio_path(tmp_path, deno_env, tid, i):
     b = next(x for x in BUILTINS if x["id"] == tid); case = b["tests"][i]
     same_run(tmp_path, deno_env, b["workflow"], case["input"], case.get("answers"))
+
+
+def test_attachments_take_the_studio_path(tmp_path, deno_env):
+    """TASK-0176: "Include attachments" on LLM and Agent nodes; the mock names the files, as in the studio."""
+    from tests.test_attachment_models import B64, IMG_REC, PDF_REC, wf
+    files = [PDF_REC, {**IMG_REC, "data_url": f"data:image/png;base64,{B64}"}]
+    same_run(tmp_path, deno_env, wf("llm"), {"message": "Summarise this", "files": files})
+    # an Agent's built-in tool is a stub here, so only the files note is compared
+    out = T.to_typescript(wf("agent"), "Files", 1, None, {"input": {"message": "Summarise this", "files": files}, "answers": {}})
+    _, final, _ = ts_run(tmp_path, deno_env, out.code)
+    assert final["reply"].endswith("\nAttachments: document invoice.pdf, image shot.png")

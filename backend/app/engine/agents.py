@@ -37,7 +37,7 @@ from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
-from . import subgraphs
+from . import attachments, subgraphs
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
@@ -390,7 +390,8 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             for m in (state.get(d["history_field"]) or []) if d.get("history_field") else []:
                 if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str):
                     msgs.append({"role": m["role"], "content": m["content"]})
-            msgs.append({"role": "user", "content": render(d.get("prompt") or "", state)})
+            files = attachments.records(state, d)  # chat attachments (TASK-0176): records only, image bytes are read per call
+            msgs.append({"role": "user", "content": render(d.get("prompt") or "", state), **({"files": files} if files else {})})
             return {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
         return fn
 
@@ -405,9 +406,11 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 cred = resolve(d["credential_id"])
             buf = tokens(nid) if tokens else None
             try:
-                out, calls = call_agent(p.get("messages") or [], None if hit else specs(d), d.get("model") or "gpt-4o-mini", cred,
+                msgs = p.get("messages") or []
+                extra = {"load": ports.attachment} if any(m.get("files") for m in msgs) else {}  # the file loader only when files are sent
+                out, calls = call_agent(msgs, None if hit else specs(d), d.get("model") or "gpt-4o-mini", cred,
                                         (lambda u: usage(nid, u)) if usage else None, buf, mock=offline, locale=ports.locale,
-                                        parallel=False if d.get("parallel_tool_calls") is False else None)
+                                        parallel=False if d.get("parallel_tool_calls") is False else None, **extra)
             finally:
                 if buf: buf.flush()
             calls = [] if hit else [{"id": str(c.get("id") or f"call_{i}"), "name": str(c.get("name") or ""), "args": c.get("args")}

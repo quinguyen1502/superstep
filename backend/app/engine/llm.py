@@ -5,7 +5,7 @@ without one, OPENAI_API_KEY from the environment is used, then the mock."""
 from __future__ import annotations
 import os, re, time
 from typing import Any, Callable, Dict, List, Optional, Tuple
-from . import providers
+from . import attachments, providers
 from .providers import LLMError, ProviderError  # noqa: F401 (re-exported)
 from .usage import estimate_tokens, make_usage
 
@@ -42,17 +42,20 @@ class TokenBuffer:
 
 
 def call_llm(prompt: str, model: str, cred: Optional[Dict[str, Any]] = None, on_usage=None,
-             on_token: Optional[Callable[[str], None]] = None, mock: bool = False, locale: str = "en") -> str:
+             on_token: Optional[Callable[[str], None]] = None, mock: bool = False, locale: str = "en",
+             files: Optional[List[Dict[str, Any]]] = None, load: Optional[attachments.Load] = None) -> str:
     """cred: decrypted credential {provider, base_url, api_key, headers}. Without cred falls back to env OPENAI_API_KEY, then mock.
     on_usage(usage): optional callback with the token usage record (engine/usage.make_usage).
     on_token(delta): optional callback with text deltas as the model streams them (TASK-0030); the return value is unchanged.
     mock: always the offline mock, whatever the credential (test runs with the mock option, TASK-0067).
-    locale: the language of the mock's answers (engine/locale)."""
+    locale: the language of the mock's answers (engine/locale).
+    files: chat attachment records sent with the prompt (TASK-0176); `load` reads an image's bytes by id."""
     report = on_usage or (lambda u: None)
     if cred is None or mock:
         key = None if mock else os.environ.get("OPENAI_API_KEY")
         if not key:
             out = mock_llm(prompt, model, locale)
+            if files: out = f"{out}\n{attachments.summary(files, locale)}"  # the mock names what it got
             if on_token:  # the mock streams word by word so the live trace works offline too
                 for w in re.findall(r"\S+\s*", out): on_token(w)
             report(make_usage("mock", model, estimate_tokens(prompt), estimate_tokens(out), estimated=True))
@@ -60,7 +63,9 @@ def call_llm(prompt: str, model: str, cred: Optional[Dict[str, Any]] = None, on_
         cred = {"provider": "openai", "api_key": key, "base_url": os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")}
     p = providers.get(cred["provider"])
     if p is None: raise LLMError(f"Unsupported provider: {cred['provider']}")
-    out, usage = p.invoke(prompt, model, cred, on_token)
+    images = None
+    if files: prompt, images = attachments.build(prompt, files, providers.vision(cred["provider"], model), load)
+    out, usage = p.invoke(prompt, model, cred, on_token, images=images) if images else p.invoke(prompt, model, cred, on_token)
     report(usage)
     return out
 
@@ -108,9 +113,19 @@ def mock_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, An
     return f"[mock:{model}] {MOCK_ANSWER.get(locale, MOCK_ANSWER['en'])}: {said[:200]}", []
 
 
+def with_files(messages: List[Dict[str, Any]], vision: bool, load: Optional[attachments.Load]) -> List[Dict[str, Any]]:
+    """Messages whose `files` (chat attachments, TASK-0176) become text blocks, notes and `images` for the provider."""
+    out = []
+    for m in messages:
+        if not m.get("files"): out.append({k: v for k, v in m.items() if k != "files"}); continue
+        text, images = attachments.build(m.get("content") or "", m["files"], vision, load)
+        out.append({**{k: v for k, v in m.items() if k != "files"}, "content": text, **({"images": images} if images else {})})
+    return out
+
+
 def call_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]], model: str, cred: Optional[Dict[str, Any]] = None,
                on_usage=None, on_token: Optional[Callable[[str], None]] = None, mock: bool = False,
-               locale: str = "en", parallel: Optional[bool] = None) -> Tuple[str, List[Dict[str, Any]]]:
+               locale: str = "en", parallel: Optional[bool] = None, load: Optional[attachments.Load] = None) -> Tuple[str, List[Dict[str, Any]]]:
     """One Agent node model call (TASK-0116): (text, tool calls [{id, name, args}]). `tools` [{name, description, parameters}];
     None or [] asks for an answer without tools. Credentials, the env key and the mock as for `call_llm`.
     `parallel` False asks the provider for one call at a time when it supports that flag (DEC-0069)."""
@@ -119,6 +134,8 @@ def call_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, An
         key = None if mock else os.environ.get("OPENAI_API_KEY")
         if not key:
             out, calls = mock_agent(messages, tools, model, locale)
+            files = [f for m in messages if m.get("role") == "user" for f in (m.get("files") or [])]
+            if out and files: out = f"{out}\n{attachments.summary(files, locale)}"  # the mock names what it got
             if on_token and out:
                 for w in re.findall(r"\S+\s*", out): on_token(w)
             report(make_usage("mock", model, estimate_tokens(" ".join(str(m.get("content") or "") for m in messages)), estimate_tokens(out), estimated=True))
@@ -127,6 +144,7 @@ def call_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, An
     p = providers.get(cred["provider"])
     if p is None: raise LLMError(f"Unsupported provider: {cred['provider']}")
     if not p.supports_tools: raise ProviderError("AGENT_TOOLS_UNSUPPORTED", p.label)
+    if any(m.get("files") for m in messages): messages = with_files(messages, providers.vision(cred["provider"], model), load)
     out, calls, usage = p.invoke_tools(messages, tools or [], model, cred, on_token, parallel=parallel)
     report(usage)
     return out, calls
