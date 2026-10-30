@@ -105,8 +105,9 @@ A person can create a personal access token in Settings, approve one from `super
 - 2026-10-30: Review REV-0143. No blocking findings. Approved for QA.
 - 2026-10-30: QA QA-0143. Pass with follow-up. No acceptance criterion failed. The Settings page and `/cli/authorize` were not opened in a browser.
 - 2026-10-30: owner approved the pull request ("duyệt"). The frontend build failed on a catch type; both catches now use `any`, matching the other pages. Task moved to done. Review REV-0143. QA QA-0143. PR #214. Not merged.
+- 2026-10-30: owner said the task chain should finish in one pass. CI on `34f15a1` was green. Merged PR #214 at 2026-10-30T10:26:02Z. Merge commit `4d0ed17`.
 
 ## Handoff Notes
 
-- TASK-0168 through TASK-0171 wait until this task is merged.
-- Review: `.factory-state/artifacts/REV-0143-task-0167.md`. QA: `.factory-state/artifacts/QA-0143-task-0167.md`. Pass with follow-up. PR #214 is Ready. Not merged. TASK-0168 waits until this task is merged.
+- Merged in PR #214 (`4d0ed17`). TASK-0168 through TASK-0171 may start from `develop`.
+- Review: `.factory-state/artifacts/REV-0143-task-0167.md`. QA: `.factory-state/artifacts/QA-0143-task-0167.md`. Pass with follow-up.

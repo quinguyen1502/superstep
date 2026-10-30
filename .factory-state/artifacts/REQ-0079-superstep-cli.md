@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0079
-- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is merged (DEC-0068, TASK-0149 to TASK-0156). Phase 2 is planned (DEC-0071, TASK-0167 to TASK-0172). The owner confirmed the set on 2026-10-30. TASK-0167 is done (PR #214, REV-0143, QA-0143) and not merged.
+- Status: Accepted on 2026-10-27 with the CLAR-0010 answers (all recommended options). Phase 1 is merged (DEC-0068, TASK-0149 to TASK-0156). Phase 2 is planned (DEC-0071, TASK-0167 to TASK-0172). The owner confirmed the set on 2026-10-30. TASK-0167 is merged (PR #214, REV-0143, QA-0143, merge `4d0ed17`).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
@@ -290,9 +290,9 @@ Planned on 2026-10-27. The layout is DEC-0068. Phase 2 is not in this list.
 
 ## Phase 2 Tasks
 
-Planned on 2026-10-30. The layout is DEC-0071. The owner confirmed this set on 2026-10-30. TASK-0167 is done on PR #214 and not merged. The other tasks are not started.
+Planned on 2026-10-30. The layout is DEC-0071. The owner confirmed this set on 2026-10-30. TASK-0167 is merged (PR #214, merge `4d0ed17`). The other tasks are not started.
 
-- TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout`, `whoami`.
+- TASK-0167 Personal access tokens, browser sign-in, Settings, `login`, `logout`, `whoami`. Merged (PR #214).
 - TASK-0168 `workflows list`, `export`, `import`, `pull`, `push`.
 - TASK-0169 `run` and `runs list`, `show`, `cancel`.
 - TASK-0170 `test` and JUnit XML.
