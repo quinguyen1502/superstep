@@ -56,6 +56,8 @@ def agent_parallel_tools() -> int:
 def allow_private_callbacks() -> bool: return os.environ.get("STUDIO_ALLOW_PRIVATE_CALLBACKS") == "1"
 def worker_enabled() -> bool: return os.environ.get("STUDIO_WORKER", "1") != "0"  # run queued jobs in this API process
 def worker_concurrency() -> int: return max(1, _int("STUDIO_WORKER_CONCURRENCY", 2))
+def auto_approval_enabled() -> bool:  # STUDIO_AUTO_APPROVAL=off: AI review of approvals never answers (REQ-0081)
+    return (os.environ.get("STUDIO_AUTO_APPROVAL") or "on").strip().lower() not in ("0", "off", "false", "no")
 def wait_ttl() -> float: return max(0.0, float(os.environ.get("STUDIO_WAIT_TTL", 7 * 86400)))  # waiting runs expire (0 = never)
 def sync_wait_max() -> float: return max(0.0, float(os.environ.get("STUDIO_SYNC_WAIT_MAX", 30)))  # sync trigger: then 202 + poll URL
 def trigger_rate_limit() -> int: return max(0, _int("STUDIO_TRIGGER_RATE_LIMIT", 60))  # runs per token per window (0 = off)
