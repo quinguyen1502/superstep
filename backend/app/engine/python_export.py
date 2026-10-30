@@ -16,7 +16,7 @@ The output is a pure function of its input: the same graph gives the same bytes.
 from __future__ import annotations
 import ast, builtins, inspect, io, json, keyword, re, tokenize
 from typing import Any, Dict, List, Optional
-from . import agents, foreach
+from . import agents, attachments, foreach
 from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWriter, camel as _camel, number as _number,
                             one_line as _one_line, slug)
 from .templating import VAR_RE, _ONE_FILTER, refs
@@ -32,7 +32,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
     "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
-    "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
+    "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 
 
 RULE = re.compile(r"# --- (.+?) -+")
@@ -188,6 +188,73 @@ def call_llm(prompt: str, model: str) -> str:
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
 '''
 
+FILES = '''
+# --- Attachments ---------------------------------------------------------------------------------------------
+# Files a chat sent with the message, for nodes with "Include attachments": a list of {name, type, text?, text_cut?,
+# data_url?}. A document reaches the model as text after the prompt. An image reaches it only when its record carries
+# a data_url ("data:image/png;base64,...") that you supply; otherwise the model gets a note.
+
+
+def is_image(f: dict) -> bool:
+    return str(f.get("type") or "").startswith("image/")
+
+
+def with_files(prompt: str, files: Any) -> tuple:
+    """(text, image parts) of one user message with its files."""
+    text, images = [prompt], []
+    for f in files if isinstance(files, list) else []:
+        if not isinstance(f, dict):
+            continue
+        name = f.get("name")
+        if is_image(f):
+            url = f.get("data_url")
+            if isinstance(url, str) and url.startswith("data:"):
+                images.append({"type": "image_url", "image_url": {"url": url}})
+            else:
+                text.append(f"An image named {name} was attached, but no image data was given.")
+        else:
+            body, cut = f.get("text") or "", " (cut)" if f.get("text_cut") else ""
+            text.append(f'Attached document "{name}"{cut}:\\n{body}' if body else f'Attached document "{name}" has no text.')
+    return "\\n\\n".join(t for t in text if t), images
+
+
+def files_note(files: Any) -> str:
+    """What the offline mock says it received: each file's kind and name."""
+    return "Attachments: " + ", ".join(f"{'image' if is_image(f) else 'document'} {f.get('name')}" for f in files if isinstance(f, dict))
+
+
+def call_llm_files(prompt: str, model: str, files: Any) -> str:
+    """call_llm() with the files sent with the message."""
+    files = files if isinstance(files, list) else []
+    if not LLM_PROVIDER:
+        return mock_llm(prompt, model) + (f"\\n{files_note(files)}" if files else "")
+    from langchain.chat_models import init_chat_model
+    from langchain_core.messages import HumanMessage
+
+    text, images = with_files(prompt, files)
+    reply = init_chat_model(model, model_provider=LLM_PROVIDER).invoke([HumanMessage([{"type": "text", "text": text}] + images)] if images else text)
+    if isinstance(reply.content, str):
+        return reply.content
+    return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
+'''
+
+AGENT_FILES = '''
+
+def call_agent_files(messages: list, tools: Optional[list], model: str) -> tuple:
+    """call_agent() for a conversation whose user message carries `files`."""
+    files = [f for m in messages if m["role"] == "user" for f in m.get("files") or []]
+    if not LLM_PROVIDER:
+        text, calls = mock_agent(messages, tools, model)
+        return (f"{text}\\n{files_note(files)}" if text and files else text), calls
+    out = []
+    for m in messages:
+        if m.get("files"):
+            text, images = with_files(m["content"], m["files"])
+            m = {"role": "user", "content": text, "images": images}
+        out.append(m)
+    return call_agent(out, tools, model)
+'''
+
 ROUTING = '''
 # --- Routing -------------------------------------------------------------------------------------------------
 
@@ -304,7 +371,9 @@ def call_agent(messages: list, tools: Optional[list], model: str) -> tuple:
         elif m["role"] == "tool":
             history.append(ToolMessage(m["content"], tool_call_id=m["tool_call_id"]))
         else:
-            history.append(SystemMessage(m["content"]) if m["role"] == "system" else HumanMessage(m["content"]))
+            images = m.get("images") or []
+            content = [{"type": "text", "text": m["content"]}] + images if images else m["content"]
+            history.append(SystemMessage(m["content"]) if m["role"] == "system" else HumanMessage(content))
     llm = init_chat_model(model, model_provider=LLM_PROVIDER)
     if tools:
         llm = llm.bind_tools([{"type": "function", "function": t} for t in tools])
@@ -470,6 +539,7 @@ class _Writer(GraphWriter):
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
+        if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
         if "routing" in self.uses: self.add("\n" + ROUTING.rstrip())
         if "decide" in self.uses: self.add("\n" + DECIDE.rstrip())
         stubs = [k for k in STUBS if k in self.uses]
@@ -554,7 +624,9 @@ class _Writer(GraphWriter):
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}."""')
             self.add(f"    prompt = render({const}_PROMPT, state)")
-            self.add(ret(f"call_llm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
+            files = attachments.field_of(d)
+            self.add(ret(f"call_llm_files(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, state.get({lit(files)}))" if files
+                         else f"call_llm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
         elif t == "human":
             self.add(f"{const}_PROMPT = {lit(d.get('prompt') or '')}")
             self.add("")
@@ -780,7 +852,9 @@ class _Writer(GraphWriter):
             self.add(f"    for m in state.get({lit(d['history_field'])}) or []:  # the earlier turns of a chat")
             self.add("        if isinstance(m, dict) and m.get(\"role\") in (\"user\", \"assistant\") and isinstance(m.get(\"content\"), str):")
             self.add("            messages.append({\"role\": m[\"role\"], \"content\": m[\"content\"]})")
-        self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}})")
+        files = attachments.field_of(d)
+        if files: self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state), \"files\": state.get({lit(files)}) or []}})")
+        else: self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}})")
         self.add(f"    return {{{chat}: {{\"messages\": messages, \"pending\": [], \"rounds\": 0, \"steps\": [], \"answer\": None}}}}")
         self.add("")
         self.add("")
@@ -788,7 +862,8 @@ class _Writer(GraphWriter):
         self.add(f'    """{_doc(who)}: one model call. After {const}_MAX_ROUNDS rounds the model gets no tools, so it has to answer."""')
         self.add(f"    chat = dict(state[{chat}])")
         self.add(f"    last = chat[\"rounds\"] >= {const}_MAX_ROUNDS")
-        self.add(f"    text, calls = call_agent(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
+        call = "call_agent_files" if attachments.field_of(d) else "call_agent"
+        self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
         self.add("    calls = [] if last else [{\"id\": str(c.get(\"id\") or f\"call_{i}\"), \"name\": str(c.get(\"name\") or \"\"), \"args\": c.get(\"args\")}")
         self.add("                             for i, c in enumerate(calls)]")
         self.add("    if not last:")

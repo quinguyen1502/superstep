@@ -2239,6 +2239,8 @@
     "AGENT_ROUNDS": "Agent node {{node}}: max rounds must be 1-{{max}}",
     "AGENT_FIELD_UNKNOWN": "Agent node {{node}}: {{key}} '{{field}}' is not in the state",
     "AGENT_FIELD_NOT_LIST": "Agent node {{node}}: {{key}} '{{field}}' must be a list field",
+    "ATTACHMENTS_FIELD_UNKNOWN": "Node {{node}}: the attachments field '{{field}}' is not in the state",
+    "ATTACHMENTS_FIELD_NOT_LIST": "Node {{node}}: the attachments field '{{field}}' must be a list field",
     "AGENT_TOOLS_MISSING": "Agent node {{node}}: add at least one tool",
     "AGENT_TOOL_NOT_OBJECT": "Agent node {{node}}: tool {{index}} is not an object",
     "AGENT_TOOL_DUPLICATE": "Agent node {{node}}: two tools are named {{tool}}",

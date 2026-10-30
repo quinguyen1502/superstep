@@ -15,7 +15,7 @@ The output is a pure function of its input: the same graph gives the same bytes.
 from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
-from . import agents, foreach
+from . import agents, attachments, foreach
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .templating import VAR_RE, _ONE_FILTER, refs
 
@@ -47,7 +47,7 @@ HELPERS = {
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS", "JSON_TYPES", "WORDS", "Schema", "ToolSpec", "ToolCall", "ChatMessage",
-    "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "checkArguments", "toolText", "shorten", "Question", "Message",
+    "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "FileRecord", "isImage", "fileList", "withFiles", "filesNote", "callLlmFiles", "callAgentFiles", "checkArguments", "toolText", "shorten", "Question", "Message",
     *(r[0] for r in REDUCERS.values())}
 
 
@@ -225,6 +225,73 @@ async function callLlm(prompt: string, model: string): Promise<string> {
 }
 ''' % {"langchain": LANGCHAIN}
 
+FILES = r'''
+// --- Attachments ---------------------------------------------------------------------------------------------
+// Files a chat sent with the message, for nodes with "Include attachments": a list of { name, type, text?, text_cut?,
+// data_url? }. A document reaches the model as text after the prompt. An image reaches it only when its record carries
+// a data_url ("data:image/png;base64,...") that you supply; otherwise the model gets a note.
+type FileRecord = { name?: string; type?: string; text?: string; text_cut?: boolean; data_url?: string };
+
+function isImage(f: FileRecord): boolean {
+  return String(f.type ?? "").startsWith("image/");
+}
+
+function fileList(files: unknown): FileRecord[] {
+  return Array.isArray(files) ? files.filter((f) => f !== null && typeof f === "object") : [];
+}
+
+/** [text, image parts] of one user message with its files. */
+function withFiles(prompt: string, files: unknown): [string, unknown[]] {
+  const text = [prompt];
+  const images: unknown[] = [];
+  for (const f of fileList(files)) {
+    if (isImage(f)) {
+      if (typeof f.data_url === "string" && f.data_url.startsWith("data:")) images.push({ type: "image_url", image_url: { url: f.data_url } });
+      else text.push(`An image named ${f.name} was attached, but no image data was given.`);
+    } else {
+      const cut = f.text_cut ? " (cut)" : "";
+      text.push(f.text ? `Attached document "${f.name}"${cut}:\n${f.text}` : `Attached document "${f.name}" has no text.`);
+    }
+  }
+  return [text.filter((t) => t).join("\n\n"), images];
+}
+
+/** What the offline mock says it received: each file's kind and name. */
+function filesNote(files: unknown): string {
+  return "Attachments: " + fileList(files).map((f) => `${isImage(f) ? "image" : "document"} ${f.name}`).join(", ");
+}
+
+/** callLlm() with the files sent with the message. */
+async function callLlmFiles(prompt: string, model: string, files: unknown): Promise<string> {
+  const list = fileList(files);
+  if (!LLM_PROVIDER) return mockLlm(prompt, model) + (list.length ? `\n${filesNote(list)}` : "");
+  const [text, images] = withFiles(prompt, list);
+  const { initChatModel } = await import("%(langchain)s");
+  const ask = images.length ? [{ role: "user", content: [{ type: "text", text }, ...images] }] : text;
+  // deno-lint-ignore no-explicit-any
+  const reply = await (await initChatModel(model, { modelProvider: LLM_PROVIDER })).invoke(ask as any);
+  if (typeof reply.content === "string") return reply.content;
+  return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
+}
+''' % {"langchain": LANGCHAIN}
+
+AGENT_FILES = r'''
+
+/** callAgent() for a conversation whose user message carries `files`. */
+async function callAgentFiles(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): Promise<[string, ToolCall[]]> {
+  const files = messages.filter((m) => m.role === "user").flatMap((m) => fileList(m.files));
+  if (!LLM_PROVIDER) {
+    const [text, calls] = mockAgent(messages, tools, model);
+    return [text && files.length ? `${text}\n${filesNote(files)}` : text, calls];
+  }
+  return callAgent(messages.map((m) => {
+    if (!m.files) return m;
+    const [content, images] = withFiles(m.content, m.files);
+    return { role: "user", content, images };
+  }), tools, model);
+}
+'''
+
 ROUTING = r'''
 // --- Routing -------------------------------------------------------------------------------------------------
 const PUNCTUATION = /^[\s!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]+|[\s!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]+$/g;
@@ -302,7 +369,7 @@ function waveCap(enabled: boolean): number {
 type Schema = { type?: string; properties?: Record<string, unknown>; required?: string[] };
 type ToolSpec = { name: string; description: string; parameters: Schema };
 type ToolCall = { id: string; name: string; args: unknown };
-type ChatMessage = { role: string; content: string; tool_calls?: ToolCall[]; tool_call_id?: string; name?: string };
+type ChatMessage = { role: string; content: string; tool_calls?: ToolCall[]; tool_call_id?: string; name?: string; files?: unknown; images?: unknown[] };
 type AgentStep = { tool: string; args: unknown; result: string; status: string; ms: number; approval?: string };
 /** An Agent node's conversation, in its own state field while the loop runs. */
 type AgentChat = { messages: ChatMessage[]; pending: ToolCall[]; rounds: number; steps: AgentStep[]; answer: string | null };
@@ -347,7 +414,11 @@ async function callAgent(messages: ChatMessage[], tools: ToolSpec[] | null, mode
   const { initChatModel } = await import("%(langchain)s");
   const llm = await initChatModel(model, { modelProvider: LLM_PROVIDER });
   // LangChain.js turns { role, content, tool_calls, tool_call_id } objects into its message classes.
-  const history = messages.map((m) => (m.tool_calls ? { ...m, tool_calls: m.tool_calls.map((c) => ({ ...c, args: c.args ?? {} })) } : m));
+  // deno-lint-ignore no-explicit-any
+  const history: any[] = messages.map((m) =>
+    m.tool_calls ? { ...m, tool_calls: m.tool_calls.map((c) => ({ ...c, args: c.args ?? {} })) }
+    : m.images?.length ? { role: m.role, content: [{ type: "text", text: m.content }, ...m.images] } : m
+  );
   const reply = tools?.length
     ? await llm.bindTools(tools.map((t) => ({ type: "function" as const, function: t }))).invoke(history)
     : await llm.invoke(history);
@@ -511,6 +582,7 @@ class _Writer(GraphWriter):
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add(MODEL.rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
+        if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
         if "routing" in self.uses or "decide" in self.uses: self.add(ROUTING.rstrip())
         if "decide" in self.uses: self.add(DECIDE.rstrip())
         stubs = [k for k in STUBS if k in self.uses]
@@ -590,7 +662,9 @@ class _Writer(GraphWriter):
             self.add(f"/** {head}. */")
             self.add(sig)
             self.add(f"  const prompt = render({const}_PROMPT, state);")
-            self.add(ret(f"await callLlm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
+            files = attachments.field_of(d)
+            self.add(ret(f"await callLlmFiles(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, (state as Record<string, unknown>)[{lit(files)}])" if files
+                         else f"await callLlm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
             self.add("}")
         elif t == "human":
             self.add(f"const {const}_PROMPT = {lit(d.get('prompt') or '')};")
@@ -837,7 +911,9 @@ class _Writer(GraphWriter):
             self.add("      messages.push({ role: m.role, content: m.content });")
             self.add("    }")
             self.add("  }")
-        self.add(f"  messages.push({{ role: \"user\", content: render({const}_PROMPT, state) }});")
+        files = attachments.field_of(d)
+        if files: self.add(f"  messages.push({{ role: \"user\", content: render({const}_PROMPT, state), files: fileList((state as Record<string, unknown>)[{lit(files)}]) }});")
+        else: self.add(f"  messages.push({{ role: \"user\", content: render({const}_PROMPT, state) }});")
         self.add(f"  return asUpdate({{ {chat}: {{ messages, pending: [], rounds: 0, steps: [], answer: null }} }});")
         self.add("}")
         self.add("")
@@ -845,7 +921,8 @@ class _Writer(GraphWriter):
         self.add(f"async function {model}(state: {cls}): Promise<Update> {{")
         self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
         self.add(f"  const last = chat.rounds >= {const}_MAX_ROUNDS;")
-        self.add(f"  const [text, asked] = await callAgent(chat.messages, last ? null : {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')});")
+        call = "callAgentFiles" if attachments.field_of(d) else "callAgent"
+        self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')});")
         self.add("  const calls: ToolCall[] = last ? [] : asked.map((c, i) => ({ id: String(c.id || `call_${i}`), name: String(c.name || \"\"), args: c.args }));")
         self.add("  if (!last) chat.rounds += 1;")
         self.add("  chat.messages = [...chat.messages, { role: \"assistant\", content: text, ...(calls.length ? { tool_calls: calls } : {}) }];")

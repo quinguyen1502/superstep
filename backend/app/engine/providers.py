@@ -66,6 +66,7 @@ class Provider:
     local: ClassVar[bool] = False                    # runs on the user's machine (Docker: host.docker.internal)
     kind: ClassVar[str] = "chat"                     # "chat" (LLM nodes), "decision" (Decision nodes, TASK-0050), "email" (TASK-0051)
     settings_fields: ClassVar[Tuple[str, ...]] = ()  # non-secret settings stored on the credential (SMTP host, port, ...)
+    vision: ClassVar[bool] = True                    # can send image parts; the model must also be in VISION_MODELS (DEC-0072)
 
     def info(self) -> Dict[str, Any]:
         return {"id": self.id, "label": self.label, "default_base_url": self.default_base_url, "default_model": self.default_model,
@@ -107,15 +108,18 @@ class Provider:
 
     stream_kwargs: ClassVar[Dict[str, Any]] = {}       # extra chat-model options when streaming (e.g. usage chunks)
 
-    def invoke(self, prompt: str, model: str, cred: Dict[str, Any], on_token: Optional[Callable[[str], None]] = None) -> Tuple[str, Dict[str, Any]]:
+    def invoke(self, prompt: str, model: str, cred: Dict[str, Any], on_token: Optional[Callable[[str], None]] = None,
+               images: Optional[List[Dict[str, str]]] = None) -> Tuple[str, Dict[str, Any]]:
         """Final text + usage. With `on_token` the LangChain model streams and every text delta is passed on as it arrives
-        (the returned text is the same concatenation)."""
+        (the returned text is the same concatenation). `images` [{name, mime, data (base64)}] go with the prompt as image
+        parts (TASK-0176)."""
         model = model or self.default_model
+        ask = _lc_messages([{"role": "user", "content": prompt, "images": images}]) if images else prompt
         try:
-            if on_token is None: msg = self.chat_model(cred, model).invoke(prompt)
+            if on_token is None: msg = self.chat_model(cred, model).invoke(ask)
             else:
                 msg = None
-                for chunk in self.chat_model(cred, model, **self.stream_kwargs).stream(prompt):
+                for chunk in self.chat_model(cred, model, **self.stream_kwargs).stream(ask):
                     if (d := _text(chunk.content)): on_token(d)
                     msg = chunk if msg is None else msg + chunk
                 if msg is None: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "empty stream")
@@ -196,8 +200,37 @@ def _lc_messages(messages: List[Dict[str, Any]]) -> list:
         if role == "system": out.append(SystemMessage(text))
         elif role == "assistant": out.append(AIMessage(text, tool_calls=[{"id": c["id"], "name": c["name"], "args": c.get("args") or {}} for c in m.get("tool_calls") or []]))
         elif role == "tool": out.append(ToolMessage(text, tool_call_id=m.get("tool_call_id") or ""))
+        elif m.get("images"): out.append(HumanMessage([{"type": "text", "text": text}] + [image_url(i) for i in m["images"]]))
         else: out.append(HumanMessage(text))
     return out
+
+
+def image_url(i: Dict[str, str]) -> Dict[str, Any]:
+    """An image part in the OpenAI Chat Completions shape (OpenAI, OpenRouter, OpenAI-compatible, LangChain)."""
+    return {"type": "image_url", "image_url": {"url": f"data:{i['mime']};base64,{i['data']}"}}
+
+
+def image_block(i: Dict[str, str]) -> Dict[str, Any]:
+    """An image block in the Anthropic Messages shape."""
+    return {"type": "image", "source": {"type": "base64", "media_type": i["mime"], "data": i["data"]}}
+
+
+def user_content(text: str, images: Optional[List[Dict[str, str]]], part: Callable[[Dict[str, str]], Dict[str, Any]]) -> Any:
+    return [{"type": "text", "text": text}] + [part(i) for i in images] if images else text
+
+
+# Models that can see images (DEC-0072 decision 5), matched on the start of the name after any "vendor/" prefix.
+# Unknown models count as text only: they get a note in place of the image.
+VISION_MODELS = ("gpt-4o", "gpt-4.1", "gpt-4-turbo", "gpt-5", "chatgpt-4o", "o1", "o3", "o4", "claude-3", "claude-sonnet-4",
+                 "claude-opus-4", "claude-haiku-4", "claude-4", "gemini", "llava", "bakllava", "llama3.2-vision", "llama-3.2-11b-vision",
+                 "llama-3.2-90b-vision", "qwen2-vl", "qwen2.5-vl", "qwen-vl", "pixtral", "gemma3", "minicpm-v", "moondream", "grok-2-vision")
+
+
+def vision(provider_id: str, model: str) -> bool:
+    """Whether this provider can send images and this model can see them."""
+    p = get(provider_id)
+    name = (model or (p.default_model if p else "")).lower().rsplit("/", 1)[-1]
+    return bool(p is not None and p.vision and any(name.startswith(v) for v in VISION_MODELS))
 
 
 def _text(content: Any) -> str:
@@ -262,10 +295,10 @@ class Ollama(Provider):
 
 class PlainHTTP(Provider):
     """Providers called over plain HTTP (no token streaming): `_complete` returns (text, usage); a stream gets one delta."""
-    def _complete(self, prompt: str, model: str, cred: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]: raise NotImplementedError
+    def _complete(self, prompt: str, model: str, cred: Dict[str, Any], images=None) -> Tuple[str, Dict[str, Any]]: raise NotImplementedError
 
-    def invoke(self, prompt, model, cred, on_token=None):
-        out, usage = self._complete(prompt, model or self.default_model, cred)
+    def invoke(self, prompt, model, cred, on_token=None, images=None):
+        out, usage = self._complete(prompt, model or self.default_model, cred, images)
         if on_token and out: on_token(out)
         return out, usage
 
@@ -280,9 +313,9 @@ class OpenAI(PlainHTTP):
 
     default_embedding_model = "text-embedding-3-small"
 
-    def _complete(self, prompt, model, cred):
+    def _complete(self, prompt, model, cred, images=None):
         data = request(self.id, "POST", self.base(cred, self.default_base_url) + "/chat/completions", self.auth_headers(cred),
-                       {"model": model, "messages": [{"role": "user", "content": prompt}]}, model=model)
+                       {"model": model, "messages": [{"role": "user", "content": user_content(prompt, images, image_url)}]}, model=model)
         try: out = data["choices"][0]["message"]["content"].strip()
         except Exception: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "invalid response") from None
         u = data.get("usage") or {}
@@ -313,7 +346,7 @@ class Anthropic(PlainHTTP):
                 blocks = ([{"type": "text", "text": text}] if text else []) + [
                     {"type": "tool_use", "id": c["id"], "name": c["name"], "input": c.get("args") or {}} for c in m.get("tool_calls") or []]
                 turns.append({"role": "assistant", "content": blocks or text})
-            else: turns.append({"role": "user", "content": text})
+            else: turns.append({"role": "user", "content": user_content(text, m.get("images"), image_block)})
         body: Dict[str, Any] = {"model": model, "max_tokens": 1024, "messages": turns}
         if system: body["system"] = system
         if tools:
@@ -329,9 +362,9 @@ class Anthropic(PlainHTTP):
         u = data.get("usage") or {}
         return out, calls, make_usage(self.id, data.get("model") or model, u.get("input_tokens", 0), u.get("output_tokens", 0))
 
-    def _complete(self, prompt, model, cred):
+    def _complete(self, prompt, model, cred, images=None):
         data = request(self.id, "POST", self.base(cred, self.default_base_url) + "/v1/messages", self.auth_headers(cred),
-                       {"model": model, "max_tokens": 1024, "messages": [{"role": "user", "content": prompt}]}, model=model)
+                       {"model": model, "max_tokens": 1024, "messages": [{"role": "user", "content": user_content(prompt, images, image_block)}]}, model=model)
         try: out = "".join(b.get("text", "") for b in data["content"] if b.get("type") == "text").strip()
         except Exception: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "invalid response") from None
         u = data.get("usage") or {}
@@ -342,7 +375,7 @@ class TypeSafe(Provider):
     """TypeSafe System One (TASK-0050, DEC-0039). Jev returns typed decisions (choice, score, noul) with probabilities,
     not text, so it serves Decision nodes only. The key check sends one tiny question (there is no model list endpoint)."""
     id, label, default_base_url, default_model, key_required = "typesafe", "TypeSafe (Jev)", "https://api.typesafe.ai", "jev-latest", True
-    kind, supports_tools, supports_embeddings = "decision", False, False
+    kind, supports_tools, supports_embeddings, vision = "decision", False, False, False
 
     def chat_model(self, cred, model, **kw):
         raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "TypeSafe answers Decision nodes, not prompts")
@@ -361,7 +394,7 @@ class Smtp(Provider):
     """An SMTP server for Send email nodes (TASK-0051, DEC-0040). The password is the credential's secret; host, port,
     security, username and sender are its settings. The check connects, upgrades to TLS and signs in, then quits."""
     id, label, default_base_url = "smtp", "SMTP (e-mail)", ""
-    kind, supports_tools, supports_embeddings = "email", False, False
+    kind, supports_tools, supports_embeddings, vision = "email", False, False, False
     settings_fields = ("host", "port", "security", "username", "from_email", "from_name")
 
     def chat_model(self, cred, model, **kw):

@@ -204,6 +204,7 @@ class GraphWriter:
             if t in ("llm", "human", "retriever", "decision", "email", "mcp") or (t == "tool" and d.get("mode") == "http"):
                 self.uses.add("templates")
             if t in ("llm", "decision"): self.uses.add("model")
+            if t in ("llm", "agent") and d.get("include_attachments"): self.uses.add("files")  # TASK-0176
             if t in ("condition", "decision"): self.uses.add("routing")
             if t == "decision": self.uses.add("decide")
             if t == "human": self.uses.add("human")

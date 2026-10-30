@@ -6,7 +6,7 @@ import httpx
 from ..core import config
 from ..core.errors import AppError
 from ..core.net import pinned_request, public_address
-from . import agents, code_languages, code_runtime, decisions, emails, foreach
+from . import agents, attachments, code_languages, code_runtime, decisions, emails, foreach
 from .effects import Effects, call_tool
 from .errors import Interrupt
 from .llm import LLMError, TokenBuffer, call_llm
@@ -74,7 +74,8 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             report = (lambda u: usage(node["id"], u)) if usage else None
             tokens = token_stream(node["id"])
             try: return {d["output_field"]: call_llm(render(d.get("prompt", ""), state), d.get("model", "gpt-4o-mini"), cred, report, tokens,
-                                                     mock=offline, locale=ports.locale)}
+                                                     mock=offline, locale=ports.locale, files=attachments.records(state, d) or None,
+                                                     load=ports.attachment)}
             finally:
                 if tokens: tokens.flush()
     elif t == "human":

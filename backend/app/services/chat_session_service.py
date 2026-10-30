@@ -429,6 +429,16 @@ class ChatSessionService:
             turn.text = ((err or {}).get("message") if isinstance(err, dict) else err) or ""
         self.sessions.add_turn(turn)
 
+    def file_loader(self, owner: str):
+        """The run port that reads a chat file's bytes (TASK-0176): only files of chats of workflows that `owner` owns,
+        the resource owner of the run (DEC-0023)."""
+        def load(aid: str):
+            a = self.attachments.get(aid) if self.attachments is not None and isinstance(aid, str) else None
+            s = self.sessions.get(a.session_id) if a is not None else None
+            w = self.workflows.get(s.workflow_id) if s is not None else None
+            return (a.mime, a.data) if w is not None and w.owner == owner else None
+        return load
+
     # ---- retention (the worker's maintenance loop) ----
     def cleanup(self) -> int:
         """Deletes sessions idle for longer than their chat's retention_days (DEC-0052), with their files, and files

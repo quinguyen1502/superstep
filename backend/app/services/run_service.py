@@ -275,8 +275,10 @@ class RunService:
         """Services nodes may call during a run, bound to the resource owner `uid`. Org-wide MCP servers follow the admin
         policy for the person running (`actor`, TASK-0029)."""
         org = self.policy.org_allowed(actor or uid) if self.policy is not None else True
+        web = self.chat().web if self.chat else None
         return Ports(retrieve=self.knowledge.retriever(uid) if self.knowledge else None, mcp_call=self.mcp.caller(uid, org) if self.mcp else None,
-                     email_quota=self.email_quota(uid), code_audit=self.code_audit(actor or uid))
+                     email_quota=self.email_quota(uid), code_audit=self.code_audit(actor or uid),
+                     attachment=web.file_loader(uid) if web is not None else None)
 
     # ---- child runs of workflow tools (TASK-0134, DEC-0066) ----
     def top_run(self, r: Run) -> Run:

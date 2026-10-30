@@ -2239,6 +2239,8 @@
     "AGENT_ROUNDS": "Node Agent {{node}}: số vòng tối đa phải từ 1 đến {{max}}",
     "AGENT_FIELD_UNKNOWN": "Node Agent {{node}}: {{key}} '{{field}}' không có trong state",
     "AGENT_FIELD_NOT_LIST": "Node Agent {{node}}: {{key}} '{{field}}' phải là trường kiểu list",
+    "ATTACHMENTS_FIELD_UNKNOWN": "Node {{node}}: trường tệp đính kèm '{{field}}' không có trong state",
+    "ATTACHMENTS_FIELD_NOT_LIST": "Node {{node}}: trường tệp đính kèm '{{field}}' phải là trường kiểu list",
     "AGENT_TOOLS_MISSING": "Node Agent {{node}}: hãy thêm ít nhất một công cụ",
     "AGENT_TOOL_NOT_OBJECT": "Node Agent {{node}}: công cụ {{index}} không phải object",
     "AGENT_TOOL_DUPLICATE": "Node Agent {{node}}: có hai công cụ cùng tên {{tool}}",
