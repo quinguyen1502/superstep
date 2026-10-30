@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0187
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -98,6 +98,9 @@ Review waiting approvals with rules, the daily cap and an LLM judge before peopl
 - 2026-10-30: planned from REQ-0081 (DEC-0075). Status todo. Not started.
 - 2026-10-30: owner approved implementing REQ-0081 for 0.10.0 and merging the task PRs when CI is green.
 
+- 2026-10-30: implemented on `factory/task-0187-auto-review-service` from `develop`. `services/auto_review_service.py` and `engine/approval_judge.py`: AI review in `ApprovalService.on_waiting` before people are asked (kill switches, rules, demo, per-workflow daily cap, separate judge call with a fixed system text, the request as delimited data, strict JSON, 30 s timeout, threshold). Confident approvals resume through the deadline auto-answer path with an `auto` audit entry (outcome, confidence, model, reason, rules, policy hash) and notify only the run owner (`run_auto_answered`); everything else escalates with the opinion on the waiting step, in the inbox and in channel messages. Suggest mode records agreement. The run service now asks for approvals after the run row is stored. `/api/approvals/auto/workflows/{wid}` returns 30-day stats. A shared-database flake in `test_deadlines.py` is fixed by scoping `fire` to its run. `factory verify run --profile full` passed. The owner authorized merging the REQ-0081 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0187-auto-review-service` from `develop`.
+- Review: `.factory-state/artifacts/REV-0171-task-0187.md`. QA: `.factory-state/artifacts/QA-0171-task-0187.md`.

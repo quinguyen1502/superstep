@@ -24,7 +24,8 @@ class InboxService:
         chain = lambda w: self.approvals.workflow_name(w.run_id, w.workflow_id) if self.runs.runs.get(w.run_id) and self.runs.runs.get(w.run_id).parent_run_id else name(w.workflow_id)  # noqa: E731
         return [{"run_id": w.run_id, "workflow_id": w.workflow_id, "workflow_name": chain(w), "node": w.node_id, "label": w.label,
                  "prompt": w.prompt, "channel": w.channel, "mine": w.owner == uid, "owner_email": None if w.owner == uid else email(w.owner),
-                 "waiting_since": w.created, "due_at": w.due_at, "can_open": self._can_open(w, uid)} for w in self.repo.inbox(uid)]
+                 "waiting_since": w.created, "due_at": w.due_at, "can_open": self._can_open(w, uid),
+                 "ai": {"decision": w.ai_decision, "confidence": w.ai_confidence, "reason": w.ai_reason} if w.ai_decision else None} for w in self.repo.inbox(uid)]
 
     def _can_open(self, w: ApprovalWait, uid: str) -> bool:
         """Only users who may already read the run: its owner, and the workflow's owner or an admin (run history rule)."""
