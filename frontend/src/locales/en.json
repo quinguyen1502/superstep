@@ -2099,6 +2099,31 @@
       "widgetHint": "Paste before </body>. A button opens the chat in a corner, and visitors keep their chats in every browser. The site can read the visitor's chat key.",
       "iframe": "Frame",
       "iframeHint": "Shows the chat inside the page. Some browsers (Safari) start a new chat each time in a frame; use the bubble to keep chats."
+    },
+    "files": {
+      "attach": "Attach files (up to {{max}}, {{max_mb}} MB each)",
+      "attachLabel": "Attach files",
+      "remove": "Remove {{name}}",
+      "download": "Download {{name}}",
+      "uploading": "Waiting for files to upload",
+      "kinds": {
+        "document": "Documents (PDF, TXT, MD, CSV)",
+        "image": "Images (PNG, JPEG, WebP)"
+      },
+      "include": "Include attachments",
+      "includeHint": "Send the chat's files to the model: documents as text, images as images when the model can see them.",
+      "includeField": "Files field",
+      "settings": {
+        "enabled": "Allow attachments",
+        "enabledHint": "People can add files to a message. Files are stored with the chat and deleted with it.",
+        "kinds": "File types",
+        "kindsHint": "The server checks each file's content, not only its name.",
+        "maxFiles": "Files per message",
+        "maxMb": "Max size (MB)",
+        "ceiling": "At most {{max}} on this server.",
+        "field": "State field",
+        "fieldHint": "The list field that receives the file records for each run."
+      }
     }
   },
   "timeTravel": {

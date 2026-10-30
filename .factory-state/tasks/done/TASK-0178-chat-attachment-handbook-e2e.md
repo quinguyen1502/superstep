@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0178
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -85,7 +85,9 @@ Document chat attachments, add the Playwright end-to-end tests, and record the c
 
 - 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0178-chat-attachment-docs-e2e` from `develop`. Chat attachments documented in the handbook (en, vi) and covered end to end `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
 - Branch `factory/task-0178-chat-attachment-handbook-e2e` from `develop`.
+- Review: `.factory-state/artifacts/REV-0155-task-0178.md`. QA: `.factory-state/artifacts/QA-0155-task-0178.md`.

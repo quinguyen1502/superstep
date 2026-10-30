@@ -24,6 +24,7 @@ import { McpSettings } from '@/components/mcp-settings'
 import { AgentData, AgentExecution, AgentSettings } from '@/components/agent-settings'
 import { AgentHandoffs, MaxHandoffs } from '@/components/agent-handoffs'
 import { Separator } from '@/components/ui/separator'
+import { IncludeAttachments } from '@/components/include-attachments'
 import { DecisionData, DecisionSettings } from '@/components/decision-settings'
 import { EmailData, EmailSettings } from '@/components/email-settings'
 import { TemplateEditor } from '@/components/template-editor'
@@ -71,6 +72,7 @@ export function EditorConfig() {
         {!chatCreds.length && <p className="text-[11px] text-muted-foreground" id="llm-no-credential">{t('editor.credentialNone')} <CredentialsDialog onChanged={() => { api<Credential[]>('/api/credentials').then(setCreds).catch(() => {}) }} trigger={<TextButton id="llm-add-credential">{t('editor.credentialAdd')}</TextButton>} /></p>}</F>
       <F label={t('field.model')}><ModelPicker credentialId={d.credential_id || undefined} value={d.model || ''} onChange={v => upd('model', v)} placeholder={providers.find(p => p.id === creds.find(c => c.id === d.credential_id)?.provider)?.default_model || 'gpt-4o-mini'} /></F>
       <F label={t('field.promptTemplate', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={7} id="llm-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>
+      {selNode && <IncludeAttachments idp="llm" data={d} fields={state} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
     </>}
     {type === 'agent' && selNode && <AgentSettings key={selNode.id} wid={wid} data={d} nodeId={selNode.id} fields={state} creds={chatCreds} providers={providers} channels={channels}
       builtins={tools} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
