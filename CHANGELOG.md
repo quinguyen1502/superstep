@@ -6,6 +6,7 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Chats stay with the agent that answered** (REQ-0078, DEC-0073). After a hand-off, the next message of the same chat session starts at the agent that answered last (new `chat_sessions.active_agent` column). If that agent was removed or is no longer a hand-off target, the chat starts at the entry again; a new session always starts at the entry.
 - **Agent hand-offs run** (REQ-0078, DEC-0073). An Agent with targets gets one `transfer_to_<name>` tool per target. Calling it ends the agent through a hand-off step and the target agent continues with the conversation and the reason; the run-wide hand-off limit removes the tools once reached, and other calls in the same round are answered as not run. Restarts, time travel and subgraphs keep the hand-off.
 - **Agent hand-offs: targets and the limit** (REQ-0078, DEC-0073). An Agent node can list `handoffs` (`[{target, description}]`): other Agent nodes of the same workflow or subgraph that it may hand the conversation to. The workflow's `max_handoffs` (default 5, 0 to 20) bounds the hand-offs of a run. A hand-off target counts as reachable. Saving refuses a target that is not another Agent node of the workflow (`AGENT_HANDOFF_TARGET_INVALID`) and a limit out of range (`AGENT_HANDOFF_LIMIT`); deleting an Agent node in the editor removes it from other nodes' targets.
 

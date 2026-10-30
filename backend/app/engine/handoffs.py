@@ -18,6 +18,12 @@ def targets(d: Dict[str, Any]) -> List[Dict[str, Any]]:
         if isinstance(d.get("handoffs"), list) else []
 
 
+def receivers(wf: Dict[str, Any]) -> set:
+    """Agent node ids some Agent hands off to: where a chat may start (DEC-0073 decision 4)."""
+    agents = {n["id"]: n for n in wf.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"}
+    return {h["target"] for n in agents.values() for h in targets(n.get("data") or {}) if h["target"] in agents}
+
+
 def limit(wf: Dict[str, Any]) -> int:
     v = wf.get("max_handoffs", DEFAULT_MAX)
     return v if isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= MAX else DEFAULT_MAX

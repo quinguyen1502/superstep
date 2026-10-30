@@ -45,6 +45,7 @@ PREFIX, SEP = "agent:", "/"
 MODEL, TOOL, JOIN, EXIT, HANDOFF = "__model", "__tool", "__join", "__exit", "__handoff"
 # hand-offs (REQ-0078, DEC-0073): the pending hand-off {from, to, reason, messages, last} and the run's count
 HANDOFF_KEY, COUNT_KEY = PREFIX + "__handoff", PREFIX + "__handoffs"
+START_INPUT, START_KEY = "__start_agent", PREFIX + "__start"  # a chat continues with the agent that answered last (TASK-0181)
 NOT_RUN = "Not run: the conversation was handed off"
 HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Continue it and answer the person yourself."
 NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
