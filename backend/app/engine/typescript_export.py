@@ -289,10 +289,11 @@ const MAX_CALLS_PER_ROUND = 8;
 const RESULT_CHARS = 8000;  // a tool result goes back to the model shortened to this
 const STEP_CHARS = 2000;  // ... and into the steps field shortened to this
 
-/** Calls of one round that run together. Off is one. Otherwise 4, or STUDIO_AGENT_PARALLEL_TOOLS when it is 1..8. */
+/** Calls of one round that run together. Off is one. Otherwise 4, or STUDIO_AGENT_PARALLEL_TOOLS when it is 1..8.
+ * env() is the reader above: Node has no Deno, and Deno without --allow-env must stay at the default. */
 function waveCap(enabled: boolean): number {
   if (!enabled) return 1;
-  const raw = Deno.env.get("STUDIO_AGENT_PARALLEL_TOOLS");
+  const raw = env("STUDIO_AGENT_PARALLEL_TOOLS");
   if (raw == null || !raw.trim()) return 4;
   const n = Number(raw);
   return Number.isInteger(n) && n >= 1 && n <= 8 ? n : 4;

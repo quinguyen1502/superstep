@@ -94,7 +94,7 @@ export function EditorRunPanel() {
             {pick.parent.workflow_name && <TextLink to={`/workflows/${pick.parent.workflow_id}?run=${pick.parent.run_id}`} id="trace-open-parent">{t('childRuns.openParent')}</TextLink>}</p>}
           {trace.waiting?.runId && !running && (trace.waiting.child
             ? <ChildWaitPanel child={trace.waiting.child} name={pick?.waiting_for?.workflow_name} status={pick?.waiting_for?.status} />
-            : <HumanPanel waiting={trace.waiting} onRespond={r => respond(trace.waiting!.runId!, r)} />)}
+            : <HumanPanel waiting={trace.waiting} onRespond={r => respond(trace.waiting!.runId!, r, trace.waiting!.node)} />)}
           <RunTrace trace={trace} events={log as any} meta={traceMeta} selected={traceSel} onSelect={sp => setTraceSel(sp?.key ?? null)}
             replay={replay ?? undefined} onExitReplay={() => { setReplay(null); setLog([]); setTraceSel(null) }}
             actions={canTravel || (canSave && !running && trace.runId && finished(trace.status)) ? <>

@@ -116,6 +116,8 @@ def test_agent_nodes_are_exported(c):
     assert 'const question = "Helper \\"one\\" wants to call " + call.name' in code and "also go to a channel" in code
     assert '.addConditionalEdges("helper_one_model", route_helper_one_model, { tool: "helper_one_tool", done: "helper_one_end" })' in code
     assert '.addEdge("helper_one_end", END)' in code and "recursionLimit: " in code
+    wave = code.split("function waveCap", 1)[1].split("type Schema", 1)[0]
+    assert 'env("STUDIO_AGENT_PARALLEL_TOOLS")' in wave and "Deno" not in wave
     assert "def helper_one" not in code and "helper_one_end" in T.to_typescript(AGENT_PARENT, "P", None, {"agent1": AGENT}).code
     u = user(c); wid = save(c, u, AGENT)
     r = c.get(f"/api/workflows/{wid}/code?language=typescript", headers=H(u["token"])).json()["data"]

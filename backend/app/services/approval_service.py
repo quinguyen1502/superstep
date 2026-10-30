@@ -128,6 +128,13 @@ class ApprovalService:
             return self.repo.close_wait(rid, "answered", w.id)
         return self.repo.close_wait(rid, "answered") or self.repo.latest_wait(rid) is None
 
+    def answered_slot(self, rid: str, node: str) -> bool:
+        """The studio answered this slot: close its waiting step and its channel buttons. Other slots of the wave stay
+        open. False when another answer already closed this step."""
+        if not self.claim(rid, node): return False
+        self._close_requests(rid, "superseded", "answered", node=node)
+        return True
+
     def _request(self, rid, owner, wid, node, cfg, target, ev, due: Optional[float] = None) -> Optional[ApprovalRequest]:
         """Send one approval message. Its buttons expire after STUDIO_APPROVAL_TTL, or at the step's deadline if sooner."""
         if self.channels.org_denied(owner, cfg):  # admin policy (TASK-0029)

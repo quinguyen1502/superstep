@@ -88,6 +88,31 @@ def test_a_visitor_answers_a_human_node_but_not_a_reviewers():
     assert code(say(v2, slug2, vt2, {"chat_session_id": sid2, "response": "yes"})) == "CHAT_ANSWER_BY_REVIEWER"
 
 
+def test_a_visitor_answers_the_question_on_the_page_when_another_is_open():
+    """Two approvals in one wave: the page names its question, and then shows the next one."""
+    tok = user(); wid = c.post("/api/workflows", json={**asking(), "name": "Two"}, headers=H(tok)).json()["data"]["id"]
+    slug = f"two-{wid[:6]}"; c.put(f"/api/workflows/{wid}/chat", json={"enabled": True, "access": "anonymous", "slug": slug}, headers=H(tok))
+    v, vt, sid = start(slug)
+    evs = say(v, slug, vt, {"chat_session_id": sid, "message": "the refund"})
+    assert next(e for e in evs if e["type"] == "run_waiting")["node"] == "ask"
+    d = turns(v, slug, vt, sid, 2); rid = d["turns"][-1]["run_id"]
+    svc = run_service(); r = svc.runs.get(rid); cp = json.loads(r.checkpoint)
+    cp["waits"] = [{"node": "ask", "kind": "approval", "prompt": "Sure about the refund?", "label": "Ask"},
+                   {"node": "other", "kind": "approval", "prompt": "And the other?", "label": "Other"}]
+    r.checkpoint = json.dumps(cp); svc.runs.add(r)
+    assert code(say(v, slug, vt, {"chat_session_id": sid, "response": "no", "node": "other"})) == "RUN_NOT_WAITING"
+    assert [w["node"] for w in json.loads(svc.runs.get(rid).checkpoint)["waits"]] == ["ask", "other"]
+    evs = say(v, slug, vt, {"chat_session_id": sid, "response": "yes"})  # the question the page is showing
+    assert evs[-1]["status"] == "waiting"
+    nxt = next(e for e in evs if e["type"] == "run_waiting")
+    assert nxt["node"] == "other" and nxt["prompt"] == "And the other?"
+    saved = json.loads(svc.runs.get(rid).checkpoint)
+    assert saved["answers"] == {"ask": "yes"} and [w["node"] for w in saved["waits"]] == ["other"]
+    page = turns(v, slug, vt, sid, 3)["turns"][-1]
+    assert page["status"] == "waiting" and page["node"] == "other" and page["text"] == "And the other?"
+    assert code(say(v, slug, vt, {"chat_session_id": sid, "response": "yes", "node": "ask"})) == "RUN_NOT_WAITING"
+
+
 def test_limits_stop_a_message_before_it_runs(monkeypatch):
     tok = user(); wid, slug = publish(tok, daily_limit=3)
     monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_VISITOR", "2"); monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_WINDOW", "3600")

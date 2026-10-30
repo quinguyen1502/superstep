@@ -51,6 +51,7 @@ class RunPlan:
     until: Optional[str] = None  # pause after this node finishes (TASK-0036); None runs to the end
     forked: Optional[dict] = None  # {run_id, checkpoint, nodes, edited}: a new run forked from a checkpoint of another one
     pending_wave: bool = False  # an answer of one wait in a wave was stored; the run stays waiting (TASK-0158)
+    pending_event: Optional[dict] = None  # the next slot's run_waiting, so the panel stops showing the one just answered
 
     @property
     def imported(self) -> bool:
@@ -88,6 +89,37 @@ def human_response(response) -> str:
     if isinstance(response, bool): response = "approved" if response else "rejected"
     if not isinstance(response, str) or len(response) > RESPONSE_MAX: raise AppError("RUN_RESPONSE_INVALID", max=RESPONSE_MAX)
     return response
+
+
+def _request_node(req: dict) -> Optional[str]:
+    """The slot a studio answer names. Missing or blank means the caller did not say which question it showed."""
+    node = req.get("node")
+    return node if isinstance(node, str) and node else None
+
+
+def _approval_node(cp: dict, node: Optional[str]) -> Optional[str]:
+    """Which approval this answer is for. One open approval can be unnamed. Several cannot: naming none would
+    answer the first, which may not be the question on screen."""
+    approvals = [w.get("node") for w in cp.get("waits") or [] if isinstance(w, dict) and w.get("kind") == "approval" and w.get("node")]
+    if node:
+        if node not in approvals: raise AppError("RUN_NOT_WAITING")
+        return node
+    if len(approvals) > 1: raise AppError("RUN_NOT_WAITING")
+    return approvals[0] if approvals else None
+
+
+def _follow_up_wait(cp: dict) -> Optional[dict]:
+    """The run_waiting event for the next open slot, after one of a wave was stored. An approval comes before a child."""
+    waits = [w for w in cp.get("waits") or [] if isinstance(w, dict)]
+    w = next((x for x in waits if x.get("kind") == "approval"), None) or (waits[0] if waits else None)
+    if not w: return None
+    ev = {"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt") or "", "ts": time.time()}
+    for k in ("label", "tool", "arguments"):
+        if w.get(k) is not None: ev[k] = w[k]
+    if w.get("kind") == "child" and w.get("run_id"):
+        ev["wait"] = {"kind": "child", "run_id": w["run_id"]}
+        if w.get("workflow_id") is not None: ev["workflow_id"] = w["workflow_id"]
+    return cap_event(ev)
 
 log = get_logger("runs")
 def code_runtime_of(events: list) -> Optional[str]:
@@ -185,7 +217,7 @@ class RunService:
         steps = _parse_steps(req); until = _parse_until(req)
         if req.get("chat_session_id"): return self._plan_chat(uid, req, steps, until)
         if req.get("fork") is not None: return self._plan_fork(uid, req["fork"], steps, until)
-        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until)
+        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
         wid = req.get("workflow_id"); row = None
         if wid: row = self._workflow(wid, uid, P.RUN)
         elif self.access is not None: self.access.require(uid, P.WORKFLOWS_CREATE)  # ad-hoc graphs: viewers only run saved workflows
@@ -220,7 +252,7 @@ class RunService:
         if web is None or not isinstance(sid, str): raise AppError("CHAT_NOT_ENABLED")
         if req.get("resume_run_id"):
             web.check_answer(uid, sid, str(req["resume_run_id"]))
-            return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until)
+            return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
         prep = web.input_for(uid, sid, req.get("message"))
         plan = self.plan(uid, {"workflow_id": prep["workflow_id"], "input": prep["input"]})
         plan.run_id, plan.source = uuid.uuid4().hex[:10], "chat"
@@ -325,7 +357,9 @@ class RunService:
                 if hit is None: return "go" if cp.get("wave_ready") else "stay"
                 cp.setdefault("answers", {})[hit["node"]] = value
             cp["waits"] = [w for w in waits if w is not hit]
-            if cp["waits"]: return "stay"
+            if cp["waits"]:
+                cp["_next_wait"] = _follow_up_wait(cp)  # the panel's next question; update_waiting appends it and drops the key
+                return "stay"
             cp["wave_ready"] = True
             return "go"
         got = self.runs.update_waiting(rid, apply)
@@ -511,12 +545,18 @@ class RunService:
         if isinstance(cp.get("waits"), list):
             if child is not None: outcome = self.absorb_wave(rid, child=child)
             else:
-                node = node or next((w.get("node") for w in cp["waits"] if w.get("kind") == "approval"), None)
+                node = _approval_node(cp, node)  # never guess among several: the panel names the question it is showing
                 if node is None or response is None: raise AppError("RUN_NOT_WAITING")
+                if self.approvals is not None and not via_channel and not self.approvals.answered_slot(rid, node):
+                    raise AppError("RUN_NOT_WAITING")  # this slot was already answered; a sibling stays open
                 outcome = self.absorb_wave(rid, node=node, value=response)
             if outcome == "stay":
-                return RunPlan(r.workflow_id, cp.get("workflow") or {}, {}, run_id=rid, pending_wave=True)
+                fresh = self.runs.get(rid)
+                evs = json.loads(fresh.events or "[]") if fresh is not None else []
+                pending = evs[-1] if evs and isinstance(evs[-1], dict) and evs[-1].get("type") == "run_waiting" else None
+                return RunPlan(r.workflow_id, cp.get("workflow") or {}, {}, run_id=rid, pending_wave=True, pending_event=pending)
             if outcome == "go": return self._wave_plan(self.runs.get(rid), steps, until)
+            raise AppError("RUN_NOT_WAITING")  # the wave changed under this answer; do not close the other slots
         if child is None: response = human_response(response)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         wait = cp.get("wait") or {}
@@ -711,6 +751,9 @@ class RunService:
         "cancelled" or "disconnected"; a cancel can also arrive through the RunBus (reason "api").
         Returns the final status: ok | error | cancelled | timeout."""
         if plan.pending_wave:  # one slot of a wave was answered; the other waits are still open
+            if plan.pending_event: await send(cap_event(plan.pending_event))  # the next question, not the one just answered
+            if plan.pending_event and self.chat is not None and plan.run_id:
+                await _write_in_thread(self._note_chat, plan.run_id)  # the published page then shows that question
             await send({"type": "run_summary", "run_id": plan.run_id, "status": "waiting", "ts": time.time()})
             return "waiting"
         rid = plan.run_id or uuid.uuid4().hex[:10]; await self.bus.astart(rid, uid)  # registered so REST/other workers can cancel it
@@ -730,6 +773,11 @@ class RunService:
         right after the run ends (the client closes the socket on run_summary), and a cancelled plain to_thread would drop
         the queued job, so the chat reply or callback would silently never happen (TASK-0083)."""
         await _write_in_thread(self._settle, rid, source)
+
+    def _note_chat(self, rid: str) -> None:
+        """A chat run stayed waiting after one slot of a wave. Record the next question as its own turn."""
+        try: self.chat().on_settled(rid)
+        except Exception: log.exception("noting the next question of chat run %s failed", rid)
 
     def _settle(self, rid: str, source: Optional[str]) -> None:
         if source == "tool":  # a workflow tool's child run: its parent goes on (TASK-0134)

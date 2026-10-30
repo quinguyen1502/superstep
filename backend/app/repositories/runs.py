@@ -62,18 +62,31 @@ class RunRepository:
             s.commit()
 
     def update_waiting(self, rid: str, fn):
-        """Apply `fn(checkpoint) -> result` to a waiting run and store the checkpoint. None when the run is not waiting.
-        Postgres locks the row. Two settles of one wave then cannot drop each other's answer."""
-        with self.db.session() as s:
-            q = select(Run).where(Run.id == rid, Run.status == "waiting")
-            if s.get_bind().dialect.name != "sqlite": q = q.with_for_update()
-            row = s.scalars(q).first()
-            if row is None: return None
-            cp = json.loads(row.checkpoint or "{}")
-            result = fn(cp)
-            row.checkpoint = json.dumps(cp, ensure_ascii=False, default=str)
-            s.commit()
-            return result
+        """Apply `fn(checkpoint) -> result` to a waiting run and store the checkpoint. None when the run is not waiting
+        or the compare-and-set lost eight times. `fn` may set `checkpoint["_next_wait"]` to one event to append; that
+        key is not stored. `fn` only changes the checkpoint, because a lost write runs it again.
+        The write matches the checkpoint text it read (`UPDATE … WHERE checkpoint = <that text>`). SQLite has no row
+        lock, so two settles of one wave would otherwise each write their own copy and drop the other. Postgres locks
+        the row as well."""
+        for _ in range(8):
+            with self.db.session() as s:
+                q = select(Run).where(Run.id == rid, Run.status == "waiting")
+                if s.get_bind().dialect.name != "sqlite": q = q.with_for_update()
+                row = s.scalars(q).first()
+                if row is None: return None
+                seen, events = row.checkpoint, row.events
+                cp = json.loads(seen or "{}")
+                result = fn(cp)
+                event = cp.pop("_next_wait", None) if isinstance(cp, dict) else None
+                values = {"checkpoint": json.dumps(cp, ensure_ascii=False, default=str)}
+                if event is not None:
+                    evs = json.loads(events or "[]"); evs.append(event)
+                    values["events"] = json.dumps(evs, ensure_ascii=False, default=str)
+                s.expunge(row)  # the compare-and-set below is the only write; a flush of this object would race it
+                n = s.execute(update(Run).where(Run.id == rid, Run.status == "waiting", Run.checkpoint == seen).values(**values)).rowcount
+                if n == 1: s.commit(); return result
+                s.rollback()
+        return None
 
     def keep_resume(self, job: dict) -> None:
         """Keep the answer to a waiting run until the resumed segment records progress or a result (TASK-0127)."""
