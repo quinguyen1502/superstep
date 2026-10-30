@@ -107,6 +107,12 @@ MESSAGES: Dict[str, str] = {
     "DEADLINE_ESCALATE_MISSING": _HUMAN + "add who to escalate to",
     "DEADLINE_ESCALATE_EMAILS": _HUMAN + "escalate to needs e-mail addresses",
     "DEADLINE_TOO_LONG": _HUMAN + "the deadline is longer than the wait limit (STUDIO_WAIT_TTL, {hours} h)",
+    # AI review of approvals (TASK-0186)
+    "AUTO_APPROVAL_MODE": "Node {node}: AI review mode must be one of {modes}",
+    "AUTO_APPROVAL_RULE_INVALID": "Node {node}: AI review rule {index} is not valid (field, operator, value and effect)",
+    "AUTO_APPROVAL_JUDGE_REQUIRED": "Node {node}: AI review needs a model credential",
+    "AUTO_APPROVAL_CONFIDENCE": "Node {node}: the minimum confidence must be between 0 and 1",
+    "AUTO_APPROVAL_CAP": "Node {node}: the daily limit must be a whole number from 1 to {max}",
     # Agent
     "AGENT_PROMPT_MISSING": "Agent node {node}: the task prompt is missing",
     "AGENT_ROUNDS": "Agent node {node}: max rounds must be 1-{max}",

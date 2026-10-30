@@ -16,6 +16,7 @@ from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
 from ..core import permissions as P
 from ..services.access import AccessService
+from ..services.auto_approval_service import AutoApprovalService
 from ..services.share_service import ShareService
 from ..services.user_service import UserService
 from ..services.template_service import TemplateService
@@ -163,6 +164,9 @@ def audit_service() -> AuditService:
 
 def policy_service() -> PolicyService:
     return PolicyService(SettingsRepository(get_db()), access_service(), audit_service())
+
+def auto_approval_service() -> AutoApprovalService:
+    return AutoApprovalService(SettingsRepository(get_db()), access_service(), audit_service())
 
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())
