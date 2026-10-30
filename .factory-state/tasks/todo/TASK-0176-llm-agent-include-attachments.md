@@ -25,7 +25,7 @@ Add "Include attachments" to LLM and Agent nodes so documents reach the model as
 - Per provider image parts: OpenAI, OpenRouter and OpenAI-compatible (`image_url` data URL), Anthropic HTTP (`image` base64 block). A `vision` capability flag per provider/model in `engine/providers.py`; unknown models count as no vision.
 - No vision: the image becomes the note "An image named <name> was attached, but this model cannot see images." and the run goes on.
 - The mock model names each file it received (kind and name) so demos and e2e work offline.
-- Exports: per DEC-0072 decision 4.
+- Exports (DEC-0072 decision 4): Python, LangGraph project and TypeScript code take the same field, include document text when "Include attachments" is on, and send images only when a file record carries a caller-supplied `data_url`.
 
 ### Out Of Scope
 
@@ -73,7 +73,7 @@ Add "Include attachments" to LLM and Agent nodes so documents reach the model as
 - A model without vision receives the note and the run finishes.
 - The mock answer names both files.
 - A node with the setting off gets no file content.
-- Export snapshot tests pass.
+- Exported Python and TypeScript code includes document text with the setting on and an image part only for a file record with `data_url`; export snapshot tests pass.
 
 ## Validation Plan
 
@@ -86,11 +86,12 @@ Add "Include attachments" to LLM and Agent nodes so documents reach the model as
 
 ## Open Questions
 
-- None beyond those listed in DEC-0072.
+- None. DEC-0072 is accepted.
 
 ## Activity Log
 
-- 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started; waits for the owner to confirm the task set.
+- 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started.
+- 2026-10-30: owner confirmed the task set and accepted the decision record.
 
 ## Handoff Notes
 

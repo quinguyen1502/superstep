@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0073
-- Status: Proposed on 2026-10-30. Waits for the owner to confirm the task set (TASK-0179 to TASK-0184).
+- Status: Accepted. The owner approved the decisions and the task set (TASK-0179 to TASK-0184) on 2026-10-30.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -47,9 +47,9 @@
 
 ## Approval
 
-- Approved By: pending
-- Approved On: pending
-- Scope And Limits: CLAR-0009 answers.
+- Approved By: Thái Quí Nguyễn
+- Approved On: 2026-10-30
+- Scope And Limits: The CLAR-0009 answers and decisions 1 to 5 as written. Approved as recommended: hand-off through a private state field and a router, not LangGraph `Command(goto)`; a start router for chat sessions instead of resuming the previous checkpoint.
 
 ## Review Or Revisit Trigger
 

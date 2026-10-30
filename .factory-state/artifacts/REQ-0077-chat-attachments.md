@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0077
-- Status: Accepted on 2026-10-27 with the CLAR-0008 answers (all recommended options). Planned on 2026-10-30 (DEC-0072, TASK-0174 to TASK-0178); waits for the owner to confirm the task set.
+- Status: Accepted on 2026-10-27 with the CLAR-0008 answers (all recommended options). Planned on 2026-10-30 (DEC-0072, TASK-0174 to TASK-0178); the owner confirmed the task set and DEC-0072 on 2026-10-30.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
@@ -165,7 +165,7 @@ None. CLAR-0008 is answered.
 
 ## Planned Tasks
 
-Planned on 2026-10-30. The layout is DEC-0072. Waits for the owner to confirm the set.
+Planned on 2026-10-30. The layout is DEC-0072. The owner confirmed the set and DEC-0072 on 2026-10-30.
 
 - TASK-0174 Storage, upload and download routes, type checks, limits, retention.
 - TASK-0175 Chat settings and the workflow list field.

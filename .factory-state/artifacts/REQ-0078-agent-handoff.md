@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0078
-- Status: Accepted on 2026-10-27 with the CLAR-0009 answers (all recommended options). Planned on 2026-10-30 (DEC-0073, TASK-0179 to TASK-0184); waits for the owner to confirm the task set.
+- Status: Accepted on 2026-10-27 with the CLAR-0009 answers (all recommended options). Planned on 2026-10-30 (DEC-0073, TASK-0179 to TASK-0184); the owner confirmed the task set and DEC-0073 on 2026-10-30.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
@@ -150,7 +150,7 @@ None. CLAR-0009 is answered.
 
 ## Planned Tasks
 
-Planned on 2026-10-30. The layout is DEC-0073. Waits for the owner to confirm the set.
+Planned on 2026-10-30. The layout is DEC-0073. The owner confirmed the set and DEC-0073 on 2026-10-30.
 
 - TASK-0179 Hand-off targets and the limit in the model, save validation.
 - TASK-0180 Engine routing, checkpointed hand-off step, limit, trace.

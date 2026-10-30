@@ -94,11 +94,12 @@ Store chat attachments in the database and expose upload and download routes for
 
 ## Open Questions
 
-- None beyond those listed in DEC-0072.
+- None. DEC-0072 is accepted.
 
 ## Activity Log
 
-- 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started; waits for the owner to confirm the task set.
+- 2026-10-30: planned from REQ-0077 (DEC-0072). Status todo. Not started.
+- 2026-10-30: owner confirmed the task set and accepted the decision record.
 
 ## Handoff Notes
 

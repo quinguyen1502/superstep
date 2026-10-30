@@ -90,6 +90,7 @@ The handbook tells an operator how to sign in, keep workflows in Git, fail CI on
 ## Activity Log
 
 - 2026-10-30: planned from REQ-0079 phase 2 (DEC-0071). Not started.
+- 2026-10-30: owner confirmed the task set and accepted the decision record.
 
 ## Handoff Notes
 

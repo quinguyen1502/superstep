@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0072
-- Status: Proposed on 2026-10-30. Waits for the owner to confirm the task set (TASK-0174 to TASK-0178) and open question 4.
+- Status: Accepted. The owner approved the decisions and the task set (TASK-0174 to TASK-0178) on 2026-10-30, with decision 4 as recommended.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -24,7 +24,7 @@
 1. **Storage.** A new table `chat_attachments` holds bytes, kind, MIME, size, extracted text and the session and turn ids. `chat_turns.attachments` stores only the ordered list of attachment ids. Upload happens before send (one file per request); an unsent upload belongs to the session and is swept after one hour.
 2. **State shape.** The configured field is a list of `{id, name, type, size, text?, text_cut?}`. Image bytes never enter the run state or checkpoints; the engine reads them through a port when an LLM or Agent node with "Include attachments" builds its messages.
 3. **Limits.** Defaults 10 MB and 5 files per message; per-chat values may only lower them; operator ceilings `STUDIO_CHAT_ATTACHMENT_MAX_MB` and `STUDIO_CHAT_ATTACHMENT_MAX_FILES`. The request body limit is enforced while reading.
-4. **Exports (recommendation, needs the owner).** Exported Python, LangGraph project and TypeScript code accept the same field and include document text when "Include attachments" is on; image parts are included when the file record carries a `data_url` supplied by the caller. REQ-0077 does not mention exports, so this is listed as an open question.
+4. **Exports.** Exported Python, LangGraph project and TypeScript code accept the same field and include document text when "Include attachments" is on; image parts are included when the file record carries a `data_url` supplied by the caller. REQ-0077 did not mention exports; the owner chose this on 2026-10-30.
 5. **Vision capability.** A per-provider flag plus a per-model allow list in `engine/providers.py`; unknown models count as text only and get the note.
 
 ## Rationale
@@ -36,7 +36,7 @@
 
 - Base64 files inside the WebSocket message: simpler, but the message can exceed the WebSocket frame limits and ties the upload to the send. Not chosen.
 - Bytes in the run state: makes exports trivial but bloats every checkpoint. Not chosen.
-- Exports ignore attachments: least work, but an exported workflow behaves differently from the studio. Alternative to decision 4.
+- Exports ignore attachments: least work, but an exported workflow behaves differently from the studio. Not chosen.
 
 ## Impacts
 
@@ -49,9 +49,9 @@
 
 ## Approval
 
-- Approved By: pending
-- Approved On: pending
-- Scope And Limits: CLAR-0008 answers.
+- Approved By: Thái Quí Nguyễn
+- Approved On: 2026-10-30
+- Scope And Limits: The CLAR-0008 answers and decisions 1 to 5 as written. Decision 4 approved as recommended: exports take the same attachments field, include document text when "Include attachments" is on, and include images only when the caller supplies a `data_url`.
 
 ## Review Or Revisit Trigger
 
