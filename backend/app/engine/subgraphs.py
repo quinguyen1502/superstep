@@ -133,6 +133,8 @@ def _expand_once(wf: Dict[str, Any], load: Loader, errs: List[str]) -> Dict[str,
         for i, n in cn.items():
             if i == start or i in ends: continue
             d = dict(n.get("data") or {}); d["label"] = f"{label} › {d.get('label') or i}"
+            if isinstance(d.get("handoffs"), list):  # hand-off targets stay inside the subgraph (TASK-0180)
+                d["handoffs"] = [{**h, "target": pid(h["target"])} if isinstance(h, dict) and h.get("target") in cn else h for h in d["handoffs"]]
             nodes.append({**n, "id": pid(i), "data": d})
         nodes.append({"id": exit_id, "type": "subgraph_exit", "position": sub.get("position"), "data": {"label": f"{label} › end"}})
         edges = [{**e, "source": exit_id} if e["source"] == nid else e for e in edges]  # the subgraph's way out

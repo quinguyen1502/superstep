@@ -71,6 +71,8 @@
 | `WORKFLOW_NAME_REQUIRED` | 400 | Workflow name is required |
 | `WORKFLOW_NAME_TOO_LONG` | 400 | Workflow name must be at most {max} characters |
 | `WORKFLOW_NAME_TAKEN` | 409 | A workflow with this name already exists |
+| `AGENT_HANDOFF_TARGET_INVALID` | 400 | Agent node {node}: hand-off target {target} must be another Agent node of this workflow, listed once |
+| `AGENT_HANDOFF_LIMIT` | 400 | Max hand-offs per run must be 0-{max} |
 | `WORKFLOW_TOO_LARGE` | 413 | Workflow is too large (max {max_kb} KB) |
 | `WORKFLOW_INVALID` | 400 | Workflow is invalid |
 | `TEMPLATE_NOT_FOUND` | 404 | Template not found |
@@ -184,6 +186,8 @@
 | `CODE_TOO_LARGE` | 413 | Code node {node}: the {what} is larger than {max_kb} KB |
 | `CODE_LANGUAGE_UNSUPPORTED` | 400 | Code node {node}: {language} is not available on this server |
 | `CODE_WRITE_FORBIDDEN` | 403 | Your role may not add Code nodes or change their code (code.write) |
+| `AUTO_APPROVAL_FORBIDDEN` | 403 | Only the workflow owner or an admin can turn on automatic AI approval |
+| `AUTO_APPROVAL_DISABLED` | 409 | AI auto-approval is turned off on this server |
 | `RUN_NOT_WAITING` | 409 | This run is not waiting for a response |
 | `CHECKPOINT_NOT_FOUND` | 404 | Checkpoint not found in this run, or it cannot be forked |
 | `RUN_FORK_UNSUPPORTED` | 400 | Runs of imported LangGraph graphs cannot be forked |
@@ -285,4 +289,5 @@ The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Cod
 `CODE_LANGUAGE_UNSUPPORTED` (TASK-0079) means the node's `data.language` is unknown or not in `STUDIO_CODE_LANGUAGES` on this server (`python` by default). Nodes without a `language` are Python. It is raised before anything runs, by a run and by *Test with sample state*; saving such a graph reports the same problem as a validation error.
 
 `CODE_WRITE_FORBIDDEN` (TASK-0054) comes from saving a workflow, restoring a version, using or importing a template, and any other write that adds a Code node or changes its `code`, when the user's role lacks `code.write` (admins only by default). Running, moving, renaming or deleting a Code node, and duplicating a workflow, stay allowed. Nothing is stored when it is refused.
+`AUTO_APPROVAL_FORBIDDEN` (TASK-0186, REQ-0081) comes from saving a workflow, restoring a version or any other write that turns a node's AI review to `auto` or changes an `auto` policy, when the caller is neither the workflow owner nor an admin. Editors may save `suggest`. Nothing is stored when it is refused. `AUTO_APPROVAL_DISABLED` comes from the AI review endpoints when the operator turned the feature off (`STUDIO_AUTO_APPROVAL=off`).
 <!-- --8<-- [end:catalog] -->

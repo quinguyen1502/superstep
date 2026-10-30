@@ -4,11 +4,12 @@
 
 - Project: superstep
 - Decision ID: DEC-0074
-- Status: Proposed. Not accepted; waiting for the owner's decision. Nothing is implemented.
+- Status: Accepted (2026-10-31, owner Thái Quí Nguyễn). Not implemented yet; planned into TASK-0191 to TASK-0195.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
-- Updated: 2026-10-30
-- Related Requirements: REQ-0080 (Proposed), REQ-0077
+- Updated: 2026-10-31
+- Related Requirements: REQ-0080 (Accepted), REQ-0077
+- Related Tasks: TASK-0191, TASK-0192, TASK-0193, TASK-0194, TASK-0195
 - Related Architecture: DEC-0072 (chat attachments), DEC-0009 (layers), DEC-0068 and DEC-0071 (CLI)
 
 ## Context
@@ -34,7 +35,7 @@ Common pattern: a storage abstraction with a local-folder default and an S3-comp
 | B. Local folder or volume (`fs`) | a path on a persistent volume | metadata only | needs a shared volume (all-in-one: same container, fine; full stack: a named volume mounted on `api` and `worker`) | archive the folder next to the dump | cheapest; lost on ephemeral disks (Render free) |
 | C. S3-compatible (`s3`) | bucket, keys, endpoint | metadata only | works anywhere | objects stay in the bucket (versioning or the provider's replication); the CLI can copy them on request | pay per GB and request; R2 has no egress fees; B2 is low-cost; MinIO self-hosted; one more credential to protect |
 
-## Decision (proposed)
+## Decision
 
 1. **A storage port with three backends**, `db` (default), `fs` and `s3`, selected by `STUDIO_ATTACHMENT_STORAGE`, with the S3 settings in REQ-0080. The attachment service depends on the port; repositories keep metadata only. `boto3` is an optional extra included in the published images.
 2. **Rows say where their bytes are** (`storage`, `key`), so a change of backend needs no downtime and old rows stay readable until migrated.
@@ -65,7 +66,7 @@ Common pattern: a storage abstraction with a local-folder default and an S3-comp
 
 ## Approval
 
-- Not approved. The owner decides whether to accept, change or drop this proposal.
+- Accepted by the owner, Thái Quí Nguyễn, on 2026-10-31: "Duyệt đề xuất cả 3 backend db, fs, s3, merge #229 và lập task". All three backends and the recommendations above are accepted as proposed: `db` default; install offers `fs` (single host) and `s3` (full stack); streaming downloads, no presigned URLs; `attachments migrate` with SHA-256 checks and resumable batches; deletion in the service with an orphan sweep; backup as in decision 6 with `--include-attachments`; the Render demo stays on `db`; `boto3` optional extra included in the images.
 
 ## Review Or Revisit Trigger
 

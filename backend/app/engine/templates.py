@@ -24,7 +24,11 @@ def sanitize(wf: dict) -> dict:
             d["tools"] = [{k: "" if k in REF_FIELDS else v for k, v in t.items() if not k.startswith("_") and k.lower() not in SECRET_KEYS}
                           if isinstance(t, dict) else t for t in d["tools"]]
         if isinstance(d.get("approval"), dict):  # a Human node keeps only the channel kind, not the connection, target or approvers (TASK-0064)
-            d["approval"] = {"channel": d["approval"]["channel"]} if d["approval"].get("channel") else {}
+            a = d["approval"]; d["approval"] = {"channel": a["channel"]} if a.get("channel") else {}
+            if isinstance(a.get("auto"), dict):  # AI review (TASK-0188): the policy stays, the judge's credential goes
+                auto = copy.deepcopy(a["auto"]); judge = auto.get("judge")
+                if isinstance(judge, dict): auto["judge"] = {**judge, "credential_id": ""}
+                d["approval"]["auto"] = auto
         if isinstance(d.get("deadline"), dict):  # the timing stays, the escalation addresses go, like approvers (TASK-0066)
             d["deadline"] = {k: v for k, v in d["deadline"].items() if k != "escalate_to"}
         out["nodes"].append({"id": n["id"], "type": n["type"], "position": n.get("position") or {"x": 0, "y": 0}, "data": d})
@@ -282,6 +286,33 @@ BUILTINS += [
         "edges": [_e("e1", "start", "agent"), _e("e2", "agent", "end")]}},
 ]
 
+# Agent hand-offs (TASK-0184, REQ-0078, DEC-0073): Triage answers order questions itself and hands the conversation to
+# Billing or Technical, which answer the person directly. In a chat the next message stays with the agent that answered.
+_ORDER = _tool("lookup_order", "Find the delivery status of an order", "builtin", function="lookup_order")
+
+
+def _agent(i, x, y, label, system, **kw):
+    return _n(i, "agent", x, y, label=label, model="gpt-4o-mini", max_rounds=4, output_field="answer", system_prompt=system,
+              prompt="{{state.message}}", history_field="messages", tools=[_ORDER], **kw)
+
+
+BUILTINS += [
+    {"id": "builtin-help-desk", "name": "Help desk",
+     "description": "A triage agent answers order questions and hands billing or technical questions to the agent for them.",
+     "workflow": {
+        "state": _s("message", "messages:list", "answer"), "max_handoffs": 3,
+        "nodes": [_n("start", "start", 40, 220, label="Start"),
+                  _agent("triage", 300, 220, "Triage", "You are the first contact of an online shop. Answer questions about where an order is. "
+                         "Hand billing questions to Billing and technical problems to Technical.",
+                         handoffs=[{"target": "billing", "description": "Duplicate charges, refunds, invoices and payment questions"},
+                                   {"target": "technical", "description": "Crashes, bugs, error messages and login problems in the app"}]),
+                  _agent("billing", 620, 60, "Billing", "You handle charges, refunds and invoices. Explain what happened and what you will do.",
+                         handoffs=[{"target": "technical", "description": "The person reports a technical problem instead"}]),
+                  _agent("technical", 620, 380, "Technical", "You fix problems with the app. Ask for the steps and the error message if they are missing."),
+                  _n("end", "end", 900, 220, label="End")],
+        "edges": [_e("e1", "start", "triage"), _e("e2", "triage", "end"), _e("e3", "billing", "end"), _e("e4", "technical", "end")]}},
+]
+
 # Test cases of each built-in template (TASK-0069, REQ-0042), in the shape of the workflow tests API. They pass with the
 # offline mock model: a Condition takes the label it finds as a whole word, and the Decision mock the label it finds in the
 # state, so the inputs name their branch. A workflow made from the template gets a copy; saved templates carry none.
@@ -350,6 +381,13 @@ TESTS: dict[str, list[dict]] = {
         # the refund desk asks a person before a refund; a test run answers no question inside a called workflow
         _case("Refund requests go to the refund desk", {"message": "Order A100 arrived broken, please refund it"}, None,
               _called("agent", "refund_desk"), _called("agent", "order_desk", False))],
+    "builtin-help-desk": [
+        _case("Order questions stay with Triage", {"message": "Where is my order B200?"}, None,
+              _called("triage", "lookup_order"), _ran("billing", False), _ran("technical", False), _has("answer", "In transit")),
+        _case("A duplicate charge goes to Billing", {"message": "Billing: duplicate charges on my invoices"}, None,
+              _ran("billing"), _ran("technical", False), _filled("answer")),
+        _case("A crash goes to Technical", {"message": "The app crashes with an error message on login"}, None,
+              _ran("technical"), _ran("billing", False), _filled("answer"))],
     "builtin-feedback-digest": [
         _case("Three pieces of feedback make one report", {"feedback": ["Love the new editor", "Runs are slow on Mondays", "Please add a Discord channel"]},
               None, _ran("send"), _filled("report"), _filled("sent"))],

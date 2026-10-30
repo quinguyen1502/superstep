@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
-import { addEdge, useNodesState, useEdgesState, useReactFlow, type Node, type Edge, type Connection } from '@xyflow/react'
+import { addEdge, useNodesState, useEdgesState, useReactFlow, type Node, type Edge, type EdgeChange, type Connection } from '@xyflow/react'
 import { Trash2, Braces, ArrowRight, ArrowDown, History, LayoutTemplate, Share2, Webhook, CalendarClock, MessageSquare, MessagesSquare, Search, FileCode2 } from 'lucide-react'
 import { useLocation, useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { freeSpot, openPalette, registerCommands, type PaletteCommand } from '@/lib/palette'
@@ -21,6 +21,7 @@ import { buildTrace, withSummary } from '@/lib/trace'
 import { canvasId, clearMarks, markEvent, markRun } from '@/lib/run-marks'
 import type { BuiltinTool } from '@/lib/agent'
 import { useShortcuts } from '@/lib/use-shortcuts'
+import { addHandoff, handoffEdges, HANDOFF_HANDLE, isHandoffEdge, pruneHandoffs, removeHandoffs } from '@/lib/handoffs'
 import { useGraphHistory } from '@/lib/use-graph-history'
 import { removeElements, selectionIds, spliceNode } from '@/lib/graph-ops'
 import { META, INSERTABLE, DEFAULTS, samplePrompt, MENU_OF, MENU_IDS, ACTION_ICONS, styleEdges, defaultInput, LOOP_LABELS, type Field, type LogItem } from './meta'
@@ -32,6 +33,7 @@ export function useStudio() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [state, setState] = useState<Field[]>([])
   const [name, setName] = useState('Untitled')
+  const [maxHandoffs, setMaxHandoffs] = useState<number | undefined>()   // the workflow's hand-off limit (TASK-0179); unset: the default
   const [wid, setWid] = useState<string | undefined>()
   const [sel, setSel] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null)
   const [input, setInput] = useState(() => i18n.t('samples.input'))
@@ -63,10 +65,13 @@ export function useStudio() {
   const hist = useGraphHistory(nodes, edges, state, h => { setNodes(h.nodes.map(n => ({ ...n }))); setEdges(styleEdges(h.edges)); setState(h.state) })
   // after a load, the first graph that renders becomes the saved snapshot and the start of the undo history
   const takeSnapshot = useEffectEvent(() => { if (takeBaseline.current) { takeBaseline.current = false; savedSnap.current = snap(); hist.reset(nodes, edges, state) } })
-  useEffect(() => { takeSnapshot() }, [nodes, edges, name, state])
+  useEffect(() => { takeSnapshot() }, [nodes, edges, name, state, maxHandoffs])
+  // a deleted Agent node leaves no hand-off pointing at it (TASK-0179); the same array when nothing changes
+  const nodeKey = nodes.map(n => `${n.id}:${n.type}`).join('|')
+  useEffect(() => { setNodes(ns => pruneHandoffs(ns)) }, [nodeKey, setNodes])
   const load = (wf: any) => {
     takeBaseline.current = true
-    setName(wf.name); setWid(wf.id); setState(wf.state || [])
+    setName(wf.name); setWid(wf.id); setState(wf.state || []); setMaxHandoffs(typeof wf.max_handoffs === 'number' ? wf.max_handoffs : undefined)
     setSource(wf.source || null)
     if (wf.access) { setAccess(wf.access); setOwnerEmail(wf.mine ? null : wf.owner_email ?? null) }
     setNodes(wf.needs_layout ? layoutGraph(wf.nodes, wf.edges, 'LR', false) : wf.nodes); setEdges(styleEdges(wf.edges))
@@ -95,7 +100,7 @@ export function useStudio() {
   useEffect(() => { openWorkflow() }, [id])
 
   const toJSON = () => ({
-    id: wid, name, state,
+    id: wid, name, state, ...(maxHandoffs === undefined ? {} : { max_handoffs: maxHandoffs }),
     nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: Object.fromEntries(Object.entries(n.data).filter(([k]) => !k.startsWith('_'))) })),
     edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, ...(e.label ? { label: String(e.label) } : {}), ...((e as any).conditional ? { conditional: true } : {}) })),
   })
@@ -132,6 +137,11 @@ export function useStudio() {
   const fork = (runId: string, checkpoint: number, state?: Record<string, unknown>) => stream({ fork: { run_id: runId, checkpoint, ...(state ? { state } : {}) } })
   const cancelRun = () => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'cancel' }))
   const removeIds = (nodeIds: string[], edgeIds: string[] = []) => {
+    if (edgeIds.some(isHandoffEdge)) {  // a hand-off link is a target of its Agent node, not a workflow edge (TASK-0182)
+      setNodes(ns => removeHandoffs(ns, edgeIds)); edgeIds = edgeIds.filter(id => !isHandoffEdge(id))
+      if (sel && isHandoffEdge(sel.id)) setSel(null)
+      if (!nodeIds.length && !edgeIds.length) return
+    }
     const r = removeElements(nodes, edges, nodeIds, edgeIds); if (!r.removed) return
     setNodes(r.nodes); setEdges(r.edges); if (sel && (nodeIds.includes(sel.id) || edgeIds.includes(sel.id))) setSel(null)
   }
@@ -278,11 +288,17 @@ export function useStudio() {
       setTraceSel(spans[cur >= 0 ? (cur + 1) % spans.length : spans.length - 1].key); setTab('logs')
     }
   }
-  const onConnect = useCallback((c: Connection) => setEdges(es => {
+  const edgesView = useMemo(() => [...edges, ...handoffEdges(nodes)], [edges, nodes])  // hand-off links are derived (TASK-0182)
+  const onEdgesView = useCallback((changes: EdgeChange[]) => {
+    const gone = changes.filter(c => c.type === 'remove' && isHandoffEdge(c.id)).map(c => (c as { id: string }).id)
+    if (gone.length) setNodes(ns => removeHandoffs(ns, gone))
+    onEdgesChange(changes.filter(c => !('id' in c && isHandoffEdge(c.id))))
+  }, [onEdgesChange, setNodes])
+  const onConnect = useCallback((c: Connection) => c.sourceHandle === HANDOFF_HANDLE ? setNodes(ns => addHandoff(ns, c.source, c.target)) : setEdges(es => {
     // a For each node's first edge is its loop body, the second leaves the loop (TASK-0049)
     const loop = rf.getNode(c.source)?.type === 'foreach' ? LOOP_LABELS.find(l => !es.some(e => e.source === c.source && e.label === l)) : undefined
     return addEdge({ ...c, id: 'e' + Date.now(), ...(loop ? { label: loop } : {}) }, es)
-  }), [setEdges, rf])
+  }), [setEdges, setNodes, rf])
   const onDrop = (ev: React.DragEvent) => {
     ev.preventDefault(); if (!edit) return; const t = ev.dataTransfer.getData('nodetype'); if (!t) return
     addNode(t, rf.screenToFlowPosition({ x: ev.clientX, y: ev.clientY }))
@@ -306,13 +322,13 @@ export function useStudio() {
   }
   const fieldNames = state.map(f => f.name)
   const [canvasLock, setCanvasLock] = useState(false)
-  return {
+  return { maxHandoffs, setMaxHandoffs,
     id, nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, state, setState, name, setName, wid, setSel,
     input, setInput, log, setLog, errors, setErrors, tools, mode, source, creds, setCreds, providers, channels, history,
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,
     hist, load, openRun, toJSON, save, mark, run, respond, fork, cancelRun, removeIds,
     clipNote, note, insert, editable, layoutDir, cheat, setCheat, insertAround, addNode, addNote, dlg, setDlg, ctx, setCtx,
-    delWf, isDirty, saves, paletteCmds, addCentered, trace, traceMeta, step, continueRun, nodesView, onNodeClick, onConnect, onDrop,
+    delWf, isDirty, saves, paletteCmds, addCentered, trace, traceMeta, step, continueRun, nodesView, edgesView, onEdgesView, onNodeClick, onConnect, onDrop,
     selNode, selEdge, upd, setRuntime, d, runTo, fieldNames, canvasLock, setCanvasLock, copyIds, chatOpen: chatOpen && canChat, setChatOpen, canChat,
   }
 }

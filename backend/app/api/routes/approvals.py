@@ -7,6 +7,7 @@ Link channels (e-mail, Teams, TASK-0047): GET /api/approvals/link?token= shows t
 records the signed-in user's decision.
 Approvals inbox (TASK-0065, DEC-0043): GET /api/approvals/inbox lists the waiting steps the user owns or may answer,
 POST /api/approvals/inbox/{run_id} {response} answers one.
+AI review kill switches (TASK-0186, REQ-0081): GET/PUT /api/approvals/auto (organisation, admin), GET /api/approvals/auto/workflows (the user's workflows with AI review, TASK-0188), GET/PUT /api/approvals/auto/workflows/{wid} (owner or admin).
 """
 import asyncio
 from typing import Optional
@@ -17,7 +18,7 @@ from ...core import config
 from ...core.errors import AppError
 from ...core.client_ip import client_ip
 from ...core import permissions as P
-from ..deps import approval_service, channel_service, current_user, identity_service, inbox_service, need, slack_oauth_service
+from ..deps import approval_service, auto_approval_service, channel_service, current_user, identity_service, inbox_service, need, slack_oauth_service
 
 router = APIRouter(prefix="/api/approvals", tags=["approvals"])
 
@@ -125,3 +126,22 @@ def answer(run_id: str, body=Body(None), user=Depends(current_user), svc=Depends
     data = body if isinstance(body, dict) else {}
     node = data.get("node")
     return svc.answer(user["id"], run_id, data.get("response"), node if isinstance(node, str) and node else None)
+
+
+# ---- AI review of approvals: kill switches (TASK-0186, REQ-0081) ----
+@router.get("/auto")
+def auto_status(user=Depends(current_user), svc=Depends(auto_approval_service)): return svc.status(user["id"])
+
+@router.put("/auto")
+def auto_set_org(body=Body(None), user=Depends(current_user), svc=Depends(auto_approval_service)):
+    return svc.set_org_paused(user["id"], bool((body or {}).get("paused")))
+
+@router.get("/auto/workflows")
+def auto_workflows(user=Depends(current_user), svc=Depends(auto_approval_service)): return svc.reviewed_workflows(user["id"])
+
+@router.get("/auto/workflows/{wid}")
+def auto_workflow(wid: str, user=Depends(current_user), svc=Depends(auto_approval_service)): return svc.workflow_status(user["id"], wid)
+
+@router.put("/auto/workflows/{wid}")
+def auto_set_workflow(wid: str, body=Body(None), user=Depends(current_user), svc=Depends(auto_approval_service)):
+    return svc.set_workflow_paused(user["id"], wid, bool((body or {}).get("paused")))

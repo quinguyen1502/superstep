@@ -3,8 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0186
-- Status: todo
+- Task ID: TASK-0189
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -14,22 +14,20 @@
 
 ## Objective
 
-Add the `approval.auto` policy to Human nodes and Agent tool approval, with save-time validation, roles, kill switches and the audit columns.
+Handbook pages, Playwright e2e in en and vi, screenshots and CHANGELOG for AI auto-approval.
 
 ## Scope
 
 ### In Scope
 
-- `engine/approval_policy.py` (pure): parse and validate `approval.auto` {mode off|suggest|auto, rules [{field, op, value, effect human|reject}], max_per_day (default 50), judge {credential_id, model, instructions}, min_confidence (default 0.8), notify (default on)}, the rule operators, `policy_hash`, and the evaluation of rules against a request (DEC-0075 decisions 2, 4, 5).
-- The validator reports invalid policies as issues on the Human node and on Agent nodes with approval tools (`AUTO_APPROVAL_RULE_INVALID`, `AUTO_APPROVAL_JUDGE_REQUIRED`).
-- Roles (owner decision 3): saving a workflow that turns `mode: auto` on, or changes an auto policy, needs the workflow owner or an admin; others get `AUTO_APPROVAL_FORBIDDEN`. Editors may set `suggest`.
-- Kill switches: the workflow setting `auto_approval_paused`, an organisation admin setting, and the operator variable `STUDIO_AUTO_APPROVAL=off` (`AUTO_APPROVAL_DISABLED` when an API asks for a paused feature).
-- Alembic revision: nullable `auto_outcome`, `auto_confidence`, `auto_model`, `auto_reason`, `auto_rules`, `policy_hash`, `agreed` on `approval_audit`; nullable `ai_decision`, `ai_confidence`, `ai_reason` on `approval_waits` (DEC-0075 decision 7).
-- Tests: policy parsing and validation, rule evaluation per operator, RBAC on save (editor auto refused, editor suggest allowed, owner and admin auto allowed), migration up and down.
+- Handbook en and vi: Human node and Agent node pages, and an "AI review of approvals" guide (modes, rules, cap, judge, fail-safe, risks: overconfidence and prompt injection).
+- Playwright e2e in en and vi: settings on the Human node and Agent tool approval, a suggest-mode opinion in the Approvals inbox, the AI badge and rates, the kill switch.
+- Screenshots for review.
+- CHANGELOG Unreleased entry.
 
 ### Out Of Scope
 
-- The review itself (TASK-0187). UI (TASK-0188).
+- New behaviour.
 
 ## Inputs
 
@@ -63,14 +61,13 @@ Add the `approval.auto` policy to Human nodes and Agent tool approval, with save
 
 ## Dependencies
 
-- none
+- TASK-0188
 
 ## Acceptance Criteria
 
-- Saving `mode: auto` as a sharing editor returns `AUTO_APPROVAL_FORBIDDEN`; as the owner or an admin it saves.
-- An invalid rule (unknown operator, missing field) and auto without a judge credential are reported with their codes.
-- Rules evaluate per operator as specified (unit tests).
-- The Alembic revision upgrades and downgrades.
+- The handbook builds in strict mode in en and vi.
+- e2e passes in en and vi.
+- CHANGELOG has the entry.
 
 ## Validation Plan
 
@@ -91,6 +88,9 @@ Add the `approval.auto` policy to Human nodes and Agent tool approval, with save
 - 2026-10-30: planned from REQ-0081 (DEC-0075). Status todo. Not started.
 - 2026-10-30: owner approved implementing REQ-0081 for 0.10.0 and merging the task PRs when CI is green.
 
+- 2026-10-30: implemented on `factory/task-0189-auto-approval-handbook-e2e` from `develop`. Handbook page `run/ai-review.md` in en and vi with links from the Human node, Agent node and Human approval pages; Playwright `e2e/auto-approval.spec.ts` in en and vi with a fixed judge verdict from the fake Ollama API; review screenshots. `factory verify run --profile full` passed. The owner authorized merging the REQ-0081 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
-- Branch `factory/task-0186-auto-approval-policy` from `develop`.
+- Branch `factory/task-0189-auto-approval-handbook-e2e` from `develop`.
+- Review: `.factory-state/artifacts/REV-0173-task-0189.md`. QA: `.factory-state/artifacts/QA-0173-task-0189.md`.

@@ -15,6 +15,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "finished": "The run went on without this request",
         "reminded": "⏰ Reminder sent in a new message", "escalated": "⏰ No answer in time: handed to other approvers",
         "deadline_approved": "⏰ No answer in time: approved by the deadline", "deadline_rejected": "⏰ No answer in time: rejected by the deadline",
+        "auto_approved": "🤖 Approved by AI review", "auto_rejected": "🤖 Rejected by an AI review rule",
+        "ai_opinion": "AI review: {decision} ({confidence}). {reason}", "ai_approve": "approve", "ai_reject": "reject", "ai_escalate": "ask a person",
         "code": "Superstep verification code: {code}\nIt expires in {minutes} min. If you did not ask for it, ignore this message.",
         "APPROVAL_TOKEN_INVALID": "Invalid approval button", "APPROVAL_TOKEN_EXPIRED": "This approval request has expired",
         "APPROVAL_ALREADY_DECIDED": "This request was already answered",
@@ -38,6 +40,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "finished": "Lượt chạy đã tiếp tục mà không cần yêu cầu này",
         "reminded": "⏰ Đã nhắc lại trong một tin nhắn mới", "escalated": "⏰ Hết hạn chờ: đã chuyển cho người duyệt khác",
         "deadline_approved": "⏰ Hết hạn chờ: tự động duyệt theo hạn", "deadline_rejected": "⏰ Hết hạn chờ: tự động từ chối theo hạn",
+        "auto_approved": "🤖 AI đã tự duyệt", "auto_rejected": "🤖 Bị từ chối theo quy tắc AI duyệt",
+        "ai_opinion": "AI duyệt: {decision} ({confidence}). {reason}", "ai_approve": "duyệt", "ai_reject": "từ chối", "ai_escalate": "cần người duyệt",
         "code": "Mã xác minh Superstep: {code}\nMã hết hạn sau {minutes} phút. Nếu bạn không yêu cầu, hãy bỏ qua tin nhắn này.",
         "APPROVAL_TOKEN_INVALID": "Nút phê duyệt không hợp lệ", "APPROVAL_TOKEN_EXPIRED": "Yêu cầu phê duyệt này đã hết hạn",
         "APPROVAL_ALREADY_DECIDED": "Yêu cầu này đã được trả lời",
@@ -64,3 +68,10 @@ def lang_of(user) -> str:
 def text(lang: Optional[str], key: str, **kw) -> str:
     t = TEXTS.get(lang or "en", TEXTS["en"]).get(key) or TEXTS["en"].get(key) or key
     return t.format(**kw) if kw else t
+
+
+def opinion_text(lang: Optional[str], r: Optional[dict]) -> Optional[str]:
+    """The AI review's opinion as one line of an approval message (TASK-0187), or None without one."""
+    if not r or r.get("decision") not in ("approve", "reject", "escalate"): return None
+    c = r.get("confidence")
+    return text(lang, "ai_opinion", decision=text(lang, f"ai_{r['decision']}"), confidence="-" if c is None else f"{c:.2f}", reason=r.get("reason") or "").strip()

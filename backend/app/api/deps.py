@@ -16,6 +16,8 @@ from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
 from ..core import permissions as P
 from ..services.access import AccessService
+from ..services.auto_approval_service import AutoApprovalService
+from ..services.auto_review_service import AutoReviewService
 from ..services.share_service import ShareService
 from ..services.user_service import UserService
 from ..services.template_service import TemplateService
@@ -164,6 +166,13 @@ def audit_service() -> AuditService:
 def policy_service() -> PolicyService:
     return PolicyService(SettingsRepository(get_db()), access_service(), audit_service())
 
+def auto_approval_service() -> AutoApprovalService:
+    db = get_db(); return AutoApprovalService(SettingsRepository(db), access_service(), audit_service(), reviews=auto_review_service, workflows=WorkflowRepository(db))
+
+def auto_review_service() -> AutoReviewService:
+    db = get_db(); creds = credential_service()
+    return AutoReviewService(ApprovalRepository(db), AutoApprovalService(SettingsRepository(db)), creds.resolve)
+
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())
 
@@ -211,7 +220,8 @@ def channel_service() -> ChannelService:
 
 def approval_service() -> ApprovalService:
     db = get_db(); return ApprovalService(ApprovalRepository(db), UserRepository(db), WorkflowRepository(db), RunRepository(db), channel_service(), get_job_queue().enqueue,
-                                         limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service)
+                                         limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service,
+                                         reviewer=auto_review_service())
 
 def inbox_service() -> InboxService:
     return InboxService(approval_service(), run_service(), access_service())

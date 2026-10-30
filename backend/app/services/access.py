@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Optional
 from ..core import permissions as P
 from ..core.errors import AppError
+from ..engine import approval_policy
 from ..models import Workflow
 from ..repositories import UserRepository, WorkflowRepository, WorkflowShareRepository
 
@@ -38,6 +39,13 @@ class AccessService:
     def require_code(self, uid: str, before: Optional[dict], after: Optional[dict]) -> None:
         """Adding a Code node or changing its source needs `code.write` (TASK-0054); anything else about it does not."""
         if P.code_written(before, after) and not self.can(uid, P.CODE_WRITE): raise AppError("CODE_WRITE_FORBIDDEN")
+
+    def require_auto(self, uid: str, owner: Optional[str], before: Optional[dict], after: Optional[dict]) -> None:
+        """Turning a node's AI review to `auto`, or changing an `auto` policy, needs the workflow owner or an admin
+        (TASK-0186, REQ-0081 owner decision 3). Editors may save `suggest`; turning auto off is always allowed."""
+        old, new = approval_policy.auto_policies(before), approval_policy.auto_policies(after)
+        if any(old.get(n) != h for n, h in new.items()) and uid != owner and self.role(uid) != "admin":
+            raise AppError("AUTO_APPROVAL_FORBIDDEN")
 
     def access_of(self, w: Workflow, uid: str, role: Optional[str] = None) -> Optional[str]:
         role = role if role is not None else self.role(uid)

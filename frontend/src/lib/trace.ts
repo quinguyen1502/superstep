@@ -6,12 +6,13 @@ export type RunEvent = { type: string; node?: string; label?: string; node_type?
   code_output?: CodeOutput; agent?: AgentStep; superstep?: number
   wait?: { kind: 'child'; run_id: string }; tool?: string; workflow_id?: string }  // a run waiting for a workflow tool's child run (TASK-0134)
 /** What one step of an Agent node did (TASK-0116, DEC-0063): a model call (`model`) or one tool call (`tool`). */
-export type AgentStep = { kind: 'model' | 'tool'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
-  tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected'; ms?: number
+export type AgentStep = { kind: 'model' | 'tool' | 'handoff'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
+  tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected' | 'not_run'; to?: string; to_label?: string; reason?: string  // a hand-off (TASK-0182)
+  ms?: number
   approval?: 'approved' | 'rejected'  // a tool that needed approval (TASK-0117)
   child_run_id?: string; child_workflow_id?: string }  // a workflow tool's child run (TASK-0136)
-/** An Agent node `ag` runs as `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join` and `ag/__exit`. */
-export const agentOf = (node: string) => /^(.+)\/__(model|tool(?:\/\d+)?|join|exit)$/.exec(node)?.[1]
+/** An Agent node `ag` runs as `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join`, `ag/__exit` and `ag/__handoff`. */
+export const agentOf = (node: string) => /^(.+)\/__(model|tool(?:\/\d+)?|join|exit|handoff)$/.exec(node)?.[1]
 /** State without the agents' conversations (`agent:<id>`), which the engine keeps for time travel only. */
 export const hideAgents = (state: any) => state && typeof state === 'object' && !Array.isArray(state) && !state._truncated
   ? Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('agent:'))) : state
@@ -55,15 +56,15 @@ function alignAgentWave(spans: Span[]) {
 
 export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: string; type?: string } = () => ({})): Trace {
   const spans: Span[] = []; const counts: Record<string, number> = {}; const errors: string[] = []; let summary: RunEvent | undefined
-  let runId: string | undefined; let waitingEv: RunEvent | undefined; let resumed: string | undefined
+  let runId: string | undefined; let waitingEv: RunEvent | undefined; const resumed = new Set<string>()
   const st = { v: (events.length ? 'running' : 'idle') as Trace['status'] }; let final: any
   const open = (n: string) => [...spans].reverse().find(s => s.node === n && s.status === 'running')
   const t = (e: RunEvent, i: number) => e.ts ?? i / 1000
   events.forEach((e, i) => {
     const n = e.node
     if ((e.type === 'run_started' || e.type === 'run_resumed') && e.run_id) runId = e.run_id
-    if (e.type === 'node_started' && n && n === resumed) {
-      resumed = undefined
+    if (e.type === 'node_started' && n && resumed.has(n)) {
+      resumed.delete(n)
       if ([...spans].reverse().some(s => s.node === n && s.status === 'running')) return // resumed Human node keeps its span
     }
     if (e.type === 'node_started' && n) {
@@ -85,8 +86,9 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
     } else if (e.type === 'run_summary') { summary = e
     } else if (e.type === 'run_waiting') { st.v = 'waiting'; waitingEv = e; const s = n ? open(n) : undefined; if (s) { s.status = 'waiting'; s.events.push(e) }
     } else if (e.type === 'run_paused') { st.v = 'paused'; waitingEv = undefined
-    } else if (e.type === 'run_resumed' || e.type === 'run_recovered') { st.v = 'running'; waitingEv = undefined; resumed = n
-      const s = n ? [...spans].reverse().find(x => x.node === n && x.status === 'waiting') : undefined; if (s) { s.status = 'running'; s.events.push(e) } }
+    } else if (e.type === 'run_resumed' || e.type === 'run_recovered') { st.v = 'running'; waitingEv = undefined; resumed.clear(); if (n) resumed.add(n)
+      // a tool wave resumes once for every slot that waited (DEC-0069): each waiting span is reopened and keeps its row
+      spans.forEach(x => { if (x.status === 'waiting') { x.status = 'running'; x.events.push(e); resumed.add(x.node) } }) }
   })
   // Speculative "started" rows (predicted next nodes) that never ran are dropped once the run ends.
   const status = st.v; const done = status !== 'running' && status !== 'idle'

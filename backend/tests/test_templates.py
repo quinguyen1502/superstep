@@ -56,7 +56,8 @@ def test_builtins_have_a_name_and_description_in_both_ui_languages():
 
 
 NEW = ["builtin-refund-approval", "builtin-leave-request", "builtin-social-post", "builtin-large-order", "builtin-expense-claim",
-       "builtin-purchase-request", "builtin-support-escalation", "builtin-feedback-digest", "builtin-support-agent", "builtin-support-team"]
+       "builtin-purchase-request", "builtin-support-escalation", "builtin-feedback-digest", "builtin-support-agent", "builtin-support-team",
+       "builtin-help-desk"]
 FIRST_HUMAN = {"builtin-refund-approval": "finance", "builtin-leave-request": "manager", "builtin-social-post": "editor",
                "builtin-large-order": "manager", "builtin-expense-claim": "approver", "builtin-purchase-request": "lead"}
 INPUTS = {"request": "Refund order 1042, $80, the parcel arrived broken.", "message": "I'd like leave from 3 to 5 March for a family event.",
@@ -84,7 +85,7 @@ def test_channel_templates_have_deadlines():
     assert due[("builtin-leave-request", "manager")] == {"after": 172800.0, "remind_every": 86400.0, "on_timeout": "reject", "escalate_to": []}
 
 
-@pytest.mark.parametrize("tid", [i for i in NEW if i not in ("builtin-support-escalation", "builtin-support-agent", "builtin-support-team")])
+@pytest.mark.parametrize("tid", [i for i in NEW if i not in ("builtin-support-escalation", "builtin-support-agent", "builtin-support-team", "builtin-help-desk")])
 # those need a knowledge base, like builtin-rag, or child runs (test_workflow_tool_template.py)
 def test_new_builtins_run_offline(tid, monkeypatch):
     """Mock LLM and dry-run e-mail: each runs up to its first Human node, or to the end."""

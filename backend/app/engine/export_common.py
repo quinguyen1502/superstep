@@ -133,6 +133,7 @@ class GraphWriter:
                 base = g.names[nid]
                 g.agents[nid] = {"model": names.take(f"{base}_model"), "tool": names.take(f"{base}_tool"), "exit": names.take(f"{base}_end"),
                                  "chat": names.take(f"agent_{base}")}
+                if self.handoff_raw(g, nid): g.agents[nid]["handoff"] = names.take(f"{base}_handoff")  # TASK-0183
             if n["type"] == "subgraph": self.build_child(g.refs.get(nid) or "", names)
             if n["type"] == "agent":
                 for t in (n.get("data") or {}).get("tools") or []:
@@ -165,7 +166,7 @@ class GraphWriter:
 
     def expanded_names(self, g: Graph, prefix: str = "", seen: Tuple[str, ...] = ()) -> Dict[str, str]:
         out = {prefix + nid: name for nid, name in g.names.items()}
-        steps = {"model": agents.MODEL, "tool": agents.TOOL, "exit": agents.EXIT}
+        steps = {"model": agents.MODEL, "tool": agents.TOOL, "exit": agents.EXIT, "handoff": agents.HANDOFF}
         out.update({f"{prefix}{nid}{agents.SEP}{steps[k]}": v for nid, a in g.agents.items() for k, v in a.items() if k in steps})
         for nid, ref in g.refs.items():
             if ref in self.built and ref not in seen:
@@ -214,6 +215,7 @@ class GraphWriter:
             if t == "email": self.uses.add("send_email")
             if t == "agent":
                 self.uses.update({"templates", "model", "agent"})
+                if self.handoff_raw(g, n["id"]): self.uses.add("handoff")
                 sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
                 if "knowledge" in sources: self.uses.add("retrieve")
                 if "mcp" in sources: self.uses.add("call_mcp_tool")
@@ -225,6 +227,37 @@ class GraphWriter:
         known = {f["name"] for f in self.all_fields(g)}
         ok = n["type"] != "subgraph" and isinstance(names, list) and names and all(x in known for x in names)
         return list(names) if ok else []
+
+    # ---- hand-offs (TASK-0183, DEC-0073 decision 5): the exports mirror the engine's steps and names ----
+    HANDOFF_FIELD, COUNT_FIELD, START_FIELD = "agent_handoff", "agent_handoffs", "start_agent"  # state fields of a graph with hand-offs
+
+    @staticmethod
+    def handoff_raw(g: Graph, nid: str) -> List[dict]:
+        """[{name, target, label, description}] of an Agent node's valid hand-offs, as the engine names its tools."""
+        d = g.nodes[nid].get("data") or {}
+        labels = {i: str((n.get("data") or {}).get("label") or i) for i, n in g.nodes.items() if n["type"] == "agent"}
+        taken = {t.get("name") for t in d.get("tools") or [] if isinstance(t, dict)}
+        return agents._handoff_tools(nid, d, labels, taken)
+
+    def handoff_tools(self, g: Graph, nid: str) -> List[dict]:
+        """The hand-offs with each target's exported node name (`node`)."""
+        return [{**h, "node": g.names[h["target"]]} for h in self.handoff_raw(g, nid) if h["target"] in g.names]
+
+    @staticmethod
+    def handoff_specs(hs: List[dict]) -> List[dict]:
+        return agents.handoff_specs({"handoff_tools": hs})
+
+    def receivers(self, g: Graph) -> List[str]:
+        """Agent node ids some Agent of this graph hands off to, in reading order (where a chat may start)."""
+        got = {h["target"] for nid in g.agents for h in self.handoff_raw(g, nid)}
+        return [i for i in g.order() if i in got]
+
+    def has_handoffs(self, g: Graph) -> bool: return any("handoff" in a for a in g.agents.values())
+
+    @staticmethod
+    def max_handoffs(raw: dict) -> int:
+        from . import handoffs
+        return handoffs.limit(raw)
 
     @staticmethod
     def http_key(const: str, t: dict) -> str:

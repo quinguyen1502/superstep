@@ -4,12 +4,12 @@
 
 - Project: superstep
 - Requirement ID: REQ-0080
-- Status: Proposed (draft for the owner's decision; not accepted, not planned into tasks)
+- Status: Accepted (2026-10-31, owner Thái Quí Nguyễn: "Duyệt đề xuất cả 3 backend db, fs, s3, merge #229 và lập task"). Planned into TASK-0191 to TASK-0195.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
-- Updated: 2026-10-30
+- Updated: 2026-10-31
 - Source: owner request on 2026-10-30 ("Nghiên cứu bổ sung thêm external storage, nếu ko db sẽ phình"). Follows REQ-0077 and DEC-0072, which store chat attachment bytes in `chat_attachments.data`.
-- Related Decision: DEC-0074 (Proposed)
+- Related Decision: DEC-0074 (Accepted)
 
 ## Summary
 
@@ -82,12 +82,35 @@
 
 ## Open Questions
 
-1. Default for new `superstep install` runs: keep `db`, or default to `fs` on the instance's data volume? (Recommendation in DEC-0074: `fs` for CLI installs, `db` when no volume is known, such as the Render demo.)
-2. Should `superstep backup` copy S3 objects by default?
-3. Should logos and knowledge documents move to the same port in the same release?
+None open. The owner accepted DEC-0074's recommendations on 2026-10-31:
+
+1. Default for new installs: `db` stays the default when nothing is configured. `superstep install` offers `fs` on the instance volume for single-host installs and `s3` for the full stack (or when the operator has a bucket).
+2. `superstep backup` does not copy S3 objects by default: the manifest records bucket and prefix; `--include-attachments` copies the objects.
+3. Logos and knowledge documents: not in this requirement (see Out Of Scope). The port is designed so they can use it later; moving them needs a new requirement.
+
+## Owner Decisions (2026-10-31)
+
+- Three backends, `db` (default), `fs` and `s3`.
+- The install offers `fs` for single-host installs and `s3` for the full stack.
+- Downloads stream through the backend; no presigned URLs.
+- `superstep attachments migrate --to <backend>` with SHA-256 checks and resumable batches.
+- Deletion stays in the service (retention, sweeper, session delete), with an orphan sweep.
+- Backup: `fs` adds the folder to the archive; `s3` writes bucket and prefix to the manifest, with `--include-attachments`.
+- The Render demo stays on `db`.
+- `boto3` is an optional extra, included in the published images.
+
+## Planned Tasks
+
+| Task | Scope | Depends on |
+|---|---|---|
+| TASK-0191 | Storage port, `storage`/`key` columns, `db` backend refactor, write order, orphan sweep, contract suite | none |
+| TASK-0192 | `fs` backend, health probe, shared volume in Docker | TASK-0191 |
+| TASK-0193 | `s3` backend (`boto3` extra), streaming, health probe, MinIO CI job | TASK-0191 |
+| TASK-0194 | `superstep attachments migrate` and backup/restore | TASK-0192, TASK-0193 |
+| TASK-0195 | Install/deploy prompts, `doctor`, handbook en and vi, e2e | TASK-0194 |
 
 ## Related Artifacts
 
 - `.factory-state/artifacts/REQ-0077-chat-attachments.md`, `.factory-state/decisions/DEC-0072-chat-attachments.md`
-- `.factory-state/decisions/DEC-0074-attachment-storage.md` (Proposed)
+- `.factory-state/decisions/DEC-0074-attachment-storage.md` (Accepted)
 - `.factory-state/artifacts/REQ-0079-superstep-cli.md`

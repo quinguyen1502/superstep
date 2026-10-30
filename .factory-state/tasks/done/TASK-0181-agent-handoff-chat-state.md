@@ -3,8 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0183
-- Status: todo
+- Task ID: TASK-0181
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -14,24 +14,26 @@
 
 ## Objective
 
-Export hand-offs to Python, the LangGraph project and TypeScript.
+Keep the conversation with the agent that answered last across messages of one chat session.
 
 ## Scope
 
 ### In Scope
 
-- Python export and the LangGraph project: transfer tools and the router after the agent's exit, the limit, and the start-agent input.
-- TypeScript export: the same with LangGraph.js.
-- Snapshot tests, the Python run test with a fake model, and `deno check` for TypeScript.
+- Chat session column `active_agent` (Alembic revision), set when a run that answers a chat message ends at an Agent node reached by a hand-off.
+- The next message's run starts at that agent: the run input carries `__start_agent`, and a start router added by the compiler routes there when it names an existing Agent node (DEC-0073 decision 4).
+- If the agent was deleted or is no longer a hand-off target, the run starts at the entry and the column is cleared.
+- Public chat, studio Chat tab and Slack/Telegram chat triggers share the behaviour through the chat session services.
 
 ### Out Of Scope
 
-- Engine (TASK-0180).
+- Engine hand-off (TASK-0180).
+- UI (TASK-0182).
 
 ## Inputs
 
-- REQ-0078 'Exports'; DEC-0073 decision 5.
-- `engine/python_export.py`, `engine/project_export.py`, `engine/typescript_export.py`, `engine/export_common.py`.
+- REQ-0078 'Chat'; DEC-0073 decision 4.
+- `services/chat_session_service.py`, `services/public_chat_service.py`, `services/chat_run_service.py`, `models/chat_session.py`.
 
 ## Related Artifacts
 
@@ -44,11 +46,11 @@ Export hand-offs to Python, the LangGraph project and TypeScript.
 
 ## Expected Outputs
 
-- Exported code compiles and runs a hand-off.
+- A test proves the second message goes to the agent that answered the first.
 
 ## Implementation Notes
 
-- Mirror the engine's expansion so the exported graph and the studio trace match step names.
+- Keep the start router a no-op when `__start_agent` is absent so runs outside chats are unchanged.
 
 ## Constraints
 
@@ -64,7 +66,9 @@ Export hand-offs to Python, the LangGraph project and TypeScript.
 
 ## Acceptance Criteria
 
-- A Triage → Billing workflow exports to Python, the LangGraph project and TypeScript; the Python run test hands off with a fake model; `deno check` passes; snapshots updated.
+- Second message of a session runs at Billing after a hand-off in the first.
+- Deleted target falls back to the entry agent.
+- A new session starts at the entry.
 
 ## Validation Plan
 
@@ -83,7 +87,9 @@ Export hand-offs to Python, the LangGraph project and TypeScript.
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0181-chat-active-agent` from `develop`. A chat session continues with the agent that answered last `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
-- Branch `factory/task-0183-agent-handoff-exports` from `develop`.
+- Branch `factory/task-0181-agent-handoff-chat-state` from `develop`.
+- Review: `.factory-state/artifacts/REV-0158-task-0181.md`. QA: `.factory-state/artifacts/QA-0158-task-0181.md`.

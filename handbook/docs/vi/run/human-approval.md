@@ -124,6 +124,12 @@ của nó. **Duyệt** để chạy lần gọi. **Từ chối**, hoặc trả l
 chối, và model được báo như vậy, với đoạn chữ làm lý do. Mỗi lần gọi đều hỏi
 lại.
 
+## AI duyệt
+
+Một mô hình có thể xem yêu cầu trước khi người thấy: làm gợi ý hiện bên cạnh yêu
+cầu, hoặc tự duyệt khi nó chắc chắn. Xem
+[AI duyệt yêu cầu phê duyệt](ai-review.md).
+
 ## Duyệt bên trong workflow được gọi
 
 Khi node Agent gọi một workflow khác làm công cụ (xem

@@ -6,7 +6,36 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
-- **Proposal: external storage for chat attachments** (REQ-0080, DEC-0074, both Proposed). Planning records only: a storage port with database, folder and S3-compatible backends, migration, backup and CLI prompts. Nothing is implemented.
+- **Plan: external storage for chat attachments** (REQ-0080, DEC-0074, Accepted 2026-10-31). Planning records only: a storage
+  port with database (default), folder and S3-compatible backends, a migrate command and backup coverage, planned as
+  TASK-0191 to TASK-0195. Nothing is implemented yet.
+
+## 0.10.0 (2026-10-31)
+
+### Added
+
+- **Help desk template and the hand-off guide** (REQ-0078). New built-in template **Help desk**: Triage answers order questions and hands billing and technical questions to Billing and Technical, with test cases for the offline model. New handbook page "Agent hand-offs" (en, vi) with a comparison of hand-offs, supervisors with workflow tools and routing nodes, and Playwright coverage of the template in the Chat tab and on the public page.
+- **AI review of approvals: handbook and e2e** (TASK-0189, REQ-0081, DEC-0075). A new handbook page, "AI review of
+  approvals" (en, vi), covers the modes, settings, rules, when people are asked anyway, pausing, the audit, the risks
+  (overconfidence, prompt injection, cost) and exports; the Human node, Agent node and Human approval pages link to it.
+  A Playwright spec runs in en and vi: the settings on a Human node and an Agent's tool approval, the AI's opinion in
+  the Approvals inbox, the agreement rate after a person answers, and the pause switch.
+- **AI review of approvals in the editor and on the Approvals page** (TASK-0188, REQ-0081, DEC-0075). Human nodes and
+  Agent tool approval have an AI review section: mode (off, suggest, answer automatically; the last only for the
+  workflow owner or an admin), judge credential, model and instructions, minimum confidence, daily cap, notify and
+  rules, with the AI/human agreement rate. The Approvals page shows the AI's opinion on a waiting request, and an AI
+  review panel lists your workflows that use it with counts, the agreement rate and a pause switch; admins also get
+  the organisation pause (`GET /api/approvals/auto/workflows`). Python, TypeScript and LangGraph project exports note
+  AI review; workflow export and templates keep the policy without the judge's credential.
+- **AI review of approvals** (TASK-0187, REQ-0081, DEC-0075). With `approval.auto` on, a waiting Human node or Agent tool call is reviewed before anyone is asked: rules first (a `reject` rule rejects, a `human` rule asks people), then a separate model call (any chat credential) that returns approve, reject or escalate with a confidence and a reason. In auto mode only a confident approval (default 0.8) answers, within a per-workflow daily cap; the AI never rejects, and errors, timeouts, invalid answers, suspected injected instructions, the demo and the cap send the request to people. Suggest mode only shows the opinion (inbox `ai`, channel messages) and records whether people agreed. Automatic answers are audited (`kind: auto`) and the run owner alone gets a `run_auto_answered` notification. `GET /api/approvals/auto/workflows/{id}` returns the 30-day counts and agreement rate.
+- **Hand-offs in the code exports** (REQ-0078, DEC-0073). The Python file, the LangGraph project and the TypeScript file export Agent hand-offs with the same steps as the studio: `transfer_to_<agent>` tools, a hand-off node routed to the target agent, `MAX_HANDOFFS`, and a `start_agent` input that starts a run at a hand-off target.
+- **Hand-offs in the studio** (REQ-0078). The Agent node Config lists its hand-off targets with a description for the model, and sets the workflow hand-off limit. The canvas draws each hand-off as a dashed link from the Agent's hand-off handle; drawing one adds a target and deleting one removes it. The run trace and the chat steps name the agent a hand-off went to. English and Vietnamese.
+- **AI review of approvals: policy and switches** (TASK-0186, REQ-0081, DEC-0075). Human nodes and Agent tool approval accept `approval.auto` (`mode` off, suggest or auto; field `rules` that send to people or reject; `max_per_day`; `judge`; `min_confidence`; `notify`), checked on save. Only the workflow owner or an admin can turn auto on (`AUTO_APPROVAL_FORBIDDEN`). Kill switches: `STUDIO_AUTO_APPROVAL=off`, an organisation switch for admins and a per-workflow switch (`/api/approvals/auto`, `AUTO_APPROVAL_DISABLED`). Alembic 0045 adds the review columns to the approval audit and waiting steps.
+- **Chats stay with the agent that answered** (REQ-0078, DEC-0073). After a hand-off, the next message of the same chat session starts at the agent that answered last (new `chat_sessions.active_agent` column). If that agent was removed or is no longer a hand-off target, the chat starts at the entry again; a new session always starts at the entry.
+- **Agent hand-offs run** (REQ-0078, DEC-0073). An Agent with targets gets one `transfer_to_<name>` tool per target. Calling it ends the agent through a hand-off step and the target agent continues with the conversation and the reason; the run-wide hand-off limit removes the tools once reached, and other calls in the same round are answered as not run. Restarts, time travel and subgraphs keep the hand-off.
+- **Agent hand-offs: targets and the limit** (REQ-0078, DEC-0073). An Agent node can list `handoffs` (`[{target, description}]`): other Agent nodes of the same workflow or subgraph that it may hand the conversation to. The workflow's `max_handoffs` (default 5, 0 to 20) bounds the hand-offs of a run. A hand-off target counts as reachable. Saving refuses a target that is not another Agent node of the workflow (`AGENT_HANDOFF_TARGET_INVALID`) and a limit out of range (`AGENT_HANDOFF_LIMIT`); deleting an Agent node in the editor removes it from other nodes' targets.
+- **Chat attachments: handbook and e2e** (REQ-0077). The Chat page has an Attachments section (types, limits, the state field, the file record, downloads, retention) and the error codes; the LLM and Agent node pages describe Include attachments. A Playwright spec covers attaching a PDF and an image on the published page in en and vi.
+
 - **`sstep` alias for the CLI** (TASK-0185). The `superstep` package also installs `sstep`, which runs the same command. The installer and the handbook CLI page mention it.
 - **Chat attachments in the studio and on the page** (REQ-0077). With attachments on, the message box has an attach button and takes dropped files. Each file is checked against the chat's kinds, size and count before upload, shows as a chip with its size (a thumbnail for images) and can be removed; Send waits for uploads. Sent messages list their files with a download action, in the Chat tab, on the published page and the widget, and in the builder's Visitors list. Chat settings gain an Attachments section bounded by the server ceiling. LLM and Agent node settings gain "Include attachments" with the files field. The published page's settings (`GET /api/public/chat/{slug}`) include `attachments` (`enabled`, `kinds`, `max_files`, `max_mb`).
 
@@ -29,6 +58,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   run's trace as `user_rating`.
 
 ### Fixed
+
+- **Run trace of a tool wave that waits in two slots** (DEC-0069). When two calls of one round both waited (for
+  example two workflow tools), the trace kept an empty row for the second slot after the run resumed. Each slot now
+  keeps one row. Stale e2e specs (tool slot names, translated save errors, the template count) are updated.
 
 - **SQLite restore and a failed upgrade rollback** (REQ-0079). Restore deletes leftover `studio.db-wal` and `studio.db-shm` before replacing `studio.db`, so an unclean stop cannot replay old pages onto the restored file. If restoring the backup itself fails, `upgrade` reports that the rollback failed instead of saying the previous version is back. A Postgres dump is written to a file and packed from that file.
 

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0188
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -89,6 +89,9 @@ Editor settings for AI review on the Human node and Agent tool approval, the App
 - 2026-10-30: planned from REQ-0081 (DEC-0075). Status todo. Not started.
 - 2026-10-30: owner approved implementing REQ-0081 for 0.10.0 and merging the task PRs when CI is green.
 
+- 2026-10-30: implemented on `factory/task-0188-auto-approval-ui-exports` from `develop`. Shared `AutoApprovalSettings` (Human node, Agent tool approval) with owner-or-admin `auto`, rules, cap, judge and the agreement rate; Approvals page opinion, AI review panel with per-workflow counts and pause, organisation pause for admins; `GET /api/approvals/auto/workflows`; export notes and templates/export keep the policy without the judge credential. The `auto` choice is disabled for non-owners with a help line under the select instead of a tooltip (a tooltip on a disabled select item is not reachable by keyboard). `factory verify run --profile full` passed. The owner authorized merging the REQ-0081 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0188-auto-approval-ui-exports` from `develop`.
+- Review: `.factory-state/artifacts/REV-0172-task-0188.md`. QA: `.factory-state/artifacts/QA-0172-task-0188.md`.

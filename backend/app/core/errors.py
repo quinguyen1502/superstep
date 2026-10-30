@@ -41,6 +41,8 @@ CATALOG: dict[str, tuple[int, str]] = {
     "WORKFLOW_NAME_REQUIRED": (400, "Workflow name is required"),
     "WORKFLOW_NAME_TOO_LONG": (400, "Workflow name must be at most {max} characters"),
     "WORKFLOW_NAME_TAKEN": (409, "A workflow with this name already exists"),
+    "AGENT_HANDOFF_TARGET_INVALID": (400, "Agent node {node}: hand-off target {target} must be another Agent node of this workflow, listed once"),
+    "AGENT_HANDOFF_LIMIT": (400, "Max hand-offs per run must be 0-{max}"),
     "WORKFLOW_TOO_LARGE": (413, "Workflow is too large (max {max_kb} KB)"),
     "WORKFLOW_INVALID": (400, "Workflow is invalid"),
     # templates (TASK-0025)
@@ -251,6 +253,8 @@ CATALOG: dict[str, tuple[int, str]] = {
     "CODE_TOO_LARGE": (413, "Code node {node}: the {what} is larger than {max_kb} KB"),
     "CODE_LANGUAGE_UNSUPPORTED": (400, "Code node {node}: {language} is not available on this server"),
     "CODE_WRITE_FORBIDDEN": (403, "Your role may not add Code nodes or change their code (code.write)"),
+    "AUTO_APPROVAL_FORBIDDEN": (403, "Only the workflow owner or an admin can turn on automatic AI approval"),
+    "AUTO_APPROVAL_DISABLED": (409, "AI auto-approval is turned off on this server"),
 }
 
 

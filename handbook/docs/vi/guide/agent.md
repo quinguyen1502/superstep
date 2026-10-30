@@ -36,8 +36,10 @@ retry/timeout ở **Thực thi**.
 | Trường output | Nhận câu trả lời cuối cùng. |
 | Trường các bước | Tuỳ chọn, một trường list. Nhận từng lần gọi công cụ: `{tool, args, result, status, ms}`, thêm `approval` khi có người trả lời. |
 | Trường lịch sử | Tuỳ chọn, một trường list gồm các tin nhắn `{role, content}` (`user` hoặc `assistant`) được thêm trước prompt nhiệm vụ, ví dụ trường `messages` của chat. |
+| Đưa tệp đính kèm vào | Thêm các tệp của chat vào tin nhắn nhiệm vụ, như ở [node LLM](nodes.md#llm). Xem [Tệp đính kèm](../run/chat.md#tep-inh-kem). |
 | Công cụ | Ít nhất một. Xem bên dưới. |
 | Duyệt | Hiện khi có công cụ cần duyệt: kênh duyệt, người duyệt và hạn chờ, như ở node Human. |
+| AI duyệt | Hiện cùng mục Duyệt: một mô hình có thể xem từng lệnh gọi công cụ trước (gợi ý, hoặc tự trả lời). Xem [AI duyệt yêu cầu phê duyệt](../run/ai-review.md). |
 | Thực thi | Số lần thử, thời gian chờ giữa các lần và timeout áp dụng cho từng lần gọi model và từng lần gọi công cụ. Cache TTL không bao giờ dùng cho chúng, vì một bước lấy từ cache sẽ bỏ qua lần gọi hoặc bước duyệt. |
 
 ## Công cụ
@@ -237,6 +239,15 @@ workflow, `order_desk` và `refund_desk`, và giao mỗi câu hỏi cho bàn ph�
 Các test case kiểm rằng câu hỏi về đơn hàng tới bàn đơn hàng, còn yêu cầu hoàn
 tiền tới bàn hoàn tiền.
 
+## Mẫu Bàn hỗ trợ
+
+Mẫu **Bàn hỗ trợ** minh hoạ [chuyển giao giữa các agent](handoffs.md). Triage
+trả lời câu hỏi về đơn hàng bằng `lookup_order`, chuyển câu hỏi thanh toán cho
+**Billing** và sự cố kỹ thuật cho **Kỹ thuật**; Billing có thể chuyển sự cố kỹ
+thuật cho Kỹ thuật. Giới hạn chuyển giao là 3. Các test case kiểm rằng câu hỏi
+về đơn hàng ở lại với Triage, thanh toán trùng tới Billing và lỗi ứng dụng tới
+Kỹ thuật. Trong chat, tin nhắn tiếp theo ở lại với agent vừa trả lời.
+
 ## Xuất code
 
 - **Python và dự án LangGraph** (xem
@@ -258,6 +269,8 @@ tiền tới bàn hoàn tiền.
 | --- | --- |
 | `AGENT_TOOLS_UNSUPPORTED` | Nhà cung cấp của credential không gọi được công cụ (TypeSafe, SMTP). Bước model lỗi khi chạy. |
 | `WORKFLOW_INVALID` | Chạy một workflow mà editor đánh dấu chưa hợp lệ: thiếu prompt nhiệm vụ, không có công cụ, số vòng ngoài khoảng cho phép, công cụ thiếu cấu hình (máy chủ và công cụ, hàm, kho tri thức, URL hoặc workflow), hai công cụ trùng tên, hoặc trường các bước hay trường lịch sử không phải list. Riêng công cụ workflow: workflow không có hoặc không được chia sẻ với bạn, workflow nhập từ code, tạo vòng, lồng quá 5 cấp, hoặc trường tham số hay kết quả mà workflow không có. |
+| `AGENT_HANDOFF_TARGET_INVALID` | Đích chuyển giao không phải node Agent khác trong workflow này, hoặc bị liệt kê hai lần. Xem [Chuyển giao giữa các agent](handoffs.md). |
+| `AGENT_HANDOFF_LIMIT` | `max_handoffs` của workflow không phải số nguyên từ 0 đến 20. |
 | `WORKFLOW_TOOL_TOO_DEEP` | Lúc chạy, công cụ workflow lồng nhau quá 5 run; lần gọi không được chạy và model nhận lỗi. |
 
 Mọi mã lỗi có trong [Mã lỗi](../reference/errors.md).

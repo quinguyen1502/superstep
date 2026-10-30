@@ -3,8 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0181
-- Status: todo
+- Task ID: TASK-0184
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -14,26 +14,25 @@
 
 ## Objective
 
-Keep the conversation with the agent that answered last across messages of one chat session.
+Add the "Help desk with hand-offs" template, document hand-offs, and add e2e tests.
 
 ## Scope
 
 ### In Scope
 
-- Chat session column `active_agent` (Alembic revision), set when a run that answers a chat message ends at an Agent node reached by a hand-off.
-- The next message's run starts at that agent: the run input carries `__start_agent`, and a start router added by the compiler routes there when it names an existing Agent node (DEC-0073 decision 4).
-- If the agent was deleted or is no longer a hand-off target, the run starts at the entry and the column is cleared.
-- Public chat, studio Chat tab and Slack/Telegram chat triggers share the behaviour through the chat session services.
+- Template: triage agent, Billing and Technical agents, with test cases that use the mock model.
+- Handbook en and vi: Agent node page section and a hand-off guide; comparison with supervisor and workflow tools.
+- `docs/api-errors.md` for the new codes.
+- Playwright e2e in en and vi: the template in the Chat tab and on the public page; the second message stays with the agent that answered.
+- CHANGELOG Unreleased entry; REQ-0078 status updated when merged.
 
 ### Out Of Scope
 
-- Engine hand-off (TASK-0180).
-- UI (TASK-0182).
+- Feature code (TASK-0179 to TASK-0183).
 
 ## Inputs
 
-- REQ-0078 'Chat'; DEC-0073 decision 4.
-- `services/chat_session_service.py`, `services/public_chat_service.py`, `services/chat_run_service.py`, `models/chat_session.py`.
+- REQ-0078 'Template' and acceptance criteria.
 
 ## Related Artifacts
 
@@ -46,11 +45,11 @@ Keep the conversation with the agent that answered last across messages of one c
 
 ## Expected Outputs
 
-- A test proves the second message goes to the agent that answered the first.
+- Template, docs and e2e are in place.
 
 ## Implementation Notes
 
-- Keep the start router a no-op when `__start_agent` is absent so runs outside chats are unchanged.
+- Keep en and vi page headings in the same structure.
 
 ## Constraints
 
@@ -62,18 +61,17 @@ Keep the conversation with the agent that answered last across messages of one c
 
 ## Dependencies
 
-- TASK-0180.
+- TASK-0181, TASK-0182, TASK-0183.
 
 ## Acceptance Criteria
 
-- Second message of a session runs at Billing after a hand-off in the first.
-- Deleted target falls back to the entry agent.
-- A new session starts at the entry.
+- The REQ-0078 acceptance criteria are covered by tests or the handbook.
+- Strict handbook builds pass; e2e passes in en and vi.
 
 ## Validation Plan
 
-- `cd backend && .venv/bin/python -m pytest -q`
-- `cd backend && .venv/bin/python -m pytest -q tests/test_layers.py tests/test_api_envelope.py`
+- `cd handbook && .venv/bin/mkdocs build --strict -f mkdocs.yml && .venv/bin/mkdocs build --strict -f mkdocs.vi.yml`
+- `cd frontend && npx playwright test` (the new specs, en and vi)
 
 ## Assumptions
 
@@ -87,7 +85,9 @@ Keep the conversation with the agent that answered last across messages of one c
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0184-help-desk-template-docs` from `develop`. Help desk template, hand-off handbook page and e2e; REQ-0078 Done `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
-- Branch `factory/task-0181-agent-handoff-chat-state` from `develop`.
+- Branch `factory/task-0184-agent-handoff-template-handbook-e2e` from `develop`.
+- Review: `.factory-state/artifacts/REV-0161-task-0184.md`. QA: `.factory-state/artifacts/QA-0161-task-0184.md`.

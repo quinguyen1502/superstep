@@ -303,9 +303,13 @@
       "status": {
         "error": "lỗi",
         "refused": "bị từ chối",
-        "rejected": "người duyệt từ chối"
+        "rejected": "người duyệt từ chối",
+        "not_run": "không chạy"
       },
-      "approved": "đã duyệt"
+      "approved": "đã duyệt",
+      "handoff": "chuyển giao cho {{to}}",
+      "handoffReason": "chuyển giao cho {{to}}: {{reason}}",
+      "handedOff": "chuyển giao"
     }
   },
   "import": {
@@ -624,7 +628,11 @@
     "CODE_RESULT_NOT_JSON": "Node Code {{node}}: main() trả về {{type}}, không lưu được dưới dạng JSON",
     "CODE_TOO_LARGE": "Node Code {{node}}: {{what}} lớn hơn {{max_kb}} KB",
     "CODE_LANGUAGE_UNSUPPORTED": "Node Code {{node}}: máy chủ này không hỗ trợ {{language}}",
-    "CODE_WRITE_FORBIDDEN": "Vai trò của bạn không được thêm node Code hay sửa code của nó (code.write)"
+    "CODE_WRITE_FORBIDDEN": "Vai trò của bạn không được thêm node Code hay sửa code của nó (code.write)",
+    "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
+    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
+    "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
+    "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này"
   },
   "lang": {
     "en": "English",
@@ -781,7 +789,8 @@
     "run_expired": "Một run đang chờ của {{workflow}} đã hết hạn",
     "unknownWorkflow": "Một workflow",
     "run_reminder": "{{workflow}} vẫn đang chờ bạn: {{label}}",
-    "run_escalated": "{{workflow}} được chuyển cho bạn duyệt: {{label}}"
+    "run_escalated": "{{workflow}} được chuyển cho bạn duyệt: {{label}}",
+    "run_auto_answered": "{{workflow}}: AI đã tự trả lời bước {{label}}"
   },
   "notifyPrefs": {
     "open": "Cài đặt thông báo",
@@ -1454,6 +1463,10 @@
       "builtin-support-team": {
         "name": "Đội hỗ trợ",
         "description": "Một agent điều phối giao mỗi câu hỏi cho một workflow chuyên trách: bàn đơn hàng hoặc bàn hoàn tiền. Cả hai được tạo cùng lúc."
+      },
+      "builtin-help-desk": {
+        "name": "Bàn hỗ trợ",
+        "description": "Agent phân loại trả lời câu hỏi về đơn hàng và chuyển câu hỏi thanh toán hoặc kỹ thuật cho agent phụ trách. Trong chat, tin nhắn tiếp theo ở lại với agent vừa trả lời."
       }
     }
   },
@@ -1968,7 +1981,8 @@
       "running": "Đang chạy {{label}}",
       "input": "Input",
       "output": "Output",
-      "errorDetail": "Lỗi"
+      "errorDetail": "Lỗi",
+      "handoff": "cho {{to}}"
     },
     "settings": {
       "title": "Cài đặt Chat",
@@ -2260,6 +2274,11 @@
     "DEADLINE_ESCALATE_MISSING": "Node Human {{node}}: hãy thêm người nhận khi chuyển cấp",
     "DEADLINE_ESCALATE_EMAILS": "Node Human {{node}}: người nhận khi chuyển cấp phải là địa chỉ email",
     "DEADLINE_TOO_LONG": "Node Human {{node}}: hạn chót dài hơn giới hạn chờ (STUDIO_WAIT_TTL, {{hours}} giờ)",
+    "AUTO_APPROVAL_MODE": "Node {{node}}: chế độ AI duyệt phải là một trong {{modes}}",
+    "AUTO_APPROVAL_RULE_INVALID": "Node {{node}}: quy tắc AI duyệt số {{index}} không hợp lệ (trường, phép so sánh, giá trị và kết quả)",
+    "AUTO_APPROVAL_JUDGE_REQUIRED": "Node {{node}}: AI duyệt cần một credential mô hình",
+    "AUTO_APPROVAL_CONFIDENCE": "Node {{node}}: độ tin cậy tối thiểu phải từ 0 đến 1",
+    "AUTO_APPROVAL_CAP": "Node {{node}}: giới hạn mỗi ngày phải là số nguyên từ 1 đến {{max}}",
     "AGENT_PROMPT_MISSING": "Node Agent {{node}}: chưa có prompt nhiệm vụ",
     "AGENT_ROUNDS": "Node Agent {{node}}: số vòng tối đa phải từ 1 đến {{max}}",
     "AGENT_FIELD_UNKNOWN": "Node Agent {{node}}: {{key}} '{{field}}' không có trong state",
@@ -2268,6 +2287,8 @@
     "ATTACHMENTS_FIELD_NOT_LIST": "Node {{node}}: trường tệp đính kèm '{{field}}' phải là trường kiểu list",
     "AGENT_TOOLS_MISSING": "Node Agent {{node}}: hãy thêm ít nhất một công cụ",
     "AGENT_TOOL_NOT_OBJECT": "Node Agent {{node}}: công cụ {{index}} không phải object",
+    "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
+    "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
     "AGENT_TOOL_DUPLICATE": "Node Agent {{node}}: có hai công cụ cùng tên {{tool}}",
     "AGENT_TOOL_NAME": "Node Agent {{node}}, công cụ {{tool}}: tên phải dài 1-64 ký tự, gồm chữ, số, _ hoặc -",
     "AGENT_TOOL_SOURCE": "Node Agent {{node}}, công cụ {{tool}}: không có nguồn '{{source}}'",
@@ -2338,5 +2359,84 @@
     "NODE_REF_FILTER_NO_ARGUMENT": "Node {{node}}: filter '{{filter}}' không nhận tham số, trong {{ref}}",
     "NODE_REF_FILTER_NEEDS_TEXT": "Node {{node}}: filter '{{filter}}' cần tham số dạng văn bản, trong {{ref}}",
     "NODE_REF_FILTER_NEEDS_NUMBER": "Node {{node}}: filter '{{filter}}' cần tham số dạng số, trong {{ref}}"
+  },
+  "handoff": {
+    "title": "Chuyển giao",
+    "add": "Thêm chuyển giao",
+    "hint": "Agent có thể chuyển cuộc trò chuyện cho các agent này. Mô tả cho mô hình biết khi nào nên chuyển.",
+    "noAgents": "Thêm một node Agent khác để chuyển cuộc trò chuyện tới.",
+    "description": "Khi nào chuyển giao",
+    "descriptionPlaceholder": "vd. Thanh toán, hoàn tiền và hoá đơn",
+    "remove": "Bỏ chuyển giao tới {{name}}",
+    "max": "Giới hạn chuyển giao mỗi run (toàn workflow)",
+    "maxHint": "Để trống dùng {{n}}. Từ 0 đến {{max}}; vượt quá thì các agent phải tự trả lời.",
+    "handle": "Kéo tới một Agent khác để thêm chuyển giao"
+  },
+  "aiReview": {
+    "title": "AI duyệt",
+    "mode": "Chế độ",
+    "modes": {
+      "off": "Tắt",
+      "suggest": "Gợi ý",
+      "auto": "Tự trả lời"
+    },
+    "modeHelp": {
+      "off": "Mọi yêu cầu do người trả lời.",
+      "suggest": "Một mô hình nêu ý kiến bên cạnh mỗi yêu cầu. Người vẫn trả lời.",
+      "auto": "Mô hình duyệt các yêu cầu mà nó chắc chắn. Nó không bao giờ từ chối: các trường hợp khác chuyển cho người."
+    },
+    "autoOwnerOnly": "Chỉ chủ workflow hoặc quản trị viên mới bật được tự trả lời.",
+    "credential": "Credential của mô hình duyệt",
+    "credentialPick": "Chọn một credential chat",
+    "instructions": "Hướng dẫn cho mô hình duyệt",
+    "instructionsPh": "Hoàn tiền đến 50 USD cho khách hàng cũ là được.",
+    "minConfidence": "Độ tin cậy tối thiểu (0-1)",
+    "cap": "Số lần tự trả lời mỗi ngày",
+    "notify": "Báo cho người sở hữu run khi tự trả lời",
+    "rules": "Quy tắc",
+    "rulesHelp": "Được kiểm tra trước mô hình. Quy tắc có thể chuyển yêu cầu cho người hoặc từ chối; quy tắc không bao giờ duyệt.",
+    "ruleField": "Trường",
+    "ruleOp": "Phép so sánh",
+    "ruleValue": "Giá trị",
+    "ruleEffect": "Thì",
+    "ruleAdd": "Thêm quy tắc",
+    "ruleRemove": "Xoá quy tắc",
+    "ops": {
+      "equals": "bằng",
+      "not_equals": "khác",
+      "contains": "chứa",
+      "not_contains": "không chứa",
+      "matches": "khớp (regex)",
+      "gt": "lớn hơn",
+      "lt": "nhỏ hơn",
+      "empty": "trống"
+    },
+    "effects": {
+      "human": "Hỏi người",
+      "reject": "Từ chối"
+    },
+    "agreement": "Người đồng ý với AI {{rate}} số lần ({{n}} câu trả lời, {{days}} ngày qua).",
+    "agreementNone": "Chưa có tỉ lệ đồng ý: hãy thử chế độ gợi ý và trả lời vài yêu cầu.",
+    "agreementShort": "Đồng ý {{rate}}",
+    "pausedHint": "AI duyệt đang tạm dừng. Yêu cầu được chuyển cho người.",
+    "badge": "AI",
+    "confidence": "độ tin cậy {{rate}}",
+    "decision": {
+      "approve": "Gợi ý duyệt",
+      "reject": "Gợi ý từ chối",
+      "escalate": "Chưa chắc"
+    },
+    "panelTitle": "AI duyệt",
+    "panelIntro": "Các workflow có mô hình duyệt yêu cầu. Tạm dừng sẽ chuyển mọi yêu cầu cho người.",
+    "operatorOff": "Tự trả lời đã bị tắt trên máy chủ này.",
+    "pauseOrg": "Tạm dừng AI duyệt cho mọi workflow",
+    "pause": "Tạm dừng",
+    "none": "Chưa có workflow nào dùng AI duyệt.",
+    "stats": {
+      "today": "{{n}} hôm nay",
+      "approved": "{{n}} đã duyệt",
+      "escalated": "{{n}} chuyển cho người",
+      "suggested": "{{n}} đã gợi ý"
+    }
   }
 }

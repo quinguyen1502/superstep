@@ -1,6 +1,6 @@
 import json, time, uuid
 from typing import Optional
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from ..models import ApprovalAudit, ApprovalChannel, ApprovalRequest, ApprovalWait, ApprovalWaitApprover, ChannelIdentity, Run
 from ..models.database import Database
 
@@ -186,6 +186,32 @@ class ApprovalRepository:
             q = (select(ApprovalWait).join(Run, Run.id == ApprovalWait.run_id)
                  .where(ApprovalWait.status == "waiting", Run.status == "waiting", or_(ApprovalWait.owner == uid, ApprovalWait.id.in_(mine))))
             return list(s.scalars(q.order_by(ApprovalWait.due_at.is_(None), ApprovalWait.due_at, ApprovalWait.created).limit(limit)))
+
+    def set_opinion(self, wid: str, decision: Optional[str], confidence: Optional[float], reason: Optional[str]) -> None:
+        """The AI's opinion on a waiting step (TASK-0187), shown to the people who answer it."""
+        with self.db.session() as s:
+            s.execute(update(ApprovalWait).where(ApprovalWait.id == wid).values(ai_decision=decision, ai_confidence=confidence, ai_reason=reason))
+            s.commit()
+
+    def wait_of(self, wid: str) -> Optional[ApprovalWait]:
+        with self.db.session() as s: return s.get(ApprovalWait, wid)
+
+    def count_auto(self, workflow_id: str, since: float) -> int:
+        """Automatic answers (approved or rejected by AI review) of a workflow since `since` (the daily cap)."""
+        with self.db.session() as s:
+            return s.scalar(select(func.count()).select_from(ApprovalAudit).where(
+                ApprovalAudit.workflow_id == workflow_id, ApprovalAudit.created >= since, ApprovalAudit.kind == "auto",
+                ApprovalAudit.auto_outcome.in_(("approved", "rejected")))) or 0
+
+    def auto_stats(self, workflow_id: str, since: float) -> dict:
+        """{approved, rejected, escalated, suggested, agreed, disagreed} of a workflow since `since`."""
+        with self.db.session() as s:
+            base = (ApprovalAudit.workflow_id == workflow_id, ApprovalAudit.created >= since)
+            out = {k: n for k, n in s.execute(select(ApprovalAudit.auto_outcome, func.count()).where(
+                *base, ApprovalAudit.kind == "auto", ApprovalAudit.auto_outcome.is_not(None)).group_by(ApprovalAudit.auto_outcome))}
+            for v, n in s.execute(select(ApprovalAudit.agreed, func.count()).where(*base, ApprovalAudit.agreed.is_not(None)).group_by(ApprovalAudit.agreed)):
+                out["agreed" if v else "disagreed"] = n
+            return out
 
     # ---- audit ----
     def audit(self, e: ApprovalAudit) -> None:

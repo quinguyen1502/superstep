@@ -3,8 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0184
-- Status: todo
+- Task ID: TASK-0183
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
@@ -14,25 +14,24 @@
 
 ## Objective
 
-Add the "Help desk with hand-offs" template, document hand-offs, and add e2e tests.
+Export hand-offs to Python, the LangGraph project and TypeScript.
 
 ## Scope
 
 ### In Scope
 
-- Template: triage agent, Billing and Technical agents, with test cases that use the mock model.
-- Handbook en and vi: Agent node page section and a hand-off guide; comparison with supervisor and workflow tools.
-- `docs/api-errors.md` for the new codes.
-- Playwright e2e in en and vi: the template in the Chat tab and on the public page; the second message stays with the agent that answered.
-- CHANGELOG Unreleased entry; REQ-0078 status updated when merged.
+- Python export and the LangGraph project: transfer tools and the router after the agent's exit, the limit, and the start-agent input.
+- TypeScript export: the same with LangGraph.js.
+- Snapshot tests, the Python run test with a fake model, and `deno check` for TypeScript.
 
 ### Out Of Scope
 
-- Feature code (TASK-0179 to TASK-0183).
+- Engine (TASK-0180).
 
 ## Inputs
 
-- REQ-0078 'Template' and acceptance criteria.
+- REQ-0078 'Exports'; DEC-0073 decision 5.
+- `engine/python_export.py`, `engine/project_export.py`, `engine/typescript_export.py`, `engine/export_common.py`.
 
 ## Related Artifacts
 
@@ -45,11 +44,11 @@ Add the "Help desk with hand-offs" template, document hand-offs, and add e2e tes
 
 ## Expected Outputs
 
-- Template, docs and e2e are in place.
+- Exported code compiles and runs a hand-off.
 
 ## Implementation Notes
 
-- Keep en and vi page headings in the same structure.
+- Mirror the engine's expansion so the exported graph and the studio trace match step names.
 
 ## Constraints
 
@@ -61,17 +60,16 @@ Add the "Help desk with hand-offs" template, document hand-offs, and add e2e tes
 
 ## Dependencies
 
-- TASK-0181, TASK-0182, TASK-0183.
+- TASK-0180.
 
 ## Acceptance Criteria
 
-- The REQ-0078 acceptance criteria are covered by tests or the handbook.
-- Strict handbook builds pass; e2e passes in en and vi.
+- A Triage → Billing workflow exports to Python, the LangGraph project and TypeScript; the Python run test hands off with a fake model; `deno check` passes; snapshots updated.
 
 ## Validation Plan
 
-- `cd handbook && .venv/bin/mkdocs build --strict -f mkdocs.yml && .venv/bin/mkdocs build --strict -f mkdocs.vi.yml`
-- `cd frontend && npx playwright test` (the new specs, en and vi)
+- `cd backend && .venv/bin/python -m pytest -q`
+- `cd backend && .venv/bin/python -m pytest -q tests/test_layers.py tests/test_api_envelope.py`
 
 ## Assumptions
 
@@ -85,7 +83,9 @@ Add the "Help desk with hand-offs" template, document hand-offs, and add e2e tes
 
 - 2026-10-30: planned from REQ-0078 (DEC-0073). Status todo. Not started.
 - 2026-10-30: owner confirmed the task set and accepted the decision record.
+- 2026-10-30: implemented on `factory/task-0183-handoff-exports` from `develop`. Hand-offs export to Python, the LangGraph project and TypeScript `factory verify run --profile full` passed. The owner authorized the merge of the REQ-0077/REQ-0078 task PRs. Moved to done on this PR before the merge (TASK-0148).
 
 ## Handoff Notes
 
-- Branch `factory/task-0184-agent-handoff-template-handbook-e2e` from `develop`.
+- Branch `factory/task-0183-agent-handoff-exports` from `develop`.
+- Review: `.factory-state/artifacts/REV-0160-task-0183.md`. QA: `.factory-state/artifacts/QA-0160-task-0183.md`.

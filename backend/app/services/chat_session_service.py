@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from typing import Optional
 from ..core import permissions as P
 from ..core.errors import AppError
-from ..engine import agents
+from ..engine import agents, handoffs
 from ..engine.limits import size
 from ..core import config
 from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, WorkflowChatTrigger
@@ -95,6 +95,12 @@ def answered_by(node_data: Optional[dict]) -> str:
     return v if v in ANSWERED_BY else "visitor"
 
 
+def last_handoff(events: list) -> Optional[str]:
+    """The Agent the run's last hand-off went to, if any (TASK-0181)."""
+    return next((a["to"] for e in reversed(events) if e.get("type") == "node_finished" and isinstance(a := e.get("agent"), dict)
+                 and a.get("kind") == "handoff" and isinstance(a.get("to"), str)), None)
+
+
 def steps_of(events: list, mode: str) -> list[dict]:
     """The node steps of a run as a chat shows them (DEC-0053): none, labels (node, label, type, status) or full
     (plus duration, input, output and errors)."""
@@ -111,6 +117,7 @@ def steps_of(events: list, mode: str) -> list[dict]:
         if t == "run_waiting": s["status"] = "waiting"  # a Human node that waits for its answer
         step = e.get("agent") if isinstance(e.get("agent"), dict) else None  # what an Agent step did (TASK-0116)
         if step and step.get("kind") == "tool" and step.get("tool"): s["label"] = f"{s['label'].rsplit(' › ', 1)[0]} › {step['tool']}"
+        if step and step.get("kind") == "handoff": s["handoff_to"] = step.get("to_label") or step.get("to")  # TASK-0182
         if mode == "full":
             for k in ("duration_ms", "input", "delta", "errors", "code"):
                 if k in e: s[k] = e[k]
@@ -226,6 +233,12 @@ class ChatSessionService:
         enabled, field = bool(a["enabled"]), a["field"]
         if not isinstance(field, str) or (enabled and (field not in fields or fields[field].get("type") != "list" or field in taken)): raise bad("field")
         return {"enabled": enabled, "kinds": [k for k in KINDS if k in kinds], "max_files": a["max_files"], "max_mb": a["max_mb"], "field": field}
+
+    @staticmethod
+    def _graph(w) -> dict:
+        try: g = json.loads(w.data or "{}")
+        except (ValueError, AttributeError): g = {}
+        return g if isinstance(g, dict) else {}
 
     @staticmethod
     def _fields(w) -> list[dict]:
@@ -368,6 +381,9 @@ class ChatSessionService:
         if (mf := st.get("messages_field")): inp[mf] = self.history(sid, int(st.get("max_turns") or DEFAULTS["max_turns"])) + [{"role": "user", "content": text}]
         a = settings_of(st)
         if a["enabled"] and a["field"] in fields: inp[a["field"]] = [state_record(x) for x in files]
+        if s.active_agent:  # the agent a hand-off left the conversation with (TASK-0181); gone or no longer a target: the entry
+            if s.active_agent in handoffs.receivers(self._graph(w)): inp[agents.START_INPUT] = s.active_agent
+            else: self.sessions.set_fields(sid, active_agent=None); s.active_agent = None
         if size({k: v for k, v in inp.items() if k != a["field"]}) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
         return {"workflow_id": s.workflow_id, "input": inp, "text": text, "attachment_ids": [x.id for x in files]}
 
@@ -421,6 +437,7 @@ class ChatSessionService:
         if r.status == "ok":
             v = (res.get("final_state") or {}).get(t.reply_field)
             turn.text = v if isinstance(v, str) else ("" if v is None else json.dumps(v, ensure_ascii=False))
+            if (to := last_handoff(json.loads(r.events or "[]"))): self.sessions.set_fields(sid, active_agent=to)  # TASK-0181
         elif r.status == "waiting":
             ev = next((e for e in reversed(json.loads(r.events or "[]")) if e.get("type") == "run_waiting"), {})
             node = (res.get("waiting") or {}).get("node") or ev.get("node")
