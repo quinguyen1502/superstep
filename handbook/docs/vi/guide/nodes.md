@@ -205,6 +205,8 @@ hạn đó chỉ áp cho các vòng lặp khác.
 `prompt` (template) và `output_field`. Run chờ ở trạng thái `waiting` tới khi
 có người trả lời **Duyệt** (`approved`), **Từ chối** (`rejected`) hoặc nhập văn
 bản tự do. Xem [Duyệt bởi người](../run/human-approval.md).
+Một mô hình có thể xem yêu cầu trước, để gợi ý hoặc tự trả lời: xem
+[AI duyệt yêu cầu phê duyệt](../run/ai-review.md).
 
 ## Join
 

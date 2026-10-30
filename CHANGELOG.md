@@ -7,6 +7,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 ### Added
 
 - **Help desk template and the hand-off guide** (REQ-0078). New built-in template **Help desk**: Triage answers order questions and hands billing and technical questions to Billing and Technical, with test cases for the offline model. New handbook page "Agent hand-offs" (en, vi) with a comparison of hand-offs, supervisors with workflow tools and routing nodes, and Playwright coverage of the template in the Chat tab and on the public page.
+- **AI review of approvals: handbook and e2e** (TASK-0189, REQ-0081, DEC-0075). A new handbook page, "AI review of
+  approvals" (en, vi), covers the modes, settings, rules, when people are asked anyway, pausing, the audit, the risks
+  (overconfidence, prompt injection, cost) and exports; the Human node, Agent node and Human approval pages link to it.
+  A Playwright spec runs in en and vi: the settings on a Human node and an Agent's tool approval, the AI's opinion in
+  the Approvals inbox, the agreement rate after a person answers, and the pause switch.
 - **AI review of approvals in the editor and on the Approvals page** (TASK-0188, REQ-0081, DEC-0075). Human nodes and
   Agent tool approval have an AI review section: mode (off, suggest, answer automatically; the last only for the
   workflow owner or an admin), judge credential, model and instructions, minimum confidence, daily cap, notify and
