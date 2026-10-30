@@ -114,7 +114,10 @@ class ApprovalService:
         p = self._policy(wid, self._node(workflow or {}, ev or {})) if ev else None
         return bool(p and p["mode"] == "auto")
 
-    def on_waiting(self, rid: str, owner: str, wid: Optional[str], workflow: dict, ev: dict, state: Optional[dict] = None) -> None:
+    def on_waiting(self, rid: str, owner: str, wid: Optional[str], workflow: dict, ev: dict, state: Optional[dict] = None, start: bool = True):
+        """Writes the waiting step now; the request (AI review, channel message) is a job. start=False returns the job
+        for the caller to start() once the run row is stored, so an answer AI review gives at once finds the run
+        waiting, while a crash before that still leaves the waiting step (TASK-0187)."""
         node = self._node(workflow, ev)
         cfg = ((node or {}).get("data") or {}).get("approval") or {}
         target = str(cfg.get("target") or "").strip()
@@ -125,7 +128,11 @@ class ApprovalService:
         if policy is not None:  # AI review first; people are asked only when it does not answer (DEC-0075 decision 1)
             job = lambda: self._reviewed(rid, owner, wid, node, cfg, target, ev, w, policy, external, state)  # noqa: E731
         elif external: job = lambda: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)  # noqa: E731
-        else: return  # this node does not use an external channel
+        else: return None  # this node does not use an external channel
+        if not start: return job
+        self.start(job); return None
+
+    def start(self, job) -> None:
         threading.Thread(target=job, daemon=True).start() if self.background else job()
 
     def _reviewed(self, rid, owner, wid, node, cfg, target, ev, w: ApprovalWait, policy: dict, external: bool, state: Optional[dict]) -> None:
