@@ -14,8 +14,10 @@ from ..core.errors import AppError
 from ..models import ChatAttachment
 from ..repositories import ChatAttachmentRepository
 from ..storage import Stores, StoreError
+from ..storage.base import PROBE_PREFIX
 
 log = logging.getLogger(__name__)
+WORKER_KEY = f"{PROBE_PREFIX}worker"  # the worker's heartbeat: the api sees it only when they share the backend (TASK-0192)
 ORPHAN_AGE = 3600  # an object without a row is removed once it is this old (seconds)
 BATCH = 500
 
@@ -103,7 +105,7 @@ class AttachmentFiles:
         return n
 
     def _sweep_batch(self, store, batch: list[tuple[str, float]], before: float) -> int:
-        old = [k for k, t in batch if t < before]
+        old = [k for k, t in batch if t < before and not k.startswith(PROBE_PREFIX)]
         known = self.repo.known(store.name, old); n = 0
         for k in old:
             if k not in known: store.delete(k); n += 1
@@ -111,3 +113,19 @@ class AttachmentFiles:
 
     def status(self) -> dict:
         return self.stores.status()
+
+    def heartbeat(self, now: Optional[float] = None) -> None:
+        """The worker writes its heartbeat on the current backend (retention loop). With `fs`, an api that cannot see
+        it does not share the worker's folder: files uploaded there would be missing for runs."""
+        try:
+            store = self.stores.current()
+            if not store.inline: store.put(WORKER_KEY, str(time.time() if now is None else now).encode(), "text/plain")
+        except Exception as e: log.warning("attachment storage: worker heartbeat failed (%s)", type(e).__name__)
+
+    def worker_seen(self) -> Optional[float]:
+        """Seconds since the worker's last heartbeat on the current backend, or None (never seen, or `db`)."""
+        try:
+            store = self.stores.current()
+            if store.inline: return None
+            return max(0.0, time.time() - float(store.read(WORKER_KEY).decode()))
+        except Exception: return None
