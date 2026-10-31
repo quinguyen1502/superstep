@@ -1,8 +1,12 @@
 import json, time, uuid
 from typing import Optional
 from sqlalchemy import delete, func, or_, select, update
-from ..models import ApprovalAudit, ApprovalChannel, ApprovalRequest, ApprovalWait, ApprovalWaitApprover, ChannelIdentity, Run
+from sqlalchemy.exc import IntegrityError
+from ..models import ApprovalAudit, ApprovalAutoQuota, ApprovalChannel, ApprovalRequest, ApprovalWait, ApprovalWaitApprover, ChannelIdentity, Run
 from ..models.database import Database
+
+
+PENDING = ("auto", "suggest")  # ApprovalWait.review while the AI review is running: the policy's mode
 
 
 class ApprovalRepository:
@@ -202,6 +206,40 @@ class ApprovalRepository:
             return s.scalar(select(func.count()).select_from(ApprovalAudit).where(
                 ApprovalAudit.workflow_id == workflow_id, ApprovalAudit.created >= since, ApprovalAudit.kind == "auto",
                 ApprovalAudit.auto_outcome.in_(("approved", "rejected")))) or 0
+
+    def reserve_auto(self, workflow_id: str, day: float, limit: Optional[int]) -> bool:
+        """Takes one automatic answer of the workflow's day if fewer than `limit` are taken (None: always, a rule's
+        reject). One compare-and-set, so parallel reviews cannot pass the cap together (TASK-0204). A new day starts
+        from the answers already in the audit, so the upgrade day keeps its count."""
+        with self.db.session() as s:
+            if s.get(ApprovalAutoQuota, (workflow_id, day)) is None:
+                s.add(ApprovalAutoQuota(workflow_id=workflow_id, day=day, used=self.count_auto(workflow_id, day)))
+                try: s.commit()
+                except IntegrityError: s.rollback()  # another review created it first
+            q = update(ApprovalAutoQuota).where(ApprovalAutoQuota.workflow_id == workflow_id, ApprovalAutoQuota.day == day)
+            if limit is not None: q = q.where(ApprovalAutoQuota.used < limit)
+            n = s.execute(q.values(used=ApprovalAutoQuota.used + 1)).rowcount
+            s.commit(); return n == 1
+
+    def release_auto(self, workflow_id: str, day: float) -> None:
+        """Gives back a reserved answer the review did not use (it escalated)."""
+        with self.db.session() as s:
+            s.execute(update(ApprovalAutoQuota).where(ApprovalAutoQuota.workflow_id == workflow_id, ApprovalAutoQuota.day == day,
+                                                      ApprovalAutoQuota.used > 0).values(used=ApprovalAutoQuota.used - 1))
+            s.commit()
+
+    def finish_review(self, wait_id: str) -> bool:
+        """Compare-and-set pending (auto | suggest) -> done: exactly one of the review and the restart recovery acts on the step."""
+        with self.db.session() as s:
+            n = s.execute(update(ApprovalWait).where(ApprovalWait.id == wait_id, ApprovalWait.review.in_(PENDING)).values(review="done")).rowcount
+            s.commit(); return n == 1
+
+    def lost_reviews(self, before: float, limit: int = 200) -> list[ApprovalWait]:
+        """Open steps of waiting runs whose AI review started before `before` and never finished (a restart)."""
+        with self.db.session() as s:
+            q = (select(ApprovalWait).join(Run, Run.id == ApprovalWait.run_id)
+                 .where(ApprovalWait.status == "waiting", Run.status == "waiting", ApprovalWait.review.in_(PENDING), ApprovalWait.created < before))
+            return list(s.scalars(q.order_by(ApprovalWait.created).limit(limit)))
 
     def auto_stats(self, workflow_id: str, since: float) -> dict:
         """{approved, rejected, escalated, suggested, agreed, disagreed} of a workflow since `since`."""

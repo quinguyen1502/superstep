@@ -41,10 +41,22 @@ class AutoReviewService:
             out.update(kw); out["outcome"] = outcome or ("escalated" if auto else "suggested"); return out
         effect, hit = approval_policy.check(policy["rules"], request)
         out["rules"] = hit
-        if effect == "reject": return done("rejected" if auto else "suggested", decision="reject", confidence=1.0, cause="rule", reason=f"rule {hit[0]}")
+        day = day_start(self.now())
+        if effect == "reject":
+            if auto and wid: self.repo.reserve_auto(wid, day, None)  # counts toward the cap, never refused
+            return done("rejected" if auto else "suggested", decision="reject", confidence=1.0, cause="rule", reason=f"rule {hit[0]}")
         if effect == "human": return done(decision="escalate", cause="rule", reason=f"rule {hit[0]}")
         if config.demo_mode(): return done(cause="demo")  # the demo's models are the offline mock: never answer
-        if auto and wid and self.repo.count_auto(wid, day_start(self.now())) >= policy["max_per_day"]: return done(cause="cap")
+        reserved = bool(auto and wid)
+        if reserved and not self.repo.reserve_auto(wid, day, policy["max_per_day"]): return done(cause="cap")  # atomic (TASK-0204)
+        try: r = self._judged(out, done, owner, policy, request, auto)
+        except BaseException:
+            if reserved: self.repo.release_auto(wid, day)
+            raise
+        if reserved and r["outcome"] != "approved": self.repo.release_auto(wid, day)  # escalated: the answer was not used
+        return r
+
+    def _judged(self, out, done, owner, policy, request, auto) -> Dict[str, Any]:
         j = policy["judge"]
         try: cred = self.resolve(owner, j["credential_id"])
         except Exception: return done(cause="credential")

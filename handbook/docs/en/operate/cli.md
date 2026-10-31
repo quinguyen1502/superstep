@@ -110,15 +110,18 @@ superstep whoami
 superstep logout
 ```
 
-`login` prints a URL and a code, and opens the browser. Approve or deny on
-`/cli/authorize` while you are signed in to the studio. Nothing is sent until
-you press a button. The command writes `url`, `token` and `account` to
+`login` prints a URL and a code, and opens the browser. On `/cli/authorize`,
+while you are signed in to the studio, type the code from your terminal, then
+approve or deny. Nothing is sent until you press a button. Approve only a
+sign-in you started yourself just now: never type a code someone sent you. The command writes `url`, `token` and `account` to
 `~/.superstep/cli.json` and sets that file to mode `0600`. It does not print
 the token. `logout` removes `token` and `account` from that file. It does not
 revoke the token. Revoke it in Settings, under Tokens (`/settings/tokens`).
 
 For a script or CI, create a token in Settings and export the two variables.
-The environment wins over the file. Do not commit the token.
+The environment wins over the file. Do not commit the token. The token saved
+by `login` is only sent to the server it came from: with `--url` or
+`SUPERSTEP_URL` naming another server, log in there or set `SUPERSTEP_TOKEN`.
 
 ```bash
 export SUPERSTEP_URL=http://localhost:8000

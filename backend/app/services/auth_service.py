@@ -32,6 +32,8 @@ def public_user(u) -> dict:
 def _digest(token: str) -> str: return hashlib.sha256(token.encode()).hexdigest()
 
 
+LAST_USED_EVERY = 300  # seconds: a token's "last used" is written at most this often
+
 class AuthService:
     def __init__(self, users: UserRepository, workflows=None, sec: Optional[AuthSecurityRepository] = None, background: bool = True, audit=None,
                  visit: Optional[Callable[[], str]] = None, pats=None):
@@ -162,5 +164,6 @@ class AuthService:
         user = self.users.get_by_id(row.user_id)
         if user is None: raise AppError("AUTH_TOKEN_INVALID")
         if not user.active: raise AppError("AUTH_ACCOUNT_DISABLED")
-        self.pats.set_fields(row.id, last_used=time.time())
+        now = time.time()
+        if row.last_used is None or now - row.last_used >= LAST_USED_EVERY: self.pats.set_fields(row.id, last_used=now)  # not every request (TASK-0205)
         return public_user(user)

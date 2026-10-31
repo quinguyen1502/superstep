@@ -57,8 +57,11 @@ The request goes to people, as if AI review were off, when:
 - AI review is paused (see below) or turned off on the server;
 - the daily cap is reached;
 - the judge credential is missing, or the studio runs in demo mode;
+- the request is longer than 12,000 characters, so the model could not see all
+  of it;
 - the model call fails, times out (30 seconds) or returns something that is not
   a valid answer;
+- the server restarted while the model was being asked;
 - the model suspects the request tries to instruct it (prompt injection);
 - the model would reject, or is not sure, or its confidence is below the
   minimum.

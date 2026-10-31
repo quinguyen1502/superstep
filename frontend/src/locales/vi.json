@@ -968,14 +968,15 @@
   },
   "cliAuth": {
     "title": "Duyệt lệnh superstep",
-    "intro": "Lệnh trên máy bạn sẽ có cùng quyền với tài khoản này. Chưa có gì được duyệt cho đến khi bạn bấm nút.",
-    "code": "Mã",
+    "intro": "Lệnh trên một máy tính sẽ có cùng quyền với tài khoản này. Chưa có gì được duyệt cho đến khi bạn bấm nút.",
+    "code": "Mã trong terminal",
     "name": "Tên token",
     "approve": "Duyệt",
     "deny": "Từ chối",
     "approved": "Đã duyệt. Bạn có thể đóng trang này và quay lại terminal.",
     "denied": "Đã từ chối. Terminal sẽ ngừng chờ.",
-    "missing": "Trang này cần mã đăng nhập từ superstep login."
+    "warning": "Chỉ duyệt lệnh superstep login mà chính bạn vừa chạy trên máy của mình. Không bao giờ nhập mã do người khác gửi cho bạn.",
+    "codeHint": "Mã mà superstep login hiện trong terminal của bạn."
   },
   "settings": {
     "title": "Cài đặt",

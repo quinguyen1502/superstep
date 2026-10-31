@@ -4,15 +4,17 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
-### Fixed
-
-- **A chat no longer skips the nodes between Start and the first agent** (TASK-0206, DEC-0073). After a hand-off, the
-  next message jumped from Start straight to the agent that answered last, so a masking, filter or lookup step before
-  the first agent did not run. The chat now continues with that agent only when Start leads straight to agents;
-  otherwise every message runs from Start. The Python, LangGraph and TypeScript exports do the same.
-
 ### Security
 
+- **The CLI sign-in asks for the code from the terminal** (TASK-0205, DEC-0076). The `superstep login` link no longer
+  carries the code, and `/cli/authorize` asks the person to type the code their terminal shows, with a warning, so a
+  link someone else sends cannot be approved with one click. Sign-in starts are limited to 10 per client IP per 10
+  minutes (`RATE_LIMITED`), and old sign-ins are removed.
+- **The CLI sends its saved token only to the server that issued it** (TASK-0205). A `--url` or `SUPERSTEP_URL` naming
+  another server gets no token; log in there or set `SUPERSTEP_TOKEN`.
+- **AI review sends a request it cannot see in full to people** (TASK-0204). The judge saw only the first 12,000
+  characters, so a field after a long one (a `bcc` after a long body) could be approved unseen; such a request now goes
+  to people (cause `too_long`).
 - **The attachment orphan sweep only deletes its own files** (TASK-0203). It used to delete any file older than an hour
   in the attachment folder or bucket prefix that no row named, including another install's files or the studio's own
   data when the folder was set to the data folder. It now deletes only names of the form `<workflow>/<chat>/<file id>`
@@ -21,6 +23,17 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **A chat no longer skips the nodes between Start and the first agent** (TASK-0206, DEC-0073). After a hand-off, the
+  next message jumped from Start straight to the agent that answered last, so a masking, filter or lookup step before
+  the first agent did not run. The chat now continues with that agent only when Start leads straight to agents;
+  otherwise every message runs from Start. The Python, LangGraph and TypeScript exports do the same.
+- **A personal access token's last use is written at most every 5 minutes** instead of on every request (TASK-0205).
+- **An AI review lost to a restart goes to people** (TASK-0204). The maintenance sweep sends a step whose review never
+  finished to people (cause `restart`): the run owner is told in auto mode and the channel request is sent.
+- **The AI review daily cap holds for parallel steps** (TASK-0204). Each automatic answer reserves its slot atomically,
+  so the steps of one wave cannot pass the cap together; an escalated review gives its slot back.
+- **AI review usage is no longer lost on SQLite** (TASK-0204). A waiting run's update kept an `approval_review` event
+  appended at the same time.
 - **Attachments survive a change of folder, bucket or prefix** (TASK-0203). Each file records where it was written
   (migration `0048`, filled for older files at start-up), so it is still read from there, and `superstep attachments
   migrate --to fs|s3` moves files between two locations of the same backend.

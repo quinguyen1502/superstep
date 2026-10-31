@@ -968,14 +968,15 @@
   },
   "cliAuth": {
     "title": "Approve the superstep command",
-    "intro": "This gives the command on your computer the same access as your account. Nothing is approved until you press the button.",
-    "code": "Code",
+    "intro": "This gives a command on a computer the same access as your account. Nothing is approved until you press the button.",
+    "code": "Code from your terminal",
     "name": "Token name",
     "approve": "Approve",
     "deny": "Deny",
     "approved": "Approved. You can close this page and return to the terminal.",
     "denied": "Denied. The terminal will stop waiting.",
-    "missing": "This page needs a sign-in code from superstep login."
+    "warning": "Approve only a superstep login you started yourself, just now, on your own computer. Never type a code that someone sent you.",
+    "codeHint": "The code superstep login shows in your terminal."
   },
   "settings": {
     "title": "Settings",

@@ -25,12 +25,16 @@ SYSTEM = (
 
 class JudgeError(Exception):
     def __init__(self, cause: str, detail: str = "", usage: Optional[Dict[str, Any]] = None):
-        super().__init__(detail or cause); self.cause = cause  # timeout | error | invalid
+        super().__init__(detail or cause); self.cause = cause  # too_long | timeout | error | invalid
         self.usage = usage  # an invalid answer still used tokens (TASK-0198)
 
 
+def request_text(request: Dict[str, Any]) -> str:
+    return json.dumps(request, ensure_ascii=False, indent=2, default=str)
+
+
 def prompt(instructions: str, request: Dict[str, Any]) -> str:
-    data = json.dumps(request, ensure_ascii=False, indent=2, default=str)[:REQUEST_MAX].replace("</request>", "<\\/request>")
+    data = request_text(request)[:REQUEST_MAX].replace("</request>", "<\\/request>")
     return f"{SYSTEM}\n\nReviewer policy:\n{instructions.strip() or '(none: escalate unless the request is clearly harmless)'}\n\n<request>\n{data}\n</request>"
 
 
@@ -51,7 +55,10 @@ def _invoke(text: str, model: str, cred: Dict[str, Any]) -> Tuple[str, Dict[str,
 
 def ask(instructions: str, request: Dict[str, Any], model: str, cred: Dict[str, Any], timeout: float = TIMEOUT,
         invoke: Optional[Callable[[str, str, Dict[str, Any]], Tuple[str, Dict[str, Any]]]] = None) -> Dict[str, Any]:
-    """{decision, confidence, reason, flags, usage}. Raises JudgeError(timeout | error | invalid)."""
+    """{decision, confidence, reason, flags, usage}. Raises JudgeError(too_long | timeout | error | invalid).
+    A request longer than REQUEST_MAX is never judged: the judge would only see its start, and a part it cannot see
+    (a recipient after a long body) could be approved unseen. It goes to people (fail-safe, DEC-0075; TASK-0204)."""
+    if len(request_text(request)) > REQUEST_MAX: raise JudgeError("too_long", f"the request is longer than {REQUEST_MAX} characters")
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     fut = pool.submit(invoke or _invoke, prompt(instructions, request), model, cred)
     try: out, usage = fut.result(timeout=timeout)
