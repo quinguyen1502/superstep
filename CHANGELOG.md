@@ -6,6 +6,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Attachment storage port** (TASK-0191, REQ-0080, DEC-0074). Chat attachment bytes go through a storage port.
+  `STUDIO_ATTACHMENT_STORAGE` (default `db`) picks where new files go; each file records where its bytes are
+  (`storage`, `key`), so files stay readable after a change of backend. The object is written before the row and
+  removed after it, the retention loop removes objects without a row once they are an hour old, and downloads stream through the backend with the same
+  headers. `/api/health` reports the backend and whether a write, read and delete there works. New error
+  `CHAT_ATTACHMENT_STORAGE` (503).
 - **Plan: external storage for chat attachments** (REQ-0080, DEC-0074, Accepted 2026-10-31). Planning records only: a storage
   port with database (default), folder and S3-compatible backends, a migrate command and backup coverage, planned as
   TASK-0191 to TASK-0195. Nothing is implemented yet.

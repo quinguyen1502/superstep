@@ -17,6 +17,7 @@ from ..core.errors import AppError
 from ..engine import documents
 from ..models import ChatAttachment, ChatSession
 from ..repositories import ChatAttachmentRepository
+from .attachment_files import AttachmentFiles
 
 if TYPE_CHECKING:
     from .chat_session_service import ChatSessionService
@@ -69,8 +70,11 @@ def public(a) -> dict:
 
 
 class ChatAttachmentService:
-    def __init__(self, repo: ChatAttachmentRepository, chat: "ChatSessionService", pub: Optional["PublicChatService"] = None):
+    def __init__(self, repo: ChatAttachmentRepository, chat: "ChatSessionService", pub: Optional["PublicChatService"] = None,
+                 files: Optional[AttachmentFiles] = None):
+        """files: where the bytes go (TASK-0191, DEC-0074); the chat session service's by default."""
         self.repo, self.chat, self.pub = repo, chat, pub
+        self.files = files or chat.files
 
     # ---- the published page (the visitor's own session) ----
     async def public_upload(self, slug: str, sid: str, token, user, ip: str, name: str, data: bytes) -> tuple[dict, "Visitor"]:
@@ -121,9 +125,13 @@ class ChatAttachmentService:
         if found is None or found[0] not in a["kinds"]: raise AppError("CHAT_ATTACHMENT_TYPE", allowed=self.allowed_names(a))
         kind, mime = found
         text, cut = text_of(name, data) if kind == "document" else (None, False)
-        row = self.repo.add(ChatAttachment(id=uuid.uuid4().hex, session_id=s.id, turn_id=None, name=name, kind=kind, mime=mime, size=len(data),
-                                           data=data, text=text, text_cut=cut, created=time.time()))
+        row = self.files.add(ChatAttachment(id=uuid.uuid4().hex, session_id=s.id, turn_id=None, name=name, kind=kind, mime=mime, size=len(data),
+                                            data=b"", text=text, text_cut=cut, created=time.time()), s.workflow_id, data)
         return public(row)
+
+    def chunks(self, row):
+        """The file's bytes in pieces, for the download response (streamed, never a bucket URL)."""
+        return self.files.open(row)
 
     @staticmethod
     def allowed_names(a: dict) -> str:
@@ -137,5 +145,5 @@ class ChatAttachmentService:
 
     def remove(self, s: ChatSession, aid) -> dict:
         """Removes a file that was not sent yet; a sent file stays with its turn."""
-        if not isinstance(aid, str) or not self.repo.delete_unsent(aid, s.id): raise AppError("CHAT_ATTACHMENT_NOT_FOUND")
+        if not isinstance(aid, str) or not self.files.remove_unsent(aid, s.id): raise AppError("CHAT_ATTACHMENT_NOT_FOUND")
         return {"ok": True}

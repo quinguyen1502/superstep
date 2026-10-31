@@ -67,7 +67,9 @@ class ChatAttachment(Base):
     kind: Mapped[str] = mapped_column(Text, nullable=False)  # document | image
     mime: Mapped[str] = mapped_column(Text, nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
-    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)  # the bytes for storage "db"; empty for fs and s3
+    storage: Mapped[str] = mapped_column(Text, nullable=False, default="db", server_default="db")  # where the bytes are (TASK-0191, DEC-0074)
+    key: Mapped[Optional[str]] = mapped_column(Text)  # the object key for fs and s3: <workflow>/<session>/<attachment id>
     text: Mapped[Optional[str]] = mapped_column(Text)  # a document's extracted text, capped
     text_cut: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created: Mapped[float] = mapped_column(Float, nullable=False, index=True)
