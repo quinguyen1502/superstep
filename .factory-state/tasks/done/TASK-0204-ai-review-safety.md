@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0204
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -49,3 +49,5 @@ Fix the AI review findings 2, 8, 10 and 11 of the external review of v0.10.0 and
 ## Activity Log
 
 - 2026-10-31: created from the owner's request to verify and fix the external review of v0.10.0 and v0.10.1.
+- 2026-10-31: implemented on `factory/task-0204-ai-review-safety` from `develop`. A request longer than the judge's 12,000 characters goes to people (cause too_long); a step remembers its pending review (approval_waits.review, migration 0049) and the maintenance sweep sends a review lost to a restart to people (cause restart); update_waiting compares the events text when it appends; the daily cap is reserved atomically in approval_auto_quota and released when the review escalates. `factory verify run --profile full` passed. The owner asked to fix the confirmed review findings and merge each task when CI is green. Moved to done on this PR before the merge (TASK-0148).
+- Review: `.factory-state/artifacts/REV-0193-task-0204.md`. QA: `.factory-state/artifacts/QA-0193-task-0204.md`.
