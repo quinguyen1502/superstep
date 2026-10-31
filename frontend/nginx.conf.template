@@ -1,10 +1,17 @@
-# Rendered by the nginx image's envsubst step (API_UPSTREAM, default api:8000).
+# Rendered by the nginx image's envsubst step (API_UPSTREAM, default api:8000; WEB_MAX_BODY_SIZE, default 110m).
 map $http_upgrade $connection_upgrade { default upgrade; '' close; }
 
 server {
   listen 80;
   root /usr/share/nginx/html;
-  client_max_body_size 10m;
+  # Above every upload ceiling the api enforces itself (chat files STUDIO_CHAT_ATTACHMENT_MAX_MB, workflow zips 50 MB),
+  # so the api answers with its own error code; raise WEB_MAX_BODY_SIZE with a ceiling above 100 MB (TASK-0203).
+  client_max_body_size ${WEB_MAX_BODY_SIZE};
+  error_page 413 = @too_large;
+  location @too_large {
+    default_type application/json;
+    return 413 '{"success":false,"data":null,"error":{"code":"PAYLOAD_TOO_LARGE","message":"Payload too large","details":null}}';
+  }
 
   location = /healthz { access_log off; return 200 "ok\n"; }
 

@@ -131,6 +131,21 @@ shows a short reason such as `S3 error AccessDenied`. The published images
 include the S3 client; a source install needs `pip install
 "superstep-backend[s3]"`.
 
+Give attachments a folder or bucket prefix of their own. The studio deletes
+leftover files there that no chat refers to, but only files whose names it
+made itself (`<workflow>/<chat>/<file id>`), so other files are never touched.
+A folder that is, or contains, the studio's data folder (the database, the
+secret key, imports) is refused: `/api/health` shows
+`attachment_storage_ok: false` and uploads fail; use a subfolder such as
+`/data/attachments`. An empty `STUDIO_ATTACHMENT_S3_PREFIX` on a bucket shared
+with anything else logs a warning; set a prefix such as `superstep/`.
+
+Each file remembers the folder or bucket and prefix it was written to, so
+changing `STUDIO_ATTACHMENT_FS_PATH`, the bucket or the prefix later does not
+lose older files: they are still read from where they are, and
+`superstep attachments migrate --to fs` (or `--to s3`) moves them to the new
+place.
+
 ## Memory
 
 With a conversation field set, each run gets the last *n* exchanges plus the

@@ -91,7 +91,9 @@ mới và bản cũ bị xoá. Tệp nào lỗi thì ở nguyên chỗ cũ và �
 thoát là 1. Lần chạy bị ngắt vẫn để mọi tệp đọc được, và chạy lại lệnh sẽ làm
 tiếp; khi không còn gì thì lệnh không làm gì. `--batch N` đặt số tệp đọc mỗi đợt
 (mặc định 100). Đặt `STUDIO_ATTACHMENT_STORAGE` cùng nơi lưu đó để tệp mới cũng
-lưu ở đó. Admin cũng làm được qua API với `GET /api/admin/attachments` và
+lưu ở đó. Tệp trên cùng nơi lưu nhưng ở thư mục, bucket hay prefix cũ cũng được
+chuyển, nên `--to fs` sau khi đổi `STUDIO_ATTACHMENT_FS_PATH` (hoặc `--to s3` sau
+khi đổi bucket hay prefix) gom chúng về chỗ mới. Admin cũng làm được qua API với `GET /api/admin/attachments` và
 `POST /api/admin/attachments/migrate`.
 
 ## Đăng nhập

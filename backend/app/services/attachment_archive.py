@@ -24,10 +24,9 @@ class AttachmentArchive:
         with tarfile.open(fileobj=out, mode="w|") as tar:
             for name in backends:
                 if name == "db" or name not in self.repo.storages(): continue
-                store = self.stores.get(name)
-                for key, _created in self.repo.keys(name):
+                for key, location in self.repo.located(name):
                     if not key or key.startswith(PROBE_PREFIX): continue
-                    data = store.read(key)
+                    data = self.stores.get(name, location).read(key)
                     info = tarfile.TarInfo(PREFIX + key); info.size, info.mtime, info.mode = len(data), int(time.time()), 0o600
                     tar.addfile(info, io.BytesIO(data)); n += 1
         return n
@@ -42,5 +41,7 @@ class AttachmentArchive:
                 if not info.isfile() or key not in wanted: continue
                 handle = tar.extractfile(info)
                 if handle is None: continue
-                self.stores.get(wanted[key]).put(key, handle, "application/octet-stream"); n += 1  # streamed (TASK-0200)
+                store = self.stores.get(wanted[key])
+                store.put(key, handle, "application/octet-stream"); n += 1  # streamed (TASK-0200)
+                self.repo.relocate(wanted[key], key, store.location)  # this host's folder or bucket (TASK-0203)
         return n

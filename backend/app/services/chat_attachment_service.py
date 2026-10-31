@@ -9,7 +9,7 @@ Who may touch a file: the session's owner (a visitor of the published page, or t
 the builder from the Visitors list. Anything else, and a guessed id, is CHAT_ATTACHMENT_NOT_FOUND.
 """
 from __future__ import annotations
-import io, os, time, uuid
+import asyncio, io, os, time, uuid
 from typing import TYPE_CHECKING, Optional
 from ..core import config
 from ..core import permissions as P
@@ -85,7 +85,7 @@ class ChatAttachmentService:
         s = self.pub.own(t, sid, v)
         self._allowed(settings_of(st))
         await self.pub.check_message(t, st, v, ip, daily=False)  # an upload counts as a message for the rate limits
-        return self.store(s, st, name, data), v
+        return await asyncio.to_thread(self.store, s, st, name, data), v  # file I/O off the event loop (TASK-0203)
 
     def public_file(self, slug: str, sid: str, aid: str, token, user) -> tuple[ChatAttachment, "Visitor"]:
         t, st = self.pub.published(slug); v = self.pub.visitor(slug, st, token, user)

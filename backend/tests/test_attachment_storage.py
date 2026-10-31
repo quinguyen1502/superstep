@@ -106,11 +106,11 @@ def test_session_delete_retention_and_the_orphan_sweep(mem):
     svc.cleanup()
     assert ChatAttachmentRepository(get_db()).get(b["id"]) is None and not any(b["id"] in k for k in mem.objects)
     # orphans: only objects without a row, and only once older than an hour
-    mem.objects["w/s/orphan-old"] = (b"x", time.time() - 7200); mem.objects["w/s/orphan-new"] = (b"x", time.time())
+    mem.objects["w/s/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"] = (b"x", time.time() - 7200); mem.objects["w/s/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"] = (b"x", time.time())
     c = up(v2, url2, "keep.txt", b"x").json()["data"]
     kept = next(k for k in mem.objects if k.endswith(c["id"])); mem.objects[kept] = (b"x", time.time() - 7200)
     assert deps.attachment_files().sweep_orphans() == 1
-    assert "w/s/orphan-old" not in mem.objects and "w/s/orphan-new" in mem.objects and kept in mem.objects
+    assert "w/s/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" not in mem.objects and "w/s/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" in mem.objects and kept in mem.objects
 
 
 def test_rows_of_another_backend_stay_readable(mem, monkeypatch):
