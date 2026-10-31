@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.10.2 (2026-10-31)
+
 ### Security
 
 - **Request bodies are bounded outside the upload routes again** (TASK-0207). Since TASK-0203 the bundled nginx let
