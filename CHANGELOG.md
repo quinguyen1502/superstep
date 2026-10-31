@@ -43,6 +43,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   it reviewed, through the same usage records as node model calls: run history, the trace summary, the Human node's
   row (tooltip line "AI review"), run metrics in the API and telemetry. A run still waiting for people shows them at
   once. The run's events carry an `approval_review` entry with the usage.
+- **Scheduled backups name the S3 bucket** (TASK-0197, REQ-0080). With `STUDIO_ATTACHMENT_STORAGE=s3`, the archive
+  that `backup.sh` writes on a schedule records `attachment_s3` (bucket and prefix) in its manifest, as a manual
+  backup does, so `restore` reminds you which bucket to restore separately.
 - **Two timing-sensitive tests** (TASK-0196). The parallel tool-call test proves the three calls run at once with a
   barrier instead of comparing start and end times. The studio e2e test checks the opened workflow's visible Last run
   badge instead of the first `ok` on the page, which is the phone-only copy hidden on desktop.
