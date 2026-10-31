@@ -43,6 +43,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   barrier instead of comparing start and end times. The studio e2e test checks the opened workflow's visible Last run
   badge instead of the first `ok` on the page, which is the phone-only copy hidden on desktop.
 
+### Changed
+
+- **S3 multipart uploads** (TASK-0200). The `s3` attachment backend uploads a file larger than
+  `STUDIO_ATTACHMENT_S3_MULTIPART_MB` (default 8) in parts, holding at most two parts in memory, and aborts the upload on
+  any failure so the bucket keeps no incomplete parts. Uploads are read in 1 MB pieces into a spooled temporary file,
+  refused as soon as they pass the size ceiling (the content-length check still runs first), and stream to the `fs` and
+  `s3` backends and from an archive restore. Tested against MinIO, including the abort path.
+
 ## 0.10.0 (2026-10-31)
 
 ### Added
