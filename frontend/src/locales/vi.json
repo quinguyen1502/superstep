@@ -510,6 +510,7 @@
     "CHAT_ATTACHMENT_STORAGE": "Không dùng được nơi lưu tệp đính kèm: {{reason}}",
     "CHAT_ATTACHMENT_LIMIT": "Giới hạn tệp đính kèm tối đa là {{max_files}} tệp và {{max_mb}} MB mỗi tệp",
     "CHAT_TURN_NOT_FOUND": "Không tìm thấy tin nhắn",
+    "CHAT_FRAME_INVALID": "Khung chat không hợp lệ: {{reason}}",
     "CHAT_RATING_NOT_ALLOWED": "Tin nhắn này không đánh giá được",
     "CHAT_RATING_INVALID": "Đánh giá: {{field}} không hợp lệ",
     "TEST_NOT_FOUND": "Không tìm thấy test case",

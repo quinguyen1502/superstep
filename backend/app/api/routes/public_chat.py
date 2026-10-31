@@ -11,6 +11,7 @@ GET  /api/public/chat/{slug}/sessions/{sid}/turns?after=<turn_id>  the turns aft
 GET  /api/public/chat/{slug}/logo?v=<hash>        the chat's logo image (TASK-0145)
 POST /api/public/chat/{slug}/sessions/{sid}/attachments        one file (multipart `file`), before the message (TASK-0174)
 GET  /api/public/chat/{slug}/sessions/{sid}/attachments/{aid}  download it      DELETE it while unsent
+WS   /ws/public/v1/chat/{slug}                    the chat socket protocol v1 (TASK-0216): typed frames, see ws_public_chat_v1
 WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response, node?}: the run
                                                   streams as public_event()s (TASK-0141); ?visitor= for the widget
 GET  /api/public/chat-frame?path=/c/{slug}        the page's frame-ancestors in Content-Security-Policy (TASK-0143):
@@ -20,7 +21,7 @@ An anonymous visitor is the HttpOnly cookie `studio_chat_<hash>`, or the `X-Chat
 sends "new" when it has no token yet and then gets the new token back as `visitor_token`). signed_in uses the studio
 session as other routes do.
 """
-import hashlib, tempfile
+import asyncio, hashlib, tempfile, time
 from urllib.parse import quote
 from typing import BinaryIO, Optional
 from fastapi import APIRouter, Depends, Request, Response, WebSocket, WebSocketDisconnect
@@ -34,6 +35,7 @@ from ...schemas.chat import ChatRatingIn
 from ...schemas.envelope import error_responses
 from ...schemas.public_chat import (ChatAttachmentEnvelope, ChatPageEnvelope, ChatRatingEnvelope, ChatSessionEnvelope,
                                     ChatSessionListEnvelope, ChatSessionViewEnvelope, ChatTurnsEnvelope, OkEnvelope)
+from ...services import chat_ws_v1 as v1
 from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
 from ..static import CHAT_PAGE
@@ -246,33 +248,29 @@ def frame(request: Request, response: Response, path: Optional[str] = None, svc=
     return {"frame_ancestors": v}
 
 
-@root_router.websocket("/ws/public/chat/{slug}")
-async def ws_public_chat(ws: WebSocket, slug: str):
-    """One message or answer per connection, as /ws/run: the run streams, then the socket closes. Same origin only (the
-    page and the embed's iframe are served by the studio); a cancel is {"type": "cancel"}."""
-    if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")):
-        await ws.close(code=4403); return
-    await ws.accept()
-    try: req = await ws.receive_json()
-    except (WebSocketDisconnect, ValueError, KeyError): return
+def ws_identity(ws: WebSocket) -> Optional[dict]:
+    """The signed-in studio user on a socket (session cookie or ?token=), or None."""
+    try: return ws_user(ws) if ws.cookies.get(security.SESSION_COOKIE) or ws.query_params.get("token") else None
+    except AppError: return None
+
+
+async def run_chat(ws: WebSocket, slug: str, req, token: Optional[str], user: Optional[dict], emit) -> bool:
+    """Plans the message or answer `req` and streams the run: `emit(public_event)` -> still connected. A request that
+    cannot run is one error event. Returns whether a run was started."""
     svc, runs = public_chat_service(), run_service()
-    try: user = ws_user(ws) if ws.cookies.get(security.SESSION_COOKIE) or ws.query_params.get("token") else None
-    except AppError: user = None
     try:
         ip = client_ip(ws.client.host if ws.client else None, ws.headers.get("x-forwarded-for"))
-        token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
         plan, owner, mode, reply = await svc.plan_message(slug, token, user, req, ip, runs.plan)
         if plan.ports is not None: plan.ports.locale = locale.pick(req.get("locale") if isinstance(req, dict) else None, ws.headers.get("accept-language"))
     except AppError as e:
-        await ws.send_json(error_event(e.to_dict())); await ws.close(); return
-
+        await emit(error_event(e.to_dict())); return False
     state = {"connected": True}
 
     async def send(ev) -> bool:
         out = public_event(ev, mode, reply)
         if out is None: return state["connected"]
-        try: await ws.send_json(out); return True
-        except Exception: state["connected"] = False; return False
+        if not await emit(out): state["connected"] = False
+        return state["connected"]
 
     async def listen() -> str:
         try:
@@ -283,7 +281,87 @@ async def ws_public_chat(ws: WebSocket, slug: str):
             state["connected"] = False
             return "disconnected"
 
+    ws.state.run_id = plan.run_id
     await runs.execute(plan, send, listen, owner)
-    if state["connected"]:
-        try: await ws.close()
-        except Exception: pass
+    return True
+
+
+async def close(ws: WebSocket) -> None:
+    try: await ws.close()
+    except Exception: pass
+
+
+def sender(ws: WebSocket):
+    async def emit(out: dict) -> bool:
+        try: await ws.send_json(out); return True
+        except Exception: return False
+    return emit
+
+
+@root_router.websocket("/ws/public/chat/{slug}")
+async def ws_public_chat(ws: WebSocket, slug: str):
+    """One message or answer per connection, as /ws/run: the run streams, then the socket closes. Same origin only (the
+    page and the embed's iframe are served by the studio); a cancel is {"type": "cancel"}. Untyped frames (the
+    unversioned protocol, kept as it is; v1 is below)."""
+    if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")):
+        await ws.close(code=4403); return
+    await ws.accept()
+    try: req = await ws.receive_json()
+    except (WebSocketDisconnect, ValueError, KeyError): return
+    token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
+    await run_chat(ws, slug, req, token, ws_identity(ws), sender(ws))
+    await close(ws)
+
+
+TURN_WAIT, TURN_POLL = 2.0, 0.05  # how long v1 waits for the answer turn to be saved before `done`
+
+
+@root_router.websocket("/ws/public/v1/chat/{slug}")
+async def ws_public_chat_v1(ws: WebSocket, slug: str):
+    """The chat socket protocol v1 (TASK-0216, DEC-0078; services/chat_ws_v1.py): `ready`, then an optional `auth` and
+    one `message` or `answer`; the run streams as typed frames with `v` and `seq`, then `turn` (when saved in time),
+    `done` and the socket closes. A frame that is not v1 is an `error` frame with CHAT_FRAME_INVALID."""
+    if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")):
+        await ws.close(code=4403); return
+    await ws.accept()
+    number, emit = v1.Frames(), sender(ws)
+    held: dict = {}
+
+    async def send(frame: Optional[dict]) -> bool:
+        if frame is None: return True
+        return await emit(number(frame))
+
+    async def translate(ev: dict) -> bool:
+        frame = v1.server_frame(ev)
+        if frame is not None and frame["type"] == "done": held["done"] = frame; return True  # after `turn`
+        return await send(frame)
+
+    await send({"type": "ready", "protocol": v1.PROTOCOL})
+    token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
+    try:
+        frame = v1.client_frame(await ws.receive_json())
+        if frame["type"] == "auth":
+            token = frame.get("visitor") or token
+            frame = v1.client_frame(await ws.receive_json())
+        if frame["type"] not in ("message", "answer"): raise v1.invalid(f"expected a message or an answer, got {frame['type']!r}")
+    except (WebSocketDisconnect, KeyError): return
+    except ValueError:
+        await send(v1.server_frame(error_event(v1.invalid("not JSON").to_dict()))); await close(ws); return
+    except AppError as e:
+        await send(v1.server_frame(error_event(e.to_dict()))); await close(ws); return
+    req, since = v1.plan_request(frame), time.time()
+    if await run_chat(ws, slug, req, token, ws_identity(ws), translate) and "done" in held:
+        turn = await answer_turn(req["chat_session_id"], getattr(ws.state, "run_id", None), since)
+        if turn: await send({"type": "turn", "turn_id": turn["id"], "role": "assistant", "status": turn["status"], "run_id": turn["run_id"]})
+        await send(held["done"])
+    await close(ws)
+
+
+async def answer_turn(sid: str, run_id: Optional[str], since: float) -> Optional[dict]:
+    """The saved answer of this run, once the run has settled (ChatRunService saves it), within TURN_WAIT."""
+    if not run_id: return None
+    svc, waited = public_chat_service(), 0.0
+    while True:
+        turn = await asyncio.to_thread(svc.answer_turn, sid, run_id, since)
+        if turn is not None or waited >= TURN_WAIT: return turn
+        await asyncio.sleep(TURN_POLL); waited += TURN_POLL

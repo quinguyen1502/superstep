@@ -159,6 +159,7 @@ WS /ws/run
     GET    /api/public/chat/{slug}/sessions/{sid}/turns?after=<turn_id>   (chỉ các lượt mới hơn)
     GET    /api/public/chat/{slug}/logo?v=<logo>
     WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
+    WS     /ws/public/v1/chat/{slug}   giao thức socket v1: các khung có kiểu, kèm v và seq (AsyncAPI: /asyncapi.public.yaml)
     GET    /api/public/chat-frame?path=/c/{slug}    (frame-ancestors của trang, cho nginx)
     ```
 

@@ -11,6 +11,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   public OpenAPI (`/openapi.public.json`, tag `Chat`, version 1.1.0) with response models and error codes. The
   unversioned `/api/public/chat/...` paths keep working as aliases. New `GET .../sessions/{sid}/turns?after=<turn_id>`
   returns only the turns after that one. The TypeScript and Python SDKs map the chat error codes.
+- **Chat socket protocol v1** (TASK-0216, DEC-0078). `/ws/public/v1/chat/{slug}` speaks typed frames: the client sends
+  `auth` (optional), then one `message` or `answer`, and may `cancel`; the server sends `ready`, `run_started`, `token`
+  (the v1 name of `node_token`), `step`, `question`, `turn` (the saved answer's id, to rate it) and `done` or `error`,
+  each with `v` and a per-connection `seq`. The frames are specified as JSON Schema and as an AsyncAPI 3.0 document
+  (`/asyncapi.public.yaml`, `docs/asyncapi/chat-v1.yaml`). A frame that is not v1 answers `CHAT_FRAME_INVALID`. The
+  unversioned socket is unchanged.
 
 ### Fixed
 

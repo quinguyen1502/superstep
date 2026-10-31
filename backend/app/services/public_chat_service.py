@@ -152,6 +152,13 @@ class PublicChatService:
             rows = rows[at + 1:]
         return {"turns": rows}, v
 
+    def answer_turn(self, sid: str, run_id: str, since: float) -> Optional[dict]:
+        """The answer turn of a run saved after `since` in this session (the v1 socket's `turn` frame), or None yet; a
+        resumed run's earlier question turn does not count. The caller has checked the session is the visitor's."""
+        rows = self.chat.sessions.turns(sid)
+        x = next((x for x in reversed(rows) if x.role == "assistant" and x.run_id == run_id and x.created >= since), None)
+        return None if x is None else {"id": x.id, "status": x.status, "run_id": x.run_id}
+
     def rate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict], value, comment) -> tuple[dict, Visitor]:
         """The visitor rates one of their own finished answers. An unpublished chat refuses it (DEC-0070)."""
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
