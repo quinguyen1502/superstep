@@ -5,7 +5,7 @@
 # `uv tool install 'superstep[cli]==<version>'`. SUPERSTEP_VERSION overrides the pin.
 set -eu
 
-VERSION="${SUPERSTEP_VERSION:-0.10.0}"
+VERSION="${SUPERSTEP_VERSION:-0.10.1}"
 
 os_name=$(uname -s 2>/dev/null || printf '%s' "${OS:-unknown}")
 case "$os_name" in
