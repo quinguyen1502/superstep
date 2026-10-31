@@ -11,7 +11,7 @@ from typing import Callable, Optional
 from ..core import config, crypto
 from ..core.errors import AppError
 from ..core.logging import get_logger
-from ..engine import approval_policy, deadlines
+from ..engine import approval_judge, approval_policy, deadlines
 from ..models import ApprovalAudit, ApprovalRequest, ApprovalWait
 from ..repositories import ApprovalRepository, RunRepository, UserRepository, WorkflowRepository
 from .approval_channels import ApprovalChannel, ApprovalMessage
@@ -25,6 +25,8 @@ CLOSE_TEXTS = ("answered", "cancelled", "expired", "deadline_approved", "deadlin
 PROMPT_MAX = 4000  # characters of the question kept on a waiting step (the inbox shows it)
 BACKGROUND = True  # send/edit messages off the request thread; tests switch it off for determinism
 
+
+REVIEW_LOST_AFTER = approval_judge.TIMEOUT * 2 + 60  # seconds: longer than any review can take
 
 class ApprovalService:
     def __init__(self, repo: ApprovalRepository, users: UserRepository, workflows: WorkflowRepository, runs: RunRepository, channels: ChannelService,
@@ -123,8 +125,8 @@ class ApprovalService:
         target = str(cfg.get("target") or "").strip()
         kind = cfg.get("channel"); needs_target = self.adapters[kind].target_required if kind in self.adapters else True
         external = bool(cfg.get("channel_id") or kind) and not (needs_target and not target)
-        w = self._wait(rid, owner, wid, ev, cfg, external, (node or {}).get("data") or {})
         policy = self._policy(wid, node)
+        w = self._wait(rid, owner, wid, ev, cfg, external, (node or {}).get("data") or {}, review=policy["mode"] if policy else None)
         if policy is not None:  # AI review first; people are asked only when it does not answer (DEC-0075 decision 1)
             job = lambda: self._reviewed(rid, owner, wid, node, cfg, target, ev, w, policy, external, state)  # noqa: E731
         elif external: job = lambda: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)  # noqa: E731
@@ -140,10 +142,12 @@ class ApprovalService:
                    "prompt": ev.get("prompt") or "", "state": state if isinstance(state, dict) else {}}
         try: r = self.reviewer.review(owner, wid, policy, request)
         except Exception: log.exception("AI review of run %s failed", rid); r = {"mode": policy["mode"], "outcome": "escalated", "cause": "error"}
+        if r is not None: self._count_usage(rid, w, r)  # the tokens were spent either way
+        if not self.repo.finish_review(w.id):  # the restart recovery has sent the step to people meanwhile (TASK-0204)
+            log.info("AI review of run %s finished after the step was sent to people", rid); return
         if r is None:  # paused meanwhile: as if AI review were off
             if external: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)
             return
-        self._count_usage(rid, w, r)
         if r.get("decision"): self.repo.set_opinion(w.id, r["decision"], r.get("confidence"), r.get("reason"))
         self._audit(owner, "auto", f"auto_{r['outcome']}", code=r.get("cause"), run_id=rid, wid=wid, auto=r)
         if r["outcome"] in ("approved", "rejected"):
@@ -176,7 +180,7 @@ class ApprovalService:
         """The node's approvers (e-mails) as studio user ids; unknown addresses are dropped."""
         return [u.id for e in cfg.get("approvers") or [] if isinstance(e, str) and (u := self.users.get_by_email(e.strip().lower()))]
 
-    def _wait(self, rid, owner, wid, ev, cfg, external: bool, data: dict) -> ApprovalWait:
+    def _wait(self, rid, owner, wid, ev, cfg, external: bool, data: dict, review: Optional[str] = None) -> ApprovalWait:
         """The waiting step the Approvals inbox lists (TASK-0065), written for every Human node, channel or not, with the
         node's deadline from the run's own workflow snapshot (TASK-0066)."""
         kind = (cfg.get("channel") or ((ch := self.repo.channel(str(cfg["channel_id"]))) and ch.kind) or None) if external else None
@@ -185,7 +189,7 @@ class ApprovalService:
             id=uuid.uuid4().hex[:12], run_id=rid, node_id=str(ev.get("node") or ""), owner=owner, workflow_id=wid, label=ev.get("label") or None,
             prompt=(ev.get("prompt") or "")[:PROMPT_MAX] or None, channel=kind, status="waiting", created=now,
             approval=json.dumps(cfg) if external else None, deadline=json.dumps(dl) if dl else None, reminders=0,
-            due_at=now + dl["after"] if dl else None, next_remind_at=now + dl["remind_every"] if dl and dl["remind_every"] else None),
+            due_at=now + dl["after"] if dl else None, next_remind_at=now + dl["remind_every"] if dl and dl["remind_every"] else None, review=review),
             self._approver_ids(cfg))
 
     def may_answer(self, uid: str, w: ApprovalWait) -> bool:
@@ -411,10 +415,32 @@ class ApprovalService:
         return len(closed)
 
     # ---- deadlines (TASK-0066): fired by the worker's maintenance loop ----
+    def recover_reviews(self, now: Optional[float] = None) -> int:
+        """Steps whose AI review was lost (the process stopped while the judge was asked) go to people, as a failed
+        review does (fail-safe, DEC-0075): the run owner is told in auto mode and the channel request is sent. A review
+        is lost once it started longer ago than the judge may take plus a margin. Claimed with a compare-and-set, so a
+        late review and several workers act once (TASK-0204)."""
+        now = time.time() if now is None else now; n = 0
+        for w in self.repo.lost_reviews(now - REVIEW_LOST_AFTER):
+            mode = w.review
+            if not self.repo.finish_review(w.id): continue
+            try:
+                r = {"mode": mode, "outcome": "escalated" if mode == "auto" else "suggested", "cause": "restart"}
+                self._audit(w.owner, "auto", f"auto_{r['outcome']}", code="restart", run_id=w.run_id, wid=w.workflow_id, auto=r)
+                ev = {"node": w.node_id, "label": w.label, "prompt": w.prompt}
+                if mode == "auto": self._notify(w.owner, "run_waiting", w.run_id, w.workflow_id, ev, r)
+                if w.approval:
+                    cfg = json.loads(w.approval)
+                    self._request(w.run_id, w.owner, w.workflow_id, {"id": w.node_id}, cfg, str(cfg.get("target") or "").strip(), ev, w.due_at)
+                n += 1
+            except Exception: log.exception("recovering the AI review of run %s failed", w.run_id)
+        return n
+
     def fire_deadlines(self, now: Optional[float] = None) -> int:
         """Send due reminders and act on due deadlines. Each one is claimed with a compare-and-set, so it fires once with
-        several workers and after a restart (a deadline missed during downtime fires on the first sweep). Returns how many fired."""
-        now = time.time() if now is None else now; fired = 0
+        several workers and after a restart (a deadline missed during downtime fires on the first sweep). Returns how many fired.
+        AI reviews lost to a restart are sent to people first (TASK-0204)."""
+        now = time.time() if now is None else now; fired = self.recover_reviews(now)
         for w in self.repo.due_waits(now):
             try:
                 if w.due_at is not None and w.due_at <= now: fired += self._timeout(w, now)

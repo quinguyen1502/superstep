@@ -38,24 +38,27 @@ class AttachmentMigration:
         if not probe["ok"]: raise AppError("CHAT_ATTACHMENT_STORAGE", reason=probe["reason"])
         out = {"to": to, "dry_run": dry_run, "moved": 0, "bytes": 0, "failed": [], "pending": 0}
         if dry_run:
-            out["pending"] = sum(v["files"] for k, v in self.repo.by_storage().items() if k != to)
+            out["pending"] = self._pending(to, target)
             return out
         failed: list[str] = []
         while limit is None or out["moved"] < limit:
             size = batch if limit is None else min(batch, limit - out["moved"])
-            rows = self.repo.not_on(to, size, tuple(failed))
+            rows = self.repo.not_on(to, size, tuple(failed), target.location)
             if not rows: break
             for r in rows:
                 reason = self._move(r, target)
                 if reason is None: out["moved"] += 1; out["bytes"] += r.size or 0
                 else: failed.append(r.id); out["failed"].append({"id": r.id, "reason": reason})
-        out["pending"] = sum(v["files"] for k, v in self.repo.by_storage().items() if k != to)
+        out["pending"] = self._pending(to, target)
         return out
+
+    def _pending(self, to: str, target) -> int:
+        return self.repo.count_not_on(to, target.location)
 
     def _move(self, r, target) -> Optional[str]:
         """None when the file now lives on `target`, else why it stays where it is."""
         try:
-            data = self.stores.get(r.storage).read(r.key if r.storage != "db" else r.id)
+            data = self.stores.get(r.storage, r.location).read(r.key if r.storage != "db" else r.id)
             if r.size is not None and len(data) != r.size: return "size does not match the stored file"
             digest = hashlib.sha256(data).hexdigest()
             key = None if target.inline else key_for(r.workflow_id, r.session_id, r.id)
@@ -66,10 +69,11 @@ class AttachmentMigration:
                     target.delete(key); return "checksum does not match after the copy"
         except StoreError as e:
             return "missing on its backend" if e.missing else e.reason
-        if not self.repo.switch(r.id, r.storage, to=target.name, key=key, data=data if target.inline else b""):
+        if not self.repo.switch(r.id, r.storage, to=target.name, key=key, data=data if target.inline else b"",
+                                frm_location=r.location, location=None if target.inline else target.location):
             if key: self._quiet_delete(target, key)  # the file was deleted meanwhile
             return "the file changed during the move"
-        if r.storage != "db": self._quiet_delete(self.stores.get(r.storage), r.key)
+        if r.storage != "db": self._quiet_delete(self.stores.get(r.storage, r.location), r.key)
         return None
 
     @staticmethod

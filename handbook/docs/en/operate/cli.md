@@ -94,6 +94,9 @@ exit code is then 1. An interrupted run leaves every file readable, and running
 the command again continues; when nothing is left it does nothing. `--batch N`
 sets how many files are read per batch (default 100). Set
 `STUDIO_ATTACHMENT_STORAGE` to the same backend so new files go there too.
+Files on the same backend but in an older folder, bucket or prefix are moved
+as well, so `--to fs` after changing `STUDIO_ATTACHMENT_FS_PATH` (or `--to s3`
+after changing the bucket or prefix) gathers them in the new place.
 Admins can do the same over the API with `GET /api/admin/attachments` and
 `POST /api/admin/attachments/migrate`.
 
