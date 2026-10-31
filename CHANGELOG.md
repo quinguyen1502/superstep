@@ -21,6 +21,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   port with database (default), folder and S3-compatible backends, a migrate command and backup coverage, planned as
   TASK-0191 to TASK-0195. Nothing is implemented yet.
 
+### Fixed
+
+- **Two timing-sensitive tests** (TASK-0196). The parallel tool-call test proves the three calls run at once with a
+  barrier instead of comparing start and end times. The studio e2e test checks the opened workflow's visible Last run
+  badge instead of the first `ok` on the page, which is the phone-only copy hidden on desktop.
+
 ## 0.10.0 (2026-10-31)
 
 ### Added
