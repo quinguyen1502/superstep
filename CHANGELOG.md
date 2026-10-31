@@ -6,6 +6,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **An Agent in a chat sends the new message to the model once** (TASK-0214). A chat's conversation field holds the
+  earlier exchanges plus the new message, and an Agent with that field as its history and `{{state.message}}` in its
+  task prompt (the built-in templates do this) sent the message twice, wasting tokens. The Agent now leaves the
+  history's last user message out when the task prompt already contains it, in the studio and in the Python and
+  TypeScript exports; saved workflows need no change. The LLM node and the public chat page had no separate
+  duplication (the page uses the same run input).
 - **Two tokens can no longer get the same name at the same moment** (TASK-0213). Active personal access token names are
   now unique per user in the database (a partial unique index; revoked tokens still free their name). A create that
   loses the race answers `PAT_NAME_TAKEN`, and a CLI sign-in collected at that moment gets the next free name

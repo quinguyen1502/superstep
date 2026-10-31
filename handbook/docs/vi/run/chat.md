@@ -160,6 +160,10 @@ Cuộc trò chuyện đến giờ:
 Trả lời tin nhắn cuối của người dùng.
 ```
 
+[Node Agent](../guide/agent.md) dùng trường này làm **Trường lịch sử** và có tin nhắn trong prompt
+nhiệm vụ (`{{state.message}}`) gửi tin nhắn mới một lần: dưới dạng prompt nhiệm vụ, không lặp lại ở
+mục cuối của lịch sử.
+
 ## Node Human trong chat
 
 Tuỳ chọn **Người trả lời** của node Human quyết định ai trả lời khi workflow

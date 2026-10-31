@@ -161,6 +161,10 @@ Conversation so far:
 Answer the last user message.
 ```
 
+An [Agent node](../guide/agent.md) with this field as its **History field** and the message in
+its task prompt (`{{state.message}}`) sends the new message once: as the task prompt, not also as
+the last history item.
+
 ## Human nodes in a chat
 
 A Human node's **Answered by** option decides who answers it when the workflow

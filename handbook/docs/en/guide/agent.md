@@ -34,7 +34,7 @@ history fields in **Data**; max rounds and retry/timeout in **Execution**.
 | Max rounds | 1–25, default 5. See [Rounds and the limit](#rounds-and-the-limit). |
 | Output field | Receives the final answer. |
 | Steps field | Optional, a list field. Receives every tool call: `{tool, args, result, status, ms}`, plus `approval` when a person answered. |
-| History field | Optional, a list field of `{role, content}` messages (`user` or `assistant`) added before the task prompt, such as a chat's `messages` field. |
+| History field | Optional, a list field of `{role, content}` messages (`user` or `assistant`) added before the task prompt, such as a chat's `messages` field. A chat's field ends with the new message; when the task prompt already contains it (for example `{{state.message}}`), the Agent leaves that last item out, so the model gets the message once. |
 | Include attachments | Adds the chat's files to the task message, as on the [LLM node](nodes.md#llm). See [Attachments](../run/chat.md#attachments). |
 | Tools | At least one. See below. |
 | Approval | Shown when a tool needs approval: channel, approvers and deadline, as on a Human node. |
