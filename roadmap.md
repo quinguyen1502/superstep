@@ -416,6 +416,8 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0190 Version 0.10.0: chat attachments, agent hand-offs and the Help desk template, AI review of approvals,
   the `sstep` alias. **released** (PR #242 to main, tag `v0.10.0`).
 - TASK-0202 Version 0.10.1: scheduled-backup S3 manifest, AI review usage, Playwright e2e in CI, S3 multipart
-  uploads, README update. **in progress**.
+  uploads, README update. **released** (PR #256 to main, tag `v0.10.1`).
+- TASK-0211 Version 0.10.2: attachment storage, AI review and CLI sign-in safety fixes, hand-off before the
+  first agent, request body ceilings, Human node answers in the chat, e2e race fixes. **in progress**.
 - Earlier releases (0.3.0 to 0.6.0: TASK-0096, TASK-0098, TASK-0100, TASK-0105, TASK-0111) and the tasks between
   TASK-0087 and TASK-0112 are not listed in this roadmap. Their task files and CHANGELOG.md have the details.

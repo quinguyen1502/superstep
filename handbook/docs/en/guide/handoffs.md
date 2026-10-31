@@ -46,6 +46,11 @@ agent that answered last, so the person keeps talking to Billing. If that
 agent was deleted or is no longer a hand-off target, the chat starts at the
 entry agent again. A new session always starts at the entry agent.
 
+This needs Start to lead straight to the entry agent. When other nodes sit
+between Start and the first agent (masking personal data, a filter, a
+customer lookup), they run on every message, and the chat then starts at the
+entry agent each time instead of skipping them.
+
 ## Trace
 
 The run trace and the chat steps show **Triage › hand-off** with the target

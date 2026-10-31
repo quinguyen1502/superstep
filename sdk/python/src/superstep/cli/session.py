@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -56,15 +57,34 @@ def write_config(data: dict) -> None:
     os.chmod(path, 0o600)
 
 
+def same_server(a: str, b: str) -> bool:
+    """True when two base URLs name the same server: scheme and host compared without case, a default port dropped,
+    a trailing slash ignored."""
+    def norm(u: str) -> tuple:
+        p = urlsplit((u or "").strip())
+        scheme, host = (p.scheme or "").lower(), (p.hostname or "").lower()
+        port = p.port if p.port not in ({"http": 80, "https": 443}.get(scheme),) else None
+        return scheme, host, port, (p.path or "").rstrip("/")
+    try:
+        return bool(a and b) and norm(a) == norm(b)
+    except ValueError:
+        return False
+
+
 def resolve_target(url_flag: Optional[str] = None) -> tuple[str, str]:
-    """Base URL and token. `--url`, then `SUPERSTEP_URL`, then the file. The token is the env var, then the file."""
+    """Base URL and token. `--url`, then `SUPERSTEP_URL`, then the file. The token is `SUPERSTEP_TOKEN`, else the
+    saved token, but the saved token only for the server it was issued by: a `--url` or `SUPERSTEP_URL` naming
+    another server gets no token (log in there, or pass SUPERSTEP_TOKEN), so the token never leaves for a server it
+    does not belong to (TASK-0205)."""
     data = load_config()
     url = url_flag or os.environ.get("SUPERSTEP_URL") or data.get("url") or ""
-    token = os.environ.get("SUPERSTEP_TOKEN") or data.get("token") or ""
     if not isinstance(url, str):
         url = ""
-    if not isinstance(token, str):
-        token = ""
+    token = os.environ.get("SUPERSTEP_TOKEN") or ""
+    if not token:
+        saved, issuer = data.get("token"), data.get("url")
+        if isinstance(saved, str) and isinstance(issuer, str) and same_server(url, issuer):
+            token = saved
     return url.rstrip("/"), token
 
 

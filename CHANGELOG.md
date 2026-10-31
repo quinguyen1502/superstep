@@ -4,6 +4,75 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.10.2 (2026-10-31)
+
+### Security
+
+- **Request bodies are bounded outside the upload routes again** (TASK-0207). Since TASK-0203 the bundled nginx let
+  every `/api/` request carry up to 110 MB, including the unauthenticated chat and approval callbacks that read the whole
+  body. nginx is back to 10 MB, with `WEB_MAX_BODY_SIZE` only on the upload routes (chat attachments, workflow import,
+  knowledge documents), and the app enforces its own ceilings without a proxy too: 1 MB for the callbacks,
+  `STUDIO_MAX_BODY_MB` (default 10) elsewhere.
+- **An approved CLI sign-in that is never collected leaves no token behind** (TASK-0207). The token is now created when
+  the CLI collects it instead of being stored in plain text at approval; a token stored by an older version is revoked
+  and cleared once its sign-in expires.
+- **The CLI sign-in asks for the code from the terminal** (TASK-0205, DEC-0076). The `superstep login` link no longer
+  carries the code, and `/cli/authorize` asks the person to type the code their terminal shows, with a warning, so a
+  link someone else sends cannot be approved with one click. Sign-in starts are limited to 10 per client IP per 10
+  minutes (`RATE_LIMITED`), and old sign-ins are removed.
+- **The CLI sends its saved token only to the server that issued it** (TASK-0205). A `--url` or `SUPERSTEP_URL` naming
+  another server gets no token; log in there or set `SUPERSTEP_TOKEN`.
+- **AI review sends a request it cannot see in full to people** (TASK-0204). The judge saw only the first 12,000
+  characters, so a field after a long one (a `bcc` after a long body) could be approved unseen; such a request now goes
+  to people (cause `too_long`).
+- **The attachment orphan sweep only deletes its own files** (TASK-0203). It used to delete any file older than an hour
+  in the attachment folder or bucket prefix that no row named, including another install's files or the studio's own
+  data when the folder was set to the data folder. It now deletes only names of the form `<workflow>/<chat>/<file id>`
+  at the configured location. A folder that is or contains the data folder is refused (`/api/health` shows
+  `attachment_storage_ok: false`), and an empty S3 prefix logs a warning.
+
+### Fixed
+
+- **The chat remembers a Human node's question with its answer** (TASK-0210). The conversation field had the answer
+  (`approved`) without the question it answered, and each answer shifted the "Messages remembered" cut by one
+  message. The question now comes before its answer and the cut keeps whole exchanges. A form answer (an object) is
+  saved as the person's turn too, one `field: value` line per field, so the question is no longer left as the last turn.
+- **An answer to a Human node stays in the chat** (TASK-0209). Approving, rejecting or typing an answer in the Chat
+  panel or on a public chat page showed the answer only until the reply arrived; it was never saved, so it vanished
+  and the question above it still looked open. The answer is now saved as the person's turn (and the next turns
+  remember it), and the chat keeps the message box busy until the saved reply is read back, so a message sent in
+  that moment is no longer taken as a second answer to the finished run or dropped.
+- **Three end-to-end tests no longer fail at random** (TASK-0209): the delivery log test stopped refreshing after its
+  first empty read, the read-only profile test counted the language the normal account saves after sign-up, and the
+  chat test typed its next message while the previous reply was still being read. The language sent after sign-in is
+  also sent once instead of twice.
+
+- **A body without a length that passes the ceiling answers 413** (TASK-0208). On routes that parse JSON, a form or a
+  file, a chunked body past the ceiling answered 400 `BAD_REQUEST`; it now answers 413 `PAYLOAD_TOO_LARGE` like a body
+  that declares its length.
+- **A CLI sign-in is not lost when its token name is taken meanwhile** (TASK-0208, DEC-0076). If a token with the
+  approved name was created before the CLI collected its token, the poll failed with `PAT_NAME_TAKEN` and the sign-in
+  was consumed; the new token now gets a free name such as `laptop (2)`.
+- **Old S3 attachments stay readable after the s3 settings are removed** (TASK-0207). A file's recorded bucket and
+  prefix are enough to read it once storage moved to another backend; missing credentials are named in the error.
+- **A chat no longer skips the nodes between Start and the first agent** (TASK-0206, DEC-0073). After a hand-off, the
+  next message jumped from Start straight to the agent that answered last, so a masking, filter or lookup step before
+  the first agent did not run. The chat now continues with that agent only when Start leads straight to agents;
+  otherwise every message runs from Start. The Python, LangGraph and TypeScript exports do the same.
+- **A personal access token's last use is written at most every 5 minutes** instead of on every request (TASK-0205).
+- **An AI review lost to a restart goes to people** (TASK-0204). The maintenance sweep sends a step whose review never
+  finished to people (cause `restart`): the run owner is told in auto mode and the channel request is sent.
+- **The AI review daily cap holds for parallel steps** (TASK-0204). Each automatic answer reserves its slot atomically,
+  so the steps of one wave cannot pass the cap together; an escalated review gives its slot back.
+- **AI review usage is no longer lost on SQLite** (TASK-0204). A waiting run's update kept an `approval_review` event
+  appended at the same time.
+- **Attachments survive a change of folder, bucket or prefix** (TASK-0203). Each file records where it was written
+  (migration `0048`, filled for older files at start-up), so it is still read from there, and `superstep attachments
+  migrate --to fs|s3` moves files between two locations of the same backend.
+- **A visitor's upload no longer blocks the server while it is stored** (TASK-0203).
+- **Uploads above 10 MB reach the API behind the bundled nginx** (TASK-0203). The `web` image allows `WEB_MAX_BODY_SIZE`
+  (default `110m`) and answers a larger body with the API's `PAYLOAD_TOO_LARGE` envelope instead of an HTML page.
+
 ## 0.10.1 (2026-10-31)
 
 ### Added

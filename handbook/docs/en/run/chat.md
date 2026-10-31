@@ -131,6 +131,23 @@ shows a short reason such as `S3 error AccessDenied`. The published images
 include the S3 client; a source install needs `pip install
 "superstep-backend[s3]"`.
 
+Give attachments a folder or bucket prefix of their own. The studio deletes
+leftover files there that no chat refers to, but only files whose names it
+made itself (`<workflow>/<chat>/<file id>`), so other files are never touched.
+A folder that is, or contains, the studio's data folder (the database, the
+secret key, imports) is refused: `/api/health` shows
+`attachment_storage_ok: false` and uploads fail; use a subfolder such as
+`/data/attachments`. An empty `STUDIO_ATTACHMENT_S3_PREFIX` on a bucket shared
+with anything else logs a warning; set a prefix such as `superstep/`.
+
+Each file remembers the folder or bucket and prefix it was written to, so
+changing `STUDIO_ATTACHMENT_FS_PATH`, the bucket or the prefix later does not
+lose older files: they are still read from where they are, and
+`superstep attachments migrate --to fs` (or `--to s3`) moves them to the new
+place. Files in a bucket stay readable after switching to another backend and
+removing `STUDIO_ATTACHMENT_S3_BUCKET`, as long as the S3 credentials (and
+endpoint) are still set; without them, reading fails with "no S3 credentials".
+
 ## Memory
 
 With a conversation field set, each run gets the last *n* exchanges plus the
@@ -151,7 +168,9 @@ runs from a chat:
 
 - **The person chatting** (default): the question appears in the chat with
   **Approve** and **Reject**; or type your answer in the message box. The answer goes to the node's
-  output field and the run goes on.
+  output field and the run goes on. Your answer stays in the chat as your message (a form answer as
+  one `field: value` line per field), and the later turns remember it together with the question it
+  answered, in the same exchange.
 - **A reviewer**: the chat says it is waiting for approval, and the question
   goes to the [Approvals](human-approval.md) page (and its channels) as usual.
   The chat shows the answer once the run goes on.
@@ -160,7 +179,8 @@ An [Agent node](../guide/agent.md#approval-before-a-tool)'s tool approvals are
 always a reviewer's: the person chatting does not approve the agent's own
 actions.
 
-A new message cannot be sent while the chat waits for an answer. The node's
+A new message cannot be sent while the chat waits for an answer, or while a reply
+is still on its way: the send button stays a stop button until the reply is saved. The node's
 [deadline](human-approval.md#deadlines) applies in both cases; when it passes,
 its timeout action decides what happens.
 

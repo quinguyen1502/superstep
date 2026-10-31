@@ -19,8 +19,12 @@ class S3Store(AttachmentStore):
                  secret_key: str = "", path_style: bool = False, client=None, part_mb: int = 8):
         if not bucket: raise StoreError("STUDIO_ATTACHMENT_S3_BUCKET is not set")
         self.bucket, self.prefix = bucket, (prefix.strip("/") + "/") if prefix.strip("/") else ""
+        self.location = f"{bucket}/{self.prefix.rstrip('/')}"
         self.client = client or self._client(endpoint, region, access_key, secret_key, path_style)
         self.part = max(5, int(part_mb)) * 1024 * 1024  # S3 parts are at least 5 MB, except the last
+
+    def warning(self) -> str | None:
+        return None if self.prefix else "STUDIO_ATTACHMENT_S3_PREFIX is empty: use a prefix when the bucket is shared"
 
     @staticmethod
     def _client(endpoint, region, access_key, secret_key, path_style):
@@ -40,6 +44,8 @@ class S3Store(AttachmentStore):
 
     @staticmethod
     def _error(e: Exception, missing_codes=("NoSuchKey", "404", "NotFound")) -> StoreError:
+        if type(e).__name__ == "NoCredentialsError":  # no keys set and none in the default AWS chain (TASK-0207)
+            return StoreError("no S3 credentials: set STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID and STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY")
         code = getattr(e, "response", {}).get("Error", {}).get("Code") if hasattr(e, "response") else None
         if code in missing_codes: return StoreError("not found", missing=True)
         return StoreError(f"S3 error {code}" if code else f"S3 unreachable ({type(e).__name__})")

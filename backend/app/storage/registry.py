@@ -2,7 +2,7 @@
 where its bytes are read from, so every backend a row names must still be reachable."""
 from __future__ import annotations
 import threading, time
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 from ..core import config
 from .base import AttachmentStore, StoreError
 
@@ -10,18 +10,27 @@ NAMES = ("db", "fs", "s3")
 
 
 class Stores:
-    def __init__(self, factories: Dict[str, Callable[[], AttachmentStore]]):
+    def __init__(self, factories: Dict[str, Callable[..., AttachmentStore]]):
         self.factories, self._built, self._lock = factories, {}, threading.Lock()
         self._status: tuple[float, dict] | None = None
 
-    def get(self, name: str) -> AttachmentStore:
-        if name not in self._built:
+    def get(self, name: str, location: Optional[str] = None) -> AttachmentStore:
+        """The configured store of `name`, or, with `location`, the store at that folder or bucket/prefix (a row written
+        before the setting changed, TASK-0203). No location is the configured one."""
+        if not location: return self._make(name, None)
+        try: store = self._make(name, None)
+        except StoreError: return self._make(name, location)  # the backend is no longer configured: the row's location is enough (TASK-0207)
+        return store if location == store.location else self._make(name, location)
+
+    def _make(self, name: str, location: Optional[str]) -> AttachmentStore:
+        k = (name, location)
+        if k not in self._built:
             with self._lock:
-                if name not in self._built:
+                if k not in self._built:
                     make = self.factories.get(name)
                     if make is None: raise StoreError(f"unknown attachment storage '{name}' (use {', '.join(NAMES)})")
-                    self._built[name] = make()
-        return self._built[name]
+                    self._built[k] = make(location) if location is not None else make()
+        return self._built[k]
 
     def current(self) -> AttachmentStore:
         return self.get(config.attachment_storage())
@@ -45,5 +54,11 @@ def default(rows) -> Stores:
     from .db import DbStore
     from .fs import FsStore
     from .s3 import S3Store
-    return Stores({"db": lambda: DbStore(rows), "fs": lambda: FsStore(config.attachment_fs_path()),
-                   "s3": lambda: S3Store(**config.attachment_s3())})
+    def s3_at(location=None):
+        cfg = config.attachment_s3()
+        if location is not None:
+            bucket, _, prefix = location.partition("/"); cfg.update(bucket=bucket, prefix=prefix)
+        return S3Store(**cfg)
+    return Stores({"db": lambda location=None: DbStore(rows),
+                   "fs": lambda location=None: FsStore(location or config.attachment_fs_path(), tuple(config.data_paths())),
+                   "s3": s3_at})

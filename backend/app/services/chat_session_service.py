@@ -129,6 +129,13 @@ def steps_of(events: list, mode: str) -> list[dict]:
     return list(out.values())
 
 
+def answer_text(v) -> str:
+    """A Human-node answer as the person's turn (TASK-0210): a string as typed, a form as `field: value` lines."""
+    if isinstance(v, str): return v.strip() and v
+    if isinstance(v, dict): return "\n".join(f"{k}: {x if isinstance(x, str) else json.dumps(x, ensure_ascii=False)}" for k, x in v.items() if x not in (None, ""))
+    return "" if v is None else json.dumps(v, ensure_ascii=False)
+
+
 class ChatSessionService:
     def __init__(self, sessions: ChatSessionRepository, triggers: ChatTriggerRepository, messages: ChatMessageRepository,
                  workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None, attachments: Optional[ChatAttachmentRepository] = None,
@@ -388,7 +395,7 @@ class ChatSessionService:
         a = settings_of(st)
         if a["enabled"] and a["field"] in fields: inp[a["field"]] = [state_record(x) for x in files]
         if s.active_agent:  # the agent a hand-off left the conversation with (TASK-0181); gone or no longer a target: the entry
-            if s.active_agent in handoffs.receivers(self._graph(w)): inp[agents.START_INPUT] = s.active_agent
+            if s.active_agent in handoffs.continues(self._graph(w)): inp[agents.START_INPUT] = s.active_agent
             else: self.sessions.set_fields(sid, active_agent=None); s.active_agent = None
         if size({k: v for k, v in inp.items() if k != a["field"]}) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
         return {"workflow_id": s.workflow_id, "input": inp, "text": text, "attachment_ids": [x.id for x in files]}
@@ -406,10 +413,15 @@ class ChatSessionService:
         return rows
 
     def history(self, sid: str, max_turns: int) -> list[dict]:
-        """The last `max_turns` exchanges as [{role, content}] (DEC-0052): the person's messages and the finished answers."""
-        rows = [x for x in self._turns(sid) if x.role == "user" or (x.role == "assistant" and x.status == "ok")]
-        msgs = [{"role": x.role, "content": x.text} for x in rows]
-        return msgs[-2 * max_turns:]
+        """The last `max_turns` exchanges as [{role, content}] (DEC-0052): the person's messages and the finished answers.
+        A Human-node question answered in the chat stays before its answer (TASK-0210), so the roles alternate; an
+        exchange starts at each of the person's messages and is cut whole."""
+        ts = self._turns(sid)
+        answered = {x.run_id for a, x in zip(ts, ts[1:]) if a.status == "waiting" and x.role == "user"}  # the answer follows its question
+        rows = [x for x in ts if x.role == "user" or (x.role == "assistant" and (x.status == "ok" or (x.status == "waiting" and x.run_id in answered)))]
+        starts = [i for i, x in enumerate(rows) if x.role == "user" and not (i and rows[i - 1].status == "waiting")]
+        if max_turns < len(starts): rows = rows[starts[-max_turns]:]
+        return [{"role": x.role, "content": x.text} for x in rows]
 
     def record(self, uid: str, sid: str, text: str, rid: str, attachment_ids: Optional[list] = None) -> None:
         """The person's turn and the reply-once record, once the run is planned."""
@@ -426,6 +438,14 @@ class ChatSessionService:
                                            team="", sender=sender, text=text, ref=json.dumps({"session": sid}), status="started", run_id=rid, created=now))
         self.sessions.set_fields(sid, last_run_id=rid, **({"title": text[:TITLE_MAX]} if not s.title else {}))
         self.triggers.set_fields(t.id, last_message=now, last_run_id=rid)
+
+    def record_answer(self, sid: str, rid: str, text) -> None:
+        """The person's answer to a Human node, once the resume is planned (TASK-0209): saved as their turn, so it stays in
+        the thread after the reply arrives and the question above it is no longer the last (waiting) turn."""
+        text = answer_text(text)
+        if not text: return  # a resume without a response (steps, until) says nothing
+        self.sessions.add_turn(ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=rid, role="user", text=text, status="ok", created=time.time()))
+        self.sessions.set_fields(sid, last_run_id=rid)
 
     def check_answer(self, uid: str, sid: str, rid: str) -> None:
         """A visitor answer from the chat: the run is this session's and its Human node is answered by the visitor."""

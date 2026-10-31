@@ -24,6 +24,22 @@ def receivers(wf: Dict[str, Any]) -> set:
     return {h["target"] for n in agents.values() for h in targets(n.get("data") or {}) if h["target"] in agents}
 
 
+def straight_to_agents(wf: Dict[str, Any]) -> bool:
+    """True when every edge leaving the Start node goes straight into an Agent node. Only then may a chat start at the
+    agent that answered last: nodes between Start and the first agent (a filter, PII masking, a lookup) must run on
+    every message, so with them the chat starts from Start each time (TASK-0206, review finding 5, DEC-0073)."""
+    nodes = {n["id"]: n for n in wf.get("nodes") or [] if isinstance(n, dict) and "id" in n}
+    starts = [i for i, n in nodes.items() if n.get("type") == "start"]
+    out = [e.get("target") for e in wf.get("edges") or [] if isinstance(e, dict) and e.get("source") in starts]
+    out = [t for t in out if (nodes.get(t) or {}).get("type") != "note"]
+    return bool(out) and all((nodes.get(t) or {}).get("type") == "agent" for t in out)
+
+
+def continues(wf: Dict[str, Any]) -> set:
+    """The agents a chat may start at (receivers), or none when nodes sit between Start and the first agent."""
+    return receivers(wf) if straight_to_agents(wf) else set()
+
+
 def limit(wf: Dict[str, Any]) -> int:
     v = wf.get("max_handoffs", DEFAULT_MAX)
     return v if isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= MAX else DEFAULT_MAX

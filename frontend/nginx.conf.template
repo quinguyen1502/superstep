@@ -1,10 +1,17 @@
-# Rendered by the nginx image's envsubst step (API_UPSTREAM, default api:8000).
+# Rendered by the nginx image's envsubst step (API_UPSTREAM, default api:8000; WEB_MAX_BODY_SIZE, default 110m).
 map $http_upgrade $connection_upgrade { default upgrade; '' close; }
 
 server {
   listen 80;
   root /usr/share/nginx/html;
+  # 10 MB for every request; only the upload routes below take WEB_MAX_BODY_SIZE (TASK-0207). The api enforces its own
+  # ceilings as well (STUDIO_MAX_BODY_MB, 1 MB for the chat and approval callbacks).
   client_max_body_size 10m;
+  error_page 413 = @too_large;
+  location @too_large {
+    default_type application/json;
+    return 413 '{"success":false,"data":null,"error":{"code":"PAYLOAD_TOO_LARGE","message":"Payload too large","details":null}}';
+  }
 
   location = /healthz { access_log off; return 200 "ok\n"; }
 
@@ -14,6 +21,18 @@ server {
     # This nginx is the edge: it replaces X-Forwarded-For with the peer it sees, so a client cannot inject hops that the
     # api's STUDIO_TRUSTED_PROXIES (Compose: private ranges) would skip. Behind a load balancer, append instead
     # ($proxy_add_x_forwarded_for) and narrow STUDIO_TRUSTED_PROXIES to nginx + the balancer.
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 300s;
+  }
+
+  # Upload routes (chat attachments, workflow import, knowledge documents): above every upload ceiling the api enforces
+  # itself (STUDIO_CHAT_ATTACHMENT_MAX_MB, workflow zips 50 MB), so the api answers with its own error code; raise
+  # WEB_MAX_BODY_SIZE with a ceiling above 100 MB (TASK-0203, TASK-0207).
+  location ~ ^/api/(chat/sessions/[^/]+/attachments|public/chat/[^/]+/sessions/[^/]+/attachments|import|knowledge-bases/[^/]+/documents)/?$ {
+    client_max_body_size ${WEB_MAX_BODY_SIZE};
+    proxy_pass http://${API_UPSTREAM};
+    proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_read_timeout 300s;

@@ -50,10 +50,13 @@ test('webhook deliveries: retried with backoff, logged, redelivered; secret rota
     await page.request.post('/api/hooks/workflows/example/runs', { headers: { Authorization: `Bearer ${token}` }, data: { input: { message: 'hi' }, callback_url: `http://127.0.0.1:${port}/cb` } })
     await page.locator('#api-deliveries-tab').click()
     const row = page.locator('[data-testid=delivery-row]', { hasText: `127.0.0.1:${port}` }).first()
-    await expect.poll(async () => { await page.locator('#deliveries-refresh').click(); return row.locator('[data-testid=delivery-status]').textContent() }, { timeout: 20_000 }).toBe('đã gửi')
+    // read without waiting: textContent() on a row that is not listed yet waits for it, so the poll would never click
+    // Refresh again and the list would stay as it was before the delivery was logged (TASK-0209)
+    const now = async (l: typeof row) => { await page.locator('#deliveries-refresh').click(); return (await l.allTextContents())[0] ?? '' }
+    await expect.poll(() => now(row.locator('[data-testid=delivery-status]')), { timeout: 20_000 }).toBe('đã gửi')
     await expect(row).toContainText('2 lần thử'); await expect(row.locator('[data-testid=delivery-code]')).toHaveText('HTTP 200')
     await row.locator('[data-testid=delivery-redeliver]').click()
-    await expect.poll(async () => { await page.locator('#deliveries-refresh').click(); return row.textContent() }, { timeout: 20_000 }).toContain('1 lần thử')
+    await expect.poll(() => now(row), { timeout: 20_000 }).toContain('1 lần thử')
     expect(hits.length).toBe(3)
     // rotate the signing secret: shown once, the old one stays valid during the grace period
     await page.getByRole('tab', { name: 'Token' }).click()

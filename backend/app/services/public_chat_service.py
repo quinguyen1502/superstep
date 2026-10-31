@@ -182,6 +182,7 @@ class PublicChatService:
             body = {"resume_run_id": last.run_id, "response": req.get("response")}
             if node or shown: body["node"] = node or shown
             p = await asyncio.to_thread(plan, owner, body)
+            self.chat.record_answer(s.id, last.run_id, req.get("response"))
         else:
             prep = self.chat.prepare(s, t, req.get("message"), req.get("attachment_ids"))
             p = await asyncio.to_thread(plan, owner, {"workflow_id": t.workflow_id, "input": prep["input"]})

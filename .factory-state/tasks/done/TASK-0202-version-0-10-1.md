@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0202
-- Status: doing
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -47,3 +47,7 @@ Version 0.10.1. Release 0.10.1 as asked in chat (Nhưng lên v0.10.1): bump vers
 ## Activity Log
 
 - 2026-10-31: created from the owner's v0.10.1 follow-up list.
+- 2026-10-31: released: #255 into develop (3d388a87), release PR #256 into main (b27e266e), tag `v0.10.1` and the
+- 2026-10-31: implemented on `factory/task-0202-post-release` from `develop`. Version 0.10.1 released: bump #255, release #256 to main, tag v0.10.1, GitHub Release; GHCR and Render checked; PyPI publish awaits owner approval. `factory verify run --profile full` passed. The owner asked for these follow-ups before v0.10.1 ('Làm cả 4 việc rồi mới release'). Moved to done on this PR before the merge (TASK-0148).
+  GitHub Release. The Publish SDKs run on the tag waits for the `pypi` environment approval (owner).
+- Review: `.factory-state/artifacts/REV-0190-task-0202.md`. QA: `.factory-state/artifacts/QA-0190-task-0202.md`.

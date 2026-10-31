@@ -104,8 +104,18 @@ def test_visitor_answers_the_human_node_in_the_chat():
     assert say(tok, {"chat_session_id": sid, "message": "next"})[-1]["error"]["code"] == "CHAT_RUN_WAITING"
     evs = say(tok, {"chat_session_id": sid, "resume_run_id": q["run_id"], "response": "yes"})
     assert evs[-1]["status"] == "ok"
-    d = wait_turns(tok, sid, 3)
-    assert d["turns"][2]["status"] == "ok" and "Answer yes" in d["turns"][2]["text"]
+    d = wait_turns(tok, sid, 4)
+    # TASK-0209: the answer is the person's turn, so it stays in the thread and the question is no longer the last turn
+    assert [(x["role"], x["text"]) for x in d["turns"][2:3]] == [("user", "yes")] and d["turns"][2]["run_id"] == q["run_id"]
+    assert d["turns"][3]["status"] == "ok" and "Answer yes" in d["turns"][3]["text"]
+    # TASK-0210: the memory keeps the question before its answer (roles alternate) and cuts whole exchanges
+    svc = chat_session_service()
+    assert [(m["role"], m["content"]) for m in svc.history(sid, 10)[:3]] == [("user", "refund A1"), ("assistant", "Sure about refund A1?"), ("user", "yes")]
+    assert [m["role"] for m in svc.history(sid, 1)] == ["user", "assistant", "user", "assistant"]
+    assert say(tok, {"chat_session_id": sid, "resume_run_id": q["run_id"], "response": "again"})[-1]["error"]["code"]  # answered once
+    assert len(turns(tok, sid)["turns"]) == 4
+    say(tok, {"chat_session_id": sid, "message": "refund A2"}); wait_turns(tok, sid, 6)  # its question is unanswered: left out
+    assert [(m["role"], m["content"]) for m in svc.history(sid, 1)] == [("user", "refund A2")] and len(svc.history(sid, 2)) == 5
 
 
 def test_reviewer_answers_in_the_inbox_not_the_chat():
@@ -152,3 +162,14 @@ def test_retention_cleanup_and_access():
     other = user()
     assert c.get(f"/api/chat/sessions/{sid2}", headers=H(other)).json()["error"]["code"] == "CHAT_SESSION_NOT_FOUND"
     assert c.delete(f"/api/chat/sessions/{sid2}", headers=H(tok)).json()["data"] == {"ok": True}
+
+
+def test_a_form_answer_is_saved_as_readable_text():
+    """TASK-0210: an object answer (a form) is the person's turn too, as `field: value` lines."""
+    tok = user(); wid, sid = chat(tok, asking())
+    say(tok, {"chat_session_id": sid, "message": "refund A1"}); q = wait_turns(tok, sid, 2)["turns"][1]
+    svc = chat_session_service()
+    svc.record_answer(sid, q["run_id"], {"approved": True, "note": "ok", "empty": ""})
+    svc.record_answer(sid, q["run_id"], {}); svc.record_answer(sid, q["run_id"], None); svc.record_answer(sid, q["run_id"], "  ")
+    t = turns(tok, sid)["turns"]
+    assert [(x["role"], x["text"]) for x in t[2:]] == [("user", "approved: true\nnote: ok")]

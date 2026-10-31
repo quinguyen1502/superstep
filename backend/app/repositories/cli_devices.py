@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from ..models import CliDevice
 from ..models.database import Database
 
@@ -18,6 +18,23 @@ class CliDeviceRepository:
     def by_user_code_hash(self, user_code_hash: str) -> Optional[CliDevice]:
         with self.db.session() as s:
             return s.scalars(select(CliDevice).where(CliDevice.user_code_hash == user_code_hash)).first()
+
+    def claim(self, did: str, frm: str, to: str, **values) -> bool:
+        """Compare-and-set the status (with `values`): exactly one caller wins."""
+        with self.db.session() as s:
+            n = s.execute(update(CliDevice).where(CliDevice.id == did, CliDevice.status == frm).values(status=to, **values)).rowcount
+            s.commit(); return n == 1
+
+    def expired_secrets(self, now: float) -> list[CliDevice]:
+        """Sign-ins past their deadline that still hold a token secret (written before TASK-0207)."""
+        with self.db.session() as s:
+            return list(s.scalars(select(CliDevice).where(CliDevice.expires < now, CliDevice.secret.is_not(None))))
+
+    def delete_expired(self, before: float) -> int:
+        """Removes sign-ins whose deadline passed before `before` and that hold no undelivered token."""
+        with self.db.session() as s:
+            n = s.execute(delete(CliDevice).where(CliDevice.expires < before, CliDevice.secret.is_(None))).rowcount
+            s.commit(); return n
 
     def set_fields(self, did: str, **values) -> None:
         with self.db.session() as s:

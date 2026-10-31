@@ -79,12 +79,13 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_PUBLIC_CHAT_RATE_IP` | `30` | Trang chat công khai: số tin nhắn của mỗi IP trong một khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_READ` | `120` | Trang chat công khai: số lần mở trang, đọc chat và tạo chat mới của mỗi IP trong một khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | Độ dài khung (giây) của trang chat công khai. Giới hạn theo ngày của từng chat nằm trong Cài đặt Chat |
-| `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Tệp đính kèm trong chat: dung lượng tối đa mỗi tệp (MB); mỗi chat chỉ được đặt thấp hơn |
+| `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Tệp đính kèm trong chat: dung lượng tối đa mỗi tệp (MB); mỗi chat chỉ được đặt thấp hơn. Trên 100 thì tăng thêm `WEB_MAX_BODY_SIZE` của image `web` (mặc định `110m`); nginx kèm theo chỉ áp dụng nó cho các route tải lên, mọi request khác giới hạn 10 MB |
+| `STUDIO_MAX_BODY_MB` | `10` | Kích thước tối đa (MB) của body một request, trừ các route tải lên (tệp đính kèm chat, import workflow, tài liệu knowledge) vốn có giới hạn riêng; callback của chat và duyệt nhận tối đa 1 MB |
 | `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Tệp đính kèm trong chat: số tệp tối đa mỗi tin nhắn; mỗi chat chỉ được đặt thấp hơn |
 | `STUDIO_ATTACHMENT_STORAGE` | `db` | Nơi lưu nội dung tệp đính kèm trong chat: `db` (trong cơ sở dữ liệu), `fs` (một thư mục) hoặc `s3` (kho lưu trữ tương thích S3). Mỗi tệp giữ nguyên nơi nó đã được lưu, nên thay đổi chỉ áp dụng cho tệp mới. Xem [Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem) |
-| `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | Thư mục của backend `fs`. Với docker compose, `api` và `worker` dùng chung thư mục này trên volume `apidata` |
+| `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | Thư mục của backend `fs`. Với docker compose, `api` và `worker` dùng chung thư mục này trên volume `apidata`. Không được trùng với hoặc chứa thư mục dữ liệu |
 | `STUDIO_ATTACHMENT_S3_BUCKET` | (trống) | Bucket của backend `s3`. Bắt buộc khi dùng `s3` |
-| `STUDIO_ATTACHMENT_S3_PREFIX` | (trống) | Một thư mục trong bucket, để nhiều bản cài dùng chung một bucket |
+| `STUDIO_ATTACHMENT_S3_PREFIX` | (trống) | Một thư mục trong bucket, để nhiều bản cài dùng chung một bucket. Chỉ để trống khi bucket không dùng cho việc gì khác (TASK-0203) |
 | `STUDIO_ATTACHMENT_S3_ENDPOINT` | (trống) | URL của dịch vụ tương thích S3 (R2, B2, MinIO). Để trống là AWS S3 |
 | `STUDIO_ATTACHMENT_S3_REGION` | (trống) | Region của bucket; `auto` với Cloudflare R2 |
 | `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` cho dịch vụ cần URL kiểu path, như MinIO |

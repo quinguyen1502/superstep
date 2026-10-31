@@ -91,7 +91,9 @@ mới và bản cũ bị xoá. Tệp nào lỗi thì ở nguyên chỗ cũ và �
 thoát là 1. Lần chạy bị ngắt vẫn để mọi tệp đọc được, và chạy lại lệnh sẽ làm
 tiếp; khi không còn gì thì lệnh không làm gì. `--batch N` đặt số tệp đọc mỗi đợt
 (mặc định 100). Đặt `STUDIO_ATTACHMENT_STORAGE` cùng nơi lưu đó để tệp mới cũng
-lưu ở đó. Admin cũng làm được qua API với `GET /api/admin/attachments` và
+lưu ở đó. Tệp trên cùng nơi lưu nhưng ở thư mục, bucket hay prefix cũ cũng được
+chuyển, nên `--to fs` sau khi đổi `STUDIO_ATTACHMENT_FS_PATH` (hoặc `--to s3` sau
+khi đổi bucket hay prefix) gom chúng về chỗ mới. Admin cũng làm được qua API với `GET /api/admin/attachments` và
 `POST /api/admin/attachments/migrate`.
 
 ## Đăng nhập
@@ -104,15 +106,19 @@ superstep whoami
 superstep logout
 ```
 
-`login` in một URL và một mã, rồi mở trình duyệt. Duyệt hoặc từ chối trên
-`/cli/authorize` khi bạn đã đăng nhập studio. Không có gì được gửi cho đến khi
-bạn bấm nút. Lệnh ghi `url`, `token` và `account` vào `~/.superstep/cli.json`
+`login` in một URL và một mã, rồi mở trình duyệt. Trên `/cli/authorize`, khi
+đã đăng nhập studio, nhập mã trong terminal của bạn rồi duyệt hoặc từ chối.
+Không có gì được gửi cho đến khi bạn bấm nút. Chỉ duyệt lần đăng nhập mà chính
+bạn vừa bắt đầu: không bao giờ nhập mã do người khác gửi cho bạn. Nếu trong lúc đó đã có token
+trùng tên được duyệt, token mới nhận một tên còn trống như `laptop (2)`. Lệnh ghi `url`, `token` và `account` vào `~/.superstep/cli.json`
 và đặt file ở mode `0600`. Lệnh không in token. `logout` xóa `token` và
 `account` khỏi file đó. Lệnh không thu hồi token. Thu hồi trong Settings, mục
 Tokens (`/settings/tokens`).
 
 Với script hoặc CI, tạo token trong Settings rồi export hai biến. Biến môi
-trường thắng file. Đừng commit token.
+trường thắng file. Đừng commit token. Token mà `login` lưu chỉ được gửi tới
+máy chủ đã cấp nó: khi `--url` hoặc `SUPERSTEP_URL` trỏ tới máy chủ khác, hãy
+đăng nhập ở đó hoặc đặt `SUPERSTEP_TOKEN`.
 
 ```bash
 export SUPERSTEP_URL=http://localhost:8000

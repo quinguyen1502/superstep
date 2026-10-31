@@ -14,8 +14,18 @@ _PART = re.compile(r"^[A-Za-z0-9_.-]+$")
 class FsStore(AttachmentStore):
     name = "fs"
 
-    def __init__(self, root: str):
+    def __init__(self, root: str, protected: tuple = ()):
         self.root = Path(root).resolve()
+        self.location = str(self.root)
+        self.protected = tuple(Path(p).resolve() for p in protected)
+
+    def unsafe(self) -> str | None:
+        """The folder must not be, or hold, the studio's own data (database file, secret key, imports): the orphan sweep
+        would otherwise run over them (TASK-0203)."""
+        for p in self.protected:
+            if p == self.root or self.root in p.parents:
+                return "the attachment folder must not be or contain the data folder; use a subfolder such as /data/attachments"
+        return None
 
     def _path(self, key: str) -> Path:
         parts = key.split("/")
@@ -25,6 +35,8 @@ class FsStore(AttachmentStore):
         return p
 
     def put(self, key: str, data: Data, mime: str) -> None:
+        bad = self.unsafe()
+        if bad: raise StoreError(bad)
         p = self._path(key)
         try:
             p.parent.mkdir(parents=True, exist_ok=True)

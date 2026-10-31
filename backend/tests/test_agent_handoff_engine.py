@@ -98,3 +98,30 @@ def test_the_offline_mock_hands_off_by_the_target_description():
     wf["nodes"][1]["data"]["tools"] = [{**TOOL, "description": "Find the status of an order"}]
     evs = list(run_stream(wf, {"message": "I want a refund for a duplicate charge"}))
     assert ev(evs, "triage/__handoff") and ev(evs, "billing/__exit") and final(evs)["answer"]
+
+
+def masked_desk():
+    """Start → Mask (a Code node) → Triage: a step that must run on every message."""
+    wf = desk(); wf["state"] = STATE + [{"name": "out", "type": "string"}]
+    wf["nodes"].append({"id": "mask", "type": "tool", "position": {"x": 1, "y": 0},
+                        "data": {"label": "Mask", "mode": "code", "code": 'def main(state):\n    return "masked"\n', "output_field": "out"}})
+    wf["edges"][0] = {"id": "1", "source": "s", "target": "mask"}; wf["edges"].append({"id": "5", "source": "mask", "target": "triage"})
+    return wf
+
+
+def test_a_chat_never_skips_the_nodes_before_the_first_agent(monkeypatch):
+    """Review finding 5 (TASK-0206): the start router jumped from Start to the agent that answered last, so a step
+    between Start and the first agent (masking, a filter, a lookup) did not run from the second message on."""
+    from app.engine import handoffs
+    monkeypatch.setenv("STUDIO_ENABLE_CODE_NODES", "1"); monkeypatch.setenv("STUDIO_CODE_RUNTIME", "subprocess")
+    seen = script(monkeypatch, [("Hello from triage.", [])])
+    evs = list(run_stream(masked_desk(), {"message": "and the invoice?", agents.START_INPUT: "billing"}))
+    assert ev(evs, "mask") and final(evs)["out"] == "masked"
+    assert ev(evs, "triage/__exit") and not ev(evs, "billing/__exit") and len(seen) == 1
+    assert handoffs.continues(masked_desk()) == set() and handoffs.continues(desk()) == {"billing", "tech"}
+
+
+def test_a_chat_still_continues_with_its_agent_when_start_leads_to_it(monkeypatch):
+    script(monkeypatch, [("Billing again.", [])])
+    evs = list(run_stream(desk(), {"message": "and the invoice?", agents.START_INPUT: "billing"}))
+    assert ev(evs, "billing/__exit") and not ev(evs, "triage/__exit")

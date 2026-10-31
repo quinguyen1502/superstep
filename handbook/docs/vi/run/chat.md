@@ -130,6 +130,23 @@ bucket lỗi chỉ hiện một lý do ngắn như `S3 error AccessDenied`. Các
 hành đã có sẵn S3 client; cài từ mã nguồn thì cần `pip install
 "superstep-backend[s3]"`.
 
+Hãy dành cho tệp đính kèm một thư mục hoặc prefix bucket riêng. Studio xoá các
+tệp còn sót ở đó mà không cuộc trò chuyện nào dùng, nhưng chỉ những tệp có tên
+do chính nó tạo (`<workflow>/<chat>/<id tệp>`), nên tệp khác không bao giờ bị
+động tới. Thư mục trùng với, hoặc chứa, thư mục dữ liệu của studio (cơ sở dữ
+liệu, khoá bí mật, thư mục import) sẽ bị từ chối: `/api/health` hiện
+`attachment_storage_ok: false` và tải lên sẽ lỗi; hãy dùng thư mục con như
+`/data/attachments`. Để trống `STUDIO_ATTACHMENT_S3_PREFIX` trên bucket dùng
+chung với thứ khác sẽ ghi cảnh báo vào log; hãy đặt prefix như `superstep/`.
+
+Mỗi tệp nhớ thư mục hoặc bucket và prefix mà nó được ghi vào, nên đổi
+`STUDIO_ATTACHMENT_FS_PATH`, bucket hay prefix về sau không làm mất tệp cũ:
+chúng vẫn được đọc từ chỗ cũ, và `superstep attachments migrate --to fs` (hoặc
+`--to s3`) chuyển chúng sang chỗ mới. Tệp trong bucket vẫn đọc được sau khi
+chuyển sang nơi lưu khác và xoá `STUDIO_ATTACHMENT_S3_BUCKET`, miễn là vẫn còn
+thông tin xác thực S3 (và endpoint); thiếu chúng thì việc đọc báo lỗi "no S3
+credentials".
+
 ## Bộ nhớ
 
 Khi có trường cuộc trò chuyện, mỗi run nhận *n* lượt hỏi–đáp gần nhất cùng tin
@@ -150,6 +167,9 @@ chạy từ chat:
 
 - **Người chat** (mặc định): câu hỏi hiện trong chat với **Duyệt** và **Từ chối**;
   hoặc nhập câu trả lời vào ô tin nhắn. Câu trả lời vào trường output của node và run chạy tiếp.
+  Câu trả lời của bạn được giữ lại trong chat như một tin nhắn của bạn (câu trả lời dạng form thành
+  mỗi trường một dòng `trường: giá trị`), và các lượt sau nhớ nó cùng với câu hỏi mà nó trả lời,
+  trong cùng một lượt trao đổi.
 - **Người duyệt**: chat báo đang chờ duyệt, còn câu hỏi đến trang
   [Duyệt](human-approval.md) (và các kênh của nó) như thường lệ. Chat hiện câu
   trả lời khi run chạy tiếp.
@@ -157,7 +177,8 @@ chạy từ chat:
 Bước duyệt công cụ của [node Agent](../guide/agent.md#duyet-truoc-khi-goi-cong-cu)
 luôn do người duyệt trả lời: người chat không duyệt hành động của chính agent.
 
-Không gửi được tin nhắn mới khi chat đang chờ trả lời. [Hạn chờ](human-approval.md#han-cho)
+Không gửi được tin nhắn mới khi chat đang chờ trả lời, hoặc khi câu trả lời của bot
+chưa về xong: nút gửi vẫn là nút dừng cho đến khi câu trả lời được lưu. [Hạn chờ](human-approval.md#han-cho)
 của node áp dụng cho cả hai cách; khi quá hạn, hành động khi hết hạn quyết định
 điều gì xảy ra.
 

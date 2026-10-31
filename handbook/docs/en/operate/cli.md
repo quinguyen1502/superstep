@@ -94,6 +94,9 @@ exit code is then 1. An interrupted run leaves every file readable, and running
 the command again continues; when nothing is left it does nothing. `--batch N`
 sets how many files are read per batch (default 100). Set
 `STUDIO_ATTACHMENT_STORAGE` to the same backend so new files go there too.
+Files on the same backend but in an older folder, bucket or prefix are moved
+as well, so `--to fs` after changing `STUDIO_ATTACHMENT_FS_PATH` (or `--to s3`
+after changing the bucket or prefix) gathers them in the new place.
 Admins can do the same over the API with `GET /api/admin/attachments` and
 `POST /api/admin/attachments/migrate`.
 
@@ -107,15 +110,19 @@ superstep whoami
 superstep logout
 ```
 
-`login` prints a URL and a code, and opens the browser. Approve or deny on
-`/cli/authorize` while you are signed in to the studio. Nothing is sent until
-you press a button. The command writes `url`, `token` and `account` to
+`login` prints a URL and a code, and opens the browser. On `/cli/authorize`,
+while you are signed in to the studio, type the code from your terminal, then
+approve or deny. Nothing is sent until you press a button. Approve only a
+sign-in you started yourself just now: never type a code someone sent you. If a token with the approved name was
+created in the meantime, the new token gets a free name such as `laptop (2)`. The command writes `url`, `token` and `account` to
 `~/.superstep/cli.json` and sets that file to mode `0600`. It does not print
 the token. `logout` removes `token` and `account` from that file. It does not
 revoke the token. Revoke it in Settings, under Tokens (`/settings/tokens`).
 
 For a script or CI, create a token in Settings and export the two variables.
-The environment wins over the file. Do not commit the token.
+The environment wins over the file. Do not commit the token. The token saved
+by `login` is only sent to the server it came from: with `--url` or
+`SUPERSTEP_URL` naming another server, log in there or set `SUPERSTEP_TOKEN`.
 
 ```bash
 export SUPERSTEP_URL=http://localhost:8000

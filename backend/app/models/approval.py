@@ -117,6 +117,15 @@ class ApprovalWait(Base):
     ai_decision: Mapped[Optional[str]] = mapped_column(Text)     # approve | reject | escalate
     ai_confidence: Mapped[Optional[float]] = mapped_column(Float)
     ai_reason: Mapped[Optional[str]] = mapped_column(Text)
+    review: Mapped[Optional[str]] = mapped_column(Text)  # AI review of this step: auto | suggest while running, then done (None: no AI review; TASK-0204)
+
+
+class ApprovalAutoQuota(Base):
+    """Automatic answers reserved per workflow per UTC day: the daily cap of AI review, reserved atomically (TASK-0204)."""
+    __tablename__ = "approval_auto_quota"
+    workflow_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    day: Mapped[float] = mapped_column(Float, primary_key=True)
+    used: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class ApprovalWaitApprover(Base):

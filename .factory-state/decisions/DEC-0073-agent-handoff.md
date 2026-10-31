@@ -7,10 +7,10 @@
 - Status: Accepted. The owner approved the decisions and the task set (TASK-0179 to TASK-0184) on 2026-10-30.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
-- Updated: 2026-10-30
+- Updated: 2026-10-31
 - Related Requirements: REQ-0078 (CLAR-0009)
 - Related Architecture: DEC-0063 (Agent node expansion), DEC-0069 (parallel tool calls), DEC-0052 (web chat model), DEC-0009, DEC-0010, DEC-0008, DEC-0033
-- Related Tasks: TASK-0179, TASK-0180, TASK-0181, TASK-0182, TASK-0183, TASK-0184
+- Related Tasks: TASK-0179, TASK-0180, TASK-0181, TASK-0182, TASK-0183, TASK-0184, TASK-0206
 
 ## Context
 
@@ -23,6 +23,7 @@
 2. **Routing.** Each target is a tool `transfer_to_<slug>`. Calling it sets a private `__handoff` field and ends the round. A new step `A/__handoff` (own checkpoint) records the hand-off, increments the run counter and routes by a conditional edge to the target's entry; without a hand-off, `A/__exit` follows the agent's own edges. LangGraph `Command(goto)` is not used.
 3. **Context.** The target receives the person's messages and the agents' final replies, without tool calls and results, plus a system note with the source agent and reason. Past the limit the hand-off tools are removed and the model is told to answer itself.
 4. **Chat.** The chat session stores `active_agent`. The next run's input carries `__start_agent`; a start router added by the compiler routes to that agent when it exists, else to the normal entry.
+   - Amended 2026-10-31 (TASK-0206, external review finding 5): the start router exists only when every edge from Start goes straight into an Agent node. Nodes between Start and the first agent (masking, filters, lookups) must run on every message, and jumping past them broke that; with such nodes the chat starts at Start, so at the entry agent, on every message. Keeping the agent across such nodes (a router placed in front of the entry agent) is deferred: it needs the same change in the three exports and a cleared start field, for a layout no template uses.
 5. **Exports.** Python, the LangGraph project and TypeScript mirror steps 2 to 4 with the same step names.
 
 ## Rationale
