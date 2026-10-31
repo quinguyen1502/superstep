@@ -168,7 +168,8 @@ runs from a chat:
 
 - **The person chatting** (default): the question appears in the chat with
   **Approve** and **Reject**; or type your answer in the message box. The answer goes to the node's
-  output field and the run goes on.
+  output field and the run goes on. Your answer stays in the chat as your message, and the later turns
+  remember it like any other message.
 - **A reviewer**: the chat says it is waiting for approval, and the question
   goes to the [Approvals](human-approval.md) page (and its channels) as usual.
   The chat shows the answer once the run goes on.
@@ -177,7 +178,8 @@ An [Agent node](../guide/agent.md#approval-before-a-tool)'s tool approvals are
 always a reviewer's: the person chatting does not approve the agent's own
 actions.
 
-A new message cannot be sent while the chat waits for an answer. The node's
+A new message cannot be sent while the chat waits for an answer, or while a reply
+is still on its way: the send button stays a stop button until the reply is saved. The node's
 [deadline](human-approval.md#deadlines) applies in both cases; when it passes,
 its timeout action decides what happens.
 

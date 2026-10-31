@@ -79,7 +79,9 @@ def test_a_visitor_answers_a_human_node_but_not_a_reviewers():
     turns(v, slug, vt, sid, 2)
     assert code(say(v, slug, vt, {"chat_session_id": sid, "message": "more"})) == "CHAT_RUN_WAITING"
     assert say(v, slug, vt, {"chat_session_id": sid, "response": "yes"})[-1]["status"] == "ok"
-    assert turns(v, slug, vt, sid, 3)["turns"][-1]["status"] == "ok"  # the answer adds the final turn
+    d = turns(v, slug, vt, sid, 4)["turns"]  # the visitor's answer is their turn (TASK-0209), then the final answer
+    assert [(x["role"], x["status"]) for x in d] == [("user", "ok"), ("assistant", "waiting"), ("user", "ok"), ("assistant", "ok")] and d[2]["text"] == "yes"
+    assert code(say(v, slug, vt, {"chat_session_id": sid, "response": "again"})) == "RUN_NOT_WAITING"  # answered already
     # a reviewer's question cannot be answered from the page
     tok2 = user(); wid2 = c.post("/api/workflows", json={**asking("reviewer"), "name": "Ask2"}, headers=H(tok2)).json()["data"]["id"]
     slug2 = f"rev-{wid2[:6]}"; c.put(f"/api/workflows/{wid2}/chat", json={"enabled": True, "access": "anonymous", "slug": slug2}, headers=H(tok2))

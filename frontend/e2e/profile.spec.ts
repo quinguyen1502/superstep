@@ -40,10 +40,12 @@ test('profile: account details, then a password change that signs out the other 
 })
 
 test('profile of a read-only account (the public demo visitor): language local, password and notifications locked', async ({ page }) => {
-  await register(page, `readonly-${uid()}@example.com`)
-  // what GET /api/me says for the demo visitor (STUDIO_DEMO_MODE is off in these tests)
+  // what GET /api/me says for the demo visitor (STUDIO_DEMO_MODE is off in these tests), from the first page on: set up
+  // after sign-up, the account was still a normal one when the app sent its language after sign-in, and that write
+  // could land after the listener started (TASK-0209)
   await page.route(u => u.pathname === '/api/me', async r => { const res = await r.fetch(); const body = await res.json(); body.data.read_only = true; await r.fulfill({ response: res, json: body }) })
-  const prefWrites: string[] = []; page.on('request', r => { if (r.method() === 'PUT' && r.url().includes('/api/notifications/preferences')) prefWrites.push(r.url()) })
+  const prefWrites: string[] = []; page.on('request', r => { if (r.method() !== 'GET' && r.url().includes('/api/notifications/preferences')) prefWrites.push(`${r.method()} ${r.postData()}`) })
+  await register(page, `readonly-${uid()}@example.com`)
   await page.goto('/settings/profile')
   await expect(page.locator('#password-read-only')).toBeVisible()
   await expect(page.locator('#current-password')).toBeDisabled(); await expect(page.locator('#password-save')).toBeDisabled()

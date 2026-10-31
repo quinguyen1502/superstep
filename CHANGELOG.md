@@ -31,6 +31,16 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **An answer to a Human node stays in the chat** (TASK-0209). Approving, rejecting or typing an answer in the Chat
+  panel or on a public chat page showed the answer only until the reply arrived; it was never saved, so it vanished
+  and the question above it still looked open. The answer is now saved as the person's turn (and the next turns
+  remember it), and the chat keeps the message box busy until the saved reply is read back, so a message sent in
+  that moment is no longer taken as a second answer to the finished run or dropped.
+- **Three end-to-end tests no longer fail at random** (TASK-0209): the delivery log test stopped refreshing after its
+  first empty read, the read-only profile test counted the language the normal account saves after sign-up, and the
+  chat test typed its next message while the previous reply was still being read. The language sent after sign-in is
+  also sent once instead of twice.
+
 - **A body without a length that passes the ceiling answers 413** (TASK-0208). On routes that parse JSON, a form or a
   file, a chunked body past the ceiling answered 400 `BAD_REQUEST`; it now answers 413 `PAYLOAD_TOO_LARGE` like a body
   that declares its length.

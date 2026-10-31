@@ -427,6 +427,13 @@ class ChatSessionService:
         self.sessions.set_fields(sid, last_run_id=rid, **({"title": text[:TITLE_MAX]} if not s.title else {}))
         self.triggers.set_fields(t.id, last_message=now, last_run_id=rid)
 
+    def record_answer(self, sid: str, rid: str, text) -> None:
+        """The person's answer to a Human node, once the resume is planned (TASK-0209): saved as their turn, so it stays in
+        the thread after the reply arrives and the question above it is no longer the last (waiting) turn."""
+        if not isinstance(text, str) or not text.strip(): return  # a resume without a response (steps, until) says nothing
+        self.sessions.add_turn(ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=rid, role="user", text=text, status="ok", created=time.time()))
+        self.sessions.set_fields(sid, last_run_id=rid)
+
     def check_answer(self, uid: str, sid: str, rid: str) -> None:
         """A visitor answer from the chat: the run is this session's and its Human node is answered by the visitor."""
         self._own(sid, uid, P.RUN)

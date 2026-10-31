@@ -20,32 +20,40 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
   const [events, setEvents] = useState<RunEvent[]>([]); const [pending, setPending] = useState<string | null>(null)
   const [running, setRunning] = useState(false); const [error, setError] = useState('')
   const ws = useRef<WebSocket | null>(null); const alive = useRef(true)
+  // TASK-0209: the message being shown. A settle of an older message must not clear a newer one's pending turn.
+  const gen = useRef(0)
   const settled = useRef(onSettled); useEffect(() => { settled.current = onSettled })
   const load = useCallback((id = sid) => id ? api<ChatSessionFull>(ep.session(id), { headers: ep.headers }) : Promise.resolve(null), [sid, ep])
 
-  useOnChange(`${sid}|${view}`, () => { setEvents([]); setPending(null); setError('') })   // another chat or view: start clean
+  useOnChange(`${sid}|${view}`, () => { gen.current++; setEvents([]); setPending(null); setRunning(false); setError('') })   // another chat or view: start clean
   useEffect(() => { alive.current = true
     load().then(s => alive.current && setSession(s)).catch(e => alive.current && setError(e.message))
     return () => { alive.current = false; ws.current?.close() } }, [load])
 
   /** Read the session again until the run's answer count grows (or give up and show what is there). */
-  const settle = useCallback(async (id: string, runId: string | undefined, before: number) => {
-    for (let i = 0; i < POLL_TRIES && alive.current; i++) {
+  const settle = useCallback(async (id: string, runId: string | undefined, before: number, mine: number) => {
+    const current = () => alive.current && gen.current === mine
+    for (let i = 0; i < POLL_TRIES && current(); i++) {
       const s = await load(id).catch(() => null)
-      if (s && (answers(s.turns, runId) > before || !runId || i === POLL_TRIES - 1)) { if (alive.current) { setSession(s); setEvents([]); setPending(null); settled.current?.() } return }
+      if (s && (answers(s.turns, runId) > before || !runId || i === POLL_TRIES - 1)) {
+        if (current()) { setSession(s); setEvents([]); setPending(null); setRunning(false); settled.current?.() } return }
       await new Promise(r => setTimeout(r, POLL_MS))
     }
+    if (current()) setRunning(false)
   }, [load])
 
   const stream = useCallback((msg: Record<string, unknown>, shown: string | null, before: number, resumeOf?: string) => {
     if (!sid) return
-    setError(''); setEvents([]); setPending(shown); setRunning(true)
+    setError(''); setEvents([]); setPending(shown); setRunning(true); const mine = ++gen.current
     const sock = new WebSocket(wsUrl(ep.socket)); ws.current = sock; let runId = resumeOf
     sock.onopen = () => sock.send(JSON.stringify({ chat_session_id: sid, ...msg, locale: uiLocale() }))
     sock.onmessage = m => { const ev: RunEvent = JSON.parse(m.data); if (ev.run_id) runId = ev.run_id
       if (ev.type === 'error' && !ev.node && !runId) setError(eventErrors(ev).join('; '))
       setEvents(l => [...l, ev]) }
-    sock.onclose = () => { setRunning(false); if (runId) settle(sid, runId, resumeOf ? before : 0); else setPending(null) }
+    // still running until the saved answer is read: until then the session on screen is the one from before this
+    // message (its question still looks open), so the composer must not send the next message as an answer to it
+    sock.onclose = () => { if (gen.current !== mine) return
+      if (runId) settle(sid, runId, resumeOf ? before : 0, mine); else { setRunning(false); setPending(null) } }
   }, [sid, settle, ep])
 
   /** Sends a message, with the files already uploaded for it (TASK-0177): shown on the pending turn until the answer. */
