@@ -88,6 +88,7 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_ATTACHMENT_S3_ENDPOINT` | (empty) | The service URL for S3-compatible storage (R2, B2, MinIO). Empty means AWS S3 |
 | `STUDIO_ATTACHMENT_S3_REGION` | (empty) | The bucket's region; `auto` for Cloudflare R2 |
 | `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` for services that need path-style URLs, such as MinIO |
+| `STUDIO_ATTACHMENT_S3_MULTIPART_MB` | `8` | Files larger than this many MB are uploaded to S3 in parts of this size (at least 5); a failed upload is aborted, so no incomplete parts are left behind |
 | `STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID` | (empty) | Access key. With both keys empty, the default AWS credential chain is used (instance role, `AWS_*` variables) |
 | `STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY` | (empty) | Secret key. Never logged or shown; `/api/health` only says whether the bucket works |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Longest `sync` wait (s) |

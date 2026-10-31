@@ -57,6 +57,15 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   the Help desk template, and AI review of approvals; it also fixes the Code node languages and the docs table. The
   handbook home pages (en, vi) link the Agent, hand-off, chat, AI review and CLI pages. A trigger rate-limit test no longer
   fails when its requests straddle a fixed window's boundary.
+- **End-to-end tests in CI** (TASK-0199). A new `E2E (Playwright)` job runs the whole Playwright suite, English and
+  Vietnamese, on every pull request to `develop`, in three shards with a 30-minute timeout, cached Chromium and Code-mode
+  specs on the subprocess runtime. There are no retries; on failure the traces and screenshots are uploaded as
+  `e2e-shard-N` (7 days).
+- **S3 multipart uploads** (TASK-0200). The `s3` attachment backend uploads a file larger than
+  `STUDIO_ATTACHMENT_S3_MULTIPART_MB` (default 8) in parts, holding at most two parts in memory, and aborts the upload on
+  any failure so the bucket keeps no incomplete parts. Uploads are read in 1 MB pieces into a spooled temporary file,
+  refused as soon as they pass the size ceiling (the content-length check still runs first), and stream to the `fs` and
+  `s3` backends and from an archive restore. Tested against MinIO, including the abort path.
 
 ## 0.10.0 (2026-10-31)
 

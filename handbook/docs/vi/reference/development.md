@@ -58,6 +58,12 @@ npm run e2e
 | `E2E_API_PORT`, `E2E_UI_PORT` | Chạy song song hai bản checkout |
 | `E2E_CODE_RUNTIME=subprocess` | Chạy các spec chế độ Code khi không có Docker |
 
+CI chạy toàn bộ bộ test (tiếng Anh và tiếng Việt) trên mọi pull request trong job
+`E2E (Playwright)`, chia thành ba phần bằng `--shard`, có cache Chromium và
+`E2E_CODE_RUNTIME=subprocess`. Test không được chạy lại: test chập chờn được sửa tận
+gốc. Khi một phần lỗi, trace và ảnh chụp màn hình được tải lên thành artifact
+`e2e-shard-N` (giữ 7 ngày); mở trace bằng `npx playwright show-trace`.
+
 ## Ảnh chụp cho handbook
 
 ```bash

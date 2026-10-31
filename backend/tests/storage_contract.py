@@ -1,8 +1,9 @@
 """The contract every attachment storage backend passes (TASK-0191, REQ-0080): db, fs, s3, and the in-memory fake the
 service tests use. `ready(key)` prepares a key where the backend needs it (the db backend's rows)."""
-import time
+import io, time
 import pytest
 from app.storage import CHUNK, AttachmentStore, StoreError
+from app.storage.base import as_bytes
 
 
 class MemStore(AttachmentStore):
@@ -11,7 +12,7 @@ class MemStore(AttachmentStore):
     def __init__(self): self.objects, self.fail_put = {}, False
     def put(self, key, data, mime):
         if self.fail_put: raise StoreError("bucket unreachable")
-        self.objects[key] = (bytes(data), time.time())
+        self.objects[key] = (bytes(as_bytes(data)), time.time())
     def open(self, key):
         if key not in self.objects: raise StoreError("not found", missing=True)
         d = self.objects[key][0]; return iter([d[i:i + CHUNK] for i in range(0, len(d), CHUNK)] or [b""])
@@ -28,6 +29,8 @@ def check(store: AttachmentStore, ready=lambda key: None, prefix="w1/s1/"):
     pieces = list(store.open(k1))
     assert b"".join(pieces) == big and all(len(p) <= CHUNK for p in pieces) and len(pieces) > 1
     assert store.read(k2) == (b"" if not store.inline else b"y")  # an empty object (db rows always hold a file)
+    ready(f"{prefix}a3"); store.put(f"{prefix}a3", io.BytesIO(big), "application/pdf")  # a file, as an upload is (TASK-0200)
+    assert store.read(f"{prefix}a3") == big; store.delete(f"{prefix}a3")
     assert store.exists(k1)
     store.put(k1, b"replaced", "text/plain"); assert store.read(k1) == b"replaced"  # a second put overwrites
     keys = dict(store.iter_keys())

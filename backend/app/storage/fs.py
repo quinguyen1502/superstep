@@ -6,7 +6,7 @@ from __future__ import annotations
 import os, re, tempfile
 from pathlib import Path
 from typing import Iterator
-from .base import CHUNK, AttachmentStore, StoreError
+from .base import CHUNK, AttachmentStore, Data, StoreError, pieces
 
 _PART = re.compile(r"^[A-Za-z0-9_.-]+$")
 
@@ -24,13 +24,15 @@ class FsStore(AttachmentStore):
         if self.root not in p.parents: raise StoreError("invalid key")
         return p
 
-    def put(self, key: str, data: bytes, mime: str) -> None:
+    def put(self, key: str, data: Data, mime: str) -> None:
         p = self._path(key)
         try:
             p.parent.mkdir(parents=True, exist_ok=True)
             fd, tmp = tempfile.mkstemp(dir=p.parent, prefix=".part-")
             try:
-                with os.fdopen(fd, "wb") as f: f.write(data); f.flush(); os.fsync(f.fileno())
+                with os.fdopen(fd, "wb") as f:
+                    for piece in pieces(data): f.write(piece)
+                    f.flush(); os.fsync(f.fileno())
                 os.replace(tmp, p)
             except BaseException:
                 Path(tmp).unlink(missing_ok=True); raise
