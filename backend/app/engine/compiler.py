@@ -47,7 +47,7 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
     ann.update({agents.slot_channel(n): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent_tool"})  # one wave's tool results (DEC-0069)
     if any(n.get("type") == "agent_handoff" for n in wf["nodes"]):  # the pending hand-off and the run's count (TASK-0180)
         ann.update({agents.HANDOFF_KEY: Optional[dict], agents.COUNT_KEY: Optional[int], agents.START_KEY: Optional[str]})
-    receivers = handoffs.receivers(wf) if agents.HANDOFF_KEY in ann else set()
+    receivers = handoffs.continues(wf) if agents.HANDOFF_KEY in ann else set()  # where a chat may start (DEC-0073)
     State = TypedDict("State", ann, total=False)  # type: ignore
     g = StateGraph(State)
     nodes = {n["id"]: n for n in wf["nodes"] if n.get("type") != "note"}  # notes are canvas comments (REQ-0025)

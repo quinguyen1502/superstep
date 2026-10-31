@@ -23,6 +23,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **A chat no longer skips the nodes between Start and the first agent** (TASK-0206, DEC-0073). After a hand-off, the
+  next message jumped from Start straight to the agent that answered last, so a masking, filter or lookup step before
+  the first agent did not run. The chat now continues with that agent only when Start leads straight to agents;
+  otherwise every message runs from Start. The Python, LangGraph and TypeScript exports do the same.
 - **A personal access token's last use is written at most every 5 minutes** instead of on every request (TASK-0205).
 - **An AI review lost to a restart goes to people** (TASK-0204). The maintenance sweep sends a step whose review never
   finished to people (cause `restart`): the run owner is told in auto mode and the channel request is sent.

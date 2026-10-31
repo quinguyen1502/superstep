@@ -252,6 +252,12 @@ class GraphWriter:
         got = {h["target"] for nid in g.agents for h in self.handoff_raw(g, nid)}
         return [i for i in g.order() if i in got]
 
+    def start_receivers(self, g: Graph) -> List[str]:
+        """The receivers a chat may start at: none when nodes sit between Start and the first agent (handoffs.straight_to_agents)."""
+        starts = [i for i, n in g.nodes.items() if n["type"] == "start"]
+        straight = all(g.nodes[e["target"]]["type"] == "agent" for s in starts for e in g.out(s)) and any(g.out(s) for s in starts)
+        return self.receivers(g) if straight else []
+
     def has_handoffs(self, g: Graph) -> bool: return any("handoff" in a for a in g.agents.values())
 
     @staticmethod
