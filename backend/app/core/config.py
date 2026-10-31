@@ -83,6 +83,9 @@ def data_paths() -> list[str]:
              os.environ.get("STUDIO_DB", STUDIO_DB)]  # the SQLite file even on Postgres: a later switch back must not lose it
     if os.environ.get("STUDIO_IMPORT_DIR"): paths.append(os.environ["STUDIO_IMPORT_DIR"])
     return [os.path.abspath(os.path.expanduser(p)) for p in paths]
+def max_body_mb() -> int:
+    """The largest request body in MB outside the upload routes (TASK-0207)."""
+    return max(1, _int("STUDIO_MAX_BODY_MB", 10))
 def attachment_s3() -> dict:
     """The `s3` attachment backend's settings (TASK-0193). Empty keys use the default AWS credential chain."""
     e = lambda k: (os.environ.get(f"STUDIO_ATTACHMENT_S3_{k}") or "").strip()  # noqa: E731

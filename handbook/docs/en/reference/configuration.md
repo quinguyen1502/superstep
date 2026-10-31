@@ -79,7 +79,8 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_PUBLIC_CHAT_RATE_IP` | `30` | Public chat page: messages per client IP per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_READ` | `120` | Public chat page: page loads, chat reads and new chats per client IP per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | The public chat page's window (s). Each chat's own daily cap is in its Chat settings |
-| `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Chat attachments: the largest file in MB; each chat may only lower it. Above 100, also raise `WEB_MAX_BODY_SIZE` on the `web` image (default `110m`) |
+| `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Chat attachments: the largest file in MB; each chat may only lower it. Above 100, also raise `WEB_MAX_BODY_SIZE` on the `web` image (default `110m`), which the bundled nginx applies to the upload routes only; every other request is limited to 10 MB there |
+| `STUDIO_MAX_BODY_MB` | `10` | The largest request body in MB, except the upload routes (chat attachments, workflow import, knowledge documents), which have their own ceilings; the chat and approval callbacks take at most 1 MB |
 | `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Chat attachments: the most files per message; each chat may only lower it |
 | `STUDIO_ATTACHMENT_STORAGE` | `db` | Where chat attachment bytes are kept: `db` (in the database), `fs` (a folder) or `s3` (S3-compatible storage). Files keep the place they were stored in, so a change applies to new files. See [Chat: Attachments](../run/chat.md#attachments) |
 | `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | The folder of the `fs` backend. In docker compose, `api` and `worker` share it on the `apidata` volume. It must not be or contain the data folder |

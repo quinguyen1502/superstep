@@ -142,7 +142,10 @@ chung với thứ khác sẽ ghi cảnh báo vào log; hãy đặt prefix như `
 Mỗi tệp nhớ thư mục hoặc bucket và prefix mà nó được ghi vào, nên đổi
 `STUDIO_ATTACHMENT_FS_PATH`, bucket hay prefix về sau không làm mất tệp cũ:
 chúng vẫn được đọc từ chỗ cũ, và `superstep attachments migrate --to fs` (hoặc
-`--to s3`) chuyển chúng sang chỗ mới.
+`--to s3`) chuyển chúng sang chỗ mới. Tệp trong bucket vẫn đọc được sau khi
+chuyển sang nơi lưu khác và xoá `STUDIO_ATTACHMENT_S3_BUCKET`, miễn là vẫn còn
+thông tin xác thực S3 (và endpoint); thiếu chúng thì việc đọc báo lỗi "no S3
+credentials".
 
 ## Bộ nhớ
 

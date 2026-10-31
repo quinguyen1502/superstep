@@ -6,6 +6,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Security
 
+- **Request bodies are bounded outside the upload routes again** (TASK-0207). Since TASK-0203 the bundled nginx let
+  every `/api/` request carry up to 110 MB, including the unauthenticated chat and approval callbacks that read the whole
+  body. nginx is back to 10 MB, with `WEB_MAX_BODY_SIZE` only on the upload routes (chat attachments, workflow import,
+  knowledge documents), and the app enforces its own ceilings without a proxy too: 1 MB for the callbacks,
+  `STUDIO_MAX_BODY_MB` (default 10) elsewhere.
+- **An approved CLI sign-in that is never collected leaves no token behind** (TASK-0207). The token is now created when
+  the CLI collects it instead of being stored in plain text at approval; a token stored by an older version is revoked
+  and cleared once its sign-in expires.
 - **The CLI sign-in asks for the code from the terminal** (TASK-0205, DEC-0076). The `superstep login` link no longer
   carries the code, and `/cli/authorize` asks the person to type the code their terminal shows, with a warning, so a
   link someone else sends cannot be approved with one click. Sign-in starts are limited to 10 per client IP per 10
@@ -23,6 +31,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **Old S3 attachments stay readable after the s3 settings are removed** (TASK-0207). A file's recorded bucket and
+  prefix are enough to read it once storage moved to another backend; missing credentials are named in the error.
 - **A chat no longer skips the nodes between Start and the first agent** (TASK-0206, DEC-0073). After a hand-off, the
   next message jumped from Start straight to the agent that answered last, so a masking, filter or lookup step before
   the first agent did not run. The chat now continues with that agent only when Start leads straight to agents;

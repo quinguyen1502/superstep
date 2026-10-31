@@ -17,9 +17,10 @@ class Stores:
     def get(self, name: str, location: Optional[str] = None) -> AttachmentStore:
         """The configured store of `name`, or, with `location`, the store at that folder or bucket/prefix (a row written
         before the setting changed, TASK-0203). No location is the configured one."""
-        store = self._make(name, None)
-        if not location or location == store.location: return store
-        return self._make(name, location)
+        if not location: return self._make(name, None)
+        try: store = self._make(name, None)
+        except StoreError: return self._make(name, location)  # the backend is no longer configured: the row's location is enough (TASK-0207)
+        return store if location == store.location else self._make(name, location)
 
     def _make(self, name: str, location: Optional[str]) -> AttachmentStore:
         k = (name, location)

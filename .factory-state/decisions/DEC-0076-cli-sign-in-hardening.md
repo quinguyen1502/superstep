@@ -9,7 +9,7 @@
 - Created: 2026-10-31
 - Updated: 2026-10-31
 - Related Requirements: none
-- Related Tasks: TASK-0205
+- Related Tasks: TASK-0205, TASK-0207
 - Related Architecture: DEC-0071 (CLI workflows, PAT and the browser sign-in), DEC-0009 (layers)
 
 ## Context
@@ -26,6 +26,7 @@
 2. **Starts are limited.** At most 10 sign-ins per client IP per 10 minutes (the shared rate limiter, Redis when configured); more answer `RATE_LIMITED` with `Retry-After`.
 3. **Old sign-ins are removed.** Starting a sign-in deletes rows whose deadline passed more than 10 minutes ago and that hold no undelivered token.
 4. **The saved token stays with its server.** The CLI sends the token from `~/.superstep/cli.json` only to the server it was issued by (scheme, host and port compared, default port and trailing slash ignored). Another URL gets no token: log in there, or set `SUPERSTEP_TOKEN` explicitly.
+6. **The token is minted when the CLI collects it** (amended 2026-10-31, TASK-0207). Approval records the account and the token name only; the first poll after approval mints the token, so no plaintext token waits in `cli_devices`, and a sign-in that expires approved but uncollected leaves nothing usable. A secret stored by an earlier version is revoked and cleared once its sign-in expires.
 5. **`last_used` is written at most every 5 minutes** per token, and the unused `PatService.user_for_token` is removed (the request path is `AuthService._from_pat`).
 
 ## Rationale
