@@ -167,6 +167,8 @@ chạy từ chat:
 
 - **Người chat** (mặc định): câu hỏi hiện trong chat với **Duyệt** và **Từ chối**;
   hoặc nhập câu trả lời vào ô tin nhắn. Câu trả lời vào trường output của node và run chạy tiếp.
+  Câu trả lời của bạn được giữ lại trong chat như một tin nhắn của bạn, và các lượt sau nhớ nó như
+  mọi tin nhắn khác.
 - **Người duyệt**: chat báo đang chờ duyệt, còn câu hỏi đến trang
   [Duyệt](human-approval.md) (và các kênh của nó) như thường lệ. Chat hiện câu
   trả lời khi run chạy tiếp.
@@ -174,7 +176,8 @@ chạy từ chat:
 Bước duyệt công cụ của [node Agent](../guide/agent.md#duyet-truoc-khi-goi-cong-cu)
 luôn do người duyệt trả lời: người chat không duyệt hành động của chính agent.
 
-Không gửi được tin nhắn mới khi chat đang chờ trả lời. [Hạn chờ](human-approval.md#han-cho)
+Không gửi được tin nhắn mới khi chat đang chờ trả lời, hoặc khi câu trả lời của bot
+chưa về xong: nút gửi vẫn là nút dừng cho đến khi câu trả lời được lưu. [Hạn chờ](human-approval.md#han-cho)
 của node áp dụng cho cả hai cách; khi quá hạn, hành động khi hết hạn quyết định
 điều gì xảy ra.
 

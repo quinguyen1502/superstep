@@ -253,7 +253,9 @@ class RunService:
         if req.get("resume_run_id"):
             if req.get("attachment_ids"): raise AppError("RUN_REQUEST_INVALID")  # a Human node's answer is text only
             web.check_answer(uid, sid, str(req["resume_run_id"]))
-            return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
+            plan = self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
+            web.record_answer(sid, str(req["resume_run_id"]), req.get("response"))
+            return plan
         prep = web.input_for(uid, sid, req.get("message"), req.get("attachment_ids"))
         plan = self.plan(uid, {"workflow_id": prep["workflow_id"], "input": prep["input"]})
         plan.run_id, plan.source = uuid.uuid4().hex[:10], "chat"

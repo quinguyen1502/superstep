@@ -104,8 +104,12 @@ def test_visitor_answers_the_human_node_in_the_chat():
     assert say(tok, {"chat_session_id": sid, "message": "next"})[-1]["error"]["code"] == "CHAT_RUN_WAITING"
     evs = say(tok, {"chat_session_id": sid, "resume_run_id": q["run_id"], "response": "yes"})
     assert evs[-1]["status"] == "ok"
-    d = wait_turns(tok, sid, 3)
-    assert d["turns"][2]["status"] == "ok" and "Answer yes" in d["turns"][2]["text"]
+    d = wait_turns(tok, sid, 4)
+    # TASK-0209: the answer is the person's turn, so it stays in the thread and the question is no longer the last turn
+    assert [(x["role"], x["text"]) for x in d["turns"][2:3]] == [("user", "yes")] and d["turns"][2]["run_id"] == q["run_id"]
+    assert d["turns"][3]["status"] == "ok" and "Answer yes" in d["turns"][3]["text"]
+    assert say(tok, {"chat_session_id": sid, "resume_run_id": q["run_id"], "response": "again"})[-1]["error"]["code"]  # answered once
+    assert len(turns(tok, sid)["turns"]) == 4
 
 
 def test_reviewer_answers_in_the_inbox_not_the_chat():

@@ -6,7 +6,12 @@ import { loadMe } from '@/lib/rbac'
 
 const SYNCED = 'lgs_lang_synced'
 // a read-only account (the demo visitor) keeps the language in this browser only: the server would refuse the save
-const save = (lang: string) => { if (signedIn()) loadMe().then(me => { if (!me.read_only) return api('/api/notifications/preferences', { method: 'PUT', json: { lang } }).then(() => sessionStorage.setItem(SYNCED, lang)) }).catch(() => {}) }
+// one save per language at a time: the sync after sign-in runs again when the switcher mounts twice (React StrictMode, a
+// page with two switchers), and the second PUT is the same write (TASK-0209)
+let saving: string | null = null
+const save = (lang: string) => { if (!signedIn() || saving === lang) return; saving = lang
+  loadMe().then(me => { if (!me.read_only) return api('/api/notifications/preferences', { method: 'PUT', json: { lang } }).then(() => sessionStorage.setItem(SYNCED, lang)) })
+    .catch(() => {}).finally(() => { if (saving === lang) saving = null }) }
 
 export function setLanguage(lang: string) { i18n.changeLanguage(lang); save(lang) }
 
