@@ -129,6 +129,13 @@ def steps_of(events: list, mode: str) -> list[dict]:
     return list(out.values())
 
 
+def answer_text(v) -> str:
+    """A Human-node answer as the person's turn (TASK-0210): a string as typed, a form as `field: value` lines."""
+    if isinstance(v, str): return v.strip() and v
+    if isinstance(v, dict): return "\n".join(f"{k}: {x if isinstance(x, str) else json.dumps(x, ensure_ascii=False)}" for k, x in v.items() if x not in (None, ""))
+    return "" if v is None else json.dumps(v, ensure_ascii=False)
+
+
 class ChatSessionService:
     def __init__(self, sessions: ChatSessionRepository, triggers: ChatTriggerRepository, messages: ChatMessageRepository,
                  workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None, attachments: Optional[ChatAttachmentRepository] = None,
@@ -406,10 +413,15 @@ class ChatSessionService:
         return rows
 
     def history(self, sid: str, max_turns: int) -> list[dict]:
-        """The last `max_turns` exchanges as [{role, content}] (DEC-0052): the person's messages and the finished answers."""
-        rows = [x for x in self._turns(sid) if x.role == "user" or (x.role == "assistant" and x.status == "ok")]
-        msgs = [{"role": x.role, "content": x.text} for x in rows]
-        return msgs[-2 * max_turns:]
+        """The last `max_turns` exchanges as [{role, content}] (DEC-0052): the person's messages and the finished answers.
+        A Human-node question answered in the chat stays before its answer (TASK-0210), so the roles alternate; an
+        exchange starts at each of the person's messages and is cut whole."""
+        ts = self._turns(sid)
+        answered = {x.run_id for a, x in zip(ts, ts[1:]) if a.status == "waiting" and x.role == "user"}  # the answer follows its question
+        rows = [x for x in ts if x.role == "user" or (x.role == "assistant" and (x.status == "ok" or (x.status == "waiting" and x.run_id in answered)))]
+        starts = [i for i, x in enumerate(rows) if x.role == "user" and not (i and rows[i - 1].status == "waiting")]
+        if max_turns < len(starts): rows = rows[starts[-max_turns]:]
+        return [{"role": x.role, "content": x.text} for x in rows]
 
     def record(self, uid: str, sid: str, text: str, rid: str, attachment_ids: Optional[list] = None) -> None:
         """The person's turn and the reply-once record, once the run is planned."""
@@ -430,7 +442,8 @@ class ChatSessionService:
     def record_answer(self, sid: str, rid: str, text) -> None:
         """The person's answer to a Human node, once the resume is planned (TASK-0209): saved as their turn, so it stays in
         the thread after the reply arrives and the question above it is no longer the last (waiting) turn."""
-        if not isinstance(text, str) or not text.strip(): return  # a resume without a response (steps, until) says nothing
+        text = answer_text(text)
+        if not text: return  # a resume without a response (steps, until) says nothing
         self.sessions.add_turn(ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=rid, role="user", text=text, status="ok", created=time.time()))
         self.sessions.set_fields(sid, last_run_id=rid)
 

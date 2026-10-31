@@ -167,8 +167,9 @@ chạy từ chat:
 
 - **Người chat** (mặc định): câu hỏi hiện trong chat với **Duyệt** và **Từ chối**;
   hoặc nhập câu trả lời vào ô tin nhắn. Câu trả lời vào trường output của node và run chạy tiếp.
-  Câu trả lời của bạn được giữ lại trong chat như một tin nhắn của bạn, và các lượt sau nhớ nó như
-  mọi tin nhắn khác.
+  Câu trả lời của bạn được giữ lại trong chat như một tin nhắn của bạn (câu trả lời dạng form thành
+  mỗi trường một dòng `trường: giá trị`), và các lượt sau nhớ nó cùng với câu hỏi mà nó trả lời,
+  trong cùng một lượt trao đổi.
 - **Người duyệt**: chat báo đang chờ duyệt, còn câu hỏi đến trang
   [Duyệt](human-approval.md) (và các kênh của nó) như thường lệ. Chat hiện câu
   trả lời khi run chạy tiếp.

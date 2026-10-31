@@ -168,8 +168,9 @@ runs from a chat:
 
 - **The person chatting** (default): the question appears in the chat with
   **Approve** and **Reject**; or type your answer in the message box. The answer goes to the node's
-  output field and the run goes on. Your answer stays in the chat as your message, and the later turns
-  remember it like any other message.
+  output field and the run goes on. Your answer stays in the chat as your message (a form answer as
+  one `field: value` line per field), and the later turns remember it together with the question it
+  answered, in the same exchange.
 - **A reviewer**: the chat says it is waiting for approval, and the question
   goes to the [Approvals](human-approval.md) page (and its channels) as usual.
   The chat shows the answer once the run goes on.

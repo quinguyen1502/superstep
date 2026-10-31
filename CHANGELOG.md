@@ -31,6 +31,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **The chat remembers a Human node's question with its answer** (TASK-0210). The conversation field had the answer
+  (`approved`) without the question it answered, and each answer shifted the "Messages remembered" cut by one
+  message. The question now comes before its answer and the cut keeps whole exchanges. A form answer (an object) is
+  saved as the person's turn too, one `field: value` line per field, so the question is no longer left as the last turn.
 - **An answer to a Human node stays in the chat** (TASK-0209). Approving, rejecting or typing an answer in the Chat
   panel or on a public chat page showed the answer only until the reply arrived; it was never saved, so it vanished
   and the question above it still looked open. The answer is now saved as the person's turn (and the next turns
