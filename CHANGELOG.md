@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.10.1 (2026-10-31)
+
 ### Added
 
 - **Choosing attachment storage at install** (TASK-0195, REQ-0080, DEC-0074). `superstep install` and `deploy` ask
