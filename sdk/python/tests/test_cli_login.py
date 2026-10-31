@@ -52,7 +52,7 @@ def test_login_stores_the_token_without_printing_it_or_opening_a_browser(tmp_pat
     def handler(request: httpx.Request):
         seen.append((request.method, request.url.path, request.headers.get("authorization")))
         if request.url.path == "/api/auth/cli/devices" and request.method == "POST":
-            return envelope({"device_code": "dev", "user_code": "abcd", "verification_uri": "/cli/authorize?code=abcd",
+            return envelope({"device_code": "dev", "user_code": "abcd", "verification_uri": "/cli/authorize",
                              "expires_in": 600, "interval": 0})
         if request.url.path == "/api/auth/cli/devices/dev":
             return envelope({"status": "approved", "token": secret})
@@ -64,7 +64,7 @@ def test_login_stores_the_token_without_printing_it_or_opening_a_browser(tmp_pat
     assert code == 0 and isolated_home == []
     assert secret not in out and secret not in err
     assert json.loads(out) == {"ok": True, "account": "ada@example.com", "url": "http://studio.example"}
-    assert "http://studio.example/cli/authorize?code=abcd" in err and "abcd" in err
+    assert "http://studio.example/cli/authorize" in err and "abcd" in err
     path = Path.home() / ".superstep" / "cli.json"
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
     saved = json.loads(path.read_text(encoding="utf-8"))
@@ -104,3 +104,28 @@ def test_env_wins_logout_keeps_lang_and_a_missing_route_names_the_server(monkeyp
     assert code == 1 and isolated_home == []
     body = json.loads(out)
     assert body["ok"] is False and body["error"]["code"] == "SERVER_TOO_OLD" and "0.9.0" in body["error"]["message"]
+
+
+def test_the_saved_token_goes_only_to_the_server_that_issued_it(monkeypatch, isolated_home):
+    """Review finding 4 (TASK-0205): `--url` or SUPERSTEP_URL naming another server sent it the saved token."""
+    from superstep.cli.session import resolve_target, same_server
+    path = Path.home() / ".superstep"
+    path.mkdir()
+    (path / "cli.json").write_text(json.dumps({"url": "https://studio.example.com", "token": "pat_file"}), encoding="utf-8")
+    seen = []
+
+    def handler(request: httpx.Request):
+        seen.append(request.headers.get("authorization"))
+        return envelope({"email": "a@example.com"})
+
+    code, out, err = invoke(["whoami", "--url", "https://evil.example"], client=httpx.Client(transport=httpx.MockTransport(handler)))
+    assert code == 1 and seen == [] and "superstep login" in err
+    monkeypatch.setenv("SUPERSTEP_URL", "https://evil.example")
+    assert resolve_target() == ("https://evil.example", "")
+    monkeypatch.delenv("SUPERSTEP_URL")
+    assert resolve_target("HTTPS://Studio.example.com:443/") == ("HTTPS://Studio.example.com:443", "pat_file")
+    assert resolve_target() == ("https://studio.example.com", "pat_file")
+    monkeypatch.setenv("SUPERSTEP_TOKEN", "pat_env")
+    assert resolve_target("https://evil.example") == ("https://evil.example", "pat_env")  # an explicit token is the user's choice
+    assert not same_server("http://studio.example.com", "https://studio.example.com")
+    assert not same_server("https://studio.example.com.evil.example", "https://studio.example.com")

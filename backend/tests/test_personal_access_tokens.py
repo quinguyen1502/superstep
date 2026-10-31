@@ -60,7 +60,7 @@ def test_an_active_name_cannot_be_reused_and_unknown_tokens_are_rejected():
 def test_device_sign_in_returns_the_secret_once():
     email, jwt = register()
     started = c.post("/api/auth/cli/devices", json={"name": "desk"}).json()["data"]
-    assert started["user_code"] and started["device_code"] and "/cli/authorize?code=" in started["verification_uri"]
+    assert started["user_code"] and started["device_code"] and started["verification_uri"].endswith("/cli/authorize") and started["user_code"] not in started["verification_uri"]
     pending = c.get(f"/api/auth/cli/devices/{started['device_code']}")
     assert pending.status_code == 200 and pending.json()["data"]["status"] == "pending"
     refused = c.post("/api/auth/cli/devices/approve", json={"user_code": "no-such-code"}, headers=headers(jwt))
@@ -87,3 +87,42 @@ def test_a_denied_or_expired_device_does_not_return_a_token():
     assert late.status_code == 400 and late.json()["error"]["code"] == "CLI_DEVICE_EXPIRED"
     still = c.post("/api/auth/cli/devices/approve", json={"user_code": expired["user_code"]}, headers=headers(jwt))
     assert still.status_code == 400 and still.json()["error"]["code"] == "CLI_DEVICE_EXPIRED"
+
+
+def test_the_sign_in_link_does_not_carry_the_code_starts_are_limited_and_old_ones_are_removed(tmp_path):
+    """Review finding 6 (TASK-0205, DEC-0076): the link held the code, so whoever sent it could have it approved; the
+    unauthenticated start had no limit and the table was never cleaned."""
+    import asyncio, time
+    import pytest
+    from app.core.errors import AppError
+    from app.models import CliDevice
+    from app.models.database import Database
+    from app.repositories import PersonalAccessTokenRepository, UserRepository
+    from app.services.pat_service import DEVICE_STARTS, DEVICE_TTL, PatService
+    from app.services.rate_limit import make_rate_limiter
+    db = Database(f"sqlite:///{tmp_path}/d.db"); db.migrate(); devices = CliDeviceRepository(db)
+    svc = PatService(PersonalAccessTokenRepository(db), devices, UserRepository(db), limiter=make_rate_limiter(None))
+    old = time.time() - 2 * DEVICE_TTL
+    devices.add(CliDevice(id="old", device_hash="h", user_code_hash="u", name=None, user_id=None, token_id=None, status="pending",
+                          secret=None, expires=old, created=old))
+    first = asyncio.run(svc.start_device_from("203.0.113.9"))
+    assert first["verification_uri"] == "/cli/authorize" and first["user_code"] not in first["verification_uri"]
+    assert devices.by_device_hash("h") is None  # an old sign-in is removed
+    for _ in range(DEVICE_STARTS - 1): asyncio.run(svc.start_device_from("203.0.113.9"))
+    with pytest.raises(AppError) as e: asyncio.run(svc.start_device_from("203.0.113.9"))
+    assert e.value.code == "RATE_LIMITED"
+    assert asyncio.run(svc.start_device_from("198.51.100.4"))["user_code"]  # another client is not affected
+
+
+def test_last_used_is_written_at_most_every_few_minutes(monkeypatch):
+    """Review finding 12 (TASK-0205): every request with a token wrote last_used; user_for_token was unused."""
+    from app.repositories import PersonalAccessTokenRepository
+    from app.services.pat_service import PatService
+    assert not hasattr(PatService, "user_for_token")
+    _email, jwt = register()
+    secret = c.post("/api/me/tokens", json={"name": "t"}, headers=headers(jwt)).json()["data"]["token"]
+    writes = []
+    real = PersonalAccessTokenRepository.set_fields
+    monkeypatch.setattr(PersonalAccessTokenRepository, "set_fields", lambda self, tid, **v: writes.append(v) or real(self, tid, **v))
+    for _ in range(3): assert c.get("/api/me", headers=headers(secret)).status_code == 200
+    assert len([w for w in writes if "last_used" in w]) == 1

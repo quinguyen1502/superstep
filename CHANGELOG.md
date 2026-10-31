@@ -4,6 +4,19 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Security
+
+- **The CLI sign-in asks for the code from the terminal** (TASK-0205, DEC-0076). The `superstep login` link no longer
+  carries the code, and `/cli/authorize` asks the person to type the code their terminal shows, with a warning, so a
+  link someone else sends cannot be approved with one click. Sign-in starts are limited to 10 per client IP per 10
+  minutes (`RATE_LIMITED`), and old sign-ins are removed.
+- **The CLI sends its saved token only to the server that issued it** (TASK-0205). A `--url` or `SUPERSTEP_URL` naming
+  another server gets no token; log in there or set `SUPERSTEP_TOKEN`.
+
+### Fixed
+
+- **A personal access token's last use is written at most every 5 minutes** instead of on every request (TASK-0205).
+
 ## 0.10.1 (2026-10-31)
 
 ### Added

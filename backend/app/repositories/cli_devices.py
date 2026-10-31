@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from ..models import CliDevice
 from ..models.database import Database
 
@@ -18,6 +18,12 @@ class CliDeviceRepository:
     def by_user_code_hash(self, user_code_hash: str) -> Optional[CliDevice]:
         with self.db.session() as s:
             return s.scalars(select(CliDevice).where(CliDevice.user_code_hash == user_code_hash)).first()
+
+    def delete_expired(self, before: float) -> int:
+        """Removes sign-ins whose deadline passed before `before` and that hold no undelivered token."""
+        with self.db.session() as s:
+            n = s.execute(delete(CliDevice).where(CliDevice.expires < before, CliDevice.secret.is_(None))).rowcount
+            s.commit(); return n
 
     def set_fields(self, did: str, **values) -> None:
         with self.db.session() as s:

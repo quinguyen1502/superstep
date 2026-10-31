@@ -1,5 +1,5 @@
 """Personal access tokens and the browser sign-in `superstep login` polls (TASK-0167, DEC-0071)."""
-import hashlib, secrets, time, uuid
+import asyncio, hashlib, secrets, time, uuid
 from typing import Optional
 from ..core import config
 from ..core.errors import AppError
@@ -11,6 +11,7 @@ DEVICE_TTL = 600
 POLL_INTERVAL = 1
 NAME_MAX = 80
 DEFAULT_NAME = "CLI"
+DEVICE_STARTS, DEVICE_WINDOW = 10, 600  # sign-ins started per client IP per 10 minutes (TASK-0205)
 
 
 def digest(token: str) -> str:
@@ -18,8 +19,8 @@ def digest(token: str) -> str:
 
 
 class PatService:
-    def __init__(self, pats: PersonalAccessTokenRepository, devices: CliDeviceRepository, users: UserRepository):
-        self.pats, self.devices, self.users = pats, devices, users
+    def __init__(self, pats: PersonalAccessTokenRepository, devices: CliDeviceRepository, users: UserRepository, limiter=None):
+        self.pats, self.devices, self.users, self.limiter = pats, devices, users, limiter
 
     def _name(self, name: Optional[str], *, required: bool) -> str:
         cleaned = (name or "").strip()
@@ -51,26 +52,22 @@ class PatService:
         if row.revoked is None: self.pats.set_fields(tid, revoked=time.time())
         return {"ok": True}
 
-    def user_for_token(self, token: str):
-        """The active user for a `pat_` secret, or None when it is not one. Raises when it is a PAT and is not usable.
-        Touches last_used. Does not apply password-change expiry."""
-        if not token or not token.startswith(PAT_PREFIX): return None
-        row = self.pats.by_hash(digest(token))
-        if row is None or row.revoked is not None: raise AppError("AUTH_TOKEN_INVALID")
-        user = self.users.get_by_id(row.user_id)
-        if user is None: raise AppError("AUTH_TOKEN_INVALID")
-        if not user.active: raise AppError("AUTH_ACCOUNT_DISABLED")
-        self.pats.set_fields(row.id, last_used=time.time())
-        return user
+    async def start_device_from(self, ip: str, name: Optional[str] = None) -> dict:
+        """start_device for an unauthenticated caller: limited per client IP, so the table cannot be flooded (TASK-0205)."""
+        if self.limiter is not None:
+            ok, retry = await self.limiter.hit(f"cli-device:{ip}", DEVICE_STARTS, DEVICE_WINDOW)
+            if not ok: raise AppError("RATE_LIMITED", headers={"Retry-After": str(retry)}, retry_after=retry)
+        return await asyncio.to_thread(self.start_device, name)
 
     def start_device(self, name: Optional[str] = None) -> dict:
         cleaned = self._name(name, required=False)
         device_code, user_code = secrets.token_urlsafe(32), secrets.token_hex(4)
         now = time.time()
+        self.devices.delete_expired(now - DEVICE_TTL)  # sign-ins that ended long ago are kept no longer (TASK-0205)
         self.devices.add(CliDevice(id=uuid.uuid4().hex[:12], device_hash=digest(device_code), user_code_hash=digest(user_code),
                                     name=cleaned or None, user_id=None, token_id=None, status="pending", secret=None,
                                     expires=now + DEVICE_TTL, created=now))
-        path = f"/cli/authorize?code={user_code}"
+        path = "/cli/authorize"  # without the code: the person types the code their own terminal shows (TASK-0205, DEC-0076)
         base = config.public_url()
         return {"device_code": device_code, "user_code": user_code, "verification_uri": f"{base}{path}" if base else path,
                 "expires_in": DEVICE_TTL, "interval": POLL_INTERVAL}

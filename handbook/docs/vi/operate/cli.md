@@ -104,15 +104,18 @@ superstep whoami
 superstep logout
 ```
 
-`login` in một URL và một mã, rồi mở trình duyệt. Duyệt hoặc từ chối trên
-`/cli/authorize` khi bạn đã đăng nhập studio. Không có gì được gửi cho đến khi
-bạn bấm nút. Lệnh ghi `url`, `token` và `account` vào `~/.superstep/cli.json`
+`login` in một URL và một mã, rồi mở trình duyệt. Trên `/cli/authorize`, khi
+đã đăng nhập studio, nhập mã trong terminal của bạn rồi duyệt hoặc từ chối.
+Không có gì được gửi cho đến khi bạn bấm nút. Chỉ duyệt lần đăng nhập mà chính
+bạn vừa bắt đầu: không bao giờ nhập mã do người khác gửi cho bạn. Lệnh ghi `url`, `token` và `account` vào `~/.superstep/cli.json`
 và đặt file ở mode `0600`. Lệnh không in token. `logout` xóa `token` và
 `account` khỏi file đó. Lệnh không thu hồi token. Thu hồi trong Settings, mục
 Tokens (`/settings/tokens`).
 
 Với script hoặc CI, tạo token trong Settings rồi export hai biến. Biến môi
-trường thắng file. Đừng commit token.
+trường thắng file. Đừng commit token. Token mà `login` lưu chỉ được gửi tới
+máy chủ đã cấp nó: khi `--url` hoặc `SUPERSTEP_URL` trỏ tới máy chủ khác, hãy
+đăng nhập ở đó hoặc đặt `SUPERSTEP_TOKEN`.
 
 ```bash
 export SUPERSTEP_URL=http://localhost:8000
