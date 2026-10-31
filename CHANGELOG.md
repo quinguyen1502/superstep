@@ -4,6 +4,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Fixed
+
+- **Two tokens can no longer get the same name at the same moment** (TASK-0213). Active personal access token names are
+  now unique per user in the database (a partial unique index; revoked tokens still free their name). A create that
+  loses the race answers `PAT_NAME_TAKEN`, and a CLI sign-in collected at that moment gets the next free name
+  (`name (2)`...). Active duplicates left by older versions are renamed the same way when the database is upgraded.
+
 ## 0.10.2 (2026-10-31)
 
 ### Security
