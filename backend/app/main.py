@@ -1,5 +1,5 @@
 """App factory. `app.main:app` stays the uvicorn entrypoint."""
-import asyncio
+import asyncio, logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,6 +34,10 @@ def create_app() -> FastAPI:
     check_secret(); crypto.check_key()
     code_runtime.warn_if_unisolated()  # TASK-0056: once at start-up
     bootstrap(get_db(), jobs=get_job_queue())  # alembic upgrade head + demo user + example workflow
+    try:  # rows from 0.10.1 learn the folder or bucket/prefix they were written to (TASK-0203)
+        from .api.deps import attachment_files
+        attachment_files().backfill_locations()
+    except Exception as e: logging.getLogger(__name__).warning("attachment locations not recorded (%s)", type(e).__name__)
     mcp_app = McpApp()  # MCP server for workflow tokens (TASK-0114)
     @asynccontextmanager
     async def lifespan(_app):

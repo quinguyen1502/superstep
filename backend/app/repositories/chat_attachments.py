@@ -1,12 +1,13 @@
 from typing import Optional
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, or_, select, update
 from ..models import ChatAttachment, ChatSession
 from ..models.database import Database
 
 META = (ChatAttachment.id, ChatAttachment.session_id, ChatAttachment.turn_id, ChatAttachment.name, ChatAttachment.kind,
         ChatAttachment.mime, ChatAttachment.size, ChatAttachment.text, ChatAttachment.text_cut, ChatAttachment.created,
-        ChatAttachment.storage, ChatAttachment.key)
-Ref = tuple  # (storage, key) of a file's bytes outside the database (TASK-0191)
+        ChatAttachment.storage, ChatAttachment.key, ChatAttachment.location)
+Ref = tuple  # (storage, key, location) of a file's bytes outside the database (TASK-0191, TASK-0203)
+REF = (ChatAttachment.storage, ChatAttachment.key, ChatAttachment.location)
 
 
 class ChatAttachmentRepository:
@@ -35,16 +36,37 @@ class ChatAttachmentRepository:
         with self.db.session() as s:
             return [(k, c) for k, c in s.execute(select(col, ChatAttachment.created).where(ChatAttachment.storage == storage))]
 
-    def known(self, storage: str, keys: list[str]) -> set[str]:
-        """The keys among `keys` that a row of `storage` points at (the orphan sweep)."""
-        if not keys: return set()
+    def located(self, storage: str) -> list[tuple[str, Optional[str]]]:
+        """(key, location) of the files kept in `storage` (archive export, TASK-0203)."""
         with self.db.session() as s:
-            return set(s.scalars(select(ChatAttachment.key).where(ChatAttachment.storage == storage, ChatAttachment.key.in_(keys))))
+            return [tuple(r) for r in s.execute(select(ChatAttachment.key, ChatAttachment.location).where(ChatAttachment.storage == storage))]
+
+    def known(self, storage: str, keys: list[str], location: Optional[str] = None) -> set[str]:
+        """The keys among `keys` that a row of `storage` at `location` points at (the orphan sweep). A row without a
+        location counts as everywhere, so a sweep never removes a file a row may still need."""
+        if not keys: return set()
+        where = [ChatAttachment.storage == storage, ChatAttachment.key.in_(keys)]
+        if location is not None: where.append(or_(ChatAttachment.location.is_(None), ChatAttachment.location == location))
+        with self.db.session() as s:
+            return set(s.scalars(select(ChatAttachment.key).where(*where)))
+
+    def backfill_locations(self, storage: str, location: str) -> int:
+        """Rows of `storage` written before locations were recorded get `location` (TASK-0203)."""
+        with self.db.session() as s:
+            n = s.execute(update(ChatAttachment).where(ChatAttachment.storage == storage, ChatAttachment.location.is_(None))
+                          .values(location=location)).rowcount
+            s.commit(); return n
+
+    def relocate(self, storage: str, key: str, location: str) -> int:
+        with self.db.session() as s:
+            n = s.execute(update(ChatAttachment).where(ChatAttachment.storage == storage, ChatAttachment.key == key)
+                          .values(location=location)).rowcount
+            s.commit(); return n
 
     def refs_of_sessions(self, sids: list[str]) -> list[Ref]:
         if not sids: return []
         with self.db.session() as s:
-            return [tuple(r) for r in s.execute(select(ChatAttachment.storage, ChatAttachment.key).where(
+            return [tuple(r) for r in s.execute(select(*REF).where(
                 ChatAttachment.session_id.in_(sids), ChatAttachment.storage != "db", ChatAttachment.key.is_not(None)))]
 
     def storages(self) -> list[str]:
@@ -78,7 +100,7 @@ class ChatAttachmentRepository:
         """Deletes an unsent file; (storage, key) of its bytes, or None when there was no such file."""
         where = (ChatAttachment.id == aid, ChatAttachment.session_id == sid, ChatAttachment.turn_id.is_(None))
         with self.db.session() as s:
-            ref = s.execute(select(ChatAttachment.storage, ChatAttachment.key).where(*where)).first()
+            ref = s.execute(select(*REF).where(*where)).first()
             if ref is None: return None
             s.execute(delete(ChatAttachment).where(*where)); s.commit(); return tuple(ref)
 
@@ -86,24 +108,35 @@ class ChatAttachmentRepository:
         """Unsent files uploaded before `before` (never sent with a message); (storage, key) of each."""
         where = (ChatAttachment.turn_id.is_(None), ChatAttachment.created < before)
         with self.db.session() as s:
-            refs = [tuple(r) for r in s.execute(select(ChatAttachment.storage, ChatAttachment.key).where(*where))]
+            refs = [tuple(r) for r in s.execute(select(*REF).where(*where))]
             s.execute(delete(ChatAttachment).where(*where)); s.commit(); return refs
 
     # ---- moving files between backends (TASK-0194) ----
-    def not_on(self, storage: str, limit: int, skip: tuple = ()) -> list:
-        """Up to `limit` files kept elsewhere than `storage`, oldest first, with their session's workflow (for the key)."""
+    def not_on(self, storage: str, limit: int, skip: tuple = (), location: str = "") -> list:
+        """Up to `limit` files kept elsewhere than `storage` at `location` (another backend, or the same backend at an
+        older folder or bucket/prefix, TASK-0203), oldest first, with their session's workflow (for the key)."""
+        elsewhere = ChatAttachment.storage != storage
+        if location: elsewhere = or_(elsewhere, ChatAttachment.location != location)
         q = (select(ChatAttachment.id, ChatAttachment.session_id, ChatAttachment.mime, ChatAttachment.size, ChatAttachment.storage,
-                    ChatAttachment.key, ChatSession.workflow_id)
+                    ChatAttachment.key, ChatAttachment.location, ChatSession.workflow_id)
              .outerjoin(ChatSession, ChatSession.id == ChatAttachment.session_id)
-             .where(ChatAttachment.storage != storage).order_by(ChatAttachment.created, ChatAttachment.id).limit(limit))
+             .where(elsewhere).order_by(ChatAttachment.created, ChatAttachment.id).limit(limit))
         if skip: q = q.where(ChatAttachment.id.not_in(list(skip)))
         with self.db.session() as s: return list(s.execute(q))
 
-    def switch(self, aid: str, frm: str, to: str, key: Optional[str], data: bytes) -> int:
-        """Points a file at its copy on `to` (only while it is still on `frm`); `data` is the bytes for db, else b''."""
+    def count_not_on(self, storage: str, location: str = "") -> int:
+        elsewhere = ChatAttachment.storage != storage
+        if location: elsewhere = or_(elsewhere, ChatAttachment.location != location)
+        with self.db.session() as s: return s.scalar(select(func.count()).select_from(ChatAttachment).where(elsewhere)) or 0
+
+    def switch(self, aid: str, frm: str, to: str, key: Optional[str], data: bytes, frm_location: Optional[str] = None,
+               location: Optional[str] = None) -> int:
+        """Points a file at its copy on `to` at `location` (only while it is still on `frm` at `frm_location`); `data`
+        is the bytes for db, else b''."""
+        where = [ChatAttachment.id == aid, ChatAttachment.storage == frm]
+        where.append(ChatAttachment.location.is_(None) if frm_location is None else ChatAttachment.location == frm_location)
         with self.db.session() as s:
-            n = s.execute(update(ChatAttachment).where(ChatAttachment.id == aid, ChatAttachment.storage == frm)
-                          .values(storage=to, key=key, data=data)).rowcount
+            n = s.execute(update(ChatAttachment).where(*where).values(storage=to, key=key, data=data, location=location)).rowcount
             s.commit(); return n
 
     def by_storage(self) -> dict:

@@ -74,9 +74,11 @@ UPLOAD_PIECE = 1024 * 1024  # read an upload in pieces of this size (TASK-0200)
 
 async def read_upload(request: Request) -> tuple[str, BinaryIO]:
     """(file name, file) of a one-file multipart upload. A body that says it is larger than the operator's ceiling is
-    refused before it is read (TASK-0174, DEC-0072 decision 3); then the file is read in pieces into a spooled
-    temporary file (in memory up to 1 MB, on disk above) and refused as soon as it passes the ceiling, so a large
-    upload is never one bytes object (TASK-0200). The caller closes the file."""
+    refused before it is read (TASK-0174, DEC-0072 decision 3). The multipart parser then spools the whole part to a
+    temporary file before the ceiling is checked, so a body without a Content-Length (chunked) is only bounded by the
+    proxy in front (nginx client_max_body_size, which also buffers it and sends a length); the file is then copied in
+    pieces and refused past the ceiling, so it is never one bytes object (TASK-0200, corrected in TASK-0203). The
+    caller closes the file."""
     ceiling = config.chat_attachment_max_mb() * 1024 * 1024
     too_large = AppError("CHAT_ATTACHMENT_TOO_LARGE", max_mb=config.chat_attachment_max_mb())
     try: declared = int(request.headers.get("content-length") or 0)
