@@ -246,3 +246,36 @@ def test_the_run_time_depth_limit():
         prev = rid
     with pytest.raises(AppError) as e: svc._child_starter(prev, None, "u")("key", {}, None, {}, {"workflow_id": "w"})
     assert e.value.code == "WORKFLOW_TOOL_TOO_DEEP"
+
+
+def test_a_slow_first_progress_write_does_not_count_against_the_child_run_time(monkeypatch):
+    """TASK-0212: the time limit counts the engine's work, not the setup before it. On CI the child's first progress
+    write (before any node) waited 12.6 s for the database; the 5 s limit had started before it, so the child timed out
+    without running a node and the parent's tool call failed. Here that write of the child takes longer than the limit."""
+    import time as _t
+    monkeypatch.setenv("STUDIO_RUN_TIMEOUT", "1")
+    tok = user(); _, sup = setup(tok, specialist("Slow store desk", llm()))
+    rid, evs = start(tok, sup)
+    cid = next(e for e in evs if e["type"] == "run_waiting")["wait"]["run_id"]
+    repo = run_service().runs; real = type(repo).save_progress; slowed = []
+    def slow_first(self, run_id, events, checkpoint, fence=None):
+        if run_id == cid and not slowed: slowed.append(run_id); _t.sleep(1.5)  # longer than the limit
+        return real(self, run_id, events, checkpoint, fence)
+    monkeypatch.setattr(type(repo), "save_progress", slow_first)
+    assert drain() == 2
+    child, parent = repo.get(cid), repo.get(rid)
+    assert slowed == [cid]
+    assert child.status == "ok", json.loads(child.events)[-1]
+    assert parent.status == "ok" and json.loads(parent.final_state)["steps"][0]["status"] == "ok"
+    assert any(e.get("type") == "node_finished" and e["node"] == "x" for e in json.loads(child.events))
+
+
+def test_the_time_limit_still_stops_a_slow_child(monkeypatch):
+    """The limit itself is unchanged: a child whose nodes run past it still ends with `timeout` (TASK-0212)."""
+    monkeypatch.setenv("STUDIO_RUN_TIMEOUT", "1")
+    from tests.test_core_hardening import slow_wf
+    tok = user(); slow = slow_wf(3); child_id, sup = setup(tok, {**slow, "name": "Slow desk", "state": STATE + [{"name": "out", "type": "string"}]})
+    rid, _ = start(tok, sup); drain()
+    child = run_service().runs.children(rid)[0]
+    assert child.status == "timeout" and "STUDIO_RUN_TIMEOUT" in json.dumps(json.loads(child.events)[-1])
+    assert run_service().runs.get(rid).status == "ok"  # the model gets the error and answers

@@ -4,6 +4,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Fixed
+
+- **A run's time limit no longer counts the setup before its first node** (TASK-0212). `STUDIO_RUN_TIMEOUT` started
+  before a queued run saved its first progress checkpoint, so when that write waited for the database the run could
+  end with `timeout` before running a node. A workflow tool's child run did this in CI: its first write waited 12.6 s,
+  the 5 s limit had passed, and the parent's tool call failed with an empty step list. The limit now starts when the
+  engine starts; its length is unchanged.
+
 ## 0.10.2 (2026-10-31)
 
 ### Security
