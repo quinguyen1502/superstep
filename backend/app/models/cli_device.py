@@ -13,7 +13,7 @@ class CliDevice(Base):
     name: Mapped[Optional[str]] = mapped_column(Text)
     user_id: Mapped[Optional[str]] = mapped_column(Text)
     token_id: Mapped[Optional[str]] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(Text)  # pending, approved, denied
+    status: Mapped[str] = mapped_column(Text)  # pending, approved, delivered (the CLI has its token, TASK-0207), denied
     secret: Mapped[Optional[str]] = mapped_column(Text)
     expires: Mapped[float] = mapped_column(Float)
     created: Mapped[float] = mapped_column(Float)

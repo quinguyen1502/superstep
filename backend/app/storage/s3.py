@@ -44,6 +44,8 @@ class S3Store(AttachmentStore):
 
     @staticmethod
     def _error(e: Exception, missing_codes=("NoSuchKey", "404", "NotFound")) -> StoreError:
+        if type(e).__name__ == "NoCredentialsError":  # no keys set and none in the default AWS chain (TASK-0207)
+            return StoreError("no S3 credentials: set STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID and STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY")
         code = getattr(e, "response", {}).get("Error", {}).get("Code") if hasattr(e, "response") else None
         if code in missing_codes: return StoreError("not found", missing=True)
         return StoreError(f"S3 error {code}" if code else f"S3 unreachable ({type(e).__name__})")

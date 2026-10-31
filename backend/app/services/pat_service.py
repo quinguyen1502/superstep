@@ -63,6 +63,7 @@ class PatService:
         cleaned = self._name(name, required=False)
         device_code, user_code = secrets.token_urlsafe(32), secrets.token_hex(4)
         now = time.time()
+        for old in self.devices.expired_secrets(now): self._drop_secret(old)  # a token never collected is revoked (TASK-0207)
         self.devices.delete_expired(now - DEVICE_TTL)  # sign-ins that ended long ago are kept no longer (TASK-0205)
         self.devices.add(CliDevice(id=uuid.uuid4().hex[:12], device_hash=digest(device_code), user_code_hash=digest(user_code),
                                     name=cleaned or None, user_id=None, token_id=None, status="pending", secret=None,
@@ -77,11 +78,19 @@ class PatService:
         if row is None: raise AppError("CLI_DEVICE_INVALID")
         return row
 
+    def _drop_secret(self, row: CliDevice) -> None:
+        if row.token_id: self.pats.set_fields(row.token_id, revoked=time.time())
+        self.devices.set_fields(row.id, secret=None)
+
+    @staticmethod
+    def _collected(row: CliDevice) -> bool:
+        """The CLI already has its token: delivered, or (before TASK-0207) approved with the secret already taken."""
+        return row.status == "delivered" or (row.status == "approved" and bool(row.token_id) and not row.secret)
+
     def _fresh(self, row: CliDevice) -> CliDevice:
-        """Refuse a device that is still waiting, or that holds an undelivered secret, after its deadline."""
-        if row.expires >= time.time() or (row.status != "pending" and not row.secret): return row
-        if row.token_id and row.secret: self.pats.set_fields(row.token_id, revoked=time.time())
-        if row.secret: self.devices.set_fields(row.id, secret=None)
+        """Refuse a device that is still waiting, or approved and not yet collected, after its deadline."""
+        if row.expires >= time.time() or self._collected(row) or row.status == "denied": return row
+        if row.secret: self._drop_secret(row)
         raise AppError("CLI_DEVICE_EXPIRED")
 
     def poll(self, device_code: str) -> dict:
@@ -90,16 +99,23 @@ class PatService:
         if row.status == "denied": raise AppError("CLI_DEVICE_DENIED")
         row = self._fresh(row)
         if row.status == "pending": return {"status": "pending", "interval": POLL_INTERVAL}
-        secret = self.devices.take_secret(row.id)
-        if not secret: raise AppError("CLI_DEVICE_INVALID")
+        if row.secret:  # approved before TASK-0207: the secret was stored
+            secret = self.devices.take_secret(row.id)
+            if not secret: raise AppError("CLI_DEVICE_INVALID")
+            return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
+        if self._collected(row) or not self.devices.claim(row.id, "approved", "delivered"): raise AppError("CLI_DEVICE_INVALID")
+        token, secret = self._issue(row.user_id, row.name or DEFAULT_NAME)  # minted now: no token waits in the table (TASK-0207)
+        self.devices.set_fields(row.id, token_id=token.id)
         return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
 
     def approve(self, user_id: str, user_code: str, name: Optional[str]) -> dict:
         row = self._fresh(self._device_by_user_code(user_code))
         if row.status != "pending": raise AppError("CLI_DEVICE_INVALID")
         chosen = self._name(name, required=False) or row.name or DEFAULT_NAME
-        token, secret = self._issue(user_id, chosen)
-        self.devices.set_fields(row.id, status="approved", user_id=user_id, token_id=token.id, secret=secret, name=chosen)
+        if self.users.get_by_id(user_id) is None: raise AppError("AUTH_TOKEN_INVALID")
+        if self.pats.active_by_name(user_id, chosen): raise AppError("PAT_NAME_TAKEN", name=chosen)
+        if not self.devices.claim(row.id, "pending", "approved", user_id=user_id, name=chosen): raise AppError("CLI_DEVICE_INVALID")
+        # the token is minted when the CLI collects it, so none waits in the table (TASK-0207)
         return {"ok": True, "name": chosen}
 
     def deny(self, user_code: str) -> dict:

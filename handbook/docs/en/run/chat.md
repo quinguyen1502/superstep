@@ -144,7 +144,9 @@ Each file remembers the folder or bucket and prefix it was written to, so
 changing `STUDIO_ATTACHMENT_FS_PATH`, the bucket or the prefix later does not
 lose older files: they are still read from where they are, and
 `superstep attachments migrate --to fs` (or `--to s3`) moves them to the new
-place.
+place. Files in a bucket stay readable after switching to another backend and
+removing `STUDIO_ATTACHMENT_S3_BUCKET`, as long as the S3 credentials (and
+endpoint) are still set; without them, reading fails with "no S3 credentials".
 
 ## Memory
 
