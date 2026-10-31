@@ -129,6 +129,16 @@ def _attachment_stores(db) -> storage.Stores:
 def attachment_files() -> AttachmentFiles:
     db = get_db(); return AttachmentFiles(ChatAttachmentRepository(db), _attachment_stores(db))
 
+def attachment_migration():
+    """Moving files between backends (TASK-0194); used by the admin route and `app.admin_cmd`."""
+    from ..services.attachment_migration import AttachmentMigration
+    db = get_db(); return AttachmentMigration(ChatAttachmentRepository(db), _attachment_stores(db), access_service())
+
+def attachment_archive():
+    """Attachment bytes in and out of a backup archive (TASK-0194); used by `app.admin_cmd`."""
+    from ..services.attachment_archive import AttachmentArchive
+    db = get_db(); return AttachmentArchive(ChatAttachmentRepository(db), _attachment_stores(db))
+
 
 def public_chat_service() -> PublicChatService:
     return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())

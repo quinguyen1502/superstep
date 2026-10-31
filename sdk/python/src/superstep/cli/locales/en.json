@@ -235,5 +235,20 @@
   "help.mcp": "Serve the named workflows as MCP tools. This process speaks MCP on stdio.",
   "help.mcp_workflow": "Workflow id or exact name.",
   "example.mcp": "Example: superstep mcp invoices",
-  "error.mcp_disabled": "MCP is off for {name}, or you cannot open it."
+  "error.mcp_disabled": "MCP is off for {name}, or you cannot open it.",
+  "help.include_attachments": "Also copy chat attachments kept in an S3 bucket into the archive. Files on a folder are always included.",
+  "help.restore_force": "Restore even when the archive used another attachment storage; this instance keeps its own attachment settings.",
+  "error.storage_mismatch": "The archive keeps chat attachments on {archived}, but this instance is set up for {target}. Use --force to restore anyway, then run superstep attachments migrate --to {target}.",
+  "backup.bucket_not_included": "Chat attachments stay in bucket {bucket} (prefix {prefix}) and are not in this archive. Back the bucket up on its own, or use --include-attachments.",
+  "help.attachments": "Manage where chat attachment files are stored.",
+  "help.attachments_migrate": "Move chat attachment files to another storage backend. Safe to run again after an interruption.",
+  "help.attachments_to": "The backend to move files to: db, fs or s3. Set STUDIO_ATTACHMENT_STORAGE to the same value so new files go there too.",
+  "help.attachments_dry_run": "Only count the files that would move.",
+  "help.attachments_batch": "Files per batch (1 to 1000). The default is 100.",
+  "example.attachments_migrate": "Example: superstep attachments migrate --to fs --dry-run",
+  "attachments.dry_run": "{pending} files would move to {to}.",
+  "attachments.moved": "Moved {moved} files ({mb} MB) to {to}.",
+  "attachments.failed": "Not moved: {id} ({reason}).",
+  "attachments.pending": "{pending} files are still on another backend. Run the command again to retry them.",
+  "error.attachments_server": "The server refused: {message}"
 }

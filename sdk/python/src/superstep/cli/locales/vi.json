@@ -235,5 +235,20 @@
   "help.mcp": "Phục vụ các workflow đã nêu như công cụ MCP. Tiến trình này nói MCP trên stdio.",
   "help.mcp_workflow": "Id của workflow hoặc tên chính xác.",
   "example.mcp": "Ví dụ: superstep mcp invoices",
-  "error.mcp_disabled": "MCP đang tắt với {name}, hoặc bạn không mở được workflow này."
+  "error.mcp_disabled": "MCP đang tắt với {name}, hoặc bạn không mở được workflow này.",
+  "help.include_attachments": "Chép cả tệp đính kèm chat trong bucket S3 vào archive. Tệp trong thư mục luôn được chép.",
+  "help.restore_force": "Vẫn khôi phục khi archive dùng nơi lưu tệp đính kèm khác; instance này giữ thiết lập tệp đính kèm của nó.",
+  "error.storage_mismatch": "Archive lưu tệp đính kèm chat ở {archived}, nhưng instance này được thiết lập cho {target}. Dùng --force để vẫn khôi phục, rồi chạy superstep attachments migrate --to {target}.",
+  "backup.bucket_not_included": "Tệp đính kèm chat vẫn nằm trong bucket {bucket} (prefix {prefix}) và không có trong archive này. Hãy sao lưu bucket riêng, hoặc dùng --include-attachments.",
+  "help.attachments": "Quản lý nơi lưu tệp đính kèm chat.",
+  "help.attachments_migrate": "Chuyển tệp đính kèm chat sang nơi lưu khác. Chạy lại an toàn sau khi bị ngắt.",
+  "help.attachments_to": "Nơi lưu đích: db, fs hoặc s3. Đặt STUDIO_ATTACHMENT_STORAGE cùng giá trị để tệp mới cũng lưu ở đó.",
+  "help.attachments_dry_run": "Chỉ đếm số tệp sẽ chuyển.",
+  "help.attachments_batch": "Số tệp mỗi đợt (1 đến 1000). Mặc định là 100.",
+  "example.attachments_migrate": "Ví dụ: superstep attachments migrate --to fs --dry-run",
+  "attachments.dry_run": "{pending} tệp sẽ chuyển sang {to}.",
+  "attachments.moved": "Đã chuyển {moved} tệp ({mb} MB) sang {to}.",
+  "attachments.failed": "Chưa chuyển: {id} ({reason}).",
+  "attachments.pending": "Còn {pending} tệp ở nơi lưu khác. Chạy lại lệnh để thử lại.",
+  "error.attachments_server": "Server từ chối: {message}"
 }

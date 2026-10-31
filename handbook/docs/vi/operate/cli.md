@@ -52,6 +52,36 @@ superstep backup --schedule daily --keep 7
 tên đó. Archive mang database, `.env`, `compose.yml` và secret key, nên
 credential đã lưu vẫn giải mã được sau khi restore vào một thư mục mới.
 
+Tệp đính kèm chat đi theo nơi lưu của chúng (xem
+[Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem)):
+
+| Nơi lưu | Trong archive |
+| --- | --- |
+| `db` | Nằm trong bản dump database. |
+| `fs` | Luôn có, dưới dạng `attachments.tar`. |
+| `s3` | Chỉ khi chạy `superstep backup --include-attachments`. Nếu không, manifest ghi bucket và prefix, và lệnh nhắc bạn sao lưu bucket riêng. |
+
+`restore` từ chối archive có nơi lưu tệp đính kèm khác với
+`STUDIO_ATTACHMENT_STORAGE` của instance. `--force` vẫn khôi phục và giữ các
+thiết lập `STUDIO_ATTACHMENT_*` của instance; tệp được ghi về nơi lưu mà bản ghi
+của nó chỉ tới, rồi `superstep attachments migrate` chuyển chúng đi.
+
+## Nơi lưu tệp đính kèm
+
+```bash
+superstep attachments migrate --to fs --dry-run
+superstep attachments migrate --to fs
+```
+
+`migrate` chuyển tệp đính kèm chat sang `db`, `fs` hoặc `s3`. Mỗi tệp được chép,
+đọc lại và kiểm tra (kích thước và SHA-256), rồi bản ghi được chuyển sang bản
+mới và bản cũ bị xoá. Tệp nào lỗi thì ở nguyên chỗ cũ và được liệt kê; khi đó mã
+thoát là 1. Lần chạy bị ngắt vẫn để mọi tệp đọc được, và chạy lại lệnh sẽ làm
+tiếp; khi không còn gì thì lệnh không làm gì. `--batch N` đặt số tệp đọc mỗi đợt
+(mặc định 100). Đặt `STUDIO_ATTACHMENT_STORAGE` cùng nơi lưu đó để tệp mới cũng
+lưu ở đó. Admin cũng làm được qua API với `GET /api/admin/attachments` và
+`POST /api/admin/attachments/migrate`.
+
 ## Đăng nhập
 
 Các lệnh workflow không đọc `instance.json`.
