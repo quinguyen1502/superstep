@@ -66,8 +66,8 @@
 
 ## Approval
 
-- Approved By: pending
-- Approved On: pending
+- Approved By: Thái Quí Nguyễn (PR #271, all 11 recommendations of PLAN-0002)
+- Approved On: 2026-10-31
 
 ## Review Or Revisit Trigger
 

@@ -29,7 +29,7 @@ server {
   # Upload routes (chat attachments, workflow import, knowledge documents): above every upload ceiling the api enforces
   # itself (STUDIO_CHAT_ATTACHMENT_MAX_MB, workflow zips 50 MB), so the api answers with its own error code; raise
   # WEB_MAX_BODY_SIZE with a ceiling above 100 MB (TASK-0203, TASK-0207).
-  location ~ ^/api/(chat/sessions/[^/]+/attachments|public/chat/[^/]+/sessions/[^/]+/attachments|import|knowledge-bases/[^/]+/documents)/?$ {
+  location ~ ^/api/(chat/sessions/[^/]+/attachments|public/(v1/)?chat/[^/]+/sessions/[^/]+/attachments|import|knowledge-bases/[^/]+/documents)/?$ {
     client_max_body_size ${WEB_MAX_BODY_SIZE};
     proxy_pass http://${API_UPSTREAM};
     proxy_set_header Host $host;
