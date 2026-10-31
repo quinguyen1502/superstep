@@ -58,6 +58,12 @@ npm run e2e
 | `E2E_API_PORT`, `E2E_UI_PORT` | Run two checkouts side by side |
 | `E2E_CODE_RUNTIME=subprocess` | Run the Code mode specs without Docker |
 
+CI runs the whole suite (English and Vietnamese) on every pull request in the
+`E2E (Playwright)` job, split into three shards with `--shard`, Chromium cached and
+`E2E_CODE_RUNTIME=subprocess`. Tests are not retried: a flaky test is fixed at its
+cause. When a shard fails, its traces and screenshots are uploaded as the
+`e2e-shard-N` artifact (kept 7 days); open a trace with `npx playwright show-trace`.
+
 ## Handbook screenshots
 
 ```bash

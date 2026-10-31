@@ -20,6 +20,7 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${UI}`,
     headless: true,
     trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',  // with the trace, uploaded by the CI e2e job (TASK-0199)
     // Use a system Chrome when PW_CHROME is set (no browser download needed); otherwise Playwright's Chromium.
     launchOptions: process.env.PW_CHROME ? { executablePath: process.env.PW_CHROME } : {},
   },
