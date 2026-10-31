@@ -1167,7 +1167,7 @@ class _Writer(GraphWriter):
         name = lambda i: "END" if g.nodes[i]["type"] == "end" else lit(g.names[i])  # noqa: E731
         leave = lambda i: lit(g.agents[i]["exit"]) if i in g.agents else lit(g.names[i])  # an Agent node's edges leave from its end node  # noqa: E731
         cache = any(number((n.get("data") or {}).get("cache_ttl"), int) is not None for n in g.nodes.values())
-        if (rec := self.receivers(g)):
+        if (rec := self.start_receivers(g)):
             r = self.start_router(build, is_main)
             first = [name(e["target"]) for x in g.nodes if g.nodes[x]["type"] == "start" for e in g.out(x) if g.nodes[e["target"]]["type"] != "join"]
             self.add("")
@@ -1236,9 +1236,9 @@ class _Writer(GraphWriter):
                     first_edge = False
                 mapping = ", ".join(f"{lit(e.get('label'))}: {name(e['target'])}" for e in out)
                 self.add(f"    .addConditionalEdges({src}, route_{g.names[nid]}, {{ {mapping} }})")
-            elif n["type"] == "start" and self.receivers(g):
+            elif n["type"] == "start" and self.start_receivers(g):
                 targets = [e["target"] for e in out if g.nodes[e["target"]]["type"] != "join"]
-                every = ", ".join(dict.fromkeys([name(t) for t in targets] + [lit(g.names[r]) for r in self.receivers(g)]))
+                every = ", ".join(dict.fromkeys([name(t) for t in targets] + [lit(g.names[r]) for r in self.start_receivers(g)]))
                 self.add(f"    // A chat continues with the agent that answered last: {self.START_FIELD} in the input starts there.")
                 self.add(f"    .addConditionalEdges(START, {self.start_router(build, is_main)}, [{every}])")
             else:

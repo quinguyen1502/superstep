@@ -46,6 +46,11 @@ agent trả lời gần nhất, nên người dùng tiếp tục nói chuyện v
 agent đó đã bị xóa hoặc không còn là đích chuyển giao, chat bắt đầu lại ở agent
 tiếp nhận. Phiên mới luôn bắt đầu ở agent tiếp nhận.
 
+Điều này cần Start nối thẳng vào agent tiếp nhận. Khi có node khác nằm giữa
+Start và agent đầu tiên (che dữ liệu cá nhân, bộ lọc, tra cứu khách hàng), các
+node đó chạy ở mọi tin nhắn, và chat khi đó bắt đầu ở agent tiếp nhận mỗi lần
+thay vì bỏ qua chúng.
+
 ## Trace
 
 Trace của run và các bước trong chat hiện **Triage › hand-off** cùng agent đích

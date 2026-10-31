@@ -388,7 +388,7 @@ class ChatSessionService:
         a = settings_of(st)
         if a["enabled"] and a["field"] in fields: inp[a["field"]] = [state_record(x) for x in files]
         if s.active_agent:  # the agent a hand-off left the conversation with (TASK-0181); gone or no longer a target: the entry
-            if s.active_agent in handoffs.receivers(self._graph(w)): inp[agents.START_INPUT] = s.active_agent
+            if s.active_agent in handoffs.continues(self._graph(w)): inp[agents.START_INPUT] = s.active_agent
             else: self.sessions.set_fields(sid, active_agent=None); s.active_agent = None
         if size({k: v for k, v in inp.items() if k != a["field"]}) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
         return {"workflow_id": s.workflow_id, "input": inp, "text": text, "attachment_ids": [x.id for x in files]}

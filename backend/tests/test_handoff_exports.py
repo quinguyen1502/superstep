@@ -70,3 +70,12 @@ def test_typescript_type_checks_and_hands_off_like_the_studio(tmp_path, deno_env
     from tests.test_typescript_export import same_run as ts_same_run
     ts_same_run(tmp_path, deno_env, help_desk(), {"message": "I want a refund for a duplicate charge"}, ignore=("answer",))  # built-in Python tools are stubs in TS
     ts_same_run(tmp_path, deno_env, help_desk(max_handoffs=0), {"message": "I want a refund for a duplicate charge"}, ignore=("answer",))  # built-in Python tools are stubs in TS
+
+
+def test_exports_do_not_skip_the_nodes_before_the_first_agent():
+    """Review finding 5 (TASK-0206): the exports mirror the engine; with a node between Start and the first agent there
+    is no start router."""
+    from tests.test_agent_handoff_engine import masked_desk
+    wf = masked_desk()
+    assert "route_start" not in X.to_python(wf, "Masked desk", 1, None).code
+    assert "routeStart" not in TS.to_typescript(wf, "Masked desk", 1).code

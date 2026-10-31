@@ -4,6 +4,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Fixed
+
+- **A chat no longer skips the nodes between Start and the first agent** (TASK-0206, DEC-0073). After a hand-off, the
+  next message jumped from Start straight to the agent that answered last, so a masking, filter or lookup step before
+  the first agent did not run. The chat now continues with that agent only when Start leads straight to agents;
+  otherwise every message runs from Start. The Python, LangGraph and TypeScript exports do the same.
+
 ### Security
 
 - **The attachment orphan sweep only deletes its own files** (TASK-0203). It used to delete any file older than an hour
