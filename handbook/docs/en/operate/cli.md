@@ -54,6 +54,37 @@ superstep backup --schedule daily --keep 7
 `compose.yml` and the secret key, so a stored credential still decrypts after a
 restore onto a new directory.
 
+Chat attachments follow their storage backend (see
+[Chat: Attachments](../run/chat.md#attachments)):
+
+| Backend | In the archive |
+| --- | --- |
+| `db` | Inside the database dump. |
+| `fs` | Always, as `attachments.tar`. |
+| `s3` | Only with `superstep backup --include-attachments`. Otherwise the manifest records the bucket and prefix, and the command reminds you to back the bucket up on its own. |
+
+`restore` refuses an archive whose attachment backend differs from the
+instance's `STUDIO_ATTACHMENT_STORAGE`. `--force` restores anyway and keeps the
+instance's own `STUDIO_ATTACHMENT_*` settings; the files go back to the backend
+their rows name, and `superstep attachments migrate` then moves them.
+
+## Attachment storage
+
+```bash
+superstep attachments migrate --to fs --dry-run
+superstep attachments migrate --to fs
+```
+
+`migrate` moves chat attachment files to `db`, `fs` or `s3`. Each file is
+copied, read back and checked (size and SHA-256), then its record is switched and
+the old copy deleted. A file that fails stays where it was and is listed; the
+exit code is then 1. An interrupted run leaves every file readable, and running
+the command again continues; when nothing is left it does nothing. `--batch N`
+sets how many files are read per batch (default 100). Set
+`STUDIO_ATTACHMENT_STORAGE` to the same backend so new files go there too.
+Admins can do the same over the API with `GET /api/admin/attachments` and
+`POST /api/admin/attachments/migrate`.
+
 ## Sign in
 
 Workflow commands do not read `instance.json`.

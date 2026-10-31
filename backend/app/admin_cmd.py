@@ -26,7 +26,8 @@ def main(argv: list[str] | None = None) -> int:
     reset.add_argument("--password-stdin", action="store_true")
     commands.add_parser("list")
     commands.add_parser("attachments-summary")
-    commands.add_parser("attachments-export")  # tar on stdout
+    export = commands.add_parser("attachments-export")  # tar on stdout
+    export.add_argument("--include-s3", action="store_true")
     commands.add_parser("attachments-import")  # tar on stdin
     migrate = commands.add_parser("attachments-migrate")
     migrate.add_argument("--to", required=True)
@@ -60,7 +61,7 @@ def _attachments(args) -> int:
     if args.command in ("attachments-export", "attachments-import"):
         archive = attachment_archive()
         try:
-            n = archive.export(sys.stdout.buffer) if args.command == "attachments-export" else archive.restore(sys.stdin.buffer)
+            n = archive.export(sys.stdout.buffer, ("fs", "s3") if args.include_s3 else ("fs",)) if args.command == "attachments-export" else archive.restore(sys.stdin.buffer)
         except StoreError as exc:
             sys.stderr.write(json.dumps({"code": "CHAT_ATTACHMENT_STORAGE", "message": exc.reason}) + "\n")
             return 1

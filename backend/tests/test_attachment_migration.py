@@ -111,6 +111,8 @@ def test_archive_round_trip_writes_only_known_keys(env, monkeypatch):
     _db, repo, stores, ext = env
     want = seed(repo, stores, 3, on="fs")
     monkeypatch.setenv("STUDIO_ATTACHMENT_STORAGE", "fs")
+    seed(repo, stores, 2, on="s3")
+    assert AttachmentArchive(repo, stores).export(io.BytesIO(), ("fs", "s3")) == 5  # a bucket only when asked
     buf = io.BytesIO(); assert AttachmentArchive(repo, stores).export(buf) == 3
     names = tarfile.open(fileobj=io.BytesIO(buf.getvalue())).getnames()
     assert all(n.startswith("attachments/adhoc/s1/") for n in names)
@@ -124,8 +126,8 @@ def test_archive_round_trip_writes_only_known_keys(env, monkeypatch):
     assert AttachmentArchive(repo, stores).restore(io.BytesIO(planted.getvalue())) == 3
     assert not fs.exists("evil/x")
     readable(repo, stores, want)
-    monkeypatch.setenv("STUDIO_ATTACHMENT_STORAGE", "db")
-    out = io.BytesIO(); assert AttachmentArchive(repo, stores).export(out) == 0  # db files travel in the database dump
+    seed(repo, stores, 2, on="db")
+    out = io.BytesIO(); assert AttachmentArchive(repo, stores).export(out, ("db",)) == 0  # db files travel in the database dump
 
 
 def test_admin_cmd_prints_json(tmp_path, monkeypatch, capsys):

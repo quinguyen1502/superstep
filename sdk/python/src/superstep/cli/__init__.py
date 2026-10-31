@@ -11,6 +11,7 @@ import httpx
 
 import superstep
 from superstep.cli.admin import add_commands as add_admin_commands
+from superstep.cli.attachments import add_commands as add_attachment_commands
 from superstep.cli.backup import add_commands as add_backup_commands
 from superstep.cli.deploy import add_commands as add_deploy_commands
 from superstep.cli.docker import Docker
@@ -102,6 +103,7 @@ def _parser(catalog: Catalog, json_mode: bool) -> argparse.ArgumentParser:
     add_backup_commands(commands, common, catalog)
     add_upgrade_commands(commands, common, catalog)
     add_admin_commands(commands, common, catalog)
+    add_attachment_commands(commands, common, catalog)
     add_deploy_commands(commands, common, catalog)
     add_login_commands(commands, common, catalog)
     add_workflow_commands(commands, common, catalog)

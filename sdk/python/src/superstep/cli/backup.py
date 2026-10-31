@@ -18,7 +18,11 @@ from superstep.cli.install import InstallError, _load, _write_private
 from superstep.cli.status import _read_env
 
 _FORMAT = 1
-_MEMBERS = {"manifest.json", "database.sqlite", "database.dump", "secret.key", ".env", "compose.yml"}
+_ATTACHMENTS = "attachments.tar"  # chat attachment files kept outside the database (TASK-0194, REQ-0080)
+_MEMBERS = {"manifest.json", "database.sqlite", "database.dump", "secret.key", ".env", "compose.yml", _ATTACHMENTS}
+_SPILLED = {"database.dump", _ATTACHMENTS}  # members written to disk on restore, not held in memory
+_EXPORT = ["python", "-m", "app.admin_cmd", "attachments-export"]
+_IMPORT = ["python", "-m", "app.admin_cmd", "attachments-import"]
 _CRON = {"daily": "0 3 * * *", "weekly": "0 3 * * 0"}
 _SQLITE_PY = (
     "import sqlite3\n"
@@ -44,6 +48,7 @@ def add_commands(commands, common, catalog: Catalog) -> None:
     backup.add_argument("--to", help=catalog.format("help.to"))
     backup.add_argument("--schedule", choices=("daily", "weekly"), help=catalog.format("help.schedule"))
     backup.add_argument("--keep", type=int, help=catalog.format("help.keep"))
+    backup.add_argument("--include-attachments", action="store_true", help=catalog.format("help.include_attachments"))
     backup.add_argument("--name", help=catalog.format("help.name"))
     backup.add_argument("--dir", help=catalog.format("help.dir"))
     backup.set_defaults(run=cmd_backup)
@@ -51,6 +56,7 @@ def add_commands(commands, common, catalog: Catalog) -> None:
     restore = _parser(commands, common, catalog, "restore", "help.restore", "example.restore")
     restore.add_argument("archive", help=catalog.format("help.restore"))
     restore.add_argument("--yes", action="store_true", help=catalog.format("help.confirm_yes"))
+    restore.add_argument("--force", action="store_true", help=catalog.format("help.restore_force"))
     restore.add_argument("--name", help=catalog.format("help.name"))
     restore.add_argument("--dir", help=catalog.format("help.dir"))
     restore.set_defaults(run=cmd_restore)
@@ -69,10 +75,15 @@ def cmd_backup(args, catalog, json_mode, _client, _parser, docker: Docker) -> in
                 _write_err(catalog.format(f"schedule.{kind}", period=args.schedule, keep=str(args.keep)) + "\n")
                 return 0
         else:
-            archive = create_backup(directory, record, docker, dest)
+            archive = create_backup(directory, record, docker, dest, include_attachments=args.include_attachments)
             payload = {"ok": True, "archive": str(archive), "name": record["name"]}
+            note = _bucket_note(_peek_manifest(archive))
+            if note:
+                payload["warning"] = catalog.format(note[0], **note[1])
             if not json_mode:
                 _write_err(catalog.format("backup.wrote", archive=str(archive)) + "\n")
+                if note:
+                    _write_err(catalog.format(note[0], **note[1]) + "\n")
                 return 0
     except BackupError as exc:
         return _fail(json_mode, catalog, exc.code, exc.key, **exc.fmt)
@@ -90,8 +101,10 @@ def cmd_restore(args, catalog, json_mode, _client, _parser, docker: Docker) -> i
         archive = Path(args.archive)
         manifest = _peek_manifest(archive)
         _accept(manifest)
+        _check_storage(manifest, directory, args.force)
         _confirm(args, catalog, record)
-        restore_archive(directory, record, docker, archive)
+        restore_archive(directory, record, docker, archive, keep_storage=args.force)
+        note = _bucket_note(manifest)
     except BackupError as exc:
         return _fail(json_mode, catalog, exc.code, exc.key, **exc.fmt)
     except InstallError as exc:
@@ -99,21 +112,34 @@ def cmd_restore(args, catalog, json_mode, _client, _parser, docker: Docker) -> i
     except DockerError as exc:
         return _fail(json_mode, catalog, "DOCKER", "error.docker_failed", message=exc.message)
     if json_mode:
-        _write_json({"ok": True, "name": record["name"]})
+        payload = {"ok": True, "name": record["name"]}
+        if note:
+            payload["warning"] = catalog.format(note[0], **note[1])
+        _write_json(payload)
     else:
         _write_err(catalog.format("restore.done", name=record["name"]) + "\n")
+        if note:
+            _write_err(catalog.format(note[0], **note[1]) + "\n")
     return 0
 
 
-def create_backup(directory: Path, record: dict, docker: Docker, dest: Path) -> Path:
-    """Write one archive and return its path. A short disk raises before any stop or file."""
+def create_backup(directory: Path, record: dict, docker: Docker, dest: Path, include_attachments: bool = False) -> Path:
+    """Write one archive and return its path. A short disk raises before any stop or file.
+
+    Chat attachments on `fs` always go into the archive; on `s3` the manifest records the bucket and prefix, and the
+    objects go in only with `include_attachments` (TASK-0194). On `db` they are in the database dump."""
     parent = dest if dest.is_dir() else dest.parent
     if not parent.is_dir() or (dest.exists() and not dest.is_dir()):
         raise BackupError("ARCHIVE", "error.archive")
     if docker.disk_free_bytes(str(parent)) < _estimate(docker, directory, record):
         raise BackupError("DISK", "error.disk")
     member, blob = _dump(docker, str(directory), record, parent)
+    files = None
     try:
+        env = _read_env(directory / ".env")
+        storage = _storage(env)
+        if storage == "fs" or (storage == "s3" and include_attachments):
+            files = _export_attachments(docker, str(directory), record, parent, storage == "s3")
         env_text = (directory / ".env").read_text(encoding="utf-8") if (directory / ".env").is_file() else ""
         compose = (directory / "compose.yml").read_text(encoding="utf-8") if (directory / "compose.yml").is_file() else ""
         secret = _secret_bytes(docker, directory, record, _read_env(directory / ".env"))
@@ -125,35 +151,96 @@ def create_backup(directory: Path, record: dict, docker: Docker, dest: Path) -> 
             "name": record["name"],
             "created": created,
             "database": member,
+            "attachment_storage": storage,
+            "attachments_included": files is not None,
         }
+        if storage == "s3":
+            manifest["attachment_s3"] = {"bucket": env.get("STUDIO_ATTACHMENT_S3_BUCKET") or "", "prefix": env.get("STUDIO_ATTACHMENT_S3_PREFIX") or ""}
         dest.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         archive = dest / f"superstep-backup-{record['name']}-{stamp}.tar.gz"
-        _write_archive(archive, {
+        members = {
             "manifest.json": json.dumps(manifest).encode("utf-8"),
             member: blob,
             "secret.key": secret,
             ".env": _env_with_secret(env_text, secret).encode("utf-8"),
             "compose.yml": compose.encode("utf-8"),
-        })
+        }
+        if files is not None:
+            members[_ATTACHMENTS] = files
+        _write_archive(archive, members)
         record["secret_backed_up"] = True
         _write_private(directory / "instance.json", json.dumps(record, indent=2) + "\n")
         return archive
     finally:
-        if isinstance(blob, Path):
-            blob.unlink(missing_ok=True)
+        for spilled in (blob, files):
+            if isinstance(spilled, Path):
+                spilled.unlink(missing_ok=True)
 
 
-def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path) -> None:
-    """Replace instance data from an archive. The caller has already confirmed the name."""
+def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path, keep_storage: bool = False) -> None:
+    """Replace instance data from an archive. The caller has already confirmed the name. With `keep_storage`, the
+    instance keeps its own STUDIO_ATTACHMENT_* settings instead of the archive's (a forced restore, TASK-0194)."""
     members = _read_archive(archive, directory)
     try:
-        _restore_members(directory, record, docker, members)
+        _restore_members(directory, record, docker, members, keep_storage)
     finally:
         _drop_spill(members)
 
 
-def _restore_members(directory: Path, record: dict, docker: Docker, members: dict) -> None:
+def _storage(env: dict) -> str:
+    return (env.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip() or "db"
+
+
+def _check_storage(manifest: dict, directory: Path, force: bool) -> None:
+    """An archive of one attachment backend restored onto an instance set up for another would point rows at files
+    that are not there; refuse unless forced (TASK-0194, REQ-0080)."""
+    archived = manifest.get("attachment_storage") or "db"
+    target = _storage(_read_env(directory / ".env"))
+    if archived != target and not force:
+        raise BackupError("STORAGE_MISMATCH", "error.storage_mismatch", archived=archived, target=target)
+
+
+def _bucket_note(manifest: dict):
+    """(key, fmt) of the reminder that a bucket's objects are not in the archive, or None."""
+    if manifest.get("attachment_storage") != "s3" or manifest.get("attachments_included"):
+        return None
+    s3 = manifest.get("attachment_s3") or {}
+    return ("backup.bucket_not_included", {"bucket": s3.get("bucket") or "?", "prefix": s3.get("prefix") or "/"})
+
+
+def _export_attachments(docker: Docker, directory: str, record: dict, spill: Path, include_s3: bool):
+    """A tar of the attachment files from the API container, on disk when the Docker client can stream."""
+    service = "api" if record.get("topology") == "full" else "superstep"
+    command = _EXPORT + (["--include-s3"] if include_s3 else [])
+    sink = getattr(docker, "exec_to_file", None)
+    if sink is None:
+        return docker.exec_bytes(directory, record["name"], service, command)
+    target = _spill_file(spill, ".tar")
+    try:
+        sink(directory, record["name"], service, command, target)
+    except Exception:
+        target.unlink(missing_ok=True)
+        raise
+    return target
+
+
+def _import_attachments(docker: Docker, directory: str, project: str, service: str, files) -> None:
+    feed = getattr(docker, "exec_from_file", None)
+    if isinstance(files, Path) and feed is not None:
+        feed(directory, project, service, list(_IMPORT), files)
+    else:
+        docker.exec_bytes(directory, project, service, list(_IMPORT), stdin=files.read_bytes() if isinstance(files, Path) else files)
+
+
+def _keep_attachment_settings(archived_env: str, current: Path) -> str:
+    """The archive's .env with this instance's STUDIO_ATTACHMENT_* lines."""
+    mine = [line for line in (current.read_text(encoding="utf-8").splitlines() if current.is_file() else []) if line.startswith("STUDIO_ATTACHMENT_")]
+    kept = [line for line in archived_env.splitlines() if not line.startswith("STUDIO_ATTACHMENT_")]
+    return "\n".join(kept + mine) + "\n"
+
+
+def _restore_members(directory: Path, record: dict, docker: Docker, members: dict, keep_storage: bool = False) -> None:
     manifest = _manifest(members)
     _accept(manifest)
     for name in ("manifest.json", ".env", "compose.yml", "secret.key"):
@@ -169,7 +256,10 @@ def _restore_members(directory: Path, record: dict, docker: Docker, members: dic
     docker.compose(folder, project, ["stop"])
     try:
         # Host files change only after the stack has stopped, so a failed stop leaves the instance as it was.
-        _write_private(directory / ".env", _env_with_secret(members[".env"].decode("utf-8"), secret))
+        env_text = members[".env"].decode("utf-8")
+        if keep_storage:
+            env_text = _keep_attachment_settings(env_text, directory / ".env")
+        _write_private(directory / ".env", _env_with_secret(env_text, secret))
         _write_private(directory / "compose.yml", members["compose.yml"].decode("utf-8"))
         _write_private_bytes(directory / "secret.key", secret)
         if topology == "full":
@@ -190,6 +280,9 @@ def _restore_members(directory: Path, record: dict, docker: Docker, members: dic
     url = record.get("public_url") or ""
     if url and not docker.wait_healthy(url):
         raise BackupError("UNHEALTHY", "error.health", url=url)
+    if _ATTACHMENTS in members:
+        # The rows are back; the API writes each file to the backend its row names.
+        _import_attachments(docker, folder, project, "api" if topology == "full" else "superstep", members[_ATTACHMENTS])
     record["secret_backed_up"] = True
     _write_private(directory / "instance.json", json.dumps(record, indent=2) + "\n")
 
@@ -412,8 +505,8 @@ def _read_archive(path: Path, spill: Path) -> dict:
                 handle = tar.extractfile(info)
                 if handle is None:
                     continue
-                if name == "database.dump":
-                    dest = _spill_file(spill, ".dump")
+                if name in _SPILLED:
+                    dest = _spill_file(spill, ".dump" if name == "database.dump" else ".tar")
                     try:
                         with dest.open("wb") as out:
                             shutil.copyfileobj(handle, out)
@@ -567,10 +660,19 @@ fi
 version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p' "$dir/instance.json" | head -n 1)
 created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
-printf '%s\\n' "{{" '"format": 1,' '"server_version": "'"$version"'",' '"topology": "'"$topology"'",' '"name": "'"$name"'",' '"created": "'"$created"'",' '"database": "'"$database"'"' "}}" > "$work/manifest.json"
+storage=$(awk -F= '$1 == "STUDIO_ATTACHMENT_STORAGE" {{ print substr($0, index($0, "=") + 1); exit }}' "$dir/.env")
+storage=${{storage:-db}}
+included=false
+files=""
+if [ "$storage" = "fs" ]; then
+  docker compose -p "$name" --project-directory "$dir" -f "$dir/compose.yml" exec -T "$service" python -m app.admin_cmd attachments-export > "$work/{_ATTACHMENTS}"
+  included=true
+  files={_ATTACHMENTS}
+fi
+printf '%s\\n' "{{" '"format": 1,' '"server_version": "'"$version"'",' '"topology": "'"$topology"'",' '"name": "'"$name"'",' '"created": "'"$created"'",' '"database": "'"$database"'",' '"attachment_storage": "'"$storage"'",' '"attachments_included": '"$included" "}}" > "$work/manifest.json"
 mkdir -p "$dest"
 archive="$dest/superstep-backup-$name-$stamp.tar.gz"
-tar -czf "$archive" -C "$work" manifest.json "$database" secret.key .env compose.yml
+tar -czf "$archive" -C "$work" manifest.json "$database" secret.key .env compose.yml $files
 chmod 0600 "$archive"
 prune
 """
