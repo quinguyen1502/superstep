@@ -95,3 +95,12 @@ def test_rating_on_v1_matches_the_documented_models():
     assert ChatRatingEnvelope.model_validate(r.json()).data.value == "up"
     r = v.delete(f"{V1}/{slug}/sessions/{sid}/turns/{answer['id']}/rating", headers=h)
     assert OkEnvelope.model_validate(r.json()).data.ok
+
+
+def test_nginx_lets_v1_uploads_through_the_upload_location():
+    import pathlib, re
+    conf = pathlib.Path(__file__).resolve().parents[2] / "frontend/nginx.conf.template"
+    if not conf.exists(): pytest.skip("no frontend in this checkout")
+    rx = next(m for m in re.findall(r"location ~ (\^/api/[^ ]+) \{", conf.read_text()) if "attachments" in m)
+    for path in ("/api/public/chat/help/sessions/s1/attachments", "/api/public/v1/chat/help/sessions/s1/attachments"):
+        assert re.match(rx, path), path
