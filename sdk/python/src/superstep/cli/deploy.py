@@ -18,6 +18,8 @@ from superstep.cli.i18n import Catalog
 from superstep.cli.install import (
     InstallError,
     _answers,
+    add_storage_flags,
+    storage_env,
     _compose,
     _image_list,
     _password,
@@ -53,6 +55,7 @@ def add_commands(commands, common, catalog: Catalog) -> None:
     deploy.add_argument("--port", type=int, help=catalog.format("help.port"))
     deploy.add_argument("--schedule", choices=("daily", "weekly"), help=catalog.format("help.schedule"))
     deploy.add_argument("--keep", type=int, help=catalog.format("help.keep"))
+    add_storage_flags(deploy, catalog)
     deploy.set_defaults(run=cmd_deploy)
 
 
@@ -122,6 +125,7 @@ def _install(args, catalog, docker, ssh, answers, name, remote, url) -> dict:
             email = email or input(catalog.format("prompt.email") + " ").strip()
         if not public or not email:
             raise InstallError("REQUIRED", "error.required")
+    attachments = storage_env(args, answers, topology, catalog)
     if not docker.docker_ok():
         raise InstallError("DOCKER", "error.docker")
     if not docker.compose_v2():
@@ -136,6 +140,7 @@ def _install(args, catalog, docker, ssh, answers, name, remote, url) -> dict:
         "STUDIO_ADMIN_PASSWORD": password,
         "STUDIO_PUBLIC_URL": public,
         "STUDIO_ENV": "production",
+        **attachments,
     }
     volumes = {"data": f"{name}_data"}
     if topology == "full":

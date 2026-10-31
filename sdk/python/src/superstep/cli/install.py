@@ -1,9 +1,11 @@
 """`install`, `adopt`, and the compose wrappers around one instance directory."""
 from __future__ import annotations
 
+import getpass
 import json
 import os
 import secrets
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -39,6 +41,7 @@ def add_commands(commands, common, catalog: Catalog) -> None:
     install.add_argument("--topology", choices=("single", "full"), help=catalog.format("help.topology"))
     install.add_argument("--sandbox", action="store_true", help=catalog.format("help.sandbox"))
     install.add_argument("--adopt", metavar="DIR", help=catalog.format("help.adopt_flag"))
+    add_storage_flags(install, catalog)
     install.set_defaults(run=cmd_install)
 
     adopt = _parser(commands, common, catalog, "adopt", "help.adopt", "example.adopt")
@@ -64,6 +67,64 @@ def add_commands(commands, common, catalog: Catalog) -> None:
     logs.add_argument("--name", help=catalog.format("help.name"))
     logs.add_argument("--dir", help=catalog.format("help.dir"))
     logs.set_defaults(run=cmd_logs)
+
+
+STORAGES = ("db", "fs", "s3")
+_S3_FLAGS = (("bucket", "BUCKET"), ("endpoint", "ENDPOINT"), ("region", "REGION"), ("prefix", "PREFIX"), ("access_key_id", "ACCESS_KEY_ID"))
+SECRET_ENV = "SUPERSTEP_S3_SECRET_ACCESS_KEY"  # the S3 secret for --yes; never a flag value
+
+
+def add_storage_flags(parser, catalog: Catalog) -> None:
+    """Chat attachment storage flags of install and deploy (TASK-0195, REQ-0080)."""
+    parser.add_argument("--attachment-storage", choices=STORAGES, help=catalog.format("help.attachment_storage"))
+    for flag, _env in _S3_FLAGS:
+        parser.add_argument("--s3-" + flag.replace("_", "-"), help=catalog.format("help.s3_" + flag))
+    parser.add_argument("--s3-path-style", action="store_true", help=catalog.format("help.s3_path_style"))
+    parser.add_argument("--s3-secret-stdin", action="store_true", help=catalog.format("help.s3_secret_stdin"))
+
+
+def storage_env(args, answers: dict, topology: str, catalog: Catalog) -> dict:
+    """STUDIO_ATTACHMENT_* lines for .env. `db` writes nothing. The S3 secret comes from stdin, SUPERSTEP_S3_SECRET_ACCESS_KEY
+    or a hidden prompt, never from argv, and is never printed."""
+    choice = getattr(args, "attachment_storage", None) or answers.get("attachment_storage")
+    if not choice and not args.yes:
+        offered = ("db", "fs") if topology == "single" else STORAGES
+        typed = input(catalog.format("prompt.attachment_storage_" + topology) + " ").strip().lower()
+        choice = typed if typed in offered else None
+    choice = choice or "db"
+    if choice not in STORAGES:
+        raise InstallError("ATTACHMENT_STORAGE", "error.attachment_storage", value=str(choice))
+    if choice == "db":
+        return {}
+    env = {"STUDIO_ATTACHMENT_STORAGE": choice}
+    if choice == "fs":
+        return env
+    values = {}
+    for flag, key in _S3_FLAGS:
+        values[key] = getattr(args, "s3_" + flag, None) or answers.get("s3_" + flag) or ""
+    if not args.yes:
+        for flag, key in _S3_FLAGS:
+            if not values[key]:
+                values[key] = input(catalog.format("prompt.s3_" + flag) + " ").strip()
+    if not values["BUCKET"]:
+        raise InstallError("S3_BUCKET", "error.s3_bucket")
+    secret = ""
+    if getattr(args, "s3_secret_stdin", False):
+        secret = sys.stdin.readline().rstrip("\n")
+    elif os.environ.get(SECRET_ENV):
+        secret = os.environ[SECRET_ENV]
+    elif values["ACCESS_KEY_ID"] and not args.yes:
+        secret = getpass.getpass(catalog.format("prompt.s3_secret") + " ")
+    if bool(values["ACCESS_KEY_ID"]) != bool(secret):
+        raise InstallError("S3_KEYS", "error.s3_keys")
+    for key, value in values.items():
+        if value:
+            env["STUDIO_ATTACHMENT_S3_" + key] = value
+    if getattr(args, "s3_path_style", False) or answers.get("s3_path_style"):
+        env["STUDIO_ATTACHMENT_S3_PATH_STYLE"] = "true"
+    if secret:
+        env["STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY"] = secret
+    return env
 
 
 def cmd_install(args, catalog, json_mode, _client, _parser, docker: Docker) -> int:
@@ -127,6 +188,7 @@ def _install(args, catalog: Catalog, docker: Docker):
             email = email or input(catalog.format("prompt.email") + " ").strip()
         if not url or not email:
             raise InstallError("REQUIRED", "error.required")
+    attachments = storage_env(args, answers, topology, catalog)
     if not docker.docker_ok():
         raise InstallError("DOCKER", "error.docker")
     if not docker.compose_v2():
@@ -154,6 +216,7 @@ def _install(args, catalog: Catalog, docker: Docker):
         "STUDIO_ADMIN_PASSWORD": password,
         "STUDIO_PUBLIC_URL": url,
         "STUDIO_ENV": "production",
+        **attachments,
     }
     volumes = {"data": f"{name}_data"}
     if topology == "full":
@@ -288,6 +351,13 @@ def _named_volume(alias: str, volume_name: str, external_names: Optional[set] = 
     return text
 
 
+ATTACHMENT_ENV = (
+    "      STUDIO_ATTACHMENT_STORAGE: ${STUDIO_ATTACHMENT_STORAGE:-db}\n"
+    + "".join(f"      STUDIO_ATTACHMENT_S3_{k}: ${{STUDIO_ATTACHMENT_S3_{k}:-}}\n"
+              for k in ("BUCKET", "PREFIX", "ENDPOINT", "REGION", "PATH_STYLE", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY"))
+)  # chat attachment storage (TASK-0195); fs uses the default folder on the /data volume
+
+
 def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, volumes: dict, external_names: Optional[set] = None) -> str:
     if topology == "single":
         return (
@@ -303,7 +373,8 @@ def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, v
             "      STUDIO_ADMIN_PASSWORD: ${STUDIO_ADMIN_PASSWORD}\n"
             "      STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL}\n"
             "      STUDIO_ENV: production\n"
-            "    volumes: [\"data:/data\"]\n"
+            + ATTACHMENT_ENV
+            + "    volumes: [\"data:/data\"]\n"
             "    restart: unless-stopped\n"
             "volumes:\n"
             + _named_volume("data", volumes["data"], external_names)
@@ -335,7 +406,8 @@ def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, v
         "      STUDIO_ADMIN_PASSWORD: ${STUDIO_ADMIN_PASSWORD}\n"
         "      STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL}\n"
         "      STUDIO_ENV: production\n"
-        "    volumes: [\"apidata:/data\"]\n"
+        + ATTACHMENT_ENV
+        + "    volumes: [\"apidata:/data\"]\n"
         "    depends_on: [postgres, redis]\n"
         "    restart: unless-stopped\n"
         "  worker:\n"
@@ -347,7 +419,8 @@ def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, v
         "      JWT_SECRET: ${JWT_SECRET}\n"
         "      STUDIO_SECRET_KEY: ${STUDIO_SECRET_KEY}\n"
         "      STUDIO_ENV: production\n"
-        "    volumes: [\"apidata:/data\"]\n"
+        + ATTACHMENT_ENV
+        + "    volumes: [\"apidata:/data\"]\n"
         "    depends_on: [api]\n"
         "    restart: unless-stopped\n"
         "  web:\n"

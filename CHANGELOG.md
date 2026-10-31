@@ -6,6 +6,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Choosing attachment storage at install** (TASK-0195, REQ-0080, DEC-0074). `superstep install` and `deploy` ask
+  where chat attachments are stored (`db`, `fs`, and `s3` for the full stack), or take `--attachment-storage` and
+  `--s3-*` flags with `--yes`. The S3 secret is read from stdin, `SUPERSTEP_S3_SECRET_ACCESS_KEY` or a hidden prompt,
+  never from a flag, and is written only to `.env` (mode 600). `superstep doctor` shows the backend and whether it
+  works. The Render demo stays on `db`.
 - **Moving and backing up chat attachments** (TASK-0194, REQ-0080, DEC-0074). `superstep attachments migrate --to
   db|fs|s3 [--dry-run] [--batch N]` (and `POST /api/admin/attachments/migrate` for admins) moves files between backends,
   checking size and SHA-256 before switching each file; an interrupted run is safe to start again. Backups include files

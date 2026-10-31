@@ -25,6 +25,18 @@ admin. `--yes` cùng các cờ đó thì bỏ qua câu hỏi. Image all-in-one l
 `ghcr.io/quinguyen1502/superstep`. Stack đầy đủ dùng `superstep-api` và
 `superstep-web`. Lần cài thứ hai vào instance đã có sẽ từ chối ghi đè.
 
+Lệnh cũng hỏi lưu tệp đính kèm chat ở đâu: `db` (trong database, mặc định)
+hoặc `fs` (một thư mục trên volume dữ liệu) với một máy, và thêm `s3` (bucket
+tương thích S3) với stack đầy đủ. Với `--yes`, dùng
+`--attachment-storage db|fs|s3`; với `s3` thêm `--s3-bucket` và khi cần
+`--s3-endpoint`, `--s3-region`, `--s3-prefix`, `--s3-path-style` và
+`--s3-access-key-id`. Secret key không bao giờ là cờ: nó được đọc từ
+`--s3-secret-stdin`, từ `SUPERSTEP_S3_SECRET_ACCESS_KEY`, hoặc từ một câu hỏi
+ẩn, và chỉ được ghi vào `.env` (quyền 600). `superstep deploy` nhận cùng các cờ
+này. `superstep doctor` cho biết nơi lưu và nó có hoạt động không, kèm lý do
+ngắn của server khi lỗi, không bao giờ hiện key. Xem
+[Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem).
+
 Ghim một bản phát hành bằng cách lấy đúng tag rồi curl script, hoặc đặt
 `SUPERSTEP_VERSION`.
 

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0195
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -85,6 +85,9 @@ CLI install prompts, doctor, handbook and e2e. Operators choose the backend at i
 
 - 2026-10-31: planned from REQ-0080 (DEC-0074, accepted by the owner). Status todo. Not started.
 
+- 2026-10-30: implemented on `factory/task-0195-attachment-storage-cli-docs-e2e` from `develop`. Adds the storage question and flags to `superstep install`/`deploy`, the attachment line in `doctor`, compose env passthrough in generated instances, an `install.sh` hint, handbook en/vi, and the Playwright spec `attachment-storage.spec.ts` (en and vi, run on db and fs). `factory verify run --profile full` passed. The owner authorized merging the REQ-0080 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0195-attachment-storage-cli-docs-e2e` from `develop`.
+- Review: `.factory-state/artifacts/REV-0184-task-0195.md`. QA: `.factory-state/artifacts/QA-0184-task-0195.md`.
