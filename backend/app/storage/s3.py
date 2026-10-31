@@ -2,21 +2,25 @@
 MinIO) through `boto3`, an optional extra (`pip install "superstep-backend[s3]"`) that the published images include.
 
 Downloads stream through the backend (DEC-0074 decision 3): the bucket is never shown to the browser and no presigned
-URL is made. Error reasons name the failure (an S3 error code or the exception type), never the endpoint, bucket,
+URL is made. A file larger than one part (STUDIO_ATTACHMENT_S3_MULTIPART_MB, default 8) goes up as a multipart upload,
+at most two parts in memory; any failure aborts the upload, so the bucket keeps no incomplete parts (TASK-0200). Error
+reasons name the failure (an S3 error code or the exception type), never the endpoint, bucket,
 key or credentials."""
 from __future__ import annotations
+import io
 from typing import Iterator, Optional
-from .base import CHUNK, AttachmentStore, StoreError
+from .base import CHUNK, AttachmentStore, Data, StoreError
 
 
 class S3Store(AttachmentStore):
     name = "s3"
 
     def __init__(self, bucket: str, prefix: str = "", endpoint: str = "", region: str = "", access_key: str = "",
-                 secret_key: str = "", path_style: bool = False, client=None):
+                 secret_key: str = "", path_style: bool = False, client=None, part_mb: int = 8):
         if not bucket: raise StoreError("STUDIO_ATTACHMENT_S3_BUCKET is not set")
         self.bucket, self.prefix = bucket, (prefix.strip("/") + "/") if prefix.strip("/") else ""
         self.client = client or self._client(endpoint, region, access_key, secret_key, path_style)
+        self.part = max(5, int(part_mb)) * 1024 * 1024  # S3 parts are at least 5 MB, except the last
 
     @staticmethod
     def _client(endpoint, region, access_key, secret_key, path_style):
@@ -40,10 +44,33 @@ class S3Store(AttachmentStore):
         if code in missing_codes: return StoreError("not found", missing=True)
         return StoreError(f"S3 error {code}" if code else f"S3 unreachable ({type(e).__name__})")
 
-    def put(self, key: str, data: bytes, mime: str) -> None:
-        try: self.client.put_object(Bucket=self.bucket, Key=self._key(key), Body=data, ContentType=mime or "application/octet-stream")
+    def put(self, key: str, data: Data, mime: str) -> None:
+        """Up to one part: one PUT. Larger: a multipart upload, read one part at a time."""
+        k, ctype = self._key(key), mime or "application/octet-stream"
+        f = io.BytesIO(data) if isinstance(data, (bytes, bytearray)) else data
+        try:
+            first = f.read(self.part)
+            nxt = f.read(self.part) if len(first) == self.part else b""
+            if not nxt: self.client.put_object(Bucket=self.bucket, Key=k, Body=first, ContentType=ctype); return
         except StoreError: raise
         except Exception as e: raise self._error(e)
+        self._multipart(k, ctype, first, nxt, f)
+
+    def _multipart(self, k: str, ctype: str, first: bytes, nxt: bytes, f) -> None:
+        try: upload = self.client.create_multipart_upload(Bucket=self.bucket, Key=k, ContentType=ctype)["UploadId"]
+        except Exception as e: raise self._error(e)
+        try:
+            parts, n, piece = [], 1, first
+            while piece:
+                r = self.client.upload_part(Bucket=self.bucket, Key=k, UploadId=upload, PartNumber=n, Body=piece)
+                parts.append({"ETag": r["ETag"], "PartNumber": n})
+                piece, nxt, n = nxt, (f.read(self.part) if nxt else b""), n + 1
+            self.client.complete_multipart_upload(Bucket=self.bucket, Key=k, UploadId=upload, MultipartUpload={"Parts": parts})
+        except BaseException as e:
+            try: self.client.abort_multipart_upload(Bucket=self.bucket, Key=k, UploadId=upload)  # no incomplete parts are kept
+            except Exception: pass  # the bucket's lifecycle rule for incomplete uploads is the fallback (handbook)
+            if isinstance(e, StoreError) or not isinstance(e, Exception): raise
+            raise self._error(e)
 
     def open(self, key: str) -> Iterator[bytes]:
         try: body = self.client.get_object(Bucket=self.bucket, Key=self._key(key))["Body"]

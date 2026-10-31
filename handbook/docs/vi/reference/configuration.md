@@ -88,6 +88,7 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_ATTACHMENT_S3_ENDPOINT` | (trống) | URL của dịch vụ tương thích S3 (R2, B2, MinIO). Để trống là AWS S3 |
 | `STUDIO_ATTACHMENT_S3_REGION` | (trống) | Region của bucket; `auto` với Cloudflare R2 |
 | `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` cho dịch vụ cần URL kiểu path, như MinIO |
+| `STUDIO_ATTACHMENT_S3_MULTIPART_MB` | `8` | Tệp lớn hơn số MB này được tải lên S3 theo từng phần cỡ này (tối thiểu 5); lần tải lỗi được hủy, nên không còn phần dở dang nào trong bucket |
 | `STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID` | (trống) | Access key. Khi cả hai key để trống, dùng chuỗi credential mặc định của AWS (instance role, biến `AWS_*`) |
 | `STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY` | (trống) | Secret key. Không bao giờ được ghi log hay hiển thị; `/api/health` chỉ cho biết bucket có dùng được không |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Thời gian chờ `sync` tối đa (giây) |

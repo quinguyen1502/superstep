@@ -2,10 +2,26 @@
 from __future__ import annotations
 import time, uuid
 from abc import ABC, abstractmethod
-from typing import Iterator
+from typing import BinaryIO, Iterator, Union
 
 CHUNK = 64 * 1024  # bytes per streamed piece
 PROBE_PREFIX = "_probe/"
+
+
+Data = Union[bytes, BinaryIO]  # put() takes the bytes or a readable, seekable file (an upload spooled to disk, TASK-0200)
+
+
+def as_bytes(data: Data) -> bytes:
+    """All of `data`: for a backend that keeps the bytes whole (`db`)."""
+    return data if isinstance(data, (bytes, bytearray)) else data.read()
+
+
+def pieces(data: Data, size: int = CHUNK) -> Iterator[bytes]:
+    """`data` in pieces of at most `size` bytes, without reading a file whole."""
+    if isinstance(data, (bytes, bytearray)):
+        for i in range(0, len(data), size): yield bytes(data[i:i + size])
+        return
+    while piece := data.read(size): yield piece
 
 
 class StoreError(Exception):
@@ -21,7 +37,8 @@ class AttachmentStore(ABC):
     inline: bool = False
 
     @abstractmethod
-    def put(self, key: str, data: bytes, mime: str) -> None: ...
+    def put(self, key: str, data: Data, mime: str) -> None:
+        """Writes `data` (bytes, or a file read from its current position to the end) under `key`."""
     @abstractmethod
     def open(self, key: str) -> Iterator[bytes]:
         """The bytes in pieces of at most CHUNK. StoreError(missing=True) when there is no such key."""
