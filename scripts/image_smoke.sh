@@ -12,4 +12,5 @@ done
 curl -fsS "$BASE/" | grep -q '<div id="root"' || { echo "UI not served at /" >&2; exit 1; }
 curl -fsS "$BASE/workflows/some-route" | grep -q '<div id="root"' || { echo "SPA fallback missing" >&2; exit 1; }
 [ "$(curl -s -o /dev/null -w '%{http_code}' "$BASE/api/nope")" = 404 ] || { echo "unknown /api path is not a 404" >&2; exit 1; }
+docker exec "$NAME" python -c "import boto3" || { echo "boto3 (the s3 attachment backend) is missing from the image" >&2; exit 1; }  # TASK-0193
 python scripts/compose_smoke.py "$BASE"

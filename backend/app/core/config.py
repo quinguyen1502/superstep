@@ -77,6 +77,12 @@ def chat_attachment_max_files() -> int:
 def attachment_storage() -> str:
     """Where new chat attachment bytes go (TASK-0191, REQ-0080, DEC-0074): db (default), fs or s3."""
     return (os.environ.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip().lower()
+def attachment_s3() -> dict:
+    """The `s3` attachment backend's settings (TASK-0193). Empty keys use the default AWS credential chain."""
+    e = lambda k: (os.environ.get(f"STUDIO_ATTACHMENT_S3_{k}") or "").strip()  # noqa: E731
+    return {"bucket": e("BUCKET"), "prefix": e("PREFIX"), "endpoint": e("ENDPOINT"), "region": e("REGION"),
+            "access_key": e("ACCESS_KEY_ID"), "secret_key": e("SECRET_ACCESS_KEY"),
+            "path_style": e("PATH_STYLE").lower() in ("1", "true", "yes", "on")}
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- TASK-0020 ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))

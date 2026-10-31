@@ -35,7 +35,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = []
+s3 = ["boto3>=1.34"]   # the s3 attachment backend (TASK-0193, DEC-0074); the published images include it
+dev = ["boto3>=1.34"]  # tests run the s3 backend against MinIO and a stubbed client
 
 [tool.setuptools.packages.find]
 include = ["app*"]
