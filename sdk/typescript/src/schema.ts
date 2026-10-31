@@ -50,10 +50,523 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/v1/chat/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the chat page */
+        get: operations["getChatPage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/v1/chat/{slug}/logo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the chat logo */
+        get: operations["getChatLogo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/v1/chat/{slug}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's chats */
+        get: operations["listChatSessions"];
+        put?: never;
+        /** Start a chat */
+        post: operations["createChatSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/v1/chat/{slug}/sessions/{sid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a chat with its turns */
+        get: operations["getChatSession"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/v1/chat/{slug}/sessions/{sid}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List newer turns
+         * @description The chat's turns after the turn `after` (all of them without it), in order, in the page's steps mode. An `after`
+         *     that is not a turn of this chat is `404 CHAT_TURN_NOT_FOUND`.
+         */
+        get: operations["listChatTurns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/v1/chat/{slug}/sessions/{sid}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a file before the message */
+        post: operations["uploadChatAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/v1/chat/{slug}/sessions/{sid}/attachments/{aid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download a file */
+        get: operations["downloadChatAttachment"];
+        put?: never;
+        post?: never;
+        /** Delete an unsent file */
+        delete: operations["deleteChatAttachment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/public/v1/chat/{slug}/sessions/{sid}/turns/{tid}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Rate an answer */
+        put: operations["rateChatTurn"];
+        post?: never;
+        /** Remove a rating */
+        delete: operations["unrateChatTurn"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AttachmentLimits */
+        AttachmentLimits: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Kinds
+             * @description Allowed kinds: `document`, `image`.
+             */
+            kinds: string[];
+            /** Max Files */
+            max_files: number;
+            /** Max Mb */
+            max_mb: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ChatAttachment */
+        ChatAttachment: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Kind */
+            kind: string;
+            /** Mime */
+            mime: string;
+            /**
+             * Size
+             * @description Bytes.
+             */
+            size: number;
+            /** Visitor Token */
+            visitor_token?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatAttachmentEnvelope
+         * @description Success envelope: an uploaded file.
+         */
+        ChatAttachmentEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatAttachment"];
+            /** Error */
+            error?: null;
+        };
+        /**
+         * ChatPage
+         * @description The published chat page: what a client shows before the first message.
+         */
+        ChatPage: {
+            /**
+             * Slug
+             * @example support
+             */
+            slug: string;
+            /**
+             * Title
+             * @example Support
+             */
+            title: string;
+            /**
+             * Intro
+             * @description Markdown shown above the first message.
+             * @default
+             */
+            intro: string;
+            /**
+             * Suggestions
+             * @description Up to 4 suggested first messages.
+             */
+            suggestions?: string[];
+            /**
+             * Access
+             * @enum {string}
+             */
+            access: "studio" | "anonymous" | "signed_in";
+            /**
+             * Steps Mode
+             * @description What a visitor sees of the run's steps.
+             * @enum {string}
+             */
+            steps_mode: "none" | "labels" | "full";
+            /**
+             * Signed In
+             * @description Whether the caller is a signed-in studio user.
+             */
+            signed_in: boolean;
+            /**
+             * Embed Origins
+             * @description Sites that may embed the page in an iframe.
+             */
+            embed_origins?: string[];
+            /**
+             * Logo
+             * @description Hash of the logo; fetch it from `.../logo?v=<hash>`.
+             */
+            logo?: string | null;
+            attachments: components["schemas"]["AttachmentLimits"];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatPageEnvelope
+         * @description Success envelope: the chat page.
+         */
+        ChatPageEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatPage"];
+            /** Error */
+            error?: null;
+        };
+        /** ChatRating */
+        ChatRating: {
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "up" | "down";
+            /**
+             * Comment
+             * @default
+             */
+            comment: string;
+            /** Updated */
+            updated: number;
+            /** Visitor Token */
+            visitor_token?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatRatingEnvelope
+         * @description Success envelope: the rating.
+         */
+        ChatRatingEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatRating"];
+            /** Error */
+            error?: null;
+        };
+        /**
+         * ChatRatingIn
+         * @description A thumbs up or down on one finished answer (DEC-0070). `comment` is only kept with a thumbs down.
+         */
+        ChatRatingIn: {
+            /** Value */
+            value: string;
+            /** Comment */
+            comment?: string | null;
+        };
+        /** ChatSession */
+        ChatSession: {
+            /**
+             * Id
+             * @example c7d1e0a9b2
+             */
+            id: string;
+            /** Workflow Id */
+            workflow_id: string;
+            /** Channel */
+            channel: string;
+            /** Title */
+            title: string;
+            /** Last Run Id */
+            last_run_id?: string | null;
+            /**
+             * Created
+             * @description Unix time (seconds).
+             */
+            created: number;
+            /**
+             * Updated
+             * @description Unix time (seconds).
+             */
+            updated: number;
+            /**
+             * Visitor Token
+             * @description Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep it and send it back in `X-Chat-Visitor`.
+             */
+            visitor_token?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatSessionEnvelope
+         * @description Success envelope: a new chat.
+         */
+        ChatSessionEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatSession"];
+            /** Error */
+            error?: null;
+        };
+        /** ChatSessionList */
+        ChatSessionList: {
+            /** Sessions */
+            sessions: components["schemas"]["ChatSession"][];
+            /** Visitor Token */
+            visitor_token?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatSessionListEnvelope
+         * @description Success envelope: the caller's chats.
+         */
+        ChatSessionListEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatSessionList"];
+            /** Error */
+            error?: null;
+        };
+        /**
+         * ChatSessionView
+         * @description One chat with its turns in the page's steps mode.
+         */
+        ChatSessionView: {
+            /**
+             * Id
+             * @example c7d1e0a9b2
+             */
+            id: string;
+            /** Workflow Id */
+            workflow_id: string;
+            /** Channel */
+            channel: string;
+            /** Title */
+            title: string;
+            /** Last Run Id */
+            last_run_id?: string | null;
+            /**
+             * Created
+             * @description Unix time (seconds).
+             */
+            created: number;
+            /**
+             * Updated
+             * @description Unix time (seconds).
+             */
+            updated: number;
+            /**
+             * Visitor Token
+             * @description Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep it and send it back in `X-Chat-Visitor`.
+             */
+            visitor_token?: string | null;
+            /**
+             * Steps Mode
+             * @enum {string}
+             */
+            steps_mode: "none" | "labels" | "full";
+            /** Turns */
+            turns: components["schemas"]["ChatTurn"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatSessionViewEnvelope
+         * @description Success envelope: one chat with its turns.
+         */
+        ChatSessionViewEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatSessionView"];
+            /** Error */
+            error?: null;
+        };
+        /** ChatTurn */
+        ChatTurn: {
+            /** Id */
+            id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /** Text */
+            text: string;
+            /**
+             * Status
+             * @description Answer status, e.g. `ok`, `error`, `waiting`, `cancelled`.
+             */
+            status?: string | null;
+            /** Run Id */
+            run_id?: string | null;
+            /**
+             * Node
+             * @description Set on a Human node's question: the node to answer.
+             */
+            node?: string | null;
+            /** Answered By */
+            answered_by?: string | null;
+            /**
+             * Code
+             * @description Error code of a failed answer.
+             */
+            code?: string | null;
+            /** Created */
+            created: number;
+            /** Attachments */
+            attachments?: components["schemas"]["ChatAttachment"][];
+            rating?: components["schemas"]["ChatRating"] | null;
+            /** Run Exists */
+            run_exists?: boolean | null;
+            /**
+             * Steps
+             * @description The run's steps in `steps_mode`, on the run's first answer.
+             */
+            steps?: {
+                [key: string]: unknown;
+            }[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatTurns
+         * @description The turns after `after` (incremental history): poll with the id of the last turn you have.
+         */
+        ChatTurns: {
+            /** Turns */
+            turns: components["schemas"]["ChatTurn"][];
+            /** Visitor Token */
+            visitor_token?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatTurnsEnvelope
+         * @description Success envelope: newer turns.
+         */
+        ChatTurnsEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatTurns"];
+            /** Error */
+            error?: null;
+        };
         /** ErrorBody */
         ErrorBody: {
             /**
@@ -85,6 +598,33 @@ export interface components {
             /** Data */
             data?: null;
             error: components["schemas"]["ErrorBody"];
+        };
+        /** Ok */
+        Ok: {
+            /**
+             * Ok
+             * @default true
+             */
+            ok: boolean;
+            /** Visitor Token */
+            visitor_token?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * OkEnvelope
+         * @description Success envelope: done.
+         */
+        OkEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["Ok"];
+            /** Error */
+            error?: null;
         };
         /**
          * RunAccepted
@@ -471,6 +1011,708 @@ export interface operations {
             };
             /** @description VALIDATION_ERROR */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    getChatPage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatPageEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    getChatLogo: {
+        parameters: {
+            query?: {
+                v?: string | null;
+            };
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The logo image. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "image/png": unknown;
+                    "image/jpeg": unknown;
+                    "image/webp": unknown;
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_LOGO_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listChatSessions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSessionListEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createChatSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description The chat is opened in an embed (the widget). */
+                    embed?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSessionEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    getChatSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSessionViewEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listChatTurns: {
+        parameters: {
+            query?: {
+                after?: string | null;
+            };
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatTurnsEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_TURN_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    uploadChatAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatAttachmentEnvelope"];
+                };
+            };
+            /** @description CHAT_ATTACHMENT_TYPE, CHAT_ATTACHMENT_TOO_MANY */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_ATTACHMENTS_OFF, CHAT_ATTACHMENT_DEMO */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_ATTACHMENT_TOO_LARGE */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    downloadChatAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+                aid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file, as a download. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/octet-stream": unknown;
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_ATTACHMENT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    deleteChatAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+                aid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_ATTACHMENT_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    rateChatTurn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+                tid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRatingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatRatingEnvelope"];
+                };
+            };
+            /** @description CHAT_RATING_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_TURN_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_RATING_NOT_ALLOWED */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    unrateChatTurn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+                tid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkEnvelope"];
+                };
+            };
+            /** @description CHAT_SIGN_IN_REQUIRED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_TURN_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

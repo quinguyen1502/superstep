@@ -142,6 +142,16 @@ class PublicChatService:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         return self.chat.view(self.own(t, sid, v), st["steps"]), v
 
+    def turns(self, slug: str, sid: str, after: Optional[str], token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:
+        """The chat's turns after the turn `after` (incremental history, TASK-0215); all of them when `after` is empty."""
+        view, v = self.get(slug, sid, token, user)
+        rows = view["turns"]
+        if after:
+            at = next((i for i, x in enumerate(rows) if x["id"] == after), None)
+            if at is None: raise AppError("CHAT_TURN_NOT_FOUND")
+            rows = rows[at + 1:]
+        return {"turns": rows}, v
+
     def rate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict], value, comment) -> tuple[dict, Visitor]:
         """The visitor rates one of their own finished answers. An unpublished chat refuses it (DEC-0070)."""
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)

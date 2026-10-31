@@ -1,8 +1,13 @@
 """The published chat page's API (TASK-0140, REQ-0074, DEC-0067), by slug and without the run right.
 
+Public Chat API v1 (TASK-0215, REQ-0082, DEC-0078): every route below is served at /api/public/v1/chat/{slug}/...
+and is in the public OpenAPI under the `Chat` tag; the unversioned /api/public/chat/... paths are aliases of v1 with the
+same handlers (kept for the page, the embed and widget.js; not in the specs).
+
 GET  /api/public/chat/{slug}                      the page: title, intro, suggestions, access, steps mode
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
+GET  /api/public/chat/{slug}/sessions/{sid}/turns?after=<turn_id>  the turns after that one (incremental history)
 GET  /api/public/chat/{slug}/logo?v=<hash>        the chat's logo image (TASK-0145)
 POST /api/public/chat/{slug}/sessions/{sid}/attachments        one file (multipart `file`), before the message (TASK-0174)
 GET  /api/public/chat/{slug}/sessions/{sid}/attachments/{aid}  download it      DELETE it while unsent
@@ -26,12 +31,17 @@ from ...core.client_ip import client_ip
 from ...core.errors import AppError
 from ...engine import locale
 from ...schemas.chat import ChatRatingIn
+from ...schemas.envelope import error_responses
+from ...schemas.public_chat import (ChatAttachmentEnvelope, ChatPageEnvelope, ChatRatingEnvelope, ChatSessionEnvelope,
+                                    ChatSessionListEnvelope, ChatSessionViewEnvelope, ChatTurnsEnvelope, OkEnvelope)
 from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
 from ..static import CHAT_PAGE
 from ..deps import _same_origin, bearer, chat_attachment_service, current_user, public_chat_service, run_service, ws_user
 
-router = APIRouter(prefix="/api/public/chat", tags=["public chat"])
+CHAT_TAG = "Chat"
+V1_PREFIX, ALIAS_PREFIX = "/api/public/v1/chat", "/api/public/chat"
+chat = APIRouter()  # the handlers, mounted twice at the bottom: v1 (documented) and the unversioned alias
 root_router = APIRouter()  # the socket and the frame check, outside the prefix
 VISITOR_HEADER = "x-chat-visitor"
 COOKIE_AGE = 400 * 86400  # browsers keep a cookie at most 400 days
@@ -40,7 +50,8 @@ COOKIE_AGE = 400 * 86400  # browsers keep a cookie at most 400 days
 def cookie_name(slug: str) -> str: return "studio_chat_" + hashlib.sha1(slug.encode()).hexdigest()[:10]
 
 
-def visitor_paths(slug: str) -> tuple[str, str]: return f"/api/public/chat/{slug}", f"/ws/public/chat/{slug}"
+def visitor_paths(slug: str) -> tuple[str, ...]:
+    return f"{ALIAS_PREFIX}/{slug}", f"/ws/public/chat/{slug}", f"{V1_PREFIX}/{slug}", f"/ws/public/v1/chat/{slug}"
 
 
 def maybe_user(request: Request, cred: Optional[HTTPAuthorizationCredentials] = Depends(bearer)) -> Optional[dict]:
@@ -124,23 +135,29 @@ def answer(request: Request, response: Response, slug: str, data, v: Visitor):
     return data
 
 
-@router.get("/{slug}")
+@chat.get("/{slug}", operation_id="getChatPage", summary="Get the chat page", response_model=None,
+    responses={200: {"model": ChatPageEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "RATE_LIMITED")})
 async def page(slug: str, request: Request, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); return svc.page(slug, user)
 
 
-@router.get("/{slug}/logo")
+@chat.get("/{slug}/logo", operation_id="getChatLogo", summary="Get the chat logo", response_model=None,
+    responses={200: {"content": {"image/png": {}, "image/jpeg": {}, "image/webp": {}}, "description": "The logo image."}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_LOGO_NOT_FOUND", "RATE_LIMITED")})
 async def logo(slug: str, request: Request, v: Optional[str] = None, svc=Depends(public_chat_service)):
     await checked(request, svc); return logo_response(svc.logo(slug), v is not None)
 
 
-@router.get("/{slug}/sessions")
+@chat.get("/{slug}/sessions", operation_id="listChatSessions", summary="List the caller's chats", response_model=None,
+    responses={200: {"model": ChatSessionListEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED")})
 async def sessions(slug: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); rows, v = svc.sessions(slug, token_of(request, slug), user)
     return answer(request, response, slug, {"sessions": rows}, v)
 
 
-@router.post("/{slug}/sessions")
+@chat.post("/{slug}/sessions", operation_id="createChatSession", summary="Start a chat", response_model=None,
+    openapi_extra={"requestBody": {"required": False, "content": {"application/json": {"schema": {"type": "object", "properties": {
+        "embed": {"type": "boolean", "description": "The chat is opened in an embed (the widget)."}}}}}}},
+    responses={200: {"model": ChatSessionEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED")})
 async def create(slug: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc)
     try: body = await request.json()
@@ -149,13 +166,27 @@ async def create(slug: str, request: Request, response: Response, user=Depends(m
     return answer(request, response, slug, s, v)
 
 
-@router.get("/{slug}/sessions/{sid}")
+@chat.get("/{slug}/sessions/{sid}", operation_id="getChatSession", summary="Get a chat with its turns", response_model=None,
+    responses={200: {"model": ChatSessionViewEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND")})
 async def session(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); s, v = svc.get(slug, sid, token_of(request, slug), user)
     return answer(request, response, slug, s, v)
 
 
-@router.post("/{slug}/sessions/{sid}/attachments")
+@chat.get("/{slug}/sessions/{sid}/turns", operation_id="listChatTurns", summary="List newer turns", response_model=None,
+    responses={200: {"model": ChatTurnsEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_TURN_NOT_FOUND")})
+async def turns(slug: str, sid: str, request: Request, response: Response, after: Optional[str] = None, user=Depends(maybe_user),
+                svc=Depends(public_chat_service)):
+    """The chat's turns after the turn `after` (all of them without it), in order, in the page's steps mode. An `after`
+    that is not a turn of this chat is `404 CHAT_TURN_NOT_FOUND`."""
+    await checked(request, svc); data, v = svc.turns(slug, sid, after, token_of(request, slug), user)
+    return answer(request, response, slug, data, v)
+
+
+@chat.post("/{slug}/sessions/{sid}/attachments", operation_id="uploadChatAttachment", summary="Upload a file before the message", response_model=None,
+    openapi_extra={"requestBody": {"required": True, "content": {"multipart/form-data": {"schema": {"type": "object", "required": ["file"],
+        "properties": {"file": {"type": "string", "format": "binary"}}}}}}},
+    responses={200: {"model": ChatAttachmentEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_ATTACHMENTS_OFF", "CHAT_ATTACHMENT_TYPE", "CHAT_ATTACHMENT_TOO_LARGE", "CHAT_ATTACHMENT_TOO_MANY", "CHAT_ATTACHMENT_DEMO")})
 async def upload(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     name, data = await read_upload(request)
@@ -165,32 +196,43 @@ async def upload(slug: str, sid: str, request: Request, response: Response, user
     return answer(request, response, slug, out, v)
 
 
-@router.get("/{slug}/sessions/{sid}/attachments/{aid}")
+@chat.get("/{slug}/sessions/{sid}/attachments/{aid}", operation_id="downloadChatAttachment", summary="Download a file", response_model=None,
+    responses={200: {"content": {"application/octet-stream": {}}, "description": "The file, as a download."}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_ATTACHMENT_NOT_FOUND")})
 async def download(slug: str, sid: str, aid: str, request: Request, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     a, _v = svc.public_file(slug, sid, aid, token_of(request, slug), user)
     return file_response(a, svc.chunks(a))
 
 
-@router.delete("/{slug}/sessions/{sid}/attachments/{aid}")
+@chat.delete("/{slug}/sessions/{sid}/attachments/{aid}", operation_id="deleteChatAttachment", summary="Delete an unsent file", response_model=None,
+    responses={200: {"model": OkEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_ATTACHMENT_NOT_FOUND")})
 async def remove(slug: str, sid: str, aid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     data, v = svc.public_delete(slug, sid, aid, token_of(request, slug), user)
     return answer(request, response, slug, data, v)
 
 
-@router.put("/{slug}/sessions/{sid}/turns/{tid}/rating")
+@chat.put("/{slug}/sessions/{sid}/turns/{tid}/rating", operation_id="rateChatTurn", summary="Rate an answer", response_model=None,
+    responses={200: {"model": ChatRatingEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_TURN_NOT_FOUND", "CHAT_RATING_NOT_ALLOWED", "CHAT_RATING_INVALID")})
 async def rate(slug: str, sid: str, tid: str, body: ChatRatingIn, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc)
     data, v = svc.rate(slug, sid, tid, token_of(request, slug), user, body.value, body.comment)
     return answer(request, response, slug, data, v)
 
 
-@router.delete("/{slug}/sessions/{sid}/turns/{tid}/rating")
+@chat.delete("/{slug}/sessions/{sid}/turns/{tid}/rating", operation_id="unrateChatTurn", summary="Remove a rating", response_model=None,
+    responses={200: {"model": OkEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_TURN_NOT_FOUND")})
 async def unrate(slug: str, sid: str, tid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc)
     data, v = svc.unrate(slug, sid, tid, token_of(request, slug), user)
     return answer(request, response, slug, data, v)
+
+
+v1_router = APIRouter()  # also the source of the public spec (api/openapi_public.py)
+v1_router.include_router(chat, prefix=V1_PREFIX, tags=[CHAT_TAG])
+router = APIRouter()
+router.include_router(v1_router)
+router.include_router(chat, prefix=ALIAS_PREFIX, tags=["public chat"], include_in_schema=False)
 
 
 @root_router.get("/api/public/chat-frame")
