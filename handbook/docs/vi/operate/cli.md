@@ -25,6 +25,18 @@ admin. `--yes` cùng các cờ đó thì bỏ qua câu hỏi. Image all-in-one l
 `ghcr.io/quinguyen1502/superstep`. Stack đầy đủ dùng `superstep-api` và
 `superstep-web`. Lần cài thứ hai vào instance đã có sẽ từ chối ghi đè.
 
+Lệnh cũng hỏi lưu tệp đính kèm chat ở đâu: `db` (trong database, mặc định)
+hoặc `fs` (một thư mục trên volume dữ liệu) với một máy, và thêm `s3` (bucket
+tương thích S3) với stack đầy đủ. Với `--yes`, dùng
+`--attachment-storage db|fs|s3`; với `s3` thêm `--s3-bucket` và khi cần
+`--s3-endpoint`, `--s3-region`, `--s3-prefix`, `--s3-path-style` và
+`--s3-access-key-id`. Secret key không bao giờ là cờ: nó được đọc từ
+`--s3-secret-stdin`, từ `SUPERSTEP_S3_SECRET_ACCESS_KEY`, hoặc từ một câu hỏi
+ẩn, và chỉ được ghi vào `.env` (quyền 600). `superstep deploy` nhận cùng các cờ
+này. `superstep doctor` cho biết nơi lưu và nó có hoạt động không, kèm lý do
+ngắn của server khi lỗi, không bao giờ hiện key. Xem
+[Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem).
+
 Ghim một bản phát hành bằng cách lấy đúng tag rồi curl script, hoặc đặt
 `SUPERSTEP_VERSION`.
 
@@ -51,6 +63,36 @@ superstep backup --schedule daily --keep 7
 `restore` yêu cầu gõ đúng tên instance. `--yes` chỉ bỏ qua khi `--name` trùng
 tên đó. Archive mang database, `.env`, `compose.yml` và secret key, nên
 credential đã lưu vẫn giải mã được sau khi restore vào một thư mục mới.
+
+Tệp đính kèm chat đi theo nơi lưu của chúng (xem
+[Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem)):
+
+| Nơi lưu | Trong archive |
+| --- | --- |
+| `db` | Nằm trong bản dump database. |
+| `fs` | Luôn có, dưới dạng `attachments.tar`. |
+| `s3` | Chỉ khi chạy `superstep backup --include-attachments`. Nếu không, manifest ghi bucket và prefix, và lệnh nhắc bạn sao lưu bucket riêng. Sao lưu theo lịch (`--schedule`) không bao giờ chép các object trong bucket; manifest của chúng cũng ghi bucket và prefix. |
+
+`restore` từ chối archive có nơi lưu tệp đính kèm khác với
+`STUDIO_ATTACHMENT_STORAGE` của instance. `--force` vẫn khôi phục và giữ các
+thiết lập `STUDIO_ATTACHMENT_*` của instance; tệp được ghi về nơi lưu mà bản ghi
+của nó chỉ tới, rồi `superstep attachments migrate` chuyển chúng đi.
+
+## Nơi lưu tệp đính kèm
+
+```bash
+superstep attachments migrate --to fs --dry-run
+superstep attachments migrate --to fs
+```
+
+`migrate` chuyển tệp đính kèm chat sang `db`, `fs` hoặc `s3`. Mỗi tệp được chép,
+đọc lại và kiểm tra (kích thước và SHA-256), rồi bản ghi được chuyển sang bản
+mới và bản cũ bị xoá. Tệp nào lỗi thì ở nguyên chỗ cũ và được liệt kê; khi đó mã
+thoát là 1. Lần chạy bị ngắt vẫn để mọi tệp đọc được, và chạy lại lệnh sẽ làm
+tiếp; khi không còn gì thì lệnh không làm gì. `--batch N` đặt số tệp đọc mỗi đợt
+(mặc định 100). Đặt `STUDIO_ATTACHMENT_STORAGE` cùng nơi lưu đó để tệp mới cũng
+lưu ở đó. Admin cũng làm được qua API với `GET /api/admin/attachments` và
+`POST /api/admin/attachments/migrate`.
 
 ## Đăng nhập
 

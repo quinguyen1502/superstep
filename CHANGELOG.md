@@ -4,6 +4,71 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+## 0.10.1 (2026-10-31)
+
+### Added
+
+- **Choosing attachment storage at install** (TASK-0195, REQ-0080, DEC-0074). `superstep install` and `deploy` ask
+  where chat attachments are stored (`db`, `fs`, and `s3` for the full stack), or take `--attachment-storage` and
+  `--s3-*` flags with `--yes`. The S3 secret is read from stdin, `SUPERSTEP_S3_SECRET_ACCESS_KEY` or a hidden prompt,
+  never from a flag, and is written only to `.env` (mode 600). `superstep doctor` shows the backend and whether it
+  works. The Render demo stays on `db`.
+- **Moving and backing up chat attachments** (TASK-0194, REQ-0080, DEC-0074). `superstep attachments migrate --to
+  db|fs|s3 [--dry-run] [--batch N]` (and `POST /api/admin/attachments/migrate` for admins) moves files between backends,
+  checking size and SHA-256 before switching each file; an interrupted run is safe to start again. Backups include files
+  on a folder, and files in a bucket with `--include-attachments`; the manifest records the backend (and bucket and
+  prefix). `restore` refuses an archive of another backend unless `--force`. New error codes
+  `ATTACHMENT_MIGRATE_TARGET` and `ATTACHMENT_MIGRATE_BATCH`.
+- **Attachment storage on S3-compatible services** (TASK-0193, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=s3`
+  keeps chat attachment bytes in a bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO), set with
+  `STUDIO_ATTACHMENT_S3_*`. Downloads still stream through the studio; the bucket is never shown to the browser. Access
+  keys are never logged; `/api/health` only says whether the bucket works. `boto3` is the optional `s3` extra and the
+  published images include it. CI runs the storage contract against MinIO.
+- **Attachment storage on a folder** (TASK-0192, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=fs` keeps chat
+  attachment bytes as files under `STUDIO_ATTACHMENT_FS_PATH` (default `/data/attachments`), written atomically, with
+  keys that cannot leave the folder. `/api/health` reports a missing or read-only folder, and
+  `attachment_storage_worker_seen` shows whether the worker shares the folder with the API. In docker compose, `api`
+  and `worker` share the `/data` volume.
+- **Attachment storage port** (TASK-0191, REQ-0080, DEC-0074). Chat attachment bytes go through a storage port.
+  `STUDIO_ATTACHMENT_STORAGE` (default `db`) picks where new files go; each file records where its bytes are
+  (`storage`, `key`), so files stay readable after a change of backend. The object is written before the row and
+  removed after it, the retention loop removes objects without a row once they are an hour old, and downloads stream through the backend with the same
+  headers. `/api/health` reports the backend and whether a write, read and delete there works. New error
+  `CHAT_ATTACHMENT_STORAGE` (503).
+- **Plan: external storage for chat attachments** (REQ-0080, DEC-0074, Accepted 2026-10-31). Planning records only: a storage
+  port with database (default), folder and S3-compatible backends, a migrate command and backup coverage, planned as
+  TASK-0191 to TASK-0195. Nothing is implemented yet.
+
+### Fixed
+
+- **AI review counts in usage** (TASK-0198, REQ-0081, DEC-0075). The judge's tokens and cost are added to the run
+  it reviewed, through the same usage records as node model calls: run history, the trace summary, the Human node's
+  row (tooltip line "AI review"), run metrics in the API and telemetry. A run still waiting for people shows them at
+  once. The run's events carry an `approval_review` entry with the usage.
+- **Scheduled backups name the S3 bucket** (TASK-0197, REQ-0080). With `STUDIO_ATTACHMENT_STORAGE=s3`, the archive
+  that `backup.sh` writes on a schedule records `attachment_s3` (bucket and prefix) in its manifest, as a manual
+  backup does, so `restore` reminds you which bucket to restore separately.
+- **Two timing-sensitive tests** (TASK-0196). The parallel tool-call test proves the three calls run at once with a
+  barrier instead of comparing start and end times. The studio e2e test checks the opened workflow's visible Last run
+  badge instead of the first `ok` on the page, which is the phone-only copy hidden on desktop.
+
+### Changed
+
+- **README and handbook home catch up** (TASK-0201). The README now covers the `superstep`/`sstep` CLI install and
+  commands, chat attachments and their `db`/`fs`/`s3` storage with `superstep attachments migrate`, Agent hand-offs and
+  the Help desk template, and AI review of approvals; it also fixes the Code node languages and the docs table. The
+  handbook home pages (en, vi) link the Agent, hand-off, chat, AI review and CLI pages. A trigger rate-limit test no longer
+  fails when its requests straddle a fixed window's boundary.
+- **End-to-end tests in CI** (TASK-0199). A new `E2E (Playwright)` job runs the whole Playwright suite, English and
+  Vietnamese, on every pull request to `develop`, in three shards with a 30-minute timeout, cached Chromium and Code-mode
+  specs on the subprocess runtime. There are no retries; on failure the traces and screenshots are uploaded as
+  `e2e-shard-N` (7 days).
+- **S3 multipart uploads** (TASK-0200). The `s3` attachment backend uploads a file larger than
+  `STUDIO_ATTACHMENT_S3_MULTIPART_MB` (default 8) in parts, holding at most two parts in memory, and aborts the upload on
+  any failure so the bucket keeps no incomplete parts. Uploads are read in 1 MB pieces into a spooled temporary file,
+  refused as soon as they pass the size ceiling (the content-length check still runs first), and stream to the `fs` and
+  `s3` backends and from an archive restore. Tested against MinIO, including the abort path.
+
 ## 0.10.0 (2026-10-31)
 
 ### Added

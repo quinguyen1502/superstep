@@ -105,6 +105,31 @@ tải xuống, không mở trong trang. Tệp được lưu cùng cuộc chat v�
 cuộc chat (theo thời gian lưu hoặc khi **Xoá**); tệp đã tải lên mà không gửi
 bị xoá sau một giờ. Bản demo công khai không nhận tệp tải lên.
 
+Mặc định tệp được lưu trong cơ sở dữ liệu. Người vận hành có thể lưu tệp trong
+một thư mục (`STUDIO_ATTACHMENT_STORAGE=fs`, `STUDIO_ATTACHMENT_FS_PATH`) để cơ
+sở dữ liệu không phình to. Tải xuống vẫn như cũ: studio đọc tệp rồi gửi đi, với
+cùng các bước kiểm tra. `/api/health` cho biết nơi lưu đang dùng
+(`attachment_storage`) và việc ghi, đọc, xoá ở đó có chạy không
+(`attachment_storage_ok`).
+
+Với `STUDIO_ATTACHMENT_STORAGE=s3`, tệp được lưu vào một bucket tương thích S3
+(AWS S3, Cloudflare R2, Backblaze B2, MinIO). Trình duyệt không bao giờ thấy
+bucket: không có liên kết tới bucket, và tải xuống vẫn đi qua studio. Đặt
+`STUDIO_ATTACHMENT_S3_BUCKET`, và với dịch vụ khác AWS thì đặt thêm
+`STUDIO_ATTACHMENT_S3_ENDPOINT`:
+
+| Dịch vụ | Endpoint | Region | Path style |
+| --- | --- | --- | --- |
+| AWS S3 | (trống) | region của bucket | `false` |
+| Cloudflare R2 | `https://<account>.r2.cloudflarestorage.com` | `auto` | `false` |
+| Backblaze B2 | `https://s3.<region>.backblazeb2.com` | region của bucket | `false` |
+| MinIO | `http://minio:9000` | `us-east-1` | `true` |
+
+Access key không bao giờ xuất hiện trong log, thông báo lỗi hay `/api/health`;
+bucket lỗi chỉ hiện một lý do ngắn như `S3 error AccessDenied`. Các image phát
+hành đã có sẵn S3 client; cài từ mã nguồn thì cần `pip install
+"superstep-backend[s3]"`.
+
 ## Bộ nhớ
 
 Khi có trường cuộc trò chuyện, mỗi run nhận *n* lượt hỏi–đáp gần nhất cùng tin

@@ -92,6 +92,23 @@ class Docker:
         if proc.returncode != 0:
             raise DockerError(proc.stderr.decode("utf-8", "replace").strip() or "docker failed")
 
+    def exec_from_file(self, directory: str, project: str, service: str, command: list[str], src: Path) -> bytes:
+        """Run a command with `src` as its stdin, without reading the file into this process (attachments, TASK-0194)."""
+        try:
+            with src.open("rb") as handle:
+                proc = subprocess.run(
+                    _compose_argv(directory, project, ["exec", "-T", service, *command]),
+                    stdin=handle,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    env=_env(self.host),
+                )
+        except OSError as exc:
+            raise DockerError(str(exc))
+        if proc.returncode != 0:
+            raise DockerError(proc.stderr.decode("utf-8", "replace").strip() or "docker failed")
+        return proc.stdout
+
     def copy_from(self, directory: str, project: str, service: str, path: str) -> bytes:
         target = _temp_path()
         try:

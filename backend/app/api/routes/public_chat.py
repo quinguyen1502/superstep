@@ -15,10 +15,11 @@ An anonymous visitor is the HttpOnly cookie `studio_chat_<hash>`, or the `X-Chat
 sends "new" when it has no token yet and then gets the new token back as `visitor_token`). signed_in uses the studio
 session as other routes do.
 """
-import hashlib
+import hashlib, tempfile
 from urllib.parse import quote
-from typing import Optional
+from typing import BinaryIO, Optional
 from fastapi import APIRouter, Depends, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from ...core import config, security
 from ...core.client_ip import client_ip
@@ -68,28 +69,43 @@ def logo_response(logo, versioned: bool, scope: str = "public") -> Response:
 MULTIPART_SLACK = 64 * 1024  # the multipart envelope around one file
 
 
-async def read_upload(request: Request) -> tuple[str, bytes]:
-    """(file name, bytes) of a one-file multipart upload, read at most one byte past the operator's ceiling: a body that
-    says it is larger is refused before it is read (TASK-0174, DEC-0072 decision 3)."""
+UPLOAD_PIECE = 1024 * 1024  # read an upload in pieces of this size (TASK-0200)
+
+
+async def read_upload(request: Request) -> tuple[str, BinaryIO]:
+    """(file name, file) of a one-file multipart upload. A body that says it is larger than the operator's ceiling is
+    refused before it is read (TASK-0174, DEC-0072 decision 3); then the file is read in pieces into a spooled
+    temporary file (in memory up to 1 MB, on disk above) and refused as soon as it passes the ceiling, so a large
+    upload is never one bytes object (TASK-0200). The caller closes the file."""
     ceiling = config.chat_attachment_max_mb() * 1024 * 1024
     too_large = AppError("CHAT_ATTACHMENT_TOO_LARGE", max_mb=config.chat_attachment_max_mb())
     try: declared = int(request.headers.get("content-length") or 0)
     except ValueError: declared = 0
     if declared > ceiling + MULTIPART_SLACK: raise too_large
     form = await request.form(max_files=1, max_fields=1)
-    f = form.get("file")
-    if f is None or isinstance(f, str): raise AppError("CHAT_ATTACHMENT_TYPE", allowed="")
-    data = await f.read(ceiling + 1)
-    await form.close()
-    if len(data) > ceiling: raise too_large
-    return f.filename or "", data
+    try:
+        f = form.get("file")
+        if f is None or isinstance(f, str): raise AppError("CHAT_ATTACHMENT_TYPE", allowed="")
+        out, size = tempfile.SpooledTemporaryFile(max_size=UPLOAD_PIECE), 0
+        try:
+            while piece := await f.read(UPLOAD_PIECE):
+                size += len(piece)
+                if size > ceiling: raise too_large
+                out.write(piece)
+        except BaseException:
+            out.close(); raise
+        out.seek(0)
+        return f.filename or "", out
+    finally:
+        await form.close()
 
 
-def file_response(a) -> Response:
-    """A chat file, always as a download that the browser must not sniff or render (REQ-0077)."""
+def file_response(a, chunks) -> Response:
+    """A chat file, always as a download that the browser must not sniff or render (REQ-0077). The bytes are streamed
+    from the attachment storage through the backend, whatever the backend: never a bucket URL (DEC-0074 decision 3)."""
     ascii_name = a.name.encode("ascii", "ignore").decode().replace('"', "") or "file"
-    return Response(a.data, media_type=a.mime, headers={
-        "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(a.name)}",
+    return StreamingResponse(chunks, media_type=a.mime, headers={
+        "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(a.name)}", "Content-Length": str(a.size),
         "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store", "Content-Security-Policy": "sandbox"})
 
 
@@ -141,8 +157,9 @@ async def session(slug: str, sid: str, request: Request, response: Response, use
 async def upload(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     name, data = await read_upload(request)
-    ip = client_ip(request.client.host if request.client else None, request.headers.get("x-forwarded-for"))
-    out, v = await svc.public_upload(slug, sid, token_of(request, slug), user, ip, name, data)
+    with data:
+        ip = client_ip(request.client.host if request.client else None, request.headers.get("x-forwarded-for"))
+        out, v = await svc.public_upload(slug, sid, token_of(request, slug), user, ip, name, data)
     return answer(request, response, slug, out, v)
 
 
@@ -150,7 +167,7 @@ async def upload(slug: str, sid: str, request: Request, response: Response, user
 async def download(slug: str, sid: str, aid: str, request: Request, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     a, _v = svc.public_file(slug, sid, aid, token_of(request, slug), user)
-    return file_response(a)
+    return file_response(a, svc.chunks(a))
 
 
 @router.delete("/{slug}/sessions/{sid}/attachments/{aid}")

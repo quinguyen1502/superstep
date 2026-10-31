@@ -34,7 +34,7 @@ RUN DENO_DIR=/opt/deno-cache deno cache --no-config --no-lock /opt/studio-deps/d
 WORKDIR /app
 COPY backend/pyproject.toml backend/alembic.ini ./
 COPY backend/app ./app
-RUN pip install . python-dateutil==2.9.0.post0 \
+RUN pip install ".[s3]" python-dateutil==2.9.0.post0 \
     && useradd -m -u 10001 studio && mkdir -p /data && chown studio /data
 COPY --from=web /src/dist ./static
 COPY docker/entrypoint.sh /usr/local/bin/superstep-entrypoint

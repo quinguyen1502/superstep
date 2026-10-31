@@ -50,6 +50,8 @@ from ..services.chat_run_service import ChatRunService
 from ..services.chat_session_service import ChatSessionService
 from ..services.public_chat_service import PublicChatService
 from ..services.chat_attachment_service import ChatAttachmentService
+from ..services.attachment_files import AttachmentFiles
+from .. import storage
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -114,7 +116,28 @@ def chat_run_service() -> ChatRunService:
 
 def chat_session_service() -> ChatSessionService:
     db = get_db(); return ChatSessionService(ChatSessionRepository(db), ChatTriggerRepository(db), ChatMessageRepository(db), WorkflowRepository(db),
-                                             RunRepository(db), access=access_service(), jobs=get_job_queue(), attachments=ChatAttachmentRepository(db))
+                                             RunRepository(db), access=access_service(), jobs=get_job_queue(), attachments=ChatAttachmentRepository(db),
+                                             files=attachment_files())
+
+
+@lru_cache(maxsize=4)
+def _attachment_stores(db) -> storage.Stores:
+    """One set of storage backends per database (a backend's client, such as S3's, is built once)."""
+    return storage.default(ChatAttachmentRepository(db))
+
+
+def attachment_files() -> AttachmentFiles:
+    db = get_db(); return AttachmentFiles(ChatAttachmentRepository(db), _attachment_stores(db))
+
+def attachment_migration():
+    """Moving files between backends (TASK-0194); used by the admin route and `app.admin_cmd`."""
+    from ..services.attachment_migration import AttachmentMigration
+    db = get_db(); return AttachmentMigration(ChatAttachmentRepository(db), _attachment_stores(db), access_service())
+
+def attachment_archive():
+    """Attachment bytes in and out of a backup archive (TASK-0194); used by `app.admin_cmd`."""
+    from ..services.attachment_archive import AttachmentArchive
+    db = get_db(); return AttachmentArchive(ChatAttachmentRepository(db), _attachment_stores(db))
 
 
 def public_chat_service() -> PublicChatService:

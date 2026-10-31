@@ -85,7 +85,11 @@ nhật ký ghi lại họ có đồng ý với mô hình hay không.
 - **Prompt injection.** Yêu cầu có thể chứa chữ do người khác viết. Mô hình
   duyệt chỉ coi yêu cầu là dữ liệu, và khi nghi có injection thì chuyển cho
   người. Quy tắc chạy trước mô hình nên không thể bị thuyết phục.
-- **Chi phí.** Mỗi lần duyệt là một lần gọi mô hình trên credential đó.
+- **Chi phí.** Mỗi lần duyệt là một lần gọi mô hình trên credential đó. Token
+  và chi phí của nó được tính vào mức dùng của run: lịch sử run, thanh tóm tắt
+  của trace và dòng của node Human trong trace (tooltip có dòng "AI duyệt").
+  Câu trả lời không đúng JSON vẫn được tính; lần gọi lỗi không có câu trả lời
+  thì không.
 
 ## Xuất code
 

@@ -26,6 +26,18 @@ all-in-one image is `ghcr.io/quinguyen1502/superstep`. The full stack uses
 `superstep-api` and `superstep-web`. A second install into an existing instance
 refuses to overwrite it.
 
+It also asks where chat attachments are stored: `db` (in the database, the
+default) or `fs` (a folder on the data volume) on a single host, and also `s3`
+(an S3-compatible bucket) for the full stack. With `--yes`, pass
+`--attachment-storage db|fs|s3`; for `s3` add `--s3-bucket` and, as needed,
+`--s3-endpoint`, `--s3-region`, `--s3-prefix`, `--s3-path-style` and
+`--s3-access-key-id`. The secret key is never a flag: it is read from
+`--s3-secret-stdin`, from `SUPERSTEP_S3_SECRET_ACCESS_KEY`, or from a hidden
+prompt, and is written only to `.env` (mode 600). `superstep deploy` takes the
+same flags. `superstep doctor` shows the backend and whether it works, with
+the server's short reason when it does not, never a key. See
+[Chat: Attachments](../run/chat.md#attachments).
+
 Pin a release by checking out that tag before curling the script, or set
 `SUPERSTEP_VERSION`.
 
@@ -53,6 +65,37 @@ superstep backup --schedule daily --keep 7
 `--name` is the same name. The archive carries the database, `.env`,
 `compose.yml` and the secret key, so a stored credential still decrypts after a
 restore onto a new directory.
+
+Chat attachments follow their storage backend (see
+[Chat: Attachments](../run/chat.md#attachments)):
+
+| Backend | In the archive |
+| --- | --- |
+| `db` | Inside the database dump. |
+| `fs` | Always, as `attachments.tar`. |
+| `s3` | Only with `superstep backup --include-attachments`. Otherwise the manifest records the bucket and prefix, and the command reminds you to back the bucket up on its own. Scheduled backups (`--schedule`) never copy the bucket's objects; their manifest records the bucket and prefix too. |
+
+`restore` refuses an archive whose attachment backend differs from the
+instance's `STUDIO_ATTACHMENT_STORAGE`. `--force` restores anyway and keeps the
+instance's own `STUDIO_ATTACHMENT_*` settings; the files go back to the backend
+their rows name, and `superstep attachments migrate` then moves them.
+
+## Attachment storage
+
+```bash
+superstep attachments migrate --to fs --dry-run
+superstep attachments migrate --to fs
+```
+
+`migrate` moves chat attachment files to `db`, `fs` or `s3`. Each file is
+copied, read back and checked (size and SHA-256), then its record is switched and
+the old copy deleted. A file that fails stays where it was and is listed; the
+exit code is then 1. An interrupted run leaves every file readable, and running
+the command again continues; when nothing is left it does nothing. `--batch N`
+sets how many files are read per batch (default 100). Set
+`STUDIO_ATTACHMENT_STORAGE` to the same backend so new files go there too.
+Admins can do the same over the API with `GET /api/admin/attachments` and
+`POST /api/admin/attachments/migrate`.
 
 ## Sign in
 

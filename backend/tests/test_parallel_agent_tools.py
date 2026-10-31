@@ -32,26 +32,35 @@ def overlap(seen):
     return max(starts) < min(ends)
 
 
-def run(monkeypatch, calls, tools, sleeps, **data):
+def run(monkeypatch, calls, tools, sleeps, mcp=None, **data):
     seen_model = []
     def fake(messages, tools_, model, cred=None, on_usage=None, on_token=None, mock=False, locale="en", parallel=None):
         seen_model.append(parallel)
         return next(calls)
     monkeypatch.setattr(agents, "call_agent", fake)
-    spans, mcp = spans_of(sleeps)
-    evs = list(run_stream(wf(tools=tools, steps_field="steps", **data), {"message": "x"}, ports=Ports(mcp_call=mcp)))
+    spans, timed = spans_of(sleeps)
+    evs = list(run_stream(wf(tools=tools, steps_field="steps", **data), {"message": "x"}, ports=Ports(mcp_call=mcp or timed)))
     return evs, spans, seen_model
 
 
 def test_three_calls_overlap_and_keep_the_model_order(monkeypatch):
+    # The three calls must be in flight together. A barrier proves it without timing: each call waits until all three
+    # have started, so a serial wave would time out here. (Comparing start and end times failed under load: a stall of
+    # the test process before the second and third worker threads started let the 50 ms call b end first; TASK-0191.)
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")
     tools = [tool("a"), tool("b"), tool("c")]
-    sleeps = {"a": 0.2, "b": 0.05, "c": 0.12}
+    together, inside, lock = threading.Barrier(3, timeout=30), [], threading.Lock()
+    def mcp(server, name, args):
+        with lock: inside.append(name)
+        together.wait()  # BrokenBarrierError (the call fails) unless all three calls are running at once
+        return name
     calls = iter([("", [call("a", {"n": 1}, "1"), call("b", {"n": 2}, "2"), call("c", {"n": 3}, "3")]), ("Done", [])])
-    evs, spans, _ = run(monkeypatch, calls, tools, sleeps)
+    evs, _, _ = run(monkeypatch, calls, tools, {}, mcp=mcp)
     st = final(evs)
-    assert overlap(spans) and [s["tool"] for s in st["steps"]] == ["a", "b", "c"] and st["answer"] == "Done"
+    assert sorted(inside) == ["a", "b", "c"] and not together.broken
+    assert [s["tool"] for s in st["steps"]] == ["a", "b", "c"] and st["answer"] == "Done"  # the model's order
     assert [s["status"] for s in st["steps"]] == ["ok", "ok", "ok"]
+    assert [s["result"] for s in st["steps"]] == ["a", "b", "c"]
     cps = checkpoints(evs)
     slots = {"ag/__tool/1", "ag/__tool/2", "ag/__tool/3"}
     wave = [cp for cp in cps if set(cp["nodes"]) == slots]

@@ -112,6 +112,9 @@ def test_redis_rate_limiter_shared_counter():
 
 def test_trigger_rate_limited_with_retry_after(c, monkeypatch):
     monkeypatch.setenv("STUDIO_TRIGGER_RATE_LIMIT", "2"); monkeypatch.setenv("STUDIO_TRIGGER_RATE_WINDOW", "60")
+    import types
+    t0 = (time.time() // 60) * 60 + 10  # the windows are fixed: keep all three hits inside one, not across a boundary
+    monkeypatch.setattr(rate_limit, "time", types.SimpleNamespace(time=lambda: t0))
     tok = user(c); wid = example(c, tok); secret = c.post(f"/api/workflows/{wid}/tokens", json={"name": "rl"}, headers=H(tok)).json()["data"]["token"]
     codes = [c.post(f"/api/hooks/workflows/{wid}/runs", json={"input": {}}, headers=H(secret)) for _ in range(3)]
     assert [r.status_code for r in codes] == [202, 202, 429]

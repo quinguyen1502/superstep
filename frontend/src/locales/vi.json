@@ -310,7 +310,8 @@
       "handoff": "chuyển giao cho {{to}}",
       "handoffReason": "chuyển giao cho {{to}}: {{reason}}",
       "handedOff": "chuyển giao"
-    }
+    },
+    "aiReviewUsage": "AI duyệt: {{detail}}"
   },
   "import": {
     "button": "Import repo",
@@ -506,6 +507,7 @@
     "CHAT_ATTACHMENT_TOO_MANY": "Mỗi tin nhắn đính kèm tối đa {{max}} tệp",
     "CHAT_ATTACHMENT_NOT_FOUND": "Không tìm thấy tệp",
     "CHAT_ATTACHMENT_DEMO": "Bản demo công khai không cho đính kèm tệp",
+    "CHAT_ATTACHMENT_STORAGE": "Không dùng được nơi lưu tệp đính kèm: {{reason}}",
     "CHAT_ATTACHMENT_LIMIT": "Giới hạn tệp đính kèm tối đa là {{max_files}} tệp và {{max_mb}} MB mỗi tệp",
     "CHAT_TURN_NOT_FOUND": "Không tìm thấy tin nhắn",
     "CHAT_RATING_NOT_ALLOWED": "Tin nhắn này không đánh giá được",
@@ -632,7 +634,9 @@
     "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
     "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
     "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
-    "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này"
+    "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này",
+    "ATTACHMENT_MIGRATE_TARGET": "Không có nơi lưu tệp đính kèm '{{target}}' (dùng {{allowed}})",
+    "ATTACHMENT_MIGRATE_BATCH": "Số tệp mỗi đợt phải từ 1 đến {{max}}"
   },
   "lang": {
     "en": "English",

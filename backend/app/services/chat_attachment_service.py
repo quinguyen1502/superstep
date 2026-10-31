@@ -9,7 +9,7 @@ Who may touch a file: the session's owner (a visitor of the published page, or t
 the builder from the Visitors list. Anything else, and a guessed id, is CHAT_ATTACHMENT_NOT_FOUND.
 """
 from __future__ import annotations
-import os, time, uuid
+import io, os, time, uuid
 from typing import TYPE_CHECKING, Optional
 from ..core import config
 from ..core import permissions as P
@@ -17,6 +17,8 @@ from ..core.errors import AppError
 from ..engine import documents
 from ..models import ChatAttachment, ChatSession
 from ..repositories import ChatAttachmentRepository
+from ..storage.base import Data
+from .attachment_files import AttachmentFiles
 
 if TYPE_CHECKING:
     from .chat_session_service import ChatSessionService
@@ -32,6 +34,8 @@ SIGNATURES = ((b"%PDF-", "application/pdf", "document", (".pdf",)),
               (b"\x89PNG\r\n\x1a\n", "image/png", "image", (".png",)),
               (b"\xff\xd8\xff", "image/jpeg", "image", (".jpg", ".jpeg")))
 TEXT_TYPES = {".txt": "text/plain", ".md": "text/markdown", ".csv": "text/csv"}
+DOCUMENT_EXTS = {".pdf", *TEXT_TYPES}  # read whole for the text; an image is checked from its first HEAD bytes (TASK-0200)
+HEAD = 64
 
 
 def settings_of(st: dict) -> dict:
@@ -69,11 +73,14 @@ def public(a) -> dict:
 
 
 class ChatAttachmentService:
-    def __init__(self, repo: ChatAttachmentRepository, chat: "ChatSessionService", pub: Optional["PublicChatService"] = None):
+    def __init__(self, repo: ChatAttachmentRepository, chat: "ChatSessionService", pub: Optional["PublicChatService"] = None,
+                 files: Optional[AttachmentFiles] = None):
+        """files: where the bytes go (TASK-0191, DEC-0074); the chat session service's by default."""
         self.repo, self.chat, self.pub = repo, chat, pub
+        self.files = files or chat.files
 
     # ---- the published page (the visitor's own session) ----
-    async def public_upload(self, slug: str, sid: str, token, user, ip: str, name: str, data: bytes) -> tuple[dict, "Visitor"]:
+    async def public_upload(self, slug: str, sid: str, token, user, ip: str, name: str, data: Data) -> tuple[dict, "Visitor"]:
         t, st = self.pub.published(slug); v = self.pub.visitor(slug, st, token, user)
         s = self.pub.own(t, sid, v)
         self._allowed(settings_of(st))
@@ -89,7 +96,7 @@ class ChatAttachmentService:
         return self.remove(self.pub.own(t, sid, v), aid), v
 
     # ---- the studio Chat tab (the user's own session) ----
-    def upload_owned(self, sid: str, uid: str, name: str, data: bytes) -> dict:
+    def upload_owned(self, sid: str, uid: str, name: str, data: Data) -> dict:
         s, t = self.chat._own(sid, uid, P.RUN)
         return self.store(s, self.chat.settings_json(t), name, data)
 
@@ -111,19 +118,29 @@ class ChatAttachmentService:
         if config.demo_mode(): raise AppError("CHAT_ATTACHMENT_DEMO")
         if not a["enabled"]: raise AppError("CHAT_ATTACHMENTS_OFF")
 
-    def store(self, s: ChatSession, st: dict, name, data: bytes) -> dict:
-        """Checks and keeps one unsent file of session `s`, under the chat's settings `st`."""
+    def store(self, s: ChatSession, st: dict, name, data: Data) -> dict:
+        """Checks and keeps one unsent file of session `s`, under the chat's settings `st`. `data` is the bytes or a
+        seekable file (an upload spooled by the route): an image is checked from its first bytes and written to the
+        backend in pieces; a document is read whole for its text (TASK-0200)."""
         a = settings_of(st); self._allowed(a)
-        if len(data) > a["max_mb"] * MB: raise AppError("CHAT_ATTACHMENT_TOO_LARGE", max_mb=a["max_mb"])
+        f = io.BytesIO(data) if isinstance(data, (bytes, bytearray)) else data
+        f.seek(0, io.SEEK_END); size = f.tell(); f.seek(0)
+        if size > a["max_mb"] * MB: raise AppError("CHAT_ATTACHMENT_TOO_LARGE", max_mb=a["max_mb"])
         if self.repo.unsent_count(s.id) >= a["max_files"]: raise AppError("CHAT_ATTACHMENT_TOO_MANY", max=a["max_files"])
         name = os.path.basename(str(name or "").replace("\\", "/")).strip()[:200]
-        found = sniff(name, data) if name and data else None
+        whole = os.path.splitext(name.lower())[1] in DOCUMENT_EXTS
+        sample = f.read() if whole else f.read(HEAD); f.seek(0)
+        found = sniff(name, sample) if name and size else None
         if found is None or found[0] not in a["kinds"]: raise AppError("CHAT_ATTACHMENT_TYPE", allowed=self.allowed_names(a))
         kind, mime = found
-        text, cut = text_of(name, data) if kind == "document" else (None, False)
-        row = self.repo.add(ChatAttachment(id=uuid.uuid4().hex, session_id=s.id, turn_id=None, name=name, kind=kind, mime=mime, size=len(data),
-                                           data=data, text=text, text_cut=cut, created=time.time()))
+        text, cut = text_of(name, sample) if kind == "document" else (None, False)
+        row = self.files.add(ChatAttachment(id=uuid.uuid4().hex, session_id=s.id, turn_id=None, name=name, kind=kind, mime=mime, size=size,
+                                            data=b"", text=text, text_cut=cut, created=time.time()), s.workflow_id, f)
         return public(row)
+
+    def chunks(self, row):
+        """The file's bytes in pieces, for the download response (streamed, never a bucket URL)."""
+        return self.files.open(row)
 
     @staticmethod
     def allowed_names(a: dict) -> str:
@@ -137,5 +154,5 @@ class ChatAttachmentService:
 
     def remove(self, s: ChatSession, aid) -> dict:
         """Removes a file that was not sent yet; a sent file stays with its turn."""
-        if not isinstance(aid, str) or not self.repo.delete_unsent(aid, s.id): raise AppError("CHAT_ATTACHMENT_NOT_FOUND")
+        if not isinstance(aid, str) or not self.files.remove_unsent(aid, s.id): raise AppError("CHAT_ATTACHMENT_NOT_FOUND")
         return {"ok": True}

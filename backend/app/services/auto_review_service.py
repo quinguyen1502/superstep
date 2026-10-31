@@ -8,6 +8,7 @@ kill switches -> rules -> demo -> daily cap -> judge -> threshold.
   cap all send the request to people (fail-safe). The AI never rejects on its own (owner decision 2).
 - Suggest mode never answers: the opinion is shown to people.
 Outcomes: approved | rejected | escalated | suggested (None: AI review is paused, people are asked as usual).
+`usage` is the judge call's token usage when the model was called (TASK-0198); the caller adds it to the run.
 """
 from __future__ import annotations
 import time
@@ -49,9 +50,9 @@ class AutoReviewService:
         except Exception: return done(cause="credential")
         out["model"] = j["model"] or None
         try: v = self.judge(j["instructions"], request, j["model"], cred)
-        except approval_judge.JudgeError as e: return done(cause=e.cause)
+        except approval_judge.JudgeError as e: return done(cause=e.cause, usage=getattr(e, "usage", None))
         except Exception: log.exception("AI review failed"); return done(cause="error")
-        out.update(decision=v["decision"], confidence=v["confidence"], reason=v["reason"])
+        out.update(decision=v["decision"], confidence=v["confidence"], reason=v["reason"], usage=v.get("usage"))
         if "injection" in v["flags"]: return done(decision="escalate", cause="injection")
         if not auto: return done()
         if v["decision"] == "approve" and v["confidence"] >= policy["min_confidence"]: return done("approved")

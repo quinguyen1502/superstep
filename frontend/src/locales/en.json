@@ -310,7 +310,8 @@
       "handoff": "hands off to {{to}}",
       "handoffReason": "hands off to {{to}}: {{reason}}",
       "handedOff": "hand-off"
-    }
+    },
+    "aiReviewUsage": "AI review: {{detail}}"
   },
   "import": {
     "button": "Import repo",
@@ -506,6 +507,7 @@
     "CHAT_ATTACHMENT_TOO_MANY": "A message may carry at most {{max}} files",
     "CHAT_ATTACHMENT_NOT_FOUND": "File not found",
     "CHAT_ATTACHMENT_DEMO": "Attachments are turned off in the public demo",
+    "CHAT_ATTACHMENT_STORAGE": "Attachment storage is not available: {{reason}}",
     "CHAT_ATTACHMENT_LIMIT": "Attachment limits may be at most {{max_files}} files and {{max_mb}} MB per file",
     "CHAT_TURN_NOT_FOUND": "Message not found",
     "CHAT_RATING_NOT_ALLOWED": "This message cannot be rated",
@@ -632,7 +634,9 @@
     "AGENT_HANDOFF_TARGET_INVALID": "Agent node {{node}}: hand-off target {{target}} must be another Agent node of this workflow, listed once",
     "AGENT_HANDOFF_LIMIT": "Max hand-offs per run must be 0-{{max}}",
     "AUTO_APPROVAL_FORBIDDEN": "Only the workflow owner or an admin can turn on automatic AI approval",
-    "AUTO_APPROVAL_DISABLED": "AI auto-approval is turned off on this server"
+    "AUTO_APPROVAL_DISABLED": "AI auto-approval is turned off on this server",
+    "ATTACHMENT_MIGRATE_TARGET": "Unknown attachment storage '{{target}}' (use {{allowed}})",
+    "ATTACHMENT_MIGRATE_BATCH": "The batch size must be between 1 and {{max}}"
   },
   "lang": {
     "en": "English",

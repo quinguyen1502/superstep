@@ -95,6 +95,18 @@ services:
       STUDIO_CODE_RUNTIME: ${STUDIO_CODE_RUNTIME:-}
       STUDIO_SANDBOX_URL: ${STUDIO_SANDBOX_URL:-http://sandbox:8080}
       STUDIO_SANDBOX_TOKEN: ${STUDIO_SANDBOX_TOKEN:-}
+      # Chat attachment storage (TASK-0192, REQ-0080): db (default), fs (a folder on the apidata volume, which api and
+      # worker share at /data) or s3. See the handbook, Configuration.
+      STUDIO_ATTACHMENT_STORAGE: ${STUDIO_ATTACHMENT_STORAGE:-db}
+      STUDIO_ATTACHMENT_FS_PATH: ${STUDIO_ATTACHMENT_FS_PATH:-/data/attachments}
+      # s3 (TASK-0193): any S3-compatible service. Empty keys use the default AWS credential chain.
+      STUDIO_ATTACHMENT_S3_BUCKET: ${STUDIO_ATTACHMENT_S3_BUCKET:-}
+      STUDIO_ATTACHMENT_S3_PREFIX: ${STUDIO_ATTACHMENT_S3_PREFIX:-}
+      STUDIO_ATTACHMENT_S3_ENDPOINT: ${STUDIO_ATTACHMENT_S3_ENDPOINT:-}
+      STUDIO_ATTACHMENT_S3_REGION: ${STUDIO_ATTACHMENT_S3_REGION:-}
+      STUDIO_ATTACHMENT_S3_PATH_STYLE: ${STUDIO_ATTACHMENT_S3_PATH_STYLE:-}
+      STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID: ${STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID:-}
+      STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY: ${STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY:-}
     # Local LLM servers on the host (TASK-0030): use http://host.docker.internal:11434 (Ollama) or
     # http://host.docker.internal:1234/v1 (LM Studio) as the credential base URL; `localhost` would be the container.
     extra_hosts: &host-gw ["host.docker.internal:host-gateway"]

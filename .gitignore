@@ -33,3 +33,6 @@ backend/.venv
 
 # factory CLI install artifacts
 .factory/build/
+
+# e2e fs attachment storage (TASK-0195)
+backend/.e2e-attachments/

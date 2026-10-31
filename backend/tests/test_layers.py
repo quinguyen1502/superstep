@@ -8,6 +8,7 @@ FORBIDDEN = {
     "schemas": ["models", "repositories", "services", "api"],
     "repositories": ["services", "api", "fastapi"],
     "services": ["api", "fastapi"],
+    "storage": ["models", "repositories", "services", "api", "engine", "fastapi"],  # adapters for attachment bytes (TASK-0191)
 }
 
 def test_import_directions():
