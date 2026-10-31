@@ -875,8 +875,11 @@ class RunService:
             else: first = {"type": "run_started", "run_id": rid, "ts": t0, **({"forked_from": plan.forked} if plan.forked else {})}
             await emit(first)
             if plan.checkpointing: await self._save_progress(rid, events, plan.resume or {}, plan, span)  # this segment's trace, before any node
+            # the time limit counts the engine's work from here: the setup above (the first progress write, which may wait for
+            # the database) is not part of the run's time, or a slow write could time a run out before its first node (TASK-0212)
+            deadline = time.time() + config.run_timeout()
             threading.Thread(target=worker, daemon=True).start()
-            listener = asyncio.create_task(listen()); deadline = t0 + config.run_timeout(); ended = None
+            listener = asyncio.create_task(listen()); ended = None
             while True:
                 get = asyncio.ensure_future(q.get())
                 done, _ = await asyncio.wait({get, listener}, timeout=max(0.0, deadline - time.time()), return_when=asyncio.FIRST_COMPLETED)
