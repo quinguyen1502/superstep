@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0205
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -49,3 +49,5 @@ Fix the CLI sign-in findings 4, 6 and 12 of the external review of v0.10.0 and v
 ## Activity Log
 
 - 2026-10-31: created from the owner's request to verify and fix the external review of v0.10.0 and v0.10.1.
+- 2026-10-31: implemented on `factory/task-0205-cli-auth-safety` from `develop`. The CLI sends its saved token only to the server that issued it; the sign-in link no longer carries the code and /cli/authorize asks for the typed code with a warning; POST /api/auth/cli/devices is limited to 10 per client IP per 10 minutes and old sign-ins are removed; PatService.user_for_token is removed and last_used is written at most every 5 minutes. `factory verify run --profile full` passed. The owner asked to fix the confirmed review findings and merge each task when CI is green. Moved to done on this PR before the merge (TASK-0148).
+- Review: `.factory-state/artifacts/REV-0192-task-0205.md`. QA: `.factory-state/artifacts/QA-0192-task-0205.md`.
