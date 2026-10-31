@@ -4,6 +4,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Added
+
+- **Public Chat API v1** (TASK-0215, REQ-0082, DEC-0078). The published chat page's HTTP routes are now a versioned
+  contract at `/api/public/v1/chat/{slug}/...` (page, logo, chats, turns, files, ratings) and are documented in the
+  public OpenAPI (`/openapi.public.json`, tag `Chat`, version 1.1.0) with response models and error codes. The
+  unversioned `/api/public/chat/...` paths keep working as aliases. New `GET .../sessions/{sid}/turns?after=<turn_id>`
+  returns only the turns after that one. The TypeScript and Python SDKs map the chat error codes.
+
 ### Fixed
 
 - **An Agent in a chat sends the new message to the model once** (TASK-0214). A chat's conversation field holds the

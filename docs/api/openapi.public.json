@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Superstep public API",
-    "description": "Start workflow runs from other services and read their results.\n\nAuthenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner\ncreates tokens in the editor under **⋯ → API**; each token starts runs of one workflow only.\n\nEvery response is an envelope: `{\"success\": true, \"data\": …, \"error\": null}` or\n`{\"success\": false, \"data\": null, \"error\": {\"code\", \"message\", \"details\"}}`. `code` is the stable contract.\n",
-    "version": "1.0.0"
+    "description": "Start workflow runs from other services and read their results, and talk to a published chat.\n\nAuthenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner\ncreates tokens in the editor under **⋯ → API**; each token starts runs of one workflow only.\n\nEvery response is an envelope: `{\"success\": true, \"data\": …, \"error\": null}` or\n`{\"success\": false, \"data\": null, \"error\": {\"code\", \"message\", \"details\"}}`. `code` is the stable contract.\n\n**Chat API v1** (`/api/public/v1/chat/{slug}`): the published chat page of a workflow. An anonymous visitor is identified\nby a visitor token: send `X-Chat-Visitor: new` once, keep the `visitor_token` of the answer and send it back in\n`X-Chat-Visitor`. Messages are sent over the WebSocket `/ws/public/v1/chat/{slug}`. Clients must ignore fields they do\nnot know: v1 only grows.\n",
+    "version": "1.1.0"
   },
   "paths": {
     "/api/hooks/workflows/{wid}/runs": {
@@ -316,10 +316,2459 @@
           }
         }
       }
+    },
+    "/api/public/v1/chat/{slug}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Get the chat page",
+        "operationId": "getChatPage",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatPageEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/logo": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Get the chat logo",
+        "operationId": "getChatLogo",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "v",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "V"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The logo image.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "image/png": {},
+              "image/jpeg": {},
+              "image/webp": {}
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_LOGO_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_LOGO_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_LOGO_NOT_FOUND",
+                        "message": "This chat has no logo"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/sessions": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "List the caller's chats",
+        "operationId": "listChatSessions",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionListEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Start a chat",
+        "operationId": "createChatSession",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "embed": {
+                    "type": "boolean",
+                    "description": "The chat is opened in an embed (the widget)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/sessions/{sid}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Get a chat with its turns",
+        "operationId": "getChatSession",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionViewEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/sessions/{sid}/turns": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "List newer turns",
+        "description": "The chat's turns after the turn `after` (all of them without it), in order, in the page's steps mode. An `after`\nthat is not a turn of this chat is `404 CHAT_TURN_NOT_FOUND`.",
+        "operationId": "listChatTurns",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatTurnsEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_TURN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  },
+                  "CHAT_TURN_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_TURN_NOT_FOUND",
+                        "message": "Message not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/sessions/{sid}/attachments": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Upload a file before the message",
+        "operationId": "uploadChatAttachment",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatAttachmentEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CHAT_ATTACHMENTS_OFF, CHAT_ATTACHMENT_DEMO",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_ATTACHMENTS_OFF": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_ATTACHMENTS_OFF",
+                        "message": "This chat does not accept attachments"
+                      }
+                    }
+                  },
+                  "CHAT_ATTACHMENT_DEMO": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_ATTACHMENT_DEMO",
+                        "message": "Attachments are turned off in the public demo"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CHAT_ATTACHMENT_TYPE, CHAT_ATTACHMENT_TOO_MANY",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_ATTACHMENT_TYPE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_ATTACHMENT_TYPE",
+                        "message": "This file type is not allowed here. Allowed: document, image"
+                      }
+                    }
+                  },
+                  "CHAT_ATTACHMENT_TOO_MANY": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_ATTACHMENT_TOO_MANY",
+                        "message": "A message may carry at most 5 files"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "CHAT_ATTACHMENT_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_ATTACHMENT_TOO_LARGE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_ATTACHMENT_TOO_LARGE",
+                        "message": "A file may be at most 10 MB"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/sessions/{sid}/attachments/{aid}": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Download a file",
+        "operationId": "downloadChatAttachment",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          },
+          {
+            "name": "aid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Aid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file, as a download.",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/octet-stream": {}
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_ATTACHMENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  },
+                  "CHAT_ATTACHMENT_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_ATTACHMENT_NOT_FOUND",
+                        "message": "File not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Delete an unsent file",
+        "operationId": "deleteChatAttachment",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          },
+          {
+            "name": "aid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Aid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_ATTACHMENT_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  },
+                  "CHAT_ATTACHMENT_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_ATTACHMENT_NOT_FOUND",
+                        "message": "File not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/sessions/{sid}/turns/{tid}/rating": {
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Rate an answer",
+        "operationId": "rateChatTurn",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          },
+          {
+            "name": "tid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRatingIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatRatingEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_TURN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  },
+                  "CHAT_TURN_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_TURN_NOT_FOUND",
+                        "message": "Message not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CHAT_RATING_NOT_ALLOWED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_RATING_NOT_ALLOWED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_RATING_NOT_ALLOWED",
+                        "message": "This message cannot be rated"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CHAT_RATING_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_RATING_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_RATING_INVALID",
+                        "message": "Rating: invalid value"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Remove a rating",
+        "operationId": "unrateChatTurn",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          },
+          {
+            "name": "tid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Tid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND, CHAT_TURN_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_NOT_PUBLISHED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_NOT_PUBLISHED",
+                        "message": "This chat is not available"
+                      }
+                    }
+                  },
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  },
+                  "CHAT_TURN_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_TURN_NOT_FOUND",
+                        "message": "Message not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "CHAT_SIGN_IN_REQUIRED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SIGN_IN_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SIGN_IN_REQUIRED",
+                        "message": "Sign in to use this chat"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AttachmentLimits": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Kinds",
+            "description": "Allowed kinds: `document`, `image`."
+          },
+          "max_files": {
+            "type": "integer",
+            "title": "Max Files"
+          },
+          "max_mb": {
+            "type": "number",
+            "title": "Max Mb"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "enabled",
+          "kinds",
+          "max_files",
+          "max_mb"
+        ],
+        "title": "AttachmentLimits"
+      },
+      "ChatAttachment": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "mime": {
+            "type": "string",
+            "title": "Mime"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "Bytes."
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "mime",
+          "size"
+        ],
+        "title": "ChatAttachment"
+      },
+      "ChatAttachmentEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatAttachment"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatAttachmentEnvelope",
+        "description": "Success envelope: an uploaded file."
+      },
+      "ChatPage": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "title": "Slug",
+            "examples": [
+              "support"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "examples": [
+              "Support"
+            ]
+          },
+          "intro": {
+            "type": "string",
+            "title": "Intro",
+            "description": "Markdown shown above the first message.",
+            "default": ""
+          },
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggestions",
+            "description": "Up to 4 suggested first messages."
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "studio",
+              "anonymous",
+              "signed_in"
+            ],
+            "title": "Access"
+          },
+          "steps_mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "labels",
+              "full"
+            ],
+            "title": "Steps Mode",
+            "description": "What a visitor sees of the run's steps."
+          },
+          "signed_in": {
+            "type": "boolean",
+            "title": "Signed In",
+            "description": "Whether the caller is a signed-in studio user."
+          },
+          "embed_origins": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Embed Origins",
+            "description": "Sites that may embed the page in an iframe."
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo",
+            "description": "Hash of the logo; fetch it from `.../logo?v=<hash>`."
+          },
+          "attachments": {
+            "$ref": "#/components/schemas/AttachmentLimits"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "slug",
+          "title",
+          "access",
+          "steps_mode",
+          "signed_in",
+          "attachments"
+        ],
+        "title": "ChatPage",
+        "description": "The published chat page: what a client shows before the first message."
+      },
+      "ChatPageEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatPage"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatPageEnvelope",
+        "description": "Success envelope: the chat page."
+      },
+      "ChatRating": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ],
+            "title": "Value"
+          },
+          "comment": {
+            "type": "string",
+            "title": "Comment",
+            "default": ""
+          },
+          "updated": {
+            "type": "number",
+            "title": "Updated"
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "value",
+          "updated"
+        ],
+        "title": "ChatRating"
+      },
+      "ChatRatingEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatRating"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatRatingEnvelope",
+        "description": "Success envelope: the rating."
+      },
+      "ChatRatingIn": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value"
+        ],
+        "title": "ChatRatingIn",
+        "description": "A thumbs up or down on one finished answer (DEC-0070). `comment` is only kept with a thumbs down."
+      },
+      "ChatSession": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "c7d1e0a9b2"
+            ]
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "last_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run Id"
+          },
+          "created": {
+            "type": "number",
+            "title": "Created",
+            "description": "Unix time (seconds)."
+          },
+          "updated": {
+            "type": "number",
+            "title": "Updated",
+            "description": "Unix time (seconds)."
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token",
+            "description": "Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep it and send it back in `X-Chat-Visitor`."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_id",
+          "channel",
+          "title",
+          "created",
+          "updated"
+        ],
+        "title": "ChatSession"
+      },
+      "ChatSessionEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatSession"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatSessionEnvelope",
+        "description": "Success envelope: a new chat."
+      },
+      "ChatSessionList": {
+        "properties": {
+          "sessions": {
+            "items": {
+              "$ref": "#/components/schemas/ChatSession"
+            },
+            "type": "array",
+            "title": "Sessions"
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "sessions"
+        ],
+        "title": "ChatSessionList"
+      },
+      "ChatSessionListEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatSessionList"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatSessionListEnvelope",
+        "description": "Success envelope: the caller's chats."
+      },
+      "ChatSessionView": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "c7d1e0a9b2"
+            ]
+          },
+          "workflow_id": {
+            "type": "string",
+            "title": "Workflow Id"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "last_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run Id"
+          },
+          "created": {
+            "type": "number",
+            "title": "Created",
+            "description": "Unix time (seconds)."
+          },
+          "updated": {
+            "type": "number",
+            "title": "Updated",
+            "description": "Unix time (seconds)."
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token",
+            "description": "Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep it and send it back in `X-Chat-Visitor`."
+          },
+          "steps_mode": {
+            "type": "string",
+            "enum": [
+              "none",
+              "labels",
+              "full"
+            ],
+            "title": "Steps Mode"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/ChatTurn"
+            },
+            "type": "array",
+            "title": "Turns"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_id",
+          "channel",
+          "title",
+          "created",
+          "updated",
+          "steps_mode",
+          "turns"
+        ],
+        "title": "ChatSessionView",
+        "description": "One chat with its turns in the page's steps mode."
+      },
+      "ChatSessionViewEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatSessionView"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatSessionViewEnvelope",
+        "description": "Success envelope: one chat with its turns."
+      },
+      "ChatTurn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Answer status, e.g. `ok`, `error`, `waiting`, `cancelled`."
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "node": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node",
+            "description": "Set on a Human node's question: the node to answer."
+          },
+          "answered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered By"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code",
+            "description": "Error code of a failed answer."
+          },
+          "created": {
+            "type": "number",
+            "title": "Created"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/ChatAttachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatRating"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_exists": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Exists"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps",
+            "description": "The run's steps in `steps_mode`, on the run's first answer."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "text",
+          "created"
+        ],
+        "title": "ChatTurn"
+      },
+      "ChatTurns": {
+        "properties": {
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/ChatTurn"
+            },
+            "type": "array",
+            "title": "Turns"
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "turns"
+        ],
+        "title": "ChatTurns",
+        "description": "The turns after `after` (incremental history): poll with the id of the last turn you have."
+      },
+      "ChatTurnsEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatTurns"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatTurnsEnvelope",
+        "description": "Success envelope: newer turns."
+      },
       "ErrorBody": {
         "properties": {
           "code": {
@@ -379,6 +2828,54 @@
           "error"
         ],
         "title": "ErrorEnvelope"
+      },
+      "Ok": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": true
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "Ok"
+      },
+      "OkEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Ok"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "OkEnvelope",
+        "description": "Success envelope: done."
       },
       "RunAccepted": {
         "properties": {
@@ -943,6 +3440,10 @@
         "description": "The same workflow token as `Authorization: Bearer wft_…`.",
         "scheme": "bearer",
         "bearerFormat": "wft_…"
+      },
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
       }
     }
   },
@@ -950,6 +3451,10 @@
     {
       "name": "public",
       "description": "Workflow-trigger API for external callers (workflow token)."
+    },
+    {
+      "name": "Chat",
+      "description": "Chat API v1: a published chat page, its chats, files and ratings (anonymous visitor token or studio sign-in)."
     }
   ]
 }

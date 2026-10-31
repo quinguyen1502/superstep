@@ -70,6 +70,20 @@ export const BY_CODE: Record<string, ErrorClass> = {
   PAYLOAD_TOO_LARGE: PayloadTooLargeError,
   RATE_LIMITED: RateLimitError,
   INTERNAL_ERROR: ServerError,
+  // the Chat API v1 (TASK-0215)
+  CHAT_NOT_PUBLISHED: NotFoundError,
+  CHAT_SESSION_NOT_FOUND: NotFoundError,
+  CHAT_TURN_NOT_FOUND: NotFoundError,
+  CHAT_ATTACHMENT_NOT_FOUND: NotFoundError,
+  CHAT_LOGO_NOT_FOUND: NotFoundError,
+  CHAT_SIGN_IN_REQUIRED: AuthenticationError,
+  CHAT_ATTACHMENT_TYPE: InvalidRequestError,
+  CHAT_ATTACHMENT_TOO_MANY: InvalidRequestError,
+  CHAT_ATTACHMENTS_OFF: InvalidRequestError,
+  CHAT_ATTACHMENT_DEMO: InvalidRequestError,
+  CHAT_RATING_INVALID: InvalidRequestError,
+  CHAT_RATING_NOT_ALLOWED: InvalidRequestError,
+  CHAT_ATTACHMENT_TOO_LARGE: PayloadTooLargeError,
 }
 const BY_STATUS: Record<number, ErrorClass> = {
   400: InvalidRequestError, 401: AuthenticationError, 404: NotFoundError, 413: PayloadTooLargeError, 422: InvalidRequestError, 429: RateLimitError,

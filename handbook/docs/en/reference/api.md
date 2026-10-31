@@ -153,9 +153,11 @@ WS /ws/run
     WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
 
     No sign-in (the published page, by slug):
+    Chat API v1 (in the public spec, tag Chat): the same routes under /api/public/v1/chat/{slug}; the paths above are aliases.
     GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins, logo)
     GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
     GET    /api/public/chat/{slug}/sessions/{sid}
+    GET    /api/public/chat/{slug}/sessions/{sid}/turns?after=<turn_id>   (only the newer turns)
     GET    /api/public/chat/{slug}/logo?v=<logo>
     WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
     GET    /api/public/chat-frame?path=/c/{slug}    (its frame-ancestors, for nginx)

@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0215
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -84,3 +84,5 @@ Expose the public chat HTTP API as a versioned, documented contract in the publi
 ## Handoff Notes
 
 - Branch `factory/task-0215-public-chat-api-v1` from `develop`.
+- 2026-10-31: implemented on `factory/task-0215-public-chat-api-v1` from `develop`. The handlers sit on one router mounted twice: `/api/public/v1/chat` (tag `Chat`, in `/openapi.public.json`, version 1.1.0) and the unversioned alias (hidden from both specs, same handlers). Response models in `app/schemas/public_chat.py` (open models: v1 only grows). `GET .../sessions/{sid}/turns?after=` filters the session view in `PublicChatService.turns` (no change to `chat_session_service.py`, which TASK-0214 edits). The visitor cookie is also scoped to the v1 paths. The SDKs map the chat error codes so their spec-sync tests keep covering every documented code. No new error codes. Moved to done on this PR before the merge.
+- Review: `.factory-state/artifacts/REV-0203-task-0215.md`. QA: `.factory-state/artifacts/QA-0203-task-0215.md`.
