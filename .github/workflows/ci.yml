@@ -142,6 +142,7 @@ jobs:
         shard: [1, 2, 3]
     env:
       E2E_PYTHON: ${{ github.workspace }}/backend/.venv/bin/python
+      E2E_CODE_RUNTIME: subprocess  # Code-mode specs run without the sandbox images (uv + deno below)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
