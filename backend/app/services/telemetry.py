@@ -23,7 +23,7 @@ def summarize(events: list[dict], started: float, ended: float) -> dict:
     for ev in events:
         if ev.get("type") == "error": errors += 1
         u = ev.get("usage")
-        if ev.get("type") == "node_finished" and u:
+        if ev.get("type") in ("node_finished", "approval_review") and u:  # approval_review: the AI judge of a step (TASK-0198)
             llm = True; tin += u.get("tokens_in", 0); tout += u.get("tokens_out", 0)
             cost = None if cost is None or u.get("cost_usd") is None else cost + u["cost_usd"]
     return {"duration_ms": round(max(0.0, ended - started - waited) * 1000, 2), "tokens_in": tin, "tokens_out": tout,

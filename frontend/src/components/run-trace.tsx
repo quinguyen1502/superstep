@@ -104,7 +104,8 @@ function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; met
       {s.code?.runtime === 'subprocess' && <Badge variant="warning" size="sm" data-testid="span-unisolated">{t('code.runtimeLabel', { runtime: s.code.runtime })}</Badge>}
       {s.agent ? <AgentSummary a={s.agent} /> : <span className="truncate shrink-0 max-w-[25%] text-muted-foreground font-mono text-[10px]">{s.node}</span>}
       {s.tokens != null && <Tooltip><TooltipTrigger asChild><span className="shrink-0 whitespace-nowrap text-muted-foreground text-[10px]" data-testid="span-tokens">· {t('trace.tokensShort', { count: s.tokens })}{s.cost ? ` · ${fmtCost(s.cost)}` : ''}</span></TooltipTrigger>
-        <TooltipContent>{t('trace.usageDetail', { model: s.usage?.model ?? '—', tin: s.usage?.tokens_in ?? 0, tout: s.usage?.tokens_out ?? 0, cost: fmtCost(s.cost) })}{s.usage?.estimated ? ` ${t('trace.estimated')}` : ''}</TooltipContent></Tooltip>}
+        <TooltipContent>{s.usage && <>{t('trace.usageDetail', { model: s.usage.model ?? '—', tin: s.usage.tokens_in ?? 0, tout: s.usage.tokens_out ?? 0, cost: fmtCost(s.usage.cost_usd) })}{s.usage.estimated ? ` ${t('trace.estimated')}` : ''}</>}
+          {s.review && <div data-testid="span-review-usage">{t('trace.aiReviewUsage', { detail: t('trace.usageDetail', { model: s.review.model ?? '—', tin: s.review.usage.tokens_in ?? 0, tout: s.review.usage.tokens_out ?? 0, cost: fmtCost(s.review.usage.cost_usd) }) })}</div>}</TooltipContent></Tooltip>}
       {s.status === 'running' && s.live && <span data-testid="span-live" className="truncate min-w-0 font-mono text-[11px] text-muted-foreground">{s.live.slice(-160)}</span>}
       {s.error && <Tooltip><TooltipTrigger asChild><span className="truncate min-w-0 text-destructive text-[11px]">— {s.error}</span></TooltipTrigger>
         <TooltipContent className="max-w-md break-all">{s.error}</TooltipContent></Tooltip>}

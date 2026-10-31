@@ -39,6 +39,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **AI review counts in usage** (TASK-0198, REQ-0081, DEC-0075). The judge's tokens and cost are added to the run
+  it reviewed, through the same usage records as node model calls: run history, the trace summary, the Human node's
+  row (tooltip line "AI review"), run metrics in the API and telemetry. A run still waiting for people shows them at
+  once. The run's events carry an `approval_review` entry with the usage.
 - **Two timing-sensitive tests** (TASK-0196). The parallel tool-call test proves the three calls run at once with a
   barrier instead of comparing start and end times. The studio e2e test checks the opened workflow's visible Last run
   badge instead of the first `ok` on the page, which is the phone-only copy hidden on desktop.

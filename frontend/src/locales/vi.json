@@ -310,7 +310,8 @@
       "handoff": "chuyển giao cho {{to}}",
       "handoffReason": "chuyển giao cho {{to}}: {{reason}}",
       "handedOff": "chuyển giao"
-    }
+    },
+    "aiReviewUsage": "AI duyệt: {{detail}}"
   },
   "import": {
     "button": "Import repo",
