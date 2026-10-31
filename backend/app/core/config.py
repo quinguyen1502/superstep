@@ -79,8 +79,8 @@ def attachment_storage() -> str:
     return (os.environ.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip().lower()
 def data_paths() -> list[str]:
     """Files and folders the studio keeps its own data in (TASK-0203): an `fs` attachment folder must not be or hold them."""
-    paths = [os.environ.get("STUDIO_SECRET_KEY_FILE") or os.path.join(home_dir(), "secret.key")]
-    if DATABASE_URL.startswith("sqlite"): paths.append(os.environ.get("STUDIO_DB", STUDIO_DB))
+    paths = [home_dir(), os.environ.get("STUDIO_SECRET_KEY_FILE") or os.path.join(home_dir(), "secret.key"),
+             os.environ.get("STUDIO_DB", STUDIO_DB)]  # the SQLite file even on Postgres: a later switch back must not lose it
     if os.environ.get("STUDIO_IMPORT_DIR"): paths.append(os.environ["STUDIO_IMPORT_DIR"])
     return [os.path.abspath(os.path.expanduser(p)) for p in paths]
 def attachment_s3() -> dict:
