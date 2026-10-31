@@ -1,7 +1,12 @@
 from typing import Optional
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from ..models import PersonalAccessToken
 from ..models.database import Database
+
+
+class PatNameTaken(Exception):
+    """Another active token of the same user got this name first (TASK-0213)."""
 
 
 class PersonalAccessTokenRepository:
@@ -9,7 +14,13 @@ class PersonalAccessTokenRepository:
 
     def add(self, row: PersonalAccessToken) -> PersonalAccessToken:
         with self.db.session() as s:
-            s.add(row); s.commit(); return row
+            s.add(row)
+            try: s.commit()
+            except IntegrityError:  # the unique index on active names (TASK-0213); a token_hash clash is re-raised
+                s.rollback()
+                if self.active_by_name(row.user_id, row.name) is None: raise
+                raise PatNameTaken(row.name) from None
+            return row
 
     def get(self, tid: str) -> Optional[PersonalAccessToken]:
         with self.db.session() as s:
