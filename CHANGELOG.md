@@ -4,6 +4,21 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Security
+
+- **AI review sends a request it cannot see in full to people** (TASK-0204). The judge saw only the first 12,000
+  characters, so a field after a long one (a `bcc` after a long body) could be approved unseen; such a request now goes
+  to people (cause `too_long`).
+
+### Fixed
+
+- **An AI review lost to a restart goes to people** (TASK-0204). The maintenance sweep sends a step whose review never
+  finished to people (cause `restart`): the run owner is told in auto mode and the channel request is sent.
+- **The AI review daily cap holds for parallel steps** (TASK-0204). Each automatic answer reserves its slot atomically,
+  so the steps of one wave cannot pass the cap together; an escalated review gives its slot back.
+- **AI review usage is no longer lost on SQLite** (TASK-0204). A waiting run's update kept an `approval_review` event
+  appended at the same time.
+
 ## 0.10.1 (2026-10-31)
 
 ### Added

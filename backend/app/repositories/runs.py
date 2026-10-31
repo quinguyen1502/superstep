@@ -83,7 +83,10 @@ class RunRepository:
                     evs = json.loads(events or "[]"); evs.append(event)
                     values["events"] = json.dumps(evs, ensure_ascii=False, default=str)
                 s.expunge(row)  # the compare-and-set below is the only write; a flush of this object would race it
-                n = s.execute(update(Run).where(Run.id == rid, Run.status == "waiting", Run.checkpoint == seen).values(**values)).rowcount
+                same = [Run.id == rid, Run.status == "waiting", Run.checkpoint == seen]
+                if event is not None:  # the events text too: an event appended meanwhile (AI review usage) is kept (TASK-0204)
+                    same.append(Run.events.is_(None) if events is None else Run.events == events)
+                n = s.execute(update(Run).where(*same).values(**values)).rowcount
                 if n == 1: s.commit(); return result
                 s.rollback()
         return None
