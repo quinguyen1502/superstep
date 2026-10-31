@@ -53,7 +53,7 @@ tên đó. Archive mang database, `.env`, `compose.yml` và secret key, nên
 credential đã lưu vẫn giải mã được sau khi restore vào một thư mục mới.
 
 Tệp đính kèm chat đi theo nơi lưu của chúng (xem
-[Chat: Tệp đính kèm](../run/chat.md#tep-dinh-kem)):
+[Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem)):
 
 | Nơi lưu | Trong archive |
 | --- | --- |

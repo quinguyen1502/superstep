@@ -81,7 +81,7 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | Độ dài khung (giây) của trang chat công khai. Giới hạn theo ngày của từng chat nằm trong Cài đặt Chat |
 | `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Tệp đính kèm trong chat: dung lượng tối đa mỗi tệp (MB); mỗi chat chỉ được đặt thấp hơn |
 | `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Tệp đính kèm trong chat: số tệp tối đa mỗi tin nhắn; mỗi chat chỉ được đặt thấp hơn |
-| `STUDIO_ATTACHMENT_STORAGE` | `db` | Nơi lưu nội dung tệp đính kèm trong chat: `db` (trong cơ sở dữ liệu), `fs` (một thư mục) hoặc `s3` (kho lưu trữ tương thích S3). Mỗi tệp giữ nguyên nơi nó đã được lưu, nên thay đổi chỉ áp dụng cho tệp mới. Xem [Chat: Tệp đính kèm](../run/chat.md#tep-dinh-kem) |
+| `STUDIO_ATTACHMENT_STORAGE` | `db` | Nơi lưu nội dung tệp đính kèm trong chat: `db` (trong cơ sở dữ liệu), `fs` (một thư mục) hoặc `s3` (kho lưu trữ tương thích S3). Mỗi tệp giữ nguyên nơi nó đã được lưu, nên thay đổi chỉ áp dụng cho tệp mới. Xem [Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem) |
 | `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | Thư mục của backend `fs`. Với docker compose, `api` và `worker` dùng chung thư mục này trên volume `apidata` |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Thời gian chờ `sync` tối đa (giây) |
 | `STUDIO_ALLOW_PRIVATE_CALLBACKS` | `0` | Cho phép callback tới địa chỉ private |
