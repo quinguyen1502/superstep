@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0203
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -51,3 +51,5 @@ Fix the storage findings 1, 3, 7 and 9 of the external review of v0.10.0 and v0.
 ## Activity Log
 
 - 2026-10-31: created from the owner's request to verify and fix the external review of v0.10.0 and v0.10.1.
+- 2026-10-31: implemented on `factory/task-0203-attachment-storage-safety` from `develop`. The orphan sweep deletes only service-made keys at the configured location, refuses a data-holding folder and warns on an empty S3 prefix; each file records its location (migration 0048, start-up backfill) and migrate moves files between locations of a backend; visitor uploads are stored with asyncio.to_thread; nginx allows WEB_MAX_BODY_SIZE (110m) with a JSON 413. `factory verify run --profile full` passed. The owner asked to fix the confirmed review findings and merge each task when CI is green. Moved to done on this PR before the merge (TASK-0148).
+- Review: `.factory-state/artifacts/REV-0191-task-0203.md`. QA: `.factory-state/artifacts/QA-0191-task-0203.md`.
