@@ -91,7 +91,7 @@ Errors are one line, with `sk-…`, `Bearer …` and `api_key=…` redacted.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `STUDIO_RECURSION_LIMIT` | 25 | Max steps per run. A loop that never passes a Condition stops with an error. For each steps do not count. |
-| `STUDIO_RUN_TIMEOUT` | 120 s | Max duration of a run, then `timeout`. Waiting at a Human node does not count. |
+| `STUDIO_RUN_TIMEOUT` | 120 s | Max duration of a run, then `timeout`. Waiting at a Human node does not count, and neither does the setup before the first node (such as saving the first progress checkpoint). |
 | `STUDIO_EVENT_MAX_BYTES` | 262144 | Max size of one event. Oversized fields become `{"_truncated": true, …}`. |
 | `STUDIO_RUN_MAX_BYTES` | 2097152 | Max stored events per run. The middle is replaced by `{"type": "truncated", "dropped": n}`. |
 | `STUDIO_INPUT_MAX_BYTES` | 262144 | Max run input. |

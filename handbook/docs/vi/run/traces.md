@@ -90,7 +90,7 @@ Lỗi gói trong một dòng, `sk-…`, `Bearer …` và `api_key=…` được 
 | Biến | Mặc định | Nghĩa |
 | --- | --- | --- |
 | `STUDIO_RECURSION_LIMIT` | 25 | Số bước tối đa mỗi run. Vòng lặp không bao giờ đi qua Condition sẽ dừng với lỗi. Bước của For each không tính. |
-| `STUDIO_RUN_TIMEOUT` | 120 giây | Thời gian tối đa của run, quá thì `timeout`. Thời gian chờ ở node Human không tính. |
+| `STUDIO_RUN_TIMEOUT` | 120 giây | Thời gian tối đa của run, quá thì `timeout`. Thời gian chờ ở node Human không tính, phần chuẩn bị trước node đầu tiên (như lưu checkpoint tiến độ đầu tiên) cũng không tính. |
 | `STUDIO_EVENT_MAX_BYTES` | 262144 | Kích thước tối đa của một sự kiện. Trường quá lớn thành `{"_truncated": true, …}`. |
 | `STUDIO_RUN_MAX_BYTES` | 2097152 | Dung lượng sự kiện tối đa lưu cho một run. Phần giữa được thay bằng `{"type": "truncated", "dropped": n}`. |
 | `STUDIO_INPUT_MAX_BYTES` | 262144 | Input tối đa của run. |
