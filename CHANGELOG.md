@@ -52,6 +52,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Changed
 
+- **README and handbook home catch up** (TASK-0201). The README now covers the `superstep`/`sstep` CLI install and
+  commands, chat attachments and their `db`/`fs`/`s3` storage with `superstep attachments migrate`, Agent hand-offs and
+  the Help desk template, and AI review of approvals; it also fixes the Code node languages and the docs table. The
+  handbook home pages (en, vi) link the Agent, hand-off, chat, AI review and CLI pages. A trigger rate-limit test no longer
+  fails when its requests straddle a fixed window's boundary.
 - **End-to-end tests in CI** (TASK-0199). A new `E2E (Playwright)` job runs the whole Playwright suite, English and
   Vietnamese, on every pull request to `develop`, in three shards with a 30-minute timeout, cached Chromium and Code-mode
   specs on the subprocess runtime. There are no retries; on failure the traces and screenshots are uploaded as
