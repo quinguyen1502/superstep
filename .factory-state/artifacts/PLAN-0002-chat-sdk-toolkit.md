@@ -4,8 +4,8 @@
 
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
-- Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Proposed.
-- Tasks: TASK-0215 to TASK-0230 (all in backlog until the owner approves; then phase 1 moves to todo)
+- Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
+- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 TASK-0215 to TASK-0219 in todo, the rest in backlog)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -49,7 +49,9 @@ Critical path: 0215, 0216, 0217 (parallel with 0216), 0218, 0220, 0224 or 0227. 
 - Mobile: RN unit tests in CI; a manual iOS simulator and Android emulator checklist with screenshots.
 - `factory verify run --profile full` and `factory validate` on each task PR.
 
-## Open questions (with recommendations)
+## Open questions (resolved)
+
+All 11 were approved as recommended by the owner on 2026-10-31 (PR #271); see REQ-0082 "Clarifications".
 
 1. App key JWT (HS256) as the MVP, asymmetric keys later (DEC-0077)? Recommended: yes.
 2. Also ship a token-exchange endpoint now? Recommended: no.
@@ -62,3 +64,19 @@ Critical path: 0215, 0216, 0217 (parallel with 0216), 0218, 0220, 0224 or 0227. 
 9. Move the repository to npm workspaces so the studio consumes `@superstep/react`? Recommended: yes.
 10. Separate `@superstep/react-native` package, no device e2e in CI for now? Recommended: yes.
 11. Release grouping: ship phases 1 and 2 as 0.11.0, phases 3 and 4 as 0.12.0? Recommended: yes.
+
+## Deferred / later
+
+Work the owner asked to keep on record (2026-10-31, "Nhớ note các thứ sẽ làm sau lại nhé"). Each item has a reason and a trigger that brings it back.
+
+| Item | Reason deferred | Trigger to pick it up |
+|---|---|---|
+| Asymmetric (public/private key pair) token signing, e.g. ES256 or RS256 with a registered public key or JWKS URL | HS256 app keys cover the MVP with less setup (decision 1, DEC-0077) | A third party cannot share a symmetric secret with its signing service, or asks for JWKS or key rotation without secret exchange |
+| Superstep-issued token endpoint (token exchange: app key in, user token out) | Third parties can sign locally with no network call (decision 2, DEC-0077) | A third party without a signing library asks for it, or a hosted SDK flow needs it |
+| SSE transport for chat streaming | WebSocket works in browsers, Node and React Native (decision 7, DEC-0078) | A real client cannot use WebSocket (proxy or platform limit) |
+| Native Swift and Kotlin SDKs | React Native and the WebView guide cover mobile for now (REQ-0082 clarification 2, DEC-0080) | Demand from native-only apps that the WebView bridge cannot serve |
+| Device e2e for React Native in CI | Simulators in CI are slow and flaky; manual simulator screenshots instead (decision 10, DEC-0080) | Repeated RN regressions not caught by unit tests, or a stable hosted device farm is available |
+| Edit a sent message (TASK-0229, backlog) | Needs a conversation fork model; a DEC comes first | Owner request after phase 2; write the DEC before moving the task to todo |
+| Regenerate an answer (TASK-0230, backlog) | Needs a rule for replacing turns and run history; a DEC comes first | Owner request after phase 2; write the DEC before moving the task to todo |
+| Investigate why the first progress write of a queue job took about 12.6 s on CI (seen in TASK-0212) | Cause not proven: SQLite write lock or thread pool start-up | The delay shows up again in CI or in a user report; profile lock waits and the executor first |
+| Unit test for a chunked upload over about 51 MB on a `File(...)` route | Left out of TASK-0208 | Next change to upload handling or the request size limit |

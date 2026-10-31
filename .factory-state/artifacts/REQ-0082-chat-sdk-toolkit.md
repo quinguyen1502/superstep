@@ -4,12 +4,12 @@
 
 - Project: superstep
 - Requirement ID: REQ-0082
-- Status: Proposed on 2026-10-31. Planning only; the owner reviews REQ-0082, DEC-0077 to DEC-0080 and PLAN-0002 before any task starts.
+- Status: Accepted on 2026-10-31 (PR #271). Phase 1 (TASK-0215 to TASK-0219) is in todo.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
 - Source: owner request on 2026-10-31: a chat SDK and toolkit so that third-party web and mobile apps can integrate Superstep chat, with the owner decisions recorded under "Clarifications".
-- Related Decision: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Proposed.
+- Related Decision: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
 - Related Plan: PLAN-0002
 
 ## Summary
@@ -48,6 +48,8 @@
 - Examples (a sample third-party host app for web, an Expo app), an e2e strategy with the sample host in CI, npm and PyPI publishing through the existing `sdk-publish.yml`.
 
 ### Later (backlog)
+
+The full list with reasons and triggers is in PLAN-0002 "Deferred / later".
 
 - Edit a sent message (fork the conversation from that turn).
 - Regenerate an answer.
@@ -129,13 +131,29 @@ The owner decided on 2026-10-31 (final):
 1. Support chat for third-party apps' signed-in users: the third party's backend issues tokens for its users; no PAT in clients. Anonymous visitor chat stays.
 2. Mobile: React Native first; native iOS and Android through a WebView of `/c/{slug}` with a guide and a token bridge. Native Swift and Kotlin SDKs are out of scope for now.
 
+The owner approved PR #271 on 2026-10-31 with all 11 recommendations of PLAN-0002 ("Duyệt plan #271 theo đề xuất cả 11 câu, merge và bắt đầu code giai đoạn 1"):
+
+1. Third-party user tokens: per-chat app keys with HS256 tokens signed by the third party's backend now; public/private key pairs (asymmetric signing) later (DEC-0077).
+2. No Superstep-issued token (token exchange) endpoint now; add it later only if a third party asks (DEC-0077).
+3. Token lifetime: 10 minutes by default, 1 hour maximum (DEC-0077).
+4. An empty allowed-origins list on an app key means any origin (for native apps), with a warning in the settings screen (DEC-0077).
+5. Tokens may carry extra user attributes (`meta`), at most 1 KB, always treated as untrusted input (DEC-0077).
+6. In v1 the stream event `node_token` is renamed to `token`, and one message is sent per socket connection (DEC-0078).
+7. No SSE transport for now (DEC-0078).
+8. Headless chat lives inside `@superstep/sdk` under the `/chat` subpath (DEC-0079).
+9. The repository moves to npm workspaces so the studio consumes `@superstep/react` (DEC-0079).
+10. `@superstep/react-native` is a separate package; no device e2e in CI, manual simulator screenshots instead (DEC-0080).
+11. Release grouping: phases 1 and 2 ship as 0.11.0, phases 3 and 4 as 0.12.0.
+
+The owner also asked to keep notes of the work deferred to later ("Nhớ note các thứ sẽ làm sau lại nhé"); the list, with reasons and triggers, is in PLAN-0002 "Deferred / later".
+
 ## Open Questions
 
-- Listed with recommendations in DEC-0077 to DEC-0080 and in PLAN-0002 "Open questions".
+- None. All 11 open questions of PLAN-0002 were resolved on 2026-10-31 (see Clarifications).
 
 ## Planned Tasks
 
-Proposed on 2026-10-31 in PLAN-0002 (all in backlog until the owner approves):
+Proposed on 2026-10-31 in PLAN-0002 (approved on 2026-10-31; phase 1 in todo, the rest in backlog):
 
 - Phase 1: TASK-0215 to TASK-0219.
 - Phase 2: TASK-0220 to TASK-0222.

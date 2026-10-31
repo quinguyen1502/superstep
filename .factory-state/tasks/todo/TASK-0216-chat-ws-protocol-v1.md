@@ -3,30 +3,29 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0217
-- Status: backlog
+- Task ID: TASK-0216
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
 - Requirement IDs: REQ-0082
 - Design IDs: none
-- Architecture IDs: DEC-0077
+- Architecture IDs: DEC-0078
 - Phase: Phase 1 (PLAN-0002)
-- Estimate: L (S up to half a day, M about one day, L two to three days)
+- Estimate: M (S up to half a day, M about one day, L two to three days)
 
 ## Objective
 
-Add per-chat app keys (server credentials) with create, rotate and revoke, and the `app` access mode.
+Specify the chat socket protocol v1 formally and serve it at `/ws/public/v1/chat/{slug}`.
 
 ## Scope
 
 ### In Scope
 
-- Alembic revision: `chat_app_keys` table; `chat_sessions.external_user`, `chat_sessions.app_key_id`, index `(trigger_id, external_user)`.
-- `access` read as a set (`anonymous`, `signed_in`, `app`), backward compatible with the single string.
-- Secret generated server-side (32 bytes), encrypted with the existing credential encryption, shown once, never logged; at most two active keys per chat.
-- Owner/admin API to list (no secret), create, revoke; `last_used_at`; audit log entries.
-- Chat settings dialog: access checkboxes, app keys list, create (copy-once dialog), revoke with ConfirmDeleteDialog, allowed origins; en and vi strings.
+- Typed client frames (`auth`, `message`, `answer`, `cancel`) and server frames (`ready`, `run_started`, `token`, `step`, `question`, `turn`, `done`, `error`) with `v` and `seq`.
+- JSON Schema files under `backend/app/api/schemas/chat_ws_v1/` and `docs/asyncapi/chat-v1.yaml`, served at `/asyncapi.public.yaml`.
+- The old socket path keeps the current untyped frames and `node_token`.
+- Contract tests validate every frame the server sends in the chat tests against the schema.
 
 ### Out Of Scope
 
@@ -34,13 +33,13 @@ Add per-chat app keys (server credentials) with create, rotate and revoke, and t
 
 ## Inputs
 
-- REQ-0082, PLAN-0002, DEC-0077.
+- REQ-0082, PLAN-0002, DEC-0078.
 
 ## Related Artifacts
 
 - Requirements: `.factory-state/artifacts/REQ-0082-chat-sdk-toolkit.md`
 - Plan: `.factory-state/artifacts/PLAN-0002-chat-sdk-toolkit.md`
-- Architecture: DEC-0077
+- Architecture: DEC-0078
 - Decisions: `DEC-0009-layered-backend-sqlalchemy-alembic.md`, `DEC-0010-api-envelope-error-codes-i18n.md`, `DEC-0008` (`docs/ui-conventions.md`), `DEC-0033` (task branches from `develop`)
 
 ## Expected Outputs
@@ -60,15 +59,14 @@ Add per-chat app keys (server credentials) with create, rotate and revoke, and t
 
 ## Acceptance Criteria
 
-- Creating a key returns the secret once; listing never returns it; a third key while two are active fails with a catalog code.
-- Non-owners get 403.
-- Migration upgrades and downgrades on SQLite and Postgres.
+- A v1 conversation (message, streaming tokens, Human question, answer, done) passes schema validation frame by frame.
+- Unknown client frame types return an `error` frame with a catalog code.
+- The old path is unchanged (existing e2e pass).
 
 ## Validation Plan
 
 - `cd backend && .venv/bin/python -m pytest -q`
-- `cd frontend && npm run lint && npm test && npm run build`
-- Screenshots of the app keys section (light, dark, en, vi).
+- `cd frontend && npm run test:e2e` (chat specs)
 
 ## Assumptions
 
@@ -84,4 +82,8 @@ Add per-chat app keys (server credentials) with create, rotate and revoke, and t
 
 ## Handoff Notes
 
-- Branch `factory/task-0217-chat-app-keys` from `develop`.
+- Branch `factory/task-0216-chat-ws-protocol-v1` from `develop`.
+
+## Status Log
+
+- 2026-10-31: backlog to todo. The owner approved PLAN-0002 and DEC-0077 to DEC-0080 on PR #271.

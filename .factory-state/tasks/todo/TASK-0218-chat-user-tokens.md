@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0218
-- Status: backlog
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -86,3 +86,7 @@ Accept third-party user tokens (HS256 JWT) on the v1 HTTP API and socket, with p
 ## Handoff Notes
 
 - Branch `factory/task-0218-chat-user-tokens` from `develop`.
+
+## Status Log
+
+- 2026-10-31: backlog to todo. The owner approved PLAN-0002 and DEC-0077 to DEC-0080 on PR #271.
