@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0211
-- Status: doing
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -47,3 +47,8 @@ Version 0.10.2. Release 0.10.2 as asked by the owner: bump version files and the
 ## Activity Log
 
 - 2026-10-31: created from the owner's request to release v0.10.2.
+- 2026-10-31: released: #266 into develop (e92f6761), release PR #267 into main (13e15b19), tag `v0.10.2` and the
+  GitHub Release. GHCR 0.10.2: superstep, -api, -web, -sandbox all present and publicly pullable. Render demo deploy
+  dep-dbirhi3ncjis73ctpv70 live on 13e15b19, /api/health version 0.10.2 ok. The Publish SDKs run 41190025511 on the
+  tag waits for the `pypi` environment approval (owner).
+- Review: `.factory-state/artifacts/REV-0199-task-0211.md`. QA: `.factory-state/artifacts/QA-0199-task-0211.md`.
