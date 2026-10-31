@@ -235,6 +235,7 @@
 | `ATTACHMENT_MIGRATE_BATCH` | 400 | The batch size must be between 1 and {max} |
 | `CHAT_ATTACHMENT_LIMIT` | 400 | Attachment limits may be at most {max_files} files and {max_mb} MB per file |
 | `CHAT_TURN_NOT_FOUND` | 404 | Message not found |
+| `CHAT_FRAME_INVALID` | 400 | Invalid chat frame: {reason} |
 | `CHAT_RATING_NOT_ALLOWED` | 409 | This message cannot be rated |
 | `CHAT_RATING_INVALID` | 400 | Rating: invalid {field} |
 | `TEST_NOT_FOUND` | 404 | Test case not found |

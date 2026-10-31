@@ -160,6 +160,7 @@ WS /ws/run
     GET    /api/public/chat/{slug}/sessions/{sid}/turns?after=<turn_id>   (only the newer turns)
     GET    /api/public/chat/{slug}/logo?v=<logo>
     WS     /ws/public/chat/{slug}   {chat_session_id, message} | {chat_session_id, response}
+    WS     /ws/public/v1/chat/{slug}   the socket protocol v1: typed frames with v and seq (AsyncAPI: /asyncapi.public.yaml)
     GET    /api/public/chat-frame?path=/c/{slug}    (its frame-ancestors, for nginx)
     ```
 

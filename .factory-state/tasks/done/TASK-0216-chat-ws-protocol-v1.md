@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0216
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -84,3 +84,5 @@ Specify the chat socket protocol v1 formally and serve it at `/ws/public/v1/chat
 ## Handoff Notes
 
 - Branch `factory/task-0216-chat-ws-protocol-v1` from `develop`.
+- 2026-10-31: implemented on `factory/task-0216-chat-ws-protocol-v1` (from `factory/task-0215-public-chat-api-v1`, then `develop`). `services/chat_ws_v1.py` translates only: a v1 client frame into the request `plan_message` takes, and a `public_event` into a v1 frame; the route shares `run_chat` with the unversioned socket, which keeps its untyped frames and `node_token`. `turn` is sent before `done` when the answer turn is saved within 2 s (it is saved when the run settles); a resumed run's earlier question turn does not count. `auth` takes `visitor` now and `token` from TASK-0218. JSON Schema in `backend/app/api/schemas/chat_ws_v1/`, AsyncAPI 3.0 built from it (`/asyncapi.public.yaml`, `docs/asyncapi/chat-v1.yaml`, checked by the generator and a test). New code CHAT_FRAME_INVALID. `pyyaml` and `jsonschema` are now explicit backend dependencies (both were already installed through other packages). Moved to done on this PR before the merge.
+- Review: `.factory-state/artifacts/REV-0204-task-0216.md`. QA: `.factory-state/artifacts/QA-0204-task-0216.md`.

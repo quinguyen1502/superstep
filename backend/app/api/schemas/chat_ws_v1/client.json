@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://superstep.dev/schemas/chat-ws/v1/client.json",
+  "title": "Chat socket v1: client frame",
+  "description": "A frame the client sends on /ws/public/v1/chat/{slug}. Send at most one `auth`, then one `message` or `answer`; `cancel` stops the run.",
+  "oneOf": [
+    {"$ref": "#/$defs/auth"},
+    {"$ref": "#/$defs/message"},
+    {"$ref": "#/$defs/answer"},
+    {"$ref": "#/$defs/cancel"}
+  ],
+  "$defs": {
+    "auth": {
+      "type": "object",
+      "description": "Who is chatting, before the message: an anonymous visitor token, or a user token signed by the app's backend (TASK-0218).",
+      "required": ["type"],
+      "properties": {
+        "type": {"const": "auth"},
+        "visitor": {"type": "string", "maxLength": 200, "description": "The visitor token from `visitor_token`."},
+        "token": {"type": "string", "maxLength": 8192, "description": "A user token (JWT) signed with an app key."}
+      },
+      "additionalProperties": false
+    },
+    "message": {
+      "type": "object",
+      "required": ["type", "chat_session_id", "text"],
+      "properties": {
+        "type": {"const": "message"},
+        "chat_session_id": {"type": "string"},
+        "text": {"type": "string"},
+        "attachments": {"type": "array", "items": {"type": "string"}, "description": "Ids of files uploaded to this chat first."},
+        "locale": {"type": "string", "description": "`en` or `vi`: the language of system messages."}
+      },
+      "additionalProperties": false
+    },
+    "answer": {
+      "type": "object",
+      "description": "The answer to the Human node question the run waits at.",
+      "required": ["type", "chat_session_id", "response"],
+      "properties": {
+        "type": {"const": "answer"},
+        "chat_session_id": {"type": "string"},
+        "node": {"type": "string", "description": "The question's node, from the `question` frame."},
+        "response": {"description": "Text, or an object for a form question.", "type": ["string", "object", "number", "boolean", "array"]},
+        "locale": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "cancel": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {"type": {"const": "cancel"}},
+      "additionalProperties": false
+    }
+  }
+}

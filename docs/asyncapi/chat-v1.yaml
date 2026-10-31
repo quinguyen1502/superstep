@@ -1,0 +1,408 @@
+asyncapi: 3.0.0
+info:
+  title: Superstep chat socket
+  version: 1.0.0
+  description: 'The published chat''s socket, version 1. Open `/ws/public/v1/chat/{slug}`, wait for `ready`, optionally send
+    `auth`, then send one `message` or `answer`. The run streams as typed frames, each with `v` (1) and `seq`, and ends with
+    `done` (after `turn` when the answer is saved in time) or `error`; then the server closes the socket. One message per
+    connection. `cancel` stops the run. Clients must ignore fields and frame types they do not know: v1 only grows. Error
+    codes are those of the HTTP API (docs/api-errors.md); a frame that is not v1 is `CHAT_FRAME_INVALID`.'
+channels:
+  chat:
+    address: /ws/public/v1/chat/{slug}
+    parameters:
+      slug:
+        description: The chat's page address.
+    messages:
+      client_auth:
+        $ref: '#/components/messages/client_auth'
+      client_message:
+        $ref: '#/components/messages/client_message'
+      client_answer:
+        $ref: '#/components/messages/client_answer'
+      client_cancel:
+        $ref: '#/components/messages/client_cancel'
+      server_ready:
+        $ref: '#/components/messages/server_ready'
+      server_run_started:
+        $ref: '#/components/messages/server_run_started'
+      server_token:
+        $ref: '#/components/messages/server_token'
+      server_step:
+        $ref: '#/components/messages/server_step'
+      server_question:
+        $ref: '#/components/messages/server_question'
+      server_turn:
+        $ref: '#/components/messages/server_turn'
+      server_done:
+        $ref: '#/components/messages/server_done'
+      server_error:
+        $ref: '#/components/messages/server_error'
+operations:
+  sendFrame:
+    action: send
+    channel:
+      $ref: '#/channels/chat'
+    summary: A client frame.
+    messages:
+    - $ref: '#/channels/chat/messages/client_auth'
+    - $ref: '#/channels/chat/messages/client_message'
+    - $ref: '#/channels/chat/messages/client_answer'
+    - $ref: '#/channels/chat/messages/client_cancel'
+  receiveFrame:
+    action: receive
+    channel:
+      $ref: '#/channels/chat'
+    summary: A server frame.
+    messages:
+    - $ref: '#/channels/chat/messages/server_ready'
+    - $ref: '#/channels/chat/messages/server_run_started'
+    - $ref: '#/channels/chat/messages/server_token'
+    - $ref: '#/channels/chat/messages/server_step'
+    - $ref: '#/channels/chat/messages/server_question'
+    - $ref: '#/channels/chat/messages/server_turn'
+    - $ref: '#/channels/chat/messages/server_done'
+    - $ref: '#/channels/chat/messages/server_error'
+components:
+  schemas:
+    client_auth:
+      type: object
+      description: 'Who is chatting, before the message: an anonymous visitor token, or a user token signed by the app''s
+        backend (TASK-0218).'
+      required:
+      - type
+      properties:
+        type:
+          const: auth
+        visitor:
+          type: string
+          maxLength: 200
+          description: The visitor token from `visitor_token`.
+        token:
+          type: string
+          maxLength: 8192
+          description: A user token (JWT) signed with an app key.
+      additionalProperties: false
+    client_message:
+      type: object
+      required:
+      - type
+      - chat_session_id
+      - text
+      properties:
+        type:
+          const: message
+        chat_session_id:
+          type: string
+        text:
+          type: string
+        attachments:
+          type: array
+          items:
+            type: string
+          description: Ids of files uploaded to this chat first.
+        locale:
+          type: string
+          description: '`en` or `vi`: the language of system messages.'
+      additionalProperties: false
+    client_answer:
+      type: object
+      description: The answer to the Human node question the run waits at.
+      required:
+      - type
+      - chat_session_id
+      - response
+      properties:
+        type:
+          const: answer
+        chat_session_id:
+          type: string
+        node:
+          type: string
+          description: The question's node, from the `question` frame.
+        response:
+          description: Text, or an object for a form question.
+          type:
+          - string
+          - object
+          - number
+          - boolean
+          - array
+        locale:
+          type: string
+      additionalProperties: false
+    client_cancel:
+      type: object
+      required:
+      - type
+      properties:
+        type:
+          const: cancel
+      additionalProperties: false
+    server_base:
+      type: object
+      required:
+      - type
+      - v
+      - seq
+      properties:
+        v:
+          const: 1
+        seq:
+          type: integer
+          minimum: 0
+        ts:
+          type:
+          - number
+          - 'null'
+          description: Unix time (seconds) of the run event.
+    server_ready:
+      description: 'Sent once the socket is open: send `auth` (optional), then a `message` or an `answer`.'
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: ready
+        protocol:
+          const: superstep-chat
+      required:
+      - protocol
+    server_run_started:
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: run_started
+        run_id:
+          type: string
+      required:
+      - run_id
+    server_token:
+      description: A piece of the answer as the model writes it (`node_token` on the unversioned socket).
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: token
+        node:
+          type:
+          - string
+          - 'null'
+        field:
+          type:
+          - string
+          - 'null'
+        iteration:
+          type:
+          - integer
+          - 'null'
+        delta:
+          type: string
+      required:
+      - delta
+    server_step:
+      description: A node started, finished or failed, as much as the chat's steps mode shows.
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: step
+        event:
+          enum:
+          - started
+          - finished
+          - error
+        node:
+          type: string
+        label:
+          type:
+          - string
+          - 'null'
+        node_type:
+          type:
+          - string
+          - 'null'
+        iteration:
+          type:
+          - integer
+          - 'null'
+        status:
+          type: string
+        duration_ms:
+          type:
+          - number
+          - 'null'
+        code:
+          type:
+          - string
+          - 'null'
+      required:
+      - event
+      - node
+    server_question:
+      description: 'The run waits at a Human node: show `prompt` (and `fields` or `options`), then answer on a new socket.'
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: question
+        node:
+          type:
+          - string
+          - 'null'
+        label:
+          type:
+          - string
+          - 'null'
+        prompt:
+          type:
+          - string
+          - 'null'
+        kind:
+          type:
+          - string
+          - 'null'
+        input_type:
+          type:
+          - string
+          - 'null'
+        placeholder:
+          type:
+          - string
+          - 'null'
+        options:
+          type:
+          - array
+          - 'null'
+        choices:
+          type:
+          - array
+          - 'null'
+        fields:
+          type:
+          - array
+          - 'null'
+    server_turn:
+      description: The stored answer turn (rate it with its id), sent just before `done` when it is saved in time.
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: turn
+        turn_id:
+          type: string
+        role:
+          const: assistant
+        status:
+          type:
+          - string
+          - 'null'
+        run_id:
+          type:
+          - string
+          - 'null'
+      required:
+      - turn_id
+      - role
+    server_done:
+      description: 'The run ended (or paused at a question: `waiting`). The server then closes the socket.'
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: done
+        run_id:
+          type:
+          - string
+          - 'null'
+        status:
+          enum:
+          - ok
+          - error
+          - waiting
+          - cancelled
+          - timeout
+      required:
+      - status
+    server_error:
+      description: The message could not run, or the run failed. `error` is the envelope's error object; the code is the contract
+        (docs/api-errors.md).
+      allOf:
+      - $ref: '#/components/schemas/server_base'
+      properties:
+        type:
+          const: error
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details: {}
+      required:
+      - error
+  messages:
+    client_auth:
+      name: auth
+      title: auth
+      payload:
+        $ref: '#/components/schemas/client_auth'
+    client_message:
+      name: message
+      title: message
+      payload:
+        $ref: '#/components/schemas/client_message'
+    client_answer:
+      name: answer
+      title: answer
+      payload:
+        $ref: '#/components/schemas/client_answer'
+    client_cancel:
+      name: cancel
+      title: cancel
+      payload:
+        $ref: '#/components/schemas/client_cancel'
+    server_ready:
+      name: ready
+      title: ready
+      payload:
+        $ref: '#/components/schemas/server_ready'
+    server_run_started:
+      name: run_started
+      title: run_started
+      payload:
+        $ref: '#/components/schemas/server_run_started'
+    server_token:
+      name: token
+      title: token
+      payload:
+        $ref: '#/components/schemas/server_token'
+    server_step:
+      name: step
+      title: step
+      payload:
+        $ref: '#/components/schemas/server_step'
+    server_question:
+      name: question
+      title: question
+      payload:
+        $ref: '#/components/schemas/server_question'
+    server_turn:
+      name: turn
+      title: turn
+      payload:
+        $ref: '#/components/schemas/server_turn'
+    server_done:
+      name: done
+      title: done
+      payload:
+        $ref: '#/components/schemas/server_done'
+    server_error:
+      name: error
+      title: error
+      payload:
+        $ref: '#/components/schemas/server_error'

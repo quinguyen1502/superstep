@@ -21,6 +21,8 @@ dependencies = [
   "psycopg[binary]>=3.2",  # Postgres driver (DATABASE_URL=postgresql://...), TASK-0009
   "redis>=5",              # optional run bus (REDIS_URL), TASK-0009
   "fakeredis>=2.20",       # Redis contract tests without a server
+  "pyyaml>=6",             # the AsyncAPI document of the chat socket (TASK-0216)
+  "jsonschema>=4.18",      # chat socket contract tests (TASK-0216)
   "pypdf>=4",              # PDF text for knowledge bases (TASK-0012)
   "aiosmtpd>=1.4",         # local SMTP debug server for notification e-mail tests (TASK-0020)
   "opentelemetry-sdk>=1.27",                      # run traces (TASK-0010); no-op without an exporter
