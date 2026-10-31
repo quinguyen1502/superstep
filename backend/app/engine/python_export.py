@@ -885,9 +885,12 @@ class _Writer(GraphWriter):
         self.add("    messages = []")
         if d.get("system_prompt"): self.add(f"    messages.append({{\"role\": \"system\", \"content\": render({const}_SYSTEM, state)}})")
         if d.get("history_field"):
+            self.add(f"    prompt = render({const}_PROMPT, state)")
             self.add(f"    for m in state.get({lit(d['history_field'])}) or []:  # the earlier turns of a chat")
             self.add("        if isinstance(m, dict) and m.get(\"role\") in (\"user\", \"assistant\") and isinstance(m.get(\"content\"), str):")
             self.add("            messages.append({\"role\": m[\"role\"], \"content\": m[\"content\"]})")
+            self.add("    if len(messages) and messages[-1][\"role\"] == \"user\" and messages[-1][\"content\"].strip() in prompt:")
+            self.add("        messages.pop()  # the current chat message, already in the prompt")
         files = attachments.field_of(d)
         if files: self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state), \"files\": state.get({lit(files)}) or []}})")
         else: self.add(f"    messages.append({{\"role\": \"user\", \"content\": render({const}_PROMPT, state)}})")
