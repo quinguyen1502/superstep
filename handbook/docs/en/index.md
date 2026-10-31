@@ -49,6 +49,7 @@ call it over HTTP in about ten minutes.
     [Editor](guide/editor.md) · [Nodes](guide/nodes.md) ·
     [State and references](guide/state.md) · [Code mode](guide/code-mode.md) ·
     [Knowledge bases](guide/knowledge.md) · [MCP servers](guide/mcp.md) ·
+    [Agent node](guide/agent.md) · [Agent hand-offs](guide/handoffs.md) ·
     [Templates](guide/templates.md) · [Versions](guide/versions.md)
 
 -   :material-play-circle-outline:{ .lg .middle } **Run**
@@ -56,13 +57,14 @@ call it over HTTP in about ten minutes.
     ---
 
     [Runs and traces](run/traces.md) · [Human approval](run/human-approval.md) ·
+    [AI review](run/ai-review.md) · [Chat and attachments](run/chat.md) ·
     [API triggers and webhooks](run/api-triggers.md) · [Schedules](run/schedules.md)
 
 -   :material-server-outline:{ .lg .middle } **Operate**
 
     ---
 
-    [Deploy with Compose](operate/deploy.md) · [Accounts](operate/accounts.md) ·
+    [Deploy with Compose](operate/deploy.md) · [CLI](operate/cli.md) · [Accounts](operate/accounts.md) ·
     [Roles and sharing](operate/access.md) · [LLM providers](operate/providers.md) ·
     [Approval channels](operate/channels.md) · [Code runtime](operate/code-runtime.md) ·
     [Observability](operate/observability.md) · [Import a repo](operate/import.md)

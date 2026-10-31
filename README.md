@@ -39,7 +39,7 @@
     <td width="50%" valign="top"><b>Live runs</b><br>Per-node trace and state diff as it runs; step and run-to-node debugging</td>
   </tr>
   <tr>
-    <td width="50%" valign="top"><b>Human in the loop</b><br>Pause for approval in the studio, Slack, Telegram, email or Teams</td>
+    <td width="50%" valign="top"><b>Human in the loop</b><br>Pause for approval in the studio, Slack, Telegram, email or Teams; optional AI review</td>
     <td width="50%" valign="top"><b>Triggers</b><br>HTTP API with tokens, signed webhooks, cron schedules, chat commands</td>
   </tr>
   <tr>
@@ -59,6 +59,14 @@ Open <http://localhost:5173> and create an account with **Sign up** (outside pro
 LLM nodes answer from a deterministic offline mock until you add a model
 credential. The [Quickstart](https://quinguyen1502.github.io/superstep/start/quickstart/)
 builds, runs, approves and triggers a first workflow in about ten minutes.
+
+To run an instance with Docker instead, install the `superstep` CLI (also
+`sstep`) and let it set one up:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/quinguyen1502/superstep/develop/scripts/install.sh | sh
+superstep install           # then: superstep doctor, upgrade, backup
+```
 
 The full stack (Postgres with pgvector, Redis, API, worker, nginx):
 
@@ -80,21 +88,30 @@ docker compose up --build   # http://localhost:8080
 3. **Agent node:** a model picks and calls the tools you allow (MCP server
    tools, HTTP requests, built-in functions, knowledge base search) until it
    answers, with a round limit and an approval before the tools you mark.
+   Agents hand the conversation off to each other, a chat continues with the
+   agent that answered last, and the Help desk template shows the pattern.
 4. **Human in the loop:** a Human node pauses a run from a checkpoint; approve
    in the studio's Approvals inbox, or from Slack, Telegram, WhatsApp, email
-   or Teams; deadlines send reminders, escalate or expire a waiting run.
-5. **Triggers:** per-workflow API tokens, sync and async runs, signed result
+   or Teams; deadlines send reminders, escalate or expire a waiting run. AI
+   review can suggest an answer or approve automatically under rules, with a
+   daily cap, kill switches and a notice to the run owner.
+5. **Chat:** chat with a workflow in the studio, on a published page or in a
+   widget; people attach images and documents, which reach LLM and Agent
+   nodes. Files are stored in the database, a folder or an S3 bucket, and
+   `superstep attachments migrate` moves them between backends.
+6. **Triggers:** per-workflow API tokens, sync and async runs, signed result
    webhooks with retries, cron schedules with time zones, and chat triggers: a
    command to the Slack app or Telegram bot starts a run and the bot replies.
-6. **Reliability:** checkpoints in the database, leased worker jobs, and
+7. **Reliability:** checkpoints in the database, leased worker jobs, and
    effectively-once side effects through idempotency keys and a result ledger.
-7. **Models and tools:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio and
+8. **Models and tools:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio and
    OpenAI-compatible servers; pgvector knowledge bases; MCP servers; Python
-   code in a locked Docker container.
-8. **Operations:** immutable versions with diff and restore, admin, editor
+   and TypeScript code in a locked Docker container.
+9. **Operations:** immutable versions with diff and restore, admin, editor
    and viewer roles, shares and teams, an audit log, and OpenTelemetry traces
-   to OTLP or LangSmith.
-9. **Learn LangGraph:** the Code tab shows any workflow as one readable LangGraph
+   to OTLP or LangSmith. The `superstep` CLI installs, upgrades, backs up
+   and checks an instance.
+10. **Learn LangGraph:** the Code tab shows any workflow as one readable LangGraph
    Python file that runs on its own (offline with a mock model), with the
    selected node's code highlighted, and exports it to your own project.
 
@@ -118,6 +135,8 @@ Details: [Architecture](https://quinguyen1502.github.io/superstep/reference/arch
 
 **Live demo:** [superstep-demo.onrender.com](https://superstep-demo.onrender.com) (click "Try the demo"). It runs on Render's free plan: the first load may take about 30 s while the server wakes, data resets whenever it sleeps, and changes are not saved. Code, HTTP and Send email nodes are off and models answer with a mock; see [docs/deploy/demo.md](docs/deploy/demo.md).
 
+On your own server, `superstep install` sets up the all-in-one image or the full stack, and `superstep upgrade`, `backup` and `doctor` keep it running ([CLI](https://quinguyen1502.github.io/superstep/operate/cli/)).
+
 Deploy the all-in-one image (UI, API and WebSocket on one port; SQLite on a volume or Postgres):
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/quinguyen1502/superstep)
@@ -133,9 +152,9 @@ Fly.io, Railway, Zeabur, Northflank, Coolify and Dokploy (the full-feature path 
 | Topic | Handbook section |
 | --- | --- |
 | Install, quickstart, concepts | [Get started](https://quinguyen1502.github.io/superstep/start/) |
-| Editor, nodes, state, Code mode, knowledge, MCP | [Build](https://quinguyen1502.github.io/superstep/guide/) |
-| Traces, tests, human approval, API triggers, schedules, chat triggers | [Run](https://quinguyen1502.github.io/superstep/run/) |
-| Deployment, accounts, roles, providers, channels | [Operate](https://quinguyen1502.github.io/superstep/operate/) |
+| Editor, nodes, state, Agent node, hand-offs, Code mode, knowledge, MCP | [Build](https://quinguyen1502.github.io/superstep/guide/) |
+| Traces, tests, chat and attachments, human approval, AI review, API triggers, schedules, chat triggers | [Run](https://quinguyen1502.github.io/superstep/run/) |
+| Deployment, CLI, accounts, roles, providers, channels | [Operate](https://quinguyen1502.github.io/superstep/operate/) |
 | Configuration, HTTP API, error codes, architecture | [Reference](https://quinguyen1502.github.io/superstep/reference/) |
 | Start workflows from other services: Python and TypeScript SDKs, public API reference | [Public API and SDKs](https://quinguyen1502.github.io/superstep/run/public-api/), [reference](https://quinguyen1502.github.io/superstep/reference/public-api/) |
 

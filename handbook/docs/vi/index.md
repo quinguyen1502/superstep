@@ -49,6 +49,7 @@ nó qua HTTP trong khoảng mười phút.
     [Trình soạn thảo](guide/editor.md) · [Các loại node](guide/nodes.md) ·
     [State và tham chiếu](guide/state.md) · [Chế độ Code](guide/code-mode.md) ·
     [Kho tri thức](guide/knowledge.md) · [Máy chủ MCP](guide/mcp.md) ·
+    [Node Agent](guide/agent.md) · [Chuyển giao giữa agent](guide/handoffs.md) ·
     [Mẫu workflow](guide/templates.md) · [Phiên bản](guide/versions.md)
 
 -   :material-play-circle-outline:{ .lg .middle } **Chạy**
@@ -56,13 +57,14 @@ nó qua HTTP trong khoảng mười phút.
     ---
 
     [Run và trace](run/traces.md) · [Duyệt bởi người](run/human-approval.md) ·
+    [AI duyệt](run/ai-review.md) · [Chat và tệp đính kèm](run/chat.md) ·
     [API trigger và webhook](run/api-triggers.md) · [Lịch chạy](run/schedules.md)
 
 -   :material-server-outline:{ .lg .middle } **Vận hành**
 
     ---
 
-    [Triển khai bằng Compose](operate/deploy.md) · [Tài khoản](operate/accounts.md) ·
+    [Triển khai bằng Compose](operate/deploy.md) · [CLI](operate/cli.md) · [Tài khoản](operate/accounts.md) ·
     [Vai trò và chia sẻ](operate/access.md) · [Nhà cung cấp LLM](operate/providers.md) ·
     [Kênh duyệt](operate/channels.md) · [Môi trường chạy Code](operate/code-runtime.md) ·
     [Quan sát hệ thống](operate/observability.md) · [Import repo](operate/import.md)
