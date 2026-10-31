@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0194
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -84,6 +84,9 @@ Migrate command and backup/restore. Move existing files between backends and cov
 
 - 2026-10-31: planned from REQ-0080 (DEC-0074, accepted by the owner). Status todo. Not started.
 
+- 2026-10-30: implemented on `factory/task-0194-attachment-migrate-backup` from `develop`. Adds `AttachmentMigration` (copy, verify size and SHA-256, switch the row, delete the old copy), `AttachmentArchive` (tar export/import of external files), the admin route `/api/admin/attachments`, `app.admin_cmd attachments-*`, `superstep attachments migrate`, attachments in backup/restore with the backend check, errors in the envelope, handbook en/vi. `factory verify run --profile full` passed. The owner authorized merging the REQ-0080 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0194-attachment-migrate-backup` from `develop`.
+- Review: `.factory-state/artifacts/REV-0183-task-0194.md`. QA: `.factory-state/artifacts/QA-0183-task-0194.md`.

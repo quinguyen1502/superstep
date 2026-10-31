@@ -6,6 +6,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Moving and backing up chat attachments** (TASK-0194, REQ-0080, DEC-0074). `superstep attachments migrate --to
+  db|fs|s3 [--dry-run] [--batch N]` (and `POST /api/admin/attachments/migrate` for admins) moves files between backends,
+  checking size and SHA-256 before switching each file; an interrupted run is safe to start again. Backups include files
+  on a folder, and files in a bucket with `--include-attachments`; the manifest records the backend (and bucket and
+  prefix). `restore` refuses an archive of another backend unless `--force`. New error codes
+  `ATTACHMENT_MIGRATE_TARGET` and `ATTACHMENT_MIGRATE_BATCH`.
 - **Attachment storage on S3-compatible services** (TASK-0193, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=s3`
   keeps chat attachment bytes in a bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO), set with
   `STUDIO_ATTACHMENT_S3_*`. Downloads still stream through the studio; the bucket is never shown to the browser. Access
