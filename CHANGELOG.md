@@ -4,6 +4,23 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+### Security
+
+- **The attachment orphan sweep only deletes its own files** (TASK-0203). It used to delete any file older than an hour
+  in the attachment folder or bucket prefix that no row named, including another install's files or the studio's own
+  data when the folder was set to the data folder. It now deletes only names of the form `<workflow>/<chat>/<file id>`
+  at the configured location. A folder that is or contains the data folder is refused (`/api/health` shows
+  `attachment_storage_ok: false`), and an empty S3 prefix logs a warning.
+
+### Fixed
+
+- **Attachments survive a change of folder, bucket or prefix** (TASK-0203). Each file records where it was written
+  (migration `0048`, filled for older files at start-up), so it is still read from there, and `superstep attachments
+  migrate --to fs|s3` moves files between two locations of the same backend.
+- **A visitor's upload no longer blocks the server while it is stored** (TASK-0203).
+- **Uploads above 10 MB reach the API behind the bundled nginx** (TASK-0203). The `web` image allows `WEB_MAX_BODY_SIZE`
+  (default `110m`) and answers a larger body with the API's `PAYLOAD_TOO_LARGE` envelope instead of an HTML page.
+
 ## 0.10.1 (2026-10-31)
 
 ### Added

@@ -77,6 +77,12 @@ def chat_attachment_max_files() -> int:
 def attachment_storage() -> str:
     """Where new chat attachment bytes go (TASK-0191, REQ-0080, DEC-0074): db (default), fs or s3."""
     return (os.environ.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip().lower()
+def data_paths() -> list[str]:
+    """Files and folders the studio keeps its own data in (TASK-0203): an `fs` attachment folder must not be or hold them."""
+    paths = [os.environ.get("STUDIO_SECRET_KEY_FILE") or os.path.join(home_dir(), "secret.key")]
+    if DATABASE_URL.startswith("sqlite"): paths.append(os.environ.get("STUDIO_DB", STUDIO_DB))
+    if os.environ.get("STUDIO_IMPORT_DIR"): paths.append(os.environ["STUDIO_IMPORT_DIR"])
+    return [os.path.abspath(os.path.expanduser(p)) for p in paths]
 def attachment_s3() -> dict:
     """The `s3` attachment backend's settings (TASK-0193). Empty keys use the default AWS credential chain."""
     e = lambda k: (os.environ.get(f"STUDIO_ATTACHMENT_S3_{k}") or "").strip()  # noqa: E731

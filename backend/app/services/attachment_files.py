@@ -14,7 +14,7 @@ from ..core.errors import AppError
 from ..models import ChatAttachment
 from ..repositories import ChatAttachmentRepository
 from ..storage import Stores, StoreError
-from ..storage.base import PROBE_PREFIX, Data, as_bytes
+from ..storage.base import PROBE_PREFIX, Data, as_bytes, is_service_key
 
 log = logging.getLogger(__name__)
 WORKER_KEY = f"{PROBE_PREFIX}worker"  # the worker's heartbeat: the api sees it only when they share the backend (TASK-0192)
@@ -43,18 +43,18 @@ class AttachmentFiles:
         if store.inline:
             row.data, row.key = as_bytes(data), None
             return self.repo.add(row)
-        row.data, row.key = b"", key_for(workflow_id, row.session_id, row.id)
+        row.data, row.key, row.location = b"", key_for(workflow_id, row.session_id, row.id), store.location
         try: store.put(row.key, data, row.mime)
         except StoreError as e: raise _unavailable(e)
         try: return self.repo.add(row)
         except Exception:
-            self._drop(row.storage, row.key); raise
+            self._drop(row.storage, row.key, row.location); raise
 
     def open(self, row) -> Iterator[bytes]:
         """The bytes of a file in pieces. The first piece is read here, so a backend failure becomes an error answer
         and not a broken download."""
         try:
-            it = self.stores.get(row.storage).open(row.key if row.storage != "db" else row.id)
+            it = self._store(row).open(row.key if row.storage != "db" else row.id)
             first = next(it, b"")
         except StoreError as e: raise _unavailable(e)
         def rest():
@@ -66,12 +66,16 @@ class AttachmentFiles:
     def read(self, row) -> bytes:
         return b"".join(self.open(row))
 
-    def drop(self, refs: Iterable[tuple]) -> None:
-        for storage, key in refs:
-            if storage != "db" and key: self._drop(storage, key)
+    def _store(self, row):
+        """The store a row's bytes were written to: its backend, at the folder or bucket/prefix recorded on the row."""
+        return self.stores.get(row.storage, getattr(row, "location", None))
 
-    def _drop(self, storage: str, key: str) -> None:
-        try: self.stores.get(storage).delete(key)
+    def drop(self, refs: Iterable[tuple]) -> None:
+        for storage, key, *rest in refs:
+            if storage != "db" and key: self._drop(storage, key, rest[0] if rest else None)
+
+    def _drop(self, storage: str, key: str, location: Optional[str] = None) -> None:
+        try: self.stores.get(storage, location).delete(key)
         except Exception as e: log.warning("attachment storage %s: delete failed (%s); the orphan sweep retries", storage, type(e).__name__)
 
     def remove_unsent(self, aid: str, sid: str) -> bool:
@@ -85,8 +89,19 @@ class AttachmentFiles:
     def refs_of_sessions(self, sids: list[str]) -> list[tuple]:
         return self.repo.refs_of_sessions(sids)
 
+    def backfill_locations(self) -> int:
+        """Rows written before locations were recorded (0.10.1) get the folder or bucket/prefix configured now, which is
+        the one they were written to as long as the setting has not changed since (TASK-0203). Run at start-up."""
+        n = 0
+        for name in {x for x in self.repo.storages() if x != "db"}:
+            try: n += self.repo.backfill_locations(name, self.stores.get(name).location)
+            except StoreError as e: log.warning("attachment storage %s: cannot record locations (%s)", name, e.reason)
+        return n
+
     def sweep_orphans(self, now: Optional[float] = None, age: float = ORPHAN_AGE) -> int:
-        """Removes objects that no row points at and that are older than `age`, on every external backend in use."""
+        """Removes objects that no row points at and that are older than `age`, on every external backend in use, at
+        its configured folder or bucket/prefix only. Only keys of the service's own form are considered (TASK-0203):
+        never a file of another system, of a nested install, or the studio's own data."""
         now = time.time() if now is None else now
         names = {n for n in self.repo.storages() if n != "db"}
         try:
@@ -97,6 +112,9 @@ class AttachmentFiles:
         for name in sorted(names):
             try:
                 store = self.stores.get(name); batch: list[tuple[str, float]] = []
+                bad = store.unsafe()
+                if bad: log.warning("attachment storage %s: orphan sweep skipped (%s)", name, bad); continue
+                if store.warning(): log.warning("attachment storage %s: %s", name, store.warning())
                 for item in store.iter_keys():
                     batch.append(item)
                     if len(batch) >= BATCH: n += self._sweep_batch(store, batch, now - age); batch = []
@@ -105,8 +123,8 @@ class AttachmentFiles:
         return n
 
     def _sweep_batch(self, store, batch: list[tuple[str, float]], before: float) -> int:
-        old = [k for k, t in batch if t < before and not k.startswith(PROBE_PREFIX)]
-        known = self.repo.known(store.name, old); n = 0
+        old = [k for k, t in batch if t < before and is_service_key(k)]
+        known = self.repo.known(store.name, old, store.location); n = 0
         for k in old:
             if k not in known: store.delete(k); n += 1
         return n

@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 FROM nginx:1.27-alpine
-ENV API_UPSTREAM=api:8000
+ENV API_UPSTREAM=api:8000 WEB_MAX_BODY_SIZE=110m
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /src/dist /usr/share/nginx/html
 EXPOSE 80

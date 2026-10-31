@@ -19,8 +19,12 @@ class S3Store(AttachmentStore):
                  secret_key: str = "", path_style: bool = False, client=None, part_mb: int = 8):
         if not bucket: raise StoreError("STUDIO_ATTACHMENT_S3_BUCKET is not set")
         self.bucket, self.prefix = bucket, (prefix.strip("/") + "/") if prefix.strip("/") else ""
+        self.location = f"{bucket}/{self.prefix.rstrip('/')}"
         self.client = client or self._client(endpoint, region, access_key, secret_key, path_style)
         self.part = max(5, int(part_mb)) * 1024 * 1024  # S3 parts are at least 5 MB, except the last
+
+    def warning(self) -> str | None:
+        return None if self.prefix else "STUDIO_ATTACHMENT_S3_PREFIX is empty: use a prefix when the bucket is shared"
 
     @staticmethod
     def _client(endpoint, region, access_key, secret_key, path_style):

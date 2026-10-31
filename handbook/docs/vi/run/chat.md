@@ -130,6 +130,20 @@ bucket lỗi chỉ hiện một lý do ngắn như `S3 error AccessDenied`. Các
 hành đã có sẵn S3 client; cài từ mã nguồn thì cần `pip install
 "superstep-backend[s3]"`.
 
+Hãy dành cho tệp đính kèm một thư mục hoặc prefix bucket riêng. Studio xoá các
+tệp còn sót ở đó mà không cuộc trò chuyện nào dùng, nhưng chỉ những tệp có tên
+do chính nó tạo (`<workflow>/<chat>/<id tệp>`), nên tệp khác không bao giờ bị
+động tới. Thư mục trùng với, hoặc chứa, thư mục dữ liệu của studio (cơ sở dữ
+liệu, khoá bí mật, thư mục import) sẽ bị từ chối: `/api/health` hiện
+`attachment_storage_ok: false` và tải lên sẽ lỗi; hãy dùng thư mục con như
+`/data/attachments`. Để trống `STUDIO_ATTACHMENT_S3_PREFIX` trên bucket dùng
+chung với thứ khác sẽ ghi cảnh báo vào log; hãy đặt prefix như `superstep/`.
+
+Mỗi tệp nhớ thư mục hoặc bucket và prefix mà nó được ghi vào, nên đổi
+`STUDIO_ATTACHMENT_FS_PATH`, bucket hay prefix về sau không làm mất tệp cũ:
+chúng vẫn được đọc từ chỗ cũ, và `superstep attachments migrate --to fs` (hoặc
+`--to s3`) chuyển chúng sang chỗ mới.
+
 ## Bộ nhớ
 
 Khi có trường cuộc trò chuyện, mỗi run nhận *n* lượt hỏi–đáp gần nhất cùng tin
