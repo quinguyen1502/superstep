@@ -141,7 +141,8 @@ def cmd_doctor(args, catalog, json_mode, _client, _parser, docker: Docker) -> in
             notes.append(catalog.format("doctor.offline"))
         elif result == "unreachable":
             findings.append(catalog.format("doctor.provider", url=provider))
-    payload = {"ok": not findings, "findings": findings, "notes": notes}
+    storage = _attachment_storage(catalog, docker, env, url, findings, notes)
+    payload = {"ok": not findings, "findings": findings, "notes": notes, "attachment_storage": storage}
     _show(json_mode, payload)
     if not json_mode:
         from superstep.cli import _write_err
@@ -149,6 +150,30 @@ def cmd_doctor(args, catalog, json_mode, _client, _parser, docker: Docker) -> in
         if text:
             _write_err(text + "\n")
     return 1 if findings else 0
+
+
+def _attachment_storage(catalog: Catalog, docker: Docker, env: dict, url: str, findings: list, notes: list) -> dict:
+    """The attachment backend and whether its probe passes (TASK-0195). Only /api/health's short reason is shown,
+    never a bucket key or endpoint secret."""
+    backend = (env.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip() or "db"
+    out = {"backend": backend, "ok": None}
+    health = docker.health(url) if url else {}
+    if "attachment_storage_ok" in health:
+        out["ok"] = bool(health["attachment_storage_ok"])
+        backend = str(health.get("attachment_storage") or backend)
+        out["backend"] = backend
+        if out["ok"]:
+            notes.append(catalog.format("doctor.attachments_ok", backend=backend))
+        else:
+            reason = str(health.get("attachment_storage_reason") or "")
+            out["reason"] = reason
+            findings.append(catalog.format("doctor.attachments_failing", backend=backend, reason=reason))
+        seen = health.get("attachment_storage_worker_seen")
+        if backend == "fs" and "attachment_storage_worker_seen" in health and seen is None:
+            notes.append(catalog.format("doctor.attachments_worker"))
+    else:
+        notes.append(catalog.format("doctor.attachments_unknown", backend=backend))
+    return out
 
 
 def _provider_url(env: dict) -> str:

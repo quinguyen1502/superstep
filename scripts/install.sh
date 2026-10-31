@@ -42,3 +42,4 @@ if ! command -v superstep >/dev/null 2>&1; then
 fi
 
 echo "superstep ${VERSION} is on PATH (also as sstep)." >&2
+echo "Next: superstep install. It asks where chat attachments are stored (db, fs, or s3 for the full stack); see --attachment-storage." >&2

@@ -26,6 +26,18 @@ all-in-one image is `ghcr.io/quinguyen1502/superstep`. The full stack uses
 `superstep-api` and `superstep-web`. A second install into an existing instance
 refuses to overwrite it.
 
+It also asks where chat attachments are stored: `db` (in the database, the
+default) or `fs` (a folder on the data volume) on a single host, and also `s3`
+(an S3-compatible bucket) for the full stack. With `--yes`, pass
+`--attachment-storage db|fs|s3`; for `s3` add `--s3-bucket` and, as needed,
+`--s3-endpoint`, `--s3-region`, `--s3-prefix`, `--s3-path-style` and
+`--s3-access-key-id`. The secret key is never a flag: it is read from
+`--s3-secret-stdin`, from `SUPERSTEP_S3_SECRET_ACCESS_KEY`, or from a hidden
+prompt, and is written only to `.env` (mode 600). `superstep deploy` takes the
+same flags. `superstep doctor` shows the backend and whether it works, with
+the server's short reason when it does not, never a key. See
+[Chat: Attachments](../run/chat.md#attachments).
+
 Pin a release by checking out that tag before curling the script, or set
 `SUPERSTEP_VERSION`.
 
