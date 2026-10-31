@@ -669,7 +669,15 @@ if [ "$storage" = "fs" ]; then
   included=true
   files={_ATTACHMENTS}
 fi
-printf '%s\\n' "{{" '"format": 1,' '"server_version": "'"$version"'",' '"topology": "'"$topology"'",' '"name": "'"$name"'",' '"created": "'"$created"'",' '"database": "'"$database"'",' '"attachment_storage": "'"$storage"'",' '"attachments_included": '"$included" "}}" > "$work/manifest.json"
+# s3: the manifest names the bucket and prefix whose objects are not in the archive, like a manual backup (TASK-0197)
+json_text() {{ printf '%s' "$1" | sed -e 's/\\\\/\\\\\\\\/g' -e 's/"/\\\\"/g'; }}
+s3=""
+if [ "$storage" = "s3" ]; then
+  bucket=$(awk -F= '$1 == "STUDIO_ATTACHMENT_S3_BUCKET" {{ print substr($0, index($0, "=") + 1); exit }}' "$dir/.env")
+  prefix=$(awk -F= '$1 == "STUDIO_ATTACHMENT_S3_PREFIX" {{ print substr($0, index($0, "=") + 1); exit }}' "$dir/.env")
+  s3=', "attachment_s3": {{"bucket": "'"$(json_text "$bucket")"'", "prefix": "'"$(json_text "$prefix")"'"}}'
+fi
+printf '%s\\n' "{{" '"format": 1,' '"server_version": "'"$version"'",' '"topology": "'"$topology"'",' '"name": "'"$name"'",' '"created": "'"$created"'",' '"database": "'"$database"'",' '"attachment_storage": "'"$storage"'",' '"attachments_included": '"$included$s3" "}}" > "$work/manifest.json"
 mkdir -p "$dest"
 archive="$dest/superstep-backup-$name-$stamp.tar.gz"
 tar -czf "$archive" -C "$work" manifest.json "$database" secret.key .env compose.yml $files

@@ -71,7 +71,7 @@ Tệp đính kèm chat đi theo nơi lưu của chúng (xem
 | --- | --- |
 | `db` | Nằm trong bản dump database. |
 | `fs` | Luôn có, dưới dạng `attachments.tar`. |
-| `s3` | Chỉ khi chạy `superstep backup --include-attachments`. Nếu không, manifest ghi bucket và prefix, và lệnh nhắc bạn sao lưu bucket riêng. |
+| `s3` | Chỉ khi chạy `superstep backup --include-attachments`. Nếu không, manifest ghi bucket và prefix, và lệnh nhắc bạn sao lưu bucket riêng. Sao lưu theo lịch (`--schedule`) không bao giờ chép các object trong bucket; manifest của chúng cũng ghi bucket và prefix. |
 
 `restore` từ chối archive có nơi lưu tệp đính kèm khác với
 `STUDIO_ATTACHMENT_STORAGE` của instance. `--force` vẫn khôi phục và giữ các
