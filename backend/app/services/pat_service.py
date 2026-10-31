@@ -38,6 +38,14 @@ class PatService:
                                    prefix=secret[:10], created=time.time(), last_used=None, revoked=None)
         return self.pats.add(row), secret
 
+    def _free_name(self, user_id: str, name: str) -> str:
+        """`name`, or `name (2)`, `name (3)`... when a token with that name was created after approval (TASK-0208, DEC-0076)."""
+        chosen, n = name, 1
+        while self.pats.active_by_name(user_id, chosen):
+            n += 1; suffix = f" ({n})"
+            chosen = name[:NAME_MAX - len(suffix)] + suffix
+        return chosen
+
     def create(self, user_id: str, name: str) -> dict:
         row, secret = self._issue(user_id, self._name(name, required=True))
         return {"id": row.id, "name": row.name, "prefix": row.prefix, "token": secret}
@@ -104,7 +112,7 @@ class PatService:
             if not secret: raise AppError("CLI_DEVICE_INVALID")
             return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
         if self._collected(row) or not self.devices.claim(row.id, "approved", "delivered"): raise AppError("CLI_DEVICE_INVALID")
-        token, secret = self._issue(row.user_id, row.name or DEFAULT_NAME)  # minted now: no token waits in the table (TASK-0207)
+        token, secret = self._issue(row.user_id, self._free_name(row.user_id, row.name or DEFAULT_NAME))  # minted now: no token waits in the table (TASK-0207)
         self.devices.set_fields(row.id, token_id=token.id)
         return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
 

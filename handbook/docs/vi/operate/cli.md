@@ -109,7 +109,8 @@ superstep logout
 `login` in một URL và một mã, rồi mở trình duyệt. Trên `/cli/authorize`, khi
 đã đăng nhập studio, nhập mã trong terminal của bạn rồi duyệt hoặc từ chối.
 Không có gì được gửi cho đến khi bạn bấm nút. Chỉ duyệt lần đăng nhập mà chính
-bạn vừa bắt đầu: không bao giờ nhập mã do người khác gửi cho bạn. Lệnh ghi `url`, `token` và `account` vào `~/.superstep/cli.json`
+bạn vừa bắt đầu: không bao giờ nhập mã do người khác gửi cho bạn. Nếu trong lúc đó đã có token
+trùng tên được duyệt, token mới nhận một tên còn trống như `laptop (2)`. Lệnh ghi `url`, `token` và `account` vào `~/.superstep/cli.json`
 và đặt file ở mode `0600`. Lệnh không in token. `logout` xóa `token` và
 `account` khỏi file đó. Lệnh không thu hồi token. Thu hồi trong Settings, mục
 Tokens (`/settings/tokens`).

@@ -9,7 +9,7 @@
 - Created: 2026-10-31
 - Updated: 2026-10-31
 - Related Requirements: none
-- Related Tasks: TASK-0205, TASK-0207
+- Related Tasks: TASK-0205, TASK-0207, TASK-0208
 - Related Architecture: DEC-0071 (CLI workflows, PAT and the browser sign-in), DEC-0009 (layers)
 
 ## Context
@@ -27,6 +27,7 @@
 3. **Old sign-ins are removed.** Starting a sign-in deletes rows whose deadline passed more than 10 minutes ago and that hold no undelivered token.
 4. **The saved token stays with its server.** The CLI sends the token from `~/.superstep/cli.json` only to the server it was issued by (scheme, host and port compared, default port and trailing slash ignored). Another URL gets no token: log in there, or set `SUPERSTEP_TOKEN` explicitly.
 6. **The token is minted when the CLI collects it** (amended 2026-10-31, TASK-0207). Approval records the account and the token name only; the first poll after approval mints the token, so no plaintext token waits in `cli_devices`, and a sign-in that expires approved but uncollected leaves nothing usable. A secret stored by an earlier version is revoked and cleared once its sign-in expires.
+7. **A name taken before collection gets a suffix** (amended 2026-10-31, TASK-0208). If a token with the approved name was created between approval and the poll, the minted token is named `name (2)`, `name (3)`... (cut to 80 characters), so the poll that won the compare-and-set always delivers a token and the CLI never has to sign in again for it. Chosen over minting in the same transaction as the compare-and-set: that would roll back to approved but still fail on every later poll with PAT_NAME_TAKEN until the sign-in expires, and it needs a transaction across two repositories; the suffix is one small method in the service and the person can rename or revoke the token in Settings.
 5. **`last_used` is written at most every 5 minutes** per token, and the unused `PatService.user_for_token` is removed (the request path is `AuthService._from_pat`).
 
 ## Rationale
@@ -46,6 +47,7 @@
 
 ## Risks
 
+- A sign-in can deliver a token whose name differs from the one approved (`laptop (2)`); it is listed under Settings, Tokens.
 - A person can still be talked into typing a code someone else sent; the warning on the page addresses this, as RFC 8628 recommends.
 
 ## Owner Decisions

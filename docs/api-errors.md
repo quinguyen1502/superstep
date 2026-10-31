@@ -23,6 +23,7 @@
 | Raising | `raise AppError("CODE", details=..., **template_params)`; no per-route try/except |
 | Success wrapping | `schemas/envelope.py` `EnvelopeResponse` (FastAPI `default_response_class`) |
 | Error wrapping | `api/error_handlers.py`: one handler each for AppError, 422, HTTP 404/405, unhandled Exception |
+| Body ceilings | `api/body_limit.py` `BodyLimit`: a body past the route's ceiling answers 413 `PAYLOAD_TOO_LARGE`, whether it declares a length or not and whatever the route parses (JSON, form, file) (TASK-0207, TASK-0208) |
 | Frontend unwrap | `frontend/src/lib/api.ts` `api()` |
 | Frontend translation | `frontend/src/locales/{en,vi}.json` → `errors.<CODE>`; `lib/i18n.ts` `errorText()` |
 
