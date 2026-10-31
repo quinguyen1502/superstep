@@ -6,6 +6,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Attachment storage on S3-compatible services** (TASK-0193, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=s3`
+  keeps chat attachment bytes in a bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO), set with
+  `STUDIO_ATTACHMENT_S3_*`. Downloads still stream through the studio; the bucket is never shown to the browser. Access
+  keys are never logged; `/api/health` only says whether the bucket works. `boto3` is the optional `s3` extra and the
+  published images include it. CI runs the storage contract against MinIO.
 - **Attachment storage on a folder** (TASK-0192, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=fs` keeps chat
   attachment bytes as files under `STUDIO_ATTACHMENT_FS_PATH` (default `/data/attachments`), written atomically, with
   keys that cannot leave the folder. `/api/health` reports a missing or read-only folder, and

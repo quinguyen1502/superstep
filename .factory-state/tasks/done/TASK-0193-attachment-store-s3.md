@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0193
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -87,6 +87,9 @@ The `s3` backend with a MinIO CI test. S3-compatible object storage (AWS S3, R2,
 
 - 2026-10-31: planned from REQ-0080 (DEC-0074, accepted by the owner). Status todo. Not started.
 
+- 2026-10-30: implemented on `factory/task-0193-attachment-store-s3` from `develop`. Adds the `s3` backend (`app/storage/s3.py`, boto3 as the optional `s3` extra, included in both Dockerfiles), `STUDIO_ATTACHMENT_S3_*` settings, compose passthrough, a MinIO CI job, image smoke check for boto3, and handbook en/vi. `factory verify run --profile full` passed. The owner authorized merging the REQ-0080 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0193-attachment-store-s3` from `develop`.
+- Review: `.factory-state/artifacts/REV-0182-task-0193.md`. QA: `.factory-state/artifacts/QA-0182-task-0193.md`.

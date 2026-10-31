@@ -83,6 +83,13 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Chat attachments: the most files per message; each chat may only lower it |
 | `STUDIO_ATTACHMENT_STORAGE` | `db` | Where chat attachment bytes are kept: `db` (in the database), `fs` (a folder) or `s3` (S3-compatible storage). Files keep the place they were stored in, so a change applies to new files. See [Chat: Attachments](../run/chat.md#attachments) |
 | `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | The folder of the `fs` backend. In docker compose, `api` and `worker` share it on the `apidata` volume |
+| `STUDIO_ATTACHMENT_S3_BUCKET` | (empty) | The bucket of the `s3` backend. Required for `s3` |
+| `STUDIO_ATTACHMENT_S3_PREFIX` | (empty) | A folder inside the bucket, so several installs can share one bucket |
+| `STUDIO_ATTACHMENT_S3_ENDPOINT` | (empty) | The service URL for S3-compatible storage (R2, B2, MinIO). Empty means AWS S3 |
+| `STUDIO_ATTACHMENT_S3_REGION` | (empty) | The bucket's region; `auto` for Cloudflare R2 |
+| `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` for services that need path-style URLs, such as MinIO |
+| `STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID` | (empty) | Access key. With both keys empty, the default AWS credential chain is used (instance role, `AWS_*` variables) |
+| `STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY` | (empty) | Secret key. Never logged or shown; `/api/health` only says whether the bucket works |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Longest `sync` wait (s) |
 | `STUDIO_ALLOW_PRIVATE_CALLBACKS` | `0` | Allow callbacks to private addresses |
 | `STUDIO_WEBHOOK_MAX_ATTEMPTS` | `5` | Delivery attempts |
