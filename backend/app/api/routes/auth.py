@@ -1,6 +1,7 @@
 import time
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Request, Response
 from ...core import config, permissions as P, security
+from ...core.client_ip import client_ip
 from ...schemas.auth import Credentials, DeviceDecision, DeviceStart, PasswordChange, ResetConfirm, ResetRequest, TokenName
 from ..deps import auth_service, current_user, need, pat_service
 
@@ -51,7 +52,8 @@ def create_token(body: TokenName, user=Depends(current_user), svc=Depends(pat_se
 def revoke_token(tid: str, user=Depends(current_user), svc=Depends(pat_service)): return svc.revoke(user["id"], tid)
 
 @router.post("/auth/cli/devices")
-def start_cli_device(body: DeviceStart, svc=Depends(pat_service)): return svc.start_device(body.name)
+async def start_cli_device(body: DeviceStart, request: Request, svc=Depends(pat_service)):
+    return await svc.start_device_from(client_ip(request.client.host if request.client else None, request.headers.get("x-forwarded-for")), body.name)
 
 @router.get("/auth/cli/devices/{device_code}")
 def poll_cli_device(device_code: str, svc=Depends(pat_service)): return svc.poll(device_code)

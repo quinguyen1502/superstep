@@ -6,6 +6,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Security
 
+- **The CLI sign-in asks for the code from the terminal** (TASK-0205, DEC-0076). The `superstep login` link no longer
+  carries the code, and `/cli/authorize` asks the person to type the code their terminal shows, with a warning, so a
+  link someone else sends cannot be approved with one click. Sign-in starts are limited to 10 per client IP per 10
+  minutes (`RATE_LIMITED`), and old sign-ins are removed.
+- **The CLI sends its saved token only to the server that issued it** (TASK-0205). A `--url` or `SUPERSTEP_URL` naming
+  another server gets no token; log in there or set `SUPERSTEP_TOKEN`.
 - **AI review sends a request it cannot see in full to people** (TASK-0204). The judge saw only the first 12,000
   characters, so a field after a long one (a `bcc` after a long body) could be approved unseen; such a request now goes
   to people (cause `too_long`).
@@ -17,6 +23,7 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **A personal access token's last use is written at most every 5 minutes** instead of on every request (TASK-0205).
 - **An AI review lost to a restart goes to people** (TASK-0204). The maintenance sweep sends a step whose review never
   finished to people (cause `restart`): the run owner is told in auto mode and the channel request is sent.
 - **The AI review daily cap holds for parallel steps** (TASK-0204). Each automatic answer reserves its slot atomically,

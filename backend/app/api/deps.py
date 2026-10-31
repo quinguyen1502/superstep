@@ -212,7 +212,7 @@ def share_service() -> ShareService:
     db = get_db(); return ShareService(WorkflowShareRepository(db), UserRepository(db), access_service(), TeamRepository(db), audit_service())
 
 def pat_service() -> PatService:
-    db = get_db(); return PatService(PersonalAccessTokenRepository(db), CliDeviceRepository(db), UserRepository(db))
+    db = get_db(); return PatService(PersonalAccessTokenRepository(db), CliDeviceRepository(db), UserRepository(db), limiter=get_rate_limiter())
 
 def _auth() -> AuthService:
     db = get_db(); return AuthService(UserRepository(db), pats=PersonalAccessTokenRepository(db))
