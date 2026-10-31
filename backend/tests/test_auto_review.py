@@ -36,6 +36,10 @@ def test_judge_prompt_keeps_the_request_as_data():
 class Repo:
     def __init__(self, n=0): self.n = n
     def count_auto(self, wid, since): return self.n
+    def reserve_auto(self, wid, day, limit):
+        if limit is not None and self.n >= limit: return False
+        self.n += 1; return True
+    def release_auto(self, wid, day): self.n -= 1
 
 
 def svc(verdict=None, n=0, paused=False, raises=None, cred=True):

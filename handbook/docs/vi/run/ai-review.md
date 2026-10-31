@@ -57,7 +57,9 @@ Yêu cầu chuyển cho người, như khi AI duyệt tắt, nếu:
 - AI duyệt đang tạm dừng (xem bên dưới) hoặc bị tắt trên máy chủ;
 - đã đạt giới hạn mỗi ngày;
 - thiếu credential của mô hình duyệt, hoặc studio đang ở chế độ demo;
+- yêu cầu dài hơn 12.000 ký tự, nên mô hình không thấy được toàn bộ;
 - lệnh gọi mô hình lỗi, quá 30 giây, hoặc trả về câu trả lời không hợp lệ;
+- máy chủ khởi động lại trong lúc đang hỏi mô hình;
 - mô hình nghi yêu cầu đang cố ra lệnh cho nó (prompt injection);
 - mô hình muốn từ chối, chưa chắc, hoặc độ tin cậy thấp hơn mức tối thiểu.
 
