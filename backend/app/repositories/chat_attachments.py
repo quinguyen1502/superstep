@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy import delete, func, select, update
-from ..models import ChatAttachment
+from ..models import ChatAttachment, ChatSession
 from ..models.database import Database
 
 META = (ChatAttachment.id, ChatAttachment.session_id, ChatAttachment.turn_id, ChatAttachment.name, ChatAttachment.kind,
@@ -88,6 +88,29 @@ class ChatAttachmentRepository:
         with self.db.session() as s:
             refs = [tuple(r) for r in s.execute(select(ChatAttachment.storage, ChatAttachment.key).where(*where))]
             s.execute(delete(ChatAttachment).where(*where)); s.commit(); return refs
+
+    # ---- moving files between backends (TASK-0194) ----
+    def not_on(self, storage: str, limit: int, skip: tuple = ()) -> list:
+        """Up to `limit` files kept elsewhere than `storage`, oldest first, with their session's workflow (for the key)."""
+        q = (select(ChatAttachment.id, ChatAttachment.session_id, ChatAttachment.mime, ChatAttachment.size, ChatAttachment.storage,
+                    ChatAttachment.key, ChatSession.workflow_id)
+             .outerjoin(ChatSession, ChatSession.id == ChatAttachment.session_id)
+             .where(ChatAttachment.storage != storage).order_by(ChatAttachment.created, ChatAttachment.id).limit(limit))
+        if skip: q = q.where(ChatAttachment.id.not_in(list(skip)))
+        with self.db.session() as s: return list(s.execute(q))
+
+    def switch(self, aid: str, frm: str, to: str, key: Optional[str], data: bytes) -> int:
+        """Points a file at its copy on `to` (only while it is still on `frm`); `data` is the bytes for db, else b''."""
+        with self.db.session() as s:
+            n = s.execute(update(ChatAttachment).where(ChatAttachment.id == aid, ChatAttachment.storage == frm)
+                          .values(storage=to, key=key, data=data)).rowcount
+            s.commit(); return n
+
+    def by_storage(self) -> dict:
+        """{storage: {"files", "bytes"}} over every file."""
+        with self.db.session() as s:
+            return {k: {"files": n, "bytes": int(b or 0)} for k, n, b in s.execute(
+                select(ChatAttachment.storage, func.count(), func.sum(ChatAttachment.size)).group_by(ChatAttachment.storage))}
 
     def count(self) -> int:
         with self.db.session() as s: return s.scalar(select(func.count()).select_from(ChatAttachment)) or 0

@@ -633,7 +633,9 @@
     "AGENT_HANDOFF_TARGET_INVALID": "Node Agent {{node}}: đích chuyển giao {{target}} phải là một node Agent khác của workflow này, mỗi đích một lần",
     "AGENT_HANDOFF_LIMIT": "Số lần chuyển giao tối đa mỗi run phải từ 0 đến {{max}}",
     "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
-    "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này"
+    "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này",
+    "ATTACHMENT_MIGRATE_TARGET": "Không có nơi lưu tệp đính kèm '{{target}}' (dùng {{allowed}})",
+    "ATTACHMENT_MIGRATE_BATCH": "Số tệp mỗi đợt phải từ 1 đến {{max}}"
   },
   "lang": {
     "en": "English",
