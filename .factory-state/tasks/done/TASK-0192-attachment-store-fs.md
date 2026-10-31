@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0192
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -85,6 +85,9 @@ The `fs` backend. A folder backend for single-host installs and shared volumes.
 
 - 2026-10-31: planned from REQ-0080 (DEC-0074, accepted by the owner). Status todo. Not started.
 
+- 2026-10-30: implemented on `factory/task-0192-attachment-store-fs` from `develop`. Adds the `fs` backend (`app/storage/fs.py`): atomic writes, key confinement, streamed reads, a worker heartbeat and health fields; compose, `.env.example` and handbook en/vi updated. `factory verify run --profile full` passed. The owner authorized merging the REQ-0080 task PRs when CI is green. Moved to done on this PR before the merge (TASK-0148).
+
 ## Handoff Notes
 
 - Branch `factory/task-0192-attachment-store-fs` from `develop`.
+- Review: `.factory-state/artifacts/REV-0181-task-0192.md`. QA: `.factory-state/artifacts/QA-0181-task-0192.md`.

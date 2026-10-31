@@ -81,6 +81,8 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | The public chat page's window (s). Each chat's own daily cap is in its Chat settings |
 | `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Chat attachments: the largest file in MB; each chat may only lower it |
 | `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Chat attachments: the most files per message; each chat may only lower it |
+| `STUDIO_ATTACHMENT_STORAGE` | `db` | Where chat attachment bytes are kept: `db` (in the database), `fs` (a folder) or `s3` (S3-compatible storage). Files keep the place they were stored in, so a change applies to new files. See [Chat: Attachments](../run/chat.md#attachments) |
+| `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | The folder of the `fs` backend. In docker compose, `api` and `worker` share it on the `apidata` volume |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Longest `sync` wait (s) |
 | `STUDIO_ALLOW_PRIVATE_CALLBACKS` | `0` | Allow callbacks to private addresses |
 | `STUDIO_WEBHOOK_MAX_ATTEMPTS` | `5` | Delivery attempts |

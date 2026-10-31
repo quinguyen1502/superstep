@@ -470,7 +470,7 @@ class ChatSessionService:
         """Deletes sessions idle for longer than their chat's retention_days (DEC-0052), with their files, and files
         uploaded but never sent within an hour (TASK-0174)."""
         n, now = 0, time.time()
-        if self.files is not None: self.files.sweep_stale(now - UNSENT_TTL)
+        if self.files is not None: self.files.sweep_stale(now - UNSENT_TTL); self.files.heartbeat(now)
         for t in self.triggers.webs():
             days = int((json.loads(t.settings or "{}") or {}).get("retention_days") or DEFAULTS["retention_days"])
             cutoff = now - days * 86400

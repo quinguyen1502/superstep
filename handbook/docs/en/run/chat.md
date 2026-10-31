@@ -106,6 +106,13 @@ the chat and deleted with it (retention or **Delete**); files that were
 uploaded but never sent are deleted after an hour. The public demo does not
 accept uploads.
 
+By default the files are kept in the database. An operator can keep them in
+a folder (`STUDIO_ATTACHMENT_STORAGE=fs`, `STUDIO_ATTACHMENT_FS_PATH`) instead,
+so the database stays small. Downloads work the same way: the studio reads the
+file and sends it, with the same checks. `/api/health` shows the storage in use
+(`attachment_storage`) and whether writing, reading and deleting there works
+(`attachment_storage_ok`).
+
 ## Memory
 
 With a conversation field set, each run gets the last *n* exchanges plus the

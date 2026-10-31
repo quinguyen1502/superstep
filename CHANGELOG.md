@@ -6,6 +6,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Attachment storage on a folder** (TASK-0192, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=fs` keeps chat
+  attachment bytes as files under `STUDIO_ATTACHMENT_FS_PATH` (default `/data/attachments`), written atomically, with
+  keys that cannot leave the folder. `/api/health` reports a missing or read-only folder, and
+  `attachment_storage_worker_seen` shows whether the worker shares the folder with the API. In docker compose, `api`
+  and `worker` share the `/data` volume.
 - **Attachment storage port** (TASK-0191, REQ-0080, DEC-0074). Chat attachment bytes go through a storage port.
   `STUDIO_ATTACHMENT_STORAGE` (default `db`) picks where new files go; each file records where its bytes are
   (`storage`, `key`), so files stay readable after a change of backend. The object is written before the row and
