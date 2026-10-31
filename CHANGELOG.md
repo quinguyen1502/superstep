@@ -6,6 +6,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **Two tokens can no longer get the same name at the same moment** (TASK-0213). Active personal access token names are
+  now unique per user in the database (a partial unique index; revoked tokens still free their name). A create that
+  loses the race answers `PAT_NAME_TAKEN`, and a CLI sign-in collected at that moment gets the next free name
+  (`name (2)`...). Active duplicates left by older versions are renamed the same way when the database is upgraded.
 - **A run's time limit no longer counts the setup before its first node** (TASK-0212). `STUDIO_RUN_TIMEOUT` started
   before a queued run saved its first progress checkpoint, so when that write waited for the database the run could
   end with `timeout` before running a node. A workflow tool's child run did this in CI: its first write waited 12.6 s,
