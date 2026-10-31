@@ -24,8 +24,9 @@ SYSTEM = (
 
 
 class JudgeError(Exception):
-    def __init__(self, cause: str, detail: str = ""):
+    def __init__(self, cause: str, detail: str = "", usage: Optional[Dict[str, Any]] = None):
         super().__init__(detail or cause); self.cause = cause  # timeout | error | invalid
+        self.usage = usage  # an invalid answer still used tokens (TASK-0198)
 
 
 def prompt(instructions: str, request: Dict[str, Any]) -> str:
@@ -57,4 +58,5 @@ def ask(instructions: str, request: Dict[str, Any], model: str, cred: Dict[str, 
     except concurrent.futures.TimeoutError: raise JudgeError("timeout", f"no answer in {int(timeout)} s") from None
     except Exception as e: raise JudgeError("error", type(e).__name__) from None
     finally: pool.shutdown(wait=False)
-    return {**parse(out), "usage": usage}
+    try: return {**parse(out), "usage": usage}
+    except JudgeError as e: raise JudgeError(e.cause, str(e), usage) from None

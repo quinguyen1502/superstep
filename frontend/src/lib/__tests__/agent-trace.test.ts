@@ -82,3 +82,21 @@ describe('a tool wave that waits in two slots (DEC-0069)', () => {
     expect(slots.every(s => s.status === 'done')).toBe(true)
   })
 })
+
+describe('AI review usage on the waiting step (TASK-0198)', () => {
+  it('adds the judge tokens and cost to the Human node row', () => {
+    const usage = { provider: 'openai', model: 'gpt-4o-mini', tokens_in: 1000, tokens_out: 200, tokens: 1200, cost_usd: 0.00027 }
+    const trace = buildTrace([
+      { type: 'node_started', node: 'ask', node_type: 'human', label: 'Approve' },
+      { type: 'run_waiting', node: 'ask' },
+      { type: 'approval_review', node: 'ask', outcome: 'approved', model: 'gpt-4o-mini', usage },
+      { type: 'run_resumed', node: 'ask' },
+      { type: 'node_finished', node: 'ask', node_type: 'human', label: 'Approve', delta: {} },
+      { type: 'run_finished', state: {} },
+    ] as RunEvent[])
+    const [ask] = trace.spans
+    expect(trace.spans).toHaveLength(1)
+    expect(ask.tokens).toBe(1200); expect(ask.cost).toBeCloseTo(0.00027); expect(ask.review?.outcome).toBe('approved')
+    expect(trace.tokens).toBe(1200)
+  })
+})

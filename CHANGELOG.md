@@ -39,6 +39,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **AI review counts in usage** (TASK-0198, REQ-0081, DEC-0075). The judge's tokens and cost are added to the run
+  it reviewed, through the same usage records as node model calls: run history, the trace summary, the Human node's
+  row (tooltip line "AI review"), run metrics in the API and telemetry. A run still waiting for people shows them at
+  once. The run's events carry an `approval_review` entry with the usage.
 - **Scheduled backups name the S3 bucket** (TASK-0197, REQ-0080). With `STUDIO_ATTACHMENT_STORAGE=s3`, the archive
   that `backup.sh` writes on a schedule records `attachment_s3` (bucket and prefix) in its manifest, as a manual
   backup does, so `restore` reminds you which bucket to restore separately.

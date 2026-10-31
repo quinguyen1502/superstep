@@ -143,6 +143,7 @@ class ApprovalService:
         if r is None:  # paused meanwhile: as if AI review were off
             if external: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)
             return
+        self._count_usage(rid, w, r)
         if r.get("decision"): self.repo.set_opinion(w.id, r["decision"], r.get("confidence"), r.get("reason"))
         self._audit(owner, "auto", f"auto_{r['outcome']}", code=r.get("cause"), run_id=rid, wid=wid, auto=r)
         if r["outcome"] in ("approved", "rejected"):
@@ -154,6 +155,16 @@ class ApprovalService:
             return
         if policy["mode"] == "auto": self._notify(owner, "run_waiting", rid, wid, ev, r)  # the run service left this to the review
         if external: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at, opinion=r)
+
+    def _count_usage(self, rid: str, w: ApprovalWait, r: dict) -> None:
+        """The judge's tokens and cost count in the run's usage, like a model call of a node (TASK-0198): an
+        `approval_review` event on the waiting step, summed into the run's metrics before the run resumes."""
+        u = r.get("usage")
+        if not u or self.runs is None: return
+        ev = {"type": "approval_review", "node": w.node_id, "ts": time.time(), "outcome": r.get("outcome"), "model": r.get("model"), "usage": u}
+        try:
+            if not self.runs.add_waiting_event(rid, ev): log.info("AI review usage of run %s not recorded: the run is no longer waiting", rid)
+        except Exception: log.exception("recording AI review usage of run %s failed", rid)
 
     def _notify(self, uid: str, kind: str, rid: str, wid: Optional[str], ev: dict, r: dict) -> None:
         if self.notifier is None: return

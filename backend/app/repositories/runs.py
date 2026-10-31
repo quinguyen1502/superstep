@@ -88,6 +88,27 @@ class RunRepository:
                 s.rollback()
         return None
 
+    def add_waiting_event(self, rid: str, event: dict) -> bool:
+        """Append one event to a waiting run and add its `usage` to the run's tokens and cost (an AI review of the
+        step, TASK-0198). Compare-and-set on the events text, like update_waiting. False when the run is not waiting."""
+        u = event.get("usage") or {}
+        for _ in range(8):
+            with self.db.session() as s:
+                row = s.scalars(select(Run).where(Run.id == rid, Run.status == "waiting")).first()
+                if row is None: return False
+                seen = row.events; evs = json.loads(seen or "[]"); evs.append(event)
+                values: dict = {"events": json.dumps(evs, ensure_ascii=False, default=str)}
+                if u:
+                    values["tokens_in"] = (row.tokens_in or 0) + int(u.get("tokens_in") or 0)
+                    values["tokens_out"] = (row.tokens_out or 0) + int(u.get("tokens_out") or 0)
+                    values["cost_usd"] = None if row.cost_usd is None or u.get("cost_usd") is None else round(row.cost_usd + u["cost_usd"], 8)
+                s.expunge(row)
+                cond = Run.events.is_(None) if seen is None else Run.events == seen
+                n = s.execute(update(Run).where(Run.id == rid, Run.status == "waiting", cond).values(**values)).rowcount
+                if n == 1: s.commit(); return True
+                s.rollback()
+        return False
+
     def keep_resume(self, job: dict) -> None:
         """Keep the answer to a waiting run until the resumed segment records progress or a result (TASK-0127)."""
         with self.db.session() as s:
