@@ -424,6 +424,16 @@ def rejection(response: str) -> str:
     return "Rejected by a reviewer" + (f": {comment}" if comment else "")
 
 
+def history(items, prompt: str) -> list:
+    """The {role, content} messages of a history field, before the task prompt. A chat's conversation field ends with
+    the current message (DEC-0052); when the prompt already carries it (e.g. `{{state.message}}`), that last item is
+    left out so the model gets the message once, as the prompt (TASK-0214)."""
+    msgs = [{"role": m["role"], "content": m["content"]} for m in items or []
+            if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)]
+    if msgs and msgs[-1]["role"] == "user" and msgs[-1]["content"].strip() in prompt: msgs.pop()
+    return msgs
+
+
 def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Effects] = None, ports: Optional[Ports] = None,
             offline: bool = False, tokens: Optional[Callable[[str], Any]] = None, resume: Optional[Dict[str, Any]] = None) -> Callable[[dict], dict]:
     """tokens(nid) -> a TokenBuffer for the run stream, or None (engine/nodes.token_stream).
@@ -443,12 +453,11 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             msgs = [{"role": "system", "content": system}] if system else []
             if got:  # the person's messages and the agents' replies, without tool traffic (DEC-0073 decision 3)
                 msgs += [{"role": m["role"], "content": m["content"]} for m in got.get("messages") or []]
-            else:
-                for m in (state.get(d["history_field"]) or []) if d.get("history_field") else []:
-                    if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str):
-                        msgs.append({"role": m["role"], "content": m["content"]})
+            prompt = render(d.get("prompt") or "", state)
+            if not got:
+                msgs += history(state.get(d["history_field"]) if d.get("history_field") else None, prompt)
             files = attachments.records(state, d)  # chat attachments (TASK-0176): records only, image bytes are read per call
-            msgs.append({"role": "user", "content": render(d.get("prompt") or "", state), **({"files": files} if files else {})})
+            msgs.append({"role": "user", "content": prompt, **({"files": files} if files else {})})
             out = {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
             if got: out[HANDOFF_KEY] = None
             return out

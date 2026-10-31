@@ -6,6 +6,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **An Agent in a chat sends the new message to the model once** (TASK-0214). A chat's conversation field holds the
+  earlier exchanges plus the new message, and an Agent with that field as its history and `{{state.message}}` in its
+  task prompt (the built-in templates do this) sent the message twice, wasting tokens. The Agent now leaves the
+  history's last user message out when the task prompt already contains it, in the studio and in the Python and
+  TypeScript exports; saved workflows need no change. The LLM node and the public chat page had no separate
+  duplication (the page uses the same run input).
+
 - **A run's time limit no longer counts the setup before its first node** (TASK-0212). `STUDIO_RUN_TIMEOUT` started
   before a queued run saved its first progress checkpoint, so when that write waited for the database the run could
   end with `timeout` before running a node. A workflow tool's child run did this in CI: its first write waited 12.6 s,
