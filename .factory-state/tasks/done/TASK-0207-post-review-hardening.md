@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0207
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31
@@ -49,3 +49,5 @@ Fix the three points of the re-review of #258 to #261: nginx let every /api/ req
 ## Activity Log
 
 - 2026-10-31: created from the owner's request to verify and fix the external review of v0.10.0 and v0.10.1.
+- 2026-10-31: implemented on `factory/task-0207-post-review-hardening` from `develop`. nginx is back to client_max_body_size 10m with WEB_MAX_BODY_SIZE only on the upload routes; a BodyLimit middleware refuses bodies past 1 MB on the chat and approval callbacks and past STUDIO_MAX_BODY_MB elsewhere, by length or while counting; the CLI token is minted when the CLI collects it and legacy stored secrets are revoked and cleared at expiry; Stores.get reads a row at its recorded location when the backend is no longer configured, and NoCredentialsError is named. `factory verify run --profile full` passed. The owner asked to fix the confirmed review findings and merge each task when CI is green. Moved to done on this PR before the merge (TASK-0148).
+- Review: `.factory-state/artifacts/REV-0195-task-0207.md`. QA: `.factory-state/artifacts/QA-0195-task-0207.md`.
