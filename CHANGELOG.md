@@ -43,6 +43,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   barrier instead of comparing start and end times. The studio e2e test checks the opened workflow's visible Last run
   badge instead of the first `ok` on the page, which is the phone-only copy hidden on desktop.
 
+### Changed
+
+- **End-to-end tests in CI** (TASK-0199). A new `E2E (Playwright)` job runs the whole Playwright suite, English and
+  Vietnamese, on every pull request to `develop`, in three shards with a 30-minute timeout, cached Chromium and Code-mode
+  specs on the subprocess runtime. There are no retries; on failure the traces and screenshots are uploaded as
+  `e2e-shard-N` (7 days).
+
 ## 0.10.0 (2026-10-31)
 
 ### Added
