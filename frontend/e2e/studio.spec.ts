@@ -30,10 +30,14 @@ test('register → logout → login → list → open example → run → done',
   await expect(page).toHaveURL(/\/workflows$/)
   await page.getByRole('cell', { name: /Customer support/i }).first().click()
   await expect(page).toHaveURL(/\/workflows\/\w+$/)
+  const wid = page.url().split('/').pop()!
   await page.locator('#run-btn').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
   await page.locator('#back-btn').click()
-  await expect(page.getByText('ok', { exact: true }).first()).toBeVisible()
+  // this workflow's row shows the run as its last run. Each row has the status twice: a phone line (sm:hidden) before the
+  // Last run column, so "the first ok on the page" was the hidden copy (TASK-0196).
+  const row = page.getByRole('row').filter({ hasText: wid })
+  await expect(row.getByText('ok', { exact: true }).filter({ visible: true })).toHaveCount(1)
 })
 
 test('wrong password shows a generic error', async ({ page }) => {

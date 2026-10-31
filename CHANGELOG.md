@@ -6,6 +6,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Attachment storage on S3-compatible services** (TASK-0193, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=s3`
+  keeps chat attachment bytes in a bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO), set with
+  `STUDIO_ATTACHMENT_S3_*`. Downloads still stream through the studio; the bucket is never shown to the browser. Access
+  keys are never logged; `/api/health` only says whether the bucket works. `boto3` is the optional `s3` extra and the
+  published images include it. CI runs the storage contract against MinIO.
 - **Attachment storage on a folder** (TASK-0192, REQ-0080, DEC-0074). `STUDIO_ATTACHMENT_STORAGE=fs` keeps chat
   attachment bytes as files under `STUDIO_ATTACHMENT_FS_PATH` (default `/data/attachments`), written atomically, with
   keys that cannot leave the folder. `/api/health` reports a missing or read-only folder, and
@@ -20,6 +25,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 - **Plan: external storage for chat attachments** (REQ-0080, DEC-0074, Accepted 2026-10-31). Planning records only: a storage
   port with database (default), folder and S3-compatible backends, a migrate command and backup coverage, planned as
   TASK-0191 to TASK-0195. Nothing is implemented yet.
+
+### Fixed
+
+- **Two timing-sensitive tests** (TASK-0196). The parallel tool-call test proves the three calls run at once with a
+  barrier instead of comparing start and end times. The studio e2e test checks the opened workflow's visible Last run
+  badge instead of the first `ok` on the page, which is the phone-only copy hidden on desktop.
 
 ## 0.10.0 (2026-10-31)
 

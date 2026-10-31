@@ -113,6 +113,24 @@ file and sends it, with the same checks. `/api/health` shows the storage in use
 (`attachment_storage`) and whether writing, reading and deleting there works
 (`attachment_storage_ok`).
 
+With `STUDIO_ATTACHMENT_STORAGE=s3` the files go to an S3-compatible bucket
+(AWS S3, Cloudflare R2, Backblaze B2, MinIO). The browser never sees the
+bucket: there are no bucket links, and downloads still go through the studio.
+Set `STUDIO_ATTACHMENT_S3_BUCKET`, and for services other than AWS also
+`STUDIO_ATTACHMENT_S3_ENDPOINT`:
+
+| Service | Endpoint | Region | Path style |
+| --- | --- | --- | --- |
+| AWS S3 | (empty) | the bucket's region | `false` |
+| Cloudflare R2 | `https://<account>.r2.cloudflarestorage.com` | `auto` | `false` |
+| Backblaze B2 | `https://s3.<region>.backblazeb2.com` | the bucket's region | `false` |
+| MinIO | `http://minio:9000` | `us-east-1` | `true` |
+
+The access keys never appear in logs, errors or `/api/health`; a failing bucket
+shows a short reason such as `S3 error AccessDenied`. The published images
+include the S3 client; a source install needs `pip install
+"superstep-backend[s3]"`.
+
 ## Memory
 
 With a conversation field set, each run gets the last *n* exchanges plus the
