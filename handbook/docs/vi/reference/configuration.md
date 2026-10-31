@@ -83,6 +83,13 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_CHAT_ATTACHMENT_MAX_FILES` | `5` | Tệp đính kèm trong chat: số tệp tối đa mỗi tin nhắn; mỗi chat chỉ được đặt thấp hơn |
 | `STUDIO_ATTACHMENT_STORAGE` | `db` | Nơi lưu nội dung tệp đính kèm trong chat: `db` (trong cơ sở dữ liệu), `fs` (một thư mục) hoặc `s3` (kho lưu trữ tương thích S3). Mỗi tệp giữ nguyên nơi nó đã được lưu, nên thay đổi chỉ áp dụng cho tệp mới. Xem [Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem) |
 | `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | Thư mục của backend `fs`. Với docker compose, `api` và `worker` dùng chung thư mục này trên volume `apidata` |
+| `STUDIO_ATTACHMENT_S3_BUCKET` | (trống) | Bucket của backend `s3`. Bắt buộc khi dùng `s3` |
+| `STUDIO_ATTACHMENT_S3_PREFIX` | (trống) | Một thư mục trong bucket, để nhiều bản cài dùng chung một bucket |
+| `STUDIO_ATTACHMENT_S3_ENDPOINT` | (trống) | URL của dịch vụ tương thích S3 (R2, B2, MinIO). Để trống là AWS S3 |
+| `STUDIO_ATTACHMENT_S3_REGION` | (trống) | Region của bucket; `auto` với Cloudflare R2 |
+| `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` cho dịch vụ cần URL kiểu path, như MinIO |
+| `STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID` | (trống) | Access key. Khi cả hai key để trống, dùng chuỗi credential mặc định của AWS (instance role, biến `AWS_*`) |
+| `STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY` | (trống) | Secret key. Không bao giờ được ghi log hay hiển thị; `/api/health` chỉ cho biết bucket có dùng được không |
 | `STUDIO_SYNC_WAIT_MAX` | `30` | Thời gian chờ `sync` tối đa (giây) |
 | `STUDIO_ALLOW_PRIVATE_CALLBACKS` | `0` | Cho phép callback tới địa chỉ private |
 | `STUDIO_WEBHOOK_MAX_ATTEMPTS` | `5` | Số lần gửi |

@@ -1,9 +1,9 @@
 schema_version: 1
 status: installed
-updated_at: '2026-10-30T23:43:52.480654+00:00'
-source_sha256: 5152ad47f98063f330c55c72cd3f75dd2ec8a4e8d99e8544548f4453dc88dad1
+updated_at: '2026-10-31T00:29:22.474495+00:00'
+source_sha256: 930d3ba5934e392431de93935a37e11aa284ea845d9af0a2565b3faf0d1c6ec5
 inputs:
-  backend/pyproject.toml: fcd96781c1edaa343578958f26f8e2654aac2f680111e41f8d655eadafd33e44
+  backend/pyproject.toml: feecdb6c6b28e071960229d9cf34551bf8720710fa2e1778d2e599b221cd894c
   backend/requirements.txt: f8b6ca5ea80ef1411634725432f2a85a9bf7223eae6bc54ba6dc7c390526a6ff
   frontend/package-lock.json: a6bb0df99f712048fcc19c7d5d4d5b86336d1f78a5d06ffda3056926dd490570
   frontend/package.json: 82eca64a7d3e797e4c045026ac80788daf7a1be81150319d034d6444a9c84208
@@ -28,7 +28,7 @@ commands:
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-30T23:43:11.638798+00:00'
+  started_at: '2026-10-31T00:29:11.557685+00:00'
   returncode: 0
   status: observed
   integrity:
@@ -55,7 +55,7 @@ commands:
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-10-30T23:43:16.281505+00:00'
+  started_at: '2026-10-31T00:29:16.306137+00:00'
   returncode: 0
   status: observed
   integrity:
@@ -66,22 +66,6 @@ commands:
     - --include=dev
     returncode: 0
     status: observed
-- target_id: python-venv:backend
-  manager: venv
-  working_dir: backend
-  argv:
-  - python
-  - -m
-  - venv
-  - .venv
-  manifest: backend/pyproject.toml
-  requires_network: false
-  expected_paths:
-  - backend/.venv/bin/python
-  integrity_argv: []
-  started_at: '2026-10-30T23:43:17.484370+00:00'
-  returncode: 0
-  status: observed
 - target_id: python:backend
   manager: pip
   working_dir: backend
@@ -97,23 +81,7 @@ commands:
   expected_paths:
   - backend/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-30T23:43:19.195544+00:00'
-  returncode: 0
-  status: observed
-- target_id: python-venv:sdk/python
-  manager: venv
-  working_dir: sdk/python
-  argv:
-  - python
-  - -m
-  - venv
-  - .venv
-  manifest: sdk/python/pyproject.toml
-  requires_network: false
-  expected_paths:
-  - sdk/python/.venv/bin/python
-  integrity_argv: []
-  started_at: '2026-10-30T23:43:40.352963+00:00'
+  started_at: '2026-10-31T00:29:17.531656+00:00'
   returncode: 0
   status: observed
 - target_id: python:sdk/python
@@ -131,23 +99,7 @@ commands:
   expected_paths:
   - sdk/python/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-30T23:43:41.915425+00:00'
-  returncode: 0
-  status: observed
-- target_id: python-venv:handbook
-  manager: venv
-  working_dir: handbook
-  argv:
-  - python
-  - -m
-  - venv
-  - .venv
-  manifest: handbook/requirements.txt
-  requires_network: false
-  expected_paths:
-  - handbook/.venv/bin/python
-  integrity_argv: []
-  started_at: '2026-10-30T23:43:46.798459+00:00'
+  started_at: '2026-10-31T00:29:19.866644+00:00'
   returncode: 0
   status: observed
 - target_id: python:handbook
@@ -165,7 +117,7 @@ commands:
   expected_paths:
   - handbook/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-10-30T23:43:48.417552+00:00'
+  started_at: '2026-10-31T00:29:22.172444+00:00'
   returncode: 0
   status: observed
 failure: null

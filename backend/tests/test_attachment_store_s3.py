@@ -42,6 +42,7 @@ def test_prefixes_keep_installs_apart():
 @live
 def test_a_chat_file_on_s3_end_to_end(monkeypatch):
     from tests.test_chat_attachments import public_session, up
+    from tests.test_public_chat_api import err, visitor
     from tests.chat_files import pdf
     from tests.test_chat_sessions import c
     prefix = f"e2e-{uuid.uuid4().hex[:8]}"
@@ -50,13 +51,16 @@ def test_a_chat_file_on_s3_end_to_end(monkeypatch):
     for k, v in env.items(): monkeypatch.setenv(f"STUDIO_ATTACHMENT_{k}", v)
     deps._attachment_stores.cache_clear()
     try:
-        _tok, wid, _slug, v, sid, url = public_session()
+        _tok, wid, slug, v, sid, url = public_session()
         a = up(v, url, "invoice.pdf", pdf()).json()["data"]
         assert minio(prefix).read(f"{wid}/{sid}/{a['id']}") == pdf()
         d = v.get(f"{url}/{a['id']}")
         assert d.content == pdf() and d.headers["content-disposition"].startswith("attachment;")
         assert d.headers["x-content-type-options"] == "nosniff" and d.headers["cache-control"] == "private, no-store"
         assert LIVE["ENDPOINT"] not in str(d.headers) and LIVE["BUCKET"] not in str(d.headers) and "location" not in d.headers
+        other = visitor(); osid = other.post(f"/api/public/chat/{slug}/sessions").json()["data"]["id"]
+        assert err(other.get(f"{url}/{a['id']}")) == "CHAT_SESSION_NOT_FOUND"  # the owner check still applies
+        assert err(other.get(f"/api/public/chat/{slug}/sessions/{osid}/attachments/{a['id']}")) == "CHAT_ATTACHMENT_NOT_FOUND"
         h = c.get("/api/health").json()["data"]; assert h["attachment_storage"] == "s3" and h["attachment_storage_ok"] is True
         v.delete(f"{url}/{a['id']}"); assert not minio(prefix).exists(f"{wid}/{sid}/{a['id']}")
     finally: deps._attachment_stores.cache_clear()
