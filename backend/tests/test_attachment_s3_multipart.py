@@ -14,6 +14,13 @@ LIVE = {k: os.environ.get(f"STUDIO_TEST_S3_{k}", "") for k in ("ENDPOINT", "BUCK
 live = pytest.mark.skipif(not (LIVE["ENDPOINT"] and LIVE["BUCKET"]), reason="no S3-compatible test endpoint (STUDIO_TEST_S3_ENDPOINT)")
 
 
+@pytest.fixture(autouse=True)
+def own_rate_budget(monkeypatch):
+    """These uploads come from the shared test client IP; without this they use up the per-IP budget that later chat
+    tests in the same minute rely on (the suite's in-memory limiter outlives a test)."""
+    for k in ("IP", "VISITOR", "READ"): monkeypatch.setenv(f"STUDIO_PUBLIC_CHAT_RATE_{k}", "0")
+
+
 class Reader(io.RawIOBase):
     """`size` bytes of a pattern, read like an upload; reads fail once `fail_at` bytes have been read."""
     def __init__(self, size, fail_at=None): self.size, self.pos, self.fail_at, self.biggest = size, 0, fail_at, 0
