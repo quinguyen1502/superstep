@@ -31,6 +31,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- **A body without a length that passes the ceiling answers 413** (TASK-0208). On routes that parse JSON, a form or a
+  file, a chunked body past the ceiling answered 400 `BAD_REQUEST`; it now answers 413 `PAYLOAD_TOO_LARGE` like a body
+  that declares its length.
+- **A CLI sign-in is not lost when its token name is taken meanwhile** (TASK-0208, DEC-0076). If a token with the
+  approved name was created before the CLI collected its token, the poll failed with `PAT_NAME_TAKEN` and the sign-in
+  was consumed; the new token now gets a free name such as `laptop (2)`.
 - **Old S3 attachments stay readable after the s3 settings are removed** (TASK-0207). A file's recorded bucket and
   prefix are enough to read it once storage moved to another backend; missing credentials are named in the error.
 - **A chat no longer skips the nodes between Start and the first agent** (TASK-0206, DEC-0073). After a hand-off, the

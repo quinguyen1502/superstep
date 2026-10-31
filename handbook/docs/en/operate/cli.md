@@ -113,7 +113,8 @@ superstep logout
 `login` prints a URL and a code, and opens the browser. On `/cli/authorize`,
 while you are signed in to the studio, type the code from your terminal, then
 approve or deny. Nothing is sent until you press a button. Approve only a
-sign-in you started yourself just now: never type a code someone sent you. The command writes `url`, `token` and `account` to
+sign-in you started yourself just now: never type a code someone sent you. If a token with the approved name was
+created in the meantime, the new token gets a free name such as `laptop (2)`. The command writes `url`, `token` and `account` to
 `~/.superstep/cli.json` and sets that file to mode `0600`. It does not print
 the token. `logout` removes `token` and `account` from that file. It does not
 revoke the token. Revoke it in Settings, under Tokens (`/settings/tokens`).
