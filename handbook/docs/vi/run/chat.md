@@ -105,6 +105,13 @@ tải xuống, không mở trong trang. Tệp được lưu cùng cuộc chat v�
 cuộc chat (theo thời gian lưu hoặc khi **Xoá**); tệp đã tải lên mà không gửi
 bị xoá sau một giờ. Bản demo công khai không nhận tệp tải lên.
 
+Mặc định tệp được lưu trong cơ sở dữ liệu. Người vận hành có thể lưu tệp trong
+một thư mục (`STUDIO_ATTACHMENT_STORAGE=fs`, `STUDIO_ATTACHMENT_FS_PATH`) để cơ
+sở dữ liệu không phình to. Tải xuống vẫn như cũ: studio đọc tệp rồi gửi đi, với
+cùng các bước kiểm tra. `/api/health` cho biết nơi lưu đang dùng
+(`attachment_storage`) và việc ghi, đọc, xoá ở đó có chạy không
+(`attachment_storage_ok`).
+
 ## Bộ nhớ
 
 Khi có trường cuộc trò chuyện, mỗi run nhận *n* lượt hỏi–đáp gần nhất cùng tin

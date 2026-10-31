@@ -77,6 +77,9 @@ def chat_attachment_max_files() -> int:
 def attachment_storage() -> str:
     """Where new chat attachment bytes go (TASK-0191, REQ-0080, DEC-0074): db (default), fs or s3."""
     return (os.environ.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip().lower()
+def attachment_fs_path() -> str:
+    """The folder of the `fs` attachment backend (TASK-0192); on the data volume by default."""
+    return (os.environ.get("STUDIO_ATTACHMENT_FS_PATH") or "/data/attachments").strip()
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- TASK-0020 ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))
