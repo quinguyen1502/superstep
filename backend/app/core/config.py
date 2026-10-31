@@ -83,6 +83,9 @@ def attachment_s3() -> dict:
     return {"bucket": e("BUCKET"), "prefix": e("PREFIX"), "endpoint": e("ENDPOINT"), "region": e("REGION"),
             "access_key": e("ACCESS_KEY_ID"), "secret_key": e("SECRET_ACCESS_KEY"),
             "path_style": e("PATH_STYLE").lower() in ("1", "true", "yes", "on")}
+def attachment_fs_path() -> str:
+    """The folder of the `fs` attachment backend (TASK-0192); on the data volume by default."""
+    return (os.environ.get("STUDIO_ATTACHMENT_FS_PATH") or "/data/attachments").strip()
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- TASK-0020 ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))
