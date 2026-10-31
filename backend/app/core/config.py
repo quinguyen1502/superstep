@@ -77,6 +77,12 @@ def chat_attachment_max_files() -> int:
 def attachment_storage() -> str:
     """Where new chat attachment bytes go (TASK-0191, REQ-0080, DEC-0074): db (default), fs or s3."""
     return (os.environ.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip().lower()
+def attachment_s3() -> dict:
+    """The `s3` attachment backend's settings (TASK-0193). Empty keys use the default AWS credential chain."""
+    e = lambda k: (os.environ.get(f"STUDIO_ATTACHMENT_S3_{k}") or "").strip()  # noqa: E731
+    return {"bucket": e("BUCKET"), "prefix": e("PREFIX"), "endpoint": e("ENDPOINT"), "region": e("REGION"),
+            "access_key": e("ACCESS_KEY_ID"), "secret_key": e("SECRET_ACCESS_KEY"),
+            "path_style": e("PATH_STYLE").lower() in ("1", "true", "yes", "on")}
 def attachment_fs_path() -> str:
     """The folder of the `fs` attachment backend (TASK-0192); on the data volume by default."""
     return (os.environ.get("STUDIO_ATTACHMENT_FS_PATH") or "/data/attachments").strip()

@@ -16,7 +16,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 COPY app ./app
 COPY alembic.ini ./
-RUN pip install . && useradd -m -u 10001 studio && mkdir -p /data && chown studio /data
+RUN pip install ".[s3]" && useradd -m -u 10001 studio && mkdir -p /data && chown studio /data
 USER studio
 VOLUME /data
 EXPOSE 8000

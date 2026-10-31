@@ -44,4 +44,6 @@ def default(rows) -> Stores:
     """Every backend this build knows; each is built on first use from its STUDIO_ATTACHMENT_* settings."""
     from .db import DbStore
     from .fs import FsStore
-    return Stores({"db": lambda: DbStore(rows), "fs": lambda: FsStore(config.attachment_fs_path())})
+    from .s3 import S3Store
+    return Stores({"db": lambda: DbStore(rows), "fs": lambda: FsStore(config.attachment_fs_path()),
+                   "s3": lambda: S3Store(**config.attachment_s3())})
