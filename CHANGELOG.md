@@ -55,7 +55,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 - **README and handbook home catch up** (TASK-0201). The README now covers the `superstep`/`sstep` CLI install and
   commands, chat attachments and their `db`/`fs`/`s3` storage with `superstep attachments migrate`, Agent hand-offs and
   the Help desk template, and AI review of approvals; it also fixes the Code node languages and the docs table. The
-  handbook home pages (en, vi) link the Agent, hand-off, chat, AI review and CLI pages.
+  handbook home pages (en, vi) link the Agent, hand-off, chat, AI review and CLI pages. A trigger rate-limit test no longer
+  fails when its requests straddle a fixed window's boundary.
 
 ## 0.10.0 (2026-10-31)
 
