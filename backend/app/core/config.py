@@ -82,7 +82,8 @@ def attachment_s3() -> dict:
     e = lambda k: (os.environ.get(f"STUDIO_ATTACHMENT_S3_{k}") or "").strip()  # noqa: E731
     return {"bucket": e("BUCKET"), "prefix": e("PREFIX"), "endpoint": e("ENDPOINT"), "region": e("REGION"),
             "access_key": e("ACCESS_KEY_ID"), "secret_key": e("SECRET_ACCESS_KEY"),
-            "path_style": e("PATH_STYLE").lower() in ("1", "true", "yes", "on")}
+            "path_style": e("PATH_STYLE").lower() in ("1", "true", "yes", "on"),
+            "part_mb": max(5, _int("STUDIO_ATTACHMENT_S3_MULTIPART_MB", 8))}  # TASK-0200: larger files go up in parts of this size
 def attachment_fs_path() -> str:
     """The folder of the `fs` attachment backend (TASK-0192); on the data volume by default."""
     return (os.environ.get("STUDIO_ATTACHMENT_FS_PATH") or "/data/attachments").strip()

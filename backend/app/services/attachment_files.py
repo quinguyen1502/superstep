@@ -14,7 +14,7 @@ from ..core.errors import AppError
 from ..models import ChatAttachment
 from ..repositories import ChatAttachmentRepository
 from ..storage import Stores, StoreError
-from ..storage.base import PROBE_PREFIX
+from ..storage.base import PROBE_PREFIX, Data, as_bytes
 
 log = logging.getLogger(__name__)
 WORKER_KEY = f"{PROBE_PREFIX}worker"  # the worker's heartbeat: the api sees it only when they share the backend (TASK-0192)
@@ -35,13 +35,13 @@ class AttachmentFiles:
     def __init__(self, repo: ChatAttachmentRepository, stores: Stores):
         self.repo, self.stores = repo, stores
 
-    def add(self, row: ChatAttachment, workflow_id: Optional[str], data: bytes) -> ChatAttachment:
-        """Stores `data` on the current backend and adds `row` pointing at it."""
+    def add(self, row: ChatAttachment, workflow_id: Optional[str], data: Data) -> ChatAttachment:
+        """Stores `data` (bytes, or a file from its current position) on the current backend and adds `row` pointing at it."""
         try: store = self.stores.current()
         except StoreError as e: raise _unavailable(e)
         row.storage = store.name
         if store.inline:
-            row.data, row.key = data, None
+            row.data, row.key = as_bytes(data), None
             return self.repo.add(row)
         row.data, row.key = b"", key_for(workflow_id, row.session_id, row.id)
         try: store.put(row.key, data, row.mime)

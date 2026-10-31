@@ -69,7 +69,7 @@ def get_visitor_chat(wid: str, sid: str, user=Depends(current_user), svc=Depends
 @router.post("/chat/sessions/{sid}/attachments")
 async def upload_attachment(sid: str, request: Request, user=Depends(current_user), svc=Depends(chat_attachment_service)):
     name, data = await read_upload(request)
-    return await asyncio.to_thread(svc.upload_owned, sid, user["id"], name, data)
+    with data: return await asyncio.to_thread(svc.upload_owned, sid, user["id"], name, data)
 
 @router.get("/chat/sessions/{sid}/attachments/{aid}")
 def get_attachment(sid: str, aid: str, user=Depends(current_user), svc=Depends(chat_attachment_service)):

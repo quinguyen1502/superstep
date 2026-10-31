@@ -42,5 +42,5 @@ class AttachmentArchive:
                 if not info.isfile() or key not in wanted: continue
                 handle = tar.extractfile(info)
                 if handle is None: continue
-                self.stores.get(wanted[key]).put(key, handle.read(), "application/octet-stream"); n += 1
+                self.stores.get(wanted[key]).put(key, handle, "application/octet-stream"); n += 1  # streamed (TASK-0200)
         return n

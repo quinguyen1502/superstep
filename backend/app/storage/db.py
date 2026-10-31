@@ -2,7 +2,7 @@
 objects: a key is an attachment id, and deleting the row deletes the bytes."""
 from __future__ import annotations
 from typing import Iterator
-from .base import CHUNK, AttachmentStore, StoreError
+from .base import CHUNK, AttachmentStore, Data, StoreError, as_bytes
 
 
 class DbStore(AttachmentStore):
@@ -12,8 +12,8 @@ class DbStore(AttachmentStore):
         """rows: the attachment repository (data_of, set_data, keys); passed in, not imported (DEC-0009)."""
         self.rows = rows
 
-    def put(self, key: str, data: bytes, mime: str) -> None:
-        if not self.rows.set_data(key, data): raise StoreError("no attachment row for this key", missing=True)
+    def put(self, key: str, data: Data, mime: str) -> None:
+        if not self.rows.set_data(key, as_bytes(data)): raise StoreError("no attachment row for this key", missing=True)
 
     def open(self, key: str) -> Iterator[bytes]:
         data = self.rows.data_of(key)
