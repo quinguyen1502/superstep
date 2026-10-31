@@ -79,11 +79,8 @@ Expose the public chat HTTP API as a versioned, documented contract in the publi
 ## Activity Log
 
 - 2026-10-31: proposed in PLAN-0002 from REQ-0082. Status backlog until the owner approves the plan.
+- 2026-10-31: backlog to todo. The owner approved PLAN-0002 and DEC-0077 to DEC-0080 on PR #271.
 
 ## Handoff Notes
 
 - Branch `factory/task-0215-public-chat-api-v1` from `develop`.
-
-## Status Log
-
-- 2026-10-31: backlog to todo. The owner approved PLAN-0002 and DEC-0077 to DEC-0080 on PR #271.
