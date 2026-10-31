@@ -310,7 +310,8 @@
       "handoff": "hands off to {{to}}",
       "handoffReason": "hands off to {{to}}: {{reason}}",
       "handedOff": "hand-off"
-    }
+    },
+    "aiReviewUsage": "AI review: {{detail}}"
   },
   "import": {
     "button": "Import repo",

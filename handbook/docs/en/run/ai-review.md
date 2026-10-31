@@ -87,7 +87,11 @@ records whether they agreed with the model.
 - **Prompt injection.** The request can carry text written by someone else.
   The judge treats the request as data only, and a suspected injection goes to
   people. Rules run before the model and cannot be talked out of.
-- **Cost.** Each review is a model call on the judge credential.
+- **Cost.** Each review is a model call on the judge credential. Its tokens
+  and cost count in the run's usage: the run history, the trace summary and
+  the Human node's row in the trace (its tooltip has an "AI review" line).
+  A judge answer that is not the expected JSON still counts; a call that
+  failed without an answer does not.
 
 ## Exports
 
