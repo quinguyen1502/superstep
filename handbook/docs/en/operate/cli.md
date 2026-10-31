@@ -73,7 +73,7 @@ Chat attachments follow their storage backend (see
 | --- | --- |
 | `db` | Inside the database dump. |
 | `fs` | Always, as `attachments.tar`. |
-| `s3` | Only with `superstep backup --include-attachments`. Otherwise the manifest records the bucket and prefix, and the command reminds you to back the bucket up on its own. |
+| `s3` | Only with `superstep backup --include-attachments`. Otherwise the manifest records the bucket and prefix, and the command reminds you to back the bucket up on its own. Scheduled backups (`--schedule`) never copy the bucket's objects; their manifest records the bucket and prefix too. |
 
 `restore` refuses an archive whose attachment backend differs from the
 instance's `STUDIO_ATTACHMENT_STORAGE`. `--force` restores anyway and keeps the

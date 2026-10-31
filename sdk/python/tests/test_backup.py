@@ -255,6 +255,40 @@ def test_schedule_systemd_prunes_to_two(tmp_path):
     ]
 
 
+FAKE_DOCKER = """#!/bin/sh
+# docker for the scheduled script: `compose ... cp SRC DEST` writes DEST, everything else succeeds quietly
+last=""; for arg in "$@"; do prev="$last"; last="$arg"; done
+case " $* " in *" cp "*) printf 'db' > "$last" ;; esac
+exit 0
+"""
+
+
+@pytest.mark.parametrize("storage, extra, expected", [
+    ("s3", "STUDIO_ATTACHMENT_S3_BUCKET=team-files\nSTUDIO_ATTACHMENT_S3_PREFIX=prod/\"chat\"\n",
+     {"bucket": "team-files", "prefix": 'prod/"chat"'}),
+    ("db", "", None),
+])
+def test_scheduled_backup_manifest_names_the_s3_bucket(tmp_path, storage, extra, expected):
+    """The scheduled script writes the same `attachment_s3` record as a manual backup (TASK-0197)."""
+    directory = layout(tmp_path)
+    with (directory / ".env").open("a", encoding="utf-8") as env:
+        env.write(f"STUDIO_ATTACHMENT_STORAGE={storage}\n{extra}")
+    code, _out, _err = invoke(["backup", "--dir", str(directory), "--schedule", "daily", "--keep", "2", "--json"], BackupDocker())
+    assert code == 0
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "docker").write_text(FAKE_DOCKER, encoding="utf-8")
+    (bin_dir / "docker").chmod(0o755)
+    env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}", "TMPDIR": str(tmp_path)}
+    proc = subprocess.run(["sh", str(directory / "backup.sh")], capture_output=True, env=env)
+    assert proc.returncode == 0, proc.stderr
+    archive = next(directory.glob("superstep-backup-inst-*.tar.gz"))
+    with tarfile.open(archive) as tar:
+        manifest = json.loads(tar.extractfile("manifest.json").read())
+    assert manifest["attachment_storage"] == storage and manifest["attachments_included"] is False
+    assert manifest.get("attachment_s3") == expected
+
+
 def test_schedule_uses_cron_without_systemd(tmp_path):
     directory = layout(tmp_path)
     docker = BackupDocker(systemd=False)
