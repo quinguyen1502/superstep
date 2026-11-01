@@ -141,7 +141,9 @@ def attachment_archive():
 
 
 def public_chat_service() -> PublicChatService:
-    return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())
+    from ..repositories.chat_app_keys import ChatAppKeyRepository
+    from ..services.chat_token_verifier import Hs256ChatTokenVerifier
+    return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter(), verifier=Hs256ChatTokenVerifier(ChatAppKeyRepository(get_db())))
 
 
 def chat_app_key_service():

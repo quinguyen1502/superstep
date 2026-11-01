@@ -1,6 +1,7 @@
 """App factory. `app.main:app` stays the uvicorn entrypoint."""
 import asyncio, logging
 from .api.body_limit import BodyLimit
+from .api.chat_cors import ChatCors
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,6 +59,7 @@ def create_app() -> FastAPI:
     redact_tokens("uvicorn.access", "uvicorn.error")  # WebSocket URLs carry ?token=<JWT>
     register_error_handlers(app)
     app.add_middleware(BodyLimit)  # request body ceilings without a proxy too (TASK-0207)
+    app.add_middleware(ChatCors, public=public_chat_service)
     if config.demo_mode(): install_demo_guard(app)  # STUDIO_DEMO_MODE: the shared visitor account is read-only
     for r in ROUTERS: app.include_router(r)
     app.router.routes.append(Route(MCP_PATH, endpoint=mcp_app))  # Streamable HTTP, all methods

@@ -9,6 +9,14 @@ from ..models.database import Database
 class ChatAppKeyRepository:
     def __init__(self, db: Database): self.db = db
 
+    def get(self, kid: str) -> ChatAppKey | None:
+        with self.db.session() as s: return s.scalar(select(ChatAppKey).where(ChatAppKey.key_id == kid))
+
+    def used(self, kid: str, at: float) -> bool:
+        with self.db.session() as s:
+            n = s.execute(update(ChatAppKey).where(ChatAppKey.key_id == kid, ChatAppKey.revoked_at.is_(None)).values(last_used_at=at)).rowcount
+            s.commit(); return n == 1
+
     def list(self, tid: str) -> list[ChatAppKey]:
         with self.db.session() as s:
             return list(s.scalars(select(ChatAppKey).where(ChatAppKey.trigger_id == tid).order_by(ChatAppKey.created_at)))

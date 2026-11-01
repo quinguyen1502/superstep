@@ -39,7 +39,9 @@ from ...services import chat_ws_v1 as v1
 from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
 from ..static import CHAT_PAGE
-from ..deps import _same_origin, bearer, chat_attachment_service, current_user, public_chat_service, run_service, ws_user
+from ..deps import bearer, chat_attachment_service, current_user, public_chat_service, run_service, ws_user
+from ..chat_cors import same_chat_origin, request_ip
+from ...services.chat_token_verifier import ChatAppUser
 
 CHAT_TAG = "Chat"
 V1_PREFIX, ALIAS_PREFIX = "/api/public/v1/chat", "/api/public/chat"
@@ -56,11 +58,14 @@ def visitor_paths(slug: str) -> tuple[str, ...]:
     return f"{ALIAS_PREFIX}/{slug}", f"/ws/public/chat/{slug}", f"{V1_PREFIX}/{slug}", f"/ws/public/v1/chat/{slug}"
 
 
-def maybe_user(request: Request, cred: Optional[HTTPAuthorizationCredentials] = Depends(bearer)) -> Optional[dict]:
+async def maybe_user(request: Request, slug: str, cred: Optional[HTTPAuthorizationCredentials] = Depends(bearer), svc=Depends(public_chat_service)):
     """The signed-in studio user, or None (an anonymous visitor)."""
+    await checked(request, svc)
+    if user := getattr(request.state, "chat_app_user", None): return user
     try: return current_user(request, cred)
     except AppError as e:
         if e.code == "AUTH_CSRF": raise
+        if cred is not None: return await svc.authenticate(slug, cred.credentials, request.headers.get("origin"), request_ip(request))
         return None
 
 
@@ -70,7 +75,9 @@ def token_of(request: Request, slug: str) -> Optional[str]:
 
 
 async def checked(request: Request, svc) -> None:
+    if getattr(request.state, "chat_read_checked", False): return
     await svc.check_read(client_ip(request.client.host if request.client else None, request.headers.get("x-forwarded-for")))
+    request.state.chat_read_checked = True
 
 
 def logo_response(logo, versioned: bool, scope: str = "public") -> Response:
@@ -303,7 +310,7 @@ async def ws_public_chat(ws: WebSocket, slug: str):
     """One message or answer per connection, as /ws/run: the run streams, then the socket closes. Same origin only (the
     page and the embed's iframe are served by the studio); a cancel is {"type": "cancel"}. Untyped frames (the
     unversioned protocol, kept as it is; v1 is below)."""
-    if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")):
+    if not same_chat_origin(ws):
         await ws.close(code=4403); return
     await ws.accept()
     try: req = await ws.receive_json()
@@ -321,8 +328,6 @@ async def ws_public_chat_v1(ws: WebSocket, slug: str):
     """The chat socket protocol v1 (TASK-0216, DEC-0078; services/chat_ws_v1.py): `ready`, then an optional `auth` and
     one `message` or `answer`; the run streams as typed frames with `v` and `seq`, then `turn` (when saved in time),
     `done` and the socket closes. A frame that is not v1 is an `error` frame with CHAT_FRAME_INVALID."""
-    if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")):
-        await ws.close(code=4403); return
     await ws.accept()
     number, emit = v1.Frames(), sender(ws)
     held: dict = {}
@@ -338,11 +343,20 @@ async def ws_public_chat_v1(ws: WebSocket, slug: str):
 
     await send({"type": "ready", "protocol": v1.PROTOCOL})
     token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
+    svc, user = public_chat_service(), None
     try:
+        await svc.check_read(request_ip(ws))
+        raw = ws.query_params.get("token")
+        user = ws_identity(ws) if same_chat_origin(ws) else None
+        if raw and user is None:
+            user = await svc.authenticate(slug, raw, ws.headers.get("origin"), request_ip(ws))
         frame = v1.client_frame(await ws.receive_json())
         if frame["type"] == "auth":
             token = frame.get("visitor") or token
+            if "token" in frame:
+                user = await svc.authenticate(slug, frame["token"], ws.headers.get("origin"), request_ip(ws))
             frame = v1.client_frame(await ws.receive_json())
+        if not same_chat_origin(ws) and not isinstance(user, ChatAppUser): raise AppError("CHAT_TOKEN_REQUIRED")
         if frame["type"] not in ("message", "answer"): raise v1.invalid(f"expected a message or an answer, got {frame['type']!r}")
     except (WebSocketDisconnect, KeyError): return
     except ValueError:
@@ -350,7 +364,7 @@ async def ws_public_chat_v1(ws: WebSocket, slug: str):
     except AppError as e:
         await send(v1.server_frame(error_event(e.to_dict()))); await close(ws); return
     req, since = v1.plan_request(frame), time.time()
-    if await run_chat(ws, slug, req, token, ws_identity(ws), translate) and "done" in held:
+    if await run_chat(ws, slug, req, token, user, translate) and "done" in held:
         turn = await answer_turn(req["chat_session_id"], getattr(ws.state, "run_id", None), since)
         if turn: await send({"type": "turn", "turn_id": turn["id"], "role": "assistant", "status": turn["status"], "run_id": turn["run_id"]})
         await send(held["done"])

@@ -25,13 +25,21 @@ by a visitor token: send `X-Chat-Visitor: new` once, keep the `visitor_token` of
 `X-Chat-Visitor`. Messages are sent over the WebSocket `/ws/public/v1/chat/{slug}`. Clients must ignore fields they do
 not know: v1 only grows.
 """
-CHAT_DESCRIPTION = "Chat API v1: a published chat page, its chats, files and ratings (anonymous visitor token or studio sign-in)."
+CHAT_DESCRIPTION = "Chat API v1: a published chat page, its chats, files and ratings (anonymous visitor, studio sign-in or a third-party HS256 user token)."
 
 
 def public_openapi() -> dict:
-    return get_openapi(title=TITLE, version=VERSION, description=DESCRIPTION, routes=hooks_router.routes + v1_router.routes,
+    spec = get_openapi(title=TITLE, version=VERSION, description=DESCRIPTION, routes=hooks_router.routes + v1_router.routes,
                        tags=[{"name": PUBLIC_TAG, "description": "Workflow-trigger API for external callers (workflow token)."},
                              {"name": CHAT_TAG, "description": CHAT_DESCRIPTION}])
+    schemes = spec["components"].setdefault("securitySchemes", {})
+    schemes["ChatUserToken"] = {"type": "http", "scheme": "bearer", "bearerFormat": "JWT",
+        "description": "HS256 user token signed server-side with a chat app key. aud=superstep-chat:<slug>; lifetime at most 1 hour. Never send the app secret to a client."}
+    schemes["ChatVisitor"] = {"type": "apiKey", "in": "header", "name": "X-Chat-Visitor", "description": "Anonymous visitor token, or new to create one."}
+    for item in spec["paths"].values():
+        for op in item.values():
+            if op.get("tags") == [CHAT_TAG]: op["security"] = [{"ChatUserToken": []}, {"ChatVisitor": []}, {}]
+    return spec
 
 
 

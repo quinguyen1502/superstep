@@ -6,7 +6,10 @@ info:
     `auth`, then send one `message` or `answer`. The run streams as typed frames, each with `v` (1) and `seq`, and ends with
     `done` (after `turn` when the answer is saved in time) or `error`; then the server closes the socket. One message per
     connection. `cancel` stops the run. Clients must ignore fields and frame types they do not know: v1 only grows. Error
-    codes are those of the HTTP API (docs/api-errors.md); a frame that is not v1 is `CHAT_FRAME_INVALID`.'
+    codes are those of the HTTP API (docs/api-errors.md); a frame that is not v1 is `CHAT_FRAME_INVALID`. For third-party
+    users, send auth.token (an HS256 JWT signed with a chat app key) before the message. The token and key''s allowed origins
+    are verified once; expiry does not interrupt that run. ?token= is a fallback for clients that cannot send an auth frame;
+    avoid URLs where possible. Cross-origin connections require an app token.'
 channels:
   chat:
     address: /ws/public/v1/chat/{slug}

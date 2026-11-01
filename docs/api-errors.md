@@ -213,6 +213,10 @@
 | `CHAT_APP_KEY_LIMIT` | 409 | A chat can have at most two active app keys |
 | `CHAT_APP_KEY_NOT_FOUND` | 404 | Chat app key not found |
 | `CHAT_TOKEN_REQUIRED` | 401 | A third-party chat user token is required |
+| `CHAT_TOKEN_INVALID` | 401 | Invalid third-party chat user token |
+| `CHAT_TOKEN_EXPIRED` | 401 | The third-party chat user token has expired |
+| `CHAT_APP_KEY_REVOKED` | 401 | This chat app key has been revoked |
+| `CHAT_ORIGIN_FORBIDDEN` | 403 | This origin is not allowed for the chat app key |
 | `CHAT_ACCESS_NOT_AVAILABLE` | 400 | Chat access '{access}' is not available yet |
 | `CHAT_SESSION_NOT_FOUND` | 404 | Chat not found |
 | `CHAT_MESSAGE_EMPTY` | 400 | Write a message first |

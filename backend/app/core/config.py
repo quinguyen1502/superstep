@@ -66,6 +66,7 @@ def chat_trigger_rate_limit() -> int: return max(0, _int("STUDIO_CHAT_TRIGGER_RA
 # the published chat page (TASK-0140, DEC-0067): fixed windows of STUDIO_PUBLIC_CHAT_RATE_WINDOW seconds, 0 = off
 def public_chat_rate_visitor() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_VISITOR", 10))  # messages per visitor
 def public_chat_rate_ip() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_IP", 30))  # messages per client IP
+def public_chat_rate_user() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_USER", public_chat_rate_ip()))
 def public_chat_rate_read() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_READ", 120))  # page, session reads and new chats per client IP
 def public_chat_rate_window() -> int: return max(1, _int("STUDIO_PUBLIC_CHAT_RATE_WINDOW", 60))
 def chat_attachment_max_mb() -> int:

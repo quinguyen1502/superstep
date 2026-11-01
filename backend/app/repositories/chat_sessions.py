@@ -150,12 +150,14 @@ class ChatSessionRepository:
             q = select(ChatRating.session_id).where(ChatRating.session_id.in_(ids), ChatRating.value == "down").distinct()
             return set(s.scalars(q))
 
-    def list_public(self, trigger_id: str, owner: Optional[str] = None, visitor: Optional[str] = None, limit: int = 50, thumbs_down: bool = False) -> list[ChatSession]:
+    def list_public(self, trigger_id: str, owner: Optional[str] = None, visitor: Optional[str] = None, limit: int = 50, thumbs_down: bool = False,
+                    external_user: Optional[str] = None) -> list[ChatSession]:
         """The published page's chats (DEC-0067): one visitor's (the studio user for signed_in, else the visitor id), or all.
         `thumbs_down` keeps chats that have at least one thumbs down (DEC-0070)."""
         with self.db.session() as s:
             q = select(ChatSession).where(ChatSession.trigger_id == trigger_id, ChatSession.channel.in_(("web", "embed")))
-            if owner or visitor: q = q.where(ChatSession.owner == owner if owner else ChatSession.visitor == visitor)
+            if external_user is not None: q = q.where(ChatSession.external_user == external_user, ChatSession.owner.is_(None), ChatSession.visitor.is_(None))
+            elif owner or visitor: q = q.where(ChatSession.external_user.is_(None), ChatSession.owner == owner if owner else ChatSession.visitor == visitor)
             if thumbs_down:
                 downs = select(ChatRating.session_id).where(ChatRating.value == "down")
                 q = q.where(ChatSession.id.in_(downs))

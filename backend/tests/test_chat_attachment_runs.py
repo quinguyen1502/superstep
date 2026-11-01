@@ -84,12 +84,14 @@ def test_the_public_page_sends_files_and_answers_stay_text_only():
     v = visitor(); sid = v.post(f"/api/public/chat/{slug}/sessions").json()["data"]["id"]
     a = v.post(f"/api/public/chat/{slug}/sessions/{sid}/attachments", files={"file": ("invoice.pdf", pdf())}).json()["data"]
     token = next(x.value for x in v.cookies.jar)
-    with v.websocket_connect(f"/ws/public/chat/{slug}?visitor={token}", headers={"origin": "https://testserver"}) as w:
+    # TestClient defaults relative socket URLs to ws:// even with an HTTPS base_url.
+    # Use wss:// explicitly so the socket and the page's HTTPS Origin are the same origin.
+    with v.websocket_connect(f"wss://testserver/ws/public/chat/{slug}?visitor={token}", headers={"origin": "https://testserver"}) as w:
         w.send_json({"chat_session_id": sid, "message": "Read it", "attachment_ids": [a["id"]]})
         while (e := w.receive_json())["type"] not in ("run_summary", "error"): pass
     assert e["type"] == "run_summary", e
     turn = v.get(f"/api/public/chat/{slug}/sessions/{sid}").json()["data"]["turns"][0]
     assert turn["attachments"] == [{"id": a["id"], "name": "invoice.pdf", "kind": "document", "mime": "application/pdf", "size": len(pdf())}]
-    with v.websocket_connect(f"/ws/public/chat/{slug}?visitor={token}", headers={"origin": "https://testserver"}) as w:
+    with v.websocket_connect(f"wss://testserver/ws/public/chat/{slug}?visitor={token}", headers={"origin": "https://testserver"}) as w:
         w.send_json({"chat_session_id": sid, "response": "yes", "attachment_ids": [a["id"]]})
         assert w.receive_json()["error"]["code"] == "RUN_REQUEST_INVALID"

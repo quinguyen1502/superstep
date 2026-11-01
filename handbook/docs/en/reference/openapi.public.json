@@ -326,8 +326,12 @@
         "operationId": "getChatPage",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -535,7 +539,16 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
+        ]
       }
     },
     "/api/public/v1/chat/{slug}/sessions": {
@@ -547,8 +560,12 @@
         "operationId": "listChatSessions",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -666,8 +683,12 @@
         "operationId": "createChatSession",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -803,8 +824,12 @@
         "operationId": "getChatSession",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -943,8 +968,12 @@
         "operationId": "listChatTurns",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -1107,8 +1136,12 @@
         "operationId": "uploadChatAttachment",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -1346,8 +1379,12 @@
         "operationId": "downloadChatAttachment",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -1500,8 +1537,12 @@
         "operationId": "deleteChatAttachment",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -1657,8 +1698,12 @@
         "operationId": "rateChatTurn",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -1864,8 +1909,12 @@
         "operationId": "unrateChatTurn",
         "security": [
           {
-            "HTTPBearer": []
-          }
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
         ],
         "parameters": [
           {
@@ -3461,6 +3510,18 @@
       "HTTPBearer": {
         "type": "http",
         "scheme": "bearer"
+      },
+      "ChatUserToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "HS256 user token signed server-side with a chat app key. aud=superstep-chat:<slug>; lifetime at most 1 hour. Never send the app secret to a client."
+      },
+      "ChatVisitor": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Chat-Visitor",
+        "description": "Anonymous visitor token, or new to create one."
       }
     }
   },
@@ -3471,7 +3532,7 @@
     },
     {
       "name": "Chat",
-      "description": "Chat API v1: a published chat page, its chats, files and ratings (anonymous visitor token or studio sign-in)."
+      "description": "Chat API v1: a published chat page, its chats, files and ratings (anonymous visitor, studio sign-in or a third-party HS256 user token)."
     }
   ]
 }
