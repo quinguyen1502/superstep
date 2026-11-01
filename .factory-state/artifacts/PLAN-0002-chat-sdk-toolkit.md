@@ -5,9 +5,21 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 TASK-0215 to TASK-0219 in todo, the rest in backlog)
+- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 TASK-0215 to TASK-0219 done and owner-approved, the rest in backlog)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
+
+## Phase 1 delivery (2026-11-01)
+
+| Task | PR | Delivery |
+| --- | --- | --- |
+| TASK-0215 Public Chat HTTP v1 | [#273](https://github.com/quinguyen1502/superstep/pull/273) | Merged |
+| TASK-0216 Socket protocol/schema v1 | [#274](https://github.com/quinguyen1502/superstep/pull/274) | Merged |
+| TASK-0217 App keys | [#275](https://github.com/quinguyen1502/superstep/pull/275) | Merged after final CI passed |
+| TASK-0218 Third-party user tokens | [#276](https://github.com/quinguyen1502/superstep/pull/276) | Merged after final CI passed |
+| TASK-0219 Handbook/compatibility | [#277](https://github.com/quinguyen1502/superstep/pull/277) | Owner-approved; task moved to done on this PR; all final-head CI required before merge |
+
+Phase-1 review and QA evidence lives in the corresponding done tasks (TASK-0217: REV/QA-0205, TASK-0218: REV/QA-0206, TASK-0219: REV/QA-0207). The complete REQ-0082 remains Accepted because phases 2 onward are not implemented. No app/SDK release, package publication or start of a later phase is implied by completing phase 1.
 
 ## Order and dependencies
 

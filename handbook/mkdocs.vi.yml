@@ -57,6 +57,8 @@ nav:
       - Lịch chạy: run/schedules.md
       - Chạy từ chat: run/chat-triggers.md
       - Chat: run/chat.md
+      - Chat API: run/chat-api.md
+      - Xác thực chat bên thứ ba: run/chat-third-party-auth.md
       - Kiểm thử workflow: run/tests.md
   - Vận hành:
       - operate/index.md
@@ -74,6 +76,7 @@ nav:
       - Cấu hình: reference/configuration.md
       - HTTP API: reference/api.md
       - Tham chiếu API công khai: reference/public-api.md
+      - Tương thích Chat API: reference/compatibility.md
       - Mã lỗi: reference/errors.md
       - Kiến trúc: reference/architecture.md
       - Phím tắt: reference/shortcuts.md

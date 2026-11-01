@@ -1,5 +1,9 @@
 # API công khai và SDK
 
+Về HTTP và stream của chat công khai, xem [Chat API](chat-api.md) và
+[Xác thực bên thứ ba](chat-third-party-auth.md). Helper SDK trên trang này
+chạy workflow; helper chat thuộc giai đoạn SDK tiếp theo.
+
 Dịch vụ khác khởi chạy workflow qua HTTP bằng **token của workflow**, rồi hỏi
 lại (poll) để lấy kết quả. Trang này mô tả hai endpoint công khai, SDK chính
 thức cho Python và TypeScript, và các lỗi cần xử lý. Callback, chữ ký và lịch

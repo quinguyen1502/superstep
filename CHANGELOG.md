@@ -6,6 +6,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Chat API handbook and compatibility policy** (TASK-0219, REQ-0082). English and Vietnamese guides cover the
+  complete HTTP endpoint list, typed socket examples, history recovery, files and ratings, app-key setup and
+  rotation, server-only JWT signing in Node/Python/Go/PHP, and the v1 additive-change/12-month successor policy.
+  Third-party user authentication from TASK-0217/0218 uses per-chat app keys and short-lived HS256 tokens;
+  SDK chat helpers, widget identify and mobile toolkit remain later phases. No new SDK or app release is made here.
 - **Public Chat API v1** (TASK-0215, REQ-0082, DEC-0078). The published chat page's HTTP routes are now a versioned
   contract at `/api/public/v1/chat/{slug}/...` (page, logo, chats, turns, files, ratings) and are documented in the
   public OpenAPI (`/openapi.public.json`, tag `Chat`, version 1.1.0) with response models and error codes. The

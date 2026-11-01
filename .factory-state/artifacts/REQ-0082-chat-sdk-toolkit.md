@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0082
-- Status: Accepted on 2026-10-31 (PR #271). Phase 1 (TASK-0215 to TASK-0219) is in todo.
+- Status: Accepted on 2026-10-31 (PR #271). Phase 1 (TASK-0215 to TASK-0219) implemented and owner-approved; later phases remain in backlog (PLAN-0002).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
-- Updated: 2026-10-31
+- Updated: 2026-11-01
 - Source: owner request on 2026-10-31: a chat SDK and toolkit so that third-party web and mobile apps can integrate Superstep chat, with the owner decisions recorded under "Clarifications".
 - Related Decision: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
 - Related Plan: PLAN-0002

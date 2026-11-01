@@ -1,5 +1,8 @@
 # Reference
 
+The [Chat API compatibility policy](compatibility.md) explains versioned
+paths, additive changes and the support window.
+
 <div class="grid cards" markdown>
 
 -   :material-tune-variant:{ .lg .middle } **[Configuration](configuration.md)**

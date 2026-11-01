@@ -52,6 +52,46 @@ WS /ws/run
   {"type": "node_finished", …} … {"type": "run_finished", …}
 ```
 
+## Public Chat v1 {#public-chat-v1}
+
+All HTTP paths below are relative to `/api/public/v1/chat/{slug}` and appear
+under tag `Chat` in the [public OpenAPI](openapi.public.json)
+(`/openapi.public.json`, `/docs/public` on the server). The
+[socket guide](../run/chat-api.md) links AsyncAPI and the frame schemas.
+See [Third-party auth](../run/chat-third-party-auth.md) and [Compatibility](compatibility.md).
+
+| Method | Path | Result (`data` inside the JSON envelope) |
+| --- | --- | --- |
+| GET | empty suffix | Page settings, access modes, steps mode and attachment limits |
+| GET | `/logo?v=<hash>` | Logo bytes, rather than an envelope |
+| GET | `/sessions` | `{sessions:[...]}`, only the caller's sessions |
+| POST | `/sessions` | New session; optional JSON `{embed:true}` |
+| GET | `/sessions/{sid}` | Session with `turns` and `steps_mode` |
+| GET | `/sessions/{sid}/turns?after=<turn_id>` | `{turns:[...]}` newer than this session's cursor; omit `after` for all |
+| POST | `/sessions/{sid}/attachments` | Uploaded file metadata; multipart field `file` |
+| GET | `/sessions/{sid}/attachments/{aid}` | Authenticated file download, bytes rather than an envelope |
+| DELETE | `/sessions/{sid}/attachments/{aid}` | `{ok:true}`; unsent files only |
+| PUT | `/sessions/{sid}/turns/{tid}/rating` | Rating; JSON `{value:"up"}` or `{value:"down",comment?:"..."}` |
+| DELETE | `/sessions/{sid}/turns/{tid}/rating` | `{ok:true}` |
+
+Streaming: `WS /ws/public/v1/chat/{slug}` takes optional `auth`, then one
+typed `message` or `answer`; `cancel` stops the active run. It emits typed
+frames with `v` and `seq`. See [Chat API](../run/chat-api.md) for examples,
+Human answers, persistence and reconnect behavior.
+
+App users send an HS256 user JWT in HTTP Bearer or socket `auth.token`.
+Anonymous same-origin clients use the chat cookie or `X-Chat-Visitor`
+(`auth.visitor` / `?visitor=` on the socket). `X-Chat-Visitor: new` requests
+a new visitor token in `data.visitor_token` on session creation/listing.
+Studio access uses the studio identity and stays same-origin. Cross-origin
+clients need an app token and the key's allowed origin, without credentialed
+CORS.
+
+The unversioned HTTP `/api/public/chat/{slug}/...` paths are legacy aliases.
+The old `WS /ws/public/chat/{slug}` remains same-origin with untyped frames.
+`GET /api/public/chat-frame?path=/c/{slug}` is the iframe CSP check used by
+nginx, not a session or streaming endpoint.
+
 ## Endpoints
 
 ??? abstract "Auth and account"
@@ -150,10 +190,12 @@ WS /ws/run
     GET    /api/chat/sessions/{sid}?view=builder|visitor   DELETE /api/chat/sessions/{sid}
     GET    /api/workflows/{wid}/chat/visitors       GET    /api/workflows/{wid}/chat/visitors/{sid}   (read-only)
     GET    /api/workflows/{wid}/chat/logo?v=      (logo: a data: URL in PUT sets it, "" removes it)
+    GET    /api/workflows/{wid}/chat/app-keys     POST /api/workflows/{wid}/chat/app-keys
+    DELETE /api/workflows/{wid}/chat/app-keys/{key_id}   (owner/admin; one-time secret on creation)
     WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
 
-    No sign-in (the published page, by slug):
-    Chat API v1 (in the public spec, tag Chat): the same routes under /api/public/v1/chat/{slug}; the paths above are aliases.
+    Legacy public HTTP aliases (authentication depends on the chat's access modes):
+    New clients use the complete Public Chat v1 section above.
     GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins, logo)
     GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
     GET    /api/public/chat/{slug}/sessions/{sid}

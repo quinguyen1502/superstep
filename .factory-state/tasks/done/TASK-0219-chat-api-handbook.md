@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0219
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
-- Updated: 2026-10-31
+- Updated: 2026-11-01
 - Requirement IDs: REQ-0082
 - Design IDs: none
 - Architecture IDs: DEC-0077, DEC-0078
@@ -75,9 +75,17 @@ Document the public Chat API, the socket protocol, third-party auth and the comp
 
 ## Activity Log
 
+- 2026-11-01: Owner approved merging PR #277 ("Duyệt"). All checks for reviewed commit 98140f3 passed, including handbook en/vi, Factory full verification, SQLite/Postgres/Redis, Docker and all E2E shards (CI 41306732213, Factory 41306732195, Handbook 41306732219). Moved to done on this same PR and aligned REQ-0082/PLAN-0002 delivery metadata. Final-head CI must pass before merge. Phase 2 onward remains backlog; no release is made.
+- 2026-11-01: Implemented matching en/vi API/socket, third-party-auth and compatibility pages, all 11 HTTP operations, four shared server signing snippets, navigation/index/onboarding updates and CHANGELOG. Both strict builds, image/video checks, bilingual structure/no-emoji checks and executable Node/Python/PHP plus browser/schema checks passed. Full Factory verification passed all eight checks. Self-review REV-0207 and QA-0207 pass locally; moved to review for the task's Draft PR and owner approval.
+- 2026-11-01: Started from develop e84a4d8 after owner-approved TASK-0218 merged as PR #276. Final CI for 34a51cd passed all checks, closing QA-0206's CI/Postgres/Compose follow-up (CI run 41291000621, Factory run 41291000618). `factory ready` passed. Scope: bilingual HTTP/socket/auth/compatibility documentation, server-only signing snippets, navigation and CHANGELOG. No source implementation change.
 - 2026-10-31: proposed in PLAN-0002 from REQ-0082. Status backlog until the owner approves the plan.
 - 2026-10-31: backlog to todo. The owner approved PLAN-0002 and DEC-0077 to DEC-0080 on PR #271.
 
 ## Handoff Notes
 
 - Branch `factory/task-0219-chat-api-handbook` from `develop`.
+- Review: `.factory-state/artifacts/REV-0207-task-0219.md`; QA: `.factory-state/artifacts/QA-0207-task-0219.md`.
+- Full verification passed (backend 445.76 s plus all seven frontend/SDK checks); final strict en/vi builds report no issues, all images/videos found. Node/Python/PHP mint snippets accepted by the real verifier; browser examples and JSON frames checked with the real schemas. Go was statically reviewed only (no local compiler).
+- Dependency PR #276 merged as e84a4d8 after final commit 34a51cd passed all CI, including Postgres/Redis, Docker and E2E. This closes QA-0206's final CI follow-up.
+- No runtime, dependency, migration, API schema or release change. SDKs/toolkits, widget identify, mobile and edit/regenerate remain in later phases/backlog of PLAN-0002.
+- Owner approved merging PR #277 on 2026-11-01. Reviewed-head CI passed; all final-head CI checks must pass before merge. TASK-0215 to TASK-0219 are implemented and owner-approved; later phases remain backlog under PLAN-0002.

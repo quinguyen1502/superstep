@@ -1,5 +1,9 @@
 # Public API and SDKs
 
+For the published chat's HTTP and streaming API, see [Chat API](chat-api.md)
+and [Third-party authentication](chat-third-party-auth.md). The SDK helpers
+on this page start workflow runs; chat helpers belong to a later SDK phase.
+
 Other services start a workflow over HTTP with a **workflow token**, then poll
 for the result. This page covers the two public endpoints, the official Python
 and TypeScript SDKs, and the errors to handle. For callbacks, signatures and
