@@ -144,6 +144,13 @@ def public_chat_service() -> PublicChatService:
     return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())
 
 
+def chat_app_key_service():
+    from ..repositories.chat_app_keys import ChatAppKeyRepository
+    from ..services.chat_app_key_service import ChatAppKeyService
+    db = get_db()
+    return ChatAppKeyService(ChatAppKeyRepository(db), ChatTriggerRepository(db), WorkflowRepository(db), access_service(), audit_service())
+
+
 def chat_attachment_service() -> ChatAttachmentService:
     pub = public_chat_service(); return ChatAttachmentService(pub.chat.attachments, pub.chat, pub)
 

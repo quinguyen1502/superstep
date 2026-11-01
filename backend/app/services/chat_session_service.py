@@ -28,8 +28,15 @@ from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS, KINDS, UNSENT_
 from .attachment_files import AttachmentFiles
 from .. import storage
 
-ACCESS = ("studio", "anonymous", "signed_in")  # anonymous / signed_in publish the chat at /c/{slug} (DEC-0067)
-PUBLIC = ("anonymous", "signed_in")
+ACCESS = ("studio", "anonymous", "signed_in", "app")
+PUBLIC = ("anonymous", "signed_in", "app")
+
+
+def access_modes(value) -> set[str]:
+    """Legacy single modes and the public access set share one interpretation."""
+    return set(value) if isinstance(value, list) and all(isinstance(x, str) for x in value) else {value} if isinstance(value, str) else set()
+
+
 STEPS = ("none", "labels", "full")
 ANSWERED_BY = ("visitor", "reviewer")
 FILE_FIELDS = ("files", "attachments")  # state list fields that hold chat files, not the history (TASK-0177)
@@ -197,9 +204,11 @@ class ChatSessionService:
     def _check(self, w, v: dict, slug_now: Optional[str] = None) -> dict:
         def bad(field): return AppError("CHAT_SETTINGS_INVALID", field=field)
         fields = {f["name"]: f for f in self._fields(w)}
-        if v.get("access") not in ACCESS: raise bad("access")
+        modes = access_modes(v.get("access"))
+        if not modes or not modes <= set(ACCESS) or ("studio" in modes and len(modes) > 1): raise bad("access")
+        if isinstance(v["access"], list): v["access"] = [m for m in ACCESS if m in modes]
         slug = v.get("slug")  # checked when it changes or the chat is published (an old chat keeps its id-based slug)
-        if (slug != slug_now or v["access"] in PUBLIC) and (not isinstance(slug, str) or not SLUG.match(slug) or slug in RESERVED_SLUGS):
+        if (slug != slug_now or modes.intersection(PUBLIC)) and (not isinstance(slug, str) or not SLUG.match(slug) or slug in RESERVED_SLUGS):
             raise AppError("CHAT_SLUG_INVALID")
         for f in ("input_field", "reply_field"):
             if v.get(f) not in fields: raise bad(f)

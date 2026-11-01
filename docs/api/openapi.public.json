@@ -2150,11 +2150,28 @@
             "description": "Up to 4 suggested first messages."
           },
           "access": {
-            "type": "string",
-            "enum": [
-              "studio",
-              "anonymous",
-              "signed_in"
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "studio",
+                  "anonymous",
+                  "signed_in",
+                  "app"
+                ]
+              },
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "studio",
+                    "anonymous",
+                    "signed_in",
+                    "app"
+                  ]
+                },
+                "type": "array"
+              }
             ],
             "title": "Access"
           },

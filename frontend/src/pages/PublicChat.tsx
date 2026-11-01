@@ -62,7 +62,8 @@ export function PublicChatPage() {
   }
   useEffect(() => {
     api<Page>(base).then(p => {
-      if (p.access === 'signed_in' && !p.signed_in) { location.href = loginUrl(false, `/c/${slug}`); return }
+      const modes = Array.isArray(p.access) ? p.access : [p.access]
+      if (!modes.includes('anonymous') && modes.includes('signed_in') && !p.signed_in) { location.href = loginUrl(false, `/c/${slug}`); return }
       setPage(p); if (p.title) document.title = p.title
     }).catch(fail)
   }, [base, slug])

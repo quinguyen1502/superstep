@@ -210,6 +210,9 @@
 | `CHAT_TRIGGER_OFF` | 409 | The chat trigger is off |
 | `CHAT_NOT_ENABLED` | 409 | Chat is off for this workflow. Turn it on in the Chat settings |
 | `CHAT_SETTINGS_INVALID` | 400 | Chat settings: invalid {field} |
+| `CHAT_APP_KEY_LIMIT` | 409 | A chat can have at most two active app keys |
+| `CHAT_APP_KEY_NOT_FOUND` | 404 | Chat app key not found |
+| `CHAT_TOKEN_REQUIRED` | 401 | A third-party chat user token is required |
 | `CHAT_ACCESS_NOT_AVAILABLE` | 400 | Chat access '{access}' is not available yet |
 | `CHAT_SESSION_NOT_FOUND` | 404 | Chat not found |
 | `CHAT_MESSAGE_EMPTY` | 400 | Write a message first |

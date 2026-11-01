@@ -4,7 +4,7 @@
  * The graph on the canvas, written as TypeScript: the state, one function per node, and buildGraph(),
  * which connects them. Run it with Deno (the npm: packages are fetched on the first run):
  *
- *     deno run --allow-env --allow-read typescript_demo.ts
+ *     deno run --allow-env --allow-read --allow-sys=homedir typescript_demo.ts
  *
  * For Node, drop the "npm:" prefixes and versions, `npm i @langchain/langgraph @langchain/core`, then
  * `npx tsx typescript_demo.ts`.
@@ -22,8 +22,8 @@ import { z } from "npm:zod@^3"
 
 // --- Environment --------------------------------------------------------------------------------------------------
 // Settings and credentials (LLM_PROVIDER, OPENAI_API_KEY, ...) are read from environment variables, never written in
-// this file. Without --allow-env, Deno gives nothing, and the defaults apply. (--allow-read lets LangGraph.js
-// look for its optional LangSmith config.)
+// this file. Without --allow-env, Deno gives nothing, and the defaults apply. (--allow-read and --allow-sys=homedir
+// let LangGraph.js locate and read its optional LangSmith config.)
 function env(name: string): string | undefined {
   try {
     const g = globalThis as { process?: { env: Record<string, string | undefined> }; Deno?: { env: { get(n: string): string | undefined } } };

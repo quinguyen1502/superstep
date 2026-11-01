@@ -106,8 +106,8 @@ def split_imports(source: str) -> Tuple[List[str], List[str]]:
 ENV = r'''
 // --- Environment ---------------------------------------------------------------------------------------------
 // Settings and credentials (LLM_PROVIDER, OPENAI_API_KEY, ...) are read from environment variables, never written in
-// this file. Without --allow-env, Deno gives nothing, and the defaults apply. (--allow-read lets LangGraph.js
-// look for its optional LangSmith config.)
+// this file. Without --allow-env, Deno gives nothing, and the defaults apply. (--allow-read and --allow-sys=homedir
+// let LangGraph.js locate and read its optional LangSmith config.)
 function env(name: string): string | undefined {
   try {
     const g = globalThis as { process?: { env: Record<string, string | undefined> }; Deno?: { env: { get(n: string): string | undefined } } };
@@ -200,7 +200,7 @@ MODEL = r'''
 // LLM nodes call callLlm(). Without configuration it is an offline mock: the file runs anywhere, for free, with the
 // same answers every time (the studio's mock model). To call a real model, name the provider (any provider
 // initChatModel knows) and set its API key; LangChain.js and the provider package are fetched on first use:
-//     LLM_PROVIDER=openai OPENAI_API_KEY=sk-... deno run --allow-env --allow-read --allow-net workflow.ts
+//     LLM_PROVIDER=openai OPENAI_API_KEY=sk-... deno run --allow-env --allow-read --allow-sys=homedir --allow-net workflow.ts
 const LLM_PROVIDER = env("LLM_PROVIDER");
 
 /** Offline answers: a category for classification prompts, else the last line of the prompt echoed back. */
@@ -572,7 +572,7 @@ class _Writer(GraphWriter):
         doc = ["/**", f" * {_doc(self.title)}{v}: a LangGraph.js graph exported from Superstep.", " *",
                " * The graph on the canvas, written as TypeScript: the state, one function per node, and buildGraph(),",
                " * which connects them. Run it with Deno (the npm: packages are fetched on the first run):", " *",
-               f" *     deno run --allow-env --allow-read{net} {file}", " *",
+               f" *     deno run --allow-env --allow-read --allow-sys=homedir{net} {file}", " *",
                " * For Node, drop the \"npm:\" prefixes and versions, `npm i @langchain/langgraph @langchain/core`, then",
                f" * `npx tsx {file}`.", " *"]
         if "agent" in self.uses:

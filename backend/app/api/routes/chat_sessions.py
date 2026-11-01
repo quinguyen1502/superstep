@@ -16,12 +16,28 @@ GET  /api/workflows/{wid}/chat/visitors/{sid}/attachments/{aid}   a visitor's fi
 """
 from typing import Optional
 import asyncio
-from fastapi import APIRouter, Depends, Request
-from ...schemas.chat import ChatRatingIn, ChatSettingsIn
-from ..deps import chat_attachment_service, chat_session_service, current_user
+from fastapi import APIRouter, Depends, Request, Response
+from ...schemas.chat import ChatRatingIn, ChatSettingsIn, ChatAppKeyIn
+from ..deps import chat_app_key_service, chat_attachment_service, chat_session_service, current_user
 from .public_chat import file_response, logo_response, read_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
+
+
+@router.get("/workflows/{wid}/chat/app-keys")
+def list_app_keys(wid: str, user=Depends(current_user), svc=Depends(chat_app_key_service)):
+    return svc.list(wid, user["id"])
+
+
+@router.post("/workflows/{wid}/chat/app-keys")
+def create_app_key(wid: str, body: ChatAppKeyIn, response: Response, user=Depends(current_user), svc=Depends(chat_app_key_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.create(wid, user["id"], body.label, body.origins)
+
+
+@router.delete("/workflows/{wid}/chat/app-keys/{kid}")
+def revoke_app_key(wid: str, kid: str, user=Depends(current_user), svc=Depends(chat_app_key_service)):
+    return svc.revoke(wid, kid, user["id"])
 
 
 @router.get("/workflows/{wid}/chat")

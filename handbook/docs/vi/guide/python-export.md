@@ -192,8 +192,10 @@ một file [LangGraph.js](https://langchain-ai.github.io/langgraphjs/). Menu nh�
 lựa chọn của bạn; **Tải .ts** lưu file.
 
 ```bash
-deno run --allow-env --allow-read leave_request.ts
+deno run --allow-env --allow-read --allow-sys=homedir leave_request.ts
 ```
+
+`--allow-sys=homedir` cho phép LangSmith tìm vị trí file cấu hình hồ sơ tuỳ chọn.
 
 Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự tải
 ở lần chạy đầu và `deno check` kiểm tra kiểu của file. Với Node, bỏ tiền tố

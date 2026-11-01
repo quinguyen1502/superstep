@@ -274,11 +274,8 @@ export interface components {
              * @description Up to 4 suggested first messages.
              */
             suggestions?: string[];
-            /**
-             * Access
-             * @enum {string}
-             */
-            access: "studio" | "anonymous" | "signed_in";
+            /** Access */
+            access: ("studio" | "anonymous" | "signed_in" | "app") | ("studio" | "anonymous" | "signed_in" | "app")[];
             /**
              * Steps Mode
              * @description What a visitor sees of the run's steps.

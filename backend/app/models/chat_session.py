@@ -8,13 +8,16 @@ class ChatSession(Base):
     """One conversation with a workflow's chat (TASK-0084, REQ-0048, DEC-0052). Phase 1 has studio sessions of a
     signed-in builder; `channel` and `visitor` leave room for the published page and the embed (phase 2)."""
     __tablename__ = "chat_sessions"
-    __table_args__ = (Index("ix_chat_sessions_workflow_owner", "workflow_id", "owner"),)
+    __table_args__ = (Index("ix_chat_sessions_workflow_owner", "workflow_id", "owner"),
+                      Index("ix_chat_sessions_trigger_external_user", "trigger_id", "external_user"))
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     workflow_id: Mapped[str] = mapped_column(Text, nullable=False)
     trigger_id: Mapped[str] = mapped_column(Text, nullable=False)  # the workflow's web chat trigger (its settings)
     channel: Mapped[str] = mapped_column(Text, nullable=False, default="studio", server_default="studio")  # studio | web | embed
     owner: Mapped[Optional[str]] = mapped_column(Text)  # the studio user; None for an anonymous visitor (phase 2)
     visitor: Mapped[Optional[str]] = mapped_column(Text)  # an anonymous visitor's id (phase 2)
+    external_user: Mapped[Optional[str]] = mapped_column(Text)
+    app_key_id: Mapped[Optional[str]] = mapped_column(Text)  # issuing key, retained for audit after revocation
     title: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     last_run_id: Mapped[Optional[str]] = mapped_column(Text)
     active_agent: Mapped[Optional[str]] = mapped_column(Text)  # the Agent a hand-off left the conversation with (TASK-0181)

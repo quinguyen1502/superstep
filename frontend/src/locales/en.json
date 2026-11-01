@@ -487,6 +487,9 @@
     "CHAT_TRIGGER_OFF": "The chat trigger is off",
     "CHAT_NOT_ENABLED": "Chat is off for this workflow. Turn it on in the Chat settings",
     "CHAT_SETTINGS_INVALID": "Chat settings: invalid {{field}}",
+    "CHAT_APP_KEY_LIMIT": "A chat can have at most two active app keys",
+    "CHAT_APP_KEY_NOT_FOUND": "Chat app key not found",
+    "CHAT_TOKEN_REQUIRED": "A third-party chat user token is required",
     "CHAT_ACCESS_NOT_AVAILABLE": "Chat access '{{access}}' is not available yet",
     "CHAT_SESSION_NOT_FOUND": "Chat not found",
     "CHAT_MESSAGE_EMPTY": "Write a message first",
@@ -1953,6 +1956,26 @@
     "tryHint": "Sign in as the shared demo visitor. You can open, edit and run workflows, but not save changes."
   },
   "chat": {
+    "appKeys": {
+      "studioOnly": "Leave all options unchecked to allow only workflow builders.",
+      "title": "App keys",
+      "hint": "Keep secrets on your server. Create a second key to rotate, update your server, then revoke the old key.",
+      "saveFirst": "Save Chat settings first, then reopen this dialog to manage keys.",
+      "revoked": "Revoked",
+      "revoke": "Revoke key",
+      "anyOrigin": "Any origin",
+      "lastUsed": "Last used: {{at}}",
+      "never": "Never",
+      "label": "Key name",
+      "origins": "Allowed origins (one per line)",
+      "anyOriginWarning": "An empty list allows any origin, including native apps. For web apps, restrict this to your sites.",
+      "create": "Create app key",
+      "secretTitle": "Copy your secret",
+      "secretHint": "This secret is shown only once. Store it on your server; never put it in a browser or mobile app.",
+      "secret": "Secret",
+      "copyFailed": "Copy failed. Select and copy the secret manually.",
+      "revokeHint": "Tokens signed with this key will stop working. Type the key name to confirm."
+    },
     "tab": "Chat",
     "new": "New chat",
     "sessions": "Chats",
@@ -1997,7 +2020,7 @@
       "enabled": "Chat",
       "enabledHint": "Turn chat on for this workflow.",
       "access": "Who can chat",
-      "accessHint": "Studio users chat in this tab. Anyone with the link, or signed-in users, chat on a public page.",
+      "accessHint": "Choose who may use the public page. Studio users can always chat in this tab.",
       "inputField": "Message field",
       "replyField": "Reply field",
       "messagesField": "Conversation field",
@@ -2014,7 +2037,8 @@
     "access": {
       "studio": "Studio users",
       "anonymous": "Anyone with the link",
-      "signed_in": "Signed-in users"
+      "signed_in": "Signed-in users",
+      "app": "Third-party app users"
     },
     "steps": {
       "none": "None",

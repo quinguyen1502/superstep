@@ -1,11 +1,11 @@
 """Web chat (TASK-0084): the workflow's Chat settings. Unset fields keep their value."""
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatSettingsIn(BaseModel):
     enabled: Optional[bool] = None
-    access: Optional[str] = None          # studio | anonymous | signed_in (the last two publish the chat at /c/{slug}, DEC-0067)
+    access: Optional[str | list[str]] = None  # legacy string or public modes (DEC-0077)
     slug: Optional[str] = None            # the page address: 3-64 of a-z, 0-9 and -, unique
     input_field: Optional[str] = None
     reply_field: Optional[str] = None
@@ -20,6 +20,11 @@ class ChatSettingsIn(BaseModel):
     embed_origins: Optional[List[str]] = None  # sites that may embed the page (https://host[:port])
     logo: Optional[str] = None            # a data: URL (PNG, JPEG or WebP, 256 KB) sets the logo, "" removes it, its hash keeps it
     attachments: Optional[dict] = None    # {enabled, kinds, max_files, max_mb, field} (REQ-0077, DEC-0072); off by default
+
+
+class ChatAppKeyIn(BaseModel):
+    label: str = Field(min_length=1, max_length=80)
+    origins: list[str] = Field(default_factory=list, max_length=10)
 
 
 class ChatRatingIn(BaseModel):
