@@ -192,8 +192,10 @@ one [LangGraph.js](https://langchain-ai.github.io/langgraphjs/) file. The menu
 remembers your choice; **Download .ts** saves the file.
 
 ```bash
-deno run --allow-env --allow-read leave_request.ts
+deno run --allow-env --allow-read --allow-sys=homedir leave_request.ts
 ```
+
+`--allow-sys=homedir` lets LangSmith locate its optional profile configuration.
 
 The packages are `npm:` imports (`npm:@langchain/langgraph@^1.5`), so Deno
 fetches them on the first run and `deno check` type-checks the file. For Node,

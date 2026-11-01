@@ -3,7 +3,9 @@
 import { defaultUrlTransform } from 'react-markdown'
 import type { RunEvent, Span } from '@/lib/trace'
 
-export const ACCESS = ['studio', 'anonymous', 'signed_in'] as const  // the last two publish the chat at /c/{slug} (DEC-0067)
+export const ACCESS = ['anonymous', 'signed_in', 'app'] as const
+export type ChatAccess = string | string[]
+export const accessModes = (access: ChatAccess): string[] => Array.isArray(access) ? access : [access]
 export const MAX_SUGGESTIONS = 4
 export const STEPS = ['none', 'labels', 'full'] as const
 export const ANSWERED_BY = ['visitor', 'reviewer'] as const
@@ -19,13 +21,13 @@ export type AttachmentKind = typeof ATTACHMENT_KINDS[number]
 export type AttachmentLimits = { enabled: boolean; kinds: AttachmentKind[]; max_files: number; max_mb: number }
 export type AttachmentSettings = AttachmentLimits & { field: string }
 export type ChatAttachment = { id: string; name: string; kind: AttachmentKind; mime: string; size: number }
-export type ChatSettings = { enabled: boolean; slug: string; access: string; input_field: string; reply_field: string
+export type ChatSettings = { enabled: boolean; slug: string; access: ChatAccess; input_field: string; reply_field: string
   messages_field: string; max_turns: number; steps: StepsMode; retention_days: number
   title: string; intro: string; suggestions: string[]; daily_limit: number; embed_origins: string[]
   logo: string   // the logo's hash, "" for none; a data: URL sets a new one, "" removes it (TASK-0145)
   attachments: AttachmentSettings; attachment_ceiling?: { max_mb: number; max_files: number } }   // the ceiling is read only
 /** The published page's settings (GET /api/public/chat/{slug}, TASK-0140): what a visitor may know of the chat. */
-export type PublicChatPage = { slug: string; title: string; intro: string; suggestions: string[]; access: 'anonymous' | 'signed_in'
+export type PublicChatPage = { slug: string; title: string; intro: string; suggestions: string[]; access: ChatAccess
   steps_mode: StepsMode; signed_in: boolean; embed_origins: string[]; logo: string; attachments?: AttachmentLimits }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
   duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string; handoff_to?: string }  // child_run_id: a workflow tool's run (TASK-0136); handoff_to: the agent a hand-off went to (TASK-0182)
@@ -42,7 +44,7 @@ export const downShare = (c: RatingCounts): number | null => { const n = c.up + 
 export type ChatSessionFull = ChatSession & { steps_mode: StepsMode; turns: ChatTurn[] }
 
 /** The chat is published (DEC-0067): on, and open to more than studio users. */
-export const published = (s: Pick<ChatSettings, 'enabled' | 'access'>) => s.enabled && s.access !== 'studio'
+export const published = (s: Pick<ChatSettings, 'enabled' | 'access'>) => s.enabled && ACCESS.some(a => accessModes(s.access).includes(a))
 /** The page's address on this studio. */
 export const pageUrl = (slug: string, origin = location.origin) => `${origin}/c/${slug}`
 /** A chat's logo image (TASK-0145): the published one, or the builder's (published or not), or a new one not saved yet. */

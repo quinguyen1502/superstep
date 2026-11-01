@@ -14,6 +14,9 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
+import { accessModes } from '@/lib/chat'
+import { ChatAppKeys } from './chat-app-keys'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { api, ApiError } from '@/lib/api'
@@ -60,10 +63,15 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
         <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
           <div className="grid gap-0.5"><Label htmlFor="chat-enabled">{t('chat.settings.enabled')}</Label><p className="text-xs text-muted-foreground">{t('chat.settings.enabledHint')}</p></div>
           <Switch id="chat-enabled" checked={v.enabled} onCheckedChange={enabled => set({ enabled })} /></div>
-        {row('access', t('chat.settings.access'), t('chat.settings.accessHint'), <Select value={v.access} onValueChange={access => set({ access })}>
-          <SelectTrigger className="w-full" id="chat-access"><SelectValue /></SelectTrigger>
-          <SelectContent>{ACCESS.map(a => <SelectItem key={a} value={a}>{t(`chat.access.${a}`)}</SelectItem>)}</SelectContent></Select>)}
-        {v.access !== 'studio' && <div className="grid gap-4 rounded-lg border p-3" id="chat-publish">
+        {row('access', t('chat.settings.access'), t('chat.settings.accessHint'), <div id="chat-access" className="grid gap-2">
+          {ACCESS.map(a => <Label key={a} className="flex items-center gap-2" htmlFor={`chat-access-${a}`}>
+            <Checkbox id={`chat-access-${a}`} checked={accessModes(v.access).includes(a)} onCheckedChange={checked => {
+              const modes = ACCESS.filter(m => m === a ? checked === true : accessModes(v.access).includes(m))
+              set({ access: modes.length ? modes : 'studio' })
+            }} />{t(`chat.access.${a}`)}</Label>)}
+          <p className="text-xs text-muted-foreground">{t('chat.appKeys.studioOnly')}</p>
+        </div>)}
+        {accessModes(v.access).some(a => a !== 'studio') && <div className="grid gap-4 rounded-lg border p-3" id="chat-publish">
           {row('slug', t('chat.publish.slug'), t('chat.publish.slugHint'), <InputGroup aria-invalid={bad === 'slug' || undefined}>
             <InputGroupAddon><InputGroupText>/c/</InputGroupText></InputGroupAddon>
             <InputGroupInput id="chat-slug" value={v.slug} aria-invalid={bad === 'slug' || undefined} onChange={e => set({ slug: e.target.value.toLowerCase() })} /></InputGroup>)}
@@ -91,7 +99,7 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
             <p className="text-xs text-muted-foreground">{t('chat.publish.suggestionsHint')}</p></div>
           {row('daily_limit', t('chat.publish.dailyLimit'), t('chat.publish.dailyLimitHint'), <Input id="chat-daily_limit" type="number" min={0} max={100000}
             aria-invalid={bad === 'daily_limit' || undefined} value={v.daily_limit} onChange={e => set({ daily_limit: Number(e.target.value) })} />)}
-          {v.access === 'anonymous' && <><Separator />
+          {accessModes(v.access).includes('anonymous') && <><Separator />
             {row('embed_origins', t('chat.embed.origins'), t('chat.embed.originsHint'), <Textarea id="chat-embed_origins" rows={2} placeholder="https://www.example.com"
               aria-invalid={bad === 'embed_origins' || undefined} value={v.embed_origins.join('\n')} onChange={e => set({ embed_origins: e.target.value.split('\n') })} />)}
             {published(v) && v.embed_origins.some(x => x.trim()) && (['widget', 'iframe'] as const).map(k => <div key={k} className="grid gap-1.5" id={`chat-snippet-${k}`}>
@@ -100,6 +108,7 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
               <Textarea id={`chat-snippet-${k}-code`} readOnly rows={2} className="font-mono text-xs" value={snippet(v)[k]} onFocus={e => e.currentTarget.select()} />
               <p className="text-xs text-muted-foreground">{t(`chat.embed.${k}Hint`)}</p></div>)}</>}
         </div>}
+        {wid && accessModes(v.access).includes('app') && <ChatAppKeys wid={wid} />}
         <div className="grid grid-cols-2 gap-3">
           {row('input_field', t('chat.settings.inputField'), null, pick('input_field', names(f => f.type === 'string' || f.type === 'list')))}
           {row('reply_field', t('chat.settings.replyField'), null, pick('reply_field', names(() => true)))}

@@ -21,7 +21,7 @@ from ..core.errors import AppError
 from ..models import ChatSession, WorkflowChatTrigger
 from ..repositories.chat_triggers import WEB
 from ..engine import agents
-from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService
+from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService, access_modes
 from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS
 
 SIG_LEN = 32
@@ -72,7 +72,7 @@ class PublicChatService:
         """The trigger and its settings, or CHAT_NOT_PUBLISHED (off, studio only, missing, or the public demo)."""
         t = self.chat.triggers.find(WEB, WEB, slug) if isinstance(slug, str) else None
         st = {**DEFAULTS, **json.loads(t.settings or "{}")} if t else {}
-        if t is None or not t.enabled or st.get("access") not in PUBLIC or config.demo_mode() or self.chat.workflows.get(t.workflow_id) is None:
+        if t is None or not t.enabled or not access_modes(st.get("access")).intersection(PUBLIC) or config.demo_mode() or self.chat.workflows.get(t.workflow_id) is None:
             raise AppError("CHAT_NOT_PUBLISHED")
         return t, st
 
@@ -104,7 +104,9 @@ class PublicChatService:
 
     # ---- who is chatting ----
     def visitor(self, slug: str, st: dict, token: Optional[str], user: Optional[dict]) -> Visitor:
-        if st["access"] == "signed_in":
+        modes = access_modes(st["access"])
+        if "anonymous" not in modes:
+            if "signed_in" not in modes: raise AppError("CHAT_TOKEN_REQUIRED")
             if user is None: raise AppError("CHAT_SIGN_IN_REQUIRED")
             return Visitor(owner=user["id"])
         vid = self.verify(slug, token)

@@ -1,7 +1,7 @@
 import time
 from typing import Optional
 from sqlalchemy import delete, select, update
-from ..models import ChatLogo, WorkflowChatTrigger
+from ..models import ChatAppKey, ChatLogo, WorkflowChatTrigger
 from ..models.database import Database
 
 
@@ -49,10 +49,12 @@ class ChatTriggerRepository:
 
     def delete(self, tid: str) -> None:
         with self.db.session() as s:
+            s.execute(delete(ChatAppKey).where(ChatAppKey.trigger_id == tid))
             s.execute(delete(ChatLogo).where(ChatLogo.trigger_id == tid)); s.execute(delete(WorkflowChatTrigger).where(WorkflowChatTrigger.id == tid)); s.commit()
 
     def delete_for_workflow(self, wid: str) -> None:
         with self.db.session() as s:
+            s.execute(delete(ChatAppKey).where(ChatAppKey.trigger_id.in_(select(WorkflowChatTrigger.id).where(WorkflowChatTrigger.workflow_id == wid))))
             s.execute(delete(ChatLogo).where(ChatLogo.trigger_id.in_(select(WorkflowChatTrigger.id).where(WorkflowChatTrigger.workflow_id == wid))))
             s.execute(delete(WorkflowChatTrigger).where(WorkflowChatTrigger.workflow_id == wid)); s.commit()
 

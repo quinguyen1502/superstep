@@ -165,7 +165,8 @@ def ts_run(tmp_path, env, code, check=True):
     if check:
         p = subprocess.run([DENO, "check", "-q", str(f)], env=env, capture_output=True, text=True, timeout=300)
         assert p.returncode == 0, p.stderr[-3000:]
-    p = subprocess.run([DENO, "run", "-q", "--allow-env", "--allow-read", str(f)], cwd=tmp_path, env=env, capture_output=True,
+    # LangSmith's profile lookup (through LangGraph.js) asks node:os for homedir before reading optional config.
+    p = subprocess.run([DENO, "run", "-q", "--allow-env", "--allow-read", "--allow-sys=homedir", str(f)], cwd=tmp_path, env=env, capture_output=True,
                        text=True, timeout=120, stdin=subprocess.DEVNULL)
     assert p.returncode == 0, p.stderr[-3000:]
     names = [m.group(1) for m in re.finditer(r"^\[(\w+)\] ", p.stdout, re.M)]

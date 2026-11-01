@@ -37,7 +37,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     if (await page.locator('#chat-open').getAttribute('aria-pressed') !== 'true') await page.locator('#chat-open').click()
     await page.locator('#chat-turn-on').click()
     await page.locator('#chat-enabled').click()
-    await page.locator('#chat-access').click(); await page.getByRole('option').nth(1).click()   // anyone with the link
+    await page.locator('#chat-access-anonymous').check()
     await page.locator('#chat-slug').fill(slug)
     await page.locator('#chat-title').fill('Order help')
     await page.locator('#chat-intro').fill('Ask about **your order**.')

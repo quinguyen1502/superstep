@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0217
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
-- Updated: 2026-10-31
+- Updated: 2026-11-01
 - Requirement IDs: REQ-0082
 - Design IDs: none
 - Architecture IDs: DEC-0077
@@ -80,9 +80,21 @@ Add per-chat app keys (server credentials) with create, rotate and revoke, and t
 
 ## Activity Log
 
+- 2026-11-01: Python 3.12 app-key tests, PostgreSQL suite, Factory verification and all three e2e shards passed on df6a9c5. The Deno-enabled backend job exposed an existing export permission gap with newly resolved LangSmith 0.11.6 (`node:os.homedir`). Added only --allow-sys=homedir to the exported-file test runner and generated/documented Deno commands; Code-node sandbox permissions are untouched. This is a CI compatibility fix needed to deliver this PR, not a new feature task.
+
+- 2026-11-01: Final CI found Python 3.12 eager annotation evaluation treating the service's `list` method as the annotation name in `create(... origins: list[str])`; Python 3.14 local checks defer annotations and did not expose it. Added future annotations to both new service/repository modules. Focused checks: 14 passed, 1 skipped; full local verification and final CI rerun. No merge while checks fail.
+
+- 2026-11-01: Owner explicitly approved merge in the local task conversation ("Duyệt"). Moved to done on PR #275 as required by AGENTS.md; local full verification and UI QA passed. Merge remains gated on the final PR checks, including PostgreSQL. No separate lifecycle-only PR.
+
+- 2026-11-01: Restarted locally at the owner's request; no recoverable implementation found in local branches, worktrees or stash. Branch from origin/develop at 1b99559; factory ready passes. Implement app key management and backwards-compatible access sets, then run the task's declared checks and capture UI evidence. TASK-0218/0219 remain dependency-gated by PLAN-0002 until this task is merged.
+
 - 2026-10-31: proposed in PLAN-0002 from REQ-0082. Status backlog until the owner approves the plan.
 - 2026-10-31: backlog to todo. The owner approved PLAN-0002 and DEC-0077 to DEC-0080 on PR #271.
 
 ## Handoff Notes
 
 - Branch `factory/task-0217-chat-app-keys` from `develop`.
+- Implemented migration 0051, encrypted per-chat app keys, atomic two-active-key cap, owner/admin API with audit and no-store copy-once creation, idempotent revocation, access sets with legacy scalar compatibility, and en/vi shadcn settings UI with exact-name confirmation.
+- `factory verify run --profile full`: all eight checks passed (backend 410.21 s). Temporary ARM64 Node launcher used outside sandbox; project policy unchanged. Focused key tests: 6 passed, 1 skipped (Postgres). Playwright key/public-chat regression: 8 passed, with four reviewed screenshots in `.factory-state/evidence/task-0217/`.
+- Review: `.factory-state/artifacts/REV-0205-task-0217.md`; QA: `.factory-state/artifacts/QA-0205-task-0217.md`. Owner approved merge on 2026-11-01; final PR checks (including Postgres) must pass before merge.
+- TASK-0218 must add actual JWT verification, user identity/scoping, token origins/CORS, rate limits and last_used_at updates. App-only access currently fails closed with CHAT_TOKEN_REQUIRED. PLAN-0002 requires this PR merged before dependent tasks begin.

@@ -8,7 +8,7 @@ from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 from .envelope import Envelope
 
-Access = Literal["studio", "anonymous", "signed_in"]
+Access = Literal["studio", "anonymous", "signed_in", "app"]
 StepsMode = Literal["none", "labels", "full"]
 
 
@@ -29,7 +29,7 @@ class ChatPage(Open):
     title: str = Field(..., examples=["Support"])
     intro: str = Field("", description="Markdown shown above the first message.")
     suggestions: list[str] = Field(default_factory=list, description="Up to 4 suggested first messages.")
-    access: Access
+    access: Access | list[Access]
     steps_mode: StepsMode = Field(..., description="What a visitor sees of the run's steps.")
     signed_in: bool = Field(..., description="Whether the caller is a signed-in studio user.")
     embed_origins: list[str] = Field(default_factory=list, description="Sites that may embed the page in an iframe.")

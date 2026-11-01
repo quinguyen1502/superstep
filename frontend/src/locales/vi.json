@@ -487,6 +487,9 @@
     "CHAT_TRIGGER_OFF": "Chat trigger đang tắt",
     "CHAT_NOT_ENABLED": "Chat đang tắt cho workflow này. Bật trong phần cài đặt Chat",
     "CHAT_SETTINGS_INVALID": "Cài đặt Chat: {{field}} không hợp lệ",
+    "CHAT_APP_KEY_LIMIT": "Mỗi chat chỉ có tối đa hai khoá ứng dụng đang hoạt động",
+    "CHAT_APP_KEY_NOT_FOUND": "Không tìm thấy khoá ứng dụng của chat",
+    "CHAT_TOKEN_REQUIRED": "Cần token chat của người dùng ứng dụng bên thứ ba",
     "CHAT_ACCESS_NOT_AVAILABLE": "Quyền truy cập chat '{{access}}' chưa dùng được",
     "CHAT_SESSION_NOT_FOUND": "Không tìm thấy cuộc trò chuyện",
     "CHAT_MESSAGE_EMPTY": "Hãy viết tin nhắn trước",
@@ -1953,6 +1956,26 @@
     "tryHint": "Đăng nhập bằng tài khoản demo dùng chung. Bạn có thể mở, sửa và chạy workflow nhưng không lưu được thay đổi."
   },
   "chat": {
+    "appKeys": {
+      "studioOnly": "Bỏ chọn tất cả để chỉ cho phép người dựng workflow chat.",
+      "title": "Khoá ứng dụng",
+      "hint": "Giữ secret trên máy chủ. Tạo khoá thứ hai để thay khoá, cập nhật máy chủ rồi thu hồi khoá cũ.",
+      "saveFirst": "Lưu cài đặt Chat trước, rồi mở lại hộp thoại này để quản lý khoá.",
+      "revoked": "Đã thu hồi",
+      "revoke": "Thu hồi khoá",
+      "anyOrigin": "Mọi origin",
+      "lastUsed": "Dùng gần nhất: {{at}}",
+      "never": "Chưa dùng",
+      "label": "Tên khoá",
+      "origins": "Origin được phép (mỗi dòng một origin)",
+      "anyOriginWarning": "Danh sách trống cho phép mọi origin, kể cả ứng dụng di động. Với ứng dụng web, hãy giới hạn theo site của bạn.",
+      "create": "Tạo khoá ứng dụng",
+      "secretTitle": "Sao chép secret",
+      "secretHint": "Secret chỉ hiện một lần. Lưu trên máy chủ; không đưa vào trình duyệt hoặc ứng dụng di động.",
+      "secret": "Secret của khoá",
+      "copyFailed": "Không sao chép được. Hãy chọn và sao chép secret thủ công.",
+      "revokeHint": "Token được ký bằng khoá này sẽ ngừng hoạt động. Nhập tên khoá để xác nhận."
+    },
     "tab": "Chat",
     "new": "Chat mới",
     "sessions": "Cuộc trò chuyện",
@@ -1997,7 +2020,7 @@
       "enabled": "Chat",
       "enabledHint": "Bật chat cho workflow này.",
       "access": "Ai được chat",
-      "accessHint": "Người dùng studio chat trong tab này. Ai có link, hoặc người đã đăng nhập, chat trên một trang công khai.",
+      "accessHint": "Chọn người được chat trên trang công khai. Người dùng studio luôn có thể chat trong tab này.",
       "inputField": "Trường tin nhắn",
       "replyField": "Trường trả lời",
       "messagesField": "Trường cuộc trò chuyện",
@@ -2014,7 +2037,8 @@
     "access": {
       "studio": "Người dùng studio",
       "anonymous": "Ai có link",
-      "signed_in": "Người đã đăng nhập"
+      "signed_in": "Người đã đăng nhập",
+      "app": "Người dùng ứng dụng bên thứ ba"
     },
     "steps": {
       "none": "Không",
