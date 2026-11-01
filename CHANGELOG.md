@@ -21,6 +21,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 - **Managed HTTP API tools** (TASK-0235, REQ-0084). Configure fixed API operations with input/response schemas and
   encrypted authentication headers through the existing MCP registry. Requests use pinned destinations, bounded
   JSON responses and credential redaction; uncertain outcomes remain blocked instead of repeating writes.
+- **Telegram expense workflow example** (TASK-0234, REQ-0083). A portable template combines event admission,
+  model fallback and managed tools with strict expense validation, separate expense/submission dates and a
+  success reply gated on a confirmed Sheets write. Includes bilingual setup/cutover guidance and acceptance
+  coverage for duplicate delivery, worker replay, rejected writes and lost-response reconciliation.
 - **LLM model fallback** (TASK-0231, REQ-0083). An LLM node can select one alternate credential/model after a provider
   failure. Credential access is checked before calls; failed attempts cannot publish partial answer text. Attempt
   metadata is recorded in the trace, mock runs stay offline and code exports explicitly reject unsupported policies.

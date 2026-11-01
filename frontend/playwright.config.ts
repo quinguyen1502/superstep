@@ -10,6 +10,9 @@ const ATTACH_DIR = path.resolve('../backend/.e2e-attachments')  // the fs backen
 const SMTP = env('E2E_SMTP_PORT', 8125)  // local SMTP sink for Send email nodes (TASK-0051); specs read it as E2E_SMTP_PORT
 const CHANNEL_SMTP = process.env.E2E_CHANNEL_SMTP === '1'  // opt-in system SMTP; ordinary session/notification specs expect it disabled
 const DRIVE = process.env.E2E_DRIVE_FIXTURE === '1'  // fixed Google HTTP double; explicit opt-in only
+const EXPENSE = process.env.E2E_EXPENSE_FIXTURE === '1'  // isolated paid-model/Google fixture, explicit opt-in only
+if (DRIVE && EXPENSE) throw new Error('Run Drive and expense acceptance fixtures separately')
+const ENTRYPOINT = EXPENSE ? 'tests.fixtures.expense_preview:app' : DRIVE ? 'tests.fixtures.drive_preview:app' : 'app.main:app'
 process.env.E2E_SMTP_PORT = String(SMTP)
 const db = path.join(os.tmpdir(), `lgs-e2e-${Date.now()}.db`)
 export default defineConfig({
@@ -31,9 +34,9 @@ export default defineConfig({
     // E2E_PYTHON (absolute, also used by mcp.spec.ts) overrides the backend venv's Python
     { command: `${process.env.E2E_PYTHON || '.venv/bin/python'} -m aiosmtpd -n -l 127.0.0.1:${SMTP} -c aiosmtpd.handlers.Sink`, cwd: '../backend', port: SMTP, reuseExistingServer: false, timeout: 30_000 },
     {
-      command: `${process.env.E2E_UVICORN || '.venv/bin/uvicorn'} ${DRIVE ? 'tests.fixtures.drive_preview:app' : 'app.main:app'} --host 127.0.0.1 --port ${API}`,
+      command: `${process.env.E2E_UVICORN || '.venv/bin/uvicorn'} ${ENTRYPOINT} --host 127.0.0.1 --port ${API}`,
       cwd: '../backend', url: `http://127.0.0.1:${API}/api/health`, reuseExistingServer: false, timeout: 60_000,
-      env: { STUDIO_DB: db, STUDIO_E2E_DRIVE_FIXTURE: DRIVE ? '1' : '0', STUDIO_IMPORT_DIR: path.join(os.tmpdir(), 'lgs-e2e-imports'), OPENAI_API_KEY: '', STUDIO_ENABLE_DEMO_TOOLS: '1', STUDIO_ENABLE_CODE_NODES: '1', STUDIO_CODE_RUNTIME: process.env.E2E_CODE_RUNTIME || 'docker',  // Code mode (TASK-0055/0056): E2E_CODE_RUNTIME=subprocess runs code-subprocess.spec.ts
+      env: { STUDIO_DB: db, STUDIO_E2E_DRIVE_FIXTURE: DRIVE ? '1' : '0', STUDIO_E2E_EXPENSE_FIXTURE: EXPENSE ? '1' : '0', STUDIO_IMPORT_DIR: path.join(os.tmpdir(), 'lgs-e2e-imports'), OPENAI_API_KEY: '', STUDIO_ENABLE_DEMO_TOOLS: '1', STUDIO_ENABLE_CODE_NODES: '1', STUDIO_CODE_RUNTIME: process.env.E2E_CODE_RUNTIME || 'docker',  // Code mode (TASK-0055/0056): E2E_CODE_RUNTIME=subprocess runs code-subprocess.spec.ts
          STUDIO_MCP_STDIO: '1', STUDIO_RUN_TIMEOUT: '5', STUDIO_ALLOW_PRIVATE_CALLBACKS: '1', STUDIO_SMTP_ALLOW_PRIVATE: '1', STUDIO_PUBLIC_URL: `http://127.0.0.1:${UI}`,  // links in e-mail / Teams approvals (TASK-0047)
         ...(CHANNEL_SMTP ? { SMTP_HOST: '127.0.0.1', SMTP_PORT: String(SMTP), SMTP_FROM: 'fixture@example.test', SMTP_STARTTLS: '0', SMTP_USER: '', SMTP_PASSWORD: '', SMTP_SSL: '0' } : {}),
         STUDIO_MCP_ALLOW_PRIVATE: '1',  // managed actions use the local fake Telegram API; production keeps its default SSRF guard

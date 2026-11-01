@@ -409,21 +409,21 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 
 REQ-0083, owner requested implementation on 2026-11-01 after selecting generic integrations over vendor-specific canvas nodes. PLAN-0003 and DEC-0081 describe the delivery; DES-0001 covers existing-surface UX. No production cutover or release is authorised.
 
-- TASK-0231 Model fallback policy — done; owner approved merge of #278 into develop on 2026-11-02 (REV-0208, QA-0208); final-head CI gates merging.
-- TASK-0232 Event bindings, Telegram metadata and signed JSON sources — done; owner approved merge of #279 into develop on 2026-11-02; final-head CI gates merging.
-- TASK-0233 Managed tools/connections through existing MCP nodes and Agent slots — done; owner approved merge of #280 into develop on 2026-11-02; final-head CI gates merging.
-- TASK-0234 Expense example, end-to-end tests and bilingual guide — planned.
+- TASK-0231 Model fallback policy — done, merged into develop through #278 on 2026-11-02 after 20 passing checks (REV-0208, QA-0208).
+- TASK-0232 Event bindings, Telegram metadata and signed JSON sources — done, merged into develop through #279 on 2026-11-02 after 20 passing checks (REV-0209, QA-0209).
+- TASK-0233 Managed tools/connections through existing MCP nodes and Agent slots — done, merged into develop through #280 on 2026-11-02 after 20 passing checks (REV-0210, QA-0210).
+- TASK-0234 Expense example, end-to-end tests and bilingual guide — done; owner approved merge of #281 into develop on 2026-11-02; final-head CI gates merging.
 
 ## Additional managed adapters
 
 REQ-0084, DES-0002, DEC-0082, PLAN-0004: owner requested generic HTTP API and services already in approval channels on 2026-11-02, then approved merging the delivery PRs into develop. Live sends/cutover remain outside this delivery.
 
-- TASK-0235 Generic managed HTTP API — done; owner approved merge of #282 into develop on 2026-11-02; final-head CI gates merging.
-- TASK-0236 Slack/WhatsApp/Email/Teams actions using existing channels — done; owner approved merge of #283 into develop on 2026-11-02; final-head CI gates merging.
+- TASK-0235 Generic managed HTTP API — done, merged into develop through #282 on 2026-11-02 after 20 passing checks (REV-0212, QA-0212).
+- TASK-0236 Slack/WhatsApp/Email/Teams actions using existing channels — done, merged into develop through #283 on 2026-11-02 after 20 passing checks (REV-0213, QA-0213).
 
 REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Drive on 2026-11-02.
 
-- TASK-0237 Managed Google Drive — done; owner approved merge of #284 into develop on 2026-11-02; final-head CI gates merging.
+- TASK-0237 Managed Google Drive — done, merged into develop through #284 on 2026-11-02 after 20 passing checks (REV-0214, QA-0214).
 
 ## Releases
 
