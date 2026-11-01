@@ -6,6 +6,9 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **LLM model fallback** (TASK-0231, REQ-0083). An LLM node can select one alternate credential/model after a provider
+  failure. Credential access is checked before calls; failed attempts cannot publish partial answer text. Attempt
+  metadata is recorded in the trace, mock runs stay offline and code exports explicitly reject unsupported policies.
 - **Chat API handbook and compatibility policy** (TASK-0219, REQ-0082). English and Vietnamese guides cover the
   complete HTTP endpoint list, typed socket examples, history recovery, files and ratings, app-key setup and
   rotation, server-only JWT signing in Node/Python/Go/PHP, and the v1 additive-change/12-month successor policy.
