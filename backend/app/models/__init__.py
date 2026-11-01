@@ -10,7 +10,7 @@ from .notification import Notification
 from .webhook_delivery import WebhookDelivery
 from .node_result import NodeResult
 from .knowledge import KnowledgeBase, KbDocument, KbChunk
-from .mcp_server import McpServer
+from .mcp_server import McpServer, McpOperation
 from .workflow_share import WorkflowShare
 from .team import Team, TeamMember, WorkflowTeamShare
 from .audit_event import AuditEvent, StudioSetting

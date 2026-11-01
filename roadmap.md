@@ -411,7 +411,7 @@ REQ-0083, owner requested implementation on 2026-11-01 after selecting generic i
 
 - TASK-0231 Model fallback policy — done; owner approved merge of #278 into develop on 2026-11-02 (REV-0208, QA-0208); final-head CI gates merging.
 - TASK-0232 Event bindings, Telegram metadata and signed JSON sources — done; owner approved merge of #279 into develop on 2026-11-02; final-head CI gates merging.
-- TASK-0233 Managed tools/connections through existing MCP nodes and Agent slots — planned.
+- TASK-0233 Managed tools/connections through existing MCP nodes and Agent slots — done; owner approved merge of #280 into develop on 2026-11-02; final-head CI gates merging.
 - TASK-0234 Expense example, end-to-end tests and bilingual guide — planned.
 
 ## Releases

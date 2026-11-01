@@ -24,7 +24,7 @@ export function McpSettings({ server, tool, args = {}, fields, readOnly, onChang
   const asText = (v: any) => v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v)
   return <div className="space-y-3" id="mcp-settings">
     <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor="mcp-server">{t('editor.mcpServer')}</Label>
-      <Select value={server || undefined} onValueChange={v => onChange({ server_id: v, tool: '', arguments: {} })}>
+      <Select value={server || ''} onValueChange={v => onChange({ server_id: v, tool: '', arguments: {} })}>
         <SelectTrigger className="w-full" id="mcp-server"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
         <SelectContent>{(items || []).map(x => <SelectItem key={x.id} value={x.id}>{x.name} · {x.transport}</SelectItem>)}</SelectContent>
       </Select></div>
@@ -32,7 +32,7 @@ export function McpSettings({ server, tool, args = {}, fields, readOnly, onChang
     {items && !items.length && <p className="text-[11px] text-muted-foreground" id="mcp-none">{t('editor.mcpNone')} <TextLink to="/settings/mcp" id="mcp-create">{t('editor.mcpCreate')}</TextLink></p>}
     {s && <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor="mcp-tool">{t('editor.mcpTool')}</Label>
       <div className="flex gap-2">
-        <Select value={tool || undefined} onValueChange={v => onChange({ tool: v, arguments: {} })}>
+        <Select value={tool || ''} onValueChange={v => onChange({ tool: v, arguments: {} })}>
           <SelectTrigger className="w-full min-w-0" id="mcp-tool"><SelectValue placeholder={s.tools.length ? t('common.choose') : t('editor.mcpNoTools')} /></SelectTrigger>
           <SelectContent>{s.tools.map(x => <SelectItem key={x.name} value={x.name}>{x.name}</SelectItem>)}</SelectContent>
         </Select>

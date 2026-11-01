@@ -181,7 +181,7 @@ def workflow_service() -> WorkflowService:
                                           access=access_service(), shares=WorkflowShareRepository(db), users=UserRepository(db),
                                           teams=TeamRepository(db), audit=audit_service(), tests=WorkflowTestRepository(db),
                                           chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db),
-                                          jobs=get_job_queue())
+                                          jobs=get_job_queue(), export_resources=mcp_service().check_export)
 
 def template_service() -> TemplateService:
     return TemplateService(TemplateRepository(get_db()), workflow_service(), access_service(), tests=workflow_test_service)
@@ -270,7 +270,7 @@ def knowledge_service() -> KnowledgeService:
 def mcp_service() -> McpService:
     db = get_db(); users = UserRepository(db)
     return McpService(McpServerRepository(db), lambda uid: bool((u := users.get_by_id(uid)) and u.active and P.can(u.role, P.ORG_MANAGE)),
-                      policy_service().org_allowed)
+                      policy_service().org_allowed, channel_service())
 
 def import_service() -> ImportService:
     return ImportService(workflow_service())

@@ -198,8 +198,7 @@ def http_request(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[
 def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects]) -> Any:
     src = t.get("source")
     if src == "mcp":
-        if ports.mcp_call is None: raise RuntimeError("Agent MCP tools need the MCP service")
-        return ports.mcp_call(t.get("server_id") or "", t.get("tool") or "", args)
+        return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None)
     if src == "knowledge":
         if ports.retrieve is None: raise RuntimeError("Agent knowledge base tools need a knowledge base service")
         return ports.retrieve(t.get("knowledge_base_id") or "", str(args.get("query") or ""), int(t.get("top_k") or 4))

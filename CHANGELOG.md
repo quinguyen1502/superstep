@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+- Added managed Telegram and Google Sheets connections through existing MCP nodes/Agent tools, with fixed destinations, encrypted credentials, dry runs, durable write outcomes and read-only reconciliation.
+
 - Added explicit event bindings for Telegram messages and signed JSON webhooks, with sender admission, typed state mapping and atomic delivery deduplication through the existing trigger UI.
 
 ### Added

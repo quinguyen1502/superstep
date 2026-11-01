@@ -122,8 +122,8 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             return {d["output_field"]: ports.retrieve(d["knowledge_base_id"], query, int(d.get("top_k") or 4))}
     elif t == "mcp":
         def fn(state):
-            if ports.mcp_call is None: raise RuntimeError("MCP nodes need the MCP service")
-            return {d["output_field"]: ports.mcp_call(d["server_id"], d["tool"], render_args(d.get("arguments") or {}, state))}
+            return {d["output_field"]: ports.call_mcp(d["server_id"], d["tool"], render_args(d.get("arguments") or {}, state),
+                                                     effects.key(node["id"]) if effects else None)}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":
