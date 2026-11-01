@@ -1,7 +1,7 @@
 from typing import Optional
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
-from ..models import ChatMessage
+from ..models import ChatMessage, Run
 from ..models.database import Database
 
 
@@ -17,8 +17,21 @@ class ChatMessageRepository:
     def get(self, mid: str) -> Optional[ChatMessage]:
         with self.db.session() as s: return s.get(ChatMessage, mid)
 
+    def add_event_once(self, message: ChatMessage, run: Run) -> bool:
+        """Persist event identity and its queued run atomically; startup recovery can requeue after a crash."""
+        with self.db.session() as s:
+            try: s.add(message); s.add(run); s.commit(); return True
+            except IntegrityError:
+                s.rollback()
+                if s.scalar(select(ChatMessage.id).where(ChatMessage.channel_id == message.channel_id, ChatMessage.key == message.key)) is None: raise
+                return False
+
     def by_run(self, rid: str) -> Optional[ChatMessage]:
         with self.db.session() as s: return s.scalar(select(ChatMessage).where(ChatMessage.run_id == rid))
+
+    def by_key(self, channel_id: str, key: str) -> Optional[ChatMessage]:
+        with self.db.session() as s:
+            return s.scalar(select(ChatMessage).where(ChatMessage.channel_id == channel_id, ChatMessage.key == key))
 
     def by_runs(self, rids: list[str]) -> list[ChatMessage]:
         if not rids: return []

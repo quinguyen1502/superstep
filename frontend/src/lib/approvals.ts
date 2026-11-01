@@ -5,6 +5,7 @@ import type { AiOpinion } from '@/lib/auto-approval'
 // link_based: e-mail / Teams, answered on the studio's /approve page; target_required false: the connection is the destination (TASK-0047)
 export type ChannelKind = { kind: string; fields: string[]; optional: string[]; link_based?: boolean; target_required?: boolean }
 export type Channel = { id: string; kind: string; scope: 'user' | 'org'; name: string | null; team_id: string | null; hint: string; created: number; editable: boolean
+  events_only?: boolean
   callback_url: string | null; callback_path: string; shared_callback_url: string | null; shared_callback_path: string | null
   // chat triggers (TASK-0074): null when the platform cannot start runs; missing_scopes null = unknown until the next Test
   chat: { missing_scopes: string[] | null; events_path: string | null; events_url: string | null } | null }

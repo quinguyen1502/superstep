@@ -1,5 +1,44 @@
 # Chat triggers
 
+## Event bindings (Telegram and signed JSON)
+
+In this dialog choose **Start from → An event (run as owner)**, an exact
+group/place and allowed sender IDs separated by commas. An explicit `*` lets
+everyone in that place spend the trigger owner's resources without a studio
+account. Use a restricted group or sender list. Command bindings take priority
+and keep requiring verified accounts. Each connection/place has one event binding.
+
+Map event paths to declared state fields: `message` → `data.text` (string),
+`context` → `$` (object). The envelope contains `id`, `source`, `type`, `time`
+(UTC ISO timestamp), `actor.id`, `actor.name`, `conversation.id` and `data`.
+Telegram supplies original text and `data.message_id`. `time` is submission time,
+not an expense date. Missing paths and mismatched types start no run. Both event
+and mapped input are bounded by `STUDIO_INPUT_MAX_BYTES`. The workflow sends its
+own processing/result replies through tools; the trigger sends no automatic
+success reply. Callback rate limits apply. Event identity and queued run are
+stored atomically. Concurrent retries reuse that run; after queue failure a retry
+queues the original saved input. Normal run recovery applies after a restart.
+
+For JSON, add **Signed JSON webhook** in **Settings → Channels**, with a secret
+of 32–256 letters, digits, `_` or `-`. It is inbound-only, unavailable for Human
+approvals or account linking. Send to its callback URL:
+
+```json
+{"id":"expense-001","type":"message.text","time":"2026-11-01T10:00:00+07:00","place":"expenses","sender":"employee-42","data":{"text":"Lunch 50000"}}
+```
+
+Bind exact place `expenses`, sender `employee-42`, type `message.text`.
+Sign the raw bytes using the [result webhook signature](api-triggers.md):
+`X-Studio-Signature: t=<unix-seconds>,v1=<hex-HMAC-SHA256(secret,"<timestamp>.<raw body>")>`.
+Signatures outside five minutes are rejected. A stable event ID suppresses replay
+even after re-signing. Keep secrets in Settings; replacing a secret takes effect
+immediately. Wrong place/sender/type, bot messages, edits, absent IDs/timestamps,
+oversized data and disabled bindings start no runs. Telegram needs privacy mode
+disabled to receive ordinary group messages. New event mode supports Telegram
+and signed JSON; Slack command behavior is unchanged.
+
+## Command bindings
+
 **⋯ → Chat triggers** in the editor starts the workflow from a message to your
 Slack app or Telegram bot. A command word picks the workflow, the rest of the
 message fills one input field, and the bot answers in the thread with one state

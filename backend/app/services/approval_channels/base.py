@@ -44,6 +44,7 @@ class IncomingMessage:
     text: str      # without the bot mention
     key: str       # the platform's id of this delivery (Slack event_id, Telegram update_id): retries carry the same one
     ref: dict = field(default_factory=dict)  # where replies go (reply() / reply_private())
+    event: dict = field(default_factory=dict)  # bounded, untrusted event metadata; never studio authority
 
 
 class ApprovalChannel:
@@ -63,6 +64,7 @@ class ApprovalChannel:
     target_required: bool = True            # False: the connection itself is the destination (a Teams webhook)
     # TASK-0074 (DEC-0046): chat triggers start runs from messages to the bot.
     chat: bool = False                      # the platform can start runs from messages (Slack, Telegram)
+    events_only: bool = False               # inbound source, unavailable for approval delivery/identity linking
     chat_scopes: tuple[str, ...] = ()       # OAuth scopes messages need (Slack); describe() reports the granted ones
     events_path: Optional[str] = None       # a separate URL that receives messages (Slack Events API); None: the callback URL
     place_pattern: str = r".+"              # a chat a trigger may listen in (besides "dm"): Slack channel id, Telegram chat id

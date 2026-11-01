@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+- Added explicit event bindings for Telegram messages and signed JSON webhooks, with sender admission, typed state mapping and atomic delivery deduplication through the existing trigger UI.
+
 ### Added
 
 - **LLM model fallback** (TASK-0231, REQ-0083). An LLM node can select one alternate credential/model after a provider

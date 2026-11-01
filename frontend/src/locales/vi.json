@@ -817,6 +817,7 @@
   },
   "approvals": {
     "kind": {
+      "webhook": "Webhook JSON có chữ ký",
       "slack": "Slack",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
@@ -828,6 +829,7 @@
     "notConnected": "chưa kết nối",
     "keepSecret": "Đã lưu, nhập giá trị mới để thay",
     "help": {
+      "webhook": "Chọn secret gồm 32–256 chữ cái, chữ số, dấu gạch dưới hoặc gạch nối. Gửi JSON tới callback URL kèm X-Studio-Signature (HMAC-SHA256). Kết nối này chỉ nhận sự kiện.",
       "slack": "Tạo Slack app với bot scope chat:write và im:write (mã xác minh), bật Interactivity với Request URL hiện trên kết nối. Để dùng chat trigger, thêm app_mentions:read và im:history rồi bật Event Subscriptions. Mỗi workspace là một kết nối riêng.",
       "telegram": "Tạo bot bằng @BotFather, lưu token rồi đăng ký webhook (cần STUDIO_PUBLIC_URL https công khai).",
       "whatsapp": "Trong Meta app có WhatsApp, sao chép access token, phone number ID, app secret và tự đặt một verify token. Đặt webhook trong Meta dashboard là callback URL bên dưới với verify token đó, đăng ký sự kiện \"messages\". Tin có nút chỉ tới người đã nhắn số này trong 24 giờ; ngoài ra, nhập một template đã duyệt có hai nút trả lời nhanh (Duyệt, Từ chối).",
@@ -892,6 +894,7 @@
       "escalation_skipped": "Bỏ qua chuyển tiếp",
       "timed_out": "Hết hạn chờ",
       "chat_started": "Chạy từ chat",
+      "event_started": "Chạy từ sự kiện",
       "chat_refused": "Từ chối chạy từ chat"
     },
     "node": {
@@ -952,6 +955,7 @@
     "chat": {
       "eventsUrl": "Request URL cho Event Subscriptions (chat trigger)",
       "help": {
+        "webhook": "Ký timestamp và nội dung gốc. Sự kiện cần id, type, time (có múi giờ), place, sender và data. Chọn đúng nơi nhận và người gửi được phép trong trigger của workflow.",
         "slack": "Chat trigger: bật Event Subscriptions với URL này và đăng ký cho bot các sự kiện app_mention và message.im. App cần các quyền app_mentions:read và im:history.",
         "telegram": "Chat trigger: bấm lại Đăng ký webhook để bot nhận cả tin nhắn. Trong nhóm, mọi người gõ /lệnh, hoặc tắt privacy mode của bot trong @BotFather."
       },
@@ -1600,6 +1604,20 @@
       "0 0 1 * *": "Ngày đầu tháng",
       "custom": "Tuỳ chỉnh"
     }
+  },
+  "eventBinding": {
+    "description": "Chạy từ sự kiện đã xác thực tại nơi được cấu hình. Người gửi được phép dùng tài nguyên của chủ trigger để chạy workflow, không cần liên kết tài khoản studio.",
+    "place": "Nơi nhận sự kiện chính xác",
+    "mode": "Bắt đầu từ",
+    "command": "Lệnh (tài khoản đã liên kết)",
+    "event": "Sự kiện (chạy với quyền chủ trigger)",
+    "senders": "ID người gửi được phép",
+    "sendersPh": "123,456 hoặc * cho mọi người ở đây",
+    "type": "Loại sự kiện chính xác",
+    "admissionHelp": "Những người này có thể dùng tài nguyên của chủ trigger tại nơi đã chọn mà không cần tài khoản studio. Nhập ID cách nhau bằng dấu phẩy, hoặc chủ động dùng * để cho phép mọi người ở đây. Trigger theo lệnh được ưu tiên.",
+    "mappingHelp": "Ánh xạ đường dẫn sự kiện vào trường state. Để trống trường không dùng. Dùng data.text, data.message_id, actor.id, actor.name, conversation.id, time, id hoặc $ cho toàn bộ sự kiện. Giá trị phải đúng kiểu của trường.",
+    "pathPh": "Đường dẫn sự kiện, để trống nếu bỏ qua",
+    "replyHelp": "Workflow nhận sự kiện tự gửi phản hồi qua công cụ. Hệ thống không tự gửi tin bắt đầu hay thành công. Chỉ báo thành công sau khi xác nhận đã ghi dữ liệu."
   },
   "chatTriggers": {
     "button": "Chạy từ chat",

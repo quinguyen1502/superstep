@@ -1,10 +1,14 @@
 /** Chat triggers (TASK-0074 to TASK-0076, DEC-0046): types and the sample message the dialog shows. */
 
 export type ChatTrigger = { id: string; name: string; channel_id: string; kind: string | null; channel_name: string | null; place: string
+  event?: EventPolicy | null
   command: string; input_field: string; reply_field: string; enabled: boolean; note: string | null; last_message: number | null
   last_run_id: string | null; created: number }
 
-export type ChatTriggerForm = { name: string; channel_id: string; place: string; command: string; input_field: string; reply_field: string }
+export type EventPolicy = { senders: string[]; type: string; mapping: Record<string, string> }
+export type ChatTriggerForm = { name: string; channel_id: string; place: string; command: string; input_field: string; reply_field: string; event?: EventPolicy | null }
+
+export const newEventPolicy = (field = ''): EventPolicy => ({ senders: [], type: 'message.text', mapping: field ? { [field]: 'data.text' } : {} })
 
 export const DM = 'dm'
 
