@@ -58,6 +58,8 @@ nav:
       - Schedules: run/schedules.md
       - Chat triggers: run/chat-triggers.md
       - Chat: run/chat.md
+      - Chat API: run/chat-api.md
+      - Third-party chat auth: run/chat-third-party-auth.md
       - Workflow tests: run/tests.md
   - Operate:
       - operate/index.md
@@ -75,6 +77,7 @@ nav:
       - Configuration: reference/configuration.md
       - HTTP API: reference/api.md
       - Public API reference: reference/public-api.md
+      - Chat API compatibility: reference/compatibility.md
       - Error codes: reference/errors.md
       - Architecture: reference/architecture.md
       - Keyboard shortcuts: reference/shortcuts.md

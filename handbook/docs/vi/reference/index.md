@@ -1,5 +1,8 @@
 # Tham chiếu
 
+[Chính sách tương thích Chat API](compatibility.md) giải thích đường dẫn
+có phiên bản, thay đổi bổ sung và thời gian hỗ trợ.
+
 <div class="grid cards" markdown>
 
 -   :material-tune-variant:{ .lg .middle } **[Cấu hình](configuration.md)**

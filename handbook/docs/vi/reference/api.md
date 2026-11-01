@@ -51,6 +51,45 @@ WS /ws/run
   {"type": "node_finished", …} … {"type": "run_finished", …}
 ```
 
+## Public Chat v1 {#public-chat-v1}
+
+Mọi đường dẫn HTTP dưới đây tính từ `/api/public/v1/chat/{slug}` và nằm
+trong thẻ `Chat` của [OpenAPI công khai](openapi.public.json)
+(`/openapi.public.json`, `/docs/public` trên server).
+[Hướng dẫn socket](../run/chat-api.md) có link AsyncAPI và schema frame.
+Xem [Xác thực bên thứ ba](../run/chat-third-party-auth.md) và [Tương thích](compatibility.md).
+
+| Method | Đường dẫn | Kết quả (`data` trong envelope JSON) |
+| --- | --- | --- |
+| GET | hậu tố trống | Cài đặt trang, chế độ truy cập/hiện bước và giới hạn tệp |
+| GET | `/logo?v=<hash>` | Byte logo, không phải envelope |
+| GET | `/sessions` | `{sessions:[...]}`, chỉ phiên của người gọi |
+| POST | `/sessions` | Phiên mới; JSON `{embed:true}` tùy chọn |
+| GET | `/sessions/{sid}` | Phiên kèm `turns`, `steps_mode` |
+| GET | `/sessions/{sid}/turns?after=<turn_id>` | `{turns:[...]}` mới hơn cursor thuộc phiên; bỏ `after` để lấy tất cả |
+| POST | `/sessions/{sid}/attachments` | Metadata tệp đã upload; trường multipart `file` |
+| GET | `/sessions/{sid}/attachments/{aid}` | Tải tệp có xác thực, byte thay vì envelope |
+| DELETE | `/sessions/{sid}/attachments/{aid}` | `{ok:true}`; chỉ tệp chưa gửi |
+| PUT | `/sessions/{sid}/turns/{tid}/rating` | Đánh giá; JSON `{value:"up"}` hoặc `{value:"down",comment?:"..."}` |
+| DELETE | `/sessions/{sid}/turns/{tid}/rating` | `{ok:true}` |
+
+Stream: `WS /ws/public/v1/chat/{slug}` nhận `auth` tùy chọn, rồi một
+`message` hoặc `answer` có kiểu; `cancel` dừng run đang chạy. Frame trả về
+có kiểu, `v` và `seq`. Xem [Chat API](../run/chat-api.md) về ví dụ, trả lời
+Human, lưu lịch sử và kết nối lại.
+
+User app gửi JWT HS256 qua HTTP Bearer hoặc socket `auth.token`. Client
+ẩn danh cùng origin dùng cookie chat hoặc `X-Chat-Visitor`
+(`auth.visitor` / `?visitor=` trên socket). `X-Chat-Visitor: new` yêu cầu
+token khách mới trong `data.visitor_token` khi tạo/liệt kê phiên. Quyền
+studio dùng danh tính studio và giữ cùng origin. Client khác origin cần
+app token và origin được key cho phép, không dùng credentialed CORS.
+
+HTTP không phiên bản `/api/public/chat/{slug}/...` là alias cũ. Socket cũ
+`WS /ws/public/chat/{slug}` vẫn cùng origin với frame không có kiểu.
+`GET /api/public/chat-frame?path=/c/{slug}` kiểm tra CSP iframe cho nginx,
+không phải endpoint phiên hay stream.
+
 ## Endpoint
 
 ??? abstract "Xác thực và tài khoản"
@@ -149,10 +188,12 @@ WS /ws/run
     GET    /api/chat/sessions/{sid}?view=builder|visitor   DELETE /api/chat/sessions/{sid}
     GET    /api/workflows/{wid}/chat/visitors       GET    /api/workflows/{wid}/chat/visitors/{sid}   (chỉ xem)
     GET    /api/workflows/{wid}/chat/logo?v=      (logo: data: URL trong PUT để đặt, "" để bỏ)
+    GET    /api/workflows/{wid}/chat/app-keys     POST /api/workflows/{wid}/chat/app-keys
+    DELETE /api/workflows/{wid}/chat/app-keys/{key_id}   (chủ/admin; secret trả một lần khi tạo)
     WS     /ws/run   {chat_session_id, message} | {chat_session_id, resume_run_id, response}
 
-    Không cần đăng nhập (trang công khai, theo slug):
-    Chat API v1 (trong đặc tả công khai, thẻ Chat): các route như trên dưới /api/public/v1/chat/{slug}; các đường dẫn trên là bí danh.
+    HTTP alias công khai cũ (xác thực tùy chế độ truy cập của chat):
+    Client mới dùng phần Public Chat v1 đầy đủ ở trên.
     GET    /api/public/chat/{slug}                  (title, intro, suggestions, access, steps_mode, signed_in, embed_origins, logo)
     GET    /api/public/chat/{slug}/sessions         POST   /api/public/chat/{slug}/sessions   ({embed?})
     GET    /api/public/chat/{slug}/sessions/{sid}

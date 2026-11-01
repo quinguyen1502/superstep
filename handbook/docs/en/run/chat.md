@@ -39,7 +39,7 @@ on a page of its own, and [embed it](#embed-the-chat-on-your-site) on your site 
 
 | Setting | What it does | Default |
 |---|---|---|
-| Who can chat | **Studio users** chat in this panel. **Anyone with the link** or **Signed-in users** also [publish the chat](#publish-a-chat) on a public page. | Studio users |
+| Who can chat | Leave all public options unchecked for builders only. **Anyone with the link**, **Signed-in users** and **Third-party app users** [publish the chat](#publish-a-chat); several options may be selected. | Builders only |
 | Messages remembered | How many earlier exchanges (one message and its answer) go to the conversation field. | 10 |
 | Steps shown to visitors | **None**, **Step names** or **Full** (with each step's input and output). | Step names |
 | Retention (days) | Chats with no new message for this long are deleted. | 30 |
@@ -190,8 +190,9 @@ its timeout action decides what happens.
 
 ## Publish a chat
 
-Set **Who can chat** to **Anyone with the link** or **Signed-in users**, and keep
-**Chat** on. The chat now has a page of its own at `/c/<address>`, where people
+Under **Who can chat**, enable **Anyone with the link**, **Signed-in users**,
+or **Third-party app users**, and keep **Chat** on. You can select several
+options. The chat now has a page of its own at `/c/<address>`, where people
 who never open the studio can talk to the workflow.
 
 ![Publish settings](../images/chat-publish.png)
@@ -217,6 +218,10 @@ On the page:
 - **Signed-in users**: any account of this studio can chat, also one that may
   not open the workflow. A visitor who is not signed in goes to the sign-in page
   and comes back to the chat.
+- **Third-party app users**: your application's backend signs short-lived
+  user tokens using a per-chat app key. Integrate with the direct
+  [Chat API](chat-api.md) and [auth guide](chat-third-party-auth.md); the
+  built-in page/widget does not yet have a token identify bridge.
 - Each message runs the saved workflow as its **owner**: with the owner's
   credentials, knowledge bases and MCP servers, as Slack and Telegram chats do.
   The runs are in the workflow's History.
@@ -235,8 +240,8 @@ with the `STUDIO_PUBLIC_CHAT_RATE_*` settings (see
 [Configuration](../reference/configuration.md)). The public demo publishes no
 chats.
 
-To take the page down, set **Who can chat** back to **Studio users** or turn
-**Chat** off. The page then says the chat is not available.
+To take the page down, uncheck all public access options (builders only),
+or turn **Chat** off. The page then says the chat is not available.
 
 ### Visitor chats
 

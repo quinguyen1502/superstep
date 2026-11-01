@@ -39,7 +39,7 @@ một trang riêng, và nếu muốn thì [nhúng chat vào site của bạn](#n
 
 | Cài đặt | Tác dụng | Mặc định |
 |---|---|---|
-| Ai được chat | **Người dùng studio** chat trong khung này. **Ai có link** hoặc **Người đã đăng nhập** thì [công khai chat](#cong-khai-chat) trên một trang riêng. | Người dùng studio |
+| Ai được chat | Bỏ chọn mọi tùy chọn công khai để chỉ người dựng workflow chat. **Ai có link**, **Người đã đăng nhập**, **Người dùng ứng dụng bên thứ ba** [công khai chat](#cong-khai-chat); có thể chọn nhiều. | Chỉ người dựng workflow |
 | Số lượt nhớ | Số lượt hỏi–đáp trước đó (một tin nhắn và câu trả lời của nó) gửi vào trường cuộc trò chuyện. | 10 |
 | Bước hiện cho người chat | **Không**, **Tên bước** hoặc **Đầy đủ** (kèm input và output của từng bước). | Tên bước |
 | Thời gian lưu (ngày) | Cuộc trò chuyện không có tin nhắn mới quá thời gian này sẽ bị xoá. | 30 |
@@ -188,8 +188,9 @@ của node áp dụng cho cả hai cách; khi quá hạn, hành động khi hế
 
 ## Công khai chat
 
-Chọn **Ai được chat** là **Ai có link** hoặc **Người đã đăng nhập**, và giữ
-**Chat** bật. Chat có một trang riêng ở `/c/<địa-chỉ>`, nơi người chưa từng mở
+Trong **Ai được chat**, bật **Ai có link**, **Người đã đăng nhập** hoặc
+**Người dùng ứng dụng bên thứ ba**, và giữ **Chat** bật. Có thể chọn nhiều
+tùy chọn. Chat có một trang riêng ở `/c/<địa-chỉ>`, nơi người chưa từng mở
 studio cũng chat được với workflow.
 
 ![Cài đặt công khai](../images/chat-publish.png)
@@ -215,6 +216,10 @@ Trên trang:
 - **Người đã đăng nhập**: mọi tài khoản của studio này đều chat được, kể cả tài
   khoản không được mở workflow. Khách chưa đăng nhập được đưa tới trang đăng
   nhập rồi quay lại chat.
+- **Người dùng ứng dụng bên thứ ba**: backend ứng dụng của bạn ký user token
+  ngắn hạn bằng app key của từng chat. Tích hợp qua
+  [Chat API](chat-api.md) và [hướng dẫn xác thực](chat-third-party-auth.md);
+  trang/widget có sẵn chưa có cầu nối identify bằng token.
 - Mỗi tin nhắn chạy workflow đã lưu dưới danh nghĩa **chủ workflow**: dùng
   credential, knowledge base và MCP server của chủ workflow, như chat qua Slack và
   Telegram. Các run nằm trong Lịch sử của workflow.
@@ -232,8 +237,8 @@ các giới hạn này bằng các cài đặt `STUDIO_PUBLIC_CHAT_RATE_*` (xem
 [Cấu hình](../reference/configuration.md)). Bản demo công khai không công khai
 chat nào.
 
-Để gỡ trang, chọn lại **Ai được chat** là **Người dùng studio**, hoặc tắt
-**Chat**. Trang khi đó báo chat không mở.
+Để gỡ trang, bỏ chọn mọi tùy chọn truy cập công khai (chỉ người dựng workflow),
+hoặc tắt **Chat**. Trang khi đó báo chat không mở.
 
 ### Chat của khách
 
