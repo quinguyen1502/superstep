@@ -28,6 +28,10 @@ class AuthenticationError(SuperstepError):
     """401 TRIGGER_TOKEN_INVALID: missing, invalid or revoked token, or a token of another workflow."""
 
 
+class PermissionDeniedError(SuperstepError):
+    """HTTP 403 or a chat origin refusal."""
+
+
 class NotFoundError(SuperstepError):
     """404, e.g. RUN_NOT_FOUND."""
 
@@ -82,6 +86,12 @@ BY_CODE: Dict[str, Type[SuperstepError]] = {
     "CHAT_ATTACHMENT_NOT_FOUND": NotFoundError,
     "CHAT_LOGO_NOT_FOUND": NotFoundError,
     "CHAT_SIGN_IN_REQUIRED": AuthenticationError,
+    "CHAT_TOKEN_REQUIRED": AuthenticationError,
+    "CHAT_TOKEN_INVALID": AuthenticationError,
+    "CHAT_TOKEN_EXPIRED": AuthenticationError,
+    "CHAT_APP_KEY_REVOKED": AuthenticationError,
+    "CHAT_ORIGIN_FORBIDDEN": PermissionDeniedError,
+    "CHAT_FRAME_INVALID": InvalidRequestError,
     "CHAT_ATTACHMENT_TYPE": InvalidRequestError,
     "CHAT_ATTACHMENT_TOO_MANY": InvalidRequestError,
     "CHAT_ATTACHMENTS_OFF": InvalidRequestError,
@@ -90,7 +100,7 @@ BY_CODE: Dict[str, Type[SuperstepError]] = {
     "CHAT_RATING_NOT_ALLOWED": InvalidRequestError,
     "CHAT_ATTACHMENT_TOO_LARGE": PayloadTooLargeError,
 }
-BY_STATUS: Dict[int, Type[SuperstepError]] = {401: AuthenticationError, 404: NotFoundError, 400: InvalidRequestError,
+BY_STATUS: Dict[int, Type[SuperstepError]] = {401: AuthenticationError, 403: PermissionDeniedError, 404: NotFoundError, 400: InvalidRequestError,
                                               422: InvalidRequestError, 413: PayloadTooLargeError, 429: RateLimitError}
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Live integration test of both SDKs: starts the backend on a temporary database, signs in as the dev admin, creates a
-# workflow token and isolated chat app keys, then runs both SDKs' workflow tests and TypeScript chat tests.
+# workflow token and isolated chat app keys, then runs both SDKs' workflow and chat tests.
 #
 #   scripts/sdk_integration.sh
 #
@@ -31,6 +31,6 @@ export SUPERSTEP_IT_BASE_URL="$BASE" SUPERSTEP_IT_WORKFLOW_ID="$WID" SUPERSTEP_I
 export SUPERSTEP_IT_CHAT_CONFIG="$WORK/chat.json"
 
 echo "== Python SDK (live)"
-(cd "$ROOT/sdk/python" && "$SDK_PYTHON" -m pytest -q tests/test_integration.py -rs)
+(cd "$ROOT/sdk/python" && "$SDK_PYTHON" -m pytest -q tests/test_integration.py tests/test_chat_integration.py -rs)
 echo "== TypeScript SDK (live)"
 (cd "$ROOT/sdk/typescript" && npm run --silent test:integration)

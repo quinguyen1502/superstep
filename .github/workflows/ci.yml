@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, 'factory/task-*']
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -228,7 +228,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - run: python -m pip install -e ".[dev]" build
+      - run: python -m pip install -e ".[dev,chat]" build
       - run: python -m pytest -q
       - run: python -m build
 
@@ -273,7 +273,7 @@ jobs:
           cache-dependency-path: sdk/typescript/package-lock.json
       - name: Install backend and SDKs
         run: |
-          python -m pip install -e "backend[dev]" -e "sdk/python[dev]"
+          python -m pip install -e "backend[dev]" -e "sdk/python[dev,chat]"
           npm ci --prefix sdk/typescript
       - name: Public spec is up to date
         run: python scripts/gen_public_openapi.py --check

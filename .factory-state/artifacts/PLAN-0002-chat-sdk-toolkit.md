@@ -5,7 +5,7 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 TASK-0215 to TASK-0219 done and owner-approved; TASK-0220 owner-approved for Ready #285 (not merged), remaining tasks in backlog)
+- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 done; TASK-0220–0221 owner-approved for Ready #285/#286, TASK-0222 finalisation follows; later tasks in backlog)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -23,7 +23,9 @@ Phase-1 review and QA evidence lives in the corresponding done tasks (TASK-0217:
 
 ## Phase 2 progress (2026-11-02)
 
-TASK-0220 is owner-approved on 2026-11-02 and moves to done for single-commit Ready #285 (REV/QA-0215). It includes bounded JSON Human answers and the reviewed browser fetch receiver fix discovered by TASK-0222. Dependent #286/#287 are being finalised in stack order. Merge and release remain pending explicit approval; later UI/native work has not started.
+TASK-0220 and TASK-0221 are owner-approved on 2026-11-02 and move to done for single-commit Ready #285/#286 (REV/QA-0215–0216). Python is explicitly stacked on #285; #287 follows in stack order. The reviewed browser fetch fix discovered by TASK-0222 now belongs to #285. Merge and release remain pending explicit approval; later UI/native work has not started.
+
+Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server, so preserve that version until the next approved shared release (phase grouping still proposes 0.11.0). Do not downgrade Python to the obsolete 0.2.0 target. TypeScript keeps its independent 0.2.0 package target.
 
 ## Order and dependencies
 
@@ -35,7 +37,7 @@ TASK-0220 is owner-approved on 2026-11-02 and moves to done for single-commit Re
 | TASK-0218 user tokens | 1 | L | 0216, 0217 | HS256 verifier, per-user scoping, CORS, limits, error codes |
 | TASK-0219 handbook (API, auth, compatibility) | 1 | M | 0218 | en and vi pages, CHANGELOG |
 | TASK-0220 TypeScript SDK chat | 2 | L | 0218 | `client.chat`, async iterator, refresh, `createChatStore`, `mintChatToken`, 0.2.0 |
-| TASK-0221 Python SDK chat | 2 | M | 0218 | sync and async chat, `mint_chat_token`, `superstep[chat]`, 0.2.0 |
+| TASK-0221 Python SDK chat | 2 | M | 0218 | sync and async chat, `mint_chat_token`, `superstep[chat]`, shared SDK/CLI/server version |
 | TASK-0222 sample host and e2e | 2 | M | 0220, 0221 | `examples/chat-host`, cross-origin Playwright job |
 | TASK-0223 extract `@superstep/react` | 3 | L | 0216 | npm workspace, move chat UI, no visual change |
 | TASK-0224 `useChat`, components, theming | 3 | M | 0220, 0223 | public components, scoped CSS, `sdk-react-v*` publish |

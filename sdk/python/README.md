@@ -1,8 +1,10 @@
 # superstep (Python SDK)
 
-Python client for the Superstep public API: start a workflow run from your own
-service, poll it, and read its final state. Sync and async clients, typed
-models and typed errors; the only dependency is `httpx`.
+Python client for Superstep workflow runs and headless chat v1. Sync and async
+clients, typed results/errors; the base dependency is `httpx`. Socket streaming
+uses the optional `superstep[chat]` extra. The package shares its version with
+the CLI/server; chat ships in the next owner-approved release, not a downgrade
+to the old standalone SDK 0.2.0 target.
 
 - Guide: <https://quinguyen1502.github.io/superstep/run/public-api/>
 - API reference: <https://quinguyen1502.github.io/superstep/reference/public-api/>
@@ -17,6 +19,138 @@ pip install ./sdk/python
 ```
 
 Python 3.9 or later.
+
+## Chat
+
+```bash
+pip install 'superstep[chat]'
+# From this repository before publication:
+pip install './sdk/python[chat]'
+```
+
+Publish a workflow with app access and create an app key in Chat settings.
+Authenticate your user in your own server, then mint a short-lived token there:
+
+```python
+from superstep import mint_chat_token
+
+token = mint_chat_token(
+    key_id=app_key_id, secret=app_key_secret, slug="support",
+    user_id=authenticated_user.id, name=authenticated_user.name,
+    ttl=600, meta={"locale": "vi"},
+)
+```
+
+The helper uses only the standard library, HS256 with the literal UTF-8 secret,
+and the audience `superstep-chat:<slug>`. TTL is 1..3600 seconds (default 600);
+JSON metadata is bounded to 1024 UTF-8 bytes and grants no permissions. Keep the
+app-key secret in your server. Never let a browser choose the signed user ID.
+
+```python
+from superstep import Client
+
+# A callback gets a fresh user token from your application server; a fixed JWT
+# string is also accepted. Never pass a workflow token or app-key secret here.
+with Client(base_url="https://superstep.example.com") as client:
+    chat = client.chat("support", token=get_user_token)
+    page = chat.info()
+    session = chat.start()  # HTTP methods return dictionaries.
+    with chat.send(session["id"], "Hello", locale="vi") as stream:
+        for event in stream:
+            if event["type"] == "token":
+                print(event["delta"], end="", flush=True)
+    result = stream.result  # ChatResult, populated after the iterator is drained.
+    if result.status == "waiting":
+        with chat.answer(session["id"], {"approved": True, "note": "Confirmed"},
+                         node=result.question.get("node")) as answer:
+            for event in answer:
+                handle_event(event)
+```
+
+`answer` accepts text, a JSON form object, or a boolean approval. v1 bounds text
+and serialized form objects to 10000 characters; it does not provide a form
+builder. Events are dictionaries following the published v1 schema, with
+additional `history` and final `result` events. Unknown event types and duplicate
+sequence numbers are ignored. `result.status` may be `ok`, `waiting`, `error`,
+`cancelled` or `timeout`; protocol, authentication and network failures raise
+typed exceptions. Iterators are lazy: creating a stream opens no socket or run.
+
+```python
+from superstep import AsyncClient
+
+async with AsyncClient(base_url="https://superstep.example.com") as client:
+    chat = client.chat("support", token=get_user_token)  # callback may be async
+    session = await chat.start()
+    async with chat.send(session["id"], "Hello") as stream:
+        async for event in stream:
+            handle_event(event)
+    result = stream.result
+```
+
+`chat.list()`, `chat.get(session_id)` and `chat.turns(session_id, after=turn_id)`
+read this identity's sessions/history. Anonymous clients omit `token`; save
+`chat.visitor_token` after the first operation and restore it as `visitor_token`
+on a new client. No storage is accessed automatically. Signed and visitor
+identities cannot be combined on one chat client. `ChatClient` and
+`AsyncChatClient` are also usable directly with `base_url`.
+
+### Files, ratings and transport
+
+Use these operations inside an open client context:
+
+```python
+with open("note.txt", "rb") as file:
+    attachment = chat.attachments.upload(session["id"], file,
+                                         filename="note.txt", content_type="text/plain")
+with chat.send(session["id"], "Read this", attachments=[attachment["id"]]) as stream:
+    for event in stream:
+        handle_event(event)
+download = chat.attachments.download(session["id"], attachment["id"])  # httpx.Response
+chat.ratings.put(session["id"], stream.result.turn_id, "down", comment="Missing context")
+chat.ratings.delete(session["id"], stream.result.turn_id)
+# Before sending an attachment: chat.attachments.delete(session_id, attachment_id)
+```
+
+Uploads accept bytes or a binary file. A seekable file is rewound on an expiry
+retry; a non-rewindable stream cannot safely be retried and raises `ConfigError`.
+Async file/rating methods use `await`. The server must enable attachments.
+
+HTTP requests and socket auth frames carry user tokens, never URLs. Chat never
+inherits workflow headers, default HTTP authentication, query parameters or
+studio cookies from a borrowed HTTP client, and refuses redirects. Configure
+`origin` only when your server/native caller needs a matching allowed origin.
+`websocket_connect` is injectable; otherwise the optional websockets package
+is imported only when streaming. Its automatic proxy selection is disabled;
+a custom factory can implement a deployment-specific transport.
+
+### Refresh, recovery and cleanup
+
+A token callback is called for each HTTP/socket authentication, and once more
+after `CHAT_TOKEN_EXPIRED`. Only an explicit socket rejection before a run starts
+can retry a message. Fixed JWT strings, revoked keys and forbidden origins never
+refresh. No network failure triggers a blind message resend.
+
+After completion or interruption, bounded `turns?after=` reads recover persisted
+history. Recovery only confirms a new assistant turn for a known run ID. A lost
+run acknowledgement or absent persisted result raises `CHAT_STREAM_INTERRUPTED`;
+reload history before deciding whether to send again. Stream options:
+`timeout=300` seconds (`None` disables the socket deadline), `after`,
+`recovery_attempts=20` (0..100) and `recovery_interval=0.25` seconds. HTTP uses
+the parent/direct client's timeout separately.
+
+Use `with` / `async with` for deterministic cleanup when stopping iteration
+early; `stream.close()` / `await stream.aclose()` is also available. Cancellation
+uses `stream.cancel()` or `chat.cancel(session_id=None)` (await async versions),
+then drain the iterator for the backend's terminal outcome. Async task
+cancellation and parent-client close release active sockets. Cancellation can
+race completion: reload history if the outcome is unknown. A stream closed
+before completion has no final result. A bare `break` alone does not guarantee
+immediate iterator cleanup in Python.
+
+The sync/async contract tests replay the backend recording from TASK-0220 and
+share its HS256 token vectors. `scripts/sdk_integration.sh` tests both SDKs
+against a temporary backend (including live Python text/form answers, files,
+ratings and user isolation). Unit CI covers Python 3.9 and 3.12.
 
 ## Configure
 
@@ -35,7 +169,9 @@ client = Client(
 ```
 
 Arguments left out are read from `SUPERSTEP_WORKFLOW_ID`, `SUPERSTEP_TOKEN`
-and `SUPERSTEP_BASE_URL`. A missing value raises `ConfigError`.
+and `SUPERSTEP_BASE_URL`. A missing base URL raises `ConfigError`; workflow
+operations additionally require a workflow ID/token. Chat-only clients need
+only `base_url`.
 
 ## Run a workflow
 
