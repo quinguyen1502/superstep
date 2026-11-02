@@ -62,6 +62,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     if until and any(n["id"] == until and n.get("type") == "agent" for n in wf["nodes"]): until = f"{until}{agents.SEP}{agents.EXIT}"  # the whole agent
     usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished (TASK-0010)
     code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished (TASK-0053)
+    model_attempts: Dict[str, List[dict]] = {}
     held = None
     if resume and ("value" in resume or resume.get("answers") or resume.get("children")):
         held = {k: resume[k] for k in ("node", "value", "answers", "children") if k in resume}
@@ -99,7 +100,9 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     try:
         for mode, chunk in app.stream(inputs, cfg, stream_mode=["updates", "checkpoints", "custom"]):
             if mode == "custom":  # live LLM text (TASK-0030): sent to the client, never stored (node_finished has the result)
-                if isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("code_output"):
+                if isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("model_attempt"):
+                    model_attempts.setdefault(chunk["node"], []).append(chunk["model_attempt"])
+                elif isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("code_output"):
                     code_out[chunk["node"]] = chunk["code_output"]  # Code node stdout (TASK-0053), stored on node_finished
                 elif isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("delta"):
                     yield {"type": "node_token", "node": chunk["node"], "iteration": counts.get(chunk["node"], 1), "delta": chunk["delta"],
@@ -133,6 +136,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                        "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),  # input: time travel forks from it
                        **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did (TASK-0116)
                        **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
+                       **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                        **({"code_output": cap_payload(code_out.pop(nid))} if nid in code_out else {})}
     except Interrupt as i:  # a Human node or an Agent tool approval is waiting: hand back a checkpoint instead of an error
         # parallel siblings finish first (Interrupt is a GraphBubbleUp) and come back from the ledger on resume
@@ -152,6 +156,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", **(meta(nid) if nid in nodes else {}), "iteration": counts.get(nid, 1) if nid else None,
                "duration_ms": round((time.perf_counter() - t0) * 1000, 2), "input": cap_payload(dict(state)),
                "code": getattr(e, "code", "NODE_FAILED"), "errors": [safe_error(e)],
+               **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                **({"code_output": cap_payload(e.output)} if getattr(e, "output", None) else {})}
         return
     if until and until not in finished_ids:

@@ -143,6 +143,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "VERSION_NOT_FOUND": (404, "Workflow version not found"),
     "CALLBACK_URL_INVALID": (400, "callback_url must be a public http(s) URL"),
     "NODE_FAILED": (500, "Node failed"),
+    "MODEL_POLICY_EXPORT_UNAVAILABLE": (400, "Model fallback policies are not yet supported by code exports; remove the policy to export"),
     "HTTP_TOOL_URL_BLOCKED": (400, "HTTP Tool node {node}: the URL must be a public http(s) address"),
     "TEMPLATE_REF_INVALID": (400, "Template error: {reason}"),
     # approval channels (TASK-0022)

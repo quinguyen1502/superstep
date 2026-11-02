@@ -36,3 +36,14 @@ backend/.venv
 
 # e2e fs attachment storage (TASK-0195)
 backend/.e2e-attachments/
+
+# Owner-requested: keep screenshot evidence out of Git; handbook images stay versioned.
+.factory-state/evidence/**/*.png
+.factory-state/evidence/**/*.jpg
+.factory-state/evidence/**/*.jpeg
+.factory-state/evidence/**/*.webp
+.factory-state/evidence/**/*.gif
+.factory-state/evidence/**/*.avif
+.factory-state/evidence/**/*.bmp
+.factory-state/evidence/**/*.tif
+.factory-state/evidence/**/*.tiff

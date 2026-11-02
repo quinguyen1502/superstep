@@ -405,6 +405,15 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0148 A task PR moves its own task to done when the owner approves the merge (framework 338d7a8); TASK-0139 to
   TASK-0144 link their review and QA. **merged** (PR #199).
 
+## Generic events, connections and model policy
+
+REQ-0083, owner requested implementation on 2026-11-01 after selecting generic integrations over vendor-specific canvas nodes. PLAN-0003 and DEC-0081 describe the delivery; DES-0001 covers existing-surface UX. No production cutover or release is authorised.
+
+- TASK-0231 Model fallback policy — done; owner approved merge of #278 into develop on 2026-11-02 (REV-0208, QA-0208); final-head CI gates merging.
+- TASK-0232 Event bindings, Telegram metadata and signed JSON sources — planned.
+- TASK-0233 Managed tools/connections through existing MCP nodes and Agent slots — planned.
+- TASK-0234 Expense example, end-to-end tests and bilingual guide — planned.
+
 ## Releases
 
 - TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,

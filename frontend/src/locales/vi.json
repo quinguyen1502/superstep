@@ -453,6 +453,7 @@
     "RUN_NOT_FOUND": "Không tìm thấy run, run đã kết thúc hoặc không thuộc về bạn",
     "RUN_NODE_NOT_REACHED": "Run đã kết thúc mà không tới node '{{node}}'",
     "NODE_FAILED": "Node bị lỗi",
+    "MODEL_POLICY_EXPORT_UNAVAILABLE": "Xuất code hiện chưa hỗ trợ chính sách model dự phòng; bỏ chính sách này để xuất",
     "HTTP_TOOL_URL_BLOCKED": "Node HTTP Tool {{node}}: URL phải là địa chỉ http(s) công khai",
     "TEMPLATE_REF_INVALID": "Lỗi template: {{reason}}",
     "CREDENTIAL_NOT_FOUND": "Credential không tồn tại hoặc không thuộc về bạn",
@@ -1959,6 +1960,12 @@
     "try": "Dùng thử demo",
     "tryHint": "Đăng nhập bằng tài khoản demo dùng chung. Bạn có thể mở, sửa và chạy workflow nhưng không lưu được thay đổi."
   },
+  "modelFallback": {
+    "enable": "Dùng model dự phòng",
+    "credential": "Credential dự phòng",
+    "model": "Model dự phòng",
+    "hint": "Thử model này một lần nếu model chính không kết nối được, không khả dụng hoặc trả kết quả sai định dạng. Lỗi xác thực dừng run. Khi bật dự phòng, chỉ gửi nội dung trả lời sau khi một model thành công. Cài đặt thử lại của node lặp lại toàn bộ chính sách. Xuất code hiện chưa hỗ trợ chính sách này."
+  },
   "chat": {
     "appKeys": {
       "studioOnly": "Bỏ chọn tất cả để chỉ cho phép người dựng workflow chat.",
@@ -2264,6 +2271,7 @@
     "FIELD_RESERVED_AGENT": "Trường state {{field}}: tên bắt đầu bằng '{{prefix}}' được dành cho node Agent",
     "REDUCER_UNKNOWN": "Trường state {{field}}: không có reducer '{{reducer}}' (hãy dùng {{reducers}})",
     "REDUCER_TYPE": "Trường state {{field}}: reducer '{{reducer}}' cần kiểu {{types}}",
+    "MODEL_FALLBACK_INVALID": "Node {{node}}: dự phòng phải có cặp credential/model khác, với credential và model không trống",
     "OUTPUT_FIELD_MISSING": "Node {{node}}: chưa chọn output_field",
     "OUTPUT_FIELD_UNKNOWN": "Node {{node}}: output_field '{{field}}' không có trong state",
     "VARIABLE_UNKNOWN": "Node {{node}}: biến state.{{field}} không có trong state",

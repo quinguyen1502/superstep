@@ -453,6 +453,7 @@
     "RUN_NOT_FOUND": "Run not found, already finished or not yours",
     "RUN_NODE_NOT_REACHED": "The run finished without reaching node '{{node}}'",
     "NODE_FAILED": "Node failed",
+    "MODEL_POLICY_EXPORT_UNAVAILABLE": "Model fallback policies are not yet supported by code exports; remove the policy to export",
     "HTTP_TOOL_URL_BLOCKED": "HTTP Tool node {{node}}: the URL must be a public http(s) address",
     "TEMPLATE_REF_INVALID": "Template error: {{reason}}",
     "CREDENTIAL_NOT_FOUND": "Credential not found or not yours",
@@ -1959,6 +1960,12 @@
     "try": "Try the demo",
     "tryHint": "Sign in as the shared demo visitor. You can open, edit and run workflows, but not save changes."
   },
+  "modelFallback": {
+    "enable": "Use a fallback model",
+    "credential": "Fallback credential",
+    "model": "Fallback model",
+    "hint": "Try this model once if the primary is unreachable, unavailable or returns an invalid response. Authentication errors stop the run. With fallback enabled, answer text is published only after a model succeeds. Node retry settings repeat the whole policy. Code exports do not yet support this policy."
+  },
   "chat": {
     "appKeys": {
       "studioOnly": "Leave all options unchecked to allow only workflow builders.",
@@ -2264,6 +2271,7 @@
     "FIELD_RESERVED_AGENT": "State field {{field}}: names starting with '{{prefix}}' are reserved for Agent nodes",
     "REDUCER_UNKNOWN": "State field {{field}}: unknown reducer '{{reducer}}' (use {{reducers}})",
     "REDUCER_TYPE": "State field {{field}}: reducer '{{reducer}}' needs type {{types}}",
+    "MODEL_FALLBACK_INVALID": "Node {{node}}: fallback must specify a different credential/model pair with a nonempty credential and model",
     "OUTPUT_FIELD_MISSING": "Node {{node}}: output_field is missing",
     "OUTPUT_FIELD_UNKNOWN": "Node {{node}}: output_field '{{field}}' is not in the state",
     "VARIABLE_UNKNOWN": "Node {{node}}: variable state.{{field}} is not in the state",
