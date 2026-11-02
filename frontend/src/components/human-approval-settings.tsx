@@ -20,7 +20,7 @@ export function HumanApprovalSettings({ value, channels, onChange }: { value?: A
   const { t } = useTranslation(); const v = value || {}
   const set = (patch: Approval) => onChange({ ...v, ...patch })
   const [raw, setRaw] = useState((v.approvers || []).join(', '))  // free text while typing; the list is what is saved
-  const list = channels?.channels || []
+  const list = (channels?.channels || []).filter(c => !c.events_only)
   const chosen = v.channel_id ? list.find(c => c.id === v.channel_id) : list.find(c => c.kind === v.channel)
   const missing = !!v.channel && !chosen
   return <div className="space-y-3" id="human-approval">

@@ -58,17 +58,17 @@ class ChannelService:
         `channel` kind (the owner's personal connection, else the org one)."""
         if cfg.get("channel_id"):
             c = self.repo.channel(str(cfg["channel_id"]))
-            ok = self.usable(owner, c) and c.kind in self.adapters and (not policy or c.scope != "org" or self.org_allowed(owner))
+            ok = self.usable(owner, c) and c.kind in self.adapters and not self.adapters[c.kind].events_only and (not policy or c.scope != "org" or self.org_allowed(owner))
             return c if ok else None
         kind = cfg.get("channel")
-        if kind not in self.adapters: return None
+        if kind not in self.adapters or self.adapters[kind].events_only: return None
         c = self.repo.find_channel(owner, kind, "user") or self.repo.org_channel(kind)
         return None if c is not None and policy and c.scope == "org" and not self.org_allowed(owner) else c
 
     def dm_channel(self, uid: str, kind: str, team: str = "") -> Optional[tuple[ApprovalChannel, dict]]:
         """(adapter, secrets) able to DM this user's chat account: their personal connection, else the org one; for
         platforms with workspaces (Slack) one of that workspace."""
-        if kind not in self.adapters: return None
+        if kind not in self.adapters or self.adapters[kind].events_only: return None
         if self.adapters[kind].per_team:
             c = next((c for c in self.workspaces(uid, kind) if c.team_id == team), None)
         else: c = self.repo.find_channel(uid, kind, "user") or self.repo.org_channel(kind)
@@ -118,7 +118,7 @@ class ChannelService:
                 "editable": c.owner == uid if c.scope == "user" else admin,
                 "callback_url": (base + path) if base else None, "callback_path": path,
                 "shared_callback_url": (base + shared) if base and shared else None, "shared_callback_path": shared,
-                "chat": self._chat(c, base)}
+                "chat": self._chat(c, base), **({"events_only": True} if self.adapter(c.kind).events_only else {})}
 
     def list(self, uid: str) -> dict:
         admin = self.is_admin(uid)

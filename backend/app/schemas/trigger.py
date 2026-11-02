@@ -31,13 +31,15 @@ class ChatTriggerIn(BaseModel):  # TASK-0074
     name: str = Field("", max_length=80)
     channel_id: str = Field(..., max_length=64)
     place: str = Field("dm", max_length=64)
-    command: str = Field(..., max_length=40)
-    input_field: str = Field(..., max_length=120)
-    reply_field: str = Field(..., max_length=120)
+    command: str = Field("", max_length=40)
+    input_field: str = Field("", max_length=120)
+    reply_field: str = Field("", max_length=120)
+    event: Optional[dict[str, Any]] = None
     enabled: bool = True
 
 
 class ChatTriggerPatch(BaseModel):
+    event: Optional[dict[str, Any]] = None
     name: Optional[str] = Field(None, max_length=80)
     channel_id: Optional[str] = Field(None, max_length=64)
     place: Optional[str] = Field(None, max_length=64)

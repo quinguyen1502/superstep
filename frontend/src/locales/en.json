@@ -817,6 +817,7 @@
   },
   "approvals": {
     "kind": {
+      "webhook": "Signed JSON webhook",
       "slack": "Slack",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
@@ -828,6 +829,7 @@
     "notConnected": "not connected",
     "keepSecret": "Saved, enter a new value to replace",
     "help": {
+      "webhook": "Choose a secret of 32–256 letters, digits, underscores or hyphens. Send JSON events to the callback URL with X-Studio-Signature (HMAC-SHA256). This connection only receives events.",
       "slack": "Create a Slack app with the bot scopes chat:write and im:write (verification codes), turn on Interactivity with the Request URL shown on the connection. For chat triggers, also add app_mentions:read and im:history and turn on Event Subscriptions. Each workspace is its own connection.",
       "telegram": "Create a bot with @BotFather, save its token, then register the webhook (needs a public https STUDIO_PUBLIC_URL).",
       "whatsapp": "In a Meta app with the WhatsApp product, copy the access token, the phone number ID and the app secret, and choose a verify token. Then set the webhook in the Meta dashboard to the callback URL below with that verify token, and subscribe to \"messages\". Button messages only reach people who wrote to the number in the last 24 hours; outside that window, give an approved template with two quick-reply buttons (Approve, Reject).",
@@ -892,6 +894,7 @@
       "escalation_skipped": "Escalation skipped",
       "timed_out": "Timed out",
       "chat_started": "Run from chat",
+      "event_started": "Run from event",
       "chat_refused": "Chat run refused"
     },
     "node": {
@@ -952,6 +955,7 @@
     "chat": {
       "eventsUrl": "Event Subscriptions Request URL (chat triggers)",
       "help": {
+        "webhook": "Sign the timestamp and raw body. Events need id, type, time (with timezone), place, sender and data. Bind an exact place and allowed senders in workflow triggers.",
         "slack": "Chat triggers: turn on Event Subscriptions with this URL and subscribe the bot to app_mention and message.im. The app needs the scopes app_mentions:read and im:history.",
         "telegram": "Chat triggers: press Register webhook again so the bot also receives messages. In groups, people write /command, or turn off the bot's privacy mode in @BotFather."
       },
@@ -1600,6 +1604,20 @@
       "0 0 1 * *": "First day of the month",
       "custom": "Custom"
     }
+  },
+  "eventBinding": {
+    "description": "Start from authenticated events in a configured place. The allowed senders run this workflow with the trigger owner's resources; they do not need a linked studio account.",
+    "place": "Exact event place",
+    "mode": "Start from",
+    "command": "A command (linked account)",
+    "event": "An event (run as owner)",
+    "senders": "Allowed sender IDs",
+    "sendersPh": "123,456 or * for everyone here",
+    "type": "Exact event type",
+    "admissionHelp": "These senders can spend the trigger owner's resources in this place without a studio account. Enter sender IDs separated by commas, or explicitly use * to allow everyone here. Command bindings take priority.",
+    "mappingHelp": "Map event paths to declared state fields. Leave unused fields empty. Use data.text, data.message_id, actor.id, actor.name, conversation.id, time, id or $ for the entire event. Values must match each field's type.",
+    "pathPh": "Event path, or empty to skip",
+    "replyHelp": "Event workflows send their own replies through tools. No automatic start or success reply is sent. Success must follow a confirmed external write."
   },
   "chatTriggers": {
     "button": "Chat triggers",
