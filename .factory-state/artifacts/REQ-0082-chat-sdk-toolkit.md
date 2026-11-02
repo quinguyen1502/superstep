@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0082
-- Status: Accepted on 2026-10-31 (PR #271). Phase 1 implemented and owner-approved; phase 2 TASK-0220–0221 owner-approved for Ready #285/#286 (not merged), TASK-0222 finalisation follows; later phases stay in backlog (PLAN-0002).
+- Status: Accepted on 2026-10-31 (PR #271). Phase 1 implemented and owner-approved; phase 2 TASK-0220–0222 owner-approved on 2026-11-02 for Ready #285–287 (not merged); later phases stay in backlog (PLAN-0002).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-11-02

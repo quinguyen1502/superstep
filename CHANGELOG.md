@@ -10,6 +10,12 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Headless chat SDKs and sample host** (TASK-0220–0222, REQ-0082). TypeScript SDK 0.2.0 and Python sync/async
+  clients add typed/pull-based chat streams, sessions/history, Human text/form answers, files, ratings and
+  server-side HS256 helpers. Expiry refresh is bounded and interrupted writes only recover persisted history.
+  A loopback-only, cross-origin customer-portal example covers two users, origin restrictions and revocation
+  through Playwright. Python retains its shared SDK/CLI/server version until the next approved release;
+  no `sdk-py-v0.2.0` downgrade or release tags are created by this delivery.
 - **Managed Google Drive tools** (TASK-0237, REQ-0085). List/search, inspect and read text/Google Docs within a fixed
   folder, or create a plain-text file through MCP nodes/Agent slots. Supports encrypted service-account and OAuth
   refresh credentials; uncertain creation reconciles by private operation marker and verified content without
