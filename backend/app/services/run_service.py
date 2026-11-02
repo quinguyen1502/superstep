@@ -85,9 +85,17 @@ def _normalise(ev: dict) -> dict:
 RESPONSE_MAX = 10_000  # characters of a human response
 
 
-def human_response(response) -> str:
-    """A Human node's answer: text, or JSON true / false for approved / rejected (DEC-0013)."""
+def human_response(response, *, allow_form: bool = False) -> str | dict:
+    """Chat v1 opts into bounded JSON forms; other callers retain DEC-0013 text/boolean semantics."""
     if isinstance(response, bool): response = "approved" if response else "rejected"
+    if allow_form and isinstance(response, dict):
+        try:
+            encoded = json.dumps(response, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+            encoded.encode("utf-8")  # reject malformed Unicode before persistence
+            if len(encoded) > RESPONSE_MAX: raise ValueError("form too large")
+            return json.loads(encoded)
+        except (ValueError, TypeError, UnicodeError, RecursionError):
+            raise AppError("RUN_RESPONSE_INVALID", max=RESPONSE_MAX) from None
     if not isinstance(response, str) or len(response) > RESPONSE_MAX: raise AppError("RUN_RESPONSE_INVALID", max=RESPONSE_MAX)
     return response
 
@@ -213,12 +221,12 @@ class RunService:
         self.bus.request_cancel(rid)
 
     # ---- planning / validation of the client request ----
-    def plan(self, uid: str, req) -> RunPlan:
+    def plan(self, uid: str, req, *, allow_form: bool = False) -> RunPlan:
         if not isinstance(req, dict): raise AppError("RUN_REQUEST_INVALID")
         steps = _parse_steps(req); until = _parse_until(req)
         if req.get("chat_session_id"): return self._plan_chat(uid, req, steps, until)
         if req.get("fork") is not None: return self._plan_fork(uid, req["fork"], steps, until)
-        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
+        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req), allow_form=allow_form)
         wid = req.get("workflow_id"); row = None
         if wid: row = self._workflow(wid, uid, P.RUN)
         elif self.access is not None: self.access.require(uid, P.WORKFLOWS_CREATE)  # ad-hoc graphs: viewers only run saved workflows
@@ -533,7 +541,7 @@ class RunService:
         return len(stale)
 
     def plan_resume(self, uid: str, rid: str, response, via_channel: bool = False, steps: Optional[int] = None, until: Optional[str] = None,
-                    child: Optional[dict] = None, node: Optional[str] = None, wave: bool = False) -> RunPlan:
+                    child: Optional[dict] = None, node: Optional[str] = None, wave: bool = False, allow_form: bool = False) -> RunPlan:
         """child: the finished child run a run waits for (TASK-0134), from the worker only. A run waiting for a child
         cannot be answered by a person, and a child's result cannot answer a person's question.
         wave: the checkpoint already holds every answer of a settled wave (TASK-0158). node: which approval this answer is for."""
@@ -545,7 +553,7 @@ class RunService:
             r = self.waiting_run(rid, uid)
             if not json.loads(r.checkpoint or "{}").get("wave_ready"): raise AppError("RUN_NOT_WAITING")
             return self._wave_plan(r, steps, until)
-        if child is None and response is not None: response = human_response(response)
+        if child is None and response is not None: response = human_response(response, allow_form=allow_form)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         if isinstance(cp.get("waits"), list):
             if child is not None: outcome, wrote = self.absorb_wave(rid, child=child)
@@ -562,7 +570,7 @@ class RunService:
                 return RunPlan(r.workflow_id, cp.get("workflow") or {}, {}, run_id=rid, pending_wave=True, pending_event=pending)
             if outcome == "go": return self._wave_plan(self.runs.get(rid), steps, until)
             raise AppError("RUN_NOT_WAITING")  # the wave changed under this answer; do not close the other slots
-        if child is None: response = human_response(response)
+        if child is None: response = human_response(response, allow_form=allow_form)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         wait = cp.get("wait") or {}
         if (child is None) == (wait.get("kind") == "child") or (child is not None and wait.get("run_id") != child.get("child_run_id")):

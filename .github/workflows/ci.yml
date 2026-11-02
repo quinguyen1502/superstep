@@ -254,7 +254,7 @@ jobs:
         run: npm run gen:check
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build && npm pack --dry-run
+      - run: npm run build && npm run test:package && npm pack --dry-run
 
   sdk-integration:
     name: SDKs against a live backend

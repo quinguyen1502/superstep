@@ -197,7 +197,7 @@
 | `RUN_NOT_WAITING` | 409 | This run is not waiting for a response |
 | `CHECKPOINT_NOT_FOUND` | 404 | Checkpoint not found in this run, or it cannot be forked |
 | `RUN_FORK_UNSUPPORTED` | 400 | Runs of imported LangGraph graphs cannot be forked |
-| `RUN_RESPONSE_INVALID` | 400 | The response must be text (max {max} characters) |
+| `RUN_RESPONSE_INVALID` | 400 | Invalid response type or size (max {max} characters) |
 | `MCP_SERVER_DISABLED` | 403 | This workflow is not exposed as an MCP tool; turn it on under API in the editor |
 | `TRIGGER_TOKEN_INVALID` | 401 | Missing, invalid or revoked workflow token |
 | `TOKEN_NOT_FOUND` | 404 | Token not found |

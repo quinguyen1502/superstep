@@ -405,6 +405,13 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0148 A task PR moves its own task to done when the owner approves the merge (framework 338d7a8); TASK-0139 to
   TASK-0144 link their review and QA. **merged** (PR #199).
 
+## Public chat SDK and toolkit
+
+REQ-0082 / PLAN-0002, accepted on 2026-10-31: phase 1 TASK-0215–0219 is merged (#273–277). The owner requested continuing the next task on 2026-11-02.
+
+- TASK-0220 TypeScript headless chat SDK 0.2.0 — done, owner-approved 2026-11-02 for Ready #285; REV-0215 / QA-0215. Includes client/store/server token helper, bounded JSON Human answers and the browser fetch binding regression discovered by TASK-0222. Merge and publication await explicit approval.
+- TASK-0221 Python chat SDK and TASK-0222 sample host/e2e — backlog. Web UI extraction/toolkit/widget and native UI remain later phases of PLAN-0002.
+
 ## Generic events, connections and model policy
 
 REQ-0083, owner requested implementation on 2026-11-01 after selecting generic integrations over vendor-specific canvas nodes. PLAN-0003 and DEC-0081 describe the delivery; DES-0001 covers existing-surface UX. No production cutover or release is authorised.
