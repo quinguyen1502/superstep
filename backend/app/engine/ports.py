@@ -20,6 +20,7 @@ StartChild = Callable[[str, Dict[str, Any], Optional[int], Dict[str, Any], Dict[
 class Ports:
     retrieve: Optional[Retrieve] = None
     mcp_call: Optional[McpCall] = None
+    mcp_effect_call: Optional[Callable[[str, str, dict, Optional[str], bool], Any]] = None
     email_quota: Optional[EmailQuota] = None
     cancelled: Optional[Cancelled] = None
     code_audit: Optional[CodeAudit] = None
@@ -28,3 +29,9 @@ class Ports:
     test: bool = False         # a workflow test run (TASK-0067, DEC-0044): Send email nodes do a dry run
     mock_models: bool = False  # a test run with the offline mock model: LLM and Decision nodes never call a provider
     locale: str = "en"         # language of offline answers: the mock model and the example tools (engine/locale)
+
+    def call_mcp(self, server_id, tool, arguments, key=None):
+        if self.mcp_effect_call is not None:
+            return self.mcp_effect_call(server_id, tool, arguments, key, self.test or self.mock_models)
+        if self.mcp_call is None: raise RuntimeError("MCP tools need the MCP service")
+        return self.mcp_call(server_id, tool, arguments)

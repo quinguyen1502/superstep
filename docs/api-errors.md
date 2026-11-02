@@ -129,6 +129,10 @@
 | `MCP_NAME_TOO_LONG` | 400 | MCP server name must be at most {max} characters |
 | `MCP_TRANSPORT_UNSUPPORTED` | 400 | Unsupported MCP transport: {transport} |
 | `MCP_CONFIG_INVALID` | 400 | MCP server setting {field} is missing or invalid |
+| `MANAGED_OPERATION_KEY_REQUIRED` | 400 | Managed writes require a stable operation ID from a workflow run |
+| `MANAGED_EXPORT_UNAVAILABLE` | 400 | Managed connections require Studio operation tracking and cannot yet be exported as standalone code |
+| `MANAGED_OPERATION_CONFLICT` | 409 | Operation ID or connection target changed; restore the original configuration to reconcile |
+| `MANAGED_OUTCOME_UNKNOWN` | 409 | Operation {operation} has an unknown external outcome; reconcile it before starting another write |
 | `MCP_URL_INVALID` | 400 | The MCP server URL must be a public http(s) URL |
 | `MCP_STDIO_DISABLED` | 403 | stdio MCP servers are disabled on this server (STUDIO_MCP_STDIO) |
 | `MCP_ADMIN_REQUIRED` | 403 | Only an admin can manage stdio or organization MCP servers |

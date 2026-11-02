@@ -23,13 +23,16 @@ import i18n from '@/lib/i18n'
 import type { McpList, McpServer } from '@/lib/mcp'
 import { cn } from '@/lib/utils'
 import { useOnChange } from '@/lib/use-when'
+import { ManagedConnectionFields } from '@/components/managed-connection-fields'
+import { ManagedOperations } from '@/components/managed-operations'
 
 type Secret = { name: string; value: string; stored: boolean }
-type Form = { name: string; transport: 'stdio' | 'http'; scope: 'user' | 'org'; command: string; args: string; url: string; secrets: Secret[] }
+type Form = { name: string; transport: 'stdio' | 'http' | 'managed'; scope: 'user' | 'org'; command: string; args: string; url: string; secrets: Secret[]; adapter: string; settings: Record<string, string | number> }
 const toForm = (s?: McpServer): Form => ({ name: s?.name || '', transport: s?.transport || 'http', scope: s?.scope || 'user', command: s?.command || '',
-  args: (s?.args || []).join('\n'), url: s?.url || '', secrets: Object.keys(s?.secrets || {}).map(name => ({ name, value: '', stored: true })) })
+  args: (s?.args || []).join('\n'), url: s?.url || '', secrets: Object.keys(s?.secrets || {}).map(name => ({ name, value: '', stored: true })), adapter: s?.adapter || '', settings: s?.settings || {} })
 /** Request body: an empty value of a stored secret means "keep it" (null). */
 const toBody = (f: Form) => ({ name: f.name, transport: f.transport, scope: f.scope, command: f.command || null, url: f.url || null,
+  adapter: f.adapter || null, settings: f.settings,
   args: f.args.split('\n').map(a => a.trim()).filter(Boolean),
   secrets: Object.fromEntries(f.secrets.filter(s => s.name.trim()).map(s => [s.name.trim(), s.stored && !s.value ? null : s.value])) })
 
@@ -40,23 +43,26 @@ function ServerFields({ form, set, idp, fixed, data }: { form: Form; set: (f: Fo
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="space-y-1.5"><Label htmlFor={`${idp}-name`}>{t('mcp.name')}</Label><Input id={`${idp}-name`} value={form.name} onChange={e => set({ ...form, name: e.target.value })} /></div>
       <div className="space-y-1.5"><Label htmlFor={`${idp}-transport`}>{t('mcp.transport')}</Label>
-        <Select value={form.transport} disabled={fixed} onValueChange={v => set({ ...form, transport: v as Form['transport'] })}>
+        <Select value={form.transport} disabled={fixed} onValueChange={v => set({ ...form, transport: v as Form['transport'],
+          ...(v === 'managed' || form.transport === 'managed' ? { adapter: '', settings: {}, secrets: [] } : {}) })}>
           <SelectTrigger className="w-full" id={`${idp}-transport`}><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="http">{t('mcp.http')}</SelectItem>
+            <SelectItem value="managed">{t('managedTools.transport')}</SelectItem>
             <SelectItem value="stdio" disabled={!data.stdio_enabled || !data.is_admin}>{t('mcp.stdio')}</SelectItem></SelectContent></Select></div>
       <div className="space-y-1.5"><Label htmlFor={`${idp}-scope`}>{t('mcp.scope')}</Label>
         <Select value={form.scope} disabled={fixed || !data.is_admin} onValueChange={v => set({ ...form, scope: v as Form['scope'] })}>
           <SelectTrigger className="w-full" id={`${idp}-scope`}><SelectValue /></SelectTrigger>
           <SelectContent><SelectItem value="user">{t('approvals.scope.user')}</SelectItem><SelectItem value="org">{t('approvals.scope.org')}</SelectItem></SelectContent></Select></div>
     </div>
-    {form.transport === 'http'
+    {form.transport === 'managed' ? <ManagedConnectionFields adapters={data.managed_adapters || []} adapter={form.adapter} settings={form.settings}
+      secrets={form.secrets} fixed={fixed} idp={idp} onChange={patch => set({ ...form, ...patch })} /> : form.transport === 'http'
       ? <div className="space-y-1.5"><Label htmlFor={`${idp}-url`}>{t('mcp.url')}</Label><Input id={`${idp}-url`} className="font-mono text-xs" placeholder="https://mcp.example.com/mcp" value={form.url} onChange={e => set({ ...form, url: e.target.value })} /></div>
       : <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor={`${idp}-command`}>{t('mcp.command')}</Label><Input id={`${idp}-command`} className="font-mono text-xs" placeholder="npx" value={form.command} onChange={e => set({ ...form, command: e.target.value })} /></div>
         <div className="space-y-1.5"><Label htmlFor={`${idp}-args`}>{t('mcp.args')}</Label>
           <Textarea id={`${idp}-args`} rows={2} className="min-h-9 font-mono text-xs" placeholder={t('mcp.argsHint')} value={form.args} onChange={e => set({ ...form, args: e.target.value })} /></div>
       </div>}
-    <div className="space-y-2">
+    {form.transport !== 'managed' && <div className="space-y-2">
       <Label>{t(form.transport === 'http' ? 'mcp.headers' : 'mcp.env')}</Label>
       {form.secrets.map((s, i) => <div key={i} className="flex gap-2" data-testid="mcp-secret">
         <Input aria-label={t('mcp.secretName')} className="w-48 font-mono text-xs" value={s.name} disabled={s.stored} onChange={e => sec(i, { name: e.target.value })} placeholder={form.transport === 'http' ? 'Authorization' : 'API_TOKEN'} />
@@ -66,7 +72,7 @@ function ServerFields({ form, set, idp, fixed, data }: { form: Form; set: (f: Fo
       </div>)}
       <Button variant="outline" size="sm" onClick={() => set({ ...form, secrets: [...form.secrets, { name: '', value: '', stored: false }] })} id={`${idp}-add-secret`}><KeyRound />{t('mcp.addSecret')}</Button>
       <p className="text-xs text-muted-foreground">{t('mcp.secretHelp')}</p>
-    </div>
+    </div>}
   </div>
 }
 
@@ -82,7 +88,7 @@ function ServerCard({ s, data, reload, defaultOpen }: { s: McpServer; data: McpL
           <Badge variant="secondary">{s.scope === 'org' ? <Building2 /> : <User />}{t(`approvals.scope.${s.scope}`)}</Badge>
           <Badge variant={s.tools.length ? 'default' : 'outline'} data-testid="mcp-tool-count"><Wrench />{t('mcp.tools', { count: s.tools.length })}</Badge>
         </CardTitle>
-        <CardDescription className="font-mono text-xs break-all">{s.transport === 'http' ? s.url : [s.command, ...s.args].join(' ')}</CardDescription>
+        <CardDescription className="font-mono text-xs break-all">{s.transport === 'managed' ? t(`managedTools.adapters.${s.adapter}`) : s.transport === 'http' ? s.url : [s.command, ...s.args].join(' ')}</CardDescription>
         <CardAction><CollapsibleTrigger asChild><Button variant="ghost" size="icon" aria-label={t('settings.toggle')} id={`mcp-${s.id}-toggle`}>
           <ChevronDown className={cn('transition-transform', open && 'rotate-180')} /></Button></CollapsibleTrigger></CardAction>
       </CardHeader>
@@ -98,6 +104,7 @@ function ServerCard({ s, data, reload, defaultOpen }: { s: McpServer; data: McpL
           {s.tools.length > 0 && <ul className="divide-y rounded-md border" data-testid="mcp-tools">{s.tools.map(x => <li key={x.name} className="flex flex-col gap-0.5 px-3 py-2">
             <span className="font-mono text-sm">{x.name}<span className="ml-2 text-xs text-muted-foreground">{Object.keys(x.input_schema?.properties || {}).join(', ')}</span></span>
             {x.description && <span className="text-xs text-muted-foreground">{x.description}</span>}</li>)}</ul>}
+          {s.transport === 'managed' && <ManagedOperations serverId={s.id} />}
           {edit && <><Separator /><div className="space-y-3" data-testid="mcp-edit">
             <ServerFields form={form} set={setForm} idp={`mcp-${s.id}`} fixed data={data} />
             <div className="flex flex-wrap gap-2">

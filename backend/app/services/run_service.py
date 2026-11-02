@@ -279,6 +279,7 @@ class RunService:
         org = self.policy.org_allowed(actor or uid) if self.policy is not None else True
         web = self.chat().web if self.chat else None
         return Ports(retrieve=self.knowledge.retriever(uid) if self.knowledge else None, mcp_call=self.mcp.caller(uid, org) if self.mcp else None,
+                     mcp_effect_call=self.mcp.effect_caller(uid, org) if self.mcp else None,
                      email_quota=self.email_quota(uid), code_audit=self.code_audit(actor or uid),
                      attachment=web.file_loader(uid) if web is not None else None)
 

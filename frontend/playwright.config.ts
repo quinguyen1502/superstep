@@ -33,6 +33,7 @@ export default defineConfig({
       cwd: '../backend', url: `http://127.0.0.1:${API}/api/health`, reuseExistingServer: false, timeout: 60_000,
       env: { STUDIO_DB: db, STUDIO_IMPORT_DIR: path.join(os.tmpdir(), 'lgs-e2e-imports'), OPENAI_API_KEY: '', STUDIO_ENABLE_DEMO_TOOLS: '1', STUDIO_ENABLE_CODE_NODES: '1', STUDIO_CODE_RUNTIME: process.env.E2E_CODE_RUNTIME || 'docker',  // Code mode (TASK-0055/0056): E2E_CODE_RUNTIME=subprocess runs code-subprocess.spec.ts
          STUDIO_MCP_STDIO: '1', STUDIO_RUN_TIMEOUT: '5', STUDIO_ALLOW_PRIVATE_CALLBACKS: '1', STUDIO_SMTP_ALLOW_PRIVATE: '1', STUDIO_PUBLIC_URL: `http://127.0.0.1:${UI}`,  // links in e-mail / Teams approvals (TASK-0047)
+        STUDIO_MCP_ALLOW_PRIVATE: '1',  // managed actions use the local fake Telegram API; production keeps its default SSRF guard
         STUDIO_WEBHOOK_BACKOFF_BASE: '0.5', STUDIO_ATTACHMENT_STORAGE: process.env.E2E_ATTACHMENT_STORAGE || 'db', STUDIO_ATTACHMENT_FS_PATH: ATTACH_DIR,  // TASK-0195: E2E_ATTACHMENT_STORAGE=fs runs every spec on a folder
          SLACK_API_URL: `http://127.0.0.1:${CHAT}/slack`, TELEGRAM_API_URL: `http://127.0.0.1:${CHAT}/telegram` },
     },

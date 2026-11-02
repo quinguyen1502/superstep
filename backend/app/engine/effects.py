@@ -14,7 +14,7 @@ import hashlib, inspect, threading
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Protocol
 
-SIDE_EFFECT_TYPES = ("llm", "tool", "decision", "email", "agent_model", "agent_tool")  # Decision: a paid call; Send email: never sent twice;
+SIDE_EFFECT_TYPES = ("llm", "tool", "mcp", "decision", "email", "agent_model", "agent_tool")  # MCP uses the same stable call key and result ledger.
 # an Agent node's model and tool steps (TASK-0116): one ledger entry and idempotency key per model call and per tool call
 
 
