@@ -15,9 +15,8 @@ customer/provider data or package publication is part of this example.
 From the repository root, with Node 22 and the backend Python environment:
 
 ```sh
-npm ci --prefix frontend
-npm ci --prefix sdk/typescript
-node frontend/node_modules/@playwright/test/cli.js install chromium
+npm ci
+node node_modules/@playwright/test/cli.js install chromium
 scripts/chat_host_e2e.sh
 ```
 
@@ -53,8 +52,9 @@ node. Create an app key allowed on exactly `http://localhost:5188`. Inject
 
 ```sh
 npm --prefix sdk/typescript run build
-node frontend/node_modules/typescript/bin/tsc -p examples/chat-host/tsconfig.json
-node frontend/node_modules/vite/bin/vite.js build --config frontend/vite.chat-host.config.ts
+npm run build --workspace=@superstep/react
+node node_modules/typescript/bin/tsc -p examples/chat-host/tsconfig.json
+node node_modules/vite/bin/vite.js build --config frontend/vite.chat-host.config.ts
 
 CHAT_HOST_DEMO=1 CHAT_STUDIO_URL='http://127.0.0.1:8000' \
   CHAT_SLUG='your-published-chat' CHAT_KEY_ID='your-key-id' \

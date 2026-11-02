@@ -1,6 +1,8 @@
 /** One chat's turns and its live run (TASK-0085): a message or a Human answer goes over the run socket like a studio
- *  run, so the steps and the reply stream; when the socket closes the session is read again for the saved answer. */
+ *  run, so the steps and the reply stream; public v1 endpoints use their typed handshake/frames, adapted to the same
+ *  presentation. When the socket closes the session is read again for the saved answer. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { v1ChatEvent, v1ChatRequest } from '@/lib/chat-v1'
 import { api, wsUrl } from '@/lib/api'
 import { useOnChange } from '@/lib/use-when'
 import { eventErrors, uiLocale } from '@/lib/i18n'
@@ -10,7 +12,7 @@ import { answers, waitingTurn, type ChatAttachment, type ChatSessionFull } from 
 export type ChatView = 'builder' | 'visitor'
 /** Where a chat is read and where its messages go: the studio (default), or the public page's API and socket. Callers
  *  memoise it: a new object reloads the chat. */
-export type ChatEndpoint = { session: (sid: string) => string; socket: string; headers?: Record<string, string> }
+export type ChatEndpoint = { session: (sid: string) => string; socket: string; headers?: Record<string, string>; v1?: boolean; visitor?: string }
 const studio = (view: ChatView): ChatEndpoint => ({ session: sid => `/api/chat/sessions/${sid}?view=${view}`, socket: '/ws/run' })
 const POLL_MS = 250, POLL_TRIES = 40   // the answer is written by the worker just after the run ends
 
@@ -46,8 +48,23 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
     if (!sid) return
     setError(''); setEvents([]); setPending(shown); setRunning(true); const mine = ++gen.current
     const sock = new WebSocket(wsUrl(ep.socket)); ws.current = sock; let runId = resumeOf
-    sock.onopen = () => sock.send(JSON.stringify({ chat_session_id: sid, ...msg, locale: uiLocale() }))
-    sock.onmessage = m => { const ev: RunEvent = JSON.parse(m.data); if (ev.run_id) runId = ev.run_id
+    let sent = false, sequence = -1
+    sock.onopen = () => { if (!ep.v1) sock.send(JSON.stringify({ chat_session_id: sid, ...msg, locale: uiLocale() })) }
+    sock.onmessage = m => {
+      let frame: RunEvent & { v?: number; seq?: number; protocol?: string }
+      try { frame = JSON.parse(m.data) } catch { return }
+      if (!frame || typeof frame !== 'object') return
+      if (ep.v1) {
+        if (frame.v !== 1 || !Number.isSafeInteger(frame.seq) || frame.seq! <= sequence) return
+        sequence = frame.seq!
+        if (frame.type === 'ready' && frame.protocol === 'superstep-chat' && !sent) {
+          sock.send(JSON.stringify({ type: 'auth', ...(ep.visitor ? { visitor: ep.visitor } : {}) }))
+          sock.send(JSON.stringify(v1ChatRequest(sid, msg, uiLocale()))); sent = true; return
+        }
+      }
+      const ev = ep.v1 ? v1ChatEvent(frame) : frame
+      if (!ev) return
+      if (ev.run_id) runId = ev.run_id
       if (ev.type === 'error' && !ev.node && !runId) setError(eventErrors(ev).join('; '))
       setEvents(l => [...l, ev]) }
     // still running until the saved answer is read: until then the session on screen is the one from before this

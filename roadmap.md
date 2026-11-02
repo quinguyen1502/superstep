@@ -409,9 +409,10 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 
 REQ-0082 / PLAN-0002, accepted on 2026-10-31: phase 1 TASK-0215–0219 is merged (#273–277). The owner requested continuing the next task on 2026-11-02.
 
-- TASK-0220 TypeScript headless chat SDK 0.2.0 — done, owner-approved 2026-11-02 for Ready #285; REV-0215 / QA-0215. Includes client/store/server token helper, bounded JSON Human answers and the browser fetch binding regression discovered by TASK-0222. Merge and publication await explicit approval.
-- TASK-0221 Python chat SDK — done, owner-approved 2026-11-02 for Ready #286, explicitly stacked on #285; REV-0216 / QA-0216. Shared version remains 0.10.2 pending a later approved release; merge is not yet authorised.
-- TASK-0222 sample host/e2e — done, owner-approved 2026-11-02 for Ready #287, stacked on #286; REV-0217 / QA-0217. Cross-origin two-user/form/file/rating/revoke acceptance and en/vi theme/mobile screenshots remain CI artifacts, outside Git. The reviewed SDK fetch correction is included in #285. Merge/release await explicit approval; later toolkit/widget/native tasks stay in backlog.
+- TASK-0220 TypeScript headless chat SDK 0.2.0 — done, merged through #285 on 2026-11-02 after owner approval and all 20 checks passed; REV-0215 / QA-0215.
+- TASK-0221 Python chat SDK — done, merged through #286 after rebase to develop and 19 passing checks; REV-0216 / QA-0216. Shared version remains 0.10.2 until a later approved release.
+- TASK-0222 sample host/e2e — done, merged through #287 after rebase to develop and 21 passing checks; REV-0217 / QA-0217. Screenshots remain CI artifacts / temporary files, outside Git.
+- TASK-0223 shared React extraction — done; owner approved merging #288 into develop on 2026-11-02, with final-head CI gating integration. REV-0218 / QA-0218; full Factory profile 8/8 and targeted/visual acceptance passed. npm workspace, common chat presentation/shadcn primitives, v1 public page and build/CI/Docker compatibility; four-variant visual regression and <=5 percent bundle-growth gate. React hooks/theme/widget/native features remain later PLAN-0002 tasks; no package release authorised.
 
 ## Generic events, connections and model policy
 

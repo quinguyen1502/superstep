@@ -4,6 +4,8 @@
 @import "@fontsource-variable/geist";
 @import "./typeset.css";  /* shadcn/typeset (https://ui.shadcn.com/typeset.css): rendered Markdown in the chat */
 
+@source "../../packages/react/src";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

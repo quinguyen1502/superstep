@@ -166,8 +166,9 @@ in [`.env.example`](.env.example) and every error code in
 
 ```bash
 cd backend && .venv/bin/python -m pytest -q
-cd frontend && npm run build && npm run lint && npm test
-cd frontend && npm run e2e
+npm ci
+npm run build && npm run lint && npm test
+npm run test:e2e
 ```
 
 | Path | Contents |

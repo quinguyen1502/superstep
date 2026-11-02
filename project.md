@@ -16,6 +16,8 @@ superstep (named langgraph-studio up to v0.1.0, renamed in TASK-0058)
 
 ## Modules
 
+- `packages/react/` — shared chat presentation, shadcn primitives and pure rendering helpers; Studio-owned routing/run access stays in frontend.
+- Root npm workspace / lockfile: `frontend`, `packages/react`, `sdk/typescript` (TASK-0223).
 - `frontend/` — React SPA: login/register, workflow list, editor (canvas, palette, config, run panel), import dialog
   - the editor page (`pages/Editor.tsx`) is a shell; state and actions are in `components/editor/use-studio.ts`, the header and panels in `components/editor/` (TASK-0040)
 - `backend/app/` — layered FastAPI backend (DEC-0009, `docs/backend-architecture.md`):
@@ -46,11 +48,11 @@ superstep (named langgraph-studio up to v0.1.0, renamed in TASK-0058)
 
 ## Technology Discovery
 
-- Install: `./dev.sh` (creates or repairs `backend/.venv`: `pip install --prefer-binary -e "backend[dev]"`, then `npm install`); Factory: `factory deps apply --allow-network`
+- Install: `./dev.sh` (creates or repairs `backend/.venv`: `pip install --prefer-binary -e "backend[dev]"`, then root `npm install`); Factory: `factory deps apply --allow-network`
 - Run: `./dev.sh` (observed: backend :8000, frontend :5173)
-- Test: `cd backend && .venv/bin/python -m pytest -q` (observed: 324 passed, 10 skipped without Postgres/Redis, 2026-10-18); `cd frontend && npm test` (vitest); `cd frontend && npm run e2e` (Playwright; `PW_CHROME`, `E2E_UVICORN`)
-- Build: `cd frontend && npm run build` (observed: passes)
-- Lint: `cd frontend && npm run lint` (oxlint; exits 0 with React hook warnings, see REQ-0027)
+- Test: root `npm test` covers frontend, React package and TypeScript SDK; `npm run test:e2e` runs frontend Playwright. Backend: `cd backend && .venv/bin/python -m pytest -q` (observed: 324 passed, 10 skipped without Postgres/Redis, 2026-10-18); `cd frontend && npm test` (vitest); `cd frontend && npm run e2e` (Playwright; `PW_CHROME`, `E2E_UVICORN`)
+- Build: root `npm run build` (SDK, React package, frontend/widget; observed TASK-0223)
+- Lint: root `npm run lint` (frontend + shared React package; strict UI guard includes both source trees)
 - Typecheck: `cd frontend && npx tsc -b` (observed, part of build)
 - Format: Unknown
 - Migration: Alembic (`backend/app/migrations/versions`, applied at startup under a file or advisory lock)

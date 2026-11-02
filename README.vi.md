@@ -153,8 +153,9 @@ có trong [`.env.example`](.env.example) và mọi mã lỗi trong
 
 ```bash
 cd backend && .venv/bin/python -m pytest -q
-cd frontend && npm run build && npm run lint && npm test
-cd frontend && npm run e2e
+npm ci
+npm run build && npm run lint && npm test
+npm run test:e2e
 ```
 
 | Đường dẫn | Nội dung |
