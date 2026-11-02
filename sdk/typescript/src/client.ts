@@ -1,5 +1,8 @@
 import type { components } from './schema.js'
-import { APIConnectionError, ConfigError, WaitTimeoutError, errorFor } from './errors.js'
+import { APIConnectionError, ConfigError, WaitTimeoutError } from './errors.js'
+import { envelope } from './transport.js'
+import { ChatClient } from './chat/client.js'
+import type { ChatOptions } from './chat/types.js'
 
 type Schemas = components['schemas']
 export type RunResult = Schemas['RunResult']
@@ -11,7 +14,7 @@ export type RunStatus = RunResult['status']
 /** A run as returned by `run()` and `getRun()`. A just-queued run has only `run_id`, `status` and `poll_url`. */
 export type Run = Partial<Omit<RunResult, 'run_id' | 'status'>> & { run_id: string; status: RunStatus; poll_url?: string }
 
-export const VERSION = '0.1.0'
+export const VERSION = '0.2.0'
 const PENDING: readonly RunStatus[] = ['queued', 'running']
 
 /** True once the run has stopped changing (any status but `queued` / `running`). */
@@ -73,14 +76,19 @@ export class Superstep {
     const e = env()
     const values = { workflowId: options.workflowId ?? e.SUPERSTEP_WORKFLOW_ID, token: options.token ?? e.SUPERSTEP_TOKEN, baseUrl: options.baseUrl ?? e.SUPERSTEP_BASE_URL }
     const names = { workflowId: 'SUPERSTEP_WORKFLOW_ID', token: 'SUPERSTEP_TOKEN', baseUrl: 'SUPERSTEP_BASE_URL' } as const
-    const missing = (Object.keys(values) as (keyof typeof values)[]).filter((k) => !values[k]).map((k) => `${k} (or ${names[k]})`)
+    const missing = !values.baseUrl ? [`baseUrl (or ${names.baseUrl})`] : []
     if (missing.length) throw new ConfigError(`Missing ${missing.join(', ')}`, { code: 'CONFIG_MISSING' })
-    this.workflowId = values.workflowId!
-    this.token = values.token!
+    this.workflowId = values.workflowId ?? ''
+    this.token = values.token ?? ''
     this.baseUrl = values.baseUrl!.replace(/\/+$/, '')
-    const f = options.fetch ?? globalThis.fetch
+    const f = (options.fetch ?? globalThis.fetch)?.bind(globalThis)
     if (!f) throw new ConfigError('No fetch available: pass options.fetch (Node 18+ has a global fetch)', { code: 'CONFIG_MISSING' })
     this.fetchImpl = f
+  }
+
+  /** Chat needs only baseUrl. Workflow credentials are never forwarded to a public chat. */
+  chat(slug: string, options: ChatOptions = {}): ChatClient {
+    return new ChatClient(slug, { ...options, baseUrl: this.baseUrl, fetch: options.fetch ?? this.fetchImpl })
   }
 
   /** Start a run. `async` (default) returns at once with status `queued`; `sync` waits up to the server's limit. */
@@ -120,6 +128,7 @@ export class Superstep {
   }
 
   private runsUrl(runId?: string): string {
+    if (!this.workflowId || !this.token) throw new ConfigError('Workflow runs require workflowId and token', { code: 'CONFIG_MISSING' })
     const url = `${this.baseUrl}/api/hooks/workflows/${encodeURIComponent(this.workflowId)}/runs`
     return runId ? `${url}/${encodeURIComponent(runId)}` : url
   }
@@ -134,14 +143,6 @@ export class Superstep {
       if (signal?.aborted) throw err  // let AbortError through unchanged
       throw new APIConnectionError(err instanceof Error ? err.message : String(err), { code: 'CONNECTION_ERROR' })
     }
-    const payload = await res.json().catch(() => null) as { success?: boolean; data?: Run; error?: { code?: string; message?: string; details?: unknown } } | null
-    if (!payload || typeof payload.success !== 'boolean') {
-      throw new APIConnectionError(`Unexpected response (HTTP ${res.status}); is baseUrl a Superstep server?`, { code: 'BAD_RESPONSE', status: res.status })
-    }
-    if (!payload.success) {
-      const e = payload.error ?? {}
-      throw errorFor(res.status, e.code ?? 'UNKNOWN', e.message ?? `HTTP ${res.status}`, e.details, res.headers)
-    }
-    return payload.data as Run
+    return envelope<Run>(res)
   }
 }

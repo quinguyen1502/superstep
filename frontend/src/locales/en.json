@@ -470,7 +470,7 @@
     "RUN_NOT_WAITING": "This run is not waiting for a response",
     "CHECKPOINT_NOT_FOUND": "Checkpoint not found in this run, or it cannot be forked",
     "RUN_FORK_UNSUPPORTED": "Runs of imported LangGraph graphs cannot be forked",
-    "RUN_RESPONSE_INVALID": "The response must be text (max {{max}} characters)",
+    "RUN_RESPONSE_INVALID": "Invalid response type or size (max {{max}} characters)",
     "MCP_SERVER_DISABLED": "This workflow is not exposed as an MCP tool; turn it on under API in the editor",
     "TRIGGER_TOKEN_INVALID": "Missing, invalid or revoked workflow token",
     "TOKEN_NOT_FOUND": "Token not found",

@@ -5,7 +5,7 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 TASK-0215 to TASK-0219 done and owner-approved, the rest in backlog)
+- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 TASK-0215 to TASK-0219 done and owner-approved; TASK-0220 owner-approved for Ready #285 (not merged), remaining tasks in backlog)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -19,7 +19,11 @@
 | TASK-0218 Third-party user tokens | [#276](https://github.com/quinguyen1502/superstep/pull/276) | Merged after final CI passed |
 | TASK-0219 Handbook/compatibility | [#277](https://github.com/quinguyen1502/superstep/pull/277) | Owner-approved; task moved to done on this PR; all final-head CI required before merge |
 
-Phase-1 review and QA evidence lives in the corresponding done tasks (TASK-0217: REV/QA-0205, TASK-0218: REV/QA-0206, TASK-0219: REV/QA-0207). The complete REQ-0082 remains Accepted because phases 2 onward are not implemented. No app/SDK release, package publication or start of a later phase is implied by completing phase 1.
+Phase-1 review and QA evidence lives in the corresponding done tasks (TASK-0217: REV/QA-0205, TASK-0218: REV/QA-0206, TASK-0219: REV/QA-0207). The complete REQ-0082 remains Accepted because later phases are incomplete. No app/SDK release or package publication is implied by completing phase 1.
+
+## Phase 2 progress (2026-11-02)
+
+TASK-0220 is owner-approved on 2026-11-02 and moves to done for single-commit Ready #285 (REV/QA-0215). It includes bounded JSON Human answers and the reviewed browser fetch receiver fix discovered by TASK-0222. Dependent #286/#287 are being finalised in stack order. Merge and release remain pending explicit approval; later UI/native work has not started.
 
 ## Order and dependencies
 
@@ -92,3 +96,7 @@ Work the owner asked to keep on record (2026-10-31, "Nhớ note các thứ sẽ 
 | Regenerate an answer (TASK-0230, backlog) | Needs a rule for replacing turns and run history; a DEC comes first | Owner request after phase 2; write the DEC before moving the task to todo |
 | Investigate why the first progress write of a queue job took about 12.6 s on CI (seen in TASK-0212) | Cause not proven: SQLite write lock or thread pool start-up | The delay shows up again in CI or in a user report; profile lock waits and the executor first |
 | Unit test for a chunked upload over about 51 MB on a `File(...)` route | Left out of TASK-0208 | Next change to upload handling or the request size limit |
+
+## TASK-0220 owner acceptance (2026-11-02)
+
+Owner approved the reviewed phase-2 stack. TASK-0220 moves to done for single-commit Ready delivery on #285, including the already-reviewed browser fetch binding correction from TASK-0222. This is acceptance of the implementation, not merge or release approval. Dependent PRs are finalised in stack order.

@@ -211,7 +211,7 @@ class PublicChatService:
         w = self.chat.workflows.get(t.workflow_id); owner = w.owner or t.owner
         answering = "response" in req
         await self.check_message(t, st, v, ip, daily=not answering)
-        if answering and req.get("attachment_ids"): raise AppError("RUN_REQUEST_INVALID")  # a Human node's answer is text only
+        if answering and req.get("attachment_ids"): raise AppError("RUN_REQUEST_INVALID")  # answers carry values, never new attachments
         if answering:
             turns = self.chat.sessions.turns(s.id); last = turns[-1] if turns else None
             if last is None or last.role != "assistant" or last.status != "waiting" or not last.run_id: raise AppError("RUN_NOT_WAITING")

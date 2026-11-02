@@ -261,13 +261,14 @@ def ws_identity(ws: WebSocket) -> Optional[dict]:
     except AppError: return None
 
 
-async def run_chat(ws: WebSocket, slug: str, req, token: Optional[str], user: Optional[dict], emit) -> bool:
+async def run_chat(ws: WebSocket, slug: str, req, token: Optional[str], user: Optional[dict], emit, *, allow_form: bool = False) -> bool:
     """Plans the message or answer `req` and streams the run: `emit(public_event)` -> still connected. A request that
     cannot run is one error event. Returns whether a run was started."""
     svc, runs = public_chat_service(), run_service()
     try:
         ip = client_ip(ws.client.host if ws.client else None, ws.headers.get("x-forwarded-for"))
-        plan, owner, mode, reply = await svc.plan_message(slug, token, user, req, ip, runs.plan)
+        planner = lambda uid, body: runs.plan(uid, body, allow_form=allow_form)
+        plan, owner, mode, reply = await svc.plan_message(slug, token, user, req, ip, planner)
         if plan.ports is not None: plan.ports.locale = locale.pick(req.get("locale") if isinstance(req, dict) else None, ws.headers.get("accept-language"))
     except AppError as e:
         await emit(error_event(e.to_dict())); return False
@@ -364,7 +365,7 @@ async def ws_public_chat_v1(ws: WebSocket, slug: str):
     except AppError as e:
         await send(v1.server_frame(error_event(e.to_dict()))); await close(ws); return
     req, since = v1.plan_request(frame), time.time()
-    if await run_chat(ws, slug, req, token, user, translate) and "done" in held:
+    if await run_chat(ws, slug, req, token, user, translate, allow_form=True) and "done" in held:
         turn = await answer_turn(req["chat_session_id"], getattr(ws.state, "run_id", None), since)
         if turn: await send({"type": "turn", "turn_id": turn["id"], "role": "assistant", "status": turn["status"], "run_id": turn["run_id"]})
         await send(held["done"])

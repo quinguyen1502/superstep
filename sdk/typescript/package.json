@@ -1,7 +1,7 @@
 {
   "name": "@superstep/sdk",
-  "version": "0.1.0",
-  "description": "TypeScript client for the Superstep public API: start workflow runs and read their results.",
+  "version": "0.2.0",
+  "description": "Headless chat and workflow runs for the Superstep public API.",
   "license": "MIT",
   "author": "Qui Nguyen",
   "repository": {
@@ -25,6 +25,26 @@
         "types": "./dist/cjs/index.d.ts",
         "default": "./dist/cjs/index.js"
       }
+    },
+    "./chat": {
+      "import": {
+        "types": "./dist/esm/chat/index.d.ts",
+        "default": "./dist/esm/chat/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/chat/index.d.ts",
+        "default": "./dist/cjs/chat/index.js"
+      }
+    },
+    "./server": {
+      "import": {
+        "types": "./dist/esm/server.d.ts",
+        "default": "./dist/esm/server.js"
+      },
+      "require": {
+        "types": "./dist/cjs/server.d.ts",
+        "default": "./dist/cjs/server.js"
+      }
     }
   },
   "files": [
@@ -36,16 +56,19 @@
     "node": ">=18"
   },
   "scripts": {
-    "gen": "openapi-typescript ../../docs/api/openapi.public.json -o src/schema.ts && node scripts/header.mjs",
-    "gen:check": "node scripts/gen-check.mjs",
+    "gen": "openapi-typescript ../../docs/api/openapi.public.json -o src/schema.ts && node scripts/header.mjs && npm run gen:chat",
+    "gen:chat": "node scripts/gen-chat.mjs",
+    "gen:check": "node scripts/gen-check.mjs && node scripts/gen-chat.mjs --check",
     "build": "rm -rf dist && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && node scripts/cjs-package.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-    "test": "vitest run test/client.test.ts test/package.test.ts",
-    "test:integration": "vitest run test/integration.test.ts",
+    "test": "vitest run --exclude test/integration.test.ts --exclude test/chat-integration.test.ts",
+    "test:integration": "vitest run test/integration.test.ts test/chat-integration.test.ts",
+    "test:package": "node scripts/smoke-package.mjs",
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "jsdom": "26.1.0",
     "openapi-typescript": "^7.4.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
