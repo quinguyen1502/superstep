@@ -42,6 +42,7 @@ nav:
       - Chế độ Code: guide/code-mode.md
       - Kho tri thức: guide/knowledge.md
       - Máy chủ MCP: guide/mcp.md
+      - Công cụ Google Drive: guide/google-drive.md
       - Mẫu workflow: guide/templates.md
       - Phiên bản: guide/versions.md
       - Xuất ra Python: guide/python-export.md

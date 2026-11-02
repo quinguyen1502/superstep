@@ -16,6 +16,7 @@ trong adapter, không tạo loại node riêng trên canvas.
 | Thao tác WhatsApp | Kênh WhatsApp và số quốc tế cố định của người nhận, chỉ chữ số | `send_message`: `text` |
 | Thao tác email | Kênh email, tối đa 10 nơi nhận cố định; cấu hình SMTP của studio | `send_email`: `text`, thêm `subject` nếu cần |
 | Thao tác Microsoft Teams | Kênh Teams đã có với webhook Workflows được mã hoá | `send_message`: `text` |
+| [Tệp Google Drive](google-drive.md) | ID thư mục cố định; JSON service account hoặc OAuth người dùng được mã hoá | Liệt kê/tìm, metadata, đọc văn bản/Google Doc có giới hạn, tạo tệp văn bản |
 
 Tạo [service account Google](https://developers.google.com/identity/protocols/oauth2/service-account),
 bật Sheets API, chia sẻ spreadsheet cho email đó với quyền chỉnh sửa rồi dán

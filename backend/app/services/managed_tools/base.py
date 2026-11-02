@@ -26,3 +26,15 @@ def request(method, url, max_bytes=None, **kwargs):
                 if len(body) + len(chunk) > max_bytes: raise httpx.DecodingError("Managed response byte limit exceeded")
                 body.extend(chunk)
             return httpx.Response(response.status_code, content=bytes(body), headers={"content-type": response.headers.get("content-type", "")})
+
+
+def redact_values(value, secrets):
+    sensitive = sorted({item for item in secrets if isinstance(item, str) and item}, key=len, reverse=True)
+    def clean(item):
+        if isinstance(item, str):
+            for secret in sensitive: item = item.replace(secret, "[redacted]")
+            return item
+        if isinstance(item, dict): return {clean(key): clean(value) for key, value in item.items()}
+        if isinstance(item, list): return [clean(value) for value in item]
+        return item
+    return clean(value)

@@ -43,6 +43,7 @@ nav:
       - Code mode: guide/code-mode.md
       - Knowledge bases: guide/knowledge.md
       - MCP servers: guide/mcp.md
+      - Google Drive tools: guide/google-drive.md
       - Workflow templates: guide/templates.md
       - Versions: guide/versions.md
       - Export to Python: guide/python-export.md

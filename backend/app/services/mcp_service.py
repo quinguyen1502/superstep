@@ -87,7 +87,7 @@ class McpService:
             if v is None:
                 if k in old: out[k] = old[k]
                 continue
-            if not isinstance(v, str) or len(v) > (16384 if k == "service_account" else VALUE_MAX): raise AppError("MCP_CONFIG_INVALID", field="secrets")
+            if not isinstance(v, str) or len(v) > (16384 if k in {"service_account", "google_credentials"} else VALUE_MAX): raise AppError("MCP_CONFIG_INVALID", field="secrets")
             out[k] = v
         return out
 
@@ -99,7 +99,7 @@ class McpService:
     @staticmethod
     def _apply_secrets(r: McpServer, sec: dict) -> None:
         r.secrets = crypto.encrypt(json.dumps(sec)) if sec else None
-        r.secret_hints = json.dumps({k: "••••" if k == "headers" else crypto.mask(v) for k, v in sec.items()})
+        r.secret_hints = json.dumps({k: "••••" if k in {"headers", "google_credentials"} else crypto.mask(v) for k, v in sec.items()})
 
     # ---- CRUD ----
     def create(self, uid: str, name: str, transport: str, scope: str = "user", command: str | None = None, args: Any = None,

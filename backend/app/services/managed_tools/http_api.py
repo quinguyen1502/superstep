@@ -6,7 +6,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError, ValidationError
 from ...core import config
 from ...core.errors import AppError
-from .base import ToolFailure, request
+from .base import ToolFailure, request, redact_values
 
 MAX_RESPONSE = 256 * 1024
 METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
@@ -107,15 +107,7 @@ class HttpApiTools:
         sensitive = set(headers.values())
         for name, secret in headers.items():
             if name.lower() == "authorization": sensitive.add(secret.split(" ", 1)[-1])
-        def clean(item):
-            if isinstance(item, str):
-                for secret in sorted(sensitive, key=len, reverse=True):
-                    if secret: item = item.replace(secret, "[redacted]")
-                return item
-            if isinstance(item, dict): return {clean(k): clean(v) for k, v in item.items()}
-            if isinstance(item, list): return [clean(v) for v in item]
-            return item
-        return clean(value)
+        return redact_values(value, sensitive)
 
     def execute(self, uid, settings, secrets, tool, args, key, allow_org=True):
         definition = next(item for item in self.definitions(settings) if item["name"] == tool)

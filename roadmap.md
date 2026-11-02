@@ -421,6 +421,10 @@ REQ-0084, DES-0002, DEC-0082, PLAN-0004: owner requested generic HTTP API and se
 - TASK-0235 Generic managed HTTP API — done; owner approved merge of #282 into develop on 2026-11-02; final-head CI gates merging.
 - TASK-0236 Slack/WhatsApp/Email/Teams actions using existing channels — done; owner approved merge of #283 into develop on 2026-11-02; final-head CI gates merging.
 
+REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Drive on 2026-11-02.
+
+- TASK-0237 Managed Google Drive — done; owner approved merge of #284 into develop on 2026-11-02; final-head CI gates merging.
+
 ## Releases
 
 - TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,
