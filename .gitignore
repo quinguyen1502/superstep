@@ -49,3 +49,6 @@ backend/.e2e-attachments/
 .factory-state/evidence/**/*.bmp
 .factory-state/evidence/**/*.tif
 .factory-state/evidence/**/*.tiff
+
+# Workspace package build output
+packages/*/dist/

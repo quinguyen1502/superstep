@@ -92,7 +92,8 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: npm ci
+      - run: npm ci --workspace=@superstep/sdk --include-workspace-root=false
+        working-directory: .
       - name: Tag matches the package version
         run: |
           v=$(node -p "require('./package.json').version")

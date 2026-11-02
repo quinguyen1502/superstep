@@ -5,7 +5,7 @@
 #   scripts/sdk_integration.sh
 #
 # Needs: backend deps (BACKEND_PYTHON, default backend/.venv/bin/python), the Python SDK installed in SDK_PYTHON
-# (default sdk/python/.venv/bin/python) and `npm ci` done in sdk/typescript. PORT defaults to 8130.
+# (default sdk/python/.venv/bin/python) and `npm ci --workspace=@superstep/sdk --include-workspace-root=false` done at the repository root. PORT defaults to 8130.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${PORT:-8130}"

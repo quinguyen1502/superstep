@@ -2,7 +2,7 @@
  *  It loads no studio data: the page settings, the visitor's own chats (an HttpOnly cookie says who they are) and the
  *  public socket. signed_in chats send a visitor who is not signed in to the login page and back.
  *  ?embed=1 is the page inside another site's iframe (TASK-0143): its chats are "embed" chats, and the visitor token
- *  goes as X-Chat-Visitor and ?visitor= because a frame's cookie is a third-party cookie that browsers may drop. With
+ *  goes in X-Chat-Visitor and the v1 socket auth frame because a frame's cookie is a third-party cookie that browsers may drop. With
  *  &widget=1 the widget on the host page keeps the token: the page asks it with postMessage and hands a new one back,
  *  and only takes tokens from the chat's embed_origins. A plain iframe keeps it in the frame's own (partitioned)
  *  localStorage, which some browsers (Safari) clear, so its chats may not last.
@@ -39,10 +39,10 @@ export function PublicChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]); const [sid, setSid] = useState<string | null>(null)
   // the visitor token ('new' when there is none yet); '' = the cookie (a direct visit); null = still asking the widget's host
   const [visitor, setVisitor] = useState<string | null>(() => widget ? null : embed ? stored(slug) || 'new' : ''); const host = useRef('')
-  const base = `/api/public/chat/${slug}`
+  const base = `/api/public/v1/chat/${slug}`
   const headers = useMemo(() => visitor ? { 'X-Chat-Visitor': visitor } : undefined, [visitor])
   const ep = useMemo<ChatEndpoint>(() => ({ session: id => `${base}/sessions/${id}`, headers,
-    socket: `/ws/public/chat/${slug}${visitor && visitor !== 'new' ? `?visitor=${encodeURIComponent(visitor)}` : ''}` }), [base, slug, headers, visitor])
+    socket: `/ws/public/v1/chat/${slug}`, v1: true, visitor: visitor || undefined }), [base, slug, headers, visitor])
   /** A new token from the API: use it from now on, and give it to the host to keep. */
   const keep = (d: { visitor_token?: string }) => { const tok = d.visitor_token; if (!tok) return
     setVisitor(tok)

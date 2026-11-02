@@ -139,4 +139,4 @@ export const fmtCost = (c?: number | null) => c == null ? '—' : c === 0 ? '$0'
 /** History rows carry metrics/trace_url; replaying them appends the same run_summary event the socket sends live. */
 export const withSummary = (h: { id: string; status: string; events: RunEvent[]; metrics?: RunMetrics | null; trace_id?: string | null; trace_url?: string | null }): RunEvent[] =>
   h.metrics ? [...h.events, { type: 'run_summary', run_id: h.id, status: h.status, metrics: h.metrics, trace_id: h.trace_id, trace_url: h.trace_url }] : h.events
-export const fmtMs = (ms?: number) => ms == null ? '—' : ms < 1 ? `${ms.toFixed(2)} ms` : ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(2)} s`
+export { fmtMs } from '@superstep/react/format'

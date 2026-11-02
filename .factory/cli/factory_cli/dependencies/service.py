@@ -74,6 +74,8 @@ def create_dependency_plan(project_dir: Path) -> DependencyPlan:
     claimed_python_directories = set()
 
     for manifest in _find_files(project_dir, "package.json"):
+        if _npm_workspace_owner(project_dir, manifest) is not None:
+            continue
         command, error = _node_command(project_dir, manifest, scaffold_outputs)
         if error:
             plan.errors.append(error)
@@ -216,6 +218,43 @@ def _walk_project_files(project_dir: Path) -> Iterator[Path]:
                 yield path
 
 
+def _npm_workspace_members(manifest: Path) -> List[Path]:
+    """Only declared npm workspace members share their root's install command."""
+    try:
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return []
+        manager, error = _node_manager(manifest.parent, data, None)
+        if manager != "npm" or error:
+            return []
+        patterns = data.get("workspaces", [])
+        if isinstance(patterns, dict):
+            patterns = patterns.get("packages", [])
+        if not isinstance(patterns, list):
+            return []
+        members = set()
+        root = manifest.parent.resolve()
+        for pattern in patterns:
+            if not _is_safe_relative_path(pattern):
+                continue
+            for member in manifest.parent.glob(pattern.rstrip("/") + "/package.json"):
+                if member.is_file() and not member.is_symlink() and root in member.resolve().parents:
+                    members.add(member)
+        return sorted(members)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return []
+
+
+def _npm_workspace_owner(project_dir: Path, manifest: Path) -> Optional[Path]:
+    for directory in manifest.parent.parents:
+        if directory != project_dir and project_dir not in directory.parents:
+            break
+        parent = directory / "package.json"
+        if parent.is_file() and manifest in _npm_workspace_members(parent):
+            return parent
+    return None
+
+
 def _node_command(
     project_dir: Path,
     manifest: Path,
@@ -268,7 +307,7 @@ def _node_command(
         "yarn": [executable, "install", "--frozen-lockfile"] if locked else [executable, "install"],
         "bun": [executable, "install", "--frozen-lockfile"] if locked else [executable, "install"],
     }[manager]
-    has_packages = any(
+    has_packages = bool(_npm_workspace_members(manifest)) or any(
         isinstance(data.get(key), dict) and bool(data[key])
         for key in ("dependencies", "devDependencies", "optionalDependencies")
     )
@@ -673,24 +712,37 @@ def _node_package_problems(
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return [f"cannot validate npm packages from {manifest}: {exc}"]
 
-    node_modules = project_dir / working_dir / "node_modules"
-    for group in ("dependencies", "devDependencies"):
-        declared = data.get(group, {})
-        if declared is None:
+    manifests = [manifest_path, *_npm_workspace_members(manifest_path)]
+    for current_manifest in manifests:
+        try:
+            current = json.loads(current_manifest.read_text(encoding="utf-8"))
+            if not isinstance(current, dict):
+                raise ValueError("package.json must contain an object")
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            problems.append(f"cannot validate npm packages from {current_manifest.relative_to(project_dir)}: {exc}")
             continue
-        if not isinstance(declared, dict):
-            problems.append(f"{manifest} has invalid {group}")
-            continue
-        for package_name in sorted(declared):
-            package_path = _node_package_path(node_modules, package_name)
-            if package_path is None:
-                problems.append(
-                    f"{manifest} has invalid package name in {group}: {package_name}"
-                )
-            elif not package_path.exists():
-                problems.append(
-                    f"missing installed {group} package: {package_name} ({working_dir})"
-                )
+        relative = current_manifest.relative_to(project_dir).as_posix()
+        for group in ("dependencies", "devDependencies"):
+            declared = current.get(group, {})
+            if declared is None:
+                continue
+            if not isinstance(declared, dict):
+                problems.append(f"{relative} has invalid {group}")
+                continue
+            for package_name in sorted(declared):
+                if _node_package_path(Path("node_modules"), package_name) is None:
+                    problems.append(f"{relative} has invalid package name in {group}")
+                    continue
+                directory = current_manifest.parent
+                found = False
+                while directory == project_dir or project_dir in directory.parents:
+                    candidate = _node_package_path(directory / "node_modules", package_name)
+                    if candidate is not None and candidate.exists():
+                        found = True
+                        break
+                    directory = directory.parent
+                if not found:
+                    problems.append(f"missing installed {group} package: {package_name} ({relative})")
     return problems
 
 

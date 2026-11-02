@@ -1,5 +1,5 @@
 schema_version: 1
-policy_sha256: 749237034d4cfef4749bb696f033ee61c5891ef89e9a8f0b812b5d56b633d899
+policy_sha256: 346f2c37bbeebb9babf078f5c87ae4effa7b81248e160d291aad539b73f2f572
 adapters:
   codex:
     version: 1

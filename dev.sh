@@ -7,7 +7,7 @@ if [ ! -x backend/.venv/bin/uvicorn ]; then
   [ -x backend/.venv/bin/python ] || python3 -m venv backend/.venv
   backend/.venv/bin/pip install -q --prefer-binary -e "backend[dev]"
 fi
-[ -d frontend/node_modules ] || (cd frontend && npm install)
+[ -d node_modules ] || npm install
 (cd backend && exec .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app) &
 BE=$!
 (cd frontend && exec npx vite --host 0.0.0.0 --port 5173) &

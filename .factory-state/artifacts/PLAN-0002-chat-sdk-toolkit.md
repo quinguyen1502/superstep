@@ -5,7 +5,7 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 done; phase 2 TASK-0220–0222 owner-approved on 2026-11-02 for Ready #285–287, not merged; later tasks in backlog)
+- Tasks: TASK-0215 to TASK-0230 (plan accepted 2026-10-31; phase 1 and phase 2 merged; TASK-0223 done with owner-approved merge #288 on 2026-11-02; later tasks in backlog)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -23,7 +23,7 @@ Phase-1 review and QA evidence lives in the corresponding done tasks (TASK-0217:
 
 ## Phase 2 progress (2026-11-02)
 
-Owner approved the reviewed phase-2 stack on 2026-11-02 ("Duyệt"). TASK-0220–0222 move to done on their existing #285–287, rebased/squashed to one commit per task for Ready delivery after final gates (REV/QA-0215–0217). #286 remains stacked on #285 and #287 on #286; do not merge a child before its dependency. The reviewed browser fetch binding fix discovered by #287 is now included in #285, preserving the final stack source tree. Merge and release remain pending explicit approval. No later UI/native work has started.
+Owner explicitly authorised merging #285–287 and continuing TASK-0223 on 2026-11-02. All three PRs are merged into develop after rebase/retarget and final-head checks (20 / 19 / 21 passed). Phase 2 is integrated; no SDK/app publication or tag is authorised. TASK-0223 starts phase 3 with shared UI extraction and regression checks; hooks, theme, widget and native work remain later tasks.
 
 Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server, so preserve that version until the next approved shared release (phase grouping still proposes 0.11.0). Do not downgrade Python to the obsolete 0.2.0 target. TypeScript keeps its independent 0.2.0 package target.
 
@@ -102,3 +102,7 @@ Work the owner asked to keep on record (2026-10-31, "Nhớ note các thứ sẽ 
 ## TASK-0220 owner acceptance (2026-11-02)
 
 Owner approved the reviewed phase-2 stack. TASK-0220 moves to done for single-commit Ready delivery on #285, including the already-reviewed browser fetch binding correction from TASK-0222. This is acceptance of the implementation, not merge or release approval. Dependent PRs are finalised in stack order.
+
+## Phase 3 extraction progress (2026-11-02)
+
+Owner accepted TASK-0223 and requested merging existing #288 on 2026-11-02. Task is done for single-commit Ready delivery, with final-head checks required before merge. Previous validation includes full Factory 8/8, root tests, unchanged chat e2e, clean workspace install, four screenshot variants and a +0.03174 percent bundle comparison. REV/QA-0218 record source review, resolved Deno/runtime setup failures, host i18next/icon compatibility, residual raster differences and no screenshots in Git. TASK-0224–0228 remain backlog; the new package is not published and release approval remains separate.

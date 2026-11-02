@@ -1,34 +1,35 @@
+import { NODE_ICONS } from '@superstep/react/node-icons'
 import { type Edge } from '@xyflow/react'
-import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Brain, Wrench, GitBranch, Flag, CirclePlay, Trash2, Code2, UserCheck, Merge, Layers, Database, Plug, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square, Repeat, Scale, Mail, Bot, ArrowRightLeft } from 'lucide-react'
+import { Keyboard, MessagesSquare, Redo2, Undo2, Play, Save, Trash2, type LucideIcon, CopyPlus, Network, Maximize, Copy, Scissors, ClipboardPaste, BoxSelect, ZoomIn, ZoomOut, Square } from 'lucide-react'
 import i18n from '@/lib/i18n'
 
 export type Field = { name: string; type: string; reducer?: string }
 export type LogItem = { type: string; node?: string; label?: string; duration_ms?: number; delta?: any; state?: any; errors?: string[]; error?: any }
 /** `desc` is resolved via i18n key `nodes.<type>`. */
 export const META: Record<string, { label: string; icon: LucideIcon; color: string; accent: string }> = {
-  start: { label: 'Start', icon: CirclePlay, color: 'bg-node-start-muted text-node-start', accent: 'bg-node-start' },
-  llm: { label: 'LLM', icon: Brain, color: 'bg-node-llm-muted text-node-llm', accent: 'bg-node-llm' },
-  tool: { label: 'Tool/API', icon: Wrench, color: 'bg-node-tool-muted text-node-tool', accent: 'bg-node-tool' },
-  condition: { label: 'Condition', icon: GitBranch, color: 'bg-node-condition-muted text-node-condition', accent: 'bg-node-condition' },
-  end: { label: 'End', icon: Flag, color: 'bg-node-end-muted text-node-end', accent: 'bg-node-end' },
-  human: { label: 'Human', icon: UserCheck, color: 'bg-node-human-muted text-node-human', accent: 'bg-node-human' },
+  start: { label: 'Start', icon: NODE_ICONS.start, color: 'bg-node-start-muted text-node-start', accent: 'bg-node-start' },
+  llm: { label: 'LLM', icon: NODE_ICONS.llm, color: 'bg-node-llm-muted text-node-llm', accent: 'bg-node-llm' },
+  tool: { label: 'Tool/API', icon: NODE_ICONS.tool, color: 'bg-node-tool-muted text-node-tool', accent: 'bg-node-tool' },
+  condition: { label: 'Condition', icon: NODE_ICONS.condition, color: 'bg-node-condition-muted text-node-condition', accent: 'bg-node-condition' },
+  end: { label: 'End', icon: NODE_ICONS.end, color: 'bg-node-end-muted text-node-end', accent: 'bg-node-end' },
+  human: { label: 'Human', icon: NODE_ICONS.human, color: 'bg-node-human-muted text-node-human', accent: 'bg-node-human' },
 }
-META.join = { label: 'Join', icon: Merge, color: 'bg-node-join-muted text-node-join', accent: 'bg-node-join' }
-META.subgraph = { label: 'Subgraph', icon: Layers, color: 'bg-node-subgraph-muted text-node-subgraph', accent: 'bg-node-subgraph' }
+META.join = { label: 'Join', icon: NODE_ICONS.join, color: 'bg-node-join-muted text-node-join', accent: 'bg-node-join' }
+META.subgraph = { label: 'Subgraph', icon: NODE_ICONS.subgraph, color: 'bg-node-subgraph-muted text-node-subgraph', accent: 'bg-node-subgraph' }
 META.subgraph_exit = META.subgraph
-META.mcp = { label: 'MCP tool', icon: Plug, color: 'bg-node-mcp-muted text-node-mcp', accent: 'bg-node-mcp' }
-META.retriever = { label: 'Retriever', icon: Database, color: 'bg-node-retriever-muted text-node-retriever', accent: 'bg-node-retriever' }
-META.foreach = { label: 'For each', icon: Repeat, color: 'bg-node-foreach-muted text-node-foreach', accent: 'bg-node-foreach' }
-META.decision = { label: 'Decision (Jev)', icon: Scale, color: 'bg-node-decision-muted text-node-decision', accent: 'bg-node-decision' }
-META.email = { label: 'Send email', icon: Mail, color: 'bg-node-email-muted text-node-email', accent: 'bg-node-email' }
-META.code = { label: 'Code', icon: Code2, color: 'bg-node-code-muted text-node-code', accent: 'bg-node-code' }
-META.agent = { label: 'Agent', icon: Bot, color: 'bg-node-agent-muted text-node-agent', accent: 'bg-node-agent' }
+META.mcp = { label: 'MCP tool', icon: NODE_ICONS.mcp, color: 'bg-node-mcp-muted text-node-mcp', accent: 'bg-node-mcp' }
+META.retriever = { label: 'Retriever', icon: NODE_ICONS.retriever, color: 'bg-node-retriever-muted text-node-retriever', accent: 'bg-node-retriever' }
+META.foreach = { label: 'For each', icon: NODE_ICONS.foreach, color: 'bg-node-foreach-muted text-node-foreach', accent: 'bg-node-foreach' }
+META.decision = { label: 'Decision (Jev)', icon: NODE_ICONS.decision, color: 'bg-node-decision-muted text-node-decision', accent: 'bg-node-decision' }
+META.email = { label: 'Send email', icon: NODE_ICONS.email, color: 'bg-node-email-muted text-node-email', accent: 'bg-node-email' }
+META.code = { label: 'Code', icon: NODE_ICONS.code, color: 'bg-node-code-muted text-node-code', accent: 'bg-node-code' }
+META.agent = { label: 'Agent', icon: NODE_ICONS.agent, color: 'bg-node-agent-muted text-node-agent', accent: 'bg-node-agent' }
 /** An Agent node's expanded steps appear in traces only: `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join`, `ag/__exit`. */
-META.agent_model = { ...META.agent, icon: Brain }
-META.agent_tool = { ...META.agent, icon: Wrench }
+META.agent_model = { ...META.agent, icon: NODE_ICONS.agent_model }
+META.agent_tool = { ...META.agent, icon: NODE_ICONS.agent_tool }
 META.agent_exit = META.agent
-META.agent_join = { ...META.agent, icon: Merge }
-META.agent_handoff = { ...META.agent, icon: ArrowRightLeft }  // TASK-0180
+META.agent_join = { ...META.agent, icon: NODE_ICONS.agent_join }
+META.agent_handoff = { ...META.agent, icon: NODE_ICONS.agent_handoff }  // TASK-0180
 export const TYPES = ['start', 'llm', 'agent', 'decision', 'retriever', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
 export const INSERTABLE = TYPES.filter(t => t !== 'start' && t !== 'end')
 export const RUNTIME = new Set(['llm', 'agent', 'retriever', 'tool', 'mcp', 'human', 'decision'])

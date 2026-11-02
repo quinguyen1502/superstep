@@ -143,6 +143,8 @@ def test_api_language_parameter(c):
 # ---- Deno: type-check and run ----
 
 DENO = shutil.which("deno")
+# Exported files use the isolated Deno cache, independently of a repository npm workspace.
+DENO_ARGS = ["--no-config", "--no-lock", "--node-modules-dir=none"]
 
 
 @pytest.fixture(scope="module")
@@ -153,7 +155,7 @@ def deno_env(tmp_path_factory):
     env.update(DENO_DIR=cache, NO_COLOR="1")
     probe = tmp_path_factory.mktemp("probe") / "p.ts"
     probe.write_text(demo().code)
-    p = subprocess.run([DENO, "check", "-q", str(probe)], env=env, capture_output=True, text=True, timeout=600)
+    p = subprocess.run([DENO, "check", "-q", *DENO_ARGS, str(probe)], env=env, capture_output=True, text=True, timeout=600)
     if p.returncode and re.search(r"error sending request|dns error|Connection refused|failed to fetch|Could not find npm package", p.stderr, re.I):
         pytest.skip(f"npm registry unreachable: {p.stderr[-300:]}")
     assert p.returncode == 0, p.stderr[-3000:]
@@ -163,10 +165,10 @@ def deno_env(tmp_path_factory):
 def ts_run(tmp_path, env, code, check=True):
     f = tmp_path / f"wf_{uuid.uuid4().hex[:6]}.ts"; f.write_text(code)
     if check:
-        p = subprocess.run([DENO, "check", "-q", str(f)], env=env, capture_output=True, text=True, timeout=300)
+        p = subprocess.run([DENO, "check", "-q", *DENO_ARGS, str(f)], env=env, capture_output=True, text=True, timeout=300)
         assert p.returncode == 0, p.stderr[-3000:]
     # LangSmith's profile lookup (through LangGraph.js) asks node:os for homedir before reading optional config.
-    p = subprocess.run([DENO, "run", "-q", "--allow-env", "--allow-read", "--allow-sys=homedir", str(f)], cwd=tmp_path, env=env, capture_output=True,
+    p = subprocess.run([DENO, "run", "-q", *DENO_ARGS, "--allow-env", "--allow-read", "--allow-sys=homedir", str(f)], cwd=tmp_path, env=env, capture_output=True,
                        text=True, timeout=120, stdin=subprocess.DEVNULL)
     assert p.returncode == 0, p.stderr[-3000:]
     names = [m.group(1) for m in re.finditer(r"^\[(\w+)\] ", p.stdout, re.M)]
@@ -221,7 +223,7 @@ def test_all_node_types_type_check(tmp_path, deno_env):
     support = next(b["workflow"] for b in BUILTINS if any(n["type"] == "agent" for n in b["workflow"]["nodes"]))
     for wf in (TOOLS, AGENT, support):
         ts_run_check = tmp_path / "t.ts"; ts_run_check.write_text(T.to_typescript(wf, wf.get("name", "Workflow")).code)
-        p = subprocess.run([DENO, "check", "-q", str(ts_run_check)], env=deno_env, capture_output=True, text=True, timeout=300)
+        p = subprocess.run([DENO, "check", "-q", *DENO_ARGS, str(ts_run_check)], env=deno_env, capture_output=True, text=True, timeout=300)
         assert p.returncode == 0, p.stderr[-3000:]
 
 

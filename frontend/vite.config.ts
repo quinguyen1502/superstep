@@ -35,7 +35,7 @@ const chatEmbed = (): Plugin => ({
 })
 export default defineConfig({
   plugins: [react(), tailwindcss(), chatEmbed()],
-  resolve: { alias: { '@': path.resolve(__dirname, './src') } },
+  resolve: { conditions: ['source', 'module', 'browser', 'development|production'], alias: { '@': path.resolve(__dirname, './src') } },
   build: { rolldownOptions: { output: { advancedChunks: { groups: VENDOR } } } },
   server: { host: '0.0.0.0', port: Number(process.env.STUDIO_UI_PORT || 5173), proxy: {
     '/api': `http://${API}`,

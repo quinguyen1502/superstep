@@ -17,8 +17,9 @@ trap cleanup EXIT
 cd "$ROOT"
 "$BACKEND_PYTHON" scripts/check_test_ports.py "$API_PORT" "$HOST_PORT" "$SECOND_PORT"
 npm --prefix sdk/typescript run build
-node frontend/node_modules/typescript/bin/tsc -p examples/chat-host/tsconfig.json
-node frontend/node_modules/vite/bin/vite.js build --config frontend/vite.chat-host.config.ts
+npm run build --workspace=@superstep/react
+node node_modules/typescript/bin/tsc -p examples/chat-host/tsconfig.json
+node node_modules/vite/bin/vite.js build --config frontend/vite.chat-host.config.ts
 node frontend/scripts/check-ui-classes.mjs --strict examples/chat-host/src/app.tsx
 node --test examples/chat-host/tests/server.test.mjs
 
@@ -39,4 +40,4 @@ for _ in $(seq 1 80); do curl -fsS "$HOST/health" >/dev/null 2>&1 && break; slee
 curl -fsS "$HOST/health" >/dev/null || { cat "$WORK/host.log"; exit 1; }
 for _ in $(seq 1 80); do curl -fsS "http://localhost:$SECOND_PORT/health" >/dev/null 2>&1 && break; sleep 0.25; done
 curl -fsS "http://localhost:$SECOND_PORT/health" >/dev/null || { cat "$WORK/second.log"; exit 1; }
-node frontend/node_modules/@playwright/test/cli.js test --config frontend/playwright.chat-host.config.ts "$@"
+node node_modules/@playwright/test/cli.js test --config frontend/playwright.chat-host.config.ts "$@"
