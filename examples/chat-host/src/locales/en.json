@@ -1,0 +1,11 @@
+{
+  "brand": "Customer portal", "demo": "Demo workspace", "title": "A little help, whenever you need it.",
+  "intro": "Choose a demo customer to explore your own conversations.", "signIn": "Continue as {{name}}", "people": { "lan": "Lan", "minh": "Minh" },
+  "privacy": "Each customer has a separate conversation history. Please use sample data only.", "language": "Language", "english": "English", "vietnamese": "Tiếng Việt",
+  "theme": "Switch colour theme", "signOut": "Switch account", "conversations": "Your conversations", "newChat": "New conversation", "untitled": "New conversation",
+  "noChats": "Your conversations will appear here.", "assistant": "Support assistant", "ready": "Ready to help", "streaming": "Writing a reply", "waiting": "Your answer is needed", "loading": "Loading", "error": "Unable to continue",
+  "welcome": "How can we help?", "welcomeHint": "Send a message or share a document to get started.", "you": "You", "message": "Your message", "placeholder": "Tell us what you need…", "send": "Send message", "cancel": "Stop reply",
+  "attachment": "Attach a document", "file": "Attached: {{name}}", "attachmentMessage": "Please review the attached document.",
+  "formTitle": "A quick confirmation", "approved": "I approve this request", "note": "Your note", "notePlaceholder": "Add any details that will help…", "answer": "Send answer",
+  "helpful": "Helpful answer", "unhelpful": "Unhelpful answer", "rated": "Feedback saved", "powered": "Powered by Superstep", "retry": "Try again"
+}

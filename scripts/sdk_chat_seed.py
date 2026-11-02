@@ -37,11 +37,15 @@ def seed(slug, human=False):
     wid = api("POST", "/api/workflows", json=workflow)["id"]
     api("PUT", f"/api/workflows/{wid}/chat", json={"enabled": True, "slug": slug, "access": ["app", "anonymous"],
         "attachments": {"enabled": True, "field": "files"}})
-    key = api("POST", f"/api/workflows/{wid}/chat/app-keys", json={"label": "SDK integration"})
+    origins = [os.environ["SUPERSTEP_IT_CHAT_ORIGIN"]] if os.environ.get("SUPERSTEP_IT_CHAT_ORIGIN") else []
+    key = api("POST", f"/api/workflows/{wid}/chat/app-keys", json={"label": "SDK integration", "origins": origins})
+    if human and os.environ.get("SUPERSTEP_IT_CHAT_SPARE_KEY") == "1":
+        # Keep CORS origin admission active after revoking the actual test key, so browsers can read its typed 401.
+        api("POST", f"/api/workflows/{wid}/chat/app-keys", json={"label": "CORS continuity", "origins": origins})
     return {"slug": slug, "workflowId": wid, "keyId": key["key_id"], "secret": key["secret"]}
 
 
-config = {"owner": owner, "chat": seed("sdk-chat-it"), "human": seed("sdk-human-it", human=True)}
+config = {"baseUrl": base, "owner": owner, "chat": seed("sdk-chat-it"), "human": seed("sdk-human-it", human=True)}
 with open(destination, "w", encoding="utf8") as out:
     os.chmod(destination, 0o600)
     json.dump(config, out)

@@ -1,6 +1,6 @@
 # deps / envs
-node_modules/
-.venv/
+node_modules
+.venv
 venv/
 # build & caches
 dist/
@@ -28,6 +28,8 @@ backend/imports/
 *.egg-info/
 frontend/test-results/
 frontend/playwright-report/
+examples/chat-host/test-results/
+examples/chat-host/playwright-report/
 backend/.venv
 .coverage
 

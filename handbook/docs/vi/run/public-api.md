@@ -2,7 +2,8 @@
 
 Về HTTP và stream của chat công khai, xem [Chat API](chat-api.md) và
 [Xác thực bên thứ ba](chat-third-party-auth.md). Helper SDK trên trang này
-chạy workflow; helper chat thuộc giai đoạn SDK tiếp theo.
+mô tả workflow và chat headless. Phần chat đã có trong mã nguồn, chờ đợt phát
+hành package tiếp theo được chủ dự án duyệt.
 
 Dịch vụ khác khởi chạy workflow qua HTTP bằng **token của workflow**, rồi hỏi
 lại (poll) để lấy kết quả. Trang này mô tả hai endpoint công khai, SDK chính
@@ -193,6 +194,33 @@ giây. Hàm trả về run bất kể trạng thái cuối, nên hãy kiểm tra
 Cả hai đọc `SUPERSTEP_BASE_URL`, `SUPERSTEP_TOKEN` và `SUPERSTEP_WORKFLOW_ID`
 khi bạn không truyền tuỳ chọn tương ứng. Trước bản phát hành đầu tiên, cài từ
 mã nguồn: `pip install ./sdk/python` hoặc `npm install ./sdk/typescript`.
+
+## Chat headless
+
+TypeScript dùng `new Superstep({baseUrl}).chat(slug, {getToken})`; Python dùng
+`Client(base_url=...).chat(slug, token=...)` hoặc `AsyncClient`. Client đọc
+session/lịch sử, stream sự kiện và kết quả cuối, trả lời Human bằng văn bản
+hoặc object biểu mẫu, upload tệp và đánh giá phản hồi. Backend của bạn ký
+token user ngắn hạn bằng `mintChatToken` từ `@superstep/sdk/server` hoặc
+`mint_chat_token` của Python; secret app key chỉ nằm trên backend đó.
+
+Với mã nguồn hiện tại, build TypeScript SDK trước khi dùng package local;
+cài Python bằng `pip install './sdk/python[chat]'` để có socket. Xem
+[README TypeScript](https://github.com/quinguyen1502/superstep/tree/develop/sdk/typescript)
+và [README Python](https://github.com/quinguyen1502/superstep/tree/develop/sdk/python)
+về callback làm mới token, huỷ chủ động và khôi phục lịch sử có giới hạn,
+không tự gửi lại tin nhắn khi kết quả ghi chưa rõ.
+
+[Ví dụ chat host](https://github.com/quinguyen1502/superstep/tree/develop/examples/chat-host)
+chạy Node trên loopback, khác origin với studio; session do host quản lý,
+hai khách hàng, biểu mẫu xác nhận Human, tệp, đánh giá và thu hồi key. Ví dụ
+dùng headless store; đây là đăng nhập mẫu local, chưa phải React UI toolkit
+hay hệ thống tài khoản production. CI lưu screenshot dưới dạng artifact tải
+về, không đưa ảnh vào Git.
+
+TypeScript hướng tới SDK 0.2.0. Python giữ version chung với CLI/server đến
+đợt release được duyệt tiếp theo, không hạ version xuống 0.2.0. Publish
+package và tạo release tag cần chủ dự án duyệt riêng.
 
 ## Lỗi
 

@@ -411,7 +411,7 @@ REQ-0082 / PLAN-0002, accepted on 2026-10-31: phase 1 TASK-0215–0219 is merged
 
 - TASK-0220 TypeScript headless chat SDK 0.2.0 — done, owner-approved 2026-11-02 for Ready #285; REV-0215 / QA-0215. Includes client/store/server token helper, bounded JSON Human answers and the browser fetch binding regression discovered by TASK-0222. Merge and publication await explicit approval.
 - TASK-0221 Python chat SDK — done, owner-approved 2026-11-02 for Ready #286, explicitly stacked on #285; REV-0216 / QA-0216. Shared version remains 0.10.2 pending a later approved release; merge is not yet authorised.
-- TASK-0222 sample host/e2e — owner requested implementation on 2026-11-02; in progress in a separate worktree stacked on TASK-0221. Web UI extraction/toolkit/widget and native UI remain later phases of PLAN-0002.
+- TASK-0222 sample host/e2e — done, owner-approved 2026-11-02 for Ready #287, stacked on #286; REV-0217 / QA-0217. Cross-origin two-user/form/file/rating/revoke acceptance and en/vi theme/mobile screenshots remain CI artifacts, outside Git. The reviewed SDK fetch correction is included in #285. Merge/release await explicit approval; later toolkit/widget/native tasks stay in backlog.
 
 ## Generic events, connections and model policy
 

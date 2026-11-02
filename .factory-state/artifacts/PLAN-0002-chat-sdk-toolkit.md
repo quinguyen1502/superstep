@@ -5,7 +5,7 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 done; TASK-0220–0221 owner-approved for Ready #285/#286, TASK-0222 finalisation follows; later tasks in backlog)
+- Tasks: TASK-0215 to TASK-0230 (approved on 2026-10-31; phase 1 done; phase 2 TASK-0220–0222 owner-approved on 2026-11-02 for Ready #285–287, not merged; later tasks in backlog)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -23,7 +23,7 @@ Phase-1 review and QA evidence lives in the corresponding done tasks (TASK-0217:
 
 ## Phase 2 progress (2026-11-02)
 
-TASK-0220 and TASK-0221 are owner-approved on 2026-11-02 and move to done for single-commit Ready #285/#286 (REV/QA-0215–0216). Python is explicitly stacked on #285; #287 follows in stack order. The reviewed browser fetch fix discovered by TASK-0222 now belongs to #285. Merge and release remain pending explicit approval; later UI/native work has not started.
+Owner approved the reviewed phase-2 stack on 2026-11-02 ("Duyệt"). TASK-0220–0222 move to done on their existing #285–287, rebased/squashed to one commit per task for Ready delivery after final gates (REV/QA-0215–0217). #286 remains stacked on #285 and #287 on #286; do not merge a child before its dependency. The reviewed browser fetch binding fix discovered by #287 is now included in #285, preserving the final stack source tree. Merge and release remain pending explicit approval. No later UI/native work has started.
 
 Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server, so preserve that version until the next approved shared release (phase grouping still proposes 0.11.0). Do not downgrade Python to the obsolete 0.2.0 target. TypeScript keeps its independent 0.2.0 package target.
 

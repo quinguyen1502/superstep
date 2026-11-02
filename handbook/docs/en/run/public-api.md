@@ -2,7 +2,8 @@
 
 For the published chat's HTTP and streaming API, see [Chat API](chat-api.md)
 and [Third-party authentication](chat-third-party-auth.md). The SDK helpers
-on this page start workflow runs; chat helpers belong to a later SDK phase.
+below cover workflow runs and headless chat. Chat support is available in the
+repository ahead of the next owner-approved package release.
 
 Other services start a workflow over HTTP with a **workflow token**, then poll
 for the result. This page covers the two public endpoints, the official Python
@@ -193,6 +194,33 @@ until it is done. The poll interval starts at 1 s and grows by 1.5 times up to
 Both read `SUPERSTEP_BASE_URL`, `SUPERSTEP_TOKEN` and `SUPERSTEP_WORKFLOW_ID`
 when an option is not passed. Until the first release, install them from a
 checkout: `pip install ./sdk/python`, or `npm install ./sdk/typescript`.
+
+## Headless chat
+
+Use `new Superstep({baseUrl}).chat(slug, {getToken})` in TypeScript, or
+`Client(base_url=...).chat(slug, token=...)` / `AsyncClient` in Python. These
+clients read sessions/history, stream typed events and a final result, answer
+Human text/form questions, upload files and rate answers. Sign short-lived
+user tokens in your own backend with `@superstep/sdk/server` `mintChatToken`
+or Python `mint_chat_token`; the app-key secret stays on that backend.
+
+For the current source version, build the TypeScript SDK before using its
+local package; install Python with `pip install './sdk/python[chat]'` for
+socket support. The [TypeScript README](https://github.com/quinguyen1502/superstep/tree/develop/sdk/typescript)
+and [Python README](https://github.com/quinguyen1502/superstep/tree/develop/sdk/python)
+describe callback refresh, explicit cancellation and bounded history recovery
+without automatically replaying an ambiguous message.
+
+The [chat host example](https://github.com/quinguyen1502/superstep/tree/develop/examples/chat-host)
+demonstrates a loopback Node host on a separate origin, server-owned sessions,
+two customers, a Human approval form, files, ratings and key revocation. It
+reuses the headless store; it is a local sign-in demonstration, not the future
+React UI toolkit or a production account system. CI keeps screenshots as
+downloadable artifacts, outside Git.
+
+TypeScript targets SDK 0.2.0. Python retains the SDK/CLI/server's shared version
+until the next approved release; no Python downgrade to 0.2.0 is planned.
+Package publication and release tags require the owner's release approval.
 
 ## Errors
 
