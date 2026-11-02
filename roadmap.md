@@ -416,10 +416,10 @@ REQ-0083, owner requested implementation on 2026-11-01 after selecting generic i
 
 ## Additional managed adapters
 
-REQ-0084, DES-0002, DEC-0082, PLAN-0004: owner requested generic HTTP API and services already in approval channels on 2026-11-02. No live sends/cutover or merge authorised.
+REQ-0084, DES-0002, DEC-0082, PLAN-0004: owner requested generic HTTP API and services already in approval channels on 2026-11-02, then approved merging the delivery PRs into develop. Live sends/cutover remain outside this delivery.
 
 - TASK-0235 Generic managed HTTP API — done; owner approved merge of #282 into develop on 2026-11-02; final-head CI gates merging.
-- TASK-0236 Slack/WhatsApp/Email/Teams actions using existing channels — planned; webhook JSON stays inbound-only.
+- TASK-0236 Slack/WhatsApp/Email/Teams actions using existing channels — done; owner approved merge of #283 into develop on 2026-11-02; final-head CI gates merging.
 
 ## Releases
 

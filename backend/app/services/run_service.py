@@ -24,6 +24,7 @@ from . import time_travel
 from .telemetry import Telemetry, summarize, trace_url
 from ..core.logging import get_logger
 from .workflow_diff import same_content
+from .email_quota import take_email_quota
 
 
 @dataclass
@@ -429,11 +430,7 @@ class RunService:
     def email_quota(self, uid: str) -> Optional[Callable[[int], None]]:
         """Send email nodes of `uid`'s workflows reach at most STUDIO_EMAIL_NODE_HOURLY_LIMIT recipients an hour."""
         if self.quota is None: return None
-        def take(n: int) -> None:
-            limit = config.email_node_hourly_limit()
-            count, retry = self.quota.add(f"email:{uid}", n, 3600)
-            if count > limit: raise AppError("EMAIL_RATE_LIMITED", limit=limit, retry=retry)
-        return take
+        return lambda n: take_email_quota(self.quota, uid, n)
 
     def _expand(self, uid: str, wid: Optional[str], wf: dict) -> tuple[dict, Optional[list]]:
         """Inline subgraph nodes (TASK-0011) with the workflows this user may read, copy in the children of workflow tools

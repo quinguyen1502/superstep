@@ -3,27 +3,16 @@ import httpx
 from ...core import config
 from ...core.errors import AppError
 from .base import ToolFailure, request
+from .channel import ChannelTools
 
 
-class TelegramTools:
+class TelegramTools(ChannelTools):
     id = "telegram"
-    secret_fields = ()
-    fields = ("channel_id", "chat_id")
     settings_schema = {"type": "object", "properties": {"channel_id": {"type": "string", "resource_kind": "telegram"}, "chat_id": {"type": "string"}}}
 
-    def __init__(self, channels): self.channels = channels
-
-    def validate(self, uid, settings, secrets):
-        if set(settings) != set(self.fields) or not re.fullmatch(r"-?\d{1,20}", str(settings.get("chat_id", ""))):
+    def validate_target(self, settings):
+        if not re.fullmatch(r"-?\d{1,20}", str(settings.get("chat_id", ""))):
             raise AppError("MCP_CONFIG_INVALID", field="settings.chat_id")
-        self.authorize(uid, settings)
-        if secrets: raise AppError("MCP_CONFIG_INVALID", field="secrets")
-
-    def authorize(self, uid, settings, allow_org=True):
-        channel = self.channels.repo.channel(settings.get("channel_id")) if self.channels else None
-        if not self.channels or not self.channels.usable(uid, channel) or channel.kind != "telegram" or (channel.scope == "org" and (not allow_org or not self.channels.org_allowed(uid))):
-            raise AppError("CHANNEL_NOT_FOUND")
-        return channel
 
     def tools(self, settings):
         return [{"name": "send_message", "description": "Send plain text to the chat configured on this connection. Unknown outcomes are never automatically resent.",
@@ -49,7 +38,3 @@ class TelegramTools:
             if not isinstance(result["message_id"], int): raise ValueError()
             return {"outcome": "confirmed", "operation_id": key, "chat_id": settings["chat_id"], "message_id": result["message_id"]}
         except (ValueError, KeyError, TypeError, AttributeError): raise ToolFailure("unknown") from None
-
-    def reconcile(self, uid, settings, secrets, tool, key, allow_org=True):
-        self.authorize(uid, settings, allow_org)
-        return None  # Telegram sendMessage cannot be queried by our operation id; block instead of resending.
