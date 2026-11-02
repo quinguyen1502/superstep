@@ -26,14 +26,15 @@ class Config:
                   "workflow_id": workflow_id or os.environ.get(ENV_WORKFLOW_ID)}
         env = {"base_url": ENV_BASE_URL, "token": ENV_TOKEN, "workflow_id": ENV_WORKFLOW_ID}
         missing = [f"{k} (or {env[k]})" for k, v in values.items() if not v]
-        if missing: raise ConfigError("Missing " + ", ".join(missing), code="CONFIG_MISSING")
-        return cls(base_url=str(values["base_url"]).rstrip("/"), token=str(values["token"]), workflow_id=str(values["workflow_id"]))
+        if not values["base_url"]: raise ConfigError("Missing " + ", ".join(missing), code="CONFIG_MISSING")
+        return cls(base_url=str(values["base_url"]).rstrip("/"), token=str(values["token"] or ""), workflow_id=str(values["workflow_id"] or ""))
 
     @property
     def headers(self) -> Dict[str, str]:
         return {"X-Workflow-Token": self.token, "Accept": "application/json", "User-Agent": f"superstep-python/{__version__}"}
 
     def runs_url(self, run_id: Optional[str] = None) -> str:
+        if not self.token or not self.workflow_id: raise ConfigError("Workflow runs require workflow_id and token", code="CONFIG_MISSING")
         url = f"{self.base_url}/api/hooks/workflows/{quote(self.workflow_id, safe='')}/runs"
         return f"{url}/{quote(run_id, safe='')}" if run_id else url
 
@@ -45,14 +46,18 @@ def start_body(input: Optional[Dict[str, Any]], mode: str, callback_url: Optiona
     return body
 
 
-def parse(status: int, headers: Dict[str, str], payload: Any) -> Run:
+def unwrap(status: int, headers: Dict[str, str], payload: Any) -> Any:
     """Unwrap the envelope; raise the typed error for an error envelope."""
-    if not isinstance(payload, dict) or "success" not in payload:
+    if not isinstance(payload, dict) or type(payload.get("success")) is not bool or (payload["success"] and (status >= 400 or "data" not in payload)):
         raise APIConnectionError(f"Unexpected response (HTTP {status}); is base_url a Superstep server?", code="BAD_RESPONSE", status=status)
     if not payload["success"]:
         err = payload.get("error") or {}
         raise error_for(status, err.get("code", "UNKNOWN"), err.get("message", f"HTTP {status}"), err.get("details"), headers)
-    return Run.from_dict(payload["data"])
+    return payload["data"]
+
+
+def parse(status: int, headers: Dict[str, str], payload: Any) -> Run:
+    return Run.from_dict(unwrap(status, headers, payload))
 
 
 def poll_delays(initial: float, maximum: float, factor: float) -> Iterator[float]:
