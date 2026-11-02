@@ -11,6 +11,7 @@ the graph uses the same tool interface as remote MCP servers.
 | --- | --- | --- |
 | Telegram actions | An existing Telegram channel connection; fixed destination chat ID | `send_message`: plain `text`, optional integer `reply_to_message_id` |
 | Google Sheets | Fixed spreadsheet ID and tab name; number of data columns (1–25); encrypted service-account JSON key | `append_row`: `values`, exactly the configured number of scalar values |
+| Generic HTTP API | Fixed API base URL, JSON tool definitions and encrypted authentication-header JSON | Your configured tools; GET sends scalar query parameters, other methods send a JSON object |
 
 Create a [Google service account](https://developers.google.com/identity/protocols/oauth2/service-account),
 enable the Sheets API and share the selected spreadsheet with its email as an
@@ -27,6 +28,73 @@ receives `RAW` values: strings stay text, including formula-looking input, and
 numbers remain numbers. The extra ID allows a read-only lookup after a lost
 response. Reconciliation scans at most 100,000 rows; use a new tab before that
 limit. Do not share the same tab with writers that alter/remove operation IDs.
+
+### Generic HTTP API
+
+![Generic HTTP API settings with synthetic configuration](../images/managed-http-api.png)
+
+Choose **Generic HTTP API** under Managed connections. Set an HTTPS base URL
+such as `https://api.example.com/v1`. Tool paths are fixed relative paths, not
+templates; runtime arguments cannot choose the URL, method or headers. Private
+addresses and plain HTTP require the explicit server-side
+`STUDIO_MCP_ALLOW_PRIVATE=1` override. Each call resolves/checks its destination
+and pins the connection; redirects are never followed.
+
+Paste a JSON array into **Tool definitions**. For example:
+
+```json
+[
+  {
+    "name": "create_record",
+    "description": "Create a record in the configured API",
+    "method": "POST",
+    "path": "/records",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {"text": {"type": "string", "maxLength": 4000}}
+    },
+    "success_statuses": [200, 201],
+    "response_schema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {"ok": {"const": true}}
+    }
+  }
+]
+```
+
+Methods are GET, POST, PUT, PATCH and DELETE. Input schemas must describe an
+object with `additionalProperties: false`. GET properties must have scalar
+types; other methods send the entire argument object as JSON. Schemas cannot
+contain references. No dynamic path variables, form data or file upload is
+included. Define separate fixed tools when targets differ, then **Discover
+tools** and select them in an MCP node or Agent slot. Rediscover after editing.
+
+**Authentication headers** is an optional encrypted JSON object, for example
+`{"Authorization":"Bearer YOUR_API_TOKEN"}` or `{"X-API-Key":"YOUR_API_KEY"}`.
+Never put credentials in the public base URL or tool definitions. Host,
+transport, cookie and idempotency headers are controlled by Studio; custom
+authentication cannot replace them. Saved values stay write-only. Configured
+credential strings are redacted from response data; response headers and URLs
+are not returned. Treat returned data as untrusted API content.
+
+Limits: 20 tools, 32 KiB of tool JSON, 4 KiB of encrypted-header JSON, JSON
+nesting 16 levels, request arguments 128 KiB and response 256 KiB. The existing
+managed request timeout is 20 seconds. Only JSON responses (or an empty body)
+are supported. Default successful status codes are 200, 201 and 204; configure
+`success_statuses` for other completed 2xx responses. HTTP 202 remains unknown
+because processing is incomplete. A malformed/oversized or response-schema-invalid
+success also remains unknown. See [HTTP semantics](https://www.rfc-editor.org/rfc/rfc9110.html#name-202-accepted).
+
+An HTTP success only confirms the configured response contract, not arbitrary
+business success or delivery. Add `response_schema` when an API can report
+errors with HTTP 200. The example's `ok: true` contract must match your API.
+Every call sends the stable `Idempotency-Key`; remote deduplication depends on
+the API's own contract. This generic adapter has no automatic external lookup:
+timeout/unknown operations remain blocked and never resend, including when
+**Check external result** is pressed. Inspect the external API before a new run.
 
 ### Write outcomes and recovery
 

@@ -1104,17 +1104,18 @@
   "managedTools": {
     "transport": "Managed connection",
     "adapter": "Service adapter",
-    "adapters": { "telegram": "Telegram actions", "google_sheets": "Google Sheets" },
-    "fields": { "channel_id": "Telegram connection", "chat_id": "Destination chat ID", "spreadsheet_id": "Spreadsheet ID", "sheet_name": "Sheet tab name", "data_columns": "Number of data columns", "service_account": "Service account JSON key" },
+    "adapters": { "telegram": "Telegram actions", "google_sheets": "Google Sheets", "http_api": "Generic HTTP API" },
+    "fields": { "channel_id": "Telegram connection", "chat_id": "Destination chat ID", "spreadsheet_id": "Spreadsheet ID", "sheet_name": "Sheet tab name", "data_columns": "Number of data columns", "service_account": "Service account JSON key", "base_url": "API base URL", "tools_json": "Tool definitions (JSON)", "headers": "Authentication headers (JSON, encrypted)" },
+    "headerHelp": "JSON object of headers, for example Authorization or X-API-Key. Leave empty for no authentication. Values are encrypted and never returned.",
     "secretHelp": "Paste the service account JSON key. It is encrypted and never returned.",
     "help": "Tools act only on the configured destination. Test runs send and write nothing. Managed tools require Studio operation tracking; standalone code export is unavailable.",
-    "setup": { "telegram": "Choose an existing Telegram connection and the chat it may send to. The stored bot secret is reused.", "google_sheets": "Share this sheet with the service account as an editor. An operation ID is added after the data columns; keep that column intact for result checks." },
+    "setup": { "telegram": "Choose an existing Telegram connection and the chat it may send to. The stored bot secret is reused.", "google_sheets": "Share this sheet with the service account as an editor. An operation ID is added after the data columns; keep that column intact for result checks.", "http_api": "Configure fixed paths, methods and object input schemas with additionalProperties: false. GET uses scalar query parameters; other methods send JSON. Add a response_schema for APIs that report business errors with HTTP 200. HTTP 202 or uncertain responses stay unknown; inspection never repeats a request." },
     "operations": "Recent operations",
     "operationKey": "External operation ID",
     "noOperations": "No operations yet.",
     "refresh": "Refresh",
     "reconcile": "Check external result",
-    "unknownHelp": "The external service may have accepted this write. This check only reads; it never sends or appends again. If the result stays unknown, inspect the external service before starting a new run. Telegram cannot look up a send by operation ID.",
+    "unknownHelp": "The external service may have accepted this write. This check never repeats a request. An adapter with a supported lookup can reconcile; otherwise the result stays unknown. Inspect the external service before starting a new run.",
     "outcomes": { "pending": "Pending confirmation", "confirmed": "Confirmed", "failed": "Rejected", "unknown": "Unknown result" }
   },
   "mcp": {

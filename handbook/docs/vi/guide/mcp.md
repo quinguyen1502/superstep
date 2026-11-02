@@ -11,6 +11,7 @@ trong adapter, không tạo loại node riêng trên canvas.
 | --- | --- | --- |
 | Thao tác Telegram | Kết nối Telegram đã có; ID cuộc chat nhận tin cố định | `send_message`: `text` thuần, `reply_to_message_id` dạng số nguyên nếu cần |
 | Thao tác Google Sheets | ID spreadsheet và tên tab cố định; số cột dữ liệu (1–25); khoá JSON service account được mã hoá | `append_row`: `values` với đúng số phần tử vô hướng đã cấu hình |
+| HTTP API tổng quát | URL gốc cố định, JSON định nghĩa công cụ và JSON header xác thực được mã hoá | Các công cụ đã khai báo; GET gửi query dạng đơn, phương thức khác gửi object JSON |
 
 Tạo [service account Google](https://developers.google.com/identity/protocols/oauth2/service-account),
 bật Sheets API, chia sẻ spreadsheet cho email đó với quyền chỉnh sửa rồi dán
@@ -26,6 +27,73 @@ nhận giá trị `RAW`: chuỗi vẫn là văn bản, kể cả nội dung gi�
 vẫn là số. ID bổ sung cho phép tìm kết quả khi mất phản hồi. Đối soát đọc tối
 đa 100.000 dòng; chuyển sang tab mới trước giới hạn đó. Không để công cụ khác
 sửa hoặc xoá ID thao tác trong cùng tab.
+
+### HTTP API tổng quát
+
+![Cài đặt HTTP API tổng quát với cấu hình mẫu](../images/managed-http-api.png)
+
+Chọn **HTTP API tổng quát** trong kết nối được quản lý. Nhập URL gốc HTTPS,
+ví dụ `https://api.example.com/v1`. Đường dẫn công cụ là đường dẫn tương đối
+cố định, không dùng template. Tham số lúc chạy không được chọn URL, phương
+thức hay header. Địa chỉ nội bộ và HTTP thường cần máy chủ bật rõ
+`STUDIO_MCP_ALLOW_PRIVATE=1`. Mỗi yêu cầu kiểm tra địa chỉ và kết nối tới IP
+đã xác minh; không đi theo redirect.
+
+Dán mảng JSON vào **Định nghĩa công cụ**, ví dụ:
+
+```json
+[
+  {
+    "name": "create_record",
+    "description": "Create a record in the configured API",
+    "method": "POST",
+    "path": "/records",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {"text": {"type": "string", "maxLength": 4000}}
+    },
+    "success_statuses": [200, 201],
+    "response_schema": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {"ok": {"const": true}}
+    }
+  }
+]
+```
+
+Hỗ trợ GET, POST, PUT, PATCH và DELETE. Schema input phải là object với
+`additionalProperties: false`. Thuộc tính GET có kiểu vô hướng; phương thức
+khác gửi toàn bộ object tham số làm JSON. Schema không được chứa tham chiếu.
+Chưa có biến đường dẫn động, form data hay tải tệp. Khai báo công cụ cố định
+riêng khi cần đích khác nhau, bấm **Khám phá công cụ** rồi chọn trong MCP node
+hoặc slot Agent. Khám phá lại sau khi sửa cấu hình.
+
+**Header xác thực** là object JSON được mã hoá, có thể để trống, ví dụ
+`{"Authorization":"Bearer YOUR_API_TOKEN"}` hoặc `{"X-API-Key":"YOUR_API_KEY"}`.
+Không đặt credential trong URL gốc hay định nghĩa công cụ công khai. Studio
+quản lý header host, truyền tải, cookie và ID thao tác; header xác thực không
+được ghi đè chúng. Giá trị đã lưu không trả lại. Chuỗi credential đã cấu hình
+được che trong dữ liệu phản hồi; không trả lại header hay URL phản hồi. Xem
+dữ liệu API nhận được là nội dung không tin cậy.
+
+Giới hạn: 20 công cụ, JSON định nghĩa 32 KiB, JSON header 4 KiB, JSON sâu tối
+đa 16 cấp, tham số 128 KiB và phản hồi 256 KiB. Thời gian chờ yêu cầu quản lý
+là 20 giây. Chỉ hỗ trợ phản hồi JSON hoặc body rỗng. Mã thành công mặc định
+là 200, 201, 204; dùng `success_statuses` cho mã 2xx đã hoàn tất khác. HTTP
+202 luôn chưa rõ kết quả vì xử lý chưa xong. Phản hồi thành công nhưng JSON
+sai, quá lớn hoặc sai schema cũng chưa rõ kết quả. Xem
+[ngữ nghĩa HTTP](https://www.rfc-editor.org/rfc/rfc9110.html#name-202-accepted).
+
+HTTP thành công chỉ xác nhận hợp đồng phản hồi đã cấu hình, không tự xác
+nhận mọi kết quả nghiệp vụ hay giao tin. Thêm `response_schema` nếu API có
+thể báo lỗi bằng HTTP 200; điều kiện `ok: true` trong ví dụ phải khớp API của
+bạn. Mỗi yêu cầu gửi `Idempotency-Key` cố định; việc chống trùng bên ngoài
+phụ thuộc hợp đồng của API. Adapter tổng quát chưa có cách tra cứu kết quả
+bên ngoài tự động: thao tác timeout/chưa rõ luôn bị chặn, không gửi lại, kể
+cả khi bấm **Kiểm tra kết quả bên ngoài**. Kiểm tra API trước khi tạo run mới.
 
 ### Kết quả ghi và khôi phục
 

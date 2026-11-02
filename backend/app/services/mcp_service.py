@@ -62,8 +62,8 @@ class McpService:
         if scope == "org" and not self.is_admin(uid): raise AppError("MCP_ADMIN_REQUIRED")
         if transport not in TRANSPORTS: raise AppError("MCP_TRANSPORT_UNSUPPORTED", transport=transport)
         if transport == "managed":
-            self.managed.adapter(adapter)
-            if not isinstance(settings, dict) or len(json.dumps(settings)) > 4096: raise AppError("MCP_CONFIG_INVALID", field="settings")
+            implementation = self.managed.adapter(adapter)
+            if not isinstance(settings, dict) or len(json.dumps(settings)) > getattr(implementation, "settings_limit", 4096): raise AppError("MCP_CONFIG_INVALID", field="settings")
             return {"name": n, "command": None, "args": None, "url": None, "adapter": adapter, "settings": json.dumps(settings)}
         if transport == "stdio":
             if not config.mcp_stdio_enabled(): raise AppError("MCP_STDIO_DISABLED")
@@ -99,7 +99,7 @@ class McpService:
     @staticmethod
     def _apply_secrets(r: McpServer, sec: dict) -> None:
         r.secrets = crypto.encrypt(json.dumps(sec)) if sec else None
-        r.secret_hints = json.dumps({k: crypto.mask(v) for k, v in sec.items()})
+        r.secret_hints = json.dumps({k: "••••" if k == "headers" else crypto.mask(v) for k, v in sec.items()})
 
     # ---- CRUD ----
     def create(self, uid: str, name: str, transport: str, scope: str = "user", command: str | None = None, args: Any = None,
