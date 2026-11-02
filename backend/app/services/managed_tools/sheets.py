@@ -1,13 +1,10 @@
-import json, re, time
+import re
 from urllib.parse import quote
-import httpx, jwt
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
-from cryptography.exceptions import UnsupportedAlgorithm
+import httpx
 from ...core.errors import AppError
 from .base import ToolFailure, request
+from .google_auth import TOKEN_URL, service_account, access_token
 
-TOKEN_URL = "https://oauth2.googleapis.com/token"
 SCOPE = "https://www.googleapis.com/auth/spreadsheets"
 API = "https://sheets.googleapis.com/v4/spreadsheets"
 
@@ -26,14 +23,8 @@ class SheetsTools:
         if not isinstance(name, str) or not name.strip() or len(name) > 100 or any(ord(c) < 32 for c in name):
             raise AppError("MCP_CONFIG_INVALID", field="settings.sheet_name")
         if type(count) is not int or not 1 <= count <= 25: raise AppError("MCP_CONFIG_INVALID", field="settings.data_columns")
-        try:
-            if set(secrets) != {"service_account"}: raise ValueError()
-            account = json.loads(secrets["service_account"])
-            if not re.fullmatch(r"[^\s@]+@[^\s@]+\.iam\.gserviceaccount\.com", account["client_email"]): raise ValueError()
-            private = load_pem_private_key(account["private_key"].encode(), password=None)
-            if not isinstance(private, RSAPrivateKey) or private.key_size < 2048: raise ValueError()
-        except (ValueError, KeyError, TypeError, AttributeError, RecursionError, UnsupportedAlgorithm):
-            raise AppError("MCP_CONFIG_INVALID", field="secrets.service_account") from None
+        if set(secrets) != {"service_account"}: raise AppError("MCP_CONFIG_INVALID", field="secrets.service_account")
+        service_account(secrets["service_account"])
 
     def authorize(self, uid, settings, allow_org=True): pass  # MCP owner/org policy gates the encrypted service account.
 
@@ -49,16 +40,7 @@ class SheetsTools:
         return "'" + settings["sheet_name"].replace("'", "''") + "'!" + columns
 
     def _token(self, secrets):
-        try:
-            account = json.loads(secrets["service_account"]); now = int(time.time())
-            assertion = jwt.encode({"iss": account["client_email"], "scope": SCOPE, "aud": TOKEN_URL, "iat": now, "exp": now + 3600},
-                                   account["private_key"], algorithm="RS256")
-            response = request("POST", TOKEN_URL, data={"grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer", "assertion": assertion})
-            if response.status_code != 200: raise ValueError()
-            token = response.json()["access_token"]
-            if not isinstance(token, str) or not token: raise ValueError()
-            return token
-        except (httpx.HTTPError, ValueError, KeyError, TypeError, jwt.PyJWTError): raise ToolFailure() from None
+        return access_token(secrets["service_account"], SCOPE, request)
 
     @staticmethod
     def _url(settings, area): return f"{API}/{settings['spreadsheet_id']}/values/{quote(area, safe='')}"

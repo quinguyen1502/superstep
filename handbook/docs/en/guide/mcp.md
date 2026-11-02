@@ -16,6 +16,7 @@ the graph uses the same tool interface as remote MCP servers.
 | WhatsApp actions | Existing WhatsApp channel and fixed international recipient number, digits only | `send_message`: `text` |
 | Email actions | Existing email channel, fixed recipients (up to 10); studio SMTP configuration | `send_email`: `text`, optional `subject` |
 | Microsoft Teams actions | Existing Teams channel with its encrypted Workflows webhook | `send_message`: `text` |
+| [Google Drive files](google-drive.md) | Fixed folder ID; encrypted service-account or authorised-user OAuth JSON | List/search, metadata, bounded text/Google Doc read, create plain-text file |
 
 Create a [Google service account](https://developers.google.com/identity/protocols/oauth2/service-account),
 enable the Sheets API and share the selected spreadsheet with its email as an

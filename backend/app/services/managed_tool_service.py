@@ -42,9 +42,9 @@ class ManagedToolService:
         if tool not in definitions: raise AppError("MCP_TOOL_NOT_FOUND", tool=tool)
         schema = definitions[tool]["input_schema"]
         if not Draft202012Validator(schema).is_valid(args): raise AppError("MCP_ARGUMENT_INVALID", name="arguments", type="tool schema")
-        try: encoded = json.dumps(args, allow_nan=False)
-        except (ValueError, TypeError): raise AppError("MCP_ARGUMENT_INVALID", name="arguments", type="JSON") from None
-        if len(encoded.encode()) > 128 * 1024: raise AppError("MCP_ARGUMENT_INVALID", name="arguments", type="bounded JSON")
+        try: encoded = json.dumps(args, allow_nan=False, ensure_ascii=False).encode("utf-8")
+        except (ValueError, TypeError, UnicodeError): raise AppError("MCP_ARGUMENT_INVALID", name="arguments", type="UTF-8 JSON") from None
+        if len(encoded) > 128 * 1024: raise AppError("MCP_ARGUMENT_INVALID", name="arguments", type="bounded JSON")
         if dry_run: return {"outcome": "dry_run", "tool": tool}  # no tokens, outbound requests or intent records
         if not isinstance(key, str) or not 1 <= len(key) <= 200: raise AppError("MANAGED_OPERATION_KEY_REQUIRED")
         now, configuration = time.time(), self.configuration(row)

@@ -10,6 +10,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Managed Google Drive tools** (TASK-0237, REQ-0085). List/search, inspect and read text/Google Docs within a fixed
+  folder, or create a plain-text file through MCP nodes/Agent slots. Supports encrypted service-account and OAuth
+  refresh credentials; uncertain creation reconciles by private operation marker and verified content without
+  uploading again. Personal service-account storage restrictions are enforced; Google auth is shared with Sheets.
 - **Managed channel actions** (TASK-0236, REQ-0084). Existing Slack, WhatsApp, email and Microsoft Teams channels
   can send through MCP nodes/Agent tools with fixed recipients, shared channel permissions and durable outcomes.
   Email shares the workflow recipient quota; submission acceptance is distinguished from delivery and uncertain
