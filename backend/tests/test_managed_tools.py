@@ -49,7 +49,8 @@ class FakeService:
             if self.append_mode == "malformed": return httpx.Response(200, json={})
             if self.append_mode == "block": self.entered.set(); self.release.wait(5)
             if self.append_mode == "timeout": raise httpx.ReadTimeout("fixture-access-token must not leak")
-            return httpx.Response(200, json={"updates": {"updatedRows": 1, "updatedRange": f"Expenses!A{len(self.rows)}:G{len(self.rows)}"}})
+            column = chr(ord("A") + len(self.rows[-1]) - 1)
+            return httpx.Response(200, json={"updates": {"updatedRows": 1, "updatedRange": f"Expenses!A{len(self.rows)}:{column}{len(self.rows)}"}})
         if url.endswith("/sendMessage"):
             self.messages.append(kwargs["json"])
             if self.send_mode == "timeout": raise httpx.ReadTimeout("bot token must not leak")

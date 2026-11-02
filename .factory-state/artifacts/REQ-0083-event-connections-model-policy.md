@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0083
-- Status: Accepted in owner chat on 2026-11-01: "Vậy thêm các tính năng đó đi", following the three-feature proposal (generic event triggers, managed service tools, model fallback).
+- Status: Implemented — owner accepted implementation and approved merge on 2026-11-02
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-01
 - Updated: 2026-11-01
@@ -90,3 +90,7 @@ An owner connects Telegram and a spreadsheet, binds messages from an allowed pla
 - `.factory-state/artifacts/DES-0001-event-connections-model-policy.md`
 - `.factory-state/decisions/DEC-0081-event-connections-model-policy.md`
 - Existing REQ-0044/DEC-0046 chat triggers, DEC-0018 effect ledger, DEC-0032 providers and REQ-0082 SDK plan (independent).
+
+## Delivery Approval
+
+Owner explicitly approved the implementation and merging the delivery PRs into develop on 2026-11-02. Related tasks: TASK-0231, TASK-0232, TASK-0233, TASK-0234. Review/QA results are recorded in those tasks. Final rebased one-commit PR checks must pass before the merge. Evidence screenshots are intentionally removed at the owner's request; handbook illustrations and textual verification records remain.

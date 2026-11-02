@@ -57,6 +57,7 @@ nav:
       - Workflow làm công cụ MCP: run/mcp-server.md
       - Lịch chạy: run/schedules.md
       - Chạy từ chat: run/chat-triggers.md
+      - Khoản chi từ Telegram: run/telegram-expenses.md
       - Chat: run/chat.md
       - Chat API: run/chat-api.md
       - Xác thực chat bên thứ ba: run/chat-third-party-auth.md
