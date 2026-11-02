@@ -38,6 +38,9 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError: body = {}
         method = self.path.rstrip("/").rsplit("/", 1)[-1]; auth = self.headers.get("Authorization", "")
         CALLS.append({"path": self.path, "method": method, "body": body, "at": time.time()})
+        if self.path == "/generic/records":
+            if auth != "Bearer fixture-http-key": return self._send({"ok": False}, 403)
+            return self._send({"ok": True, "text": body.get("text"), "echo_auth": auth, "operation_key": self.headers.get("Idempotency-Key")}, 201)
         if self.path == "/ollama/api/chat":
             if body.get("model") not in OLLAMA_MODELS: return self._send({"error": f"model '{body.get('model')}' not found"}, 404)
             classify = "classify" in json.dumps(body).lower()

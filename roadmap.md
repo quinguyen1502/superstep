@@ -414,6 +414,13 @@ REQ-0083, owner requested implementation on 2026-11-01 after selecting generic i
 - TASK-0233 Managed tools/connections through existing MCP nodes and Agent slots — done; owner approved merge of #280 into develop on 2026-11-02; final-head CI gates merging.
 - TASK-0234 Expense example, end-to-end tests and bilingual guide — planned.
 
+## Additional managed adapters
+
+REQ-0084, DES-0002, DEC-0082, PLAN-0004: owner requested generic HTTP API and services already in approval channels on 2026-11-02. No live sends/cutover or merge authorised.
+
+- TASK-0235 Generic managed HTTP API — done; owner approved merge of #282 into develop on 2026-11-02; final-head CI gates merging.
+- TASK-0236 Slack/WhatsApp/Email/Teams actions using existing channels — planned; webhook JSON stays inbound-only.
+
 ## Releases
 
 - TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,

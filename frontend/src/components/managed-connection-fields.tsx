@@ -24,19 +24,20 @@ export function ManagedConnectionFields({ adapters, adapter, settings, secrets, 
         onChange({ adapter: value, settings: Object.fromEntries(Object.entries(spec?.settings_schema.properties || {}).map(([key, property]) => [key, property.default ?? ''])), secrets: [] })
       }}><SelectTrigger id={`${idp}-adapter`} className="w-full"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
         <SelectContent>{adapters.map(value => <SelectItem key={value.id} value={value.id}>{t(`managedTools.adapters.${value.id}`)}</SelectItem>)}</SelectContent></Select></div>
-    <div className="grid gap-3 sm:grid-cols-2">{Object.entries(definition?.settings_schema.properties || {}).map(([field, property]) => <div key={field} className="space-y-1.5">
+    <div className="grid gap-3 sm:grid-cols-2">{Object.entries(definition?.settings_schema.properties || {}).map(([field, property]) => <div key={field} className={property.format === 'json' ? 'space-y-1.5 sm:col-span-2' : 'space-y-1.5'}>
       <Label htmlFor={`${idp}-${field}`}>{t(`managedTools.fields.${field}`)}</Label>
       {property.resource_kind ? <Select value={String(settings[field] ?? '')} onValueChange={value => set(field, value)}>
         <SelectTrigger id={`${idp}-${field}`} className="w-full"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
         <SelectContent>{channels.filter(channel => channel.kind === property.resource_kind).map(channel => <SelectItem key={channel.id} value={channel.id}>{channelLabel(t, channel)}</SelectItem>)}</SelectContent>
-      </Select> : <Input id={`${idp}-${field}`} type={property.type === 'integer' ? 'number' : 'text'} value={settings[field] ?? ''}
+      </Select> : property.format === 'json' ? <Textarea id={`${idp}-${field}`} className="font-mono field-sizing-fixed" rows={12} value={settings[field] ?? ''}
+        onChange={event => set(field, event.target.value)} /> : <Input id={`${idp}-${field}`} type={property.type === 'integer' ? 'number' : 'text'} value={settings[field] ?? ''}
         onChange={event => set(field, property.type === 'integer' && event.target.value ? Number(event.target.value) : event.target.value)} />}
     </div>)}</div>
     {definition?.secret_fields.map(field => {
       const secret = secrets.find(item => item.name === field)
       return <div className="space-y-1.5" key={field}><Label htmlFor={`${idp}-${field}`}>{t(`managedTools.fields.${field}`)}</Label>
         <Textarea id={`${idp}-${field}`} autoComplete="off" className="font-mono" rows={4} value={secret?.value || ''}
-          placeholder={secret?.stored ? t('mcp.keepSecret') : t('managedTools.secretHelp')} onChange={event => onChange({
+          placeholder={secret?.stored ? t('mcp.keepSecret') : t(field === 'headers' ? 'managedTools.headerHelp' : 'managedTools.secretHelp')} onChange={event => onChange({
             secrets: [...secrets.filter(item => item.name !== field), { name: field, value: event.target.value, stored: !!secret?.stored }],
           })} /></div>
     })}

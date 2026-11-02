@@ -1104,17 +1104,18 @@
   "managedTools": {
     "transport": "Kết nối được quản lý",
     "adapter": "Adapter dịch vụ",
-    "adapters": { "telegram": "Thao tác Telegram", "google_sheets": "Thao tác Google Sheets" },
-    "fields": { "channel_id": "Kết nối Telegram", "chat_id": "ID cuộc chat nhận tin", "spreadsheet_id": "ID spreadsheet", "sheet_name": "Tên tab trong sheet", "data_columns": "Số cột dữ liệu", "service_account": "Khoá JSON của service account" },
+    "adapters": { "telegram": "Thao tác Telegram", "google_sheets": "Thao tác Google Sheets", "http_api": "HTTP API tổng quát" },
+    "fields": { "channel_id": "Kết nối Telegram", "chat_id": "ID cuộc chat nhận tin", "spreadsheet_id": "ID spreadsheet", "sheet_name": "Tên tab trong sheet", "data_columns": "Số cột dữ liệu", "service_account": "Khoá JSON của service account", "base_url": "URL gốc của API", "tools_json": "Định nghĩa công cụ (JSON)", "headers": "Header xác thực (JSON, mã hoá)" },
+    "headerHelp": "Đối tượng JSON chứa header, ví dụ Authorization hoặc X-API-Key. Để trống nếu không cần xác thực. Giá trị được mã hoá và không trả lại qua API.",
     "secretHelp": "Dán khoá JSON của service account. Khoá được mã hoá và không trả lại qua API.",
     "help": "Công cụ chỉ tác động tới nơi đã cấu hình. Run kiểm thử không gửi tin hay ghi dữ liệu. Công cụ quản lý cần theo dõi thao tác trong Studio, chưa hỗ trợ xuất code độc lập.",
-    "setup": { "telegram": "Chọn kết nối Telegram đã có và cuộc chat được phép gửi tới. Hệ thống dùng lại secret của bot đã lưu.", "google_sheets": "Chia sẻ sheet cho service account với quyền chỉnh sửa. ID thao tác được thêm sau các cột dữ liệu; giữ nguyên cột này để kiểm tra kết quả." },
+    "setup": { "telegram": "Chọn kết nối Telegram đã có và cuộc chat được phép gửi tới. Hệ thống dùng lại secret của bot đã lưu.", "google_sheets": "Chia sẻ sheet cho service account với quyền chỉnh sửa. ID thao tác được thêm sau các cột dữ liệu; giữ nguyên cột này để kiểm tra kết quả.", "http_api": "Cấu hình đường dẫn, phương thức cố định và schema input object với additionalProperties: false. GET dùng query dạng đơn; phương thức khác gửi JSON. Thêm response_schema nếu API báo lỗi nghiệp vụ bằng HTTP 200. HTTP 202 hoặc phản hồi chưa rõ giữ trạng thái chưa rõ kết quả; việc kiểm tra không gửi lại yêu cầu." },
     "operations": "Thao tác gần đây",
     "operationKey": "ID thao tác bên ngoài",
     "noOperations": "Chưa có thao tác nào.",
     "refresh": "Tải lại",
     "reconcile": "Kiểm tra kết quả bên ngoài",
-    "unknownHelp": "Dịch vụ bên ngoài có thể đã nhận thao tác ghi. Kiểm tra này chỉ đọc, không gửi hay ghi thêm. Nếu kết quả vẫn chưa rõ, hãy kiểm tra dịch vụ bên ngoài trước khi tạo run mới. Telegram không hỗ trợ tìm tin đã gửi theo ID thao tác.",
+    "unknownHelp": "Dịch vụ bên ngoài có thể đã nhận thao tác ghi. Việc kiểm tra không lặp lại yêu cầu. Adapter có hỗ trợ tra cứu sẽ đối soát; nếu không, kết quả vẫn chưa rõ. Kiểm tra dịch vụ bên ngoài trước khi tạo run mới.",
     "outcomes": { "pending": "Chờ xác nhận", "confirmed": "Đã xác nhận", "failed": "Bị từ chối", "unknown": "Chưa rõ kết quả" }
   },
   "mcp": {

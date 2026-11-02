@@ -13,8 +13,16 @@ class ToolFailure(Exception):
 def http_client(): return httpx.Client(timeout=20, follow_redirects=False)
 
 
-def request(method, url, **kwargs):
+def request(method, url, max_bytes=None, **kwargs):
     target, ip = public_address(url, config.mcp_allow_private(), "MCP_URL_INVALID")
     pinned, headers, extensions = pinned_request(target, ip)
     with http_client() as client:
-        return client.request(method, pinned, headers={**kwargs.pop("headers", {}), **headers}, extensions=extensions, **kwargs)
+        provided = kwargs.pop("headers", {})
+        options = {**kwargs, "headers": {**provided, **headers}, "extensions": extensions}
+        if max_bytes is None: return client.request(method, pinned, **options)
+        with client.stream(method, pinned, **options) as response:
+            body = bytearray()
+            for chunk in response.iter_bytes():
+                if len(body) + len(chunk) > max_bytes: raise httpx.DecodingError("Managed response byte limit exceeded")
+                body.extend(chunk)
+            return httpx.Response(response.status_code, content=bytes(body), headers={"content-type": response.headers.get("content-type", "")})
