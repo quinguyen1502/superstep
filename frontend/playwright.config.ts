@@ -38,13 +38,14 @@ export default defineConfig({
       cwd: '../backend', url: `http://127.0.0.1:${API}/api/health`, reuseExistingServer: false, timeout: 60_000,
       env: { STUDIO_DB: db, STUDIO_E2E_DRIVE_FIXTURE: DRIVE ? '1' : '0', STUDIO_E2E_EXPENSE_FIXTURE: EXPENSE ? '1' : '0', STUDIO_IMPORT_DIR: path.join(os.tmpdir(), 'lgs-e2e-imports'), OPENAI_API_KEY: '', STUDIO_ENABLE_DEMO_TOOLS: '1', STUDIO_ENABLE_CODE_NODES: '1', STUDIO_CODE_RUNTIME: process.env.E2E_CODE_RUNTIME || 'docker',  // Code mode (TASK-0055/0056): E2E_CODE_RUNTIME=subprocess runs code-subprocess.spec.ts
          STUDIO_MCP_STDIO: '1', STUDIO_RUN_TIMEOUT: '5', STUDIO_ALLOW_PRIVATE_CALLBACKS: '1', STUDIO_SMTP_ALLOW_PRIVATE: '1', STUDIO_PUBLIC_URL: `http://127.0.0.1:${UI}`,  // links in e-mail / Teams approvals (TASK-0047)
+        STUDIO_PUBLIC_CHAT_RATE_READ: '0',  // isolate UI cases sharing one IP; backend tests assert transport throttling
         ...(CHANNEL_SMTP ? { SMTP_HOST: '127.0.0.1', SMTP_PORT: String(SMTP), SMTP_FROM: 'fixture@example.test', SMTP_STARTTLS: '0', SMTP_USER: '', SMTP_PASSWORD: '', SMTP_SSL: '0' } : {}),
         STUDIO_MCP_ALLOW_PRIVATE: '1',  // managed actions use the local fake Telegram API; production keeps its default SSRF guard
         STUDIO_WEBHOOK_BACKOFF_BASE: '0.5', STUDIO_ATTACHMENT_STORAGE: process.env.E2E_ATTACHMENT_STORAGE || 'db', STUDIO_ATTACHMENT_FS_PATH: ATTACH_DIR,  // TASK-0195: E2E_ATTACHMENT_STORAGE=fs runs every spec on a folder
          SLACK_API_URL: `http://127.0.0.1:${CHAT}/slack`, TELEGRAM_API_URL: `http://127.0.0.1:${CHAT}/telegram`, WHATSAPP_API_URL: `http://127.0.0.1:${CHAT}/whatsapp` },
     },
     {
-      command: `npx vite --host 127.0.0.1 --port ${UI} --strictPort`,
+      command: `npm run dev -- --host 127.0.0.1 --port ${UI} --strictPort`,
       url: `http://127.0.0.1:${UI}`, reuseExistingServer: false, timeout: 60_000,
       env: { STUDIO_API_PORT: String(API), STUDIO_UI_PORT: String(UI) },
     },

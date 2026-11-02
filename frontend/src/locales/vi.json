@@ -2212,6 +2212,36 @@
         "field": "Trường state",
         "fieldHint": "Trường danh sách nhận thông tin các tệp trong mỗi run."
       }
+    },
+    "toolkit": {
+      "loading": "Đang tải chat…",
+      "refresh": "Tải lại lịch sử",
+      "requestFailed": "Không thể hoàn tất yêu cầu. Bạn hãy thử lại.",
+      "answer": "Gửi câu trả lời",
+      "answerLabel": "Câu trả lời của bạn",
+      "choose": "Chọn một mục",
+      "required": "Bạn cần nhập trường này",
+      "unsupported": "Không thể hiển thị câu hỏi này. Bạn có thể trả lời bằng văn bản.",
+      "ratingName": "Đánh giá",
+      "removeFileTitle": "Xoá file đính kèm",
+      "removeRatingTitle": "Xoá đánh giá",
+      "customTitle": "Chat cho ứng dụng của bạn",
+      "customIntro": "Chat dùng giao diện và ngôn ngữ riêng.",
+      "emptySessions": "Chưa có cuộc trò chuyện",
+      "waitReviewer": "Đang chờ người duyệt",
+      "formAnswer": "Trả lời biểu mẫu",
+      "light": "Sáng",
+      "dark": "Tối",
+      "custom": "Theme tuỳ chỉnh",
+      "language": "Ngôn ngữ",
+      "demoTitle": "Bộ giao diện React chat",
+      "hostTitle": "Ứng dụng chủ",
+      "hostDescription": "Nội dung bên ngoài chat giữ nguyên giao diện riêng.",
+      "switchCustomer": "Đổi người dùng",
+      "customer": "Người dùng",
+      "theme": "Giao diện",
+      "english": "Tiếng Anh",
+      "vietnamese": "Tiếng Việt"
     }
   },
   "timeTravel": {

@@ -105,4 +105,14 @@ Owner approved the reviewed phase-2 stack. TASK-0220 moves to done for single-co
 
 ## Phase 3 extraction progress (2026-11-02)
 
-Owner accepted TASK-0223 and requested merging existing #288 on 2026-11-02. Task is done for single-commit Ready delivery, with final-head checks required before merge. Previous validation includes full Factory 8/8, root tests, unchanged chat e2e, clean workspace install, four screenshot variants and a +0.03174 percent bundle comparison. REV/QA-0218 record source review, resolved Deno/runtime setup failures, host i18next/icon compatibility, residual raster differences and no screenshots in Git. TASK-0224–0228 remain backlog; the new package is not published and release approval remains separate.
+Owner accepted TASK-0223 and requested merging existing #288 on 2026-11-02. Task is done for single-commit Ready delivery, with final-head checks required before merge. Previous validation includes full Factory 8/8, root tests, unchanged chat e2e, clean workspace install, four screenshot variants and a +0.03174 percent bundle comparison. REV/QA-0218 record source review, resolved Deno/runtime setup failures, host i18next/icon compatibility, residual raster differences and no screenshots in Git. TASK-0225–0228 remain backlog; TASK-0224 implementation is authorised on 2026-11-02 and moves through review on its own PR; the new package is not published and release approval remains separate.
+
+
+## TASK-0224 Draft Delivery (2026-11-02)
+
+Public React toolkit is in review on its own branch/PR. Hook/shared components, scoped CSS, per-instance theme/locales, standalone Vite example and React 18/19 browser matrix are implemented. REV-0219 / QA-0219 record passing source/acceptance checks, the resolved first-run timing failure, package contents and release-only provenance preparation. No Ready/merge/tag/package release is approved. TASK-0225–0228 remain later work.
+
+
+## TASK-0224 Owner Acceptance (2026-11-03)
+
+Owner accepted the implementation on existing PR #289 ("Duyệt") after reviewed head b0c21ab6 passed 21 CI checks and one expected GHCR skip. TASK-0224 moves to done for rebased single-commit Ready delivery on that same PR. REV-0219 / QA-0219 retain source review, resolved bootstrap/quota/timing failures and acceptance evidence. Final rewritten-head checks are required. This approval does not authorise merge, release tags, npm publication or deployment; TASK-0225–0228 remain later work.

@@ -3,6 +3,7 @@ name: Publish SDKs
 # Publishes an SDK when a tag is pushed:
 #   v<version>          sdk/python      -> PyPI   "superstep" (same number as the server)
 #   sdk-py-v<version>   sdk/python      -> PyPI   "superstep"
+#   sdk-react-v<version> packages/react -> npm    "@superstep/react"
 #   sdk-ts-v<version>   sdk/typescript  -> npm    "@superstep/sdk"
 # The tag version must equal the package version. A v* tag must also equal
 # backend/pyproject.toml. Nothing is published from branches or pull requests.
@@ -14,7 +15,7 @@ name: Publish SDKs
 #         environment "npm". Provenance uses the id-token permission.
 on:
   push:
-    tags: ["v*", "sdk-py-v*", "sdk-ts-v*"]
+    tags: ["v*", "sdk-py-v*", "sdk-ts-v*", "sdk-react-v*"]
 
 permissions:
   contents: read
@@ -100,5 +101,29 @@ jobs:
           [ "sdk-ts-v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package $v"; exit 1; }
       - run: npm run gen:check && npm run typecheck && npm test
       - run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  react:
+    if: startsWith(github.ref_name, 'sdk-react-v')
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - name: Tag matches the React package version
+        run: |
+          v=$(node -p "require('./packages/react/package.json').version")
+          [ "sdk-react-v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package $v"; exit 1; }
+      - run: npm run lint --workspace=@superstep/react && npm test --workspace=@superstep/react
+      - run: npm pack --dry-run --workspace=@superstep/react
+      - run: npm publish --workspace=@superstep/react --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

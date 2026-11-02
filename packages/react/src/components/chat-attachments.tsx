@@ -24,18 +24,18 @@ export function AttachmentChip({ name, size, kind, preview, busy, invalid, actio
 }
 
 /** The remove action of a chip in the composer. */
-export function RemoveFile({ name, onClick }: { name: string; onClick: () => void }) {
+export function RemoveFile({ name, onClick, disabled }: { name: string; onClick: () => void; disabled?: boolean }) {
   const { t } = useTranslation(); const label = t('chat.files.remove', { name })
-  return <Tip tip={label}><Button type="button" size="icon-xs" variant="ghost" aria-label={label} data-testid="chat-file-remove" onClick={onClick}><X /></Button></Tip>
+  return <Tip tip={label}><Button type="button" size="icon-xs" variant="ghost" aria-label={label} data-testid="chat-file-remove" disabled={disabled} onClick={onClick}><X /></Button></Tip>
 }
 
 /** A sent message's files, each with a download action. `url` gives a file's address; none: no download (a pending turn). */
-export function TurnFiles({ files, url, headers, align = 'end' }: { files: ChatAttachment[]; url?: (id: string) => string; headers?: Record<string, string>; align?: 'start' | 'end' }) {
+export function TurnFiles({ files, url, headers, download, align = 'end' }: { files: ChatAttachment[]; url?: (id: string) => string; headers?: Record<string, string>; download?: (file: ChatAttachment) => Promise<void>; align?: 'start' | 'end' }) {
   const { t } = useTranslation()
   if (!files.length) return null
   return <div className={cn('flex flex-wrap gap-2', align === 'end' && 'justify-end')} data-testid="chat-turn-files">
     {files.map(f => <AttachmentChip key={f.id} name={f.name} size={f.size} kind={f.kind} data-testid="chat-turn-file"
-      action={url && <Tip tip={t('chat.files.download', { name: f.name })}><Button type="button" size="icon-xs" variant="ghost" data-testid="chat-file-download"
-        aria-label={t('chat.files.download', { name: f.name })} onClick={() => downloadFile(url(f.id), f.name, headers).catch(() => {})}><Download /></Button></Tip>} />)}
+      action={(url || download) && <Tip tip={t('chat.files.download', { name: f.name })}><Button type="button" size="icon-xs" variant="ghost" data-testid="chat-file-download"
+        aria-label={t('chat.files.download', { name: f.name })} onClick={() => (download ? download(f) : downloadFile(url!(f.id), f.name, headers)).catch(() => {})}><Download /></Button></Tip>} />)}
   </div>
 }

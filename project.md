@@ -16,7 +16,7 @@ superstep (named langgraph-studio up to v0.1.0, renamed in TASK-0058)
 
 ## Modules
 
-- `packages/react/` — shared chat presentation, shadcn primitives and pure rendering helpers; Studio-owned routing/run access stays in frontend.
+- `packages/react/` — shared chat presentation, public SDK hook/components, scoped CSS/themes, shadcn primitives and pure rendering helpers; Studio-owned routing/run access stays in frontend.
 - Root npm workspace / lockfile: `frontend`, `packages/react`, `sdk/typescript` (TASK-0223).
 - `frontend/` — React SPA: login/register, workflow list, editor (canvas, palette, config, run panel), import dialog
   - the editor page (`pages/Editor.tsx`) is a shell; state and actions are in `components/editor/use-studio.ts`, the header and panels in `components/editor/` (TASK-0040)
@@ -54,6 +54,7 @@ superstep (named langgraph-studio up to v0.1.0, renamed in TASK-0058)
 - Build: root `npm run build` (SDK, React package, frontend/widget; observed TASK-0223)
 - Lint: root `npm run lint` (frontend + shared React package; strict UI guard includes both source trees)
 - Typecheck: `cd frontend && npx tsc -b` (observed, part of build)
+- React toolkit example: `scripts/chat_host_e2e.sh` builds the standalone Vite consumer and tests real Human/file/rating/identity flows with React 18/19; `npm test --workspace=@superstep/react` runs Testing Library and CSS boundary checks (observed TASK-0224).
 - Format: Unknown
 - Migration: Alembic (`backend/app/migrations/versions`, applied at startup under a file or advisory lock)
 

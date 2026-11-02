@@ -1,3 +1,4 @@
+import { useChatPresentation } from '../components/presentation.js'
 import * as React from "react"
 import { cn } from "cn"
 import { Tooltip as TooltipPrimitive } from "radix-ui"
@@ -33,8 +34,9 @@ function TooltipContent({
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  const { portalContainer } = useChatPresentation()
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal container={portalContainer}>
       <TooltipPrimitive.Content
         data-slot="tooltip-content"
         sideOffset={sideOffset}
