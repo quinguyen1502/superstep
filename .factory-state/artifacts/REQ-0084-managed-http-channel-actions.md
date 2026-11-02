@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0084
-- Status: Accepted — owner requested implementation and selected HTTP API plus services in approval channels
+- Status: Implemented — owner accepted implementation and approved merge on 2026-11-02
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-02
 - Updated: 2026-11-02
@@ -49,3 +49,7 @@ Extend managed tools with configurable HTTP API operations and actions for exist
 - `.factory-state/decisions/DEC-0082-managed-http-channel-actions.md`
 - `.factory-state/artifacts/PLAN-0004-managed-http-channel-actions.md`
 - Existing REQ-0083, DEC-0081, `docs/backend-architecture.md`, `docs/ui-conventions.md`.
+
+## Delivery Approval
+
+Owner explicitly approved the implementation and merging the delivery PRs into develop on 2026-11-02. Related tasks: TASK-0235, TASK-0236. Review/QA results are recorded in those tasks. Final rebased one-commit PR checks must pass before the merge. Evidence screenshots are intentionally removed at the owner's request; handbook illustrations and textual verification records remain.

@@ -23,9 +23,9 @@ SECRET_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 
 class McpService:
     def __init__(self, repo: McpServerRepository, is_admin: Callable[[str], bool] = lambda uid: False,
-                 org_allowed: Callable[[str], bool] = lambda uid: True, channels=None):
+                 org_allowed: Callable[[str], bool] = lambda uid: True, channels=None, quota=None):
         self.repo, self.is_admin, self.org_allowed = repo, is_admin, org_allowed
-        self.managed = ManagedToolService(McpOperationRepository(repo.db), channels)
+        self.managed = ManagedToolService(McpOperationRepository(repo.db), channels, quota)
 
     # ---- views ----
     @staticmethod

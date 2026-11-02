@@ -12,6 +12,10 @@ the graph uses the same tool interface as remote MCP servers.
 | Telegram actions | An existing Telegram channel connection; fixed destination chat ID | `send_message`: plain `text`, optional integer `reply_to_message_id` |
 | Google Sheets | Fixed spreadsheet ID and tab name; number of data columns (1–25); encrypted service-account JSON key | `append_row`: `values`, exactly the configured number of scalar values |
 | Generic HTTP API | Fixed API base URL, JSON tool definitions and encrypted authentication-header JSON | Your configured tools; GET sends scalar query parameters, other methods send a JSON object |
+| Slack actions | Existing Slack channel connection and fixed conversation ID (C/G/D) | `send_message`: `text`, optional `thread_ts` |
+| WhatsApp actions | Existing WhatsApp channel and fixed international recipient number, digits only | `send_message`: `text` |
+| Email actions | Existing email channel, fixed recipients (up to 10); studio SMTP configuration | `send_email`: `text`, optional `subject` |
+| Microsoft Teams actions | Existing Teams channel with its encrypted Workflows webhook | `send_message`: `text` |
 
 Create a [Google service account](https://developers.google.com/identity/protocols/oauth2/service-account),
 enable the Sheets API and share the selected spreadsheet with its email as an
@@ -95,6 +99,61 @@ Every call sends the stable `Idempotency-Key`; remote deduplication depends on
 the API's own contract. This generic adapter has no automatic external lookup:
 timeout/unknown operations remain blocked and never resend, including when
 **Check external result** is pressed. Inspect the external API before a new run.
+
+### Actions using existing channels
+
+![Managed Slack action reusing a synthetic channel connection](../images/managed-channel-actions.png)
+
+Create the source connection in **Settings → Channels**, then select the
+matching adapter under **Settings → MCP → Managed connection**. The channel
+picker shows matching platform connections; credentials are reused, not copied
+into another form. Owner/org access is checked again at execution. A personal
+MCP connection cannot bypass organisation-channel restrictions. A deleted or
+inaccessible source channel refuses the action.
+
+- **Slack:** fix a conversation ID starting C, G or D. The bot needs
+  `chat:write` and membership/access to that conversation; public posting may
+  need `chat:write.public`. Text is escaped and markdown/link previews are off;
+  `thread_ts` can place the message in a thread. See
+  [chat.postMessage](https://docs.slack.dev/reference/methods/chat.postMessage/).
+- **WhatsApp:** fix the recipient's international number without `+`. This
+  adapter sends text within the customer-service window (normally 24 hours
+  after the recipient's message). It does not reuse the channel's approval
+  template or send approval buttons. The provider may reject delivery outside
+  that window even after accepting a request. See Meta's
+  [text-message contract](https://whatsapp.github.io/WhatsApp-Nodejs-SDK/api-reference/messages/text/).
+- **Email:** fix up to ten unique comma-separated recipients. Uses the
+  existing email channel and studio SMTP sender (`SMTP_HOST`, `SMTP_PORT`,
+  `SMTP_FROM` and the existing auth/TLS options). The administrator owns those
+  settings. `subject` is optional (defaults to `Superstep`); `text` is plain
+  text. Header newlines are normalised. Sends share the owner's existing
+  `STUDIO_EMAIL_NODE_HOURLY_LIMIT` recipient budget with Send email nodes;
+  dry runs and cached results consume no additional recipients. Message-ID
+  is stable for the operation; it is not a remote deduplication guarantee.
+- **Teams:** choose an existing channel's Workflows webhook; that encrypted
+  URL fixes the destination. Sends a text Adaptive Card without approval
+  links/buttons. Acknowledgement can be HTTP 202: the specific Workflows
+  contract confirms request acceptance, not downstream delivery. See
+  [Teams Workflows webhooks](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook).
+
+Text is limited to 4,000 characters; email subjects to 200. Successful results
+include `delivery: "accepted"`: this confirms submission acceptance, not that
+the recipient read or received it. HTTP rejection is a failure; lost responses,
+malformed API success and partial/uncertain SMTP delivery stay unknown. These
+adapters have no supported read-only lookup and never resend an unknown
+operation, including from **Check external result**. Inspect Slack/WhatsApp,
+the SMTP logs or the Teams workflow before starting a new run. This differs
+from generic HTTP 202, where no completion/acceptance contract is assumed.
+
+The signed JSON webhook channel stays inbound-only. It is an event source,
+not a destination for sending messages. Existing Telegram/Sheets behavior is
+unchanged; choose each connection's tools in the same MCP node/Agent interface.
+
+For isolated browser acceptance, run from `frontend/`:
+`E2E_CHANNEL_SMTP=1 npm run e2e -- managed-channel-actions.spec.ts`.
+This enables only the local SMTP sink and fake channel APIs. The default
+browser suite leaves studio SMTP disabled and exercises Slack/WhatsApp/Teams;
+email cases require the explicit flag. Never point this fixture at live services.
 
 ### Write outcomes and recovery
 

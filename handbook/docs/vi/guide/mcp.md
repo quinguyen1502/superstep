@@ -12,6 +12,10 @@ trong adapter, không tạo loại node riêng trên canvas.
 | Thao tác Telegram | Kết nối Telegram đã có; ID cuộc chat nhận tin cố định | `send_message`: `text` thuần, `reply_to_message_id` dạng số nguyên nếu cần |
 | Thao tác Google Sheets | ID spreadsheet và tên tab cố định; số cột dữ liệu (1–25); khoá JSON service account được mã hoá | `append_row`: `values` với đúng số phần tử vô hướng đã cấu hình |
 | HTTP API tổng quát | URL gốc cố định, JSON định nghĩa công cụ và JSON header xác thực được mã hoá | Các công cụ đã khai báo; GET gửi query dạng đơn, phương thức khác gửi object JSON |
+| Thao tác Slack | Kết nối kênh Slack và ID cuộc trò chuyện nhận cố định (C/G/D) | `send_message`: `text`, thêm `thread_ts` nếu cần |
+| Thao tác WhatsApp | Kênh WhatsApp và số quốc tế cố định của người nhận, chỉ chữ số | `send_message`: `text` |
+| Thao tác email | Kênh email, tối đa 10 nơi nhận cố định; cấu hình SMTP của studio | `send_email`: `text`, thêm `subject` nếu cần |
+| Thao tác Microsoft Teams | Kênh Teams đã có với webhook Workflows được mã hoá | `send_message`: `text` |
 
 Tạo [service account Google](https://developers.google.com/identity/protocols/oauth2/service-account),
 bật Sheets API, chia sẻ spreadsheet cho email đó với quyền chỉnh sửa rồi dán
@@ -94,6 +98,58 @@ bạn. Mỗi yêu cầu gửi `Idempotency-Key` cố định; việc chống tr�
 phụ thuộc hợp đồng của API. Adapter tổng quát chưa có cách tra cứu kết quả
 bên ngoài tự động: thao tác timeout/chưa rõ luôn bị chặn, không gửi lại, kể
 cả khi bấm **Kiểm tra kết quả bên ngoài**. Kiểm tra API trước khi tạo run mới.
+
+### Thao tác dùng lại kết nối kênh
+
+![Thao tác Slack dùng lại kết nối kênh giả lập](../images/managed-channel-actions.png)
+
+Tạo kết nối nguồn trong **Cài đặt → Kênh**, sau đó chọn adapter tương ứng
+trong **Cài đặt → MCP → Kết nối được quản lý**. Danh sách kênh chỉ hiện đúng
+nền tảng; dùng lại credential đã lưu, không cần sao chép sang form khác.
+Quyền cá nhân/tổ chức được kiểm tra lại khi chạy. Kết nối MCP cá nhân không
+được vượt chính sách kênh tổ chức. Kênh bị xoá hoặc mất quyền sẽ từ chối gửi.
+
+- **Slack:** chọn ID cuộc trò chuyện bắt đầu bằng C, G hoặc D. Bot cần
+  `chat:write` và quyền vào nơi nhận; gửi kênh công khai có thể cần thêm
+  `chat:write.public`. Văn bản được escape, tắt markdown và xem trước liên
+  kết; `thread_ts` cho phép trả lời trong thread. Xem
+  [chat.postMessage](https://docs.slack.dev/reference/methods/chat.postMessage/).
+- **WhatsApp:** cố định số quốc tế của người nhận, không có dấu `+`. Adapter
+  gửi văn bản trong cửa sổ dịch vụ khách hàng (thường 24 giờ sau tin của người
+  nhận). Không dùng lại mẫu yêu cầu duyệt của kênh hay gửi nút duyệt. Nhà cung
+  cấp có thể từ chối giao ngoài cửa sổ đó dù đã nhận yêu cầu. Xem
+  [hợp đồng tin văn bản của Meta](https://whatsapp.github.io/WhatsApp-Nodejs-SDK/api-reference/messages/text/).
+- **Email:** tối đa 10 nơi nhận duy nhất, cách nhau bằng dấu phẩy. Dùng kênh
+  email và địa chỉ SMTP của studio (`SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`
+  cùng tuỳ chọn xác thực/TLS hiện có) do quản trị viên cấu hình. `subject`
+  tuỳ chọn, mặc định `Superstep`; `text` là văn bản thuần. Xuống dòng trong
+  header được chuẩn hoá. Dùng chung hạn mức người nhận
+  `STUDIO_EMAIL_NODE_HOURLY_LIMIT` với node Send email của chủ workflow;
+  run giả lập và kết quả dùng lại không tính thêm. Message-ID cố định cho
+  thao tác, không bảo đảm SMTP bên ngoài chống trùng.
+- **Teams:** chọn kênh Workflows đã có; URL mã hoá cố định nơi nhận. Gửi
+  Adaptive Card văn bản, không có liên kết hay nút duyệt. Phản hồi có thể là
+  HTTP 202: hợp đồng Workflows chỉ xác nhận nhận yêu cầu, chưa xác nhận giao
+  tin sau đó. Xem [webhook Teams Workflows](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook).
+
+Văn bản tối đa 4.000 ký tự; tiêu đề email tối đa 200. Kết quả thành công có
+`delivery: "accepted"`: chỉ xác nhận nhận yêu cầu gửi, không khẳng định người
+nhận đã đọc hay nhận tin. Bị HTTP từ chối là lỗi; mất phản hồi, API thành công
+nhưng sai định dạng và SMTP nhận một phần/chưa rõ đều giữ trạng thái chưa rõ.
+Các adapter này chưa hỗ trợ tra cứu chỉ đọc và không gửi lại thao tác chưa
+rõ, kể cả khi bấm **Kiểm tra kết quả bên ngoài**. Kiểm tra Slack/WhatsApp,
+log SMTP hoặc workflow Teams trước khi tạo run mới. Khác với adapter HTTP
+tổng quát, trường hợp HTTP 202 ở Teams có hợp đồng nhận yêu cầu cụ thể.
+
+Webhook JSON có chữ ký vẫn chỉ nhận sự kiện, không phải nơi gửi tin. Telegram
+và Sheets giữ hành vi hiện có; chọn công cụ của mỗi kết nối trong cùng giao
+diện node MCP hoặc Agent.
+
+Để kiểm thử trình duyệt riêng, chạy từ `frontend/`:
+`E2E_CHANNEL_SMTP=1 npm run e2e -- managed-channel-actions.spec.ts`.
+Cờ này bật SMTP sink cục bộ và dùng API kênh giả lập. Bộ trình duyệt mặc định
+không bật SMTP của studio, kiểm tra Slack/WhatsApp/Teams; email cần bật cờ rõ
+ràng. Không trỏ fixture này tới dịch vụ thật.
 
 ### Kết quả ghi và khôi phục
 

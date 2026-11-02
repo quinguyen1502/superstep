@@ -10,6 +10,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Managed channel actions** (TASK-0236, REQ-0084). Existing Slack, WhatsApp, email and Microsoft Teams channels
+  can send through MCP nodes/Agent tools with fixed recipients, shared channel permissions and durable outcomes.
+  Email shares the workflow recipient quota; submission acceptance is distinguished from delivery and uncertain
+  sends are never automatically repeated.
 - **Managed HTTP API tools** (TASK-0235, REQ-0084). Configure fixed API operations with input/response schemas and
   encrypted authentication headers through the existing MCP registry. Requests use pinned destinations, bounded
   JSON responses and credential redaction; uncertain outcomes remain blocked instead of repeating writes.

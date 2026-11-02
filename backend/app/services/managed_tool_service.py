@@ -11,8 +11,8 @@ def digest(value): return hashlib.sha256(json.dumps(value, sort_keys=True, ensur
 
 
 class ManagedToolService:
-    def __init__(self, operations, channels):
-        self.operations, self.adapters = operations, adapters(channels)
+    def __init__(self, operations, channels, quota=None):
+        self.operations, self.adapters = operations, adapters(channels, quota)
 
     def adapter(self, name):
         if name not in self.adapters: raise AppError("MCP_CONFIG_INVALID", field="adapter")
