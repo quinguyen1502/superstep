@@ -6,7 +6,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { mintChatToken } from '../../sdk/typescript/dist/esm/server.js'
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist')
+const root = process.env.CHAT_HOST_DIST ? path.resolve(process.env.CHAT_HOST_DIST) : path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist')
 const port = Number(process.env.CHAT_HOST_PORT || 5188)
 const hostOrigin = `http://localhost:${port}`
 const baseUrl = process.env.CHAT_STUDIO_URL || ''

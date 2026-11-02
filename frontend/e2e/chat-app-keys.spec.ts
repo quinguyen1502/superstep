@@ -35,8 +35,9 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await page.keyboard.press('Escape')
     await expect(page.getByTestId('chat-app-key')).toHaveCount(2)
     await expect(page.locator('#chat-key-create')).toBeDisabled()
-    await page.locator('#chat-app-keys').scrollIntoViewIfNeeded()
     await settled(page.locator('#chat-settings'))
+    await expect(page.locator('#chat-settings')).toBeVisible()
+    await page.locator('#chat-app-keys').scrollIntoViewIfNeeded()
     await expectRowAligned(await page.getByTestId('chat-app-key').first().locator('> div > *').all(), { sameHeight: false, label: 'app key actions' })
     // Only the list is captured: copy-once secrets are never screenshots or logs.
     if (process.env.REVIEW_SHOTS) await page.locator('#chat-app-keys').screenshot({ path: `${process.env.REVIEW_SHOTS}/app-keys-${lang}-${theme}.png` })

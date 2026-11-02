@@ -20,19 +20,21 @@ npm --prefix sdk/typescript run build
 npm run build --workspace=@superstep/react
 node node_modules/typescript/bin/tsc -p examples/chat-host/tsconfig.json
 node node_modules/vite/bin/vite.js build --config frontend/vite.chat-host.config.ts
+node node_modules/typescript/bin/tsc -p examples/react-chat/tsconfig.json
+node node_modules/vite/bin/vite.js build --config examples/react-chat/vite.config.mts
 node frontend/scripts/check-ui-classes.mjs --strict examples/chat-host/src/app.tsx
 node --test examples/chat-host/tests/server.test.mjs
 
 (cd backend && DATABASE_URL= REDIS_URL= STUDIO_DB="$WORK/host.db" STUDIO_IMPORT_DIR="$WORK/imports" STUDIO_SECRET_KEY_FILE="$WORK/key" \
   OPENAI_API_KEY= STUDIO_ATTACHMENT_STORAGE=db STUDIO_ENABLE_DEMO_TOOLS=1 STUDIO_TRIGGER_RATE_LIMIT=0 STUDIO_PUBLIC_CHAT_RATE_READ=0 \
   STUDIO_PUBLIC_CHAT_RATE_VISITOR=0 STUDIO_PUBLIC_CHAT_RATE_IP=0 STUDIO_PUBLIC_CHAT_RATE_USER=0 \
-  "$BACKEND_PYTHON" -m uvicorn app.main:app --host 127.0.0.1 --port "$API_PORT" >"$WORK/backend.log" 2>&1) &
+  exec "$BACKEND_PYTHON" -m uvicorn app.main:app --host 127.0.0.1 --port "$API_PORT" >"$WORK/backend.log" 2>&1) &
 API_PID=$!
 for _ in $(seq 1 120); do curl -fsS "$BASE/api/health" >/dev/null 2>&1 && break; sleep 0.5; done
 curl -fsS "$BASE/api/health" >/dev/null || { cat "$WORK/backend.log"; exit 1; }
 SUPERSTEP_IT_CHAT_ORIGIN="$HOST" SUPERSTEP_IT_CHAT_SPARE_KEY=1 "$BACKEND_PYTHON" scripts/sdk_chat_seed.py "$BASE" "$WORK/config.json" >"$WORK/seed.env"
 export CHAT_HOST_DEMO=1 CHAT_HOST_FIXTURE="$WORK/config.json" CHAT_HOST_PORT="$HOST_PORT" CHAT_HOST_SECOND_PORT="$SECOND_PORT"
-node examples/chat-host/tests/fixture-host.mjs >"$WORK/host.log" 2>&1 &
+CHAT_HOST_DIST="$ROOT/examples/react-chat/dist" node examples/chat-host/tests/fixture-host.mjs >"$WORK/host.log" 2>&1 &
 HOST_PID=$!
 CHAT_HOST_PORT="$SECOND_PORT" node examples/chat-host/tests/fixture-host.mjs >"$WORK/second.log" 2>&1 &
 SECOND_PID=$!
@@ -40,4 +42,11 @@ for _ in $(seq 1 80); do curl -fsS "$HOST/health" >/dev/null 2>&1 && break; slee
 curl -fsS "$HOST/health" >/dev/null || { cat "$WORK/host.log"; exit 1; }
 for _ in $(seq 1 80); do curl -fsS "http://localhost:$SECOND_PORT/health" >/dev/null 2>&1 && break; sleep 0.25; done
 curl -fsS "http://localhost:$SECOND_PORT/health" >/dev/null || { cat "$WORK/second.log"; exit 1; }
+node node_modules/@playwright/test/cli.js test --config frontend/playwright.react-chat.config.ts
+kill "$HOST_PID"
+wait "$HOST_PID" || true
+node examples/chat-host/tests/fixture-host.mjs >"$WORK/host.log" 2>&1 &
+HOST_PID=$!
+for _ in $(seq 1 80); do curl -fsS "$HOST/health" >/dev/null 2>&1 && break; sleep 0.25; done
+curl -fsS "$HOST/health" >/dev/null || { cat "$WORK/host.log"; exit 1; }
 node node_modules/@playwright/test/cli.js test --config frontend/playwright.chat-host.config.ts "$@"

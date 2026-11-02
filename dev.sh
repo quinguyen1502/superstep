@@ -10,7 +10,7 @@ fi
 [ -d node_modules ] || npm install
 (cd backend && exec .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir app) &
 BE=$!
-(cd frontend && exec npx vite --host 0.0.0.0 --port 5173) &
+(cd frontend && exec npm run dev -- --host 0.0.0.0 --port 5173) &
 FE=$!
 trap 'kill $BE $FE 2>/dev/null' INT TERM EXIT
 echo "Backend: http://localhost:8000/docs  |  UI: http://localhost:5173"

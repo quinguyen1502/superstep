@@ -289,7 +289,11 @@ jobs:
           SDK_PYTHON: python
 
   chat-host-e2e:
-    name: Chat host e2e (two origins)
+    name: Chat host e2e (two origins, React ${{ matrix.react }})
+    strategy:
+      fail-fast: false
+      matrix:
+        react: [18, 19]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -309,6 +313,11 @@ jobs:
           python -m pip install -e "backend[dev]"
           npm ci
           node node_modules/@playwright/test/cli.js install --with-deps chromium
+      - name: Install isolated React 18 compatibility fixture
+        if: matrix.react == 18
+        run: |
+          npm install --prefix "$RUNNER_TEMP/react18" --ignore-scripts --no-audit --no-fund react@18.3.1 react-dom@18.3.1
+          echo "REACT_COMPAT_ROOT=$RUNNER_TEMP/react18" >> "$GITHUB_ENV"
       - name: Run local sample and cross-origin acceptance
         run: scripts/chat_host_e2e.sh
         env:
@@ -317,6 +326,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: chat-host-screenshots
-          path: frontend/test-results/chat-host/
+          name: chat-host-screenshots-react-${{ matrix.react }}
+          path: |
+            frontend/test-results/chat-host/
+            frontend/test-results/react-chat/
           retention-days: 14

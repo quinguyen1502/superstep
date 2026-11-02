@@ -9,3 +9,8 @@ export * from './components/chat-logo.js'
 export { Tip } from './components/tip.js'
 export { ChatPresentationProvider, type ChatPresentation } from './components/presentation.js'
 export type { ChatTurn, ChatStep, ChatAttachment, StepsMode } from './lib/chat.js'
+
+export { useChat, type UseChatOptions, type ChatController } from './public/use-chat.js'
+export { ChatProvider, type ChatProviderProps, type ChatTheme, type ChatLocale, type ChatMessages } from './public/provider.js'
+export { Chat, MessageList, Composer, Rating, type ChatProps } from './public/components.js'
+export { QuestionCard, type QuestionCardProps } from './public/question-card.js'

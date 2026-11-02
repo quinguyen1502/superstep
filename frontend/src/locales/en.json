@@ -2212,6 +2212,36 @@
         "field": "State field",
         "fieldHint": "The list field that receives the file records for each run."
       }
+    },
+    "toolkit": {
+      "loading": "Loading chat…",
+      "refresh": "Refresh history",
+      "requestFailed": "The request could not be completed. Try again.",
+      "answer": "Send answer",
+      "answerLabel": "Your answer",
+      "choose": "Choose an option",
+      "required": "This field is required",
+      "unsupported": "This question cannot be displayed. Use a text answer.",
+      "ratingName": "Rating",
+      "removeFileTitle": "Remove attachment",
+      "removeRatingTitle": "Remove rating",
+      "customTitle": "A chat for your app",
+      "customIntro": "The chat uses its own styles and language.",
+      "emptySessions": "No conversations yet",
+      "waitReviewer": "Waiting for a reviewer",
+      "formAnswer": "Form answer",
+      "light": "Light",
+      "dark": "Dark",
+      "custom": "Custom theme",
+      "language": "Language",
+      "demoTitle": "React chat toolkit",
+      "hostTitle": "Host application",
+      "hostDescription": "This content keeps its own styles outside the chat.",
+      "switchCustomer": "Switch customer",
+      "customer": "Customer",
+      "theme": "Theme",
+      "english": "English",
+      "vietnamese": "Vietnamese"
     }
   },
   "timeTravel": {

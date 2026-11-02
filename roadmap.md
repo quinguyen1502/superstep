@@ -414,6 +414,8 @@ REQ-0082 / PLAN-0002, accepted on 2026-10-31: phase 1 TASK-0215–0219 is merged
 - TASK-0222 sample host/e2e — done, merged through #287 after rebase to develop and 21 passing checks; REV-0217 / QA-0217. Screenshots remain CI artifacts / temporary files, outside Git.
 - TASK-0223 shared React extraction — done; owner approved merging #288 into develop on 2026-11-02, with final-head CI gating integration. REV-0218 / QA-0218; full Factory profile 8/8 and targeted/visual acceptance passed. npm workspace, common chat presentation/shadcn primitives, v1 public page and build/CI/Docker compatibility; four-variant visual regression and <=5 percent bundle-growth gate. React hooks/theme/widget/native features remain later PLAN-0002 tasks; no package release authorised.
 
+- TASK-0224 public React toolkit — done; owner accepted #289 on 2026-11-03 for rebased single-commit Ready delivery. useChat/public components, scoped CSS, independent en/vi/theme, Vite example and React 18/19 browser coverage; REV-0219 / QA-0219. Reviewed head passed 21 checks plus one expected publish skip; final-head validation/CI gates Ready. Merge/publication remain unauthorised.
+
 ## Generic events, connections and model policy
 
 REQ-0083, owner requested implementation on 2026-11-01 after selecting generic integrations over vendor-specific canvas nodes. PLAN-0003 and DEC-0081 describe the delivery; DES-0001 covers existing-surface UX. No production cutover or release is authorised.

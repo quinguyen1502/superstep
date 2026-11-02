@@ -1,0 +1,14 @@
+:root { --background: oklch(0.98 0 0); --foreground: oklch(0.22 0 0); --border: oklch(0.86 0 0); --demo-brand: oklch(0.48 0.16 155); --demo-brand-foreground: oklch(0.99 0 0); }
+body { margin: 0; background: var(--background); color: var(--foreground); font: 16px/1.6 system-ui, sans-serif; }
+.host-page { max-width: 1240px; margin: auto; padding: 28px; }
+.host-page > header h1 { margin: 0; font-size: 30px; }
+.host-page > header p { margin: 4px 0 16px; }
+.host-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.host-controls { display: flex; flex-wrap: wrap; gap: 16px; padding: 12px 0; background: transparent; }
+.host-controls > div { display: flex; gap: 4px; }
+#host-sentinel { border: 2px dashed var(--border); padding: 12px; margin: 12px 0 20px; border-radius: 8px; font: 15px/1.6 Georgia, serif; }
+#host-sentinel p { margin: 4px 0; }
+#host-sentinel button { font: inherit; }
+.demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.demo-chat { height: 650px; min-width: 0; }
+@media (max-width: 800px) { .demo-grid { grid-template-columns: 1fr; } .host-page { padding: 16px; } }

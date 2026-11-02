@@ -5,10 +5,11 @@ COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/package.json
 COPY packages/react/package.json ./packages/react/package.json
 COPY sdk/typescript/package.json ./sdk/typescript/package.json
-RUN npm ci --workspace=frontend --workspace=@superstep/react --include-workspace-root=false
+RUN npm ci
 COPY frontend/ ./frontend/
 COPY packages/react/ ./packages/react/
-RUN npm run build --workspace=frontend
+COPY sdk/typescript/ ./sdk/typescript/
+RUN npm run build
 
 FROM nginx:1.27-alpine
 ENV API_UPSTREAM=api:8000 WEB_MAX_BODY_SIZE=110m
