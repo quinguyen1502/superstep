@@ -17,18 +17,18 @@ commands:
     timeout: 900
   frontend-build:
     command: npm run build
-    evidence: Expected
-    cwd: frontend
+    evidence: Observed
+    cwd: .
     kind: build
   frontend-lint:
     command: npm run lint
-    evidence: Expected
-    cwd: frontend
+    evidence: Observed
+    cwd: .
     kind: lint
   frontend-test:
     command: npm run test
-    evidence: Expected
-    cwd: frontend
+    evidence: Observed
+    cwd: .
     kind: test
   sdk-python-test:
     command: .venv/bin/python -m pytest

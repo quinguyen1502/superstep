@@ -37,7 +37,7 @@ def test_committed_public_spec_matches_the_app():
 def test_public_spec_has_only_the_public_routes(c):
     spec = c.get("/openapi.public.json").json()
     assert spec == public_openapi()
-    ops = {(m, p): op for p, item in spec["paths"].items() for m, op in item.items()}
+    ops = {(m, p): op for p, item in spec["paths"].items() for m, op in item.items() if op["tags"] != ["Chat"]}  # Chat: test_public_chat_v1
     assert {k: v["operationId"] for k, v in ops.items()} == PUBLIC_OPS
     schemes = spec["components"]["securitySchemes"]
     assert schemes["WorkflowToken"] == {**schemes["WorkflowToken"], "type": "apiKey", "in": "header", "name": "X-Workflow-Token"}

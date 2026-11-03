@@ -24,6 +24,7 @@ from . import time_travel
 from .telemetry import Telemetry, summarize, trace_url
 from ..core.logging import get_logger
 from .workflow_diff import same_content
+from .email_quota import take_email_quota
 
 
 @dataclass
@@ -84,9 +85,17 @@ def _normalise(ev: dict) -> dict:
 RESPONSE_MAX = 10_000  # characters of a human response
 
 
-def human_response(response) -> str:
-    """A Human node's answer: text, or JSON true / false for approved / rejected (DEC-0013)."""
+def human_response(response, *, allow_form: bool = False) -> str | dict:
+    """Chat v1 opts into bounded JSON forms; other callers retain DEC-0013 text/boolean semantics."""
     if isinstance(response, bool): response = "approved" if response else "rejected"
+    if allow_form and isinstance(response, dict):
+        try:
+            encoded = json.dumps(response, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
+            encoded.encode("utf-8")  # reject malformed Unicode before persistence
+            if len(encoded) > RESPONSE_MAX: raise ValueError("form too large")
+            return json.loads(encoded)
+        except (ValueError, TypeError, UnicodeError, RecursionError):
+            raise AppError("RUN_RESPONSE_INVALID", max=RESPONSE_MAX) from None
     if not isinstance(response, str) or len(response) > RESPONSE_MAX: raise AppError("RUN_RESPONSE_INVALID", max=RESPONSE_MAX)
     return response
 
@@ -212,12 +221,12 @@ class RunService:
         self.bus.request_cancel(rid)
 
     # ---- planning / validation of the client request ----
-    def plan(self, uid: str, req) -> RunPlan:
+    def plan(self, uid: str, req, *, allow_form: bool = False) -> RunPlan:
         if not isinstance(req, dict): raise AppError("RUN_REQUEST_INVALID")
         steps = _parse_steps(req); until = _parse_until(req)
         if req.get("chat_session_id"): return self._plan_chat(uid, req, steps, until)
         if req.get("fork") is not None: return self._plan_fork(uid, req["fork"], steps, until)
-        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
+        if req.get("resume_run_id"): return self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req), allow_form=allow_form)
         wid = req.get("workflow_id"); row = None
         if wid: row = self._workflow(wid, uid, P.RUN)
         elif self.access is not None: self.access.require(uid, P.WORKFLOWS_CREATE)  # ad-hoc graphs: viewers only run saved workflows
@@ -256,9 +265,9 @@ class RunService:
             plan = self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
             web.record_answer(sid, str(req["resume_run_id"]), req.get("response"))
             return plan
-        prep = web.input_for(uid, sid, req.get("message"), req.get("attachment_ids"))
+        prep = web.input_for(uid, sid, req.get("message"), req.get("attachment_ids"), edit_operation_id=req.get("edit_operation_id"))
         plan = self.plan(uid, {"workflow_id": prep["workflow_id"], "input": prep["input"]})
-        plan.run_id, plan.source = uuid.uuid4().hex[:10], "chat"
+        plan.run_id, plan.source = prep.get("run_id") or uuid.uuid4().hex[:10], "chat"
         web.record(uid, sid, prep["text"], plan.run_id, prep["attachment_ids"])
         return plan
 
@@ -279,6 +288,7 @@ class RunService:
         org = self.policy.org_allowed(actor or uid) if self.policy is not None else True
         web = self.chat().web if self.chat else None
         return Ports(retrieve=self.knowledge.retriever(uid) if self.knowledge else None, mcp_call=self.mcp.caller(uid, org) if self.mcp else None,
+                     mcp_effect_call=self.mcp.effect_caller(uid, org) if self.mcp else None,
                      email_quota=self.email_quota(uid), code_audit=self.code_audit(actor or uid),
                      attachment=web.file_loader(uid) if web is not None else None)
 
@@ -428,11 +438,7 @@ class RunService:
     def email_quota(self, uid: str) -> Optional[Callable[[int], None]]:
         """Send email nodes of `uid`'s workflows reach at most STUDIO_EMAIL_NODE_HOURLY_LIMIT recipients an hour."""
         if self.quota is None: return None
-        def take(n: int) -> None:
-            limit = config.email_node_hourly_limit()
-            count, retry = self.quota.add(f"email:{uid}", n, 3600)
-            if count > limit: raise AppError("EMAIL_RATE_LIMITED", limit=limit, retry=retry)
-        return take
+        return lambda n: take_email_quota(self.quota, uid, n)
 
     def _expand(self, uid: str, wid: Optional[str], wf: dict) -> tuple[dict, Optional[list]]:
         """Inline subgraph nodes (TASK-0011) with the workflows this user may read, copy in the children of workflow tools
@@ -535,7 +541,7 @@ class RunService:
         return len(stale)
 
     def plan_resume(self, uid: str, rid: str, response, via_channel: bool = False, steps: Optional[int] = None, until: Optional[str] = None,
-                    child: Optional[dict] = None, node: Optional[str] = None, wave: bool = False) -> RunPlan:
+                    child: Optional[dict] = None, node: Optional[str] = None, wave: bool = False, allow_form: bool = False) -> RunPlan:
         """child: the finished child run a run waits for (TASK-0134), from the worker only. A run waiting for a child
         cannot be answered by a person, and a child's result cannot answer a person's question.
         wave: the checkpoint already holds every answer of a settled wave (TASK-0158). node: which approval this answer is for."""
@@ -547,7 +553,7 @@ class RunService:
             r = self.waiting_run(rid, uid)
             if not json.loads(r.checkpoint or "{}").get("wave_ready"): raise AppError("RUN_NOT_WAITING")
             return self._wave_plan(r, steps, until)
-        if child is None and response is not None: response = human_response(response)
+        if child is None and response is not None: response = human_response(response, allow_form=allow_form)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         if isinstance(cp.get("waits"), list):
             if child is not None: outcome, wrote = self.absorb_wave(rid, child=child)
@@ -564,7 +570,7 @@ class RunService:
                 return RunPlan(r.workflow_id, cp.get("workflow") or {}, {}, run_id=rid, pending_wave=True, pending_event=pending)
             if outcome == "go": return self._wave_plan(self.runs.get(rid), steps, until)
             raise AppError("RUN_NOT_WAITING")  # the wave changed under this answer; do not close the other slots
-        if child is None: response = human_response(response)
+        if child is None: response = human_response(response, allow_form=allow_form)
         r = self.waiting_run(rid, uid); cp = json.loads(r.checkpoint)
         wait = cp.get("wait") or {}
         if (child is None) == (wait.get("kind") == "child") or (child is not None and wait.get("run_id") != child.get("child_run_id")):
@@ -875,8 +881,11 @@ class RunService:
             else: first = {"type": "run_started", "run_id": rid, "ts": t0, **({"forked_from": plan.forked} if plan.forked else {})}
             await emit(first)
             if plan.checkpointing: await self._save_progress(rid, events, plan.resume or {}, plan, span)  # this segment's trace, before any node
+            # the time limit counts the engine's work from here: the setup above (the first progress write, which may wait for
+            # the database) is not part of the run's time, or a slow write could time a run out before its first node (TASK-0212)
+            deadline = time.time() + config.run_timeout()
             threading.Thread(target=worker, daemon=True).start()
-            listener = asyncio.create_task(listen()); deadline = t0 + config.run_timeout(); ended = None
+            listener = asyncio.create_task(listen()); ended = None
             while True:
                 get = asyncio.ensure_future(q.get())
                 done, _ = await asyncio.wait({get, listener}, timeout=max(0.0, deadline - time.time()), return_when=asyncio.FIRST_COMPLETED)

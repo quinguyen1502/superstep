@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { chromePath, promoDir, repoRoot, buildDir, videoDir, framesDir } from './paths.mjs'
 
-const { chromium } = await import(path.join(repoRoot, 'frontend/node_modules/playwright/index.mjs'))
+const { chromium } = await import(path.join(repoRoot, 'node_modules/playwright/index.mjs'))
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) => {
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : true])

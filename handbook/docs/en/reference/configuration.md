@@ -77,6 +77,7 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_CHAT_TRIGGER_RATE_LIMIT` | `60` | Chat triggers: runs per sender and trigger per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_VISITOR` | `10` | Public chat page: messages per visitor per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_IP` | `30` | Public chat page: messages per client IP per window; `0` off |
+| `STUDIO_PUBLIC_CHAT_RATE_USER` | same as `STUDIO_PUBLIC_CHAT_RATE_IP` | Messages/uploads per external user and chat per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_READ` | `120` | Public chat page: page loads, chat reads and new chats per client IP per window; `0` off |
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | The public chat page's window (s). Each chat's own daily cap is in its Chat settings |
 | `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Chat attachments: the largest file in MB; each chat may only lower it. Above 100, also raise `WEB_MAX_BODY_SIZE` on the `web` image (default `110m`), which the bundled nginx applies to the upload routes only; every other request is limited to 10 MB there |

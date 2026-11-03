@@ -1,11 +1,17 @@
 """The published chat page's API (TASK-0140, REQ-0074, DEC-0067), by slug and without the run right.
 
+Public Chat API v1 (TASK-0215, REQ-0082, DEC-0078): every route below is served at /api/public/v1/chat/{slug}/...
+and is in the public OpenAPI under the `Chat` tag; the unversioned /api/public/chat/... paths are aliases of v1 with the
+same handlers (kept for the page, the embed and widget.js; not in the specs).
+
 GET  /api/public/chat/{slug}                      the page: title, intro, suggestions, access, steps mode
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
+GET  /api/public/chat/{slug}/sessions/{sid}/turns?after=<turn_id>  the turns after that one (incremental history)
 GET  /api/public/chat/{slug}/logo?v=<hash>        the chat's logo image (TASK-0145)
 POST /api/public/chat/{slug}/sessions/{sid}/attachments        one file (multipart `file`), before the message (TASK-0174)
 GET  /api/public/chat/{slug}/sessions/{sid}/attachments/{aid}  download it      DELETE it while unsent
+WS   /ws/public/v1/chat/{slug}                    the chat socket protocol v1 (TASK-0216): typed frames, see ws_public_chat_v1
 WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response, node?}: the run
                                                   streams as public_event()s (TASK-0141); ?visitor= for the widget
 GET  /api/public/chat-frame?path=/c/{slug}        the page's frame-ancestors in Content-Security-Policy (TASK-0143):
@@ -15,7 +21,7 @@ An anonymous visitor is the HttpOnly cookie `studio_chat_<hash>`, or the `X-Chat
 sends "new" when it has no token yet and then gets the new token back as `visitor_token`). signed_in uses the studio
 session as other routes do.
 """
-import hashlib, tempfile
+import asyncio, hashlib, tempfile, time
 from urllib.parse import quote
 from typing import BinaryIO, Optional
 from fastapi import APIRouter, Depends, Request, Response, WebSocket, WebSocketDisconnect
@@ -25,13 +31,21 @@ from ...core import config, security
 from ...core.client_ip import client_ip
 from ...core.errors import AppError
 from ...engine import locale
-from ...schemas.chat import ChatRatingIn
+from ...schemas.chat import ChatEditIn, ChatRegenerateIn, ChatRatingIn
+from ...schemas.envelope import error_responses
+from ...schemas.public_chat import (ChatAttachmentEnvelope, ChatEditEnvelope, ChatPageEnvelope, ChatRatingEnvelope, ChatSessionEnvelope,
+                                    ChatSessionListEnvelope, ChatSessionViewEnvelope, ChatTurnsEnvelope, OkEnvelope)
+from ...services import chat_ws_v1 as v1
 from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
 from ..static import CHAT_PAGE
-from ..deps import _same_origin, bearer, chat_attachment_service, current_user, public_chat_service, run_service, ws_user
+from ..deps import bearer, chat_attachment_service, current_user, public_chat_service, run_service, ws_user
+from ..chat_cors import same_chat_origin, chat_request_origin, request_ip
+from ...services.chat_token_verifier import ChatAppUser
 
-router = APIRouter(prefix="/api/public/chat", tags=["public chat"])
+CHAT_TAG = "Chat"
+V1_PREFIX, ALIAS_PREFIX = "/api/public/v1/chat", "/api/public/chat"
+chat = APIRouter()  # the handlers, mounted twice at the bottom: v1 (documented) and the unversioned alias
 root_router = APIRouter()  # the socket and the frame check, outside the prefix
 VISITOR_HEADER = "x-chat-visitor"
 COOKIE_AGE = 400 * 86400  # browsers keep a cookie at most 400 days
@@ -40,14 +54,18 @@ COOKIE_AGE = 400 * 86400  # browsers keep a cookie at most 400 days
 def cookie_name(slug: str) -> str: return "studio_chat_" + hashlib.sha1(slug.encode()).hexdigest()[:10]
 
 
-def visitor_paths(slug: str) -> tuple[str, str]: return f"/api/public/chat/{slug}", f"/ws/public/chat/{slug}"
+def visitor_paths(slug: str) -> tuple[str, ...]:
+    return f"{ALIAS_PREFIX}/{slug}", f"/ws/public/chat/{slug}", f"{V1_PREFIX}/{slug}", f"/ws/public/v1/chat/{slug}"
 
 
-def maybe_user(request: Request, cred: Optional[HTTPAuthorizationCredentials] = Depends(bearer)) -> Optional[dict]:
+async def maybe_user(request: Request, slug: str, cred: Optional[HTTPAuthorizationCredentials] = Depends(bearer), svc=Depends(public_chat_service)):
     """The signed-in studio user, or None (an anonymous visitor)."""
+    await checked(request, svc)
+    if user := getattr(request.state, "chat_app_user", None): return user
     try: return current_user(request, cred)
     except AppError as e:
         if e.code == "AUTH_CSRF": raise
+        if cred is not None: return await svc.authenticate(slug, cred.credentials, chat_request_origin(request), request_ip(request))
         return None
 
 
@@ -57,7 +75,9 @@ def token_of(request: Request, slug: str) -> Optional[str]:
 
 
 async def checked(request: Request, svc) -> None:
+    if getattr(request.state, "chat_read_checked", False): return
     await svc.check_read(client_ip(request.client.host if request.client else None, request.headers.get("x-forwarded-for")))
+    request.state.chat_read_checked = True
 
 
 def logo_response(logo, versioned: bool, scope: str = "public") -> Response:
@@ -124,23 +144,29 @@ def answer(request: Request, response: Response, slug: str, data, v: Visitor):
     return data
 
 
-@router.get("/{slug}")
+@chat.get("/{slug}", operation_id="getChatPage", summary="Get the chat page", response_model=None,
+    responses={200: {"model": ChatPageEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "RATE_LIMITED")})
 async def page(slug: str, request: Request, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); return svc.page(slug, user)
 
 
-@router.get("/{slug}/logo")
+@chat.get("/{slug}/logo", operation_id="getChatLogo", summary="Get the chat logo", response_model=None,
+    responses={200: {"content": {"image/png": {}, "image/jpeg": {}, "image/webp": {}}, "description": "The logo image."}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_LOGO_NOT_FOUND", "RATE_LIMITED")})
 async def logo(slug: str, request: Request, v: Optional[str] = None, svc=Depends(public_chat_service)):
     await checked(request, svc); return logo_response(svc.logo(slug), v is not None)
 
 
-@router.get("/{slug}/sessions")
+@chat.get("/{slug}/sessions", operation_id="listChatSessions", summary="List the caller's chats", response_model=None,
+    responses={200: {"model": ChatSessionListEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED")})
 async def sessions(slug: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); rows, v = svc.sessions(slug, token_of(request, slug), user)
     return answer(request, response, slug, {"sessions": rows}, v)
 
 
-@router.post("/{slug}/sessions")
+@chat.post("/{slug}/sessions", operation_id="createChatSession", summary="Start a chat", response_model=None,
+    openapi_extra={"requestBody": {"required": False, "content": {"application/json": {"schema": {"type": "object", "properties": {
+        "embed": {"type": "boolean", "description": "The chat is opened in an embed (the widget)."}}}}}}},
+    responses={200: {"model": ChatSessionEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED")})
 async def create(slug: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc)
     try: body = await request.json()
@@ -149,13 +175,45 @@ async def create(slug: str, request: Request, response: Response, user=Depends(m
     return answer(request, response, slug, s, v)
 
 
-@router.get("/{slug}/sessions/{sid}")
+@chat.get("/{slug}/sessions/{sid}", operation_id="getChatSession", summary="Get a chat with its turns", response_model=None,
+    responses={200: {"model": ChatSessionViewEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND")})
 async def session(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); s, v = svc.get(slug, sid, token_of(request, slug), user)
     return answer(request, response, slug, s, v)
 
 
-@router.post("/{slug}/sessions/{sid}/attachments")
+@chat.post("/{slug}/sessions/{sid}/edits", operation_id="prepareChatEdit", summary="Prepare an independent edited conversation", response_model=None,
+    responses={200: {"model": ChatEditEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_SESSION_NOT_FOUND", "CHAT_EDIT_INVALID", "CHAT_EDIT_BUSY", "CHAT_EDIT_STALE", "CHAT_EDIT_CONTEXT_UNAVAILABLE", "CHAT_EDIT_CONFLICT", "CHAT_EDIT_GONE", "RATE_LIMITED")})
+async def edit_session(slug: str, sid: str, body: ChatEditIn, request: Request, response: Response, user=Depends(maybe_user),
+                       svc=Depends(public_chat_service), runs=Depends(run_service)):
+    result, v = await svc.revise(slug, sid, token_of(request, slug), user, body.model_dump(), request_ip(request), runs.plan)
+    response.headers["Cache-Control"] = "no-store"
+    return answer(request, response, slug, result, v)
+
+
+@chat.post("/{slug}/sessions/{sid}/regenerations", operation_id="prepareChatRegeneration", summary="Prepare a fresh attempt of the latest terminal answer", response_model=None,
+    responses={200: {"model": ChatEditEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_SESSION_NOT_FOUND", "CHAT_REGENERATE_INVALID", "CHAT_EDIT_BUSY", "CHAT_EDIT_STALE", "CHAT_EDIT_CONTEXT_UNAVAILABLE", "CHAT_EDIT_CONFLICT", "CHAT_EDIT_GONE", "RATE_LIMITED")})
+async def regenerate_session(slug: str, sid: str, body: ChatRegenerateIn, request: Request, response: Response, user=Depends(maybe_user),
+                             svc=Depends(public_chat_service), runs=Depends(run_service)):
+    result, v = await svc.revise(slug, sid, token_of(request, slug), user, body.model_dump(), request_ip(request), runs.plan, action="regenerate")
+    response.headers["Cache-Control"] = "no-store"
+    return answer(request, response, slug, result, v)
+
+
+@chat.get("/{slug}/sessions/{sid}/turns", operation_id="listChatTurns", summary="List newer turns", response_model=None,
+    responses={200: {"model": ChatTurnsEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_TURN_NOT_FOUND")})
+async def turns(slug: str, sid: str, request: Request, response: Response, after: Optional[str] = None, user=Depends(maybe_user),
+                svc=Depends(public_chat_service)):
+    """The chat's turns after the turn `after` (all of them without it), in order, in the page's steps mode. An `after`
+    that is not a turn of this chat is `404 CHAT_TURN_NOT_FOUND`."""
+    await checked(request, svc); data, v = svc.turns(slug, sid, after, token_of(request, slug), user)
+    return answer(request, response, slug, data, v)
+
+
+@chat.post("/{slug}/sessions/{sid}/attachments", operation_id="uploadChatAttachment", summary="Upload a file before the message", response_model=None,
+    openapi_extra={"requestBody": {"required": True, "content": {"multipart/form-data": {"schema": {"type": "object", "required": ["file"],
+        "properties": {"file": {"type": "string", "format": "binary"}}}}}}},
+    responses={200: {"model": ChatAttachmentEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_ATTACHMENTS_OFF", "CHAT_ATTACHMENT_TYPE", "CHAT_ATTACHMENT_TOO_LARGE", "CHAT_ATTACHMENT_TOO_MANY", "CHAT_ATTACHMENT_DEMO")})
 async def upload(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     name, data = await read_upload(request)
@@ -165,32 +223,43 @@ async def upload(slug: str, sid: str, request: Request, response: Response, user
     return answer(request, response, slug, out, v)
 
 
-@router.get("/{slug}/sessions/{sid}/attachments/{aid}")
+@chat.get("/{slug}/sessions/{sid}/attachments/{aid}", operation_id="downloadChatAttachment", summary="Download a file", response_model=None,
+    responses={200: {"content": {"application/octet-stream": {}}, "description": "The file, as a download."}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_ATTACHMENT_NOT_FOUND")})
 async def download(slug: str, sid: str, aid: str, request: Request, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     a, _v = svc.public_file(slug, sid, aid, token_of(request, slug), user)
     return file_response(a, svc.chunks(a))
 
 
-@router.delete("/{slug}/sessions/{sid}/attachments/{aid}")
+@chat.delete("/{slug}/sessions/{sid}/attachments/{aid}", operation_id="deleteChatAttachment", summary="Delete an unsent file", response_model=None,
+    responses={200: {"model": OkEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_ATTACHMENT_NOT_FOUND")})
 async def remove(slug: str, sid: str, aid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(chat_attachment_service)):
     await checked(request, svc.pub)
     data, v = svc.public_delete(slug, sid, aid, token_of(request, slug), user)
     return answer(request, response, slug, data, v)
 
 
-@router.put("/{slug}/sessions/{sid}/turns/{tid}/rating")
+@chat.put("/{slug}/sessions/{sid}/turns/{tid}/rating", operation_id="rateChatTurn", summary="Rate an answer", response_model=None,
+    responses={200: {"model": ChatRatingEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_TURN_NOT_FOUND", "CHAT_RATING_NOT_ALLOWED", "CHAT_RATING_INVALID")})
 async def rate(slug: str, sid: str, tid: str, body: ChatRatingIn, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc)
     data, v = svc.rate(slug, sid, tid, token_of(request, slug), user, body.value, body.comment)
     return answer(request, response, slug, data, v)
 
 
-@router.delete("/{slug}/sessions/{sid}/turns/{tid}/rating")
+@chat.delete("/{slug}/sessions/{sid}/turns/{tid}/rating", operation_id="unrateChatTurn", summary="Remove a rating", response_model=None,
+    responses={200: {"model": OkEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_NOT_PUBLISHED", "CHAT_SIGN_IN_REQUIRED", "RATE_LIMITED", "CHAT_SESSION_NOT_FOUND", "CHAT_TURN_NOT_FOUND")})
 async def unrate(slug: str, sid: str, tid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc)
     data, v = svc.unrate(slug, sid, tid, token_of(request, slug), user)
     return answer(request, response, slug, data, v)
+
+
+v1_router = APIRouter()  # also the source of the public spec (api/openapi_public.py)
+v1_router.include_router(chat, prefix=V1_PREFIX, tags=[CHAT_TAG])
+router = APIRouter()
+router.include_router(v1_router)
+router.include_router(chat, prefix=ALIAS_PREFIX, tags=["public chat"], include_in_schema=False)
 
 
 @root_router.get("/api/public/chat-frame")
@@ -204,33 +273,30 @@ def frame(request: Request, response: Response, path: Optional[str] = None, svc=
     return {"frame_ancestors": v}
 
 
-@root_router.websocket("/ws/public/chat/{slug}")
-async def ws_public_chat(ws: WebSocket, slug: str):
-    """One message or answer per connection, as /ws/run: the run streams, then the socket closes. Same origin only (the
-    page and the embed's iframe are served by the studio); a cancel is {"type": "cancel"}."""
-    if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")):
-        await ws.close(code=4403); return
-    await ws.accept()
-    try: req = await ws.receive_json()
-    except (WebSocketDisconnect, ValueError, KeyError): return
+def ws_identity(ws: WebSocket) -> Optional[dict]:
+    """The signed-in studio user on a socket (session cookie or ?token=), or None."""
+    try: return ws_user(ws) if ws.cookies.get(security.SESSION_COOKIE) or ws.query_params.get("token") else None
+    except AppError: return None
+
+
+async def run_chat(ws: WebSocket, slug: str, req, token: Optional[str], user: Optional[dict], emit, *, allow_form: bool = False) -> bool:
+    """Plans the message or answer `req` and streams the run: `emit(public_event)` -> still connected. A request that
+    cannot run is one error event. Returns whether a run was started."""
     svc, runs = public_chat_service(), run_service()
-    try: user = ws_user(ws) if ws.cookies.get(security.SESSION_COOKIE) or ws.query_params.get("token") else None
-    except AppError: user = None
     try:
         ip = client_ip(ws.client.host if ws.client else None, ws.headers.get("x-forwarded-for"))
-        token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
-        plan, owner, mode, reply = await svc.plan_message(slug, token, user, req, ip, runs.plan)
+        planner = lambda uid, body: runs.plan(uid, body, allow_form=allow_form)
+        plan, owner, mode, reply = await svc.plan_message(slug, token, user, req, ip, planner)
         if plan.ports is not None: plan.ports.locale = locale.pick(req.get("locale") if isinstance(req, dict) else None, ws.headers.get("accept-language"))
     except AppError as e:
-        await ws.send_json(error_event(e.to_dict())); await ws.close(); return
-
+        await emit(error_event(e.to_dict())); return False
     state = {"connected": True}
 
     async def send(ev) -> bool:
         out = public_event(ev, mode, reply)
         if out is None: return state["connected"]
-        try: await ws.send_json(out); return True
-        except Exception: state["connected"] = False; return False
+        if not await emit(out): state["connected"] = False
+        return state["connected"]
 
     async def listen() -> str:
         try:
@@ -241,7 +307,94 @@ async def ws_public_chat(ws: WebSocket, slug: str):
             state["connected"] = False
             return "disconnected"
 
+    ws.state.run_id = plan.run_id
     await runs.execute(plan, send, listen, owner)
-    if state["connected"]:
-        try: await ws.close()
-        except Exception: pass
+    return True
+
+
+async def close(ws: WebSocket) -> None:
+    try: await ws.close()
+    except Exception: pass
+
+
+def sender(ws: WebSocket):
+    async def emit(out: dict) -> bool:
+        try: await ws.send_json(out); return True
+        except Exception: return False
+    return emit
+
+
+@root_router.websocket("/ws/public/chat/{slug}")
+async def ws_public_chat(ws: WebSocket, slug: str):
+    """One message or answer per connection, as /ws/run: the run streams, then the socket closes. Same origin only (the
+    page and the embed's iframe are served by the studio); a cancel is {"type": "cancel"}. Untyped frames (the
+    unversioned protocol, kept as it is; v1 is below)."""
+    if not same_chat_origin(ws):
+        await ws.close(code=4403); return
+    await ws.accept()
+    try: req = await ws.receive_json()
+    except (WebSocketDisconnect, ValueError, KeyError): return
+    token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
+    await run_chat(ws, slug, req, token, ws_identity(ws), sender(ws))
+    await close(ws)
+
+
+TURN_WAIT, TURN_POLL = 2.0, 0.05  # how long v1 waits for the answer turn to be saved before `done`
+
+
+@root_router.websocket("/ws/public/v1/chat/{slug}")
+async def ws_public_chat_v1(ws: WebSocket, slug: str):
+    """The chat socket protocol v1 (TASK-0216, DEC-0078; services/chat_ws_v1.py): `ready`, then an optional `auth` and
+    one `message` or `answer`; the run streams as typed frames with `v` and `seq`, then `turn` (when saved in time),
+    `done` and the socket closes. A frame that is not v1 is an `error` frame with CHAT_FRAME_INVALID."""
+    await ws.accept()
+    number, emit = v1.Frames(), sender(ws)
+    held: dict = {}
+
+    async def send(frame: Optional[dict]) -> bool:
+        if frame is None: return True
+        return await emit(number(frame))
+
+    async def translate(ev: dict) -> bool:
+        frame = v1.server_frame(ev)
+        if frame is not None and frame["type"] == "done": held["done"] = frame; return True  # after `turn`
+        return await send(frame)
+
+    await send({"type": "ready", "protocol": v1.PROTOCOL})
+    token = ws.query_params.get("visitor") or ws.cookies.get(cookie_name(slug))
+    svc, user = public_chat_service(), None
+    try:
+        await svc.check_read(request_ip(ws))
+        raw = ws.query_params.get("token")
+        user = ws_identity(ws) if same_chat_origin(ws) else None
+        if raw and user is None:
+            user = await svc.authenticate(slug, raw, ws.headers.get("origin"), request_ip(ws))
+        frame = v1.client_frame(await ws.receive_json())
+        if frame["type"] == "auth":
+            token = frame.get("visitor") or token
+            if "token" in frame:
+                user = await svc.authenticate(slug, frame["token"], ws.headers.get("origin"), request_ip(ws))
+            frame = v1.client_frame(await ws.receive_json())
+        if not same_chat_origin(ws) and not isinstance(user, ChatAppUser): raise AppError("CHAT_TOKEN_REQUIRED")
+        if frame["type"] not in ("message", "answer"): raise v1.invalid(f"expected a message or an answer, got {frame['type']!r}")
+    except (WebSocketDisconnect, KeyError): return
+    except ValueError:
+        await send(v1.server_frame(error_event(v1.invalid("not JSON").to_dict()))); await close(ws); return
+    except AppError as e:
+        await send(v1.server_frame(error_event(e.to_dict()))); await close(ws); return
+    req, since = v1.plan_request(frame), time.time()
+    if await run_chat(ws, slug, req, token, user, translate, allow_form=True) and "done" in held:
+        turn = await answer_turn(req["chat_session_id"], getattr(ws.state, "run_id", None), since)
+        if turn: await send({"type": "turn", "turn_id": turn["id"], "role": "assistant", "status": turn["status"], "run_id": turn["run_id"]})
+        await send(held["done"])
+    await close(ws)
+
+
+async def answer_turn(sid: str, run_id: Optional[str], since: float) -> Optional[dict]:
+    """The saved answer of this run, once the run has settled (ChatRunService saves it), within TURN_WAIT."""
+    if not run_id: return None
+    svc, waited = public_chat_service(), 0.0
+    while True:
+        turn = await asyncio.to_thread(svc.answer_turn, sid, run_id, since)
+        if turn is not None or waited >= TURN_WAIT: return turn
+        await asyncio.sleep(TURN_POLL); waited += TURN_POLL

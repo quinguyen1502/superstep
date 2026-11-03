@@ -1,5 +1,6 @@
 """Telegram: bot sendMessage with an inline keyboard; the webhook is authenticated by the secret_token header."""
 import hmac, json, re, secrets as pysecrets
+from datetime import datetime, timezone
 from typing import Optional
 from ...core import config
 from ...core.errors import AppError
@@ -71,8 +72,13 @@ class TelegramChannel(ApprovalChannel):
         chat = m.get("chat") or {}
         text = re.sub(r"^@\w+\s+", "", m["text"].strip())          # "@studio_bot leave ..."
         text = re.sub(r"^/([\w-]+)@\w+", r"/\1", text)             # "/leave@studio_bot ..." (commands in groups)
-        return IncomingMessage("", "dm" if chat.get("type") == "private" else str(chat.get("id")), str(m["from"]["id"]), text,
-                               str(u.get("update_id")), {"chat_id": chat.get("id"), "message_id": m.get("message_id")})
+        try: stamp = datetime.fromtimestamp(m["date"], timezone.utc).isoformat() if isinstance(m.get("date"), (int, float)) else None
+        except (ValueError, OverflowError, OSError): return None
+        actor = m["from"]
+        name = " ".join(str(actor.get(k) or "") for k in ("first_name", "last_name")).strip() or str(actor.get("username") or "")
+        return IncomingMessage("", "dm" if chat.get("type") == "private" else str(chat.get("id")), str(actor["id"]), text,
+                               str(u.get("update_id")), {"chat_id": chat.get("id"), "message_id": m.get("message_id")},
+                               {"time": stamp, "name": name[:200], "data": {"text": m["text"], "message_id": m.get("message_id")}})
 
     def reply(self, secrets, ref, text):
         self._api(secrets, "sendMessage", {"chat_id": ref["chat_id"], "text": text[:4000], "disable_web_page_preview": True,

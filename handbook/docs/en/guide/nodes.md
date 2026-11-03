@@ -67,6 +67,28 @@ the Logs row and the Output tab. They are not stored in run history; the final
 text is. Provider failures (401, timeout and so on) become a node `error`
 event, never a server crash.
 
+### Fallback model
+
+In an LLM node's Settings, enable **Use a fallback model** and choose its
+credential and model. The pair must differ from the primary. The alternate
+credential is checked using the workflow owner's access before either model
+is called; only chat-model credentials are accepted.
+
+The primary is tried first. An unreachable provider, missing model or bad
+provider response can select the alternate once. Authentication/configuration
+and credential-access errors stop the attempt. Cancellation or an expired node
+timeout never starts the alternate. Node retry settings repeat the whole
+policy, so keep their attempt count in mind when estimating usage.
+
+With fallback enabled, answer text is held until a model succeeds, then emitted
+as a completed chunk. Ordinary LLM nodes still stream live. The trace's
+`model_attempts` records provider/model, status and error code; a failed call
+can still incur provider charges even if it reports no usage. Mock runs remain
+offline and do not resolve credentials. Code exports currently reject a workflow
+with a configured fallback policy (`MODEL_POLICY_EXPORT_UNAVAILABLE`) rather
+than silently omitting it. Portable templates clear the fallback credential;
+select your own credential after import.
+
 ## Agent
 
 A task prompt, a list of tools (MCP, HTTP, built-in function, knowledge base

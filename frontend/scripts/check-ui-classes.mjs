@@ -19,7 +19,7 @@ const DIMENSION = new Set(['Skeleton', 'ScrollArea', 'Separator', 'ResizablePane
 function walk(dir, out = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name)
-    if (e.isDirectory()) { if (p !== path.join(ROOT, 'components/ui') && e.name !== '__tests__') walk(p, out) }
+    if (e.isDirectory()) { if (e.name !== 'ui' && e.name !== '__tests__') walk(p, out) }
     else if (p.endsWith('.tsx')) out.push(p)
   }
   return out
@@ -36,7 +36,7 @@ export function check(file, src = fs.readFileSync(file, 'utf8')) {
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
   const ui = new Set()
   for (const st of sf.statements)
-    if (ts.isImportDeclaration(st) && /^@\/components\/ui\//.test(st.moduleSpecifier.text))
+    if (ts.isImportDeclaration(st) && /^(?:@\/components\/ui\/|@superstep\/react\/ui\/|\.\.\/ui\/)/.test(st.moduleSpecifier.text))
       st.importClause?.namedBindings?.elements?.forEach(e => ui.add(e.name.text))
   const lines = src.split('\n'), hits = []
   const visit = n => {
@@ -62,7 +62,7 @@ export function check(file, src = fs.readFileSync(file, 'utf8')) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2), strict = args.includes('--strict')
   const files = args.filter(a => !a.startsWith('--')).map(f => path.resolve(f))
-  const hits = (files.length ? files : walk(ROOT)).flatMap(f => check(f))
+  const hits = (files.length ? files : [...walk(ROOT), ...walk(path.resolve(ROOT, '../../packages/react/src'))]).flatMap(f => check(f))
   for (const h of hits) console.log(`${h.file}:${h.line}  <${h.tag}> ${h.classes.join(' ')}  (use the size prop / a cva variant, or add "ui-class-ok: <reason>")`)
   console.log(hits.length ? `\n${hits.length} ui-class warning(s)` : 'ui-class check: no hits')
   process.exit(strict && hits.length ? 1 : 0)

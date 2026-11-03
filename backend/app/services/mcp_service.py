@@ -11,9 +11,11 @@ from ..core.errors import AppError
 from ..engine import mcp_client
 from ..models import McpServer
 from ..repositories import McpServerRepository
+from ..repositories.mcp_operations import McpOperationRepository
+from .managed_tool_service import ManagedToolService
 from ..core.net import pinned_request, public_address
 
-TRANSPORTS = ("stdio", "http")
+TRANSPORTS = ("stdio", "http", "managed")
 SCOPES = ("user", "org")
 NAME_MAX, ARGS_MAX, SECRETS_MAX, VALUE_MAX = 120, 50, 30, 4096
 SECRET_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
@@ -21,8 +23,9 @@ SECRET_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 
 class McpService:
     def __init__(self, repo: McpServerRepository, is_admin: Callable[[str], bool] = lambda uid: False,
-                 org_allowed: Callable[[str], bool] = lambda uid: True):
+                 org_allowed: Callable[[str], bool] = lambda uid: True, channels=None, quota=None):
         self.repo, self.is_admin, self.org_allowed = repo, is_admin, org_allowed
+        self.managed = ManagedToolService(McpOperationRepository(repo.db), channels, quota)
 
     # ---- views ----
     @staticmethod
@@ -30,12 +33,15 @@ class McpService:
         return {"id": r.id, "name": r.name, "scope": r.scope, "transport": r.transport, "command": r.command,
                 "args": json.loads(r.args or "[]"), "url": r.url, "secrets": json.loads(r.secret_hints or "{}"),
                 "tools": json.loads(r.tools or "[]"), "tools_at": r.tools_at, "created": r.created,
+                "adapter": r.adapter, "settings": json.loads(r.settings or "{}"),
                 "can_edit": r.owner == uid if r.scope == "user" else admin}
 
     def list(self, uid: str) -> dict:
         admin = self.is_admin(uid)
         return {"servers": [self.public(r, uid, admin) for r in self.repo.visible(uid)], "is_admin": admin,
-                "stdio_enabled": config.mcp_stdio_enabled(), "org_usable": self.org_allowed(uid)}
+                "stdio_enabled": config.mcp_stdio_enabled(), "org_usable": self.org_allowed(uid),
+                "managed_adapters": [{"id": adapter.id, "settings_schema": adapter.settings_schema, "secret_fields": list(adapter.secret_fields)}
+                                     for adapter in self.managed.adapters.values()]}
 
     def _visible(self, sid: str, uid: str) -> McpServer:
         r = self.repo.get(sid)
@@ -48,13 +54,17 @@ class McpService:
         return r
 
     # ---- validation ----
-    def _check(self, uid: str, scope: str, transport: str, name: str, command: Optional[str], args: Any, url: Optional[str]) -> dict:
+    def _check(self, uid: str, scope: str, transport: str, name: str, command: Optional[str], args: Any, url: Optional[str], adapter=None, settings=None) -> dict:
         n = (name or "").strip()
         if not n: raise AppError("MCP_NAME_REQUIRED")
         if len(n) > NAME_MAX: raise AppError("MCP_NAME_TOO_LONG", max=NAME_MAX)
         if scope not in SCOPES: raise AppError("MCP_CONFIG_INVALID", field="scope")
         if scope == "org" and not self.is_admin(uid): raise AppError("MCP_ADMIN_REQUIRED")
         if transport not in TRANSPORTS: raise AppError("MCP_TRANSPORT_UNSUPPORTED", transport=transport)
+        if transport == "managed":
+            implementation = self.managed.adapter(adapter)
+            if not isinstance(settings, dict) or len(json.dumps(settings)) > getattr(implementation, "settings_limit", 4096): raise AppError("MCP_CONFIG_INVALID", field="settings")
+            return {"name": n, "command": None, "args": None, "url": None, "adapter": adapter, "settings": json.dumps(settings)}
         if transport == "stdio":
             if not config.mcp_stdio_enabled(): raise AppError("MCP_STDIO_DISABLED")
             if not self.is_admin(uid): raise AppError("MCP_ADMIN_REQUIRED")
@@ -77,7 +87,7 @@ class McpService:
             if v is None:
                 if k in old: out[k] = old[k]
                 continue
-            if not isinstance(v, str) or len(v) > VALUE_MAX: raise AppError("MCP_CONFIG_INVALID", field="secrets")
+            if not isinstance(v, str) or len(v) > (16384 if k in {"service_account", "google_credentials"} else VALUE_MAX): raise AppError("MCP_CONFIG_INVALID", field="secrets")
             out[k] = v
         return out
 
@@ -89,23 +99,28 @@ class McpService:
     @staticmethod
     def _apply_secrets(r: McpServer, sec: dict) -> None:
         r.secrets = crypto.encrypt(json.dumps(sec)) if sec else None
-        r.secret_hints = json.dumps({k: crypto.mask(v) for k, v in sec.items()})
+        r.secret_hints = json.dumps({k: "••••" if k in {"headers", "google_credentials"} else crypto.mask(v) for k, v in sec.items()})
 
     # ---- CRUD ----
     def create(self, uid: str, name: str, transport: str, scope: str = "user", command: str | None = None, args: Any = None,
-               url: str | None = None, secrets: dict | None = None) -> dict:
-        v = self._check(uid, scope, transport, name, command, args if args is not None else [], url)
+               url: str | None = None, secrets: dict | None = None, adapter=None, settings=None) -> dict:
+        v = self._check(uid, scope, transport, name, command, args if args is not None else [], url, adapter, settings)
+        sec = self._secrets(secrets or {}, {})
+        if transport == "managed": self.managed.validate(uid, adapter, settings, sec)
         r = McpServer(id=uuid.uuid4().hex[:10], owner=uid, scope=scope, transport=transport, created=time.time(), **v)
-        self._apply_secrets(r, self._secrets(secrets or {}, {}))
+        self._apply_secrets(r, sec)
         return self.public(self.repo.save(r), uid, self.is_admin(uid))
 
     def update(self, sid: str, uid: str, name: str, command: str | None = None, args: Any = None, url: str | None = None,
-               secrets: dict | None = None) -> dict:
+               secrets: dict | None = None, settings=None) -> dict:
         """Transport and scope are fixed after creation (create a new server instead)."""
         r = self._editable(sid, uid)
-        v = self._check(uid, r.scope, r.transport, name, command, args if args is not None else [], url)
+        config_values = settings if settings is not None else json.loads(r.settings or "{}")
+        v = self._check(uid, r.scope, r.transport, name, command, args if args is not None else [], url, r.adapter, config_values)
+        sec = self._secrets(secrets, self._stored(r))
+        if r.transport == "managed": self.managed.validate(uid, r.adapter, config_values, sec)
         for k, val in v.items(): setattr(r, k, val)
-        self._apply_secrets(r, self._secrets(secrets, self._stored(r)))
+        self._apply_secrets(r, sec)
         r.tools, r.tools_at = None, None  # the configuration changed: discover again
         return self.public(self.repo.save(r), uid, self.is_admin(uid))
 
@@ -125,8 +140,13 @@ class McpService:
 
     def discover(self, sid: str, uid: str) -> dict:
         r = self._visible(sid, uid)
-        try: tools = mcp_client.list_tools(self._spec(r), config.mcp_timeout())
-        except mcp_client.McpError as e: raise AppError("MCP_CONNECT_FAILED", reason=str(e)) from None
+        if r.transport == "managed":
+            if r.scope == "org" and not self.org_allowed(uid): raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")
+            self.managed.adapter(r.adapter).authorize(uid, json.loads(r.settings or "{}"))
+            tools = self.managed.tools(r)
+        else:
+            try: tools = mcp_client.list_tools(self._spec(r), config.mcp_timeout())
+            except mcp_client.McpError as e: raise AppError("MCP_CONNECT_FAILED", reason=str(e)) from None
         r.tools, r.tools_at = json.dumps(tools), time.time(); self.repo.save(r)
         return self.public(r, uid, self.is_admin(uid))
 
@@ -149,9 +169,14 @@ class McpService:
             out[k] = v
         return out
 
-    def call(self, uid: str, sid: str, tool: str, args: dict, org_allowed: bool = True) -> Any:
+    def call(self, uid: str, sid: str, tool: str, args: dict, org_allowed: bool = True, operation_key=None, dry_run=False) -> Any:
         r = self._visible(sid, uid)
         if r.scope == "org" and not org_allowed: raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")  # policy, TASK-0029
+        if r.transport == "managed":
+            if r.scope == "org" and not self.org_allowed(uid): raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")
+            definitions = {item["name"]: item for item in self.managed.tools(r)}
+            if tool not in definitions: raise AppError("MCP_TOOL_NOT_FOUND", tool=tool)
+            return self.managed.call(uid, r, tool, self.coerce(args, definitions[tool]["input_schema"]), self._stored(r), operation_key, dry_run, org_allowed)
         tools = {t["name"]: t for t in json.loads(r.tools or "[]")}
         if tool not in tools:
             tools = {t["name"]: t for t in self.discover(sid, uid)["tools"]}
@@ -163,3 +188,25 @@ class McpService:
     def caller(self, uid: str, org_allowed: bool = True) -> Callable[[str, str, dict], Any]:
         """Port for MCP tool nodes, bound to the resource owner; org servers only if the person running may use them."""
         return lambda sid, tool, args: self.call(uid, sid, tool, args, org_allowed)
+
+    def effect_caller(self, uid, org_allowed=True):
+        return lambda sid, tool, args, key, dry: self.call(uid, sid, tool, args, org_allowed, key, dry)
+
+    def check_export(self, graphs):
+        for graph in graphs:
+            for node in graph.get("nodes") or []:
+                data = node.get("data") or {}
+                references = ([data] if node.get("type") == "mcp" else []) + list(data.get("tools") or [])
+                for reference in references:
+                    row = self.repo.get(reference.get("server_id")) if isinstance(reference, dict) and reference.get("server_id") else None
+                    if row is not None and row.transport == "managed": raise AppError("MANAGED_EXPORT_UNAVAILABLE")
+
+    def operations(self, uid, sid):
+        self._visible(sid, uid)
+        return [self.managed.public(op) for op in self.managed.operations.list_for(sid, uid)]
+
+    def reconcile(self, uid, sid, operation_id):
+        row = self._visible(sid, uid)
+        if row.scope == "org" and not self.org_allowed(uid): raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")
+        if row.transport != "managed": raise AppError("MCP_CONFIG_INVALID", field="transport")
+        return self.managed.reconcile(uid, row, operation_id, self._stored(row))

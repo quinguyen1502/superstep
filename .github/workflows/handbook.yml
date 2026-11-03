@@ -4,7 +4,7 @@ name: Handbook
 # Pages from main. Publishing needs Settings → Pages → Source: GitHub Actions.
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, 'factory/task-*']
     paths: ['handbook/**', 'docs/api-errors.md', '.github/workflows/handbook.yml']
   push:
     branches: [main]

@@ -405,6 +405,40 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0148 A task PR moves its own task to done when the owner approves the merge (framework 338d7a8); TASK-0139 to
   TASK-0144 link their review and QA. **merged** (PR #199).
 
+## Public chat SDK and toolkit
+
+REQ-0082 / PLAN-0002, accepted on 2026-10-31: phase 1 TASK-0215–0219 is merged (#273–277). The owner requested continuing the next task on 2026-11-02.
+
+- TASK-0220 TypeScript headless chat SDK 0.2.0 — done, merged through #285 on 2026-11-02 after owner approval and all 20 checks passed; REV-0215 / QA-0215.
+- TASK-0221 Python chat SDK — done, merged through #286 after rebase to develop and 19 passing checks; REV-0216 / QA-0216. Shared version remains 0.10.2 until a later approved release.
+- TASK-0222 sample host/e2e — done, merged through #287 after rebase to develop and 21 passing checks; REV-0217 / QA-0217. Screenshots remain CI artifacts / temporary files, outside Git.
+- TASK-0223 shared React extraction — done; owner approved merging #288 into develop on 2026-11-02, with final-head CI gating integration. REV-0218 / QA-0218; full Factory profile 8/8 and targeted/visual acceptance passed. npm workspace, common chat presentation/shadcn primitives, v1 public page and build/CI/Docker compatibility; four-variant visual regression and <=5 percent bundle-growth gate. React hooks/theme/widget/native features remain later PLAN-0002 tasks; no package release authorised.
+
+- TASK-0224 public React toolkit — done; owner accepted #289 on 2026-11-03 for rebased single-commit Ready delivery. useChat/public components, scoped CSS, independent en/vi/theme, Vite example and React 18/19 browser coverage; REV-0219 / QA-0219. Reviewed head passed 21 checks plus one expected publish skip; final-head validation/CI gates Ready. Merge/publication remain unauthorised.
+
+- TASK-0224–0226 web toolkit/widget/docs — merged through #289–291; #291 integrated at 02361fbd after 22 checks passed.
+- 2026-11-03 owner amendment: temporarily defer native TASK-0227/0228. Prioritise TASK-0229 (edit message) then TASK-0230 (regenerate answer) for 0.11.0. The owner accepted DEC-0084; TASK-0229 merged through #292 at 42333ffc after all 22 final single-commit checks passed. TASK-0230 merged through #293 at d2119965 after all 22 final-head checks passed. TASK-0238 is done for owner-authorised 0.11.0 release, with REV-0224/QA-0224, passing local package/runtime/migration/handbook/full verification and 22 reviewed-head CI checks; final lifecycle-head CI gates merge. PLAN-0002 records revised release grouping and validation. Native scope remains incomplete; no new version/tag is published by this delivery.
+
+## Generic events, connections and model policy
+
+REQ-0083, owner requested implementation on 2026-11-01 after selecting generic integrations over vendor-specific canvas nodes. PLAN-0003 and DEC-0081 describe the delivery; DES-0001 covers existing-surface UX. No production cutover or release is authorised.
+
+- TASK-0231 Model fallback policy — done, merged into develop through #278 on 2026-11-02 after 20 passing checks (REV-0208, QA-0208).
+- TASK-0232 Event bindings, Telegram metadata and signed JSON sources — done, merged into develop through #279 on 2026-11-02 after 20 passing checks (REV-0209, QA-0209).
+- TASK-0233 Managed tools/connections through existing MCP nodes and Agent slots — done, merged into develop through #280 on 2026-11-02 after 20 passing checks (REV-0210, QA-0210).
+- TASK-0234 Expense example, end-to-end tests and bilingual guide — done; owner approved merge of #281 into develop on 2026-11-02; final-head CI gates merging.
+
+## Additional managed adapters
+
+REQ-0084, DES-0002, DEC-0082, PLAN-0004: owner requested generic HTTP API and services already in approval channels on 2026-11-02, then approved merging the delivery PRs into develop. Live sends/cutover remain outside this delivery.
+
+- TASK-0235 Generic managed HTTP API — done, merged into develop through #282 on 2026-11-02 after 20 passing checks (REV-0212, QA-0212).
+- TASK-0236 Slack/WhatsApp/Email/Teams actions using existing channels — done, merged into develop through #283 on 2026-11-02 after 20 passing checks (REV-0213, QA-0213).
+
+REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Drive on 2026-11-02.
+
+- TASK-0237 Managed Google Drive — done, merged into develop through #284 on 2026-11-02 after 20 passing checks (REV-0214, QA-0214).
+
 ## Releases
 
 - TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,
@@ -418,6 +452,11 @@ Asked for in chat, with no requirement of their own. Review and QA are in each t
 - TASK-0202 Version 0.10.1: scheduled-backup S3 manifest, AI review usage, Playwright e2e in CI, S3 multipart
   uploads, README update. **released** (PR #256 to main, tag `v0.10.1`).
 - TASK-0211 Version 0.10.2: attachment storage, AI review and CLI sign-in safety fixes, hand-off before the
-  first agent, request body ceilings, Human node answers in the chat, e2e race fixes. **in progress**.
+  first agent, request body ceilings, Human node answers in the chat, e2e race fixes. **released** (PR #267 to main,
+  tag `v0.10.2`).
 - Earlier releases (0.3.0 to 0.6.0: TASK-0096, TASK-0098, TASK-0100, TASK-0105, TASK-0111) and the tasks between
   TASK-0087 and TASK-0112 are not listed in this roadmap. Their task files and CHANGELOG.md have the details.
+
+## 0.11.0 Release Authorisation
+
+Owner explicitly instructed “Phát hành đi” after reviewing PR #294 and the release summary. Integrate the accepted candidate and release through main, version tags, GitHub Release and configured PyPI/npm/GHCR workflows. Publication is in progress, not yet claimed successful. Native TASK-0227/0228 stays deferred; no live bot/provider cutover is included.

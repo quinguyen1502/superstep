@@ -70,7 +70,7 @@ def create_chat_trigger(wid: str, body: ChatTriggerIn, user=Depends(current_user
 
 @router.patch("/workflows/{wid}/chat-triggers/{tid}")
 def update_chat_trigger(wid: str, tid: str, body: ChatTriggerPatch, user=Depends(current_user), svc=Depends(chat_trigger_service)):
-    return svc.update(wid, tid, user["id"], body.model_dump())
+    return svc.update(wid, tid, user["id"], body.model_dump(exclude_unset=True))
 
 @router.delete("/workflows/{wid}/chat-triggers/{tid}")
 def delete_chat_trigger(wid: str, tid: str, user=Depends(current_user), svc=Depends(chat_trigger_service)): return svc.delete(wid, tid, user["id"])

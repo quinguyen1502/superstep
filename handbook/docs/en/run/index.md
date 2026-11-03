@@ -1,5 +1,10 @@
 # Run
 
+For a custom client of a published chat, see [Chat API](chat-api.md) and
+[Third-party authentication](chat-third-party-auth.md).
+
+Use [React chat toolkit](chat-react.md) for components or [Chat widget](chat-widget.md) for a bubble on your website.
+
 A workflow runs in six ways. All of them go through the same engine,
 produce the same trace, and appear in the run history (**Run → View all**).
 

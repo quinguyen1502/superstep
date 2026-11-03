@@ -405,6 +405,17 @@
     }
   },
   "errors": {
+    "CHAT_REGENERATE_INVALID": "Chỉ tạo lại được câu trả lời cuối đã kết thúc",
+    "CHAT_REGENERATE_UNSUPPORTED": "Máy chủ này chưa hỗ trợ tạo lại câu trả lời chat",
+    "CHAT_EDIT_INVALID": "Tin nhắn này không sửa được",
+    "CHAT_EDIT_CONTEXT_UNAVAILABLE": "Không còn dữ liệu agent tại điểm này; hãy bắt đầu cuộc trò chuyện mới",
+    "CHAT_EDIT_BUSY": "Hãy chờ cuộc trò chuyện chạy xong trước khi tạo nhánh mới",
+    "CHAT_EDIT_STALE": "Cuộc trò chuyện đã thay đổi; hãy tải lại trước khi thử lại",
+    "CHAT_EDIT_CONFLICT": "Mã thao tác này đã dùng cho một lần tạo nhánh khác",
+    "CHAT_EDIT_GONE": "Nhánh cuộc trò chuyện mới đã bị xoá",
+    "CHAT_EDIT_PENDING": "Nhánh cuộc trò chuyện này còn thao tác chưa hoàn tất",
+    "CHAT_EDIT_STARTED": "Thao tác này đã được tiếp nhận; hãy đọc kết quả đã lưu thay vì gửi lại",
+    "CHAT_EDIT_UNSUPPORTED": "Máy chủ này chưa hỗ trợ sửa tin nhắn chat",
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
     "BAD_REQUEST": "Yêu cầu không hợp lệ",
     "NOT_FOUND": "Không tìm thấy",
@@ -453,6 +464,7 @@
     "RUN_NOT_FOUND": "Không tìm thấy run, run đã kết thúc hoặc không thuộc về bạn",
     "RUN_NODE_NOT_REACHED": "Run đã kết thúc mà không tới node '{{node}}'",
     "NODE_FAILED": "Node bị lỗi",
+    "MODEL_POLICY_EXPORT_UNAVAILABLE": "Xuất code hiện chưa hỗ trợ chính sách model dự phòng; bỏ chính sách này để xuất",
     "HTTP_TOOL_URL_BLOCKED": "Node HTTP Tool {{node}}: URL phải là địa chỉ http(s) công khai",
     "TEMPLATE_REF_INVALID": "Lỗi template: {{reason}}",
     "CREDENTIAL_NOT_FOUND": "Credential không tồn tại hoặc không thuộc về bạn",
@@ -469,7 +481,7 @@
     "RUN_NOT_WAITING": "Run này không ở trạng thái chờ phản hồi",
     "CHECKPOINT_NOT_FOUND": "Không tìm thấy checkpoint trong run này, hoặc không thể fork từ nó",
     "RUN_FORK_UNSUPPORTED": "Không thể fork run của graph LangGraph được import",
-    "RUN_RESPONSE_INVALID": "Phản hồi phải là văn bản (tối đa {{max}} ký tự)",
+    "RUN_RESPONSE_INVALID": "Kiểu hoặc kích thước phản hồi không hợp lệ (tối đa {{max}} ký tự)",
     "MCP_SERVER_DISABLED": "Workflow này chưa được cung cấp dưới dạng công cụ MCP; hãy bật trong mục API của editor",
     "TRIGGER_TOKEN_INVALID": "Token workflow bị thiếu, không hợp lệ hoặc đã thu hồi",
     "TOKEN_NOT_FOUND": "Không tìm thấy token",
@@ -487,6 +499,13 @@
     "CHAT_TRIGGER_OFF": "Chat trigger đang tắt",
     "CHAT_NOT_ENABLED": "Chat đang tắt cho workflow này. Bật trong phần cài đặt Chat",
     "CHAT_SETTINGS_INVALID": "Cài đặt Chat: {{field}} không hợp lệ",
+    "CHAT_APP_KEY_LIMIT": "Mỗi chat chỉ có tối đa hai khoá ứng dụng đang hoạt động",
+    "CHAT_APP_KEY_NOT_FOUND": "Không tìm thấy khoá ứng dụng của chat",
+    "CHAT_TOKEN_REQUIRED": "Cần token chat của người dùng ứng dụng bên thứ ba",
+    "CHAT_TOKEN_INVALID": "Token chat của người dùng ứng dụng bên thứ ba không hợp lệ",
+    "CHAT_TOKEN_EXPIRED": "Token chat của người dùng ứng dụng bên thứ ba đã hết hạn",
+    "CHAT_APP_KEY_REVOKED": "Khoá ứng dụng của chat này đã bị thu hồi",
+    "CHAT_ORIGIN_FORBIDDEN": "Origin này không được phép dùng khoá ứng dụng của chat",
     "CHAT_ACCESS_NOT_AVAILABLE": "Quyền truy cập chat '{{access}}' chưa dùng được",
     "CHAT_SESSION_NOT_FOUND": "Không tìm thấy cuộc trò chuyện",
     "CHAT_MESSAGE_EMPTY": "Hãy viết tin nhắn trước",
@@ -510,6 +529,7 @@
     "CHAT_ATTACHMENT_STORAGE": "Không dùng được nơi lưu tệp đính kèm: {{reason}}",
     "CHAT_ATTACHMENT_LIMIT": "Giới hạn tệp đính kèm tối đa là {{max_files}} tệp và {{max_mb}} MB mỗi tệp",
     "CHAT_TURN_NOT_FOUND": "Không tìm thấy tin nhắn",
+    "CHAT_FRAME_INVALID": "Khung chat không hợp lệ: {{reason}}",
     "CHAT_RATING_NOT_ALLOWED": "Tin nhắn này không đánh giá được",
     "CHAT_RATING_INVALID": "Đánh giá: {{field}} không hợp lệ",
     "TEST_NOT_FOUND": "Không tìm thấy test case",
@@ -564,6 +584,10 @@
     "MCP_NAME_TOO_LONG": "Tên máy chủ MCP tối đa {{max}} ký tự",
     "MCP_TRANSPORT_UNSUPPORTED": "Giao thức MCP không được hỗ trợ: {{transport}}",
     "MCP_CONFIG_INVALID": "Thiết lập {{field}} của máy chủ MCP bị thiếu hoặc không hợp lệ",
+    "MANAGED_OPERATION_KEY_REQUIRED": "Thao tác ghi qua kết nối quản lý cần ID cố định từ một run workflow",
+    "MANAGED_EXPORT_UNAVAILABLE": "Kết nối quản lý cần theo dõi thao tác trong Studio, hiện chưa hỗ trợ xuất thành code độc lập",
+    "MANAGED_OPERATION_CONFLICT": "ID thao tác hoặc nơi ghi của kết nối đã thay đổi; khôi phục cấu hình gốc để đối soát",
+    "MANAGED_OUTCOME_UNKNOWN": "Chưa xác định được kết quả bên ngoài của thao tác {{operation}}; hãy đối soát trước khi tạo thao tác ghi khác",
     "MCP_URL_INVALID": "URL máy chủ MCP phải là URL http(s) công khai",
     "MCP_STDIO_DISABLED": "MCP stdio đang tắt trên máy chủ này (STUDIO_MCP_STDIO)",
     "MCP_ADMIN_REQUIRED": "Chỉ admin được quản lý máy chủ MCP stdio hoặc của tổ chức",
@@ -808,6 +832,7 @@
   },
   "approvals": {
     "kind": {
+      "webhook": "Webhook JSON có chữ ký",
       "slack": "Slack",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
@@ -819,6 +844,7 @@
     "notConnected": "chưa kết nối",
     "keepSecret": "Đã lưu, nhập giá trị mới để thay",
     "help": {
+      "webhook": "Chọn secret gồm 32–256 chữ cái, chữ số, dấu gạch dưới hoặc gạch nối. Gửi JSON tới callback URL kèm X-Studio-Signature (HMAC-SHA256). Kết nối này chỉ nhận sự kiện.",
       "slack": "Tạo Slack app với bot scope chat:write và im:write (mã xác minh), bật Interactivity với Request URL hiện trên kết nối. Để dùng chat trigger, thêm app_mentions:read và im:history rồi bật Event Subscriptions. Mỗi workspace là một kết nối riêng.",
       "telegram": "Tạo bot bằng @BotFather, lưu token rồi đăng ký webhook (cần STUDIO_PUBLIC_URL https công khai).",
       "whatsapp": "Trong Meta app có WhatsApp, sao chép access token, phone number ID, app secret và tự đặt một verify token. Đặt webhook trong Meta dashboard là callback URL bên dưới với verify token đó, đăng ký sự kiện \"messages\". Tin có nút chỉ tới người đã nhắn số này trong 24 giờ; ngoài ra, nhập một template đã duyệt có hai nút trả lời nhanh (Duyệt, Từ chối).",
@@ -883,6 +909,7 @@
       "escalation_skipped": "Bỏ qua chuyển tiếp",
       "timed_out": "Hết hạn chờ",
       "chat_started": "Chạy từ chat",
+      "event_started": "Chạy từ sự kiện",
       "chat_refused": "Từ chối chạy từ chat"
     },
     "node": {
@@ -943,6 +970,7 @@
     "chat": {
       "eventsUrl": "Request URL cho Event Subscriptions (chat trigger)",
       "help": {
+        "webhook": "Ký timestamp và nội dung gốc. Sự kiện cần id, type, time (có múi giờ), place, sender và data. Chọn đúng nơi nhận và người gửi được phép trong trigger của workflow.",
         "slack": "Chat trigger: bật Event Subscriptions với URL này và đăng ký cho bot các sự kiện app_mention và message.im. App cần các quyền app_mentions:read và im:history.",
         "telegram": "Chat trigger: bấm lại Đăng ký webhook để bot nhận cả tin nhắn. Trong nhóm, mọi người gõ /lệnh, hoặc tắt privacy mode của bot trong @BotFather."
       },
@@ -1084,9 +1112,27 @@
     "embedOk": "Hoạt động · {{dims}} chiều · {{ms}} ms",
     "dims": "{{dims}} chiều"
   },
+  "managedTools": {
+    "transport": "Kết nối được quản lý",
+    "adapter": "Adapter dịch vụ",
+    "adapters": { "google_drive": "Tệp Google Drive", "telegram": "Thao tác Telegram", "google_sheets": "Thao tác Google Sheets", "http_api": "HTTP API tổng quát", "slack": "Thao tác Slack", "whatsapp": "Thao tác WhatsApp", "email": "Thao tác email", "teams": "Thao tác Microsoft Teams" },
+    "fields": { "folder_id": "ID thư mục Google Drive được phép truy cập", "google_credentials": "JSON credential Google (mã hoá)", "channel_id": "Kết nối kênh", "chat_id": "ID cuộc chat nhận tin", "spreadsheet_id": "ID spreadsheet", "sheet_name": "Tên tab trong sheet", "data_columns": "Số cột dữ liệu", "service_account": "Khoá JSON của service account", "base_url": "URL gốc của API", "tools_json": "Định nghĩa công cụ (JSON)", "headers": "Header xác thực (JSON, mã hoá)", "destination_channel": "ID cuộc trò chuyện Slack nhận tin", "recipient_phone": "Số điện thoại nhận (mã nước, chỉ chữ số)", "recipients": "Email nhận cố định (cách nhau bằng dấu phẩy, tối đa 10)" },
+    "headerHelp": "Đối tượng JSON chứa header, ví dụ Authorization hoặc X-API-Key. Để trống nếu không cần xác thực. Giá trị được mã hoá và không trả lại qua API.",
+    "googleCredentialHelp": "Dán JSON service_account hoặc authorized_user có client_id, client_secret và refresh_token. Giá trị được mã hoá và không trả lại. Không dán access token hay chỉ tệp tải client secret.",
+    "secretHelp": "Dán khoá JSON của service account. Khoá được mã hoá và không trả lại qua API.",
+    "help": "Công cụ chỉ tác động tới nơi đã cấu hình. Run kiểm thử không gửi tin hay ghi dữ liệu. Công cụ quản lý cần theo dõi thao tác trong Studio, chưa hỗ trợ xuất code độc lập.",
+    "setup": { "google_drive": "Chỉ truy cập tệp con trực tiếp trong thư mục này. Hỗ trợ liệt kê, metadata, đọc văn bản/Google Doc và tạo tệp văn bản tối đa 64 KiB. My Drive cá nhân dùng OAuth refresh credential; service account chỉ tạo trong Shared Drive. Giữ thuộc tính thao tác riêng để khôi phục chỉ đọc; không tự tải lên lại.", "telegram": "Chọn kết nối Telegram đã có và cuộc chat được phép gửi tới. Hệ thống dùng lại secret của bot đã lưu.", "google_sheets": "Chia sẻ sheet cho service account với quyền chỉnh sửa. ID thao tác được thêm sau các cột dữ liệu; giữ nguyên cột này để kiểm tra kết quả.", "http_api": "Cấu hình đường dẫn, phương thức cố định và schema input object với additionalProperties: false. GET dùng query dạng đơn; phương thức khác gửi JSON. Thêm response_schema nếu API báo lỗi nghiệp vụ bằng HTTP 200. HTTP 202 hoặc phản hồi chưa rõ giữ trạng thái chưa rõ kết quả; việc kiểm tra không gửi lại yêu cầu.", "slack": "Dùng lại kết nối kênh Slack, chọn ID cuộc trò chuyện cố định (C, G hoặc D). Bot cần chat:write và quyền vào nơi nhận. Không gửi lại tin chưa rõ kết quả.", "whatsapp": "Dùng lại kênh WhatsApp, cố định số quốc tế của người nhận không có dấu +. Tin văn bản cần trong cửa sổ dịch vụ khách hàng; không dùng lại mẫu yêu cầu duyệt. Chấp nhận gửi chưa có nghĩa là đã giao tin.", "email": "Dùng lại kênh email và địa chỉ gửi SMTP đã cấu hình trên máy chủ. Nơi nhận cố định; tiêu đề và văn bản là tham số công cụ. Dùng chung hạn mức người nhận của workflow. SMTP chấp nhận chưa có nghĩa đã giao; gửi một phần hoặc chưa rõ vẫn giữ trạng thái chưa rõ kết quả.", "teams": "Dùng lại webhook Workflows đã lưu của kênh Teams. Phản hồi chỉ xác nhận nhận yêu cầu; giao tin sau đó vẫn có thể lỗi. Tin chưa rõ kết quả bị chặn để kiểm tra thủ công." },
+    "operations": "Thao tác gần đây",
+    "operationKey": "ID thao tác bên ngoài",
+    "noOperations": "Chưa có thao tác nào.",
+    "refresh": "Tải lại",
+    "reconcile": "Kiểm tra kết quả bên ngoài",
+    "unknownHelp": "Dịch vụ bên ngoài có thể đã nhận thao tác ghi. Việc kiểm tra không lặp lại yêu cầu. Adapter có hỗ trợ tra cứu sẽ đối soát; nếu không, kết quả vẫn chưa rõ. Kiểm tra dịch vụ bên ngoài trước khi tạo run mới.",
+    "outcomes": { "pending": "Chờ xác nhận", "confirmed": "Đã xác nhận", "failed": "Bị từ chối", "unknown": "Chưa rõ kết quả" }
+  },
   "mcp": {
     "new": "Thêm máy chủ MCP",
-    "newHelp": "Endpoint Streamable HTTP, hoặc lệnh cục bộ (stdio) nếu máy chủ cho phép.",
+    "newHelp": "Thao tác dịch vụ được quản lý, endpoint Streamable HTTP hoặc lệnh cục bộ (stdio) khi được bật.",
     "create": "Thêm máy chủ",
     "name": "Tên",
     "transport": "Giao thức",
@@ -1592,6 +1638,20 @@
       "custom": "Tuỳ chỉnh"
     }
   },
+  "eventBinding": {
+    "description": "Chạy từ sự kiện đã xác thực tại nơi được cấu hình. Người gửi được phép dùng tài nguyên của chủ trigger để chạy workflow, không cần liên kết tài khoản studio.",
+    "place": "Nơi nhận sự kiện chính xác",
+    "mode": "Bắt đầu từ",
+    "command": "Lệnh (tài khoản đã liên kết)",
+    "event": "Sự kiện (chạy với quyền chủ trigger)",
+    "senders": "ID người gửi được phép",
+    "sendersPh": "123,456 hoặc * cho mọi người ở đây",
+    "type": "Loại sự kiện chính xác",
+    "admissionHelp": "Những người này có thể dùng tài nguyên của chủ trigger tại nơi đã chọn mà không cần tài khoản studio. Nhập ID cách nhau bằng dấu phẩy, hoặc chủ động dùng * để cho phép mọi người ở đây. Trigger theo lệnh được ưu tiên.",
+    "mappingHelp": "Ánh xạ đường dẫn sự kiện vào trường state. Để trống trường không dùng. Dùng data.text, data.message_id, actor.id, actor.name, conversation.id, time, id hoặc $ cho toàn bộ sự kiện. Giá trị phải đúng kiểu của trường.",
+    "pathPh": "Đường dẫn sự kiện, để trống nếu bỏ qua",
+    "replyHelp": "Workflow nhận sự kiện tự gửi phản hồi qua công cụ. Hệ thống không tự gửi tin bắt đầu hay thành công. Chỉ báo thành công sau khi xác nhận đã ghi dữ liệu."
+  },
   "chatTriggers": {
     "button": "Chạy từ chat",
     "title": "Chạy từ chat",
@@ -1951,7 +2011,46 @@
     "try": "Dùng thử demo",
     "tryHint": "Đăng nhập bằng tài khoản demo dùng chung. Bạn có thể mở, sửa và chạy workflow nhưng không lưu được thay đổi."
   },
+  "modelFallback": {
+    "enable": "Dùng model dự phòng",
+    "credential": "Credential dự phòng",
+    "model": "Model dự phòng",
+    "hint": "Thử model này một lần nếu model chính không kết nối được, không khả dụng hoặc trả kết quả sai định dạng. Lỗi xác thực dừng run. Khi bật dự phòng, chỉ gửi nội dung trả lời sau khi một model thành công. Cài đặt thử lại của node lặp lại toàn bộ chính sách. Xuất code hiện chưa hỗ trợ chính sách này."
+  },
   "chat": {
+    "edit": {
+      "title": "Sửa tin nhắn",
+      "description": "Tiếp tục từ tin nhắn này trong một cuộc trò chuyện mới. Cuộc trò chuyện gốc được giữ nguyên.",
+      "message": "Tin nhắn của bạn",
+      "rerunWarning": "Thao tác này chạy lại workflow đang lưu. Lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Các câu hỏi Human trước đó cần được trả lời lại.",
+      "saveRun": "Lưu và chạy trong nhánh mới",
+      "source": "Cuộc trò chuyện gốc"
+    },
+    "regenerate": {
+      "title": "Tạo lại câu trả lời",
+      "description": "Chạy lại tin nhắn đã tạo ra câu trả lời này trong một cuộc trò chuyện mới. Câu trả lời gốc được giữ nguyên.",
+      "run": "Chạy lại trong nhánh mới"
+    },
+    "appKeys": {
+      "studioOnly": "Bỏ chọn tất cả để chỉ cho phép người dựng workflow chat.",
+      "title": "Khoá ứng dụng",
+      "hint": "Giữ secret trên máy chủ. Tạo khoá thứ hai để thay khoá, cập nhật máy chủ rồi thu hồi khoá cũ.",
+      "saveFirst": "Lưu cài đặt Chat trước, rồi mở lại hộp thoại này để quản lý khoá.",
+      "revoked": "Đã thu hồi",
+      "revoke": "Thu hồi khoá",
+      "anyOrigin": "Mọi origin",
+      "lastUsed": "Dùng gần nhất: {{at}}",
+      "never": "Chưa dùng",
+      "label": "Tên khoá",
+      "origins": "Origin được phép (mỗi dòng một origin)",
+      "anyOriginWarning": "Danh sách trống cho phép mọi origin, kể cả ứng dụng di động. Với ứng dụng web, hãy giới hạn theo site của bạn.",
+      "create": "Tạo khoá ứng dụng",
+      "secretTitle": "Sao chép secret",
+      "secretHint": "Secret chỉ hiện một lần. Lưu trên máy chủ; không đưa vào trình duyệt hoặc ứng dụng di động.",
+      "secret": "Secret của khoá",
+      "copyFailed": "Không sao chép được. Hãy chọn và sao chép secret thủ công.",
+      "revokeHint": "Token được ký bằng khoá này sẽ ngừng hoạt động. Nhập tên khoá để xác nhận."
+    },
     "tab": "Chat",
     "new": "Chat mới",
     "sessions": "Cuộc trò chuyện",
@@ -1996,7 +2095,7 @@
       "enabled": "Chat",
       "enabledHint": "Bật chat cho workflow này.",
       "access": "Ai được chat",
-      "accessHint": "Người dùng studio chat trong tab này. Ai có link, hoặc người đã đăng nhập, chat trên một trang công khai.",
+      "accessHint": "Chọn người được chat trên trang công khai. Người dùng studio luôn có thể chat trong tab này.",
       "inputField": "Trường tin nhắn",
       "replyField": "Trường trả lời",
       "messagesField": "Trường cuộc trò chuyện",
@@ -2013,7 +2112,8 @@
     "access": {
       "studio": "Người dùng studio",
       "anonymous": "Ai có link",
-      "signed_in": "Người đã đăng nhập"
+      "signed_in": "Người đã đăng nhập",
+      "app": "Người dùng ứng dụng bên thứ ba"
     },
     "steps": {
       "none": "Không",
@@ -2136,6 +2236,49 @@
         "field": "Trường state",
         "fieldHint": "Trường danh sách nhận thông tin các tệp trong mỗi run."
       }
+    },
+    "widget": {
+      "open": "Mở chat",
+      "close": "Đóng chat",
+      "frame": "Trợ lý chat"
+    },
+    "toolkit": {
+      "headlessExample": "Ví dụ SDK headless",
+      "reactExample": "Ví dụ bộ giao diện React",
+      "widgetExample": "Ví dụ widget",
+      "widgetDescription": "Mở bong bóng để chat ẩn danh, rồi chọn người dùng mẫu để đổi danh tính.",
+      "openWidget": "Mở widget",
+      "closeWidget": "Đóng widget",
+      "widgetReady": "Widget đã sẵn sàng",
+      "widgetEvents": "Tin nhắn: {{messages}} · Câu trả lời: {{answers}}",
+      "loading": "Đang tải chat…",
+      "refresh": "Tải lại lịch sử",
+      "requestFailed": "Không thể hoàn tất yêu cầu. Bạn hãy thử lại.",
+      "answer": "Gửi câu trả lời",
+      "answerLabel": "Câu trả lời của bạn",
+      "choose": "Chọn một mục",
+      "required": "Bạn cần nhập trường này",
+      "unsupported": "Không thể hiển thị câu hỏi này. Bạn có thể trả lời bằng văn bản.",
+      "ratingName": "Đánh giá",
+      "removeFileTitle": "Xoá file đính kèm",
+      "removeRatingTitle": "Xoá đánh giá",
+      "customTitle": "Chat cho ứng dụng của bạn",
+      "customIntro": "Chat dùng giao diện và ngôn ngữ riêng.",
+      "emptySessions": "Chưa có cuộc trò chuyện",
+      "waitReviewer": "Đang chờ người duyệt",
+      "formAnswer": "Trả lời biểu mẫu",
+      "light": "Sáng",
+      "dark": "Tối",
+      "custom": "Theme tuỳ chỉnh",
+      "language": "Ngôn ngữ",
+      "demoTitle": "Bộ giao diện React chat",
+      "hostTitle": "Ứng dụng chủ",
+      "hostDescription": "Nội dung bên ngoài chat giữ nguyên giao diện riêng.",
+      "switchCustomer": "Đổi người dùng",
+      "customer": "Người dùng",
+      "theme": "Giao diện",
+      "english": "Tiếng Anh",
+      "vietnamese": "Tiếng Việt"
     }
   },
   "timeTravel": {
@@ -2235,6 +2378,7 @@
     "FIELD_RESERVED_AGENT": "Trường state {{field}}: tên bắt đầu bằng '{{prefix}}' được dành cho node Agent",
     "REDUCER_UNKNOWN": "Trường state {{field}}: không có reducer '{{reducer}}' (hãy dùng {{reducers}})",
     "REDUCER_TYPE": "Trường state {{field}}: reducer '{{reducer}}' cần kiểu {{types}}",
+    "MODEL_FALLBACK_INVALID": "Node {{node}}: dự phòng phải có cặp credential/model khác, với credential và model không trống",
     "OUTPUT_FIELD_MISSING": "Node {{node}}: chưa chọn output_field",
     "OUTPUT_FIELD_UNKNOWN": "Node {{node}}: output_field '{{field}}' không có trong state",
     "VARIABLE_UNKNOWN": "Node {{node}}: biến state.{{field}} không có trong state",

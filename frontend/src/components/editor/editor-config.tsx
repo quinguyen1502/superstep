@@ -19,6 +19,7 @@ import { HumanDeadlineSettings } from '@/components/human-deadline-settings'
 import { CredentialsDialog, type Credential } from '@/components/credentials-dialog'
 import { TextButton } from '@/components/text-link'
 import { ModelPicker } from '@/components/model-picker'
+import { ModelFallbackSettings } from '@/components/model-fallback-settings'
 import { SubgraphSettings } from '@/components/subgraph-settings'
 import { RetrieverSettings } from '@/components/retriever-settings'
 import { McpSettings } from '@/components/mcp-settings'
@@ -73,6 +74,7 @@ export function EditorConfig() {
           {chatCreds.map(c => <SelectItem key={c.id} value={c.id}>{c.name} · {c.provider} {c.hint}</SelectItem>)}</SelectContent></Select>
         {!chatCreds.length && <p className="text-[11px] text-muted-foreground" id="llm-no-credential">{t('editor.credentialNone')} <CredentialsDialog onChanged={() => { api<Credential[]>('/api/credentials').then(setCreds).catch(() => {}) }} trigger={<TextButton id="llm-add-credential">{t('editor.credentialAdd')}</TextButton>} /></p>}</F>
       <F label={t('field.model')}><ModelPicker credentialId={d.credential_id || undefined} value={d.model || ''} onChange={v => upd('model', v)} placeholder={providers.find(p => p.id === creds.find(c => c.id === d.credential_id)?.provider)?.default_model || 'gpt-4o-mini'} /></F>
+      <ModelFallbackSettings value={d.fallback} creds={chatCreds} readOnly={!edit} onChange={v => upd('fallback', v)} />
       <F label={t('field.promptTemplate', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={7} id="llm-prompt" value={d.prompt || ''} onChange={v => upd('prompt', v)} /></F>
       {selNode && <IncludeAttachments idp="llm" data={d} fields={state} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
     </>}

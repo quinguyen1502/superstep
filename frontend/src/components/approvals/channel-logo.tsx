@@ -1,14 +1,17 @@
-/** Approval channel logos (TASK-0063). The one component file allowed to use brand colours (DEC-0042): marks are the
+/** Channel and managed-adapter logos (TASK-0063, TASK-0237). The one component file allowed to use brand colours (DEC-0042): marks are the
  *  platforms' own, unmodified, and only identify the integration. E-mail has no brand and uses a theme-coloured icon.
  *  Sources:
  *  - Slack: the 2019 mark, File:Slack_icon_2019.svg on Wikimedia Commons (a copy of the Slack Media Kit mark).
  *  - Microsoft Teams: the 2025 icon, File:Microsoft_Office_Teams_(2025–present).svg on Wikimedia Commons; gradient ids
  *    are prefixed per instance so two logos on one page never share them.
  *  - Telegram, WhatsApp: Simple Icons 16.35.0 (CC0 1.0), in the brand colours Simple Icons records (#26A5E4, #25D366).
- *    Telegram's plane is cut out of its circle, so a white disc behind it gives the official white-on-blue mark. */
+ *    Telegram's plane is cut out of its circle, so a white disc behind it gives the official white-on-blue mark.
+ *  - Google Sheets/Drive: Google's product SVGs, with original paths and colours:
+ *    https://fonts.gstatic.com/s/i/productlogos/sheets_2020q4/v1/192px.svg
+ *    https://fonts.gstatic.com/s/i/productlogos/drive_2020q4/v2/192px.svg */
 import { useId, type ComponentProps, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Mail, MessageSquare } from 'lucide-react'
+import { Globe, Mail, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Mark = (p: ComponentProps<'svg'>) => ReactElement
@@ -86,6 +89,19 @@ function TeamsMark(p: ComponentProps<'svg'>) {
 }
 
 const MARKS: Record<string, Mark> = {
+  google_sheets: p => <svg viewBox="0 0 192 192" {...p}>
+    <polygon fill="#188038" points="116,8 160,52 138,56 116,52 112,30" />
+    <path d="M116,52V8H44c-6.63,0-12,5.37-12,12v152c0,6.63,5.37,12,12,12h104c6.63,0,12-5.37,12-12V52H116z" fill="#34A853" />
+    <path d="M56,76v58h80V76H56z M91,124H66v-14h25V124z M91,100H66V86h25V100z M126,124h-25v-14h25V124z M126,100h-25 V86h25V100z" fill="#FFFFFF" />
+  </svg>,
+  google_drive: p => <svg viewBox="0 0 192 192" {...p}>
+    <path d="M128.33,122l7.59,26.17l19.89,21.42c0,0,0,0,0,0v0c2.69-1.55,4.98-3.8,6.59-6.59l18.48-32 c1.61-2.78,2.41-5.89,2.41-9l-28.38-5.5L128.33,122z" fill="#EA4335" />
+    <path d="M123.48,18.41c-2.69-1.55-5.78-2.41-9-2.41H77.53c-3.2,0-6.32,0.88-9,2.41l0,0l7.96,26.81l19.44,20.64 L96,66l0,0l19.58-20.89L123.48,18.41C123.48,18.41,123.48,18.41,123.48,18.41C123.48,18.41,123.48,18.41,123.48,18.41z" fill="#188038" />
+    <path d="M63.67,122l-28.33-6.5L8.72,122c0,3.1,0.8,6.2,2.4,8.99L29.6,163c1.61,2.78,3.9,5.03,6.59,6.59 l19.59-20.18L63.67,122L63.67,122z" fill="#1967D2" />
+    <path d="M155.47,69l-25.4-44c-1.61-2.79-3.9-5.04-6.59-6.59L96,66l32.33,56h54.95c0-3.11-0.8-6.21-2.41-9 L155.47,69z" fill="#FBBC04" />
+    <path d="M128.33,122H63.67l-27.48,47.59c2.69,1.55,5.78,2.41,9,2.41h101.61c3.22,0,6.31-0.86,9-2.41L128.33,122z" fill="#4285F4" />
+    <path d="M96,66L68.53,18.41c-2.69,1.55-4.97,3.79-6.58,6.57l-50.83,88.05c-1.6,2.78-2.4,5.88-2.4,8.97h54.95L96,66 z" fill="#34A853" />
+  </svg>,
   slack: p => <svg viewBox="0 0 127 127" {...p}>
     <path fill="#E01E5A" d="M27.2 80c0 7.3-5.9 13.2-13.2 13.2C6.7 93.2.8 87.3.8 80c0-7.3 5.9-13.2 13.2-13.2h13.2V80zm6.6 0c0-7.3 5.9-13.2 13.2-13.2 7.3 0 13.2 5.9 13.2 13.2v33c0 7.3-5.9 13.2-13.2 13.2-7.3 0-13.2-5.9-13.2-13.2V80z" />
     <path fill="#36C5F0" d="M47 27c-7.3 0-13.2-5.9-13.2-13.2C33.8 6.5 39.7.6 47 .6c7.3 0 13.2 5.9 13.2 13.2V27H47zm0 6.7c7.3 0 13.2 5.9 13.2 13.2 0 7.3-5.9 13.2-13.2 13.2H13.9C6.6 60.1.7 54.2.7 46.9c0-7.3 5.9-13.2 13.2-13.2H47z" />
@@ -102,14 +118,14 @@ const MARKS: Record<string, Mark> = {
   teams: p => <TeamsMark {...p} />,
 }
 
-/** The logo of a channel kind. Next to a visible label it is hidden from screen readers; pass `standalone` when it is
+/** The logo of a channel kind or managed adapter. Next to a visible label it is hidden from screen readers; pass `standalone` when it is
  *  shown alone, so it gets the kind's name. Unknown kinds get a generic icon. */
 export function ChannelLogo({ kind, className, standalone }: { kind: string; className?: string; standalone?: boolean }) {
   const { t } = useTranslation()
-  const a11y = standalone ? { role: 'img', 'aria-label': t(`approvals.kind.${kind}`, { defaultValue: kind }) } : { 'aria-hidden': true as const }
+  const a11y = standalone ? { role: 'img', 'aria-label': t(`approvals.kind.${kind}`, { defaultValue: t(`managedTools.adapters.${kind}`, { defaultValue: kind }) }) } : { 'aria-hidden': true as const }
   const cls = cn('size-4 shrink-0', className)
   const M = MARKS[kind]
   if (M) return <M className={cls} data-channel-logo={kind} {...a11y} />
-  const Icon = kind === 'email' ? Mail : MessageSquare
+  const Icon = kind === 'http_api' ? Globe : kind === 'email' ? Mail : MessageSquare
   return <Icon className={cn('text-muted-foreground', cls)} data-channel-logo={kind} {...a11y} />
 }

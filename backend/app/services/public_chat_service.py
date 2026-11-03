@@ -21,8 +21,9 @@ from ..core.errors import AppError
 from ..models import ChatSession, WorkflowChatTrigger
 from ..repositories.chat_triggers import WEB
 from ..engine import agents
-from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService
+from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService, access_modes
 from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS
+from .chat_token_verifier import ChatAppUser, ChatTokenVerifier
 
 SIG_LEN = 32
 DAY = 86400
@@ -61,18 +62,33 @@ class Visitor:
     owner: Optional[str] = None
     visitor: Optional[str] = None
     token: Optional[str] = None
+    app: Optional[ChatAppUser] = None
 
 
 class PublicChatService:
-    def __init__(self, chat: ChatSessionService, limiter=None, counter=None, secret: str = security.SECRET):
+    def __init__(self, chat: ChatSessionService, limiter=None, counter=None, secret: str = security.SECRET, verifier: ChatTokenVerifier | None = None):
         self.chat, self.limiter, self.counter, self.secret = chat, limiter, counter, secret
+        self.verifier = verifier
+
+    async def authenticate(self, slug: str, token: str, origin: Optional[str], ip: str) -> ChatAppUser:
+        try:
+            t, st = self.published(slug)
+            if "app" not in access_modes(st["access"]): raise AppError("CHAT_NOT_PUBLISHED")
+            if not token: raise AppError("CHAT_TOKEN_REQUIRED")
+            if self.verifier is None: raise AppError("CHAT_TOKEN_INVALID")
+            return await asyncio.to_thread(self.verifier.verify, token, slug, t.id, origin)
+        except AppError:
+            if self.limiter is not None and (n := config.public_chat_rate_ip()):
+                ok, retry = await self.limiter.hit(f"pubchat-ip:{ip}", n, config.public_chat_rate_window())
+                if not ok: raise AppError("RATE_LIMITED", retry_after=retry) from None
+            raise
 
     # ---- the published chat ----
     def published(self, slug: str) -> tuple[WorkflowChatTrigger, dict]:
         """The trigger and its settings, or CHAT_NOT_PUBLISHED (off, studio only, missing, or the public demo)."""
         t = self.chat.triggers.find(WEB, WEB, slug) if isinstance(slug, str) else None
         st = {**DEFAULTS, **json.loads(t.settings or "{}")} if t else {}
-        if t is None or not t.enabled or st.get("access") not in PUBLIC or config.demo_mode() or self.chat.workflows.get(t.workflow_id) is None:
+        if t is None or not t.enabled or not access_modes(st.get("access")).intersection(PUBLIC) or config.demo_mode() or self.chat.workflows.get(t.workflow_id) is None:
             raise AppError("CHAT_NOT_PUBLISHED")
         return t, st
 
@@ -80,7 +96,7 @@ class PublicChatService:
         t, st = self.published(slug)
         w = self.chat.workflows.get(t.workflow_id)
         return {"slug": slug, "title": st["title"] or w.name, "intro": st["intro"], "suggestions": st["suggestions"], "access": st["access"],
-                "steps_mode": st["steps"], "signed_in": user is not None, "embed_origins": st["embed_origins"], "logo": st["logo"],  # the widget's iframe checks its host
+                "steps_mode": st["steps"], "signed_in": isinstance(user, dict), "embed_origins": st["embed_origins"], "logo": st["logo"],  # the widget's iframe checks its host
                 "attachments": self.attachment_limits(st)}
 
     @staticmethod
@@ -104,7 +120,13 @@ class PublicChatService:
 
     # ---- who is chatting ----
     def visitor(self, slug: str, st: dict, token: Optional[str], user: Optional[dict]) -> Visitor:
-        if st["access"] == "signed_in":
+        modes = access_modes(st["access"])
+        if isinstance(user, ChatAppUser):
+            if "app" not in modes: raise AppError("CHAT_NOT_PUBLISHED")
+            return Visitor(app=user)
+        if "signed_in" in modes and user is not None: return Visitor(owner=user["id"])
+        if "anonymous" not in modes:
+            if "signed_in" not in modes: raise AppError("CHAT_TOKEN_REQUIRED")
             if user is None: raise AppError("CHAT_SIGN_IN_REQUIRED")
             return Visitor(owner=user["id"])
         vid = self.verify(slug, token)
@@ -129,18 +151,48 @@ class PublicChatService:
     # ---- sessions ----
     def sessions(self, slug: str, token: Optional[str], user: Optional[dict]) -> tuple[list, Visitor]:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
-        rows = [] if v.token else self.chat.sessions.list_public(t.id, owner=v.owner, visitor=v.visitor)
+        rows = [] if v.token else self.chat.sessions.list_public(t.id, owner=v.owner, visitor=v.visitor, external_user=v.app.id if v.app else None)
         return [self.chat._session(s) for s in rows], v
 
     def create(self, slug: str, token: Optional[str], user: Optional[dict], embed: bool = False) -> tuple[dict, Visitor]:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user); now = time.time()
         s = self.chat.sessions.add(ChatSession(id=uuid.uuid4().hex[:12], workflow_id=t.workflow_id, trigger_id=t.id, channel="embed" if embed else "web",
-                                               owner=v.owner, visitor=v.visitor, title="", created=now, updated=now))
+                                               owner=v.owner, visitor=v.visitor, external_user=v.app.id if v.app else None,
+                                               app_key_id=v.app.app_key_id if v.app else None, title="", created=now, updated=now))
         return self.chat._session(s), v
 
     def get(self, slug: str, sid: str, token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         return self.chat.view(self.own(t, sid, v), st["steps"]), v
+
+    async def revise(self, slug: str, sid: str, token, user, body, ip, plan, *, action="edit"):
+        from .chat_edit_service import ChatEditService
+        t, st = self.published(slug); v = self.visitor(slug, st, token, user)
+        source = self.own(t, sid, v)
+        await self.check_message(t, st, v, ip, daily=False)
+        w = self.chat.workflows.get(t.workflow_id); owner = w.owner or t.owner
+        def validate(prep):
+            if v.app: prep["input"]["chat"] = v.app.input()
+            plan(owner, {"workflow_id": t.workflow_id, "input": prep["input"]})
+        result = await asyncio.to_thread(ChatEditService(self.chat).prepare, source, t, body, validate, st["steps"], app_key_id=v.app.app_key_id if v.app else None, action=action)
+        return result, v
+
+    def turns(self, slug: str, sid: str, after: Optional[str], token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:
+        """The chat's turns after the turn `after` (incremental history, TASK-0215); all of them when `after` is empty."""
+        view, v = self.get(slug, sid, token, user)
+        rows = view["turns"]
+        if after:
+            at = next((i for i, x in enumerate(rows) if x["id"] == after), None)
+            if at is None: raise AppError("CHAT_TURN_NOT_FOUND")
+            rows = rows[at + 1:]
+        return {"turns": rows}, v
+
+    def answer_turn(self, sid: str, run_id: str, since: float) -> Optional[dict]:
+        """The answer turn of a run saved after `since` in this session (the v1 socket's `turn` frame), or None yet; a
+        resumed run's earlier question turn does not count. The caller has checked the session is the visitor's."""
+        rows = self.chat.sessions.turns(sid)
+        x = next((x for x in reversed(rows) if x.role == "assistant" and x.run_id == run_id and x.created >= since), None)
+        return None if x is None else {"id": x.id, "status": x.status, "run_id": x.run_id}
 
     def rate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict], value, comment) -> tuple[dict, Visitor]:
         """The visitor rates one of their own finished answers. An unpublished chat refuses it (DEC-0070)."""
@@ -154,7 +206,8 @@ class PublicChatService:
     def own(self, t: WorkflowChatTrigger, sid: str, v: Visitor) -> ChatSession:
         """The visitor's session of this chat, else CHAT_SESSION_NOT_FOUND (another visitor's, another chat's, a studio chat)."""
         s = self.chat.sessions.get(sid) if isinstance(sid, str) else None
-        mine = s is not None and (s.owner == v.owner if v.owner else (s.visitor is not None and s.visitor == v.visitor and s.owner is None))
+        if v.app: mine = s is not None and s.external_user == v.app.id and s.owner is None and s.visitor is None
+        else: mine = s is not None and s.external_user is None and (s.owner == v.owner if v.owner else (s.visitor is not None and s.visitor == v.visitor and s.owner is None))
         if not mine or v.token or s.trigger_id != t.id or s.channel not in ("web", "embed"): raise AppError("CHAT_SESSION_NOT_FOUND")
         return s
 
@@ -163,14 +216,14 @@ class PublicChatService:
         """(RunPlan, owner, steps mode, reply field) for `{chat_session_id, message}` or `{chat_session_id, response, node?}`.
         `plan` is RunService.plan; the run is the owner's and the session's, nothing else can be asked for.
         `node` is the question on the page. Another slot of the same wave is not accepted."""
-        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node", "attachment_ids"}:
+        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node", "attachment_ids", "edit_operation_id"}:
             raise AppError("RUN_REQUEST_INVALID")
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         s = self.own(t, req.get("chat_session_id"), v)
         w = self.chat.workflows.get(t.workflow_id); owner = w.owner or t.owner
         answering = "response" in req
         await self.check_message(t, st, v, ip, daily=not answering)
-        if answering and req.get("attachment_ids"): raise AppError("RUN_REQUEST_INVALID")  # a Human node's answer is text only
+        if answering and req.get("attachment_ids"): raise AppError("RUN_REQUEST_INVALID")  # answers carry values, never new attachments
         if answering:
             turns = self.chat.sessions.turns(s.id); last = turns[-1] if turns else None
             if last is None or last.role != "assistant" or last.status != "waiting" or not last.run_id: raise AppError("RUN_NOT_WAITING")
@@ -184,16 +237,18 @@ class PublicChatService:
             p = await asyncio.to_thread(plan, owner, body)
             self.chat.record_answer(s.id, last.run_id, req.get("response"))
         else:
-            prep = self.chat.prepare(s, t, req.get("message"), req.get("attachment_ids"))
+            prep = self.chat.prepare(s, t, req.get("message"), req.get("attachment_ids"), edit_operation_id=req.get("edit_operation_id"))
+            if v.app: prep["input"]["chat"] = v.app.input()  # bounded, untrusted user data, never instructions or permissions
             p = await asyncio.to_thread(plan, owner, {"workflow_id": t.workflow_id, "input": prep["input"]})
-            p.run_id, p.source = uuid.uuid4().hex[:10], "chat"
-            self.chat.write(s, t, prep["text"], p.run_id, v.owner or "visitor", prep["attachment_ids"])
+            p.run_id, p.source = prep.get("run_id") or uuid.uuid4().hex[:10], "chat"
+            self.chat.write(s, t, prep["text"], p.run_id, v.app.id if v.app else v.owner or "visitor", prep["attachment_ids"])
         return p, owner, st["steps"], t.reply_field
 
     async def check_message(self, t: WorkflowChatTrigger, st: dict, v: Visitor, ip: str, daily: bool = True) -> None:
         """Per visitor and per IP in a window, then the chat's daily cap (decision 5); nothing runs when one says no."""
         win = config.public_chat_rate_window()
-        for key, n in ((f"pubchat-v:{t.id}:{v.owner or v.visitor}", config.public_chat_rate_visitor()), (f"pubchat-ip:{ip}", config.public_chat_rate_ip())):
+        user_limit = (f"pubchat-user:{t.id}:{v.app.id}", config.public_chat_rate_user()) if v.app else (f"pubchat-v:{t.id}:{v.owner or v.visitor}", config.public_chat_rate_visitor())
+        for key, n in (user_limit, (f"pubchat-ip:{ip}", config.public_chat_rate_ip())):
             if n and self.limiter is not None:
                 ok, retry = await self.limiter.hit(key, n, win)
                 if not ok: raise AppError("RATE_LIMITED", retry_after=retry)

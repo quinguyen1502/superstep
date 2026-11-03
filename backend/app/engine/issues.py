@@ -59,6 +59,7 @@ MESSAGES: Dict[str, str] = {
     "REDUCER_UNKNOWN": "State field {field}: unknown reducer '{reducer}' (use {reducers})",
     "REDUCER_TYPE": "State field {field}: reducer '{reducer}' needs type {types}",
     # any node
+    "MODEL_FALLBACK_INVALID": _NODE + "fallback must specify a different credential/model pair with a nonempty credential and model",
     "OUTPUT_FIELD_MISSING": _NODE + "output_field is missing",
     "OUTPUT_FIELD_UNKNOWN": _NODE + "output_field '{field}' is not in the state",
     "VARIABLE_UNKNOWN": _NODE + "variable state.{field} is not in the state",

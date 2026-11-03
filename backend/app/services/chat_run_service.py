@@ -22,6 +22,7 @@ from .approval_channels.messages import lang_of, text
 from .channel_service import ChannelService
 from .job_queue import JobQueue
 from .trigger_service import run_result
+from . import event_bindings
 
 log = get_logger("chat")
 COMMAND = re.compile(r"/?([A-Za-z0-9][\w-]{0,31})(?:[\s:,]+|$)(.*)", re.S)  # the first word, then the text
@@ -65,13 +66,55 @@ class ChatRunService:
         hit = COMMAND.match(m.text); found = None
         for c, _ in rows if hit else []:
             if (t := self.triggers.find(c.id, m.place, hit.group(1).lower())) is not None: found = (c, t); break
-        if found is None: return {"outcome": "ignored"}  # chatter, or no trigger for this command here
+        if found is None:
+            for c, _ in rows:
+                t = self.triggers.find(c.id, m.place, "*")
+                if t is not None and event_bindings.settings(t) is not None: return self._receive_event(c, t, m)
+            return {"outcome": "ignored"}  # chatter, or no binding for this place
         c, t = found
         row = ChatMessage(id=uuid.uuid4().hex[:12], channel_id=c.id, key=m.key or uuid.uuid4().hex, trigger_id=t.id, workflow_id=t.workflow_id,
                           kind=c.kind, team=m.team, sender=m.sender, text=hit.group(2).strip(), ref=json.dumps(m.ref), status="queued", created=time.time())
         if not self.messages.add_once(row): return {"outcome": "duplicate"}  # a platform retry
         self.triggers.set_fields(t.id, last_message=row.created)
         self.jobs.enqueue({"kind": "chat_message", "message_id": row.id})
+        return {"outcome": "queued"}
+
+    def _receive_event(self, channel, trigger, message):
+        """Explicit run-as-owner admission. Persist dedupe identity and queued run in one transaction."""
+        policy = event_bindings.settings(trigger)
+        event = event_bindings.envelope(channel.kind, message)
+        if not trigger.enabled or not event_bindings.admitted(policy, message, event): return {"outcome": "ignored"}
+        owner = trigger.owner
+        if not self.channels.usable(owner, channel) or (channel.scope == "org" and not self.channels.org_allowed(owner)):
+            return {"outcome": "ignored"}
+        workflow = self.workflows.get(trigger.workflow_id)
+        if workflow is None or not self._may(workflow, owner, P.SHARE) or not self._may(workflow, owner, P.RUN):
+            self.triggers.set_fields(trigger.id, enabled=False, note="access"); return {"outcome": "ignored"}
+        try:
+            data = json.loads(workflow.data or "{}")
+            policy = event_bindings.validate(policy, {f["name"] for f in data.get("state", []) if isinstance(f, dict) and isinstance(f.get("name"), str)})
+            inp = event_bindings.map_input(policy, event, data)
+        except (AppError, ValueError, KeyError): return {"outcome": "ignored"}
+        rid, now = uuid.uuid4().hex[:10], time.time()
+        row = ChatMessage(id=uuid.uuid4().hex[:12], channel_id=channel.id, key=message.key, trigger_id=trigger.id, workflow_id=workflow.id,
+                          kind=channel.kind, team=message.team, sender=message.sender, text=message.text,
+                          ref=json.dumps({**message.ref, "event": event}), status="started", run_id=rid, created=now)
+        run = Run(id=rid, workflow_id=workflow.id, input=json.dumps(inp, ensure_ascii=False), events="[]", status="queued", started=now,
+                  owner=owner, source="chat")
+        if not self.messages.add_event_once(row, run):
+            # A previous delivery may have committed then lost the queue response. Requeue the persisted job,
+            # never the retry's payload; the normal run claim prevents two workers from executing it.
+            previous = self.messages.by_key(channel.id, message.key)
+            saved = self.runs.get(previous.run_id) if previous and previous.run_id else None
+            if saved is not None and saved.status == "queued":
+                self.jobs.enqueue({"run_id": saved.id, "workflow_id": saved.workflow_id, "owner": saved.owner,
+                                   "input": json.loads(saved.input), "callback_url": None, "token_id": None, "source": "chat"})
+            return {"outcome": "duplicate"}
+        self.triggers.set_fields(trigger.id, last_message=now, last_run_id=rid)
+        self._audit(owner, row, "event_started", actor=message.sender, run_id=rid)
+        # Event workflows own their replies through tools; no automatic processing/success message is sent here.
+        self.jobs.enqueue({"run_id": rid, "workflow_id": workflow.id, "owner": owner, "input": inp,
+                           "callback_url": None, "token_id": None, "source": "chat"})
         return {"outcome": "queued"}
 
     # ---- on the worker ----
@@ -139,6 +182,7 @@ class ChatRunService:
     def on_settled(self, rid: str) -> None:
         m, r = self.messages.by_run(rid), self.runs.get(rid)
         if m is None or r is None or r.status in ("queued", "running"): return
+        if "event" in json.loads(m.ref or "{}"): return  # event workflows send their own confirmed tool replies
         res = run_result(r); waiting = res["waiting"] or {}
         key = f"waiting:{waiting.get('node')}" if r.status == "waiting" else r.status
         if m.replied == key or not self.messages.mark_replied(m.id, m.replied, key): return  # this state was answered already

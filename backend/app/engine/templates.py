@@ -20,6 +20,8 @@ def sanitize(wf: dict) -> dict:
              if not k.startswith("_") and k.lower() not in SECRET_KEYS}
         for f in REF_FIELDS:
             if f in d: d[f] = ""
+        if isinstance(d.get("fallback"), dict):
+            d["fallback"] = {"credential_id": "", "model": d["fallback"].get("model", "")}
         if isinstance(d.get("tools"), list):  # an Agent node's tools point at servers and knowledge bases too (TASK-0119)
             d["tools"] = [{k: "" if k in REF_FIELDS else v for k, v in t.items() if not k.startswith("_") and k.lower() not in SECRET_KEYS}
                           if isinstance(t, dict) else t for t in d["tools"]]

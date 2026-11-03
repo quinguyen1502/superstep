@@ -141,7 +141,16 @@ def attachment_archive():
 
 
 def public_chat_service() -> PublicChatService:
-    return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter())
+    from ..repositories.chat_app_keys import ChatAppKeyRepository
+    from ..services.chat_token_verifier import Hs256ChatTokenVerifier
+    return PublicChatService(chat_session_service(), limiter=get_rate_limiter(), counter=get_counter(), verifier=Hs256ChatTokenVerifier(ChatAppKeyRepository(get_db())))
+
+
+def chat_app_key_service():
+    from ..repositories.chat_app_keys import ChatAppKeyRepository
+    from ..services.chat_app_key_service import ChatAppKeyService
+    db = get_db()
+    return ChatAppKeyService(ChatAppKeyRepository(db), ChatTriggerRepository(db), WorkflowRepository(db), access_service(), audit_service())
 
 
 def chat_attachment_service() -> ChatAttachmentService:
@@ -172,7 +181,7 @@ def workflow_service() -> WorkflowService:
                                           access=access_service(), shares=WorkflowShareRepository(db), users=UserRepository(db),
                                           teams=TeamRepository(db), audit=audit_service(), tests=WorkflowTestRepository(db),
                                           chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db),
-                                          jobs=get_job_queue())
+                                          jobs=get_job_queue(), export_resources=mcp_service().check_export)
 
 def template_service() -> TemplateService:
     return TemplateService(TemplateRepository(get_db()), workflow_service(), access_service(), tests=workflow_test_service)
@@ -261,7 +270,7 @@ def knowledge_service() -> KnowledgeService:
 def mcp_service() -> McpService:
     db = get_db(); users = UserRepository(db)
     return McpService(McpServerRepository(db), lambda uid: bool((u := users.get_by_id(uid)) and u.active and P.can(u.role, P.ORG_MANAGE)),
-                      policy_service().org_allowed)
+                      policy_service().org_allowed, channel_service(), get_counter())
 
 def import_service() -> ImportService:
     return ImportService(workflow_service())

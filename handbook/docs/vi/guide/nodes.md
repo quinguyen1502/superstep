@@ -67,6 +67,26 @@ dòng Logs lẫn tab Output. Các đoạn này không lưu vào lịch sử run;
 cùng thì có. Lỗi từ nhà cung cấp (401, timeout, …) thành sự kiện `error` của
 node, không làm sập server.
 
+### Model dự phòng
+
+Trong Cài đặt node LLM, bật **Dùng model dự phòng** rồi chọn credential và
+model. Cặp này phải khác model chính. Credential dự phòng được kiểm tra theo
+quyền của chủ workflow trước khi gọi model; chỉ chấp nhận credential model chat.
+
+Model chính được thử trước. Nhà cung cấp không kết nối được, thiếu model hoặc
+trả kết quả sai có thể chuyển sang model dự phòng một lần. Lỗi xác thực/cấu
+hình hoặc quyền truy cập credential dừng lần thử. Huỷ run hoặc hết thời gian
+node không khởi động model dự phòng. Cài đặt thử lại của node lặp lại toàn bộ
+chính sách, nên cần tính cả số lần thử khi ước lượng mức sử dụng.
+
+Khi bật dự phòng, giữ nội dung đến khi một model thành công rồi gửi một đoạn
+hoàn chỉnh. Node LLM thông thường vẫn stream trực tiếp. `model_attempts` trong
+trace ghi nhà cung cấp/model, trạng thái và mã lỗi; nhà cung cấp vẫn có thể
+tính phí lần gọi lỗi dù không trả usage. Run mock vẫn offline và không đọc
+credential. Xuất code hiện từ chối workflow có chính sách dự phòng
+(`MODEL_POLICY_EXPORT_UNAVAILABLE`) để tránh bỏ sót chính sách. Mẫu xuất ra xoá
+tham chiếu credential dự phòng; chọn credential của bạn sau khi import.
+
 ## Agent
 
 Một prompt nhiệm vụ, danh sách công cụ (MCP, HTTP, hàm có sẵn, tìm trong kho

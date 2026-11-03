@@ -42,7 +42,7 @@
 2. **Personal access tokens.**
    - Table `personal_access_tokens`: `id`, `user_id`, `name`, `token_hash` (SHA-256, unique), `prefix` (first 10 characters), `created`, `last_used`, `revoked`. The next Alembic revision after `0042_chat_ratings`. Only the hash is stored.
    - The secret is `pat_` plus `secrets.token_urlsafe(24)`. It is returned once, on create.
-   - Active names are unique per user. A duplicate active name is `PAT_NAME_TAKEN`. Revoked rows do not block the name.
+   - Active names are unique per user. A duplicate active name is `PAT_NAME_TAKEN`. Revoked rows do not block the name. Enforced by a partial unique index on `(user_id, name)` where `revoked IS NULL` (amended 2026-10-31, TASK-0213).
    - `AuthService.current` treats a Bearer or cookie value that starts with `pat_` as a PAT: hash lookup, not revoked, user still active. Anything else stays a JWT, including an unknown `pat_` (`AUTH_TOKEN_INVALID`). `last_used` is set on a successful PAT check. Password-change invalidation does not apply to PATs; revoking them is separate.
    - `ws_user` uses the same check, so `/ws/run?token=pat_…` is the signed-in user.
    - Routes, all on the envelope, caller is the token's user: `GET /api/me/tokens`, `POST /api/me/tokens` `{name}` → `{id, name, prefix, token}`, `DELETE /api/me/tokens/{id}`. List rows have no secret. Delete is `PAT_NOT_FOUND` when the id is missing or belongs to someone else.

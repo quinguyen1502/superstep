@@ -1,3 +1,4 @@
+import { errorText, type ApiErrorBody } from '@superstep/react/errors'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
@@ -15,14 +16,7 @@ i18n.use(LanguageDetector).use(initReactI18next).init({
 const syncHtmlLang = (l: string) => { document.documentElement.lang = l }
 syncHtmlLang(i18n.resolvedLanguage || 'en'); i18n.on('languageChanged', syncHtmlLang)
 
-export type ApiErrorBody = { code?: string; message?: string; details?: any }
-
-/** The one place that turns an API/WS error into user text: translated by code, else the server's English message. */
-export function errorText(e: ApiErrorBody): string {
-  const key = `errors.${e.code}`
-  const params = e.details && typeof e.details === 'object' && !Array.isArray(e.details) ? e.details : {}
-  return String(e.code && i18n.exists(key) ? i18n.t(key, params) : e.message || i18n.t("errors.HTTP_ERROR"))
-}
+export { errorText, type ApiErrorBody } from '@superstep/react/errors'
 
 /** The code of one validation message, sent next to the English `errors` (TASK-0132); null when it has none. */
 export type Issue = { code: string; params?: Record<string, unknown> } | null

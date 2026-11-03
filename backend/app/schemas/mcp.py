@@ -1,8 +1,10 @@
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
 
 class McpServerIn(BaseModel):
+    adapter: Optional[str] = None
+    settings: Optional[Dict[str, Any]] = None
     name: str
     transport: str = "http"          # fixed after creation
     scope: str = "user"              # fixed after creation

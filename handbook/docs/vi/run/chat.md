@@ -39,7 +39,7 @@ một trang riêng, và nếu muốn thì [nhúng chat vào site của bạn](#n
 
 | Cài đặt | Tác dụng | Mặc định |
 |---|---|---|
-| Ai được chat | **Người dùng studio** chat trong khung này. **Ai có link** hoặc **Người đã đăng nhập** thì [công khai chat](#cong-khai-chat) trên một trang riêng. | Người dùng studio |
+| Ai được chat | Bỏ chọn mọi tùy chọn công khai để chỉ người dựng workflow chat. **Ai có link**, **Người đã đăng nhập**, **Người dùng ứng dụng bên thứ ba** [công khai chat](#cong-khai-chat); có thể chọn nhiều. | Chỉ người dựng workflow |
 | Số lượt nhớ | Số lượt hỏi–đáp trước đó (một tin nhắn và câu trả lời của nó) gửi vào trường cuộc trò chuyện. | 10 |
 | Bước hiện cho người chat | **Không**, **Tên bước** hoặc **Đầy đủ** (kèm input và output của từng bước). | Tên bước |
 | Thời gian lưu (ngày) | Cuộc trò chuyện không có tin nhắn mới quá thời gian này sẽ bị xoá. | 30 |
@@ -160,6 +160,10 @@ Cuộc trò chuyện đến giờ:
 Trả lời tin nhắn cuối của người dùng.
 ```
 
+[Node Agent](../guide/agent.md) dùng trường này làm **Trường lịch sử** và có tin nhắn trong prompt
+nhiệm vụ (`{{state.message}}`) gửi tin nhắn mới một lần: dưới dạng prompt nhiệm vụ, không lặp lại ở
+mục cuối của lịch sử.
+
 ## Node Human trong chat
 
 Tuỳ chọn **Người trả lời** của node Human quyết định ai trả lời khi workflow
@@ -184,8 +188,9 @@ của node áp dụng cho cả hai cách; khi quá hạn, hành động khi hế
 
 ## Công khai chat
 
-Chọn **Ai được chat** là **Ai có link** hoặc **Người đã đăng nhập**, và giữ
-**Chat** bật. Chat có một trang riêng ở `/c/<địa-chỉ>`, nơi người chưa từng mở
+Trong **Ai được chat**, bật **Ai có link**, **Người đã đăng nhập** hoặc
+**Người dùng ứng dụng bên thứ ba**, và giữ **Chat** bật. Có thể chọn nhiều
+tùy chọn. Chat có một trang riêng ở `/c/<địa-chỉ>`, nơi người chưa từng mở
 studio cũng chat được với workflow.
 
 ![Cài đặt công khai](../images/chat-publish.png)
@@ -211,6 +216,10 @@ Trên trang:
 - **Người đã đăng nhập**: mọi tài khoản của studio này đều chat được, kể cả tài
   khoản không được mở workflow. Khách chưa đăng nhập được đưa tới trang đăng
   nhập rồi quay lại chat.
+- **Người dùng ứng dụng bên thứ ba**: backend ứng dụng của bạn ký user token
+  ngắn hạn bằng app key của từng chat. Tích hợp qua
+  [Chat API](chat-api.md) và [hướng dẫn xác thực](chat-third-party-auth.md);
+  trang/widget có sẵn chưa có cầu nối identify bằng token.
 - Mỗi tin nhắn chạy workflow đã lưu dưới danh nghĩa **chủ workflow**: dùng
   credential, knowledge base và MCP server của chủ workflow, như chat qua Slack và
   Telegram. Các run nằm trong Lịch sử của workflow.
@@ -228,8 +237,8 @@ các giới hạn này bằng các cài đặt `STUDIO_PUBLIC_CHAT_RATE_*` (xem
 [Cấu hình](../reference/configuration.md)). Bản demo công khai không công khai
 chat nào.
 
-Để gỡ trang, chọn lại **Ai được chat** là **Người dùng studio**, hoặc tắt
-**Chat**. Trang khi đó báo chat không mở.
+Để gỡ trang, bỏ chọn mọi tùy chọn truy cập công khai (chỉ người dựng workflow),
+hoặc tắt **Chat**. Trang khi đó báo chat không mở.
 
 ### Chat của khách
 
@@ -304,3 +313,22 @@ Phần còn lại của studio không hiện được trong frame trên bất k�
 | `RATE_LIMITED` | Khách hoặc địa chỉ IP này gửi quá nhiều tin nhắn; `retry_after` cho biết khi nào thử lại. |
 
 Xem thêm [Chạy từ chat](chat-triggers.md) cho Slack và Telegram.
+
+
+Để tích hợp người dùng riêng và tuỳ chỉnh giao diện, xem [bộ giao diện React](chat-react.md) và [API widget](chat-widget.md).
+
+
+## Sửa tin nhắn đã gửi
+
+Trên máy chủ có `capabilities.edit` trong dữ liệu cuộc trò chuyện, chọn **Sửa tin nhắn** ở tin nhắn người dùng đã lưu. Câu trả lời cho Human không phải tin nhắn được sửa. Lưu sẽ mở nhánh hội thoại mới với lịch sử trước đó và nội dung đã sửa; cuộc trò chuyện gốc cùng các tin nhắn sau nó vẫn được giữ nguyên. Chọn **Cuộc trò chuyện gốc** để quay về. Các tin nhắn kế thừa chỉ đọc, không tạo thêm đánh giá. Tệp được sao chép sang ID và đối tượng lưu trữ riêng, nên xoá một cuộc trò chuyện không làm hỏng tệp của cuộc trò chuyện kia.
+
+Hộp xác nhận nêu rõ thao tác sẽ chạy lại workflow đang lưu/công khai: lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Thao tác không hoàn tác hành động cũ hay chỉ tạo lại văn bản của model. Câu hỏi Human và yêu cầu người duyệt cần được trả lời lại. Hãy chờ cuộc trò chuyện đang chạy/chờ xử lý xong và tải lại nếu lịch sử đã thay đổi. Huỷ sửa không thay đổi tin nhắn.
+
+Sửa tin nhắn và tạo lại câu trả lời cần Superstep 0.11.0 trở lên. Dùng các phiên bản SDK/giao diện tương thích với máy chủ; các gói native tiếp tục tạm hoãn.
+
+
+## Tạo lại câu trả lời cuối
+
+Dùng **Tạo lại câu trả lời** trên câu trả lời cuối đã kết thúc, kể cả khi lỗi, bị huỷ hoặc hết thời gian. Xác nhận **Chạy lại trong nhánh mới** để chạy lại tin nhắn đã tạo ra câu trả lời đó. Cuộc trò chuyện mới giữ lịch sử trước tin nhắn ấy và sao chép file độc lập; câu trả lời gốc cùng đánh giá được giữ nguyên. Dùng **Cuộc trò chuyện gốc** để quay lại.
+
+Thao tác chạy workflow đang lưu/công khai từ đầu, nên lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Các câu trả lời Human và yêu cầu duyệt của người duyệt trong lần trước không được dùng lại: bạn cần trả lời/duyệt các yêu cầu mới. Cuộc trò chuyện đang chạy hoặc đang chờ không tạo lại được. Huỷ hộp thoại không tạo nhánh. Cần `capabilities.regenerate`; câu trả lời kế thừa chỉ được đọc.

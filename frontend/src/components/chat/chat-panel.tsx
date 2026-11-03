@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { ConfirmDeleteDialog } from '@/components/confirm-delete-dialog'
 import { Tip } from '@/components/tip'
 import { api } from '@/lib/api'
 import { fmtDate } from '@/lib/i18n'
@@ -44,7 +44,7 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
   const loadTotals = () => api<RatingTotals>(`/api/workflows/${wid}/chat/ratings`).then(setTotals).catch(() => {})
   const share = (c: RatingTotals['d7'], days: number) => t('chat.ratings.summary', { days, up: c.up, down: c.down, share: downShare(c) === null ? t('chat.ratings.noShare') : `${downShare(c)}%` })
   const visitorEp = useMemo<ChatEndpoint>(() => ({ session: id => `/api/workflows/${wid}/chat/visitors/${id}`, socket: '/ws/run' }), [wid])
-  const chat = useChatRun(sid, view, () => { list().catch(() => {}) })   // titles and order change after a message
+  const chat = useChatRun(sid, view, () => { list().catch(() => {}) }, undefined, setSid)   // titles and order change after a message
   const read = useChatRun(vsid, 'builder', undefined, visitorEp)
   useLoadWhen(active, () => { setErr(''); api<ChatSettings>(`/api/workflows/${wid}/chat`).then(setSettings).catch(e => setErr(e.message)); list().catch(e => setErr(e.message)); listVisitors().catch(() => setVisitors([])); loadTotals() }, wid)
   const rate = (turnId: string, value: 'up' | 'down' | null, comment?: string) => {
@@ -73,8 +73,9 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
   const links = useMemo<FileLinks | undefined>(() => sid ? { url: id => `/api/chat/sessions/${sid}/attachments/${id}` } : undefined, [sid])
   const visitorLinks = useMemo<FileLinks | undefined>(() => vsid ? { url: id => `/api/workflows/${wid}/chat/visitors/${vsid}/attachments/${id}` } : undefined, [wid, vsid])
   useEffect(() => { if (first.current && sid && session?.id === sid) { const x = first.current; first.current = ''; say(x) } }, [sid, session, say])
-  const remove = (s: ChatSession) => api(`/api/chat/sessions/${s.id}`, { method: 'DELETE' }).then(() => { if (sid === s.id) setSid(null); list() }).catch(e => setErr(e.message))
+  const remove = (s: ChatSession) => api(`/api/chat/sessions/${s.id}`, { method: 'DELETE' }).then(async () => { if (sid === s.id) setSid(null); await list() })
   const mode = view === 'builder' ? 'full' : chat.session?.steps_mode ?? settings?.steps ?? 'labels'
+  const deleteName = (del?.title || t('chat.untitled')).replace(/\s+/g, ' ').trim()
   const off = settings && !settings.enabled
   // one icon-only New chat button: next to the session Select (compact) or in the sidebar header (fullscreen)
   const newChat = <Tip tip={t('chat.new')}><Button size="icon-sm" variant="ghost" id="chat-new" aria-label={t('chat.new')} disabled={!!off} onClick={fresh}><SquarePen /></Button></Tip>
@@ -154,6 +155,7 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
             <Button size="xs" variant="link" id="chat-visitor-exit" onClick={() => setView('builder')}>{t('chat.visitorExit')}</Button></div>}
           <ChatThread turns={chat.session?.turns ?? []} mode={mode} replyField={settings.reply_field} events={chat.events} trace={chat.trace}
             pending={chat.pending} pendingFiles={chat.pendingFiles} running={chat.running} onAnswer={chat.answer} onRate={vsid === null ? rate : undefined}
+            onEdit={chat.edit} onRegenerate={chat.regenerate} onSource={chat.session?.source_session_id ? () => setSid(chat.session!.source_session_id!) : undefined}
             onSaveTest={canEdit ? saveCase : undefined} files={links} /></>}
       {!off && vsid === null && <ChatComposer disabled={!settings || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
         placeholder={waiting ? t(waiting.answered_by === 'reviewer' ? 'chat.waitingReviewer' : 'chat.answerPlaceholder') : undefined}
@@ -162,10 +164,8 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
     </div>
     <ChatSettingsDialog wid={wid} open={cfg} onOpenChange={setCfg} onSaved={setSettings} />
     {draft && <TestCaseDialog wid={wid} value={draft} onClose={() => setDraft(null)} onSaved={() => { setDraft(null); setTab('tests') }} />}
-    <AlertDialog open={!!del} onOpenChange={o => { if (!o) setDel(null) }}><AlertDialogContent>
-      <AlertDialogHeader><AlertDialogTitle>{t('chat.deleteTitle')}</AlertDialogTitle><AlertDialogDescription>{t('chat.deleteBody', { title: del?.title || t('chat.untitled') })}</AlertDialogDescription></AlertDialogHeader>
-      <AlertDialogFooter><AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-        <AlertDialogAction asChild><Button variant="destructive" id="chat-delete-confirm" onClick={() => { if (del) remove(del); setDel(null) }}>{t("common.delete")}</Button></AlertDialogAction></AlertDialogFooter>
-    </AlertDialogContent></AlertDialog>
+    <ConfirmDeleteDialog open={!!del} onOpenChange={o => { if (!o) setDel(null) }} idPrefix="chat-delete" title={t('chat.deleteTitle')}
+      name={deleteName} description={t('chat.deleteBody', { title: deleteName })}
+      onConfirm={async () => { if (del) await remove(del) }} />
   </div>
 }

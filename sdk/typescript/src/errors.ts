@@ -29,6 +29,8 @@ export class ConfigError extends SuperstepError {}
 export class APIConnectionError extends SuperstepError {}
 /** 401 TRIGGER_TOKEN_INVALID: missing, invalid or revoked token, or a token of another workflow. */
 export class AuthenticationError extends SuperstepError {}
+/** 403: the authenticated caller is not allowed to use this resource or origin. */
+export class PermissionDeniedError extends SuperstepError {}
 /** 404, e.g. RUN_NOT_FOUND. */
 export class NotFoundError extends SuperstepError {}
 /** 400 / 422: RUN_INPUT_INVALID, CALLBACK_URL_INVALID, VALIDATION_ERROR (see `details`). */
@@ -70,9 +72,40 @@ export const BY_CODE: Record<string, ErrorClass> = {
   PAYLOAD_TOO_LARGE: PayloadTooLargeError,
   RATE_LIMITED: RateLimitError,
   INTERNAL_ERROR: ServerError,
+  // the Chat API v1 (TASK-0215)
+  CHAT_NOT_PUBLISHED: NotFoundError,
+  CHAT_SESSION_NOT_FOUND: NotFoundError,
+  CHAT_TURN_NOT_FOUND: NotFoundError,
+  CHAT_ATTACHMENT_NOT_FOUND: NotFoundError,
+  CHAT_LOGO_NOT_FOUND: NotFoundError,
+  CHAT_SIGN_IN_REQUIRED: AuthenticationError,
+  CHAT_TOKEN_REQUIRED: AuthenticationError,
+  CHAT_TOKEN_INVALID: AuthenticationError,
+  CHAT_TOKEN_EXPIRED: AuthenticationError,
+  CHAT_APP_KEY_REVOKED: AuthenticationError,
+  CHAT_ORIGIN_FORBIDDEN: PermissionDeniedError,
+  CHAT_REGENERATE_INVALID: InvalidRequestError,
+  CHAT_REGENERATE_UNSUPPORTED: InvalidRequestError,
+  CHAT_EDIT_INVALID: InvalidRequestError,
+  CHAT_EDIT_CONTEXT_UNAVAILABLE: InvalidRequestError,
+  CHAT_EDIT_BUSY: InvalidRequestError,
+  CHAT_EDIT_STALE: InvalidRequestError,
+  CHAT_EDIT_CONFLICT: InvalidRequestError,
+  CHAT_EDIT_GONE: NotFoundError,
+  CHAT_EDIT_PENDING: InvalidRequestError,
+  CHAT_EDIT_STARTED: InvalidRequestError,
+  CHAT_EDIT_UNSUPPORTED: InvalidRequestError,
+  CHAT_FRAME_INVALID: InvalidRequestError,
+  CHAT_ATTACHMENT_TYPE: InvalidRequestError,
+  CHAT_ATTACHMENT_TOO_MANY: InvalidRequestError,
+  CHAT_ATTACHMENTS_OFF: InvalidRequestError,
+  CHAT_ATTACHMENT_DEMO: InvalidRequestError,
+  CHAT_RATING_INVALID: InvalidRequestError,
+  CHAT_RATING_NOT_ALLOWED: InvalidRequestError,
+  CHAT_ATTACHMENT_TOO_LARGE: PayloadTooLargeError,
 }
 const BY_STATUS: Record<number, ErrorClass> = {
-  400: InvalidRequestError, 401: AuthenticationError, 404: NotFoundError, 413: PayloadTooLargeError, 422: InvalidRequestError, 429: RateLimitError,
+  400: InvalidRequestError, 401: AuthenticationError, 403: PermissionDeniedError, 404: NotFoundError, 413: PayloadTooLargeError, 422: InvalidRequestError, 429: RateLimitError,
 }
 
 export function errorFor(status: number, code: string, message: string, details?: unknown, headers?: Headers): SuperstepError {

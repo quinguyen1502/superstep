@@ -35,7 +35,7 @@ retry/timeout ở **Thực thi**.
 | Số vòng tối đa | 1–25, mặc định 5. Xem [Vòng và giới hạn](#vong-va-gioi-han). |
 | Trường output | Nhận câu trả lời cuối cùng. |
 | Trường các bước | Tuỳ chọn, một trường list. Nhận từng lần gọi công cụ: `{tool, args, result, status, ms}`, thêm `approval` khi có người trả lời. |
-| Trường lịch sử | Tuỳ chọn, một trường list gồm các tin nhắn `{role, content}` (`user` hoặc `assistant`) được thêm trước prompt nhiệm vụ, ví dụ trường `messages` của chat. |
+| Trường lịch sử | Tuỳ chọn, một trường list gồm các tin nhắn `{role, content}` (`user` hoặc `assistant`) được thêm trước prompt nhiệm vụ, ví dụ trường `messages` của chat. Trường của chat kết thúc bằng tin nhắn mới; khi prompt nhiệm vụ đã chứa tin nhắn đó (ví dụ `{{state.message}}`), Agent bỏ mục cuối đó để model chỉ nhận tin nhắn một lần. |
 | Đưa tệp đính kèm vào | Thêm các tệp của chat vào tin nhắn nhiệm vụ, như ở [node LLM](nodes.md#llm). Xem [Tệp đính kèm](../run/chat.md#tep-inh-kem). |
 | Công cụ | Ít nhất một. Xem bên dưới. |
 | Duyệt | Hiện khi có công cụ cần duyệt: kênh duyệt, người duyệt và hạn chờ, như ở node Human. |

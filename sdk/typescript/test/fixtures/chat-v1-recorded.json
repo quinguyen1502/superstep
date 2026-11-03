@@ -1,0 +1,140 @@
+{
+  "source": "Recorded from the real v1 backend with the offline mock LLM; IDs/timestamps sanitised.",
+  "frames": [
+    {
+      "type": "ready",
+      "protocol": "superstep-chat",
+      "v": 1,
+      "seq": 0
+    },
+    {
+      "type": "run_started",
+      "run_id": "recorded-run",
+      "ts": 0,
+      "v": 1,
+      "seq": 1
+    },
+    {
+      "node": "bot",
+      "label": "Bot",
+      "node_type": "llm",
+      "iteration": 1,
+      "ts": 0,
+      "type": "step",
+      "event": "started",
+      "v": 1,
+      "seq": 2
+    },
+    {
+      "node": "bot",
+      "field": "reply",
+      "iteration": 1,
+      "delta": "[mock:gpt-4o-mini] Answer: [{\"role\": \"user\", \"content\": \"SDK fixture\"}]",
+      "ts": 0,
+      "type": "token",
+      "v": 1,
+      "seq": 3
+    },
+    {
+      "node": "bot",
+      "label": "Bot",
+      "node_type": "llm",
+      "iteration": 1,
+      "ts": 0,
+      "duration_ms": 3.75,
+      "input": {
+        "message": "SDK fixture",
+        "messages": [
+          {
+            "role": "user",
+            "content": "SDK fixture"
+          }
+        ]
+      },
+      "delta": {
+        "reply": "[mock:gpt-4o-mini] Answer: [{\"role\": \"user\", \"content\": \"SDK fixture\"}]"
+      },
+      "type": "step",
+      "event": "finished",
+      "v": 1,
+      "seq": 4
+    },
+    {
+      "type": "turn",
+      "turn_id": "recorded-answer",
+      "role": "assistant",
+      "status": "ok",
+      "run_id": "recorded-run",
+      "v": 1,
+      "seq": 5
+    },
+    {
+      "type": "done",
+      "run_id": "recorded-run",
+      "status": "ok",
+      "ts": 0,
+      "v": 1,
+      "seq": 6
+    }
+  ],
+  "session": {
+    "id": "recorded-session",
+    "workflow_id": "recorded-workflow",
+    "channel": "web",
+    "title": "SDK fixture",
+    "last_run_id": "5492c8faa6",
+    "created": 0,
+    "updated": 0,
+    "steps_mode": "full",
+    "turns": [
+      {
+        "id": "recorded-user",
+        "role": "user",
+        "text": "SDK fixture",
+        "status": "ok",
+        "run_id": "recorded-run",
+        "node": null,
+        "answered_by": null,
+        "code": null,
+        "created": 0,
+        "attachments": [],
+        "rating": null
+      },
+      {
+        "id": "recorded-answer",
+        "role": "assistant",
+        "text": "[mock:gpt-4o-mini] Answer: [{\"role\": \"user\", \"content\": \"SDK fixture\"}]",
+        "status": "ok",
+        "run_id": "recorded-run",
+        "node": null,
+        "answered_by": null,
+        "code": null,
+        "created": 0,
+        "attachments": [],
+        "rating": null,
+        "run_exists": true,
+        "steps": [
+          {
+            "node": "bot",
+            "label": "Bot",
+            "type": "llm",
+            "status": "ok",
+            "duration_ms": 3.75,
+            "input": {
+              "message": "SDK fixture",
+              "messages": [
+                {
+                  "role": "user",
+                  "content": "SDK fixture"
+                }
+              ]
+            },
+            "delta": {
+              "reply": "[mock:gpt-4o-mini] Answer: [{\"role\": \"user\", \"content\": \"SDK fixture\"}]"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,5 +1,45 @@
 # Chạy từ chat
 
+## Nhận sự kiện từ Telegram và JSON có chữ ký
+
+Trong hộp thoại chọn **Bắt đầu từ → Sự kiện (chạy với quyền chủ trigger)**,
+đúng nhóm/nơi nhận và ID người gửi cách nhau bằng dấu phẩy. Chủ động nhập `*`
+để cho phép mọi người tại nơi đó dùng tài nguyên của chủ trigger mà không cần
+tài khoản studio. Nên giới hạn nhóm hoặc danh sách người gửi. Trigger theo lệnh
+được ưu tiên và vẫn cần tài khoản đã xác minh. Mỗi kết nối/nơi nhận có tối đa
+một trigger sự kiện.
+
+Ánh xạ đường dẫn vào trường state đã khai báo: `message` → `data.text` (string),
+`context` → `$` (object). Sự kiện gồm `id`, `source`, `type`, `time` (ISO UTC),
+`actor.id`, `actor.name`, `conversation.id` và `data`. Telegram cung cấp nội dung
+gốc và `data.message_id`. `time` là thời gian gửi, không phải ngày phát sinh
+khoản chi. Thiếu đường dẫn hoặc sai kiểu không tạo run. Sự kiện và input chịu
+giới hạn `STUDIO_INPUT_MAX_BYTES`. Workflow tự gửi tin đang xử lý/kết quả qua
+công cụ; trigger không tự báo thành công. Giới hạn tần suất callback vẫn áp dụng.
+Sự kiện và run được lưu trong cùng transaction. Gửi lại đồng thời dùng chung
+run; sau lỗi queue, lần gửi lại lấy input đã lưu. Run được khôi phục theo cơ chế
+hiện có khi máy chủ khởi động lại.
+
+Với JSON, thêm **Webhook JSON có chữ ký** trong **Cài đặt → Kênh**, đặt secret
+32–256 ký tự gồm chữ cái, chữ số, `_` hoặc `-`. Kết nối chỉ nhận sự kiện,
+không dùng cho phê duyệt Human hoặc liên kết tài khoản. Gửi tới callback URL:
+
+```json
+{"id":"expense-001","type":"message.text","time":"2026-11-01T10:00:00+07:00","place":"expenses","sender":"employee-42","data":{"text":"Ăn trưa 50000"}}
+```
+
+Chọn nơi `expenses`, người gửi `employee-42`, loại chính xác `message.text`.
+Ký nội dung bytes gốc theo [chữ ký webhook kết quả](api-triggers.md):
+`X-Studio-Signature: t=<unix-seconds>,v1=<hex-HMAC-SHA256(secret,"<timestamp>.<raw body>")>`.
+Chữ ký lệch quá năm phút bị từ chối. ID sự kiện cố định ngăn tạo thêm run khi
+ký lại và gửi lại. Lưu secret trong Cài đặt; thay secret có hiệu lực ngay. Sai
+nơi/người gửi/loại, tin bot, tin sửa, thiếu ID/thời gian, dữ liệu quá lớn và
+trigger đã tắt không tạo run. Telegram cần tắt privacy mode để nhận tin thường
+trong nhóm. Chế độ sự kiện hiện hỗ trợ Telegram và JSON có chữ ký; trigger theo
+lệnh của Slack giữ nguyên.
+
+## Trigger theo lệnh
+
 **⋯ → Chạy từ chat** trong trình soạn thảo chạy workflow bằng một tin nhắn gửi
 tới Slack app hoặc bot Telegram của bạn. Một từ lệnh chọn workflow, phần còn
 lại của tin nhắn điền vào một trường input, và bot trả lời trong thread bằng

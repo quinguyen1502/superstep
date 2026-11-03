@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from . import agents, foreach
 from .templates import sanitize
+from ..core.errors import AppError
 
 SKIP = ("start", "end", "note")  # canvas nodes that are not LangGraph nodes
 TITLES = {"agent": "Agent", "llm": "LLM", "foreach": "For each", "mcp": "MCP", "email": "Send email", "subgraph_exit": "Subgraph exit"}
@@ -64,6 +65,8 @@ class Graph:
     """One workflow (the exported one or a subgraph child), after `sanitize`, with its LangGraph names."""
 
     def __init__(self, raw: dict, title: str, wid: Optional[str]):
+        if any(n.get("type") == "llm" and (n.get("data") or {}).get("fallback") is not None for n in raw.get("nodes") or []):
+            raise AppError("MODEL_POLICY_EXPORT_UNAVAILABLE")
         self.raw, self.title, self.wid = raw, title, wid
         self.wf = sanitize(raw)
         # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it (TASK-0137)

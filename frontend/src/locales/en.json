@@ -405,6 +405,17 @@
     }
   },
   "errors": {
+    "CHAT_REGENERATE_INVALID": "Only the latest completed answer can be regenerated",
+    "CHAT_REGENERATE_UNSUPPORTED": "This server does not support regenerating chat answers",
+    "CHAT_EDIT_INVALID": "This message cannot be edited",
+    "CHAT_EDIT_CONTEXT_UNAVAILABLE": "The agent context at this point is no longer available; start a new conversation",
+    "CHAT_EDIT_BUSY": "Wait for the conversation to finish before creating a new branch",
+    "CHAT_EDIT_STALE": "The conversation changed; refresh it before trying again",
+    "CHAT_EDIT_CONFLICT": "This operation ID was already used for a different revision",
+    "CHAT_EDIT_GONE": "The new conversation branch was removed",
+    "CHAT_EDIT_PENDING": "This conversation branch has an unfinished operation",
+    "CHAT_EDIT_STARTED": "This operation was already admitted; read its saved outcome instead of resending",
+    "CHAT_EDIT_UNSUPPORTED": "This server does not support editing chat messages",
     "VALIDATION_ERROR": "Some fields are invalid",
     "BAD_REQUEST": "Bad request",
     "NOT_FOUND": "Not found",
@@ -453,6 +464,7 @@
     "RUN_NOT_FOUND": "Run not found, already finished or not yours",
     "RUN_NODE_NOT_REACHED": "The run finished without reaching node '{{node}}'",
     "NODE_FAILED": "Node failed",
+    "MODEL_POLICY_EXPORT_UNAVAILABLE": "Model fallback policies are not yet supported by code exports; remove the policy to export",
     "HTTP_TOOL_URL_BLOCKED": "HTTP Tool node {{node}}: the URL must be a public http(s) address",
     "TEMPLATE_REF_INVALID": "Template error: {{reason}}",
     "CREDENTIAL_NOT_FOUND": "Credential not found or not yours",
@@ -469,7 +481,7 @@
     "RUN_NOT_WAITING": "This run is not waiting for a response",
     "CHECKPOINT_NOT_FOUND": "Checkpoint not found in this run, or it cannot be forked",
     "RUN_FORK_UNSUPPORTED": "Runs of imported LangGraph graphs cannot be forked",
-    "RUN_RESPONSE_INVALID": "The response must be text (max {{max}} characters)",
+    "RUN_RESPONSE_INVALID": "Invalid response type or size (max {{max}} characters)",
     "MCP_SERVER_DISABLED": "This workflow is not exposed as an MCP tool; turn it on under API in the editor",
     "TRIGGER_TOKEN_INVALID": "Missing, invalid or revoked workflow token",
     "TOKEN_NOT_FOUND": "Token not found",
@@ -487,6 +499,13 @@
     "CHAT_TRIGGER_OFF": "The chat trigger is off",
     "CHAT_NOT_ENABLED": "Chat is off for this workflow. Turn it on in the Chat settings",
     "CHAT_SETTINGS_INVALID": "Chat settings: invalid {{field}}",
+    "CHAT_APP_KEY_LIMIT": "A chat can have at most two active app keys",
+    "CHAT_APP_KEY_NOT_FOUND": "Chat app key not found",
+    "CHAT_TOKEN_REQUIRED": "A third-party chat user token is required",
+    "CHAT_TOKEN_INVALID": "Invalid third-party chat user token",
+    "CHAT_TOKEN_EXPIRED": "The third-party chat user token has expired",
+    "CHAT_APP_KEY_REVOKED": "This chat app key has been revoked",
+    "CHAT_ORIGIN_FORBIDDEN": "This origin is not allowed for the chat app key",
     "CHAT_ACCESS_NOT_AVAILABLE": "Chat access '{{access}}' is not available yet",
     "CHAT_SESSION_NOT_FOUND": "Chat not found",
     "CHAT_MESSAGE_EMPTY": "Write a message first",
@@ -510,6 +529,7 @@
     "CHAT_ATTACHMENT_STORAGE": "Attachment storage is not available: {{reason}}",
     "CHAT_ATTACHMENT_LIMIT": "Attachment limits may be at most {{max_files}} files and {{max_mb}} MB per file",
     "CHAT_TURN_NOT_FOUND": "Message not found",
+    "CHAT_FRAME_INVALID": "Invalid chat frame: {{reason}}",
     "CHAT_RATING_NOT_ALLOWED": "This message cannot be rated",
     "CHAT_RATING_INVALID": "Rating: invalid {{field}}",
     "TEST_NOT_FOUND": "Test case not found",
@@ -564,6 +584,10 @@
     "MCP_NAME_TOO_LONG": "MCP server name must be at most {{max}} characters",
     "MCP_TRANSPORT_UNSUPPORTED": "Unsupported MCP transport: {{transport}}",
     "MCP_CONFIG_INVALID": "MCP server setting {{field}} is missing or invalid",
+    "MANAGED_OPERATION_KEY_REQUIRED": "Managed writes require a stable operation ID from a workflow run",
+    "MANAGED_EXPORT_UNAVAILABLE": "Managed connections require Studio operation tracking and cannot yet be exported as standalone code",
+    "MANAGED_OPERATION_CONFLICT": "Operation ID or connection target changed; restore the original configuration to reconcile",
+    "MANAGED_OUTCOME_UNKNOWN": "Operation {{operation}} has an unknown external outcome; reconcile it before starting another write",
     "MCP_URL_INVALID": "The MCP server URL must be a public http(s) URL",
     "MCP_STDIO_DISABLED": "stdio MCP servers are disabled on this server (STUDIO_MCP_STDIO)",
     "MCP_ADMIN_REQUIRED": "Only an admin can manage stdio or organization MCP servers",
@@ -808,6 +832,7 @@
   },
   "approvals": {
     "kind": {
+      "webhook": "Signed JSON webhook",
       "slack": "Slack",
       "telegram": "Telegram",
       "whatsapp": "WhatsApp",
@@ -819,6 +844,7 @@
     "notConnected": "not connected",
     "keepSecret": "Saved, enter a new value to replace",
     "help": {
+      "webhook": "Choose a secret of 32–256 letters, digits, underscores or hyphens. Send JSON events to the callback URL with X-Studio-Signature (HMAC-SHA256). This connection only receives events.",
       "slack": "Create a Slack app with the bot scopes chat:write and im:write (verification codes), turn on Interactivity with the Request URL shown on the connection. For chat triggers, also add app_mentions:read and im:history and turn on Event Subscriptions. Each workspace is its own connection.",
       "telegram": "Create a bot with @BotFather, save its token, then register the webhook (needs a public https STUDIO_PUBLIC_URL).",
       "whatsapp": "In a Meta app with the WhatsApp product, copy the access token, the phone number ID and the app secret, and choose a verify token. Then set the webhook in the Meta dashboard to the callback URL below with that verify token, and subscribe to \"messages\". Button messages only reach people who wrote to the number in the last 24 hours; outside that window, give an approved template with two quick-reply buttons (Approve, Reject).",
@@ -883,6 +909,7 @@
       "escalation_skipped": "Escalation skipped",
       "timed_out": "Timed out",
       "chat_started": "Run from chat",
+      "event_started": "Run from event",
       "chat_refused": "Chat run refused"
     },
     "node": {
@@ -943,6 +970,7 @@
     "chat": {
       "eventsUrl": "Event Subscriptions Request URL (chat triggers)",
       "help": {
+        "webhook": "Sign the timestamp and raw body. Events need id, type, time (with timezone), place, sender and data. Bind an exact place and allowed senders in workflow triggers.",
         "slack": "Chat triggers: turn on Event Subscriptions with this URL and subscribe the bot to app_mention and message.im. The app needs the scopes app_mentions:read and im:history.",
         "telegram": "Chat triggers: press Register webhook again so the bot also receives messages. In groups, people write /command, or turn off the bot's privacy mode in @BotFather."
       },
@@ -1084,9 +1112,27 @@
     "embedOk": "Works · {{dims}} dimensions · {{ms}} ms",
     "dims": "{{dims}} dims"
   },
+  "managedTools": {
+    "transport": "Managed connection",
+    "adapter": "Service adapter",
+    "adapters": { "google_drive": "Google Drive files", "telegram": "Telegram actions", "google_sheets": "Google Sheets", "http_api": "Generic HTTP API", "slack": "Slack actions", "whatsapp": "WhatsApp actions", "email": "Email actions", "teams": "Microsoft Teams actions" },
+    "fields": { "folder_id": "Allowed Google Drive folder ID", "google_credentials": "Google credential JSON (encrypted)", "channel_id": "Channel connection", "chat_id": "Destination chat ID", "spreadsheet_id": "Spreadsheet ID", "sheet_name": "Sheet tab name", "data_columns": "Number of data columns", "service_account": "Service account JSON key", "base_url": "API base URL", "tools_json": "Tool definitions (JSON)", "headers": "Authentication headers (JSON, encrypted)", "destination_channel": "Destination Slack conversation ID", "recipient_phone": "Recipient phone (country code, digits only)", "recipients": "Fixed email recipients (comma separated, up to 10)" },
+    "headerHelp": "JSON object of headers, for example Authorization or X-API-Key. Leave empty for no authentication. Values are encrypted and never returned.",
+    "googleCredentialHelp": "Paste service_account JSON or authorized_user JSON containing client_id, client_secret and refresh_token. Values are encrypted and never returned. Do not paste an access token or a client-secret download alone.",
+    "secretHelp": "Paste the service account JSON key. It is encrypted and never returned.",
+    "help": "Tools act only on the configured destination. Test runs send and write nothing. Managed tools require Studio operation tracking; standalone code export is unavailable.",
+    "setup": { "google_drive": "Only direct children of this folder are accessible. Supports list, metadata, text/Google Doc reads and plain-text creation up to 64 KiB. Personal My Drive uses OAuth refresh credentials; service-account creation needs a Shared Drive. Keep private operation properties for read-only recovery; no automatic repeat upload.", "telegram": "Choose an existing Telegram connection and the chat it may send to. The stored bot secret is reused.", "google_sheets": "Share this sheet with the service account as an editor. An operation ID is added after the data columns; keep that column intact for result checks.", "http_api": "Configure fixed paths, methods and object input schemas with additionalProperties: false. GET uses scalar query parameters; other methods send JSON. Add a response_schema for APIs that report business errors with HTTP 200. HTTP 202 or uncertain responses stay unknown; inspection never repeats a request.", "slack": "Reuse an existing Slack channel connection and fix a conversation ID (C, G or D). The bot needs chat:write and access to that conversation. Unknown sends are never repeated.", "whatsapp": "Reuse a WhatsApp channel and fix the recipient's international number without +. Free-form text requires the customer-service window; approval templates are not reused. Acceptance does not confirm delivery.", "email": "Reuse an email channel and the server's configured SMTP sender. Recipients are fixed; subject and plain text are tool arguments. Shares the workflow email recipient quota. SMTP acceptance is not delivery; partial or uncertain sends stay unknown.", "teams": "Reuse a Teams channel's stored Workflows webhook. Acknowledgement confirms submission only; downstream delivery can still fail. Unknown sends stay blocked for manual inspection." },
+    "operations": "Recent operations",
+    "operationKey": "External operation ID",
+    "noOperations": "No operations yet.",
+    "refresh": "Refresh",
+    "reconcile": "Check external result",
+    "unknownHelp": "The external service may have accepted this write. This check never repeats a request. An adapter with a supported lookup can reconcile; otherwise the result stays unknown. Inspect the external service before starting a new run.",
+    "outcomes": { "pending": "Pending confirmation", "confirmed": "Confirmed", "failed": "Rejected", "unknown": "Unknown result" }
+  },
   "mcp": {
     "new": "Add MCP server",
-    "newHelp": "Streamable HTTP endpoint, or a local command (stdio) when the server allows it.",
+    "newHelp": "Managed service actions, a Streamable HTTP endpoint, or a local command (stdio) when enabled.",
     "create": "Add server",
     "name": "Name",
     "transport": "Transport",
@@ -1592,6 +1638,20 @@
       "custom": "Custom"
     }
   },
+  "eventBinding": {
+    "description": "Start from authenticated events in a configured place. The allowed senders run this workflow with the trigger owner's resources; they do not need a linked studio account.",
+    "place": "Exact event place",
+    "mode": "Start from",
+    "command": "A command (linked account)",
+    "event": "An event (run as owner)",
+    "senders": "Allowed sender IDs",
+    "sendersPh": "123,456 or * for everyone here",
+    "type": "Exact event type",
+    "admissionHelp": "These senders can spend the trigger owner's resources in this place without a studio account. Enter sender IDs separated by commas, or explicitly use * to allow everyone here. Command bindings take priority.",
+    "mappingHelp": "Map event paths to declared state fields. Leave unused fields empty. Use data.text, data.message_id, actor.id, actor.name, conversation.id, time, id or $ for the entire event. Values must match each field's type.",
+    "pathPh": "Event path, or empty to skip",
+    "replyHelp": "Event workflows send their own replies through tools. No automatic start or success reply is sent. Success must follow a confirmed external write."
+  },
   "chatTriggers": {
     "button": "Chat triggers",
     "title": "Chat triggers",
@@ -1951,7 +2011,46 @@
     "try": "Try the demo",
     "tryHint": "Sign in as the shared demo visitor. You can open, edit and run workflows, but not save changes."
   },
+  "modelFallback": {
+    "enable": "Use a fallback model",
+    "credential": "Fallback credential",
+    "model": "Fallback model",
+    "hint": "Try this model once if the primary is unreachable, unavailable or returns an invalid response. Authentication errors stop the run. With fallback enabled, answer text is published only after a model succeeds. Node retry settings repeat the whole policy. Code exports do not yet support this policy."
+  },
   "chat": {
+    "edit": {
+      "title": "Edit message",
+      "description": "Continue from this message in a new conversation. The original conversation stays unchanged.",
+      "message": "Your message",
+      "rerunWarning": "This runs the currently saved workflow again. API calls, writes and notifications may repeat. Previous Human answers must be provided again.",
+      "saveRun": "Save and run in new branch",
+      "source": "Original conversation"
+    },
+    "regenerate": {
+      "title": "Regenerate answer",
+      "description": "Run the message that produced this answer again in a new conversation. The original answer stays unchanged.",
+      "run": "Run again in new branch"
+    },
+    "appKeys": {
+      "studioOnly": "Leave all options unchecked to allow only workflow builders.",
+      "title": "App keys",
+      "hint": "Keep secrets on your server. Create a second key to rotate, update your server, then revoke the old key.",
+      "saveFirst": "Save Chat settings first, then reopen this dialog to manage keys.",
+      "revoked": "Revoked",
+      "revoke": "Revoke key",
+      "anyOrigin": "Any origin",
+      "lastUsed": "Last used: {{at}}",
+      "never": "Never",
+      "label": "Key name",
+      "origins": "Allowed origins (one per line)",
+      "anyOriginWarning": "An empty list allows any origin, including native apps. For web apps, restrict this to your sites.",
+      "create": "Create app key",
+      "secretTitle": "Copy your secret",
+      "secretHint": "This secret is shown only once. Store it on your server; never put it in a browser or mobile app.",
+      "secret": "Secret",
+      "copyFailed": "Copy failed. Select and copy the secret manually.",
+      "revokeHint": "Tokens signed with this key will stop working. Type the key name to confirm."
+    },
     "tab": "Chat",
     "new": "New chat",
     "sessions": "Chats",
@@ -1996,7 +2095,7 @@
       "enabled": "Chat",
       "enabledHint": "Turn chat on for this workflow.",
       "access": "Who can chat",
-      "accessHint": "Studio users chat in this tab. Anyone with the link, or signed-in users, chat on a public page.",
+      "accessHint": "Choose who may use the public page. Studio users can always chat in this tab.",
       "inputField": "Message field",
       "replyField": "Reply field",
       "messagesField": "Conversation field",
@@ -2013,7 +2112,8 @@
     "access": {
       "studio": "Studio users",
       "anonymous": "Anyone with the link",
-      "signed_in": "Signed-in users"
+      "signed_in": "Signed-in users",
+      "app": "Third-party app users"
     },
     "steps": {
       "none": "None",
@@ -2136,6 +2236,49 @@
         "field": "State field",
         "fieldHint": "The list field that receives the file records for each run."
       }
+    },
+    "widget": {
+      "open": "Open chat",
+      "close": "Close chat",
+      "frame": "Chat assistant"
+    },
+    "toolkit": {
+      "headlessExample": "Headless SDK example",
+      "reactExample": "React toolkit example",
+      "widgetExample": "Widget example",
+      "widgetDescription": "Use the bubble to chat anonymously, then choose a demo customer to switch identity.",
+      "openWidget": "Open widget",
+      "closeWidget": "Close widget",
+      "widgetReady": "Widget ready",
+      "widgetEvents": "Messages: {{messages}} · Answers: {{answers}}",
+      "loading": "Loading chat…",
+      "refresh": "Refresh history",
+      "requestFailed": "The request could not be completed. Try again.",
+      "answer": "Send answer",
+      "answerLabel": "Your answer",
+      "choose": "Choose an option",
+      "required": "This field is required",
+      "unsupported": "This question cannot be displayed. Use a text answer.",
+      "ratingName": "Rating",
+      "removeFileTitle": "Remove attachment",
+      "removeRatingTitle": "Remove rating",
+      "customTitle": "A chat for your app",
+      "customIntro": "The chat uses its own styles and language.",
+      "emptySessions": "No conversations yet",
+      "waitReviewer": "Waiting for a reviewer",
+      "formAnswer": "Form answer",
+      "light": "Light",
+      "dark": "Dark",
+      "custom": "Custom theme",
+      "language": "Language",
+      "demoTitle": "React chat toolkit",
+      "hostTitle": "Host application",
+      "hostDescription": "This content keeps its own styles outside the chat.",
+      "switchCustomer": "Switch customer",
+      "customer": "Customer",
+      "theme": "Theme",
+      "english": "English",
+      "vietnamese": "Vietnamese"
     }
   },
   "timeTravel": {
@@ -2235,6 +2378,7 @@
     "FIELD_RESERVED_AGENT": "State field {{field}}: names starting with '{{prefix}}' are reserved for Agent nodes",
     "REDUCER_UNKNOWN": "State field {{field}}: unknown reducer '{{reducer}}' (use {{reducers}})",
     "REDUCER_TYPE": "State field {{field}}: reducer '{{reducer}}' needs type {{types}}",
+    "MODEL_FALLBACK_INVALID": "Node {{node}}: fallback must specify a different credential/model pair with a nonempty credential and model",
     "OUTPUT_FIELD_MISSING": "Node {{node}}: output_field is missing",
     "OUTPUT_FIELD_UNKNOWN": "Node {{node}}: output_field '{{field}}' is not in the state",
     "VARIABLE_UNKNOWN": "Node {{node}}: variable state.{{field}} is not in the state",

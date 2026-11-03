@@ -118,6 +118,12 @@ def test_frame_ancestors_follow_the_allowed_sites():
 
 
 def test_page_loads_are_limited_per_ip(monkeypatch):
+    from app.api.deps import public_chat_service
+    from app.services.rate_limit import InMemoryRateLimiter
+    # This test's budget must not include earlier requests from the shared testclient IP.
+    service = public_chat_service()
+    monkeypatch.setattr(service, "limiter", InMemoryRateLimiter())
+    monkeypatch.setitem(app.dependency_overrides, public_chat_service, lambda: service)
     tok = user(); _, slug = publish(tok)
     monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_READ", "3"); monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_WINDOW", "3600")
     v = visitor(); codes = [v.get(f"/api/public/chat/{slug}").status_code for _ in range(5)]

@@ -8,18 +8,25 @@ class ChatSession(Base):
     """One conversation with a workflow's chat (TASK-0084, REQ-0048, DEC-0052). Phase 1 has studio sessions of a
     signed-in builder; `channel` and `visitor` leave room for the published page and the embed (phase 2)."""
     __tablename__ = "chat_sessions"
-    __table_args__ = (Index("ix_chat_sessions_workflow_owner", "workflow_id", "owner"),)
+    __table_args__ = (Index("ix_chat_sessions_workflow_owner", "workflow_id", "owner"),
+                      Index("ix_chat_sessions_trigger_external_user", "trigger_id", "external_user"))
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     workflow_id: Mapped[str] = mapped_column(Text, nullable=False)
     trigger_id: Mapped[str] = mapped_column(Text, nullable=False)  # the workflow's web chat trigger (its settings)
     channel: Mapped[str] = mapped_column(Text, nullable=False, default="studio", server_default="studio")  # studio | web | embed
     owner: Mapped[Optional[str]] = mapped_column(Text)  # the studio user; None for an anonymous visitor (phase 2)
     visitor: Mapped[Optional[str]] = mapped_column(Text)  # an anonymous visitor's id (phase 2)
+    external_user: Mapped[Optional[str]] = mapped_column(Text)
+    app_key_id: Mapped[Optional[str]] = mapped_column(Text)  # issuing key, retained for audit after revocation
     title: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     last_run_id: Mapped[Optional[str]] = mapped_column(Text)
     active_agent: Mapped[Optional[str]] = mapped_column(Text)  # the Agent a hand-off left the conversation with (TASK-0181)
     created: Mapped[float] = mapped_column(Float, nullable=False)
     updated: Mapped[float] = mapped_column(Float, nullable=False, index=True)  # the retention clock
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    source_session_id: Mapped[Optional[str]] = mapped_column(Text)
+    source_turn_id: Mapped[Optional[str]] = mapped_column(Text)
+    source_action: Mapped[Optional[str]] = mapped_column(Text)  # edit | regenerate; old branches imply edit
 
 
 class ChatTurn(Base):
@@ -36,6 +43,23 @@ class ChatTurn(Base):
     answered_by: Mapped[Optional[str]] = mapped_column(Text)  # visitor | reviewer, for a waiting turn
     code: Mapped[Optional[str]] = mapped_column(Text)  # the error code of a failed turn
     attachments: Mapped[Optional[str]] = mapped_column(Text)  # JSON list of chat_attachments ids, in order (DEC-0072)
+    created: Mapped[float] = mapped_column(Float, nullable=False)
+    inherited: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
+
+
+class ChatEdit(Base):
+    """Durable edit intent. Kept as a tombstone after branch deletion; never replay an execution."""
+    __tablename__ = "chat_edits"
+    __table_args__ = (Index("uq_chat_edit_intent", "source_session_id", "operation_id", unique=True),)
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    source_session_id: Mapped[str] = mapped_column(Text, nullable=False)
+    operation_id: Mapped[str] = mapped_column(Text, nullable=False)
+    branch_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    run_id: Mapped[str] = mapped_column(Text, nullable=False)
+    body_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    attachments: Mapped[str] = mapped_column(Text, nullable=False)
+    claimed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created: Mapped[float] = mapped_column(Float, nullable=False)
 
 

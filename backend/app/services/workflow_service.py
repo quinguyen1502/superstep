@@ -27,7 +27,7 @@ def new_id() -> str: return uuid.uuid4().hex[:8]
 class WorkflowService:
     def __init__(self, workflows: WorkflowRepository, runs: RunRepository, versions: WorkflowVersionRepository | None = None,
                  access=None, shares=None, users=None, teams=None, audit=None, tests=None, chat_triggers=None, chat_sessions=None,
-                 jobs=None):
+                 jobs=None, export_resources=None):
         self.repo, self.runs, self.versions = workflows, runs, versions
         self.access, self.shares, self.users = access, shares, users
         self.teams, self.audit = teams, audit  # TeamRepository, AuditService (TASK-0029)  # AccessService etc. (TASK-0014); None = owner-only
@@ -35,6 +35,7 @@ class WorkflowService:
         self.chat_sessions = chat_sessions  # ChatSessionRepository (optional): and its chats (TASK-0084)
         self.chat_triggers = chat_triggers  # ChatTriggerRepository (optional): so do its chat triggers (TASK-0074)
         self.jobs = jobs  # deletes LangSmith feedback when the workflow's ratings go (optional)
+        self.export_resources = export_resources  # refuse runtime-only resource configurations explicitly
 
     # -- persistence: every write goes through here so versions stay in sync (TASK-0008) --
     def _write(self, wid: str, name: str, wf: dict, uid: str, *, new: bool = True, note: str | None = None,
@@ -142,6 +143,7 @@ class WorkflowService:
             for _, ref in subgraphs.all_refs(g):
                 if ref and ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
         collect(wf)
+        if self.export_resources is not None: self.export_resources([wf, *children.values()])
         case = (self.tests.list_for_workflow(wid) or [None])[0] if self.tests is not None else None
         example = {"input": json.loads(case.input), "answers": json.loads(case.answers)} if case else None
         out = exporter.write(wf, w.name, n, children, example)

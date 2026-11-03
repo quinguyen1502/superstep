@@ -4,5 +4,7 @@ export default defineConfig({
   build: {
     outDir: 'dist/c', emptyOutDir: false, copyPublicDir: false,
     lib: { entry: 'src/widget/widget.ts', formats: ['iife'], name: 'SuperstepChat', fileName: () => 'widget.js' },
+    // A classic script inherits the host page's encoding when no charset is supplied.
+    rolldownOptions: { output: { charset: 'ascii' } },
   },
 })

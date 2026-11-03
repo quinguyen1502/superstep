@@ -1,6 +1,7 @@
 """App factory. `app.main:app` stays the uvicorn entrypoint."""
 import asyncio, logging
 from .api.body_limit import BodyLimit
+from .api.chat_cors import ChatCors
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,6 +13,7 @@ from .api.error_handlers import register_error_handlers
 from .api.routes import ROUTERS
 from .api.static import mount_frontend
 from .api.openapi_public import install_public_docs
+from .api.asyncapi_public import install_asyncapi
 from .api.demo import install_demo_guard
 from .api.mcp_server import PATH as MCP_PATH, McpApp
 from .core.security import check_secret
@@ -57,9 +59,11 @@ def create_app() -> FastAPI:
     redact_tokens("uvicorn.access", "uvicorn.error")  # WebSocket URLs carry ?token=<JWT>
     register_error_handlers(app)
     app.add_middleware(BodyLimit)  # request body ceilings without a proxy too (TASK-0207)
+    app.add_middleware(ChatCors, public=public_chat_service)
     if config.demo_mode(): install_demo_guard(app)  # STUDIO_DEMO_MODE: the shared visitor account is read-only
     for r in ROUTERS: app.include_router(r)
     app.router.routes.append(Route(MCP_PATH, endpoint=mcp_app))  # Streamable HTTP, all methods
+    install_asyncapi(app)  # GET /asyncapi.public.yaml: the chat socket protocol v1 (TASK-0216)
     install_public_docs(app)  # GET /openapi.public.json + /docs/public: the workflow-trigger API only
     # all-in-one image (TASK-PaaS): the built UI on the same origin, after the API routes; frame headers (TASK-0143)
     mount_frontend(app, config.static_dir(), lambda slug: public_chat_service().frame_ancestors(slug))

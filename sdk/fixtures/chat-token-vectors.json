@@ -1,0 +1,35 @@
+{
+  "description": "Synthetic HS256 interoperability vectors; no real credentials. Fixed test clock, literal UTF-8 secrets.",
+  "vectors": [
+    {
+      "issuedAt": 1800000000,
+      "options": {
+        "keyId": "ck_sdk_vector_ascii",
+        "secret": "synthetic-sdk-test-secret-not-a-real-app-key",
+        "slug": "sdk-vector",
+        "userId": "customer-42"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImNrX3Nka192ZWN0b3JfYXNjaWkifQ.eyJpc3MiOiJja19zZGtfdmVjdG9yX2FzY2lpIiwiYXVkIjoic3VwZXJzdGVwLWNoYXQ6c2RrLXZlY3RvciIsInN1YiI6ImN1c3RvbWVyLTQyIiwibmFtZSI6IiIsImlhdCI6MTgwMDAwMDAwMCwiZXhwIjoxODAwMDAwNjAwfQ.sO-VZrA58RKQe2ygsI_2i1ZcOKigAwb_IeYyQGDeHfk"
+    },
+    {
+      "issuedAt": 1800000000,
+      "options": {
+        "keyId": "ck_sdk_vector_unicode",
+        "secret": "synthetic-secret-tiếng-Việt-🔑",
+        "slug": "sdk-vector",
+        "userId": "khách-👩🏽",
+        "name": "Thái Quí Nguyễn",
+        "meta": {
+          "locale": "vi",
+          "note": "Xin chào 🌏",
+          "nested": {
+            "allowed": true,
+            "amount": 12.5
+          }
+        },
+        "ttl": 3600
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImNrX3Nka192ZWN0b3JfdW5pY29kZSJ9.eyJpc3MiOiJja19zZGtfdmVjdG9yX3VuaWNvZGUiLCJhdWQiOiJzdXBlcnN0ZXAtY2hhdDpzZGstdmVjdG9yIiwic3ViIjoia2jDoWNoLfCfkanwn4-9IiwibmFtZSI6IlRow6FpIFF1w60gTmd1eeG7hW4iLCJpYXQiOjE4MDAwMDAwMDAsImV4cCI6MTgwMDAwMzYwMCwibWV0YSI6eyJsb2NhbGUiOiJ2aSIsIm5vdGUiOiJYaW4gY2jDoG8g8J-MjyIsIm5lc3RlZCI6eyJhbGxvd2VkIjp0cnVlLCJhbW91bnQiOjEyLjV9fX0._LSts6rbmOOxmWcr-8zIFHTmcThoWOHE_4zwPEAmM9M"
+    }
+  ]
+}

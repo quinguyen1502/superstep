@@ -75,8 +75,21 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             tokens = token_stream(node["id"])
             files = attachments.records(state, d)
             extra = {"files": files, "load": ports.attachment} if files else {}  # only when the node sends files
-            try: return {d["output_field"]: call_llm(render(d.get("prompt", ""), state), d.get("model", "gpt-4o-mini"), cred, report, tokens,
-                                                     mock=offline, locale=ports.locale, **extra)}
+            try:
+                prompt = render(d.get("prompt", ""), state)
+                if d.get("fallback") is not None and not offline:
+                    from . import model_policy
+                    def emit(attempt):
+                        try:
+                            from langgraph.config import get_stream_writer
+                            get_stream_writer()({"node": node["id"], "model_attempt": attempt})
+                        except RuntimeError: pass  # direct engine/unit call outside a streamed run
+                    out = model_policy.run(d, cred, resolve,
+                        lambda model, credential: call_llm(prompt, model, credential, report, None, locale=ports.locale, **extra),
+                        tokens, emit, ports.cancelled)
+                else:
+                    out = call_llm(prompt, d.get("model", "gpt-4o-mini"), cred, report, tokens, mock=offline, locale=ports.locale, **extra)
+                return {d["output_field"]: out}
             finally:
                 if tokens: tokens.flush()
     elif t == "human":
@@ -109,8 +122,8 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             return {d["output_field"]: ports.retrieve(d["knowledge_base_id"], query, int(d.get("top_k") or 4))}
     elif t == "mcp":
         def fn(state):
-            if ports.mcp_call is None: raise RuntimeError("MCP nodes need the MCP service")
-            return {d["output_field"]: ports.mcp_call(d["server_id"], d["tool"], render_args(d.get("arguments") or {}, state))}
+            return {d["output_field"]: ports.call_mcp(d["server_id"], d["tool"], render_args(d.get("arguments") or {}, state),
+                                                     effects.key(node["id"]) if effects else None)}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":

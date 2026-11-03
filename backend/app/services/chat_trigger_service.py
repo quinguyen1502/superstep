@@ -12,6 +12,7 @@ from ..core.errors import AppError
 from ..models import WorkflowChatTrigger
 from ..repositories import ChatTriggerRepository, WorkflowRepository
 from .channel_service import ChannelService
+from . import event_bindings
 
 MAX_PER_WORKFLOW = 20
 DM = "dm"
@@ -36,7 +37,7 @@ class ChatTriggerService:
         c = self.channels.repo.channel(t.channel_id)
         return {"id": t.id, "name": t.name, "channel_id": t.channel_id, "kind": c.kind if c else None, "channel_name": c.name if c else None,
                 "place": t.place, "command": t.command, "input_field": t.input_field, "reply_field": t.reply_field, "enabled": t.enabled,
-                "note": t.note, "last_message": t.last_message, "last_run_id": t.last_run_id, "created": t.created}
+                "note": t.note, "last_message": t.last_message, "last_run_id": t.last_run_id, "created": t.created, "event": event_bindings.settings(t)}
 
     # ---- validation ----
     def _fields(self, wid: str) -> set[str]:
@@ -54,18 +55,26 @@ class ChatTriggerService:
         if a is None or not a.chat: raise bad("channel_id")
         place = str(v.get("place") or "").strip()
         if place != DM and not re.fullmatch(a.place_pattern, place): raise bad("place")
-        command = str(v.get("command") or "").strip().lstrip("/").lower()
-        if not COMMAND.fullmatch(command): raise bad("command")
         fields = self._fields(wid)
-        for f in ("input_field", "reply_field"):
-            if v.get(f) not in fields: raise bad(f)
+        policy = v.get("event")
+        if policy is not None:
+            if c.kind not in ("telegram", "webhook"): raise bad("channel_id")
+            policy = event_bindings.validate(policy, fields)
+            command = "*"
+        else:
+            if a.events_only: raise bad("event")
+            command = str(v.get("command") or "").strip().lstrip("/").lower()
+            if not COMMAND.fullmatch(command): raise bad("command")
+            for f in ("input_field", "reply_field"):
+                if v.get(f) not in fields: raise bad(f)
         if v.get("enabled", True):
             missing = self.channels.missing_scopes(c)
             if missing: raise AppError("CHAT_TRIGGER_SCOPE_MISSING", scopes=", ".join(missing))
         other = self.triggers.find(c.id, place, command)
         if other is not None and other.id != tid: raise AppError("CHAT_TRIGGER_COMMAND_TAKEN", command=command)
-        return {"channel_id": c.id, "place": place, "command": command, "input_field": v["input_field"], "reply_field": v["reply_field"],
-                "name": str(v.get("name") or "").strip()[:80] or command, "enabled": bool(v.get("enabled", True))}
+        return {"channel_id": c.id, "place": place, "command": command, "input_field": v.get("input_field") or "", "reply_field": v.get("reply_field") or "",
+                "settings": json.dumps({"event": policy}) if policy is not None else None,
+                "name": str(v.get("name") or "").strip()[:80] or (policy["type"] if policy else command), "enabled": bool(v.get("enabled", True))}
 
     # ---- owner API ----
     def list(self, wid: str, uid: str) -> list[dict]:
@@ -82,6 +91,7 @@ class ChatTriggerService:
         """Change any setting; the merged settings are checked again (the connection may have changed since)."""
         t = self._own(wid, tid, uid)
         merged = {**{f: getattr(t, f) for f in FIELDS}, **{k: v for k, v in patch.items() if k in FIELDS and v is not None}}
+        merged["event"] = patch["event"] if "event" in patch else event_bindings.settings(t)
         v = self._check(wid, uid, merged, tid)
         if v["enabled"]: v["note"] = None
         self.triggers.set_fields(tid, **v)

@@ -16,12 +16,28 @@ GET  /api/workflows/{wid}/chat/visitors/{sid}/attachments/{aid}   a visitor's fi
 """
 from typing import Optional
 import asyncio
-from fastapi import APIRouter, Depends, Request
-from ...schemas.chat import ChatRatingIn, ChatSettingsIn
-from ..deps import chat_attachment_service, chat_session_service, current_user
+from fastapi import APIRouter, Depends, Request, Response
+from ...schemas.chat import ChatEditIn, ChatRegenerateIn, ChatRatingIn, ChatSettingsIn, ChatAppKeyIn
+from ..deps import chat_app_key_service, chat_attachment_service, chat_session_service, current_user, run_service
 from .public_chat import file_response, logo_response, read_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
+
+
+@router.get("/workflows/{wid}/chat/app-keys")
+def list_app_keys(wid: str, user=Depends(current_user), svc=Depends(chat_app_key_service)):
+    return svc.list(wid, user["id"])
+
+
+@router.post("/workflows/{wid}/chat/app-keys")
+def create_app_key(wid: str, body: ChatAppKeyIn, response: Response, user=Depends(current_user), svc=Depends(chat_app_key_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.create(wid, user["id"], body.label, body.origins)
+
+
+@router.delete("/workflows/{wid}/chat/app-keys/{kid}")
+def revoke_app_key(wid: str, kid: str, user=Depends(current_user), svc=Depends(chat_app_key_service)):
+    return svc.revoke(wid, kid, user["id"])
 
 
 @router.get("/workflows/{wid}/chat")
@@ -47,6 +63,16 @@ def get_chat_session(sid: str, view: str = "builder", user=Depends(current_user)
 
 @router.delete("/chat/sessions/{sid}")
 def delete_chat_session(sid: str, user=Depends(current_user), svc=Depends(chat_session_service)): return svc.delete(sid, user["id"])
+
+@router.post("/chat/sessions/{sid}/edits")
+def edit_chat_session(sid: str, body: ChatEditIn, response: Response, user=Depends(current_user), svc=Depends(chat_session_service), runs=Depends(run_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.revise_owned(sid, user["id"], body.model_dump(), runs.plan)
+
+@router.post("/chat/sessions/{sid}/regenerations")
+def regenerate_chat_session(sid: str, body: ChatRegenerateIn, response: Response, user=Depends(current_user), svc=Depends(chat_session_service), runs=Depends(run_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.revise_owned(sid, user["id"], body.model_dump(), runs.plan, action="regenerate")
 
 @router.get("/workflows/{wid}/chat/visitors")
 def list_visitor_chats(wid: str, thumbs_down: bool = False, user=Depends(current_user), svc=Depends(chat_session_service)):

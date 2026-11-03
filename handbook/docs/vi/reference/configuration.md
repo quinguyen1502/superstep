@@ -77,6 +77,7 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_CHAT_TRIGGER_RATE_LIMIT` | `60` | Chat trigger: số run mỗi người gửi và trigger trong một khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_VISITOR` | `10` | Trang chat công khai: số tin nhắn của mỗi khách chat trong một khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_IP` | `30` | Trang chat công khai: số tin nhắn của mỗi IP trong một khung; `0` là tắt |
+| `STUDIO_PUBLIC_CHAT_RATE_USER` | theo `STUDIO_PUBLIC_CHAT_RATE_IP` | Số tin nhắn/file tải lên của mỗi người dùng bên thứ ba trong từng chat, theo khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_READ` | `120` | Trang chat công khai: số lần mở trang, đọc chat và tạo chat mới của mỗi IP trong một khung; `0` là tắt |
 | `STUDIO_PUBLIC_CHAT_RATE_WINDOW` | `60` | Độ dài khung (giây) của trang chat công khai. Giới hạn theo ngày của từng chat nằm trong Cài đặt Chat |
 | `STUDIO_CHAT_ATTACHMENT_MAX_MB` | `10` | Tệp đính kèm trong chat: dung lượng tối đa mỗi tệp (MB); mỗi chat chỉ được đặt thấp hơn. Trên 100 thì tăng thêm `WEB_MAX_BODY_SIZE` của image `web` (mặc định `110m`); nginx kèm theo chỉ áp dụng nó cho các route tải lên, mọi request khác giới hạn 10 MB |

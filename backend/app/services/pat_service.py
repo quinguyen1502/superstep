@@ -5,6 +5,7 @@ from ..core import config
 from ..core.errors import AppError
 from ..models import CliDevice, PersonalAccessToken
 from ..repositories import CliDeviceRepository, PersonalAccessTokenRepository, UserRepository
+from ..repositories.personal_access_tokens import PatNameTaken
 
 PAT_PREFIX = "pat_"
 DEVICE_TTL = 600
@@ -36,7 +37,8 @@ class PatService:
         secret = PAT_PREFIX + secrets.token_urlsafe(24)
         row = PersonalAccessToken(id=uuid.uuid4().hex[:12], user_id=user_id, name=name, token_hash=digest(secret),
                                    prefix=secret[:10], created=time.time(), last_used=None, revoked=None)
-        return self.pats.add(row), secret
+        try: return self.pats.add(row), secret
+        except PatNameTaken: raise AppError("PAT_NAME_TAKEN", name=name) from None  # lost a race to a create with the same name (TASK-0213)
 
     def _free_name(self, user_id: str, name: str) -> str:
         """`name`, or `name (2)`, `name (3)`... when a token with that name was created after approval (TASK-0208, DEC-0076)."""
@@ -45,6 +47,14 @@ class PatService:
             n += 1; suffix = f" ({n})"
             chosen = name[:NAME_MAX - len(suffix)] + suffix
         return chosen
+
+    def _issue_free(self, user_id: str, name: str, attempts: int = 20) -> tuple[PersonalAccessToken, str]:
+        """_issue with a free name; a create that takes the chosen name at the same moment moves on to the next (TASK-0213)."""
+        for _ in range(attempts - 1):
+            try: return self._issue(user_id, self._free_name(user_id, name))
+            except AppError as exc:
+                if exc.code != "PAT_NAME_TAKEN": raise
+        return self._issue(user_id, self._free_name(user_id, name))
 
     def create(self, user_id: str, name: str) -> dict:
         row, secret = self._issue(user_id, self._name(name, required=True))
@@ -112,7 +122,7 @@ class PatService:
             if not secret: raise AppError("CLI_DEVICE_INVALID")
             return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
         if self._collected(row) or not self.devices.claim(row.id, "approved", "delivered"): raise AppError("CLI_DEVICE_INVALID")
-        token, secret = self._issue(row.user_id, self._free_name(row.user_id, row.name or DEFAULT_NAME))  # minted now: no token waits in the table (TASK-0207)
+        token, secret = self._issue_free(row.user_id, row.name or DEFAULT_NAME)  # minted now: no token waits in the table (TASK-0207)
         self.devices.set_fields(row.id, token_id=token.id)
         return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
 

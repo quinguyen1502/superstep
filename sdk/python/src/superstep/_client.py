@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 import httpx
 
 from ._base import DEFAULT_TIMEOUT, Config, parse, poll_delays, start_body
+from ._chat import AsyncChatClient, ChatClient
 from ._errors import APIConnectionError, WaitTimeoutError
 from ._models import Run
 
@@ -20,6 +21,7 @@ def _json(r: httpx.Response) -> Any:
 class _Common:
     def __init__(self, workflow_id: Optional[str], token: Optional[str], base_url: Optional[str]):
         self.config = Config.resolve(base_url, token, workflow_id)
+        self._chats = []
 
     def _deadline(self, timeout: Optional[float]) -> Optional[float]:
         return None if timeout is None else time.monotonic() + timeout
@@ -52,6 +54,11 @@ class Client(_Common):
         except httpx.HTTPError as e: raise APIConnectionError(str(e) or type(e).__name__, code="CONNECTION_ERROR") from e
         return parse(r.status_code, dict(r.headers), _json(r))
 
+    def chat(self, slug: str, **options) -> ChatClient:
+        chat = ChatClient(slug, base_url=self.config.base_url, http_client=self._http, **options)
+        self._chats.append(chat)
+        return chat
+
     def run(self, input: Optional[Dict[str, Any]] = None, *, mode: str = "async", callback_url: Optional[str] = None) -> Run:
         """Start a run. `async` returns at once (status `queued`); `sync` waits up to the server's limit."""
         return self._send("POST", self.config.runs_url(), start_body(input, mode, callback_url))
@@ -76,6 +83,7 @@ class Client(_Common):
         return self.wait(started.run_id, timeout=timeout, poll_interval=poll_interval, max_poll_interval=max_poll_interval, backoff=backoff)
 
     def close(self) -> None:
+        for chat in self._chats: chat.close()
         if self._owns_http: self._http.close()
 
     def __enter__(self) -> "Client": return self
@@ -96,6 +104,11 @@ class AsyncClient(_Common):
         try: r = await self._http.request(method, url, json=body, headers=self.config.headers)
         except httpx.HTTPError as e: raise APIConnectionError(str(e) or type(e).__name__, code="CONNECTION_ERROR") from e
         return parse(r.status_code, dict(r.headers), _json(r))
+
+    def chat(self, slug: str, **options) -> AsyncChatClient:
+        chat = AsyncChatClient(slug, base_url=self.config.base_url, http_client=self._http, **options)
+        self._chats.append(chat)
+        return chat
 
     async def run(self, input: Optional[Dict[str, Any]] = None, *, mode: str = "async", callback_url: Optional[str] = None) -> Run:
         return await self._send("POST", self.config.runs_url(), start_body(input, mode, callback_url))
@@ -118,6 +131,7 @@ class AsyncClient(_Common):
         return await self.wait(started.run_id, timeout=timeout, poll_interval=poll_interval, max_poll_interval=max_poll_interval, backoff=backoff)
 
     async def aclose(self) -> None:
+        for chat in self._chats: await chat.aclose()
         if self._owns_http: await self._http.aclose()
 
     async def __aenter__(self) -> "AsyncClient": return self

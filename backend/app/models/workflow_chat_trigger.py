@@ -23,7 +23,7 @@ class WorkflowChatTrigger(Base):
     last_message: Mapped[Optional[float]] = mapped_column(Float)
     last_run_id: Mapped[Optional[str]] = mapped_column(Text)
     created: Mapped[float] = mapped_column(Float, nullable=False)
-    settings: Mapped[Optional[str]] = mapped_column(Text)  # JSON: the web chat's settings (TASK-0084); None for Slack/Telegram
+    settings: Mapped[Optional[str]] = mapped_column(Text)  # JSON: web chat settings, or explicit event admission/mapping (TASK-0232)
 
 
 class ChatLogo(Base):

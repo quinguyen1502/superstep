@@ -129,7 +129,7 @@ jobs:
           - { suffix: "", file: Dockerfile, context: ".", scope: "", title: "Superstep", description: "Visual LangGraph studio (all-in-one image)" }
           - { suffix: "-sandbox", file: docker/studio-sandbox/Dockerfile, context: ".", scope: sandbox, title: "Superstep sandbox", description: "Code node sandbox service for STUDIO_CODE_RUNTIME=remote" }
           - { suffix: "-api", file: backend/Dockerfile, context: backend, scope: api, title: "Superstep API", description: "API and worker image" }
-          - { suffix: "-web", file: frontend/Dockerfile, context: frontend, scope: web, title: "Superstep web", description: "Web UI image" }
+          - { suffix: "-web", file: frontend/Dockerfile, context: ".", scope: web, title: "Superstep web", description: "Web UI image" }
     permissions:
       contents: read
       packages: write

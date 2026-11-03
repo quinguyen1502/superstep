@@ -128,7 +128,7 @@ def test_channel_settings_are_validated_encrypted_and_masked(c):
     from app.api.deps import get_db
     row = ApprovalRepository(get_db()).channel(ch["id"]); assert SLACK["bot_token"] not in row.secrets  # Fernet at rest
     listed = c.get("/api/approvals/channels", headers=H(o["token"])).json()["data"]
-    assert [k["kind"] for k in listed["kinds"]] == ["slack", "telegram", "whatsapp", "email", "teams"] and listed["is_admin"] is False
+    assert [k["kind"] for k in listed["kinds"]] == ["slack", "telegram", "whatsapp", "email", "teams", "webhook"] and listed["is_admin"] is False
     assert {x["id"] for x in listed["channels"] if x["scope"] == "user"} == {ch["id"], tg["id"]}
     assert c.put(f"/api/approvals/channels/{ch['id']}", json={"name": "Ops"}, headers=H(o["token"])).json()["data"]["name"] == "Ops"
     other = user(c)

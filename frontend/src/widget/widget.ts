@@ -1,84 +1,133 @@
-/** The chat widget (TASK-0143, REQ-0074, DEC-0067 decision 7): one script tag on another site draws a bubble that opens
- *  the published chat page in an iframe.
- *
- *    <script src="https://studio.example.com/c/widget.js" data-slug="help" data-position="right" data-open="false" async></script>
- *
- *  A browser may block the chat page's cookie inside the frame (Safari), so the widget keeps the visitor's token in the
- *  host page's localStorage and hands it to the frame with postMessage; the frame sends it to the API as X-Chat-Visitor
- *  and posts back a new one when it gets one. The widget only talks to the studio origin it was loaded from; the frame
- *  only accepts tokens from the sites in the chat's embed_origins. Plain DOM and inline styles: no dependency, nothing
- *  from the host page's CSS. Built on its own to dist/c/widget.js (vite.widget.config.ts). */
-
-import { MSG } from './protocol'
-
-export { MSG }
-export type WidgetOptions = { slug: string; origin: string; position: 'left' | 'right'; open: boolean; vi: boolean }
-type Store = Pick<Storage, 'getItem' | 'setItem'>
-
-export const storageKey = (slug: string) => `superstep-chat:${slug}`
+/** Plain-JS host API (DEC-0079). The iframe owns React; the bubble uses the canonical shadcn tokens. */
+import css from './styles.css?inline'
+import { labels, tokens } from './assets.generated'
+import { MSG, EVENTS, appearance, bridgeError, channelId, epochId, errorCode, failureCode, resolveToken, eventHub, payload, storageKey, userToken, visitorToken,
+  type Appearance, type Command, type TokenProvider, type WidgetAPI } from './protocol'
+export { MSG, storageKey }
+export type { WidgetAPI, InitOptions } from './protocol'
+export type WidgetOptions = { slug: string; origin: string; position: 'left' | 'right'; open: boolean; vi: boolean } & Appearance
+export type Store = Pick<Storage, 'getItem' | 'setItem'>
 export const frameUrl = (o: WidgetOptions) => `${o.origin}/c/${encodeURIComponent(o.slug)}?embed=1&widget=1`
-
-/** The options of a widget script tag, or null when it has no data-slug. */
+const safeStore = (win: Window): Store | undefined => { try { return win.localStorage } catch { return undefined } }
+const read = (store: Store | undefined, slug: string) => { try { const value = store?.getItem(storageKey(slug)); return visitorToken(value) ? value : null } catch { return null } }
+const save = (store: Store | undefined, slug: string, value: unknown) => { if (visitorToken(value)) try { store?.setItem(storageKey(slug), value) } catch { /* blocked storage: identity lasts for this page */ } }
 export function optionsOf(script: HTMLScriptElement, lang = navigator.language): WidgetOptions | null {
-  const slug = script.dataset.slug?.trim()
-  if (!slug) return null
-  return { slug, origin: new URL(script.src, location.href).origin, position: script.dataset.position === 'left' ? 'left' : 'right',
-    open: script.dataset.open === 'true', vi: lang.toLowerCase().startsWith('vi') }
+  const slug = script.dataset.slug?.trim(); if (!slug) return null
+  const a = appearance({ ...script.dataset, language: script.dataset.language ?? script.dataset.lang }, script.ownerDocument)
+  const vi = a.language ? a.language === 'vi' : lang.toLowerCase().startsWith('vi')
+  return { slug, origin: new URL(script.src, script.ownerDocument.location.href).origin, position: a.position ?? 'right', open: script.dataset.open === 'true', vi, ...a }
 }
-
-/** The host side of the handshake: what to post back to the frame for a message, or null. Saves a token the frame sends. */
-export function answer(e: { origin: string; data: unknown }, o: WidgetOptions, store: Store): Record<string, unknown> | null {
+/** Cached old frames get anonymous tokens only; JWTs require bridge v1's channel/epoch handshake. */
+export function answer(e: { origin: string; data: unknown }, o: WidgetOptions, store?: Store): Record<string, unknown> | null {
   if (e.origin !== o.origin || !e.data || typeof e.data !== 'object') return null
   const d = e.data as { type?: string; token?: unknown }
-  if (d.type === MSG.ready) {
-    let token: string | null = null
-    try { token = store.getItem(storageKey(o.slug)) } catch { /* storage blocked: the frame gets a new visitor */ }
-    return { type: MSG.token, token }
-  }
-  if (d.type === MSG.save && typeof d.token === 'string' && d.token.length < 200) {
-    try { store.setItem(storageKey(o.slug), d.token) } catch { /* storage blocked */ }
-  }
+  if (d.type === MSG.ready) return { type: MSG.token, token: read(store, o.slug) }
+  if (d.type === MSG.save) save(store, o.slug, d.token)
   return null
 }
-
 const CHAT = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>'
-const CLOSE = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
-
-/** Draws the bubble and the (hidden) frame, and answers the frame's messages. Returns the bubble button. */
-export function mount(o: WidgetOptions, doc: Document = document, store: Store = localStorage): HTMLButtonElement {
-  const side = o.position === 'left' ? 'left' : 'right'
-  const panel = doc.createElement('div')
-  panel.id = 'superstep-chat-panel'
-  panel.style.cssText = `position:fixed;${side}:16px;bottom:88px;width:min(400px,calc(100vw - 32px));height:min(640px,calc(100vh - 120px));` +
-    'border-radius:12px;overflow:hidden;box-shadow:0 12px 32px rgba(0,0,0,.24);z-index:2147483000;display:none;background:#fff'
-  const frame = doc.createElement('iframe')
-  frame.src = frameUrl(o); frame.title = 'Chat'
-  frame.style.cssText = 'width:100%;height:100%;border:0;display:block'
-  frame.setAttribute('allow', 'clipboard-write')
-  panel.appendChild(frame)
-  const button = doc.createElement('button')
-  button.id = 'superstep-chat-button'; button.type = 'button'
-  button.style.cssText = `position:fixed;${side}:16px;bottom:16px;width:56px;height:56px;border-radius:9999px;border:0;cursor:pointer;` +
-    'display:flex;align-items:center;justify-content:center;background:#18181b;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.24);z-index:2147483001'
-  const show = (open: boolean) => {
-    panel.style.display = open ? 'block' : 'none'
-    button.innerHTML = open ? CLOSE : CHAT
-    button.setAttribute('aria-expanded', String(open))
-    button.setAttribute('aria-label', open ? (o.vi ? 'Đóng chat' : 'Close chat') : (o.vi ? 'Mở chat' : 'Open chat'))
+const CLOSE = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg>'
+const WAIT = 10000
+export function createWidget(win: Window, defaultOrigin: string, store = safeStore(win)) {
+  const doc = win.document, hub = eventHub()
+  let opts: WidgetOptions | null = null, root: HTMLDivElement | null = null, panel: HTMLDivElement | null = null, frame: HTMLIFrameElement | null = null, button: HTMLButtonElement | null = null
+  let channel = '', epoch = 0, provider: TokenProvider | undefined, opened = false, attempt = 0
+  const acknowledgements = new Map<number, { resolve: () => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> }>()
+  const emitError = (code: string) => hub.emit('error', { slug: opts?.slug ?? '', code: errorCode(code) })
+  const settle = (key: number, code?: string) => { const wait = acknowledgements.get(key); if (!wait) return; clearTimeout(wait.timer); acknowledgements.delete(key); if (code) wait.reject(bridgeError(code)); else wait.resolve() }
+  const rejectPending = () => { for (const key of acknowledgements.keys()) settle(key, 'HTTP_ERROR') }
+  const send = (data: object) => { if (channel && frame?.contentWindow && opts) frame.contentWindow.postMessage({ v: 1, channel, epoch, ...data }, opts.origin) }
+  const token = resolveToken
+  const synchronize = async () => {
+    if (!opts || !channel) return
+    const mine = epoch, myChannel = channel, myAttempt = ++attempt, current = provider
+    send({ type: MSG.configure, options: { language: opts.language ?? (opts.vi ? 'vi' : 'en'), color: opts.color, logo: opts.logo, position: opts.position } })
+    if (!current) { send({ type: MSG.identity, visitor: read(store, opts.slug) }); return }
+    send({ type: MSG.identity, pending: true })
+    try { const value = await token(current); if (mine === epoch && myChannel === channel && myAttempt === attempt) send({ type: MSG.identity, token: value }) }
+    catch (error) { if (mine === epoch && myChannel === channel && myAttempt === attempt) send({ type: MSG.identity, error: failureCode(error) }) }
   }
-  button.addEventListener('click', () => show(panel.style.display === 'none'))
-  doc.defaultView?.addEventListener('message', e => {
-    if (e.source !== frame.contentWindow) return
-    const reply = answer(e, o, store)
-    if (reply) frame.contentWindow?.postMessage(reply, o.origin)
-  })
-  show(o.open)
-  doc.body.append(panel, button)
-  return button
+  const paint = () => {
+    if (!opts || !root || !panel || !button || !frame) return
+    root.dataset.position = opts.position; panel.style.display = opened ? 'block' : 'none'
+    const lang = opts.language ?? (opts.vi ? 'vi' : 'en'); frame.title = labels[lang].frame
+    button.replaceChildren()
+    if (!opened && opts.logo) { const image = doc.createElement('img'); image.src = opts.logo; image.alt = ''; button.append(image) }
+    else button.innerHTML = opened ? CLOSE : CHAT
+    button.setAttribute('aria-expanded', String(opened)); button.setAttribute('aria-label', labels[lang][opened ? 'close' : 'open'])
+    for (const [key, value] of Object.entries(tokens)) root.style.setProperty(key, value)
+    if (opts.color) root.style.setProperty('--ss-widget-primary', opts.color)
+  }
+  const show = (value: boolean) => { if (opened === value) return; opened = value; paint(); if (opts) hub.emit(value ? 'open' : 'close', { slug: opts.slug }) }
+  const listen = (e: MessageEvent) => {
+    if (!opts || e.source !== frame?.contentWindow || e.origin !== opts.origin || !e.data || typeof e.data !== 'object') return
+    const d = e.data
+    if (d.type === MSG.ready) {
+      if (d.v === 1 && channelId(d.channel)) { if (channel !== d.channel) { channel = d.channel; void synchronize() } }
+      else if (!provider) { const reply = answer(e, opts, store); if (reply) frame?.contentWindow?.postMessage(reply, opts.origin) }
+      return
+    }
+    if (!channel) { if (!provider) answer(e, opts, store); return }
+    if (d.v !== 1 || d.channel !== channel || !epochId(d.epoch) || d.epoch !== epoch) return
+    if (d.type === MSG.save && !provider) save(store, opts.slug, d.token)
+    else if (d.type === MSG.request && provider && channelId(d.id)) {
+      const mine = epoch, myChannel = channel, current = provider
+      void token(current).then(value => { if (mine === epoch && myChannel === channel) send({ type: MSG.response, id: d.id, token: value }) }, error => { if (mine === epoch && myChannel === channel) send({ type: MSG.response, id: d.id, error: failureCode(error) }) })
+    } else if (d.type === MSG.ack) settle(epoch, d.error ? errorCode(d.error) : undefined)
+    else if (d.type === MSG.event && EVENTS.includes(d.event)) { const data = payload(d.data, opts.slug); if (data) hub.emit(d.event, data) }
+  }
+  win.addEventListener('message', listen)
+  const identify = (value?: TokenProvider) => {
+    if (value !== undefined && typeof value !== 'function' && !userToken(value)) return Promise.reject(bridgeError('CHAT_TOKEN_INVALID'))
+    rejectPending(); provider = value; epoch++; attempt++
+    const result = new Promise<void>((resolve, reject) => { const key = epoch; acknowledgements.set(key, { resolve, reject, timer: setTimeout(() => { settle(key, 'HTTP_ERROR'); emitError('HTTP_ERROR') }, WAIT) }) })
+    void synchronize(); return result
+  }
+  const api: WidgetAPI = {
+    init(options) {
+      if (!options || typeof options.slug !== 'string' || !/^[\w-]{1,200}$/.test(options.slug)) throw bridgeError('VALIDATION_ERROR')
+      let origin: URL
+      try { origin = new URL(options.baseUrl ?? opts?.origin ?? defaultOrigin) } catch { throw bridgeError('VALIDATION_ERROR') }
+      if (!['http:','https:'].includes(origin.protocol) || origin.username || origin.password || origin.search || origin.hash || origin.pathname !== '/') throw bridgeError('VALIDATION_ERROR')
+      const reset = !opts || opts.slug !== options.slug || opts.origin !== origin.origin
+      if (reset) {
+        if (opts) { rejectPending(); provider = undefined; epoch++; attempt++ }
+        channel = ''; root?.remove(); root = doc.createElement('div'); root.id = 'superstep-chat-widget'
+        const style = doc.createElement('style'); style.textContent = css
+        panel = doc.createElement('div'); panel.id = 'superstep-chat-panel'
+        frame = doc.createElement('iframe'); frame.setAttribute('allow','clipboard-write'); panel.append(frame)
+        button = doc.createElement('button'); button.id = 'superstep-chat-button'; button.type = 'button'; button.setAttribute('aria-controls', panel.id)
+        button.addEventListener('click', () => show(!opened)); root.append(style, panel, button)
+        if (doc.body) doc.body.append(root); else doc.addEventListener('DOMContentLoaded', () => { if (root && !root.isConnected) doc.body.append(root) }, { once: true })
+      }
+      const a = appearance(options, doc), vi = (a.language ?? win.navigator.language).toLowerCase().startsWith('vi')
+      opts = { ...(reset ? {} : opts), slug: options.slug, origin: origin.origin, position: a.position ?? opts?.position ?? 'right', open: !!options.open, vi, ...a }
+      if (options.open !== undefined || reset) opened = !!options.open
+      paint(); if (reset) frame!.src = frameUrl(opts); else if (channel) send({ type: MSG.configure, options: a })
+    },
+    open: () => show(true), close: () => show(false), toggle: () => show(!opened), identify: value => identify(value), logout: () => identify(), on: hub.on, off: hub.off,
+  }
+  return { api, dispose() { rejectPending(); provider = undefined; epoch++; attempt++; win.removeEventListener('message', listen); root?.remove(); root = null; frame = null; channel = '' }, get button() { return button } }
 }
-
+/** Compatibility helper for the original bubble API. */
+export function mount(o: WidgetOptions, doc: Document = document, store?: Store): HTMLButtonElement {
+  const widget = createWidget(doc.defaultView!, o.origin, store)
+  widget.api.init({ ...o, baseUrl: o.origin, language: o.language ?? (o.vi ? 'vi' : 'en') }); return widget.button!
+}
+export function installWidget(win: Window, script: HTMLScriptElement) {
+  const previous = win.Superstep
+  if (previous && !Array.isArray(previous) && 'init' in previous && (previous as WidgetAPI & { version?: number }).version === 1) return previous as WidgetAPI
+  const queue: Command[] = Array.isArray(previous) ? previous : previous && 'q' in previous && Array.isArray(previous.q) ? previous.q : []
+  const widget = createWidget(win, new URL(script.src, win.location.href).origin), api = widget.api as WidgetAPI & { version: number }
+  api.version = 1; win.Superstep = api
+  const o = optionsOf(script); if (o) api.init({ ...o, baseUrl: o.origin })
+  for (const command of queue.slice(0,100)) {
+    if (!Array.isArray(command)) continue
+    const [name, ...args] = command
+    if (!['init','open','close','toggle','identify','logout','on','off'].includes(name)) continue
+    try { const result = (api[name] as (...values: unknown[]) => unknown)(...args); if (result instanceof Promise) void result.catch(() => {}) } catch { /* invalid queued commands do not prevent later commands */ }
+  }
+  return api
+}
 const script = typeof document !== 'undefined' ? document.currentScript : null
-if (script instanceof HTMLScriptElement) {
-  const o = optionsOf(script)
-  if (o) { if (document.body) mount(o); else document.addEventListener('DOMContentLoaded', () => mount(o)) }
-}
+if (script instanceof HTMLScriptElement) installWidget(window, script)

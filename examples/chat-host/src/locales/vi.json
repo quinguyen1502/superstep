@@ -1,0 +1,11 @@
+{
+  "brand": "Cổng khách hàng", "demo": "Không gian dùng thử", "title": "Luôn có người hỗ trợ khi bạn cần.",
+  "intro": "Chọn khách hàng mẫu để khám phá cuộc trò chuyện của riêng bạn.", "signIn": "Tiếp tục với {{name}}", "people": { "lan": "Lan", "minh": "Minh" },
+  "privacy": "Mỗi khách hàng có lịch sử trò chuyện riêng. Vui lòng chỉ dùng dữ liệu mẫu.", "language": "Ngôn ngữ", "english": "English", "vietnamese": "Tiếng Việt",
+  "theme": "Đổi giao diện sáng tối", "signOut": "Đổi tài khoản", "conversations": "Cuộc trò chuyện của bạn", "newChat": "Cuộc trò chuyện mới", "untitled": "Cuộc trò chuyện mới",
+  "noChats": "Các cuộc trò chuyện sẽ xuất hiện ở đây.", "assistant": "Trợ lý hỗ trợ", "ready": "Sẵn sàng hỗ trợ", "streaming": "Đang viết phản hồi", "waiting": "Đang chờ bạn trả lời", "loading": "Đang tải", "error": "Chưa thể tiếp tục",
+  "welcome": "Chúng tôi có thể giúp gì cho bạn?", "welcomeHint": "Gửi tin nhắn hoặc tài liệu để bắt đầu.", "you": "Bạn", "message": "Tin nhắn của bạn", "placeholder": "Bạn đang cần hỗ trợ điều gì…", "send": "Gửi tin nhắn", "cancel": "Dừng phản hồi",
+  "attachment": "Đính kèm tài liệu", "file": "Đã đính kèm: {{name}}", "attachmentMessage": "Vui lòng xem tài liệu đính kèm.",
+  "formTitle": "Xác nhận nhanh", "approved": "Tôi đồng ý với yêu cầu này", "note": "Ghi chú của bạn", "notePlaceholder": "Bổ sung thông tin hữu ích…", "answer": "Gửi câu trả lời",
+  "helpful": "Phản hồi hữu ích", "unhelpful": "Phản hồi chưa hữu ích", "rated": "Đã lưu đánh giá", "powered": "Được hỗ trợ bởi Superstep", "retry": "Thử lại"
+}

@@ -39,3 +39,25 @@ def test_migrations_and_seed_on_fresh_postgres(fresh_pg):
         assert c.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD
         assert c.execute(text("SELECT count(*) FROM users WHERE email='admin@example.com'")).scalar_one() == 1
         assert c.execute(text("SELECT count(*) FROM workflows")).scalar_one() >= 1
+
+
+def test_pat_name_index_on_postgres(fresh_pg):
+    """TASK-0213: active duplicates are renamed before the partial unique index, which then refuses a second active name."""
+    import sqlalchemy as sa
+    from alembic import command
+    from alembic.config import Config
+    from app.models.database import MIGRATIONS_DIR
+    cfg = Config(); cfg.set_main_option("script_location", os.path.normpath(MIGRATIONS_DIR))
+    cfg.set_main_option("sqlalchemy.url", fresh_pg.url.replace("%", "%%"))
+    command.upgrade(cfg, "0049_review_recovery")
+    with fresh_pg.engine.begin() as c:
+        for tid, name, created, revoked in [("a", "ci", 1, None), ("b", "ci", 2, None), ("c", "ci", 0, 3.0)]:
+            c.execute(text("INSERT INTO personal_access_tokens (id, user_id, name, token_hash, prefix, created, revoked) "
+                           "VALUES (:i, 'u1', :n, :i, 'pat_', :c, :r)"), dict(i=tid, n=name, c=created, r=revoked))
+    command.upgrade(cfg, "head")
+    with fresh_pg.engine.connect() as c:
+        assert dict(c.execute(text("SELECT id, name FROM personal_access_tokens")).fetchall()) == {"a": "ci", "b": "ci (2)", "c": "ci"}
+    with pytest.raises(sa.exc.IntegrityError), fresh_pg.engine.begin() as c:
+        c.execute(text("INSERT INTO personal_access_tokens (id, user_id, name, token_hash, prefix, created) VALUES ('d', 'u1', 'ci', 'd', 'pat_', 9)"))
+    with fresh_pg.engine.begin() as c:  # a revoked row does not block the name
+        c.execute(text("INSERT INTO personal_access_tokens (id, user_id, name, token_hash, prefix, created, revoked) VALUES ('e', 'u1', 'ci', 'e', 'pat_', 9, 10)"))
