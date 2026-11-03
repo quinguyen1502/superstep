@@ -7,7 +7,7 @@
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
-- Updated: 2026-10-31
+- Updated: 2026-11-03
 - Requirement IDs: REQ-0082
 - Design IDs: none
 - Architecture IDs: DEC-0080
@@ -75,6 +75,8 @@ Ship `@superstep/react-native` with `useChat` and basic native components, and a
 - See PLAN-0002 and the related DECs.
 
 ## Activity Log
+
+- 2026-11-03: Owner temporarily deferred this task and prioritised TASK-0229/0230 for 0.11.0. Remain in backlog, outside that release; resume only on owner request. This is deferral, not cancellation or completion. See PLAN-0002 and proposed DEC-0084.
 
 - 2026-10-31: proposed in PLAN-0002 from REQ-0082. Status backlog until the owner approves the plan.
 

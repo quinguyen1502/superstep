@@ -17,7 +17,7 @@ VERSION = 1
 PROTOCOL = "superstep-chat"
 CLIENT_TYPES = ("auth", "message", "answer", "cancel")
 STEP_EVENTS = {"node_started": "started", "node_finished": "finished", "error": "error"}
-FIELDS = {"auth": {"type", "visitor", "token"}, "message": {"type", "chat_session_id", "text", "attachments", "locale"},
+FIELDS = {"auth": {"type", "visitor", "token"}, "message": {"type", "chat_session_id", "text", "attachments", "locale", "edit_operation_id"},
           "answer": {"type", "chat_session_id", "node", "response", "locale"}, "cancel": {"type"}}
 
 
@@ -34,6 +34,7 @@ def client_frame(frame) -> dict:
     if t in ("message", "answer") and not isinstance(frame.get("chat_session_id"), str): raise invalid("chat_session_id")
     if t == "message" and not isinstance(frame.get("text"), str): raise invalid("text")
     if t == "message" and not isinstance(frame.get("attachments", []), list): raise invalid("attachments")
+    if t == "message" and "edit_operation_id" in frame and not isinstance(frame["edit_operation_id"], str): raise invalid("edit_operation_id")
     if t == "answer" and "response" not in frame: raise invalid("response")
     if t == "auth" and not all(isinstance(frame.get(k, ""), str) for k in ("visitor", "token")): raise invalid("auth")
     return frame
@@ -45,6 +46,7 @@ def plan_request(frame: dict) -> dict:
     if frame["type"] == "message":
         req["message"] = frame["text"]
         if frame.get("attachments"): req["attachment_ids"] = frame["attachments"]
+        if "edit_operation_id" in frame: req["edit_operation_id"] = frame["edit_operation_id"]
     else:
         req["response"] = frame["response"]
         if frame.get("node"): req["node"] = frame["node"]

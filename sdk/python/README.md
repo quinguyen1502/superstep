@@ -258,3 +258,22 @@ creates a token and runs it for both SDKs.
 ## License
 
 MIT
+
+
+## Edit a message (0.11.0 target)
+
+After the user confirms that running the current saved workflow may repeat external actions, create a new branch with a stable operation ID:
+
+```python
+import uuid
+
+before = chat.get(session_id)
+operation_id = uuid.uuid4().hex  # retain for recovery of this same intent
+stream = chat.edit(session_id, turn_id, "Corrected request",
+    operation_id=operation_id, expected_last_turn_id=before["turns"][-1]["id"])
+for event in stream:
+    pass
+branch_id = stream.result.session_id
+```
+
+For `AsyncChatClient`, use `stream = await chat.edit(...)`, then `async for event in stream`. `prepare_edit` prepares only (await it on the async client). Repeated admitted intents recover their reserved run from history without another socket write. The original session remains unchanged; Human questions must be answered again, and all subsequent operations address the branch. Older servers fail clearly when `capabilities.edit` is absent. Full semantics: [English](../../handbook/docs/en/run/chat-api.md#prepare-and-execute-an-edit) / [Tiếng Việt](../../handbook/docs/vi/run/chat-api.md).

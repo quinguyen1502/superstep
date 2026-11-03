@@ -316,3 +316,12 @@ Xem thêm [Chạy từ chat](chat-triggers.md) cho Slack và Telegram.
 
 
 Để tích hợp người dùng riêng và tuỳ chỉnh giao diện, xem [bộ giao diện React](chat-react.md) và [API widget](chat-widget.md).
+
+
+## Sửa tin nhắn đã gửi
+
+Trên máy chủ có `capabilities.edit` trong dữ liệu cuộc trò chuyện, chọn **Sửa tin nhắn** ở tin nhắn người dùng đã lưu. Câu trả lời cho Human không phải tin nhắn được sửa. Lưu sẽ mở nhánh hội thoại mới với lịch sử trước đó và nội dung đã sửa; cuộc trò chuyện gốc cùng các tin nhắn sau nó vẫn được giữ nguyên. Chọn **Cuộc trò chuyện gốc** để quay về. Các tin nhắn kế thừa chỉ đọc, không tạo thêm đánh giá. Tệp được sao chép sang ID và đối tượng lưu trữ riêng, nên xoá một cuộc trò chuyện không làm hỏng tệp của cuộc trò chuyện kia.
+
+Hộp xác nhận nêu rõ thao tác sẽ chạy lại workflow đang lưu/công khai: lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Thao tác không hoàn tác hành động cũ hay chỉ tạo lại văn bản của model. Câu hỏi Human và yêu cầu người duyệt cần được trả lời lại. Hãy chờ cuộc trò chuyện đang chạy/chờ xử lý xong và tải lại nếu lịch sử đã thay đổi. Huỷ sửa không thay đổi tin nhắn.
+
+Tính năng dự kiến phát hành cùng 0.11.0; trước đợt phát hành đó, dùng đồng bộ mã máy chủ và SDK/giao diện mới. Các gói native tiếp tục tạm hoãn.

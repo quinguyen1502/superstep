@@ -97,6 +97,30 @@ class Wire:
 async def maybe(value): return await value if inspect.isawaitable(value) else value
 
 
+async def test_edit_uses_branch_and_repeated_intent_recovers_without_another_socket(mode):
+    wire = Wire(mode); chat = wire.client(); branch = "edited-session"
+    def respond(request):
+        if request.url.path.endswith("/" + SID):
+            return env({**RECORDED["session"], "capabilities": {"edit": True}})
+        if request.url.path.endswith("/edits"):
+            body = json.loads(request.content)
+            assert body["operation_id"] == "intent-12345678" and body["expected_last_turn_id"] == "recorded-answer"
+            return env(dict(session={**RECORDED["session"], "id": branch}, operation_id=body["operation_id"],
+                            run_id="recorded-run", message="Edited text", attachment_ids=[], state="finished" if wire.saved else "prepared"))
+        if request.url.path.endswith("/" + branch):
+            return env({**RECORDED["session"], "id": branch, "turns": RECORDED["session"]["turns"] if wire.saved else []})
+    wire.override = respond
+    options = dict(operation_id="intent-12345678", expected_last_turn_id="recorded-answer", recovery_interval=0)
+    stream = await maybe(chat.edit(SID, "recorded-user", "Edited text", **options))
+    await drain(stream)
+    assert stream.result.session_id == branch and stream.result.status == "ok"
+    frame = wire.sockets[0].sent[1]
+    assert frame["chat_session_id"] == branch and frame["edit_operation_id"] == options["operation_id"]
+    repeated = await maybe(chat.edit(SID, "recorded-user", "Edited text", **options))
+    await drain(repeated)
+    assert repeated.result.recovered and len(wire.sockets) == wire.writes == 1
+
+
 async def drain(stream, callback=None):
     events = []
     if hasattr(stream, "__aiter__"):

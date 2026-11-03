@@ -23,6 +23,9 @@ class ChatSession(Base):
     active_agent: Mapped[Optional[str]] = mapped_column(Text)  # the Agent a hand-off left the conversation with (TASK-0181)
     created: Mapped[float] = mapped_column(Float, nullable=False)
     updated: Mapped[float] = mapped_column(Float, nullable=False, index=True)  # the retention clock
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    source_session_id: Mapped[Optional[str]] = mapped_column(Text)
+    source_turn_id: Mapped[Optional[str]] = mapped_column(Text)
 
 
 class ChatTurn(Base):
@@ -39,6 +42,23 @@ class ChatTurn(Base):
     answered_by: Mapped[Optional[str]] = mapped_column(Text)  # visitor | reviewer, for a waiting turn
     code: Mapped[Optional[str]] = mapped_column(Text)  # the error code of a failed turn
     attachments: Mapped[Optional[str]] = mapped_column(Text)  # JSON list of chat_attachments ids, in order (DEC-0072)
+    created: Mapped[float] = mapped_column(Float, nullable=False)
+    inherited: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
+
+
+class ChatEdit(Base):
+    """Durable edit intent. Kept as a tombstone after branch deletion; never replay an execution."""
+    __tablename__ = "chat_edits"
+    __table_args__ = (Index("uq_chat_edit_intent", "source_session_id", "operation_id", unique=True),)
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    source_session_id: Mapped[str] = mapped_column(Text, nullable=False)
+    operation_id: Mapped[str] = mapped_column(Text, nullable=False)
+    branch_id: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    run_id: Mapped[str] = mapped_column(Text, nullable=False)
+    body_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    attachments: Mapped[str] = mapped_column(Text, nullable=False)
+    claimed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created: Mapped[float] = mapped_column(Float, nullable=False)
 
 

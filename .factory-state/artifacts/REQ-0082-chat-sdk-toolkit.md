@@ -7,7 +7,7 @@
 - Status: Accepted on 2026-10-31 (PR #271). Phases 1 and 2 merged into develop (#273–277, #285–287); phase 3 TASK-0223 done with owner-approved merge #288 on 2026-11-02. Remaining phases are incomplete; no release/publication authorised.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
-- Updated: 2026-11-02
+- Updated: 2026-11-03
 - Source: owner request on 2026-10-31: a chat SDK and toolkit so that third-party web and mobile apps can integrate Superstep chat, with the owner decisions recorded under "Clarifications".
 - Related Decision: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
 - Related Plan: PLAN-0002
@@ -166,3 +166,12 @@ Proposed on 2026-10-31 in PLAN-0002 (approved on 2026-10-31; phase 1 in todo, th
 - `.factory-state/artifacts/PLAN-0002-chat-sdk-toolkit.md`
 - `.factory-state/decisions/DEC-0077-chat-third-party-auth.md`, `DEC-0078-public-chat-api-versioning.md`, `DEC-0079-chat-packages-ui-reuse.md`, `DEC-0080-chat-react-native.md`
 - `.factory-state/artifacts/REQ-0074-public-chat-page.md`, `.factory-state/decisions/DEC-0067-public-chat-page.md`
+
+
+## Owner Scope Amendment (2026-11-03)
+
+The owner prioritised TASK-0229 (edit sent message) and TASK-0230 (regenerate answer) for 0.11.0, temporarily deferring TASK-0227/0228. Web phases 1–3 are integrated through #291 (02361fbd). Editing/regeneration are promoted from later backlog into the next release scope; the earlier exclusion of Studio chat behaviour changes is superseded only for these shared features. Existing accepted identity, API and package decisions retain their approval status.
+
+The new revision semantics are proposed in `.factory-state/decisions/DEC-0084-chat-edit-regenerate.md`; architecture acceptance is pending. Native requirements are deferred, not fulfilled, so the overall requirement remains Accepted/incomplete. Shared Python SDK/CLI/server target 0.11.0; package versions, tags and publication wait for validated release preparation and explicit release instructions.
+
+- 2026-11-03: Owner accepted DEC-0084 in PR #292 ("Duyệt"); edit/regenerate design is now approved for implementation. Earlier Proposed/pending statements are historical. Native scope remains deferred.

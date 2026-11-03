@@ -5,7 +5,7 @@ import type { ClientFrame } from './frames.js'
 import { Interrupted, RetryExpired, socketRequest } from './socket.js'
 import { ChatStream } from './stream.js'
 import type { StreamControl } from './stream.js'
-import type { ChatAnswerOptions, ChatClientOptions, ChatFile, ChatPage, ChatRating, ChatRequestOptions, ChatResult, ChatSendOptions,
+import type { ChatAnswerOptions, ChatClientOptions, ChatEdit, ChatEditOptions, ChatFile, ChatPage, ChatRating, ChatRequestOptions, ChatResult, ChatSendOptions,
   ChatSession, ChatSessionList, ChatSessionView, ChatStreamOptions, ChatTurn, ChatTurns, ChatUploadOptions, NativeChatFile, WebSocketConstructor } from './types.js'
 
 function segment(value: string): string {
@@ -79,6 +79,32 @@ export class ChatClient {
     const frame: Extract<ClientFrame, { type: 'answer' }> = { type: 'answer', chat_session_id: sessionId, response,
       ...(options.node ? { node: options.node } : {}), ...(options.locale ? { locale: options.locale } : {}) }
     return this.stream(sessionId, frame, options)
+  }
+
+  /** Prepare only; no workflow runs until the returned intent is admitted over the socket. */
+  async prepareEdit(sessionId: string, turnId: string, text: string, options: ChatEditOptions): Promise<ChatEdit> {
+    const view = await this.get(sessionId, options)
+    if (!view.capabilities?.edit) throw new ConfigError('This server does not support chat editing', { code: 'CHAT_EDIT_UNSUPPORTED' })
+    segment(turnId); segment(options.operationId); segment(options.expectedLastTurnId)
+    return this.json(`/sessions/${segment(sessionId)}/edits`, 'POST', { turn_id: turnId, message: text,
+      operation_id: options.operationId, expected_last_turn_id: options.expectedLastTurnId }, options.signal)
+  }
+
+  /** Fresh execution, after the host has confirmed that external actions may repeat. */
+  edit(sessionId: string, turnId: string, text: string, options: ChatEditOptions): ChatStream {
+    let stream: ChatStream
+    stream = new ChatStream(async control => {
+      try {
+        const edit = await this.prepareEdit(sessionId, turnId, text, { ...options, signal: control.signal })
+        this.active.set(stream, edit.session.id)
+        control.emit({ type: 'session', session: edit.session })
+        const frame: Extract<ClientFrame, { type: 'message' }> = { type: 'message', chat_session_id: edit.session.id,
+          text: edit.message, attachments: edit.attachment_ids, edit_operation_id: edit.operation_id, ...(options.locale ? { locale: options.locale } : {}) }
+        return await this.runStream(edit.session.id, frame, { ...options, after: undefined }, control, edit.state === 'prepared' ? undefined : edit.run_id, edit.run_id)
+      } finally { this.active.delete(stream) }
+    }, options.signal)
+    this.active.set(stream, sessionId)
+    return stream
   }
 
   cancel(sessionId?: string): void { for (const [stream, id] of this.active) if (!sessionId || id === sessionId) stream.cancel() }
@@ -194,28 +220,33 @@ export class ChatClient {
     this.active.set(stream, sessionId); return stream
   }
 
-  private async runStream(sessionId: string, frame: Extract<ClientFrame, { type: 'message' | 'answer' }>, options: ChatStreamOptions, control: StreamControl): Promise<ChatResult> {
+  private async runStream(sessionId: string, frame: Extract<ClientFrame, { type: 'message' | 'answer' }>, options: ChatStreamOptions, control: StreamControl, recoverRunId?: string, expectedRunId = recoverRunId): Promise<ChatResult> {
     const attempts = options.recoveryAttempts ?? 20, interval = options.recoveryIntervalMs ?? 250
     if (!Number.isInteger(attempts) || attempts < 0 || attempts > 100 || !Number.isFinite(interval) || interval < 0) throw new RangeError('Invalid recovery limits')
     const before = await this.get(sessionId, { signal: control.signal })
     if (!Array.isArray(before?.turns)) throw bad()
-    const known = new Set(before.turns.map(turn => turn.id))
-    let cursor = options.after ?? before.turns[before.turns.length - 1]?.id
+    const prior = expectedRunId ? before.turns.filter(turn => turn.run_id !== expectedRunId) : before.turns
+    const known = new Set(prior.map(turn => turn.id))
+    let cursor = options.after ?? prior[prior.length - 1]?.id
     const Socket = this.options.WebSocket ?? globalThis.WebSocket as WebSocketConstructor | undefined
-    if (!Socket) throw new ConfigError('No WebSocket available: pass options.WebSocket (Node 18 needs an adapter)', { code: 'CONFIG_MISSING' })
+    if (!Socket && !recoverRunId) throw new ConfigError('No WebSocket available: pass options.WebSocket (Node 18 needs an adapter)', { code: 'CONFIG_MISSING' })
     const url = new URL(this.baseUrl + `/ws/public/v1/chat/${segment(this.slug)}`)
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-    let output: Awaited<ReturnType<typeof socketRequest>> | undefined, interrupted: Interrupted | undefined
-    for (let attempt = 0; ; attempt++) {
+    let output: Awaited<ReturnType<typeof socketRequest>> | undefined, interrupted = recoverRunId ? new Interrupted(recoverRunId) : undefined
+    for (let attempt = 0; !recoverRunId; attempt++) {
       const auth = await this.auth(control.signal)
-      try { output = await socketRequest(Socket, url.href, auth, frame, options, control, attempt === 0 && !!this.options.getToken); break }
+      try { output = await socketRequest(Socket!, url.href, auth, frame, options, control, attempt === 0 && !!this.options.getToken); break }
       catch (error) {
         if (attempt === 0 && error instanceof RetryExpired) continue
         if (error instanceof Interrupted) { interrupted = error; break }
+        if (error instanceof SuperstepError && error.code === 'CHAT_EDIT_STARTED' && frame.type === 'message' && frame.edit_operation_id) {
+          const runId = (error.details as { run_id?: unknown } | undefined)?.run_id
+          if (typeof runId === 'string') { interrupted = new Interrupted(runId); break }
+        }
         throw error
       }
     }
-    const runId = output?.runId ?? interrupted?.runId
+    const runId = output?.runId ?? interrupted?.runId ?? expectedRunId
     const recovered: ChatTurn[] = []
     let saved: ChatTurn | undefined
     for (let i = 0; i < attempts; i++) {

@@ -2,7 +2,7 @@
 import { StrictMode } from 'react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
-import { Chat, ChatProvider, Composer, MessageList, QuestionCard, Rating, useChat } from '../src/index'
+import { Chat, ChatProvider, ChatThread, Composer, MessageList, QuestionCard, Rating, useChat } from '../src/index'
 import type { ChatController } from '../src/index'
 import { Wire, SID, holding, ok, recorded } from '../../../sdk/typescript/test/chat-harness'
 
@@ -22,6 +22,27 @@ function Harness({ wire, children, identityKey }: { wire: Wire; identityKey?: st
 }
 
 describe('useChat SDK binding', () => {
+  it('confirms a new branch and reuses the same intent after a failed response', async () => {
+    const wire = new Wire(), edit = vi.fn().mockRejectedValueOnce({ code: 'CONNECTION_ERROR', message: 'untranslated transport detail' }).mockResolvedValue(undefined)
+    const turn = { id: 'root-message', role: 'user' as const, text: 'Original message', created: 1, editable: true }
+    render(<Harness wire={wire}>{() => <ChatThread turns={[turn]} mode="none" events={[]} trace={{ spans: [] }} pending={null} running={false} onEdit={edit} />}</Harness>)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit message' }))
+    const dialog = screen.getByRole('alertdialog'), save = within(dialog).getByRole('button', { name: 'Save and run in new branch' }) as HTMLButtonElement
+    expect(save.disabled).toBe(true)
+    expect(dialog.textContent).toContain('API calls, writes and notifications may repeat')
+    fireEvent.change(within(dialog).getByRole('textbox'), { target: { value: 'Edited message' } })
+    fireEvent.click(save)
+    await waitFor(() => expect(edit).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(save.disabled).toBe(false))
+    expect(dialog.textContent).not.toContain('untranslated transport detail')
+    expect(dialog.textContent).toContain('The request could not be completed')
+    fireEvent.click(save)
+    await waitFor(() => expect(edit).toHaveBeenCalledTimes(2))
+    expect(edit.mock.calls[0][2]).toBe(edit.mock.calls[1][2])
+    expect(edit.mock.calls[0][2]).toMatch(/^[a-z0-9-]{36}$/i)
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(screen.getByTestId('chat-mine').textContent).toContain('Original message')
+  })
   it('marks implicit sessions as embeds and aborts their creation before a stale identity can write', async () => {
     const wire = new Wire()
     let release!: (response: Response) => void

@@ -5,6 +5,7 @@ type Schemas = components['schemas']
 export type ChatPage = Schemas['ChatPage']
 export type ChatSession = Schemas['ChatSession']
 export type ChatSessionView = Schemas['ChatSessionView']
+export type ChatEdit = Schemas['ChatEdit']
 export type ChatTurn = Schemas['ChatTurn']
 export type ChatAttachment = Schemas['ChatAttachment']
 export type ChatRating = Schemas['ChatRating']
@@ -46,6 +47,11 @@ export interface ChatStreamOptions extends ChatRequestOptions {
   recoveryIntervalMs?: number
 }
 export interface ChatSendOptions extends ChatStreamOptions { attachments?: string[] }
+export interface ChatEditOptions extends ChatStreamOptions {
+  /** Keep this identifier when recovering the same deliberate edit. A new intent needs a new identifier. */
+  operationId: string
+  expectedLastTurnId: string
+}
 export interface ChatAnswerOptions extends ChatStreamOptions { node?: string }
 export type NativeChatFile = { uri: string; name: string; type: string }
 export type ChatFile = Blob | Uint8Array | ArrayBuffer | NativeChatFile
@@ -60,5 +66,5 @@ export interface ChatResult {
   question?: ChatQuestion
   recovered: boolean
 }
-export type ChatEvent = ServerFrame | { type: 'history'; turns: ChatTurn[] } | { type: 'result'; result: ChatResult }
+export type ChatEvent = ServerFrame | { type: 'session'; session: ChatSessionView } | { type: 'history'; turns: ChatTurn[] } | { type: 'result'; result: ChatResult }
 export type { ClientFrame, ServerFrame } from './frames.js'

@@ -162,3 +162,8 @@ Omit `PW_CHROME` when Playwright's Chromium is installed. CI runs the shared
 React/widget/headless acceptance with React 18 and 19: streaming, Human answers,
 files, feedback, identity/history isolation, logout, origin refusals and key
 revocation. Screenshots are temporary CI artifacts, never Git evidence.
+
+
+## Edit a sent message
+
+Message actions reuse the shared [editing flow](chat.md#edit-a-sent-message): confirm a fresh execution in an independent conversation branch, keep the original, and use the source link to return. Human replies are not editable roots. For custom interfaces, `useChat().edit(turnId, text, operationId)` requires the same explicit rerun confirmation; retain the operation ID when recovering an interrupted attempt. See the [API contract](chat-api.md#prepare-and-execute-an-edit) for admission and recovery.

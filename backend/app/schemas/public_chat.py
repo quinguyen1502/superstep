@@ -45,6 +45,8 @@ class ChatSession(Open):
     last_run_id: Optional[str] = None
     created: float = Field(..., description="Unix time (seconds).")
     updated: float = Field(..., description="Unix time (seconds).")
+    source_session_id: Optional[str] = None
+    source_turn_id: Optional[str] = None
     visitor_token: Optional[str] = Field(None, description="Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep "
                                                             "it and send it back in `X-Chat-Visitor`.")
 
@@ -80,6 +82,8 @@ class ChatTurn(Open):
     answered_by: Optional[str] = None
     code: Optional[str] = Field(None, description="Error code of a failed answer.")
     created: float
+    inherited: bool = False
+    editable: bool = False
     attachments: list[ChatAttachment] = Field(default_factory=list)
     rating: Optional[ChatRating] = None
     run_exists: Optional[bool] = None
@@ -90,6 +94,17 @@ class ChatSessionView(ChatSession):
     """One chat with its turns in the page's steps mode."""
     steps_mode: StepsMode
     turns: list[ChatTurn]
+    capabilities: dict[str, bool] = Field(default_factory=dict)
+
+
+class ChatEdit(Open):
+    session: ChatSessionView
+    operation_id: str
+    run_id: str
+    message: str
+    attachment_ids: list[str]
+    state: Literal["prepared", "started", "finished"]
+    visitor_token: Optional[str] = None
 
 
 class ChatTurns(Open):
@@ -108,6 +123,7 @@ class ChatSessionEnvelope(Envelope[ChatSession]): """Success envelope: a new cha
 class ChatSessionListEnvelope(Envelope[ChatSessionList]): """Success envelope: the caller's chats."""
 class ChatSessionViewEnvelope(Envelope[ChatSessionView]): """Success envelope: one chat with its turns."""
 class ChatTurnsEnvelope(Envelope[ChatTurns]): """Success envelope: newer turns."""
+class ChatEditEnvelope(Envelope[ChatEdit]): """Success envelope: a prepared independent edit branch."""
 class ChatAttachmentEnvelope(Envelope[ChatAttachment]): """Success envelope: an uploaded file."""
 class ChatRatingEnvelope(Envelope[ChatRating]): """Success envelope: the rating."""
 class OkEnvelope(Envelope[Ok]): """Success envelope: done."""

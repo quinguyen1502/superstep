@@ -5,7 +5,8 @@ export function v1ChatRequest(session: string, request: Record<string, unknown>,
   const base = { chat_session_id: session, locale }
   return 'response' in request
     ? { ...base, type: 'answer', response: request.response, ...(request.node ? { node: request.node } : {}) }
-    : { ...base, type: 'message', text: request.message, ...(request.attachment_ids ? { attachments: request.attachment_ids } : {}) }
+    : { ...base, type: 'message', text: request.message, ...(request.attachment_ids ? { attachments: request.attachment_ids } : {}),
+      ...(request.edit_operation_id ? { edit_operation_id: request.edit_operation_id } : {}) }
 }
 
 export function v1ChatEvent(frame: RunEvent & { event?: string }): RunEvent | undefined {

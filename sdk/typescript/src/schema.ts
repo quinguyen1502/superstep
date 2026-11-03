@@ -119,6 +119,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/public/v1/chat/{slug}/sessions/{sid}/edits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Prepare an independent edited conversation */
+        post: operations["prepareChatEdit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/public/v1/chat/{slug}/sessions/{sid}/turns": {
         parameters: {
             query?: never;
@@ -247,6 +264,53 @@ export interface components {
             data: components["schemas"]["ChatAttachment"];
             /** Error */
             error?: null;
+        };
+        /** ChatEdit */
+        ChatEdit: {
+            session: components["schemas"]["ChatSessionView"];
+            /** Operation Id */
+            operation_id: string;
+            /** Run Id */
+            run_id: string;
+            /** Message */
+            message: string;
+            /** Attachment Ids */
+            attachment_ids: string[];
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "prepared" | "started" | "finished";
+            /** Visitor Token */
+            visitor_token?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ChatEditEnvelope
+         * @description Success envelope: a prepared independent edit branch.
+         */
+        ChatEditEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ChatEdit"];
+            /** Error */
+            error?: null;
+        };
+        /** ChatEditIn */
+        ChatEditIn: {
+            /** Turn Id */
+            turn_id: string;
+            /** Message */
+            message: string;
+            /** Operation Id */
+            operation_id: string;
+            /** Expected Last Turn Id */
+            expected_last_turn_id: string;
         };
         /**
          * ChatPage
@@ -385,6 +449,10 @@ export interface components {
              * @description Unix time (seconds).
              */
             updated: number;
+            /** Source Session Id */
+            source_session_id?: string | null;
+            /** Source Turn Id */
+            source_turn_id?: string | null;
             /**
              * Visitor Token
              * @description Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep it and send it back in `X-Chat-Visitor`.
@@ -460,6 +528,10 @@ export interface components {
              * @description Unix time (seconds).
              */
             updated: number;
+            /** Source Session Id */
+            source_session_id?: string | null;
+            /** Source Turn Id */
+            source_turn_id?: string | null;
             /**
              * Visitor Token
              * @description Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep it and send it back in `X-Chat-Visitor`.
@@ -472,6 +544,10 @@ export interface components {
             steps_mode: "none" | "labels" | "full";
             /** Turns */
             turns: components["schemas"]["ChatTurn"][];
+            /** Capabilities */
+            capabilities?: {
+                [key: string]: boolean;
+            };
         } & {
             [key: string]: unknown;
         };
@@ -522,6 +598,16 @@ export interface components {
             code?: string | null;
             /** Created */
             created: number;
+            /**
+             * Inherited
+             * @default false
+             */
+            inherited: boolean;
+            /**
+             * Editable
+             * @default false
+             */
+            editable: boolean;
             /** Attachments */
             attachments?: components["schemas"]["ChatAttachment"][];
             rating?: components["schemas"]["ChatRating"] | null;
@@ -1275,6 +1361,87 @@ export interface operations {
             };
             /** @description CHAT_NOT_PUBLISHED, CHAT_SESSION_NOT_FOUND */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RATE_LIMITED */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    prepareChatEdit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatEditIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatEditEnvelope"];
+                };
+            };
+            /** @description CHAT_EDIT_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_SESSION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_EDIT_BUSY, CHAT_EDIT_STALE, CHAT_EDIT_CONTEXT_UNAVAILABLE, CHAT_EDIT_CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description CHAT_EDIT_GONE */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { ConfigError } from '@superstep/sdk'
 import { ChatClient, createChatStore, type ChatClientOptions, type ChatPage, type ChatSession, type ChatAttachment, type ChatResult, type ChatQuestion, type ChatState } from '@superstep/sdk/chat'
 
 export interface UseChatOptions extends ChatClientOptions {
@@ -69,6 +70,16 @@ export function useChat(options: UseChatOptions) {
       answer: (response: Parameters<typeof r.store.answer>[0]) => perform(async () => {
         r.navigation++
         const result = await r.store.answer(response, { locale: latest.current.locale, signal: r.lifetime.signal }); await refresh(); return result
+      }),
+      edit: (turn: string, text: string, operationId: string = crypto.randomUUID()) => perform(async () => {
+        r.navigation++; r.selection++
+        const turns = r.store.getSnapshot().turns, tip = turns[turns.length - 1]?.id
+        if (!tip) throw new ConfigError('No saved chat turn', { code: 'CHAT_EDIT_INVALID' })
+        r.patch({ pending: text, pendingFiles: [] })
+        try {
+          const result = await r.store.edit(turn, text, { operationId, expectedLastTurnId: tip, locale: latest.current.locale, signal: r.lifetime.signal })
+          await refresh(); return result
+        } finally { if (!r.lifetime.signal.aborted) r.patch({ pending: null }) }
       }),
       cancel: () => r.store.cancel(),
       upload: (file: File) => perform(async () => {

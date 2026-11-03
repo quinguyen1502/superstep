@@ -30,7 +30,7 @@ function useRating(chat: ChatController) {
 }
 export function Rating({ turn, chat: explicit }: { turn: SDKChatTurn; chat?: ChatController }) {
   const chat = useChatController(explicit), rating = useRating(chat)
-  return <><ChatRatingBar turn={{ id: turn.id, role: turn.role, text: turn.text, created: turn.created, rating: turn.rating, run_id: turn.run_id, run_exists: turn.run_exists ?? undefined }} onRate={chat.busy ? undefined : rating.onRate} />{rating.dialog}</>
+  return <><ChatRatingBar turn={{ id: turn.id, role: turn.role, text: turn.text, created: turn.created, rating: turn.rating, run_id: turn.run_id, run_exists: turn.run_exists ?? undefined, inherited: turn.inherited }} onRate={chat.busy ? undefined : rating.onRate} />{rating.dialog}</>
 }
 export function MessageList({ chat: explicit, empty: customEmpty }: { chat?: ChatController; empty?: ReactNode }) {
   const chat = useChatController(explicit), { t } = useTranslation(), rating = useRating(chat)
@@ -40,7 +40,9 @@ export function MessageList({ chat: explicit, empty: customEmpty }: { chat?: Cha
     {!!chat.page.suggestions?.length && <div className="flex flex-wrap justify-center gap-2">{chat.page.suggestions.map(value => <Button key={value} variant="outline" disabled={chat.busy} onClick={() => void chat.send(value).catch(() => {})}>{value}</Button>)}</div>}
   </div>
   return <><ChatThread turns={[...chat.turns] as ChatTurn[]} mode={chat.page?.steps_mode ?? 'labels'} events={chat.text ? [{ type: 'node_token', node: 'answer', delta: chat.text }] : []} trace={{ spans: [] }}
-    pending={chat.pending} pendingFiles={attachments(chat.pendingFiles)} running={chat.busy} replyPending={chat.status === 'streaming' && chat.pending === null} onRate={chat.busy ? undefined : rating.onRate} files={{ download: chat.download }} empty={chat.loading ? <p role="status" className="p-4 text-sm text-muted-foreground">{t('chat.toolkit.loading')}</p> : customEmpty ?? empty} />{rating.dialog}</>
+    pending={chat.pending} pendingFiles={attachments(chat.pendingFiles)} running={chat.busy} replyPending={chat.status === 'streaming' && chat.pending === null} onRate={chat.busy ? undefined : rating.onRate}
+    onEdit={chat.edit} onSource={chat.sourceSessionId ? () => void chat.load(chat.sourceSessionId!).catch(() => {}) : undefined}
+    files={{ download: chat.download }} empty={chat.loading ? <p role="status" className="p-4 text-sm text-muted-foreground">{t('chat.toolkit.loading')}</p> : customEmpty ?? empty} />{rating.dialog}</>
 }
 export function Composer({ chat: explicit, idPrefix }: { chat?: ChatController; idPrefix?: string }) {
   const chat = useChatController(explicit), { t, i18n } = useTranslation(), id = useId(), pending = useRef<((value: boolean) => void) | null>(null), [error, setError] = useState('')

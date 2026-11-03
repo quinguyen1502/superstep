@@ -24,7 +24,7 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
   const list = (pick?: string) => api<{ sessions: ChatSession[]; visitor_token?: string }>(`${base}/sessions`, { headers }).then(d => {
     setSessions(d.sessions); setSid(c => pick ?? (c && d.sessions.some(x => x.id === c) ? c : d.sessions[0]?.id ?? null)) })
   const fail = (e: unknown) => { if (e instanceof ApiError && e.code === 'CHAT_NOT_PUBLISHED') setGone(true); else setErr((e as Error).message) }
-  const chat = useChatRun(sid, 'visitor', () => { list().catch(() => {}) }, ep)
+  const chat = useChatRun(sid, 'visitor', () => { list().catch(() => {}) }, ep, setSid)
   const rate = (turnId: string, value: 'up' | 'down' | null, comment?: string) => {
     if (!sid) return
     const path = `${base}/sessions/${sid}/turns/${turnId}/rating`
@@ -61,5 +61,6 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
 
   return <PublicChatView embed={embed} slug={slug} page={page} title={title} logo={logo} gone={gone} err={err || chat.error} ready={ready}
     sessions={sessions} sid={sid} setSid={setSid} fresh={fresh} send={send} files={files} onError={setErr} cancel={chat.cancel}
-    chat={{ turns: sid ? chat.session?.turns ?? [] : [], mode: page?.steps_mode ?? 'labels', events: chat.events, trace: chat.trace, pending: chat.pending, pendingFiles: chat.pendingFiles, running: chat.running, onAnswer: chat.answer, onRate: sid ? rate : undefined, files: links }} />
+    chat={{ turns: sid ? chat.session?.turns ?? [] : [], mode: page?.steps_mode ?? 'labels', events: chat.events, trace: chat.trace, pending: chat.pending, pendingFiles: chat.pendingFiles, running: chat.running, onAnswer: chat.answer, onRate: sid ? rate : undefined,
+      onEdit: chat.edit, onSource: chat.session?.source_session_id ? () => setSid(chat.session!.source_session_id!) : undefined, files: links }} />
 }

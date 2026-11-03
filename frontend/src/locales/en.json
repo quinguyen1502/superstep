@@ -405,6 +405,15 @@
     }
   },
   "errors": {
+    "CHAT_EDIT_INVALID": "This message cannot be edited",
+    "CHAT_EDIT_CONTEXT_UNAVAILABLE": "The agent context at this message is no longer available; start a new conversation",
+    "CHAT_EDIT_BUSY": "Wait for the conversation to finish before editing",
+    "CHAT_EDIT_STALE": "The conversation changed; refresh it before editing",
+    "CHAT_EDIT_CONFLICT": "This operation ID was already used for a different edit",
+    "CHAT_EDIT_GONE": "The edited conversation was removed",
+    "CHAT_EDIT_PENDING": "This edited conversation has an unfinished operation",
+    "CHAT_EDIT_STARTED": "This edit was already admitted; read its saved outcome instead of resending",
+    "CHAT_EDIT_UNSUPPORTED": "This server does not support editing chat messages",
     "VALIDATION_ERROR": "Some fields are invalid",
     "BAD_REQUEST": "Bad request",
     "NOT_FOUND": "Not found",
@@ -2007,6 +2016,14 @@
     "hint": "Try this model once if the primary is unreachable, unavailable or returns an invalid response. Authentication errors stop the run. With fallback enabled, answer text is published only after a model succeeds. Node retry settings repeat the whole policy. Code exports do not yet support this policy."
   },
   "chat": {
+    "edit": {
+      "title": "Edit message",
+      "description": "Continue from this message in a new conversation. The original conversation stays unchanged.",
+      "message": "Your message",
+      "rerunWarning": "This runs the currently saved workflow again. API calls, writes and notifications may repeat. Previous Human answers must be provided again.",
+      "saveRun": "Save and run in new branch",
+      "source": "Original conversation"
+    },
     "appKeys": {
       "studioOnly": "Leave all options unchecked to allow only workflow builders.",
       "title": "App keys",

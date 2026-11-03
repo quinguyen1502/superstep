@@ -157,3 +157,8 @@ Bỏ `PW_CHROME` khi đã cài Chromium của Playwright. CI chạy kiểm thử
 React/widget/headless với React 18 và 19: truyền dần nội dung, trả lời Human,
 file, đánh giá, cách ly danh tính/lịch sử, đăng xuất, từ chối origin và thu hồi
 key. Ảnh chỉ là artifact CI tạm thời, không thêm vào Git.
+
+
+## Sửa tin nhắn đã gửi
+
+Các thao tác tin nhắn dùng chung [luồng sửa tin nhắn](chat.md): xác nhận chạy mới trong một nhánh độc lập, giữ nguyên bản gốc và dùng liên kết nguồn để quay lại. Câu trả lời Human không phải tin nhắn gốc được sửa. Với giao diện tự dựng, `useChat().edit(turnId, text, operationId)` cần cùng bước xác nhận chạy lại; giữ mã thao tác khi phục hồi lần chạy bị gián đoạn. Xem [hợp đồng API](chat-api.md) về tiếp nhận thao tác và phục hồi kết quả.

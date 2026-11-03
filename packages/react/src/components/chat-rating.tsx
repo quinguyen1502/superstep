@@ -16,22 +16,23 @@ export function ChatRatingBar({ turn, onRate, onSaveTest }: {
   onSaveTest?: (runId: string) => void
 }) {
   const { t } = useTranslation()
+  const rate = turn.inherited ? undefined : onRate
   const rating = turn.rating ?? null
   const [box, setBox] = useState(false)
   const [text, setText] = useState(rating?.comment ?? '')
   const set = (value: 'up' | 'down') => {
-    if (!onRate) return
-    if (rating?.value === value) { onRate(turn.id, null); setBox(false); return }
-    onRate(turn.id, value)
+    if (!rate) return
+    if (rating?.value === value) { rate(turn.id, null); setBox(false); return }
+    rate(turn.id, value)
     setBox(value === 'down')
     if (value === 'up') setText('')
   }
-  const send = () => { onRate?.(turn.id, 'down', text.trim()); setBox(false) }
+  const send = () => { rate?.(turn.id, 'down', text.trim()); setBox(false) }
   const gone = turn.run_exists === false
   const save = onSaveTest && rating && turn.run_id ? <Tip tip={gone ? t('chat.rating.runGone') : t('tests.saveFromRun')}>
     <Button size="icon-sm" variant="ghost" data-testid="chat-save-test" aria-label={t('tests.saveFromRun')} disabled={gone}
       onClick={() => onSaveTest(turn.run_id!)}><FlaskConical /></Button></Tip> : null
-  if (!onRate) return <div className="flex flex-wrap items-center gap-2" data-testid="chat-rating-mark" data-value={rating?.value ?? ''}>
+  if (!rate) return <div className="flex flex-wrap items-center gap-2" data-testid="chat-rating-mark" data-value={rating?.value ?? ''}>
     {rating && <span className="text-xs text-muted-foreground">{t(rating.value === 'up' ? 'chat.rating.up' : 'chat.rating.down')}</span>}
     {rating?.comment ? <p className="w-full text-sm text-muted-foreground" data-testid="chat-rating-comment">{rating.comment}</p> : null}
     {save}

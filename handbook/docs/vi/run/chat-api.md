@@ -217,3 +217,24 @@ bộ mã nằm ở [Mã lỗi](../reference/errors.md).
 ghi lại. Giới hạn đọc/gửi theo IP, gửi theo khách hoặc user bên ngoài, và
 quota mỗi ngày UTC của chat cùng áp dụng. Operator cấu hình
 `STUDIO_PUBLIC_CHAT_RATE_*`; xem [Cấu hình](../reference/configuration.md).
+
+
+## Chuẩn bị và chạy tin nhắn đã sửa
+
+Kiểm tra `capabilities.edit` của `GET .../sessions/{sid}` và cờ `editable` trên tin nhắn. Sau khi người dùng xác nhận chạy lại workflow, gọi:
+
+```http
+POST /api/public/v1/chat/{slug}/sessions/{sid}/edits
+Content-Type: application/json
+
+{"turn_id":"saved-user-turn","message":"Nội dung đã sửa","operation_id":"client-generated-unique-id","expected_last_turn_id":"latest-saved-turn"}
+```
+
+`data` trong envelope gồm `session` (nhánh độc lập và lịch sử giữ lại), `message`, `attachment_ids`, `operation_id`, `run_id` đã dành trước và `state` (`prepared`, `started`, `finished`). Bước chuẩn bị chưa chạy workflow. Với trạng thái **prepared**, mở socket v1 thông thường, gửi `message` với ID nhánh, `message` đã chuẩn hoá, `attachment_ids` đã sao chép và `edit_operation_id: operation_id` từ kết quả. Stream, lịch sử, tệp, câu trả lời Human và đánh giá sau đó đều thuộc nhánh mới. Giữ nguyên mã thao tác và nội dung khi phục hồi cùng một lần sửa; đổi nội dung sẽ nhận `CHAT_EDIT_CONFLICT`. Lần sửa mới có chủ đích dùng mã mới.
+
+Nếu đã `started`/`finished`, chỉ đọc lịch sử nhánh theo run đã dành trước, không gửi lại lệnh chạy. `CHAT_EDIT_STARTED` cũng yêu cầu phục hồi bằng lịch sử. Nếu mất frame bắt đầu run, dùng `run_id` đã dành trước để tìm kết quả. Nhánh đã xoá trả `CHAT_EDIT_GONE`, không được tạo lại khi thử lại. Nguồn đang bận trả `CHAT_EDIT_BUSY`; lịch sử đã thay đổi trả `CHAT_EDIT_STALE`. API không nhận checkpoint, state, owner hoặc workflow ID tuỳ ý. Các quy tắc danh tính/origin/thu hồi khoá và quota vẫn áp dụng. Tin nhắn/câu trả lời v1 cũ không đổi.
+
+Cuộc trò chuyện gốc được giữ nguyên. Lịch sử kế thừa có ID mới và `inherited: true`, không được sửa/đánh giá/trả lời Human, chỉ hiện các bước được phép. Nhánh có `source_session_id` và `source_turn_id` tuỳ chọn; nguồn bị xoá không ngăn truy cập lịch sử/tệp của nhánh. Xem phần sửa tin nhắn trong [hướng dẫn chat](chat.md) để hiểu cảnh báo chạy lại và phiên bản workflow được chạy.
+
+
+Mọi tin nhắn khởi tạo trong nguồn phải có kết quả kết thúc đã lưu; một câu trả lời mới đã xong không cho phép phân nhánh khi run cũ còn dang dở. Trạng thái agent được dựng lại từ run cuối được giữ, bao gồm việc trở về đầu workflow khi agent đích từng bị xoá. Nếu dữ liệu agent cần thiết đã hết thời gian lưu, `CHAT_EDIT_CONTEXT_UNAVAILABLE` từ chối đoán trạng thái: hãy bắt đầu cuộc trò chuyện mới. Nếu tiến trình dừng sau tiếp nhận nhưng trước khi lưu run, thao tác không được tự chạy lại; đọc lịch sử có giới hạn có thể báo gián đoạn. Chuẩn bị hoặc tải lại nhánh không tự chạy workflow.

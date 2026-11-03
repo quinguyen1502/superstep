@@ -13,6 +13,7 @@ V1, OLD = "/api/public/v1/chat", "/api/public/chat"
 OPS = {("get", "/{slug}"): "getChatPage", ("get", "/{slug}/logo"): "getChatLogo", ("get", "/{slug}/sessions"): "listChatSessions",
        ("post", "/{slug}/sessions"): "createChatSession", ("get", "/{slug}/sessions/{sid}"): "getChatSession",
        ("get", "/{slug}/sessions/{sid}/turns"): "listChatTurns",
+       ("post", "/{slug}/sessions/{sid}/edits"): "prepareChatEdit",
        ("post", "/{slug}/sessions/{sid}/attachments"): "uploadChatAttachment",
        ("get", "/{slug}/sessions/{sid}/attachments/{aid}"): "downloadChatAttachment",
        ("delete", "/{slug}/sessions/{sid}/attachments/{aid}"): "deleteChatAttachment",
