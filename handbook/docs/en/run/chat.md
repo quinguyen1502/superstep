@@ -328,7 +328,7 @@ On servers advertising `capabilities.edit` in the session view, use **Edit messa
 
 The confirmation explains that this starts the currently saved/published workflow again: API calls, writes and notifications may repeat. It does not undo earlier actions or regenerate only a model's text. Human and reviewer approvals must be provided again. Wait for running/waiting conversations to finish before editing; refresh a stale conversation. Cancelling the edit changes nothing.
 
-This feature is targeted for 0.11.0; use the updated server and SDK/UI together before that release. Native packages remain deferred.
+Editing and regeneration require Superstep 0.11.0 or newer. Use compatible SDK/UI versions together with the server; native packages remain deferred.
 
 
 ## Regenerate the latest answer

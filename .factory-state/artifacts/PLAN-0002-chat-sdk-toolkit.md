@@ -5,7 +5,7 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (plan accepted 2026-10-31; phases 1–3 merged through #291; TASK-0229 merged (#292, 42333ffc); TASK-0230 owner-approved/done (#293; final-head CI gates authorised merge); TASK-0230 follows its merged foundation; native tasks deferred)
+- Tasks: TASK-0215 to TASK-0230 (plan accepted 2026-10-31; phases 1–3 merged through #291; TASK-0229 merged (#292, 42333ffc); TASK-0230 merged (#293, d2119965); TASK-0238 done for owner-authorised 0.11.0 release; TASK-0230 follows its merged foundation; native tasks deferred)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -46,7 +46,7 @@ Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server,
 | TASK-0227 `@superstep/react-native` | deferred | L | 0220 | RN components, Expo example, `sdk-rn-v*` publish |
 | TASK-0228 native WebView guide and bridge | deferred | M | 0225 | bridge protocol, Swift and Kotlin guide, browser e2e |
 | TASK-0229 edit message | 0.11.0 priority | L | 0216 | DEC-0084 Accepted; shared branch foundation + edit merged (#292, 42333ffc) |
-| TASK-0230 regenerate answer | 0.11.0 priority | M | 0229 | DEC-0084 Accepted; regeneration owner-approved/done (#293; final CI gates merge) |
+| TASK-0230 regenerate answer | 0.11.0 priority | M | 0229 | DEC-0084 Accepted; regeneration merged (#293, d2119965) |
 
 Critical path: 0215, 0216, 0217 (parallel with 0216), 0218, 0220, 0224 or 0227. TASK-0223 can run in parallel with 0217 and 0218.
 
@@ -148,3 +148,11 @@ The owner accepted PR #292 ("Duyệt") and authorised implementing the proposed 
 Owner approved #292 merge and continuing TASK-0230. TASK-0229 merged at 42333ffc after single-commit head 85f8e21e passed all 22 checks and two expected skips. TASK-0230 builds on that integration; REV-0223/QA-0223 track its shared API/SDK/UI and file/admission acceptance. Final full verification/CI and separate owner acceptance remain required before its merge, then 0.11.0 preparation.
 
 - Owner accepted TASK-0230 implementation and explicitly instructed merging #293 (2026-11-03). Reviewed 922ea6a8 passes 22 checks/two expected skips. Final lifecycle-only commit must also pass CI before integration; then proceed to approved shared 0.11.0 preparation.
+
+## 0.11.0 Preparation (TASK-0238, 2026-11-03)
+
+Both revision tasks are integrated: #292 at 42333ffc and #293 at d2119965, each after 22 final checks/two expected skips and explicit owner merge instruction. TASK-0238 prepares shared server/Python SDK/CLI/frontend/install version 0.11.0, consolidated release notes and packaged/migration validation; TypeScript 0.2.0 and React 0.1.0 remain independent. Local full profile, artifact installs/imports, backup/restore and en/vi handbook pass (REV/QA-0224); exact PR-head CI and owner acceptance gate integration. Release/main merge, tag and registry publication still require explicit instruction on the concrete candidate. Native is deferred and REQ-0082 remains incomplete.
+
+## Owner 0.11.0 Release Instruction
+
+After reviewing candidate #294 and its feature summary, the owner explicitly instructed “Phát hành đi”. This accepts TASK-0238 and authorises #294 integration, develop-to-main release merge, v0.11.0 and independent SDK tags, GitHub Release and configured registry publication. Reviewed e8b21129 has 22 successful checks/two expected skips; local full 8/8, artifact/migration/handbook checks pass. Final lifecycle-only head must pass exact-head CI before merging; publication outcomes are checked separately. This supersedes pending-owner/release statements for this candidate, while native TASK-0227/0228 and overall REQ-0082 remain incomplete.
