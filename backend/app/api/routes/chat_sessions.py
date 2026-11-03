@@ -17,8 +17,8 @@ GET  /api/workflows/{wid}/chat/visitors/{sid}/attachments/{aid}   a visitor's fi
 from typing import Optional
 import asyncio
 from fastapi import APIRouter, Depends, Request, Response
-from ...schemas.chat import ChatRatingIn, ChatSettingsIn, ChatAppKeyIn
-from ..deps import chat_app_key_service, chat_attachment_service, chat_session_service, current_user
+from ...schemas.chat import ChatEditIn, ChatRatingIn, ChatSettingsIn, ChatAppKeyIn
+from ..deps import chat_app_key_service, chat_attachment_service, chat_session_service, current_user, run_service
 from .public_chat import file_response, logo_response, read_upload
 
 router = APIRouter(prefix="/api", tags=["chat"])
@@ -63,6 +63,11 @@ def get_chat_session(sid: str, view: str = "builder", user=Depends(current_user)
 
 @router.delete("/chat/sessions/{sid}")
 def delete_chat_session(sid: str, user=Depends(current_user), svc=Depends(chat_session_service)): return svc.delete(sid, user["id"])
+
+@router.post("/chat/sessions/{sid}/edits")
+def edit_chat_session(sid: str, body: ChatEditIn, response: Response, user=Depends(current_user), svc=Depends(chat_session_service), runs=Depends(run_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.edit_owned(sid, user["id"], body.model_dump(), runs.plan)
 
 @router.get("/workflows/{wid}/chat/visitors")
 def list_visitor_chats(wid: str, thumbs_down: bool = False, user=Depends(current_user), svc=Depends(chat_session_service)):

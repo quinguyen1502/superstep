@@ -18,7 +18,7 @@ export type ChatSettings = { enabled: boolean; slug: string; access: ChatAccess;
 export type PublicChatPage = { slug: string; title: string; intro: string; suggestions: string[]; access: ChatAccess
   steps_mode: StepsMode; signed_in: boolean; embed_origins: string[]; logo: string; attachments?: AttachmentLimits }
 export type ChatSession = { id: string; workflow_id: string; channel: string; title?: string | null; last_run_id?: string | null
-  created: number; updated: number; thumbs_down?: boolean }
+  created: number; updated: number; thumbs_down?: boolean; source_session_id?: string; source_turn_id?: string }
 export type RatingCounts = { up: number; down: number }
 export type RatingTotals = { d7: RatingCounts; d30: RatingCounts }
 /** The share of thumbs down, as a whole percent, or null when there are no ratings (DEC-0070). */

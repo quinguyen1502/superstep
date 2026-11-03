@@ -58,13 +58,14 @@ function EmbeddedController({ slug, page, state, bridge, widget }: { slug: strin
     try {
       const result = await operation()
       // Only newly produced turns, never restored history, auth frames, user metadata or attachment credentials.
-      for (const turn of result.turns) if (bridge.getSnapshot().epoch === state.epoch && !existing.has(turn.id)) bridge.emit(turn.role === 'user' ? 'message' : 'answer', {
+      for (const turn of result.turns) if (bridge.getSnapshot().epoch === state.epoch && !turn.inherited && !existing.has(turn.id)) bridge.emit(turn.role === 'user' ? 'message' : 'answer', {
         slug, sessionId: result.sessionId, turn: { id: turn.id, role: turn.role, text: turn.text, status: turn.status },
       })
       return result
     } catch (error) { report(error); throw error }
   }
-  const observed: ChatController = { ...chat, send: (text, files) => observe(() => chat.send(text, files)), answer: response => observe(() => chat.answer(response)) }
+  const observed: ChatController = { ...chat, send: (text, files) => observe(() => chat.send(text, files)), answer: response => observe(() => chat.answer(response)),
+    edit: (turn, text, operationId) => observe(() => chat.edit(turn, text, operationId)) }
   return <ChatProvider chat={observed} locale={locale} theme={{ primary: state.options.color }} style={{ height: '100svh' }}>
     <EmbeddedView chat={observed} page={page} slug={slug} widget={widget} logo={state.options.logo} report={report} />
   </ChatProvider>

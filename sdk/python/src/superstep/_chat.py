@@ -24,6 +24,12 @@ def _attachment(sid, aid=None): return _session(sid) + "/attachments" + (f"/{seg
 def _expired(error, attempt, token): return attempt == 0 and callable(token) and error.status == 401 and error.code == "CHAT_TOKEN_EXPIRED"
 
 
+def _edit_body(view, turn_id, text, operation_id, expected_last_turn_id):
+    if not view.get("capabilities", {}).get("edit"):
+        raise ConfigError("This server does not support chat editing", code="CHAT_EDIT_UNSUPPORTED")
+    return dict(turn_id=segment(turn_id), message=text, operation_id=segment(operation_id), expected_last_turn_id=segment(expected_last_turn_id))
+
+
 class _Common:
     def __init__(self, slug, base_url, token, visitor_token, origin, websocket_connect):
         self._config = ChatConfig(slug, base_url, token, visitor_token, origin)
@@ -46,8 +52,9 @@ class _Common:
         if binary and response.is_success: return response
         return self._config.capture(unwrap(response.status_code, dict(response.headers), _data(response)))
 
-    def _stream(self, stream_type, kind, sid, value, *, node=None, attachments=None, locale=None, **options):
+    def _stream(self, stream_type, kind, sid, value, *, node=None, attachments=None, locale=None, edit_operation_id=None, **options):
         frame = request_frame(kind, sid, value, node, attachments, locale)
+        if edit_operation_id is not None: frame["edit_operation_id"] = segment(edit_operation_id)
         if self._closed: raise ConfigError("This chat client is closed", code="CHAT_CLIENT_CLOSED")
         stream = stream_type(self, sid, frame, **options)
         self._active.add(stream)
@@ -112,6 +119,18 @@ class ChatClient(_Common):
     def send(self, session_id, text, **options):
         from ._chat_stream import ChatStream
         return self._stream(ChatStream, "message", session_id, text, **options)
+
+    def prepare_edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id):
+        """Create a branch without executing. Keep operation_id when recovering the same intent."""
+        body = _edit_body(self.get(session_id), turn_id, text, operation_id, expected_last_turn_id)
+        return self._send("POST", _session(session_id) + "/edits", body)
+
+    def edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id, **options):
+        """Execute an edit after confirming that external actions may repeat. Duplicate intents only recover history."""
+        from ._chat_stream import ChatStream
+        edit = self.prepare_edit(session_id, turn_id, text, operation_id=operation_id, expected_last_turn_id=expected_last_turn_id)
+        return self._stream(ChatStream, "message", edit["session"]["id"], edit["message"], attachments=edit["attachment_ids"],
+                            edit_operation_id=edit["operation_id"], prepared_edit=edit, **options)
 
     def answer(self, session_id, response, **options):
         from ._chat_stream import ChatStream
@@ -188,6 +207,16 @@ class AsyncChatClient(_Common):
     def send(self, session_id, text, **options):
         from ._chat_stream import AsyncChatStream
         return self._stream(AsyncChatStream, "message", session_id, text, **options)
+
+    async def prepare_edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id):
+        body = _edit_body(await self.get(session_id), turn_id, text, operation_id, expected_last_turn_id)
+        return await self._send("POST", _session(session_id) + "/edits", body)
+
+    async def edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id, **options):
+        from ._chat_stream import AsyncChatStream
+        edit = await self.prepare_edit(session_id, turn_id, text, operation_id=operation_id, expected_last_turn_id=expected_last_turn_id)
+        return self._stream(AsyncChatStream, "message", edit["session"]["id"], edit["message"], attachments=edit["attachment_ids"],
+                            edit_operation_id=edit["operation_id"], prepared_edit=edit, **options)
 
     def answer(self, session_id, response, **options):
         from ._chat_stream import AsyncChatStream

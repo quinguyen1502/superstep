@@ -405,6 +405,15 @@
     }
   },
   "errors": {
+    "CHAT_EDIT_INVALID": "Tin nhắn này không sửa được",
+    "CHAT_EDIT_CONTEXT_UNAVAILABLE": "Không còn dữ liệu agent tại điểm sửa; hãy bắt đầu cuộc trò chuyện mới",
+    "CHAT_EDIT_BUSY": "Hãy chờ cuộc trò chuyện chạy xong trước khi sửa",
+    "CHAT_EDIT_STALE": "Cuộc trò chuyện đã thay đổi; hãy tải lại trước khi sửa",
+    "CHAT_EDIT_CONFLICT": "Mã thao tác này đã dùng cho một lần sửa khác",
+    "CHAT_EDIT_GONE": "Cuộc trò chuyện đã sửa đã bị xoá",
+    "CHAT_EDIT_PENDING": "Cuộc trò chuyện đã sửa còn thao tác chưa hoàn tất",
+    "CHAT_EDIT_STARTED": "Lần sửa này đã được tiếp nhận; hãy đọc kết quả đã lưu thay vì gửi lại",
+    "CHAT_EDIT_UNSUPPORTED": "Máy chủ này chưa hỗ trợ sửa tin nhắn chat",
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
     "BAD_REQUEST": "Yêu cầu không hợp lệ",
     "NOT_FOUND": "Không tìm thấy",
@@ -2007,6 +2016,14 @@
     "hint": "Thử model này một lần nếu model chính không kết nối được, không khả dụng hoặc trả kết quả sai định dạng. Lỗi xác thực dừng run. Khi bật dự phòng, chỉ gửi nội dung trả lời sau khi một model thành công. Cài đặt thử lại của node lặp lại toàn bộ chính sách. Xuất code hiện chưa hỗ trợ chính sách này."
   },
   "chat": {
+    "edit": {
+      "title": "Sửa tin nhắn",
+      "description": "Tiếp tục từ tin nhắn này trong một cuộc trò chuyện mới. Cuộc trò chuyện gốc được giữ nguyên.",
+      "message": "Tin nhắn của bạn",
+      "rerunWarning": "Thao tác này chạy lại workflow đang lưu. Lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Các câu hỏi Human trước đó cần được trả lời lại.",
+      "saveRun": "Lưu và chạy trong nhánh mới",
+      "source": "Cuộc trò chuyện gốc"
+    },
     "appKeys": {
       "studioOnly": "Bỏ chọn tất cả để chỉ cho phép người dựng workflow chat.",
       "title": "Khoá ứng dụng",

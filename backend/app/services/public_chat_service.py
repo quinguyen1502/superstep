@@ -165,6 +165,18 @@ class PublicChatService:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         return self.chat.view(self.own(t, sid, v), st["steps"]), v
 
+    async def edit(self, slug: str, sid: str, token, user, body, ip, plan):
+        from .chat_edit_service import ChatEditService
+        t, st = self.published(slug); v = self.visitor(slug, st, token, user)
+        source = self.own(t, sid, v)
+        await self.check_message(t, st, v, ip, daily=False)
+        w = self.chat.workflows.get(t.workflow_id); owner = w.owner or t.owner
+        def validate(prep):
+            if v.app: prep["input"]["chat"] = v.app.input()
+            plan(owner, {"workflow_id": t.workflow_id, "input": prep["input"]})
+        result = await asyncio.to_thread(ChatEditService(self.chat).prepare, source, t, body, validate, st["steps"], app_key_id=v.app.app_key_id if v.app else None)
+        return result, v
+
     def turns(self, slug: str, sid: str, after: Optional[str], token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:
         """The chat's turns after the turn `after` (incremental history, TASK-0215); all of them when `after` is empty."""
         view, v = self.get(slug, sid, token, user)
@@ -204,7 +216,7 @@ class PublicChatService:
         """(RunPlan, owner, steps mode, reply field) for `{chat_session_id, message}` or `{chat_session_id, response, node?}`.
         `plan` is RunService.plan; the run is the owner's and the session's, nothing else can be asked for.
         `node` is the question on the page. Another slot of the same wave is not accepted."""
-        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node", "attachment_ids"}:
+        if not isinstance(req, dict) or set(req) - {"chat_session_id", "message", "response", "resume_run_id", "locale", "node", "attachment_ids", "edit_operation_id"}:
             raise AppError("RUN_REQUEST_INVALID")
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         s = self.own(t, req.get("chat_session_id"), v)
@@ -225,10 +237,10 @@ class PublicChatService:
             p = await asyncio.to_thread(plan, owner, body)
             self.chat.record_answer(s.id, last.run_id, req.get("response"))
         else:
-            prep = self.chat.prepare(s, t, req.get("message"), req.get("attachment_ids"))
+            prep = self.chat.prepare(s, t, req.get("message"), req.get("attachment_ids"), edit_operation_id=req.get("edit_operation_id"))
             if v.app: prep["input"]["chat"] = v.app.input()  # bounded, untrusted user data, never instructions or permissions
             p = await asyncio.to_thread(plan, owner, {"workflow_id": t.workflow_id, "input": prep["input"]})
-            p.run_id, p.source = uuid.uuid4().hex[:10], "chat"
+            p.run_id, p.source = prep.get("run_id") or uuid.uuid4().hex[:10], "chat"
             self.chat.write(s, t, prep["text"], p.run_id, v.app.id if v.app else v.owner or "visitor", prep["attachment_ids"])
         return p, owner, st["steps"], t.reply_field
 

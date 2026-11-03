@@ -24,7 +24,7 @@ from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, Workfl
 from ..repositories import ChatAttachmentRepository, ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, WorkflowRepository
 from ..repositories.chat_sessions import feedback_is_pending
 from ..repositories.chat_triggers import WEB
-from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS, KINDS, UNSENT_TTL, public as file_public, settings_of
+from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS, KINDS, MB, UNSENT_TTL, ChatAttachmentService, public as file_public, settings_of
 from .attachment_files import AttachmentFiles
 from .. import storage
 
@@ -311,7 +311,16 @@ class ChatSessionService:
             if x.role == "assistant" and x.run_id in steps:
                 d["steps"] = steps.pop(x.run_id)  # a run's steps go with its first answer
             out.append(d)
-        return {**self._session(s), "steps_mode": mode, "turns": out}
+        seen = set()
+        for x, d in zip(turns, out):
+            d["editable"] = bool(x.role == "user" and x.run_id and x.run_id not in seen and not x.inherited)
+            if x.role == "user" and x.run_id: seen.add(x.run_id)
+        return {**self._session(s), "steps_mode": mode, "turns": out, "capabilities": {"edit": True}}
+
+    def edit_owned(self, sid: str, uid: str, body: dict, plan) -> dict:
+        from .chat_edit_service import ChatEditService
+        s, t = self._own(sid, uid, P.RUN)
+        return ChatEditService(self).prepare(s, t, body, lambda prep: plan(uid, {"workflow_id": s.workflow_id, "input": prep["input"]}), "full")
 
     def visitors(self, wid: str, uid: str, thumbs_down: bool = False) -> list[dict]:
         """The published page's chats, for builders with the run right (DEC-0067 decision 8): no visitor ids or names.
@@ -331,7 +340,7 @@ class ChatSessionService:
         """Set the session owner's rating of one finished answer. The last write wins (one row)."""
         turn = self.sessions.turn(tid) if isinstance(tid, str) else None
         if turn is None or turn.session_id != s.id: raise AppError("CHAT_TURN_NOT_FOUND")
-        if turn.role != "assistant" or turn.status not in RATEABLE: raise AppError("CHAT_RATING_NOT_ALLOWED")
+        if turn.inherited or turn.role != "assistant" or turn.status not in RATEABLE: raise AppError("CHAT_RATING_NOT_ALLOWED")
         if value not in ("up", "down"): raise AppError("CHAT_RATING_INVALID", field="value")
         if comment is None:
             prev = self.sessions.rating(tid)
@@ -351,6 +360,7 @@ class ChatSessionService:
     def unrate(self, s: ChatSession, tid: str) -> dict:
         turn = self.sessions.turn(tid) if isinstance(tid, str) else None
         if turn is None or turn.session_id != s.id: raise AppError("CHAT_TURN_NOT_FOUND")
+        if turn.inherited: raise AppError("CHAT_RATING_NOT_ALLOWED")
         rating = self.sessions.rating(tid)
         feedback_id = rating.feedback_id if rating is not None else ""
         self.sessions.delete_rating(tid)
@@ -380,34 +390,45 @@ class ChatSessionService:
         return {"ok": True}
 
     # ---- a message (RunService.plan, over the run socket) ----
-    def input_for(self, uid: str, sid: str, message, attachment_ids=None) -> dict:
+    def input_for(self, uid: str, sid: str, message, attachment_ids=None, edit_operation_id=None) -> dict:
         """{workflow_id, input} for the next message, checked; nothing is written yet."""
         s, t = self._own(sid, uid, P.RUN)
-        return self.prepare(s, t, message, attachment_ids)
+        return self.prepare(s, t, message, attachment_ids, edit_operation_id=edit_operation_id)
 
-    def prepare(self, s: ChatSession, t: WorkflowChatTrigger, message, attachment_ids=None) -> dict:
+    def prepare(self, s: ChatSession, t: WorkflowChatTrigger, message, attachment_ids=None, *, turns=None, edit_operation_id=None) -> dict:
         """The run input of a message in session `s`, checked: the input field, the history in the messages field, and
         the files sent with it in the attachments field (TASK-0175)."""
         sid = s.id
         if not t.enabled: raise AppError("CHAT_NOT_ENABLED")
+        edit = self.sessions.branch_edit(sid) if getattr(s, "source_session_id", None) else None
+        if edit is not None:
+            if edit_operation_id:
+                from .chat_edit_service import ChatEditService
+                edit = ChatEditService(self).claim(s, edit_operation_id, message, attachment_ids)
+                message, attachment_ids = edit.message, json.loads(edit.attachments)
+            else:
+                run = self.runs.get(edit.run_id) if edit.claimed else None
+                if run is None or run.status in ("queued", "running", "waiting", "paused"): raise AppError("CHAT_EDIT_PENDING")
+        elif edit_operation_id:
+            raise AppError("CHAT_EDIT_INVALID")
         files = self.files_for(s, t, attachment_ids)
         if message is None and files: message = ""
         if not isinstance(message, str) or (not message.strip() and not files): raise AppError("CHAT_MESSAGE_EMPTY")
         if len(message) > TEXT_MAX: raise AppError("CHAT_MESSAGE_TOO_LONG", max=TEXT_MAX)
-        last = self._turns(sid)
+        last = self._turns(sid) if turns is None else turns
         if last and last[-1].status == "waiting": raise AppError("CHAT_RUN_WAITING")  # answer the question first
         w = self.workflows.get(s.workflow_id)
         st = json.loads(t.settings or "{}"); fields = {f["name"]: f for f in self._fields(w)}
         text = message.strip()
         inp = {t.input_field: [text] if (fields.get(t.input_field) or {}).get("type") == "list" else text}
-        if (mf := st.get("messages_field")): inp[mf] = self.history(sid, int(st.get("max_turns") or DEFAULTS["max_turns"])) + [{"role": "user", "content": text}]
+        if (mf := st.get("messages_field")): inp[mf] = self.history(sid, int(st.get("max_turns") or DEFAULTS["max_turns"]), turns=last) + [{"role": "user", "content": text}]
         a = settings_of(st)
         if a["enabled"] and a["field"] in fields: inp[a["field"]] = [state_record(x) for x in files]
         if s.active_agent:  # the agent a hand-off left the conversation with (TASK-0181); gone or no longer a target: the entry
             if s.active_agent in handoffs.continues(self._graph(w)): inp[agents.START_INPUT] = s.active_agent
             else: self.sessions.set_fields(sid, active_agent=None); s.active_agent = None
         if size({k: v for k, v in inp.items() if k != a["field"]}) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
-        return {"workflow_id": s.workflow_id, "input": inp, "text": text, "attachment_ids": [x.id for x in files]}
+        return {"workflow_id": s.workflow_id, "input": inp, "text": text, "attachment_ids": [x.id for x in files], **({"run_id": edit.run_id} if edit_operation_id else {})}
 
     def files_for(self, s: ChatSession, t: WorkflowChatTrigger, ids) -> list:
         """The unsent files of session `s` named by `ids`, in that order (without bytes). CHAT_ATTACHMENTS_OFF when the chat
@@ -419,13 +440,15 @@ class ChatSessionService:
         if len(ids) > a["max_files"]: raise AppError("CHAT_ATTACHMENT_TOO_MANY", max=a["max_files"])
         rows = self.attachments.meta(ids)
         if len(rows) != len(ids) or any(r.session_id != s.id or r.turn_id is not None for r in rows): raise AppError("CHAT_ATTACHMENT_NOT_FOUND")
+        if any(r.size > a["max_mb"] * MB for r in rows): raise AppError("CHAT_ATTACHMENT_TOO_LARGE", max_mb=a["max_mb"])
+        if any(r.kind not in a["kinds"] for r in rows): raise AppError("CHAT_ATTACHMENT_TYPE", allowed=ChatAttachmentService.allowed_names(a))
         return rows
 
-    def history(self, sid: str, max_turns: int) -> list[dict]:
+    def history(self, sid: str, max_turns: int, *, turns=None) -> list[dict]:
         """The last `max_turns` exchanges as [{role, content}] (DEC-0052): the person's messages and the finished answers.
         A Human-node question answered in the chat stays before its answer (TASK-0210), so the roles alternate; an
         exchange starts at each of the person's messages and is cut whole."""
-        ts = self._turns(sid)
+        ts = self._turns(sid) if turns is None else turns
         answered = {x.run_id for a, x in zip(ts, ts[1:]) if a.status == "waiting" and x.role == "user"}  # the answer follows its question
         rows = [x for x in ts if x.role == "user" or (x.role == "assistant" and (x.status == "ok" or (x.status == "waiting" and x.run_id in answered)))]
         starts = [i for i, x in enumerate(rows) if x.role == "user" and not (i and rows[i - 1].status == "waiting")]
@@ -460,7 +483,7 @@ class ChatSessionService:
         """A visitor answer from the chat: the run is this session's and its Human node is answered by the visitor."""
         self._own(sid, uid, P.RUN)
         turn = next((x for x in reversed(self._turns(sid)) if x.run_id == rid), None)
-        if turn is None: raise AppError("RUN_NOT_FOUND")
+        if turn is None or turn.inherited: raise AppError("RUN_NOT_FOUND")
         if turn.status == "waiting" and turn.answered_by == "reviewer": raise AppError("CHAT_ANSWER_BY_REVIEWER")
 
     # ---- a run settled (ChatRunService.on_settled, once per state) ----
@@ -546,12 +569,13 @@ class ChatSessionService:
     @staticmethod
     def _session(s: ChatSession) -> dict:
         return {"id": s.id, "workflow_id": s.workflow_id, "channel": s.channel, "title": s.title, "last_run_id": s.last_run_id,
-                "created": s.created, "updated": s.updated}
+                "created": s.created, "updated": s.updated,
+                **({"source_session_id": s.source_session_id, "source_turn_id": s.source_turn_id} if s.source_session_id else {})}
 
     @staticmethod
     def _turn(x: ChatTurn) -> dict:
         return {"id": x.id, "role": x.role, "text": x.text, "status": x.status, "run_id": x.run_id, "node": x.node,
-                "answered_by": x.answered_by, "code": x.code, "created": x.created}
+                "answered_by": x.answered_by, "code": x.code, "created": x.created, **({"inherited": True} if x.inherited else {})}
 
     @staticmethod
     def _rating(r: ChatRating) -> dict:

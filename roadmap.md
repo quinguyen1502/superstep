@@ -416,6 +416,9 @@ REQ-0082 / PLAN-0002, accepted on 2026-10-31: phase 1 TASK-0215–0219 is merged
 
 - TASK-0224 public React toolkit — done; owner accepted #289 on 2026-11-03 for rebased single-commit Ready delivery. useChat/public components, scoped CSS, independent en/vi/theme, Vite example and React 18/19 browser coverage; REV-0219 / QA-0219. Reviewed head passed 21 checks plus one expected publish skip; final-head validation/CI gates Ready. Merge/publication remain unauthorised.
 
+- TASK-0224–0226 web toolkit/widget/docs — merged through #289–291; #291 integrated at 02361fbd after 22 checks passed.
+- 2026-11-03 owner amendment: temporarily defer native TASK-0227/0228. Prioritise TASK-0229 (edit message) then TASK-0230 (regenerate answer) for 0.11.0. The owner accepted DEC-0084; TASK-0229 is owner-approved/done on #292 with REV-0222/QA-0222 and 22 passing reviewed-head checks; final single-commit CI gates the authorised merge. TASK-0230 follows its merged foundation. PLAN-0002 records revised release grouping and validation. Native scope remains incomplete; no new version/tag is published by this delivery.
+
 ## Generic events, connections and model policy
 
 REQ-0083, owner requested implementation on 2026-11-01 after selecting generic integrations over vendor-specific canvas nodes. PLAN-0003 and DEC-0081 describe the delivery; DES-0001 covers existing-surface UX. No production cutover or release is authorised.

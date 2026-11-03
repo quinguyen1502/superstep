@@ -3,7 +3,7 @@
  *  Markdown with a Message footer of actions (Message pattern), an Empty state, and the scroll button. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, Check, Copy, LoaderCircle, MessageCircleDashed } from 'lucide-react'
+import { ArrowDown, Check, Copy, LoaderCircle, MessageCircleDashed, Pencil } from 'lucide-react'
 import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from '../ui/message-scroller.js'
 import { Message, MessageContent, MessageFooter } from '../ui/message.js'
 import { Bubble, BubbleContent } from '../ui/bubble.js'
@@ -19,6 +19,7 @@ import { ChatRatingBar } from './chat-rating.js'
 import { ChatSteps } from './chat-steps.js'
 import { ChatConfirmation } from './chat-confirmation.js'
 import { TurnFiles } from './chat-attachments.js'
+import { ChatEditDialog } from './chat-edit-dialog.js'
 
 /** The Message pattern's action: a ghost icon button with a tooltip, its label as the aria-label. */
 function MessageAction({ label, children, ...props }: React.ComponentProps<typeof Button> & { label: string }) {
@@ -38,7 +39,7 @@ function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTes
   turn?: ChatTurn; onRate?: (turnId: string, value: 'up' | 'down' | null, comment?: string) => void
   onSaveTest?: (runId: string) => void; children?: React.ReactNode }) {
   const { t, i18n } = useTranslation(); const failed = status && !['ok', 'waiting'].includes(status)
-  const rateable = !!turn && (status === 'ok' || status === 'error')
+  const rateable = !!turn && !turn.inherited && (status === 'ok' || status === 'error')
   const showRating = rateable && (!!onRate || !!turn.rating || !!onSaveTest)
   return <Message data-testid="chat-answer" data-status={status ?? 'running'}>
     <MessageContent className="gap-3">
@@ -58,29 +59,37 @@ function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTes
 /** Where a chat's files are downloaded from (TASK-0177): a file's address, and the headers the chat sends. */
 export type FileLinks = { url?: (id: string) => string; headers?: Record<string, string>; download?: (file: ChatAttachment) => Promise<void> }
 
-const Mine = ({ text, files, links }: { text: string; files?: ChatAttachment[]; links?: FileLinks }) => <Message align="end" data-testid="chat-mine">
+const Mine = ({ text, files, links, edit }: { text: string; files?: ChatAttachment[]; links?: FileLinks; edit?: React.ReactNode }) => <Message align="end" data-testid="chat-mine">
   <MessageContent>
     {!!files?.length && <TurnFiles files={files} url={links?.url} headers={links?.headers} download={links?.download} />}
-    {text && <Bubble align="end" variant="muted"><BubbleContent className="whitespace-pre-wrap">{text}</BubbleContent></Bubble>}</MessageContent></Message>
+    {text && <Bubble align="end" variant="muted"><BubbleContent className="whitespace-pre-wrap">{text}</BubbleContent></Bubble>}
+    {edit && <MessageFooter className="justify-end px-0">{edit}</MessageFooter>}</MessageContent></Message>
 
 /** `replyField`: the field whose tokens are the answer; none on the public page, whose socket sends only those (TASK-0142).
  *  `empty`: what an empty chat shows instead of the default (the page's intro and suggestions). */
-export function ChatThread({ turns, mode, replyField, events, trace, pending, pendingFiles, running, replyPending = false, onAnswer, onRate, onSaveTest, empty, files }: {
+export function ChatThread({ turns, mode, replyField, events, trace, pending, pendingFiles, running, replyPending = false, onAnswer, onRate, onSaveTest, onEdit, onSource, empty, files }: {
   turns: ChatTurn[]; mode: StepsMode; replyField?: string; events: RunEvent[]; trace: RunTrace; pending: string | null; running: boolean
   pendingFiles?: ChatAttachment[]; files?: FileLinks; replyPending?: boolean
   onAnswer?: (runId: string, response: string) => void
   onRate?: (turnId: string, value: 'up' | 'down' | null, comment?: string) => void
+  onEdit?: (turnId: string, text: string, operationId: string) => Promise<unknown>; onSource?: () => void
   onSaveTest?: (runId: string) => void; empty?: React.ReactNode }) {
-  const { t } = useTranslation(); const wait = waitingTurn(turns); const reply = liveReply(events, replyField)
+  const { t } = useTranslation(); const [editing, setEditing] = useState<ChatTurn | null>(null)
+  useEffect(() => { if (editing && !turns.some(x => x.id === editing.id)) setEditing(null) }, [turns, editing])
+  const wait = waitingTurn(turns); const reply = liveReply(events, replyField)
   const live = liveSteps(trace.spans, mode)
-  if (!turns.length && pending === null && !replyPending && empty) return <>{empty}</>
-  if (!turns.length && pending === null && !replyPending) return <Empty className="flex-1" id="chat-empty">
+  const source = onSource && <div className="flex shrink-0 items-center border-b px-3"><Button variant="link" size="sm" onClick={onSource}>{t('chat.edit.source')}</Button></div>
+  if (!turns.length && pending === null && !replyPending && empty) return <>{source}{empty}</>
+  if (!turns.length && pending === null && !replyPending) return <>{source}<Empty className="flex-1" id="chat-empty">
     <EmptyHeader><EmptyMedia variant="icon"><MessageCircleDashed /></EmptyMedia>
-      <EmptyTitle>{t('chat.emptyTitle')}</EmptyTitle><EmptyDescription>{t('chat.empty')}</EmptyDescription></EmptyHeader></Empty>
-  return <MessageScrollerProvider autoScroll><MessageScroller className="min-h-0 flex-1">
+      <EmptyTitle>{t('chat.emptyTitle')}</EmptyTitle><EmptyDescription>{t('chat.empty')}</EmptyDescription></EmptyHeader></Empty></>
+  return <>{source}
+    {onEdit && <ChatEditDialog turn={editing} onClose={() => setEditing(null)} onEdit={onEdit} />}
+    <MessageScrollerProvider autoScroll><MessageScroller className="min-h-0 flex-1">
     <MessageScrollerViewport><MessageScrollerContent /* ui-class-ok: reading padding of the message column, a layout container, not a control */ aria-busy={running} className="mx-auto max-w-3xl gap-6 px-4 py-4" id="chat-thread">
       {turns.map(x => <MessageScrollerItem key={x.id} messageId={x.id} scrollAnchor={x.role === 'user'}>
-        {x.role === 'user' ? <Mine text={x.text} files={x.attachments} links={files} />
+        {x.role === 'user' ? <Mine text={x.text} files={x.attachments} links={files}
+          edit={onEdit && x.editable && <MessageAction label={t('chat.edit.title')} disabled={running || !!wait || pending !== null} onClick={() => setEditing(x)}><Pencil /></MessageAction>} />
           : <Answer text={x.text} steps={x.steps} mode={mode} status={x.status} code={x.code} turn={x} onRate={onRate} onSaveTest={onSaveTest}>
               {x === wait && !running && onAnswer && <ChatConfirmation turn={x} busy={running} onAnswer={r => onAnswer(x.run_id!, r)} />}</Answer>}
       </MessageScrollerItem>)}
@@ -90,5 +99,5 @@ export function ChatThread({ turns, mode, replyField, events, trace, pending, pe
       </MessageScrollerItem>}
     </MessageScrollerContent></MessageScrollerViewport>
     <MessageScrollerButton><ArrowDown /><span className="sr-only">{t('chat.scrollEnd')}</span></MessageScrollerButton>
-  </MessageScroller></MessageScrollerProvider>
+  </MessageScroller></MessageScrollerProvider></>
 }

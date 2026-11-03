@@ -265,9 +265,9 @@ class RunService:
             plan = self.plan_resume(uid, req["resume_run_id"], req.get("response"), steps=steps, until=until, node=_request_node(req))
             web.record_answer(sid, str(req["resume_run_id"]), req.get("response"))
             return plan
-        prep = web.input_for(uid, sid, req.get("message"), req.get("attachment_ids"))
+        prep = web.input_for(uid, sid, req.get("message"), req.get("attachment_ids"), edit_operation_id=req.get("edit_operation_id"))
         plan = self.plan(uid, {"workflow_id": prep["workflow_id"], "input": prep["input"]})
-        plan.run_id, plan.source = uuid.uuid4().hex[:10], "chat"
+        plan.run_id, plan.source = prep.get("run_id") or uuid.uuid4().hex[:10], "chat"
         web.record(uid, sid, prep["text"], plan.run_id, prep["attachment_ids"])
         return plan
 

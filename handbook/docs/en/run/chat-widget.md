@@ -156,3 +156,8 @@ headless terminal revocation case runs last on a fresh fixture. It also checks
 origin refusals, files and ratings. Screenshots en/vi/light/dark remain temporary
 CI artifacts. The `/c/<slug>?embed=1` page exposes the API inside its frame for
 future native wrappers; platform-specific guides remain separate work.
+
+
+## Edit a sent message
+
+Message actions reuse the shared [editing flow](chat.md#edit-a-sent-message): confirm a fresh execution in an independent conversation branch, keep the original, and use the source link to return. Human replies are not editable roots. For custom interfaces, `useChat().edit(turnId, text, operationId)` requires the same explicit rerun confirmation; retain the operation ID when recovering an interrupted attempt. See the [API contract](chat-api.md#prepare-and-execute-an-edit) for admission and recovery.

@@ -10,6 +10,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Edit sent chat messages** (TASK-0229, DEC-0084; targeted for 0.11.0). Studio, public chat, widget and the shared React toolkit open independent conversation branches while preserving original history. TypeScript and Python helpers carry a durable edit intent and recover interrupted results without replaying execution. Retained files use independent storage objects; inherited turns remain read-only. Confirmation explains that the current saved workflow runs again and external actions may repeat. Native delivery remains deferred.
+
 - **React chat toolkit and widget integration guides** (TASK-0223–0226, REQ-0082). Shared `@superstep/react`
   components, `useChat`, isolated themes/locales and the programmable `window.Superstep` widget support
   third-party identity/history, token refresh, Human answers, files and feedback. English/Vietnamese handbook

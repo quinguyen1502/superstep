@@ -958,6 +958,219 @@
         }
       }
     },
+    "/api/public/v1/chat/{slug}/sessions/{sid}/edits": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Prepare an independent edited conversation",
+        "operationId": "prepareChatEdit",
+        "security": [
+          {
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatEditIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatEditEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CHAT_EDIT_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_EDIT_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_INVALID",
+                        "message": "This message cannot be edited"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CHAT_EDIT_BUSY, CHAT_EDIT_STALE, CHAT_EDIT_CONTEXT_UNAVAILABLE, CHAT_EDIT_CONFLICT",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_EDIT_BUSY": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_BUSY",
+                        "message": "Wait for the conversation to finish before editing"
+                      }
+                    }
+                  },
+                  "CHAT_EDIT_STALE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_STALE",
+                        "message": "The conversation changed; refresh it before editing"
+                      }
+                    }
+                  },
+                  "CHAT_EDIT_CONTEXT_UNAVAILABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_CONTEXT_UNAVAILABLE",
+                        "message": "The agent context at this message is no longer available; start a new conversation"
+                      }
+                    }
+                  },
+                  "CHAT_EDIT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_CONFLICT",
+                        "message": "This operation ID was already used for a different edit"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "CHAT_EDIT_GONE",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_EDIT_GONE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_GONE",
+                        "message": "The edited conversation was removed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/public/v1/chat/{slug}/sessions/{sid}/turns": {
       "get": {
         "tags": [
@@ -2168,6 +2381,122 @@
         "title": "ChatAttachmentEnvelope",
         "description": "Success envelope: an uploaded file."
       },
+      "ChatEdit": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/ChatSessionView"
+          },
+          "operation_id": {
+            "type": "string",
+            "title": "Operation Id"
+          },
+          "run_id": {
+            "type": "string",
+            "title": "Run Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "attachment_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Attachment Ids"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "prepared",
+              "started",
+              "finished"
+            ],
+            "title": "State"
+          },
+          "visitor_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visitor Token"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "session",
+          "operation_id",
+          "run_id",
+          "message",
+          "attachment_ids",
+          "state"
+        ],
+        "title": "ChatEdit"
+      },
+      "ChatEditEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ChatEdit"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ChatEditEnvelope",
+        "description": "Success envelope: a prepared independent edit branch."
+      },
+      "ChatEditIn": {
+        "properties": {
+          "turn_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Turn Id"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Message"
+          },
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{8,128}$",
+            "title": "Operation Id"
+          },
+          "expected_last_turn_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Expected Last Turn Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "turn_id",
+          "message",
+          "operation_id",
+          "expected_last_turn_id"
+        ],
+        "title": "ChatEditIn"
+      },
       "ChatPage": {
         "properties": {
           "slug": {
@@ -2432,6 +2761,28 @@
             "title": "Updated",
             "description": "Unix time (seconds)."
           },
+          "source_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Session Id"
+          },
+          "source_turn_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Turn Id"
+          },
           "visitor_token": {
             "anyOf": [
               {
@@ -2577,6 +2928,28 @@
             "title": "Updated",
             "description": "Unix time (seconds)."
           },
+          "source_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Session Id"
+          },
+          "source_turn_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Turn Id"
+          },
           "visitor_token": {
             "anyOf": [
               {
@@ -2604,6 +2977,13 @@
             },
             "type": "array",
             "title": "Turns"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Capabilities"
           }
         },
         "additionalProperties": true,
@@ -2725,6 +3105,16 @@
           "created": {
             "type": "number",
             "title": "Created"
+          },
+          "inherited": {
+            "type": "boolean",
+            "title": "Inherited",
+            "default": false
+          },
+          "editable": {
+            "type": "boolean",
+            "title": "Editable",
+            "default": false
           },
           "attachments": {
             "items": {

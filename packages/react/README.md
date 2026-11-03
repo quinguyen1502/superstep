@@ -52,3 +52,6 @@ scripts/chat_host_e2e.sh
 ```
 
 The root lockfile owns all three npm workspaces. Development uses the `source` export condition; normal ESM consumers receive built code/declarations. See [the Vite example](../../examples/react-chat/README.md). The shared loopback host serves headless `/`, toolkit `/react/` and `/widget.html` pages; one authenticated server endpoint issues user tokens for all three. Widget requests originate at the Studio iframe and require its origin on the app key, separately from the parent embed allowlist. The `sdk-react-v<version>` workflow checks the package version, tests/builds and prepares npm provenance publishing; branches and PRs do not publish. Screenshots remain temporary files/CI artifacts, never package files or Git evidence.
+
+
+Message editing (0.11.0 target) is shared with Studio/public chat/widget. The built-in action confirms a new workflow execution, opens an independent branch and keeps a link to the original. Custom layouts may call `chat.edit(turnId, text, operationId)` after providing the same rerun confirmation; retain the ID for recovery. Files are copied and inherited history is read-only. [Editing guide](../../handbook/docs/en/run/chat.md#edit-a-sent-message).

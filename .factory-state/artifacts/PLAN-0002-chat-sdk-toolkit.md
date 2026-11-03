@@ -5,7 +5,7 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (plan accepted 2026-10-31; phase 1 and phase 2 merged; TASK-0223 done with owner-approved merge #288 on 2026-11-02; later tasks in backlog)
+- Tasks: TASK-0215 to TASK-0230 (plan accepted 2026-10-31; phases 1–3 merged through #291; TASK-0229 owner-approved/done on #292 (final-head checks gate authorised merge); TASK-0230 follows its merged foundation; native tasks deferred)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -43,10 +43,10 @@ Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server,
 | TASK-0224 `useChat`, components, theming | 3 | M | 0220, 0223 | public components, scoped CSS, `sdk-react-v*` publish |
 | TASK-0225 widget JS API | 3 | M | 0218, 0223 | `window.Superstep`, events, theming, `identify` |
 | TASK-0226 web docs and examples | 3 | S | 0224, 0225 | handbook pages, e2e pages |
-| TASK-0227 `@superstep/react-native` | 4 | L | 0220 | RN components, Expo example, `sdk-rn-v*` publish |
-| TASK-0228 native WebView guide and bridge | 4 | M | 0225 | bridge protocol, Swift and Kotlin guide, browser e2e |
-| TASK-0229 edit message | backlog | L | 0216 | DEC first |
-| TASK-0230 regenerate answer | backlog | M | 0216 | DEC first |
+| TASK-0227 `@superstep/react-native` | deferred | L | 0220 | RN components, Expo example, `sdk-rn-v*` publish |
+| TASK-0228 native WebView guide and bridge | deferred | M | 0225 | bridge protocol, Swift and Kotlin guide, browser e2e |
+| TASK-0229 edit message | 0.11.0 priority | L | 0216 | DEC-0084 Accepted; shared branch foundation + edit owner-approved/done (#292; final CI gates merge) |
+| TASK-0230 regenerate answer | 0.11.0 priority | M | 0229 | DEC-0084 Accepted; reuse merged branch foundation |
 
 Critical path: 0215, 0216, 0217 (parallel with 0216), 0218, 0220, 0224 or 0227. TASK-0223 can run in parallel with 0217 and 0218.
 
@@ -128,3 +128,17 @@ Owner approved and merged TASK-0224 #289 and TASK-0225 #290; #290 integrated as 
 Owner accepted PR #291 ("Duyệt") after head 5d2d8471 passed 22 checks with the expected handbook-deployment and GHCR skips. TASK-0226 moves to done for a rebased, one-commit Ready delivery on the same PR. REV-0221 / QA-0221 preserve the source review, validation/retry history and screenshots outside Git. Final-head checks are required. Phase 3 is not yet claimed integrated until this PR merges; native TASK-0227/0228 and the overall REQ-0082 remain incomplete. No merge or release approval is inferred.
 
 - Final-head CI follow-up: a pre-existing public-chat rate-limit test used a temporary service instead of the route dependency. TASK-0226 carries a minimal dependency-override test correction and repeated validation on #291; product scope and native backlog remain unchanged. See REV/QA-0221.
+
+
+## Owner Priority And 0.11.0 Amendment (2026-11-03)
+
+The owner requested temporarily deferring TASK-0227/0228 and focusing TASK-0229/0230 for version 0.11.0. This supersedes the earlier phase grouping: include already integrated phases 1–3 and the two approved chat revision features; exclude native delivery. TASK-0226 #291 is merged at 02361fbd after 22 successful checks and two expected deploy/publication skips.
+
+DEC-0084-chat-edit-regenerate.md is Proposed, with concrete semantics, risks and an acceptance matrix. The existing planning-first rule still applies: owner acceptance of this new decision comes before moving the implementation tasks to todo. TASK-0229 delivers a single shared branch/admission foundation and editing on its own PR; TASK-0230 follows its merged foundation on a separate PR. Current priority is authorised, while these newly proposed execution/UI semantics remain pending acceptance.
+
+Release preparation follows integration of both features: reconcile changelog/docs and additive schemas, verify migrations and compatibility, bump the shared server/Python SDK/CLI version to 0.11.0 with install/runtime pins, validate package contents and full CI, then present the release result. Preserve the independent TypeScript/React version scheme. No tag/publication/deploy is performed by this planning change, and overall REQ-0082 remains incomplete while native work is deferred.
+
+
+## DEC-0084 Accepted (2026-11-03)
+
+The owner accepted PR #292 ("Duyệt") and authorised implementing the proposed edit/regenerate semantics. DEC-0084 is Accepted; this supersedes its earlier pending-architecture statements. Start TASK-0229 on its existing branch/PR from develop 02361fbd; TASK-0230 follows its shared foundation separately. Native tasks remain deferred. No merge/release instruction is inferred.

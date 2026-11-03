@@ -287,3 +287,22 @@ expiry and revocation). Shared synthetic signing vectors live in
 ## License
 
 MIT
+
+
+## Edit a message (0.11.0 target)
+
+Confirm that the currently saved workflow may repeat API calls/writes/notifications before calling `edit`. It creates an independent branch; it never changes the original session. Keep `operationId` when recovering the same intent. A repeated intent reads the reserved run's persisted result instead of sending another execution.
+
+```ts
+const before = await chat.get(sessionId)
+const operationId = crypto.randomUUID() // browser; persist with this deliberate intent
+const edited = chat.edit(sessionId, turnId, 'Corrected request', {
+  operationId, expectedLastTurnId: before.turns[before.turns.length - 1].id,
+})
+for await (const event of edited) {
+  if (event.type === 'session') console.log('Branch:', event.session.id)
+}
+const branchId = (await edited.result).sessionId
+```
+
+`prepareEdit` creates the branch without running it. Session `capabilities.edit` and turn `editable` advertise support. An older server fails with `CHAT_EDIT_UNSUPPORTED`. Use the returned branch for history, Human answers, files and ratings. See the bilingual [API guide](../../handbook/docs/en/run/chat-api.md#prepare-and-execute-an-edit).

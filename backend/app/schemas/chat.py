@@ -31,3 +31,10 @@ class ChatRatingIn(BaseModel):
     """A thumbs up or down on one finished answer (DEC-0070). `comment` is only kept with a thumbs down."""
     value: str
     comment: Optional[str] = None
+
+
+class ChatEditIn(BaseModel):
+    turn_id: str = Field(min_length=1, max_length=200)
+    message: str = Field(max_length=4000)
+    operation_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,128}$")
+    expected_last_turn_id: str = Field(min_length=1, max_length=200)

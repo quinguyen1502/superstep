@@ -14,13 +14,22 @@ def _error(frame):
 
 
 class _Common:
-    def __init__(self, chat, session_id, frame, *, timeout=300.0, after=None, recovery_attempts=20, recovery_interval=0.25):
+    def __init__(self, chat, session_id, frame, *, timeout=300.0, after=None, recovery_attempts=20, recovery_interval=0.25, prepared_edit=None):
         stream_limits(timeout, recovery_attempts, recovery_interval)
         self.chat, self.session_id, self.frame = chat, session_id, frame
         self.timeout, self.after = timeout, after
         self.recovery_attempts, self.recovery_interval = recovery_attempts, recovery_interval
         self.result, self._socket, self._closed = None, None, False
         self._deadline = None
+        self.prepared_edit = prepared_edit
+
+    def _history(self, before):
+        if self.prepared_edit:
+            before = {**before, "turns": [t for t in before["turns"] if t.get("run_id") != self.prepared_edit["run_id"]]}
+        return History(before, None if self.prepared_edit else self.after)
+
+    def _edit_recovery(self, frame):
+        return bool(self.prepared_edit and frame["type"] == "error" and frame["error"]["code"] == "CHAT_EDIT_STARTED")
 
     def _left(self):
         if self._deadline is None: return None
@@ -72,10 +81,10 @@ class ChatStream(_Common):
     def _run(self):
         state, interrupted = FrameState(), False
         try:
-            history = History(self.chat.get(self.session_id), self.after)
+            history = self._history(self.chat.get(self.session_id))
             if self._closed: return
             self._deadline = None if self.timeout is None else time.monotonic() + self.timeout
-            for attempt in range(2):
+            for attempt in range(0 if self.prepared_edit and self.prepared_edit["state"] != "prepared" else 2):
                 auth, state, retry = self.chat._auth(), FrameState(), False
                 if self._closed: return
                 try:
@@ -90,6 +99,7 @@ class ChatStream(_Common):
                         frame = state.take(raw)
                         if frame is None: continue
                         if self._refresh(frame, state, attempt): retry = True; break
+                        if self._edit_recovery(frame): interrupted = True; break
                         yield frame
                         if frame["type"] == "error": raise _error(frame)
                         if frame["type"] == "ready" and not state.sent:
@@ -105,6 +115,9 @@ class ChatStream(_Common):
                     self._close_socket()
                 if not retry: break
             if self._closed: return
+            if self.prepared_edit:
+                state.run_id = state.run_id or self.prepared_edit["run_id"]
+                interrupted = interrupted or self.prepared_edit["state"] != "prepared"
             for i in range(self.recovery_attempts):
                 rows = history.add(self.chat.turns(self.session_id, after=history.cursor), state.run_id)
                 if rows: yield dict(type="history", turns=rows)
@@ -157,10 +170,10 @@ class AsyncChatStream(_Common):
     async def _run(self):
         state, interrupted = FrameState(), False
         try:
-            history = History(await self.chat.get(self.session_id), self.after)
+            history = self._history(await self.chat.get(self.session_id))
             if self._closed: return
             self._deadline = None if self.timeout is None else time.monotonic() + self.timeout
-            for attempt in range(2):
+            for attempt in range(0 if self.prepared_edit and self.prepared_edit["state"] != "prepared" else 2):
                 auth, state, retry = await self.chat._auth(), FrameState(), False
                 if self._closed: return
                 try:
@@ -175,6 +188,7 @@ class AsyncChatStream(_Common):
                         frame = state.take(raw)
                         if frame is None: continue
                         if self._refresh(frame, state, attempt): retry = True; break
+                        if self._edit_recovery(frame): interrupted = True; break
                         yield frame
                         if frame["type"] == "error": raise _error(frame)
                         if frame["type"] == "ready" and not state.sent:
@@ -190,6 +204,9 @@ class AsyncChatStream(_Common):
                     await self._close_socket()
                 if not retry: break
             if self._closed: return
+            if self.prepared_edit:
+                state.run_id = state.run_id or self.prepared_edit["run_id"]
+                interrupted = interrupted or self.prepared_edit["state"] != "prepared"
             for i in range(self.recovery_attempts):
                 rows = history.add(await self.chat.turns(self.session_id, after=history.cursor), state.run_id)
                 if rows: yield dict(type="history", turns=rows)

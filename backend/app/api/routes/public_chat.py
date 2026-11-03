@@ -31,9 +31,9 @@ from ...core import config, security
 from ...core.client_ip import client_ip
 from ...core.errors import AppError
 from ...engine import locale
-from ...schemas.chat import ChatRatingIn
+from ...schemas.chat import ChatEditIn, ChatRatingIn
 from ...schemas.envelope import error_responses
-from ...schemas.public_chat import (ChatAttachmentEnvelope, ChatPageEnvelope, ChatRatingEnvelope, ChatSessionEnvelope,
+from ...schemas.public_chat import (ChatAttachmentEnvelope, ChatEditEnvelope, ChatPageEnvelope, ChatRatingEnvelope, ChatSessionEnvelope,
                                     ChatSessionListEnvelope, ChatSessionViewEnvelope, ChatTurnsEnvelope, OkEnvelope)
 from ...services import chat_ws_v1 as v1
 from ...services.public_chat_service import Visitor, public_event
@@ -180,6 +180,15 @@ async def create(slug: str, request: Request, response: Response, user=Depends(m
 async def session(slug: str, sid: str, request: Request, response: Response, user=Depends(maybe_user), svc=Depends(public_chat_service)):
     await checked(request, svc); s, v = svc.get(slug, sid, token_of(request, slug), user)
     return answer(request, response, slug, s, v)
+
+
+@chat.post("/{slug}/sessions/{sid}/edits", operation_id="prepareChatEdit", summary="Prepare an independent edited conversation", response_model=None,
+    responses={200: {"model": ChatEditEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_SESSION_NOT_FOUND", "CHAT_EDIT_INVALID", "CHAT_EDIT_BUSY", "CHAT_EDIT_STALE", "CHAT_EDIT_CONTEXT_UNAVAILABLE", "CHAT_EDIT_CONFLICT", "CHAT_EDIT_GONE", "RATE_LIMITED")})
+async def edit_session(slug: str, sid: str, body: ChatEditIn, request: Request, response: Response, user=Depends(maybe_user),
+                       svc=Depends(public_chat_service), runs=Depends(run_service)):
+    result, v = await svc.edit(slug, sid, token_of(request, slug), user, body.model_dump(), request_ip(request), runs.plan)
+    response.headers["Cache-Control"] = "no-store"
+    return answer(request, response, slug, result, v)
 
 
 @chat.get("/{slug}/sessions/{sid}/turns", operation_id="listChatTurns", summary="List newer turns", response_model=None,

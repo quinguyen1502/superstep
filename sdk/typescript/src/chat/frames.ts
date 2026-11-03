@@ -17,6 +17,8 @@ export interface components {
             type: "message";
             chat_session_id: string;
             text: string;
+            /** @description Execute the prepared edit intent once, on its returned branch session. Reconnects recover history rather than replaying this operation. */
+            edit_operation_id?: string;
             /** @description Ids of files uploaded to this chat first. */
             attachments?: string[];
             /** @description `en` or `vi`: the language of system messages. */

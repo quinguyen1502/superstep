@@ -220,3 +220,24 @@ another user's session. Token errors and origin policy are in the
 retrying a write. Per-IP read/message limits, per-visitor or external-user
 message limits, and the chat's UTC daily cap all apply. Operators configure
 `STUDIO_PUBLIC_CHAT_RATE_*`; see [Configuration](../reference/configuration.md).
+
+
+## Prepare and execute an edit
+
+Check `GET .../sessions/{sid}` for `capabilities.edit` and the target turn's `editable` flag. After the user confirms a new workflow execution, call:
+
+```http
+POST /api/public/v1/chat/{slug}/sessions/{sid}/edits
+Content-Type: application/json
+
+{"turn_id":"saved-user-turn","message":"Corrected request","operation_id":"client-generated-unique-id","expected_last_turn_id":"latest-saved-turn"}
+```
+
+The envelope's data contains `session` (the independent branch and its retained prefix), `message`, `attachment_ids`, `operation_id`, the reserved `run_id`, and `state` (`prepared`, `started`, `finished`). Preparing does not execute the workflow. For a **prepared** intent, open the normal v1 socket and send a `message` using the returned branch ID, normalised `message`, copied `attachment_ids`, and `edit_operation_id: operation_id`. The response stream and all subsequent history/files/Human answers/ratings belong to that branch. Keep the same operation ID and payload when recovering one intent; using it with different content is `CHAT_EDIT_CONFLICT`. A deliberate new edit needs a new ID.
+
+An already started/finished intent must recover its reserved run through branch history, without sending another execution. `CHAT_EDIT_STARTED` also means read that branch/run instead of replaying. A lost run-start frame can be recovered with the reserved run ID. A removed branch returns `CHAT_EDIT_GONE` and is never recreated by retry. A busy source returns `CHAT_EDIT_BUSY`; changed history returns `CHAT_EDIT_STALE`. No arbitrary checkpoint, state, owner or workflow ID is accepted. Public identity/origin/revocation rules and normal quotas apply. Old v1 message/answer requests remain unchanged.
+
+Editing retains the original session; inherited prefix turns have fresh IDs and `inherited: true`, cannot be edited/rated/resumed, and expose only the chat's allowed steps. The branch has optional `source_session_id` and `source_turn_id`; a deleted source does not prevent branch history/file access. See [chat usage](chat.md#edit-a-sent-message) for the rerun warning and workflow-version semantics.
+
+
+Every initiating message in the source must have a saved terminal outcome; a later finished answer does not make an earlier pending run safe to fork. Agent routing is reconstructed from the latest retained run, including resets after target removal. If required historical agent metadata has been pruned, `CHAT_EDIT_CONTEXT_UNAVAILABLE` refuses to guess: start a new conversation. A claimed intent whose process stops before saving its run remains non-replayable; bounded history recovery may report interruption. Preparing or reloading a branch never runs it automatically.

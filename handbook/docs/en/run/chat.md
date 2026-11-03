@@ -320,3 +320,12 @@ See also [Chat triggers](chat-triggers.md) for Slack and Telegram.
 
 
 For your own users and custom appearance, see [React toolkit](chat-react.md) and [Widget API](chat-widget.md).
+
+
+## Edit a sent message
+
+On servers advertising `capabilities.edit` in the session view, use **Edit message** on a saved root user message. Human answers are not editable messages. Save opens a new conversation branch with the preceding history and the edited message; the original conversation and its later messages remain intact. Use **Original conversation** to return. Inherited turns are read-only and cannot create duplicate feedback. Files are copied to independent IDs/storage objects so either conversation can be removed without breaking the other.
+
+The confirmation explains that this starts the currently saved/published workflow again: API calls, writes and notifications may repeat. It does not undo earlier actions or regenerate only a model's text. Human and reviewer approvals must be provided again. Wait for running/waiting conversations to finish before editing; refresh a stale conversation. Cancelling the edit changes nothing.
+
+This feature is targeted for 0.11.0; use the updated server and SDK/UI together before that release. Native packages remain deferred.

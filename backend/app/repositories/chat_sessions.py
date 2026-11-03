@@ -2,7 +2,7 @@ import time
 from typing import Optional
 from sqlalchemy import case, delete, func, select, update
 from sqlalchemy.exc import IntegrityError
-from ..models import ChatAttachment, ChatRating, ChatSession, ChatTurn
+from ..models import ChatAttachment, ChatEdit, ChatRating, ChatSession, ChatTurn, Run
 from ..models.database import Database
 
 _PENDING = "pending:"  # one worker owns the LangSmith create; not a real feedback id
@@ -37,11 +37,50 @@ class ChatSessionRepository:
             return list(s.scalars(q))
 
     def set_fields(self, sid: str, **values) -> None:
-        with self.db.session() as s: s.execute(update(ChatSession).where(ChatSession.id == sid).values(**values)); s.commit()
+        with self.db.session() as s:
+            s.execute(update(ChatSession).where(ChatSession.id == sid).values(**values, revision=ChatSession.revision + 1)); s.commit()
 
     def add_turn(self, t: ChatTurn) -> ChatTurn:
         with self.db.session() as s:
-            s.add(t); s.execute(update(ChatSession).where(ChatSession.id == t.session_id).values(updated=t.created)); s.commit(); s.refresh(t); return t
+            s.add(t); s.execute(update(ChatSession).where(ChatSession.id == t.session_id).values(updated=t.created, revision=ChatSession.revision + 1)); s.commit(); s.refresh(t); return t
+
+    def edit(self, source: str, operation: str) -> Optional[ChatEdit]:
+        with self.db.session() as s:
+            return s.scalar(select(ChatEdit).where(ChatEdit.source_session_id == source, ChatEdit.operation_id == operation))
+
+    def branch_edit(self, sid: str) -> Optional[ChatEdit]:
+        with self.db.session() as s: return s.scalar(select(ChatEdit).where(ChatEdit.branch_id == sid))
+
+    def has_active_runs(self, sid: str, statuses: tuple[str, ...]) -> bool:
+        with self.db.session() as s:
+            return s.scalar(select(Run.id).join(ChatTurn, ChatTurn.run_id == Run.id)
+                            .where(ChatTurn.session_id == sid, Run.status.in_(statuses)).limit(1)) is not None
+
+    def publish_edit(self, source: ChatSession, branch: ChatSession, turns: list[ChatTurn], intent: ChatEdit) -> Optional[ChatEdit]:
+        """Publish one immutable snapshot iff the source did not change; a duplicate returns the winning intent."""
+        try:
+            with self.db.session() as s:
+                old = s.scalar(select(ChatEdit).where(ChatEdit.source_session_id == source.id, ChatEdit.operation_id == intent.operation_id))
+                if old is not None: return old
+                changed = s.execute(update(ChatSession).where(ChatSession.id == source.id, ChatSession.revision == source.revision)
+                                    .values(revision=ChatSession.revision + 1)).rowcount
+                if changed != 1:
+                    s.rollback()
+                    return self.edit(source.id, intent.operation_id)
+                s.add(branch); s.add_all(turns); s.add(intent); s.commit(); s.refresh(intent); return intent
+        except IntegrityError:
+            existing = self.edit(source.id, intent.operation_id)
+            if existing is None: raise
+            return existing
+
+    def claim_edit(self, sid: str, operation: str) -> Optional[ChatEdit]:
+        with self.db.session() as s:
+            row = s.scalar(select(ChatEdit).where(ChatEdit.branch_id == sid, ChatEdit.operation_id == operation))
+            if row is None: return None
+            n = s.execute(update(ChatEdit).where(ChatEdit.id == row.id, ChatEdit.claimed.is_(False)).values(claimed=True)).rowcount
+            if n != 1: s.rollback(); return None
+            s.execute(update(ChatSession).where(ChatSession.id == sid).values(last_run_id=row.run_id, revision=ChatSession.revision + 1))
+            s.commit(); s.refresh(row); return row
 
     def turns(self, sid: str) -> list[ChatTurn]:
         with self.db.session() as s:
@@ -164,6 +203,7 @@ class ChatSessionRepository:
             return list(s.scalars(q.order_by(ChatSession.updated.desc()).limit(limit)))
 
     def _drop_session(self, s, ids) -> None:
+        s.execute(update(ChatEdit).where(ChatEdit.branch_id.in_(ids)).values(message="", attachments="[]"))
         s.execute(delete(ChatAttachment).where(ChatAttachment.session_id.in_(ids)))  # a file goes with its session (TASK-0174)
         s.execute(delete(ChatRating).where(ChatRating.session_id.in_(ids)))
         s.execute(delete(ChatTurn).where(ChatTurn.session_id.in_(ids)))
