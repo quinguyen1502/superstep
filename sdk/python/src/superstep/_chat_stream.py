@@ -25,7 +25,8 @@ class _Common:
 
     def _history(self, before):
         if self.prepared_edit:
-            before = {**before, "turns": [t for t in before["turns"] if t.get("run_id") != self.prepared_edit["run_id"]]}
+            first = next((i for i, t in enumerate(before["turns"]) if t.get("run_id") == self.prepared_edit["run_id"]), len(before["turns"]))
+            before = {**before, "turns": before["turns"][:first]}
         return History(before, None if self.prepared_edit else self.after)
 
     def _edit_recovery(self, frame):

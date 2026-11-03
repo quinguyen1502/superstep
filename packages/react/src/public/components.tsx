@@ -41,7 +41,7 @@ export function MessageList({ chat: explicit, empty: customEmpty }: { chat?: Cha
   </div>
   return <><ChatThread turns={[...chat.turns] as ChatTurn[]} mode={chat.page?.steps_mode ?? 'labels'} events={chat.text ? [{ type: 'node_token', node: 'answer', delta: chat.text }] : []} trace={{ spans: [] }}
     pending={chat.pending} pendingFiles={attachments(chat.pendingFiles)} running={chat.busy} replyPending={chat.status === 'streaming' && chat.pending === null} onRate={chat.busy ? undefined : rating.onRate}
-    onEdit={chat.edit} onSource={chat.sourceSessionId ? () => void chat.load(chat.sourceSessionId!).catch(() => {}) : undefined}
+    onEdit={chat.edit} onRegenerate={chat.regenerate} onSource={chat.sourceSessionId ? () => void chat.load(chat.sourceSessionId!).catch(() => {}) : undefined}
     files={{ download: chat.download }} empty={chat.loading ? <p role="status" className="p-4 text-sm text-muted-foreground">{t('chat.toolkit.loading')}</p> : customEmpty ?? empty} />{rating.dialog}</>
 }
 export function Composer({ chat: explicit, idPrefix }: { chat?: ChatController; idPrefix?: string }) {

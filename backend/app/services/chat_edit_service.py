@@ -21,11 +21,13 @@ class ChatEditService:
                 "message": intent.message, "attachment_ids": json.loads(intent.attachments),
                 "state": "prepared" if not intent.claimed else "finished" if run and run.status not in BUSY else "started"}
 
-    def prepare(self, source, trigger, body, validate, mode, *, app_key_id=None):
+    def prepare(self, source, trigger, body, validate, mode, *, app_key_id=None, action="edit"):
         op, target, message, tip = (body.get(k) for k in ("operation_id", "turn_id", "message", "expected_last_turn_id"))
-        if not isinstance(op, str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,128}", op) or not isinstance(message, str):
+        if action not in ("edit", "regenerate") or not isinstance(op, str) or not re.fullmatch(r"[A-Za-z0-9_-]{8,128}", op) or (action == "edit" and not isinstance(message, str)):
             raise AppError("CHAT_EDIT_INVALID")
-        fingerprint = hashlib.sha256(json.dumps([target, message, tip], ensure_ascii=False).encode()).hexdigest()
+        # Keep existing edit fingerprints valid; action is part of every regeneration fingerprint.
+        payload = [target, message, tip] if action == "edit" else [action, target, tip, None]
+        fingerprint = hashlib.sha256(json.dumps(payload, ensure_ascii=False).encode()).hexdigest()
         existing = self.chat.sessions.edit(source.id, op)
         if existing is not None:
             if existing.body_hash != fingerprint: raise AppError("CHAT_EDIT_CONFLICT")
@@ -40,13 +42,21 @@ class ChatEditService:
         index = next((i for i, x in enumerate(turns) if x.id == target), None)
         if index is None: raise AppError("CHAT_TURN_NOT_FOUND")
         chosen = turns[index]
+        lineage = chosen.id
+        if action == "regenerate":
+            if index != len(turns) - 1 or chosen.inherited or chosen.role != "assistant" or not chosen.run_id:
+                raise AppError("CHAT_REGENERATE_INVALID")
+            index = next((i for i, x in enumerate(turns) if x.role == "user" and x.run_id == chosen.run_id and not x.inherited), None)
+            if index is None: raise AppError("CHAT_REGENERATE_INVALID")
+            chosen = turns[index]
+            message = chosen.text
         if chosen.inherited or chosen.role != "user" or not chosen.run_id or any(x.role == "user" and x.run_id == chosen.run_id for x in turns[:index]):
             raise AppError("CHAT_EDIT_INVALID")
         now = time.time()
         branch = ChatSession(id=uuid.uuid4().hex, workflow_id=source.workflow_id, trigger_id=source.trigger_id,
                              channel=source.channel, owner=source.owner, visitor=source.visitor, external_user=source.external_user,
                              app_key_id=app_key_id or source.app_key_id, title=message.strip()[:TITLE_MAX], created=now, updated=now,
-                             source_session_id=source.id, source_turn_id=chosen.id, revision=0)
+                             source_session_id=source.id, source_turn_id=lineage, source_action=action, revision=0)
         prefix = []
         for i, old in enumerate(turns[:index]):
             prefix.append(ChatTurn(id=f"{i:08x}-{uuid.uuid4().hex}", session_id=branch.id, run_id=old.run_id,

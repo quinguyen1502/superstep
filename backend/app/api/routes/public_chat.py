@@ -31,7 +31,7 @@ from ...core import config, security
 from ...core.client_ip import client_ip
 from ...core.errors import AppError
 from ...engine import locale
-from ...schemas.chat import ChatEditIn, ChatRatingIn
+from ...schemas.chat import ChatEditIn, ChatRegenerateIn, ChatRatingIn
 from ...schemas.envelope import error_responses
 from ...schemas.public_chat import (ChatAttachmentEnvelope, ChatEditEnvelope, ChatPageEnvelope, ChatRatingEnvelope, ChatSessionEnvelope,
                                     ChatSessionListEnvelope, ChatSessionViewEnvelope, ChatTurnsEnvelope, OkEnvelope)
@@ -186,7 +186,16 @@ async def session(slug: str, sid: str, request: Request, response: Response, use
     responses={200: {"model": ChatEditEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_SESSION_NOT_FOUND", "CHAT_EDIT_INVALID", "CHAT_EDIT_BUSY", "CHAT_EDIT_STALE", "CHAT_EDIT_CONTEXT_UNAVAILABLE", "CHAT_EDIT_CONFLICT", "CHAT_EDIT_GONE", "RATE_LIMITED")})
 async def edit_session(slug: str, sid: str, body: ChatEditIn, request: Request, response: Response, user=Depends(maybe_user),
                        svc=Depends(public_chat_service), runs=Depends(run_service)):
-    result, v = await svc.edit(slug, sid, token_of(request, slug), user, body.model_dump(), request_ip(request), runs.plan)
+    result, v = await svc.revise(slug, sid, token_of(request, slug), user, body.model_dump(), request_ip(request), runs.plan)
+    response.headers["Cache-Control"] = "no-store"
+    return answer(request, response, slug, result, v)
+
+
+@chat.post("/{slug}/sessions/{sid}/regenerations", operation_id="prepareChatRegeneration", summary="Prepare a fresh attempt of the latest terminal answer", response_model=None,
+    responses={200: {"model": ChatEditEnvelope}, **error_responses("VALIDATION_ERROR", "CHAT_SESSION_NOT_FOUND", "CHAT_REGENERATE_INVALID", "CHAT_EDIT_BUSY", "CHAT_EDIT_STALE", "CHAT_EDIT_CONTEXT_UNAVAILABLE", "CHAT_EDIT_CONFLICT", "CHAT_EDIT_GONE", "RATE_LIMITED")})
+async def regenerate_session(slug: str, sid: str, body: ChatRegenerateIn, request: Request, response: Response, user=Depends(maybe_user),
+                             svc=Depends(public_chat_service), runs=Depends(run_service)):
+    result, v = await svc.revise(slug, sid, token_of(request, slug), user, body.model_dump(), request_ip(request), runs.plan, action="regenerate")
     response.headers["Cache-Control"] = "no-store"
     return answer(request, response, slug, result, v)
 

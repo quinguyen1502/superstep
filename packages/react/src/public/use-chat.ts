@@ -57,6 +57,19 @@ export function useChat(options: UseChatOptions) {
     let starting: Promise<string> | null = null
     const ensureSession = async () => r.store.getSnapshot().sessionId ?? (starting ??= r.store.start({ signal: r.lifetime.signal, embed: latest.current.embed }).then(s => s.id).finally(() => { starting = null }))
     const reload = async () => { const id = r.store.getSnapshot().sessionId; if (id) await r.store.load(id, { signal: r.lifetime.signal }); await refresh() }
+    const revise = (turn: string, text: string | undefined, operationId: string) => perform(async () => {
+      r.navigation++; r.selection++
+      const turns = r.store.getSnapshot().turns, tip = turns[turns.length - 1]?.id
+      if (!tip) throw new ConfigError('No saved chat turn', { code: text === undefined ? 'CHAT_REGENERATE_INVALID' : 'CHAT_EDIT_INVALID' })
+      const answer = turns.find(x => x.id === turn)
+      const root = turns.find(x => x.role === 'user' && x.run_id === answer?.run_id)
+      r.patch({ pending: text ?? root?.text ?? null, pendingFiles: [] })
+      const request = { operationId, expectedLastTurnId: tip, locale: latest.current.locale, signal: r.lifetime.signal }
+      try {
+        const result = text === undefined ? await r.store.regenerate(turn, request) : await r.store.edit(turn, text, request)
+        await refresh(); return result
+      } finally { if (!r.lifetime.signal.aborted) r.patch({ pending: null }) }
+    })
     return {
       refresh: () => perform(async () => { const page = await r.client.info({ signal: r.lifetime.signal }); r.patch({ page }); await reload() }),
       load: (id: string) => { r.navigation++; r.selection++; return perform(() => r.store.load(id, { signal: r.lifetime.signal })) },
@@ -71,16 +84,8 @@ export function useChat(options: UseChatOptions) {
         r.navigation++
         const result = await r.store.answer(response, { locale: latest.current.locale, signal: r.lifetime.signal }); await refresh(); return result
       }),
-      edit: (turn: string, text: string, operationId: string = crypto.randomUUID()) => perform(async () => {
-        r.navigation++; r.selection++
-        const turns = r.store.getSnapshot().turns, tip = turns[turns.length - 1]?.id
-        if (!tip) throw new ConfigError('No saved chat turn', { code: 'CHAT_EDIT_INVALID' })
-        r.patch({ pending: text, pendingFiles: [] })
-        try {
-          const result = await r.store.edit(turn, text, { operationId, expectedLastTurnId: tip, locale: latest.current.locale, signal: r.lifetime.signal })
-          await refresh(); return result
-        } finally { if (!r.lifetime.signal.aborted) r.patch({ pending: null }) }
-      }),
+      edit: (turn: string, text: string, operationId: string = crypto.randomUUID()) => revise(turn, text, operationId),
+      regenerate: (turn: string, operationId: string = crypto.randomUUID()) => revise(turn, undefined, operationId),
       cancel: () => r.store.cancel(),
       upload: (file: File) => perform(async () => {
         r.navigation++

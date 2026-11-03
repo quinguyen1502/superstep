@@ -84,6 +84,8 @@ export const BY_CODE: Record<string, ErrorClass> = {
   CHAT_TOKEN_EXPIRED: AuthenticationError,
   CHAT_APP_KEY_REVOKED: AuthenticationError,
   CHAT_ORIGIN_FORBIDDEN: PermissionDeniedError,
+  CHAT_REGENERATE_INVALID: InvalidRequestError,
+  CHAT_REGENERATE_UNSUPPORTED: InvalidRequestError,
   CHAT_EDIT_INVALID: InvalidRequestError,
   CHAT_EDIT_CONTEXT_UNAVAILABLE: InvalidRequestError,
   CHAT_EDIT_BUSY: InvalidRequestError,

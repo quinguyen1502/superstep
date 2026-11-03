@@ -3,7 +3,7 @@
  *  Markdown with a Message footer of actions (Message pattern), an Empty state, and the scroll button. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, Check, Copy, LoaderCircle, MessageCircleDashed, Pencil } from 'lucide-react'
+import { ArrowDown, Check, Copy, LoaderCircle, MessageCircleDashed, Pencil, RefreshCw } from 'lucide-react'
 import { MessageScroller, MessageScrollerButton, MessageScrollerContent, MessageScrollerItem, MessageScrollerProvider, MessageScrollerViewport } from '../ui/message-scroller.js'
 import { Message, MessageContent, MessageFooter } from '../ui/message.js'
 import { Bubble, BubbleContent } from '../ui/bubble.js'
@@ -19,7 +19,7 @@ import { ChatRatingBar } from './chat-rating.js'
 import { ChatSteps } from './chat-steps.js'
 import { ChatConfirmation } from './chat-confirmation.js'
 import { TurnFiles } from './chat-attachments.js'
-import { ChatEditDialog } from './chat-edit-dialog.js'
+import { ChatRevisionDialog } from './chat-revision-dialog.js'
 
 /** The Message pattern's action: a ghost icon button with a tooltip, its label as the aria-label. */
 function MessageAction({ label, children, ...props }: React.ComponentProps<typeof Button> & { label: string }) {
@@ -34,10 +34,10 @@ function CopyAction({ text }: { text: string }) {
     onClick={() => navigator.clipboard.writeText(text).then(() => setCopied(true)).catch(() => {})}>{copied ? <Check /> : <Copy />}</MessageAction>
 }
 
-function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTest, children }: {
+function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTest, regenerate, children }: {
   text: string; steps?: ChatStep[]; mode: StepsMode; status?: string | null; code?: string | null; live?: string
   turn?: ChatTurn; onRate?: (turnId: string, value: 'up' | 'down' | null, comment?: string) => void
-  onSaveTest?: (runId: string) => void; children?: React.ReactNode }) {
+  onSaveTest?: (runId: string) => void; regenerate?: React.ReactNode; children?: React.ReactNode }) {
   const { t, i18n } = useTranslation(); const failed = status && !['ok', 'waiting'].includes(status)
   const rateable = !!turn && !turn.inherited && (status === 'ok' || status === 'error')
   const showRating = rateable && (!!onRate || !!turn.rating || !!onSaveTest)
@@ -48,9 +48,10 @@ function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTes
       {failed ? <Bubble variant="destructive"><BubbleContent data-testid="chat-error">{code ? errorText({ code, message: text }, i18n) : text || t('chat.failed')}</BubbleContent></Bubble>
         : text ? <ChatMarkdown text={text} /> : null}
       {children}
-      {(status === 'ok' && text) || showRating ? <MessageFooter className="flex-wrap px-0">
+      {(status === 'ok' && text) || showRating || regenerate ? <MessageFooter className="flex-wrap px-0">
         {status === 'ok' && text && <CopyAction text={text} />}
         {showRating && turn && <ChatRatingBar turn={turn} onRate={onRate} onSaveTest={onSaveTest} />}
+        {regenerate}
       </MessageFooter> : null}
     </MessageContent>
   </Message>
@@ -67,15 +68,20 @@ const Mine = ({ text, files, links, edit }: { text: string; files?: ChatAttachme
 
 /** `replyField`: the field whose tokens are the answer; none on the public page, whose socket sends only those (TASK-0142).
  *  `empty`: what an empty chat shows instead of the default (the page's intro and suggestions). */
-export function ChatThread({ turns, mode, replyField, events, trace, pending, pendingFiles, running, replyPending = false, onAnswer, onRate, onSaveTest, onEdit, onSource, empty, files }: {
+export function ChatThread({ turns, mode, replyField, events, trace, pending, pendingFiles, running, replyPending = false, onAnswer, onRate, onSaveTest, onEdit, onRegenerate, onSource, empty, files }: {
   turns: ChatTurn[]; mode: StepsMode; replyField?: string; events: RunEvent[]; trace: RunTrace; pending: string | null; running: boolean
   pendingFiles?: ChatAttachment[]; files?: FileLinks; replyPending?: boolean
   onAnswer?: (runId: string, response: string) => void
   onRate?: (turnId: string, value: 'up' | 'down' | null, comment?: string) => void
   onEdit?: (turnId: string, text: string, operationId: string) => Promise<unknown>; onSource?: () => void
+  onRegenerate?: (turnId: string, operationId: string) => Promise<unknown>
   onSaveTest?: (runId: string) => void; empty?: React.ReactNode }) {
   const { t } = useTranslation(); const [editing, setEditing] = useState<ChatTurn | null>(null)
-  useEffect(() => { if (editing && !turns.some(x => x.id === editing.id)) setEditing(null) }, [turns, editing])
+  const [regenerating, setRegenerating] = useState<ChatTurn | null>(null)
+  useEffect(() => {
+    if (editing && !turns.some(x => x.id === editing.id)) setEditing(null)
+    if (regenerating && !turns.some(x => x.id === regenerating.id)) setRegenerating(null)
+  }, [turns, editing, regenerating])
   const wait = waitingTurn(turns); const reply = liveReply(events, replyField)
   const live = liveSteps(trace.spans, mode)
   const source = onSource && <div className="flex shrink-0 items-center border-b px-3"><Button variant="link" size="sm" onClick={onSource}>{t('chat.edit.source')}</Button></div>
@@ -84,13 +90,15 @@ export function ChatThread({ turns, mode, replyField, events, trace, pending, pe
     <EmptyHeader><EmptyMedia variant="icon"><MessageCircleDashed /></EmptyMedia>
       <EmptyTitle>{t('chat.emptyTitle')}</EmptyTitle><EmptyDescription>{t('chat.empty')}</EmptyDescription></EmptyHeader></Empty></>
   return <>{source}
-    {onEdit && <ChatEditDialog turn={editing} onClose={() => setEditing(null)} onEdit={onEdit} />}
+    {onEdit && <ChatRevisionDialog turn={editing} onClose={() => setEditing(null)} onConfirm={onEdit} />}
+    {onRegenerate && <ChatRevisionDialog turn={regenerating} action="regenerate" onClose={() => setRegenerating(null)} onConfirm={(turn, _text, operation) => onRegenerate(turn, operation)} />}
     <MessageScrollerProvider autoScroll><MessageScroller className="min-h-0 flex-1">
     <MessageScrollerViewport><MessageScrollerContent /* ui-class-ok: reading padding of the message column, a layout container, not a control */ aria-busy={running} className="mx-auto max-w-3xl gap-6 px-4 py-4" id="chat-thread">
       {turns.map(x => <MessageScrollerItem key={x.id} messageId={x.id} scrollAnchor={x.role === 'user'}>
         {x.role === 'user' ? <Mine text={x.text} files={x.attachments} links={files}
           edit={onEdit && x.editable && <MessageAction label={t('chat.edit.title')} disabled={running || !!wait || pending !== null} onClick={() => setEditing(x)}><Pencil /></MessageAction>} />
-          : <Answer text={x.text} steps={x.steps} mode={mode} status={x.status} code={x.code} turn={x} onRate={onRate} onSaveTest={onSaveTest}>
+          : <Answer text={x.text} steps={x.steps} mode={mode} status={x.status} code={x.code} turn={x} onRate={onRate} onSaveTest={onSaveTest}
+              regenerate={onRegenerate && !x.inherited && x.regeneratable && x.id === turns[turns.length - 1]?.id && <MessageAction label={t('chat.regenerate.title')} disabled={running || !!wait || pending !== null} onClick={() => setRegenerating(x)}><RefreshCw /></MessageAction>}>
               {x === wait && !running && onAnswer && <ChatConfirmation turn={x} busy={running} onAnswer={r => onAnswer(x.run_id!, r)} />}</Answer>}
       </MessageScrollerItem>)}
       {pending !== null && <MessageScrollerItem messageId="pending-user" scrollAnchor><Mine text={pending} files={pendingFiles} /></MessageScrollerItem>}

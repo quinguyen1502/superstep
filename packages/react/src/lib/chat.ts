@@ -16,7 +16,7 @@ export type ChatStep = { node: string; label: string; type?: string; status: 'ru
 export type ChatRating = { value: 'up' | 'down'; comment: string; updated: number }
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
   node?: string | null; answered_by?: AnsweredBy | null; code?: string | null; created: number; steps?: ChatStep[]
-  rating?: ChatRating | null; run_exists?: boolean; attachments?: ChatAttachment[]; editable?: boolean; inherited?: boolean }
+  rating?: ChatRating | null; run_exists?: boolean; attachments?: ChatAttachment[]; editable?: boolean; regeneratable?: boolean; inherited?: boolean }
 /** The letter a chat without a logo shows: the first letter of its title. */
 export const initialOf = (title: string) => (Array.from(title.trim())[0] ?? '?').toLocaleUpperCase()
 

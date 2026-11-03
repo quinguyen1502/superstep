@@ -14,6 +14,7 @@ OPS = {("get", "/{slug}"): "getChatPage", ("get", "/{slug}/logo"): "getChatLogo"
        ("post", "/{slug}/sessions"): "createChatSession", ("get", "/{slug}/sessions/{sid}"): "getChatSession",
        ("get", "/{slug}/sessions/{sid}/turns"): "listChatTurns",
        ("post", "/{slug}/sessions/{sid}/edits"): "prepareChatEdit",
+       ("post", "/{slug}/sessions/{sid}/regenerations"): "prepareChatRegeneration",
        ("post", "/{slug}/sessions/{sid}/attachments"): "uploadChatAttachment",
        ("get", "/{slug}/sessions/{sid}/attachments/{aid}"): "downloadChatAttachment",
        ("delete", "/{slug}/sessions/{sid}/attachments/{aid}"): "deleteChatAttachment",

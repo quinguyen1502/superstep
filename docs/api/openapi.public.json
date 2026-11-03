@@ -1088,7 +1088,7 @@
                       "success": false,
                       "error": {
                         "code": "CHAT_EDIT_BUSY",
-                        "message": "Wait for the conversation to finish before editing"
+                        "message": "Wait for the conversation to finish before creating a new branch"
                       }
                     }
                   },
@@ -1097,7 +1097,7 @@
                       "success": false,
                       "error": {
                         "code": "CHAT_EDIT_STALE",
-                        "message": "The conversation changed; refresh it before editing"
+                        "message": "The conversation changed; refresh it before trying again"
                       }
                     }
                   },
@@ -1106,7 +1106,7 @@
                       "success": false,
                       "error": {
                         "code": "CHAT_EDIT_CONTEXT_UNAVAILABLE",
-                        "message": "The agent context at this message is no longer available; start a new conversation"
+                        "message": "The agent context at this point is no longer available; start a new conversation"
                       }
                     }
                   },
@@ -1115,7 +1115,7 @@
                       "success": false,
                       "error": {
                         "code": "CHAT_EDIT_CONFLICT",
-                        "message": "This operation ID was already used for a different edit"
+                        "message": "This operation ID was already used for a different revision"
                       }
                     }
                   }
@@ -1136,7 +1136,220 @@
                       "success": false,
                       "error": {
                         "code": "CHAT_EDIT_GONE",
-                        "message": "The edited conversation was removed"
+                        "message": "The new conversation branch was removed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "RATE_LIMITED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests, retry in 12 s"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/public/v1/chat/{slug}/sessions/{sid}/regenerations": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Prepare a fresh attempt of the latest terminal answer",
+        "operationId": "prepareChatRegeneration",
+        "security": [
+          {
+            "ChatUserToken": []
+          },
+          {
+            "ChatVisitor": []
+          },
+          {}
+        ],
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slug"
+            }
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Sid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRegenerateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatEditEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CHAT_SESSION_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_SESSION_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_SESSION_NOT_FOUND",
+                        "message": "Chat not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CHAT_REGENERATE_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_REGENERATE_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_REGENERATE_INVALID",
+                        "message": "Only the latest completed answer can be regenerated"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CHAT_EDIT_BUSY, CHAT_EDIT_STALE, CHAT_EDIT_CONTEXT_UNAVAILABLE, CHAT_EDIT_CONFLICT",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_EDIT_BUSY": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_BUSY",
+                        "message": "Wait for the conversation to finish before creating a new branch"
+                      }
+                    }
+                  },
+                  "CHAT_EDIT_STALE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_STALE",
+                        "message": "The conversation changed; refresh it before trying again"
+                      }
+                    }
+                  },
+                  "CHAT_EDIT_CONTEXT_UNAVAILABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_CONTEXT_UNAVAILABLE",
+                        "message": "The agent context at this point is no longer available; start a new conversation"
+                      }
+                    }
+                  },
+                  "CHAT_EDIT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_CONFLICT",
+                        "message": "This operation ID was already used for a different revision"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "CHAT_EDIT_GONE",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_EDIT_GONE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_EDIT_GONE",
+                        "message": "The new conversation branch was removed"
                       }
                     }
                   }
@@ -2461,7 +2674,7 @@
           "data"
         ],
         "title": "ChatEditEnvelope",
-        "description": "Success envelope: a prepared independent edit branch."
+        "description": "Success envelope: a prepared independent revision branch (edit or regenerate)."
       },
       "ChatEditIn": {
         "properties": {
@@ -2470,11 +2683,6 @@
             "maxLength": 200,
             "minLength": 1,
             "title": "Turn Id"
-          },
-          "message": {
-            "type": "string",
-            "maxLength": 4000,
-            "title": "Message"
           },
           "operation_id": {
             "type": "string",
@@ -2486,14 +2694,19 @@
             "maxLength": 200,
             "minLength": 1,
             "title": "Expected Last Turn Id"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Message"
           }
         },
         "type": "object",
         "required": [
           "turn_id",
-          "message",
           "operation_id",
-          "expected_last_turn_id"
+          "expected_last_turn_id",
+          "message"
         ],
         "title": "ChatEditIn"
       },
@@ -2719,6 +2932,35 @@
         "title": "ChatRatingIn",
         "description": "A thumbs up or down on one finished answer (DEC-0070). `comment` is only kept with a thumbs down."
       },
+      "ChatRegenerateIn": {
+        "properties": {
+          "turn_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Turn Id"
+          },
+          "operation_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{8,128}$",
+            "title": "Operation Id"
+          },
+          "expected_last_turn_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Expected Last Turn Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "turn_id",
+          "operation_id",
+          "expected_last_turn_id"
+        ],
+        "title": "ChatRegenerateIn"
+      },
       "ChatSession": {
         "properties": {
           "id": {
@@ -2782,6 +3024,21 @@
               }
             ],
             "title": "Source Turn Id"
+          },
+          "source_action": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "edit",
+                  "regenerate"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Action"
           },
           "visitor_token": {
             "anyOf": [
@@ -2950,6 +3207,21 @@
             ],
             "title": "Source Turn Id"
           },
+          "source_action": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "edit",
+                  "regenerate"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Action"
+          },
           "visitor_token": {
             "anyOf": [
               {
@@ -3114,6 +3386,11 @@
           "editable": {
             "type": "boolean",
             "title": "Editable",
+            "default": false
+          },
+          "regeneratable": {
+            "type": "boolean",
+            "title": "Regeneratable",
             "default": false
           },
           "attachments": {

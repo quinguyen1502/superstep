@@ -155,7 +155,7 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
             <Button size="xs" variant="link" id="chat-visitor-exit" onClick={() => setView('builder')}>{t('chat.visitorExit')}</Button></div>}
           <ChatThread turns={chat.session?.turns ?? []} mode={mode} replyField={settings.reply_field} events={chat.events} trace={chat.trace}
             pending={chat.pending} pendingFiles={chat.pendingFiles} running={chat.running} onAnswer={chat.answer} onRate={vsid === null ? rate : undefined}
-            onEdit={chat.edit} onSource={chat.session?.source_session_id ? () => setSid(chat.session!.source_session_id!) : undefined}
+            onEdit={chat.edit} onRegenerate={chat.regenerate} onSource={chat.session?.source_session_id ? () => setSid(chat.session!.source_session_id!) : undefined}
             onSaveTest={canEdit ? saveCase : undefined} files={links} /></>}
       {!off && vsid === null && <ChatComposer disabled={!settings || waiting?.answered_by === 'reviewer'} running={chat.running} onStop={chat.cancel}
         placeholder={waiting ? t(waiting.answered_by === 'reviewer' ? 'chat.waitingReviewer' : 'chat.answerPlaceholder') : undefined}

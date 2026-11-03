@@ -97,13 +97,16 @@ class Wire:
 async def maybe(value): return await value if inspect.isawaitable(value) else value
 
 
-async def test_edit_uses_branch_and_repeated_intent_recovers_without_another_socket(mode):
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+async def test_edit_uses_branch_and_repeated_intent_recovers_without_another_socket(mode, action):
+    operation = "edits" if action == "edit" else "regenerations"
     wire = Wire(mode); chat = wire.client(); branch = "edited-session"
     def respond(request):
         if request.url.path.endswith("/" + SID):
-            return env({**RECORDED["session"], "capabilities": {"edit": True}})
-        if request.url.path.endswith("/edits"):
+            return env({**RECORDED["session"], "capabilities": {"edit": True, "regenerate": True}})
+        if request.url.path.endswith("/" + operation):
             body = json.loads(request.content)
+            if action == "regenerate": assert "message" not in body
             assert body["operation_id"] == "intent-12345678" and body["expected_last_turn_id"] == "recorded-answer"
             return env(dict(session={**RECORDED["session"], "id": branch}, operation_id=body["operation_id"],
                             run_id="recorded-run", message="Edited text", attachment_ids=[], state="finished" if wire.saved else "prepared"))
@@ -111,14 +114,48 @@ async def test_edit_uses_branch_and_repeated_intent_recovers_without_another_soc
             return env({**RECORDED["session"], "id": branch, "turns": RECORDED["session"]["turns"] if wire.saved else []})
     wire.override = respond
     options = dict(operation_id="intent-12345678", expected_last_turn_id="recorded-answer", recovery_interval=0)
-    stream = await maybe(chat.edit(SID, "recorded-user", "Edited text", **options))
+    revise = lambda: chat.edit(SID, "recorded-user", "Edited text", **options) if action == "edit" else chat.regenerate(SID, "recorded-answer", **options)
+    stream = await maybe(revise())
     await drain(stream)
     assert stream.result.session_id == branch and stream.result.status == "ok"
     frame = wire.sockets[0].sent[1]
     assert frame["chat_session_id"] == branch and frame["edit_operation_id"] == options["operation_id"]
-    repeated = await maybe(chat.edit(SID, "recorded-user", "Edited text", **options))
+    repeated = await maybe(revise())
     await drain(repeated)
     assert repeated.result.recovered and len(wire.sockets) == wire.writes == 1
+
+
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+async def test_revision_recovery_after_later_branch_messages_does_not_write(mode, action):
+    wire = Wire(mode); wire.saved = True; chat = wire.client(); branch = "continued-branch"
+    rows = [*RECORDED["session"]["turns"],
+            {**RECORDED["session"]["turns"][0], "id": "later-root", "run_id": "later-run"},
+            {**RECORDED["session"]["turns"][1], "id": "later-answer", "run_id": "later-run"}]
+    def respond(request):
+        if request.url.path.endswith("/" + SID): return env({**RECORDED["session"], "capabilities": {"edit": True, "regenerate": True}})
+        if request.url.path.endswith("/edits") or request.url.path.endswith("/regenerations"):
+            return env(dict(session={**RECORDED["session"], "id": branch}, operation_id="old-intent", run_id="recorded-run", message="text", attachment_ids=[], state="finished"))
+        if request.url.path.endswith("/" + branch): return env({**RECORDED["session"], "id": branch, "turns": rows})
+        if request.url.path.endswith("/turns"):
+            after = request.url.params.get("after")
+            i = next((i for i, turn in enumerate(rows) if turn["id"] == after), -1)
+            return env({"turns": rows[i + 1:]})
+    wire.override = respond
+    opts = dict(operation_id="old-intent", expected_last_turn_id="recorded-answer", recovery_interval=0)
+    stream = await maybe(chat.edit(SID, "recorded-user", "text", **opts) if action == "edit" else chat.regenerate(SID, "recorded-answer", **opts))
+    await drain(stream)
+    assert stream.result.run_id == "recorded-run" and stream.result.text == RECORDED["session"]["turns"][1]["text"]
+    assert stream.result.recovered and wire.writes == len(wire.sockets) == 0
+
+
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+async def test_revision_refuses_old_servers_before_posting(mode, action):
+    wire = Wire(mode); chat = wire.client()
+    with pytest.raises(ConfigError) as error:
+        opts = dict(operation_id="intent-1234", expected_last_turn_id="answer")
+        await maybe(chat.prepare_edit(SID, "root", "text", **opts) if action == "edit" else chat.prepare_regenerate(SID, "answer", **opts))
+    assert error.value.code == ("CHAT_EDIT_UNSUPPORTED" if action == "edit" else "CHAT_REGENERATE_UNSUPPORTED")
+    assert not any(request.method == "POST" for request in wire.requests) and wire.writes == 0
 
 
 async def drain(stream, callback=None):

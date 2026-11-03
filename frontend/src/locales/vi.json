@@ -405,14 +405,16 @@
     }
   },
   "errors": {
+    "CHAT_REGENERATE_INVALID": "Chỉ tạo lại được câu trả lời cuối đã kết thúc",
+    "CHAT_REGENERATE_UNSUPPORTED": "Máy chủ này chưa hỗ trợ tạo lại câu trả lời chat",
     "CHAT_EDIT_INVALID": "Tin nhắn này không sửa được",
-    "CHAT_EDIT_CONTEXT_UNAVAILABLE": "Không còn dữ liệu agent tại điểm sửa; hãy bắt đầu cuộc trò chuyện mới",
-    "CHAT_EDIT_BUSY": "Hãy chờ cuộc trò chuyện chạy xong trước khi sửa",
-    "CHAT_EDIT_STALE": "Cuộc trò chuyện đã thay đổi; hãy tải lại trước khi sửa",
-    "CHAT_EDIT_CONFLICT": "Mã thao tác này đã dùng cho một lần sửa khác",
-    "CHAT_EDIT_GONE": "Cuộc trò chuyện đã sửa đã bị xoá",
-    "CHAT_EDIT_PENDING": "Cuộc trò chuyện đã sửa còn thao tác chưa hoàn tất",
-    "CHAT_EDIT_STARTED": "Lần sửa này đã được tiếp nhận; hãy đọc kết quả đã lưu thay vì gửi lại",
+    "CHAT_EDIT_CONTEXT_UNAVAILABLE": "Không còn dữ liệu agent tại điểm này; hãy bắt đầu cuộc trò chuyện mới",
+    "CHAT_EDIT_BUSY": "Hãy chờ cuộc trò chuyện chạy xong trước khi tạo nhánh mới",
+    "CHAT_EDIT_STALE": "Cuộc trò chuyện đã thay đổi; hãy tải lại trước khi thử lại",
+    "CHAT_EDIT_CONFLICT": "Mã thao tác này đã dùng cho một lần tạo nhánh khác",
+    "CHAT_EDIT_GONE": "Nhánh cuộc trò chuyện mới đã bị xoá",
+    "CHAT_EDIT_PENDING": "Nhánh cuộc trò chuyện này còn thao tác chưa hoàn tất",
+    "CHAT_EDIT_STARTED": "Thao tác này đã được tiếp nhận; hãy đọc kết quả đã lưu thay vì gửi lại",
     "CHAT_EDIT_UNSUPPORTED": "Máy chủ này chưa hỗ trợ sửa tin nhắn chat",
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
     "BAD_REQUEST": "Yêu cầu không hợp lệ",
@@ -2023,6 +2025,11 @@
       "rerunWarning": "Thao tác này chạy lại workflow đang lưu. Lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Các câu hỏi Human trước đó cần được trả lời lại.",
       "saveRun": "Lưu và chạy trong nhánh mới",
       "source": "Cuộc trò chuyện gốc"
+    },
+    "regenerate": {
+      "title": "Tạo lại câu trả lời",
+      "description": "Chạy lại tin nhắn đã tạo ra câu trả lời này trong một cuộc trò chuyện mới. Câu trả lời gốc được giữ nguyên.",
+      "run": "Chạy lại trong nhánh mới"
     },
     "appKeys": {
       "studioOnly": "Bỏ chọn tất cả để chỉ cho phép người dựng workflow chat.",

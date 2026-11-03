@@ -17,7 +17,7 @@ type Composer = ComponentProps<typeof ChatComposer>
 export type PublicChatViewProps = {
   slug: string; page: Page | null; gone: boolean; err: string; ready: boolean; title: string; logo?: string; embed?: 'iframe' | 'widget';
   sessions: readonly { id: string; title?: string | null }[]; sid: string | null; setSid: (id: string) => void; fresh: () => void;
-  chat: Pick<Thread, 'turns' | 'mode' | 'events' | 'trace' | 'pending' | 'pendingFiles' | 'running' | 'onAnswer' | 'onRate' | 'onEdit' | 'onSource' | 'files'>;
+  chat: Pick<Thread, 'turns' | 'mode' | 'events' | 'trace' | 'pending' | 'pendingFiles' | 'running' | 'onAnswer' | 'onRate' | 'onEdit' | 'onRegenerate' | 'onSource' | 'files'>;
   files?: Composer['files']; onError: (error: string) => void; send: (text: string, files?: ChatAttachment[]) => void; cancel: () => void;
   renderThread?: (intro: ReactNode) => ReactNode; footer?: ReactNode
 }

@@ -55,3 +55,6 @@ The root lockfile owns all three npm workspaces. Development uses the `source` e
 
 
 Message editing (0.11.0 target) is shared with Studio/public chat/widget. The built-in action confirms a new workflow execution, opens an independent branch and keeps a link to the original. Custom layouts may call `chat.edit(turnId, text, operationId)` after providing the same rerun confirmation; retain the ID for recovery. Files are copied and inherited history is read-only. [Editing guide](../../handbook/docs/en/run/chat.md#edit-a-sent-message).
+
+
+`MessageList` also offers **Regenerate answer** on the latest terminal answer. Its shared confirmation explains current-workflow side effects; Human/reviewer responses are requested again in a new branch. Custom hosts can call `chat.regenerate(answerId, operationId?)` after the same confirmation. Unsupported servers keep ordinary chat; inherited turns remain read-only.

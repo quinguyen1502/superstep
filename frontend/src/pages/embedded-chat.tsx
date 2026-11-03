@@ -65,7 +65,8 @@ function EmbeddedController({ slug, page, state, bridge, widget }: { slug: strin
     } catch (error) { report(error); throw error }
   }
   const observed: ChatController = { ...chat, send: (text, files) => observe(() => chat.send(text, files)), answer: response => observe(() => chat.answer(response)),
-    edit: (turn, text, operationId) => observe(() => chat.edit(turn, text, operationId)) }
+    edit: (turn, text, operationId) => observe(() => chat.edit(turn, text, operationId)),
+    regenerate: (turn, operationId) => observe(() => chat.regenerate(turn, operationId)) }
   return <ChatProvider chat={observed} locale={locale} theme={{ primary: state.options.color }} style={{ height: '100svh' }}>
     <EmbeddedView chat={observed} page={page} slug={slug} widget={widget} logo={state.options.logo} report={report} />
   </ChatProvider>

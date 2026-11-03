@@ -315,12 +315,15 @@ class ChatSessionService:
         for x, d in zip(turns, out):
             d["editable"] = bool(x.role == "user" and x.run_id and x.run_id not in seen and not x.inherited)
             if x.role == "user" and x.run_id: seen.add(x.run_id)
-        return {**self._session(s), "steps_mode": mode, "turns": out, "capabilities": {"edit": True}}
+        roots = {x.run_id for x, d in zip(turns, out) if d["editable"]}
+        for x, d in zip(turns, out):
+            d["regeneratable"] = bool(x is turns[-1] and x.role == "assistant" and not x.inherited and x.run_id in roots and x.status not in ("queued", "running", "waiting", "paused"))
+        return {**self._session(s), "steps_mode": mode, "turns": out, "capabilities": {"edit": True, "regenerate": True}}
 
-    def edit_owned(self, sid: str, uid: str, body: dict, plan) -> dict:
+    def revise_owned(self, sid: str, uid: str, body: dict, plan, *, action="edit") -> dict:
         from .chat_edit_service import ChatEditService
         s, t = self._own(sid, uid, P.RUN)
-        return ChatEditService(self).prepare(s, t, body, lambda prep: plan(uid, {"workflow_id": s.workflow_id, "input": prep["input"]}), "full")
+        return ChatEditService(self).prepare(s, t, body, lambda prep: plan(uid, {"workflow_id": s.workflow_id, "input": prep["input"]}), "full", action=action)
 
     def visitors(self, wid: str, uid: str, thumbs_down: bool = False) -> list[dict]:
         """The published page's chats, for builders with the run right (DEC-0067 decision 8): no visitor ids or names.
@@ -570,7 +573,7 @@ class ChatSessionService:
     def _session(s: ChatSession) -> dict:
         return {"id": s.id, "workflow_id": s.workflow_id, "channel": s.channel, "title": s.title, "last_run_id": s.last_run_id,
                 "created": s.created, "updated": s.updated,
-                **({"source_session_id": s.source_session_id, "source_turn_id": s.source_turn_id} if s.source_session_id else {})}
+                **({"source_session_id": s.source_session_id, "source_turn_id": s.source_turn_id, "source_action": s.source_action or "edit"} if s.source_session_id else {})}
 
     @staticmethod
     def _turn(x: ChatTurn) -> dict:

@@ -101,8 +101,8 @@ components:
           type: string
         edit_operation_id:
           type: string
-          description: Execute the prepared edit intent once, on its returned branch session. Reconnects recover history rather
-            than replaying this operation.
+          description: Execute the prepared edit or regeneration intent once, on its returned branch session. Reconnects recover
+            history rather than replaying this operation.
         attachments:
           type: array
           items:

@@ -26,6 +26,7 @@ class ChatSession(Base):
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     source_session_id: Mapped[Optional[str]] = mapped_column(Text)
     source_turn_id: Mapped[Optional[str]] = mapped_column(Text)
+    source_action: Mapped[Optional[str]] = mapped_column(Text)  # edit | regenerate; old branches imply edit
 
 
 class ChatTurn(Base):
