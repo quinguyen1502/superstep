@@ -175,3 +175,7 @@ The owner prioritised TASK-0229 (edit sent message) and TASK-0230 (regenerate an
 The new revision semantics are proposed in `.factory-state/decisions/DEC-0084-chat-edit-regenerate.md`; architecture acceptance is pending. Native requirements are deferred, not fulfilled, so the overall requirement remains Accepted/incomplete. Shared Python SDK/CLI/server target 0.11.0; package versions, tags and publication wait for validated release preparation and explicit release instructions.
 
 - 2026-11-03: Owner accepted DEC-0084 in PR #292 ("Duyệt"); edit/regenerate design is now approved for implementation. Earlier Proposed/pending statements are historical. Native scope remains deferred.
+
+## Integrated Web Delivery And Release Preparation (2026-11-03)
+
+Web phases 1–3 and accepted edit/regenerate are merged through #293 (d2119965). TASK-0238 prepares the shared 0.11.0 candidate and validates packages, migration/backup and compatibility, with REV/QA-0224. The requirement remains Accepted/incomplete while native TASK-0227/0228 is deferred. No release/main merge, tag, registry publication or production cutover is implied by preparation.

@@ -324,7 +324,7 @@ Trên máy chủ có `capabilities.edit` trong dữ liệu cuộc trò chuyện,
 
 Hộp xác nhận nêu rõ thao tác sẽ chạy lại workflow đang lưu/công khai: lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Thao tác không hoàn tác hành động cũ hay chỉ tạo lại văn bản của model. Câu hỏi Human và yêu cầu người duyệt cần được trả lời lại. Hãy chờ cuộc trò chuyện đang chạy/chờ xử lý xong và tải lại nếu lịch sử đã thay đổi. Huỷ sửa không thay đổi tin nhắn.
 
-Tính năng dự kiến phát hành cùng 0.11.0; trước đợt phát hành đó, dùng đồng bộ mã máy chủ và SDK/giao diện mới. Các gói native tiếp tục tạm hoãn.
+Sửa tin nhắn và tạo lại câu trả lời cần Superstep 0.11.0 trở lên. Dùng các phiên bản SDK/giao diện tương thích với máy chủ; các gói native tiếp tục tạm hoãn.
 
 
 ## Tạo lại câu trả lời cuối

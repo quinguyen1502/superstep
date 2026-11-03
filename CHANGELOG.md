@@ -2,83 +2,58 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
-## Unreleased
-
-- Chat: regenerate the latest terminal answer in an independent branch across Studio, public/widget, React and TypeScript/Python SDKs; fresh Human/reviewer approvals and durable recovery preserve the original. Target shared release 0.11.0.
-
-- Added managed Telegram and Google Sheets connections through existing MCP nodes/Agent tools, with fixed destinations, encrypted credentials, dry runs, durable write outcomes and read-only reconciliation.
-
-- Added explicit event bindings for Telegram messages and signed JSON webhooks, with sender admission, typed state mapping and atomic delivery deduplication through the existing trigger UI.
+## 0.11.0 (2026-11-03)
 
 ### Added
 
-- **Edit sent chat messages** (TASK-0229, DEC-0084; targeted for 0.11.0). Studio, public chat, widget and the shared React toolkit open independent conversation branches while preserving original history. TypeScript and Python helpers carry a durable edit intent and recover interrupted results without replaying execution. Retained files use independent storage objects; inherited turns remain read-only. Confirmation explains that the current saved workflow runs again and external actions may repeat. Native delivery remains deferred.
-
-- **React chat toolkit and widget integration guides** (TASK-0223–0226, REQ-0082). Shared `@superstep/react`
-  components, `useChat`, isolated themes/locales and the programmable `window.Superstep` widget support
-  third-party identity/history, token refresh, Human answers, files and feedback. English/Vietnamese handbook
-  guides cover setup, lifecycle, events and the separate iframe/parent origin policies. The shared sample host
-  serves headless, React and widget pages with one server-owned login/token endpoint; CI exercises built Studio
-  embeds and React 18/19 consumers. No package version or publication is changed by this delivery.
-
-- **Headless chat SDKs and sample host** (TASK-0220–0222, REQ-0082). TypeScript SDK 0.2.0 and Python sync/async
-  clients add typed/pull-based chat streams, sessions/history, Human text/form answers, files, ratings and
-  server-side HS256 helpers. Expiry refresh is bounded and interrupted writes only recover persisted history.
-  A loopback-only, cross-origin customer-portal example covers two users, origin restrictions and revocation
-  through Playwright. Python retains its shared SDK/CLI/server version until the next approved release;
-  no `sdk-py-v0.2.0` downgrade or release tags are created by this delivery.
-- **Managed Google Drive tools** (TASK-0237, REQ-0085). List/search, inspect and read text/Google Docs within a fixed
-  folder, or create a plain-text file through MCP nodes/Agent slots. Supports encrypted service-account and OAuth
-  refresh credentials; uncertain creation reconciles by private operation marker and verified content without
-  uploading again. Personal service-account storage restrictions are enforced; Google auth is shared with Sheets.
-- **Managed channel actions** (TASK-0236, REQ-0084). Existing Slack, WhatsApp, email and Microsoft Teams channels
-  can send through MCP nodes/Agent tools with fixed recipients, shared channel permissions and durable outcomes.
-  Email shares the workflow recipient quota; submission acceptance is distinguished from delivery and uncertain
-  sends are never automatically repeated.
-- **Managed HTTP API tools** (TASK-0235, REQ-0084). Configure fixed API operations with input/response schemas and
-  encrypted authentication headers through the existing MCP registry. Requests use pinned destinations, bounded
-  JSON responses and credential redaction; uncertain outcomes remain blocked instead of repeating writes.
-- **Telegram expense workflow example** (TASK-0234, REQ-0083). A portable template combines event admission,
-  model fallback and managed tools with strict expense validation, separate expense/submission dates and a
-  success reply gated on a confirmed Sheets write. Includes bilingual setup/cutover guidance and acceptance
-  coverage for duplicate delivery, worker replay, rejected writes and lost-response reconciliation.
-- **LLM model fallback** (TASK-0231, REQ-0083). An LLM node can select one alternate credential/model after a provider
-  failure. Credential access is checked before calls; failed attempts cannot publish partial answer text. Attempt
-  metadata is recorded in the trace, mock runs stay offline and code exports explicitly reject unsupported policies.
-- **Chat API handbook and compatibility policy** (TASK-0219, REQ-0082). English and Vietnamese guides cover the
-  complete HTTP endpoint list, typed socket examples, history recovery, files and ratings, app-key setup and
-  rotation, server-only JWT signing in Node/Python/Go/PHP, and the v1 additive-change/12-month successor policy.
-  Third-party user authentication from TASK-0217/0218 uses per-chat app keys and short-lived HS256 tokens;
-  SDK chat helpers, widget identify and mobile toolkit remain later phases. No new SDK or app release is made here.
-- **Public Chat API v1** (TASK-0215, REQ-0082, DEC-0078). The published chat page's HTTP routes are now a versioned
-  contract at `/api/public/v1/chat/{slug}/...` (page, logo, chats, turns, files, ratings) and are documented in the
-  public OpenAPI (`/openapi.public.json`, tag `Chat`, version 1.1.0) with response models and error codes. The
-  unversioned `/api/public/chat/...` paths keep working as aliases. New `GET .../sessions/{sid}/turns?after=<turn_id>`
-  returns only the turns after that one. The TypeScript and Python SDKs map the chat error codes.
-- **Chat socket protocol v1** (TASK-0216, DEC-0078). `/ws/public/v1/chat/{slug}` speaks typed frames: the client sends
-  `auth` (optional), then one `message` or `answer`, and may `cancel`; the server sends `ready`, `run_started`, `token`
-  (the v1 name of `node_token`), `step`, `question`, `turn` (the saved answer's id, to rate it) and `done` or `error`,
-  each with `v` and a per-connection `seq`. The frames are specified as JSON Schema and as an AsyncAPI 3.0 document
-  (`/asyncapi.public.yaml`, `docs/asyncapi/chat-v1.yaml`). A frame that is not v1 answers `CHAT_FRAME_INVALID`. The
-  unversioned socket is unchanged.
+- **Public Chat API v1 and third-party identity** (TASK-0215–0219). Versioned HTTP and typed WebSocket APIs,
+  generated OpenAPI/AsyncAPI contracts, history recovery, files and ratings. Per-chat app keys let an application's
+  backend mint short-lived user tokens; secrets stay on the server and conversations remain scoped to each user.
+  Legacy routes remain aliases. API contract versioning is independent of the application version.
+- **Headless chat SDKs** (TASK-0220–0222). TypeScript 0.2.0 and Python 0.11.0 support streaming, sessions/history,
+  Human text/form answers, files, feedback and server-side signing helpers. Token refresh is bounded; interrupted
+  execution recovers saved history instead of replaying writes. Python SDK, CLI and server share version 0.11.0.
+- **Shared React toolkit and programmable widget** (TASK-0223–0226). `@superstep/react` 0.1.0 provides `useChat`,
+  composable chat controls, isolated themes/locales and the same presentation used by Studio. `window.Superstep`
+  supports identity, lifecycle and events. English/Vietnamese guides and a shared headless/React/widget sample
+  host cover origins, token refresh, Human answers, files and feedback; CI exercises React 18/19 consumers.
+- **Edit and regenerate chat messages** (TASK-0229/0230, DEC-0084). Editing a saved root message or regenerating the
+  latest terminal answer opens an independent conversation branch. Original history/feedback stays intact and
+  files are copied independently. Studio, public chat, widget and TypeScript/Python/React helpers share durable
+  admission and recovery. Confirmation explains that the current workflow runs again and API calls, writes or
+  notifications may repeat; Human/reviewer approvals are requested again. Inherited turns remain read-only.
+- **Generic managed tools** (TASK-0233/0235–0237). Existing MCP nodes and Agent tool slots can use configured HTTP
+  API operations, Telegram, Google Sheets/Drive and existing Slack, WhatsApp, email and Teams channels with fixed
+  destinations, encrypted authentication, shared permissions and bounded schemas. Unknown write outcomes stay
+  blocked for read-only reconciliation instead of automatically repeating non-idempotent actions. Google Drive
+  supports folder-scoped search/read and plain-text creation; Google authentication is shared with Sheets.
+- **Explicit event bindings** (TASK-0232). Telegram messages and signed JSON webhooks use sender admission, typed
+  state mapping and atomic delivery deduplication through existing trigger controls.
+- **LLM model fallback** (TASK-0231). An LLM node may use one alternate credential/model after a provider failure.
+  Credential permissions are checked first, failed-primary tokens are not published as an answer and attempts
+  appear in the trace. Mock runs remain offline; unsupported code exports fail explicitly.
+- **Telegram expense workflow example** (TASK-0234). A portable sample template combines event admission, model
+  fallback and managed tools with strict expense validation, separate expense/submission dates and a success
+  reply gated on a confirmed Sheets write. Bilingual setup guidance and duplicate/replay/reconciliation tests
+  accompany the example; it is not a built-in expense-management module.
 
 ### Fixed
 
-- **An Agent in a chat sends the new message to the model once** (TASK-0214). A chat's conversation field holds the
-  earlier exchanges plus the new message, and an Agent with that field as its history and `{{state.message}}` in its
-  task prompt (the built-in templates do this) sent the message twice, wasting tokens. The Agent now leaves the
-  history's last user message out when the task prompt already contains it, in the studio and in the Python and
-  TypeScript exports; saved workflows need no change. The LLM node and the public chat page had no separate
-  duplication (the page uses the same run input).
-- **Two tokens can no longer get the same name at the same moment** (TASK-0213). Active personal access token names are
-  now unique per user in the database (a partial unique index; revoked tokens still free their name). A create that
-  loses the race answers `PAT_NAME_TAKEN`, and a CLI sign-in collected at that moment gets the next free name
-  (`name (2)`...). Active duplicates left by older versions are renamed the same way when the database is upgraded.
-- **A run's time limit no longer counts the setup before its first node** (TASK-0212). `STUDIO_RUN_TIMEOUT` started
-  before a queued run saved its first progress checkpoint, so when that write waited for the database the run could
-  end with `timeout` before running a node. A workflow tool's child run did this in CI: its first write waited 12.6 s,
-  the 5 s limit had passed, and the parent's tool call failed with an empty step list. The limit now starts when the
-  engine starts; its length is unchanged.
+- **Chat Agent input duplication** (TASK-0214). An Agent using the chat history and the new message in its prompt
+  sends the message to the model once, in Studio and generated Python/TypeScript workflows.
+- **Concurrent token names** (TASK-0213). Active PAT names are unique per user. Losing creates return
+  `PAT_NAME_TAKEN`, CLI sign-in chooses the next free name and existing duplicates are renamed during migration.
+- **Run timeout starts at execution** (TASK-0212). Queue/setup and the first progress-checkpoint write no longer
+  consume the run's execution timeout; the configured limit itself is unchanged.
+- **Revision recovery after newer messages** (TASK-0230). SDKs still find an admitted operation's reserved run
+  after its branch has continued, without resending execution. The TypeScript store preserves a later Human wait.
+
+### Upgrade
+
+- Back up the database and attachment storage before upgrading. Startup applies Alembic migrations 0050–0054
+  from the v0.10.2 schema; existing conversations/files remain readable. Conversation branches use extra storage.
+- Use matching 0.11.0 Python SDK/CLI/server versions. TypeScript SDK 0.2.0 and React 0.1.0 retain independent
+  package versions. React Native toolkit/WebView tasks TASK-0227/0228 remain deferred; no native delivery is claimed.
 
 ## 0.10.2 (2026-10-31)
 
