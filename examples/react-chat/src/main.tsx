@@ -16,7 +16,8 @@ function App() {
   useEffect(() => { document.title = t.demoTitle }, [t])
   const signIn = async (persona: string) => { setError(false); try { setSession(await api<Session>('/api/auth/login', { persona })) } catch { setError(true) } }
   const theme: ChatTheme = { colorScheme: scheme === 'dark' ? 'dark' : 'light', ...(scheme === 'custom' ? { primary: 'var(--demo-brand)', primaryForeground: 'var(--demo-brand-foreground)', radius: 16, font: 'Georgia, serif' } : {}) }
-  return <main className="host-page" data-react-version={version}>
+  return <main lang={locale} className="host-page" data-react-version={version}>
+    <nav className="superstep-chat host-controls">{([['/', 'headlessExample'], ['/react/', 'reactExample'], ['/widget.html', 'widgetExample']] as const).map(([href,key]) => <Button key={href} asChild variant="ghost"><a href={href}>{t[key]}</a></Button>)}</nav>
     <header><p className="host-eyebrow">{t.demoTitle}</p><h1>{t.hostTitle}</h1><p>{t.hostDescription}</p></header>
     <div className="superstep-chat host-controls" lang={locale}>
       <div role="group" aria-label={t.language}>{(['en','vi'] as const).map(value => <Button key={value} variant={value === locale ? 'secondary' : 'ghost'} onClick={() => setLocale(value)}>{value === 'en' ? t.english : t.vietnamese}</Button>)}</div>

@@ -17,19 +17,20 @@ import i18n, { errorText } from '@/lib/i18n'
 import en from './locales/en.json'
 import vi from './locales/vi.json'
 import './styles.css'
+import { WidgetDemo } from './widget-demo'
 
 i18n.addResourceBundle('en', 'host', en)
 i18n.addResourceBundle('vi', 'host', vi)
 type User = { id: string; name: string }
-type Session = { user: User | null; config: { baseUrl: string; slug: string } }
+export type Session = { user: User | null; config: { baseUrl: string; slug: string } }
 const displayError = (error: unknown) => {
   const value = error as { code?: string; message?: string }
   return errorText({ ...value, code: value?.code === 'CONNECTION_ERROR' ? 'NETWORK_ERROR' : value?.code, message: value?.message })
 }
 const locale = (): 'en' | 'vi' => i18n.language?.startsWith('vi') ? 'vi' : 'en'
 
-export function App() {
-  const { t } = useTranslation('host')
+export function App({ integration = 'headless' }: { integration?: 'headless' | 'widget' }) {
+  const { t } = useTranslation('host'), { t: common } = useTranslation()
   const [session, setSession] = useState<Session | null>(null)
   const [error, setError] = useState<unknown>(null)
   const [busy, setBusy] = useState(false)
@@ -56,18 +57,19 @@ export function App() {
     try { await api('/api/auth/logout', { method: 'POST' }); setSession(current => current && { ...current, user: null }) }
     catch (error) { setError(error) } finally { setBusy(false) }
   }
-  return <div className="min-h-screen bg-background text-foreground">
+  return <div lang={lang} className="min-h-screen bg-background text-foreground">
     <header className="border-b bg-card">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-5 py-5">
         <div className="flex items-center gap-3"><span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><MessageCircle aria-hidden="true" className="size-5" /></span>
           <div><p className="font-semibold">{t('brand')}</p><p className="text-xs text-muted-foreground">{t('demo')}</p></div></div>
         <div className="flex flex-wrap items-center gap-2">
+          {([['/', 'headlessExample'], ['/react/', 'reactExample'], ['/widget.html', 'widgetExample']] as const).map(([href, key]) => <Button key={href} asChild size="sm" variant="ghost"><a href={href}>{common(`chat.toolkit.${key}`)}</a></Button>)}
           <div className="flex items-center gap-1" role="group" aria-label={t('language')}>
             <Button size="sm" variant={lang === 'en' ? 'secondary' : 'ghost'} onClick={() => void i18n.changeLanguage('en')}>{t('english')}</Button>
             <Button size="sm" variant={lang === 'vi' ? 'secondary' : 'ghost'} onClick={() => void i18n.changeLanguage('vi')}>{t('vietnamese')}</Button>
           </div>
-          <Button variant="outline" size="icon" aria-label={t('theme')} onClick={() => setDark(value => !value)}>{dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}</Button>
-          {session?.user && <><Badge variant="secondary">{session.user.name}</Badge><Button variant="ghost" disabled={busy} onClick={() => void signOut()}>{t('signOut')}</Button></>}
+          <Button variant="outline" size="icon-sm" aria-label={t('theme')} onClick={() => setDark(value => !value)}>{dark ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}</Button>
+          {session?.user && <><Badge variant="secondary">{session.user.name}</Badge><Button size="sm" variant="ghost" disabled={busy} onClick={() => void signOut()}>{t('signOut')}</Button></>}
         </div>
       </div>
     </header>
@@ -80,7 +82,8 @@ export function App() {
             {t('signIn', { name: t(`people.${persona}`) })}
           </Button>)}</CardContent><CardFooter><p className="text-xs text-muted-foreground">{t('privacy')}</p></CardFooter></Card>
       </div>}
-      {session?.user && <Workspace key={session.user.id} session={session as Session & { user: User }} />}
+      {integration === 'headless' && session?.user && <Workspace key={session.user.id} session={session as Session & { user: User }} />}
+      {integration === 'widget' && session && <WidgetDemo session={session} lang={lang} onError={setError} />}
     </main>
   </div>
 }

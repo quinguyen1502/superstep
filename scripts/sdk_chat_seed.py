@@ -35,9 +35,11 @@ def seed(slug, human=False):
         {"name": "reply", "type": "string"}, {"name": "answer", "type": "object"}, {"name": "files", "type": "list"}, {"name": "chat", "type": "object"}],
         "nodes": nodes, "edges": [{"id": str(i), "source": left["id"], "target": right["id"]} for i, (left, right) in enumerate(zip(nodes, nodes[1:]))]}
     wid = api("POST", "/api/workflows", json=workflow)["id"]
-    api("PUT", f"/api/workflows/{wid}/chat", json={"enabled": True, "slug": slug, "access": ["app", "anonymous"],
-        "attachments": {"enabled": True, "field": "files"}})
     origins = [os.environ["SUPERSTEP_IT_CHAT_ORIGIN"]] if os.environ.get("SUPERSTEP_IT_CHAT_ORIGIN") else []
+    embeds = origins if os.environ.get("SUPERSTEP_IT_CHAT_WIDGET") == "1" else []
+    api("PUT", f"/api/workflows/{wid}/chat", json={"enabled": True, "slug": slug, "access": ["app", "anonymous"],
+        "attachments": {"enabled": True, "field": "files"}, "embed_origins": embeds})
+    if embeds: origins = [*origins, base]  # Widget traffic originates at the Studio iframe, not its parent.
     key = api("POST", f"/api/workflows/{wid}/chat/app-keys", json={"label": "SDK integration", "origins": origins})
     if human and os.environ.get("SUPERSTEP_IT_CHAT_SPARE_KEY") == "1":
         # Keep CORS origin admission active after revoking the actual test key, so browsers can read its typed 401.

@@ -330,4 +330,5 @@ jobs:
           path: |
             frontend/test-results/chat-host/
             frontend/test-results/react-chat/
+            frontend/test-results/widget-chat/
           retention-days: 14

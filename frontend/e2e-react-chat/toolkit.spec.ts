@@ -4,7 +4,7 @@ import { expectRowAligned } from '../e2e/helpers/alignment'
 test('built toolkit: theme/locale isolation, Human answer, files, feedback and identity', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message))
   page.on('console', message => { if (message.type() === 'error' && !message.text().includes('Failed to load resource')) errors.push(message.text()) })
-  await page.goto('/')
+  await page.goto('/react/')
   await expect(page.locator('main')).toHaveAttribute('data-react-version', process.env.REACT_COMPAT_ROOT ? /^18\./ : /^19\./)
   const host = page.locator('#host-sentinel')
   const before = await host.evaluate(element => { const s = getComputedStyle(element); return [s.fontFamily, s.fontSize, s.padding, s.borderWidth, s.borderRadius] })
@@ -13,7 +13,13 @@ test('built toolkit: theme/locale isolation, Human answer, files, feedback and i
   const chat = page.getByTestId('main-chat'), composed = page.getByTestId('composed-chat')
   await expect(chat.getByRole('textbox')).toBeEnabled()
   await expect(composed.getByRole('textbox', { name: 'Tin nhắn' })).toBeEnabled()
-  const capture = async (name: string) => { const file = info.outputPath(`${name}.png`); await page.screenshot({ path: file, fullPage: true }); await info.attach(name, { path: file, contentType: 'image/png' }) }
+  const capture = async (name: string) => {
+    await expect.poll(() => chat.locator('.superstep-chat').evaluate(el => [...el.querySelectorAll('header button, textarea')]
+      .every(control => getComputedStyle(control).color === getComputedStyle(el).color))).toBe(true)
+    const file = info.outputPath(`${name}.png`)
+    await page.screenshot({ path: file, fullPage: true, animations: 'disabled' })
+    await info.attach(name, { path: file, contentType: 'image/png' })
+  }
   const inputGroup = chat.locator('[data-slot=input-group]')
   const lightBackground = await inputGroup.evaluate(element => getComputedStyle(element).backgroundColor)
   await page.evaluate(() => { document.documentElement.dataset.colorScheme = 'dark' })

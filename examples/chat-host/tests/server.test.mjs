@@ -79,7 +79,17 @@ test('sample locales match and static serving cannot expose server sources', asy
   const vi = JSON.parse(await readFile(new URL('../src/locales/vi.json', import.meta.url), 'utf8'))
   const keys = (value, prefix = '') => Object.entries(value).flatMap(([key, item]) => typeof item === 'object' ? keys(item, prefix + key + '.') : [prefix + key]).sort()
   assert.deepEqual(keys(en), keys(vi))
-  assert.equal((await api('/..%2fserver.mjs')).status, 404)
+  for (const route of ['/..%2fserver.mjs', '/react/..%2f..%2fchat-host/server.mjs', '/react/..%2fserver.mjs']) assert.equal((await api(route)).status, 404)
+  for (const route of ['/widget.html', '/react/']) {
+    const page = await api(route)
+    assert.equal(page.status, 200)
+    assert.equal(page.headers.get('cache-control'), 'no-store')
+    const html = await page.text()
+    assert.equal(html.includes(secret), false)
+    const scripts = [...html.matchAll(/src="([^"]+\.js)"/g)].map(match => new URL(match[1], origin + route).pathname)
+    assert.ok(scripts.length > 0)
+    for (const asset of scripts) assert.equal((await api(asset)).status, 200)
+  }
   const response = await api('/')
   assert.equal(response.status, 200)
   assert.equal(response.headers.get('content-security-policy').includes("frame-ancestors 'none'"), true)

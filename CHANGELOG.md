@@ -10,6 +10,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **React chat toolkit and widget integration guides** (TASK-0223–0226, REQ-0082). Shared `@superstep/react`
+  components, `useChat`, isolated themes/locales and the programmable `window.Superstep` widget support
+  third-party identity/history, token refresh, Human answers, files and feedback. English/Vietnamese handbook
+  guides cover setup, lifecycle, events and the separate iframe/parent origin policies. The shared sample host
+  serves headless, React and widget pages with one server-owned login/token endpoint; CI exercises built Studio
+  embeds and React 18/19 consumers. No package version or publication is changed by this delivery.
+
 - **Headless chat SDKs and sample host** (TASK-0220–0222, REQ-0082). TypeScript SDK 0.2.0 and Python sync/async
   clients add typed/pull-based chat streams, sessions/history, Human text/form answers, files, ratings and
   server-side HS256 helpers. Expiry refresh is bounded and interrupted writes only recover persisted history.

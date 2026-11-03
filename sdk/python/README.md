@@ -22,6 +22,9 @@ Python 3.9 or later.
 
 ## Chat
 
+For a web UI, see the [React toolkit guide](../../handbook/docs/en/run/chat-react.md) and [widget guide](../../handbook/docs/en/run/chat-widget.md), also available in [Vietnamese](../../handbook/docs/vi/run/chat-react.md).
+
+
 ```bash
 pip install 'superstep[chat]'
 # From this repository before publication:

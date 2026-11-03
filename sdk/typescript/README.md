@@ -21,6 +21,9 @@ have been published by the owner. Building this repository does not publish it.
 
 ## Chat
 
+For a web UI, see the [React toolkit guide](../../handbook/docs/en/run/chat-react.md) and [widget guide](../../handbook/docs/en/run/chat-widget.md), also available in [Vietnamese](../../handbook/docs/vi/run/chat-react.md).
+
+
 Publish a workflow with app access, then create an app key in Chat settings.
 Keep its secret in your application's backend. After authenticating your user,
 mint a short-lived token there:

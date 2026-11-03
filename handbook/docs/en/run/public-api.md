@@ -214,8 +214,9 @@ without automatically replaying an ambiguous message.
 The [chat host example](https://github.com/quinguyen1502/superstep/tree/develop/examples/chat-host)
 demonstrates a loopback Node host on a separate origin, server-owned sessions,
 two customers, a Human approval form, files, ratings and key revocation. It
-reuses the headless store; it is a local sign-in demonstration, not the future
-React UI toolkit or a production account system. CI keeps screenshots as
+serves a headless SDK portal, [React toolkit](chat-react.md) page and
+[widget](chat-widget.md) page with the same protected token endpoint. It is a local
+sign-in demonstration; replace its stub before deploying an account system. CI keeps screenshots as
 downloadable artifacts, outside Git.
 
 TypeScript targets SDK 0.2.0. Python retains the SDK/CLI/server's shared version

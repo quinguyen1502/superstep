@@ -61,6 +61,8 @@ nav:
       - Telegram expense workflow: run/telegram-expenses.md
       - Chat: run/chat.md
       - Chat API: run/chat-api.md
+      - React chat toolkit: run/chat-react.md
+      - Chat widget: run/chat-widget.md
       - Third-party chat auth: run/chat-third-party-auth.md
       - Workflow tests: run/tests.md
   - Operate:

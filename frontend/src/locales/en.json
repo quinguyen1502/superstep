@@ -2219,6 +2219,14 @@
       "frame": "Chat assistant"
     },
     "toolkit": {
+      "headlessExample": "Headless SDK example",
+      "reactExample": "React toolkit example",
+      "widgetExample": "Widget example",
+      "widgetDescription": "Use the bubble to chat anonymously, then choose a demo customer to switch identity.",
+      "openWidget": "Open widget",
+      "closeWidget": "Close widget",
+      "widgetReady": "Widget ready",
+      "widgetEvents": "Messages: {{messages}} · Answers: {{answers}}",
       "loading": "Loading chat…",
       "refresh": "Refresh history",
       "requestFailed": "The request could not be completed. Try again.",

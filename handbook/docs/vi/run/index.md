@@ -1,5 +1,7 @@
 # Chạy
 
+Dùng [bộ giao diện React chat](chat-react.md) để ghép thành phần, hoặc [widget chat](chat-widget.md) để thêm bong bóng vào website.
+
 Để tạo client riêng cho chat công khai, xem [Chat API](chat-api.md) và
 [Xác thực bên thứ ba](chat-third-party-auth.md).
 
