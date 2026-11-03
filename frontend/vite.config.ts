@@ -21,7 +21,7 @@ const chatEmbed = (): Plugin => ({
       if (url.split('?')[0] === '/c/widget.js') {   // a classic script, as the production build makes it
         const out = await build({ configFile: path.resolve(__dirname, 'vite.widget.config.ts'), build: { write: false }, logLevel: 'silent' })
         const chunk = (Array.isArray(out) ? out[0] : out as { output: { code?: string }[] }).output[0]
-        res.setHeader('Content-Type', 'text/javascript'); res.end(chunk.code ?? ''); return
+        res.setHeader('Content-Type', 'text/javascript; charset=utf-8'); res.end(chunk.code ?? ''); return
       }
       if (/^\/c\/[a-z0-9-]+\/?(\?|$)/.test(url)) {
         try {

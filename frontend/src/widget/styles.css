@@ -1,0 +1,10 @@
+#superstep-chat-widget { all: initial; font-family: ui-sans-serif, system-ui, sans-serif; }
+#superstep-chat-widget #superstep-chat-panel { position:fixed; right:16px; bottom:88px; width:min(400px,calc(100vw - 32px)); height:min(640px,calc(100dvh - 120px)); border-radius:var(--ss-widget-radius); overflow:hidden; box-shadow:var(--ss-widget-shadow); z-index:2147483000; background:var(--ss-widget-popover); }
+#superstep-chat-widget[data-position=left] #superstep-chat-panel { right:auto; left:16px; }
+#superstep-chat-widget iframe { width:100%; height:100%; border:0; display:block; }
+#superstep-chat-widget #superstep-chat-button { all:unset; box-sizing:border-box; position:fixed; right:16px; bottom:16px; width:56px; height:56px; border-radius:9999px; cursor:pointer; display:flex; align-items:center; justify-content:center; background:var(--ss-widget-primary); color:var(--ss-widget-primary-foreground); box-shadow:var(--ss-widget-shadow); z-index:2147483001; }
+#superstep-chat-widget[data-position=left] #superstep-chat-button { right:auto; left:16px; }
+#superstep-chat-widget #superstep-chat-button:focus-visible { outline:2px solid var(--ss-widget-ring); outline-offset:3px; }
+#superstep-chat-widget #superstep-chat-button:hover { filter:brightness(.94); }
+#superstep-chat-widget #superstep-chat-button img { width:28px; height:28px; object-fit:contain; border-radius:6px; }
+#superstep-chat-widget [hidden] { display:none !important; }

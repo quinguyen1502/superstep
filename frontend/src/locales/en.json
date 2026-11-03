@@ -2213,6 +2213,11 @@
         "fieldHint": "The list field that receives the file records for each run."
       }
     },
+    "widget": {
+      "open": "Open chat",
+      "close": "Close chat",
+      "frame": "Chat assistant"
+    },
     "toolkit": {
       "loading": "Loading chat…",
       "refresh": "Refresh history",

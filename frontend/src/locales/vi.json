@@ -2213,6 +2213,11 @@
         "fieldHint": "Trường danh sách nhận thông tin các tệp trong mỗi run."
       }
     },
+    "widget": {
+      "open": "Mở chat",
+      "close": "Đóng chat",
+      "frame": "Trợ lý chat"
+    },
     "toolkit": {
       "loading": "Đang tải chat…",
       "refresh": "Tải lại lịch sử",

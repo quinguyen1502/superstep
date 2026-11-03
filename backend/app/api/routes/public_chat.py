@@ -40,7 +40,7 @@ from ...services.public_chat_service import Visitor, public_event
 from ...services.run_service import error_event
 from ..static import CHAT_PAGE
 from ..deps import bearer, chat_attachment_service, current_user, public_chat_service, run_service, ws_user
-from ..chat_cors import same_chat_origin, request_ip
+from ..chat_cors import same_chat_origin, chat_request_origin, request_ip
 from ...services.chat_token_verifier import ChatAppUser
 
 CHAT_TAG = "Chat"
@@ -65,7 +65,7 @@ async def maybe_user(request: Request, slug: str, cred: Optional[HTTPAuthorizati
     try: return current_user(request, cred)
     except AppError as e:
         if e.code == "AUTH_CSRF": raise
-        if cred is not None: return await svc.authenticate(slug, cred.credentials, request.headers.get("origin"), request_ip(request))
+        if cred is not None: return await svc.authenticate(slug, cred.credentials, chat_request_origin(request), request_ip(request))
         return None
 
 

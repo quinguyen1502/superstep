@@ -8,6 +8,7 @@ export interface UseChatOptions extends ChatClientOptions {
   /** undefined restores the latest chat; null starts empty; a string loads that session. */
   sessionId?: string | null
   locale?: 'en' | 'vi'
+  embed?: boolean
 }
 type Extra = { page: ChatPage | null; sessions: readonly ChatSession[]; loading: boolean; operation: boolean; error: unknown; pending: string | null; pendingFiles: ChatAttachment[] }
 let nextResource = 0
@@ -53,16 +54,16 @@ export function useChat(options: UseChatOptions) {
       finally { operations--; if (!r.lifetime.signal.aborted) r.patch({ operation: operations > 0 }) }
     }
     let starting: Promise<string> | null = null
-    const ensureSession = async () => r.store.getSnapshot().sessionId ?? (starting ??= r.store.start({ signal: r.lifetime.signal }).then(s => s.id).finally(() => { starting = null }))
+    const ensureSession = async () => r.store.getSnapshot().sessionId ?? (starting ??= r.store.start({ signal: r.lifetime.signal, embed: latest.current.embed }).then(s => s.id).finally(() => { starting = null }))
     const reload = async () => { const id = r.store.getSnapshot().sessionId; if (id) await r.store.load(id, { signal: r.lifetime.signal }); await refresh() }
     return {
       refresh: () => perform(async () => { const page = await r.client.info({ signal: r.lifetime.signal }); r.patch({ page }); await reload() }),
       load: (id: string) => { r.navigation++; r.selection++; return perform(() => r.store.load(id, { signal: r.lifetime.signal })) },
-      start: () => { r.navigation++; r.selection++; return perform(async () => { await r.store.start({ signal: r.lifetime.signal }); await refresh() }) },
+      start: () => { r.navigation++; r.selection++; return perform(async () => { await r.store.start({ signal: r.lifetime.signal, embed: latest.current.embed }); await refresh() }) },
       send: (text: string, files: ChatAttachment[] = []) => perform(async () => {
         r.navigation++
         r.patch({ pending: text, pendingFiles: files })
-        try { const result = await r.store.send(text, { locale: latest.current.locale, attachments: files.map(f => f.id), signal: r.lifetime.signal }); await refresh(); return result }
+        try { await ensureSession(); const result = await r.store.send(text, { locale: latest.current.locale, attachments: files.map(f => f.id), signal: r.lifetime.signal }); await refresh(); return result }
         finally { if (!r.lifetime.signal.aborted) r.patch({ pending: null, pendingFiles: [] }) }
       }),
       answer: (response: Parameters<typeof r.store.answer>[0]) => perform(async () => {

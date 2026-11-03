@@ -15,9 +15,7 @@ METHODS = "GET, POST, PUT, DELETE, OPTIONS"
 HEADERS = "Authorization, Content-Type, X-Requested-With, X-Chat-Visitor"
 
 
-def same_chat_origin(connection) -> bool:
-    origin = connection.headers.get("origin")
-    if not origin: return True  # native/server clients send no Origin; app keys still enforce their origin policy
+def _matches_chat_origin(connection, origin: str) -> bool:
     try:
         parsed = urlsplit(origin)
         if parsed.scheme not in ("http", "https") or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment: return False
@@ -27,6 +25,29 @@ def same_chat_origin(connection) -> bool:
         # The configured public URL describes a trusted reverse proxy's external origin.
         return own or bool(config.public_url() and origin.rstrip("/") == config.public_url())
     except ValueError: return False
+
+
+def same_chat_origin(connection) -> bool:
+    origin = connection.headers.get("origin")
+    # Native/server clients send no Origin; app keys still enforce their origin policy.
+    return not origin or _matches_chat_origin(connection, origin)
+
+
+def chat_request_origin(request) -> str | None:
+    """Browsers omit Origin on same-origin GETs. Accept only their own verified referrer.
+
+    Cross-site requests still require Origin. Neither a parent-origin claim nor an
+    arbitrary Referer can grant an app key access to a different site's origin.
+    """
+    origin = request.headers.get("origin")
+    if origin is not None: return origin
+    if request.headers.get("sec-fetch-site") != "same-origin": return None
+    try:
+        referrer = urlsplit(request.headers.get("referer", ""))
+        if referrer.scheme not in ("http", "https") or not referrer.netloc or referrer.username or referrer.password: return None
+        candidate = f"{referrer.scheme}://{referrer.netloc}"
+        return candidate if _matches_chat_origin(request, candidate) else None
+    except ValueError: return None
 
 
 def request_ip(connection) -> str:

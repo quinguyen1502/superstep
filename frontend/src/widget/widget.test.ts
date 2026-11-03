@@ -4,6 +4,7 @@ import { answer, frameUrl, mount, MSG, optionsOf, storageKey, type WidgetOptions
 import { iframeSnippet, widgetSnippet } from '@/lib/chat'
 
 const O: WidgetOptions = { slug: 'help', origin: 'https://studio.example.com', position: 'right', open: false, vi: false }
+const V1 = '0123456789abcdef.0123456789abcdef0123456789abcdef', V2 = 'abcdef0123456789.abcdef0123456789abcdef0123456789'
 const store = (init: Record<string, string> = {}) => { const m = new Map(Object.entries(init))
   return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) }, m } }
 
@@ -16,13 +17,13 @@ describe('chat widget', () => {
   })
 
   it('gives the stored token to the studio frame only, and keeps the one it sends', () => {
-    const st = store({ [storageKey('help')]: 'v1.sig' })
-    expect(answer({ origin: O.origin, data: { type: MSG.ready } }, O, st)).toEqual({ type: MSG.token, token: 'v1.sig' })
+    const st = store({ [storageKey('help')]: V1 })
+    expect(answer({ origin: O.origin, data: { type: MSG.ready } }, O, st)).toEqual({ type: MSG.token, token: V1 })
     expect(answer({ origin: 'https://evil.example', data: { type: MSG.ready } }, O, st)).toBeNull()
-    expect(answer({ origin: O.origin, data: { type: MSG.save, token: 'v2.sig' } }, O, st)).toBeNull()
-    expect(st.m.get(storageKey('help'))).toBe('v2.sig')
+    expect(answer({ origin: O.origin, data: { type: MSG.save, token: V2 } }, O, st)).toBeNull()
+    expect(st.m.get(storageKey('help'))).toBe(V2)
     answer({ origin: 'https://evil.example', data: { type: MSG.save, token: 'x' } }, O, st)
-    expect(st.m.get(storageKey('help'))).toBe('v2.sig')
+    expect(st.m.get(storageKey('help'))).toBe(V2)
     const blocked = { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } }
     expect(answer({ origin: O.origin, data: { type: MSG.ready } }, O, blocked)).toEqual({ type: MSG.token, token: null })
   })
