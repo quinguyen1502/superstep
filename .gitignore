@@ -57,3 +57,5 @@ packages/react/src/public/messages.generated.ts
 
 examples/react-chat/src/messages.generated.ts
 examples/react-chat/dist/
+
+frontend/src/widget/assets.generated.ts

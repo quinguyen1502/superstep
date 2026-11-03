@@ -20,6 +20,10 @@ await write('src/public/messages.generated.ts', '// Generated from frontend loca
 await fs.mkdir(path.join(root, 'examples/react-chat/src'), { recursive: true })
 await fs.writeFile(path.join(root, 'examples/react-chat/src/messages.generated.ts'), '// Generated from frontend locales.\nexport const messages = '+JSON.stringify(Object.fromEntries(Object.entries(languages).map(([lang,value])=>[lang,value.chat.toolkit])))+' as const\n')
 const source = postcss.parse(await fs.readFile(path.join(root, 'frontend/src/index.css'), 'utf8'))
+const palette = source.nodes.find(n=>n.type==='rule' && n.selector===':root').nodes.filter(n=>n.type==='decl' && ['--primary','--primary-foreground','--popover','--ring','--radius'].includes(n.prop))
+const widgetTokens = Object.fromEntries(palette.map(n=>[n.prop.replace('--','--ss-widget-'),n.value]))
+widgetTokens['--ss-widget-shadow'] = '0 12px 32px color-mix(in oklch, '+widgetTokens['--ss-widget-primary']+', transparent 76%)'
+await fs.writeFile(path.join(root, 'frontend/src/widget/assets.generated.ts'), '// Generated from canonical locales/theme; no independent widget palette.\nexport const labels = '+JSON.stringify(Object.fromEntries(Object.entries(languages).map(([lang,value])=>[lang,value.chat.widget])))+' as const\nexport const tokens = '+JSON.stringify(widgetTokens)+' as const\n')
 const theme = source.nodes.filter(n => n.type === 'atrule' && (n.name === 'theme' || n.name === 'utility' || (n.name === 'layer' && n.params === 'base'))).map(n => n.toString()).join('\n')
 const scanner = new Scanner({ sources: [{ base: path.join(pkg, 'src'), pattern: '**/*.{ts,tsx}', negated: false }, { base: path.join(pkg, 'src'), pattern: '**/messages.generated.ts', negated: true }] })
 const candidate = scanner.scan()

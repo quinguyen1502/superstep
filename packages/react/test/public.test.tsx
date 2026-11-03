@@ -22,6 +22,23 @@ function Harness({ wire, children, identityKey }: { wire: Wire; identityKey?: st
 }
 
 describe('useChat SDK binding', () => {
+  it('marks implicit sessions as embeds and aborts their creation before a stale identity can write', async () => {
+    const wire = new Wire()
+    let release!: (response: Response) => void
+    wire.override = (url, init) => url.pathname.endsWith('/sessions') && init.method === 'POST' ? new Promise<Response>(resolve => { release = resolve }) : undefined
+    const { result, unmount } = renderHook(() => useChat({ ...options(wire), embed: true }))
+    await ready(result)
+    let pending!: Promise<unknown>
+    act(() => { pending = result.current.send('Hello').catch(error => error) })
+    await waitFor(() => expect(release).toBeTypeOf('function'))
+    const start = wire.calls.find(call => call.init.method === 'POST')!
+    expect(JSON.parse(String(start.init.body))).toEqual({ embed: true })
+    unmount(); await act(async () => {})
+    expect(start.init.signal?.aborted).toBe(true)
+    release(ok({ ...recorded.session, turns: undefined }))
+    await pending
+    expect(wire.writes).toBe(0)
+  })
   it('survives StrictMode replay, rerenders and refreshed token callbacks without losing its store', async () => {
     const wire = new Wire(), token = vi.fn(async () => 'fixture-token')
     const { result, rerender } = renderHook(() => useChat({ ...options(wire), visitorToken: undefined, getToken: () => token() }), { wrapper: StrictMode })

@@ -245,3 +245,22 @@ def test_failed_verifications_hit_the_message_ip_limit(monkeypatch):
             except Exception as e: codes.append(e.code)
         return codes
     assert asyncio.run(failures()) == ["CHAT_TOKEN_INVALID", "CHAT_TOKEN_INVALID", "RATE_LIMITED"]
+
+
+def test_same_origin_browser_get_uses_only_a_verified_own_referrer(monkeypatch):
+    monkeypatch.setenv("STUDIO_PUBLIC_URL", "https://studio.example")
+    _, _, slug, key = setup(["https://studio.example"])
+    token = mint(key, slug)
+    v = visitor()
+    path = f"{BASE}/{slug}/sessions"
+    own = {**H(token), "Sec-Fetch-Site": "same-origin", "Referer": "https://studio.example/c/support?embed=1"}
+    assert v.get(path, headers=own).status_code == 200
+    for extra in ({"Referer": "https://shop.example/c/support"},
+                  {"Sec-Fetch-Site": "cross-site"},
+                  {"Sec-Fetch-Site": "none"},
+                  {"Origin": "https://shop.example"},
+                  {"Referer": "https://studio.example@evil.example/"}):
+        response = v.get(path, headers={**own, **extra})
+        assert response.status_code == 403 and err(response) == "CHAT_ORIGIN_FORBIDDEN"
+    # Native callers with restricted keys must still explicitly supply an allowed Origin.
+    assert err(v.get(path, headers=H(token))) == "CHAT_ORIGIN_FORBIDDEN"

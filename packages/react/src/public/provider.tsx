@@ -9,7 +9,7 @@ import type { ChatController } from './use-chat.js'
 export type ChatLocale = 'en' | 'vi'
 export type ChatMessages = Record<string, string>
 export interface ChatTheme { primary?: string; primaryForeground?: string; radius?: string | number; font?: string; colorScheme?: 'light' | 'dark' | 'system' }
-export interface ChatProviderProps { chat: ChatController; locale?: ChatLocale; messages?: ChatMessages; theme?: ChatTheme; children: ReactNode; className?: string; style?: CSSProperties }
+export interface ChatProviderProps { chat?: ChatController; locale?: ChatLocale; messages?: ChatMessages; theme?: ChatTheme; children: ReactNode; className?: string; style?: CSSProperties }
 const Controller = createContext<ChatController | null>(null)
 export function useChatController(explicit?: ChatController) {
   const current = useContext(Controller)
@@ -34,7 +34,7 @@ export function ChatProvider({ chat, locale = 'en', messages, theme, children, c
   const scheme = !theme?.colorScheme || theme.colorScheme === 'system' ? system : theme.colorScheme
   const vars = { ...(theme?.primary ? { '--ss-primary': theme.primary } : {}), ...(theme?.primaryForeground ? { '--ss-primary-foreground': theme.primaryForeground } : {}),
     ...(theme?.radius !== undefined ? { '--ss-radius': typeof theme.radius === 'number' ? `${theme.radius}px` : theme.radius } : {}), ...(theme?.font ? { '--ss-font': theme.font } : {}), ...style } as CSSProperties
-  return <I18nextProvider i18n={i18n}><Controller.Provider value={chat}>
+  return <I18nextProvider i18n={i18n}><Controller.Provider value={chat ?? null}>
     <div ref={setContainer} className={`superstep-chat ${className ?? ''}`} style={vars} lang={locale} data-color-scheme={scheme}>
       <ChatPresentationProvider value={{ portalContainer: container }}><TooltipProvider>{children}</TooltipProvider></ChatPresentationProvider>
     </div>
