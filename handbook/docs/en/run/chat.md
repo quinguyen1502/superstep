@@ -329,3 +329,10 @@ On servers advertising `capabilities.edit` in the session view, use **Edit messa
 The confirmation explains that this starts the currently saved/published workflow again: API calls, writes and notifications may repeat. It does not undo earlier actions or regenerate only a model's text. Human and reviewer approvals must be provided again. Wait for running/waiting conversations to finish before editing; refresh a stale conversation. Cancelling the edit changes nothing.
 
 This feature is targeted for 0.11.0; use the updated server and SDK/UI together before that release. Native packages remain deferred.
+
+
+## Regenerate the latest answer
+
+Use **Regenerate answer** on the latest completed answer, including a failed, cancelled or timed-out attempt. Confirm **Run again in new branch** to rerun the message that produced it. The new conversation keeps the prefix before that message and independently copies its files; the original answer and its feedback remain unchanged. Use **Original conversation** to return.
+
+This runs the currently saved/published workflow from the start, so API calls, writes and notifications may repeat. Earlier Human responses and reviewer approvals from that attempt are not replayed: answer/approve the new requests again. Running or waiting conversations cannot regenerate. Cancel closes the confirmation without creating a branch. Requires `capabilities.regenerate`; inherited answers are read-only.

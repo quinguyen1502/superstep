@@ -47,6 +47,7 @@ class ChatSession(Open):
     updated: float = Field(..., description="Unix time (seconds).")
     source_session_id: Optional[str] = None
     source_turn_id: Optional[str] = None
+    source_action: Optional[Literal["edit", "regenerate"]] = None
     visitor_token: Optional[str] = Field(None, description="Set once for a new anonymous visitor that sent `X-Chat-Visitor: new`: keep "
                                                             "it and send it back in `X-Chat-Visitor`.")
 
@@ -84,6 +85,7 @@ class ChatTurn(Open):
     created: float
     inherited: bool = False
     editable: bool = False
+    regeneratable: bool = False
     attachments: list[ChatAttachment] = Field(default_factory=list)
     rating: Optional[ChatRating] = None
     run_exists: Optional[bool] = None
@@ -123,7 +125,7 @@ class ChatSessionEnvelope(Envelope[ChatSession]): """Success envelope: a new cha
 class ChatSessionListEnvelope(Envelope[ChatSessionList]): """Success envelope: the caller's chats."""
 class ChatSessionViewEnvelope(Envelope[ChatSessionView]): """Success envelope: one chat with its turns."""
 class ChatTurnsEnvelope(Envelope[ChatTurns]): """Success envelope: newer turns."""
-class ChatEditEnvelope(Envelope[ChatEdit]): """Success envelope: a prepared independent edit branch."""
+class ChatEditEnvelope(Envelope[ChatEdit]): """Success envelope: a prepared independent revision branch (edit or regenerate)."""
 class ChatAttachmentEnvelope(Envelope[ChatAttachment]): """Success envelope: an uploaded file."""
 class ChatRatingEnvelope(Envelope[ChatRating]): """Success envelope: the rating."""
 class OkEnvelope(Envelope[Ok]): """Success envelope: done."""

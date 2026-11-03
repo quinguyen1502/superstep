@@ -5,7 +5,7 @@ import type { ClientFrame } from './frames.js'
 import { Interrupted, RetryExpired, socketRequest } from './socket.js'
 import { ChatStream } from './stream.js'
 import type { StreamControl } from './stream.js'
-import type { ChatAnswerOptions, ChatClientOptions, ChatEdit, ChatEditOptions, ChatFile, ChatPage, ChatRating, ChatRequestOptions, ChatResult, ChatSendOptions,
+import type { ChatAnswerOptions, ChatClientOptions, ChatEdit, ChatEditOptions, ChatRevision, ChatRevisionOptions, ChatRegenerateOptions, ChatFile, ChatPage, ChatRating, ChatRequestOptions, ChatResult, ChatSendOptions,
   ChatSession, ChatSessionList, ChatSessionView, ChatStreamOptions, ChatTurn, ChatTurns, ChatUploadOptions, NativeChatFile, WebSocketConstructor } from './types.js'
 
 function segment(value: string): string {
@@ -82,20 +82,37 @@ export class ChatClient {
   }
 
   /** Prepare only; no workflow runs until the returned intent is admitted over the socket. */
-  async prepareEdit(sessionId: string, turnId: string, text: string, options: ChatEditOptions): Promise<ChatEdit> {
+  private async prepareRevision(action: 'edit' | 'regenerate', sessionId: string, turnId: string, text: string | undefined, options: ChatRevisionOptions): Promise<ChatRevision> {
     const view = await this.get(sessionId, options)
-    if (!view.capabilities?.edit) throw new ConfigError('This server does not support chat editing', { code: 'CHAT_EDIT_UNSUPPORTED' })
+    if (!view.capabilities?.[action]) throw new ConfigError('This server does not support this chat action', { code: action === 'edit' ? 'CHAT_EDIT_UNSUPPORTED' : 'CHAT_REGENERATE_UNSUPPORTED' })
     segment(turnId); segment(options.operationId); segment(options.expectedLastTurnId)
-    return this.json(`/sessions/${segment(sessionId)}/edits`, 'POST', { turn_id: turnId, message: text,
+    return this.json(`/sessions/${segment(sessionId)}/${action === 'edit' ? 'edits' : 'regenerations'}`, 'POST', { turn_id: turnId, ...(action === 'edit' ? { message: text } : {}),
       operation_id: options.operationId, expected_last_turn_id: options.expectedLastTurnId }, options.signal)
+  }
+
+  prepareEdit(sessionId: string, turnId: string, text: string, options: ChatEditOptions): Promise<ChatEdit> {
+    return this.prepareRevision('edit', sessionId, turnId, text, options)
+  }
+
+  /** Prepare a fresh attempt of the latest terminal answer; the server selects its initiating message. */
+  prepareRegenerate(sessionId: string, turnId: string, options: ChatRegenerateOptions): Promise<ChatRevision> {
+    return this.prepareRevision('regenerate', sessionId, turnId, undefined, options)
   }
 
   /** Fresh execution, after the host has confirmed that external actions may repeat. */
   edit(sessionId: string, turnId: string, text: string, options: ChatEditOptions): ChatStream {
+    return this.revision(sessionId, signal => this.prepareEdit(sessionId, turnId, text, { ...options, signal }), options)
+  }
+
+  regenerate(sessionId: string, turnId: string, options: ChatRegenerateOptions): ChatStream {
+    return this.revision(sessionId, signal => this.prepareRegenerate(sessionId, turnId, { ...options, signal }), options)
+  }
+
+  private revision(sessionId: string, prepare: (signal: AbortSignal) => Promise<ChatRevision>, options: ChatRevisionOptions): ChatStream {
     let stream: ChatStream
     stream = new ChatStream(async control => {
       try {
-        const edit = await this.prepareEdit(sessionId, turnId, text, { ...options, signal: control.signal })
+        const edit = await prepare(control.signal)
         this.active.set(stream, edit.session.id)
         control.emit({ type: 'session', session: edit.session })
         const frame: Extract<ClientFrame, { type: 'message' }> = { type: 'message', chat_session_id: edit.session.id,
@@ -225,7 +242,8 @@ export class ChatClient {
     if (!Number.isInteger(attempts) || attempts < 0 || attempts > 100 || !Number.isFinite(interval) || interval < 0) throw new RangeError('Invalid recovery limits')
     const before = await this.get(sessionId, { signal: control.signal })
     if (!Array.isArray(before?.turns)) throw bad()
-    const prior = expectedRunId ? before.turns.filter(turn => turn.run_id !== expectedRunId) : before.turns
+    const first = expectedRunId ? before.turns.findIndex(turn => turn.run_id === expectedRunId) : -1
+    const prior = first >= 0 ? before.turns.slice(0, first) : before.turns
     const known = new Set(prior.map(turn => turn.id))
     let cursor = options.after ?? prior[prior.length - 1]?.id
     const Socket = this.options.WebSocket ?? globalThis.WebSocket as WebSocketConstructor | undefined

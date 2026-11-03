@@ -246,14 +246,16 @@
 | `ATTACHMENT_MIGRATE_TARGET` | 400 | Unknown attachment storage '{target}' (use {allowed}) |
 | `ATTACHMENT_MIGRATE_BATCH` | 400 | The batch size must be between 1 and {max} |
 | `CHAT_ATTACHMENT_LIMIT` | 400 | Attachment limits may be at most {max_files} files and {max_mb} MB per file |
+| `CHAT_REGENERATE_INVALID` | 400 | Only the latest completed answer can be regenerated |
+| `CHAT_REGENERATE_UNSUPPORTED` | 400 | This server does not support regenerating chat answers |
 | `CHAT_EDIT_INVALID` | 400 | This message cannot be edited |
-| `CHAT_EDIT_CONTEXT_UNAVAILABLE` | 409 | The agent context at this message is no longer available; start a new conversation |
-| `CHAT_EDIT_BUSY` | 409 | Wait for the conversation to finish before editing |
-| `CHAT_EDIT_STALE` | 409 | The conversation changed; refresh it before editing |
-| `CHAT_EDIT_CONFLICT` | 409 | This operation ID was already used for a different edit |
-| `CHAT_EDIT_GONE` | 410 | The edited conversation was removed |
-| `CHAT_EDIT_PENDING` | 409 | This edited conversation has an unfinished operation |
-| `CHAT_EDIT_STARTED` | 409 | This edit was already admitted; read its saved outcome instead of resending |
+| `CHAT_EDIT_CONTEXT_UNAVAILABLE` | 409 | The agent context at this point is no longer available; start a new conversation |
+| `CHAT_EDIT_BUSY` | 409 | Wait for the conversation to finish before creating a new branch |
+| `CHAT_EDIT_STALE` | 409 | The conversation changed; refresh it before trying again |
+| `CHAT_EDIT_CONFLICT` | 409 | This operation ID was already used for a different revision |
+| `CHAT_EDIT_GONE` | 410 | The new conversation branch was removed |
+| `CHAT_EDIT_PENDING` | 409 | This conversation branch has an unfinished operation |
+| `CHAT_EDIT_STARTED` | 409 | This operation was already admitted; read its saved outcome instead of resending |
 | `CHAT_EDIT_UNSUPPORTED` | 400 | This server does not support editing chat messages |
 | `CHAT_TURN_NOT_FOUND` | 404 | Message not found |
 | `CHAT_FRAME_INVALID` | 400 | Invalid chat frame: {reason} |

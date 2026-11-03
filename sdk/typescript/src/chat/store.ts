@@ -2,7 +2,7 @@ import { ConfigError } from '../errors.js'
 import { abortReason } from '../transport.js'
 import type { ChatClient } from './client.js'
 import type { ChatStream } from './stream.js'
-import type { ChatAnswerOptions, ChatEditOptions, ChatQuestion, ChatRequestOptions, ChatResult, ChatSendOptions, ChatTurn } from './types.js'
+import type { ChatAnswerOptions, ChatEditOptions, ChatRegenerateOptions, ChatQuestion, ChatRequestOptions, ChatResult, ChatSendOptions, ChatTurn } from './types.js'
 
 export interface ChatState {
   readonly sessionId: string | null
@@ -68,7 +68,12 @@ export function createChatStore(client: ChatClient) {
         else if (event.type === 'history') update({ turns: merge(event.turns) })
       }
       const result = await stream.result
-      if (mine === generation && !disposed) update({ text: result.text, status: result.status === 'waiting' ? 'waiting' : 'idle', turns: merge(result.turns) })
+      if (mine === generation && !disposed) {
+        const turns = merge(result.turns), last = turns[turns.length - 1]
+        const later = !!last?.run_id && last.run_id !== result.runId
+        update({ text: result.text, status: (later ? last.status === 'waiting' : result.status === 'waiting') ? 'waiting' : 'idle',
+          ...(later ? { question: null } : {}), turns })
+      }
       return result
     } catch (error) { if (mine === generation && !disposed) update({ error, status: 'error' }); throw error }
     finally { if (active === stream) active = undefined }
@@ -79,6 +84,7 @@ export function createChatStore(client: ChatClient) {
     start, load,
     send: (text: string, options: ChatSendOptions = {}) => consume((sid, after) => client.send(sid, text, { after, ...options })),
     edit: (turn: string, text: string, options: ChatEditOptions) => consume(sid => client.edit(sid, turn, text, options)),
+    regenerate: (turn: string, options: ChatRegenerateOptions) => consume(sid => client.regenerate(sid, turn, options)),
     answer: (response: Parameters<ChatClient['answer']>[1], options: ChatAnswerOptions = {}) => consume((sid, after) => client.answer(sid, response, { after, node: state.question?.node ?? undefined, ...options })),
     cancel: () => active?.cancel(),
     dispose: () => { if (!disposed) { generation++; void active?.return(); active = undefined; listeners.clear(); disposed = true } },

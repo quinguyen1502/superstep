@@ -238,3 +238,21 @@ Cuộc trò chuyện gốc được giữ nguyên. Lịch sử kế thừa có I
 
 
 Mọi tin nhắn khởi tạo trong nguồn phải có kết quả kết thúc đã lưu; một câu trả lời mới đã xong không cho phép phân nhánh khi run cũ còn dang dở. Trạng thái agent được dựng lại từ run cuối được giữ, bao gồm việc trở về đầu workflow khi agent đích từng bị xoá. Nếu dữ liệu agent cần thiết đã hết thời gian lưu, `CHAT_EDIT_CONTEXT_UNAVAILABLE` từ chối đoán trạng thái: hãy bắt đầu cuộc trò chuyện mới. Nếu tiến trình dừng sau tiếp nhận nhưng trước khi lưu run, thao tác không được tự chạy lại; đọc lịch sử có giới hạn có thể báo gián đoạn. Chuẩn bị hoặc tải lại nhánh không tự chạy workflow.
+
+
+## Chuẩn bị tạo lại câu trả lời
+
+Kiểm tra `capabilities.regenerate` và cờ `regeneratable` của câu trả lời cuối. Sau khi xác nhận rằng thao tác bên ngoài có thể lặp lại, gửi ID câu trả lời (không phải tin nhắn người dùng hay câu trả lời Human):
+
+```http
+POST /api/public/v1/chat/{slug}/sessions/{sid}/regenerations
+Content-Type: application/json
+
+{"turn_id":"latest-terminal-answer","operation_id":"a-new-unique-intent-id","expected_last_turn_id":"latest-terminal-answer"}
+```
+
+Máy chủ chọn tin nhắn gốc và lịch sử cần giữ; từ chối input/state/checkpoint do bên gọi tự truyền. Phản hồi và bước tiếp nhận qua socket dùng chung luồng edit ở trên, gồm trường giao thức `edit_operation_id` và tên schema phản hồi `ChatEdit` hiện có. TypeScript đặt tên kết quả dùng chung là `ChatRevision`; Python có `regenerate`/`prepare_regenerate`. Giữ một operation ID khi phục hồi, đọc run đã tiếp nhận mà không chạy lại, và dùng ID mới khi chủ động tạo lần mới. Loại thao tác thuộc định danh yêu cầu; dùng cùng ID cho edit/regenerate gây xung đột.
+
+Thông tin nhánh thêm `source_action: "edit" | "regenerate"`. Khi tạo lại, `source_turn_id` là câu trả lời assistant gốc; nhánh cũ chưa lưu loại thao tác được hiểu là edit. Xoá nguồn không làm mất loại thao tác/file của nhánh. Các kiểm tra đang chạy, lịch sử thay đổi, chính sách file, chủ sở hữu, origin, thu hồi khoá và hạn mức được dùng chung. Câu hỏi Human/người duyệt đang chờ chưa kết thúc; câu trả lời/quyết định cũ không được dùng lại. Máy chủ chưa hỗ trợ sẽ bị từ chối trước POST; chỉ chọn được câu trả lời cuối đã kết thúc.
+
+Khi đọc lại yêu cầu đã tiếp nhận sau khi nhánh có thêm tin nhắn, SDK vẫn tìm run đã dành cho yêu cầu ấy. TypeScript store giữ trạng thái chờ Human mới hơn trong khi trả về kết quả run được yêu cầu.

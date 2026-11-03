@@ -62,5 +62,5 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
   return <PublicChatView embed={embed} slug={slug} page={page} title={title} logo={logo} gone={gone} err={err || chat.error} ready={ready}
     sessions={sessions} sid={sid} setSid={setSid} fresh={fresh} send={send} files={files} onError={setErr} cancel={chat.cancel}
     chat={{ turns: sid ? chat.session?.turns ?? [] : [], mode: page?.steps_mode ?? 'labels', events: chat.events, trace: chat.trace, pending: chat.pending, pendingFiles: chat.pendingFiles, running: chat.running, onAnswer: chat.answer, onRate: sid ? rate : undefined,
-      onEdit: chat.edit, onSource: chat.session?.source_session_id ? () => setSid(chat.session!.source_session_id!) : undefined, files: links }} />
+      onEdit: chat.edit, onRegenerate: chat.regenerate, onSource: chat.session?.source_session_id ? () => setSid(chat.session!.source_session_id!) : undefined, files: links }} />
 }

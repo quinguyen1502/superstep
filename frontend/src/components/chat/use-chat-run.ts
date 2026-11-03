@@ -80,13 +80,13 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
   const [pendingFiles, setPendingFiles] = useState<ChatAttachment[]>([])
   const send = useCallback((text: string, files: ChatAttachment[] = []) => { setPendingFiles(files)
     stream(files.length ? { message: text, attachment_ids: files.map(f => f.id) } : { message: text }, text, 0) }, [stream])
-  const edit = async (turn: string, text: string, operationId: string) => {
+  const revise = async (action: 'edit' | 'regenerate', turn: string, text: string | undefined, operationId: string) => {
     const tip = session?.turns[session.turns.length - 1]?.id
     if (!sid || !tip || running || !select.current) return
     const mine = gen.current; setRunning(true); setError('')
     try {
-      const intent = await api<ChatEdit>(ep.session(sid).split('?')[0] + '/edits', { method: 'POST', headers: ep.headers,
-        json: { turn_id: turn, message: text, operation_id: operationId, expected_last_turn_id: tip } })
+      const intent = await api<ChatEdit>(ep.session(sid).split('?')[0] + (action === 'edit' ? '/edits' : '/regenerations'), { method: 'POST', headers: ep.headers,
+        json: { turn_id: turn, ...(action === 'edit' ? { message: text } : {}), operation_id: operationId, expected_last_turn_id: tip } })
       if (!alive.current || gen.current !== mine) return
       setQueuedEdit(intent); select.current(intent.session.id)
     } catch (e) { if (alive.current && gen.current === mine) setRunning(false); throw e }
@@ -103,5 +103,8 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
     stream({ resume_run_id: runId, response, ...(node ? { node } : {}) }, response, answers(session?.turns ?? [], runId), runId)
   }
   const cancel = () => ws.current?.readyState === WebSocket.OPEN && ws.current.send(JSON.stringify({ type: 'cancel' }))
-  return { session, events, trace: buildTrace(events), pending, pendingFiles, running, error, send, edit, answer, cancel, reload: () => load().then(setSession) }
+  return { session, events, trace: buildTrace(events), pending, pendingFiles, running, error, send,
+    edit: (turn: string, text: string, operationId: string) => revise('edit', turn, text, operationId),
+    regenerate: (turn: string, operationId: string) => revise('regenerate', turn, undefined, operationId),
+    answer, cancel, reload: () => load().then(setSession) }
 }

@@ -277,3 +277,23 @@ branch_id = stream.result.session_id
 ```
 
 For `AsyncChatClient`, use `stream = await chat.edit(...)`, then `async for event in stream`. `prepare_edit` prepares only (await it on the async client). Repeated admitted intents recover their reserved run from history without another socket write. The original session remains unchanged; Human questions must be answered again, and all subsequent operations address the branch. Older servers fail clearly when `capabilities.edit` is absent. Full semantics: [English](../../handbook/docs/en/run/chat-api.md#prepare-and-execute-an-edit) / [Tiếng Việt](../../handbook/docs/vi/run/chat-api.md).
+
+
+Regenerate the latest terminal answer only after confirming that current-workflow actions may repeat:
+
+```python
+stream = chat.regenerate(session_id, latest_answer_id,
+    operation_id="new-client-generated-unique-id", expected_last_turn_id=latest_answer_id)
+for event in stream:
+    pass  # ordinary v1 stream/history events
+branch_id = stream.result.session_id
+
+# Async client: preparing is awaited, then consume the returned stream.
+stream = await async_chat.regenerate(session_id, latest_answer_id,
+    operation_id="another-client-generated-unique-id", expected_last_turn_id=latest_answer_id)
+async with stream:
+    async for event in stream:
+        pass
+```
+
+`prepare_regenerate` prepares without execution. Support requires `capabilities.regenerate`; only the latest terminal answer is eligible. Keep the same operation ID when recovering one attempt. Files are independent copies, source history stays unchanged, and Human/reviewer questions must be answered again. Reading an admitted intent never resends execution, even after its branch has continued.

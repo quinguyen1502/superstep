@@ -159,3 +159,6 @@ native dùng sau; hướng dẫn theo nền tảng là phần việc riêng.
 ## Sửa tin nhắn đã gửi
 
 Các thao tác tin nhắn dùng chung [luồng sửa tin nhắn](chat.md): xác nhận chạy mới trong một nhánh độc lập, giữ nguyên bản gốc và dùng liên kết nguồn để quay lại. Câu trả lời Human không phải tin nhắn gốc được sửa. Với giao diện tự dựng, `useChat().edit(turnId, text, operationId)` cần cùng bước xác nhận chạy lại; giữ mã thao tác khi phục hồi lần chạy bị gián đoạn. Xem [hợp đồng API](chat-api.md) về tiếp nhận thao tác và phục hồi kết quả.
+
+
+Tạo lại dùng chung luồng xác nhận tạo nhánh: **Tạo lại câu trả lời** trên câu trả lời cuối đã kết thúc mở nhánh độc lập và hỏi lại Human/người duyệt. `useChat().regenerate(answerId, operationId?)` trả kết quả chat thông thường. Xem [cách dùng chat](chat.md#tao-lai-cau-tra-loi-cuoi) và [tiếp nhận/phục hồi API](chat-api.md#chuan-bi-tao-lai-cau-tra-loi).

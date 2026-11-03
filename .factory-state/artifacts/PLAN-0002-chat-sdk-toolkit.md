@@ -5,7 +5,7 @@
 - Plan ID: PLAN-0002
 - Requirement: REQ-0082 (chat SDK and toolkit for third-party web and mobile apps)
 - Decisions: DEC-0077 (third-party auth), DEC-0078 (API versioning, schema, transport), DEC-0079 (package layout and UI reuse), DEC-0080 (React Native approach). All Accepted on 2026-10-31.
-- Tasks: TASK-0215 to TASK-0230 (plan accepted 2026-10-31; phases 1–3 merged through #291; TASK-0229 owner-approved/done on #292 (final-head checks gate authorised merge); TASK-0230 follows its merged foundation; native tasks deferred)
+- Tasks: TASK-0215 to TASK-0230 (plan accepted 2026-10-31; phases 1–3 merged through #291; TASK-0229 merged (#292, 42333ffc); TASK-0230 owner-approved/done (#293; final-head CI gates authorised merge); TASK-0230 follows its merged foundation; native tasks deferred)
 - Date: 2026-10-31
 - Delivery: one PR per task into `develop`, branch `factory/task-NNNN-<slug>`; a task starts only when its dependencies are merged.
 
@@ -45,8 +45,8 @@ Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server,
 | TASK-0226 web docs and examples | 3 | S | 0224, 0225 | handbook pages, e2e pages |
 | TASK-0227 `@superstep/react-native` | deferred | L | 0220 | RN components, Expo example, `sdk-rn-v*` publish |
 | TASK-0228 native WebView guide and bridge | deferred | M | 0225 | bridge protocol, Swift and Kotlin guide, browser e2e |
-| TASK-0229 edit message | 0.11.0 priority | L | 0216 | DEC-0084 Accepted; shared branch foundation + edit owner-approved/done (#292; final CI gates merge) |
-| TASK-0230 regenerate answer | 0.11.0 priority | M | 0229 | DEC-0084 Accepted; reuse merged branch foundation |
+| TASK-0229 edit message | 0.11.0 priority | L | 0216 | DEC-0084 Accepted; shared branch foundation + edit merged (#292, 42333ffc) |
+| TASK-0230 regenerate answer | 0.11.0 priority | M | 0229 | DEC-0084 Accepted; regeneration owner-approved/done (#293; final CI gates merge) |
 
 Critical path: 0215, 0216, 0217 (parallel with 0216), 0218, 0220, 0224 or 0227. TASK-0223 can run in parallel with 0217 and 0218.
 
@@ -142,3 +142,9 @@ Release preparation follows integration of both features: reconcile changelog/do
 ## DEC-0084 Accepted (2026-11-03)
 
 The owner accepted PR #292 ("Duyệt") and authorised implementing the proposed edit/regenerate semantics. DEC-0084 is Accepted; this supersedes its earlier pending-architecture statements. Start TASK-0229 on its existing branch/PR from develop 02361fbd; TASK-0230 follows its shared foundation separately. Native tasks remain deferred. No merge/release instruction is inferred.
+
+## Revision Delivery Progress (2026-11-03)
+
+Owner approved #292 merge and continuing TASK-0230. TASK-0229 merged at 42333ffc after single-commit head 85f8e21e passed all 22 checks and two expected skips. TASK-0230 builds on that integration; REV-0223/QA-0223 track its shared API/SDK/UI and file/admission acceptance. Final full verification/CI and separate owner acceptance remain required before its merge, then 0.11.0 preparation.
+
+- Owner accepted TASK-0230 implementation and explicitly instructed merging #293 (2026-11-03). Reviewed 922ea6a8 passes 22 checks/two expected skips. Final lifecycle-only commit must also pass CI before integration; then proceed to approved shared 0.11.0 preparation.

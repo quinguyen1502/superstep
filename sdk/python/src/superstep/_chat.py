@@ -24,10 +24,12 @@ def _attachment(sid, aid=None): return _session(sid) + "/attachments" + (f"/{seg
 def _expired(error, attempt, token): return attempt == 0 and callable(token) and error.status == 401 and error.code == "CHAT_TOKEN_EXPIRED"
 
 
-def _edit_body(view, turn_id, text, operation_id, expected_last_turn_id):
-    if not view.get("capabilities", {}).get("edit"):
-        raise ConfigError("This server does not support chat editing", code="CHAT_EDIT_UNSUPPORTED")
-    return dict(turn_id=segment(turn_id), message=text, operation_id=segment(operation_id), expected_last_turn_id=segment(expected_last_turn_id))
+def _revision_body(action, view, turn_id, text, operation_id, expected_last_turn_id):
+    if not view.get("capabilities", {}).get(action):
+        raise ConfigError("This server does not support this chat action", code="CHAT_EDIT_UNSUPPORTED" if action == "edit" else "CHAT_REGENERATE_UNSUPPORTED")
+    body = dict(turn_id=segment(turn_id), operation_id=segment(operation_id), expected_last_turn_id=segment(expected_last_turn_id))
+    if action == "edit": body["message"] = text
+    return body
 
 
 class _Common:
@@ -59,6 +61,10 @@ class _Common:
         stream = stream_type(self, sid, frame, **options)
         self._active.add(stream)
         return stream
+
+    def _revision_stream(self, stream_type, revision, options):
+        return self._stream(stream_type, "message", revision["session"]["id"], revision["message"], attachments=revision["attachment_ids"],
+                            edit_operation_id=revision["operation_id"], prepared_edit=revision, **options)
 
 
 class ChatClient(_Common):
@@ -122,15 +128,24 @@ class ChatClient(_Common):
 
     def prepare_edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id):
         """Create a branch without executing. Keep operation_id when recovering the same intent."""
-        body = _edit_body(self.get(session_id), turn_id, text, operation_id, expected_last_turn_id)
+        body = _revision_body("edit", self.get(session_id), turn_id, text, operation_id, expected_last_turn_id)
         return self._send("POST", _session(session_id) + "/edits", body)
+
+    def prepare_regenerate(self, session_id, turn_id, *, operation_id, expected_last_turn_id):
+        body = _revision_body("regenerate", self.get(session_id), turn_id, None, operation_id, expected_last_turn_id)
+        return self._send("POST", _session(session_id) + "/regenerations", body)
+
+    def regenerate(self, session_id, turn_id, *, operation_id, expected_last_turn_id, **options):
+        """Fresh workflow execution after confirmation; Human answers are asked again."""
+        from ._chat_stream import ChatStream
+        revision = self.prepare_regenerate(session_id, turn_id, operation_id=operation_id, expected_last_turn_id=expected_last_turn_id)
+        return self._revision_stream(ChatStream, revision, options)
 
     def edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id, **options):
         """Execute an edit after confirming that external actions may repeat. Duplicate intents only recover history."""
         from ._chat_stream import ChatStream
         edit = self.prepare_edit(session_id, turn_id, text, operation_id=operation_id, expected_last_turn_id=expected_last_turn_id)
-        return self._stream(ChatStream, "message", edit["session"]["id"], edit["message"], attachments=edit["attachment_ids"],
-                            edit_operation_id=edit["operation_id"], prepared_edit=edit, **options)
+        return self._revision_stream(ChatStream, edit, options)
 
     def answer(self, session_id, response, **options):
         from ._chat_stream import ChatStream
@@ -209,14 +224,22 @@ class AsyncChatClient(_Common):
         return self._stream(AsyncChatStream, "message", session_id, text, **options)
 
     async def prepare_edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id):
-        body = _edit_body(await self.get(session_id), turn_id, text, operation_id, expected_last_turn_id)
+        body = _revision_body("edit", await self.get(session_id), turn_id, text, operation_id, expected_last_turn_id)
         return await self._send("POST", _session(session_id) + "/edits", body)
+
+    async def prepare_regenerate(self, session_id, turn_id, *, operation_id, expected_last_turn_id):
+        body = _revision_body("regenerate", await self.get(session_id), turn_id, None, operation_id, expected_last_turn_id)
+        return await self._send("POST", _session(session_id) + "/regenerations", body)
+
+    async def regenerate(self, session_id, turn_id, *, operation_id, expected_last_turn_id, **options):
+        from ._chat_stream import AsyncChatStream
+        revision = await self.prepare_regenerate(session_id, turn_id, operation_id=operation_id, expected_last_turn_id=expected_last_turn_id)
+        return self._revision_stream(AsyncChatStream, revision, options)
 
     async def edit(self, session_id, turn_id, text, *, operation_id, expected_last_turn_id, **options):
         from ._chat_stream import AsyncChatStream
         edit = await self.prepare_edit(session_id, turn_id, text, operation_id=operation_id, expected_last_turn_id=expected_last_turn_id)
-        return self._stream(AsyncChatStream, "message", edit["session"]["id"], edit["message"], attachments=edit["attachment_ids"],
-                            edit_operation_id=edit["operation_id"], prepared_edit=edit, **options)
+        return self._revision_stream(AsyncChatStream, edit, options)
 
     def answer(self, session_id, response, **options):
         from ._chat_stream import AsyncChatStream

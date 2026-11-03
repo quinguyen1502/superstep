@@ -325,3 +325,10 @@ Trên máy chủ có `capabilities.edit` trong dữ liệu cuộc trò chuyện,
 Hộp xác nhận nêu rõ thao tác sẽ chạy lại workflow đang lưu/công khai: lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Thao tác không hoàn tác hành động cũ hay chỉ tạo lại văn bản của model. Câu hỏi Human và yêu cầu người duyệt cần được trả lời lại. Hãy chờ cuộc trò chuyện đang chạy/chờ xử lý xong và tải lại nếu lịch sử đã thay đổi. Huỷ sửa không thay đổi tin nhắn.
 
 Tính năng dự kiến phát hành cùng 0.11.0; trước đợt phát hành đó, dùng đồng bộ mã máy chủ và SDK/giao diện mới. Các gói native tiếp tục tạm hoãn.
+
+
+## Tạo lại câu trả lời cuối
+
+Dùng **Tạo lại câu trả lời** trên câu trả lời cuối đã kết thúc, kể cả khi lỗi, bị huỷ hoặc hết thời gian. Xác nhận **Chạy lại trong nhánh mới** để chạy lại tin nhắn đã tạo ra câu trả lời đó. Cuộc trò chuyện mới giữ lịch sử trước tin nhắn ấy và sao chép file độc lập; câu trả lời gốc cùng đánh giá được giữ nguyên. Dùng **Cuộc trò chuyện gốc** để quay lại.
+
+Thao tác chạy workflow đang lưu/công khai từ đầu, nên lệnh gọi API, ghi dữ liệu và thông báo có thể lặp lại. Các câu trả lời Human và yêu cầu duyệt của người duyệt trong lần trước không được dùng lại: bạn cần trả lời/duyệt các yêu cầu mới. Cuộc trò chuyện đang chạy hoặc đang chờ không tạo lại được. Huỷ hộp thoại không tạo nhánh. Cần `capabilities.regenerate`; câu trả lời kế thừa chỉ được đọc.

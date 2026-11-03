@@ -241,3 +241,21 @@ Editing retains the original session; inherited prefix turns have fresh IDs and 
 
 
 Every initiating message in the source must have a saved terminal outcome; a later finished answer does not make an earlier pending run safe to fork. Agent routing is reconstructed from the latest retained run, including resets after target removal. If required historical agent metadata has been pruned, `CHAT_EDIT_CONTEXT_UNAVAILABLE` refuses to guess: start a new conversation. A claimed intent whose process stops before saving its run remains non-replayable; bounded history recovery may report interruption. Preparing or reloading a branch never runs it automatically.
+
+
+## Prepare regeneration
+
+Check `capabilities.regenerate` and the latest answer's `regeneratable` flag. After confirming that external actions may repeat, submit the answer ID (not a user/Human response):
+
+```http
+POST /api/public/v1/chat/{slug}/sessions/{sid}/regenerations
+Content-Type: application/json
+
+{"turn_id":"latest-terminal-answer","operation_id":"a-new-unique-intent-id","expected_last_turn_id":"latest-terminal-answer"}
+```
+
+The server chooses the initiating root message and its retained prefix; caller-supplied input/state/checkpoints are refused. The response and socket admission reuse the edit pipeline above, including the existing `edit_operation_id` wire field and `ChatEdit` response schema name. The SDKs expose this shared result as `ChatRevision` in TypeScript and use `regenerate`/`prepare_regenerate` in Python. Preserve one operation ID across recovery, read admitted runs without executing again, and use a fresh ID for a deliberate new attempt. Action is part of intent identity; reusing an ID across edit/regenerate conflicts.
+
+Branch lineage adds `source_action: "edit" | "regenerate"`. For regenerate, `source_turn_id` is the original assistant answer; old branches without a stored action imply edit. Source deletion does not erase the branch's action/files. Busy, stale, file-policy, ownership, origin, revocation and quota checks are shared. A waiting Human/reviewer question is not terminal, and its old response/approval is never replayed. Unsupported servers fail before POST; only the latest terminal answer can be selected.
+
+When reading an old admitted intent after its branch has continued, SDK recovery still finds that intent's reserved run rather than starting after newer messages. TypeScript store state preserves a later Human wait while returning the requested run's result.

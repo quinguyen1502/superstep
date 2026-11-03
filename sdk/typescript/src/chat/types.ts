@@ -6,6 +6,7 @@ export type ChatPage = Schemas['ChatPage']
 export type ChatSession = Schemas['ChatSession']
 export type ChatSessionView = Schemas['ChatSessionView']
 export type ChatEdit = Schemas['ChatEdit']
+export type ChatRevision = ChatEdit
 export type ChatTurn = Schemas['ChatTurn']
 export type ChatAttachment = Schemas['ChatAttachment']
 export type ChatRating = Schemas['ChatRating']
@@ -47,11 +48,13 @@ export interface ChatStreamOptions extends ChatRequestOptions {
   recoveryIntervalMs?: number
 }
 export interface ChatSendOptions extends ChatStreamOptions { attachments?: string[] }
-export interface ChatEditOptions extends ChatStreamOptions {
-  /** Keep this identifier when recovering the same deliberate edit. A new intent needs a new identifier. */
+export interface ChatRevisionOptions extends ChatStreamOptions {
+  /** Keep this identifier when recovering the same deliberate revision. A new intent needs a new identifier. */
   operationId: string
   expectedLastTurnId: string
 }
+export type ChatEditOptions = ChatRevisionOptions
+export type ChatRegenerateOptions = ChatRevisionOptions
 export interface ChatAnswerOptions extends ChatStreamOptions { node?: string }
 export type NativeChatFile = { uri: string; name: string; type: string }
 export type ChatFile = Blob | Uint8Array | ArrayBuffer | NativeChatFile

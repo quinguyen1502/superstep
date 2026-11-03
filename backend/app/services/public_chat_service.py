@@ -165,7 +165,7 @@ class PublicChatService:
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         return self.chat.view(self.own(t, sid, v), st["steps"]), v
 
-    async def edit(self, slug: str, sid: str, token, user, body, ip, plan):
+    async def revise(self, slug: str, sid: str, token, user, body, ip, plan, *, action="edit"):
         from .chat_edit_service import ChatEditService
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         source = self.own(t, sid, v)
@@ -174,7 +174,7 @@ class PublicChatService:
         def validate(prep):
             if v.app: prep["input"]["chat"] = v.app.input()
             plan(owner, {"workflow_id": t.workflow_id, "input": prep["input"]})
-        result = await asyncio.to_thread(ChatEditService(self.chat).prepare, source, t, body, validate, st["steps"], app_key_id=v.app.app_key_id if v.app else None)
+        result = await asyncio.to_thread(ChatEditService(self.chat).prepare, source, t, body, validate, st["steps"], app_key_id=v.app.app_key_id if v.app else None, action=action)
         return result, v
 
     def turns(self, slug: str, sid: str, after: Optional[str], token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:

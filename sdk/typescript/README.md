@@ -306,3 +306,16 @@ const branchId = (await edited.result).sessionId
 ```
 
 `prepareEdit` creates the branch without running it. Session `capabilities.edit` and turn `editable` advertise support. An older server fails with `CHAT_EDIT_UNSUPPORTED`. Use the returned branch for history, Human answers, files and ratings. See the bilingual [API guide](../../handbook/docs/en/run/chat-api.md#prepare-and-execute-an-edit).
+
+
+Regenerate the latest terminal answer after confirming that the current workflow's external actions may repeat:
+
+```ts
+const attempt = chat.regenerate(sessionId, latestAnswer.id, {
+  operationId: 'new-client-generated-unique-id', expectedLastTurnId: latestAnswer.id,
+})
+for await (const event of attempt) { /* ordinary v1 stream/history events */ }
+const result = await attempt.result // independent result.sessionId, original preserved
+```
+
+`prepareRegenerate` prepares without running. It checks `capabilities.regenerate`; the server selects the root message. `ChatRevision`/`ChatRevisionOptions` are the shared types (`ChatEdit`/`ChatEditOptions` remain compatible aliases). Keep one operation ID for retries; a deliberate new attempt needs a new ID. Files are copied, Human/reviewer approvals are requested again, and admitted intents only read their reserved run, including after later branch messages.

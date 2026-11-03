@@ -167,3 +167,6 @@ revocation. Screenshots are temporary CI artifacts, never Git evidence.
 ## Edit a sent message
 
 Message actions reuse the shared [editing flow](chat.md#edit-a-sent-message): confirm a fresh execution in an independent conversation branch, keep the original, and use the source link to return. Human replies are not editable roots. For custom interfaces, `useChat().edit(turnId, text, operationId)` requires the same explicit rerun confirmation; retain the operation ID when recovering an interrupted attempt. See the [API contract](chat-api.md#prepare-and-execute-an-edit) for admission and recovery.
+
+
+Regeneration uses the same confirmed revision flow: **Regenerate answer** on the latest terminal answer opens an independent branch and asks Human/reviewer questions again. `useChat().regenerate(answerId, operationId?)` returns the normal chat result. See [chat usage](chat.md#regenerate-the-latest-answer) and [API admission/recovery](chat-api.md#prepare-regeneration).

@@ -22,6 +22,28 @@ function Harness({ wire, children, identityKey }: { wire: Wire; identityKey?: st
 }
 
 describe('useChat SDK binding', () => {
+  it('regenerates only the latest answer, confirms side effects and keeps a failed intent stable', async () => {
+    const wire = new Wire(), regenerate = vi.fn().mockRejectedValueOnce({ code: 'CONNECTION_ERROR' }).mockResolvedValue(undefined)
+    const older = { id: 'old-answer', role: 'assistant' as const, text: 'Older answer', created: 1, status: 'ok', regeneratable: true }
+    const latest = { ...older, id: 'last-answer', text: 'Failed answer', created: 2, status: 'error' }
+    render(<Harness wire={wire}>{() => <ChatThread turns={[older, latest]} mode="none" events={[]} trace={{ spans: [] }} pending={null} running={false} onRegenerate={regenerate} />}</Harness>)
+    expect(screen.getAllByRole('button', { name: 'Regenerate answer' })).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate answer' }))
+    let dialog = screen.getByRole('alertdialog')
+    expect(within(dialog).queryByRole('textbox')).toBeNull()
+    expect(dialog.textContent).toContain('API calls, writes and notifications may repeat')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(regenerate).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Regenerate answer' }))
+    dialog = screen.getByRole('alertdialog')
+    const run = within(dialog).getByRole('button', { name: 'Run again in new branch' }) as HTMLButtonElement
+    fireEvent.click(run); await waitFor(() => expect(regenerate).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(run.disabled).toBe(false))
+    fireEvent.click(run); await waitFor(() => expect(regenerate).toHaveBeenCalledTimes(2))
+    expect(regenerate.mock.calls[0][0]).toBe('last-answer')
+    expect(regenerate.mock.calls[0][1]).toBe(regenerate.mock.calls[1][1])
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+  })
   it('confirms a new branch and reuses the same intent after a failed response', async () => {
     const wire = new Wire(), edit = vi.fn().mockRejectedValueOnce({ code: 'CONNECTION_ERROR', message: 'untranslated transport detail' }).mockResolvedValue(undefined)
     const turn = { id: 'root-message', role: 'user' as const, text: 'Original message', created: 1, editable: true }

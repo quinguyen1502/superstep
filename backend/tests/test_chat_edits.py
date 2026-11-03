@@ -22,7 +22,16 @@ def edit_body(view, index=0, message="edited"):
             "operation_id": uuid.uuid4().hex, "expected_last_turn_id": view["turns"][-1]["id"]}
 
 
-def prepare(tok, sid, body): return c.post(f"/api/chat/sessions/{sid}/edits", headers=H(tok), json=body)
+def prepare(tok, sid, body):
+    operation = "edits" if "message" in body else "regenerations"
+    return c.post(f"/api/chat/sessions/{sid}/{operation}", headers=H(tok), json=body)
+
+
+def revision_body(view, action, index=0):
+    body = edit_body(view, index)
+    if action == "regenerate":
+        body.pop("message"); body["turn_id"] = view["turns"][-1]["id"]
+    return body
 
 
 def execute(tok, result):
@@ -46,10 +55,11 @@ def test_edit_early_message_preserves_source_and_drops_the_future():
     assert result["run_id"] == branch["turns"][-1]["run_id"]
 
 
-def test_duplicate_delivery_and_concurrent_claim_execute_once():
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+def test_duplicate_delivery_and_concurrent_claim_execute_once(action):
     tok = user(); _, sid = chat(tok)
     say(tok, {"chat_session_id": sid, "message": "first"}); view = wait_turns(tok, sid, 2)
-    body = edit_body(view)
+    body = revision_body(view, action)
     with ThreadPoolExecutor(max_workers=2) as pool:
         prepared = list(pool.map(lambda _: prepare(tok, sid, body).json(), range(2)))
     assert all(x["success"] for x in prepared), prepared
@@ -61,7 +71,7 @@ def test_duplicate_delivery_and_concurrent_claim_execute_once():
     assert [e["error"]["code"] for ev in events for e in ev if e["type"] == "error"] == ["CHAT_EDIT_STARTED"]
     assert len(wait_turns(tok, result["session"]["id"], 2)["turns"]) == 2
     assert prepare(tok, sid, body).json()["data"]["state"] == "finished"
-    assert err(prepare(tok, sid, {**body, "message": "different"})) == "CHAT_EDIT_CONFLICT"
+    assert err(prepare(tok, sid, {**body, ("message" if action == "edit" else "turn_id"): "different"})) == "CHAT_EDIT_CONFLICT"
 
 
 def test_stale_targets_and_other_people_are_rejected_without_a_branch():
@@ -87,7 +97,8 @@ def test_waiting_and_human_answers_are_not_editable_roots():
 
 
 @pytest.mark.parametrize("storage", ["db", "fs", "s3"])
-def test_retained_files_are_independent_and_inherited_feedback_is_read_only(storage, monkeypatch, tmp_path):
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+def test_retained_files_are_independent_and_inherited_feedback_is_read_only(action, storage, monkeypatch, tmp_path):
     from app.api import deps
     monkeypatch.setenv("STUDIO_ATTACHMENT_STORAGE", storage)
     monkeypatch.setenv("STUDIO_ATTACHMENT_FS_PATH", str(tmp_path))
@@ -105,7 +116,7 @@ def test_retained_files_are_independent_and_inherited_feedback_is_read_only(stor
         file = up(c, url, "notes.txt", b"keep independently", headers=H(tok)).json()["data"]
         say(tok, {"chat_session_id": sid, "message": "prefix", "attachment_ids": [file["id"]]}); wait_turns(tok, sid, 2)
         say(tok, {"chat_session_id": sid, "message": "change me"}); view = wait_turns(tok, sid, 4)
-        result = prepare(tok, sid, edit_body(view, 2)).json()["data"]; branch = result["session"]; bid = branch["id"]
+        result = prepare(tok, sid, revision_body(view, action, 2)).json()["data"]; branch = result["session"]; bid = branch["id"]
         cleanup.append(bid)
         assert [x["text"] for x in branch["turns"]] == [x["text"] for x in view["turns"][:2]]
         assert all(x["inherited"] and not x["editable"] for x in branch["turns"])
@@ -120,11 +131,12 @@ def test_retained_files_are_independent_and_inherited_feedback_is_read_only(stor
         deps._attachment_stores.cache_clear()
 
 
-def test_late_source_change_rolls_back_staged_files_and_duplicate_tombstones_never_recreate(monkeypatch):
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+def test_late_source_change_rolls_back_staged_files_and_duplicate_tombstones_never_recreate(action, monkeypatch):
     tok = user(); wid, sid = chat(tok); allow(wid)
     file = up(c, f"/api/chat/sessions/{sid}/attachments", "notes.txt", b"owned", headers=H(tok)).json()["data"]
     say(tok, {"chat_session_id": sid, "message": "first", "attachment_ids": [file["id"]]}); view = wait_turns(tok, sid, 2)
-    body = edit_body(view); svc = chat_session_service(); original = svc.sessions.publish_edit
+    body = revision_body(view, action); svc = chat_session_service(); original = svc.sessions.publish_edit
     staged = []
     def change(source, branch, prefix, intent):
         staged.append(branch.id)
@@ -143,12 +155,13 @@ def test_late_source_change_rolls_back_staged_files_and_duplicate_tombstones_nev
     assert len(c.get(f"/api/workflows/{wid}/chat/sessions", headers=H(tok)).json()["data"]) == 1
 
 
-def test_changed_file_policy_is_rechecked_before_publishing_an_edit():
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+def test_changed_file_policy_is_rechecked_before_publishing_an_edit(action):
     tok = user(); wid, sid = chat(tok); allow(wid)
     file = up(c, f"/api/chat/sessions/{sid}/attachments", "notes.txt", b"owned", headers=H(tok)).json()["data"]
     say(tok, {"chat_session_id": sid, "message": "first", "attachment_ids": [file["id"]]}); view = wait_turns(tok, sid, 2)
     allow(wid, kinds=["image"])
-    assert err(prepare(tok, sid, edit_body(view))) == "CHAT_ATTACHMENT_TYPE"
+    assert err(prepare(tok, sid, revision_body(view, action))) == "CHAT_ATTACHMENT_TYPE"
     assert len(c.get(f"/api/workflows/{wid}/chat/sessions", headers=H(tok)).json()["data"]) == 1
 
 
@@ -184,15 +197,17 @@ def test_edit_restores_agent_at_the_prefix_after_removal_and_readdition(monkeypa
     assert err(prepare(tok, sid, edit_body(view, 4))) == "CHAT_EDIT_CONTEXT_UNAVAILABLE"
 
 
-def test_public_v1_branch_uses_the_same_identity_and_typed_stream():
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+def test_public_v1_branch_uses_the_same_identity_and_typed_stream(action):
+    operation = "edits" if action == "edit" else "regenerations"
     slug = publish(user())[1]; v, token, sid = start(slug); headers = {"X-Chat-Visitor": token}
     talk(v, slug, {"type": "message", "chat_session_id": sid, "text": "old"}, query=f"?visitor={token}")
     root = f"/api/public/v1/chat/{slug}/sessions"
     view = v.get(f"{root}/{sid}", headers=headers).json()["data"]
-    body = edit_body(view)
-    denied = v.post(f"{root}/{sid}/edits", headers={"X-Chat-Visitor": "new"}, json=body)
+    body = revision_body(view, action)
+    denied = v.post(f"{root}/{sid}/{operation}", headers={"X-Chat-Visitor": "new"}, json=body)
     assert err(denied) == "CHAT_SESSION_NOT_FOUND"
-    result = v.post(f"{root}/{sid}/edits", headers=headers, json=body).json()["data"]
+    result = v.post(f"{root}/{sid}/{operation}", headers=headers, json=body).json()["data"]
     frame = {"type": "message", "chat_session_id": result["session"]["id"], "text": result["message"], "edit_operation_id": result["operation_id"]}
     events = talk(v, slug, frame, query=f"?visitor={token}")
     assert events[-1]["status"] == "ok" and events[1]["run_id"] == result["run_id"]
@@ -201,13 +216,15 @@ def test_public_v1_branch_uses_the_same_identity_and_typed_stream():
     assert v.get(f"{root}/{sid}", headers=headers).json()["data"] == view
 
 
-def test_an_edit_does_not_bypass_the_published_chats_daily_quota():
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+def test_an_edit_does_not_bypass_the_published_chats_daily_quota(action):
+    operation = "edits" if action == "edit" else "regenerations"
     slug = publish(user(), daily_limit=1)[1]; v, token, sid = start(slug); headers = {"X-Chat-Visitor": token}
     original = talk(v, slug, {"type": "message", "chat_session_id": sid, "text": "original"}, query=f"?visitor={token}")
     assert original[-1]["status"] == "ok"
     root = f"/api/public/v1/chat/{slug}/sessions"
     view = v.get(f"{root}/{sid}", headers=headers).json()["data"]
-    result = v.post(f"{root}/{sid}/edits", headers=headers, json=edit_body(view)).json()["data"]
+    result = v.post(f"{root}/{sid}/{operation}", headers=headers, json=revision_body(view, action)).json()["data"]
     bid = result["session"]["id"]
     events = talk(v, slug, {"type": "message", "chat_session_id": bid, "text": result["message"], "edit_operation_id": result["operation_id"]}, query=f"?visitor={token}")
     assert events[-1]["error"]["code"] == "CHAT_DAILY_LIMIT"
@@ -216,7 +233,9 @@ def test_an_edit_does_not_bypass_the_published_chats_daily_quota():
     assert v.get(f"{root}/{sid}", headers=headers).json()["data"] == view
 
 
-def test_app_user_cannot_edit_another_users_session_and_rotation_keeps_the_current_issuer():
+@pytest.mark.parametrize("action", ["edit", "regenerate"])
+def test_app_user_cannot_edit_another_users_session_and_rotation_keeps_the_current_issuer(action):
+    operation = "edits" if action == "edit" else "regenerations"
     from tests.test_chat_user_tokens import setup, mint, headers, create, talk as app_talk
     from tests.test_public_chat_api import visitor
     owner, wid, slug, key = setup(["https://shop.example"]); v = visitor()
@@ -224,19 +243,19 @@ def test_app_user_cannot_edit_another_users_session_and_rotation_keeps_the_curre
     sid = create(v, slug, first, "https://shop.example")
     app_talk(v, slug, first, {"type": "message", "chat_session_id": sid, "text": "original"})
     root = f"/api/public/v1/chat/{slug}/sessions"
-    view = v.get(f"{root}/{sid}", headers=headers(first, "https://shop.example")).json()["data"]; body = edit_body(view)
-    assert err(v.post(f"{root}/{sid}/edits", headers=headers(other, "https://shop.example"), json=body)) == "CHAT_SESSION_NOT_FOUND"
-    assert err(v.post(f"{root}/{sid}/edits", headers=headers(first, "https://blocked.example"), json=body)) == "CHAT_ORIGIN_FORBIDDEN"
+    view = v.get(f"{root}/{sid}", headers=headers(first, "https://shop.example")).json()["data"]; body = revision_body(view, action)
+    assert err(v.post(f"{root}/{sid}/{operation}", headers=headers(other, "https://shop.example"), json=body)) == "CHAT_SESSION_NOT_FOUND"
+    assert err(v.post(f"{root}/{sid}/{operation}", headers=headers(first, "https://blocked.example"), json=body)) == "CHAT_ORIGIN_FORBIDDEN"
     rotated = c.post(f"/api/workflows/{wid}/chat/app-keys", headers=H(owner), json={"label": "Rotated", "origins": ["https://shop.example"]}).json()["data"]
     current = mint(rotated, slug)
-    result = v.post(f"{root}/{sid}/edits", headers=headers(current, "https://shop.example"), json=body).json()["data"]
+    result = v.post(f"{root}/{sid}/{operation}", headers=headers(current, "https://shop.example"), json=body).json()["data"]
     bid = result["session"]["id"]
     from app.api.deps import get_db
     from app.repositories.chat_app_keys import ChatAppKeyRepository
     current_key = ChatAppKeyRepository(get_db()).get(rotated["key_id"])
     assert chat_session_service().sessions.get(bid).app_key_id == current_key.id
     assert c.delete(f"/api/workflows/{wid}/chat/app-keys/{key['key_id']}", headers=H(owner)).json()["success"]
-    assert err(v.post(f"{root}/{sid}/edits", headers=headers(first, "https://shop.example"), json=body)) == "CHAT_APP_KEY_REVOKED"
+    assert err(v.post(f"{root}/{sid}/{operation}", headers=headers(first, "https://shop.example"), json=body)) == "CHAT_APP_KEY_REVOKED"
     events = app_talk(v, slug, current, {"type": "message", "chat_session_id": bid, "text": result["message"], "edit_operation_id": result["operation_id"]})
     assert events[-1]["status"] == "ok"
     other_current = mint(rotated, slug, sub="other-user")

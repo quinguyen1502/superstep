@@ -33,8 +33,15 @@ class ChatRatingIn(BaseModel):
     comment: Optional[str] = None
 
 
-class ChatEditIn(BaseModel):
+class ChatRevisionIn(BaseModel):
     turn_id: str = Field(min_length=1, max_length=200)
-    message: str = Field(max_length=4000)
     operation_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,128}$")
     expected_last_turn_id: str = Field(min_length=1, max_length=200)
+
+
+class ChatEditIn(ChatRevisionIn):
+    message: str = Field(max_length=4000)
+
+
+class ChatRegenerateIn(ChatRevisionIn):
+    model_config = {"extra": "forbid"}
