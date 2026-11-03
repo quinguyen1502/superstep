@@ -317,3 +317,6 @@ The rest of the studio cannot be shown in a frame on any site.
 | `RATE_LIMITED` | Too many messages from this visitor or address; `retry_after` says when to try again. |
 
 See also [Chat triggers](chat-triggers.md) for Slack and Telegram.
+
+
+For your own users and custom appearance, see [React toolkit](chat-react.md) and [Widget API](chat-widget.md).

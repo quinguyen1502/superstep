@@ -313,3 +313,6 @@ Phần còn lại của studio không hiện được trong frame trên bất k�
 | `RATE_LIMITED` | Khách hoặc địa chỉ IP này gửi quá nhiều tin nhắn; `retry_after` cho biết khi nào thử lại. |
 
 Xem thêm [Chạy từ chat](chat-triggers.md) cho Slack và Telegram.
+
+
+Để tích hợp người dùng riêng và tuỳ chỉnh giao diện, xem [bộ giao diện React](chat-react.md) và [API widget](chat-widget.md).

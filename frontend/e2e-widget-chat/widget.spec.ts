@@ -1,0 +1,69 @@
+import { test, expect, type Page } from '@playwright/test'
+import fs from 'node:fs/promises'
+import { expectRowAligned } from '../e2e/helpers/alignment'
+const file = process.env.CHAT_HOST_FIXTURE
+if (!file) throw new Error('Run scripts/chat_host_e2e.sh for an isolated server-side token fixture')
+const config = JSON.parse(await fs.readFile(file, 'utf8'))
+const studio = config.baseUrl
+async function complete(page: Page, message: string) {
+  const chat = page.frameLocator('#superstep-chat-panel iframe')
+  await chat.locator('#chat-input').fill(message); await chat.locator('#chat-input').press('Enter')
+  await expect(chat.getByTestId('question-card')).toBeVisible()
+  await chat.getByRole('button', { name: 'Approve', exact: true }).click()
+  await expect(chat.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok')
+}
+test('built widget sample: anonymous, identified users, Human answer, events and logout', async ({ page }, info) => {
+  const failures: string[] = [], frames: string[] = []
+  page.on('pageerror', error => failures.push(error.name))
+  page.on('websocket', socket => {
+    expect(new URL(socket.url()).search).toBe('')
+    socket.on('framereceived', event => { const value = JSON.parse(String(event.payload)); if (typeof value.type === 'string') frames.push(value.type) })
+  })
+  await page.goto('/widget.html')
+  await expect(page.getByTestId('widget-demo')).toHaveAttribute('data-ready', 'true')
+  const chat = page.frameLocator('#superstep-chat-panel iframe')
+  await complete(page, 'Guest widget request')
+  await expect(page.getByTestId('widget-events')).toHaveText('Messages: 2 · Answers: 2')
+  const guest = await page.evaluate(slug => localStorage.getItem(`superstep-chat:${slug}`), config.human.slug)
+  expect(typeof guest === 'string' && /^[0-9a-f]{16}\.[0-9a-f]{32}$/.test(guest)).toBe(true)
+  await page.getByTestId('signin-lan').click()
+  await expect(chat.getByTestId('chat-mine')).not.toContainText(['Guest widget request'])
+  await expect(page.getByTestId('widget-demo')).toHaveAttribute('data-ready', 'true')
+  await complete(page, 'Lan widget request')
+  await expect(page.getByTestId('widget-events')).toHaveText('Messages: 4 · Answers: 4')
+  await expectRowAligned(await page.locator('header button, header a').all(), { label: 'sample host navigation' })
+  expect(frames).toContain('token'); expect(frames).toContain('question'); expect(frames).toContain('done')
+  const capture = async (name: string) => { const path = info.outputPath(`${name}.png`); await page.screenshot({ path, fullPage: true, animations: 'disabled' }); await info.attach(name, { path, contentType: 'image/png' }) }
+  await capture('widget-host-en-light')
+  await page.getByRole('button', { name: 'Switch account', exact: true }).click()
+  await expect(chat.getByTestId('chat-mine').filter({ hasText: 'Guest widget request' })).toHaveCount(1)
+  await expect(chat.getByTestId('chat-mine')).not.toContainText(['Lan widget request'])
+  await page.getByTestId('signin-minh').click()
+  await expect(page.getByTestId('widget-demo')).toHaveAttribute('data-ready', 'true')
+  await expect(chat.getByTestId('chat-mine')).not.toContainText(['Lan widget request'])
+  await page.getByRole('button', { name: 'Switch account', exact: true }).click()
+  await page.getByTestId('signin-lan').click()
+  await expect(chat.getByTestId('chat-mine').filter({ hasText: 'Lan widget request' })).toHaveCount(1)
+  await page.getByRole('button', { name: 'Tiếng Việt', exact: true }).click()
+  await expect(page.locator('#superstep-chat-button')).toHaveAttribute('aria-label', 'Đóng chat')
+  await expect(chat.locator('#chat-input')).toHaveAttribute('placeholder', /^Nhập tin nhắn/)
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.getByRole('button', { name: 'Đổi giao diện sáng tối', exact: true }).click()
+  await expect(chat.locator('.superstep-chat').first()).toHaveAttribute('data-color-scheme', 'dark')
+  await expect.poll(() => chat.locator('#public-chat').evaluate(el => [...el.querySelectorAll('#chat-input, #public-chat-new, #public-chat-sessions')]
+    .every(control => getComputedStyle(control).color === getComputedStyle(el).color))).toBe(true)
+  await expectRowAligned(await page.locator('header button, header a').all(), { label: 'sample host navigation (vi/dark)' })
+  await capture('widget-host-vi-dark')
+  const storage = await page.evaluate(() => ({ ...localStorage }))
+  expect(JSON.stringify(storage).includes(config.human.secret)).toBe(false)
+  expect(Object.values(storage).some(value => typeof value === 'string' && /^[\w-]+\.[\w-]+\.[\w-]+$/.test(value))).toBe(false)
+  expect(await page.evaluate(({ slug, guest }) => localStorage.getItem(`superstep-chat:${slug}`) === guest, { slug: config.human.slug, guest })).toBe(true)
+  expect(page.frames().some(frame => frame.url().startsWith(`${studio}/c/`))).toBe(true)
+  expect(failures).toEqual([])
+  // All three pages share the same opaque host session and the same protected token endpoint.
+  await page.getByRole('link', { name: 'Ví dụ bộ giao diện React', exact: true }).click()
+  await expect(page).toHaveURL(/\/react\/$/)
+  await page.getByRole('link', { name: 'Widget example', exact: true }).click()
+  await expect(page.getByTestId('widget-demo')).toHaveAttribute('data-ready', 'true')
+  await expect(page.frameLocator('#superstep-chat-panel iframe').getByTestId('chat-mine').filter({ hasText: 'Lan widget request' })).toHaveCount(1)
+})

@@ -62,9 +62,11 @@ must fit both its own limit and that token limit.
 
 ## Mint on your server
 
-These standard-library examples are standalone helpers, not methods of the
-current SDK release. Call one on your server using a key/secret from secret
-storage and `sub`/name from your **authenticated** application user. Never
+These standard-library examples are standalone helpers. The SDK source also
+provides `mintChatToken` from `@superstep/sdk/server` and Python `mint_chat_token`;
+use a compatible approved package version or the built checkout. Call a helper
+on your server using a key/secret from secret storage and `sub`/name from your
+**authenticated** application user. Never
 accept an arbitrary user id supplied by the browser as the identity to sign.
 Each helper returns a token; your private HTTP handler returns it to that
 user. Keep secrets and returned tokens out of logs.
@@ -125,8 +127,10 @@ token before its operation and does not cut a running stream when it expires.
 A new connection or HTTP request verifies again. After an interrupted stream,
 recover history before sending the message again.
 
-The current built-in iframe/widget has no app-token identify bridge yet;
-that is a later toolkit phase. Use the direct v1 API for this integration.
+The [widget API](chat-widget.md) supports `identify` through a checked parent/frame
+bridge. Its app-key origin is the Studio iframe origin; `embed_origins` separately
+allows the parent website. Direct [React toolkit](chat-react.md) and headless SDK
+clients instead allow their own application origin.
 
 ## Workflow identity and history
 
@@ -198,3 +202,6 @@ verifications count against the IP message limit. See
   A leaked key can impersonate any user of that chat until revoked.
 - Treat `name`/`meta` as untrusted data and apply the chat's spending limits.
 - Use stable, tenant-scoped user ids; changing keys alone does not split history.
+
+
+Continue with the [React toolkit](chat-react.md) or [Widget API](chat-widget.md). The widget guide explains why its app key allows the Studio iframe origin, separately from the parent embed allowlist.

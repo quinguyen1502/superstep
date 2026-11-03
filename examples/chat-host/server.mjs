@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { mintChatToken } from '../../sdk/typescript/dist/esm/server.js'
 
 const root = process.env.CHAT_HOST_DIST ? path.resolve(process.env.CHAT_HOST_DIST) : path.join(path.dirname(fileURLToPath(import.meta.url)), 'dist')
+const reactRoot = process.env.CHAT_HOST_REACT_DIST ? path.resolve(process.env.CHAT_HOST_REACT_DIST) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../react-chat/dist')
 const port = Number(process.env.CHAT_HOST_PORT || 5188)
 const hostOrigin = `http://localhost:${port}`
 const baseUrl = process.env.CHAT_STUDIO_URL || ''
@@ -83,10 +84,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname.startsWith('/api/') || req.method !== 'GET') throw fail(404, 'NOT_FOUND')
     const decoded = decodeURIComponent(url.pathname)
-    const file = path.resolve(root, '.' + (decoded === '/' ? '/index.html' : decoded))
-    if (!file.startsWith(root + path.sep) || !(await stat(file).catch(() => null))?.isFile()) throw fail(404, 'NOT_FOUND')
+    if (decoded === '/react') { res.writeHead(307, { Location: '/react/', 'Cache-Control': 'no-store' }); res.end(); return }
+    const react = decoded.startsWith('/react/'), directory = react ? reactRoot : root
+    const relative = react ? decoded.slice('/react'.length) : decoded
+    const file = path.resolve(directory, '.' + (relative === '/' ? '/index.html' : relative))
+    if (!file.startsWith(directory + path.sep) || !(await stat(file).catch(() => null))?.isFile()) throw fail(404, 'NOT_FOUND')
     res.writeHead(200, { 'Content-Type': mime[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store',
-      'Content-Security-Policy': `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ${studio.origin} ${wsOrigin}; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`,
+      'Content-Security-Policy': `default-src 'self'; script-src 'self' ${studio.origin}; frame-src ${studio.origin}; img-src 'self' data: ${studio.origin}; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ${studio.origin} ${wsOrigin}; frame-ancestors 'none'; base-uri 'none'; form-action 'self'`,
       'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' })
     res.end(await readFile(file))
   } catch (error) {

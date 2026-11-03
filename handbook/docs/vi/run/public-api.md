@@ -214,8 +214,9 @@ không tự gửi lại tin nhắn khi kết quả ghi chưa rõ.
 [Ví dụ chat host](https://github.com/quinguyen1502/superstep/tree/develop/examples/chat-host)
 chạy Node trên loopback, khác origin với studio; session do host quản lý,
 hai khách hàng, biểu mẫu xác nhận Human, tệp, đánh giá và thu hồi key. Ví dụ
-dùng headless store; đây là đăng nhập mẫu local, chưa phải React UI toolkit
-hay hệ thống tài khoản production. CI lưu screenshot dưới dạng artifact tải
+có trang SDK headless, [bộ giao diện React](chat-react.md) và
+[widget](chat-widget.md) dùng chung endpoint cấp token có bảo vệ. Đây là đăng nhập
+mẫu local; thay phần mẫu trước khi triển khai hệ thống tài khoản. CI lưu screenshot dưới dạng artifact tải
 về, không đưa ảnh vào Git.
 
 TypeScript hướng tới SDK 0.2.0. Python giữ version chung với CLI/server đến

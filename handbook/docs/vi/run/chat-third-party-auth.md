@@ -60,9 +60,10 @@ tự. Metadata phải vừa giới hạn riêng lẫn giới hạn token đó.
 
 ## Ký trên server của bạn
 
-Các ví dụ chỉ dùng thư viện chuẩn, là helper độc lập, chưa phải method của
-SDK hiện tại. Gọi trên server với key/secret từ kho bí mật và `sub`/tên từ
-user ứng dụng **đã xác thực**. Không ký danh tính theo id tùy ý do trình
+Các ví dụ dùng thư viện chuẩn là helper độc lập. Source SDK còn có
+`mintChatToken` từ `@superstep/sdk/server` và Python `mint_chat_token`; dùng phiên
+bản package tương thích đã duyệt hoặc checkout đã build. Gọi helper trên server
+với key/secret từ kho bí mật và `sub`/tên từ user ứng dụng **đã xác thực**. Không ký danh tính theo id tùy ý do trình
 duyệt gửi lên. Mỗi helper trả token; HTTP handler riêng trả token đó cho
 đúng user. Không ghi secret và token trả về vào log.
 
@@ -121,8 +122,10 @@ tránh lặp vô hạn. Socket kiểm tra token trước thao tác và không c�
 đang chạy khi token hết hạn. Kết nối hoặc request HTTP mới kiểm tra lại.
 Sau stream bị ngắt, đọc lại lịch sử trước khi gửi lại tin nhắn.
 
-Iframe/widget có sẵn hiện chưa có cầu nối identify bằng app token; phần đó
-thuộc giai đoạn toolkit sau. Tích hợp này dùng API v1 trực tiếp.
+[API widget](chat-widget.md) hỗ trợ `identify` qua bridge kiểm tra trang cha/frame.
+Origin trong app key là origin của iframe Studio; `embed_origins` cho phép website
+cha riêng. Client [bộ giao diện React](chat-react.md) và SDK headless trực tiếp
+dùng origin của ứng dụng.
 
 ## Danh tính và lịch sử trong workflow
 
@@ -193,3 +196,6 @@ thực token thất bại tính vào giới hạn gửi theo IP. Xem
   Key bị lộ có thể giả mạo mọi user của chat đó cho tới khi bị thu hồi.
 - Xem `name`/`meta` là dữ liệu không tin cậy và đặt giới hạn chi tiêu chat.
 - Dùng id ổn định có phạm vi tenant; đổi key không tự tách lịch sử.
+
+
+Tiếp tục với [bộ giao diện React](chat-react.md) hoặc [API widget](chat-widget.md). Hướng dẫn widget giải thích origin của iframe Studio trong app key, tách biệt với danh sách website cha được nhúng.

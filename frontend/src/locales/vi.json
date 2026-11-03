@@ -2219,6 +2219,14 @@
       "frame": "Trợ lý chat"
     },
     "toolkit": {
+      "headlessExample": "Ví dụ SDK headless",
+      "reactExample": "Ví dụ bộ giao diện React",
+      "widgetExample": "Ví dụ widget",
+      "widgetDescription": "Mở bong bóng để chat ẩn danh, rồi chọn người dùng mẫu để đổi danh tính.",
+      "openWidget": "Mở widget",
+      "closeWidget": "Đóng widget",
+      "widgetReady": "Widget đã sẵn sàng",
+      "widgetEvents": "Tin nhắn: {{messages}} · Câu trả lời: {{answers}}",
       "loading": "Đang tải chat…",
       "refresh": "Tải lại lịch sử",
       "requestFailed": "Không thể hoàn tất yêu cầu. Bạn hãy thử lại.",

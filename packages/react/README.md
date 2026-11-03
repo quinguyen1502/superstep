@@ -1,6 +1,6 @@
 # @superstep/react
 
-React chat toolkit shared with Superstep Studio. `useChat` binds the headless `createChatStore` in `@superstep/sdk/chat`; the public components reuse the Studio's shadcn chat presentation. Package publication requires separate owner approval.
+React chat toolkit shared with Superstep Studio. Guides: [English](../../handbook/docs/en/run/chat-react.md) / [Tiếng Việt](../../handbook/docs/vi/run/chat-react.md); [widget guide](../../handbook/docs/en/run/chat-widget.md). `useChat` binds the headless `createChatStore` in `@superstep/sdk/chat`; the public components reuse the Studio's shadcn chat presentation. Package publication requires separate owner approval.
 
 ```tsx
 import { Chat } from '@superstep/react'
@@ -51,4 +51,4 @@ npm test
 scripts/chat_host_e2e.sh
 ```
 
-The root lockfile owns all three npm workspaces. Development uses the `source` export condition; normal ESM consumers receive built code/declarations. See [the Vite example](../../examples/react-chat/README.md). The `sdk-react-v<version>` workflow checks the package version, tests/builds and prepares npm provenance publishing; branches and PRs do not publish. Screenshots remain temporary files/CI artifacts, never package files or Git evidence.
+The root lockfile owns all three npm workspaces. Development uses the `source` export condition; normal ESM consumers receive built code/declarations. See [the Vite example](../../examples/react-chat/README.md). The shared loopback host serves headless `/`, toolkit `/react/` and `/widget.html` pages; one authenticated server endpoint issues user tokens for all three. Widget requests originate at the Studio iframe and require its origin on the app key, separately from the parent embed allowlist. The `sdk-react-v<version>` workflow checks the package version, tests/builds and prepares npm provenance publishing; branches and PRs do not publish. Screenshots remain temporary files/CI artifacts, never package files or Git evidence.
