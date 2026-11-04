@@ -2,7 +2,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
@@ -16,12 +16,15 @@ export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
   const { t } = useTranslation()
   const { state, setState, edit, editable } = useStudioCtx()
   const tap = onAdd && editable ? onAdd : undefined
-  // two halves, each with its own scroll, so a long node list never hides the state schema
-  return <aside className="h-full bg-muted/30 min-h-0 flex flex-col">
-      <section className="flex min-h-0 flex-1 basis-0 flex-col" id="palette-nodes">
-        <div className="px-3 pt-3 pb-2 text-xs font-semibold uppercase text-muted-foreground">{t('editor.palette')}</div>
+  return <aside className="h-full bg-muted/30 min-h-0 flex flex-col" id="palette-panel">
+    <Tabs defaultValue="nodes" className="min-h-0 flex-1 gap-0">
+      <div className="shrink-0"><TabsList variant="panel" className="w-full" aria-label={t('editor.palette')}>
+        <TabsTrigger value="nodes" id="palette-nodes-tab" aria-controls="palette-nodes" className="min-w-0"><span className="truncate">{t('editor.palette')}</span></TabsTrigger>
+        <TabsTrigger value="state" id="palette-state-tab" aria-controls="palette-state" className="min-w-0"><span className="truncate">{t('editor.stateSchema')}</span></TabsTrigger>
+      </TabsList></div>
+      <TabsContent value="nodes" forceMount className="flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden" id="palette-nodes" aria-labelledby="palette-nodes-tab">
         {tap && <p className="px-3 pb-2 text-[11px] text-muted-foreground" id="palette-tap-hint">{t('editor.mobileNav.addHint')}</p>}
-        <ScrollArea className="min-h-0 flex-1"><div className="px-3 pt-1 pb-3 space-y-2">{/* pt-1: room for the first card's ring, which the viewport would clip */}{TYPES.map(t_ => { const m = META[t_]; const I = m.icon
+        <ScrollArea className="min-h-0 flex-1"><div className="px-3 pt-3 pb-3 space-y-2">{/* pt-1: room for the first card's ring, which the viewport would clip */}{TYPES.map(t_ => { const m = META[t_]; const I = m.icon
             const add = tap ? () => tap(t_) : undefined
             // phones: the Add button is the explicit (and focusable) control; a tap anywhere on the card does the same
             return <Card key={t_} draggable={edit} onDragStart={e => { e.dataTransfer.setData('nodetype', t_); e.dataTransfer.effectAllowed = 'move' }}
@@ -32,11 +35,9 @@ export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
               {add && <Button variant="outline" size="sm" data-testid="palette-add" aria-label={t('palette.addNode', { type: m.label })}
                 onClick={e => { e.stopPropagation(); add() }}><Plus />{t('editor.mobileNav.add')}</Button>}
             </Card> })}</div></ScrollArea>
-      </section>
-      <Separator />
-      <section className="flex min-h-0 flex-1 basis-0 flex-col" id="palette-state">
-        <div className="px-3 pt-3 pb-2 text-xs font-semibold uppercase text-muted-foreground">{t('editor.stateSchema')}</div>
-        <ScrollArea className="min-h-0 flex-1"><div className="px-3 pt-1 pb-2 divide-y">{state.map((f, i) => <div className="@container space-y-1 py-2 first:pt-1" key={i} data-testid="state-field"><div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1 @max-[13rem]:grid-cols-[minmax(0,1fr)_auto]">
+      </TabsContent>
+      <TabsContent value="state" forceMount className="flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden" id="palette-state" aria-labelledby="palette-state-tab">
+        <ScrollArea className="min-h-0 flex-1"><div className="px-3 pt-3 pb-2 divide-y">{state.map((f, i) => <div className="@container space-y-1 py-2 first:pt-1" key={i} data-testid="state-field"><div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1 @max-[13rem]:grid-cols-[minmax(0,1fr)_auto]">
             <Input className="min-w-0 @max-[13rem]:col-span-full" value={f.name} aria-label={t('editor.fieldName')} onChange={e => setState(s => s.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
             <Select value={f.type} onValueChange={v => setState(s => s.map((x, j) => j === i ? { ...x, type: v, reducer: REDUCERS[v]?.includes(x.reducer || '') ? x.reducer : undefined } : x))}>
               <SelectTrigger className="w-24 @max-[13rem]:w-full" aria-label={t('editor.fieldType')}><SelectValue /></SelectTrigger>
@@ -52,6 +53,7 @@ export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
         <div className="px-3 pt-1 pb-3">
           <Button variant="outline" size="sm" className="w-full" onClick={() => setState(s => [...s, { name: 'field' + (s.length + 1), type: 'string' }])}><Plus />{t('editor.addField')}</Button>
         </div>
-      </section>
+      </TabsContent>
+    </Tabs>
     </aside>
 }

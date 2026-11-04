@@ -32,7 +32,7 @@ test('knowledge base: upload, search, Retriever node', async ({ page }) => {
   expect(saved.errors).toEqual([])
   await page.goto(`/workflows/${saved.id}`)
   await expect(page.getByText('Tìm trong kho tri thức')).toBeVisible()
-  await page.locator('.react-flow__node[data-id="ret"]').click()
+  await page.locator('.react-flow__node[data-id="ret"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#retriever-kb')).toContainText(name); await expect(page.locator('#retriever-topk')).toHaveValue('2')
   await expect(page.locator('#retriever-manage')).toHaveAttribute('href', '/settings/knowledge')
   await page.locator('#run-btn').click()

@@ -172,8 +172,9 @@ Chỉ báo thành công sau thao tác **đã xác nhận**. Bị từ chối ho�
 quả sẽ dừng MCP node thường. Agent nhận lỗi công cụ bình thường; hướng dẫn
 Agent phải yêu cầu xác nhận trước khi báo thành công. Run kiểm thử và run dùng
 model giả lập không gửi tin, ghi sheet, đổi token hay lưu ý định. MCP HTTP/stdio
-giữ nguyên hành vi. Xuất Python/TypeScript từ chối kết nối quản lý một cách rõ
-ràng vì hiện cần theo dõi thao tác trong Studio. Template để trống tham chiếu
+giữ nguyên hành vi. Xuất Python/TypeScript giữ bước quản lý dưới dạng TODO rõ ràng.
+Bước này báo lỗi cho đến khi bạn triển khai xác thực, theo dõi thao tác, chống ghi
+lặp và đối soát bên ngoài Studio; không xuất cấu hình kết nối hay khoá bí mật. Template để trống tham chiếu
 tài nguyên; chọn kết nối sau khi tạo workflow từ mẫu.
 
 Máy chủ [Model Context Protocol](https://modelcontextprotocol.io) cung cấp

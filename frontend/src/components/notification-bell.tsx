@@ -54,14 +54,14 @@ export function NotificationBell() {
   return <><DropdownMenu onOpenChange={o => o && load()}>
     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" id="notify-bell" className="relative" data-live={live} aria-label={t('notify.unread', { count: unread })}>
       <Bell />{unread > 0 && <Badge size="sm" className="absolute -top-1 -right-1 min-w-4" data-testid="notify-count">{unread}</Badge>}</Button></DropdownMenuTrigger>
-    <DropdownMenuContent align="end" className="w-80">
+    <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-1rem)]">
       <DropdownMenuLabel className="flex items-center justify-between">{t('notify.title')}
         {unread > 0 && <Button variant="ghost" size="xs" id="notify-read-all" onClick={e => { e.preventDefault(); readAll() }}><CheckCheck />{t('notify.markAll')}</Button>}</DropdownMenuLabel>
       <DropdownMenuSeparator />
       {!items.length && <div className="px-2 py-3 text-xs text-muted-foreground">{t('notify.empty')}</div>}
-      {items.map(n => <DropdownMenuItem key={n.id} data-testid="notify-item" data-read={n.read} onClick={() => open(n)} className="flex items-start gap-2">
-        <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', n.read ? 'bg-transparent' : 'bg-primary')} />
-        <span className="min-w-0 space-y-0.5"><span className={cn('block text-sm', !n.read && 'font-medium')}>{text(n)}</span>
+      {items.map(n => <DropdownMenuItem key={n.id} data-testid="notify-item" data-read={n.read} onClick={() => open(n)} className="items-start">
+        <span className="min-w-0 flex-1 space-y-0.5"><span className="flex items-start gap-2"><span className={cn('min-w-0 flex-1 text-sm', !n.read && 'font-medium')}>{text(n)}</span>
+          {!n.read && <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />}</span>
           {n.params.prompt && <span className="block truncate text-xs text-muted-foreground">{n.params.prompt}</span>}
           <span className="block text-xs text-muted-foreground">{new Date(n.created * 1000).toLocaleString(i18n.resolvedLanguage)}</span></span>
       </DropdownMenuItem>)}

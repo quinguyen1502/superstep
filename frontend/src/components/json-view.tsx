@@ -40,10 +40,13 @@ function Node({ k, v, depth }: { k?: string; v: any; depth: number }) {
   </Collapsible>
 }
 
-export function JsonView({ value, className }: { value: any; className?: string }) {
+export function JsonView({ value, className, emptyMessage }: { value: any; className?: string; emptyMessage?: string }) {
   const { t } = useTranslation()
+  if (value === undefined) return <div className={cn('flex items-center rounded-md border bg-muted/30 px-3 py-3 text-xs text-muted-foreground', className)}>
+    {emptyMessage ?? t('common.noData')}
+  </div>
   return <div className={cn('relative rounded-md border bg-muted/30 p-2 pl-6 font-mono text-[11px] leading-5', className)}>
     <CopyButton value={value} className="absolute right-1 top-1" />
-    {value === undefined ? <span className="text-muted-foreground">{t('common.noData')}</span> : <Node v={value} depth={0} />}
+    <Node v={value} depth={0} />
   </div>
 }

@@ -54,7 +54,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await page.locator('[id="chat-attachments.max_mb"]').fill('10')
     await page.locator('#chat-settings-save').click(); await expect(page.locator('#chat-settings')).toHaveCount(0)
     // the LLM node shows "Include attachments" on
-    await page.locator('.react-flow__node').filter({ hasText: 'Bot' }).click()
+    await page.locator('.react-flow__node').filter({ hasText: 'Bot' }).click(); await page.locator('#config-tab-settings').click()
     await expect(page.locator('#llm-include-attachments')).toHaveAttribute('aria-checked', 'true')
 
     // a visitor: a file over the limit is refused before upload; a PDF and an image upload as chips
@@ -87,8 +87,9 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     expect(r.status()).toBe(404)
 
     // the builder reads the visitor's chat and downloads its file
-    await page.reload(); await page.locator('#chat-session-picker').click()
-    await page.getByTestId('chat-visitor-option').first().click()
+    await page.reload(); await page.locator('#more-btn').click()
+    await page.locator('#chat-history-btn').click()
+    await expect(page.locator('#chat-history-dialog')).toBeVisible()
     await expect(page.getByTestId('chat-turn-file')).toHaveCount(2)
     const bdl = page.waitForEvent('download'); await page.getByTestId('chat-file-download').nth(1).click()
     expect((await bdl).suggestedFilename()).toBe('photo.png')

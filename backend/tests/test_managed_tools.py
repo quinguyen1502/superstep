@@ -1,5 +1,5 @@
 """Managed adapters: owner scope, typed calls, stable intent and uncertain-write recovery."""
-import json, threading, uuid
+import ast, io, json, threading, uuid, zipfile
 from concurrent.futures import ThreadPoolExecutor
 import httpx, jwt, pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -277,4 +277,51 @@ def test_mcp_and_agent_ports_use_stable_keys_and_dry_runs(c, external):
     wid = c.post("/api/workflows", headers=H(owner["token"]), json=graph).json()["data"]["id"]
     for language in ("python", "typescript"):
         response = c.get(f"/api/workflows/{wid}/code?language={language}", headers=H(owner["token"]))
-        assert response.json()["error"]["code"] == "MANAGED_EXPORT_UNAVAILABLE"
+        assert response.status_code == 200, response.text
+        data = response.json()["data"]
+        assert data["managed_placeholders"] is True
+        assert "TODO" in data["code"] and "Managed connection placeholder" in data["code"]
+        assert server["id"] not in data["code"] and all(value not in data["code"] for value in TG.values())
+        if language == "python":
+            tree = ast.parse(data["code"])
+            helper = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "managed_operation")
+            namespace = {"Any": object}
+            exec(compile(ast.Module(body=[helper], type_ignores=[]), "export", "exec"), namespace)
+            with pytest.raises(NotImplementedError, match="Managed connection placeholder"):
+                namespace["managed_operation"]("send_message", {"text": "No action"})
+        project = c.get(f"/api/workflows/{wid}/export/{language}/project", headers=H(owner["token"]))
+        assert project.status_code == 200, project.text
+        with zipfile.ZipFile(io.BytesIO(project.content)) as archive:
+            assert b"managed" in archive.read(next(name for name in archive.namelist() if name.endswith("/README.md"))).lower()
+            assert all(server["id"].encode() not in archive.read(name) for name in archive.namelist())
+    assert len(external.messages) == 2
+    saved = c.get(f"/api/workflows/{wid}", headers=H(owner["token"])).json()["data"]
+    assert "_managed_export" not in json.dumps(saved)
+
+
+@pytest.mark.parametrize("nested", [False, True])
+def test_managed_agent_exports_in_children_are_placeholders(c, external, nested):
+    owner = user(c); server = create(c, owner)
+    from tests.test_agent_workflow_tools import supervisor
+    graph = supervisor({"source": "mcp", "name": "send", "description": "Send a message", "server_id": server["id"],
+                        "tool": "send_message", "parameters": {"type": "object", "properties": {"text": {"type": "string"}}}})
+    response = c.post("/api/workflows", headers=H(owner["token"]), json=graph)
+    assert response.status_code == 200, response.text
+    wid = response.json()["data"]["id"]
+    if nested:
+        graph = {"name": "Parent", "state": graph["state"], "nodes": [
+            {"id": "s", "type": "start", "data": {}}, {"id": "child", "type": "subgraph", "data": {"workflow_id": wid}},
+            {"id": "e", "type": "end", "data": {}}], "edges": [{"id": "1", "source": "s", "target": "child"}, {"id": "2", "source": "child", "target": "e"}]}
+        response = c.post("/api/workflows", headers=H(owner["token"]), json=graph)
+        assert response.status_code == 200, response.text
+        wid = response.json()["data"]["id"]
+    for language, helper in [("python", "managed_operation"), ("typescript", "managedOperation")]:
+        response = c.get(f"/api/workflows/{wid}/code?language={language}", headers=H(owner["token"]))
+        assert response.status_code == 200, response.text
+        data = response.json()["data"]
+        assert data["managed_placeholders"] is True
+        assert data["code"].count(helper + "(") >= 2  # definition and actual tool call
+        assert server["id"] not in data["code"]
+        assert all(secret not in data["code"] for secret in TG.values())
+        if language == "python": ast.parse(data["code"])
+    assert not external.messages

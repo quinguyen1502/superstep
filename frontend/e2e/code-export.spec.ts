@@ -61,6 +61,7 @@ test('Code tab: Python of the saved version, the selected node highlighted, copy
   expect(entries[`${root}/agent.py`]).toContain('graph = build_graph()')
 
   // a change shows as unsaved until it is saved; then the code is the new version's
+  await page.locator('#config-tab-settings').click()
   await page.locator('#llm-prompt').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.insertText('Answer briefly: {{state.message}}')
   await expect(page.locator('#code-unsaved')).toBeVisible()
   await page.locator('#save-btn').click()

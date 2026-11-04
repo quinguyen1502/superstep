@@ -72,9 +72,14 @@ class Graph:
         # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it (TASK-0137)
         kept = {(n.get("id"), t.get("name")): t.get("workflow_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                 for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "workflow"}
+        managed_nodes = {n.get("id") for n in raw.get("nodes") or [] if n.get("type") == "mcp" and (n.get("data") or {}).get("_managed_export") is True}
+        managed_tools = {(n.get("id"), tool.get("name")) for n in raw.get("nodes") or [] if n.get("type") == "agent"
+                         for tool in (n.get("data") or {}).get("tools") or [] if isinstance(tool, dict) and tool.get("_managed_export") is True}
         for n in self.wf["nodes"]:
+            if n["id"] in managed_nodes: n["data"]["_managed_export"] = True
             for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
                 if isinstance(t, dict) and t.get("source") == "workflow": t["workflow_id"] = kept.get((n["id"], t.get("name"))) or ""
+                if isinstance(t, dict) and (n["id"], t.get("name")) in managed_tools: t["_managed_export"] = True
         self.refs = {n["id"]: (n.get("data") or {}).get("workflow_id") or "" for n in raw.get("nodes") or []
                      if isinstance(n, dict) and n.get("type") == "subgraph"}
         # workflow tools of Agent nodes (TASK-0137, DEC-0066): their own graphs, with their own state, called by the tool
@@ -214,14 +219,16 @@ class GraphWriter:
             if t == "human": self.uses.add("human")
             if t == "tool" and d.get("mode") == "code": self.uses.add("code")
             if t == "retriever": self.uses.add("retrieve")
-            if t == "mcp": self.uses.add("call_mcp_tool")
+            if t == "mcp": self.uses.add("managed_operation" if d.get("_managed_export") else "call_mcp_tool")
             if t == "email": self.uses.add("send_email")
             if t == "agent":
                 self.uses.update({"templates", "model", "agent"})
                 if self.handoff_raw(g, n["id"]): self.uses.add("handoff")
                 sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
                 if "knowledge" in sources: self.uses.add("retrieve")
-                if "mcp" in sources: self.uses.add("call_mcp_tool")
+                for tool in d.get("tools") or []:
+                    if isinstance(tool, dict) and tool.get("source") == "mcp":
+                        self.uses.add("managed_operation" if tool.get("_managed_export") else "call_mcp_tool")
                 if agents.needs_approval(d): self.uses.add("human")
 
     def inputs(self, g: Graph, nid: str) -> List[str]:

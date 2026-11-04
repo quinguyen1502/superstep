@@ -51,6 +51,6 @@ export function McpSettings({ server, tool, args = {}, fields, readOnly, onChang
       </div>)}
       <p className="text-[11px] text-muted-foreground">{t('editor.mcpArgsHint', { field: '{{state.field}}' })}</p>
     </div>}
-    <Button variant="outline" size="sm" asChild><Link to="/settings/mcp" id="mcp-manage"><ExternalLink />{t('editor.mcpManage')}</Link></Button>
+    <Button variant="outline" asChild><Link to="/settings/mcp" id="mcp-manage"><ExternalLink /><span>{t('editor.mcpManage')}</span></Link></Button>
   </div>
 }

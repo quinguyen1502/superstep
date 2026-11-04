@@ -44,7 +44,7 @@ GLOBALS = {
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER",
-    "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool",
+    "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS", "JSON_TYPES", "WORDS", "Schema", "ToolSpec", "ToolCall", "ChatMessage",
     "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "FileRecord", "isImage", "fileList", "withFiles", "filesNote", "callLlmFiles", "callAgentFiles", "checkArguments", "toolText", "shorten", "Question", "Message",
@@ -491,6 +491,16 @@ async function retrieve(query: string, topK: number): Promise<unknown[]> {
   return [];
 }
 ''',
+    "managed_operation": r'''
+/** Placeholder for a Superstep managed connection. No external action is performed.
+ * TODO: implement this tool with your own credentials, operation tracking,
+ * idempotency and reconciliation before running the exported workflow.
+ * Studio connection settings and secrets are deliberately not exported. */
+async function managedOperation(tool: string, args: unknown): Promise<never> {
+  void tool, args;
+  throw new Error("Managed connection placeholder: implement the tool before running it");
+}
+''',
     "call_mcp_tool": r'''
 /** MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
  * TODO: call the tool with an MCP client, for example @langchain/mcp-adapters (MultiServerMCPClient). */
@@ -734,11 +744,13 @@ class _Writer(GraphWriter):
             self.add(ret(f"await retrieve(render({const}_QUERY, state), {number(d.get('top_k'), int) or 4})"))
             self.add("}")
         elif t == "mcp":
+            call = "managedOperation" if d.get("_managed_export") else "callMcpTool"
             self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
             self.add("")
-            self.add(f"/** {head}: calls the MCP tool {lit(_doc(d.get('tool')))} (see callMcpTool). */")
+            self.add(f"/** {head}: MCP tool {lit(_doc(d.get('tool')))} (see {call}). */")
             self.add(sig)
-            self.add(ret(f"await callMcpTool({lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
+            if d.get("_managed_export"): self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
+            self.add(ret(f"await {call}({lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
             self.add("}")
         elif t == "email":
             self.email(g, nid, cls, head, sig)
@@ -1118,7 +1130,8 @@ class _Writer(GraphWriter):
             elif src == "knowledge":
                 self.add(f"    return await retrieve(String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
-                self.add(f"    return await callMcpTool({lit(t.get('tool') or '')}, args);")
+                call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
+                self.add(f"    return await {call}({lit(t.get('tool') or '')}, args);")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:

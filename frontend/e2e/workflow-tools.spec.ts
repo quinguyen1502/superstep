@@ -36,7 +36,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     const desk = (await (await page.request.post('/api/workflows', { headers: H, data: ORDERS(orders) })).json()).data.id
     const team = (await (await page.request.post('/api/workflows', { headers: H, data: EMPTY_TEAM(`Order team ${lang} ${n}`) })).json()).data.id
     await page.goto(`/workflows/${team}${lang === 'en' ? '?theme=dark' : ''}`)
-    await page.locator('.react-flow__node[data-id="ag"]').click()
+    await page.locator('.react-flow__node[data-id="ag"]').click(); await page.locator('#config-tab-settings').click()
     await page.locator('#agent-add-tool').click(); await page.locator('#agent-add-workflow').click()
     await expect(page.locator('#agent-tool-0-workflow-required')).toBeVisible()
     await page.locator('#agent-tool-0-workflow').click(); await page.getByRole('option', { name: orders }).click()
@@ -72,7 +72,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await expect(card).toBeVisible(); await shot(page, `workflow-tool-template-card-${lang}`, '[data-id=builtin-support-team]')
     await card.locator('button').first().click()
     await expect(page).toHaveURL(/\/workflows\/[^/]+$/); await expect(page.locator('#validation-errors')).toHaveCount(0)
-    await page.locator('.react-flow__node[data-id="agent"]').click()
+    await page.locator('.react-flow__node[data-id="agent"]').click(); await page.locator('#config-tab-settings').click()
     await expect(page.getByTestId('agent-tool')).toHaveCount(2)
     await expect(page.locator('#agent-tool-0-workflow')).toContainText('Order desk')  // made with it: "Support team · Order desk"
     await page.locator('#run-tab').click(); await page.locator('#run-input').fill('{"message": "Where is my order B200?"}')

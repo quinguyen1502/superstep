@@ -28,7 +28,7 @@ test('approval channels: org connection, verified account, Human node, request, 
   const wid = (await (await page.request.post('/api/workflows', { headers: auth, data: WF })).json()).data.id
   await page.goto(`/workflows/${wid}`)
   // node settings: Studio only by default; nothing connected yet
-  await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#approval-channel')).toContainText('Chỉ trong Studio')
   await expect(page.locator('#approval-no-channels')).toBeVisible()
   // Settings → Channels (own URL): one card per platform, Not set up yet
@@ -40,6 +40,8 @@ test('approval channels: org connection, verified account, Human node, request, 
   for (const k of ['slack', 'telegram', 'whatsapp', 'email', 'teams'])
     await expect(page.locator(`[data-testid=channel-card-${k}] [data-channel-logo=${k}]`).first()).toBeVisible()
   // connect Slack for the whole organization (the demo user is an admin): Org tab inside the Slack card
+  await expect(slack.locator('#channel-card-slack-toggle')).toHaveAttribute('aria-expanded', 'false')
+  await slack.locator('#channel-card-slack-toggle').click()
   await slack.locator('#channel-card-slack-tab-org').click()
   const add = slack.locator('[data-testid=add-slack-org]'), save = add.locator('#add-slack-org-save'); await expect(save).toBeDisabled()
   await add.locator('#add-slack-org-name').fill('Acme')
@@ -81,7 +83,7 @@ test('approval channels: org connection, verified account, Human node, request, 
   await expect(page.locator('#id-slack-2222-verified')).toBeVisible()
   await page.goto(`/workflows/${wid}`)
   // reopen the editor (channels reload) and configure the node
-  await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
   await page.locator('#approval-channel').click()
   await expect(page.getByRole('option', { name: 'Slack · Acme · Toàn tổ chức' }).locator('[data-channel-logo=slack]')).toBeVisible()
   await page.getByRole('option', { name: 'Slack · Acme · Toàn tổ chức' }).click()

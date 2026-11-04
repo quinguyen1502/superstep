@@ -234,6 +234,7 @@
     },
     "configTabs": {
       "label": "Node settings",
+      "general": "General",
       "settings": "Settings",
       "data": "Data",
       "execution": "Execution",
@@ -269,6 +270,7 @@
     "exitReplay": "Exit replay",
     "rawEvents": "Raw events",
     "noDiff": "No state changes.",
+    "noOutputAfterError": "This node failed before producing an output.",
     "closeDetail": "Close details",
     "input": "Input",
     "output": "Output",
@@ -772,6 +774,8 @@
     "restoredFrom": "Restored from v{{n}}",
     "initial": "Initial version",
     "compare": "Compare",
+    "before": "Before · v{{n}}",
+    "after": "After · v{{n}}",
     "identical": "No differences.",
     "renamed": "Renamed",
     "added": "added",
@@ -1045,7 +1049,8 @@
       "telegram": "Buttons in a Telegram group or private chat, through your bot.",
       "whatsapp": "Reply buttons in a WhatsApp chat, from your business number.",
       "email": "An e-mail with Approve / Reject links to the studio.",
-      "teams": "An Adaptive Card in a Teams channel with buttons that open the studio."
+      "teams": "An Adaptive Card in a Teams channel with buttons that open the studio.",
+      "webhook": "Receive signed JSON events and route them to workflow triggers."
     },
     "scopeHelp": {
       "org": "Organization connections are set up by an admin and usable by everyone.",
@@ -1115,20 +1120,58 @@
   "managedTools": {
     "transport": "Managed connection",
     "adapter": "Service adapter",
-    "adapters": { "google_drive": "Google Drive files", "telegram": "Telegram actions", "google_sheets": "Google Sheets", "http_api": "Generic HTTP API", "slack": "Slack actions", "whatsapp": "WhatsApp actions", "email": "Email actions", "teams": "Microsoft Teams actions" },
-    "fields": { "folder_id": "Allowed Google Drive folder ID", "google_credentials": "Google credential JSON (encrypted)", "channel_id": "Channel connection", "chat_id": "Destination chat ID", "spreadsheet_id": "Spreadsheet ID", "sheet_name": "Sheet tab name", "data_columns": "Number of data columns", "service_account": "Service account JSON key", "base_url": "API base URL", "tools_json": "Tool definitions (JSON)", "headers": "Authentication headers (JSON, encrypted)", "destination_channel": "Destination Slack conversation ID", "recipient_phone": "Recipient phone (country code, digits only)", "recipients": "Fixed email recipients (comma separated, up to 10)" },
+    "adapters": {
+      "google_drive": "Google Drive files",
+      "telegram": "Telegram actions",
+      "google_sheets": "Google Sheets",
+      "http_api": "Generic HTTP API",
+      "slack": "Slack actions",
+      "whatsapp": "WhatsApp actions",
+      "email": "Email actions",
+      "teams": "Microsoft Teams actions"
+    },
+    "fields": {
+      "folder_id": "Allowed Google Drive folder ID",
+      "google_credentials": "Google credential JSON (encrypted)",
+      "channel_id": "Channel connection",
+      "chat_id": "Destination chat ID",
+      "spreadsheet_id": "Spreadsheet ID",
+      "sheet_name": "Sheet tab name",
+      "data_columns": "Number of data columns",
+      "service_account": "Service account JSON key",
+      "base_url": "API base URL",
+      "tools_json": "Tool definitions (JSON)",
+      "headers": "Authentication headers (JSON, encrypted)",
+      "destination_channel": "Destination Slack conversation ID",
+      "recipient_phone": "Recipient phone (country code, digits only)",
+      "recipients": "Fixed email recipients (comma separated, up to 10)"
+    },
     "headerHelp": "JSON object of headers, for example Authorization or X-API-Key. Leave empty for no authentication. Values are encrypted and never returned.",
     "googleCredentialHelp": "Paste service_account JSON or authorized_user JSON containing client_id, client_secret and refresh_token. Values are encrypted and never returned. Do not paste an access token or a client-secret download alone.",
     "secretHelp": "Paste the service account JSON key. It is encrypted and never returned.",
-    "help": "Tools act only on the configured destination. Test runs send and write nothing. Managed tools require Studio operation tracking; standalone code export is unavailable.",
-    "setup": { "google_drive": "Only direct children of this folder are accessible. Supports list, metadata, text/Google Doc reads and plain-text creation up to 64 KiB. Personal My Drive uses OAuth refresh credentials; service-account creation needs a Shared Drive. Keep private operation properties for read-only recovery; no automatic repeat upload.", "telegram": "Choose an existing Telegram connection and the chat it may send to. The stored bot secret is reused.", "google_sheets": "Share this sheet with the service account as an editor. An operation ID is added after the data columns; keep that column intact for result checks.", "http_api": "Configure fixed paths, methods and object input schemas with additionalProperties: false. GET uses scalar query parameters; other methods send JSON. Add a response_schema for APIs that report business errors with HTTP 200. HTTP 202 or uncertain responses stay unknown; inspection never repeats a request.", "slack": "Reuse an existing Slack channel connection and fix a conversation ID (C, G or D). The bot needs chat:write and access to that conversation. Unknown sends are never repeated.", "whatsapp": "Reuse a WhatsApp channel and fix the recipient's international number without +. Free-form text requires the customer-service window; approval templates are not reused. Acceptance does not confirm delivery.", "email": "Reuse an email channel and the server's configured SMTP sender. Recipients are fixed; subject and plain text are tool arguments. Shares the workflow email recipient quota. SMTP acceptance is not delivery; partial or uncertain sends stay unknown.", "teams": "Reuse a Teams channel's stored Workflows webhook. Acknowledgement confirms submission only; downstream delivery can still fail. Unknown sends stay blocked for manual inspection." },
+    "help": "Tools act only on the configured destination. Test runs send and write nothing. Code exports include TODO placeholders for managed steps that you must implement before running.",
+    "setup": {
+      "google_drive": "Only direct children of this folder are accessible. Supports list, metadata, text/Google Doc reads and plain-text creation up to 64 KiB. Personal My Drive uses OAuth refresh credentials; service-account creation needs a Shared Drive. Keep private operation properties for read-only recovery; no automatic repeat upload.",
+      "telegram": "Choose an existing Telegram connection and the chat it may send to. The stored bot secret is reused.",
+      "google_sheets": "Share this sheet with the service account as an editor. An operation ID is added after the data columns; keep that column intact for result checks.",
+      "http_api": "Configure fixed paths, methods and object input schemas with additionalProperties: false. GET uses scalar query parameters; other methods send JSON. Add a response_schema for APIs that report business errors with HTTP 200. HTTP 202 or uncertain responses stay unknown; inspection never repeats a request.",
+      "slack": "Reuse an existing Slack channel connection and fix a conversation ID (C, G or D). The bot needs chat:write and access to that conversation. Unknown sends are never repeated.",
+      "whatsapp": "Reuse a WhatsApp channel and fix the recipient's international number without +. Free-form text requires the customer-service window; approval templates are not reused. Acceptance does not confirm delivery.",
+      "email": "Reuse an email channel and the server's configured SMTP sender. Recipients are fixed; subject and plain text are tool arguments. Shares the workflow email recipient quota. SMTP acceptance is not delivery; partial or uncertain sends stay unknown.",
+      "teams": "Reuse a Teams channel's stored Workflows webhook. Acknowledgement confirms submission only; downstream delivery can still fail. Unknown sends stay blocked for manual inspection."
+    },
     "operations": "Recent operations",
     "operationKey": "External operation ID",
     "noOperations": "No operations yet.",
     "refresh": "Refresh",
     "reconcile": "Check external result",
     "unknownHelp": "The external service may have accepted this write. This check never repeats a request. An adapter with a supported lookup can reconcile; otherwise the result stays unknown. Inspect the external service before starting a new run.",
-    "outcomes": { "pending": "Pending confirmation", "confirmed": "Confirmed", "failed": "Rejected", "unknown": "Unknown result" }
+    "outcomes": {
+      "pending": "Pending confirmation",
+      "confirmed": "Confirmed",
+      "failed": "Rejected",
+      "unknown": "Unknown result"
+    }
   },
   "mcp": {
     "new": "Add MCP server",
@@ -1991,6 +2034,7 @@
     "langsmithNotConfigured": "Set LANGSMITH_API_KEY on the server first"
   },
   "codeView": {
+    "managedPlaceholders": "Managed connection steps are placeholders in this export. Implement the marked TODOs before running it; connection credentials are not included.",
     "tab": "Code",
     "button": "View as code",
     "saveFirst": "Save the workflow to see it as LangGraph code.",
@@ -2154,6 +2198,7 @@
     "visitorBanner": "You're previewing what chat visitors see",
     "visitorExit": "Back to builder view",
     "publish": {
+      "settings": "Public page settings",
       "slug": "Page address",
       "slugHint": "3 to 64 lowercase letters, digits or hyphens. Changing it breaks the old link.",
       "copyLink": "Copy link",
@@ -2197,7 +2242,8 @@
     "visitors": {
       "tab": "Visitors",
       "none": "No visitor chats yet.",
-      "thumbsDown": "Thumbs down",
+      "thumbsDown": "With dislikes",
+      "thumbsDownHint": "Only visitor chats with negative feedback",
       "readOnly": "A visitor's chat from the public page. Read-only.",
       "channel": {
         "web": "Page",
@@ -2234,7 +2280,9 @@
         "maxMb": "Max size (MB)",
         "ceiling": "At most {{max}} on this server.",
         "field": "State field",
-        "fieldHint": "The list field that receives the file records for each run."
+        "fieldHint": "The list field that receives the file records for each run.",
+        "invalidField": "Choose an existing list field that is different from the input, reply and message history fields.",
+        "noFields": "No separate list field is available for files. Add one in State schema and save the workflow, then reopen Chat settings to select it. Or turn attachments off."
       }
     },
     "widget": {
@@ -2279,6 +2327,18 @@
       "theme": "Theme",
       "english": "English",
       "vietnamese": "Vietnamese"
+    },
+    "history": {
+      "title": "Chat history & feedback",
+      "description": "Review published-page chats and your Studio chats. Feedback totals cover this workflow.",
+      "readOnly": "History is read-only. Use Chat to continue your own conversations.",
+      "empty": "No chats match this view.",
+      "all": "All chats",
+      "loading": "Loading chats…",
+      "period": "Last {{days}} days",
+      "counts": "{{up}} helpful · {{down}} not helpful",
+      "negativeShare": "{{share}} not helpful",
+      "refresh": "Refresh history"
     }
   },
   "timeTravel": {

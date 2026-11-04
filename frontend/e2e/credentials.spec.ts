@@ -24,7 +24,7 @@ test('credentials: add (masked), invalid base URL error, pick on LLM node, delet
   await page.keyboard.press('Escape')
 
   await page.goto('/workflows/example')
-  await page.locator('.react-flow__node[data-id="classify"]').click()
+  await page.locator('.react-flow__node[data-id="classify"]').click(); await page.locator('#config-tab-settings').click()
   await page.locator('#llm-credential').click()
   await expect(page.getByRole('option', { name: new RegExp(name) })).toBeVisible()
   await page.keyboard.press('Escape')
