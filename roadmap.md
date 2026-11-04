@@ -460,3 +460,7 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 ## 0.11.0 Release Authorisation
 
 Owner explicitly instructed “Phát hành đi” after reviewing PR #294 and the release summary. Integrate the accepted candidate and release through main, version tags, GitHub Release and configured PyPI/npm/GHCR workflows. Publication is in progress, not yet claimed successful. Native TASK-0227/0228 stays deferred; no live bot/provider cutover is included.
+
+## 0.11.0 Image Release Recovery
+
+TASK-0238 #294 merged develop 55b34916; release #295 merged main 7520f6a1 after all checks passed. Python/CLI 0.11.0, npm SDK 0.2.0 and React 0.1.0 are public; demo health reports 0.11.0. GHCR publication is blocked by upstream get.trivy.dev DNS failure installing the pinned scanner; GitHub Release stays Draft. TASK-0239 prepares a verified GitHub-asset installer and main-only recovery dispatch for the unchanged v0.11.0 source (REV/QA-0225), with all 22 reviewed-head CI checks passed. TASK-0239 is done under the owner's explicit release/continue authorisation for this necessary operational recovery; final-head CI gates its integration, then immutable-tag image dispatch and publication verification. No native delivery or tag rewrite.

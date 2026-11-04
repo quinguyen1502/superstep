@@ -24,6 +24,8 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await page.locator('#chat-key-origins').fill('https://shop.example.com')
     await page.locator('#chat-key-create').click()
     await expect(page.locator('#chat-key-secret')).toBeVisible()
+    // Wait for the nested modal to own focus so Escape dismisses that modal.
+    await expect.poll(() => page.evaluate(() => Boolean(document.activeElement?.closest('#chat-key-secret')))).toBe(true)
     const secret = await page.locator('#chat-key-secret-value').inputValue()
     expect(secret.length).toBeGreaterThan(40)
     await page.keyboard.press('Escape')
@@ -32,7 +34,9 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await page.locator('#chat-key-label').fill('Rotation')
     await page.locator('#chat-key-create').click()
     await expect(page.locator('#chat-key-secret')).toBeVisible()
+    await expect.poll(() => page.evaluate(() => Boolean(document.activeElement?.closest('#chat-key-secret')))).toBe(true)
     await page.keyboard.press('Escape')
+    await expect(page.locator('#chat-key-secret')).toBeHidden()
     await expect(page.getByTestId('chat-app-key')).toHaveCount(2)
     await expect(page.locator('#chat-key-create')).toBeDisabled()
     await settled(page.locator('#chat-settings'))
