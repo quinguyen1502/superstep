@@ -1,0 +1,369 @@
+<div id="ss-browser-workspace" aria-label="Superstep — Browser connection, Agent tools và recipes">
+<style>
+#ss-browser-workspace{color-scheme:light dark;--bw-bg:light-dark(#fff,#171717);--bw-fg:light-dark(#18181b,#fafafa);--bw-soft:light-dark(#f5f5f5,#232323);--bw-dim:light-dark(#66666e,#aaaab2);--bw-border:light-dark(#e4e4e7,#38383c);--bw-primary:light-dark(#18181b,#fafafa);--bw-on-primary:light-dark(#fafafa,#18181b);--bw-success:light-dark(#256847,#9fd9b6);--bw-success-bg:light-dark(#eef7f0,#203126);--bw-warning:light-dark(#805915,#efcb85);--bw-warning-bg:light-dark(#faf3e6,#342c20);font:400 14px/1.5 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--bw-fg)}
+#ss-browser-workspace *{box-sizing:border-box}#ss-browser-workspace [hidden]{display:none!important}#ss-browser-workspace button,#ss-browser-workspace input,#ss-browser-workspace textarea,#ss-browser-workspace select{font:inherit;color:inherit}#ss-browser-workspace button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--bw-border);border-radius:6px;padding:7px 11px;background:var(--bw-bg);font-weight:500}#ss-browser-workspace button:hover{background:var(--bw-soft)}#ss-browser-workspace button:disabled{opacity:.5}#ss-browser-workspace .bw-primary{background:var(--bw-primary);color:var(--bw-on-primary);border-color:var(--bw-primary)}#ss-browser-workspace input:not([type=checkbox]),#ss-browser-workspace textarea,#ss-browser-workspace select{width:100%;min-width:0;border:1px solid var(--bw-border);border-radius:6px;padding:8px 10px;background:var(--bw-bg)}#ss-browser-workspace input[type=checkbox]{width:15px;height:15px;margin:3px 0;accent-color:var(--bw-primary);flex-shrink:0}#ss-browser-workspace textarea{resize:vertical}#ss-browser-workspace label{display:grid;gap:6px}#ss-browser-workspace h2,#ss-browser-workspace h3,#ss-browser-workspace p{margin:0;font:inherit}#ss-browser-workspace h2,#ss-browser-workspace h3{font-weight:500}#ss-browser-workspace svg{width:16px;height:16px;flex-shrink:0}#ss-browser-workspace code,#ss-browser-workspace pre{font:400 12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}#ss-browser-workspace .bw-app{background:var(--bw-bg);border:1px solid var(--bw-border);border-radius:10px;overflow:hidden}#ss-browser-workspace .bw-chrome{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 105px 16px 19px;border-bottom:1px solid var(--bw-border)}#ss-browser-workspace .bw-brand{display:flex;align-items:center;gap:7px;font-weight:500;letter-spacing:-.3px}#ss-browser-workspace .bw-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}#ss-browser-workspace .bw-between{justify-content:space-between}#ss-browser-workspace .bw-dim{color:var(--bw-dim)}#ss-browser-workspace .bw-small{font-size:12px}#ss-browser-workspace .bw-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:5px;background:var(--bw-soft);font-size:12px;color:var(--bw-dim)}#ss-browser-workspace .bw-good{background:var(--bw-success-bg);color:var(--bw-success)}#ss-browser-workspace .bw-warn{background:var(--bw-warning-bg);color:var(--bw-warning)}#ss-browser-workspace .bw-toolbar{padding:11px 18px;display:flex;justify-content:space-between;align-items:center;gap:9px;border-bottom:1px solid var(--bw-border)}#ss-browser-workspace .bw-workspace{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(0,1.8fr)}#ss-browser-workspace .bw-canvas{background:var(--bw-soft);background-image:radial-gradient(var(--bw-border) 1px,transparent 1px);background-size:18px 18px;padding:21px;border-right:1px solid var(--bw-border);display:flex;flex-direction:column;gap:20px}#ss-browser-workspace .bw-flow{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:20px 0 30px}#ss-browser-workspace .bw-node{display:flex;align-items:center;gap:10px;text-align:left;justify-content:flex-start;width:100%;max-width:250px;background:var(--bw-bg);border:1px solid var(--bw-border);border-radius:8px;padding:13px}#ss-browser-workspace .bw-node-selected{border-color:var(--bw-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--bw-primary) 9%,transparent)}#ss-browser-workspace .bw-node span.bw-small{display:block;margin-top:3px}#ss-browser-workspace .bw-icon{display:inline-flex;padding:8px;border-radius:6px;background:var(--bw-soft);align-self:flex-start}#ss-browser-workspace .bw-edge{height:38px;width:1px;background:var(--bw-dim);position:relative;opacity:.6}#ss-browser-workspace .bw-edge:after{content:"";position:absolute;left:-3px;bottom:0;border-left:3px solid transparent;border-right:3px solid transparent;border-top:5px solid var(--bw-dim)}#ss-browser-workspace .bw-canvas-foot{display:grid;gap:8px}#ss-browser-workspace .bw-mini{display:flex;gap:7px;align-items:center;font-size:12px;color:var(--bw-dim)}#ss-browser-workspace .bw-inspector{min-width:0}#ss-browser-workspace .bw-title{padding:18px 21px 13px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}#ss-browser-workspace .bw-heading{font-weight:500;font-size:16px;letter-spacing:-.2px}#ss-browser-workspace .bw-tabs{display:flex;flex-wrap:wrap;gap:3px;padding:0 15px 11px;border-bottom:1px solid var(--bw-border)}#ss-browser-workspace .bw-tabs button{padding:6px 9px;border-color:transparent;color:var(--bw-dim);background:transparent}#ss-browser-workspace .bw-tabs button[aria-selected=true]{background:var(--bw-soft);color:var(--bw-fg)}#ss-browser-workspace .bw-pane{padding:19px 21px;min-height:580px}#ss-browser-workspace .bw-stack{display:grid;gap:17px}#ss-browser-workspace .bw-stack-tight{display:grid;gap:11px}#ss-browser-workspace .bw-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}#ss-browser-workspace .bw-block{display:grid;gap:13px;border:1px solid var(--bw-border);border-radius:7px;padding:13px}#ss-browser-workspace .bw-label{font-weight:500}#ss-browser-workspace .bw-check{display:flex;align-items:flex-start;gap:9px;font-weight:400}#ss-browser-workspace .bw-check span{min-width:0}#ss-browser-workspace .bw-check small{display:block;color:var(--bw-dim);font-size:12px;margin-top:2px}#ss-browser-workspace .bw-tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}#ss-browser-workspace .bw-tool-grid code{display:block;color:var(--bw-dim);font-size:11px}#ss-browser-workspace .bw-info{display:flex;align-items:flex-start;gap:8px;padding:11px 12px;background:var(--bw-soft);border-radius:6px;color:var(--bw-dim);font-size:12px}#ss-browser-workspace .bw-info svg{margin-top:2px}#ss-browser-workspace .bw-binding{background:var(--bw-soft);border-radius:6px;padding:12px;display:grid;gap:10px}#ss-browser-workspace .bw-binding-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#ss-browser-workspace .bw-binding-head select{width:auto;max-width:100%;padding:5px 8px;font-size:12px;background:var(--bw-bg)}#ss-browser-workspace .bw-footer{padding:12px 20px;border-top:1px solid var(--bw-border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#ss-browser-workspace .bw-recipe-layout{display:grid;grid-template-columns:1fr 1.2fr;gap:12px;align-items:start}#ss-browser-workspace .bw-recipe-steps{display:grid;gap:7px}#ss-browser-workspace .bw-recipe-steps button{justify-content:flex-start;text-align:left;font-weight:400;padding:10px;align-items:flex-start}#ss-browser-workspace .bw-recipe-steps button[aria-pressed=true]{border-color:var(--bw-primary);background:var(--bw-soft)}#ss-browser-workspace .bw-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid var(--bw-border);border-radius:5px;font-size:12px;flex-shrink:0}#ss-browser-workspace .bw-recipe-detail{display:grid;gap:11px;padding:12px;background:var(--bw-soft);border-radius:6px;min-width:0}#ss-browser-workspace .bw-recipe-detail input{font-size:12px!important}#ss-browser-workspace .bw-samples{display:flex;flex-wrap:wrap;gap:6px}#ss-browser-workspace .bw-samples button{font-size:12px;padding:5px 8px;font-weight:400}#ss-browser-workspace .bw-samples button[aria-pressed=true]{border-color:var(--bw-primary);background:var(--bw-soft)}#ss-browser-workspace .bw-chat{display:flex;align-items:flex-start;gap:9px;background:var(--bw-soft);padding:12px;border-radius:7px}#ss-browser-workspace .bw-chat p{overflow-wrap:anywhere}#ss-browser-workspace .bw-feed{display:grid;gap:0}#ss-browser-workspace .bw-feed-row{display:grid;grid-template-columns:20px 1fr auto;gap:8px;padding:10px 0;border-bottom:1px solid var(--bw-border);align-items:start}#ss-browser-workspace .bw-feed-row:last-child{border-bottom:0}#ss-browser-workspace .bw-feed-row code{display:block;font-size:11px;color:var(--bw-dim)}#ss-browser-workspace .bw-feed-mark{color:var(--bw-success)}#ss-browser-workspace .bw-page{border:1px solid var(--bw-border);border-radius:7px;overflow:hidden}#ss-browser-workspace .bw-page-head{padding:9px 12px;background:var(--bw-soft);border-bottom:1px solid var(--bw-border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}#ss-browser-workspace .bw-page-url{font-size:12px;color:var(--bw-dim);padding:8px 12px;border-bottom:1px solid var(--bw-border);overflow-wrap:anywhere}#ss-browser-workspace .bw-page-body{padding:14px;display:grid;gap:10px}#ss-browser-workspace .bw-page-field{border:1px solid var(--bw-border);border-radius:6px;padding:8px 10px;overflow-wrap:anywhere}#ss-browser-workspace .bw-result{padding:12px;background:var(--bw-soft);border-radius:6px;display:grid;gap:7px}#ss-browser-workspace .bw-result pre{margin:0;white-space:pre-wrap}#ss-browser-workspace .bw-next{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#ss-browser-workspace .bw-code{min-height:350px;resize:none;font:400 12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace!important;background:var(--bw-soft)!important}#ss-browser-workspace .bw-note{padding:9px 17px;border-top:1px solid var(--bw-border);background:var(--bw-soft);font-size:12px;color:var(--bw-dim);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}#ss-browser-workspace details>summary{font-size:12px;color:var(--bw-dim)}#ss-browser-workspace details>div{margin-top:10px}#ss-browser-workspace .bw-zero{padding:10px 0;font-size:12px;color:var(--bw-dim)}
+@media(max-width:760px){#ss-browser-workspace .bw-workspace{grid-template-columns:1fr}#ss-browser-workspace .bw-canvas{border-right:0;border-bottom:1px solid var(--bw-border);padding:15px;gap:12px}#ss-browser-workspace .bw-flow{flex-direction:row;padding:0 0 7px}#ss-browser-workspace .bw-node{min-width:0;flex:1;width:auto;font-size:12px;padding:9px;gap:6px}#ss-browser-workspace .bw-node .bw-icon{display:none}#ss-browser-workspace .bw-node .bw-small{font-size:11px}#ss-browser-workspace .bw-edge{height:1px;width:17px;flex-shrink:0}#ss-browser-workspace .bw-edge:after{left:auto;right:0;bottom:-3px;border-left:5px solid var(--bw-dim);border-top:3px solid transparent;border-bottom:3px solid transparent;border-right:0}#ss-browser-workspace .bw-canvas-foot{display:flex;gap:12px;flex-wrap:wrap}#ss-browser-workspace .bw-pane{min-height:0}#ss-browser-workspace .bw-crumb{display:none}}
+@media(max-width:430px){#ss-browser-workspace .bw-grid,#ss-browser-workspace .bw-recipe-layout{grid-template-columns:1fr}#ss-browser-workspace .bw-pane{padding:16px}#ss-browser-workspace .bw-tool-grid{grid-template-columns:1fr}#ss-browser-workspace .bw-tabs{padding-left:10px;padding-right:10px}#ss-browser-workspace .bw-tabs button{font-size:12px;padding:7px}#ss-browser-workspace .bw-title{padding:16px;flex-wrap:wrap}#ss-browser-workspace .bw-chrome{padding-left:15px}#ss-browser-workspace .bw-recipe-steps{grid-template-columns:1fr 1fr}}
+@media(pointer:coarse){#ss-browser-workspace button{min-height:44px}#ss-browser-workspace input:not([type=checkbox]),#ss-browser-workspace select,#ss-browser-workspace textarea{font-size:16px;min-height:44px}#ss-browser-workspace .bw-check{min-height:44px}}
+</style>
+<div class="bw-app">
+  <header class="bw-chrome"><div class="bw-brand"><i data-lucide="workflow" aria-hidden="true"></i>superstep</div><span class="bw-dim bw-crumb">/ Workflows /</span><span>Trợ lý giao hàng</span><span class="bw-badge">Bản nháp</span></header>
+  <div class="bw-toolbar"><div class="bw-row"><span class="bw-badge">Thiết kế</span><span class="bw-small bw-dim" id="bw-save-label">Đã lưu</span></div><button type="button" class="bw-primary cursor-interaction" id="bw-run"><i data-lucide="play" aria-hidden="true"></i>Chạy thử</button></div>
+  <div class="bw-workspace">
+    <aside class="bw-canvas" aria-label="Workflow và các tools được cấp">
+      <div class="bw-row bw-between"><span class="bw-small bw-dim">Workflow</span><span class="bw-badge">3 node</span></div>
+      <div class="bw-flow">
+        <div class="bw-node"><span class="bw-icon"><i data-lucide="log-in" aria-hidden="true"></i></span><div>Bắt đầu<span class="bw-small bw-dim">Tin nhắn người dùng</span></div></div><div class="bw-edge" aria-hidden="true"></div>
+        <button type="button" class="bw-node bw-node-selected cursor-interaction" id="bw-agent-node"><span class="bw-icon"><i data-lucide="bot" aria-hidden="true"></i></span><span>Trợ lý giao hàng<span class="bw-small bw-dim" id="bw-node-tools">Browser · 6 tools</span><span class="bw-small bw-dim" id="bw-node-web">Web search · Web fetch</span><span class="bw-small bw-dim" id="bw-node-recipe" hidden>Recipe · Tra cứu vận đơn</span></span></button><div class="bw-edge" aria-hidden="true"></div>
+        <div class="bw-node"><span class="bw-icon"><i data-lucide="flag" aria-hidden="true"></i></span><div>Kết thúc<span class="bw-small bw-dim">Trả lời trong chat</span></div></div>
+      </div>
+      <div class="bw-canvas-foot"><div class="bw-mini"><i data-lucide="globe" aria-hidden="true"></i><span id="bw-canvas-connection">Browser nội bộ</span></div><div class="bw-mini"><i data-lucide="message-square" aria-hidden="true"></i>URL lấy theo từng yêu cầu</div></div>
+    </aside>
+    <main class="bw-inspector">
+      <div class="bw-title"><div><div class="bw-heading" id="bw-title">Tools của Agent</div><p class="bw-small bw-dim" id="bw-subtitle">Trợ lý giao hàng · Dùng model hiện tại</p></div><span class="bw-badge" id="bw-surface-tag">Agent</span></div>
+      <nav class="bw-tabs" role="tablist" aria-label="Browser trong Superstep">
+        <button type="button" class="cursor-interaction" role="tab" id="bw-tab-agent" data-tab="agent" aria-controls="bw-pane-agent" aria-selected="true">Agent tools</button>
+        <button type="button" class="cursor-interaction" role="tab" id="bw-tab-connection" data-tab="connection" aria-controls="bw-pane-connection" aria-selected="false">Kết nối</button>
+        <button type="button" class="cursor-interaction" role="tab" id="bw-tab-recipe" data-tab="recipe" aria-controls="bw-pane-recipe" aria-selected="false">Recipes</button>
+        <button type="button" class="cursor-interaction" role="tab" id="bw-tab-demo" data-tab="demo" aria-controls="bw-pane-demo" aria-selected="false">Lần chạy</button>
+        <button type="button" class="cursor-interaction" role="tab" id="bw-tab-export" data-tab="export" aria-controls="bw-pane-export" aria-selected="false">Export</button>
+      </nav>
+      <section class="bw-pane" id="bw-pane-agent" role="tabpanel" aria-labelledby="bw-tab-agent">
+        <div class="bw-stack">
+          <label>Nhiệm vụ của Agent<textarea rows="2" maxlength="1200" id="bw-task">Hỗ trợ tra cứu vận đơn từ yêu cầu trong chat. Dùng URL người dùng cung cấp; tìm website khi biết hãng. Hỏi lại nếu thiếu thông tin.</textarea></label>
+          <div class="bw-row bw-between"><label class="bw-check"><input type="checkbox" id="bw-enable-browser" checked><span class="bw-label">Browser tools</span></label><button type="button" class="cursor-interaction" id="bw-open-connection"><i data-lucide="settings-2" aria-hidden="true"></i>Cấu hình kết nối</button></div>
+          <div class="bw-stack-tight" id="bw-browser-settings">
+            <label>Kết nối<select id="bw-connection"><option value="local">Browser nội bộ</option><option value="remote">Browserless · Remote</option></select></label>
+            <div class="bw-tool-grid" aria-label="Browser tools được cấp">
+              <label class="bw-check"><input type="checkbox" data-tool="navigate" checked><span>Mở trang<code>browser_navigate(url)</code></span></label>
+              <label class="bw-check"><input type="checkbox" data-tool="snapshot" checked><span>Quan sát trang<code>browser_snapshot()</code></span></label>
+              <label class="bw-check"><input type="checkbox" data-tool="click" checked><span>Bấm phần tử<code>browser_click(ref)</code></span></label>
+              <label class="bw-check"><input type="checkbox" data-tool="fill" checked><span>Điền dữ liệu<code>browser_fill(ref, value)</code></span></label>
+              <label class="bw-check"><input type="checkbox" data-tool="extract" checked><span>Đọc kết quả<code>browser_extract(schema)</code></span></label>
+              <label class="bw-check"><input type="checkbox" data-tool="screenshot" checked><span>Chụp ảnh<code>browser_screenshot()</code></span></label>
+            </div>
+            <div class="bw-binding"><div class="bw-binding-head"><span class="bw-label">Tham số <code>url</code></span><select id="bw-url-source" aria-label="Nguồn tham số URL"><option value="agent">Agent điền từ ngữ cảnh</option><option value="workflow">Dữ liệu workflow</option><option value="fixed">Giá trị cố định</option></select></div><label id="bw-url-hint-wrap" class="bw-small">Hướng dẫn cho Agent<input id="bw-url-hint" maxlength="400" value="Lấy URL từ tin nhắn hoặc kết quả tìm kiếm; hỏi lại khi chưa đủ thông tin."></label><label id="bw-url-input-wrap" class="bw-small" hidden><span id="bw-url-input-label">Trường dữ liệu workflow</span><input id="bw-url-input" maxlength="2048" value="{{state.target_url}}" spellcheck="false"></label><span class="bw-small bw-dim" id="bw-url-help">Không cần URL lúc thiết kế. Agent truyền URL khi gọi browser_navigate.</span></div>
+          </div>
+          <div class="bw-grid"><label class="bw-check"><input type="checkbox" id="bw-search" checked><span>Web search<small>Tìm URL khi đã biết cần tìm gì</small></span></label><label class="bw-check"><input type="checkbox" id="bw-fetch" checked><span>Web fetch<small>Đọc trang mà không cần thao tác</small></span></label></div>
+          <div class="bw-grid"><label>Tối đa hành động browser<select id="bw-limit"><option value="4">4 hành động</option><option value="8">8 hành động</option><option value="12" selected>12 hành động</option></select></label><label>Khi thiếu thông tin<select id="bw-missing"><option value="ask">Hỏi người dùng trong chat</option><option value="stop">Trả trạng thái thiếu thông tin</option></select></label></div>
+          <label class="bw-check"><input type="checkbox" id="bw-write-approval" checked><span>Duyệt trước hành động thay đổi dữ liệu<small>Ví dụ gửi biểu mẫu cập nhật, đặt hàng hoặc thanh toán.</small></span></label>
+        </div>
+      </section>
+      <section class="bw-pane" id="bw-pane-connection" role="tabpanel" aria-labelledby="bw-tab-connection" hidden>
+        <div class="bw-stack">
+          <div class="bw-info"><i data-lucide="link" aria-hidden="true"></i><span>Kết nối dùng chung cho Agent tools và recipes.</span></div>
+          <div class="bw-grid"><label>Tên kết nối<input id="bw-connection-name" maxlength="80" value="Browser nội bộ"></label><label>Provider<select id="bw-provider"><option value="local">Playwright · Local worker</option><option value="remote">Browserless · Remote</option></select></label></div>
+          <div id="bw-remote-settings" class="bw-stack-tight" hidden><label>Browser endpoint<input value="Đã cấu hình trong kho bí mật" readonly aria-label="Browser endpoint được bảo vệ"></label><label class="bw-check"><input id="bw-stealth" type="checkbox"><span>Stealth của provider<small>Khả năng truy cập phụ thuộc website.</small></span></label></div>
+          <label>Hồ sơ đăng nhập<select id="bw-profile"><option value="fresh">Phiên mới · Chưa đăng nhập</option><option value="carrier">Tài khoản hãng vận chuyển · tracking.example</option></select></label>
+          <label>Chính sách website<select id="bw-policy"><option value="public">Cho phép website công khai</option><option value="allowlist">Chỉ các domain trong danh sách</option></select></label>
+          <label id="bw-domains-wrap" hidden>Domain được phép<textarea rows="2" maxlength="500" id="bw-domains" spellcheck="false">tracking.example</textarea></label>
+          <div class="bw-info"><i data-lucide="shield-check" aria-hidden="true"></i><span>Chặn địa chỉ nội bộ và kiểm tra cả redirect. Hồ sơ đăng nhập chỉ áp dụng cho domain đã liên kết.</span></div>
+          <div class="bw-grid"><label>Hết hạn khi không hoạt động<select id="bw-idle"><option>30 giây</option><option selected>2 phút</option><option>5 phút</option></select></label><label>Giới hạn mỗi thao tác<select id="bw-timeout"><option selected>30 giây</option><option>60 giây</option></select></label></div>
+          <div class="bw-block"><div class="bw-row bw-between"><span class="bw-label">Vòng đời phiên</span><span class="bw-badge">Theo lượt Agent</span></div><p class="bw-small bw-dim">Mở khi cần, giữ nguyên tab qua các tool calls, đóng khi kết thúc hoặc hết hạn.</p></div>
+        </div>
+      </section>
+      <section class="bw-pane" id="bw-pane-recipe" role="tabpanel" aria-labelledby="bw-tab-recipe" hidden>
+        <div class="bw-stack">
+          <div class="bw-row bw-between"><div><h3>Tra cứu vận đơn</h3><code class="bw-dim">lookup_shipment(url, order_id)</code></div><span class="bw-badge">Recipe</span></div>
+          <div class="bw-info"><i data-lucide="list-ordered" aria-hidden="true"></i><span>Chuỗi thao tác cho tác vụ lặp lại. URL và mã đơn được truyền vào mỗi lần gọi.</span></div>
+          <div class="bw-row"><span class="bw-badge">url · string · bắt buộc</span><span class="bw-badge">order_id · string · bắt buộc</span></div>
+          <div class="bw-recipe-layout" id="bw-recipe-layout" aria-label="Các bước recipe">
+            <div class="bw-recipe-steps"><button type="button" data-step="0" aria-pressed="true" class="cursor-interaction"><span class="bw-num">1</span><span>Mở trang<br><code>{{url}}</code></span></button><button type="button" data-step="1" aria-pressed="false" class="cursor-interaction"><span class="bw-num">2</span><span>Điền mã<br><code>{{order_id}}</code></span></button><button type="button" data-step="2" aria-pressed="false" class="cursor-interaction"><span class="bw-num">3</span><span>Bấm tra cứu</span></button><button type="button" data-step="3" aria-pressed="false" class="cursor-interaction"><span class="bw-num">4</span><span>Lấy trạng thái</span></button></div>
+            <div class="bw-recipe-detail" id="bw-recipe-detail" aria-live="polite"></div>
+          </div>
+          <label class="bw-check"><input id="bw-recipe-enabled" type="checkbox"><span>Cho Agent gọi recipe này<small>Thêm lookup_shipment vào tools của Agent.</small></span></label>
+          <div class="bw-row bw-between"><code>status → state.order_status</code><button id="bw-test-recipe" type="button" class="cursor-interaction"><i data-lucide="play" aria-hidden="true"></i>Thử recipe</button></div>
+        </div>
+      </section>
+      <section class="bw-pane" id="bw-pane-demo" role="tabpanel" aria-labelledby="bw-tab-demo" hidden>
+        <div class="bw-stack">
+          <div class="bw-samples" role="group" aria-label="Ví dụ hội thoại"><button type="button" data-sample="chat" aria-pressed="true" class="cursor-interaction">URL từ chat</button><button type="button" data-sample="workflow" aria-pressed="false" class="cursor-interaction">URL từ workflow</button><button type="button" data-sample="search" aria-pressed="false" class="cursor-interaction">Chưa có website</button><button type="button" data-sample="ask" aria-pressed="false" class="cursor-interaction">Cần hỏi thêm</button></div>
+          <label>Tin nhắn người dùng<textarea id="bw-message" rows="2" maxlength="1500">Tra trạng thái đơn SS-2048 tại https://tracking.example/lookup giúp tôi.</textarea></label>
+          <details><summary class="cursor-interaction">Dữ liệu workflow và tùy chọn chạy thử</summary><div class="bw-stack-tight"><div class="bw-grid"><label>state.target_url<input id="bw-state-url" maxlength="2048" value="https://tracking.example/lookup" spellcheck="false"></label><label>Chạy<select id="bw-demo-kind"><option value="agent">Agent</option><option value="recipe">Recipe · lookup_shipment</option></select></label></div><label>Tình huống website<select id="bw-page-scenario"><option value="normal">Bố cục thông thường</option><option value="changed">Website đổi bố cục</option><option value="challenge">Website yêu cầu xác minh</option></select></label></div></details>
+          <div class="bw-row bw-between"><span class="bw-badge" id="bw-demo-status" aria-live="polite">Sẵn sàng</span><span class="bw-small bw-dim" id="bw-demo-progress">0 hành động</span></div>
+          <div class="bw-page"><div class="bw-page-head"><span class="bw-small">Quan sát · Minh họa</span><span class="bw-badge" id="bw-page-tag">Chưa mở browser</span></div><div class="bw-page-url" id="bw-page-url">Chưa xác định URL</div><div class="bw-page-body" id="bw-page-content" aria-live="polite"><p class="bw-dim bw-small">Agent đọc yêu cầu trước khi quyết định cần mở browser hay không.</p></div></div>
+          <div class="bw-next"><div><span class="bw-small bw-dim">Tiếp theo</span><code id="bw-next" style="display:block">Đọc yêu cầu và chọn tool</code></div><button id="bw-next-step" type="button" class="cursor-interaction"><i data-lucide="step-forward" aria-hidden="true"></i>Chạy bước tiếp</button></div>
+          <div class="bw-feed" id="bw-feed"></div>
+          <div class="bw-result"><div class="bw-row bw-between"><span>Kết quả về workflow</span><span class="bw-small bw-dim">Dữ liệu mô phỏng</span></div><pre id="bw-result">Chưa chạy</pre></div>
+        </div>
+      </section>
+      <section class="bw-pane" id="bw-pane-export" role="tabpanel" aria-labelledby="bw-tab-export" hidden>
+        <div class="bw-stack"><div class="bw-grid"><label>Phạm vi<select id="bw-export-kind"><option value="agent">Agent và tools</option><option value="recipe">Recipe · lookup_shipment</option></select></label><label>Ngôn ngữ<select id="bw-language"><option value="python">Python</option><option value="typescript">TypeScript</option></select></label></div><span class="bw-small bw-dim" id="bw-export-label">Khung export dự kiến · Chưa phải project hoàn chỉnh</span><textarea id="bw-code" class="bw-code" readonly spellcheck="false" aria-label="Khung export minh họa"></textarea><div class="bw-info"><i data-lucide="package" aria-hidden="true"></i><span id="bw-export-note">Giữ vòng lặp Agent và nguồn tham số lúc chạy. Project dự kiến kèm browser helpers, dependencies và cấu hình môi trường.</span></div><button id="bw-select-code" type="button" class="cursor-interaction"><i data-lucide="text-select" aria-hidden="true"></i>Chọn mã minh họa</button></div>
+      </section>
+      <footer class="bw-footer"><span class="bw-small bw-dim" id="bw-footer">Browser theo lượt Agent · URL theo từng lần gọi</span><button type="button" id="bw-save" class="cursor-interaction">Lưu cấu hình</button></footer>
+    </main>
+  </div>
+  <div class="bw-note"><span>Mockup tương tác · Không truy cập website thật</span><span>Connection · Agent tools · Recipes</span></div>
+</div>
+<script>
+(() => {
+  const root=document.getElementById('ss-browser-workspace');
+  const q=s=>root.querySelector(s);
+  const qa=s=>Array.from(root.querySelectorAll(s));
+  const initial={tab:'agent',provider:'local',name:'Browser nội bộ',profile:'fresh',policy:'public',domains:'tracking.example',idle:'2 phút',timeout:'30 giây',stealth:false,browser:true,search:true,fetch:true,limit:12,missing:'ask',approval:true,urlSource:'agent',urlHint:'Lấy URL từ tin nhắn hoặc kết quả tìm kiếm; hỏi lại khi chưa đủ thông tin.',urlExpression:'{{state.target_url}}',fixedUrl:'https://tracking.example/lookup',task:'Hỗ trợ tra cứu vận đơn từ yêu cầu trong chat. Dùng URL người dùng cung cấp; tìm website khi biết hãng. Hỏi lại nếu thiếu thông tin.',sample:'chat',message:'Tra trạng thái đơn SS-2048 tại https://tracking.example/lookup giúp tôi.',stateUrl:'https://tracking.example/lookup',runKind:'agent',scenario:'normal',recipeEnabled:false,recipeStep:0,fillSelector:'[name="order_id"]',clickSelector:'button[type="submit"]',extractSelector:'[data-testid="order-status"]',exportKind:'agent',language:'python',tools:{navigate:true,snapshot:true,click:true,fill:true,extract:true,screenshot:true}};
+  const state={...initial,tools:{...initial.tools}};
+  const ui={detail:true};
+  const run={index:0,plan:[],auto:false,timer:null};
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const icon=name=>'<i data-lucide="'+name+'" aria-hidden="true"></i>';
+  function icons(){if(globalThis.lucide)lucide.createIcons({attrs:{width:16,height:16}});}
+  function persist(){
+    const snapshot={modelContent:{browserWorkspace:{view:state.tab,urlSource:state.urlSource,provider:state.provider,recipeEnabled:state.recipeEnabled,sample:state.sample}},privateContent:{browserWorkspaceV3:{...state,tools:{...state.tools}}}};
+    if(JSON.stringify(snapshot).length<15000&&window.openai?.setWidgetState)window.openai.setWidgetState(snapshot).catch(()=>{});
+  }
+  function show(tab,save=true){
+    state.tab=tab;
+    qa('[data-tab]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.tab===tab)));
+    ['agent','connection','recipe','demo','export'].forEach(name=>q('#bw-pane-'+name).hidden=name!==tab);
+    const titles={agent:['Tools của Agent','Trợ lý giao hàng · Dùng model hiện tại','Agent'],connection:['Browser connection','Cài đặt dùng chung · Kết nối và hồ sơ','Connection'],recipe:['Browser recipe','Tra cứu vận đơn · Chuỗi thao tác tái sử dụng','Recipe'],demo:['Lần chạy thử','Hội thoại → chọn tools → trả kết quả','Mô phỏng'],export:['Export code','Python / TypeScript · Khung dự kiến','Code']};
+    q('#bw-title').textContent=titles[tab][0];q('#bw-subtitle').textContent=titles[tab][1];q('#bw-surface-tag').textContent=titles[tab][2];
+    if(tab==='demo')renderRun();
+    if(tab==='export')renderCode();
+    if(save)persist();
+  }
+  function connectionName(){return state.name.trim()||(state.provider==='local'?'Browser nội bộ':'Browserless · Remote');}
+  function renderBindings(){
+    q('#bw-url-hint-wrap').hidden=state.urlSource!=='agent';
+    q('#bw-url-input-wrap').hidden=state.urlSource==='agent';
+    q('#bw-url-input-label').textContent=state.urlSource==='fixed'?'URL cố định':'Trường dữ liệu workflow';
+    q('#bw-url-input').value=state.urlSource==='fixed'?state.fixedUrl:state.urlExpression;
+    q('#bw-url-help').textContent={agent:'Không cần URL lúc thiết kế. Agent truyền URL khi gọi browser_navigate.',workflow:'Lấy đúng giá trị từ state lúc chạy; thiếu dữ liệu thì hỏi lại hoặc trả trạng thái.',fixed:'Giới hạn browser_navigate vào URL đã cấu hình.'}[state.urlSource];
+  }
+  function renderDecor(){
+    q('#bw-browser-settings').hidden=!state.browser;
+    q('#bw-remote-settings').hidden=state.provider!=='remote';
+    q('#bw-domains-wrap').hidden=state.policy!=='allowlist';
+    q('#bw-connection').value=state.provider;q('#bw-provider').value=state.provider;
+    const option=q('#bw-connection option[value="'+state.provider+'"]');
+    option.textContent=connectionName();
+    const count=Object.values(state.tools).filter(Boolean).length;
+    q('#bw-node-tools').textContent=state.browser?'Browser · '+count+' tools':'Browser tools chưa được cấp';
+    q('#bw-node-web').textContent=[state.search?'Web search':'',state.fetch?'Web fetch':''].filter(Boolean).join(' · ');
+    q('#bw-node-web').hidden=!state.search&&!state.fetch;
+    q('#bw-node-recipe').hidden=!state.recipeEnabled;
+    q('#bw-canvas-connection').textContent=connectionName();
+    q('#bw-footer').textContent=state.tab==='connection'?'Kết nối dùng chung · Hồ sơ theo domain':state.tab==='recipe'?'Recipe nhận URL và dữ liệu cho từng lần gọi':'Browser theo lượt Agent · URL theo từng lần gọi';
+    qa('[data-sample]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.sample===state.sample)));
+    icons();
+  }
+  function renderRecipe(){
+    const items=[
+      ['Mở URL từ input','Địa chỉ trang','{{args.url}}','Giá trị lấy từ tham số url của mỗi lần gọi.'],
+      ['Điền mã vận đơn','Phần tử trên trang',state.fillSelector,'Giá trị điền: {{args.order_id}}'],
+      ['Bấm tra cứu','Phần tử trên trang',state.clickSelector,'Đây là thao tác đã cấu hình của recipe.'],
+      ['Lấy trạng thái','Phần tử chứa kết quả',state.extractSelector,'Nội dung văn bản → status.']
+    ];
+    const row=items[state.recipeStep];
+    q('#bw-recipe-detail').innerHTML='<h3>'+row[0]+'</h3><label class="bw-small">'+row[1]+'<input id="bw-recipe-value" maxlength="300" spellcheck="false" value="'+esc(row[2])+'"'+(state.recipeStep===0?' readonly':'')+'></label><p class="bw-small bw-dim">'+row[3]+'</p>';
+    q('#bw-recipe-value').addEventListener('input',e=>{
+      const key=['','fillSelector','clickSelector','extractSelector'][state.recipeStep];
+      if(key){state[key]=e.target.value;invalidate();renderCode();persist();}
+    });
+    qa('[data-step]').forEach(el=>el.setAttribute('aria-pressed',String(Number(el.dataset.step)===state.recipeStep)));
+    q('#bw-recipe-detail').hidden=!ui.detail;
+    q('#bw-recipe-layout').style.gridTemplateColumns=ui.detail?'':'1fr';
+  }
+  function finishStep(title,status,message,more={}){return {tool:'workflow',title,detail:message,page:'stopped',result:{status,message,...more},done:true};}
+  function ask(message){return finishStep(state.missing==='ask'?'Hỏi người dùng':'Thiếu thông tin',state.missing==='ask'?'needs_input':'missing_input',message);}
+  function targetCheck(raw,withBrowser){
+    let u;
+    try{u=new URL(raw);}catch{return ['invalid_url','URL chưa hợp lệ.'];}
+    if(!['http:','https:'].includes(u.protocol)||u.username||u.password)return ['invalid_url','Cần URL HTTP/HTTPS không chứa credentials.'];
+    const host=u.hostname.toLowerCase();
+    if(host==='localhost'||host.endsWith('.localhost')||host.endsWith('.local')||/^(127\.|10\.|0\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)||host.includes(':'))return ['target_blocked','Địa chỉ nội bộ hoặc địa chỉ đặc biệt bị chặn trong ví dụ này.'];
+    if(withBrowser&&state.policy==='allowlist'){
+      const allowed=state.domains.split(/[,\n]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+      if(!allowed.includes(host))return ['domain_not_allowed','Domain '+host+' chưa được phép trong kết nối.'];
+    }
+    if(withBrowser&&state.profile==='carrier'&&host!=='tracking.example')return ['profile_scope_mismatch','Hồ sơ đăng nhập chỉ được dùng với tracking.example.'];
+    return null;
+  }
+  function buildPlan(){
+    const plan=[];
+    const order=(state.message.match(/\bSS-\d+\b/i)||[])[0]||'';
+    const extracted=(state.message.match(/https?:\/\/[^\s<>"')]+/i)||[])[0]?.replace(/[.,;!?]+$/,'')||'';
+    const recipe=state.runKind==='recipe';
+    let url='';
+    if(recipe){
+      url=state.stateUrl.trim();
+      if(!url||!order)return [ask('Recipe cần url và order_id. Hãy cung cấp đủ hai tham số.')];
+      plan.push({tool:'lookup_shipment',title:'Gọi recipe Tra cứu vận đơn',detail:'url='+url+' · order_id='+order,page:'blank'});
+    }else if(state.urlSource==='fixed'){
+      url=state.fixedUrl.trim();
+      if(!url)return [ask('Chưa có giá trị URL cố định.')];
+      plan.push({tool:'input',title:'Dùng URL đã cấu hình',detail:url,page:'blank'});
+    }else if(state.urlSource==='workflow'){
+      if(state.urlExpression.trim()!=='{{state.target_url}}')return [ask('Ví dụ này có trường state.target_url. Hãy chọn trường đó hoặc bổ sung dữ liệu tương ứng.')];
+      url=state.stateUrl.trim();
+      if(!url)return [ask('Workflow chưa có state.target_url. Anh gửi URL cần truy cập giúp tôi.')];
+      plan.push({tool:'input',title:'Lấy URL từ dữ liệu workflow',detail:'state.target_url → '+url,page:'blank'});
+    }else if(extracted){
+      url=extracted;
+      plan.push({tool:'input',title:'Lấy URL từ tin nhắn',detail:url,page:'blank'});
+    }else{
+      const named=state.message.toLowerCase().includes('giao nhanh mẫu');
+      if(!named)return [ask('Anh muốn tra đơn trên website hoặc hãng vận chuyển nào?')];
+      if(!state.search)return [ask('Chưa có URL và Web search chưa được cấp. Anh gửi link website giúp tôi.')];
+      url='https://carrier.example/lookup';
+      plan.push({tool:'web_search',title:'Tìm website của hãng Giao Nhanh Mẫu',detail:'query="Giao Nhanh Mẫu website chính thức"',page:'search',url,resultPreview:'Kết quả mẫu: carrier.example/lookup'});
+    }
+    const readOnly=!recipe&&!order;
+    const useFetch=readOnly&&state.fetch;
+    const issue=targetCheck(url,!useFetch);
+    if(issue)return [...plan,finishStep('Không truy cập URL',issue[0],issue[1])];
+    if(useFetch)return [...plan,{tool:'web_fetch',title:'Đọc nội dung trang',detail:url+' · Không dùng hồ sơ browser',page:'fetch',url,done:true,result:{status:'completed',content:'Nội dung trang mẫu đã được đọc bằng Web fetch.',url}}];
+    if(!recipe&&!state.browser)return [...plan,finishStep('Browser chưa được cấp','tool_not_enabled','Bật Browser tools hoặc cấp Web fetch cho tác vụ chỉ đọc.')];
+    const action=(tool,title,detail,page,extra={})=>({tool,title,detail,page,url,browser:true,...extra});
+    const changed=state.scenario==='changed';
+    const challenge=state.scenario==='challenge';
+    plan.push(action('browser_navigate','Mở URL lúc chạy',url,challenge?'challenge':changed?'menu':'lookup'));
+    if(challenge){
+      plan.push(action('browser_snapshot','Nhận diện trang yêu cầu xác minh','Website yêu cầu người dùng xác minh.','challenge',{done:true,result:{status:'challenge_required',message:'Chuyển người dùng hoặc Human node để xử lý.'}}));
+    }else if(recipe&&changed){
+      plan.push(action('recipe_step','Không tìm thấy ô đã cấu hình',state.fillSelector,'menu',{done:true,result:{status:'recipe_element_not_found',message:'Recipe cần cập nhật selector hoặc chuyển cho Agent xử lý.'}}));
+    }else{
+      if(!recipe&&changed)plan.push(action('browser_snapshot','Quan sát bố cục mới','Trang chủ có liên kết “Đơn hàng” [ref=e1].','menu'),action('browser_click','Mở mục Đơn hàng','ref=e1 → Biểu mẫu tra cứu','lookup'));
+      if(!recipe)plan.push(action('browser_snapshot','Quan sát trang hiện tại','Ô “Mã vận đơn” [ref=e2] · Nút “Tra cứu” [ref=e3]','lookup'));
+      if(order){
+        plan.push(action('browser_fill','Điền mã vận đơn',recipe?state.fillSelector+' ← '+order:'ref=e2 ← '+order,'filled'),action('browser_click','Bấm tra cứu',recipe?state.clickSelector:'ref=e3 · Tra cứu chỉ đọc','result'));
+        if(!recipe)plan.push(action('browser_snapshot','Quan sát kết quả mới','Vùng kết quả [ref=e4]: Đang giao','result'));
+      }
+      plan.push(action('browser_extract',order?'Đọc trạng thái vận đơn':'Đọc thông tin trên trang',recipe?state.extractSelector:order?'ref=e4 → order_status':'Nội dung trang hiện tại',order?'result':'lookup',{done:true,result:order?{status:'completed',order_id:order,order_status:'Đang giao',url}:{status:'completed',content:'Nội dung trang mẫu.',url}}));
+    }
+    let actions=0;
+    const bounded=[];
+    for(const step of plan){
+      if(step.browser){
+        const toolKey=step.tool.replace('browser_','');
+        if(!recipe&&Object.hasOwn(state.tools,toolKey)&&!state.tools[toolKey]){bounded.push(finishStep('Tool chưa được cấp','tool_not_enabled',step.tool+' chưa được cấp cho Agent.'));break;}
+        if(!recipe&&actions>=state.limit){bounded.push(finishStep('Đạt giới hạn hành động','action_limit_reached','Dừng sau '+actions+' hành động browser.'));break;}
+        actions++;
+      }
+      bounded.push(step);
+    }
+    return bounded;
+  }
+  function stopAuto(){clearTimeout(run.timer);run.auto=false;q('#bw-run').disabled=false;}
+  function invalidate(){stopAuto();run.index=0;run.plan=buildPlan();renderRun();q('#bw-save-label').textContent='Chưa lưu';}
+  function renderRun(){
+    if(!run.plan.length)run.plan=buildPlan();
+    run.index=Math.min(run.index,run.plan.length);
+    const seen=run.plan.slice(0,run.index);
+    const last=seen[seen.length-1];
+    const pageStep=seen.filter(s=>s.browser||['search','fetch'].includes(s.page)).at(-1);
+    const complete=run.index>=run.plan.length;
+    const result=complete?last?.result||{status:'completed'}:{status:run.index?'running':'ready'};
+    const status=q('#bw-demo-status');
+    status.className='bw-badge '+(complete?(result.status==='completed'?'bw-good':'bw-warn'):'');
+    const names={completed:'Hoàn tất',needs_input:'Đang chờ người dùng',missing_input:'Thiếu thông tin',challenge_required:'Cần xác minh',domain_not_allowed:'Domain chưa được phép',profile_scope_mismatch:'Sai phạm vi hồ sơ',target_blocked:'URL bị chặn',invalid_url:'URL chưa hợp lệ',tool_not_enabled:'Thiếu tool',action_limit_reached:'Đạt giới hạn',recipe_element_not_found:'Recipe cần cập nhật'};
+    status.textContent=complete?names[result.status]||'Đã dừng':run.auto?'Đang mô phỏng':run.index?'Đang chạy từng bước':'Sẵn sàng';
+    const browserCount=seen.filter(s=>s.browser).length;
+    q('#bw-demo-progress').textContent=browserCount+' hành động browser'+(browserCount&&!complete?' · Cùng một phiên':'');
+    q('#bw-next').textContent=complete?'Kết thúc lượt chạy':run.plan[run.index].tool+' · '+run.plan[run.index].title;
+    q('#bw-next-step').disabled=complete||run.auto;
+    let page=pageStep?.page||'blank';
+    if(last?.page==='stopped'&&!pageStep)page='blank';
+    const pageNames={blank:'Chưa mở browser',search:'Kết quả tìm kiếm mẫu',fetch:'Đọc bằng Web fetch',menu:'Bố cục mới',lookup:'Biểu mẫu tra cứu',filled:'Đã điền mã',result:'Có kết quả',challenge:'Yêu cầu xác minh'};
+    q('#bw-page-tag').textContent=pageNames[page];
+    q('#bw-page-url').textContent=page==='search'?'URL đang được tìm':pageStep?.url||'Chưa xác định URL';
+    const order=(state.message.match(/\bSS-\d+\b/i)||[])[0]||'';
+    let html='';
+    if(page==='search')html='<h3>Giao Nhanh Mẫu · Website hãng vận chuyển</h3><code>https://carrier.example/lookup</code><span class="bw-small bw-dim">Một kết quả tìm kiếm mô phỏng để Agent chọn URL.</span>';
+    else if(page==='menu')html='<h3>Cổng vận chuyển</h3><div class="bw-row"><span class="bw-badge">Trang chủ</span><span class="bw-badge">Đơn hàng</span><span class="bw-badge">Hỗ trợ</span></div>';
+    else if(['lookup','filled','result'].includes(page))html='<h3>Tra cứu vận đơn</h3><span class="bw-small bw-dim">Mã vận đơn</span><div class="bw-page-field">'+(page==='lookup'?'<span class="bw-dim">Nhập mã vận đơn</span>':esc(order))+'</div><div class="bw-row"><span class="bw-badge">Tra cứu</span>'+(page==='result'?'<span class="bw-badge bw-good">Đang giao</span>':'')+'</div>';
+    else if(page==='challenge')html='<h3>Vui lòng xác minh để tiếp tục</h3><p class="bw-small bw-dim">Agent trả trạng thái để chuyển người xử lý.</p>';
+    else if(page==='fetch')html='<h3>Nội dung trang đã đọc</h3><p class="bw-small bw-dim">Không mở browser và không sử dụng cookie của hồ sơ browser.</p>';
+    else html='<p class="bw-small bw-dim">'+esc(complete?result.message||'Chưa mở browser.':'Agent đọc yêu cầu trước khi quyết định cần mở browser hay không.')+'</p>';
+    q('#bw-page-content').innerHTML=html;
+    q('#bw-feed').innerHTML=seen.length?seen.map((step,i)=>'<div class="bw-feed-row"><span class="bw-feed-mark">'+(step.done&&step.result?.status!=='completed'?'!':'✓')+'</span><span>'+esc(step.title)+'<code>'+esc(step.tool)+' · '+esc(step.detail)+'</code></span><span class="bw-small bw-dim">'+(i+1)+'</span></div>').join(''):'<div class="bw-zero">Chưa có tool nào được gọi.</div>';
+    q('#bw-result').textContent=JSON.stringify(result,null,2);
+  }
+  function next(){if(run.auto)return;if(run.index<run.plan.length)run.index++;renderRun();}
+  function start(){
+    stopAuto();run.index=0;run.plan=buildPlan();run.auto=true;q('#bw-run').disabled=true;show('demo');
+    const advance=()=>{run.index++;renderRun();if(run.index>=run.plan.length){stopAuto();renderRun();return;}run.timer=setTimeout(advance,350);};
+    run.timer=setTimeout(advance,350);
+  }
+  function renderCode(){
+    const recipe=state.exportKind==='recipe';
+    const lit=JSON.stringify;
+    const enabled=Object.entries(state.tools).filter(([,v])=>v).map(([k])=>'browser_'+k);
+    const binding={source:state.urlSource,...(state.urlSource==='fixed'?{value:state.fixedUrl}:state.urlSource==='workflow'?{expression:state.urlExpression}:{description:state.urlHint})};
+    const policy={public_only:true,...(state.policy==='allowlist'?{allowed_domains:state.domains.split(/[,\n]/).map(s=>s.trim()).filter(Boolean)}:{})};
+    let py,ts;
+    if(recipe){
+      py=['# Recipe nhận URL lúc gọi, không chứa URL cố định.','from playwright.async_api import async_playwright','','async def lookup_shipment(url: str, order_id: str):','    # Kèm outbound policy và cấu hình provider trong project.','    async with async_playwright() as p:','        browser = await p.chromium.launch(headless=True)','        try:','            page = await browser.new_page()','            await page.goto(url)','            await page.locator('+lit(state.fillSelector)+').fill(order_id)','            await page.locator('+lit(state.clickSelector)+').click()','            result = page.locator('+lit(state.extractSelector)+')','            await result.wait_for(state="visible")','            return {"status": await result.inner_text()}','        finally:','            await browser.close()'].join('\n');
+      ts=['// Recipe nhận URL lúc gọi.','import { chromium } from "playwright";','','export async function lookupShipment(url: string, orderId: string) {','  // Kèm outbound policy và cấu hình provider trong project.','  const browser = await chromium.launch({ headless: true });','  try {','    const page = await browser.newPage();','    await page.goto(url);','    await page.locator('+lit(state.fillSelector)+').fill(orderId);','    await page.locator('+lit(state.clickSelector)+').click();','    const result = page.locator('+lit(state.extractSelector)+');','    await result.waitFor({ state: "visible" });','    return { status: await result.innerText() };','  } finally { await browser.close(); }','}'].join('\n');
+    }else{
+      const configuration={provider:state.provider,url_binding:binding,browser_tools:state.browser?enabled:[],web_search:state.search,web_fetch:state.fetch,recipe:state.recipeEnabled?'lookup_shipment':null,max_browser_actions:state.limit,require_write_approval:state.approval,policy};
+      const configJson=JSON.stringify(configuration,null,2);
+      py=['# Khung dự kiến; browser_runtime là module đi kèm export.','import json','from browser_runtime import BrowserSession, build_tools','from agent import configured_agent','','config = json.loads('+JSON.stringify(configJson)+')','','async def run(message, workflow_state):','    async with BrowserSession(config) as session:','        tools = build_tools(session, config, workflow_state)','        # URL là tham số lúc chạy; Agent hiện có điều phối.','        return await configured_agent(tools).ainvoke({','            "messages": [("user", message)]','        })'].join('\n');
+      ts=['// Khung dự kiến; các module đi kèm project export.','import { BrowserSession, buildTools } from "./browser-runtime.js";','import { configuredAgent } from "./agent.js";','','const config = '+configJson+';','','export async function run(message: string, state: WorkflowState) {','  const session = await BrowserSession.open(config);','  try {','    const tools = buildTools(session, config, state);','    // Agent hiện có chọn tools và URL cho từng lần gọi.','    return await configuredAgent(tools).invoke({','      messages: [{ role: "user", content: message }]','    });','  } finally { await session.close(); }','}'].join('\n');
+    }
+    if(recipe&&state.provider==='remote'){
+      py=py.replace('from playwright.async_api import async_playwright','import os\nfrom playwright.async_api import async_playwright').replace('p.chromium.launch(headless=True)','p.chromium.connect_over_cdp(os.environ["BROWSER_WS_ENDPOINT"])');
+      ts=ts.replace('chromium.launch({ headless: true })','chromium.connectOverCDP(process.env.BROWSER_WS_ENDPOINT!)');
+    }
+    q('#bw-code').value=state.language==='python'?py:ts;
+    q('#bw-export-note').textContent=recipe?'Recipe nhận url và order_id cho mỗi lần gọi. Khung này chưa bao gồm toàn bộ policy, hồ sơ và đóng gói dependencies.':'Giữ vòng lặp Agent và nguồn tham số lúc chạy. Các helpers browser/model được đóng gói cùng project; đoạn này chỉ minh họa cấu trúc.';
+  }
+  const samples={
+    chat:{message:'Tra trạng thái đơn SS-2048 tại https://tracking.example/lookup giúp tôi.',source:'agent'},
+    workflow:{message:'Tra trạng thái vận đơn SS-2048 bằng website đã được workflow chọn.',source:'workflow'},
+    search:{message:'Tìm website chính thức của hãng Giao Nhanh Mẫu và tra đơn SS-2048.',source:'agent'},
+    ask:{message:'Tra giúp tôi vận đơn SS-2048.',source:'agent'}
+  };
+  function selectSample(key){
+    state.sample=key;state.message=samples[key].message;state.urlSource=samples[key].source;state.runKind='agent';
+    q('#bw-message').value=state.message;q('#bw-url-source').value=state.urlSource;q('#bw-demo-kind').value='agent';
+    renderBindings();renderDecor();invalidate();renderCode();persist();
+  }
+  const fields={
+    'bw-task':'task','bw-url-hint':'urlHint','bw-connection-name':'name','bw-profile':'profile','bw-policy':'policy','bw-domains':'domains','bw-idle':'idle','bw-timeout':'timeout','bw-stealth':'stealth','bw-enable-browser':'browser','bw-search':'search','bw-fetch':'fetch','bw-limit':'limit','bw-missing':'missing','bw-write-approval':'approval','bw-recipe-enabled':'recipeEnabled','bw-message':'message','bw-state-url':'stateUrl','bw-demo-kind':'runKind','bw-page-scenario':'scenario','bw-export-kind':'exportKind','bw-language':'language'
+  };
+  function restore(snapshot){
+    stopAuto();
+    const saved=snapshot?.privateContent?.browserWorkspaceV3;
+    if(saved&&typeof saved==='object'){
+      for(const key of Object.keys(initial))if(key!=='tools'&&typeof saved[key]===typeof initial[key])state[key]=saved[key];
+      for(const key of Object.keys(initial.tools))if(typeof saved.tools?.[key]==='boolean')state.tools[key]=saved.tools[key];
+    }
+    const enums={tab:['agent','connection','recipe','demo','export'],provider:['local','remote'],profile:['fresh','carrier'],policy:['public','allowlist'],urlSource:['agent','workflow','fixed'],missing:['ask','stop'],scenario:['normal','changed','challenge'],runKind:['agent','recipe'],exportKind:['agent','recipe'],language:['python','typescript']};
+    for(const [key,allowed]of Object.entries(enums))if(!allowed.includes(state[key]))state[key]=initial[key];
+    if(![4,8,12].includes(state.limit))state.limit=12;
+    if(![0,1,2,3].includes(state.recipeStep))state.recipeStep=0;
+    for(const [id,key]of Object.entries(fields)){const el=q('#'+id);if(el.type==='checkbox')el.checked=state[key];else el.value=String(state[key]);}
+    qa('[data-tool]').forEach(el=>el.checked=state.tools[el.dataset.tool]);
+    q('#bw-url-source').value=state.urlSource;
+    renderBindings();renderDecor();renderRecipe();run.index=0;run.plan=buildPlan();renderRun();renderCode();show(state.tab,false);
+    q('#bw-save-label').textContent='Đã lưu';
+  }
+  qa('[data-tab]').forEach(el=>el.addEventListener('click',()=>{show(el.dataset.tab);renderDecor();}));
+  qa('[data-tool]').forEach(el=>el.addEventListener('change',()=>{state.tools[el.dataset.tool]=el.checked;renderDecor();invalidate();renderCode();persist();}));
+  qa('[data-step]').forEach(el=>el.addEventListener('click',()=>{state.recipeStep=Number(el.dataset.step);renderRecipe();persist();}));
+  qa('[data-sample]').forEach(el=>el.addEventListener('click',()=>selectSample(el.dataset.sample)));
+  for(const[id,key]of Object.entries(fields)){
+    const el=q('#'+id);
+    el.addEventListener(el.tagName==='TEXTAREA'||el.tagName==='INPUT'&&el.type!=='checkbox'?'input':'change',()=>{
+      state[key]=el.type==='checkbox'?el.checked:key==='limit'?Number(el.value):el.value;
+      renderDecor();invalidate();renderCode();persist();
+    });
+  }
+  ['bw-provider','bw-connection'].forEach(id=>q('#'+id).addEventListener('change',e=>{
+    state.provider=e.target.value;state.name=state.provider==='remote'?'Browserless · Remote':'Browser nội bộ';q('#bw-connection-name').value=state.name;renderDecor();invalidate();renderCode();persist();
+  }));
+  q('#bw-url-source').addEventListener('change',e=>{state.urlSource=e.target.value;renderBindings();invalidate();renderCode();persist();});
+  q('#bw-url-input').addEventListener('input',e=>{state[state.urlSource==='fixed'?'fixedUrl':'urlExpression']=e.target.value;invalidate();renderCode();persist();});
+  q('#bw-agent-node').addEventListener('click',()=>{show('agent');renderDecor();});
+  q('#bw-open-connection').addEventListener('click',()=>{show('connection');renderDecor();});
+  q('#bw-test-recipe').addEventListener('click',()=>{state.runKind='recipe';q('#bw-demo-kind').value='recipe';invalidate();show('demo');renderDecor();persist();});
+  q('#bw-run').addEventListener('click',start);
+  q('#bw-next-step').addEventListener('click',next);
+  q('#bw-save').addEventListener('click',()=>{q('#bw-save-label').textContent='Đã lưu trong bản xem thử';persist();});
+  q('#bw-select-code').addEventListener('click',()=>{q('#bw-code').focus();q('#bw-code').select();});
+  window.addEventListener('openai:set_globals',e=>{if(e.detail?.globals?.widgetState)restore(e.detail.globals.widgetState);});
+  restore(window.openai?.widgetState);
+  if(globalThis.Tweak){const tweak=new Tweak({container:q('#bw-recipe-layout'),onChange:renderRecipe});tweak.addToggle(ui,'detail',{label:'Hiện chi tiết thao tác recipe'});}
+})();
+</script>
+</div>
