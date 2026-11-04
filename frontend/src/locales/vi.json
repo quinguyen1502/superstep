@@ -234,6 +234,7 @@
     },
     "configTabs": {
       "label": "Cấu hình node",
+      "general": "Chung",
       "settings": "Cài đặt",
       "data": "Dữ liệu",
       "execution": "Thực thi",
@@ -269,6 +270,7 @@
     "exitReplay": "Thoát xem lại",
     "rawEvents": "Sự kiện thô",
     "noDiff": "Không có thay đổi state.",
+    "noOutputAfterError": "Node gặp lỗi trước khi tạo output.",
     "closeDetail": "Đóng chi tiết",
     "input": "Input",
     "output": "Output",
@@ -772,6 +774,8 @@
     "restoredFrom": "Khôi phục từ v{{n}}",
     "initial": "Phiên bản đầu tiên",
     "compare": "So sánh",
+    "before": "Trước · v{{n}}",
+    "after": "Sau · v{{n}}",
     "identical": "Không có khác biệt.",
     "renamed": "Đã đổi tên",
     "added": "thêm",
@@ -1045,7 +1049,8 @@
       "telegram": "Nút bấm trong nhóm hoặc chat riêng Telegram, qua bot của bạn.",
       "whatsapp": "Nút trả lời trong chat WhatsApp, gửi từ số doanh nghiệp của bạn.",
       "email": "Một email có link Duyệt / Từ chối tới studio.",
-      "teams": "Một Adaptive Card trong kênh Teams, nút bấm mở studio."
+      "teams": "Một Adaptive Card trong kênh Teams, nút bấm mở studio.",
+      "webhook": "Nhận sự kiện JSON có chữ ký và chuyển tới trigger của workflow."
     },
     "scopeHelp": {
       "org": "Kết nối toàn tổ chức do admin thiết lập, mọi người đều dùng được.",
@@ -1115,20 +1120,58 @@
   "managedTools": {
     "transport": "Kết nối được quản lý",
     "adapter": "Adapter dịch vụ",
-    "adapters": { "google_drive": "Tệp Google Drive", "telegram": "Thao tác Telegram", "google_sheets": "Thao tác Google Sheets", "http_api": "HTTP API tổng quát", "slack": "Thao tác Slack", "whatsapp": "Thao tác WhatsApp", "email": "Thao tác email", "teams": "Thao tác Microsoft Teams" },
-    "fields": { "folder_id": "ID thư mục Google Drive được phép truy cập", "google_credentials": "JSON credential Google (mã hoá)", "channel_id": "Kết nối kênh", "chat_id": "ID cuộc chat nhận tin", "spreadsheet_id": "ID spreadsheet", "sheet_name": "Tên tab trong sheet", "data_columns": "Số cột dữ liệu", "service_account": "Khoá JSON của service account", "base_url": "URL gốc của API", "tools_json": "Định nghĩa công cụ (JSON)", "headers": "Header xác thực (JSON, mã hoá)", "destination_channel": "ID cuộc trò chuyện Slack nhận tin", "recipient_phone": "Số điện thoại nhận (mã nước, chỉ chữ số)", "recipients": "Email nhận cố định (cách nhau bằng dấu phẩy, tối đa 10)" },
+    "adapters": {
+      "google_drive": "Tệp Google Drive",
+      "telegram": "Thao tác Telegram",
+      "google_sheets": "Thao tác Google Sheets",
+      "http_api": "HTTP API tổng quát",
+      "slack": "Thao tác Slack",
+      "whatsapp": "Thao tác WhatsApp",
+      "email": "Thao tác email",
+      "teams": "Thao tác Microsoft Teams"
+    },
+    "fields": {
+      "folder_id": "ID thư mục Google Drive được phép truy cập",
+      "google_credentials": "JSON credential Google (mã hoá)",
+      "channel_id": "Kết nối kênh",
+      "chat_id": "ID cuộc chat nhận tin",
+      "spreadsheet_id": "ID spreadsheet",
+      "sheet_name": "Tên tab trong sheet",
+      "data_columns": "Số cột dữ liệu",
+      "service_account": "Khoá JSON của service account",
+      "base_url": "URL gốc của API",
+      "tools_json": "Định nghĩa công cụ (JSON)",
+      "headers": "Header xác thực (JSON, mã hoá)",
+      "destination_channel": "ID cuộc trò chuyện Slack nhận tin",
+      "recipient_phone": "Số điện thoại nhận (mã nước, chỉ chữ số)",
+      "recipients": "Email nhận cố định (cách nhau bằng dấu phẩy, tối đa 10)"
+    },
     "headerHelp": "Đối tượng JSON chứa header, ví dụ Authorization hoặc X-API-Key. Để trống nếu không cần xác thực. Giá trị được mã hoá và không trả lại qua API.",
     "googleCredentialHelp": "Dán JSON service_account hoặc authorized_user có client_id, client_secret và refresh_token. Giá trị được mã hoá và không trả lại. Không dán access token hay chỉ tệp tải client secret.",
     "secretHelp": "Dán khoá JSON của service account. Khoá được mã hoá và không trả lại qua API.",
-    "help": "Công cụ chỉ tác động tới nơi đã cấu hình. Run kiểm thử không gửi tin hay ghi dữ liệu. Công cụ quản lý cần theo dõi thao tác trong Studio, chưa hỗ trợ xuất code độc lập.",
-    "setup": { "google_drive": "Chỉ truy cập tệp con trực tiếp trong thư mục này. Hỗ trợ liệt kê, metadata, đọc văn bản/Google Doc và tạo tệp văn bản tối đa 64 KiB. My Drive cá nhân dùng OAuth refresh credential; service account chỉ tạo trong Shared Drive. Giữ thuộc tính thao tác riêng để khôi phục chỉ đọc; không tự tải lên lại.", "telegram": "Chọn kết nối Telegram đã có và cuộc chat được phép gửi tới. Hệ thống dùng lại secret của bot đã lưu.", "google_sheets": "Chia sẻ sheet cho service account với quyền chỉnh sửa. ID thao tác được thêm sau các cột dữ liệu; giữ nguyên cột này để kiểm tra kết quả.", "http_api": "Cấu hình đường dẫn, phương thức cố định và schema input object với additionalProperties: false. GET dùng query dạng đơn; phương thức khác gửi JSON. Thêm response_schema nếu API báo lỗi nghiệp vụ bằng HTTP 200. HTTP 202 hoặc phản hồi chưa rõ giữ trạng thái chưa rõ kết quả; việc kiểm tra không gửi lại yêu cầu.", "slack": "Dùng lại kết nối kênh Slack, chọn ID cuộc trò chuyện cố định (C, G hoặc D). Bot cần chat:write và quyền vào nơi nhận. Không gửi lại tin chưa rõ kết quả.", "whatsapp": "Dùng lại kênh WhatsApp, cố định số quốc tế của người nhận không có dấu +. Tin văn bản cần trong cửa sổ dịch vụ khách hàng; không dùng lại mẫu yêu cầu duyệt. Chấp nhận gửi chưa có nghĩa là đã giao tin.", "email": "Dùng lại kênh email và địa chỉ gửi SMTP đã cấu hình trên máy chủ. Nơi nhận cố định; tiêu đề và văn bản là tham số công cụ. Dùng chung hạn mức người nhận của workflow. SMTP chấp nhận chưa có nghĩa đã giao; gửi một phần hoặc chưa rõ vẫn giữ trạng thái chưa rõ kết quả.", "teams": "Dùng lại webhook Workflows đã lưu của kênh Teams. Phản hồi chỉ xác nhận nhận yêu cầu; giao tin sau đó vẫn có thể lỗi. Tin chưa rõ kết quả bị chặn để kiểm tra thủ công." },
+    "help": "Công cụ chỉ tác động tới nơi đã cấu hình. Run kiểm thử không gửi tin hay ghi dữ liệu. Code xuất ra có bước managed dạng TODO; bạn cần triển khai trước khi chạy.",
+    "setup": {
+      "google_drive": "Chỉ truy cập tệp con trực tiếp trong thư mục này. Hỗ trợ liệt kê, metadata, đọc văn bản/Google Doc và tạo tệp văn bản tối đa 64 KiB. My Drive cá nhân dùng OAuth refresh credential; service account chỉ tạo trong Shared Drive. Giữ thuộc tính thao tác riêng để khôi phục chỉ đọc; không tự tải lên lại.",
+      "telegram": "Chọn kết nối Telegram đã có và cuộc chat được phép gửi tới. Hệ thống dùng lại secret của bot đã lưu.",
+      "google_sheets": "Chia sẻ sheet cho service account với quyền chỉnh sửa. ID thao tác được thêm sau các cột dữ liệu; giữ nguyên cột này để kiểm tra kết quả.",
+      "http_api": "Cấu hình đường dẫn, phương thức cố định và schema input object với additionalProperties: false. GET dùng query dạng đơn; phương thức khác gửi JSON. Thêm response_schema nếu API báo lỗi nghiệp vụ bằng HTTP 200. HTTP 202 hoặc phản hồi chưa rõ giữ trạng thái chưa rõ kết quả; việc kiểm tra không gửi lại yêu cầu.",
+      "slack": "Dùng lại kết nối kênh Slack, chọn ID cuộc trò chuyện cố định (C, G hoặc D). Bot cần chat:write và quyền vào nơi nhận. Không gửi lại tin chưa rõ kết quả.",
+      "whatsapp": "Dùng lại kênh WhatsApp, cố định số quốc tế của người nhận không có dấu +. Tin văn bản cần trong cửa sổ dịch vụ khách hàng; không dùng lại mẫu yêu cầu duyệt. Chấp nhận gửi chưa có nghĩa là đã giao tin.",
+      "email": "Dùng lại kênh email và địa chỉ gửi SMTP đã cấu hình trên máy chủ. Nơi nhận cố định; tiêu đề và văn bản là tham số công cụ. Dùng chung hạn mức người nhận của workflow. SMTP chấp nhận chưa có nghĩa đã giao; gửi một phần hoặc chưa rõ vẫn giữ trạng thái chưa rõ kết quả.",
+      "teams": "Dùng lại webhook Workflows đã lưu của kênh Teams. Phản hồi chỉ xác nhận nhận yêu cầu; giao tin sau đó vẫn có thể lỗi. Tin chưa rõ kết quả bị chặn để kiểm tra thủ công."
+    },
     "operations": "Thao tác gần đây",
     "operationKey": "ID thao tác bên ngoài",
     "noOperations": "Chưa có thao tác nào.",
     "refresh": "Tải lại",
     "reconcile": "Kiểm tra kết quả bên ngoài",
     "unknownHelp": "Dịch vụ bên ngoài có thể đã nhận thao tác ghi. Việc kiểm tra không lặp lại yêu cầu. Adapter có hỗ trợ tra cứu sẽ đối soát; nếu không, kết quả vẫn chưa rõ. Kiểm tra dịch vụ bên ngoài trước khi tạo run mới.",
-    "outcomes": { "pending": "Chờ xác nhận", "confirmed": "Đã xác nhận", "failed": "Bị từ chối", "unknown": "Chưa rõ kết quả" }
+    "outcomes": {
+      "pending": "Chờ xác nhận",
+      "confirmed": "Đã xác nhận",
+      "failed": "Bị từ chối",
+      "unknown": "Chưa rõ kết quả"
+    }
   },
   "mcp": {
     "new": "Thêm máy chủ MCP",
@@ -1991,6 +2034,7 @@
     "langsmithNotConfigured": "Cần đặt LANGSMITH_API_KEY trên máy chủ trước"
   },
   "codeView": {
+    "managedPlaceholders": "Các bước dùng kết nối managed được xuất dưới dạng code khung. Hãy triển khai các TODO được đánh dấu trước khi chạy; credential của kết nối không được xuất kèm.",
     "tab": "Code",
     "button": "Xem dạng code",
     "saveFirst": "Lưu workflow để xem dạng mã LangGraph.",
@@ -2154,6 +2198,7 @@
     "visitorBanner": "Bạn đang xem trước như khách chat",
     "visitorExit": "Về góc nhìn người dựng",
     "publish": {
+      "settings": "Cài đặt trang công khai",
       "slug": "Địa chỉ trang",
       "slugHint": "Từ 3 đến 64 ký tự: chữ thường, số hoặc dấu gạch ngang. Đổi địa chỉ thì link cũ không dùng được nữa.",
       "copyLink": "Sao chép link",
@@ -2197,7 +2242,8 @@
     "visitors": {
       "tab": "Khách",
       "none": "Chưa có cuộc trò chuyện nào của khách.",
-      "thumbsDown": "Không thích",
+      "thumbsDown": "Có phản hồi không thích",
+      "thumbsDownHint": "Chỉ xem chat của khách có phản hồi không thích",
       "readOnly": "Chat của khách trên trang công khai. Chỉ xem.",
       "channel": {
         "web": "Trang",
@@ -2234,7 +2280,9 @@
         "maxMb": "Dung lượng tối đa (MB)",
         "ceiling": "Máy chủ này cho phép tối đa {{max}}.",
         "field": "Trường state",
-        "fieldHint": "Trường danh sách nhận thông tin các tệp trong mỗi run."
+        "fieldHint": "Trường danh sách nhận thông tin các tệp trong mỗi run.",
+        "invalidField": "Chọn một trường kiểu list có sẵn, khác trường input, reply và lịch sử tin nhắn.",
+        "noFields": "Chưa có trường kiểu list riêng để nhận tệp. Thêm trường trong State schema và lưu workflow, rồi mở lại Cài đặt Chat để chọn. Hoặc tắt cho phép đính kèm."
       }
     },
     "widget": {
@@ -2279,6 +2327,18 @@
       "theme": "Giao diện",
       "english": "Tiếng Anh",
       "vietnamese": "Tiếng Việt"
+    },
+    "history": {
+      "title": "Lịch sử chat & phản hồi",
+      "description": "Xem chat trên trang công khai và chat của bạn trong Studio. Thống kê phản hồi áp dụng cho workflow này.",
+      "readOnly": "Lịch sử chỉ để xem. Dùng khung Chat để tiếp tục trò chuyện của bạn.",
+      "empty": "Không có cuộc trò chuyện phù hợp.",
+      "all": "Tất cả cuộc trò chuyện",
+      "loading": "Đang tải cuộc trò chuyện…",
+      "period": "{{days}} ngày qua",
+      "counts": "{{up}} hữu ích · {{down}} chưa hữu ích",
+      "negativeShare": "{{share}} chưa hữu ích",
+      "refresh": "Làm mới lịch sử"
     }
   },
   "timeTravel": {

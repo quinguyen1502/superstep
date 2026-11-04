@@ -20,7 +20,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     const H = { Authorization: `Bearer ${await apiToken(page)}` }
     const wid = (await (await page.request.post('/api/workflows', { headers: H, data: AGENT(`Agent e2e ${lang} ${Date.now() % 100000}`) })).json()).data.id
     await page.goto(`/workflows/${wid}${lang === 'en' ? '?theme=dark' : ''}`)  // screenshots in both themes
-    await page.locator('.react-flow__node[data-id="ag"]').click()
+    await page.locator('.react-flow__node[data-id="ag"]').click(); await page.locator('#config-tab-settings').click()
     await expect(page.locator('#agent-settings')).toBeVisible()
     await expect(page.locator('#agent-no-tools')).toBeVisible()
 

@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "0.11.0",
+  "version": "0.11.1",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -43,7 +43,7 @@
     "shadcn": "^4.21.5",
     "tailwindcss": "^4.3.3",
     "tw-animate-css": "^1.4.0",
-    "@superstep/react": "0.1.0"
+    "@superstep/react": "0.1.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

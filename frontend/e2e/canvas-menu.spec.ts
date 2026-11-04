@@ -11,10 +11,12 @@ test('right-click the canvas to add a node; the state schema stays in view', asy
   await page.goto(`/workflows/${wid}`); const nodes = page.locator('.react-flow__node')
   await expect(nodes).toHaveCount(3)
 
-  // both halves of the left panel are visible without scrolling the panel
+  // Each tab uses the whole panel; the schema action remains in view.
   await expect(page.locator('#palette-nodes')).toBeInViewport()
+  await page.locator('#palette-state-tab').click()
   await expect(page.locator('#palette-state').getByRole('button', { name: 'Thêm trường' })).toBeInViewport()
 
+  await page.locator('#palette-nodes-tab').click()
   const pane = page.locator('.react-flow__pane'); const box = (await pane.boundingBox())!
   await pane.click({ button: 'right', position: { x: 80, y: box.height - 80 } })
   await page.locator('#pane-insert').hover(); await page.locator('#pane-insert-llm').click()

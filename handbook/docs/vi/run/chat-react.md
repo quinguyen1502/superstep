@@ -17,7 +17,7 @@ Nếu muốn thêm bong bóng vào website, xem [Widget chat](chat-widget.md).
    `@superstep/sdk`, với peer dependency React/React DOM từ 18, i18next và react-i18next.
 
 Phát hành package là bước riêng. Repo chuẩn bị TypeScript SDK 0.2.0 và bộ giao diện
-React 0.1.0; hướng dẫn này không đồng nghĩa với một bản phát hành npm mới.
+React 0.1.1; hướng dẫn này không đồng nghĩa với một bản phát hành npm mới.
 Để thử checkout trước khi có bản phát hành package được duyệt:
 
 ```sh

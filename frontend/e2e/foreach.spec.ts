@@ -19,6 +19,7 @@ test('for each: connect done, configure, run once per item', async ({ page }) =>
 
   // the panel shows the loop fields
   await page.locator('.react-flow__node[data-id="fe"]').click()
+  await page.locator('#config-tab-settings').click()
   await expect(page.locator('#loop-hint')).toBeVisible()
   await page.locator('#config-tab-data').click(); await expect(page.locator('#loop-index')).toHaveText('i')  // TASK-0121 tabs
   await page.locator('#config-tab-execution').click(); await expect(page.locator('#loop-max')).toHaveValue('100')

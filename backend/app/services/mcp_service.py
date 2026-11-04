@@ -193,13 +193,23 @@ class McpService:
         return lambda sid, tool, args, key, dry: self.call(uid, sid, tool, args, org_allowed, key, dry)
 
     def check_export(self, graphs):
+        """Mark managed references for explicit, non-executable export placeholders (TASK-0254).
+
+        Only the temporary export graphs are annotated; no connection settings or secrets are copied.
+        """
+        managed = False
         for graph in graphs:
             for node in graph.get("nodes") or []:
                 data = node.get("data") or {}
                 references = ([data] if node.get("type") == "mcp" else []) + list(data.get("tools") or [])
                 for reference in references:
+                    if not isinstance(reference, dict): continue
+                    reference.pop("_managed_export", None)  # internal export metadata is never trusted from stored input
                     row = self.repo.get(reference.get("server_id")) if isinstance(reference, dict) and reference.get("server_id") else None
-                    if row is not None and row.transport == "managed": raise AppError("MANAGED_EXPORT_UNAVAILABLE")
+                    if row is not None and row.transport == "managed":
+                        reference["_managed_export"] = True
+                        managed = True
+        return managed
 
     def operations(self, uid, sid):
         self._visible(sid, uid)

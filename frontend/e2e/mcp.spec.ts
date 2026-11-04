@@ -34,7 +34,7 @@ test('MCP server: register, discover, run a tool node', async ({ page }) => {
   expect(saved.errors).toEqual([])
   await page.goto(`/workflows/${saved.id}`)
   await expect(page.getByText('Gọi công cụ trên máy chủ MCP')).toBeVisible()
-  await page.locator('.react-flow__node[data-id="m"]').click()
+  await page.locator('.react-flow__node[data-id="m"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#mcp-server')).toContainText(name); await expect(page.locator('#mcp-tool')).toContainText('add')
   await expect(page.locator('#mcp-arg-a .template-tag[data-field="n"]')).toBeVisible(); await expect(page.locator('#mcp-tool-desc')).toContainText('Add two integers')
   await page.locator('#run-input').fill('{"message": "hi", "n": 40}')

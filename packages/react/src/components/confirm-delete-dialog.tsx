@@ -32,12 +32,12 @@ export function ConfirmDeleteDialog({ open, onOpenChange, title, name, descripti
   const match = typed === name
   return <AlertDialog open={open} onOpenChange={change}>
     <AlertDialogContent id={idPrefix}>
-      <AlertDialogHeader><AlertDialogTitle className="flex items-start gap-2 break-all"><TriangleAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />{title}</AlertDialogTitle>
-        <AlertDialogDescription>{description ?? t('confirmDelete.irreversible')}</AlertDialogDescription></AlertDialogHeader>
+      <AlertDialogHeader className="text-left"><AlertDialogTitle className="flex items-start gap-2 wrap-break-word"><TriangleAlert className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden />{title}</AlertDialogTitle>
+        <AlertDialogDescription className="text-left wrap-break-word">{description ?? t('confirmDelete.irreversible')}</AlertDialogDescription></AlertDialogHeader>
       {children}
       <div className="space-y-1.5">
-        <Label htmlFor={`${idPrefix}-input`} className="block break-all font-normal">
-          <Trans i18nKey="confirmDelete.typeToConfirm" values={{ name }} components={{ b: <span className="font-mono font-semibold" /> }} /></Label>
+        <Label htmlFor={`${idPrefix}-input`} className="block wrap-break-word font-normal"><span className="leading-relaxed">
+          <Trans i18nKey="confirmDelete.typeToConfirm" values={{ name }} components={{ b: <code className="box-decoration-clone rounded-md border bg-muted px-1.5 py-0.5 font-mono font-semibold text-foreground" /> }} /></span></Label>
         <Input id={`${idPrefix}-input`} autoComplete="off" spellCheck={false} placeholder={t('confirmDelete.placeholder')} value={typed}
           onChange={e => setTyped(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && match && !disabled && !busy) go() }} aria-invalid={!!typed && !match} />
       </div>

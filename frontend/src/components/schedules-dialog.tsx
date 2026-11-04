@@ -20,6 +20,7 @@ type Schedule = { id: string; name: string; cron: string; timezone: string; inpu
   next_runs: number[]; last_run: number | null; last_run_id: string | null; note: string | null }
 const PRESETS = ['0 * * * *', '*/15 * * * *', '0 9 * * *', '0 9 * * 1-5', '0 9 * * 1', '0 0 1 * *'] as const
 const browserZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+const timeZones = () => typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
 const at = (ts: number | null, tz: string) => {
   if (!ts) return '—'
   try { return new Date(ts * 1000).toLocaleString(i18n.resolvedLanguage, { timeZone: tz, dateStyle: 'medium', timeStyle: 'short' }) }
@@ -30,6 +31,7 @@ export function SchedulesDialog({ wid, open, onOpenChange, defaultInput }: { wid
   const { t } = useTranslation(); const [items, setItems] = useState<Schedule[]>([]); const [err, setErr] = useState('')
   const [name, setName] = useState(''); const [expr, setExpr] = useState('0 9 * * 1-5'); const [tz, setTz] = useState(browserZone)
   const [input, setInput] = useState(defaultInput); const [preview, setPreview] = useState<number[] | string>([])
+  const [zones] = useState(timeZones)
   const load = () => wid && api<Schedule[]>(`/api/workflows/${wid}/schedules`).then(setItems).catch(e => setErr(e.message))
   useLoadWhen(open, () => { setErr(''); setName(''); setInput(defaultInput); load() })
   useEffect(() => {  // next runs of the expression being typed (the server parses it)
@@ -82,7 +84,10 @@ export function SchedulesDialog({ wid, open, onOpenChange, defaultInput }: { wid
             <div className="space-y-1.5"><Label htmlFor="schedule-cron" className="text-xs text-muted-foreground">{t('schedules.cron')}</Label>
               <Input id="schedule-cron" className="font-mono text-xs" value={expr} onChange={e => setExpr(e.target.value)} aria-describedby="schedule-preview" /></div>
             <div className="space-y-1.5"><Label htmlFor="schedule-tz" className="text-xs text-muted-foreground">{t('schedules.timezone')}</Label>
-              <Input id="schedule-tz" className="font-mono text-xs" value={tz} onChange={e => setTz(e.target.value)} placeholder="UTC" /></div>
+              <Select value={tz} onValueChange={setTz}>
+                <SelectTrigger id="schedule-tz" className="w-full font-mono"><SelectValue /></SelectTrigger>
+                <SelectContent>{[...new Set(['UTC', browserZone(), tz, ...zones])].sort().map(zone => <SelectItem key={zone} value={zone}>{zone}</SelectItem>)}</SelectContent>
+              </Select></div>
           </div>
           <div id="schedule-preview" className="text-xs" aria-live="polite">
             {typeof preview === 'string' ? <span className="text-destructive">{preview}</span>

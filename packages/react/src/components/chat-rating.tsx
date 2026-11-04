@@ -1,6 +1,6 @@
 /** Thumbs on a finished answer (TASK-0163, TASK-0164, REQ-0075). `onRate` is absent when the builder is only reading
  *  a visitor's chat: the mark and the comment stay, and nothing is written. */
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FlaskConical, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { Button } from '../ui/button.js'
@@ -10,10 +10,12 @@ import type { ChatTurn } from '../lib/chat.js'
 
 const COMMENT_MAX = 1000
 
-export function ChatRatingBar({ turn, onRate, onSaveTest }: {
+export function ChatRatingBar({ turn, onRate, onSaveTest, before, after }: {
   turn: ChatTurn
   onRate?: (turnId: string, value: 'up' | 'down' | null, comment?: string) => void
   onSaveTest?: (runId: string) => void
+  before?: ReactNode
+  after?: ReactNode
 }) {
   const { t } = useTranslation()
   const rate = turn.inherited ? undefined : onRate
@@ -32,28 +34,25 @@ export function ChatRatingBar({ turn, onRate, onSaveTest }: {
   const save = onSaveTest && rating && turn.run_id ? <Tip tip={gone ? t('chat.rating.runGone') : t('tests.saveFromRun')}>
     <Button size="icon-sm" variant="ghost" data-testid="chat-save-test" aria-label={t('tests.saveFromRun')} disabled={gone}
       onClick={() => onSaveTest(turn.run_id!)}><FlaskConical /></Button></Tip> : null
-  if (!rate) return <div className="flex flex-wrap items-center gap-2" data-testid="chat-rating-mark" data-value={rating?.value ?? ''}>
-    {rating && <span className="text-xs text-muted-foreground">{t(rating.value === 'up' ? 'chat.rating.up' : 'chat.rating.down')}</span>}
-    {rating?.comment ? <p className="w-full text-sm text-muted-foreground" data-testid="chat-rating-comment">{rating.comment}</p> : null}
-    {save}
-  </div>
-  return <div className="flex flex-col gap-2">
-    <div className="flex flex-wrap items-center gap-1">
-      <Tip tip={rating?.value === 'up' ? t('chat.rating.remove') : t('chat.rating.up')}>
+  return <div className="flex w-full min-w-0 flex-col gap-2" data-testid={!rate ? 'chat-rating-mark' : undefined} data-value={!rate ? rating?.value ?? '' : undefined}>
+    <div className="flex items-center gap-1">
+      {before}
+      {rate ? <><Tip tip={rating?.value === 'up' ? t('chat.rating.remove') : t('chat.rating.up')}>
         <Button size="icon-sm" variant={rating?.value === 'up' ? 'secondary' : 'ghost'} data-testid="chat-rate-up" aria-pressed={rating?.value === 'up'}
           aria-label={t('chat.rating.up')} onClick={() => set('up')}><ThumbsUp /></Button></Tip>
       <Tip tip={rating?.value === 'down' ? t('chat.rating.remove') : t('chat.rating.down')}>
         <Button size="icon-sm" variant={rating?.value === 'down' ? 'secondary' : 'ghost'} data-testid="chat-rate-down" aria-pressed={rating?.value === 'down'}
           aria-label={t('chat.rating.down')} onClick={() => set('down')}><ThumbsDown /></Button></Tip>
-      {save}
+      </> : rating && <span className="text-xs text-muted-foreground">{t(rating.value === 'up' ? 'chat.rating.up' : 'chat.rating.down')}</span>}
+      {save}{after}
     </div>
-    {rating?.comment && !box && <p className="text-sm text-muted-foreground" data-testid="chat-rating-comment">{rating.comment}</p>}
-    {box && <form className="flex flex-col gap-2" onSubmit={e => { e.preventDefault(); send() }}>
+    {rating?.comment && (!rate || !box) && <p className="min-w-0 text-sm wrap-break-word text-muted-foreground" data-testid="chat-rating-comment">{rating.comment}</p>}
+    {rate && box && <form className="flex min-w-0 flex-col gap-2" onSubmit={e => { e.preventDefault(); send() }}>
       <label className="text-xs text-muted-foreground" htmlFor={`chat-rating-${turn.id}`}>{t('chat.rating.comment')}</label>
       <div className="flex items-center gap-2">
-        <Input id={`chat-rating-${turn.id}`} value={text} maxLength={COMMENT_MAX} placeholder={t('chat.rating.commentPlaceholder')}
+        <Input id={`chat-rating-${turn.id}`} className="min-w-0 flex-1" value={text} maxLength={COMMENT_MAX} placeholder={t('chat.rating.commentPlaceholder')}
           data-testid="chat-rating-input" onChange={e => setText(e.target.value)} />
-        <Button type="submit" size="sm" variant="secondary" data-testid="chat-rating-send">{t('chat.rating.sendComment')}</Button>
+        <Button type="submit" variant="secondary" data-testid="chat-rating-send">{t('chat.rating.sendComment')}</Button>
       </div>
     </form>}
   </div>

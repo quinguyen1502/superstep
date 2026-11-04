@@ -98,8 +98,8 @@ bảo đảm dịch vụ bên ngoài luôn thực hiện đúng một lần. Xem
 và [multipart upload](https://developers.google.com/workspace/drive/api/guides/manage-uploads#multipart).
 
 Thao tác đã xác nhận dùng lại kết quả đã lưu. Run kiểm thử/model giả lập
-không gọi mạng, đổi token hay tạo tệp. Xuất code độc lập tiếp tục từ chối
-managed tools vì theo dõi thao tác cần Studio.
+không gọi mạng, đổi token hay tạo tệp. Xuất code độc lập giữ bước managed dưới dạng TODO báo lỗi cho đến khi bạn
+triển khai xác thực và theo dõi thao tác bên ngoài Studio.
 
 ## Fixture kiểm thử trong repository
 

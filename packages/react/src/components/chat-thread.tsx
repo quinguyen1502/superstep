@@ -41,6 +41,7 @@ function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTes
   const { t, i18n } = useTranslation(); const failed = status && !['ok', 'waiting'].includes(status)
   const rateable = !!turn && !turn.inherited && (status === 'ok' || status === 'error')
   const showRating = rateable && (!!onRate || !!turn.rating || !!onSaveTest)
+  const copy = status === 'ok' && text ? <CopyAction text={text} /> : null
   return <Message data-testid="chat-answer" data-status={status ?? 'running'}>
     <MessageContent className="gap-3">
       <ChatSteps steps={steps ?? []} mode={mode} />
@@ -49,9 +50,8 @@ function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTes
         : text ? <ChatMarkdown text={text} /> : null}
       {children}
       {(status === 'ok' && text) || showRating || regenerate ? <MessageFooter className="flex-wrap px-0">
-        {status === 'ok' && text && <CopyAction text={text} />}
-        {showRating && turn && <ChatRatingBar turn={turn} onRate={onRate} onSaveTest={onSaveTest} />}
-        {regenerate}
+        {showRating && turn ? <ChatRatingBar turn={turn} onRate={onRate} onSaveTest={onSaveTest} before={copy} after={regenerate} />
+          : <>{copy}{regenerate}</>}
       </MessageFooter> : null}
     </MessageContent>
   </Message>
@@ -98,7 +98,7 @@ export function ChatThread({ turns, mode, replyField, events, trace, pending, pe
         {x.role === 'user' ? <Mine text={x.text} files={x.attachments} links={files}
           edit={onEdit && x.editable && <MessageAction label={t('chat.edit.title')} disabled={running || !!wait || pending !== null} onClick={() => setEditing(x)}><Pencil /></MessageAction>} />
           : <Answer text={x.text} steps={x.steps} mode={mode} status={x.status} code={x.code} turn={x} onRate={onRate} onSaveTest={onSaveTest}
-              regenerate={onRegenerate && !x.inherited && x.regeneratable && x.id === turns[turns.length - 1]?.id && <MessageAction label={t('chat.regenerate.title')} disabled={running || !!wait || pending !== null} onClick={() => setRegenerating(x)}><RefreshCw /></MessageAction>}>
+              regenerate={onRegenerate && !x.inherited && x.regeneratable && x.id === turns[turns.length - 1]?.id && <MessageAction data-testid="chat-regenerate" label={t('chat.regenerate.title')} disabled={running || !!wait || pending !== null} onClick={() => setRegenerating(x)}><RefreshCw /></MessageAction>}>
               {x === wait && !running && onAnswer && <ChatConfirmation turn={x} busy={running} onAnswer={r => onAnswer(x.run_id!, r)} />}</Answer>}
       </MessageScrollerItem>)}
       {pending !== null && <MessageScrollerItem messageId="pending-user" scrollAnchor><Mine text={pending} files={pendingFiles} /></MessageScrollerItem>}

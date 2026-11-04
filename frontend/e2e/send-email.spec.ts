@@ -38,12 +38,12 @@ test('send email: SMTP credential, dry run, then a real send', async ({ page }) 
     return (await runs())[0].final_state.sent
   }
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="mail"]').click()
+  await page.locator('.react-flow__node[data-id="mail"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#email-settings')).toBeVisible(); await expect(page.locator('#email-dry-hint')).toBeVisible()
   const dry = await run()
   expect(dry).toMatchObject({ dry_run: true, sent: false, to: ['ann@example.com'], subject: 'Hello Ann', preview: 'Hi Ann' })
 
-  await page.locator('.react-flow__node[data-id="mail"]').click()
+  await page.locator('.react-flow__node[data-id="mail"]').click(); await page.locator('#config-tab-settings').click()
   await page.locator('#email-credential').click(); await page.getByRole('option', { name: new RegExp(credName) }).click()
   await expect(page.locator('#email-dry-hint')).toHaveCount(0)
   await page.locator('#save-btn').click(); await expect(page.locator('#unsaved-badge')).toHaveCount(0)

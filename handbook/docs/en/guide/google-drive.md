@@ -103,8 +103,8 @@ not a universal external exactly-once guarantee. See
 and [multipart uploads](https://developers.google.com/workspace/drive/api/guides/manage-uploads#multipart).
 
 Confirmed operations reuse their durable result. Test/mock runs do no network,
-token exchange or file creation. Standalone code export keeps the existing
-managed-tool refusal because operation tracking requires Studio.
+token exchange or file creation. Standalone code export keeps managed steps as TODO placeholders that throw
+until implemented with your own credentials and operation tracking outside Studio.
 
 ## Repository acceptance fixture
 

@@ -178,8 +178,9 @@ unknown outcome stops a normal MCP node. Agent tools receive the normal tool
 error; an Agent's instructions must require confirmation before claiming success.
 Workflow tests and mock-model runs perform a dry run without external sends,
 writes, token exchanges or intent records. HTTP/stdio MCP behavior is unchanged.
-Standalone Python/TypeScript export explicitly refuses managed connections,
-because their operation tracking currently requires Studio. Portable templates
+Standalone Python/TypeScript export retains managed steps as explicit TODO placeholders.
+They raise/throw until you implement credentials, operation tracking, idempotency
+and reconciliation outside Studio; no connection settings or secrets are exported. Portable templates
 contain blank resource references; bind connections after creating a workflow.
 
 [Model Context Protocol](https://modelcontextprotocol.io) servers expose

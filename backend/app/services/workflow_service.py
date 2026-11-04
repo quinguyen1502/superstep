@@ -35,7 +35,7 @@ class WorkflowService:
         self.chat_sessions = chat_sessions  # ChatSessionRepository (optional): and its chats (TASK-0084)
         self.chat_triggers = chat_triggers  # ChatTriggerRepository (optional): so do its chat triggers (TASK-0074)
         self.jobs = jobs  # deletes LangSmith feedback when the workflow's ratings go (optional)
-        self.export_resources = export_resources  # refuse runtime-only resource configurations explicitly
+        self.export_resources = export_resources  # mark runtime-only resources for explicit export placeholders
 
     # -- persistence: every write goes through here so versions stay in sync (TASK-0008) --
     def _write(self, wid: str, name: str, wf: dict, uid: str, *, new: bool = True, note: str | None = None,
@@ -143,12 +143,12 @@ class WorkflowService:
             for _, ref in subgraphs.all_refs(g):
                 if ref and ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
         collect(wf)
-        if self.export_resources is not None: self.export_resources([wf, *children.values()])
+        managed_placeholders = bool(self.export_resources([wf, *children.values()])) if self.export_resources is not None else False
         case = (self.tests.list_for_workflow(wid) or [None])[0] if self.tests is not None else None
         example = {"input": json.loads(case.input), "answers": json.loads(case.answers)} if case else None
         out = exporter.write(wf, w.name, n, children, example)
         return {"language": exporter.id, "media_type": exporter.media_type, "filename": out.filename, "version": n,
-                "code": out.code, "nodes": out.nodes}
+                "code": out.code, "nodes": out.nodes, "managed_placeholders": managed_placeholders}
 
     def export_project(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT) -> dict:
         """The export as a runnable LangGraph project (a zip for `langgraph dev` and LangSmith Studio)."""

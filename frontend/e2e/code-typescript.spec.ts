@@ -20,7 +20,7 @@ test('code mode in TypeScript: switch language, State type, test, run, admin car
   test.skip(!rt.available || !ts?.available, `TypeScript cannot run here: ${ts?.problem || rt.problem || rt.code_runtime}`)
   const wid = await newWorkflow(page, H, WF(`TS ${Date.now()}`))
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="c"]').click()
+  await page.locator('.react-flow__node[data-id="c"]').click(); await page.locator('#config-tab-settings').click()
   await page.locator('#tool-mode').click(); await page.getByRole('option', { name: /^Code \(Python/ }).click()
   await expect(page.locator('#code-source')).toContainText('def main(state)')
 

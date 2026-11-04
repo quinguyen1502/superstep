@@ -115,3 +115,7 @@
 ## Allocation
 
 - 2026-10-27: renumbered from DEC-0069 before the first push. That number, and TASK-0157 to TASK-0161, are held on `factory/task-0157-parallel-tool-waves` (REQ-0076).
+
+## Owner UI-location amendment — TASK-0254 (2026-11-04)
+
+The owner explicitly approved a separate **Chat history & feedback** entry in the workflow ⋯ menu. Workflow-wide 7/30-day totals, visitor-history reading and the visitor dislike filter move into that dialog. It also offers the current user’s Studio history through the existing authorised API; it does not broaden session visibility or claim coverage for unsupported channels. The Chat panel keeps the current user’s conversations and composer, with New chat immediately before Expand. Rating storage, permissions, counters and per-answer feedback semantics remain unchanged. This amendment supersedes the earlier embedded review placement only; the accepted decision status is preserved.

@@ -17,7 +17,7 @@ test('blank and built-in templates from the New workflow gallery', async ({ page
   await page.goto('/workflows'); await page.locator('#new-wf').click(); await g.locator('[data-id=builtin-rag] button').first().click()
   await expect(page.locator('#validation-errors')).toContainText('1 lỗi cần sửa')
   await expect(page.locator('#validation-errors')).toContainText('Node Retriever retrieve: hãy chọn kho tri thức')  // by its code (TASK-0132)
-  await page.locator('.react-flow__node[data-id="retrieve"]').click()
+  await page.locator('.react-flow__node[data-id="retrieve"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#retriever-required')).toContainText('Hãy chọn kho tri thức')
   await page.reload(); await expect(page.locator('.react-flow__node')).toHaveCount(4)
   await expect(page.locator('#validation-errors')).toHaveCount(0)  // shown once, not on every visit
@@ -35,7 +35,7 @@ test('process templates: 13 built-ins, names in the UI language (TASK-0064)', as
   // a channel template opens with the Human node on that channel, not yet connected
   await g.locator('[data-id=builtin-social-post] button').first().click()
   await expect(page).toHaveURL(/\/workflows\/[^/]+$/); await expect(page.locator('.react-flow__node')).toHaveCount(7)
-  await page.locator('.react-flow__node[data-id="editor"]').click()
+  await page.locator('.react-flow__node[data-id="editor"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#approval-not-connected')).toBeVisible()
   await expect(page.locator('#approval-channel')).toContainText('chưa kết nối')  // translated, not the raw i18n key (TASK-0073)
   await expect(page.locator('#approval-channel')).not.toContainText('approvals.')

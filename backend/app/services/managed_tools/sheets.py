@@ -13,7 +13,7 @@ class SheetsTools:
     id = "google_sheets"
     fields = ("spreadsheet_id", "sheet_name", "data_columns")
     secret_fields = ("service_account",)
-    settings_schema = {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "sheet_name": {"type": "string", "default": "Expenses"}, "data_columns": {"type": "integer", "default": 6}}}
+    settings_schema = {"type": "object", "properties": {"spreadsheet_id": {"type": "string"}, "sheet_name": {"type": "string"}, "data_columns": {"type": "integer"}}}
 
     def validate(self, uid, settings, secrets):
         if set(settings) != set(self.fields): raise AppError("MCP_CONFIG_INVALID", field="settings")

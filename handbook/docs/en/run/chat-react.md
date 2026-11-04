@@ -18,7 +18,7 @@ For a bubble on an existing website, see [Chat widget](chat-widget.md).
    with React/React DOM 18 or later, i18next and react-i18next as peer dependencies.
 
 Package publication is separate from implementation. This repository prepares
-TypeScript SDK 0.2.0 and React toolkit 0.1.0; this guide does not imply a new npm
+TypeScript SDK 0.2.0 and React toolkit 0.1.1; this guide does not imply a new npm
 release. To try the checkout before an approved package release:
 
 ```sh

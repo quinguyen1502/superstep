@@ -73,7 +73,9 @@ function MessageScrollerItem({
       data-slot="message-scroller-item"
       scrollAnchor={scrollAnchor}
       className={cn(
-        "min-w-0 shrink-0 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]",
+        // content-visibility clips paint at the item boundary; reserve space for control focus rings.
+        // Matching negative margins keep the message column and gaps unchanged.
+        "-m-1 min-w-0 shrink-0 p-1 [contain-intrinsic-size:auto_10rem] [content-visibility:auto]",
         className
       )}
       {...props}

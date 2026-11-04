@@ -38,16 +38,18 @@ export function ShareDialog(props: { workflowId: string; disabled?: boolean; onT
     {!controlled && <DialogTrigger asChild><Button variant="outline" size="sm" id="share-btn" disabled={disabled}><Share2 />{t('share.button')}</Button></DialogTrigger>}
     <DialogContent className="sm:max-w-lg">
       <DialogHeader><DialogTitle>{t('share.title')}</DialogTitle><DialogDescription>{t('share.intro')}</DialogDescription></DialogHeader>
-      {data?.can_share && <div className="flex items-end gap-2">
-        <Select value={kind} onValueChange={v => setKind(v as 'user' | 'team')}><SelectTrigger className="w-28" id="share-kind" aria-label={t('share.with')}><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="user">{t('share.kindUser')}</SelectItem><SelectItem value="team">{t('share.kindTeam')}</SelectItem></SelectContent></Select>
-        {kind === 'user' ? <div className="flex-1 space-y-1.5"><Label htmlFor="share-email">{t('share.email')}</Label>
+      {data?.can_share && <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_7rem_auto]">
+        <div className="space-y-1.5"><Label htmlFor="share-kind">{t('share.with')}</Label>
+        <Select value={kind} onValueChange={v => setKind(v as 'user' | 'team')}><SelectTrigger className="w-full" id="share-kind"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="user">{t('share.kindUser')}</SelectItem><SelectItem value="team">{t('share.kindTeam')}</SelectItem></SelectContent></Select></div>
+        {kind === 'user' ? <div className="min-w-0 space-y-1.5"><Label htmlFor="share-email">{t('share.email')}</Label>
           <Input id="share-email" type="email" placeholder="name@example.com" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && email.trim() && add()} /></div>
-          : <div className="flex-1 space-y-1.5"><Label htmlFor="share-team">{t('share.team')}</Label>
+          : <div className="min-w-0 space-y-1.5"><Label htmlFor="share-team">{t('share.team')}</Label>
             <Select value={team} onValueChange={setTeam}><SelectTrigger id="share-team" className="w-full"><SelectValue placeholder={teams.length ? t('share.pickTeam') : t('share.noTeams')} /></SelectTrigger>
               <SelectContent>{teams.map(tm => <SelectItem key={tm.id} value={tm.id}>{tm.name} ({tm.members})</SelectItem>)}</SelectContent></Select></div>}
-        <Select value={role} onValueChange={v => setRole(v as 'viewer' | 'editor')}><SelectTrigger className="w-32" id="share-role" aria-label={t('share.role')}><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="viewer">{t('share.roles.viewer')}</SelectItem><SelectItem value="editor">{t('share.roles.editor')}</SelectItem></SelectContent></Select>
+        <div className="space-y-1.5"><Label htmlFor="share-role">{t('share.role')}</Label>
+        <Select value={role} onValueChange={v => setRole(v as 'viewer' | 'editor')}><SelectTrigger className="w-full" id="share-role"><SelectValue /></SelectTrigger>
+          <SelectContent><SelectItem value="viewer">{t('share.roles.viewer')}</SelectItem><SelectItem value="editor">{t('share.roles.editor')}</SelectItem></SelectContent></Select></div>
         <Button id="share-add" onClick={kind === 'user' ? add : addTeam} disabled={(kind === 'user' ? !email.trim() : !team) || busy}>{busy ? <Loader2 className="animate-spin" /> : <UserPlus />}{t('share.add')}</Button>
       </div>}
       {err && <p role="alert" className="text-sm text-destructive" id="share-error">{err}</p>}
