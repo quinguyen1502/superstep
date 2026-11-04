@@ -9,12 +9,18 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing stable release tag in main to rebuild and publish
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: image-${{ github.ref }}
+  group: image-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -22,8 +28,45 @@ env:
   SMOKE_PASSWORD: Ci-smoke-pass-1
 
 jobs:
+  source:
+    name: Resolve image source
+    if: github.event_name != 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: resolve
+        name: Bind release tag to an integrated source commit
+        env:
+          INPUT_RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: python
+        run: |
+          import json, os, pathlib, re, subprocess, tomllib
+          def git(*args):
+              return subprocess.check_output(["git", *args], text=True).strip()
+          sha = git("rev-parse", "HEAD")
+          tag = os.environ["GITHUB_REF_NAME"] if os.environ["GITHUB_REF_TYPE"] == "tag" else ""
+          if os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch":
+              tag = os.environ["INPUT_RELEASE_TAG"]
+              if not re.fullmatch(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", tag):
+                  raise SystemExit("Expected an existing stable vX.Y.Z release tag")
+              sha = git("rev-parse", f"refs/tags/{tag}^{{commit}}")
+              subprocess.run(["git", "merge-base", "--is-ancestor", sha, "origin/main"], check=True)
+              backend = tomllib.loads(git("show", f"{sha}:backend/pyproject.toml"))["project"]["version"]
+              python = re.search(r'__version__\s*=\s*[\'"]([^\'"]+)', git("show", f"{sha}:sdk/python/src/superstep/_version.py")).group(1)
+              frontend = json.loads(git("show", f"{sha}:frontend/package.json"))["version"]
+              if not backend == python == frontend == tag[1:]:
+                  raise SystemExit("Release tag and shared package versions must agree")
+          with pathlib.Path(os.environ["GITHUB_OUTPUT"]).open("a") as output:
+              output.write(f"sha={sha}\ntag={tag}\n")
+
   test:
     name: All-in-one image (build + SQLite/Postgres smoke + Trivy)
+    needs: source
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -33,6 +76,8 @@ jobs:
         options: --health-cmd "pg_isready -U studio" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
       - name: Deploy files (Render, Heroku, Railway, Fly, DO, Zeabur, compose)
         run: pip install pyyaml && python scripts/check_deploy_configs.py
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -99,10 +144,23 @@ jobs:
           python scripts/cli_smoke.py
       - if: failure()
         run: docker logs sq || true; docker logs pg || true; docker logs rv || true; docker logs sbx || true; docker logs rm || true
+      - name: Install verified Trivy from its pinned GitHub release
+        shell: bash
+        run: |
+          trivy_dir="$RUNNER_TEMP/trivy-v0.69.3"
+          mkdir -p "$trivy_dir"
+          curl --fail --show-error --location --retry 3 --retry-all-errors --connect-timeout 15 --max-time 120 \
+            https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz \
+            --output "$trivy_dir/trivy.tar.gz"
+          printf '%s  %s\n' 1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75 "$trivy_dir/trivy.tar.gz" | sha256sum --check
+          tar -xzf "$trivy_dir/trivy.tar.gz" -C "$trivy_dir" trivy
+          "$trivy_dir/trivy" --version
+          echo "$trivy_dir" >> "$GITHUB_PATH"
       - name: Trivy (fail on fixable CRITICAL)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0 (immutable; earlier tags were compromised in March 2026)
         with:
           version: v0.69.3
+          skip-setup-trivy: true # Binary above is checksum-verified; both scans remain required.
           image-ref: superstep:ci
           severity: CRITICAL
           ignore-unfixed: true
@@ -112,6 +170,7 @@ jobs:
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           version: v0.69.3
+          skip-setup-trivy: true
           image-ref: superstep-sandbox:ci
           severity: CRITICAL
           ignore-unfixed: true
@@ -120,8 +179,8 @@ jobs:
 
   publish:
     name: Publish to GHCR (${{ matrix.image.suffix || 'app' }})
-    needs: test
-    if: github.event_name == 'push'
+    needs: [source, test]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -135,6 +194,10 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.source.outputs.sha }}
+      - name: Bind git metadata to the verified source commit
+        run: git switch --create image-source
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
@@ -144,11 +207,12 @@ jobs:
       - id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
+          context: git
           images: ghcr.io/${{ github.repository }}${{ matrix.image.suffix }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            type=semver,pattern={{version}},value=${{ needs.source.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.source.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.source.outputs.tag }},enable=${{ !startsWith(needs.source.outputs.tag, 'v0.') }}
             type=raw,value=develop,enable=${{ github.ref == 'refs/heads/develop' }}
             type=sha,prefix=sha-
           labels: |
