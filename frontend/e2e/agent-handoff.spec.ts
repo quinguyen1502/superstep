@@ -35,7 +35,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await shot(page, `r010-handoff-canvas-${lang}`, '.react-flow')
 
     // Config: the targets with their descriptions; remove one, then add it back from the menu
-    await page.locator('.react-flow__node').filter({ hasText: 'Triage' }).click()
+    await page.locator('.react-flow__node').filter({ hasText: 'Triage' }).click(); await page.locator('#config-tab-settings').click()
     await expect(page.locator('#agent-handoffs')).toContainText(T.title)
     await expect(page.getByTestId('agent-handoff')).toHaveCount(2)
     await page.locator('#agent-handoff-remove-tech').click()

@@ -104,12 +104,13 @@ for (const lang of ['en', 'vi'] as const) {
     const wid = await newWorkflow(page, H, { name: 'Narrow', state: [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'meta', type: 'object' }],
       nodes: [N('s', 'start', 40), N('e', 'end', 300)], edges: [{ id: '1', source: 's', target: 'e' }] })
     await page.evaluate(l => { localStorage.setItem('lang', l); localStorage.setItem('lgs.editorPanels', JSON.stringify({ left: 180, right: 300, bottom: 260 })) }, lang)
-    await page.goto(`/workflows/${wid}`); await expect(page.locator('#reducer-messages')).toBeVisible()
+    await page.goto(`/workflows/${wid}`); await page.locator('#palette-state-tab').click(); await expect(page.locator('#reducer-messages')).toBeVisible()
     const panel = (await page.locator('#panel-left').boundingBox())!
     for (const vp of await page.locator('#panel-left [data-slot=scroll-area-viewport]').all()) {
       const { sw, cw } = await vp.evaluate(e => ({ sw: e.scrollWidth, cw: e.clientWidth }))
       expect(sw, 'left panel scroll viewport overflows').toBeLessThanOrEqual(cw)
     }
+    await page.locator('#palette-state-tab').click()
     for (const el of await page.locator('[data-testid=state-field] input, [data-testid=state-field] button, #reducer-messages, #reducer-meta').all()) {
       const b = (await el.boundingBox())!
       expect(b.x + b.width, 'control past the left panel edge').toBeLessThanOrEqual(panel.x + panel.width + 0.5)
@@ -133,7 +134,10 @@ for (const lang of ['en', 'vi'] as const) {
     await page.goto(`/workflows/${wid}`); await expect(page.locator('#chat-session-picker')).toBeVisible()
     const tb = (await page.locator('#chat-toolbar').boundingBox())!
     expect(Math.round(tb.width)).toBeLessThanOrEqual(341)
-    expect((await page.locator('#chat-session-picker').boundingBox())!.width, 'session picker width').toBeGreaterThanOrEqual(128)
+    await expect(page.locator('#chat-session-picker [data-slot=select-value]')).toBeVisible()
+    const fresh = (await page.locator('#chat-new').boundingBox())!, expand = (await page.locator('#chat-fullscreen').boundingBox())!
+    expect(fresh.x + fresh.width).toBeLessThanOrEqual(expand.x)
+    expect(fresh.x).toBeGreaterThan(tb.x + tb.width / 2)
     const row = await page.locator('#chat-toolbar > button:visible, #chat-toolbar > [data-slot=select-trigger]:visible').all()
     await expectRowAligned(row, { label: 'compact chat toolbar' })
     for (const r of row) { const b = (await r.boundingBox())!; expect(b.x + b.width, 'toolbar control past the panel edge').toBeLessThanOrEqual(tb.x + tb.width + 0.5) }
@@ -154,7 +158,7 @@ for (const lang of ['en', 'vi'] as const) {
       expect(cb.x - label.right).toBeGreaterThanOrEqual(0)
       const ob = (await page.locator('#chat-view').boundingBox())!
       expect(cb.x + cb.width, 'chevron inside its button').toBeLessThanOrEqual(ob.x + ob.width)
-      expect((await page.locator('#chat-session-picker').boundingBox())!.width, `${v}: session picker width`).toBeGreaterThanOrEqual(128)
+      await expect(page.locator('#chat-session-picker [data-slot=select-value]')).toBeVisible()
       const sw = await page.locator('#chat-toolbar').evaluate(e => e.scrollWidth - e.clientWidth); expect(sw, 'toolbar overflow').toBeLessThanOrEqual(0)
       if (v === 'visitor') { await page.keyboard.press('Escape'); await page.locator('#chat-visitor-exit').click(); await page.locator('#chat-view').click() }
     }

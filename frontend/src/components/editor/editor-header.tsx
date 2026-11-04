@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom'
 import { ApiTriggerDialog } from '@/components/api-trigger-dialog'
 import { SchedulesDialog } from '@/components/schedules-dialog'
 import { ChatTriggersDialog } from '@/components/chat-triggers-dialog'
+import { WorkflowChatHistoryDialog } from '@/components/chat/workflow-chat-history-dialog'
 import { ChatSettingsDialog } from '@/components/chat/chat-settings-dialog'
 import { VersionsDialog } from '@/components/versions-dialog'
 import { ShareDialog } from '@/components/share-dialog'
@@ -84,6 +85,7 @@ export function EditorHeader() {
       {access === 'owner' && <ApiTriggerDialog wid={wid} open={dlg === 'api'} onOpenChange={v => setDlg(v ? 'api' : null)} />}
       {access === 'owner' && <SchedulesDialog wid={wid} open={dlg === 'schedules'} onOpenChange={v => setDlg(v ? 'schedules' : null)} defaultInput={input} />}
       {access === 'owner' && !source && <ChatTriggersDialog wid={wid} open={dlg === 'chat'} onOpenChange={v => setDlg(v ? 'chat' : null)} />}
+      {wid && canChat && <WorkflowChatHistoryDialog wid={wid} canEdit={edit} open={dlg === 'chatHistory'} onOpenChange={v => setDlg(v ? 'chatHistory' : null)} />}
       {access === 'owner' && !source && <ChatSettingsDialog wid={wid} open={dlg === 'chatSettings'} onOpenChange={v => setDlg(v ? 'chatSettings' : null)} />}
       <Dialog open={dlg === 'json'} onOpenChange={v => setDlg(v ? 'json' : null)}>
         <DialogContent className="flex max-h-[85vh] w-full min-w-0 flex-col overflow-hidden sm:max-w-2xl">

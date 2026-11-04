@@ -20,7 +20,7 @@ test('human node: wait, pending list, approve, complete', async ({ page }) => {
   const token = await login(page)
   const wid = (await (await page.request.post('/api/workflows', { headers: { Authorization: `Bearer ${token}` }, data: APPROVAL })).json()).data.id
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#human-prompt')).toHaveText('Approve refund for message?'); await expect(page.locator('#human-prompt .template-tag[data-field="message"]')).toBeVisible()
   await page.locator('#run-tab').click()
   await page.locator('#run-input').fill('{"message": "order A100"}')
@@ -50,7 +50,7 @@ test('approvals inbox: a listed approver answers in place (TASK-0065)', async ({
   const wf = { ...APPROVAL, name: `Inbox e2e ${Date.now()}`, nodes: APPROVAL.nodes.map(n => n.id === 'ask' ? { ...n, data: { ...n.data, approval: { approvers: [email] } } } : n) }
   const wid = (await (await page.request.post('/api/workflows', { headers: { Authorization: `Bearer ${token}` }, data: wf })).json()).data.id
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#approval-approvers')).toHaveValue(email)  // approvers on a studio-only Human node
   await page.locator('#run-tab').click(); await page.locator('#run-input').fill('{"message": "order B7"}')
   await page.locator('#run-btn').click(); await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'waiting', { timeout: 30_000 })
@@ -73,6 +73,7 @@ test('human node deadline: settings, due time in the inbox, rejected on time (TA
   const wid = (await (await page.request.post('/api/workflows', { headers: { Authorization: `Bearer ${token}` }, data: wf })).json()).data.id
   await page.goto(`/workflows/${wid}`)
   await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('#config-tab-settings').click()
   await page.locator('#deadline-on').click(); await expect(page.locator('#deadline-after')).toHaveValue('1')
   await page.locator('#deadline-action').click(); await page.getByRole('option', { name: 'Chuyển cho người duyệt khác' }).click()
   await expect(page.locator('#deadline-escalate')).toBeVisible()

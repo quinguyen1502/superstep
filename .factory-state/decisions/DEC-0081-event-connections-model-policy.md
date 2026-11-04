@@ -51,3 +51,7 @@ Provider-specific OAuth, payloads and idempotency still require adapter code. No
 ## Review Or Revisit Trigger
 
 Second managed provider with different auth requirements, an event source needing polling, or a need for multiple fallback models.
+
+## Owner Amendment — Export Presentation (2026-11-04, TASK-0254)
+
+The owner explicitly requested a commented empty managed step with the remaining workflow code visible instead of refusing the entire export. Managed MCP node/Agent-tool references now generate explicit Python/TypeScript TODO placeholders, including nested graphs and project ZIPs. They raise/throw if invoked until the operator implements the integration, operation tracking, idempotency and reconciliation. Connection settings, credentials and secrets remain excluded; managed runtime execution policy is unchanged. The code response/UI identifies incomplete managed steps. This amendment authorises source preparation for preview only; testing, merge and publication remain subject to the current owner's staged approvals. Prior approval/status sections are preserved.

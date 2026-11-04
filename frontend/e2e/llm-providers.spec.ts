@@ -46,7 +46,7 @@ test('llm providers: test connection, OpenRouter key, Ollama models on the LLM n
   // LLM node: pick the credential, load models, choose one; manual entry stays possible
   await page.goto('/workflows/example')
   for (const id of ['classify', 'answer']) {
-    await page.locator(`.react-flow__node[data-id="${id}"]`).click()
+    await page.locator(`.react-flow__node[data-id="${id}"]`).click(); await page.locator('#config-tab-settings').click()
     await page.locator('#llm-credential').click(); await page.getByRole('option', { name: new RegExp(name) }).click()
     await page.locator('#llm-model-load').click()
     await page.locator('#llm-model-select').click(); await page.getByRole('option', { name: 'qwen2.5:7b' }).click()

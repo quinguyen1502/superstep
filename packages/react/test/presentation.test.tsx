@@ -27,6 +27,14 @@ describe('presentation without a Studio application', () => {
     expect(html).toContain('Chat unavailable from the host language')
     expect(html).not.toContain('Server fallback')
   })
+  it('uses rendered server errors when events lack translation arguments', () => {
+    i18n.addResource('en', 'translation', 'errors.MCP_ARGUMENT_TYPE', 'Argument {{name}} must be of type {{type}}')
+    const html = render(<ChatThread turns={[{ id: 'argument-failed', role: 'assistant', text: 'Argument values must be of type array', status: 'error', code: 'MCP_ARGUMENT_TYPE', created: 1 }]}
+      mode="none" events={[]} trace={{ spans: [] }} pending={null} running={false} />)
+    expect(html).toContain('Argument values must be of type array')
+    expect(html).not.toContain('{{name}}')
+    expect(html).not.toContain('{{type}}')
+  })
   it('leaves reviewer navigation with the host', () => {
     const turn = { id: 'turn', role: 'assistant' as const, text: 'Review', status: 'waiting', answered_by: 'reviewer' as const, created: 1 }
     const alone = render(<ChatConfirmation turn={turn} busy={false} onAnswer={() => {}} />)

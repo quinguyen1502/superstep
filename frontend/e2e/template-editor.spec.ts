@@ -22,7 +22,7 @@ test('template editor: tags, suggestions, insert menu, one-line URL, saved text,
   const auth = await login(page)
   const wid = (await (await page.request.post('/api/workflows', { headers: auth, data: WF(`Template ${Date.now()}`) })).json()).data.id
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
   const prompt = page.locator('#llm-prompt')
   await expect(prompt.locator('.template-tag[data-field="message"]')).toHaveAttribute('data-known', 'true')
   await expect(prompt.locator('.template-tag[data-field="ghost"]')).toHaveAttribute('data-known', 'false')  // not in the state schema
@@ -40,7 +40,7 @@ test('template editor: tags, suggestions, insert menu, one-line URL, saved text,
   await expect(prompt.locator('.template-tag[data-field="reply"]')).toHaveCount(0); await expect(page.locator('.react-flow__node[data-id="ask"]')).toBeVisible()
 
   // the URL stays on one line
-  await page.locator('.react-flow__node[data-id="call"]').click()
+  await page.locator('.react-flow__node[data-id="call"]').click(); await page.locator('#config-tab-settings').click()
   const url = page.locator('#http-url'); await url.click(); await page.keyboard.type('https://example.com/o/{{mes'); await pick(page, 'message')
   await page.keyboard.press('Enter'); await page.keyboard.type('x')
   await expect(url.locator('.cm-line')).toHaveCount(1); await expect(url.locator('.template-tag[data-field="message"]')).toBeVisible()
@@ -55,7 +55,7 @@ test('template editor: tags, suggestions, insert menu, one-line URL, saved text,
   expect((await page.request.put(`/api/workflows/${wid}/shares`, { headers: auth, data: { email, role: 'viewer' } })).ok()).toBeTruthy()
   const ctx = await browser.newContext(); const other = await ctx.newPage(); await login(other, email, 'secret12')
   await other.goto(`/workflows/${wid}`); await expect(other.locator('#view-only')).toBeVisible()
-  await other.locator('.react-flow__node[data-id="ask"]').click()
+  await other.locator('.react-flow__node[data-id="ask"]').click(); await other.locator('#config-tab-settings').click()
   await expect(other.locator('#llm-prompt')).toHaveAttribute('contenteditable', 'false')
   await expect(other.locator('#llm-prompt .template-tag[data-field="answer"]')).toBeVisible(); await expect(other.locator('#llm-prompt-insert')).toHaveCount(0)
   await ctx.close()

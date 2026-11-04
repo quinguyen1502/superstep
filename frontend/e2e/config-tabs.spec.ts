@@ -20,8 +20,9 @@ test('Config tabs: same order for every node, kept across nodes, disabled in pla
   await page.goto(`/workflows/${wid}`)
 
   await pick(page, 'ag')
-  await expect(page.locator('#config-tabs [role=tab]')).toHaveText(['Cài đặt', 'Dữ liệu', 'Thực thi'])
-  await expect(tab(page, 'settings')).toHaveAttribute('data-state', 'active')
+  await expect(page.locator('#config-tabs [role=tab]')).toHaveText(['Chung', 'Cài đặt', 'Dữ liệu', 'Thực thi'])
+  await expect(tab(page, 'general')).toHaveAttribute('data-state', 'active')
+  await tab(page, 'settings').click()
   await expect(page.locator('#agent-settings')).toBeVisible(); await expect(page.locator('#agent-output')).toHaveCount(0)
   await tab(page, 'data').click()
   await expect(page.locator('#agent-output')).toBeVisible(); await expect(page.locator('#agent-steps-field')).toBeVisible()
@@ -38,15 +39,15 @@ test('Config tabs: same order for every node, kept across nodes, disabled in pla
 
   // Condition has no execution settings: the tab stays, disabled, and Settings shows; the choice is still Execution
   await pick(page, 'route')
-  await expect(page.locator('#config-tabs [role=tab]')).toHaveCount(3)
+  await expect(page.locator('#config-tabs [role=tab]')).toHaveCount(4)
   await expect(tab(page, 'execution')).toBeDisabled()
-  await expect(tab(page, 'settings')).toHaveAttribute('data-state', 'active')
+  await expect(tab(page, 'general')).toHaveAttribute('data-state', 'active')
   await pick(page, 'llm'); await expect(tab(page, 'execution')).toHaveAttribute('data-state', 'active')
 
   // Start has nothing to set beyond its label
   await pick(page, 'start')
   for (const k of ['settings', 'data', 'execution']) await expect(tab(page, k)).toBeDisabled()
-  await expect(page.locator('#config-nothing')).toBeVisible()
+  await expect(tab(page, 'general')).toHaveAttribute('data-state', 'active')
 
   // a Data choice is saved like before
   await pick(page, 'llm'); await tab(page, 'data').click()

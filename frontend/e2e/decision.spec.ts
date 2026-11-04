@@ -16,7 +16,7 @@ test('decision node: build questions, run offline, branch on the choice', async 
   const H = await login(page)
   const wid = await newWorkflow(page, H, WF(`Jev ${Date.now()}`))
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="dec"]').click()
+  await page.locator('.react-flow__node[data-id="dec"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#decision-settings')).toBeVisible()
   await expect(page.locator('#decision-mock-hint')).toBeVisible()
   await expect(page.locator('#dq-0-opt-0-label')).toHaveValue('order')

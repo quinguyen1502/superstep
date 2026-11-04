@@ -37,10 +37,10 @@ import { META, RUNTIME, LOOP_LABELS } from './meta'
 import { Sel, F } from './parts'
 import { useStudioCtx } from './studio-context'
 
-/** Config tabs (TASK-0121): the same three, in the same order, for every node, so a setting is always found in one place.
+/** Config tabs (TASK-0121, owner amendment TASK-0254): General for identity/label, then the same three tabs.
  *  Settings: what the node does. Data: every picker of a state field (what it reads and writes, which fields it sees).
  *  Execution: how it runs (retry, timeout, cache, limits). A tab a node does not use stays in its place, disabled. */
-const CONFIG_TABS = ['settings', 'data', 'execution'] as const
+const CONFIG_TABS = ['general', 'settings', 'data', 'execution'] as const
 type ConfigTab = typeof CONFIG_TABS[number]
 const FIELD_PICKERS = new Set(['email', 'decision', 'condition', 'foreach'])  // state fields picked besides RUNTIME's input fields
 const LIMITS = new Set(['foreach'])  // an execution limit without RUNTIME's retry / timeout / cache
@@ -49,7 +49,7 @@ const WRITERS = new Set(['llm', 'tool', 'human', 'retriever', 'mcp', 'agent'])  
 /** Right panel: config of the selected node or edge (TASK-0040). */
 export function EditorConfig() {
   const [kept, setKept] = useState<string | null>(null)  // node whose edited code was kept on a language switch
-  const [tab, setTab] = useState<ConfigTab>('settings')  // kept while another node is selected
+  const [tab, setTab] = useState<ConfigTab>('general')  // kept while another node is selected
   const { t } = useTranslation()
   const { access, nodes, setEdges, maxHandoffs, setMaxHandoffs, wid, tools, creds, setCreds, providers, channels, edit, mark, selNode, selEdge, upd, setRuntime, d, fieldNames, state, input } = useStudioCtx()
   const codeRt = useCodeRuntime(); const me = useMe(); const canCode = can(me, 'code.write')  // Tool node Code mode (TASK-0055)
@@ -59,12 +59,12 @@ export function EditorConfig() {
   const type = selNode?.type || ''
   const node = !!selNode && type !== 'note'
   const runtime = RUNTIME.has(type)
-  const has: Record<ConfigTab, boolean> = { settings: type !== 'start' && type !== 'end', data: runtime || FIELD_PICKERS.has(type), execution: runtime || LIMITS.has(type) }
-  const issue: Record<ConfigTab, boolean> = { settings: type === 'agent' && !(Array.isArray(d.tools) && d.tools.length), data: WRITERS.has(type) && !d.output_field, execution: false }
+  const has: Record<ConfigTab, boolean> = { general: true, settings: type !== 'start' && type !== 'end', data: runtime || FIELD_PICKERS.has(type), execution: runtime || LIMITS.has(type) }
+  const issue: Record<ConfigTab, boolean> = { general: false, settings: type === 'agent' && !(Array.isArray(d.tools) && d.tools.length), data: WRITERS.has(type) && !d.output_field, execution: false }
   const enabled = CONFIG_TABS.filter(k => has[k])
   const active = enabled.includes(tab) ? tab : enabled[0]
   const output = <F label={t('field.outputField')}><Sel value={d.output_field} onChange={v => upd('output_field', v)} opts={fieldNames} /></F>
-  const pane = (k: ConfigTab, children: ReactNode) => <TabsContent value={k} className="space-y-3" id={`config-pane-${k}`}>{children}</TabsContent>
+  const pane = (k: ConfigTab, children: ReactNode) => <TabsContent value={k} className="space-y-3" id={`config-pane-${k}`} aria-labelledby={`config-tab-${k}`}>{children}</TabsContent>
 
   const settings = <>
     {type === 'llm' && <>
@@ -175,24 +175,22 @@ export function EditorConfig() {
       </div></fieldset></ScrollArea>
     </aside>
 
-  // the node's name and label stay above the tabs; the tab bar sits outside the disabled fieldset so viewers can switch
+  // The tab bar stays outside the disabled fieldset so viewers can switch.
   const m = META[type]; const I = m.icon
   return <aside className="h-full bg-muted/30 min-h-0 flex flex-col" id="config-panel">
-      <fieldset disabled={!edit} className="contents"><div className="shrink-0 p-4 pb-3 space-y-3 min-w-0">
-        {title}
-        <div className="flex items-center gap-2"><div className={cn('rounded-md p-1.5', m.color)}><I className="size-4" /></div>
-          <div><div className="font-medium">{m.label}</div><div className="text-[11px] text-muted-foreground font-mono">{selNode!.id}</div></div></div>
-        <F label={t('field.label')}><Input value={d.label || ''} onChange={e => upd('label', e.target.value)} /></F>
-      </div></fieldset>
+
       <Tabs value={active ?? ''} onValueChange={v => setTab(v as ConfigTab)} className="min-h-0 flex-1 gap-0">
-        <div className="shrink-0 px-4 pb-3"><TabsList className="w-full" aria-label={t('editor.configTabs.label')} id="config-tabs">
-          {CONFIG_TABS.map(k => <TabsTrigger key={k} value={k} id={`config-tab-${k}`} disabled={!has[k]}>
-            {t(`editor.configTabs.${k}`)}
+        <div className="shrink-0 pb-3"><TabsList variant="panel" className="w-full" aria-label={t('editor.configTabs.label')} id="config-tabs">
+          {CONFIG_TABS.map(k => <TabsTrigger key={k} value={k} id={`config-tab-${k}`} aria-controls={`config-pane-${k}`} aria-label={t(`editor.configTabs.${k}`)} className="min-w-0 flex-auto text-xs group-data-[variant=panel]/tabs-list:px-2" disabled={!has[k]}>
+            <span className="truncate">{t(`editor.configTabs.${k}`)}</span>
             {has[k] && issue[k] && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-destructive" data-testid="config-tab-issue"><span className="sr-only">{t('editor.configTabs.issue')}</span></span>}
           </TabsTrigger>)}
         </TabsList></div>
         <ScrollArea className="min-h-0 flex-1"><fieldset disabled={!edit} className="contents"><div className="px-4 pb-4 min-w-0">
           {!active && <p className="text-muted-foreground text-xs" id="config-nothing">{t('editor.configTabs.nothing')}</p>}
+          {pane('general', <><div className="flex items-center gap-2"><div className={cn('rounded-md p-1.5', m.color)}><I className="size-4" /></div>
+            <div className="min-w-0"><div className="font-medium">{m.label}</div><div className="wrap-anywhere text-[11px] text-muted-foreground font-mono">{selNode!.id}</div></div></div>
+            <F label={t('field.label')}><Input value={d.label || ''} onChange={e => upd('label', e.target.value)} /></F></>)}
           {pane('settings', settings)}{pane('data', data)}{pane('execution', execution)}
         </div></fieldset></ScrollArea>
       </Tabs>

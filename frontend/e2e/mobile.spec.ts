@@ -35,6 +35,7 @@ test('Editor on a phone: tab bar, tap to add a node, Config for the selection, R
   await expect(page.getByTestId('mobile-config-dot')).toBeVisible()
   await tab('config').click()
   await expect(page.locator('#config-panel')).toBeVisible()
+  await page.locator('#config-tab-settings').click()
   await expect(page.locator('#llm-prompt')).toBeVisible()
 
   // Run switches to the Run pane: input above the logs

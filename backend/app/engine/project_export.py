@@ -77,6 +77,8 @@ def _readme(title: str, graph_id: str, file: str, python: bool) -> str:
         "- LLM nodes use an offline mock model unless `LLM_PROVIDER` is set.",
         "- Credentials, knowledge bases, MCP servers and approval channels are not exported. Retriever, MCP and Send",
         "  email nodes are stubs.",
+        "- Managed connection steps are explicit placeholders that raise/throw until implemented. Add your own",
+        "  credentials, operation tracking, idempotency and reconciliation; Studio secrets are never included.",
         "- Human-in-the-loop nodes use `interrupt()`: in Studio, resume the paused thread with the answer. AI review of",
         "  approvals (suggest or automatic answers) is a Superstep feature: here people answer every request.", ""])
 

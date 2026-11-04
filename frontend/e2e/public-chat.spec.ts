@@ -84,15 +84,15 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
 
     // the builder reads it under Visitors, read-only
     await page.reload()
-    await page.locator('#chat-session-picker').click()
-    await page.getByTestId('chat-visitor-option').first().click()
-    await expect(page.locator('#chat-visitor-readonly')).toBeVisible()
-    await expect(page.getByTestId('chat-mine')).toHaveCount(2); await expect(page.locator('#chat-input')).toHaveCount(0)
-    await expect(page.getByTestId('chat-rating-comment')).toHaveText('The order status was wrong')
-    await expect(page.getByTestId('chat-rate-down')).toHaveCount(0)
+    await page.locator('#more-btn').click(); await page.locator('#chat-history-btn').click()
+    const history = page.locator('#chat-history-dialog')
+    await expect(history).toBeVisible()
+    await expect(history.getByTestId('chat-mine')).toHaveCount(2); await expect(history.locator('#chat-input')).toHaveCount(0)
+    await expect(history.getByTestId('chat-rating-comment')).toHaveText('The order status was wrong')
+    await expect(history.getByTestId('chat-rate-down')).toHaveCount(0)
     await page.locator('#chat-thumbs-down').click()
     await expect(page.locator('#chat-rating-totals')).toBeVisible()
-    await shot(page, `public-chat-visitors-${lang}`, '#chat-panel')
+    await shot(page, `public-chat-visitors-${lang}`, '#chat-history-dialog')
     await ctx.close()
   })
 
@@ -126,4 +126,23 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await a.reload(); await expect(a.locator('#public-chat-gone')).toContainText(T[lang].gone)
     await shot(a, `public-chat-gone-${lang}`)
   })
+})
+
+
+test('session rejection stays inline and can recover without hiding the public page', async ({ page }) => {
+  const H = await login(page), slug = `inline-error-${Date.now()}`
+  const wid = await newWorkflow(page, H, ECHO(`Inline error ${Date.now()}`))
+  await page.request.put(`/api/workflows/${wid}/chat`, { headers: H, data: { enabled: true, access: 'anonymous', slug } })
+  await page.goto(`/c/${slug}`)
+  await expect(page.locator('#chat-input')).toBeVisible()
+  await page.route(`**/api/public/v1/chat/${slug}/sessions`, route => route.request().method() === 'POST'
+    ? route.fulfill({ status: 404, json: { success: false, data: null, error: { code: 'CHAT_NOT_PUBLISHED', message: 'Chat not available' } } })
+    : route.continue())
+  await page.locator('#chat-input').fill('Hi'); await page.locator('#chat-input').press('Enter')
+  await expect(page.locator('#public-chat-error')).toBeVisible()
+  await expect(page.locator('#chat-input')).toBeVisible()
+  await page.unroute(`**/api/public/v1/chat/${slug}/sessions`)
+  await page.locator('#chat-input').fill('Try again'); await page.locator('#chat-input').press('Enter')
+  await expect(page.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok')
+  await expect(page.locator('#public-chat-error')).toHaveCount(0)
 })

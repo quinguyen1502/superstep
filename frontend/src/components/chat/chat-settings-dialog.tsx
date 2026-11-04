@@ -5,7 +5,7 @@
  *  (TASK-0145) is read here and goes with Save as a data: URL; Remove clears it on Save too. */
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertCircle, Check, Copy, ExternalLink, ImageUp, Plus, Save, Trash2, X } from 'lucide-react'
+import { AlertCircle, Check, ChevronDown, Copy, ExternalLink, ImageUp, Plus, Save, Trash2, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { accessModes } from '@/lib/chat'
 import { ChatAppKeys } from './chat-app-keys'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -41,7 +42,7 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
   const pickLogo = (f?: File) => { if (!f) return
     if (!LOGO_TYPES.includes(f.type) || f.size > LOGO_MAX_KB * 1024) { setErr(t('errors.CHAT_LOGO_INVALID', { max_kb: LOGO_MAX_KB })); setBad('logo'); return }
     const r = new FileReader(); r.onload = () => { setErr(''); setBad(''); set({ logo: String(r.result) }) }; r.readAsDataURL(f) }
-  const save = () => { if (!v) return; setBusy(true); setErr(''); setBad('')
+  const save = () => { if (!v || attachmentFieldError) return; setBusy(true); setErr(''); setBad('')
     const { attachment_ceiling: _ceiling, ...rest } = v   // read only
     const body = { ...rest, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean), embed_origins: v.embed_origins.map(x => x.trim()).filter(Boolean) }
     api<ChatSettings>(`/api/workflows/${wid}/chat`, { method: 'PUT', json: body }).then(s => { setV(s); onSaved?.(s); onOpenChange(false) })
@@ -50,6 +51,9 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
   const copy = (what: string, text: string) => navigator.clipboard.writeText(text).then(() => { setCopied(what); setTimeout(() => setCopied(''), 2000) }).catch(() => {})
   const snippet = (s: ChatSettings) => ({ iframe: iframeSnippet(s.slug), widget: widgetSnippet(s.slug) })
   const names = (pred: (f: Field) => boolean) => fields.filter(pred).map(f => f.name)
+  const attachmentFields = names(f => f.type === 'list' && ![v?.input_field, v?.reply_field, v?.messages_field].includes(f.name))
+  const attachmentFieldError = v?.attachments.enabled && !attachmentFields.includes(v.attachments.field)
+    ? t(attachmentFields.length ? 'chat.files.settings.invalidField' : 'chat.files.settings.noFields') : ''
   const pick = (id: keyof ChatSettings, opts: string[], none = false) => <Select value={(v?.[id] as string) || (none ? NONE : '')} onValueChange={x => set({ [id]: x === NONE ? '' : x } as any)}>
     <SelectTrigger className="w-full" id={`chat-${id}`} aria-invalid={bad === id || undefined}><SelectValue placeholder={t('chat.settings.pickField')} /></SelectTrigger>
     <SelectContent>{none && <SelectItem value={NONE}>{t('chat.settings.noMemory')}</SelectItem>}{opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
@@ -71,7 +75,11 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
             }} />{t(`chat.access.${a}`)}</Label>)}
           <p className="text-xs text-muted-foreground">{t('chat.appKeys.studioOnly')}</p>
         </div>)}
-        {accessModes(v.access).some(a => a !== 'studio') && <div className="grid gap-4 rounded-lg border p-3" id="chat-publish">
+        {accessModes(v.access).some(a => a !== 'studio') && <Collapsible defaultOpen className="rounded-lg border p-3" id="chat-publish">
+          <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 text-left text-sm font-medium focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" id="chat-publish-toggle">
+            {t('chat.publish.settings')}<ChevronDown className="size-4 shrink-0 transition-transform in-data-[state=closed]:-rotate-90" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="grid gap-4 pt-3">
           {row('slug', t('chat.publish.slug'), t('chat.publish.slugHint'), <InputGroup aria-invalid={bad === 'slug' || undefined}>
             <InputGroupAddon><InputGroupText>/c/</InputGroupText></InputGroupAddon>
             <InputGroupInput id="chat-slug" value={v.slug} aria-invalid={bad === 'slug' || undefined} onChange={e => set({ slug: e.target.value.toLowerCase() })} /></InputGroup>)}
@@ -107,7 +115,8 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
                 <Button size="xs" variant="ghost" id={`chat-copy-${k}`} onClick={() => copy(k, snippet(v)[k])}>{copied === k ? <Check /> : <Copy />}{t(copied === k ? 'chat.copied' : 'chat.copy')}</Button></div>
               <Textarea id={`chat-snippet-${k}-code`} readOnly rows={2} className="font-mono text-xs" value={snippet(v)[k]} onFocus={e => e.currentTarget.select()} />
               <p className="text-xs text-muted-foreground">{t(`chat.embed.${k}Hint`)}</p></div>)}</>}
-        </div>}
+          </CollapsibleContent>
+        </Collapsible>}
         {wid && accessModes(v.access).includes('app') && <ChatAppKeys wid={wid} />}
         <div className="grid grid-cols-2 gap-3">
           {row('input_field', t('chat.settings.inputField'), null, pick('input_field', names(f => f.type === 'string' || f.type === 'list')))}
@@ -123,10 +132,10 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
         {row('steps', t('chat.settings.steps'), t('chat.settings.stepsHint'), <Select value={v.steps} onValueChange={steps => set({ steps: steps as ChatSettings['steps'] })}>
           <SelectTrigger className="w-full" id="chat-steps"><SelectValue /></SelectTrigger>
           <SelectContent>{STEPS.map(s => <SelectItem key={s} value={s}>{t(`chat.steps.${s}`)}</SelectItem>)}</SelectContent></Select>)}
-        <ChatAttachmentSettings value={v.attachments} ceiling={v.attachment_ceiling} lists={names(f => f.type === 'list' && f.name !== v.messages_field)} bad={bad}
-          onChange={p => setV(x => x && { ...x, attachments: { ...x.attachments, ...p } })} />
+        <ChatAttachmentSettings value={v.attachments} ceiling={v.attachment_ceiling} lists={attachmentFields} bad={bad} fieldError={attachmentFieldError}
+          onChange={p => { setBad(b => b.startsWith('attachments.') ? '' : b); setErr(''); setV(x => x && { ...x, attachments: { ...x.attachments, ...p } }) }} />
       </div>}
-      <DialogFooter><Button id="chat-settings-save" disabled={!v || busy} onClick={save}><Save />{t('common.save')}</Button></DialogFooter>
+      <DialogFooter><Button id="chat-settings-save" disabled={!v || busy || !!attachmentFieldError} onClick={save}><Save />{t('common.save')}</Button></DialogFooter>
     </DialogContent>
   </Dialog>
 }

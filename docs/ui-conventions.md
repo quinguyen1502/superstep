@@ -112,7 +112,9 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
     | `<span className="leading-none">21:07</span><span className="font-mono text-xs leading-none">2959fe</span>` | `<span className="inline-flex items-baseline gap-1.5 text-xs"><span className="tabular-nums">21:07</span><span className="font-mono tabular-nums">2959fe</span></span>` |
     | `<div className="flex gap-3 py-1.5">` toolbar | `<div className="flex h-11 items-center gap-2">` |
 
-12. **Node Config uses the same three tabs for every node** (TASK-0121). `components/editor/editor-config.tsx` shows the node's icon, id and Label above a tab bar with **Settings · Data · Execution** (vi: Cài đặt · Dữ liệu · Thực thi), always in that order, so a builder learns once where a setting lives.
+12. **Node Config uses the same tabs for every node** (TASK-0121; owner amendment TASK-0254). The owner requested **General · Settings · Data · Execution** (vi: Chung · Cài đặt · Dữ liệu · Thực thi) at the top on 2026-11-04. `components/editor/editor-config.tsx` puts the node's icon, id and Label in General. The tab selection is kept between nodes and unused tabs remain disabled.
+    - Palette/State schema and Config headers use the shared shadcn Tabs `panel` variant: rectangular tabs attached to the panel edge, no floating pill group, existing theme tokens and keyboard navigation.
+    - **General**: the node identity and Label; initially selected, available for every graph node.
     - **Settings**: what the node does: credential, model, prompts, tools, mode, code, approvers and deadline, a condition's default label.
     - **Data**: every picker of a state field: output field, steps and history fields, a loop's items/item/index fields, the field a Condition branches on, a Decision's answer fields, and the input fields switch list.
     - **Execution**: how the node runs: retry, wait, timeout, cache TTL, and limits (Agent max rounds, For each max items).

@@ -130,7 +130,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await setInput(page, JSON.stringify({ order_id: 'A100', amount: '$129.50', reply: '', decision: '' }, null, 2))
       await run(page, 'waiting'); await expect(page.locator('#human-question')).toBeVisible()
       await shot(page, lang, 'human-waiting')
-      await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#human-deadline').scrollIntoViewIfNeeded()
+      await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click(); await page.locator('#human-deadline').scrollIntoViewIfNeeded()
       await shot(page, lang, 'human-deadline')
 
       // Approvals inbox with the waiting refund, then the workflow list with its link (TASK-0065)
@@ -301,7 +301,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       expect((await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).success).toBe(true)
 
       await page.goto(`/workflows/${wid}`); await expect(page.locator('.react-flow__node')).toHaveCount(3); await fit(page)
-      await page.locator('.react-flow__node[data-id="agent"]').click(); await expect(page.locator('#agent-settings')).toBeVisible()
+      await page.locator('.react-flow__node[data-id="agent"]').click(); await page.locator('#config-tab-settings').click(); await expect(page.locator('#agent-settings')).toBeVisible()
       await page.locator('#agent-settings').getByText(vi ? 'Công cụ' : 'Tools', { exact: true }).first().scrollIntoViewIfNeeded()
       await shot(page, lang, 'agent-settings')
       await setInput(page, JSON.stringify({ message: vi ? 'Đơn A100 của tôi bị vỡ, cho tôi hoàn tiền' : 'Order A100 arrived broken, please refund it' }, null, 2))
@@ -329,7 +329,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
         expect((await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).success).toBe(true)
       }
       await page.goto(`/workflows/${wid}`); await expect(page.locator('.react-flow__node')).toHaveCount(3); await fit(page)
-      await page.locator('.react-flow__node[data-id="agent"]').click(); await expect(page.locator('#agent-settings')).toBeVisible()
+      await page.locator('.react-flow__node[data-id="agent"]').click(); await page.locator('#config-tab-settings').click(); await expect(page.locator('#agent-settings')).toBeVisible()
       await page.locator('#agent-tool-0-fields').scrollIntoViewIfNeeded()
       await shot(page, lang, 'workflow-tool-settings')
       await setInput(page, JSON.stringify({ message: vi ? 'Đơn hàng B200 của tôi đang ở đâu?' : 'Where is my order B200?' }, null, 2))

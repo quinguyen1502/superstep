@@ -10,7 +10,8 @@ test('schedules: add from a preset, preview, refuse a bad expression, turn off, 
   const dlg = page.locator('#schedules-dialog'); await expect(dlg).toBeVisible()
   await expect(dlg.getByText('Chưa có lịch chạy nào.')).toBeVisible()
 
-  await page.locator('#schedule-tz').fill('Asia/Ho_Chi_Minh')
+  await page.locator('#schedule-tz').click()
+  await page.getByRole('option', { name: 'Asia/Saigon', exact: true }).click()
   await page.locator('#schedule-preset').click(); await page.getByRole('option', { name: 'Mỗi giờ' }).click()
   await expect(page.locator('#schedule-cron')).toHaveValue('0 * * * *')
   await expect(page.locator('#schedule-preview')).toContainText('Lần tới:')
@@ -21,9 +22,9 @@ test('schedules: add from a preset, preview, refuse a bad expression, turn off, 
   await page.locator('#schedule-name').fill('Morning report'); await page.locator('#schedule-create').click()
 
   const row = dlg.locator('[data-testid=schedule-row][data-name="Morning report"]')
-  await expect(row).toContainText('30 9 * * 1-5'); await expect(row.getByTestId('schedule-next')).toContainText('Asia/Ho_Chi_Minh')
+  await expect(row).toContainText('30 9 * * 1-5'); await expect(row.getByTestId('schedule-next')).toContainText('Asia/Saigon')
   const saved = (await (await page.request.get(`/api/workflows/${wid}/schedules`, { headers: H })).json()).data
-  expect(saved).toHaveLength(1); expect(saved[0]).toMatchObject({ name: 'Morning report', cron: '30 9 * * 1-5', timezone: 'Asia/Ho_Chi_Minh', enabled: true })
+  expect(saved).toHaveLength(1); expect(saved[0]).toMatchObject({ name: 'Morning report', cron: '30 9 * * 1-5', timezone: 'Asia/Saigon', enabled: true })
 
   await row.getByRole('switch').click(); await expect(row.getByTestId('schedule-next')).toHaveText('Tắt')
   await row.getByRole('button', { name: 'Xoá lịch Morning report' }).click(); await confirmDelete(page, 'Morning report')
