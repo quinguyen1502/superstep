@@ -13,4 +13,3 @@ def http_url(value: str, *, origin=False, proxy=False) -> str:
     if (origin or proxy) and (parsed.path not in ("", "/") or parsed.query or parsed.fragment):
         raise ValueError("Expected an origin without a path, query or fragment")
     return value.rstrip("/") if origin or proxy else value
-
