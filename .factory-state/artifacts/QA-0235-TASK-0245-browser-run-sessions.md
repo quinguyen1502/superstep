@@ -8,7 +8,7 @@
 - QA Owner: Codex (advisory; owner approval pending)
 - Created: 2026-11-05
 - Updated: 2026-11-05
-- Outcome: scoped pass; full declared verification pending
+- Outcome: scoped pass; all declared commands passed across documented native-runtime reruns
 
 ## Acceptance Coverage
 
@@ -31,4 +31,6 @@ Runtime is experimental/default off behind a separate flag. Durable browser appr
 
 ## QA Decision
 
-Scoped pass pending complete declared verification and owner review. Remain review; no done/merge approval inferred.
+Scoped pass pending owner review and canonical Ready/integration verification. Remain review; no done/merge approval inferred.
+
+- 2026-11-05 declared verification on committed 4b65144f: full backend passed (462.99 s), Python SDK passed (14.09 s), TS build/typecheck passed. Initial Factory Node checks inherited x64 from the Rosetta-only Python while installed native dependencies are arm64; no source/dependency defect. Native arm64 Node reruns passed all remaining declared commands: root npm 280 tests/build/lint and explicit TS SDK tests/build/typecheck. Factory filtered full-profile build/lint/typecheck and verify validate passed. Thus all eight declared commands passed across these runs; a single all-eight canonical run remains a Ready/integration gate. The temporary Node architecture wrapper is outside Git. No source changed during verification.

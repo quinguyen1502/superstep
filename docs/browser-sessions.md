@@ -30,7 +30,8 @@ the profile owner. Scope comes from persisted chat records, not workflow inputs.
 The Agent model step reserves a whole batch in model order **before** LangGraph
 sends parallel tool slots. Each valid browser call receives a private ticket in
 the hidden pending state; tickets are not added to model tool-call messages or
-public metadata. Generic tools are not in this queue. Sessions/connections/groups
+public metadata. Generic tools are not in this queue. A standalone MCP node has its own group;
+use an Agent or the planned recipe tool for multi-action page continuity. Sessions/connections/groups
 have independent queues and unrelated tools retain existing parallel scheduling
 and model-ordered result joining.
 
