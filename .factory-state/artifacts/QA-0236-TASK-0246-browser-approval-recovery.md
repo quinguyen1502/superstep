@@ -7,8 +7,8 @@
 - Task ID: TASK-0246
 - QA Owner: Codex (advisory; owner approval pending)
 - Created: 2026-11-05
-- Updated: 2026-11-05
-- Outcome: scoped conditional pass; final committed-source full verification pending
+- Updated: 2026-11-06
+- Outcome: scoped pass; full declared verification passed
 
 ## Validation Scope
 
@@ -36,8 +36,10 @@ Existing approval/inbox and reviewer-only chat presentation reused; en/vi backen
 
 ## Defects, Gaps And Residual Risk
 
-REV-0236 wave gap is resolved and tested. Final committed-source full declared verification pending. Runtime remains experimental/default off; live credentials, third-party deployment, recipes/UI/export and release acceptance are not claimed. Site effects after dispatch may be unknown and cannot be undone; the conservative outcome closes rather than retries. Janitors retain minimal encrypted cleanup authority through infrastructure outages, with capacity held. Exact-context reattachment requires the same local Docker daemon or approved HTTPS controller. Self-QA does not replace owner approval.
+REV-0236 wave gap is resolved and tested. Final committed-source full declared verification passed. Runtime remains experimental/default off; live credentials, third-party deployment, recipes/UI/export and release acceptance are not claimed. Site effects after dispatch may be unknown and cannot be undone; the conservative outcome closes rather than retries. Janitors retain minimal encrypted cleanup authority through infrastructure outages, with capacity held. Exact-context reattachment requires the same local Docker daemon or approved HTTPS controller. Self-QA does not replace owner approval.
 
 ## Required Follow-Up And QA Decision
 
-Conditionally passed for scoped review with final committed-source full verification and owner approval pending. Remain review; no done/Ready/merge authority inferred.
+Conditionally passed for scoped review with final committed-source full verification passed; owner approval pending. Remain review; no done/Ready/merge authority inferred.
+
+- 2026-11-06 final source verification: canonical full profile on isolated 2d0d6159 passed all 8 commands, backend 481.74 s, Python SDK 14.29 s, root build/lint/test 16.03/2.14/19.28 s, TS SDK build/test/typecheck 1.66/1.47/1.52 s. Root final approval/child/restart/parallel/deadline regression: 47 passed (76.24 s). Final backend source is identical to task e7f1ab8d; only workflow evidence/docs followed. Isolated workspace now uses its own exact lockfile dependencies; the earlier shared-node_modules resolution failure did not require source or lock changes. Factory verification metadata records all eight passes. Draft PR #311; no done/Ready/merge approval.
