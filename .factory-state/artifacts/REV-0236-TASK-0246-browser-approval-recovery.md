@@ -7,8 +7,8 @@
 - Task ID: TASK-0246
 - Reviewer: Codex (self-review; owner review pending)
 - Created: 2026-11-05
-- Updated: 2026-11-05
-- Outcome: scoped conditional pass; final declared verification pending
+- Updated: 2026-11-06
+- Outcome: scoped pass; final declared verification passed
 
 ## Review Scope And References
 
@@ -40,4 +40,6 @@ Unknown external effects cannot be undone or exactly-once guaranteed. No blind r
 
 ## Review Decision
 
-Conditionally approved for QA/review after the wave fix, pending final committed-source full verification and owner review. No merge approval inferred.
+Conditionally approved for QA/review after the wave fix, with committed-source full verification passed; owner review pending. No merge approval inferred.
+
+- 2026-11-06 final verification: full eight-command Factory profile passed on isolated 2d0d6159, identical final backend source to task e7f1ab8d. Backend 481.74 s; root build/lint/test, Python SDK and TypeScript SDK build/test/typecheck all passed in one canonical run. Exact locked workspace dependencies were installed after a root-only node_modules symlink selected the wrong nested TypeScript version; no source/dependency-manifest change. The prior environment-only failures are superseded by this complete pass. No blocking finding remains; owner approval still required.

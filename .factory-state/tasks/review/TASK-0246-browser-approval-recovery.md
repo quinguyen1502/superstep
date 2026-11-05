@@ -8,7 +8,7 @@
 - Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-05
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -106,3 +106,5 @@ Browser approvals, stale sessions and uncertain-effect recovery, satisfying the 
 - Review follow-up: retain node→intent map after all waits of a browser wave are absorbed. Recovery uses the existing wave-ready path; a missing final receipt expires instead of granting. Independent-browser multi-approval tests prove zero duplicate clicks, with one permitted click when the other receipt is missing. Focused approval/child/restart/parallel/deadline regressions: 46 passed before the last purge-only test addition; three final wave/purge checks passed.
 
 - Full eight-command Factory profile passed on c7cb3af7; backend 483.79 s, all root/SDK build/lint/test/typecheck commands green. Applied review wave fix as e7f1ab8d; final source full profile running on identical isolated 2d0d6159. REV-0236/QA-0236 conditional scoped pass; owner review remains pending. Draft PR only; no merge.
+
+- 2026-11-06: Draft PR #311 https://github.com/quinguyen1502/superstep/pull/311. Final canonical full profile on isolated 2d0d6159 (same backend source as e7f1ab8d) passed all eight commands, backend 481.74 s. Final focused root approval/child/restart/parallel/deadline suite: 47 passed. REV-0236/QA-0236 scoped pass, owner review pending. Earlier isolated Node dependency-resolution failures superseded by exact-lockfile installation and complete pass; no source/dependency change.
