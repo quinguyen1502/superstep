@@ -8,7 +8,7 @@
 - QA Owner: Codex (advisory; owner approval pending)
 - Created: 2026-11-06
 - Updated: 2026-11-06
-- Outcome: scoped conditional pass; full declared verification running
+- Outcome: scoped pass; full declared verification passed
 
 ## Scope And References
 
@@ -43,7 +43,7 @@ PLAN-0006, REV-0239, docs/browser-settings.md and docs/ui-conventions.md.
 - npm run lint: passed strict UI class guard, no new component warnings. Existing
   unrelated lint/Vite/dev-key/socket shutdown warnings remain.
 - Colour/hex scan on changed components: no hits; git diff --check passed.
-- Full Factory eight-command profile running on committed source 14b1560a.
+- Full Factory eight-command profile passed on committed source 14b1560a.
 
 ## UX And Accessibility Evidence
 
@@ -56,7 +56,7 @@ cards use page scrolling. No new node/template/tab/dialog layout is added.
 
 ## Defects, Gaps And Residual Risk
 
-No unresolved scoped defect. Full canonical verification still pending. UI
+No unresolved scoped defect. Full canonical verification passed. UI
 discovery does not attest remote enforcement or test a real proxy route; actual
 runtime/HTTPS/Docker proofs belong to prerequisites. Metadata-unavailable test is
 a controlled UI response, not live operator reconfiguration. Seed validation and
@@ -65,7 +65,11 @@ code exports remain TASK-0250/0251/0252. Default runtime stays off.
 
 ## QA Decision
 
-Conditionally passed for scoped review pending full profile and owner approval.
+Passed for scoped review after full profile; owner approval pending.
 No done/Ready/merge authority. Parent follow-up sync is separately awaiting
 permission after automatic merge-review rejection; current source is committed
 and testable independently.
+
+## Final Full Verification — 2026-11-06
+
+Clean source 14b1560a passed all eight declared commands: root build 11.95 s, lint 1.19 s, test 16.39 s; backend 488.54 s; Python SDK 14.94 s; TypeScript SDK build/test/typecheck 1.57/1.40/1.45 s. No source changed after that tested commit. Factory validate passed (worktree handbook venv linked); all-ref ID check passed against 109 refs. Parent metadata sync remains pending permission; no merge performed. Owner approval pending; no done/Ready/merge claim.

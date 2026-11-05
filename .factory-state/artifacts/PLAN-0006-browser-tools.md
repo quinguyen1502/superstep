@@ -131,3 +131,5 @@ The owner instructed: “Pull develop về branch hiện tại, và tiến hành
 - 2026-11-05: Owner started the chain. TASK-0241 branch is based on develop 3c83262a plus published planning commit b8f3a861 carried as 3beffe55. Readiness passed before source changes. Contract implementation and metadata-only gate are recorded in `docs/browser-contract.md`; browser runtime remains unavailable until egress/session proof.
 
 - 2026-11-06 TASK-0249: Settings UI in scoped review (REV-0239/QA-0239), full profile running; ten real Chrome cases passed. Existing branch retains TASK-0248 base 07d22fce pending explicit parent-sync permission; #313 final 50a536ce independently records predecessor full pass.
+
+- 2026-11-06 TASK-0249 final: all eight declared commands passed source 14b1560a (backend 488.54 s); REV-0239/QA-0239 scoped pass, Draft #314, owner approval pending. Parent sync remains a separate pending permission; no merge.

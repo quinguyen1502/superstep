@@ -453,7 +453,7 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **accepted for delivery o
 - TASK-0246 — approvals, expired/lost sessions and uncertain-effect recovery. **review** (REV-0236, QA-0236; full verification passed), stacked on TASK-0245 #310.
 - TASK-0247 — dynamic URL bindings, search/fetch and missing context. **review** (REV-0237, QA-0237; full verification passed), stacked on TASK-0246 #311.
 - TASK-0248 — typed reusable recipes through existing tool surfaces. **doing**, explicitly stacked on TASK-0247 #312 / TASK-0246 #311.
-- TASK-0249 — connection/proxy/profile settings UI. **review**, REV-0239/QA-0239 scoped conditional; full checks running.
+- TASK-0249 — connection/proxy/profile settings UI. **review**, REV-0239/QA-0239 scoped pass; all eight declared checks passed, Draft #314.
 - TASK-0250 — Agent/recipe config and filtered trace/chat UI. **backlog**.
 - TASK-0251 — executable Python/plain and project exports. **backlog**.
 - TASK-0252 — executable TypeScript/plain and project exports. **backlog**.
