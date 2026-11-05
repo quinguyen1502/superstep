@@ -84,3 +84,7 @@ DISC-0002 documents the short-lived generic MCP transport, existing managed conn
 ## Owner Delivery Authorisation — 2026-11-05
 
 The owner instructed: “Pull develop về branch hiện tại, và tiến hành chuỗi task này.” This accepts the proposed browser delivery scope and starts PLAN-0006 in dependency order. This supersedes earlier planning-only/pending-start statements; source onboarding approval statuses are unchanged. Implementation, fixture validation and task PRs are authorised; merges, production/provider setup, release and deployment are not. Task branches may stack on the published planning package; dependent implementation tasks require predecessor review/QA and an explicitly documented stack.
+
+## Local Worker Refinement — TASK-0243, 2026-11-05
+
+The private HTTP/JSON worker channel uses a Unix socket inside network=none, reached by the trusted supervisor through Docker exec/stdin. No TCP control endpoint or host mount enters the page namespace. Generated schemas share the Python source contract; the only TCP listener relays bytes to the isolated gateway. Local worker/image/cleanup and screenshot retention are specified and proved in `docs/browser-runtime.md`. Idle/lifetime watchdogs remove the containers/volume without needing another call; failed Docker cleanup is explicit as cleanup_pending and must be retained/reaped by TASK-0245. Stored captures are owner-only with a one-hour TTL, account/workflow purge and Alembic 0055. This does not claim Agent binding, remote/profile support, durable approvals, UI or executable exports complete.

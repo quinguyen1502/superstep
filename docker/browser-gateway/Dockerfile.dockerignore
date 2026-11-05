@@ -1,0 +1,8 @@
+**
+!backend/
+!backend/app/
+!backend/app/core/
+!backend/app/core/browser_urls.py
+!backend/app/engine/
+!backend/app/engine/browser_network.py
+!backend/app/engine/browser_gateway.py

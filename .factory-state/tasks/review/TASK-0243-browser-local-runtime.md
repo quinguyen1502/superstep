@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0243
 - Title: Isolated local Playwright runtime and bounded browser tools
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -30,7 +30,6 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
 
@@ -78,12 +77,12 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised implementation of the chain and local Docker fixtures on 2026-11-05.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no owner merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -96,3 +95,12 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 
 - Future branch: `factory/task-0243-browser-local-runtime`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Owner requested the chain and local Docker fixtures. Explicit stack on TASK-0242 (PR #304, REV-0230/QA-0230) and TASK-0241 (PR #303, REV-0229/QA-0229), neither merged. Scope is one local worker/artifact delivery using the proven gateway; Agent run binding remains TASK-0245.
+
+- 2026-11-05: `factory ready` passed before worker source changes. Task-start complete. Production worker uses a separate image/build and generated schemas, not a promoted synthetic fixture image.
+
+- 2026-11-05: Added isolated worker/gateway images with locked compatible dependencies, generated schemas, private HTTP-over-Unix Docker-exec control, six bounded commands, exact-command approval primitive, stale/principal/generation checks and automatic resource watchdogs. Added owner-only stored screenshots, one-hour retention/purge and Alembic 0055. `docs/browser-runtime.md` records boundaries and dependency evidence.
+- 2026-11-05: Real worker smoke passed six operations and approval/stale/foreign-artifact/budget/idle/uncertain-effect/production-gateway denial cases. PostgreSQL/SQLite migration suite 4 passed; root npm 280/build/lint passed; targeted/focused backend checks and wheel asset packaging passed. REV-0233/QA-0233 recorded; full backend regression to be run against the task commit. Run/Agent binding and durable Human approval are not claimed implemented.
+
+- 2026-11-05: Final focused checks: 71 passed, 1 optional PostgreSQL skip. Review/QA IDs reallocated to 0233 because develop merged TASK-0256/0257 while this task was being verified.

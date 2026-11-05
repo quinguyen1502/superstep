@@ -2,7 +2,7 @@ import json
 from typing import Optional
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
-from ..models import Run
+from ..models import Run, BrowserArtifact
 from ..models.database import Database
 
 NOT_TEST = or_(Run.source.is_(None), Run.source != "test")  # every run but workflow test runs (TASK-0067)
@@ -170,4 +170,5 @@ class RunRepository:
 
     def delete_for_workflow(self, wid: str) -> None:
         with self.db.session() as s:
+            s.execute(delete(BrowserArtifact).where(BrowserArtifact.run_id.in_(select(Run.id).where(Run.workflow_id == wid))))
             s.execute(delete(Run).where(Run.workflow_id == wid)); s.commit()

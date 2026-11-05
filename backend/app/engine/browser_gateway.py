@@ -6,12 +6,14 @@ Do not expose this listener through a host TCP port or put it on a shared volume
 from __future__ import annotations
 
 import os
+import json
 import re
 import selectors
 import socketserver
 import threading
 import time
 from urllib.parse import urlsplit
+from types import SimpleNamespace
 
 from .browser_network import DestinationPolicy, EgressDenied, Route, read_header
 
@@ -136,7 +138,47 @@ class GatewayHandler(socketserver.BaseRequestHandler):
         except (EgressDenied, OSError):
             self.server.audit("denied", None)
             if not connected:
-                try: client.sendall(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+                try: client.sendall(b"HTTP/1.1 403 Forbidden\r\nX-Superstep-Egress: denied\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
                 except OSError: pass
         finally:
             if upstream is not None: upstream.close()
+
+
+def main():
+    """Private per-session container entrypoint; configuration is supplied by the trusted supervisor."""
+    import signal
+    import sys
+    try:
+        raw = os.environ.pop("STUDIO_BROWSER_GATEWAY_CONFIG", "")
+        if not raw or len(raw.encode()) > 65536: raise ValueError()
+        value = json.loads(raw)
+        if not isinstance(value, dict) or set(value) - {"allowed_origins", "proxy", "secrets", "operator_default", "approved_proxies", "lifetime_s"}:
+            raise ValueError()
+        lifetime = value.get("lifetime_s", 600)
+        if type(lifetime) is not int or not 30 <= lifetime <= 1800: raise ValueError()
+        policy = DestinationPolicy(value.get("allowed_origins", ()))
+        proxy = SimpleNamespace(mode="direct", server=None, auth="none")
+        for key, item in value.get("proxy", {}).items():
+            if key not in {"mode", "server", "auth"}: raise ValueError()
+            setattr(proxy, key, item)
+        if proxy.mode not in {"direct", "operator_default", "custom"} or proxy.auth not in {"none", "basic"}: raise ValueError()
+        default = value.get("operator_default")
+        configured_default = None
+        if default:
+            configured_default = (SimpleNamespace(**default["proxy"]), default["secrets"])
+        route = Route.from_settings(proxy, value.get("secrets", {}), policy,
+            operator_default=configured_default, approved_proxies=value.get("approved_proxies", ()))
+        del raw, value
+        path = "/egress/gateway.sock"
+        with Gateway(path, policy, route) as server:
+            timer = threading.Timer(lifetime, server.shutdown); timer.daemon = True; timer.start()
+            signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown, daemon=True).start())
+            try: server.serve_forever()
+            finally: timer.cancel()
+        os.unlink(path)
+    except Exception:
+        print("Browser gateway unavailable", file=sys.stderr)  # never emit raw config/URL/secret exceptions
+        raise SystemExit(2) from None
+
+
+if __name__ == "__main__": main()

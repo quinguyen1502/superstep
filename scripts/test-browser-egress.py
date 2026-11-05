@@ -56,7 +56,7 @@ def main():
                 time.sleep(0.1)
             else: raise RuntimeError("Gateway socket unavailable: " + docker("logs", gateway))
             docker("create", "--name", browser, "--network=none", "--init", "--read-only", "--cap-drop=ALL",
-                "--security-opt=no-new-privileges", "--security-opt", f"seccomp={FIXTURE / 'seccomp_profile.json'}",
+                "--security-opt=no-new-privileges", "--security-opt", f"seccomp={ROOT / 'backend/app/engine/browser_seccomp.json'}",
                 "--pids-limit=128", "--memory=768m", "--cpus=1", "--shm-size=256m", "--env", "HOME=/tmp",
                 "--env", f"FIXTURE_IP={fixture_ip}", "--env", f"FIXTURE_ROUTE={mode}",
                 "--tmpfs=/tmp:rw,nosuid,size=256m", "--mount", f"type=volume,src={volume},dst=/egress,readonly", BROWSER_IMAGE)

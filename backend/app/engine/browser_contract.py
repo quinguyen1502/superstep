@@ -31,8 +31,11 @@ class WorkerEnvelope(VersionedContract):
     @classmethod
     def bounded_json(cls, value):
         if isinstance(value, cls): return value
+        def model_value(item):
+            if isinstance(item, BaseModel): return item.model_dump()
+            raise TypeError()
         try:
-            size = len(json.dumps(value, ensure_ascii=False, allow_nan=False).encode("utf-8"))
+            size = len(json.dumps(value, ensure_ascii=False, allow_nan=False, default=model_value).encode("utf-8"))
         except (TypeError, ValueError, UnicodeError, RecursionError):
             raise ValueError("Worker envelope must be finite UTF-8 JSON") from None
         if size > 256 * 1024: raise ValueError("Worker envelope exceeds byte limit")
@@ -168,6 +171,23 @@ class WorkerCommand(WorkerEnvelope):
     def check_arguments(self):
         ARGUMENT_MODELS[self.operation].model_validate(self.arguments)
         return self
+
+
+class WorkerOpen(WorkerEnvelope):
+    context: ExecutionContext
+    settings: BrowserSettings
+    session_id: Identifier
+    generation: Annotated[int, Field(ge=1)] = 1
+
+
+class WorkerControl(WorkerEnvelope):
+    context: ExecutionContext
+    session_id: Identifier
+    generation: Annotated[int, Field(ge=1)]
+
+
+class WorkerArtifact(WorkerControl):
+    artifact_id: Identifier
 
 
 class ObservedElement(Contract):

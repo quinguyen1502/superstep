@@ -42,6 +42,7 @@ dev = ["boto3>=1.34"]  # tests run the s3 backend against MinIO and a stubbed cl
 
 [tool.setuptools.package-data]
 "app.api" = ["schemas/chat_ws_v1/*.json"]
+"app.engine" = ["browser_seccomp.json", "browser_seccomp.LICENSE"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

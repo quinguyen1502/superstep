@@ -1,5 +1,6 @@
 """ORM models (tables). Column names/types match the MVP schema so existing SQLite files keep working."""
 from .base import Base
+from .browser_artifact import BrowserArtifact
 from .user import User
 from .workflow import Workflow
 from .run import Run
@@ -27,4 +28,4 @@ from .workflow_test import WorkflowTest, WorkflowTestResult, WorkflowTestSuite
 from .agent_thread import AgentThread, AgentThreadRun
 from .approval import ApprovalAudit, ApprovalChannel, ApprovalRequest, ApprovalAutoQuota, ApprovalWait, ApprovalWaitApprover, ChannelIdentity
 
-__all__ = ["Base", "User", "Workflow", "Run", "Credential", "WorkflowToken", "WorkflowVersion", "Notification", "WebhookDelivery", "NodeResult", "ApprovalChannel", "ChannelIdentity", "ApprovalRequest", "ApprovalAudit", "ApprovalWait", "ApprovalWaitApprover", "ApprovalAutoQuota", "KnowledgeBase", "KbDocument", "KbChunk", "McpServer", "WorkflowShare", "Team", "TeamMember", "WorkflowTeamShare", "AuditEvent", "StudioSetting", "WorkflowTemplate", "LoginThrottle", "PasswordReset", "PersonalAccessToken", "CliDevice", "WorkflowSchedule", "WorkflowChatTrigger", "ChatLogo", "ChatMessage", "ChatAttachment", "ChatRating", "ChatSession", "ChatTurn", "ChatEdit", "WorkflowTest", "WorkflowTestSuite", "WorkflowTestResult", "AgentThread", "AgentThreadRun"]
+__all__ = ["Base", "BrowserArtifact", "User", "Workflow", "Run", "Credential", "WorkflowToken", "WorkflowVersion", "Notification", "WebhookDelivery", "NodeResult", "ApprovalChannel", "ChannelIdentity", "ApprovalRequest", "ApprovalAudit", "ApprovalWait", "ApprovalWaitApprover", "ApprovalAutoQuota", "KnowledgeBase", "KbDocument", "KbChunk", "McpServer", "WorkflowShare", "Team", "TeamMember", "WorkflowTeamShare", "AuditEvent", "StudioSetting", "WorkflowTemplate", "LoginThrottle", "PasswordReset", "PersonalAccessToken", "CliDevice", "WorkflowSchedule", "WorkflowChatTrigger", "ChatLogo", "ChatMessage", "ChatAttachment", "ChatRating", "ChatSession", "ChatTurn", "ChatEdit", "WorkflowTest", "WorkflowTestSuite", "WorkflowTestResult", "AgentThread", "AgentThreadRun"]

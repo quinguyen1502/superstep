@@ -326,3 +326,8 @@ The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Cod
 | --- | --- | --- |
 | `BROWSER_DISABLED` | 404 | Browser metadata/discovery is disabled by the operator. |
 | `BROWSER_RUNTIME_UNAVAILABLE` | 503 | No verified isolated browser runtime/trusted run context is available; no browser operation is started. |
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `BROWSER_ARTIFACT_NOT_FOUND` | 404 | Screenshot missing, expired, or owned by another account. |
+| `BROWSER_ARTIFACT_INVALID` | 400 | Trusted capture did not produce a bounded viewport PNG. |

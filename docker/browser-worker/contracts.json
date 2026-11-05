@@ -1,0 +1,738 @@
+{
+  "WorkerCommand": {
+    "$defs": {
+      "ExecutionContext": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "run_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "group_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "configuration": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Configuration",
+            "type": "string"
+          },
+          "lease_generation": {
+            "minimum": 1,
+            "title": "Lease Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal_id",
+          "run_id",
+          "group_id",
+          "connection_id",
+          "configuration",
+          "lease_generation"
+        ],
+        "title": "ExecutionContext",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "context": {
+        "$ref": "#/$defs/ExecutionContext"
+      },
+      "session_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "generation": {
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      },
+      "sequence": {
+        "minimum": 0,
+        "title": "Sequence",
+        "type": "integer"
+      },
+      "command_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "operation": {
+        "enum": [
+          "navigate",
+          "snapshot",
+          "click",
+          "fill",
+          "extract",
+          "screenshot"
+        ],
+        "title": "Operation",
+        "type": "string"
+      },
+      "arguments": {
+        "additionalProperties": true,
+        "title": "Arguments",
+        "type": "object"
+      },
+      "timeout_ms": {
+        "default": 30000,
+        "maximum": 60000,
+        "minimum": 1000,
+        "title": "Timeout Ms",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "context",
+      "session_id",
+      "generation",
+      "sequence",
+      "command_id",
+      "operation",
+      "arguments"
+    ],
+    "title": "WorkerCommand",
+    "type": "object"
+  },
+  "WorkerOpen": {
+    "$defs": {
+      "BrowserSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "provider": {
+            "default": "local",
+            "enum": [
+              "local",
+              "controlled_cdp"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "proxy": {
+            "$ref": "#/$defs/ProxySettings"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/ProfileSettings"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "allowed_origins": {
+            "items": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Allowed Origins",
+            "type": "array"
+          },
+          "action_timeout_ms": {
+            "default": 30000,
+            "maximum": 60000,
+            "minimum": 1000,
+            "title": "Action Timeout Ms",
+            "type": "integer"
+          },
+          "idle_timeout_s": {
+            "default": 120,
+            "maximum": 600,
+            "minimum": 30,
+            "title": "Idle Timeout S",
+            "type": "integer"
+          },
+          "lifetime_s": {
+            "default": 600,
+            "maximum": 1800,
+            "minimum": 30,
+            "title": "Lifetime S",
+            "type": "integer"
+          },
+          "max_actions": {
+            "default": 12,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Max Actions",
+            "type": "integer"
+          },
+          "stealth": {
+            "const": false,
+            "default": false,
+            "title": "Stealth",
+            "type": "boolean"
+          }
+        },
+        "title": "BrowserSettings",
+        "type": "object"
+      },
+      "ExecutionContext": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "run_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "group_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "configuration": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Configuration",
+            "type": "string"
+          },
+          "lease_generation": {
+            "minimum": 1,
+            "title": "Lease Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal_id",
+          "run_id",
+          "group_id",
+          "connection_id",
+          "configuration",
+          "lease_generation"
+        ],
+        "title": "ExecutionContext",
+        "type": "object"
+      },
+      "ProfileSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Name",
+            "type": "string"
+          },
+          "origins": {
+            "items": {
+              "maxLength": 2048,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Origins",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "origins"
+        ],
+        "title": "ProfileSettings",
+        "type": "object"
+      },
+      "ProxySettings": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "default": "direct",
+            "enum": [
+              "direct",
+              "operator_default",
+              "custom"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "server": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Server"
+          },
+          "auth": {
+            "default": "none",
+            "enum": [
+              "none",
+              "basic"
+            ],
+            "title": "Auth",
+            "type": "string"
+          }
+        },
+        "title": "ProxySettings",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "context": {
+        "$ref": "#/$defs/ExecutionContext"
+      },
+      "settings": {
+        "$ref": "#/$defs/BrowserSettings"
+      },
+      "session_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "generation": {
+        "default": 1,
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "context",
+      "settings",
+      "session_id"
+    ],
+    "title": "WorkerOpen",
+    "type": "object"
+  },
+  "WorkerControl": {
+    "$defs": {
+      "ExecutionContext": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "run_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "group_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "configuration": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Configuration",
+            "type": "string"
+          },
+          "lease_generation": {
+            "minimum": 1,
+            "title": "Lease Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal_id",
+          "run_id",
+          "group_id",
+          "connection_id",
+          "configuration",
+          "lease_generation"
+        ],
+        "title": "ExecutionContext",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "context": {
+        "$ref": "#/$defs/ExecutionContext"
+      },
+      "session_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "generation": {
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "context",
+      "session_id",
+      "generation"
+    ],
+    "title": "WorkerControl",
+    "type": "object"
+  },
+  "WorkerArtifact": {
+    "$defs": {
+      "ExecutionContext": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "run_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "group_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "configuration": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Configuration",
+            "type": "string"
+          },
+          "lease_generation": {
+            "minimum": 1,
+            "title": "Lease Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal_id",
+          "run_id",
+          "group_id",
+          "connection_id",
+          "configuration",
+          "lease_generation"
+        ],
+        "title": "ExecutionContext",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "context": {
+        "$ref": "#/$defs/ExecutionContext"
+      },
+      "session_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "generation": {
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      },
+      "artifact_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Artifact Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "context",
+      "session_id",
+      "generation",
+      "artifact_id"
+    ],
+    "title": "WorkerArtifact",
+    "type": "object"
+  },
+  "WorkerResult": {
+    "$defs": {
+      "Observation": {
+        "additionalProperties": false,
+        "properties": {
+          "observation_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "page_generation": {
+            "minimum": 1,
+            "title": "Page Generation",
+            "type": "integer"
+          },
+          "origin": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Origin",
+            "type": "string"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 16000,
+            "title": "Text",
+            "type": "string"
+          },
+          "elements": {
+            "items": {
+              "$ref": "#/$defs/ObservedElement"
+            },
+            "maxItems": 200,
+            "title": "Elements",
+            "type": "array"
+          }
+        },
+        "required": [
+          "observation_id",
+          "page_generation",
+          "origin"
+        ],
+        "title": "Observation",
+        "type": "object"
+      },
+      "ObservedElement": {
+        "additionalProperties": false,
+        "properties": {
+          "element_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Element Id",
+            "type": "string"
+          },
+          "role": {
+            "maxLength": 80,
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 1000,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "element_id",
+          "role",
+          "text"
+        ],
+        "title": "ObservedElement",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "command_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "generation": {
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      },
+      "sequence": {
+        "minimum": 0,
+        "title": "Sequence",
+        "type": "integer"
+      },
+      "status": {
+        "enum": [
+          "confirmed",
+          "failed_before_effect",
+          "unknown",
+          "approval_required",
+          "challenge_required",
+          "expired",
+          "session_lost",
+          "stale_observation",
+          "policy_denied",
+          "cancelled"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "elapsed_ms": {
+        "maximum": 60000,
+        "minimum": 0,
+        "title": "Elapsed Ms",
+        "type": "integer"
+      },
+      "observation": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/Observation"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "extracted": {
+        "anyOf": [
+          {
+            "maxProperties": 20,
+            "patternProperties": {
+              "^[A-Za-z0-9_.:-]+$": {
+                "maxLength": 4000,
+                "type": "string"
+              }
+            },
+            "propertyNames": {
+              "maxLength": 128,
+              "minLength": 1
+            },
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Extracted"
+      },
+      "artifact_id": {
+        "anyOf": [
+          {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Artifact Id"
+      }
+    },
+    "required": [
+      "command_id",
+      "generation",
+      "sequence",
+      "status",
+      "elapsed_ms"
+    ],
+    "title": "WorkerResult",
+    "type": "object"
+  }
+}
