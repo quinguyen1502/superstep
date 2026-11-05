@@ -8,7 +8,7 @@
 - Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -103,3 +103,6 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 - 2026-11-05: Owner chain instruction authorises TASK-0247 after TASK-0246 scoped review/QA. Explicit unmerged stack on TASK-0246 #311 (REV-0236/QA-0236; final full profile running on isolated committed source), #310/#309/#308/#304/#303/#299. Integration develop remains 21ddce1a. Task-start edits only; no implementation source changed.
 
 - Task-start: factory ready exited 0 before implementation. Scope: existing MCP argument templates for fixed/state URLs; narrow Agent url_binding for fixed/state/model URL authority; separate managed web search/fetch connection with enabled-tool enforcement, guarded direct transport and no browser state. One configured SearXNG JSON adapter, bounded normalized results, explicit missing-input/unsupported/empty outcomes. No mandatory start URL or new Agent loop. Next implement contracts/transport/binding integration, then fixtures/regressions and review/QA.
+
+- 2026-11-06 implementation: URLBinding model/fixed/state metadata reuses state references and resolves private effective arguments before ticket reservation. Missing/blank URL yields missing_input with no browser; fixed/state bindings cannot be model-overridden. Standalone MCP keeps existing argument templates. Separate managed web adapter exposes enabled search/fetch with SearXNG JSON normalization, encrypted search-only headers, fresh pinned verified-TLS direct clients and no browser cookie/proxy inheritance. Provider/result limits and unsupported states are explicit; no new schema/dependency.
+- Scoped final URL/web/Agent/browser approval/layers checks: 84 passed. Existing MCP/managed/parallel/approval/workflow-tool/public-chat/envelope regressions: 121 passed. Generated contracts and whitespace passed. `docs/browser-web-tools.md` records exact support, OS-DNS limit, no business-identity attestation, backend-only metadata and controlled fake-provider evidence. Source commit precedes full declared verification.

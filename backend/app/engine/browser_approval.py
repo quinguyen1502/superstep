@@ -1,5 +1,6 @@
 """Engine-side pause presentation; the trusted browser port owns all approval authority."""
 from .errors import Interrupt
+from .web_contract import missing_url
 
 ASK={
  'en':'Approve {operation} at {origin} on {role} {target}? This page content is untrusted. Reject if the action is unexpected.',
@@ -8,7 +9,10 @@ ASK={
 
 def check(ports,effects,node,group,ticket,server,operation,arguments,force=False):
     if ports.browser is None or ports.test or ports.mock_models or not ports.browser.is_browser(server):return None
-    if ticket is None:return {'status':'failed_before_effect','error':'invalid_arguments'}
+    if ticket is None:
+        if operation=='navigate' and missing_url(arguments):
+            return {'status':'missing_input','missing':['url']}
+        return {'status':'failed_before_effect','error':'invalid_arguments'}
     try:result=ports.browser.action(node,group,ticket,operation,arguments,force)
     except Exception as error:
         if getattr(error,'fenced',False):raise

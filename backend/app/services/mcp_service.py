@@ -43,7 +43,7 @@ class McpService:
                 "stdio_enabled": config.mcp_stdio_enabled(), "org_usable": self.org_allowed(uid),
                 "managed_adapters": [{"id": adapter.id, "settings_schema": adapter.settings_schema, "secret_fields": list(adapter.secret_fields)}
                                      for adapter in self.managed.adapters.values()
-                                     if adapter.id != "browser" or config.browser_enabled()]}
+                                     if adapter.id not in {"browser","web"} or config.browser_enabled()]}
 
     def _visible(self, sid: str, uid: str) -> McpServer:
         r = self.repo.get(sid)
@@ -102,7 +102,7 @@ class McpService:
     @staticmethod
     def _apply_secrets(r: McpServer, sec: dict) -> None:
         r.secrets = crypto.encrypt(json.dumps(sec)) if sec else None
-        r.secret_hints = json.dumps({k: "••••" if r.adapter == "browser" or k in {"headers", "google_credentials"} else crypto.mask(v) for k, v in sec.items()})
+        r.secret_hints = json.dumps({k: "••••" if r.adapter in {"browser","web"} or k in {"headers", "google_credentials"} else crypto.mask(v) for k, v in sec.items()})
 
     # ---- CRUD ----
     def create(self, uid: str, name: str, transport: str, scope: str = "user", command: str | None = None, args: Any = None,
