@@ -41,7 +41,7 @@ Deliver browser connections, primitive tools for the existing Agent, reusable ty
 | [TASK-0244](../tasks/review/TASK-0244-browser-remote-profiles.md) | Remote browser capabilities and origin-scoped login profiles | M | TASK-0241, TASK-0242, TASK-0243 |
 | [TASK-0245](../tasks/review/TASK-0245-browser-run-sessions.md) | Run-bound sessions, ordered Agent calls and lifecycle integration | L | TASK-0243, TASK-0244 |
 | [TASK-0246](../tasks/review/TASK-0246-browser-approval-recovery.md) | Browser approvals, stale sessions and uncertain-effect recovery | L | TASK-0245 |
-| [TASK-0247](../tasks/backlog/TASK-0247-browser-url-web-tools.md) | Dynamic URL bindings, search/fetch and missing-context flows | M | TASK-0241, TASK-0245, TASK-0246 |
+| [TASK-0247](../tasks/doing/TASK-0247-browser-url-web-tools.md) | Dynamic URL bindings, search/fetch and missing-context flows | M | TASK-0241, TASK-0245, TASK-0246 |
 | [TASK-0248](../tasks/backlog/TASK-0248-browser-recipes.md) | Reusable typed browser recipes through existing tool surfaces | M | TASK-0241, TASK-0245, TASK-0246 |
 | [TASK-0249](../tasks/backlog/TASK-0249-browser-connection-settings-ui.md) | Connection, proxy and profile configuration UI | M | TASK-0241, TASK-0242, TASK-0244 |
 | [TASK-0250](../tasks/backlog/TASK-0250-browser-agent-recipe-trace-ui.md) | Agent/recipe configuration and filtered browser trace/chat UI | M | TASK-0247, TASK-0248, TASK-0249 |

@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0247
 - Title: Dynamic URL bindings, search/fetch and missing-context flows
-- Status: backlog
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -30,7 +30,7 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- UI/export work assigned to later tasks.
 
 ## Inputs And Related Artifacts
 
@@ -43,7 +43,7 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
 - Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
 - Dependency artifact: `.factory-state/tasks/review/TASK-0245-browser-run-sessions.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0246-browser-approval-recovery.md`.
 
 ## Expected Outputs
 
@@ -81,12 +81,12 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the complete chain, local Docker fixtures and explicitly documented stacked task delivery.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no owner merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -99,3 +99,7 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 
 - Future branch: `factory/task-0247-browser-url-web-tools`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Owner chain instruction authorises TASK-0247 after TASK-0246 scoped review/QA. Explicit unmerged stack on TASK-0246 #311 (REV-0236/QA-0236; final full profile running on isolated committed source), #310/#309/#308/#304/#303/#299. Integration develop remains 21ddce1a. Task-start edits only; no implementation source changed.
+
+- Task-start: factory ready exited 0 before implementation. Scope: existing MCP argument templates for fixed/state URLs; narrow Agent url_binding for fixed/state/model URL authority; separate managed web search/fetch connection with enabled-tool enforcement, guarded direct transport and no browser state. One configured SearXNG JSON adapter, bounded normalized results, explicit missing-input/unsupported/empty outcomes. No mandatory start URL or new Agent loop. Next implement contracts/transport/binding integration, then fixtures/regressions and review/QA.
