@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -68,9 +68,10 @@ export function CredentialsDialog({ trigger, onChanged }: { trigger?: React.Reac
   const label = (id: string) => t(`creds.providers.${id}`, { defaultValue: providers.find(x => x.id === id)?.label ?? id })
   return <Dialog open={open} onOpenChange={o => { setOpen(o); if (!o) onChanged?.() }}>
     <DialogTrigger asChild>{trigger ?? <Button variant="outline" id="creds-btn"><KeyRound />{t('creds.button')}</Button>}</DialogTrigger>
-    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto [&>*]:min-w-0">
+    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-2xl [&>*]:min-w-0">
       <DialogHeader><DialogTitle>{t('creds.title')}</DialogTitle>
         <DialogDescription className="flex items-center gap-1"><Lock className="size-3" />{t('creds.desc')}</DialogDescription></DialogHeader>
+      <DialogBody className="space-y-4">
       <div className="space-y-2">
         {items.map(c => <div key={c.id} className={cn('space-y-2 rounded-md border px-3 py-2 text-sm', editing?.id === c.id && 'border-primary bg-accent/40')} data-cred={c.name}>
           <div className="flex min-w-0 items-center gap-2">
@@ -108,10 +109,11 @@ export function CredentialsDialog({ trigger, onChanged }: { trigger?: React.Reac
       </div>
       <ProbeStatus s={test} id="cred-test-result" />
       {err && <Alert variant="destructive" id="cred-error"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
-      <div className="flex justify-end gap-2">
+      </DialogBody>
+      <DialogFooter>
         {editing && <Button variant="ghost" id="cred-cancel" onClick={reset}>{t('common.cancel')}</Button>}
         <Button variant="outline" id="cred-test" disabled={test.busy || keyMissing} onClick={() => run(setTest, () => probeProvider(provider, form()))}><PlugZap />{t('creds.test')}</Button>
-        <Button onClick={submit} id={editing ? 'cred-save' : 'cred-add'} disabled={keyMissing}>{editing ? <><Save />{t('common.save')}</> : <><Plus />{t('creds.add')}</>}</Button></div>
+        <Button onClick={submit} id={editing ? 'cred-save' : 'cred-add'} disabled={keyMissing}>{editing ? <><Save />{t('common.save')}</> : <><Plus />{t('creds.add')}</>}</Button></DialogFooter>
     </DialogContent>
     {confirmDel.dialog}
   </Dialog>

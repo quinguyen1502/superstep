@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import { META, TYPES, REDUCERS } from './meta'
 import { useStudioCtx } from './studio-context'
+import { StateFieldAction } from '@/components/state-field-action'
 
 /** Left panel: node palette and the state schema (TASK-0040). `onAdd` (phones, TASK-0121): a tap on any card adds that
  *  node, Start and End included as a drag does on desktop, since touch screens cannot drag a card onto the canvas. */
@@ -27,7 +28,15 @@ export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
         <ScrollArea className="min-h-0 flex-1"><div className="px-3 pt-3 pb-3 space-y-2">{/* pt-1: room for the first card's ring, which the viewport would clip */}{TYPES.map(t_ => { const m = META[t_]; const I = m.icon
             const add = tap ? () => tap(t_) : undefined
             // phones: the Add button is the explicit (and focusable) control; a tap anywhere on the card does the same
-            return <Card key={t_} draggable={edit} onDragStart={e => { e.dataTransfer.setData('nodetype', t_); e.dataTransfer.effectAllowed = 'move' }}
+            return <Card key={t_} draggable={edit} onDragStart={e => {
+              e.dataTransfer.setData('nodetype', t_); e.dataTransfer.effectAllowed = 'move'
+              // Native snapshots of a shadow/ring include the card's rectangular paint bounds.
+              // Clip the dedicated snapshot to its rounded edge; never capture the ScrollArea backdrop.
+              const preview = e.currentTarget.cloneNode(true) as HTMLElement
+              preview.classList.add('palette-drag-preview'); preview.style.width = `${e.currentTarget.offsetWidth}px`
+              document.body.appendChild(preview); e.dataTransfer.setDragImage(preview, 24, 24)
+              requestAnimationFrame(() => preview.remove())
+            }}
               onClick={add} data-testid="palette-card" data-type={t_}
               className={cn('flex-row items-center gap-3 p-2.5 cursor-grab hover:bg-accent transition-colors', add && 'cursor-pointer')}>
               <div className={cn('rounded-md p-1.5', m.color)}><I className="size-4" /></div>
@@ -51,7 +60,7 @@ export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
             </Select>}
           </div>)}</div></ScrollArea>
         <div className="px-3 pt-1 pb-3">
-          <Button variant="outline" size="sm" className="w-full" onClick={() => setState(s => [...s, { name: 'field' + (s.length + 1), type: 'string' }])}><Plus />{t('editor.addField')}</Button>
+          <StateFieldAction compact={false} />
         </div>
       </TabsContent>
     </Tabs>

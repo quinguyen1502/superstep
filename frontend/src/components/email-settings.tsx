@@ -1,6 +1,7 @@
 /** Send email node settings (TASK-0051): an SMTP credential (none = dry run), recipients, subject and body templates. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { StateFieldPicker } from '@/components/state-field-action'
 import { ChevronDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -55,9 +56,7 @@ export function EmailSettings({ data, fields, creds, providers, readOnly, onChan
 export function EmailData({ data, fields, onChange }: Pick<Props, 'data' | 'fields' | 'onChange'>) {
   const { t } = useTranslation()
   return <Row label={t('email.outputField')} htmlFor="email-output">
-    <Select value={data.output_field || 'none'} onValueChange={v => onChange({ output_field: v === 'none' ? '' : v })}>
-      <SelectTrigger className="w-full" id="email-output"><SelectValue /></SelectTrigger>
-      <SelectContent><SelectItem value="none">{t('email.outputNone')}</SelectItem>
-        {fields.filter(f => f.type === 'object' && (!f.reducer || f.reducer === 'replace')).map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
+    <StateFieldPicker value={data.output_field} onChange={v => onChange({ output_field: v })} id="email-output" types={['object']}
+      noneLabel={t('email.outputNone')} options={fields.filter(f => f.type === 'object' && (!f.reducer || f.reducer === 'replace')).map(f => f.name)} />
   </Row>
 }

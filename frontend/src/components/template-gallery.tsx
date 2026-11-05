@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { TemplatePreview } from '@/components/template-preview'
 import { api } from '@/lib/api'
@@ -45,11 +45,12 @@ export function TemplateGallery({ open, onOpenChange, onBlank }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent id="template-gallery" className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+      <DialogContent id="template-gallery" className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{t('templates.title')}</DialogTitle>
           <DialogDescription>{t('templates.subtitle')}</DialogDescription>
         </DialogHeader>
+        <DialogBody className="space-y-4">
         <div className="flex justify-end">
           <input ref={file} id="tpl-import-file" type="file" accept=".json,application/json" className="hidden" onChange={e => { imp(e.target.files?.[0]); e.target.value = '' }} />
           <Button variant="outline" size="sm" id="tpl-import" disabled={busy === 'import'} onClick={() => file.current?.click()}>
@@ -82,6 +83,7 @@ export function TemplateGallery({ open, onOpenChange, onBlank }: Props) {
           ) })}
         </div>
         {confirmDel.dialog}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

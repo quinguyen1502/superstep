@@ -7,11 +7,17 @@
 The bell keeps polling as a fallback, so a lost push only delays a notification.
 """
 import asyncio, json, threading
+import anyio
 from contextlib import asynccontextmanager
 from typing import AsyncIterator, Optional, Protocol
 
 
 def channel(uid: str) -> str: return f"studio:notify:{uid}"
+
+
+def workflow_runs_channel(wid: str) -> str:
+    """Separate from personal bell notifications; payloads contain invalidations only, never run data."""
+    return f"workflow-runs:{wid}"
 
 
 class NotificationHub(Protocol):
@@ -62,8 +68,11 @@ class RedisNotificationHub:
                 if m and m.get("type") == "message": yield json.loads(m["data"])
         try: yield it()
         finally:
-            try: await ps.unsubscribe(channel(uid)); await ps.aclose()
-            except Exception: pass
+            # Closing the connection unsubscribes it too. Finish this bounded cleanup
+            # even when the owning ASGI cancellation scope is already cancelled.
+            with anyio.CancelScope(shield=True):
+                try: await ps.aclose()
+                except Exception: pass
 
 
 def make_notification_hub(url: Optional[str]) -> NotificationHub:

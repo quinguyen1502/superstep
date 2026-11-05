@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { StateFieldAction } from '@/components/state-field-action'
 
 /** Which state fields this node receives. All off stores nothing, so the node sees the whole state. */
 export function NodeInput({ fields, value, onChange }: {
@@ -25,5 +26,6 @@ export function NodeInput({ fields, value, onChange }: {
           <Switch id={`node-input-${name}`} size="sm" checked={selected.has(name)} onCheckedChange={on => toggle(name, on)} />
         </div>)}
     <p className="text-[11px] text-muted-foreground">{t('editor.inputFieldsHint')}</p>
+    <StateFieldAction compact={false} onCreated={name => { if (value?.length) onChange([...new Set([...value, name])]) }} />
   </div>
 }

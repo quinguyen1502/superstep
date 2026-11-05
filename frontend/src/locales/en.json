@@ -7,6 +7,7 @@
     "loading": "Loading…",
     "retry": "Retry",
     "choose": "Choose…",
+    "noOptions": "No options available yet.",
     "optional": "(optional)",
     "darkMode": "Dark mode",
     "language": "Language",
@@ -26,6 +27,7 @@
     "timeout": "timeout",
     "cancelled": "cancelled",
     "running": "running",
+    "queued": "queued",
     "done": "done",
     "waiting": "waiting",
     "paused": "paused",
@@ -114,6 +116,21 @@
     "palette": "Node palette",
     "stateSchema": "State schema",
     "addField": "Add field",
+    "newField": {
+      "title": "Add state field",
+      "hint": "Added to the workflow draft. Save the workflow to use it in chat or API runs.",
+      "invalid": "Use letters, numbers and underscores; start with a letter or underscore.",
+      "duplicate": "A field with this name already exists.",
+      "saveFailed": "Could not save the workflow. Your changes are still in the draft.",
+      "saveTogetherHint": "New state fields are in the workflow draft. Saving here also saves the current workflow draft before the chat settings.",
+      "saveTogether": "Save workflow & settings"
+    },
+    "nodeInfo": {
+      "connections": "Connections",
+      "incoming": "Incoming",
+      "outgoing": "Outgoing",
+      "none": "No connections yet."
+    },
     "config": "Config",
     "resizePalette": "Resize the node palette",
     "resizeConfig": "Resize the config panel",
