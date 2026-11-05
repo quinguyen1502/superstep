@@ -26,13 +26,13 @@ import { TestCaseDialog, type TestCase } from '@/components/editor/editor-tests-
 import { useStudioCtx } from '@/components/editor/studio-context'
 
 export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact = false, actions }: { wid: string; active: boolean; canConfigure: boolean; canEdit: boolean; dirty: boolean; compact?: boolean; actions?: React.ReactNode }) {
-  const { t } = useTranslation(); const { setTab } = useStudioCtx()
+  const { t } = useTranslation(); const { setTab, observeChatRun, refreshHistory } = useStudioCtx()
   const [settings, setSettings] = useState<ChatSettings | null>(null); const [sessions, setSessions] = useState<ChatSession[]>([])
   const [sid, setSid] = useState<string | null>(null); const [view, setView] = useState<ChatView>('builder')
   const [err, setErr] = useState(''); const [cfg, setCfg] = useState(false); const [del, setDel] = useState<ChatSession | null>(null)
   const [draft, setDraft] = useState<TestCase | null>(null); const [draftErr, setDraftErr] = useState('')
   const list = (pick?: string) => api<ChatSession[]>(`/api/workflows/${wid}/chat/sessions`).then(s => { setSessions(s); setSid(c => pick ?? (c && s.some(x => x.id === c) ? c : s[0]?.id ?? null)) })
-  const chat = useChatRun(sid, view, () => { list().catch(() => {}) }, undefined, setSid)   // titles and order change after a message
+  const chat = useChatRun(sid, view, () => { list().catch(() => {}); refreshHistory(wid)?.catch(() => {}) }, undefined, setSid, observeChatRun)
   useLoadWhen(active, () => { setErr(''); api<ChatSettings>(`/api/workflows/${wid}/chat`).then(setSettings).catch(e => setErr(e.message)); list().catch(e => setErr(e.message)) }, wid)
   const rate = (turnId: string, value: 'up' | 'down' | null, comment?: string) => {
     if (!sid) return

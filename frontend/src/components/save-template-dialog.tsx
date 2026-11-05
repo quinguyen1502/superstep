@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useOpenState } from '@/lib/use-open-state'
@@ -33,8 +33,9 @@ export function SaveTemplateDialog(props: { wid?: string | null; defaultName: st
       {!controlled && <Tooltip><TooltipTrigger asChild><span className="inline-flex">{/* icon-only keeps the editor toolbar compact */}
         <DialogTrigger asChild><Button size="icon-sm" variant="outline" id="save-template-btn" aria-label={t('templates.saveAs')} disabled={!wid}><LayoutTemplate /></Button></DialogTrigger>
       </span></TooltipTrigger><TooltipContent>{t('templates.saveAs')}</TooltipContent></Tooltip>}
-      <DialogContent id="save-template">
+      <DialogContent id="save-template" className="flex max-h-[85dvh] flex-col overflow-hidden">
         <DialogHeader><DialogTitle>{t('templates.saveAsTitle')}</DialogTitle><DialogDescription>{t('templates.saveAsDesc')}</DialogDescription></DialogHeader>
+        <DialogBody className="space-y-4">
         {done ? <Alert id="tpl-saved"><CheckCircle2 /><AlertDescription>{t('templates.saved', { name: done })}</AlertDescription></Alert> : <>
           {dirty && <Alert variant="warning" id="tpl-unsaved"><TriangleAlert /><AlertDescription>{t('templates.unsavedNote')}</AlertDescription></Alert>}
           <div className="grid gap-2"><Label htmlFor="tpl-name">{t('templates.name')}</Label>
@@ -46,6 +47,7 @@ export function SaveTemplateDialog(props: { wid?: string | null; defaultName: st
               <SelectContent><SelectItem value="user">{t('templates.scope.user')}</SelectItem><SelectItem value="org">{t('templates.scope.org')}</SelectItem></SelectContent></Select></div>}
           {err && <Alert variant="destructive" id="tpl-save-error"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
         </>}
+        </DialogBody>
         <DialogFooter>
           {done ? <Button onClick={() => setOpen(false)}>{t('common.close')}</Button> : <>
             <Button variant="outline" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>

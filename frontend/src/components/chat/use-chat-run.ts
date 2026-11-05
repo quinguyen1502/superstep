@@ -17,7 +17,8 @@ export type ChatEndpoint = { session: (sid: string) => string; socket: string; h
 const studio = (view: ChatView): ChatEndpoint => ({ session: sid => `/api/chat/sessions/${sid}?view=${view}`, socket: '/ws/run' })
 const POLL_MS = 250, POLL_TRIES = 40   // the answer is written by the worker just after the run ends
 
-export function useChatRun(sid: string | null, view: ChatView, onSettled?: () => void, endpoint?: ChatEndpoint, onSelect?: (id: string) => void) {
+export function useChatRun(sid: string | null, view: ChatView, onSettled?: () => void, endpoint?: ChatEndpoint, onSelect?: (id: string) => void,
+  onRunEvent?: (event: RunEvent) => void) {
   const fallback = useMemo(() => studio(view), [view]); const ep = endpoint ?? fallback
   const [session, setSession] = useState<ChatSessionFull | null>(null)
   const [events, setEvents] = useState<RunEvent[]>([]); const [pending, setPending] = useState<string | null>(null)
@@ -28,6 +29,7 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
   const gen = useRef(0)
   const settled = useRef(onSettled); useEffect(() => { settled.current = onSettled })
   const select = useRef(onSelect); useEffect(() => { select.current = onSelect })
+  const observer = useRef(onRunEvent); useEffect(() => { observer.current = onRunEvent })
   const load = useCallback((id = sid) => id ? api<ChatSessionFull>(ep.session(id), { headers: ep.headers }) : Promise.resolve(null), [sid, ep])
 
   useOnChange(`${sid}|${view}`, () => { gen.current++; setSession(null); setEvents([]); setPending(null); setRunning(false); setError(''); if (queuedEdit && sid !== queuedEdit.session.id) setQueuedEdit(null) })   // another chat or view: start clean
@@ -54,6 +56,7 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
     let sent = false, sequence = -1
     sock.onopen = () => { if (!ep.v1) sock.send(JSON.stringify({ chat_session_id: sid, ...msg, locale: uiLocale() })) }
     sock.onmessage = m => {
+      if (!alive.current || gen.current !== mine) return
       let frame: RunEvent & { v?: number; seq?: number; protocol?: string }
       try { frame = JSON.parse(m.data) } catch { return }
       if (!frame || typeof frame !== 'object') return
@@ -68,6 +71,7 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
       const ev = ep.v1 ? v1ChatEvent(frame) : frame
       if (!ev) return
       if (ev.run_id) runId = ev.run_id
+      if (runId) observer.current?.({ ...ev, run_id: runId })
       if (ev.type === 'error' && !ev.node && !runId) setError(eventErrors(ev).join('; '))
       setEvents(l => [...l, ev]) }
     // still running until the saved answer is read: until then the session on screen is the one from before this
