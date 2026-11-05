@@ -36,7 +36,7 @@ Deliver browser connections, primitive tools for the existing Agent, reusable ty
 | Task | Purpose | Size | Dependencies |
 | --- | --- | --- | --- |
 | [TASK-0241](../tasks/review/TASK-0241-browser-connection-contract.md) | Browser contracts and scoped connection metadata | M | none |
-| [TASK-0242](../tasks/backlog/TASK-0242-browser-egress-proxy-policy.md) | Enforce browser egress and connection-level proxy policy | L | TASK-0241 |
+| [TASK-0242](../tasks/review/TASK-0242-browser-egress-proxy-policy.md) | Enforce browser egress and connection-level proxy policy | L | TASK-0241 |
 | [TASK-0243](../tasks/backlog/TASK-0243-browser-local-runtime.md) | Isolated local Playwright runtime and bounded browser tools | M | TASK-0241, TASK-0242 |
 | [TASK-0244](../tasks/backlog/TASK-0244-browser-remote-profiles.md) | Remote browser capabilities and origin-scoped login profiles | M | TASK-0241, TASK-0242, TASK-0243 |
 | [TASK-0245](../tasks/backlog/TASK-0245-browser-run-sessions.md) | Run-bound sessions, ordered Agent calls and lifecycle integration | L | TASK-0243, TASK-0244 |

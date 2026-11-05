@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0242
 - Title: Enforce browser egress and connection-level proxy policy
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -30,7 +30,6 @@ Enforce browser egress and connection-level proxy policy, satisfying the assigne
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
 
@@ -76,12 +75,12 @@ Enforce browser egress and connection-level proxy policy, satisfying the assigne
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the chain and selected local Docker on 2026-11-05.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; merge remains unapproved.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -94,3 +93,10 @@ Enforce browser egress and connection-level proxy policy, satisfying the assigne
 
 - Future branch: `factory/task-0242-browser-egress-proxy-policy`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Owner instructed proceeding with PLAN-0006 and selected local Docker. Explicit stack on TASK-0241 commit ea29f822 (review/QA REV-0229 / QA-0229, not merged). The branch `factory/task-0242-browser-egress-proxy-policy` carries the published planning package and TASK-0241; do not merge independently of prerequisites. Scope remains one reviewable egress gateway + isolated adversarial fixture delivery; no product browser runtime activation.
+
+- 2026-11-05: `factory ready` passed before source edits. TASK-0241 Draft PR #303 is the declared stack prerequisite. Task-start complete; implementing effective egress gateway and disposable browser fixture, with product runtime still disabled.
+
+- 2026-11-05: Implemented guarded Unix-socket gateway, all-answer public-IP policy, pinned numeric direct/proxy routes, explicit operator proxy approvals/default, bounded HTTP framing/concurrency/time/bytes and no fallback. Shared URL syntax extracted without changing metadata behavior. `docs/browser-egress.md` documents topology and limits.
+- 2026-11-05: Final real Chromium proof passed direct/custom/operator-default (13/14/14 denials, 14 numeric proxy CONNECTs), including secure-origin SW blocking, redirect/subresource/DNS/proxy failure cases and no direct network. 179 targeted backend regressions passed; REV-0230 / QA-0230 recorded. Product runtime remains unavailable; no merge/release/deployment.
