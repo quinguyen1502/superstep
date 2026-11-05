@@ -8,7 +8,7 @@
 - Reviewer: Codex (self-review; owner review pending)
 - Created: 2026-11-06
 - Updated: 2026-11-06
-- Outcome: scoped conditional pass; full declared verification pending
+- Outcome: scoped pass; declared verification passed
 
 ## Review Scope And References
 
@@ -36,4 +36,6 @@ Role-only extraction needs one unique reviewed semantic role; it does not attest
 
 ## Review Decision
 
-Conditionally approved for scoped QA pending full declared verification, final locale wording review and owner approval. No done/Ready/merge approval.
+Conditionally approved for scoped QA with declared verification and locale wording checks passed; owner approval pending. No done/Ready/merge approval.
+
+- Final canonical full profile on 27cdf07d (only documentation followed during the run): all eight commands passed. Backend 483.94 s; root build/lint/test 11.83/1.16/16.65 s; Python SDK 14.76 s; TS SDK build/test/typecheck 1.58/1.46/1.46 s. A subsequent wording-only vi correction uses the input/output glossary; root npm test passed 280 tests and backend locale/envelope passed 14 tests (5.60 s). No backend behavior/source changed after the full profile. Owner review remains pending; no done/Ready/merge approval.

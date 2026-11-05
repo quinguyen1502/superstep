@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0006
-- Status: Accepted for delivery — TASK-0241–0247 in review; remaining tasks await dependencies
+- Status: Accepted for delivery — TASK-0241–0248 in review; remaining tasks await dependencies
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -42,7 +42,7 @@ Deliver browser connections, primitive tools for the existing Agent, reusable ty
 | [TASK-0245](../tasks/review/TASK-0245-browser-run-sessions.md) | Run-bound sessions, ordered Agent calls and lifecycle integration | L | TASK-0243, TASK-0244 |
 | [TASK-0246](../tasks/review/TASK-0246-browser-approval-recovery.md) | Browser approvals, stale sessions and uncertain-effect recovery | L | TASK-0245 |
 | [TASK-0247](../tasks/review/TASK-0247-browser-url-web-tools.md) | Dynamic URL bindings, search/fetch and missing-context flows | M | TASK-0241, TASK-0245, TASK-0246 |
-| [TASK-0248](../tasks/doing/TASK-0248-browser-recipes.md) | Reusable typed browser recipes through existing tool surfaces | M | TASK-0241, TASK-0245, TASK-0246 |
+| [TASK-0248](../tasks/review/TASK-0248-browser-recipes.md) | Reusable typed browser recipes through existing tool surfaces | M | TASK-0241, TASK-0245, TASK-0246 |
 | [TASK-0249](../tasks/backlog/TASK-0249-browser-connection-settings-ui.md) | Connection, proxy and profile configuration UI | M | TASK-0241, TASK-0242, TASK-0244 |
 | [TASK-0250](../tasks/backlog/TASK-0250-browser-agent-recipe-trace-ui.md) | Agent/recipe configuration and filtered browser trace/chat UI | M | TASK-0247, TASK-0248, TASK-0249 |
 | [TASK-0251](../tasks/backlog/TASK-0251-browser-python-export.md) | Executable Python and project export for browser tools/recipes | L | TASK-0247, TASK-0248, TASK-0246, TASK-0244 |
