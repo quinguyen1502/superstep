@@ -58,3 +58,7 @@ API/metadata foundation only. No new canvas node or tabs; the existing typed-nam
 ## Review Decision
 
 Approved for QA within contract/metadata scope; advisory self-review does not substitute for owner approval.
+
+## Final Regression Evidence — 2026-11-05
+
+Declared backend command `.venv/bin/python -m pytest` passed: 1,234 passed, 65 skipped in 513.35 seconds on Python 3.14.6/SQLite. The 65 skips reflect unavailable optional engines/services/toolchains; no Postgres/Redis or isolated-browser evidence is inferred. Root npm test (280 passed), build, lint, Factory validate, ID and whitespace checks also passed. Earlier full-suite-pending statements are superseded. TASK-0241 remains in review pending owner approval; no merge authorised.
