@@ -4,7 +4,7 @@ import json, time
 from typing import Any, Dict, List, Optional
 from langgraph.checkpoint.memory import InMemorySaver
 from .compiler import compile_workflow
-from . import agents, foreach
+from . import agents, foreach, browser_recipes
 from .effects import Effects
 from .errors import Interrupt, ValidationError
 from .issues import Issue
@@ -32,6 +32,7 @@ PY_TYPES = {"number": (int, float), "integer": (int,), "boolean": (bool,), "list
 def check_input(wf: Dict[str, Any], inputs: Any) -> List[str]:
     """Run input must be a JSON object whose known fields match the state schema types."""
     if not isinstance(inputs, dict): return [Issue("INPUT_NOT_OBJECT")]
+    browser_recipes.validate_input(wf,inputs)
     errs = []
     for f in wf.get("state", []) or []:
         name, typ = f.get("name"), f.get("type", "string")
@@ -167,7 +168,11 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", "node": until, "code": "RUN_NODE_NOT_REACHED", "errors": [msg],
                "error": {"code": "RUN_NODE_NOT_REACHED", "message": msg, "details": {"node": until}}}
         return
-    yield {"type": "run_finished", "state": agents.visible(foreach.visible(state))}
+    try:final=browser_recipes.outputs(wf,agents.visible(foreach.visible(state)))
+    except Exception as error:
+        yield {'type':'error','code':getattr(error,'code','NODE_FAILED'),'errors':[safe_error(error)]}
+        return
+    yield {"type": "run_finished", "state": final}
 
 
 def _holds(effects, i: Interrupt) -> List[dict]:

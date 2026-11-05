@@ -47,6 +47,10 @@ class Destination(BaseHTTPRequestHandler):
         elif self.path.startswith('/mutable-effect'):
             body=b'''<html><h1>Mutable fixture</h1><button id="action" onclick="fetch('/effect',{method:'POST'})">Initial effect</button>
             <script>setInterval(()=>fetch('/mutation-status').then(r=>r.text()).then(value=>{if(value==='1')document.getElementById('action').textContent='Changed effect'}),500)</script></html>'''
+        elif self.path.startswith('/shipment'):
+            body=b'''<html><h1>Shipment fixture</h1><input aria-label="Order ID">
+            <button onclick="document.getElementById('status').textContent='Submitted '+document.querySelector('input').value;fetch('/effect',{method:'POST',body:document.querySelector('input').value})">Track shipment</button>
+            <p id="status" role="status">Ready</p></html>'''
         elif self.path.startswith("/effect-form"):
             body = b'''<html><h1>Effect fixture</h1><button onclick="fetch('/effect',{method:'POST'}).then(()=>document.getElementById('status').textContent='Submitted')">Submit effect</button><p id="status">Ready</p></html>'''
         elif self.path.startswith("/profile"):

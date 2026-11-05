@@ -37,7 +37,7 @@ from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
-from . import attachments, subgraphs, browser_approval, web_contract
+from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
@@ -120,6 +120,7 @@ def parameters(t: Dict[str, Any]) -> Dict[str, Any]:
     if src == "knowledge": return QUERY
     if src == "builtin": return PARAMETERS.get(t.get("function") or "") or {"type": "object", "properties": {}}
     if src == "workflow":  # the child's state fields the model fills, typed from the snapshot once a run is planned
+        if browser_recipes.parsed(t.get('snapshot') or {}) is not None:return browser_recipes.input_schema(t['snapshot'])
         props, want = state_schema(t.get("snapshot") or {})["properties"], field_list(t.get("inputs"))
         return {"type": "object", "properties": {f: props.get(f) or {"type": "string"} for f in want}, "required": want}
     p = t.get("parameters")
@@ -579,6 +580,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             elif tool.get("source") == "workflow":  # start the child run (once per call) and wait for it (DEC-0066)
                 try:
                     if ports.start_child is None: raise RuntimeError("workflow tools need the run service")
+                    browser_recipes.validate_input(tool.get('snapshot') or {},args)
                     call_key = f"{effects.key(nid) if effects else nid}#{call['id']}"
                     inp = {f: args[f] for f in field_list(tool.get("inputs")) if f in args}
                     cid = ports.start_child(call_key, tool.get("snapshot") or {}, tool.get("version"), inp,

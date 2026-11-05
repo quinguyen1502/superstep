@@ -249,6 +249,8 @@ class RunService:
             v = self.versions.get(wid, n) if wid and edits and self.versions is not None and isinstance(n, int) and not isinstance(n, bool) else None
             if v is None: raise AppError("VERSION_NOT_FOUND")
             wf = json.loads(v.data or "{}")
+        from ..engine import browser_recipes
+        browser_recipes.validate_input(wf,inp)
         version = n if n is not None else self._version_of(wid, wf)
         res = row.owner if row is not None and row.owner else uid  # a saved workflow uses its owner's resources (DEC-0023)
         wf, invalid = self._expand(res, wid, wf)
@@ -327,9 +329,14 @@ class RunService:
     def _child_starter(self, rid: str, plan: RunPlan, uid: str):
         """ports.start_child of one run: insert the child (once per call key) and queue it."""
         def start(key: str, wf: dict, version: Optional[int], inp: dict, meta: dict) -> str:
+            from ..engine import browser_recipes
+            browser_recipes.validate_input(wf,inp)
             if self.jobs is None: raise RuntimeError("workflow tools need the job queue")
             found = self.runs.child_of(rid, key)
             if found is not None: return found.id
+            if browser_recipes.parsed(wf) is not None and self.browser is not None and (
+                getattr(getattr(plan.ports,'browser',None),'lost',False) or self.browser.repo.has_history(rid,uncertain=True)):
+                raise AppError('BROWSER_RUNTIME_UNAVAILABLE')
             depth, r = 1, self.runs.get(rid)
             while r is not None and r.parent_run_id: depth += 1; r = self.runs.get(r.parent_run_id)
             if depth > subgraphs.MAX_DEPTH: raise AppError("WORKFLOW_TOOL_TOO_DEEP", max=subgraphs.MAX_DEPTH)
@@ -345,8 +352,16 @@ class RunService:
         """The first segment of a child run: the snapshot its parent's plan took (DEC-0066 decision 2)."""
         cp = json.loads(r.checkpoint or "{}"); uid = r.owner or ""
         res = self.run_resources(r, uid)
+        from ..engine import browser_recipes
+        browser_recipes.validate_input(cp.get('workflow') or {},json.loads(r.input or '{}'))
         return RunPlan(r.workflow_id, cp.get("workflow") or {}, json.loads(r.input or "{}"), self.credentials.resolver(res) if self.credentials else None,
                        run_id=r.id, source="tool", version=r.workflow_version, ports=self.run_ports(r, uid))
+
+    def plan_recipe(self,r:Run)->RunPlan:
+        """A queued recipe uses its accepted snapshot; current workflow access is still required."""
+        self._workflow(r.workflow_id,r.owner or '',P.RUN)
+        plan=self.plan_child(r);plan.source=r.source or 'api'
+        return plan
 
     def child_value(self, r: Run) -> dict:
         """What the parent's tool step gets from a finished child: its status, final state or error, and usage."""
@@ -609,7 +624,8 @@ class RunService:
         from there (same checkpoint shape as HITL; parallel branches and imported graphs included, TASK-0021);
         without one it starts over. Either way the lost segment's root span is exported first (DEC-0018)."""
         cp = json.loads(r.checkpoint or "null") or {}
-        snapshot = cp.get("workflow") if r.parent_run_id else None  # a child restarts on its parent's snapshot (TASK-0134)
+        recipe_snapshot=cp.get('kind')=='browser_recipe'
+        snapshot = cp.get("workflow") if r.parent_run_id or recipe_snapshot else None  # child/accepted recipe snapshots survive before first progress
         if cp.get("kind") != "progress": cp = {}
         lost = cp.get("trace")
         if lost:
@@ -618,7 +634,7 @@ class RunService:
         common = dict(run_id=r.id, source=r.source or "api", trace_parent=lost, checkpointing=True, fence=fence, attempt=attempt)
         if not (cp.get("node") or cp.get("nodes")):  # nothing finished yet: restart from the beginning
             if snapshot is not None:
-                plan = self.plan_child(r)
+                plan = self.plan_recipe(r) if recipe_snapshot and not r.parent_run_id else self.plan_child(r)
                 for k, v in common.items(): setattr(plan, k, v)
                 return plan
             pin = {"version": r.workflow_version} if r.source == "test" and r.workflow_version else {}  # a test run keeps its version

@@ -186,7 +186,7 @@ def chat_attachment_service() -> ChatAttachmentService:
 
 def trigger_service() -> TriggerService:
     db = get_db(); return TriggerService(WorkflowRepository(db), RunRepository(db), WorkflowTokenRepository(db), get_job_queue(), get_rate_limiter(),
-                                         access=access_service())
+                                         access=access_service(),versions=WorkflowVersionRepository(db))
 
 
 def workflow_mcp_service() -> WorkflowMcpService:

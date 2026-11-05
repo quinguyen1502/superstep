@@ -4,7 +4,7 @@ import re, string
 from typing import Annotated, Any, Dict, List, Optional, TypedDict
 from langgraph.cache.memory import InMemoryCache
 from langgraph.graph import StateGraph, START, END
-from . import agents, foreach, handoffs
+from . import agents, foreach, handoffs, browser_recipes
 from .errors import ValidationError
 from .node_policy import add_node_kwargs, input_schema, limit, needs_cache
 from .nodes import node_fn
@@ -38,6 +38,7 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
     if errs:
         from .subgraphs import readable  # expanded subgraph nodes by label (TASK-0029)
         raise ValidationError(readable(errs, wf))
+    wf=browser_recipes.prepare(wf)
     def annotation(f):
         typ = TYPE_MAP.get(f.get("type", "string"), str); fn = fn_of(f)
         return Annotated[typ, fn] if fn else Optional[typ]  # reducer fields: LangGraph combines parallel writes (TASK-0011)

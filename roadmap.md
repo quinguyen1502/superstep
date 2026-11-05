@@ -452,7 +452,7 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **accepted for delivery o
 - TASK-0245 — run-bound sessions, ordered Agent calls and lifecycle. **review** (REV-0235, QA-0235), stacked on TASK-0244 #309.
 - TASK-0246 — approvals, expired/lost sessions and uncertain-effect recovery. **review** (REV-0236, QA-0236; full verification passed), stacked on TASK-0245 #310.
 - TASK-0247 — dynamic URL bindings, search/fetch and missing context. **doing**, explicitly stacked on TASK-0246 #311.
-- TASK-0248 — typed reusable recipes through existing tool surfaces. **backlog**.
+- TASK-0248 — typed reusable recipes through existing tool surfaces. **doing**, explicitly stacked on TASK-0247 #312 / TASK-0246 #311.
 - TASK-0249 — connection/proxy/profile settings UI. **backlog**.
 - TASK-0250 — Agent/recipe config and filtered trace/chat UI. **backlog**.
 - TASK-0251 — executable Python/plain and project exports. **backlog**.

@@ -326,6 +326,7 @@ The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Cod
 | --- | --- | --- |
 | `BROWSER_DISABLED` | 404 | Browser metadata/discovery is disabled by the operator. |
 | `BROWSER_RUNTIME_UNAVAILABLE` | 503 | No verified isolated browser runtime/trusted run context is available; no browser operation is started. |
+| `BROWSER_RECIPE_INVALID` | 400 | Recipe version, bounded linear browser sequence, typed input/output fields or literal observation targets are invalid. |
 
 | Code | Status | Meaning |
 | --- | --- | --- |

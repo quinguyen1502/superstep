@@ -1,0 +1,216 @@
+{
+  "name": "lookup_shipment",
+  "description": "Typed browser recipe: use an authorised URL and order ID; review fill/click and return the bounded shipment extraction. Adapt literal targets to the reviewed page layout.",
+  "browser_recipe": {
+    "version": 1,
+    "connection_id": "browser",
+    "inputs": [
+      "url",
+      "order_id"
+    ],
+    "outputs": [
+      "shipment"
+    ]
+  },
+  "state": [
+    {
+      "name": "url",
+      "type": "string"
+    },
+    {
+      "name": "order_id",
+      "type": "string"
+    },
+    {
+      "name": "page",
+      "type": "object"
+    },
+    {
+      "name": "fill_result",
+      "type": "object"
+    },
+    {
+      "name": "form_page",
+      "type": "object"
+    },
+    {
+      "name": "click_result",
+      "type": "object"
+    },
+    {
+      "name": "shipment_page",
+      "type": "object"
+    },
+    {
+      "name": "shipment",
+      "type": "object"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "start",
+      "type": "start",
+      "data": {},
+      "position": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": "open",
+      "type": "mcp",
+      "position": {
+        "x": 240,
+        "y": 0
+      },
+      "data": {
+        "label": "open",
+        "server_id": "browser",
+        "tool": "navigate",
+        "arguments": {
+          "url": "{{state.url}}"
+        },
+        "output_field": "page"
+      }
+    },
+    {
+      "id": "fill",
+      "type": "mcp",
+      "position": {
+        "x": 480,
+        "y": 0
+      },
+      "data": {
+        "label": "fill",
+        "server_id": "browser",
+        "tool": "fill",
+        "arguments": {
+          "value": "{{state.order_id}}"
+        },
+        "output_field": "fill_result",
+        "target": {
+          "observation_field": "page",
+          "role": "textbox",
+          "text": "Order ID"
+        }
+      }
+    },
+    {
+      "id": "observe_form",
+      "type": "mcp",
+      "position": {
+        "x": 720,
+        "y": 0
+      },
+      "data": {
+        "label": "observe form",
+        "server_id": "browser",
+        "tool": "snapshot",
+        "arguments": {},
+        "output_field": "form_page"
+      }
+    },
+    {
+      "id": "submit",
+      "type": "mcp",
+      "position": {
+        "x": 960,
+        "y": 0
+      },
+      "data": {
+        "label": "submit",
+        "server_id": "browser",
+        "tool": "click",
+        "arguments": {},
+        "output_field": "click_result",
+        "target": {
+          "observation_field": "form_page",
+          "role": "button",
+          "text": "Track shipment"
+        }
+      }
+    },
+    {
+      "id": "observe_shipment",
+      "type": "mcp",
+      "position": {
+        "x": 1200,
+        "y": 0
+      },
+      "data": {
+        "label": "observe shipment",
+        "server_id": "browser",
+        "tool": "snapshot",
+        "arguments": {},
+        "output_field": "shipment_page"
+      }
+    },
+    {
+      "id": "extract",
+      "type": "mcp",
+      "position": {
+        "x": 1440,
+        "y": 0
+      },
+      "data": {
+        "label": "extract",
+        "server_id": "browser",
+        "tool": "extract",
+        "arguments": {},
+        "output_field": "shipment",
+        "targets": {
+          "status": {
+            "observation_field": "shipment_page",
+            "role": "status"
+          }
+        }
+      }
+    },
+    {
+      "id": "end",
+      "type": "end",
+      "data": {},
+      "position": {
+        "x": 1680,
+        "y": 0
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-0",
+      "source": "start",
+      "target": "open"
+    },
+    {
+      "id": "edge-1",
+      "source": "open",
+      "target": "fill"
+    },
+    {
+      "id": "edge-2",
+      "source": "fill",
+      "target": "observe_form"
+    },
+    {
+      "id": "edge-3",
+      "source": "observe_form",
+      "target": "submit"
+    },
+    {
+      "id": "edge-4",
+      "source": "submit",
+      "target": "observe_shipment"
+    },
+    {
+      "id": "edge-5",
+      "source": "observe_shipment",
+      "target": "extract"
+    },
+    {
+      "id": "edge-6",
+      "source": "extract",
+      "target": "end"
+    }
+  ]
+}
