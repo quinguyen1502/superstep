@@ -7,6 +7,7 @@
     "loading": "Đang tải…",
     "retry": "Thử lại",
     "choose": "Chọn…",
+    "noOptions": "Chưa có lựa chọn nào.",
     "optional": "(tuỳ chọn)",
     "darkMode": "Chế độ tối",
     "language": "Ngôn ngữ",
@@ -26,6 +27,7 @@
     "timeout": "quá giờ",
     "cancelled": "đã huỷ",
     "running": "đang chạy",
+    "queued": "đang chờ chạy",
     "done": "xong",
     "waiting": "đang chờ",
     "paused": "tạm dừng",
@@ -114,6 +116,21 @@
     "palette": "Bảng node",
     "stateSchema": "State schema",
     "addField": "Thêm trường",
+    "newField": {
+      "title": "Thêm trường state",
+      "hint": "Trường được thêm vào bản nháp. Lưu workflow để dùng trong chat hoặc run qua API.",
+      "invalid": "Dùng chữ cái, chữ số và dấu gạch dưới; bắt đầu bằng chữ cái hoặc dấu gạch dưới.",
+      "duplicate": "Đã có trường dùng tên này.",
+      "saveFailed": "Không lưu được workflow. Các thay đổi vẫn nằm trong bản nháp.",
+      "saveTogetherHint": "Trường state mới đang nằm trong bản nháp. Lưu ở đây sẽ lưu cả bản nháp workflow hiện tại trước khi lưu cài đặt chat.",
+      "saveTogether": "Lưu workflow và cài đặt"
+    },
+    "nodeInfo": {
+      "connections": "Kết nối",
+      "incoming": "Đầu vào",
+      "outgoing": "Đầu ra",
+      "none": "Chưa có kết nối."
+    },
     "config": "Cấu hình",
     "resizePalette": "Đổi kích thước bảng node",
     "resizeConfig": "Đổi kích thước bảng cấu hình",

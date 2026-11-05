@@ -149,7 +149,7 @@ function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void
     <Tabs value={tab} onValueChange={setTab} className="flex-1 min-h-0 flex flex-col gap-0">
       <TabsList size="sm" className="mx-3 mt-1.5">{['input', 'output', 'diff', 'raw'].map(k => <TabsTrigger key={k} value={k}>{t(`trace.${k}`)}</TabsTrigger>)}</TabsList>
       <ScrollArea className="flex-1 min-h-0"><div className="p-3 pt-2">
-        {s.error && <Alert variant="destructive" className="mb-2 items-center text-xs *:[svg]:row-span-1 *:[svg]:translate-y-0"><AlertTriangle /><AlertDescription className="wrap-break-word text-xs">{s.error}</AlertDescription></Alert>}
+        {s.error && <Alert variant="destructive" className="mb-2 text-xs"><AlertTriangle /><AlertDescription className="wrap-break-word text-xs">{s.error}</AlertDescription></Alert>}
         <TabsContent value="input"><JsonView value={s.input} /></TabsContent>
         <TabsContent value="output">{s.status === 'running' && s.live
           ? <div className="space-y-1" id="trace-live"><div className="flex items-center gap-1 text-[11px] text-muted-foreground"><Loader2 className="size-3 animate-spin" />{t('trace.streaming')}</div>

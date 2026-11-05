@@ -60,7 +60,8 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       }
       const addField = async (name: string) => {
         await page.locator('#panel-left').getByRole('button', { name: s.addField }).click()
-        await page.locator('#panel-left input').last().fill(name)
+        await page.getByRole('dialog').locator('input').first().fill(name)
+        await page.getByRole('dialog').getByRole('button', { name: s.addField, exact: true }).click()
       }
       // the output field is in the Config panel's Data tab (TASK-0121); back to Settings afterwards
       const configTab = (k: 'settings' | 'data') => page.locator(`#config-tab-${k}`).click()

@@ -309,6 +309,14 @@
     }
 }
 .react-flow__node { font-family: inherit; }
+.palette-drag-preview {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  box-shadow: none;
+  outline: none;
+  clip-path: inset(0 round var(--radius-xl));
+}
 .react-flow__handle { width: 10px; height: 10px; }
 
 /* Typeset preset for chat answers (TASK-0085): the tighter rhythm from the Typeset docs. */

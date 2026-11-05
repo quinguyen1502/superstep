@@ -4,7 +4,7 @@ import { AlertCircle, History, Info, RotateCcw, TriangleAlert } from 'lucide-rea
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useOpenState } from '@/lib/use-open-state'
@@ -81,8 +81,9 @@ export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => v
   </Select>
   return <Dialog open={open} onOpenChange={setOpen}>
     {!controlled && <DialogTrigger asChild><Button size="sm" variant="outline" id="versions-btn" disabled={!wid}><History />{t('versions.button')}</Button></DialogTrigger>}
-    <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
+    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-4xl">
       <DialogHeader><DialogTitle>{t('versions.title')}</DialogTitle><DialogDescription>{t('versions.desc')}</DialogDescription></DialogHeader>
+      <DialogBody className="space-y-4">
       {err && <Alert variant="destructive"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
       {!!children.length && <Alert variant="warning" id="versions-children"><TriangleAlert /><AlertDescription>{t('versions.childrenChanged', { count: children.length })}
         <ul className="mt-1 list-disc pl-4">{children.map(c => <li key={c.id}>{c.name} · v{c.version} · {fmtDate(c.at)}</li>)}</ul></AlertDescription></Alert>}
@@ -100,7 +101,7 @@ export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => v
             {!v.current && (confirm === v.version
               ? <div className="space-y-1">{dirty && <p className="text-warning" data-testid="restore-unsaved-warning">{t('versions.unsavedWarning')}</p>}<div className="flex gap-1"><Button size="xs" variant="destructive" data-testid="restore-confirm" onClick={() => restore(v.version)}>{t('versions.confirm', { n: v.version })}</Button>
                   <Button size="xs" variant="ghost" onClick={() => setConfirm(null)}>{t('common.cancel')}</Button></div></div>
-              : <Button size="xs" variant="ghost" data-testid="restore-btn" onClick={() => setConfirm(v.version)}><RotateCcw />{t('versions.restore')}</Button>)}
+              : <Button size="xs" variant="outline" data-testid="restore-btn" onClick={() => setConfirm(v.version)}><RotateCcw data-icon="inline-start" /><span>{t('versions.restore')}</span></Button>)}
           </div>)}
           {items.length < total && <Button variant="ghost" size="sm" className="w-full" id="versions-more" onClick={more}>{t('versions.loadMore')} ({t('versions.shown', { shown: items.length, total })})</Button>}</div>
         </ScrollArea>
@@ -115,6 +116,7 @@ export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => v
           </div>
         </div>
       </div>
+      </DialogBody>
     </DialogContent>
   </Dialog>
 }

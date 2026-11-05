@@ -1,5 +1,5 @@
 /** Input for `{{state.field}}` templates (TASK-0041): references show as tags, `{{` suggests state fields, the braces button inserts one. The value stays plain text. */
-import { useMemo, useRef } from 'react'
+import { useContext, useMemo, useRef } from 'react'
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { autocompletion, type Completion, type CompletionContext } from '@codemirror/autocomplete'
 import { EditorState, StateEffect, StateField } from '@codemirror/state'
@@ -12,6 +12,8 @@ import { badFilter, closeLen, FILTERS, openFilter, openRef, parseRef, refLabel, 
 import { cn } from '@/lib/utils'
 import i18n from '@/lib/i18n'
 import { Tip } from '@/components/tip'
+import { StudioContext } from '@/components/editor/studio-context'
+import { StateFieldAction } from '@/components/state-field-action'
 
 export type TemplateField = { name: string; type?: string }
 
@@ -140,7 +142,7 @@ export function TemplateEditor({ value, onChange, fields, readOnly, singleLine, 
   placeholder?: string
   className?: string
 }) {
-  const { t } = useTranslation(); const cm = useRef<ReactCodeMirrorRef>(null)
+  const { t } = useTranslation(); const cm = useRef<ReactCodeMirrorRef>(null); const studio = useContext(StudioContext)
   const key = JSON.stringify(fields.map(f => ({ name: f.name, type: f.type })))  // callers pass a new array on every render
   const extensions = useMemo(() => { const list: TemplateField[] = JSON.parse(key); return [
     ...tags(new Set(list.map(f => f.name))),
@@ -163,7 +165,7 @@ export function TemplateEditor({ value, onChange, fields, readOnly, singleLine, 
     e.preventDefault(); view.focus(); view.dispatch({ selection: { anchor: view.state.doc.length } })
   }
   return <div onMouseDown={focusEnd} className={cn('relative min-w-0 cursor-text rounded-lg border border-input bg-transparent py-1.5 pl-2.5 pr-8 text-xs transition-colors focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 dark:bg-input/30',
-    readOnly && 'cursor-not-allowed bg-input/50 opacity-50 dark:bg-input/80', className)}>
+    !readOnly && studio?.editable && 'pr-16', readOnly && 'cursor-not-allowed bg-input/50 opacity-50 dark:bg-input/80', className)}>
     <CodeMirror ref={cm} value={value} onChange={onChange} theme="none" editable={!readOnly} readOnly={!!readOnly} basicSetup={SETUP} extensions={extensions}
       minHeight={singleLine ? undefined : `${rows * 1.5}em`} maxHeight="20rem" />
     {/* not modal: a modal menu traps focus until it unmounts, so a key pressed right after picking would reach the canvas */}
@@ -179,5 +181,6 @@ export function TemplateEditor({ value, onChange, fields, readOnly, singleLine, 
         </DropdownMenuItem>) : <DropdownMenuItem disabled className="text-xs">{t('template.noFields')}</DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>}
+    {!readOnly && <StateFieldAction size="icon-xs" className="absolute right-8 top-1" onCreated={insert} />}
   </div>
 }

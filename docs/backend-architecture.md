@@ -174,6 +174,14 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - `NotificationHub` (`services/notification_hub.py`) + WebSocket `/ws/notifications`; `NotificationService.preferences/set_preferences`, `email_text/email_html`.
 - Migration `0009_effectively_once`: `node_results`, `runs.lease_gen`, `users.notify_in_app/notify_email`.
 
+### Live workflow run history (TASK-0256)
+
+- `RunService.history_changed` publishes a lightweight invalidation after existing progress/terminal writes through the same NotificationHub (Redis across processes; memory in single-process development). It does not create bell notifications or carry run content.
+- Socket chat runs also persist capped display snapshots at run start/resume and node boundaries, excluding token deltas. Their `live_history` marker is not a recovery checkpoint: memory startup cancels orphan socket snapshots rather than replaying side effects. Ordinary editor/ad-hoc runs retain their existing persistence behaviour; queued jobs retain their existing fenced progress/checkpoint path. Waiting/terminal persistence replaces the display marker with the normal checkpoint/result.
+- `/ws/workflows/{wid}/runs` authenticates with the normal same-origin session/token rules. `RunService.watch_history` enforces the same workflow and per-run visibility as `history`; the route rechecks authentication/access on pushes and heartbeats. Clients receive only `ready`, `runs_changed` and `ping`, never another user's run identifiers or data.
+- Observer receive/push/heartbeat tasks share an AnyIO task group tied to the ASGI lifetime; PubSub connection cleanup is shielded from cancellation and does not leave detached subscriptions.
+- Studio reads snapshots through the existing `/api/workflows/{wid}/runs` envelope API after an invalidation, reconnect or focus, with a disconnected polling fallback. The current chat socket additionally updates its own run immediately. Selected runs remain selected and update their persisted traces; workflow switches and stale responses are guarded. No migration or expanded history permission.
+
 ## LLM providers (TASK-0030, DEC-0032)
 
 `engine/providers.py` is the provider registry (one strategy class per provider: defaults, model listing, LangChain chat model). `engine/llm.py` dispatches LLM nodes to it; `services/credential_service.py` uses it for validation, model lists and connection tests. Engine failures are `ProviderError(code)` and become `AppError` in the service.
