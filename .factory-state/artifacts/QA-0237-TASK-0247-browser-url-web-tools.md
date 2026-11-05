@@ -8,7 +8,7 @@
 - QA Owner: Codex (advisory; owner approval pending)
 - Created: 2026-11-06
 - Updated: 2026-11-06
-- Outcome: scoped conditional pass; full declared verification pending
+- Outcome: scoped pass; full declared verification passed
 
 ## Validation Scope And References
 
@@ -34,8 +34,10 @@ No UI component changed. Backend metadata and existing Agent/MCP/approval surfac
 
 ## Defects, Gaps And Residual Risk
 
-No blocking scoped finding. Full declared verification remains pending. Search quality/availability and an operator-provisioned JSON-enabled public HTTPS SearXNG instance are not exercised by fake-provider tests. Network policy is enforced at actual candidate use; the model remains responsible for asking about ambiguous business context, constrained by saved origins/fixed bindings when configured. Shared OS resolver has no absolute timeout promise. GET is the exposed read method; no browser login/proxy is inherited. UI/recipes/executable export/release acceptance remain their assigned tasks and default-off scope.
+No blocking scoped finding. Full declared verification passed. Search quality/availability and an operator-provisioned JSON-enabled public HTTPS SearXNG instance are not exercised by fake-provider tests. Network policy is enforced at actual candidate use; the model remains responsible for asking about ambiguous business context, constrained by saved origins/fixed bindings when configured. Shared OS resolver has no absolute timeout promise. GET is the exposed read method; no browser login/proxy is inherited. UI/recipes/executable export/release acceptance remain their assigned tasks and default-off scope.
 
 ## QA Decision
 
-Conditionally passed for scoped review pending full committed-source verification and owner approval. No done/Ready/merge approval.
+Conditionally passed for scoped review with full committed-source verification passed; owner approval pending. No done/Ready/merge approval.
+
+- Final canonical verification on committed 01b3727e (only documentation/evidence followed): all eight commands passed. Root build/lint/test 12.68/1.20/17.97 s; backend 478.82 s; Python SDK 13.73 s; TypeScript SDK build/test/typecheck 1.59/1.36/1.45 s. No backend/Node source changed during the run. Factory verify validation/IDs follow before publication; no owner merge approval.

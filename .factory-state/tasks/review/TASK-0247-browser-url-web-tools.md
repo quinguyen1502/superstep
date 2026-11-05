@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0247
 - Title: Dynamic URL bindings, search/fetch and missing-context flows
-- Status: doing
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -108,3 +108,5 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 - Scoped final URL/web/Agent/browser approval/layers checks: 84 passed. Existing MCP/managed/parallel/approval/workflow-tool/public-chat/envelope regressions: 121 passed. Generated contracts and whitespace passed. `docs/browser-web-tools.md` records exact support, OS-DNS limit, no business-identity attestation, backend-only metadata and controlled fake-provider evidence. Source commit precedes full declared verification.
 
 - 2026-11-06 review/QA: REV-0237/QA-0237 scoped conditional pass, final full profile on 01b3727e pending. No blocking scoped finding; API-only metadata/UX and live-provider limits explicitly recorded. TASK-0246 predecessor final full checks passed and PR #311 evidence updated.
+
+- Final canonical full verification on 01b3727e: all eight declared commands passed, backend 478.82 s. Only documentation/evidence followed. REV-0237/QA-0237 scoped pass; owner review remains pending. Publish one Draft PR; no merge/release.

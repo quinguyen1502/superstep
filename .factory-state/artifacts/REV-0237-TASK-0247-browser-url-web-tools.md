@@ -8,7 +8,7 @@
 - Reviewer: Codex (self-review; owner review pending)
 - Created: 2026-11-06
 - Updated: 2026-11-06
-- Outcome: scoped conditional pass; full declared verification pending
+- Outcome: scoped pass; full declared verification passed
 
 ## Review Scope And Reference Artifacts
 
@@ -36,4 +36,6 @@ A syntactically valid public model URL is not proof of the correct business orga
 
 ## Review Decision
 
-Conditionally approved for scoped QA, pending full declared verification and owner review. No done/Ready/merge approval.
+Conditionally approved for scoped QA, with full declared verification passed; owner review pending. No done/Ready/merge approval.
+
+- Final canonical verification on committed 01b3727e (only documentation/evidence followed): all eight commands passed. Root build/lint/test 12.68/1.20/17.97 s; backend 478.82 s; Python SDK 13.73 s; TypeScript SDK build/test/typecheck 1.59/1.36/1.45 s. No backend/Node source changed during the run. Factory verify validation/IDs follow before publication; no owner merge approval.
