@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0249
 - Title: Connection, proxy and profile configuration UI
-- Status: doing
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -104,3 +104,5 @@ Connection, proxy and profile configuration UI, satisfying the assigned acceptan
 - Task-start complete after factory ready exited 0; no source changed before the gate. Next extend the existing MCP Settings cards with typed browser/web forms, connection-level Network/Proxy, provider/profile/resource settings and write-only secret retention. Use shared exact-name removal confirmation, shadcn/theme tokens, en/vi strings, existing inline-card layout (no new dialog) and field errors. Node configuration later follows current General/Settings/Data/Execution conventions (owner amendment), with no new Browser node or extra tabs. Owner chain instruction authorises implementation, checks and visual QA next.
 
 - 2026-11-06 implementation: typed browser/web controls added to existing Settings inline cards. Connection-only provider/proxy/origin/profile/session settings, write-only secret retention and exact-name secret/profile removal use shared components. New client checks cover unsupported transports, canonical origin duplicates, profile scope and coupled session bounds. Six helper cases and locale checks pass; four real Chrome en/vi × light/dark create/edit/discover/proxy/profile/delete cases pass (42.4 s), including 390px/no-overflow/keyboard/anonymous access. Screenshots outside Git at `/private/tmp/superstep-browser-settings-shots-20261106`, visually inspected. Remote/feature-unavailable and generic MCP/HTTP regressions running; full verification pending.
+
+- 2026-11-06 scoped review/QA: REV-0239 / QA-0239 conditionally pass source 14b1560a; ten actual Chrome UI/regression cases passed. Full declared eight-command verification running on clean committed source. Settings docs added; owner approval pending. Predecessor #313 final 50a536ce has full passed checks; metadata sync is pending explicit permission after automatic merge-review rejection. No merge performed.
