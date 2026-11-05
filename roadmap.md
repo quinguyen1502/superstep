@@ -446,7 +446,7 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **accepted for delivery on 2026-11-05**, after requirement capture and task breakdown on 2026-11-03. Existing Agent/MCP tools, dynamic chat/workflow/search URLs, shared browser connections with proxy/profile policy, reusable recipes, isolated local/remote browser sessions and executable Python/TypeScript exports. Owner authorised implementation of the task chain on 2026-11-05; deployment, provider purchase and merge remain outside scope.
 
 - TASK-0241 — browser contracts and scoped connection metadata. **review**, on `factory/task-0241-browser-connection-contract` (REV-0229, QA-0229).
-- TASK-0242 — effective browser egress and connection-level proxy policy. **backlog**.
+- TASK-0242 — effective browser egress and connection-level proxy policy. **review** (REV-0230, QA-0230), stacked on TASK-0241.
 - TASK-0243 — isolated local Playwright runtime and bounded operations. **backlog**.
 - TASK-0244 — remote browser capabilities and origin-scoped login profiles. **backlog**.
 - TASK-0245 — run-bound sessions, ordered Agent calls and lifecycle. **backlog**.
