@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0245
 - Title: Run-bound sessions, ordered Agent calls and lifecycle integration
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-05
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -30,7 +30,7 @@ Run-bound sessions, ordered Agent calls and lifecycle integration, satisfying th
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- Durable approval policy and recovery UX are TASK-0246.
 
 ## Inputs And Related Artifacts
 
@@ -78,12 +78,12 @@ Run-bound sessions, ordered Agent calls and lifecycle integration, satisfying th
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the full browser chain and local Docker fixtures.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no owner merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -96,3 +96,9 @@ Run-bound sessions, ordered Agent calls and lifecycle integration, satisfying th
 
 - Future branch: `factory/task-0245-browser-run-sessions`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Explicit owner-authorised stack on TASK-0244 (controlled remote/profile review/QA), TASK-0243 #308, TASK-0242 #304, TASK-0241 #303 and planning #299; all unmerged. Current base includes develop 21ddce1a.
+
+- 2026-11-05: factory ready passed before source work. Task-start complete, stack includes TASK-0244 #309 (REV-0234/QA-0234). Next: durable session identity/order and trusted RunService ports; no merge approval inferred.
+
+- 2026-11-05: Implemented trusted run/actor/group ports, pre-dispatch ticket batch/CAS order, ledger bypass, exact-context page attachment, config/fence/cancel lifecycle and durable bounded cleanup (Alembic 0056). Real multi-process Chromium and HTTPS fixtures passed; PostgreSQL/SQLite suite 7 passed. REV-0235/QA-0235 record scoped self-review; full declared profile pending. Runtime flag remains experimental/default off; TASK-0246 approval/recovery and TASK-0250 filtering remain explicit gates.

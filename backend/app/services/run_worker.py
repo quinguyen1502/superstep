@@ -24,11 +24,12 @@ _recovered = False  # start-up recovery runs once per process: later lifespans (
 class RunWorker:
     def __init__(self, jobs: JobQueue, services: Callable[[], RunService], deliveries: Optional[Callable[[], object]] = None,
                  schedules: Optional[Callable[[], object]] = None, approvals: Optional[Callable[[], object]] = None,
-                 chat: Optional[Callable[[], object]] = None, langsmith: Optional[Callable[[], object]] = None):
+                 chat: Optional[Callable[[], object]] = None, langsmith: Optional[Callable[[], object]] = None, browser=None):
         self.jobs, self.services, self.deliveries = jobs, services, deliveries  # deliveries: -> DeliveryService
         self.schedules = schedules  # -> ScheduleService (TASK-0046): due cron schedules start runs from maintain()
         self.approvals = approvals  # -> ApprovalService (TASK-0066): Human node reminders and deadlines from maintain()
         self.chat = chat  # -> ChatRunService (TASK-0075): chat_message jobs check a message and start its run
+        self.browser = browser
         self.langsmith = langsmith  # -> LangSmithService: langsmith_suite jobs send a finished test suite as an experiment
         self._tasks: list[asyncio.Task] = []; self._stop = False
 
@@ -125,10 +126,14 @@ class RunWorker:
             log.exception("reaping expired jobs failed"); return 0
 
     async def maintain(self) -> None:
-        last_reap = last_cleanup = 0.0
+        last_reap = last_cleanup = last_browser = 0.0
         while not self._stop:
             try: await asyncio.to_thread(self.jobs.promote_due)
             except Exception: log.warning("promoting delayed jobs failed")
+            if self.browser is not None and time.time()-last_browser>=5:
+                last_browser=time.time()
+                try:await asyncio.to_thread(self.browser().sweep)
+                except Exception:log.exception('reaping browser sessions failed')
             if self.schedules is not None:
                 try: await asyncio.to_thread(self.schedules().fire_due)
                 except Exception: log.exception("firing schedules failed")

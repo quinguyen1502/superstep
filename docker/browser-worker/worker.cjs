@@ -209,7 +209,7 @@ async function execute(command) {
 }
 
 const paths = { '/v1/open': 'WorkerOpen', '/v1/command': 'WorkerCommand', '/v1/approve': 'WorkerCommand',
-  '/v1/artifact': 'WorkerArtifact', '/v1/close': 'WorkerControl' }
+  '/v1/artifact': 'WorkerArtifact', '/v1/close': 'WorkerControl', '/v1/health': 'WorkerControl' }
 const server = http.createServer(async (request, response) => {
   const send = (status, result) => { response.writeHead(status, { 'content-type': 'application/json' }); response.end(JSON.stringify(result)) }
   if (request.method !== 'POST' || !paths[request.url]) return send(404, { status: 'invalid' })
@@ -221,6 +221,7 @@ const server = http.createServer(async (request, response) => {
     if (request.url === '/v1/open') return send(200, await open(value))
     if (!identity(value)) return send(403, { status: 'denied' })
     await expireIfNeeded()
+    if (request.url === '/v1/health') return send(200, { status: state.status, idle_remaining_ms: Math.max(0, state.busy ? state.open.settings.idle_timeout_s * 1000 : state.open.settings.idle_timeout_s * 1000 - (Date.now() - state.touched)), lifetime_remaining_ms: Math.max(0, state.open.settings.lifetime_s * 1000 - (Date.now() - state.started)) })
     if (request.url === '/v1/command') return send(200, await execute(value))
     if (request.url === '/v1/approve') {
       if (state.status !== 'ready' || state.busy || value.sequence !== state.sequence || !['click', 'fill'].includes(value.operation)) return send(409, { status: 'stale' })

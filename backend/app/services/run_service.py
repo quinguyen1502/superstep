@@ -186,7 +186,7 @@ class RunService:
                  telemetry: Telemetry | None = None, versions=None, notifier=None, ledger=None, approvals=None,
                  deliveries: Optional[Callable[[], object]] = None, knowledge=None, mcp=None, access=None, policy=None, quota=None, audit=None,
                  tests: Optional[Callable[[], object]] = None, chat: Optional[Callable[[], object]] = None,
-                 jobs: Optional[Callable[[], object]] = None):
+                 jobs: Optional[Callable[[], object]] = None, browser=None):
         """credentials: CredentialService (optional; without it, nodes with credential_id fail clearly).
         bus: RunBus for cross-process cancel + event fan-out (in-memory when not given)."""
         self.workflows, self.runs, self.credentials = workflows, runs, credentials
@@ -199,6 +199,7 @@ class RunService:
         self.approvals = approvals  # ApprovalService (optional): Slack/Telegram approval requests of Human nodes (TASK-0022)
         self.knowledge = knowledge  # KnowledgeService (optional): Retriever nodes (TASK-0012)
         self.audit = audit  # AuditService (optional): Code nodes running without isolation (TASK-0056)
+        self.browser = browser  # trusted browser lifecycle service (TASK-0245)
         self.mcp = mcp  # McpService (optional): MCP tool nodes (TASK-0013)
         self.policy = policy  # PolicyService (optional): org resources at run time (TASK-0029)
         self.access = access  # AccessService (optional): shared workflows and roles (TASK-0014); None = owner-only
@@ -220,6 +221,7 @@ class RunService:
         if row is not None: return self.cancel_waiting(rid, uid)
         if self.bus.owner(rid) != uid: raise AppError("RUN_NOT_FOUND")  # unknown, finished or not yours
         self.bus.request_cancel(rid)
+        if self.browser:self.browser.close_run(rid)
 
     # ---- planning / validation of the client request ----
     def plan(self, uid: str, req, *, allow_form: bool = False) -> RunPlan:
@@ -524,6 +526,7 @@ class RunService:
     def _close_waiting(self, r: Run, ev: dict, status: str, uid: str) -> None:
         """End a waiting run without executing it (cancel / expiry): one more trace segment, no node spans."""
         cp = json.loads(r.checkpoint or "{}")
+        if self.browser:self.browser.close_run(r.id)
         self.record(r.id, r.workflow_id, json.loads(r.input or "{}"), json.loads(r.events or "[]") + [ev], None, status, r.started, uid,
                     source=r.source or "ui", version=r.workflow_version, trace_parent=cp.get("trace"), trace_events=[] if cp.get("trace") else None)
         if (cp.get("wait") or {}).get("kind") == "child" or any(
@@ -797,6 +800,24 @@ class RunService:
         self.history_changed(plan.workflow_id, rid)
 
     # ---- execution ----
+    def browser_principal(self,rid,plan,uid):
+        from .browser_session_service import digest
+        from ..repositories.chat_sessions import ChatSessionRepository
+        from ..repositories.chat_messages import ChatMessageRepository
+        row=self.runs.get(rid)
+        top=self.top_run(row) if row is not None else None
+        source_id=top.id if top is not None else rid
+        source=top.source if top is not None else plan.source
+        session=ChatSessionRepository(self.runs.db).for_run(source_id)
+        if session is not None:
+            if session.external_user:return 'app:'+digest([session.trigger_id,session.app_key_id,session.external_user])[:48]
+            if session.owner:return 'user:'+session.owner
+            return 'visitor:'+digest([session.trigger_id,session.visitor,session.id])[:48]
+        message=ChatMessageRepository(self.runs.db).by_run(source_id)
+        if message is not None:return 'channel:'+digest([message.channel_id,message.team,message.sender])[:48]
+        if source=='chat':return 'chat:'+digest(source_id)[:48]  # never upgrade an unknown chat actor to resource owner
+        return 'user:'+((top.owner if top is not None else None) or (plan.previous.owner if plan.previous else None) or uid)
+
     async def execute(self, plan: RunPlan, send: Callable[[dict], Awaitable[bool]],
                       listen: Callable[[], Awaitable[str]], uid: str = "") -> str:
         """Stream events through `send` (returns False once the client is gone). `listen` resolves to
@@ -815,6 +836,8 @@ class RunService:
             if status != "fenced": await self.settled(rid, plan.source)
             return status
         finally:
+            if self.browser and status not in {"waiting","paused"}:
+                await _write_in_thread(self.browser.close_run,rid,plan.fence or 1)
             if status != "fenced": await _write_in_thread(self.bus.finish, rid)  # a fenced worker leaves the new owner's entry alone
 
     async def settled(self, rid: str, source: Optional[str] = None) -> None:
@@ -868,6 +891,19 @@ class RunService:
 
         if plan.ports is not None:  # a Code node's sandbox is killed when the run is cancelled or times out (TASK-0053)
             plan.ports.cancelled = lambda: cancel.is_set() or bus.is_cancelled(rid)
+            if self.browser and config.browser_runtime_enabled():
+                def bind_browser():
+                    stored=self.runs.get(rid)
+                    resource=self.run_resources(stored,uid) if stored is not None else self.resources_of(plan.workflow_id,uid)
+                    org=self.policy.org_allowed(uid) if self.policy else True
+                    def browser_guard():
+                        fence_guard=self._guard(rid,plan.fence)
+                        if fence_guard:fence_guard()
+                        if plan.workflow_id and plan.workflow_id!='adhoc' and self.workflows.get(plan.workflow_id) is None:
+                            raise AppError('WORKFLOW_NOT_FOUND')
+                    return self.browser.bind(resource,self.browser_principal(rid,plan,uid),rid,plan.fence or 1,
+                        guard=browser_guard,cancelled=plan.ports.cancelled,org_allowed=org)
+                plan.ports.browser=await asyncio.to_thread(bind_browser)
             plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools (TASK-0134)
         plan.effects = Effects(rid, plan.attempt, ledger=_RunLedger(self.ledger, rid, plan.fence) if self.ledger is not None else None,
                           guard=self._guard(rid, plan.fence))

@@ -77,6 +77,7 @@ class BrowserControllerService:
                 if not worker.close(): raise AppError('BROWSER_CONTROL_UNAVAILABLE')
                 return {'status': 'closed'}
             if not entry.ready: raise AppError('BROWSER_CONTROL_UNAVAILABLE')
+            if method == 'health': return worker.health()
             if method == 'command': return worker.call(mapped).model_dump()
             if method == 'approve': return worker.approve(mapped)
             if method == 'artifact':

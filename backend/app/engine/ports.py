@@ -18,6 +18,7 @@ StartChild = Callable[[str, Dict[str, Any], Optional[int], Dict[str, Any], Dict[
 
 @dataclass
 class Ports:
+    browser: Optional[Any] = None  # trusted per-run scope; never supplied by workflow/model arguments
     retrieve: Optional[Retrieve] = None
     mcp_call: Optional[McpCall] = None
     mcp_effect_call: Optional[Callable[[str, str, dict, Optional[str], bool], Any]] = None
@@ -30,7 +31,29 @@ class Ports:
     mock_models: bool = False  # a test run with the offline mock model: LLM and Decision nodes never call a provider
     locale: str = "en"         # language of offline answers: the mock model and the example tools (engine/locale)
 
-    def call_mcp(self, server_id, tool, arguments, key=None):
+    def prepare_browsers(self, group, batch, calls):
+        if self.browser is None or self.test or self.mock_models:return {}
+        return self.browser.prepare(group,batch,calls)
+
+    def cache_mcp(self,node,state):
+        if self.browser is None or self.test or self.mock_models:return True
+        data=node.get('data') or {}
+        if node['type']=='mcp':return not self.browser.is_browser(data.get('server_id'))
+        if node['type']=='agent_tool':
+            from . import agents
+            calls=((state.get(agents.private(agents.owner(node))) or {}).get('pending')) or []
+            index=agents.slot_index(node['id'])-1
+            if index>=len(calls):return True
+            tool=next((item for item in data.get('tools') or [] if item.get('name')==calls[index]['name']),{})
+            return tool.get('source')!='mcp' or not self.browser.is_browser(tool.get('server_id'))
+        return True
+
+    def call_mcp(self, server_id, tool, arguments, key=None, *, group=None, ticket=None):
+        if self.browser is not None and not (self.test or self.mock_models) and self.browser.is_browser(server_id):
+            if group is None or key is None:raise RuntimeError('Browser requires a trusted run group and call key')
+            if ticket is None:
+                ticket=self.browser.prepare(group,key,[{'index':0,'server_id':server_id,'tool':tool,'arguments':arguments}]).get(0)
+            return self.browser.call(group,ticket,tool,arguments)
         if self.mcp_effect_call is not None:
             return self.mcp_effect_call(server_id, tool, arguments, key, self.test or self.mock_models)
         if self.mcp_call is None: raise RuntimeError("MCP tools need the MCP service")

@@ -54,7 +54,7 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
     joins = {nid for nid, n in nodes.items() if n["type"] == "join"}
     for nid, n in nodes.items():
         fn = node_fn(n, resolve, usage, resume, effects, ports)
-        if effects: fn = effects.wrap(n, fn)
+        if effects: fn = effects.wrap(n, fn, cache=(lambda state, n=n: ports.cache_mcp(n,state)) if ports is not None else None)
         data = n.get("data") or {}
         timeout = data.get("timeout")
         if isinstance(timeout, (int, float)) and not isinstance(timeout, bool):

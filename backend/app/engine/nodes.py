@@ -123,7 +123,7 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
     elif t == "mcp":
         def fn(state):
             return {d["output_field"]: ports.call_mcp(d["server_id"], d["tool"], render_args(d.get("arguments") or {}, state),
-                                                     effects.key(node["id"]) if effects else None)}
+                                                     effects.key(node["id"]) if effects else None, group=node["id"])}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":

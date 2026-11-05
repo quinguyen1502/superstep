@@ -66,7 +66,7 @@ def create_app(controller=None, token=None):
             from starlette.concurrency import run_in_threadpool
             return await run_in_threadpool(controller.invoke, method, value)
         app.add_api_route('/v1/' + method, invoke, methods=['POST'], dependencies=[Depends(authorised)])
-    for method, model in [('command', WorkerCommand), ('approve', WorkerCommand), ('artifact', WorkerArtifact), ('close', WorkerControl)]:
+    for method, model in [('command', WorkerCommand), ('approve', WorkerCommand), ('artifact', WorkerArtifact), ('close', WorkerControl), ('health', WorkerControl)]:
         register(method, model)
     return app
 

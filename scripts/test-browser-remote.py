@@ -66,6 +66,8 @@ def main():
             transport=RemoteTransport(ApprovedController('https://controller.test:'+str(port),'127.0.0.1'),token,tls=ssl.create_default_context(cafile=cert))
             worker=RemoteBrowserWorker(context,BrowserSettings(provider='controlled_remote',allowed_origins=['http://allowed.test:8080'],max_actions=20),transport)
             workers.append(worker);worker.start()
+            attached=RemoteBrowserWorker.attach(context,worker.settings,worker.session_id,transport)
+            assert attached.health()["status"]=="ready"
             first=worker.call(worker.command('navigate',{'url':'http://allowed.test:8080/form'},0));assert first.status=='confirmed',first.status
             field=next(item.element_id for item in first.observation.elements if item.role=='textbox')
             fill=worker.command('fill',{'observation_id':first.observation.observation_id,'element_id':field,'value':'synthetic-value'},1)
