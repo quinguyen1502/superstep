@@ -450,7 +450,7 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **accepted for delivery o
 - TASK-0243 — isolated local Playwright runtime and bounded operations. **review** (REV-0233, QA-0233), PR #308, stacked on TASK-0242.
 - TASK-0244 — remote browser capabilities and origin-scoped login profiles. **review** (REV-0234, QA-0234), stacked on TASK-0243.
 - TASK-0245 — run-bound sessions, ordered Agent calls and lifecycle. **review** (REV-0235, QA-0235), stacked on TASK-0244 #309.
-- TASK-0246 — approvals, expired/lost sessions and uncertain-effect recovery. **backlog**.
+- TASK-0246 — approvals, expired/lost sessions and uncertain-effect recovery. **review** (REV-0236, QA-0236; final full verification pending), stacked on TASK-0245 #310.
 - TASK-0247 — dynamic URL bindings, search/fetch and missing context. **backlog**.
 - TASK-0248 — typed reusable recipes through existing tool surfaces. **backlog**.
 - TASK-0249 — connection/proxy/profile settings UI. **backlog**.

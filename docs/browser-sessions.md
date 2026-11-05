@@ -1,6 +1,9 @@
 # Run-bound browser sessions
 
 TASK-0245 connects the existing Agent/MCP runtime to isolated browser workers.
+TASK-0246 extends the approval/resume behavior described here; see
+[browser-approvals.md](browser-approvals.md) for the current receipt, handoff,
+confirmed-sibling acknowledgment and crash-window contract.
 Enablement is experimental and defaults off: both `STUDIO_ENABLE_BROWSER=1` and
 `STUDIO_ENABLE_BROWSER_RUNTIME=1` are required for trusted run ports. A standalone
 MCP connection test/call still cannot launch a browser without a run context.

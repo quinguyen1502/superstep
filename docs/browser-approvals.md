@@ -84,7 +84,9 @@ dies after recording a decision but before enqueue, maintenance reconstructs the
 existing resume job only for the current waiting checkpoint and closed wait.
 Only a still-valid, unconsumed verified receipt grants. A closed inbox with a
 missing receipt rejects; dispatching/unknown stops. Multiple waits retain their
-own receipt, using existing wave CAS and run fencing. The receipt is not a replay
+own receipt and a node→intent map after absorption; a completely answered wave
+uses the existing wave-ready resume path. Existing wave CAS and run fencing
+prevent duplicate claims. The receipt is not a replay
 cache. A completely lost page always returns session_lost.
 
 ## Persistence and evidence
