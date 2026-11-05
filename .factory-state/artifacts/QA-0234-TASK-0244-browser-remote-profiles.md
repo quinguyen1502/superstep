@@ -32,3 +32,5 @@ No live account, purchased provider, physical remote host, deployment, UI flow o
 ## QA Decision
 
 Scoped pass; remain review pending final regression/owner review. No done/merge approval inferred.
+
+- Final fixture rerun passed after strict proxy/profile validation; direct/custom/operator-default, no fallback, profile and restart cases all passed. Python SDK declared suite: **229 passed, 8 skipped** (10.49 s); TS SDK declared typecheck passed. Full backend is running on isolated commit 252aedff; subsequent documentation does not change source.
