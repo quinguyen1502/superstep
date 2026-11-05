@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0248
 - Title: Reusable typed browser recipes through existing tool surfaces
-- Status: backlog
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -30,7 +30,7 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- Connection/recipe UI and executable exports assigned to later tasks.
 
 ## Inputs And Related Artifacts
 
@@ -43,7 +43,7 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
 - Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
 - Dependency artifact: `.factory-state/tasks/review/TASK-0245-browser-run-sessions.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0246-browser-approval-recovery.md`.
 
 ## Expected Outputs
 
@@ -80,12 +80,12 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised full-chain implementation, local controlled fixtures and explicitly documented unmerged stacks.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -98,3 +98,7 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 
 - Future branch: `factory/task-0248-browser-recipes`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-06: Task-start under owner chain instruction. Isolated branch stacks on committed TASK-0247 3550dec1 (scoped REV-0237/QA-0237, full checks running), TASK-0246 #311 (full declared pass, REV-0236/QA-0236), #310/#309/#308/#304/#303/#299. TASK-0248 depends on reviewed TASK-0246; no claim of merged integration. No source edited during task-start.
+
+- Task-start complete: factory ready exited 0, no source edited before this gate. Implementation refinement: browser_recipe versioned root metadata selects typed input/output state fields and a fixed connection, restricts an ordinary workflow to one bounded linear MCP action chain, and uses existing workflow versions/Agent child snapshots/MCP exposure. Same-invocation MCP steps share one scoped browser group; literal role/text selectors bind existing bounded observations and fail on missing/ambiguous/stale layout. No separate recipe storage, CRUD, Agent loop or expression language. Owner chain instruction authorises implementation and declared checks next.
