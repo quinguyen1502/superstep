@@ -72,3 +72,36 @@ def test_browser_session_sqlite_round_trip(tmp_path):
 
 @pytest.mark.skipif(not URL.startswith('postgresql'),reason='requires disposable TEST_DATABASE_URL')
 def test_browser_session_postgres_round_trip(fresh_pg):session_round_trip(fresh_pg)
+
+
+def approval_round_trip(db):
+    from app.models import BrowserSession,BrowserCommand,BrowserIntent,ApprovalWait
+    import time
+    cfg=Config();cfg.set_main_option('script_location',os.path.normpath(MIGRATIONS_DIR));cfg.set_main_option('sqlalchemy.url',db.url.replace('%','%%'))
+    command.upgrade(cfg,'head');now=time.time();sid,cid,wid=[uuid.uuid4().hex for _ in range(3)]
+    with db.session() as s:
+        s.add(BrowserSession(id=sid,owner='fixture-owner',principal_id='user:fixture-owner',run_id='fixture',group_id='agent',connection_id='browser',
+            configuration='a'*64,lease_generation=2,generation=3,next_lease_generation=4,next_generation=4,provider='local',status='closed',created=now,expires=now+600,touched=now));s.commit()
+        s.add(BrowserCommand(id=cid,session_id=sid,position=0,body_hash='b'*64,status='confirmed',wire_sequence=0,generation=3));s.commit()
+        s.add(BrowserIntent(command_id=cid,node_id='slot',status='confirmed',target_hash='c'*64,page_generation=1,origin='https://example.test',role='button',text='Submit',
+            created=now,expires=now+60,decided_by='fixture-owner',decided_channel='studio',decided_at=now,consumed_at=now,resume_after=now+5))
+        s.add(ApprovalWait(id=wid,run_id='fixture',node_id='slot',owner='fixture-owner',status='closed',outcome='answered',created=now,browser_intent_id=cid));s.commit()
+    command.downgrade(cfg,'0056_browser_sessions')
+    assert 'browser_intents' not in inspect(db.engine).get_table_names()
+    assert 'generation' not in {column['name'] for column in inspect(db.engine).get_columns('browser_sessions')}
+    command.upgrade(cfg,'head')
+    with db.session() as s:
+        row=s.get(BrowserSession,sid);ticket=s.get(BrowserCommand,cid)
+        assert row.lease_generation==2 and row.generation==1 and row.next_lease_generation is None
+        assert ticket.status=='confirmed' and ticket.wire_sequence is None and ticket.generation is None
+        assert s.get(ApprovalWait,wid).browser_intent_id is None and s.get(BrowserIntent,cid) is None
+
+
+def test_browser_approval_sqlite_round_trip(tmp_path):
+    db=Database(f'sqlite:///{tmp_path / "browser-approvals.db"}')
+    try:approval_round_trip(db)
+    finally:db.engine.dispose()
+
+
+@pytest.mark.skipif(not URL.startswith('postgresql'),reason='requires disposable TEST_DATABASE_URL')
+def test_browser_approval_postgres_round_trip(fresh_pg):approval_round_trip(fresh_pg)

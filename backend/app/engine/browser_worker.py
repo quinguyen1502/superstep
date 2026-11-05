@@ -15,7 +15,7 @@ import time
 import uuid
 
 from .browser_contract import (BrowserSettings, ExecutionContext, WorkerCommand, WorkerControl,
-                               WorkerOpen, WorkerArtifact, WorkerResult)
+                               WorkerOpen, WorkerArtifact, WorkerResult, WorkerTarget, WorkerApproval, WorkerRenew, WorkerSupervisor)
 from .sandbox.container import docker_exe
 from pydantic import ValidationError
 from .browser_profiles import validate_profile, ProfileDenied
@@ -56,7 +56,7 @@ class LocalBrowserWorker:
     def _check_idle(self):
         if self.closed: return
         try:
-            state = self.health()
+            state = self._rpc("supervisor_health", WorkerSupervisor(), timeout=5)
             if state.get("status") != "ready": self.close(); return
             remaining = min(state["idle_remaining_ms"], state["lifetime_remaining_ms"])
             if type(remaining) is not int or not 0 < remaining <= 1800000: self.close(); return
@@ -66,12 +66,12 @@ class LocalBrowserWorker:
         except (BrowserWorkerError, KeyError, TypeError): self.close()
 
     @classmethod
-    def attach(cls, context, settings, worker_id, **options):
+    def attach(cls, context, settings, worker_id, *, generation=1, **options):
         """Reattach only to an existing worker which proves the exact private context; never open/replay."""
         import re
         if not isinstance(worker_id, str) or not re.fullmatch(r"[a-f0-9]{32}", worker_id): raise BrowserWorkerError()
         worker = cls(context, settings, **options)
-        worker.session_id = worker_id
+        worker.session_id, worker.generation = worker_id, generation
         worker.worker, worker.gateway, worker.volume = (f"ss-browser-{worker_id}-{part}" for part in ("worker", "gateway", "socket"))
         if worker.health().get("status") != "ready": raise BrowserWorkerError()
         worker.started = True
@@ -169,10 +169,27 @@ class LocalBrowserWorker:
             return WorkerResult(command_id=command.command_id, generation=self.generation, sequence=command.sequence, status=status, elapsed_ms=0)
         finally: self._arm_idle()
 
-    def approve(self, command: WorkerCommand):
-        """Trusted control port only; run/approval service must verify durable human approval before invoking."""
+    def inspect(self, command: WorkerCommand):
         if command.context != self.context or command.session_id != self.session_id: raise BrowserWorkerError("policy_denied")
+        value=self._rpc("inspect", command)
+        if value.get("status") in {"stale_observation","policy_denied"}:raise BrowserWorkerError(value["status"])
+        return WorkerTarget.model_validate(value)
+
+    def approve(self, command: WorkerCommand, target=None, expires_at_ms=None):
+        """Private primitive: caller must verify a durable human decision, then supply the reviewed target proof."""
+        if command.context != self.context or command.session_id != self.session_id: raise BrowserWorkerError("policy_denied")
+        if not isinstance(command, WorkerApproval):
+            target = target or self.inspect(command)
+            expires_at_ms = expires_at_ms or int(time.time()*1000 + max(1,min(30000,self.health()["lifetime_remaining_ms"]-1000)))
+            command = WorkerApproval(**command.model_dump(), target_hash=target.target_hash, page_generation=target.page_generation, expires_at_ms=expires_at_ms)
         return self._rpc("approve", command)
+
+    def renew(self, context):
+        request = WorkerRenew(context=self.context,session_id=self.session_id,generation=self.generation,next_context=context)
+        result = self._rpc("renew", request)
+        if result != {"status":"ready","generation":self.generation+1}: raise BrowserWorkerError()
+        self.context, self.generation = context, self.generation+1
+        return result
 
     def artifact(self, artifact_id):
         request = WorkerArtifact(context=self.context, session_id=self.session_id, generation=self.generation, artifact_id=artifact_id)

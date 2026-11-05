@@ -504,7 +504,7 @@ class ChatSessionService:
             node = (res.get("waiting") or {}).get("node") or ev.get("node")
             wf = (json.loads(r.checkpoint or "{}") or {}).get("workflow") or {}
             data = next((n.get("data") for n in wf.get("nodes") or [] if n.get("id") == node), None)
-            turn.text, turn.node, turn.answered_by = ev.get("prompt") or "", node, answered_by(data)
+            turn.text, turn.node, turn.answered_by = ev.get("prompt") or "", node, "reviewer" if ev.get("browser_intent") else answered_by(data)
         else:
             err = res.get("error"); turn.code = (err or {}).get("code") if isinstance(err, dict) else None
             turn.text = ((err or {}).get("message") if isinstance(err, dict) else err) or ""

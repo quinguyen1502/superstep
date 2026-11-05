@@ -31,11 +31,12 @@ REVIEW_LOST_AFTER = approval_judge.TIMEOUT * 2 + 60  # seconds: longer than any 
 class ApprovalService:
     def __init__(self, repo: ApprovalRepository, users: UserRepository, workflows: WorkflowRepository, runs: RunRepository, channels: ChannelService,
                  enqueue: Optional[Callable[[dict], None]] = None, background: Optional[bool] = None, limiter=None, notifier=None,
-                 chat: Optional[Callable[[], object]] = None, reviewer=None):
+                 chat: Optional[Callable[[], object]] = None, reviewer=None, browser=None):
         self.repo, self.users, self.workflows, self.runs, self.channels, self.enqueue = repo, users, workflows, runs, channels, enqueue
         self.notifier = notifier  # NotificationService (optional): deadline reminders and escalations (TASK-0066)
         self.limiter = limiter  # RateLimiter for the public callbacks (None = no limit)
         self.chat = chat  # -> ChatRunService (optional): messages on the same webhook start chat-trigger runs (TASK-0075)
+        self.browser = browser
         self.reviewer = reviewer  # AutoReviewService (optional): AI review before people are asked (TASK-0187, REQ-0081)
         self.adapters = channels.adapters
         self.background = BACKGROUND if background is None else background
@@ -113,6 +114,7 @@ class ApprovalService:
 
     def answers_itself(self, wid: Optional[str], workflow: dict, ev: Optional[dict]) -> bool:
         """True when AI review in auto mode may answer this step: the run owner is told after the review instead of now."""
+        if ev and ev.get('browser_intent'):return False
         p = self._policy(wid, self._node(workflow or {}, ev or {})) if ev else None
         return bool(p and p["mode"] == "auto")
 
@@ -125,7 +127,7 @@ class ApprovalService:
         target = str(cfg.get("target") or "").strip()
         kind = cfg.get("channel"); needs_target = self.adapters[kind].target_required if kind in self.adapters else True
         external = bool(cfg.get("channel_id") or kind) and not (needs_target and not target)
-        policy = self._policy(wid, node)
+        policy = None if ev.get("browser_intent") else self._policy(wid, node)
         w = self._wait(rid, owner, wid, ev, cfg, external, (node or {}).get("data") or {}, review=policy["mode"] if policy else None)
         if policy is not None:  # AI review first; people are asked only when it does not answer (DEC-0075 decision 1)
             job = lambda: self._reviewed(rid, owner, wid, node, cfg, target, ev, w, policy, external, state)  # noqa: E731
@@ -185,9 +187,17 @@ class ApprovalService:
         node's deadline from the run's own workflow snapshot (TASK-0066)."""
         kind = (cfg.get("channel") or ((ch := self.repo.channel(str(cfg["channel_id"]))) and ch.kind) or None) if external else None
         now = time.time(); dl = deadlines.parse(data)
+        if ev.get('browser_intent'):
+            intent=self.browser().intents.get(ev['browser_intent']) if self.browser else None
+            remaining=max(0.01,intent.expires-now) if intent is not None else 0.01
+            after=min(remaining,dl['after']) if dl else remaining
+            every=dl.get('remind_every') if dl else None
+            dl={'after':after,'remind_every':every if every and every<after else None,'on_timeout':'reject','escalate_to':[]}
+
         return self.repo.add_wait(ApprovalWait(
             id=uuid.uuid4().hex[:12], run_id=rid, node_id=str(ev.get("node") or ""), owner=owner, workflow_id=wid, label=ev.get("label") or None,
             prompt=(ev.get("prompt") or "")[:PROMPT_MAX] or None, channel=kind, status="waiting", created=now,
+            browser_intent_id=ev.get('browser_intent'),
             approval=json.dumps(cfg) if external else None, deadline=json.dumps(dl) if dl else None, reminders=0,
             due_at=now + dl["after"] if dl else None, next_remind_at=now + dl["remind_every"] if dl and dl["remind_every"] else None, review=review),
             self._approver_ids(cfg))
@@ -324,6 +334,8 @@ class ApprovalService:
             self.repo.decide(r.id, "superseded"); return refuse("APPROVAL_ALREADY_DECIDED")
         if not self.repo.decide(r.id, decision, uid, external): return refuse("APPROVAL_ALREADY_DECIDED")  # lost the race: single use
         self._audit(r.owner, kind, decision, r, actor=uid, external=external, agreed=self._agreed(self.repo.latest_wait(r.run_id), decision))
+        wait=self.repo.latest_wait_for_node(r.run_id,r.node_id)
+        if self.browser and wait is not None and wait.browser_intent_id:self.browser().record(wait,uid,decision,kind)
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": r.run_id, "owner": r.owner, "response": decision,
                                        "node": r.node_id, "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
         return None, self.repo.request(r.id), decision
@@ -375,6 +387,7 @@ class ApprovalService:
         """An inbox answer whose waiting step the caller already closed: close that step's channel requests, audit it and
         resume the run like a channel decision (the run stays its owner's). Other open steps of the run stay open."""
         self._close_requests(w.run_id, "superseded", "answered", node=w.node_id)
+        if self.browser and w.browser_intent_id:self.browser().record(w,uid,response,'studio')
         self._audit(w.owner, "studio", response if response in DECISIONS.values() else "answered", actor=uid, run_id=w.run_id, wid=w.workflow_id,
                     agreed=self._agreed(self.repo.wait_of(w.id), response))
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response,
@@ -478,6 +491,7 @@ class ApprovalService:
         log_skipped()
         self._close_requests(w.run_id, "superseded", f"deadline_{response}", node=w.node_id)
         self._audit(w.owner, kind, "timed_out", run_id=w.run_id, wid=w.workflow_id)
+        if self.browser and w.browser_intent_id:self.browser().record(w,None,response,'deadline')
         if self.enqueue: enqueue_resume(self.runs, self.enqueue, {"kind": "resume", "run_id": w.run_id, "owner": w.owner, "response": response,
                                        "node": w.node_id, "workflow_id": w.workflow_id, "by": {"channel": "deadline", "on_timeout": action}})
         return 1

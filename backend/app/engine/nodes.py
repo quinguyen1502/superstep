@@ -122,8 +122,12 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             return {d["output_field"]: ports.retrieve(d["knowledge_base_id"], query, int(d.get("top_k") or 4))}
     elif t == "mcp":
         def fn(state):
-            return {d["output_field"]: ports.call_mcp(d["server_id"], d["tool"], render_args(d.get("arguments") or {}, state),
-                                                     effects.key(node["id"]) if effects else None, group=node["id"])}
+            from . import browser_approval
+            arguments=render_args(d.get('arguments') or {},state)
+            key=effects.key(node['id']) if effects else None
+            ticket=ports.prepare_browsers(node['id'],key or node['id'],[{'index':0,'server_id':d['server_id'],'tool':d['tool'],'arguments':arguments}]).get(0)
+            result=browser_approval.check(ports,effects,node['id'],node['id'],ticket,d['server_id'],d['tool'],arguments,bool(d.get('approval')))
+            return {d['output_field']:result if result is not None else ports.call_mcp(d['server_id'],d['tool'],arguments,key,group=node['id'],ticket=ticket)}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":

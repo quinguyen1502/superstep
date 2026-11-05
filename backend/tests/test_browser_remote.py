@@ -25,6 +25,11 @@ class FakeWorker:
     def call(self, command):
         self.calls.append(command)
         return WorkerResult(command_id=command.command_id, generation=1, sequence=command.sequence, status='confirmed', elapsed_ms=0)
+    def inspect(self,command):
+        from app.engine.browser_contract import WorkerTarget
+        return WorkerTarget(generation=self.generation,page_generation=1,target_hash='a'*64,origin='https://example.test',role='button',text='Fixture')
+    def health(self):return {'status':'ready','generation':self.generation,'idle_remaining_ms':120000,'lifetime_remaining_ms':600000}
+    def renew(self,context):self.context=context;self.generation+=1;return {'status':'ready','generation':self.generation}
     def approve(self, command): self.calls.append(command); return {'status':'approved'}
     def artifact(self, aid): return PNG
     def close(self): self.closed = True; return True

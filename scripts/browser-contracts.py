@@ -6,12 +6,12 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
-from app.engine.browser_contract import WorkerCommand, WorkerOpen, WorkerControl, WorkerArtifact, WorkerResult
+from app.engine.browser_contract import WorkerCommand, WorkerOpen, WorkerControl, WorkerArtifact, WorkerResult, WorkerRenew, WorkerTarget, WorkerApproval, WorkerSupervisor
 
 
 def schemas():
     return {model.__name__: model.model_json_schema() for model in
-            (WorkerCommand, WorkerOpen, WorkerControl, WorkerArtifact, WorkerResult)}
+            (WorkerCommand, WorkerOpen, WorkerControl, WorkerArtifact, WorkerResult, WorkerRenew, WorkerTarget, WorkerApproval, WorkerSupervisor)}
 
 
 if __name__ == "__main__":

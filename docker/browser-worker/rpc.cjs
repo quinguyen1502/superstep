@@ -5,7 +5,7 @@ process.stdin.on('data', chunk => { size += chunk.length; if (size > 256 * 1024)
 process.stdin.on('end', () => {
   let value
   try { value = JSON.parse(Buffer.concat(chunks).toString('utf8')) } catch { process.exit(2) }
-  if (!['open', 'command', 'approve', 'artifact', 'close', 'health'].includes(value.method)) process.exit(2)
+  if (!['open', 'command', 'approve', 'artifact', 'close', 'health', 'inspect', 'renew', 'supervisor_health'].includes(value.method)) process.exit(2)
   const body = JSON.stringify(value.body)
   const request = http.request({ socketPath: '/tmp/browser-control.sock', path: `/v1/${value.method}`, method: 'POST',
     headers: { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) }, timeout: 65000 }, response => {

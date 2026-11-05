@@ -88,12 +88,22 @@ def scoped_service(tmp_path,monkeypatch):
             calls.append(command)
             time.sleep(.02)
             return WorkerResult(command_id=command.command_id,generation=1,sequence=command.sequence,status='confirmed',elapsed_ms=20)
+        def inspect(self,command):
+            from app.engine.browser_contract import WorkerTarget
+            return WorkerTarget(generation=self.generation,page_generation=1,target_hash=getattr(self,'target_hash','a'*64),origin='https://example.test',role='button',text='Fixture')
+        def health(self):return {'status':'ready','generation':self.generation,'idle_remaining_ms':120000,'lifetime_remaining_ms':600000}
+        def approve(self,command,target=None,expires_at_ms=None):return {'status':'approved'}
+        def renew(self,context):self.context=context;self.generation+=1;return {'status':'ready','generation':self.generation}
         def close(self):
             self.closed=True
             if self.session_id in workers:workers[self.session_id].closed=True
             return True
     monkeypatch.setattr('app.services.browser_session_service.LocalBrowserWorker',Worker)
     service=BrowserSessionService(repo,mcp,BrowserRuntimeService(None))
+    from app.repositories import ApprovalRepository,UserRepository
+    from app.repositories.browser_intents import BrowserIntentRepository
+    from app.services.browser_approval_service import BrowserApprovalService
+    service.approvals=BrowserApprovalService(BrowserIntentRepository(db),ApprovalRepository(db),UserRepository(db),service)
     return service,calls,workers
 
 
@@ -247,6 +257,11 @@ def test_cancel_during_possible_effect_is_unknown_and_not_retried(tmp_path,monke
     monkeypatch.setattr(root,'call',act)
     args={'observation_id':'observation','element_id':'element'}
     ticket=scope.prepare('agent','two',[{'index':0,'server_id':'browser','tool':'click','arguments':args}])[0]
+    info=scope.action('fixture-slot','agent',ticket,'click',args)
+    from app.models import ApprovalWait
+    wait=ApprovalWait(id=uuid.uuid4().hex,run_id='run-one',node_id='fixture-slot',owner='owner',status='closed',outcome='answered',created=time.time(),browser_intent_id=ticket)
+    service.approvals.waits.add_wait(wait,[])
+    assert service.approvals.record(wait,'owner','approved','studio')
     assert scope.call('agent',ticket,'click',args)['status']=='unknown'
     assert service.repo.command(ticket).status=='unknown' and root.closed and len(calls)==2
 

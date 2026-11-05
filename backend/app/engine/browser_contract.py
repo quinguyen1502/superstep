@@ -234,6 +234,40 @@ class WorkerArtifact(WorkerControl):
     artifact_id: Identifier
 
 
+class WorkerSupervisor(VersionedContract):
+    pass
+
+
+class WorkerRenew(WorkerControl):
+    next_context: ExecutionContext
+
+    @model_validator(mode="after")
+    def same_authority(self):
+        old, new = self.context.model_dump(), self.next_context.model_dump()
+        if new.pop("lease_generation") <= old.pop("lease_generation") or old != new:
+            raise ValueError("Lease handoff cannot change session authority")
+        return self
+
+
+class WorkerTarget(WorkerEnvelope):
+    generation: Annotated[int, Field(ge=1)]
+    page_generation: Annotated[int, Field(ge=1)]
+    target_hash: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    origin: Origin
+    role: Annotated[str, Field(max_length=80)]
+    text: Annotated[str, Field(max_length=1000)]
+
+    @field_validator("origin")
+    @classmethod
+    def check_origin(cls, value): return http_url(value, origin=True)
+
+
+class WorkerApproval(WorkerCommand):
+    expires_at_ms: Annotated[int, Field(ge=1, le=253402300799000)]
+    target_hash: Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")]
+    page_generation: Annotated[int, Field(ge=1)]
+
+
 class ObservedElement(Contract):
     element_id: Identifier
     role: Annotated[str, Field(max_length=80)]
@@ -262,6 +296,8 @@ class WorkerResult(WorkerEnvelope):
     observation: Observation | None = None
     extracted: Annotated[dict[Identifier, Annotated[str, Field(max_length=4000)]], Field(max_length=20)] | None = None
     artifact_id: Identifier | None = None
+    approval_outcome: Literal["approved", "rejected", "expired", "stale"] | None = None
+    acknowledgement: Literal["already_completed"] | None = None
 
 
 # Contract eligibility, not verified runtime support. TASK-0242–0244 must prove
