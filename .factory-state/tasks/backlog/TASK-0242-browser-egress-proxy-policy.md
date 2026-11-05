@@ -41,7 +41,7 @@ Enforce browser egress and connection-level proxy policy, satisfying the assigne
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
 
 ## Expected Outputs
 

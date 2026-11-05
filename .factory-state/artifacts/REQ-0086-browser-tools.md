@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0086
-- Status: Proposed — owner authorised requirement capture and task breakdown on 2026-11-03; implementation and detailed design approval remain pending
+- Status: Accepted for delivery — owner instruction on 2026-11-05
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -125,3 +125,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 - `.factory-state/artifacts/PLAN-0006-browser-tools.md`
 - `.factory-state/previews/browser-tool/browser-workspace.html` and `browser-tool-preview.html` (exploratory mockups)
 - `.factory-state/artifacts/REQ-0083-event-connections-model-policy.md`
+
+## Owner Delivery Authorisation — 2026-11-05
+
+The owner instructed: “Pull develop về branch hiện tại, và tiến hành chuỗi task này.” This accepts the proposed browser delivery scope and starts PLAN-0006 in dependency order. This supersedes earlier planning-only/pending-start statements; source onboarding approval statuses are unchanged. Implementation, fixture validation and task PRs are authorised; merges, production/provider setup, release and deployment are not. Task branches may stack on the published planning package; dependent implementation tasks require predecessor review/QA and an explicitly documented stack.

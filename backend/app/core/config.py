@@ -258,3 +258,6 @@ def code_packages() -> list[str]:
     raw = os.environ.get("STUDIO_CODE_PACKAGES")
     if raw is not None: return [p.strip() for p in raw.split(",") if p.strip()]
     return list(CODE_DEFAULT_PACKAGES) if code_image() == "studio-code:1" else []
+
+# Browser metadata is opt-in; worker execution has separate implementation/proof gates.
+def browser_enabled() -> bool: return os.environ.get("STUDIO_ENABLE_BROWSER") == "1"

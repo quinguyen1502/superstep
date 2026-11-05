@@ -46,6 +46,7 @@ class ManagedToolService:
         except (ValueError, TypeError, UnicodeError): raise AppError("MCP_ARGUMENT_INVALID", name="arguments", type="UTF-8 JSON") from None
         if len(encoded) > 128 * 1024: raise AppError("MCP_ARGUMENT_INVALID", name="arguments", type="bounded JSON")
         if dry_run: return {"outcome": "dry_run", "tool": tool}  # no tokens, outbound requests or intent records
+        if adapter.id == "browser": adapter.require_runtime()
         if not isinstance(key, str) or not 1 <= len(key) <= 200: raise AppError("MANAGED_OPERATION_KEY_REQUIRED")
         now, configuration = time.time(), self.configuration(row)
         operation = McpOperation(id=digest([uid, row.id, key]), owner=uid, server_id=row.id, key=key, tool=tool,

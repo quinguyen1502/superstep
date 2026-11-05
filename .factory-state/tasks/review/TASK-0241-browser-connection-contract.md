@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0241
 - Title: Browser contracts and scoped connection metadata
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -30,7 +30,6 @@ Browser contracts and scoped connection metadata, satisfying the assigned accept
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
 
@@ -76,12 +75,12 @@ Browser contracts and scoped connection metadata, satisfying the assigned accept
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the delivery chain on 2026-11-05; technical bounds/capability eligibility are specified in `docs/browser-contract.md`.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Scope/start accepted on 2026-11-05; no owner merge approval yet.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -94,3 +93,12 @@ Browser contracts and scoped connection metadata, satisfying the assigned accept
 
 - Future branch: `factory/task-0241-browser-connection-contract`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Owner authorised the complete task chain. Prepared branch `factory/task-0241-browser-connection-contract` from origin/develop 3c83262a, with planning commit b8f3a861 carried as 3beffe55 (PR #299 remains unmerged). Local changes preserved in stash `browser-plan-before-develop-20261105`. No product source changed before readiness gate.
+
+- 2026-11-05: `factory ready` exited 0 with TASK-0241 in todo before source edits. Task-start complete; owner instruction already authorises implementation and required validation.
+
+- 2026-11-05: Implemented opt-in managed browser metadata/discovery, full secret masking, strict bounded v1 command/result and six tool schemas. Reused existing encrypted MCP storage without schema changes. Real calls fail before stateless managed ledger reservation until verified runtime/session work lands. `docs/browser-contract.md` records transport, bounds, proxy eligibility and remaining proof gates.
+- 2026-11-05: Targeted tests: 84 passed (browser contract/connections, MCP, managed tools, layers, envelope/locales, SQLite migration regressions). Factory validate and diff whitespace passed; full backend/build/lint are being collected. No product browser/provider traffic or migration introduced.
+
+- 2026-11-05: Self-review REV-0229 and QA-0229 passed scoped contract/metadata acceptance; owner review and full backend regression still pending. Root npm test (280), build and lint passed. Task remains review, not done.

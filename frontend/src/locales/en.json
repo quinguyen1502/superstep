@@ -407,6 +407,8 @@
     }
   },
   "errors": {
+    "BROWSER_DISABLED": "Browser connections are disabled",
+    "BROWSER_RUNTIME_UNAVAILABLE": "Browser execution requires a verified isolated worker and trusted run context",
     "CHAT_REGENERATE_INVALID": "Only the latest completed answer can be regenerated",
     "CHAT_REGENERATE_UNSUPPORTED": "This server does not support regenerating chat answers",
     "CHAT_EDIT_INVALID": "This message cannot be edited",
