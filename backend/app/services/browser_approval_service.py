@@ -157,16 +157,19 @@ class BrowserApprovalService:
             if run is None or run.status!='waiting' or self.active and self.active(run.id):continue
             checkpoint=json.loads(run.checkpoint or '{}')
             awaiting=checkpoint.get('browser_intent')==intent.command_id or any(wait.get('browser_intent')==intent.command_id for wait in checkpoint.get('waits') or [])
+            settled=(checkpoint.get('browser_intents') or {}).get(intent.node_id)==intent.command_id and intent.node_id in (checkpoint.get('answers') or {})
             wait=self.waits.latest_wait_for_node(run.id,intent.node_id)
-            if not awaiting or wait is None or wait.status!='closed' or wait.browser_intent_id!=intent.command_id:continue
+            if not (awaiting or settled) or wait is None or wait.status!='closed' or wait.browser_intent_id!=intent.command_id:continue
             if not self.intents.claim_resume(intent.command_id,intent.status,now):continue
             approved=intent.status=='approved' and intent.consumed_at is None and intent.expires>now and self.valid_decision(intent)
             if intent.status=='dispatching':
                 self.intents.transition(intent.command_id,['dispatching'],'unknown');self.sessions.close(session,'unknown')
             elif intent.status=='pending' or intent.status=='approved' and not approved:
                 self.intents.transition(intent.command_id,['pending','approved'],'expired')
+            if settled and not checkpoint.get('wave_ready'):continue  # another question still needs its own answer
             enqueue_resume(self.sessions.runs,self.enqueue,{'kind':'resume','run_id':run.id,'owner':run.owner,'workflow_id':run.workflow_id,
                 'node':intent.node_id,'response':'approved' if approved else 'rejected',
+                **({'wave':True} if settled and checkpoint.get('wave_ready') else {}),
                 'by':{'channel':'browser_recovery','user_id':intent.decided_by}})
             count+=1
         return count

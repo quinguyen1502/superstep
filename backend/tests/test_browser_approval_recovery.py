@@ -268,3 +268,54 @@ def test_invalid_browser_fill_keeps_secrets_out_of_trace(tmp_path,monkeypatch):
     assert status=='ok' and calls==[]
     final=next(event['state'] for event in events if event['type']=='run_finished')
     assert 'synthetic-private-value' not in json.dumps(final['steps'])
+
+
+@pytest.mark.parametrize('missing_receipt',[False,True])
+def test_final_wave_answer_survives_crash_before_queue_claim(tmp_path,monkeypatch,missing_receipt):
+    from copy import deepcopy
+    from app.models import McpServer
+    from app.services.run_worker import RunWorker
+    from app.services.job_queue import InMemoryJobQueue
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    monkeypatch.setenv('STUDIO_AGENT_PARALLEL_TOOLS','4')
+    service.mcp.repo.save(McpServer(id='browser-two',owner='owner',scope='user',transport='managed',adapter='browser',name='Second browser',settings='{}',created=time.time()))
+    flow=flow_for(['click']);agent=next(node for node in flow['nodes'] if node['type']=='agent')
+    one=agent['data']['tools'][0];one['name']='click_one'
+    two=deepcopy(one);two.update(name='click_two',server_id='browser-two');agent['data']['tools'].append(two)
+    args={'observation_id':'o','element_id':'e'}
+    responses(monkeypatch,[('',[call('click_one',args,'one'),call('click_two',args,'two')]),('Done',[])])
+    plan=runner.plan('owner',{'workflow':flow,'input':{'message':'fixture'}});plan.run_id='settled-wave'
+    assert execute(runner,plan)[0]=='waiting'
+    cp=json.loads(runner.runs.get(plan.run_id).checkpoint);assert len(cp['waits'])==2 and len(cp['browser_intents'])==2
+    slots=[item['node'] for item in cp['waits']]
+    assert runner.plan_resume('owner',plan.run_id,'approved',node=slots[0]).pending_wave
+    if missing_receipt:
+        # Crash after the final wave answer/closed inbox, before its browser receipt.
+        assert runner.absorb_wave(plan.run_id,node=slots[1],value='approved')[0]=='go'
+        runner.approvals.answered_slot(plan.run_id,slots[1])
+    else:assert runner.plan_resume('owner',plan.run_id,'approved',node=slots[1]).previous is not None
+    cp=json.loads(runner.runs.get(plan.run_id).checkpoint);assert cp['wave_ready'] and cp['waits']==[]
+    jobs=[];service.approvals.enqueue=jobs.append
+    assert service.approvals.recover_decisions(time.time()+6)>0
+    assert all(job.get('wave') for job in jobs)
+    worker=RunWorker(InMemoryJobQueue(),lambda:runner)
+    assert asyncio.run(worker.resume_job(runner,jobs[0]))=='ok'
+    assert len(calls)==(1 if missing_receipt else 2)
+    for job in jobs:assert asyncio.run(worker.resume_job(runner,job)) is None
+    assert len(calls)==(1 if missing_receipt else 2)
+
+
+def test_account_purge_removes_target_text_even_when_cleanup_is_pending(tmp_path,monkeypatch):
+    from app.repositories.user_data import UserDataRepository
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    responses(monkeypatch,[('',[call('click',{'observation_id':'o','element_id':'e'})])])
+    plan=runner.plan('owner',{'workflow':flow_for(['click']),'input':{'message':'fixture'}});plan.run_id='purge-browser-intent'
+    assert execute(runner,plan)[0]=='waiting'
+    wait=runner.approvals.repo.latest_wait(plan.run_id);cid=wait.browser_intent_id
+    row=service.repo.get(service.repo.command(cid).session_id)
+    monkeypatch.setattr(type(next(iter(workers.values()))),'close',lambda self:False)
+    service.close_run(plan.run_id)
+    assert service.repo.get(row.id).cleanup_pending
+    UserDataRepository(service.repo.db).purge('owner',runs=True)
+    assert service.approvals.intents.get(cid) is None
+    assert service.repo.get(row.id).cleanup_pending
