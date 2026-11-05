@@ -424,6 +424,8 @@
     }
   },
   "errors": {
+    "BROWSER_DISABLED": "Kết nối trình duyệt đang bị tắt",
+    "BROWSER_RUNTIME_UNAVAILABLE": "Thực thi trình duyệt cần worker cô lập đã kiểm chứng và ngữ cảnh chạy tin cậy",
     "CHAT_REGENERATE_INVALID": "Chỉ tạo lại được câu trả lời cuối đã kết thúc",
     "CHAT_REGENERATE_UNSUPPORTED": "Máy chủ này chưa hỗ trợ tạo lại câu trả lời chat",
     "CHAT_EDIT_INVALID": "Tin nhắn này không sửa được",

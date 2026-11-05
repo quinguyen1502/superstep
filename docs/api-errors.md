@@ -319,3 +319,10 @@ The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Cod
 `CODE_WRITE_FORBIDDEN` (TASK-0054) comes from saving a workflow, restoring a version, using or importing a template, and any other write that adds a Code node or changes its `code`, when the user's role lacks `code.write` (admins only by default). Running, moving, renaming or deleting a Code node, and duplicating a workflow, stay allowed. Nothing is stored when it is refused.
 `AUTO_APPROVAL_FORBIDDEN` (TASK-0186, REQ-0081) comes from saving a workflow, restoring a version or any other write that turns a node's AI review to `auto` or changes an `auto` policy, when the caller is neither the workflow owner nor an admin. Editors may save `suggest`. Nothing is stored when it is refused. `AUTO_APPROVAL_DISABLED` comes from the AI review endpoints when the operator turned the feature off (`STUDIO_AUTO_APPROVAL=off`).
 <!-- --8<-- [end:catalog] -->
+
+## Browser connections
+
+| Code | Status | Meaning |
+| --- | --- | --- |
+| `BROWSER_DISABLED` | 404 | Browser metadata/discovery is disabled by the operator. |
+| `BROWSER_RUNTIME_UNAVAILABLE` | 503 | No verified isolated browser runtime/trusted run context is available; no browser operation is started. |

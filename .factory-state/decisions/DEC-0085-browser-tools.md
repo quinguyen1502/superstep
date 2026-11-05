@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0085
-- Status: Proposed — not an approved technology or implementation decision
+- Status: Accepted for delivery — owner instruction on 2026-11-05
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -46,10 +46,14 @@ This preserves Superstep's LangGraph Agent orchestration, makes dynamic URLs ord
 
 ## Approval
 
-- Approved By: no detailed design approver recorded yet.
-- Approved On: pending.
+- Approved By: Thái Quí Nguyễn (owner instruction to proceed with PLAN-0006).
+- Approved On: 2026-11-05.
 - Scope And Limits: the owner authorised writing the requirement and proposed task decomposition on 2026-11-03. No implementation, migration execution, dependency installation, merge, deployment or release authorisation is inferred.
 
 ## Review Or Revisit Trigger
 
 - Owner accepts/amends the proposed task set; initial provider/proxy proof fails; cross-turn browser persistence, arbitrary files/scripts or a hosted browser-Agent integration enters scope.
+
+## Owner Delivery Authorisation — 2026-11-05
+
+The owner instructed: “Pull develop về branch hiện tại, và tiến hành chuỗi task này.” This accepts the proposed browser delivery scope and starts PLAN-0006 in dependency order. This supersedes earlier planning-only/pending-start statements; source onboarding approval statuses are unchanged. Implementation, fixture validation and task PRs are authorised; merges, production/provider setup, release and deployment are not. Task branches may stack on the published planning package; dependent implementation tasks require predecessor review/QA and an explicitly documented stack.

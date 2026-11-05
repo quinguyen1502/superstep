@@ -8,6 +8,8 @@ from typing import Any
 
 # code: (HTTP status, English message template)
 CATALOG: dict[str, tuple[int, str]] = {
+    "BROWSER_DISABLED": (404, "Browser connections are disabled"),
+    "BROWSER_RUNTIME_UNAVAILABLE": (503, "Browser execution requires a verified isolated worker and trusted run context"),
     # generic / transport
     "VALIDATION_ERROR": (422, "Request validation failed"),
     "BAD_REQUEST": (400, "Bad request"),

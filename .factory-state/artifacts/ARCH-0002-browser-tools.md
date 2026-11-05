@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Architecture ID: ARCH-0002
-- Status: Proposed — planning authorised, technical implementation and migrations not approved
+- Status: Accepted for delivery — owner instruction on 2026-11-05
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -80,3 +80,7 @@ DISC-0002 documents the short-lived generic MCP transport, existing managed conn
 
 - REQ-0086, DES-0004, DEC-0085, DISC-0002 and PLAN-0006.
 - Existing DEC-0009, DEC-0018, DEC-0063, DEC-0066, DEC-0069 and DEC-0081 remain authoritative unless an implementation decision explicitly amends a named clause.
+
+## Owner Delivery Authorisation — 2026-11-05
+
+The owner instructed: “Pull develop về branch hiện tại, và tiến hành chuỗi task này.” This accepts the proposed browser delivery scope and starts PLAN-0006 in dependency order. This supersedes earlier planning-only/pending-start statements; source onboarding approval statuses are unchanged. Implementation, fixture validation and task PRs are authorised; merges, production/provider setup, release and deployment are not. Task branches may stack on the published planning package; dependent implementation tasks require predecessor review/QA and an explicitly documented stack.

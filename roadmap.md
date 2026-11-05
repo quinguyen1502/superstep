@@ -443,9 +443,9 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 ## Browser tools, recipes and proxies
 
-REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **proposed / planning only**, recorded on 2026-11-03 after the owner requested requirement capture and task breakdown. Existing Agent/MCP tools, dynamic chat/workflow/search URLs, shared browser connections with proxy/profile policy, reusable recipes, isolated local/remote browser sessions and executable Python/TypeScript exports. No implementation, deployment, provider purchase or merge authorised by this request.
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **accepted for delivery on 2026-11-05**, after requirement capture and task breakdown on 2026-11-03. Existing Agent/MCP tools, dynamic chat/workflow/search URLs, shared browser connections with proxy/profile policy, reusable recipes, isolated local/remote browser sessions and executable Python/TypeScript exports. Owner authorised implementation of the task chain on 2026-11-05; deployment, provider purchase and merge remain outside scope.
 
-- TASK-0241 — browser contracts and scoped connection metadata. **backlog**.
+- TASK-0241 — browser contracts and scoped connection metadata. **review**, on `factory/task-0241-browser-connection-contract` (REV-0229, QA-0229).
 - TASK-0242 — effective browser egress and connection-level proxy policy. **backlog**.
 - TASK-0243 — isolated local Playwright runtime and bounded operations. **backlog**.
 - TASK-0244 — remote browser capabilities and origin-scoped login profiles. **backlog**.
@@ -459,7 +459,7 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **proposed / planning onl
 - TASK-0252 — executable TypeScript/plain and project exports. **backlog**.
 - TASK-0253 — integrated acceptance, example workflow and en/vi handbook. **backlog**.
 
-See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability and gates. Owner acceptance of the proposed package and `factory ready` precede task-start. Existing unrelated SDK task state is unchanged.
+See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability and gates. Owner accepted the package; `factory ready` passed before TASK-0241 source work. Existing unrelated SDK task state is unchanged.
 
 ## Releases
 

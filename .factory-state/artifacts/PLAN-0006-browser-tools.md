@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0006
-- Status: Proposed — owner authorised requirement capture and breakdown on 2026-11-03; delivery tasks remain in backlog pending acceptance/start
+- Status: Accepted for delivery — TASK-0241 started on 2026-11-05; remaining tasks await dependencies
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -35,7 +35,7 @@ Deliver browser connections, primitive tools for the existing Agent, reusable ty
 
 | Task | Purpose | Size | Dependencies |
 | --- | --- | --- | --- |
-| [TASK-0241](../tasks/backlog/TASK-0241-browser-connection-contract.md) | Browser contracts and scoped connection metadata | M | none |
+| [TASK-0241](../tasks/review/TASK-0241-browser-connection-contract.md) | Browser contracts and scoped connection metadata | M | none |
 | [TASK-0242](../tasks/backlog/TASK-0242-browser-egress-proxy-policy.md) | Enforce browser egress and connection-level proxy policy | L | TASK-0241 |
 | [TASK-0243](../tasks/backlog/TASK-0243-browser-local-runtime.md) | Isolated local Playwright runtime and bounded browser tools | M | TASK-0241, TASK-0242 |
 | [TASK-0244](../tasks/backlog/TASK-0244-browser-remote-profiles.md) | Remote browser capabilities and origin-scoped login profiles | M | TASK-0241, TASK-0242, TASK-0243 |
@@ -123,3 +123,9 @@ Critical path: contracts → egress → local runtime → remote capability/prof
 
 - 2026-11-04: Owner requested publication (“Push đi”). Prepared this planning-only branch from develop 94c44366, preserving current release/SDK changes. Re-fetched and allocated against all refs in an isolated worktree; unpublished DEC-0084 and TASK-0238–0250 were renumbered to DEC-0085 and TASK-0241–0253 after collisions with merged work. All internal links, dependencies, future branch names and roadmap entries were updated together. Proposed statuses/backlog lifecycle are retained; no implementation or merge approval inferred.
 - 2026-11-04: Publication checks passed: unique IDs across working tree plus 83 refs; 19 artifact/task references and dependency DAG; whitespace; both mockup fragment scripts parsed by Node. The 23-file publication includes roadmap and three exploratory HTML previews. No application implementation test or dependency installation is claimed for this documentation-only commit.
+
+## Owner Delivery Authorisation — 2026-11-05
+
+The owner instructed: “Pull develop về branch hiện tại, và tiến hành chuỗi task này.” This accepts the proposed browser delivery scope and starts PLAN-0006 in dependency order. This supersedes earlier planning-only/pending-start statements; source onboarding approval statuses are unchanged. Implementation, fixture validation and task PRs are authorised; merges, production/provider setup, release and deployment are not. Task branches may stack on the published planning package; dependent implementation tasks require predecessor review/QA and an explicitly documented stack.
+
+- 2026-11-05: Owner started the chain. TASK-0241 branch is based on develop 3c83262a plus published planning commit b8f3a861 carried as 3beffe55. Readiness passed before source changes. Contract implementation and metadata-only gate are recorded in `docs/browser-contract.md`; browser runtime remains unavailable until egress/session proof.
