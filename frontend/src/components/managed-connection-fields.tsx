@@ -7,31 +7,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChannelLogo } from '@/components/approvals/channel-logo'
 import { api } from '@/lib/api'
 import { channelLabel, type Channel, type Channels } from '@/lib/approvals'
-import type { ManagedAdapter } from '@/lib/mcp'
+import type { ManagedAdapter, ManagedSettings, McpSecretInput } from '@/lib/mcp'
+import { browserDefaults, webDefaults, isBrowserAdapter, type ConnectionErrors } from '@/lib/browser-settings'
+import { BrowserConnectionFields } from './browser-connection-fields'
 
-type Secret = { name: string; value: string; stored: boolean }
-export function ManagedConnectionFields({ adapters, adapter, settings, secrets, fixed, idp, onChange }: {
-  adapters: ManagedAdapter[]; adapter: string; settings: Record<string, string | number>; secrets: Secret[]; fixed: boolean; idp: string
-  onChange: (patch: { adapter?: string; settings?: Record<string, string | number>; secrets?: Secret[] }) => void
+export function ManagedConnectionFields({ adapters, adapter, settings, secrets, fixed, idp, onChange, scope, errors = {} }: {
+  adapters: ManagedAdapter[]; adapter: string; settings: ManagedSettings; secrets: McpSecretInput[]; fixed: boolean; idp: string; scope: 'user' | 'org'; errors?: ConnectionErrors
+  onChange: (patch: { adapter?: string; settings?: ManagedSettings; secrets?: McpSecretInput[] }) => void
 }) {
   const { t } = useTranslation(); const [channels, setChannels] = useState<Channel[]>([])
   useEffect(() => { api<Channels>('/api/approvals/channels').then(value => setChannels(value.channels)).catch(() => setChannels([])) }, [])
   const definition = adapters.find(value => value.id === adapter)
   const set = (field: string, value: string | number) => onChange({ settings: { ...settings, [field]: value } })
+  const asText = (value: unknown) => value === undefined || value === null ? '' : typeof value === 'string' || typeof value === 'number' ? value : JSON.stringify(value)
   return <div className="space-y-3" id={`${idp}-managed`}>
     <div className="space-y-1.5"><Label htmlFor={`${idp}-adapter`}>{t('managedTools.adapter')}</Label>
       <Select value={adapter} disabled={fixed} onValueChange={value => {
         const spec = adapters.find(item => item.id === value)
-        onChange({ adapter: value, settings: Object.fromEntries(Object.entries(spec?.settings_schema.properties || {}).map(([key, property]) => [key, property.default ?? ''])), secrets: [] })
+        onChange({ adapter: value, settings: value === 'browser' ? browserDefaults() : value === 'web' ? webDefaults() : Object.fromEntries(Object.entries(spec?.settings_schema.properties || {}).map(([key, property]) => [key, property.default ?? ''])), secrets: [] })
       }}><SelectTrigger id={`${idp}-adapter`} className="w-full"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
         <SelectContent>{adapters.map(value => <SelectItem key={value.id} value={value.id}><ChannelLogo kind={value.id} />{t(`managedTools.adapters.${value.id}`)}</SelectItem>)}</SelectContent></Select></div>
+    {isBrowserAdapter(adapter) ? <BrowserConnectionFields adapter={adapter as 'browser' | 'web'} settings={settings} secrets={secrets} scope={scope} idp={idp} errors={errors} available={!!definition} onChange={onChange} /> : <>
     <div className="grid gap-3 sm:grid-cols-2">{Object.entries(definition?.settings_schema.properties || {}).map(([field, property]) => <div key={field} className={property.format === 'json' ? 'space-y-1.5 sm:col-span-2' : 'space-y-1.5'}>
       <Label htmlFor={`${idp}-${field}`}>{t(`managedTools.fields.${field}`)}</Label>
       {property.resource_kind ? <Select value={String(settings[field] ?? '')} onValueChange={value => set(field, value)}>
         <SelectTrigger id={`${idp}-${field}`} className="w-full"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
         <SelectContent>{channels.filter(channel => channel.kind === property.resource_kind).map(channel => <SelectItem key={channel.id} value={channel.id}><ChannelLogo kind={channel.kind} />{channelLabel(t, channel)}</SelectItem>)}</SelectContent>
-      </Select> : property.format === 'json' ? <Textarea id={`${idp}-${field}`} className="font-mono field-sizing-fixed" rows={12} value={settings[field] ?? ''}
-        onChange={event => set(field, event.target.value)} /> : <Input id={`${idp}-${field}`} type={property.type === 'integer' ? 'number' : 'text'} value={settings[field] ?? ''}
+      </Select> : property.format === 'json' ? <Textarea id={`${idp}-${field}`} className="font-mono field-sizing-fixed" rows={12} value={asText(settings[field])}
+        onChange={event => set(field, event.target.value)} /> : <Input id={`${idp}-${field}`} type={property.type === 'integer' ? 'number' : 'text'} value={asText(settings[field])}
         onChange={event => set(field, property.type === 'integer' && event.target.value ? Number(event.target.value) : event.target.value)} />}
     </div>)}</div>
     {definition?.secret_fields.map(field => {
@@ -44,5 +47,6 @@ export function ManagedConnectionFields({ adapters, adapter, settings, secrets, 
     })}
     {definition && <p className="text-xs text-muted-foreground">{t(`managedTools.setup.${definition.id}`)}</p>}
     <p className="text-xs text-muted-foreground">{t('managedTools.help')}</p>
+    </>}
   </div>
 }

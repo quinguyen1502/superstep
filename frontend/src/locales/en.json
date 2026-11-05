@@ -1153,7 +1153,9 @@
       "slack": "Slack actions",
       "whatsapp": "WhatsApp actions",
       "email": "Email actions",
-      "teams": "Microsoft Teams actions"
+      "teams": "Microsoft Teams actions",
+      "browser": "Isolated browser",
+      "web": "Web search and fetch"
     },
     "fields": {
       "folder_id": "Allowed Google Drive folder ID",
@@ -2673,5 +2675,92 @@
       "escalated": "{{n}} to people",
       "suggested": "{{n}} suggested"
     }
+  },
+  "browserSettings": {
+    "connectionHelp": "No start URL is required. URLs come from tool calls or workflow inputs. Discovery lists tools; the runtime verifies the isolated provider when a run starts.",
+    "webHelp": "Separate search/fetch connection. It never inherits browser login state, cookies or proxy settings.",
+    "disabled": "Browser and web connections are disabled by the operator. Stored secrets remain hidden; enable the server feature before editing or discovery.",
+    "providers": {
+      "local": "Local isolated browser (Docker)",
+      "controlled_remote": "Operator-controlled remote browser"
+    },
+    "remoteHelp": "Use an independently approved HTTPS controller compatible with this runtime. Arbitrary CDP/WSS endpoints are unsupported. Leave stored secret fields empty to keep them.",
+    "network": "Network / Proxy",
+    "proxyModes": {
+      "direct": "Direct connection",
+      "operator_default": "Operator default proxy",
+      "custom": "Custom HTTP proxy"
+    },
+    "auth": {
+      "none": "No proxy authentication",
+      "basic": "HTTP Basic authentication"
+    },
+    "proxyHelp": "Applies to all browser traffic for this session. The operator must approve custom/default routes. A proxy failure never falls back to direct. Search/fetch uses its separate connection.",
+    "originHelp": "One exact http(s) origin per line, without paths or wildcards. Empty allows public destinations under the enforced network policy; it does not allow internal addresses.",
+    "profile": "Personal login profile",
+    "profileHelp": "Login state is personal and restricted to declared HTTPS origins. Each run gets a fresh context; pages cannot change the selected profile.",
+    "orgProfileHelp": "Login profiles are available only on personal connections, not organisation connections.",
+    "profileStateHelp": "Playwright storage state JSON (cookies and origins), up to 64 KiB. Only secure host-only cookies and exact HTTPS origins are supported. Stored login changes are not written back.",
+    "resources": "Session and action limits",
+    "resourceHelp": "Expired or lost sessions stop browser actions. Approval does not extend these limits. Worker CPU/memory bounds are enforced by the operator runtime.",
+    "stealthHelp": "Stealth mode and firewall/CAPTCHA bypass are unsupported. A proxy routes traffic; it does not guarantee access to a protected site.",
+    "webTools": "Enabled web tools",
+    "tools": {
+      "search": "Search for candidate URLs",
+      "fetch": "Fetch public page text"
+    },
+    "noWebTools": "No tools are enabled. Discovery returns an empty list and calls are refused.",
+    "searchHelp": "SearXNG must expose JSON search on this fixed HTTPS endpoint. Optional authentication headers are encrypted and sent only to search, never to fetched sites. Redirects and browser cookies are not used.",
+    "webOriginHelp": "Allowed origins for candidate results and fetch. Each actual request must pass public-address policy. No browser proxy or custom web proxy is inherited.",
+    "stored": "Stored encrypted",
+    "secretPlaceholder": "Enter a new value",
+    "clearSecret": "Clear stored secret",
+    "clearSecretTitle": "Clear stored secret {{name}}?",
+    "clearSecretBody": "Save the connection to remove this stored secret. An empty field without clearing keeps the saved value.",
+    "removeProfile": "Remove profile",
+    "removeProfileTitle": "Remove profile {{name}}?",
+    "removeProfileBody": "Save the connection to remove this profile and its encrypted login state. Active browser sessions will be revoked.",
+    "originPlaceholder": "One origin per line, e.g. https://example.org",
+    "httpsOriginPlaceholder": "One HTTPS origin per line, e.g. https://example.org",
+    "proxyPlaceholder": "http://proxy.example.org:3128",
+    "searchPlaceholder": "https://search.example.org/search",
+    "fields": {
+      "provider": "Browser provider",
+      "remote_endpoint": "Controller HTTPS origin (encrypted)",
+      "remote_token": "Controller token (encrypted)",
+      "proxy_mode": "Proxy route",
+      "proxy_server": "HTTP proxy origin",
+      "proxy_auth": "Proxy authentication",
+      "proxy_username": "Proxy username (encrypted)",
+      "proxy_password": "Proxy password (encrypted)",
+      "allowed_origins": "Allowed origins",
+      "profile_name": "Profile name",
+      "profile_origins": "Profile HTTPS origins",
+      "profile_state": "Profile state JSON (encrypted)",
+      "action_timeout_ms": "Action timeout (ms)",
+      "idle_timeout_s": "Idle timeout (seconds)",
+      "lifetime_s": "Maximum session lifetime (seconds)",
+      "max_actions": "Maximum actions per session",
+      "search_endpoint": "SearXNG HTTPS search endpoint",
+      "search_headers": "Search authentication headers JSON (encrypted)"
+    },
+    "errors": {
+      "unsupported": "This provider, version or capability is unsupported. Choose a supported option.",
+      "origins": "Enter at most 50 unique exact http(s) origins, one per line, without paths, credentials or wildcards.",
+      "httpsOrigins": "Enter 1–20 unique exact HTTPS origins, without paths, credentials or wildcards.",
+      "searchEndpoint": "Configure a fixed SearXNG HTTPS endpoint without credentials, query or fragment.",
+      "headers": "Enter a JSON object of at most 20 HTTP authentication headers with nonempty string values.",
+      "controller": "Enter a controller HTTPS origin without credentials, path, query or fragment, or keep its stored value.",
+      "token": "Enter a token of 32–4096 printable ASCII characters without spaces, or keep its stored value.",
+      "proxy": "Only an HTTP proxy origin is supported. Enter credentials in the separate fields; do not include paths, query or fragment.",
+      "requiredSecret": "Enter this required secret, or keep its stored value.",
+      "personalProfile": "Login profiles require a personal connection.",
+      "profileName": "Use 1–128 letters, digits, underscores, dots, colons or hyphens for the profile name.",
+      "profileState": "Enter storage-state JSON as an object, at most 64 KiB. The server validates cookies and origin scope.",
+      "resource": "Enter a whole number within the displayed minimum and maximum.",
+      "idleLifetime": "Idle timeout must not exceed the maximum session lifetime.",
+      "profileScope": "Every profile origin must also appear in the allowed origins."
+    },
+    "range": "Allowed range: {{min}}–{{max}}"
   }
 }
