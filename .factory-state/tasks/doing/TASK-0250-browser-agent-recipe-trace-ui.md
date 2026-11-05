@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0250
 - Title: Agent/recipe configuration and filtered browser trace/chat UI
-- Status: backlog
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -30,7 +30,7 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- New browser node/tab taxonomy, live provider setup, release and merge.
 
 ## Inputs And Related Artifacts
 
@@ -41,9 +41,9 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0247-browser-url-web-tools.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0248-browser-recipes.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0249-browser-connection-settings-ui.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0247-browser-url-web-tools.md`.
+- Dependency artifact: `.factory-state/tasks/doing/TASK-0248-browser-recipes.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0249-browser-connection-settings-ui.md`.
 
 ## Expected Outputs
 
@@ -80,12 +80,12 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised full-chain implementation and controlled fixtures on 2026-11-05; this task explicitly stacks on unmerged prerequisites.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner chain instruction accepts scope and start; owner review and merge approval remain pending.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -98,3 +98,7 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 
 - Future branch: `factory/task-0250-browser-agent-recipe-trace-ui`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-06 preparation: explicit stack on TASK-0249 47a9b2bc / Draft #314, scoped REV-0239/QA-0239 (ten real Chrome cases, full declared checks running on source 14b1560a). TASK-0248 final #313 / 50a536ce has full passed checks; this branch includes its source 27cdf07d/base 07d22fce but not final metadata/Vi follow-up. Parent sync awaits explicit permission after automatic merge-review rejection, with no merge performed. Other prerequisites #312/#311/#310/#309/#308/#304/#303/#299 remain unmerged. No source changed for TASK-0250.
+
+- 2026-11-06 task-start: factory ready exited 0 before source. Existing Agent/MCP and workflow settings will expose URL sources, recipe contracts/selectors and execution limits using General/Settings/Data/Execution tabs; owner-only trace observations/artifacts and filtered visitor states use current seams. No implementation source changed at task-start. Owner full-chain instruction authorises implementation and checks next.
