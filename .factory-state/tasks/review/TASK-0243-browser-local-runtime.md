@@ -104,3 +104,5 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 - 2026-11-05: Real worker smoke passed six operations and approval/stale/foreign-artifact/budget/idle/uncertain-effect/production-gateway denial cases. PostgreSQL/SQLite migration suite 4 passed; root npm 280/build/lint passed; targeted/focused backend checks and wheel asset packaging passed. REV-0233/QA-0233 recorded; full backend regression to be run against the task commit. Run/Agent binding and durable Human approval are not claimed implemented.
 
 - 2026-11-05: Final focused checks: 71 passed, 1 optional PostgreSQL skip. Review/QA IDs reallocated to 0233 because develop merged TASK-0256/0257 while this task was being verified.
+
+- 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against rebased implementation 1b52abff in an isolated checkout: **1284 passed, 67 skipped**, 458.45 s, no failures. This includes develop 21ddce1a. Optional environment skips and existing warnings remain. Commit 22a5d935 only normalises source/license whitespace. Draft PR #308; owner review remains pending.

@@ -8,7 +8,7 @@
 - QA Owner: Codex
 - Created: 2026-11-05
 - Updated: 2026-11-05
-- Outcome: pass within local worker/artifact scope; full regression pending
+- Outcome: pass within local worker/artifact scope; full regression passed
 
 ## Validation Scope
 
@@ -41,7 +41,7 @@ No open blocking defect within scope. Resolved issues: typed model envelope seri
 
 ## Gaps Or Untested Areas
 
-Full backend suite pending against task commit. No live accounts, production deployment, remote provider/login profile, distributed scheduler/fence, completed Human approval workflow, public trace filter, executable export or browser settings UI claimed. Other CPU/OS combinations need separate evidence.
+Full backend suite passed against task commit; see final evidence below. No live accounts, production deployment, remote provider/login profile, distributed scheduler/fence, completed Human approval workflow, public trace filter, executable export or browser settings UI claimed. Other CPU/OS combinations need separate evidence.
 
 ## Residual Risk
 
@@ -60,3 +60,5 @@ Record final regression output, owner review and full-stack integration evidence
 Pass within scoped acceptance; remain review pending owner approval and final regression. No done/merge approval inferred.
 
 - Renumbered: QA-0231 → QA-0233 after fresh all-ref allocation; develop already merged the earlier allocation for TASK-0256.
+
+- 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against rebased implementation 1b52abff in an isolated checkout: **1284 passed, 67 skipped**, 458.45 s, no failures. This includes develop 21ddce1a. Optional environment skips and existing warnings remain. Commit 22a5d935 only normalises source/license whitespace. Draft PR #308; owner review remains pending.

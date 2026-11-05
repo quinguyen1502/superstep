@@ -59,3 +59,5 @@ Record final focused/full regression evidence before Ready. Owner review before 
 Approved for QA within this delivery scope; advisory self-review does not approve on behalf of the owner.
 
 - Renumbered: REV-0231 → REV-0233 after fresh all-ref allocation; develop already merged the earlier allocation for TASK-0256.
+
+- 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against rebased implementation 1b52abff in an isolated checkout: **1284 passed, 67 skipped**, 458.45 s, no failures. This includes develop 21ddce1a. Optional environment skips and existing warnings remain. Commit 22a5d935 only normalises source/license whitespace. Draft PR #308; owner review remains pending.
