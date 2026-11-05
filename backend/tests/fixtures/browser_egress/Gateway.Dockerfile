@@ -1,5 +1,5 @@
 FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f AS fixture_tls
-RUN openssl req -x509 -newkey rsa:2048 -nodes -keyout /fixture-key.pem -out /fixture-cert.pem -days 1 -subj /CN=allowed.test >/dev/null 2>&1 && chmod 644 /fixture-key.pem
+RUN openssl req -x509 -newkey rsa:2048 -nodes -keyout /fixture-key.pem -out /fixture-cert.pem -days 3650 -subj /CN=allowed.test -addext "subjectAltName=DNS:allowed.test,DNS:other.test,DNS:sub.allowed.test,DNS:controller.test" >/dev/null 2>&1 && chmod 644 /fixture-key.pem
 FROM python:3.12-slim
 WORKDIR /fixture
 COPY --from=fixture_tls /fixture-key.pem /fixture-cert.pem ./

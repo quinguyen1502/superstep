@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0006
-- Status: Accepted for delivery — TASK-0241–0243 in review; remaining tasks await dependencies
+- Status: Accepted for delivery — TASK-0241–0244 in review; remaining tasks await dependencies
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -38,7 +38,7 @@ Deliver browser connections, primitive tools for the existing Agent, reusable ty
 | [TASK-0241](../tasks/review/TASK-0241-browser-connection-contract.md) | Browser contracts and scoped connection metadata | M | none |
 | [TASK-0242](../tasks/review/TASK-0242-browser-egress-proxy-policy.md) | Enforce browser egress and connection-level proxy policy | L | TASK-0241 |
 | [TASK-0243](../tasks/review/TASK-0243-browser-local-runtime.md) | Isolated local Playwright runtime and bounded browser tools | M | TASK-0241, TASK-0242 |
-| [TASK-0244](../tasks/backlog/TASK-0244-browser-remote-profiles.md) | Remote browser capabilities and origin-scoped login profiles | M | TASK-0241, TASK-0242, TASK-0243 |
+| [TASK-0244](../tasks/review/TASK-0244-browser-remote-profiles.md) | Remote browser capabilities and origin-scoped login profiles | M | TASK-0241, TASK-0242, TASK-0243 |
 | [TASK-0245](../tasks/backlog/TASK-0245-browser-run-sessions.md) | Run-bound sessions, ordered Agent calls and lifecycle integration | L | TASK-0243, TASK-0244 |
 | [TASK-0246](../tasks/backlog/TASK-0246-browser-approval-recovery.md) | Browser approvals, stale sessions and uncertain-effect recovery | L | TASK-0245 |
 | [TASK-0247](../tasks/backlog/TASK-0247-browser-url-web-tools.md) | Dynamic URL bindings, search/fetch and missing-context flows | M | TASK-0241, TASK-0245, TASK-0246 |

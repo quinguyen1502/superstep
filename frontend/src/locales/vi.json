@@ -424,6 +424,9 @@
     }
   },
   "errors": {
+    "BROWSER_PROFILE_DENIED": "Hồ sơ đăng nhập trình duyệt không được cấp cho danh tính hoặc origin này",
+    "BROWSER_CAPABILITY_UNSUPPORTED": "Nhà cung cấp trình duyệt không thể thực thi các khả năng được yêu cầu",
+    "BROWSER_CONTROL_UNAVAILABLE": "Dịch vụ điều khiển trình duyệt không khả dụng",
     "BROWSER_ARTIFACT_NOT_FOUND": "Không tìm thấy ảnh chụp trình duyệt hoặc ảnh đã hết hạn",
     "BROWSER_ARTIFACT_INVALID": "Ảnh chụp trình duyệt vượt giới hạn PNG được hỗ trợ",
     "BROWSER_DISABLED": "Kết nối trình duyệt đang bị tắt",

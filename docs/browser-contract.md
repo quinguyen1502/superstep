@@ -18,11 +18,11 @@ design-time website URL is required.
 | Setting | Default / bound |
 | --- | --- |
 | version | integer 1 |
-| provider | `local` or `controlled_cdp` |
+| provider | `local` or `controlled_remote` |
 | proxy.mode | `direct`, `operator_default`, or `custom` |
 | proxy.server | HTTP origin, only for custom; no credentials/path/query/fragment |
 | proxy.auth | `none` or `basic`, only custom may choose basic |
-| profile | optional name and 1–20 exact HTTP(S) origins; metadata only |
+| profile | optional name and 1–20 exact HTTPS origins; personal encrypted state (TASK-0244) |
 | allowed_origins | up to 50 exact HTTP(S) origins; empty means public targets subject to enforced egress |
 | action_timeout_ms | 30,000; 1,000–60,000 |
 | idle_timeout_s | 120; 30–600 and no greater than lifetime |
@@ -31,18 +31,20 @@ design-time website URL is required.
 | stealth | false; all other values rejected |
 
 Profile origins must be a subset of a nonempty connection origin allowlist.
-They do not grant network access or load cookies. Origin checks here are syntax
-validation; they do not claim DNS, IP or browser-egress enforcement.
+At runtime TASK-0244 narrows the effective network allowlist to profile origins.
+Syntax validation alone does not establish DNS/IP or browser-egress enforcement.
 
-Only `remote_endpoint`, `proxy_username` and `proxy_password` are accepted secret
-keys. Controlled CDP requires a secret HTTPS/WSS control endpoint. A local
+Accepted secret keys are `remote_endpoint`, `remote_token`, `proxy_username`,
+`proxy_password` and `profile_state`. Controlled remote requires an operator-approved
+HTTPS origin and an authentication token of at least 32 characters. Raw CDP/WSS
+endpoints and endpoint query tokens are refused. A local
 connection rejects that key. Basic proxy authentication requires both secrets;
 other modes reject them. Secrets are encrypted before persistence and all hints
 are exactly `••••`, including endpoints/usernames. Updates preserve existing
 MCP semantics: omit the secrets object to keep all; null values keep named keys;
 unlisted keys are removed. Removal that leaves a required pair incomplete fails
-atomically. Profile state provisioning is intentionally not accepted until
-TASK-0244 enforces owner and origin scope.
+atomically. TASK-0244 accepts bounded encrypted personal profile state with
+owner/origin checks; see `browser-remote.md`.
 
 ## Capability eligibility and proof gates
 
@@ -51,7 +53,7 @@ TASK-0244 enforces owner and origin scope.
 | local + direct | yes | isolated worker with no direct page-network escape, controlled DNS/egress |
 | local + operator default | yes | explicit operator config, stable resolution; missing default fails closed |
 | local + HTTP proxy (none/basic) | yes | enforced destination resolution on the selected proxy path; no direct fallback |
-| controlled CDP + those modes | yes | equivalent remote network isolation, authenticated allowed control plane, actual proxy capability |
+| controlled remote + those modes | yes | equivalent remote network isolation, authenticated allowed control plane, actual proxy capability |
 | SOCKS/HTTPS proxy, provider geo, stealth | no | out of v1; cannot be selected through tool arguments |
 
 `CAPABILITY_CONTRACT.runtime_verified` is false for every provider. Settings do
@@ -127,3 +129,5 @@ in force; executable browser exports belong to TASK-0251/0252.
 
 No browser dependency, provider account, remote/proxy connection, login state,
 production migration, release or deployment is introduced by this contract task.
+
+TASK-0244 refines the provisional remote provider name to `controlled_remote`: it uses the same isolated worker through authenticated, verified/pinned HTTPS RPC. `controlled_cdp` was metadata-only and never executable; old provisional records must be explicitly reconfigured. Profile provisioning and exact capability/refusal rules are in `docs/browser-remote.md`.

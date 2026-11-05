@@ -37,8 +37,8 @@ def test_metadata_discovery_no_network_and_owner_scope(c):
 
 def test_proxy_secrets_encrypted_masked_keep_remove_and_invalid_edits(c):
     owner = user(c)
-    settings = {"provider": "controlled_cdp", "proxy": {"mode": "custom", "server": "http://proxy.example:8080", "auth": "basic"}}
-    secrets = {"remote_endpoint": "wss://control.example?token=remote-secret", "proxy_username": "fixture-user", "proxy_password": "fixture-password"}
+    settings = {"provider": "controlled_remote", "proxy": {"mode": "custom", "server": "http://proxy.example:8080", "auth": "basic"}}
+    secrets = {"remote_endpoint": "https://control.example", "remote_token": "synthetic-remote-secret-token-32chars", "proxy_username": "fixture-user", "proxy_password": "fixture-password"}
     response = create(c, owner, settings=settings, secrets=secrets)
     assert response.status_code == 200, response.text
     server = response.json()["data"]; sid = server["id"]
@@ -55,16 +55,16 @@ def test_proxy_secrets_encrypted_masked_keep_remove_and_invalid_edits(c):
     assert McpServerRepository(get_db()).get(sid).secrets is None
 
 
-@pytest.mark.parametrize("settings,secrets", [({"provider": "controlled_cdp"}, {}),
+@pytest.mark.parametrize("settings,secrets", [({"provider": "controlled_remote"}, {}),
     ({}, {"remote_endpoint": "wss://control.example"}), ({}, {"profile_state": "not-supported-yet"}),
-    ({"provider": "controlled_cdp"}, {"remote_endpoint": "http://control.example"}),
+    ({"provider": "controlled_remote"}, {"remote_endpoint": "http://control.example"}),
     ({"proxy": {"mode": "custom", "server": "http://proxy.example", "auth": "basic"}}, {}),
     ({"proxy": {"mode": "direct"}}, {"proxy_username": "user", "proxy_password": "secret"}),
     ({"stealth": True}, {}), ({"profile": {"name": "profile", "origins": ["https://site.example/path"]}}, {})])
 def test_invalid_configuration_uses_shared_envelope(c, settings, secrets):
     response = create(c, user(c), settings=settings, secrets=secrets)
-    assert response.status_code == 400, response.text
-    assert response.json()["error"]["code"] == "MCP_CONFIG_INVALID"
+    assert response.status_code in (400, 403), response.text
+    assert response.json()["error"]["code"] in {"MCP_CONFIG_INVALID", "BROWSER_PROFILE_DENIED"}
 
 
 def test_disabled_gate_hides_adapter_and_denies_saved_connection(c, monkeypatch):

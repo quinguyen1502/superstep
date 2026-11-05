@@ -23,7 +23,7 @@ def record(key, value):
 class Destination(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
     def do_GET(self):
-        record("requests", {"path": self.path.split("?", 1)[0], "leaked_proxy_auth": "Proxy-Authorization" in self.headers})
+        record("requests", {"path": self.path.split("?", 1)[0], "leaked_proxy_auth": "Proxy-Authorization" in self.headers, "host": self.headers.get("Host", ""), "profile_cookie": self.headers.get("Cookie", "") == "login=synthetic-cookie"})
         if self.path.startswith("/redirect"):
             self.send_response(302); self.send_header("Location", "http://127.0.0.1:9090/private"); self.end_headers(); return
         if self.path.startswith("/hostile"):
@@ -33,6 +33,10 @@ class Destination(BaseHTTPRequestHandler):
             navigator.serviceWorker.register('/sw.js').catch(()=>{});</script></html>'''
         elif self.path.startswith("/sw.js"):
             body = b"self.addEventListener('activate',()=>fetch('http://127.0.0.1:9090/service-worker'))"
+        elif self.path.startswith("/profile"):
+            body = b'''<html><h1>Profile fixture</h1><p id="status">Anonymous</p><p>synthetic-cookie</p>
+            <script>if(localStorage.getItem('login')==='synthetic-storage')document.getElementById('status').textContent='Stored login';
+            document.body.insertAdjacentHTML('beforeend','<p>'+localStorage.getItem('login')+'</p>')</script></html>'''
         elif self.path.startswith("/form"):
             body = b'''<html><h1>Form fixture</h1><input aria-label="Name" value="sensitive-prefilled-value">
             <button onclick="document.getElementById('status').textContent='Submitted'">Submit fixture</button>
