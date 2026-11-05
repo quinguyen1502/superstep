@@ -33,8 +33,10 @@ Dedicated API calls service; service calls engine. No FastAPI in services/engine
 
 ## Validation Review
 
-Real HTTPS client/controller + Docker Chromium proved all six operations, approval/private artifact flow, all three proxy routes, upstream failure without direct fallback, private target denial, secure cookie/localStorage origin isolation, anonymous separate context, secret text redaction and own-label restart cleanup. 206 targeted backend/managed/MCP regressions passed before final strictness refinements; focused refinements passed. Root npm 280 tests/build/lint passed on develop 0.11.2. Full backend regression and final fixture results are recorded in QA-0234 as available. No screenshot images or raw secrets committed.
+Real HTTPS client/controller + Docker Chromium proved all six operations, approval/private artifact flow, all three proxy routes, upstream failure without direct fallback, private target denial, secure cookie/localStorage origin isolation, anonymous separate context, secret text redaction and own-label restart cleanup. 206 targeted backend/managed/MCP regressions passed before final strictness refinements; focused refinements passed. Root npm 280 tests/build/lint passed on develop 0.11.2. Full backend regression: 1300 passed, 67 skipped. Final fixture results are recorded in QA-0234. No screenshot images or raw secrets committed.
 
 ## Review Decision
 
 Scoped pass / advisory self-review. Owner approval is pending; task remains review. No merge, deployment, release or paid provider setup authorised.
+
+- 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against isolated implementation commit 252aedff: **1300 passed, 67 skipped**, 458.78 s, no failures. Source is unchanged by subsequent documentation. Final real HTTPS/Chromium fixture and all declared SDK/root checks passed. Draft PR #309; owner review remains pending.

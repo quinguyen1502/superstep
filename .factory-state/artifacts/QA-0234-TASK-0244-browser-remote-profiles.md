@@ -8,7 +8,7 @@
 - QA Owner: Codex (advisory; owner approval pending)
 - Created: 2026-11-05
 - Updated: 2026-11-05
-- Outcome: pass within controlled remote/profile scope; full regression to be recorded against commit
+- Outcome: pass within controlled remote/profile scope; full regression passed
 
 ## Acceptance Criteria Coverage
 
@@ -34,3 +34,5 @@ No live account, purchased provider, physical remote host, deployment, UI flow o
 Scoped pass; remain review pending final regression/owner review. No done/merge approval inferred.
 
 - Final fixture rerun passed after strict proxy/profile validation; direct/custom/operator-default, no fallback, profile and restart cases all passed. Python SDK declared suite: **229 passed, 8 skipped** (10.49 s); TS SDK declared typecheck passed. Full backend is running on isolated commit 252aedff; subsequent documentation does not change source.
+
+- 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against isolated implementation commit 252aedff: **1300 passed, 67 skipped**, 458.78 s, no failures. Source is unchanged by subsequent documentation. Final real HTTPS/Chromium fixture and all declared SDK/root checks passed. Draft PR #309; owner review remains pending.
