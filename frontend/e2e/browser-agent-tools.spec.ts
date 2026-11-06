@@ -13,7 +13,7 @@ async function choose(page: Page, id: string, name: string) {
   await page.locator(`#${id}`).click(); await page.getByRole('option', { name, exact: true }).click()
 }
 async function connection(page: Page, headers: Record<string, string>, name: string) {
-  const result = await (await page.request.post('/api/mcp/servers', { headers, data: { name, scope: 'user', transport: 'managed', adapter: 'browser', settings: {}, secrets: {} } })).json()
+  const result = await (await page.request.post('/api/mcp/servers', { headers, data: { name, scope: 'user', transport: 'managed', adapter: 'browser', settings: { provider: 'local', allowed_origins: ['https://example.org'] }, secrets: {} } })).json()
   expect(result.success).toBe(true)
   return (await (await page.request.post(`/api/mcp/servers/${result.data.id}/discover`, { headers })).json()).data
 }
