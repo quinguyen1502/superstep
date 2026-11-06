@@ -171,8 +171,23 @@ export function useStudio() {
         setErrors(issueTexts(pending.map(String), st?.issues)); setTab('input')
         nav(`${loc.pathname}${loc.search}`, { replace: true, state: null })  // once: a reload must not bring them back
       }
-      // ?run=<id> (from the pending list) opens that run with its Human panel
-      loadHistory(wf.id)?.then((hs: any[]) => { const h = hs?.find(x => x.id === params.get('run')); if (h) openRun(h) }) })
+      // ?run=<id> (from the pending list) opens that run with its Human panel.
+      // Retry on empty/failed history: Approvals→editor navigations race the runs API under load
+      // (ECONNRESET), and a single miss leaves #human-panel never mounted.
+      const wanted = params.get('run')
+      const openWanted = (attempt = 0) => {
+        const pending = loadHistory(wf.id)
+        if (!pending) return
+        pending.then((hs: any[]) => {
+          if (!wanted) return
+          const row = hs?.find((x: any) => x.id === wanted)
+          if (row) { openRun(row); return }
+          if (attempt < 8) window.setTimeout(() => openWanted(attempt + 1), Math.min(2000, 250 * (2 ** attempt)))
+        }).catch(() => {
+          if (wanted && attempt < 8) window.setTimeout(() => openWanted(attempt + 1), Math.min(2000, 250 * (2 ** attempt)))
+        })
+      }
+      openWanted() })
       .catch(e => setLoadErr({ status: e.status ?? 0, msg: e.message }))
     api('/api/tools').then(setTools).catch(() => {})
     api<Credential[]>('/api/credentials').then(setCreds).catch(() => {})
