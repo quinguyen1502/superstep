@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0253
-- Title: Integrated browser acceptance, example workflow and bilingual handbook
-- Status: backlog
+- Title: Studio integrated browser acceptance, example workflow and bilingual handbook
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,19 @@
 
 ## Objective
 
-Integrated browser acceptance, example workflow and bilingual handbook, satisfying the assigned acceptance criteria of REQ-0086.
+Studio first-milestone integrated browser acceptance, example workflow and bilingual handbook (export handbook deferred with TASK-0251/0252), satisfying the studio acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Provide a disposable tracking-portal fixture, fake search/proxy/remote endpoints and an offline example workflow covering chat/workflow/unknown URL and recipe paths.
-- Document local/remote setup, proxy modes/capabilities, profile scope, browser action/approval limits, unknown outcomes, session expiry and executable export setup.
-- Run integrated security/permission/export/UI acceptance and declared project checks; capture review/QA evidence and record residual provider limitations.
+- Provide a disposable tracking-portal fixture, fake search/proxy/Browserless endpoints and an offline example workflow covering chat/workflow/unknown URL, whitelist denial, multi-turn session and recipe paths.
+- Document local and Browserless setup, whitelist, proxy modes/capabilities, safety toggles and risks, profile scope, browser action/approval defaults, unknown outcomes and session idle/max behaviour. **Studio handbook only** for this milestone; executable export setup waits with TASK-0251/0252.
+- Run integrated security/permission/UI acceptance and declared project checks for studio; capture review/QA evidence and record residual Browserless limitations. Export parity suites are out of this milestone.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -42,8 +42,6 @@ Integrated browser acceptance, example workflow and bilingual handbook, satisfyi
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0250-browser-agent-recipe-trace-ui.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0251-browser-python-export.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0252-browser-typescript-export.md`.
 
 ## Expected Outputs
 
@@ -60,22 +58,21 @@ Integrated browser acceptance, example workflow and bilingual handbook, satisfyi
 ## Dependencies
 
 - TASK-0250 — Agent/recipe configuration and filtered browser trace/chat UI
-- TASK-0251 — Executable Python and project export for browser tools/recipes
-- TASK-0252 — Executable TypeScript and project export with browser parity
-- Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
+- Owner accepts the amended REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
+- TASK-0251 and TASK-0252 are **not** dependencies of this studio milestone.
 - Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
 
 ## Acceptance Criteria
 
-- REQ-0086 AC1–AC10 map to real fixture/contract/export/UI evidence, including changed layout, ask-for-context, proxy policy failures and cancellation/recovery.
-- No live account, paid provider, automatic CAPTCHA solving, real external write or production cutover is needed for mandatory automated acceptance.
-- Mock remains network-free; screenshots are protected/filtered and evidence stays outside Git. en/vi handbook/example/CHANGELOG accurately state supported capabilities and gaps.
-- Every delivery task has review/QA and dependency integration evidence; full Factory/project checks pass before the requirement is marked complete. Owner approves any merge/release separately.
+- REQ-0086 AC1–AC7, AC9 and studio AC10 map to real fixture/contract/UI evidence, including changed layout, ask-for-context, whitelist denials, Browserless policy failures, multi-turn session idle and cancellation/recovery. AC8/export evidence is explicitly deferred.
+- No live account, paid provider, automatic CAPTCHA solving, real external write or production cutover is needed for mandatory automated acceptance (Browserless fixtures may use controlled/fake control APIs).
+- Mock remains network-free; screenshots are protected/filtered and evidence stays outside Git. en/vi studio handbook/example/CHANGELOG accurately state supported capabilities, toggle defaults, risks and gaps.
+- Every studio delivery task has review/QA and dependency integration evidence; full Factory/project checks pass before the studio milestone is marked complete. Overall REQ-0086 remains incomplete until deferred exports finish. Owner approves any merge/release separately.
 
 ## Validation Plan
 
 - Declared full Factory profile, factory validate/ready/ID checks; full backend including layers/envelope/migrations; root npm test/build/lint and targeted browser e2e.
-- Actual local/remote controlled browser, DNS/proxy, permission, crash/approval and Python/TypeScript export parity suites; handbook checks discovered from the current repository.
+- Actual local/Browserless controlled browser, DNS/proxy/whitelist, permission, crash/approval ON/OFF and multi-turn session suites; studio handbook checks discovered from the current repository. Export parity waits with TASK-0251/0252.
 - At implementation: run appropriate declared project checks plus Factory validation/ID checks; each task records review and QA before completion.
 
 ## Assumptions
@@ -93,6 +90,8 @@ Integrated browser acceptance, example workflow and bilingual handbook, satisfyi
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0250 → TASK-0253 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

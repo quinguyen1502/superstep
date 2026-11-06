@@ -148,7 +148,7 @@ class RunRepository:
             return list(s.scalars(select(Run).where(Run.owner == owner, Run.status == "waiting", NOT_TEST).order_by(Run.started.desc()).limit(limit)))
 
     def list_unfinished(self, limit: int = 500) -> list[Run]:
-        """Queued or running queue-job runs (every source except the editor's, whose rows are written when they end)."""
+        """Recovery candidates; the worker distinguishes queue checkpoints from display-only socket snapshots."""
         with self.db.session() as s:
             return list(s.scalars(select(Run).where(Run.status.in_(("queued", "running")), Run.source.is_not(None), Run.source != "ui")
                                   .order_by(Run.started).limit(limit)))

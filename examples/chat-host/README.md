@@ -94,8 +94,8 @@ en/vi, light/dark, widget, mobile and revoked-key states. Screenshots stay under
 `frontend/test-results/chat-host/`, `react-chat/` and `widget-chat/`; link CI artifacts from the PR instead of
 adding images to Git. Auth traces are disabled because they capture tokens.
 
-This sample targets Superstep 0.11.1 with matching Python SDK/CLI/server versions,
-TypeScript SDK 0.2.0 and React toolkit 0.1.1. The npm packages keep independent
-versions. See the [0.11.1 release notes](../../CHANGELOG.md) for the integrated
+This sample targets Superstep 0.11.2 with matching Python SDK/CLI/server versions,
+TypeScript SDK 0.2.0 and React toolkit 0.1.2. The npm packages keep independent
+versions. See the [0.11.2 release notes](../../CHANGELOG.md) for the integrated
 scope; native toolkit/WebView work remains deferred. Release tags and package
 publication follow the owner-approved release process.

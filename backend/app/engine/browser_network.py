@@ -2,6 +2,8 @@
 
 This module does not grant browser access. Only a network-isolated worker using
 the gateway for *all* page traffic can enforce this policy (see browser-egress.md).
+Page destinations require a non-empty origin whitelist (Accepted DEC-0085);
+empty allowlists deny every non-infrastructure resolve.
 """
 from __future__ import annotations
 
@@ -47,10 +49,11 @@ class DestinationPolicy:
     There is deliberately no `allow_private` or fixture field. The fixture-only
     subclass lives outside app/ and cannot be enabled by connection/model data.
     """
-    def __init__(self, allowed_origins=(), *, resolver=socket.getaddrinfo):
+    def __init__(self, allowed_origins=(), *, resolver=socket.getaddrinfo, require_whitelist=True):
         try:
             self.allowed_origins = frozenset(self._origin(value) for value in allowed_origins)
         except (ValueError, TypeError): raise EgressDenied() from None
+        if require_whitelist and not self.allowed_origins: raise EgressDenied()
         self.resolver = resolver
 
     @staticmethod
@@ -73,7 +76,7 @@ class DestinationPolicy:
             if not host or any(ord(c) <= 32 or c in "\\/%@?#" or ord(c) == 127 for c in host): raise ValueError()
             host = host.lower().rstrip(".").encode("idna").decode("ascii")
             target_origin = origin(scheme, host, port)
-            if not infrastructure and self.allowed_origins and target_origin not in self.allowed_origins: raise ValueError()
+            if not infrastructure and target_origin not in self.allowed_origins: raise ValueError()
             # Nonstandard ports must be explicitly named in the destination allowlist.
             if not infrastructure and port not in {80, 443} and target_origin not in self.allowed_origins: raise ValueError()
             answers = self.resolver(host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)

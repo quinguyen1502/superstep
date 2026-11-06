@@ -3,7 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { StateFieldPicker } from '@/components/state-field-action'
 import type { TemplateField } from '@/components/template-editor'
 
 const DEFAULT_FIELD = 'files'
@@ -21,8 +21,7 @@ export function IncludeAttachments({ idp, data: d, fields, readOnly, onChange }:
     </div>
     <p className="text-[11px] text-muted-foreground">{t('chat.files.includeHint')}</p>
     {d.include_attachments && <div className="grid gap-1.5"><Label htmlFor={`${idp}-attachments-field`} className="text-xs">{t('chat.files.includeField')}</Label>
-      <Select value={field} disabled={readOnly} onValueChange={v => onChange({ attachments_field: v === DEFAULT_FIELD ? undefined : v })}>
-        <SelectTrigger className="w-full" id={`${idp}-attachments-field`}><SelectValue /></SelectTrigger>
-        <SelectContent>{lists.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></div>}
+      <StateFieldPicker value={field} disabled={readOnly} onChange={v => onChange({ attachments_field: v === DEFAULT_FIELD ? undefined : v })}
+        id={`${idp}-attachments-field`} types={['list']} options={lists} /></div>}
   </div>
 }

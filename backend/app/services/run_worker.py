@@ -171,6 +171,15 @@ class RunWorker:
         for r in await asyncio.to_thread(svc.runs.list_unfinished):
             if r.id in answered: continue
             try:
+                # Socket history is for observers, not permission to replay side
+                # effects after a restart. A live socket still owns its bus entry.
+                if json.loads(r.checkpoint or "{}").get("kind") == "live_history":
+                    if await asyncio.to_thread(svc.bus.owner, r.id) is None:
+                        await asyncio.to_thread(svc.record, r.id, r.workflow_id, json.loads(r.input or "{}"),
+                            json.loads(r.events or "[]") + [{"type": "run_cancelled", "ts": time.time(), "reason": "disconnect"}],
+                            None, "cancelled", r.started, r.owner or "", source=r.source or "ui", version=r.workflow_version)
+                        await svc.settled(r.id, r.source)
+                    continue
                 if (cut := svc.interruptions(r)) >= most:
                     await asyncio.to_thread(svc.interrupted, r, cut); await svc.settled(r.id, r.source); continue
                 self.jobs.enqueue(await asyncio.to_thread(svc.recovery_job, r)); n += 1

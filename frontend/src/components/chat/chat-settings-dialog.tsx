@@ -3,7 +3,7 @@
  *  at /c/{slug} (TASK-0142, DEC-0067): its address, title, intro, suggested messages and daily limit. An anonymous chat
  *  can be embedded (TASK-0143): the sites allowed to frame it, and an iframe and a widget snippet to copy. Its logo
  *  (TASK-0145) is read here and goes with Save as a data: URL; Remove clears it on Save too. */
-import { useRef, useState } from 'react'
+import { useContext, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Check, ChevronDown, Copy, ExternalLink, ImageUp, Plus, Save, Trash2, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -19,21 +19,24 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { accessModes } from '@/lib/chat'
 import { ChatAppKeys } from './chat-app-keys'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { api, ApiError } from '@/lib/api'
 import { ACCESS, iframeSnippet, LOGO_MAX_KB, LOGO_TYPES, logoUrl, MAX_SUGGESTIONS, pageUrl, published, STEPS, widgetSnippet, type ChatSettings } from '@/lib/chat'
 import { ChatLogo } from '@/components/chat/chat-logo'
 import { ChatAttachmentSettings } from '@/components/chat/chat-attachment-settings'
 import { useLoadWhen } from '@/lib/use-when'
+import { StudioContext } from '@/components/editor/studio-context'
+import { StateFieldAction } from '@/components/state-field-action'
 
 type Field = { name: string; type: string }
 const NONE = '__none'
 
 export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?: string; open: boolean; onOpenChange: (v: boolean) => void; onSaved?: (s: ChatSettings) => void }) {
   const { t } = useTranslation(); const [v, setV] = useState<ChatSettings | null>(null); const [fields, setFields] = useState<Field[]>([])
+  const studio = useContext(StudioContext); const [schemaAdded, setSchemaAdded] = useState(false)
   const [err, setErr] = useState(''); const [bad, setBad] = useState(''); const [busy, setBusy] = useState(false)
   useLoadWhen(open, () => {
-    setErr(''); setBad('')
+    setErr(''); setBad(''); setSchemaAdded(false)
     Promise.all([api<ChatSettings>(`/api/workflows/${wid}/chat`), api<{ state?: Field[] }>(`/api/workflows/${wid}`)])
       .then(([s, wf]) => { setV(s); setFields(wf.state || []) }).catch(e => setErr(e.message))
   })
@@ -42,7 +45,12 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
   const pickLogo = (f?: File) => { if (!f) return
     if (!LOGO_TYPES.includes(f.type) || f.size > LOGO_MAX_KB * 1024) { setErr(t('errors.CHAT_LOGO_INVALID', { max_kb: LOGO_MAX_KB })); setBad('logo'); return }
     const r = new FileReader(); r.onload = () => { setErr(''); setBad(''); set({ logo: String(r.result) }) }; r.readAsDataURL(f) }
-  const save = () => { if (!v || attachmentFieldError) return; setBusy(true); setErr(''); setBad('')
+  const save = async () => { if (!v || attachmentFieldError) return; setBusy(true); setErr(''); setBad('')
+    if (schemaAdded) {
+      const saved = await studio?.save()
+      if (!saved) { setErr(t('editor.newField.saveFailed')); setBusy(false); return }
+      setSchemaAdded(false)
+    }
     const { attachment_ceiling: _ceiling, ...rest } = v   // read only
     const body = { ...rest, suggestions: v.suggestions.map(x => x.trim()).filter(Boolean), embed_origins: v.embed_origins.map(x => x.trim()).filter(Boolean) }
     api<ChatSettings>(`/api/workflows/${wid}/chat`, { method: 'PUT', json: body }).then(s => { setV(s); onSaved?.(s); onOpenChange(false) })
@@ -54,15 +62,20 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
   const attachmentFields = names(f => f.type === 'list' && ![v?.input_field, v?.reply_field, v?.messages_field].includes(f.name))
   const attachmentFieldError = v?.attachments.enabled && !attachmentFields.includes(v.attachments.field)
     ? t(attachmentFields.length ? 'chat.files.settings.invalidField' : 'chat.files.settings.noFields') : ''
-  const pick = (id: keyof ChatSettings, opts: string[], none = false) => <Select value={(v?.[id] as string) || (none ? NONE : '')} onValueChange={x => set({ [id]: x === NONE ? '' : x } as any)}>
-    <SelectTrigger className="w-full" id={`chat-${id}`} aria-invalid={bad === id || undefined}><SelectValue placeholder={t('chat.settings.pickField')} /></SelectTrigger>
+  const addField = (field: Field) => { setFields(fs => [...fs.filter(f => f.name !== field.name), field]); setSchemaAdded(true) }
+  const pick = (id: keyof ChatSettings, opts: string[], none = false) => <div className="flex min-w-0 items-center gap-2"><Select value={(v?.[id] as string) || (none ? NONE : '')} onValueChange={x => set({ [id]: x === NONE ? '' : x } as any)}>
+    <SelectTrigger className="min-w-0 flex-1" id={`chat-${id}`} aria-invalid={bad === id || undefined}><SelectValue placeholder={t('chat.settings.pickField')} /></SelectTrigger>
     <SelectContent>{none && <SelectItem value={NONE}>{t('chat.settings.noMemory')}</SelectItem>}{opts.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+    <StateFieldAction types={id === 'messages_field' ? ['list'] : id === 'input_field' ? ['string', 'list'] : undefined}
+      onCreated={(name, field) => { addField(field); set({ [id]: name }) }} /></div>
   const row = (id: string, label: string, hint: string | null, control: React.ReactNode) => <div className="grid gap-1.5">
     <Label htmlFor={`chat-${id}`}>{label}</Label>{control}{hint && <p className="text-xs text-muted-foreground">{hint}</p>}</div>
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg" id="chat-settings">
+    <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-lg" id="chat-settings">
       <DialogHeader><DialogTitle>{t('chat.settings.title')}</DialogTitle><DialogDescription>{t('chat.settings.desc')}</DialogDescription></DialogHeader>
+      <DialogBody className="space-y-4">
       {err && <Alert variant="destructive"><AlertCircle /><AlertDescription id="chat-settings-error">{err}</AlertDescription></Alert>}
+      {schemaAdded && <Alert variant="warning"><AlertCircle /><AlertDescription>{t('editor.newField.saveTogetherHint')}</AlertDescription></Alert>}
       {v && <div className="grid gap-4">
         <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
           <div className="grid gap-0.5"><Label htmlFor="chat-enabled">{t('chat.settings.enabled')}</Label><p className="text-xs text-muted-foreground">{t('chat.settings.enabledHint')}</p></div>
@@ -133,9 +146,11 @@ export function ChatSettingsDialog({ wid, open, onOpenChange, onSaved }: { wid?:
           <SelectTrigger className="w-full" id="chat-steps"><SelectValue /></SelectTrigger>
           <SelectContent>{STEPS.map(s => <SelectItem key={s} value={s}>{t(`chat.steps.${s}`)}</SelectItem>)}</SelectContent></Select>)}
         <ChatAttachmentSettings value={v.attachments} ceiling={v.attachment_ceiling} lists={attachmentFields} bad={bad} fieldError={attachmentFieldError}
+          fieldAction={<StateFieldAction types={['list']} onCreated={(name, field) => { addField(field); set({ attachments: { ...v.attachments, field: name } }) }} />}
           onChange={p => { setBad(b => b.startsWith('attachments.') ? '' : b); setErr(''); setV(x => x && { ...x, attachments: { ...x.attachments, ...p } }) }} />
       </div>}
-      <DialogFooter><Button id="chat-settings-save" disabled={!v || busy || !!attachmentFieldError} onClick={save}><Save />{t('common.save')}</Button></DialogFooter>
+      </DialogBody>
+      <DialogFooter><Button id="chat-settings-save" disabled={!v || busy || !!attachmentFieldError} onClick={save}><Save />{t(schemaAdded ? 'editor.newField.saveTogether' : 'common.save')}</Button></DialogFooter>
     </DialogContent>
   </Dialog>
 }
