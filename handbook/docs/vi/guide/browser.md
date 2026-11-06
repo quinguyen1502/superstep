@@ -6,9 +6,8 @@ upload, download, evaluate). Kết nối nằm ở **Cài đặt → Máy chủ 
 URL khởi đầu trên kết nối — URL đến từ chat, state workflow hoặc công cụ tìm kiếm
 đã cấu hình khi chạy.
 
-Trang tiếng Anh [Browser tools](../../en/guide/browser.md) là hướng dẫn cấu hình
-chi tiết của bản giao Studio đầu tiên (ảnh minh hoạ chỉ tiếng Anh). Trang này
-tóm tắt cùng các bước bằng tiếng Việt. Xuất Python/TypeScript vẫn để sau
+Bản giao Studio đầu tiên ưu tiên hướng dẫn tiếng Anh (Guide → Browser tools;
+ảnh minh hoạ chỉ tiếng Anh). Trang này tóm tắt cùng các bước bằng tiếng Việt. Xuất Python/TypeScript vẫn để sau
 (TASK-0251/0252).
 
 ## Trước khi bắt đầu
