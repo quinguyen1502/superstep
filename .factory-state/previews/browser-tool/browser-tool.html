@@ -1,0 +1,318 @@
+<div id="ss-browser-mock" aria-label="Mockup Browser tool trong Superstep">
+  <style>
+    #ss-browser-mock{color-scheme:light dark;--ss-bg:light-dark(#ffffff,#171717);--ss-fg:light-dark(#18181b,#fafafa);--ss-soft:light-dark(#f5f5f5,#222222);--ss-muted:light-dark(#65656d,#ababaf);--ss-line:light-dark(#e4e4e7,#343438);--ss-active:light-dark(#18181b,#fafafa);--ss-on-active:light-dark(#fafafa,#18181b);--ss-success:light-dark(#24714b,#8bd4ad);--ss-success-bg:light-dark(#edf7f0,#1d3227);--ss-warning:light-dark(#865a15,#ecc582);--ss-warning-bg:light-dark(#faf3e5,#352b1a);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;color:var(--ss-fg)}
+    #ss-browser-mock *{box-sizing:border-box}#ss-browser-mock [hidden]{display:none!important}#ss-browser-mock p,#ss-browser-mock h2,#ss-browser-mock h3{margin:0;font-size:inherit;font-weight:500}#ss-browser-mock p{font-weight:400}#ss-browser-mock button,#ss-browser-mock input,#ss-browser-mock select,#ss-browser-mock textarea{font:inherit;color:inherit}#ss-browser-mock button{border:1px solid var(--ss-line);background:var(--ss-bg);padding:7px 11px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:500}#ss-browser-mock button:hover{background:var(--ss-soft)}#ss-browser-mock button:disabled{opacity:.55}#ss-browser-mock button.ss-primary{background:var(--ss-active);color:var(--ss-on-active);border-color:var(--ss-active)}#ss-browser-mock input:not([type=checkbox]),#ss-browser-mock select,#ss-browser-mock textarea{width:100%;min-width:0;background:var(--ss-bg);border:1px solid var(--ss-line);border-radius:6px;padding:8px 10px}#ss-browser-mock input[type=checkbox]{accent-color:var(--ss-active);width:15px;height:15px;margin:2px 0}#ss-browser-mock label{display:grid;gap:6px}#ss-browser-mock svg{width:16px;height:16px;flex-shrink:0}#ss-browser-mock code,#ss-browser-mock pre{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}#ss-browser-mock .ss-app{background:var(--ss-bg);border:1px solid var(--ss-line);border-radius:10px;overflow:hidden}#ss-browser-mock .ss-chrome{padding:15px 105px 15px 19px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;border-bottom:1px solid var(--ss-line)}#ss-browser-mock .ss-brand{display:flex;align-items:center;gap:7px;font-weight:500;letter-spacing:-.3px}#ss-browser-mock .ss-brand i{display:inline-flex;background:var(--ss-active);color:var(--ss-on-active);padding:5px;border-radius:6px}#ss-browser-mock .ss-muted{color:var(--ss-muted)}#ss-browser-mock .ss-small{font-size:12px}#ss-browser-mock .ss-badge{display:inline-flex;gap:5px;align-items:center;padding:2px 7px;border-radius:5px;background:var(--ss-soft);color:var(--ss-muted);font-size:12px;white-space:nowrap}#ss-browser-mock .ss-success{background:var(--ss-success-bg);color:var(--ss-success)}#ss-browser-mock .ss-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}#ss-browser-mock .ss-spread{justify-content:space-between}#ss-browser-mock .ss-toolbar{padding:12px 18px;border-bottom:1px solid var(--ss-line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}#ss-browser-mock .ss-tabs{display:flex;gap:3px;flex-wrap:wrap}#ss-browser-mock .ss-tabs button{border-color:transparent;color:var(--ss-muted);padding:6px 10px;background:transparent}#ss-browser-mock .ss-tabs button[aria-selected=true]{background:var(--ss-soft);color:var(--ss-fg)}#ss-browser-mock .ss-workspace{display:grid;grid-template-columns:minmax(240px,.8fr) minmax(0,1.6fr)}#ss-browser-mock .ss-canvas{padding:23px 24px;background-color:var(--ss-soft);background-image:radial-gradient(var(--ss-line) 1px,transparent 1px);background-size:18px 18px;display:flex;flex-direction:column;border-right:1px solid var(--ss-line)}#ss-browser-mock .ss-canvas-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:32px}#ss-browser-mock .ss-flow{display:flex;flex-direction:column;align-items:center;flex:1;justify-content:center;padding-bottom:36px}#ss-browser-mock .ss-node{background:var(--ss-bg);border:1px solid var(--ss-line);border-radius:8px;width:100%;max-width:260px;padding:13px;display:flex;align-items:center;gap:12px;text-align:left}#ss-browser-mock .ss-node.ss-selected{border-color:var(--ss-active);box-shadow:0 0 0 2px color-mix(in srgb,var(--ss-active) 10%,transparent);padding:15px 13px}#ss-browser-mock .ss-node-icon{display:flex;padding:8px;border:1px solid var(--ss-line);border-radius:6px}#ss-browser-mock .ss-node .ss-small{display:block;margin-top:3px}#ss-browser-mock .ss-edge{width:1px;height:45px;background:var(--ss-muted);position:relative;opacity:.65}#ss-browser-mock .ss-edge:after{content:"";position:absolute;bottom:0;left:-3px;border-left:3px solid transparent;border-right:3px solid transparent;border-top:5px solid var(--ss-muted)}#ss-browser-mock .ss-canvas-note{display:flex;align-items:center;gap:7px;color:var(--ss-muted);font-size:12px}#ss-browser-mock .ss-inspector{min-width:0}#ss-browser-mock .ss-panel-head{padding:19px 21px 14px;display:flex;gap:11px;align-items:flex-start}#ss-browser-mock .ss-panel-title{font-size:16px;letter-spacing:-.25px;font-weight:500}#ss-browser-mock .ss-panel-tabs{padding:0 17px 11px;border-bottom:1px solid var(--ss-line)}#ss-browser-mock .ss-panel-body{padding:19px 21px;min-height:480px}#ss-browser-mock .ss-stack{display:grid;gap:17px}#ss-browser-mock .ss-fields{display:grid;grid-template-columns:1fr 1fr;gap:13px}#ss-browser-mock .ss-section-label{font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}#ss-browser-mock .ss-step-layout{display:grid;grid-template-columns:minmax(160px,1fr) minmax(0,1.1fr);gap:13px;align-items:start}#ss-browser-mock .ss-step-list{display:grid;gap:7px}#ss-browser-mock .ss-step{width:100%;text-align:left!important;justify-content:flex-start!important;padding:11px!important;font-weight:400!important;align-items:flex-start!important}#ss-browser-mock .ss-step[aria-pressed=true]{border-color:var(--ss-active);background:var(--ss-soft)}#ss-browser-mock .ss-number{width:22px;height:22px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1px solid var(--ss-line);border-radius:5px;font-size:12px}#ss-browser-mock .ss-step-label{min-width:0}#ss-browser-mock .ss-step-sub{display:block;color:var(--ss-muted);font-size:12px;overflow-wrap:anywhere;margin-top:2px}#ss-browser-mock .ss-detail{padding:13px;background:var(--ss-soft);border-radius:7px;display:grid;gap:12px;min-width:0}#ss-browser-mock .ss-detail input{font-size:12px!important;background:var(--ss-bg)!important}#ss-browser-mock .ss-detail h3{display:flex;align-items:center;gap:7px;margin-bottom:3px}#ss-browser-mock .ss-check{display:flex;align-items:flex-start;gap:9px;font-size:12px;color:var(--ss-muted)}#ss-browser-mock .ss-output{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:11px 0;border-top:1px solid var(--ss-line);border-bottom:1px solid var(--ss-line)}#ss-browser-mock .ss-output code{background:var(--ss-soft);padding:3px 6px;border-radius:4px}#ss-browser-mock .ss-footer{padding:12px 20px;border-top:1px solid var(--ss-line);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#ss-browser-mock .ss-inline-info{padding:11px 12px;background:var(--ss-soft);border-radius:6px;display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--ss-muted)}#ss-browser-mock .ss-warning{background:var(--ss-warning-bg);color:var(--ss-warning)}#ss-browser-mock .ss-tool-box{padding:14px;border:1px solid var(--ss-line);border-radius:7px;display:grid;gap:13px}#ss-browser-mock .ss-param{display:grid;grid-template-columns:1fr auto;gap:3px 15px;padding-top:11px;border-top:1px solid var(--ss-line)}#ss-browser-mock .ss-trace{display:grid;gap:0}#ss-browser-mock .ss-trace-row{display:grid;grid-template-columns:22px 1fr auto;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid var(--ss-line)}#ss-browser-mock .ss-trace-row:last-child{border:0}#ss-browser-mock .ss-trace-row>span:first-child{color:var(--ss-success)}#ss-browser-mock .ss-trace-ms{color:var(--ss-muted);font-variant-numeric:tabular-nums;font-size:12px}#ss-browser-mock .ss-result{background:var(--ss-soft);border-radius:6px;padding:13px}#ss-browser-mock .ss-result pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0}#ss-browser-mock .ss-page-preview{border:1px solid var(--ss-line);border-radius:7px;overflow:hidden}#ss-browser-mock .ss-address{padding:7px 10px;background:var(--ss-soft);display:flex;gap:6px;align-items:center;color:var(--ss-muted);font-size:12px;overflow-wrap:anywhere}#ss-browser-mock .ss-page-content{padding:17px;display:grid;gap:11px}#ss-browser-mock .ss-page-content .ss-row{justify-content:space-between}#ss-browser-mock .ss-export-code{width:100%;resize:none;min-height:335px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.7;background:var(--ss-soft);white-space:pre-wrap}#ss-browser-mock .ss-bottom-status{margin-top:12px;font-size:12px;color:var(--ss-muted);min-height:18px}#ss-browser-mock .ss-chip{background:var(--ss-soft);border:1px solid var(--ss-line);border-radius:5px;display:inline-flex;align-items:center;gap:5px;padding:4px 7px;font-size:12px}#ss-browser-mock .ss-grow{flex:1;min-width:0}#ss-browser-mock .ss-illustrative{padding:8px 17px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;border-top:1px solid var(--ss-line);background:var(--ss-soft);font-size:12px;color:var(--ss-muted)}
+    @media(max-width:760px){#ss-browser-mock .ss-workspace{grid-template-columns:1fr}#ss-browser-mock .ss-canvas{border-right:0;border-bottom:1px solid var(--ss-line);padding:16px}#ss-browser-mock .ss-canvas-label{margin-bottom:15px}#ss-browser-mock .ss-flow{flex-direction:row;padding-bottom:14px;gap:0}#ss-browser-mock .ss-node{width:auto;flex:1;min-width:0;padding:9px!important;gap:7px;align-items:flex-start}#ss-browser-mock .ss-node-icon{padding:4px}#ss-browser-mock .ss-node .ss-small{font-size:11px}#ss-browser-mock .ss-edge{height:1px;width:18px;flex-shrink:0}#ss-browser-mock .ss-edge:after{left:auto;right:0;bottom:-3px;border-top:3px solid transparent;border-bottom:3px solid transparent;border-left:5px solid var(--ss-muted);border-right:0}#ss-browser-mock .ss-panel-body{min-height:0}#ss-browser-mock .ss-chrome{gap:9px}#ss-browser-mock .ss-crumb{display:none}}
+    @media(max-width:430px){#ss-browser-mock .ss-step-layout,#ss-browser-mock .ss-fields{grid-template-columns:1fr}#ss-browser-mock .ss-step-list{grid-template-columns:1fr 1fr}#ss-browser-mock .ss-panel-body{padding:16px}#ss-browser-mock .ss-panel-head{padding:16px}#ss-browser-mock .ss-node-icon{display:none}#ss-browser-mock .ss-tabs{gap:0}#ss-browser-mock .ss-tabs button{padding:8px;font-size:12px}#ss-browser-mock .ss-node{font-size:12px}#ss-browser-mock .ss-node .ss-small{font-size:11px}#ss-browser-mock .ss-chip{font-size:11px}#ss-browser-mock .ss-chrome{padding-left:14px}#ss-browser-mock .ss-toolbar{padding:11px 14px}}
+    @media(pointer:coarse){#ss-browser-mock button{min-height:44px}#ss-browser-mock input:not([type=checkbox]),#ss-browser-mock select{min-height:44px;font-size:16px!important}}
+    #ss-browser-mock .ss-mode{padding:0 21px 16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}#ss-browser-mock .ss-mode button{display:block;text-align:left;padding:10px 12px;font-weight:500;min-width:0}#ss-browser-mock .ss-mode button span{display:block;font-weight:400;font-size:12px;color:var(--ss-muted);margin-top:2px}#ss-browser-mock .ss-mode button[aria-pressed=true]{border-color:var(--ss-active);background:var(--ss-soft)}#ss-browser-mock .ss-live-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:var(--ss-soft);border-bottom:1px solid var(--ss-line)}#ss-browser-mock .ss-live-page{border:1px solid var(--ss-line);border-radius:7px;overflow:hidden}#ss-browser-mock .ss-live-page-body{padding:15px;display:grid;gap:12px}#ss-browser-mock .ss-observation{display:grid;gap:4px}#ss-browser-mock .ss-observation span{font-size:12px;color:var(--ss-muted)}#ss-browser-mock .ss-live-field{padding:8px 10px;border:1px solid var(--ss-line);border-radius:6px;background:var(--ss-bg);overflow-wrap:anywhere}#ss-browser-mock .ss-loop{display:flex;flex-wrap:wrap;gap:7px;align-items:center;color:var(--ss-muted);font-size:12px}#ss-browser-mock .ss-loop span{padding:4px 8px;border-radius:5px;background:var(--ss-soft)}#ss-browser-mock .ss-loop span[aria-current=step]{background:var(--ss-active);color:var(--ss-on-active)}#ss-browser-mock .ss-live-next{display:grid;gap:6px;padding:11px 12px;background:var(--ss-soft);border-radius:6px}#ss-browser-mock .ss-tool-permissions{display:grid;grid-template-columns:1fr 1fr;gap:9px 12px}#ss-browser-mock .ss-agent-tools{display:grid;gap:0}#ss-browser-mock .ss-agent-tools>div{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 0;border-bottom:1px solid var(--ss-line)}#ss-browser-mock .ss-agent-tools>div:last-child{border-bottom:0}#ss-browser-mock .ss-auto-setup{display:grid;gap:15px}#ss-browser-mock .ss-auto-setup textarea{resize:vertical}#ss-browser-mock .ss-trace-action{display:block;color:var(--ss-muted);font-size:12px;overflow-wrap:anywhere;margin-top:2px}#ss-browser-mock .ss-trace-row{align-items:start}#ss-browser-mock .ss-panel-body{min-height:480px}#ss-browser-mock .ss-code-note{font-size:12px;color:var(--ss-muted)}
+    @media(max-width:430px){#ss-browser-mock .ss-mode{padding-left:16px;padding-right:16px}#ss-browser-mock .ss-mode button{padding:9px;font-size:12px}#ss-browser-mock .ss-mode button span{font-size:11px}#ss-browser-mock .ss-tool-permissions{grid-template-columns:1fr}#ss-browser-mock .ss-panel-head{flex-wrap:wrap}#ss-browser-mock .ss-param{grid-template-columns:1fr}}
+  </style>
+  <div class="ss-app">
+    <header class="ss-chrome">
+      <div class="ss-brand"><i data-lucide="workflow" aria-hidden="true"></i>superstep</div>
+      <span class="ss-muted ss-crumb">/</span><span class="ss-muted ss-small ss-crumb">Workflows</span><span class="ss-muted ss-crumb">/</span>
+      <span>Tra cứu vận đơn</span><span class="ss-badge">Bản nháp</span>
+    </header>
+    <div class="ss-toolbar">
+      <div class="ss-row"><span class="ss-chip"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i>Thiết kế</span><span class="ss-small ss-muted">Đã lưu</span></div>
+      <button type="button" class="ss-primary cursor-interaction" id="ss-run"><i data-lucide="play" aria-hidden="true"></i>Chạy thử</button>
+    </div>
+    <div class="ss-workspace">
+      <aside class="ss-canvas" aria-label="Workflow minh họa">
+        <div class="ss-canvas-label"><span class="ss-small ss-muted">Workflow</span><span class="ss-badge">3 node</span></div>
+        <div class="ss-flow">
+          <div class="ss-node"><span class="ss-node-icon"><i data-lucide="log-in" aria-hidden="true"></i></span><div>Bắt đầu<span class="ss-small ss-muted">order_id</span></div></div>
+          <div class="ss-edge" aria-hidden="true"></div>
+          <button type="button" class="ss-node ss-selected cursor-interaction" id="ss-canvas-tool"><span class="ss-node-icon"><i data-lucide="globe" aria-hidden="true"></i></span><span class="ss-grow"><span id="ss-node-title">Tra cứu vận đơn</span><span class="ss-small ss-muted" id="ss-node-type">MCP · Browser</span><span class="ss-chip" id="ss-agent-chip" hidden>Browser · Tra cứu</span></span></button>
+          <div class="ss-edge" aria-hidden="true"></div>
+          <div class="ss-node"><span class="ss-node-icon"><i data-lucide="flag" aria-hidden="true"></i></span><div>Kết thúc<span class="ss-small ss-muted">order_status</span></div></div>
+        </div>
+        <div class="ss-canvas-note"><i data-lucide="braces" aria-hidden="true"></i><code>order_id → order_status</code></div>
+      </aside>
+      <main class="ss-inspector">
+        <div class="ss-panel-head"><span class="ss-node-icon"><i data-lucide="globe" aria-hidden="true"></i></span><div class="ss-grow"><div class="ss-panel-title">Tra cứu vận đơn</div><p class="ss-muted ss-small">Browser tool</p></div><span class="ss-badge ss-success">Đã cấu hình</span></div>
+        <div class="ss-mode" role="group" aria-label="Chế độ điều khiển browser">
+          <button type="button" data-mode="scripted" aria-pressed="false" class="cursor-interaction">Theo kịch bản<span>Thực hiện chuỗi bước đã cấu hình</span></button>
+          <button type="button" data-mode="autonomous" aria-pressed="true" class="cursor-interaction">Agent tự điều khiển<span>Quan sát trang, chọn thao tác tiếp theo</span></button>
+        </div>
+        <div class="ss-tabs ss-panel-tabs" role="tablist" aria-label="Cấu hình Browser">
+          <button type="button" role="tab" id="ss-tab-steps" aria-controls="ss-pane-steps" aria-selected="true" data-view="steps" class="cursor-interaction">Các bước</button>
+          <button type="button" role="tab" id="ss-tab-agent" aria-controls="ss-pane-agent" aria-selected="false" data-view="agent" class="cursor-interaction">Agent tool</button>
+          <button type="button" role="tab" id="ss-tab-trace" aria-controls="ss-pane-trace" aria-selected="false" data-view="trace" class="cursor-interaction">Lần chạy</button>
+          <button type="button" role="tab" id="ss-tab-export" aria-controls="ss-pane-export" aria-selected="false" data-view="export" class="cursor-interaction">Export</button>
+        </div>
+        <section id="ss-pane-steps" role="tabpanel" aria-labelledby="ss-tab-steps" class="ss-panel-body">
+          <div class="ss-stack">
+            <div class="ss-fields"><label>Kết nối browser<select id="ss-provider"><option value="local">Browser nội bộ</option><option value="stealth">Browserless · Stealth</option></select></label><label>Giới hạn thời gian<select id="ss-timeout"><option>30 giây</option><option>60 giây</option><option>120 giây</option></select></label></div>
+            <div id="ss-provider-note" class="ss-inline-info ss-warning" hidden><i data-lucide="shield-alert" aria-hidden="true"></i><span>Stealth tùy thuộc website. Khi gặp challenge, chuyển sang bước xử lý của workflow.</span></div>
+            <div id="ss-scripted-setup"><div class="ss-section-label"><span>Chuỗi thao tác</span><span class="ss-small ss-muted">Một phiên · 4 bước</span></div>
+              <div class="ss-step-layout" id="ss-step-layout">
+                <div class="ss-step-list" aria-label="Chọn thao tác">
+                  <button type="button" class="ss-step cursor-interaction" data-step="0" aria-pressed="false"><span class="ss-number">1</span><span class="ss-step-label">Mở trang<span class="ss-step-sub">Cổng tra cứu</span></span></button>
+                  <button type="button" class="ss-step cursor-interaction" data-step="1" aria-pressed="true"><span class="ss-number">2</span><span class="ss-step-label">Điền mã đơn<span class="ss-step-sub">{{order_id}}</span></span></button>
+                  <button type="button" class="ss-step cursor-interaction" data-step="2" aria-pressed="false"><span class="ss-number">3</span><span class="ss-step-label">Bấm tra cứu<span class="ss-step-sub">Nút “Tra cứu”</span></span></button>
+                  <button type="button" class="ss-step cursor-interaction" data-step="3" aria-pressed="false"><span class="ss-number">4</span><span class="ss-step-label">Lấy trạng thái<span class="ss-step-sub">order_status</span></span></button>
+                </div>
+                <div class="ss-detail" id="ss-step-detail" aria-live="polite"></div>
+              </div>
+            </div>
+            <div id="ss-auto-setup" class="ss-auto-setup">
+              <label>Nhiệm vụ của Agent<textarea id="ss-auto-task" rows="3">Tra cứu trạng thái vận đơn {{order_id}}. Tự tìm ô nhập, điền mã và đọc kết quả. Nếu trang đổi bố cục, tìm cách tra cứu phù hợp.</textarea></label>
+              <div class="ss-fields"><label>Trang bắt đầu<input id="ss-auto-url" value="https://tracking.example/lookup" spellcheck="false"></label><label>Tối đa số hành động<select id="ss-auto-limit"><option value="4">4 hành động</option><option value="8">8 hành động</option><option value="12" selected>12 hành động</option><option value="20">20 hành động</option></select></label></div>
+              <div><div class="ss-section-label"><span>Thao tác Agent được dùng</span><span class="ss-small ss-muted">6 tools</span></div><div class="ss-tool-permissions"><span class="ss-chip"><i data-lucide="external-link" aria-hidden="true"></i>Mở trang</span><span class="ss-chip"><i data-lucide="scan-eye" aria-hidden="true"></i>Quan sát trang</span><span class="ss-chip"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i>Bấm phần tử</span><span class="ss-chip"><i data-lucide="text-cursor-input" aria-hidden="true"></i>Điền dữ liệu</span><span class="ss-chip"><i data-lucide="scan-text" aria-hidden="true"></i>Đọc nội dung</span><span class="ss-chip"><i data-lucide="camera" aria-hidden="true"></i>Chụp ảnh</span></div></div>
+              <label>Domain được truy cập<input id="ss-auto-domains" value="tracking.example" spellcheck="false"></label>
+              <div class="ss-inline-info"><i data-lucide="repeat-2" aria-hidden="true"></i><span>Dùng model của Agent hiện tại. Giữ cùng phiên browser trong suốt vòng lặp quan sát và hành động.</span></div>
+            </div>
+            <div class="ss-output"><span class="ss-small ss-muted">Đầu ra</span><code>status</code><i data-lucide="arrow-right" aria-hidden="true"></i><code>state.order_status</code></div>
+            <label class="ss-check"><input type="checkbox" id="ss-approval"><span id="ss-approval-label">Yêu cầu duyệt trước hành động gửi dữ liệu hoặc thay đổi thông tin</span></label>
+          </div>
+        </section>
+        <section id="ss-pane-agent" role="tabpanel" aria-labelledby="ss-tab-agent" class="ss-panel-body" hidden>
+          <div class="ss-stack">
+            <div class="ss-row ss-spread"><span class="ss-section-label" style="margin:0">Tools của Agent “Trợ lý giao hàng”</span><span class="ss-badge" id="ss-agent-tool-count">6 tools</span></div>
+            <div class="ss-tool-box" id="ss-scripted-agent"><div class="ss-row"><i data-lucide="globe" aria-hidden="true"></i><span>Tra cứu vận đơn</span><span class="ss-badge">Browser</span></div><label>Tên tool<input id="ss-tool-name" value="get_order_status" readonly></label><label>Mô tả cho Agent<textarea rows="2" id="ss-tool-desc">Tra cứu trạng thái vận đơn khi người dùng cung cấp mã đơn hàng.</textarea></label><div class="ss-param"><code>order_id</code><span class="ss-badge">string · bắt buộc</span><span class="ss-muted ss-small">Mã vận đơn cần tra cứu</span></div></div>
+            <div class="ss-tool-box" id="ss-auto-agent"><div class="ss-row ss-spread"><span class="ss-row"><i data-lucide="globe" aria-hidden="true"></i>Browser nội bộ</span><span class="ss-badge">Cùng một phiên</span></div><div class="ss-agent-tools"><div><code>browser_navigate</code><span class="ss-small ss-muted">Mở URL được phép</span></div><div><code>browser_snapshot</code><span class="ss-small ss-muted">Đọc cấu trúc trang</span></div><div><code>browser_click</code><span class="ss-small ss-muted">Bấm phần tử đã quan sát</span></div><div><code>browser_fill</code><span class="ss-small ss-muted">Điền dữ liệu</span></div><div><code>browser_extract</code><span class="ss-small ss-muted">Lấy nội dung kết quả</span></div><div><code>browser_screenshot</code><span class="ss-small ss-muted">Chụp ảnh trang</span></div></div></div>
+            <div class="ss-inline-info"><i data-lucide="route" aria-hidden="true"></i><span id="ss-agent-help">Agent chọn từng tool dựa trên quan sát mới nhất. Các thao tác trên cùng trang chạy tuần tự.</span></div>
+            <label class="ss-check"><input type="checkbox" id="ss-agent-approval"><span id="ss-agent-approval-label">Cần duyệt trước hành động gửi dữ liệu hoặc thay đổi thông tin</span></label>
+            <button type="button" id="ss-edit-steps" class="cursor-interaction"><i data-lucide="settings-2" aria-hidden="true"></i><span id="ss-edit-label">Xem cấu hình tự điều khiển</span></button>
+          </div>
+        </section>
+        <section id="ss-pane-trace" role="tabpanel" aria-labelledby="ss-tab-trace" class="ss-panel-body" hidden>
+          <div class="ss-stack">
+            <div class="ss-fields"><label>Mã vận đơn thử<input id="ss-order-id" value="SS-2048" maxlength="40"></label><label>Tình huống mô phỏng<select id="ss-scenario"><option value="success">Tra cứu thành công</option><option value="layout">Website đổi bố cục</option><option value="challenge">Website yêu cầu xác minh</option><option value="timeout">Hết thời gian chờ</option></select></label></div>
+            <div id="ss-auto-live" class="ss-stack">
+              <div class="ss-row ss-spread"><span class="ss-small ss-muted" id="ss-session-label">Một phiên browser xuyên suốt lượt Agent</span><span class="ss-badge" id="ss-auto-progress">0 / 12 hành động</span></div>
+              <div class="ss-loop" aria-label="Vòng lặp Agent"><span id="ss-phase-observe">Quan sát</span><i data-lucide="arrow-right" aria-hidden="true"></i><span id="ss-phase-act">Chọn và gọi tool</span><i data-lucide="arrow-right" aria-hidden="true"></i><span id="ss-phase-result">Nhận kết quả</span><i data-lucide="repeat-2" aria-hidden="true"></i></div>
+              <div class="ss-live-page"><div class="ss-live-head"><span class="ss-small">Quan sát trang · Minh họa</span><span class="ss-badge" id="ss-auto-page-badge">Chưa mở trang</span></div><div class="ss-address"><i data-lucide="lock-keyhole" aria-hidden="true"></i><span id="ss-auto-page-url">about:blank</span></div><div id="ss-auto-page-content" class="ss-live-page-body" aria-live="polite"></div></div>
+              <div class="ss-live-next"><span class="ss-small ss-muted">Hành động tiếp theo do Agent chọn</span><code id="ss-auto-next">browser_navigate</code><div class="ss-row ss-spread"><span class="ss-small ss-muted" id="ss-auto-next-label">Mở trang tra cứu</span><button type="button" id="ss-auto-step" class="cursor-interaction"><i data-lucide="step-forward" aria-hidden="true"></i>Chạy bước tiếp</button></div></div>
+            </div>
+            <div class="ss-row ss-spread"><span id="ss-trace-status" class="ss-badge ss-success">Hoàn tất · Dữ liệu mẫu</span><span class="ss-small ss-muted" id="ss-trace-total">2,4 giây</span></div>
+            <div class="ss-trace" id="ss-trace-rows"></div>
+            <div class="ss-result"><div class="ss-row ss-spread"><span>Kết quả</span><code>order_status</code></div><pre id="ss-result" aria-live="polite"></pre></div>
+            <details class="ss-page-preview" id="ss-scripted-page"><summary style="padding:10px 13px" class="cursor-interaction">Ảnh trang minh họa</summary><div class="ss-address"><i data-lucide="lock-keyhole" aria-hidden="true"></i><span>tracking.example/lookup</span></div><div class="ss-page-content"><h3>Cổng tra cứu vận đơn</h3><div class="ss-row"><code id="ss-preview-order">SS-2048</code><span class="ss-badge ss-success" id="ss-preview-status">Đang giao</span></div><span class="ss-muted ss-small">Kết quả minh họa</span></div></details>
+          </div>
+        </section>
+        <section id="ss-pane-export" role="tabpanel" aria-labelledby="ss-tab-export" class="ss-panel-body" hidden>
+          <div class="ss-stack"><div class="ss-row ss-spread"><div class="ss-tabs" role="tablist" aria-label="Ngôn ngữ export"><button type="button" role="tab" aria-selected="true" aria-controls="ss-code-box" id="ss-lang-python" data-lang="python" class="cursor-interaction">Python</button><button type="button" role="tab" aria-selected="false" aria-controls="ss-code-box" id="ss-lang-ts" data-lang="typescript" class="cursor-interaction">TypeScript</button></div><span class="ss-badge" id="ss-export-provider">Playwright · Local</span></div><span class="ss-code-note" id="ss-code-note">Khung export minh họa</span><div id="ss-code-box" role="tabpanel" aria-labelledby="ss-lang-python"><textarea id="ss-code" class="ss-export-code" aria-label="Mã nguồn minh họa" readonly spellcheck="false"></textarea></div><div class="ss-inline-info"><i data-lucide="package" aria-hidden="true"></i><span id="ss-export-help">Project export dự kiến kèm dependencies, .env.example và hướng dẫn cài browser.</span></div><button type="button" id="ss-select-code" class="cursor-interaction"><i data-lucide="text-select" aria-hidden="true"></i>Chọn mã minh họa</button></div>
+        </section>
+        <footer class="ss-footer"><span class="ss-small ss-muted" id="ss-footer-status" aria-live="polite">Browser nội bộ · Đóng phiên sau khi chạy</span><button type="button" id="ss-save" class="cursor-interaction">Lưu cấu hình</button></footer>
+      </main>
+    </div>
+    <div class="ss-illustrative"><span>Mockup tương tác · Các lần chạy được mô phỏng</span><span id="ss-mode-caption">Agent tự điều khiển · Một phiên / lượt Agent</span></div>
+  </div>
+  <script>
+  (() => {
+    const root = document.getElementById('ss-browser-mock');
+    const q = s => root.querySelector(s);
+    const qa = s => Array.from(root.querySelectorAll(s));
+    const defaults = {mode:'autonomous',view:'steps',step:1,provider:'local',language:'python',scenario:'success',order:'SS-2048',approval:false,timeout:'30 giây',url:'https://tracking.example/lookup',selector:'[name="order_id"]',value:'{{order_id}}',click:'button[type="submit"]',extract:'[data-testid="order-status"]',description:'Tra cứu trạng thái vận đơn khi người dùng cung cấp mã đơn hàng.',task:'Tra cứu trạng thái vận đơn {{order_id}}. Tự tìm ô nhập, điền mã và đọc kết quả. Nếu trang đổi bố cục, tìm cách tra cứu phù hợp.',domains:'tracking.example',limit:12,autoIndex:0};
+    const state = {...defaults};
+    const ui = {detail:true};
+    let busy = false;
+    let runTimer;
+    const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function persist(){
+      if(window.openai?.setWidgetState) window.openai.setWidgetState({modelContent:{browserMockup:{mode:state.mode,view:state.view,provider:state.provider,language:state.language,scenario:state.scenario,approval:state.approval}},privateContent:{browserMockup:{...state}}}).catch(()=>{});
+    }
+    function icons(){if(globalThis.lucide) lucide.createIcons({attrs:{width:16,height:16}});}
+    function detail(){
+      const rows = [
+        {title:'Mở trang',icon:'external-link',fields:[['Địa chỉ trang','url']],note:'Chờ trang sẵn sàng trước bước tiếp theo.'},
+        {title:'Điền mã đơn',icon:'text-cursor-input',fields:[['Phần tử trên trang','selector'],['Giá trị từ workflow','value']],note:'{{order_id}} lấy từ dữ liệu đầu vào.'},
+        {title:'Bấm tra cứu',icon:'mouse-pointer-2',fields:[['Phần tử trên trang','click']],note:'Chờ kết quả sau khi bấm nút.'},
+        {title:'Lấy trạng thái',icon:'scan-text',fields:[['Phần tử chứa kết quả','extract']],note:'Nội dung văn bản → status.'}
+      ];
+      const row = rows[state.step];
+      q('#ss-step-detail').innerHTML = '<h3><i data-lucide="'+row.icon+'" aria-hidden="true"></i>'+row.title+'</h3>'+row.fields.map(([label,key])=>'<label class="ss-small">'+label+'<input data-field="'+key+'" aria-label="'+label+'" value="'+escapeHtml(state[key])+'" spellcheck="false"></label>').join('')+'<p class="ss-small ss-muted">'+row.note+'</p>';
+      qa('[data-field]').forEach(el=>el.addEventListener('input',()=>{state[el.dataset.field]=el.value;if(el.dataset.field==='url')q('#ss-auto-url').value=state.url;code();persist();}));
+      qa('[data-step]').forEach(el=>el.setAttribute('aria-pressed',String(Number(el.dataset.step)===state.step)));
+      q('#ss-step-detail').hidden = !ui.detail;
+      q('#ss-step-layout').style.gridTemplateColumns = ui.detail ? '' : '1fr';
+      icons();
+    }
+    function code(){
+      const py = s => JSON.stringify(s);
+      const remote = state.provider==='stealth';
+      const time = parseInt(state.timeout,10)*1000;
+      const fill = state.value === '{{order_id}}' ? 'order_id' : py(state.value);
+      const python = [remote?'import os':'from typing import Any','from playwright.async_api import async_playwright','','async def get_order_status(order_id: str) -> dict:', '    async with async_playwright() as p:',remote?'        browser = await p.chromium.connect_over_cdp(':'        browser = await p.chromium.launch(headless=True)',...(remote?['            os.environ["BROWSER_WS_ENDPOINT"]', '        )']:[]),'        try:', '            page = await browser.new_page()', '            page.set_default_timeout('+time+')', '            await page.goto('+py(state.url)+')','            await page.locator('+py(state.selector)+').fill('+fill+')','            await page.locator('+py(state.click)+').click()','            status = page.locator('+py(state.extract)+')','            await status.wait_for(state="visible")','            return {"status": await status.inner_text()}','        finally:','            await browser.close()'].join('\n');
+      const ts = ['import { chromium } from "playwright";','','export async function getOrderStatus(order_id: string) {',remote?'  const browser = await chromium.connectOverCDP(':'  const browser = await chromium.launch({ headless: true });',...(remote?['    process.env.BROWSER_WS_ENDPOINT!', '  );']:[]),'  try {','    const page = await browser.newPage();','    page.setDefaultTimeout('+time+');','    await page.goto('+py(state.url)+');','    await page.locator('+py(state.selector)+').fill('+fill+');','    await page.locator('+py(state.click)+').click();','    const status = page.locator('+py(state.extract)+');','    await status.waitFor({ state: "visible" });','    return { status: await status.innerText() };','  } finally {','    await browser.close();','  }','}'].join('\n');
+      q('#ss-code').value = state.language==='python'?python:ts;
+      const auto=state.mode==='autonomous';
+      q('#ss-code-note').textContent=auto?'Khung export dự kiến · Agent + browser tools':'Mã minh họa · Chuỗi thao tác Playwright';
+      q('#ss-export-help').textContent=auto?'Export giữ vòng lặp model → tool → quan sát. Các helper browser/model được đóng gói cùng project; đoạn này chỉ minh họa cấu trúc.':'Project export dự kiến kèm dependencies, .env.example và hướng dẫn cài browser.';
+      if(auto){
+        const domains=state.domains.split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+        const pythonAgent=['# Khung minh họa; chưa phải project chạy hoàn chỉnh.','from langgraph.graph import StateGraph, MessagesState, START','from langgraph.prebuilt import ToolNode, tools_condition','# browser_tools và model: các module dự kiến đi kèm export.','from browser_tools import BrowserSession, create_browser_tools','from model import configured_model','','# Một session riêng cho lượt chạy, đóng trong finally.','async with BrowserSession() as session:','    tools = create_browser_tools(','        session, allowed_domains='+JSON.stringify(domains)+',','        max_actions='+state.limit+', require_write_approval='+String(state.approval?'True':'False')+',','    )','    model = configured_model.bind_tools(tools)','','    async def agent(state):','        reply = await model.ainvoke(state["messages"])','        return {"messages": [reply]}','','    builder = StateGraph(MessagesState)','    builder.add_node("agent", agent)','    builder.add_node("tools", ToolNode(tools))','    builder.add_edge(START, "agent")','    builder.add_conditional_edges("agent", tools_condition)','    builder.add_edge("tools", "agent")','    graph = builder.compile()','# Nhiệm vụ: '+state.task.replace(/\n/g,' ')].join('\n');
+        const tsAgent=['// Khung minh họa; chưa phải project chạy hoàn chỉnh.','import { StateGraph, MessagesAnnotation, START } from "@langchain/langgraph";','import { ToolNode, toolsCondition } from "@langchain/langgraph/prebuilt";','// Các module dự kiến đi kèm export.','import { BrowserSession, createBrowserTools } from "./browser-tools.js";','import { configuredModel } from "./model.js";','','const session = await BrowserSession.open();','try {','  const tools = createBrowserTools(session, {','    allowedDomains: '+JSON.stringify(domains)+',','    maxActions: '+state.limit+', requireWriteApproval: '+state.approval, '  });','  const model = configuredModel.bindTools(tools);','  const graph = new StateGraph(MessagesAnnotation)','    .addNode("agent", async (state) => ({','      messages: [await model.invoke(state.messages)]','    }))','    .addNode("tools", new ToolNode(tools))','    .addEdge(START, "agent")','    .addConditionalEdges("agent", toolsCondition)','    .addEdge("tools", "agent")','    .compile();','  // Truyền nhiệm vụ vào graph.invoke(...).','} finally {','  await session.close();','}'].join('\n');
+        q('#ss-code').value=state.language==='python'?pythonAgent:tsAgent;
+      }
+      q('#ss-export-provider').textContent = remote?'Playwright · Remote':'Playwright · Local';
+      qa('[data-lang]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.lang===state.language)));
+      q('#ss-code-box').setAttribute('aria-labelledby',state.language==='python'?'ss-lang-python':'ss-lang-ts');
+    }
+    function trace(){
+      if(state.mode==='autonomous'){autoTrace();return;}
+      const ok=state.scenario==='success';
+      const challenge=state.scenario==='challenge';
+      const names=['Mở trang tra cứu','Điền mã '+(state.order||'SS-2048'),'Bấm tra cứu','Đọc trạng thái'];
+      const count=ok?4:challenge?1:4;
+      q('#ss-trace-rows').innerHTML=names.slice(0,count).map((label,i)=>'<div class="ss-trace-row"><span>'+(i===count-1&&!ok?'!':'✓')+'</span><span>'+escapeHtml(label)+'</span><span class="ss-trace-ms">'+(i===count-1&&!ok?(challenge?'Challenge':state.timeout):['1,1 s','0,2 s','0,6 s','0,5 s'][i])+'</span></div>').join('');
+      const status=q('#ss-trace-status');
+      status.className='ss-badge '+(ok?'ss-success':'ss-warning');
+      status.textContent=ok?'Hoàn tất · Dữ liệu mẫu':challenge?'Cần xác minh':'Hết thời gian chờ';
+      q('#ss-trace-total').textContent=ok?'2,4 giây':challenge?'Dừng ở bước 1':state.timeout;
+      const result=ok?{status:'Đang giao'}:challenge?{status:'challenge_required',next:'Chuyển Human node'}:{status:'timeout',step:'extract'};
+      q('#ss-result').textContent=JSON.stringify(result,null,2);
+      q('#ss-preview-order').textContent=state.order||'SS-2048';
+      q('#ss-preview-status').textContent=ok?'Đang giao':challenge?'Yêu cầu xác minh':'Chưa có kết quả';
+    }
+    function autoActions(){
+      const order=state.order||'SS-2048';
+      const action=(tool,label,target,page,observation)=>({tool,label,target,page,observation});
+      let host='';
+      try {const u=new URL(state.url);if(!['http:','https:'].includes(u.protocol))throw new Error();host=u.hostname;} catch {return [action('browser_navigate','Địa chỉ trang chưa hợp lệ',state.url,'blocked','Dừng trước khi mở trang: cần URL HTTP hoặc HTTPS hợp lệ.')];}
+      const allowed=state.domains.split(/[,\n]/).map(s=>s.trim().toLowerCase()).filter(Boolean);
+      if(!allowed.includes(host.toLowerCase()))return [action('browser_navigate','Domain ngoài danh sách được phép',host,'blocked','Dừng trước khi mở trang: '+host+' chưa được cho phép.')];
+      const result=[action('browser_navigate','Mở trang bắt đầu',state.url,state.scenario==='challenge'?'challenge':state.scenario==='layout'?'menu':'lookup','Trang đã tải trong phiên browser của lượt Agent.')];
+      if(state.scenario==='challenge')return [...result,action('browser_snapshot','Nhận diện yêu cầu xác minh','Trang yêu cầu xác minh người dùng','challenge','Website yêu cầu xác minh. Agent dừng để chuyển người xử lý.')];
+      if(state.scenario==='layout')result.push(action('browser_snapshot','Quan sát bố cục mới','Trang chủ có mục “Đơn hàng”, chưa có ô tra cứu','menu','Tìm thấy mục “Đơn hàng”. Cần mở mục này để tìm biểu mẫu.'),action('browser_click','Mở mục Đơn hàng','Liên kết “Đơn hàng”','lookup','Biểu mẫu tra cứu xuất hiện sau khi mở mục Đơn hàng.'));
+      result.push(action('browser_snapshot','Tìm ô nhập và nút tra cứu','Ô “Mã vận đơn” · Nút “Tra cứu”','lookup','Đã tìm thấy ô mã vận đơn và nút tra cứu trong cấu trúc trang.'),action('browser_fill','Điền mã vận đơn',order,'filled','Đã điền mã '+order+' vào ô quan sát được.'),action('browser_click','Gửi yêu cầu tra cứu','Nút “Tra cứu”',state.scenario==='timeout'?'loading':'result',state.scenario==='timeout'?'Đã bấm tra cứu; đang chờ website trả kết quả.':'Website hiển thị kết quả cho mã '+order+'.'),action('browser_snapshot','Quan sát kết quả mới','Vùng kết quả sau thao tác',state.scenario==='timeout'?'loading':'result',state.scenario==='timeout'?'Hết thời gian chờ website hiển thị kết quả.':'Tìm thấy trạng thái vận đơn: Đang giao.'));
+      if(state.scenario!=='timeout')result.push(action('browser_extract','Đọc trạng thái vận đơn','Nội dung trạng thái → order_status','result','Đã lấy đủ thông tin để trả lời và kết thúc lượt Agent.'));
+      return result;
+    }
+    function autoTrace(){
+      const actions=autoActions();
+      const cap=Math.min(actions.length,state.limit);
+      state.autoIndex=Math.max(0,Math.min(state.autoIndex,cap));
+      const n=state.autoIndex;
+      const last=actions[n-1];
+      const done=n>=cap;
+      const blocked=done&&last?.page==='blocked';
+      const limited=done&&actions.length>state.limit;
+      const issue=done&&(blocked||limited||state.scenario==='challenge'||state.scenario==='timeout');
+      const status=q('#ss-trace-status');
+      status.className='ss-badge '+(done?(issue?'ss-warning':'ss-success'):'');
+      status.textContent=!done?(busy?'Đang mô phỏng':'Sẵn sàng · Bấm chạy bước tiếp'):blocked?'URL không được phép':limited?'Đã đạt giới hạn hành động':state.scenario==='challenge'?'Cần xác minh':state.scenario==='timeout'?'Hết thời gian chờ':'Hoàn tất · Dữ liệu mẫu';
+      q('#ss-trace-total').textContent='Mô phỏng';
+      q('#ss-auto-progress').textContent=n+' / '+state.limit+' hành động';
+      q('#ss-session-label').textContent=n===0?'Phiên mới · Chưa mở trang':done?'Phiên được đóng khi kết thúc lượt Agent':'Cùng phiên browser · Đang giữ trang';
+      q('#ss-auto-step').disabled=done||busy;
+      q('#ss-auto-next').textContent=done?'Kết thúc lượt Agent':actions[n].tool;
+      q('#ss-auto-next-label').textContent=done?(issue?'Workflow nhận trạng thái để xử lý tiếp.':'Trả kết quả về workflow.'):actions[n].label;
+      q('#ss-auto-page-url').textContent=n&&!blocked?state.url:'about:blank';
+      const page=last?.page||'blank';
+      const labels={blank:'Chưa mở trang',menu:'Bố cục mới',lookup:'Biểu mẫu tra cứu',filled:'Đã điền mã',result:'Đã có kết quả',challenge:'Yêu cầu xác minh',loading:'Đang chờ kết quả',blocked:'Đã dừng'};
+      q('#ss-auto-page-badge').textContent=labels[page];
+      let content='';
+      if(page==='menu')content='<h3>Cổng vận chuyển</h3><div class="ss-row"><span class="ss-chip">Trang chủ</span><span class="ss-chip">Đơn hàng</span><span class="ss-chip">Hỗ trợ</span></div>';
+      else if(['lookup','filled','loading','result'].includes(page))content='<h3>Tra cứu vận đơn</h3><div class="ss-observation"><span>Mã vận đơn</span><div class="ss-live-field">'+(page==='lookup'?'<span class="ss-muted">Nhập mã vận đơn</span>':escapeHtml(state.order||'SS-2048'))+'</div></div><div class="ss-row"><span class="ss-chip">Tra cứu</span>'+(page==='result'?'<span class="ss-badge ss-success">Đang giao</span>':page==='loading'?'<span class="ss-badge">Đang tải…</span>':'')+'</div>';
+      else content='<h3>'+labels[page]+'</h3>';
+      content+='<p class="ss-muted ss-small">'+escapeHtml(last?.observation||'Agent nhận nhiệm vụ và chọn thao tác đầu tiên dựa trên cấu hình.')+'</p>';
+      q('#ss-auto-page-content').innerHTML=content;
+      q('#ss-trace-rows').innerHTML=actions.slice(0,n).map((a,i)=>'<div class="ss-trace-row"><span>'+(done&&issue&&i===n-1?'!':'✓')+'</span><span>'+escapeHtml(a.label)+'<code class="ss-trace-action">'+a.tool+' · '+escapeHtml(a.target)+'</code></span><span class="ss-trace-ms">'+(i+1)+'</span></div>').join('');
+      const result=!done?{status:'in_progress',actions:n}:blocked?{status:'target_not_allowed'}:limited?{status:'action_limit_reached',actions:n}:state.scenario==='challenge'?{status:'challenge_required',next:'Chuyển Human node'}:state.scenario==='timeout'?{status:'timeout',next:'Trả lỗi về workflow'}:{status:'Đang giao'};
+      q('#ss-result').textContent=JSON.stringify(result,null,2);
+      ['observe','act','result'].forEach(phase=>q('#ss-phase-'+phase).removeAttribute('aria-current'));
+      q('#ss-phase-'+(done?'result':last?.tool==='browser_snapshot'?'act':'observe')).setAttribute('aria-current','step');
+    }
+    function mode(){
+      const auto=state.mode==='autonomous';
+      qa('[data-mode]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.mode===state.mode)));
+      q('#ss-auto-setup').hidden=!auto;q('#ss-scripted-setup').hidden=auto;
+      q('#ss-auto-agent').hidden=!auto;q('#ss-scripted-agent').hidden=auto;
+      q('#ss-auto-live').hidden=!auto;q('#ss-scripted-page').hidden=auto;
+      q('#ss-tab-steps').textContent=auto?'Cấu hình':'Các bước';
+      q('#ss-approval-label').textContent=auto?'Yêu cầu duyệt trước hành động gửi dữ liệu hoặc thay đổi thông tin':'Yêu cầu duyệt trước khi chạy chuỗi thao tác';
+      q('#ss-agent-approval-label').textContent=auto?'Cần duyệt trước hành động gửi dữ liệu hoặc thay đổi thông tin':'Agent cần người duyệt trước khi gọi tool này';
+      q('#ss-agent-tool-count').textContent=auto?'6 tools':'1 tool';
+      q('#ss-agent-help').textContent=auto?'Agent chọn từng tool dựa trên quan sát mới nhất. Các thao tác trên cùng trang chạy tuần tự.':'Agent chọn thời điểm gọi tool. Mỗi lần gọi thực hiện trọn chuỗi 4 bước đã cấu hình.';
+      q('#ss-edit-label').textContent=auto?'Xem cấu hình tự điều khiển':'Xem chuỗi thao tác';
+      q('#ss-mode-caption').textContent=auto?'Agent tự điều khiển · Một phiên / lượt Agent':'Theo kịch bản · Một chuỗi thao tác / lần gọi';
+      q('#ss-scenario option[value="layout"]').disabled=!auto;
+      if(!auto&&state.scenario==='layout'){state.scenario='success';q('#ss-scenario').value='success';}
+      provider();show(state.view,false);trace();
+    }
+    function stopDemo(){clearTimeout(runTimer);busy=false;q('#ss-run').disabled=false;}
+    function nextAction(){
+      if(busy)return;
+      if(state.autoIndex<Math.min(autoActions().length,state.limit))state.autoIndex++;
+      autoTrace();persist();
+    }
+    function show(view,save=true){
+      state.view=view;
+      qa('[data-view]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.view===view)));
+      ['steps','agent','trace','export'].forEach(name=>q('#ss-pane-'+name).hidden=name!==view);
+      const agent=view==='agent'||state.mode==='autonomous';
+      q('#ss-node-title').textContent=agent?'Trợ lý giao hàng':'Tra cứu vận đơn';
+      q('#ss-node-type').textContent=agent?'Agent':'MCP · Browser';
+      q('#ss-agent-chip').hidden=!agent;
+      q('#ss-agent-chip').textContent=state.mode==='autonomous'?'Browser · 6 tools':'Browser · Tra cứu';
+      if(view==='export')code();
+      if(view==='trace')trace();
+      if(save)persist();
+    }
+    function provider(){
+      q('#ss-provider-note').hidden=state.provider!=='stealth';
+      q('#ss-footer-status').textContent=(state.provider==='stealth'?'Browserless · Stealth':'Browser nội bộ')+(state.mode==='autonomous'?' · Một phiên suốt lượt Agent':' · Đóng phiên sau khi chạy');
+      q('#ss-auto-agent>.ss-row>span.ss-row').innerHTML='<i data-lucide="globe" aria-hidden="true"></i>'+(state.provider==='stealth'?'Browserless · Stealth':'Browser nội bộ');
+      code();
+      icons();
+    }
+    function restore(saved){
+      const prev=saved?.privateContent?.browserMockup;
+      if(prev&&typeof prev==='object'){
+        for(const key of Object.keys(defaults)) if(typeof prev[key]===typeof defaults[key]) state[key]=prev[key];
+      }
+      if(!['steps','agent','trace','export'].includes(state.view))state.view='steps';
+      if(![0,1,2,3].includes(state.step))state.step=1;
+      if(!['local','stealth'].includes(state.provider))state.provider='local';
+      if(!['python','typescript'].includes(state.language))state.language='python';
+      if(!['scripted','autonomous'].includes(state.mode))state.mode='autonomous';
+      if(!['success','layout','challenge','timeout'].includes(state.scenario))state.scenario='success';
+      if(![4,8,12,20].includes(state.limit))state.limit=12;
+      if(!Number.isInteger(state.autoIndex)||state.autoIndex<0)state.autoIndex=0;
+      if(!['30 giây','60 giây','120 giây'].includes(state.timeout))state.timeout='30 giây';
+      q('#ss-provider').value=state.provider;q('#ss-timeout').value=state.timeout;q('#ss-order-id').value=state.order;q('#ss-scenario').value=state.scenario;
+      q('#ss-approval').checked=state.approval;q('#ss-agent-approval').checked=state.approval;q('#ss-tool-desc').value=state.description;
+      q('#ss-auto-task').value=state.task;q('#ss-auto-url').value=state.url;q('#ss-auto-domains').value=state.domains;q('#ss-auto-limit').value=String(state.limit);
+      detail();mode();
+    }
+    qa('[data-view]').forEach(el=>el.addEventListener('click',()=>show(el.dataset.view)));
+    qa('[data-mode]').forEach(el=>el.addEventListener('click',()=>{stopDemo();state.mode=el.dataset.mode;state.autoIndex=0;mode();persist();}));
+    qa('[data-step]').forEach(el=>el.addEventListener('click',()=>{state.step=Number(el.dataset.step);detail();persist();}));
+    qa('[data-lang]').forEach(el=>el.addEventListener('click',()=>{state.language=el.dataset.lang;code();persist();}));
+    q('#ss-provider').addEventListener('change',e=>{state.provider=e.target.value;provider();persist();});
+    q('#ss-timeout').addEventListener('change',e=>{state.timeout=e.target.value;code();trace();persist();});
+    q('#ss-scenario').addEventListener('change',e=>{stopDemo();state.scenario=e.target.value;state.autoIndex=0;trace();persist();});
+    q('#ss-order-id').addEventListener('input',e=>{stopDemo();state.order=e.target.value;state.autoIndex=0;trace();persist();});
+    q('#ss-auto-task').addEventListener('input',e=>{state.task=e.target.value;code();persist();});
+    q('#ss-auto-url').addEventListener('input',e=>{stopDemo();state.url=e.target.value;state.autoIndex=0;code();trace();persist();});
+    q('#ss-auto-domains').addEventListener('input',e=>{stopDemo();state.domains=e.target.value;state.autoIndex=0;code();trace();persist();});
+    q('#ss-auto-limit').addEventListener('change',e=>{stopDemo();state.limit=Number(e.target.value);state.autoIndex=0;code();trace();persist();});
+    q('#ss-auto-step').addEventListener('click',nextAction);
+    q('#ss-tool-desc').addEventListener('input',e=>{state.description=e.target.value;persist();});
+    ['#ss-approval','#ss-agent-approval'].forEach(id=>q(id).addEventListener('change',e=>{state.approval=e.target.checked;q('#ss-approval').checked=state.approval;q('#ss-agent-approval').checked=state.approval;code();persist();}));
+    q('#ss-edit-steps').addEventListener('click',()=>show('steps'));
+    q('#ss-canvas-tool').addEventListener('click',()=>show('steps'));
+    q('#ss-save').addEventListener('click',()=>{q('#ss-footer-status').textContent='Đã lưu cấu hình trong bản xem thử';persist();});
+    q('#ss-select-code').addEventListener('click',()=>{q('#ss-code').focus();q('#ss-code').select();});
+    q('#ss-run').addEventListener('click',()=>{
+      if(busy)return;
+      if(state.mode==='autonomous'){
+        state.autoIndex=0;busy=true;q('#ss-run').disabled=true;show('trace');
+        const advance=()=>{state.autoIndex++;autoTrace();if(state.autoIndex>=Math.min(autoActions().length,state.limit)){stopDemo();autoTrace();persist();return;}runTimer=setTimeout(advance,450);};
+        runTimer=setTimeout(advance,450);return;
+      }
+      busy=true;show('trace');
+      const button=q('#ss-run');button.disabled=true;
+      q('#ss-trace-status').textContent='Đang mô phỏng…';q('#ss-trace-status').className='ss-badge';q('#ss-result').textContent='…';
+      clearTimeout(runTimer);runTimer=setTimeout(()=>{trace();button.disabled=false;busy=false;persist();},650);
+    });
+    window.addEventListener('openai:set_globals',event=>{if(event.detail?.globals?.widgetState)restore(event.detail.globals.widgetState);});
+    restore(window.openai?.widgetState);
+    if(globalThis.Tweak){const tweak=new Tweak({container:q('#ss-step-layout'),onChange:detail});tweak.addToggle(ui,'detail',{label:'Hiện chi tiết thao tác'});}
+  })();
+  </script>
+</div>

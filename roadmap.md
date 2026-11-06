@@ -441,6 +441,26 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 - TASK-0237 Managed Google Drive — done, merged into develop through #284 on 2026-11-02 after 20 passing checks (REV-0214, QA-0214).
 
+## Browser tools, recipes and proxies
+
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio delivery in progress via TASK-0241–0250 and studio-scoped TASK-0253 (todo). Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Executable Python/TypeScript exports (TASK-0251/0252) remain **deferred** after studio. Draft implementation PRs #303–#315 started against the previous Proposed plan and must be reconciled with the Accepted package before merge. No release/version bump authorised by acceptance alone.
+
+- TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **backlog** (studio).
+- TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **backlog** (studio).
+- TASK-0243 — isolated local Playwright runtime and nine bounded operations. **backlog** (studio).
+- TASK-0244 — Browserless remote capabilities and origin-scoped login profiles. **backlog** (studio; remote required).
+- TASK-0245 — conversation/run-bound sessions (cross-turn), ordered Agent calls and lifecycle. **backlog** (studio).
+- TASK-0246 — configurable mutating approvals, expired/lost sessions and uncertain-effect recovery. **backlog** (studio).
+- TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **backlog** (studio).
+- TASK-0248 — typed reusable recipes through existing tool surfaces. **backlog** (studio).
+- TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **backlog** (studio).
+- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **backlog** (studio).
+- TASK-0253 — studio integrated acceptance, example workflow and en/vi handbook. **backlog** (studio first milestone).
+- TASK-0251 — executable Python/plain and project exports. **backlog (deferred)** after studio acceptance.
+- TASK-0252 — executable TypeScript/plain and project exports. **backlog (deferred)** after studio acceptance.
+
+See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability, deferred triggers and gates. Owner acceptance of the **amended** package and `factory ready` precede task-start. Existing unrelated SDK task state is unchanged.
+
 ## Releases
 
 - TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,
