@@ -25,7 +25,7 @@ def test_runtime_url_from_chat_model_fixed_or_workflow_state(tmp_path,monkeypatc
     assert status=='ok' and len(calls)==1 and calls[0].arguments=={'url':url}
     assert ('url' in seen[0][0]['parameters']['properties'])==(source=='model')
     assert 'synthetic=private' not in json.dumps(next(event['state'] for event in events if event['type']=='run_finished')['steps'])
-    assert json.loads(service.mcp.repo.get('browser').settings)=={}  # connection has no start URL
+    settings=json.loads(service.mcp.repo.get('browser').settings or '{}'); assert 'start_url' not in settings and 'url' not in settings  # connection has no start URL
 
 
 @pytest.mark.parametrize('source,args',[('state',{}),('model',{'url':''}),('model',{}),('model',{'url':'   '})])

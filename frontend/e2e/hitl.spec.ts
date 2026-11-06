@@ -36,7 +36,9 @@ test('human node: wait, pending list, approve, complete', async ({ page }) => {
   await expect(row.locator('[data-testid=inbox-question]')).toHaveText('Approve refund for order A100?')
   await row.locator('[data-testid=inbox-open]').click()
   await expect(page).toHaveURL(new RegExp(`/workflows/${wid}\\?run=`))
-  await expect(page.locator('#human-panel')).toBeVisible()
+  // Wait for the reopened run to hydrate (history fetch can lag under WebServer resets).
+  await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'waiting', { timeout: 30_000 })
+  await expect(page.locator('#human-panel')).toBeVisible({ timeout: 30_000 })
   await page.locator('#human-approve').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
   await expect(page.locator('#human-panel')).toHaveCount(0)

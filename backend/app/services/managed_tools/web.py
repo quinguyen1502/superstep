@@ -62,7 +62,7 @@ class WebTools:
     def read(url,*,headers=None,params=None,allowed_origins=(),infrastructure=False):
         """One pinned public destination, verified TLS, no redirects/proxy/cookie jar reuse."""
         target=urlsplit(http_url(url))
-        destination=DestinationPolicy(allowed_origins,resolver=socket.getaddrinfo).resolve(target.scheme,target.hostname,target.port or (443 if target.scheme=='https' else 80),infrastructure=infrastructure)
+        destination=DestinationPolicy.public_discovery(allowed_origins,resolver=socket.getaddrinfo).resolve(target.scheme,target.hostname,target.port or (443 if target.scheme=='https' else 80),infrastructure=infrastructure)
         pinned,authority,extensions=pinned_request(url,destination.address)
         deadline=time.monotonic()+30
         with httpx.Client(timeout=httpx.Timeout(20,connect=5),follow_redirects=False,trust_env=False,verify=True) as client:

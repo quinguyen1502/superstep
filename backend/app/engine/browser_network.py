@@ -2,6 +2,8 @@
 
 This module does not grant browser access. Only a network-isolated worker using
 the gateway for *all* page traffic can enforce this policy (see browser-egress.md).
+Page destinations require a non-empty origin whitelist (Accepted DEC-0085);
+empty allowlists deny every non-infrastructure resolve.
 """
 from __future__ import annotations
 
@@ -47,11 +49,23 @@ class DestinationPolicy:
     There is deliberately no `allow_private` or fixture field. The fixture-only
     subclass lives outside app/ and cannot be enabled by connection/model data.
     """
-    def __init__(self, allowed_origins=(), *, resolver=socket.getaddrinfo):
+    def __init__(self, allowed_origins=(), *, resolver=socket.getaddrinfo, require_whitelist=True):
         try:
             self.allowed_origins = frozenset(self._origin(value) for value in allowed_origins)
         except (ValueError, TypeError): raise EgressDenied() from None
+        if require_whitelist and not self.allowed_origins: raise EgressDenied()
         self.resolver = resolver
+        self.public_web = False
+
+    @classmethod
+    def public_discovery(cls, allowed_origins=(), *, resolver=socket.getaddrinfo):
+        """Optional origin filter for separate web search/fetch (TASK-0247). Empty means any global public IP."""
+        policy = cls(allowed_origins, resolver=resolver, require_whitelist=False) if allowed_origins else object.__new__(cls)
+        if not allowed_origins:
+            policy.allowed_origins = frozenset()
+            policy.resolver = resolver
+        policy.public_web = True
+        return policy
 
     @staticmethod
     def _origin(value):
@@ -73,9 +87,15 @@ class DestinationPolicy:
             if not host or any(ord(c) <= 32 or c in "\\/%@?#" or ord(c) == 127 for c in host): raise ValueError()
             host = host.lower().rstrip(".").encode("idna").decode("ascii")
             target_origin = origin(scheme, host, port)
-            if not infrastructure and self.allowed_origins and target_origin not in self.allowed_origins: raise ValueError()
-            # Nonstandard ports must be explicitly named in the destination allowlist.
-            if not infrastructure and port not in {80, 443} and target_origin not in self.allowed_origins: raise ValueError()
+            # Browser (default): membership always required. public_web: empty allowlist means any global IP.
+            if not infrastructure:
+                if self.public_web:
+                    if self.allowed_origins and target_origin not in self.allowed_origins: raise ValueError()
+                    if port not in {80, 443} and (not self.allowed_origins or target_origin not in self.allowed_origins): raise ValueError()
+                else:
+                    if target_origin not in self.allowed_origins: raise ValueError()
+                    # Nonstandard ports must be explicitly named in the destination allowlist.
+                    if port not in {80, 443} and target_origin not in self.allowed_origins: raise ValueError()
             answers = self.resolver(host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
             addresses = tuple(dict.fromkeys(item[4][0] for item in answers))
             if not addresses or any(not self.address_allowed(value) for value in addresses): raise ValueError()

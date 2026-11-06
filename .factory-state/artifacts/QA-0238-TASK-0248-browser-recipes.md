@@ -8,7 +8,7 @@
 - QA Owner: Codex (advisory; owner approval pending)
 - Created: 2026-11-06
 - Updated: 2026-11-06
-- Outcome: scoped conditional pass; full declared verification pending
+- Outcome: scoped pass; declared verification passed
 
 ## Scope And References
 
@@ -32,12 +32,14 @@ REQ-0086, DES-0004, ARCH-0002 recipe refinement, DEC-0085, PLAN-0006, REV-0238, 
 
 ## UX And Accessibility Coverage
 
-No UI component changed. Error and validation locales exist and parity checks pass; final glossary wording review pending. Recipe connection/selector builder controls and full keyboard/narrow/theme/locale acceptance remain TASK-0249/0250. Workflow deletion continues through the existing shared exact-name dialog and plain DELETE API.
+No UI component changed. Error and validation locales exist and parity checks pass; final glossary wording corrected and checked. Recipe connection/selector builder controls and full keyboard/narrow/theme/locale acceptance remain TASK-0249/0250. Workflow deletion continues through the existing shared exact-name dialog and plain DELETE API.
 
 ## Gaps, Risks And Required Follow-Up
 
-Full declared verification and final locale wording review pending. Backend-only recipe metadata is not a finished UI/export claim. Unique semantic role/text must reflect the reviewed site; business meaning/layout cannot be inferred by an Agent inside the recipe. Unknown external effects stop conservatively, with no undo/exactly-once promise. Live account/provider configuration and remote recipe-specific fixture are not claimed (remote/shared six-action primitives were verified in prerequisite tasks). Runtime defaults off.
+Declared verification and locale wording checks passed. Backend-only recipe metadata is not a finished UI/export claim. Unique semantic role/text must reflect the reviewed site; business meaning/layout cannot be inferred by an Agent inside the recipe. Unknown external effects stop conservatively, with no undo/exactly-once promise. Live account/provider configuration and remote recipe-specific fixture are not claimed (remote/shared six-action primitives were verified in prerequisite tasks). Runtime defaults off.
 
 ## QA Decision
 
-Conditionally passed for scoped review pending final checks/locale wording and owner approval. No done/Ready/merge authority.
+Conditionally passed for scoped review with declared checks/locale wording passed; owner approval pending. No done/Ready/merge authority.
+
+- Final canonical full profile on 27cdf07d (only documentation followed during the run): all eight commands passed. Backend 483.94 s; root build/lint/test 11.83/1.16/16.65 s; Python SDK 14.76 s; TS SDK build/test/typecheck 1.58/1.46/1.46 s. A subsequent wording-only vi correction uses the input/output glossary; root npm test passed 280 tests and backend locale/envelope passed 14 tests (5.60 s). No backend behavior/source changed after the full profile. Owner review remains pending; no done/Ready/merge approval.

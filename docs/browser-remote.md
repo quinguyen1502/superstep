@@ -7,7 +7,7 @@ gated until TASK-0245/0246 bind run sessions, fences and durable Human approval.
 ## Provider and trust boundary
 
 The provisional metadata-only `controlled_cdp` provider is replaced explicitly by
-`controlled_remote`. It speaks the same worker protocol over authenticated HTTPS
+`browserless`. It speaks the same worker protocol over authenticated HTTPS
 RPC to an operator-controlled deployment of `app.browser_controller`. Raw CDP/WSS,
 arbitrary third-party self-reported capabilities and endpoint query tokens are
 unsupported. Previously saved provisional metadata must be reconfigured; there

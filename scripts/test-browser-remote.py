@@ -64,7 +64,7 @@ def main():
             while not server.started and time.monotonic()<deadline: time.sleep(.05)
             assert server.started
             transport=RemoteTransport(ApprovedController('https://controller.test:'+str(port),'127.0.0.1'),token,tls=ssl.create_default_context(cafile=cert))
-            worker=RemoteBrowserWorker(context,BrowserSettings(provider='controlled_remote',allowed_origins=['http://allowed.test:8080'],max_actions=20),transport)
+            worker=RemoteBrowserWorker(context,BrowserSettings(provider='browserless',allowed_origins=['http://allowed.test:8080'],max_actions=20),transport)
             workers.append(worker);worker.start()
             attached=RemoteBrowserWorker.attach(context,worker.settings,worker.session_id,transport)
             assert attached.health()["status"]=="ready"
@@ -90,13 +90,13 @@ def main():
             worker.close()
             for mode in ['custom','operator_default']:
                 routed=RemoteBrowserWorker(context.model_copy(update={'group_id':mode}),
-                    BrowserSettings(provider='controlled_remote',allowed_origins=['https://allowed.test:8443','http://allowed.test:8082'],
+                    BrowserSettings(provider='browserless',allowed_origins=['https://allowed.test:8443','http://allowed.test:8082'],
                                     proxy=proxy if mode=='custom' else {'mode':'operator_default'}),transport)
                 workers.append(routed);routed.start(secrets=proxy_secrets if mode=='custom' else {})
                 assert routed.call(routed.command('navigate',{'url':'https://allowed.test:8443/'},0)).status=='confirmed'
                 assert routed.call(routed.command('navigate',{'url':'http://allowed.test:8082/no-direct-fallback'},1)).status!='confirmed'
                 routed.close()
-            settings=BrowserSettings(provider='controlled_remote',profile={'name':'fixture-profile','origins':['https://allowed.test:8443']})
+            settings=BrowserSettings(provider='browserless',allowed_origins=['https://allowed.test:8443'],profile={'name':'fixture-profile','origins':['https://allowed.test:8443']})
             raw=json.dumps({'cookies':[{'name':'login','value':'synthetic-cookie','domain':'allowed.test','path':'/','expires':-1,'httpOnly':True,'secure':True,'sameSite':'Lax'}],
                             'origins':[{'origin':'https://allowed.test:8443','localStorage':[{'name':'login','value':'synthetic-storage'}]}]})
             profile=RemoteBrowserWorker(context.model_copy(update={'group_id':'profile'}),settings,transport);workers.append(profile)
@@ -109,7 +109,7 @@ def main():
                 assert profile.call(profile.command('navigate',{'url':url},sequence)).status=='policy_denied'
             capture=profile.call(profile.command('screenshot',{},4));assert profile.artifact(capture.artifact_id).startswith(b'\x89PNG')
             profile.close()
-            anonymous=RemoteBrowserWorker(context.model_copy(update={'group_id':'anonymous'}),BrowserSettings(provider='controlled_remote',allowed_origins=['https://allowed.test:8443']),transport)
+            anonymous=RemoteBrowserWorker(context.model_copy(update={'group_id':'anonymous'}),BrowserSettings(provider='browserless',allowed_origins=['https://allowed.test:8443']),transport)
             workers.append(anonymous);anonymous.start()
             empty=anonymous.call(anonymous.command('navigate',{'url':'https://allowed.test:8443/profile'},0));assert empty.status=='confirmed'
             assert 'Anonymous' in empty.observation.text and 'Stored login' not in empty.observation.text;anonymous.close()
@@ -121,7 +121,7 @@ def main():
             assert not any(item['path']=='/no-direct-fallback' for item in stats['requests'])
             assert len(stats['connects']) >= 4
             # Restart cleanup addresses only this controller's labels, including volume leftovers.
-            orphan=factory(context.model_copy(update={'group_id':'restart'}),BrowserSettings());orphan.start()
+            orphan=factory(context.model_copy(update={'group_id':'restart'}),BrowserSettings(allowed_origins=['https://allowed.test:8443']));orphan.start()
             reap_controller(args.docker,identity)
             assert not docker('ps','-aq','--filter','label=superstep.browser.controller='+identity)
             assert not docker('volume','ls','-q','--filter','label=superstep.browser.controller='+identity)

@@ -56,7 +56,7 @@ export function BrowserConnectionFields({ adapter, settings, secrets, scope, idp
     if (!name) { apply(); return }
     confirm.ask({ title: t('browserSettings.removeProfileTitle', { name }), name, description: t('browserSettings.removeProfileBody'), onConfirm: apply })
   }
-  const limits = [['action_timeout_ms', 1000, 60000, 30000], ['idle_timeout_s', 30, 600, 120], ['lifetime_s', 30, 1800, 600], ['max_actions', 1, 100, 12]] as const
+  const limits = [['action_timeout_ms', 1000, 60000, 30000], ['idle_timeout_s', 60, 7200, 1800], ['lifetime_s', 120, 14400, 3600], ['max_actions', 1, 200, 40], ['max_pages', 1, 20, 4]] as const
   return <div className="space-y-3" id={`${idp}-browser-settings`}>
     {!available && <Alert variant="warning"><ShieldAlert /><AlertDescription>{t('browserSettings.disabled')}</AlertDescription></Alert>}
     <fieldset disabled={!available} className="space-y-4">
@@ -64,12 +64,11 @@ export function BrowserConnectionFields({ adapter, settings, secrets, scope, idp
       {adapter === 'browser' ? <>
         <Field idp={idp} name="provider" errors={errors}>{props => <Select value={provider} onValueChange={value => update({ provider: value })}>
           <SelectTrigger {...props} className="w-full"><SelectValue /></SelectTrigger><SelectContent>
-            <SelectItem value="local">{t('browserSettings.providers.local')}</SelectItem><SelectItem value="controlled_remote">{t('browserSettings.providers.controlled_remote')}</SelectItem>
+            <SelectItem value="local">{t('browserSettings.providers.local')}</SelectItem><SelectItem value="browserless">{t('browserSettings.providers.browserless')}</SelectItem>
           </SelectContent></Select>}</Field>
-        {provider === 'controlled_remote' && <div className="space-y-3">
+        {provider === 'browserless' && <div className="space-y-3">
           <p className="text-xs text-muted-foreground">{t('browserSettings.remoteHelp')}</p>
-          <SecretField name="remote_endpoint" idp={idp} secrets={secrets} errors={errors} onChange={setSecret} />
-          <SecretField name="remote_token" idp={idp} secrets={secrets} errors={errors} onChange={setSecret} />
+          <SecretField name="browserless_token" idp={idp} secrets={secrets} errors={errors} onChange={setSecret} />
         </div>}
         <Separator /><h3 className="text-sm font-medium">{t('browserSettings.network')}</h3>
         <Field idp={idp} name="proxy_mode" errors={errors}>{props => <Select value={mode} onValueChange={value => update({ proxy: { ...proxy, mode: value } })}>
@@ -96,6 +95,11 @@ export function BrowserConnectionFields({ adapter, settings, secrets, scope, idp
           <p className="text-xs text-muted-foreground">{t('browserSettings.profileStateHelp')}</p>
           <Button variant="outline" type="button" onClick={removeProfile} id={`${idp}-profile-remove`}><Trash2 />{t('browserSettings.removeProfile')}</Button>
         </div>}
+        <Separator /><h3 className="text-sm font-medium">{t('browserSettings.safety')}</h3>
+        {([['require_mutating_approval', false], ['allow_evaluate_js', false], ['allow_upload', false], ['allow_download', false]] as const).map(([name, fallback]) =>
+          <div key={name} className="flex items-center justify-between gap-3"><div className="space-y-1"><Label htmlFor={`${idp}-${name}`}>{t(`browserSettings.fields.${name}`)}</Label>
+            <p className="text-xs text-muted-foreground">{t(`browserSettings.help.${name}`)}</p></div>
+            <Switch id={`${idp}-${name}`} checked={settings[name] === undefined ? fallback : !!settings[name]} onCheckedChange={value => update({ [name]: value })} /></div>)}
         <Separator /><Collapsible open={limitsOpen || limits.some(([name]) => errors[name])} onOpenChange={setLimitsOpen}>
           <CollapsibleTrigger asChild><Button variant="ghost" type="button" aria-controls={`${idp}-limits`}><ChevronDown />{t('browserSettings.resources')}</Button></CollapsibleTrigger>
           <CollapsibleContent id={`${idp}-limits`} className="space-y-3"><div className="grid gap-3 sm:grid-cols-2">{limits.map(([name, min, max, fallback]) => <Field key={name} idp={idp} name={name} errors={errors}>{props => <div className="space-y-1.5"><Input {...props} type="number" min={min} max={max} aria-describedby={[props['aria-describedby'], `${props.id}-range`].filter(Boolean).join(' ')}

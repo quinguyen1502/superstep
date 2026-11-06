@@ -62,3 +62,13 @@ Approved for QA within contract/metadata scope; advisory self-review does not su
 ## Final Regression Evidence — 2026-11-05
 
 Declared backend command `.venv/bin/python -m pytest` passed: 1,234 passed, 65 skipped in 513.35 seconds on Python 3.14.6/SQLite. The 65 skips reflect unavailable optional engines/services/toolchains; no Postgres/Redis or isolated-browser evidence is inferred. Root npm test (280 passed), build, lint, Factory validate, ID and whitespace checks also passed. Earlier full-suite-pending statements are superseded. TASK-0241 remains in review pending owner approval; no merge authorised.
+
+
+## 2026-11-06 reconciliation with Accepted plan
+
+- Synced `origin/develop` at 3ec44c3c (plan #299 Accepted + v0.11.2).
+- Contract now matches DEC-0085: required whitelist, `local`/`browserless`, nine tools,
+  mutating-approval default OFF, idle 1800s, connection allow_* gates, `browserless_token`,
+  optional `conversation_id`.
+- Tests: `pytest tests/test_browser_contract.py tests/test_browser_connections.py` → 57 passed.
+- Still metadata-only; no browser launch (`BROWSER_RUNTIME_UNAVAILABLE`).

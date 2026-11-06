@@ -2,8 +2,8 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision='0057_browser_approvals'
-down_revision='0056_browser_sessions'
+revision='0058_browser_approvals'
+down_revision='0057_browser_conv_sessions'
 branch_labels=depends_on=None
 
 

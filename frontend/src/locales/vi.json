@@ -687,7 +687,7 @@
     "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này",
     "ATTACHMENT_MIGRATE_TARGET": "Không có nơi lưu tệp đính kèm '{{target}}' (dùng {{allowed}})",
     "ATTACHMENT_MIGRATE_BATCH": "Số tệp mỗi đợt phải từ 1 đến {{max}}",
-    "BROWSER_RECIPE_INVALID": "Recipe trình duyệt phải là workflow trình duyệt tuyến tính phiên bản 1, có đầu vào, đầu ra và mục tiêu đúng kiểu"
+    "BROWSER_RECIPE_INVALID": "Recipe trình duyệt phải là workflow tuyến tính phiên bản 1, có input, output và mục tiêu đúng kiểu"
   },
   "lang": {
     "en": "English",
@@ -2444,7 +2444,7 @@
     "noToolCalling": "{{provider}} không gọi được công cụ. Hãy chọn credential hỗ trợ gọi công cụ cho node Agent."
   },
   "validation": {
-    "BROWSER_RECIPE_INVALID": "Recipe trình duyệt phải là workflow trình duyệt tuyến tính phiên bản 1, có đầu vào, đầu ra và mục tiêu đúng kiểu",
+    "BROWSER_RECIPE_INVALID": "Recipe trình duyệt phải là workflow tuyến tính phiên bản 1, có input, output và mục tiêu đúng kiểu",
     "NODE_ID_MISSING": "Node nào cũng cần có id",
     "EDGE_ENDS_MISSING": "Edge nào cũng cần có điểm đầu và điểm cuối",
     "DUPLICATE_NODE_ID": "Trùng id node: {{ids}}",
@@ -2682,9 +2682,9 @@
     "disabled": "Quản trị đã tắt kết nối trình duyệt và web. Khoá đã lưu vẫn bị ẩn; hãy bật tính năng trên máy chủ trước khi chỉnh sửa hoặc khám phá.",
     "providers": {
       "local": "Trình duyệt cách ly trên máy chủ (Docker)",
-      "controlled_remote": "Trình duyệt từ xa do quản trị kiểm soát"
+      "browserless": "Browserless (bộ điều khiển Superstep tự lưu trữ)"
     },
-    "remoteHelp": "Dùng bộ điều khiển HTTPS tương thích với runtime và được quản trị cho phép độc lập. Không hỗ trợ endpoint CDP/WSS tuỳ ý. Để trống ô khoá đã lưu để giữ giá trị cũ.",
+    "remoteHelp": "Bộ điều khiển Superstep tự lưu trữ gắn nhãn Browserless. Không cấu hình Browserless.io trực tiếp tại đây.",
     "network": "Mạng / Proxy",
     "proxyModes": {
       "direct": "Kết nối trực tiếp",
@@ -2726,8 +2726,6 @@
     "searchPlaceholder": "https://search.example.org/search",
     "fields": {
       "provider": "Nhà cung cấp trình duyệt",
-      "remote_endpoint": "Địa chỉ HTTPS bộ điều khiển (mã hoá)",
-      "remote_token": "Token bộ điều khiển (mã hoá)",
       "proxy_mode": "Tuyến proxy",
       "proxy_server": "Địa chỉ gốc proxy HTTP",
       "proxy_auth": "Xác thực proxy",
@@ -2742,7 +2740,13 @@
       "lifetime_s": "Thời hạn phiên tối đa (giây)",
       "max_actions": "Số thao tác tối đa mỗi phiên",
       "search_endpoint": "Endpoint HTTPS tìm kiếm SearXNG",
-      "search_headers": "JSON header xác thực tìm kiếm (mã hoá)"
+      "search_headers": "JSON header xác thực tìm kiếm (mã hoá)",
+      "browserless_token": "Token điều khiển Browserless",
+      "require_mutating_approval": "Yêu cầu duyệt thao tác thay đổi trang",
+      "allow_evaluate_js": "Cho phép evaluate JavaScript",
+      "allow_upload": "Cho phép tải tệp lên",
+      "allow_download": "Cho phép tải tệp xuống",
+      "max_pages": "Số trang tối đa"
     },
     "errors": {
       "unsupported": "Không hỗ trợ nhà cung cấp, phiên bản hoặc khả năng này. Chọn tuỳ chọn được hỗ trợ.",
@@ -2761,6 +2765,13 @@
       "idleLifetime": "Thời gian chờ rảnh không được vượt thời hạn phiên tối đa.",
       "profileScope": "Mọi địa chỉ của hồ sơ phải có trong danh sách địa chỉ gốc được phép."
     },
-    "range": "Khoảng cho phép: {{min}}–{{max}}"
+    "range": "Khoảng cho phép: {{min}}–{{max}}",
+    "help": {
+      "require_mutating_approval": "Khi tắt (mặc định), click/fill/upload/download/evaluate chạy ngay. Navigate, snapshot, extract và screenshot không bao giờ chờ.",
+      "allow_evaluate_js": "Ẩn evaluate cho đến khi bật. Kết quả vẫn không đáng tin cậy.",
+      "allow_upload": "Ẩn upload cho đến khi bật.",
+      "allow_download": "Ẩn download cho đến khi bật. Tải xuống vẫn giới hạn kích thước và loại."
+    },
+    "safety": "Công tắc an toàn"
   }
 }
