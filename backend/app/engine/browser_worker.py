@@ -48,7 +48,34 @@ class LocalBrowserWorker:
         if self.closed or not self.started: return
         if self._idle_timer is not None: self._idle_timer.cancel()
         remaining = max(0.001, self.settings.idle_timeout_s - (time.monotonic() - self._last_activity))
-        self._idle_timer = threading.Timer(remaining, self.close); self._idle_timer.daemon = True; self._idle_timer.start()
+        self._idle_timer = threading.Timer(remaining, self._check_idle); self._idle_timer.daemon = True; self._idle_timer.start()
+
+    def health(self):
+        return self._rpc("health", WorkerControl(context=self.context, session_id=self.session_id, generation=self.generation), timeout=5)
+
+    def _check_idle(self):
+        if self.closed: return
+        try:
+            state = self.health()
+            if state.get("status") != "ready": self.close(); return
+            remaining = min(state["idle_remaining_ms"], state["lifetime_remaining_ms"])
+            if type(remaining) is not int or not 0 < remaining <= 1800000: self.close(); return
+            # The worker clock is authoritative when several service processes use the same page.
+            self._idle_timer = threading.Timer(max(.01, remaining / 1000), self._check_idle)
+            self._idle_timer.daemon = True; self._idle_timer.start()
+        except (BrowserWorkerError, KeyError, TypeError): self.close()
+
+    @classmethod
+    def attach(cls, context, settings, worker_id, **options):
+        """Reattach only to an existing worker which proves the exact private context; never open/replay."""
+        import re
+        if not isinstance(worker_id, str) or not re.fullmatch(r"[a-f0-9]{32}", worker_id): raise BrowserWorkerError()
+        worker = cls(context, settings, **options)
+        worker.session_id = worker_id
+        worker.worker, worker.gateway, worker.volume = (f"ss-browser-{worker_id}-{part}" for part in ("worker", "gateway", "socket"))
+        if worker.health().get("status") != "ready": raise BrowserWorkerError()
+        worker.started = True
+        return worker
 
     def _docker(self, *args, data=None, timeout=30):
         try:

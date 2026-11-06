@@ -31,8 +31,9 @@ async def expire_waiting_loop() -> None:
         except asyncio.CancelledError: raise
         except Exception: get_logger("sweeper").exception("expiring waiting runs failed")
         try:
-            from .api.deps import browser_artifact_service
+            from .api.deps import browser_artifact_service, browser_session_service
             await asyncio.to_thread(browser_artifact_service().sweep)
+            await asyncio.to_thread(browser_session_service().sweep)
         except asyncio.CancelledError: raise
         except Exception: get_logger("sweeper").exception("expiring browser artifacts failed")
         await asyncio.sleep(SWEEP_EVERY)

@@ -56,7 +56,7 @@ class RemoteTransport:
         self.controller, self._token, self._tls = controller, token, tls
 
     def request(self, method, body=None, timeout=65):
-        if method not in {'info', 'open', 'command', 'approve', 'artifact', 'close'}: raise BrowserWorkerError('unsupported')
+        if method not in {'info', 'open', 'command', 'approve', 'artifact', 'close', 'health'}: raise BrowserWorkerError('unsupported')
         url, headers, extensions = pinned_request(self.controller.endpoint + '/v1/' + method, self.controller.address)
         headers['Authorization'] = 'Bearer ' + self._token
         raw = None if body is None else json.dumps(body, ensure_ascii=False, allow_nan=False).encode()
@@ -115,6 +115,16 @@ class RemoteBrowserWorker(LocalBrowserWorker):
         except BrowserWorkerError: self.cleanup_pending = True
         self.closed = True
         return not self.cleanup_pending
+
+    @classmethod
+    def attach(cls, context, settings, worker_id, transport):
+        import re
+        if not isinstance(worker_id, str) or not re.fullmatch(r'[a-f0-9]{32}', worker_id): raise BrowserWorkerError()
+        worker = cls(context, settings, transport)
+        worker.session_id = worker_id
+        if worker.health().get('status') != 'ready': raise BrowserWorkerError()
+        worker.started = True
+        return worker
 
     def _arm_idle(self): pass  # remote controller's independent supervisor enforces this
 

@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0245
-- Title: Conversation/run-bound sessions, ordered Agent calls and lifecycle integration
-- Status: todo
+- Title: Run-bound sessions, ordered Agent calls and lifecycle integration
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-05
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,21 +17,20 @@
 
 ## Objective
 
-Conversation/run-bound sessions that persist across chat turns, ordered Agent calls and lifecycle integration, satisfying the assigned acceptance criteria of REQ-0086.
+Run-bound sessions, ordered Agent calls and lifecycle integration, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Bind browser ports to trusted effective principal, **conversation id when chat-driven**, run/Agent-tool group and connection snapshots through RunService and existing tool call paths.
-- **Persist sessions across chat turns** of the same conversation, same effective user/principal and same connection until idle timeout (proposed default 30 minutes, configurable), hard max duration, cancel, conversation end or connection revoke. Still no promised survival across worker/browser crashes.
-- Keep sessions across Agent rounds while serialising same-session commands in model call order, including parallel slots and multiple workers; preserve unrelated tool concurrency.
-- Integrate lease fencing, revocation, cancellation, action/page budgets, idle/max expiry and terminal cleanup with the current run queue and MCP/Agent behavior.
+- Bind browser ports to trusted effective principal/run/Agent-tool group/connection snapshots through RunService and existing tool call paths.
+- Keep sessions across rounds while serialising same-session commands in model call order, including parallel slots and multiple workers; preserve unrelated tool concurrency.
+- Integrate lease fencing, revocation, cancellation, bounds, idle expiry and terminal cleanup with the current run queue and MCP/Agent behavior.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
-- Starting implementation under this planning-only request.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Durable approval policy and recovery UX are TASK-0246.
 
 ## Inputs And Related Artifacts
 
@@ -42,8 +41,8 @@ Conversation/run-bound sessions that persist across chat turns, ordered Agent ca
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0243-browser-local-runtime.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0244-browser-remote-profiles.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0243-browser-local-runtime.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0244-browser-remote-profiles.md`.
 
 ## Expected Outputs
 
@@ -67,10 +66,9 @@ Conversation/run-bound sessions that persist across chat turns, ordered Agent ca
 ## Acceptance Criteria
 
 - Two same-round browser calls execute in deterministic tool-call order; thread lock acquisition order is not treated as an ordering guarantee.
-- A later chat turn in the same conversation/principal/connection can reattach a still-live session before idle/max expiry; a different conversation, principal or connection cannot.
 - Separate principals, visitor identities, runs, child groups and connections cannot discover/control one another's live sessions.
 - Unrelated tools/sessions retain parallel execution and existing result ordering; existing generic MCP per-call sessions remain compatible.
-- Cancellation, stale worker lease, connection revoke, idle/max timeout and terminal completion stop late commands and clean up resources. Crash recovery is not promised.
+- Cancellation, stale worker lease, connection revoke, timeout and terminal completion stop late commands and clean up resources.
 
 ## Validation Plan
 
@@ -80,12 +78,12 @@ Conversation/run-bound sessions that persist across chat turns, ordered Agent ca
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the full browser chain and local Docker fixtures.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no owner merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -94,9 +92,18 @@ Conversation/run-bound sessions that persist across chat turns, ordered Agent ca
 
 - 2026-11-04: Renumbered: TASK-0242 → TASK-0245 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
-- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
-
 ## Handoff Notes
 
 - Future branch: `factory/task-0245-browser-run-sessions`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Explicit owner-authorised stack on TASK-0244 (controlled remote/profile review/QA), TASK-0243 #308, TASK-0242 #304, TASK-0241 #303 and planning #299; all unmerged. Current base includes develop 21ddce1a.
+
+- 2026-11-05: factory ready passed before source work. Task-start complete, stack includes TASK-0244 #309 (REV-0234/QA-0234). Next: durable session identity/order and trusted RunService ports; no merge approval inferred.
+
+- 2026-11-05: Implemented trusted run/actor/group ports, pre-dispatch ticket batch/CAS order, ledger bypass, exact-context page attachment, config/fence/cancel lifecycle and durable bounded cleanup (Alembic 0056). Real multi-process Chromium and HTTPS fixtures passed; PostgreSQL/SQLite suite 7 passed. REV-0235/QA-0235 record scoped self-review; full declared profile pending. Runtime flag remains experimental/default off; TASK-0246 approval/recovery and TASK-0250 filtering remain explicit gates.
+
+- 2026-11-05 declared verification on committed 4b65144f: full backend passed (462.99 s), Python SDK passed (14.09 s), TS build/typecheck passed. Initial Factory Node checks inherited x64 from the Rosetta-only Python while installed native dependencies are arm64; no source/dependency defect. Native arm64 Node reruns passed all remaining declared commands: root npm 280 tests/build/lint and explicit TS SDK tests/build/typecheck. Factory filtered full-profile build/lint/typecheck and verify validate passed. Thus all eight declared commands passed across these runs; a single all-eight canonical run remains a Ready/integration gate. The temporary Node architecture wrapper is outside Git. No source changed during verification.
+
+
+- 2026-11-06: Reconciled with Accepted DEC-0085 after merging develop (#303–#309): conversation-scoped cross-turn persistence (default 30m idle), browserless provider naming, required whitelist.

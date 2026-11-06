@@ -10,8 +10,9 @@ DELETE_MODES = ("anonymize", "delete")
 
 
 class UserService:
-    def __init__(self, users: UserRepository, access: AccessService, audit=None, data=None, ownership=None, workflows=None):
+    def __init__(self, users: UserRepository, access: AccessService, audit=None, data=None, ownership=None, workflows=None, browser=None):
         """data: UserDataRepository; ownership: OwnershipService; workflows: WorkflowRepository (account deletion)."""
+        self.browser=browser
         self.users, self.access, self.audit, self.data, self.ownership, self.workflows = users, access, audit, data, ownership, workflows
 
     @staticmethod
@@ -43,6 +44,7 @@ class UserService:
         if changes_role: self.users.set_role(target, role); self._log(uid, "user.role", u, before=u.role, after=role)
         if active is not None and active != bool(u.active):
             self.users.set_active(target, active); self._log(uid, "user.activate" if active else "user.deactivate", u)
+        if self.browser and (changes_role or deactivates):self.browser().close_owner(target)
         return self.public(self.users.get_by_id(target))
 
     def delete(self, uid: str, target: str, mode: str = "anonymize", reassign_to: str | None = None) -> dict:
@@ -64,6 +66,7 @@ class UserService:
                 r = self.ownership.reassign(w, new, uid, {}, keep_access=False); moved.append(r["id"])
                 flagged += [{"workflow_id": w.id, "workflow": r["name"], **i} for i in r["flagged"]]
         email = u.email
+        if self.browser:self.browser().close_owner(target)
         self.data.purge(target, runs=mode == "delete")
         if mode == "delete": self.data.delete_user(target)
         else: self.data.anonymise(target)

@@ -42,3 +42,33 @@ def test_browser_artifact_sqlite_round_trip(tmp_path):
 
 @pytest.mark.skipif(not URL.startswith("postgresql"), reason="requires disposable TEST_DATABASE_URL")
 def test_browser_artifact_postgres_round_trip(fresh_pg): round_trip(fresh_pg)
+
+
+def session_round_trip(db):
+    from app.models.browser_session import BrowserSession,BrowserCapacity
+    import time
+    cfg=Config();cfg.set_main_option('script_location',os.path.normpath(MIGRATIONS_DIR));cfg.set_main_option('sqlalchemy.url',db.url.replace('%','%%'))
+    command.upgrade(cfg,'0055_browser_artifacts')
+    owner='session-'+uuid.uuid4().hex
+    with db.session() as s:s.add(User(id=owner,email=owner+'@example.test',active=True));s.commit()
+    command.upgrade(cfg,'head')
+    with db.session() as s:
+        assert s.get(BrowserCapacity,'global').epoch==0
+        s.add(BrowserSession(id=uuid.uuid4().hex,owner=owner,principal_id='user:'+owner,run_id='fixture',group_id='agent',connection_id='browser',
+              configuration='a'*64,lease_generation=1,provider='local',status='closed',created=time.time(),expires=time.time()+600,touched=time.time()))
+        s.commit()
+    command.downgrade(cfg,'0055_browser_artifacts')
+    assert not {'browser_sessions','browser_commands','browser_capacity'} & set(inspect(db.engine).get_table_names())
+    with db.session() as s:assert s.get(User,owner) is not None
+    command.upgrade(cfg,'head')
+    with db.session() as s:assert s.get(BrowserCapacity,'global').epoch==0
+
+
+def test_browser_session_sqlite_round_trip(tmp_path):
+    db=Database(f'sqlite:///{tmp_path / "browser-sessions.db"}')
+    try:session_round_trip(db)
+    finally:db.engine.dispose()
+
+
+@pytest.mark.skipif(not URL.startswith('postgresql'),reason='requires disposable TEST_DATABASE_URL')
+def test_browser_session_postgres_round_trip(fresh_pg):session_round_trip(fresh_pg)

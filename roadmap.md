@@ -448,8 +448,8 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (
 - TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **done** (merged #303).
 - TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **done** (merged #304).
 - TASK-0243 — isolated local Playwright runtime and nine bounded operations. **done** (merged #308).
-- TASK-0244 — Browserless remote capabilities and origin-scoped login profiles. **review** (PR #309; remote required).
-- TASK-0245 — conversation/run-bound sessions (cross-turn), ordered Agent calls and lifecycle. **backlog** (studio).
+- TASK-0244 — Browserless remote (self-hosted Superstep controller) and origin-scoped login profiles. **done** (merged #309).
+- TASK-0245 — conversation/run-bound sessions (cross-turn), ordered Agent calls and lifecycle. **review** (PR #310).
 - TASK-0246 — configurable mutating approvals, expired/lost sessions and uncertain-effect recovery. **backlog** (studio).
 - TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **backlog** (studio).
 - TASK-0248 — typed reusable recipes through existing tool surfaces. **backlog** (studio).

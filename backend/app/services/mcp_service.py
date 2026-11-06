@@ -23,8 +23,9 @@ SECRET_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 
 class McpService:
     def __init__(self, repo: McpServerRepository, is_admin: Callable[[str], bool] = lambda uid: False,
-                 org_allowed: Callable[[str], bool] = lambda uid: True, channels=None, quota=None):
+                 org_allowed: Callable[[str], bool] = lambda uid: True, channels=None, quota=None, browser_lifecycle=None):
         self.repo, self.is_admin, self.org_allowed = repo, is_admin, org_allowed
+        self.browser_lifecycle = browser_lifecycle
         self.managed = ManagedToolService(McpOperationRepository(repo.db), channels, quota)
 
     # ---- views ----
@@ -121,13 +122,18 @@ class McpService:
         v = self._check(uid, r.scope, r.transport, name, command, args if args is not None else [], url, r.adapter, config_values)
         sec = self._secrets(secrets, self._stored(r))
         if r.transport == "managed": self.managed.validate(uid, r.adapter, config_values, sec)
+        lifecycle=self.browser_lifecycle() if r.adapter=='browser' and self.browser_lifecycle else None
         for k, val in v.items(): setattr(r, k, val)
         self._apply_secrets(r, sec)
         r.tools, r.tools_at = None, None  # the configuration changed: discover again
-        return self.public(self.repo.save(r), uid, self.is_admin(uid))
+        saved=self.repo.save(r)
+        if lifecycle:lifecycle.revoke(sid)
+        return self.public(saved, uid, self.is_admin(uid))
 
     def delete(self, sid: str, uid: str) -> dict:
-        self._editable(sid, uid); self.repo.delete(sid); return {"ok": True}
+        row=self._editable(sid, uid)
+        if row.adapter=="browser" and self.browser_lifecycle:self.browser_lifecycle().revoke(sid)
+        self.repo.delete(sid); return {"ok": True}
 
     # ---- connection ----
     def _spec(self, r: McpServer) -> dict:

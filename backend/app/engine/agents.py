@@ -195,10 +195,10 @@ def http_request(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[
     return http_send(nid, method, url, body, headers)
 
 
-def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects]) -> Any:
+def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None) -> Any:
     src = t.get("source")
     if src == "mcp":
-        return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None)
+        return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None, group=group, ticket=ticket)
     if src == "knowledge":
         if ports.retrieve is None: raise RuntimeError("Agent knowledge base tools need a knowledge base service")
         return ports.retrieve(t.get("knowledge_base_id") or "", str(args.get("query") or ""), int(t.get("top_k") or 4))
@@ -506,7 +506,15 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": False,
                              "tool_calls": [{"name": c["name"], "args": c["args"]} for c in calls]}
                 return {key: p}
-            p["pending"] = calls[:MAX_CALLS_PER_ROUND]
+            p["pending"] = copy.deepcopy(calls[:MAX_CALLS_PER_ROUND])
+            configured={item.get('name'):item for item in d.get('tools') or []}
+            batch=[]
+            for index,call in enumerate(p['pending']):
+                tool=configured.get(call['name'])
+                if tool and tool.get('source')=='mcp' and not arg_error(parameters(tool),call.get('args')):
+                    batch.append({'index':index,'server_id':tool.get('server_id') or '', 'tool':tool.get('tool') or '', 'arguments':call['args']})
+            tickets=ports.prepare_browsers(owner(node),effects.key(nid) if effects else f"round:{p['rounds']}",batch)
+            for index,ticket in tickets.items():p['pending'][index]['_browser_ticket']=ticket
             for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run
                 why = f"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round"
                 p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": why})
@@ -562,10 +570,12 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                              "workflow_id": tool.get("workflow_id")}
                     _pause(effects, {"node": nid, "kind": "child", "run_id": cid, **extra}, AwaitChild(nid, cid, extra))
             else:
-                try: status, result = "ok", text(run_tool(nid, tool, args, state, ports, effects))
+                try: status, result = "ok", text(run_tool(nid, tool, args, state, ports, effects, group=owner(node), ticket=call.get("_browser_ticket")))
                 except Exception as e:
                     if getattr(e, "fenced", False): raise  # this worker lost the run
                     status, result = "error", f"{FAILED}: {safe_error(e)}"
+            if call.get('_browser_ticket') and status in {'rejected','error'} and ports.browser is not None:
+                ports.browser.skip(owner(node),call['_browser_ticket'])
             ms = round((time.perf_counter() - t0) * 1000, 2)
             step = {"tool": call["name"], "args": args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
                     **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),

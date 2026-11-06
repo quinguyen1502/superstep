@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 
 from app.engine.browser_gateway import relay
 
-LOCK, STATS = threading.Lock(), {"requests": [], "connects": [], "auth_rejections": 0}
+LOCK, STATS = threading.Lock(), {"requests": [], "connects": [], "auth_rejections": 0, "effects": []}
 AUTH = "Basic " + base64.b64encode(b"synthetic-user:synthetic-password").decode()
 
 
@@ -22,6 +22,13 @@ def record(key, value):
 
 class Destination(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
+    def do_POST(self):
+        size=int(self.headers.get('Content-Length','0'))
+        if self.path!='/effect' or size>1024:self.send_error(400);return
+        self.rfile.read(size)
+        record('effects',{'path':'/effect'})
+        self.send_response(200);self.send_header('Content-Length','2');self.end_headers();self.wfile.write(b'{}')
+
     def do_GET(self):
         record("requests", {"path": self.path.split("?", 1)[0], "leaked_proxy_auth": "Proxy-Authorization" in self.headers, "host": self.headers.get("Host", ""), "profile_cookie": self.headers.get("Cookie", "") == "login=synthetic-cookie"})
         if self.path.startswith("/redirect"):
@@ -33,6 +40,8 @@ class Destination(BaseHTTPRequestHandler):
             navigator.serviceWorker.register('/sw.js').catch(()=>{});</script></html>'''
         elif self.path.startswith("/sw.js"):
             body = b"self.addEventListener('activate',()=>fetch('http://127.0.0.1:9090/service-worker'))"
+        elif self.path.startswith("/effect-form"):
+            body = b'''<html><h1>Effect fixture</h1><button onclick="fetch('/effect',{method:'POST'}).then(()=>document.getElementById('status').textContent='Submitted')">Submit effect</button><p id="status">Ready</p></html>'''
         elif self.path.startswith("/profile"):
             body = b'''<html><h1>Profile fixture</h1><p id="status">Anonymous</p><p>synthetic-cookie</p>
             <script>if(localStorage.getItem('login')==='synthetic-storage')document.getElementById('status').textContent='Stored login';

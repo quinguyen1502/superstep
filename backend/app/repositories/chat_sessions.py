@@ -31,6 +31,11 @@ class ChatSessionRepository:
     def get(self, sid: str) -> Optional[ChatSession]:
         with self.db.session() as s: return s.get(ChatSession, sid)
 
+    def for_run(self,rid):
+        with self.db.session() as s:
+            return s.scalar(select(ChatSession).join(ChatTurn,ChatTurn.session_id==ChatSession.id)
+                .where(ChatTurn.run_id==rid,ChatTurn.role=='user').order_by(ChatTurn.created.desc()).limit(1))
+
     def list_for(self, wid: str, owner: str, limit: int = 50) -> list[ChatSession]:
         with self.db.session() as s:
             q = select(ChatSession).where(ChatSession.workflow_id == wid, ChatSession.owner == owner).order_by(ChatSession.updated.desc()).limit(limit)

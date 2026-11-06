@@ -29,3 +29,5 @@ from .agent_thread import AgentThread, AgentThreadRun
 from .approval import ApprovalAudit, ApprovalChannel, ApprovalRequest, ApprovalAutoQuota, ApprovalWait, ApprovalWaitApprover, ChannelIdentity
 
 __all__ = ["Base", "BrowserArtifact", "User", "Workflow", "Run", "Credential", "WorkflowToken", "WorkflowVersion", "Notification", "WebhookDelivery", "NodeResult", "ApprovalChannel", "ChannelIdentity", "ApprovalRequest", "ApprovalAudit", "ApprovalWait", "ApprovalWaitApprover", "ApprovalAutoQuota", "KnowledgeBase", "KbDocument", "KbChunk", "McpServer", "WorkflowShare", "Team", "TeamMember", "WorkflowTeamShare", "AuditEvent", "StudioSetting", "WorkflowTemplate", "LoginThrottle", "PasswordReset", "PersonalAccessToken", "CliDevice", "WorkflowSchedule", "WorkflowChatTrigger", "ChatLogo", "ChatMessage", "ChatAttachment", "ChatRating", "ChatSession", "ChatTurn", "ChatEdit", "WorkflowTest", "WorkflowTestSuite", "WorkflowTestResult", "AgentThread", "AgentThreadRun"]
+
+from .browser_session import BrowserSession, BrowserCommand

@@ -1,4 +1,5 @@
 """Personal data of one user, for account deletion / anonymisation (TASK-0029). Org-scope resources are kept."""
+from ..models.browser_session import BrowserSession, BrowserCommand
 from sqlalchemy import delete, select, update
 from ..models import (ApprovalChannel, ChannelIdentity, Credential, KbChunk, KbDocument, KnowledgeBase, McpServer, Notification, Run, WorkflowTemplate,
                       TeamMember, User, WorkflowShare, WorkflowToken, BrowserArtifact)
@@ -11,6 +12,9 @@ class UserDataRepository:
     def purge(self, uid: str, *, runs: bool) -> None:
         """Remove personal resources (secrets included), memberships and shares; with `runs`, also the runs they started."""
         with self.db.session() as s:
+            browser_ids=select(BrowserSession.id).where(((BrowserSession.owner==uid)|(BrowserSession.principal_id=='user:'+uid)),BrowserSession.cleanup_pending.is_(False))
+            s.execute(delete(BrowserCommand).where(BrowserCommand.session_id.in_(browser_ids)))
+            s.execute(delete(BrowserSession).where(BrowserSession.id.in_(browser_ids)))
             kbs = list(s.scalars(select(KnowledgeBase.id).where(KnowledgeBase.owner == uid)))
             if kbs:
                 s.execute(delete(KbChunk).where(KbChunk.kb_id.in_(kbs))); s.execute(delete(KbDocument).where(KbDocument.kb_id.in_(kbs)))
