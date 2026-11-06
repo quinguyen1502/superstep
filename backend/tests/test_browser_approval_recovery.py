@@ -301,7 +301,7 @@ def test_final_wave_answer_survives_crash_before_queue_claim(tmp_path,monkeypatc
     from app.services.job_queue import InMemoryJobQueue
     service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     monkeypatch.setenv('STUDIO_AGENT_PARALLEL_TOOLS','4')
-    service.mcp.repo.save(McpServer(id='browser-two',owner='owner',scope='user',transport='managed',adapter='browser',name='Second browser',settings='{}',created=time.time()))
+    service.mcp.repo.save(McpServer(id='browser-two',owner='owner',scope='user',transport='managed',adapter='browser',name='Second browser',settings='{"allowed_origins":["https://example.com"],"require_mutating_approval":true}',created=time.time()))
     flow=flow_for(['click']);agent=next(node for node in flow['nodes'] if node['type']=='agent')
     one=agent['data']['tools'][0];one['name']='click_one'
     two=deepcopy(one);two.update(name='click_two',server_id='browser-two');agent['data']['tools'].append(two)

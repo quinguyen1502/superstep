@@ -275,7 +275,10 @@ def test_connection_crud_revokes_and_pending_cleanup_survives_user_purge(tmp_pat
 
 def test_cancel_during_possible_effect_is_unknown_and_not_retried(tmp_path,monkeypatch):
     from app.engine.browser_contract import WorkerResult
+    import json as _json
     service,calls,workers=scoped_service(tmp_path,monkeypatch)
+    row=service.mcp.repo.get('browser');s=_json.loads(row.settings or '{}');s['require_mutating_approval']=True
+    row.settings=_json.dumps(s);service.mcp.repo.save(row)
     cancelled=[False];scope=service.bind('owner','user:owner','run-one',1,cancelled=lambda:cancelled[0])
     first=scope.prepare('agent','one',[{'index':0,'server_id':'browser','tool':'snapshot','arguments':{}}])[0]
     scope.call('agent',first,'snapshot',{})
