@@ -38,8 +38,13 @@ class WorkerEnvelope(VersionedContract):
     def bounded_json(cls, value):
         if isinstance(value, cls):
             return value
+        def default(item):
+            dump = getattr(item, "model_dump", None)
+            if callable(dump):
+                return dump()
+            raise TypeError(type(item).__name__)
         try:
-            size = len(json.dumps(value, ensure_ascii=False, allow_nan=False).encode("utf-8"))
+            size = len(json.dumps(value, ensure_ascii=False, allow_nan=False, default=default).encode("utf-8"))
         except (TypeError, ValueError, UnicodeError, RecursionError):
             raise ValueError("Worker envelope must be finite UTF-8 JSON") from None
         if size > 256 * 1024:
@@ -264,6 +269,24 @@ class Observation(Contract):
     @classmethod
     def check_origin(cls, value):
         return http_url(value, origin=True)
+
+
+
+class WorkerOpen(WorkerEnvelope):
+    context: ExecutionContext
+    settings: BrowserSettings
+    session_id: Identifier
+    generation: Annotated[int, Field(ge=1)] = 1
+
+
+class WorkerControl(WorkerEnvelope):
+    context: ExecutionContext
+    session_id: Identifier
+    generation: Annotated[int, Field(ge=1)]
+
+
+class WorkerArtifact(WorkerControl):
+    artifact_id: Identifier
 
 
 class WorkerResult(WorkerEnvelope):

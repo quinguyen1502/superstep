@@ -51,6 +51,8 @@ from ..services.chat_session_service import ChatSessionService
 from ..services.public_chat_service import PublicChatService
 from ..services.chat_attachment_service import ChatAttachmentService
 from ..services.attachment_files import AttachmentFiles
+from ..services.browser_artifact_service import BrowserArtifactService
+from ..repositories.browser_artifacts import BrowserArtifactRepository
 from .. import storage
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
@@ -60,6 +62,10 @@ from ..services.workflow_test_service import WorkflowTestService
 @lru_cache
 def get_db() -> Database:
     return Database()
+
+
+def browser_artifact_service() -> BrowserArtifactService:
+    return BrowserArtifactService(BrowserArtifactRepository(get_db()))
 
 
 @lru_cache

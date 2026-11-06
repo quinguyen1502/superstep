@@ -681,7 +681,9 @@
     "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
     "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này",
     "ATTACHMENT_MIGRATE_TARGET": "Không có nơi lưu tệp đính kèm '{{target}}' (dùng {{allowed}})",
-    "ATTACHMENT_MIGRATE_BATCH": "Số tệp mỗi đợt phải từ 1 đến {{max}}"
+    "ATTACHMENT_MIGRATE_BATCH": "Số tệp mỗi đợt phải từ 1 đến {{max}}",
+    "BROWSER_ARTIFACT_NOT_FOUND": "Ảnh chụp trình duyệt không tìm thấy hoặc đã hết hạn",
+    "BROWSER_ARTIFACT_INVALID": "Ảnh chụp trình duyệt vượt quá giới hạn PNG được hỗ trợ"
   },
   "lang": {
     "en": "English",

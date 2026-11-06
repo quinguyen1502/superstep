@@ -15,6 +15,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   DNS once, blocks private/link-local/metadata addresses, requires a non-empty origin
   whitelist for page traffic, and routes custom/operator proxies without silent direct
   fallback. Gateway request rewriting redacts proxy credentials. Runtime still gated.
+- **Local browser runtime and protected screenshots (TASK-0243).** Isolated Docker
+  Playwright worker (`network=none`) plus gateway, private screenshot artifacts with
+  owner-only read, and nine-tool command surface from the Accepted contract. Upload/
+  download/evaluate honor connection allow_* gates at discovery; session/approval
+  binding remain later tasks.
 
 ## 0.11.2 (2026-11-05)
 
