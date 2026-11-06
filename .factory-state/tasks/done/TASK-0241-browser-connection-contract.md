@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0241
 - Title: Browser contracts and scoped connection metadata
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
@@ -115,3 +115,9 @@ Reconciled with Accepted REQ-0086 / DEC-0085 after plan PR #299 merged into deve
 - Defaults: `require_mutating_approval=false`, idle 1800s, lifetime 3600s.
 - Optional `conversation_id` on ExecutionContext for cross-turn sessions.
 - Stealth only for browserless, default off.
+
+## Delivery (2026-11-06)
+
+Owner authorised implementation ("Ok triển khai"). PR #303 reconciled with Accepted
+DEC-0085, local `factory verify run --profile full` passed, and required GitHub checks
+on the final head were green before merge.
