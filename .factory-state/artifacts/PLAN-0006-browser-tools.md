@@ -44,7 +44,7 @@ Deliver browser connections, primitive tools for the existing Agent, reusable ty
 | [TASK-0247](../tasks/review/TASK-0247-browser-url-web-tools.md) | Dynamic URL bindings, search/fetch and missing-context flows | M | TASK-0241, TASK-0245, TASK-0246 |
 | [TASK-0248](../tasks/doing/TASK-0248-browser-recipes.md) | Reusable typed browser recipes through existing tool surfaces | M | TASK-0241, TASK-0245, TASK-0246 |
 | [TASK-0249](../tasks/review/TASK-0249-browser-connection-settings-ui.md) | Connection, proxy and profile configuration UI | M | TASK-0241, TASK-0242, TASK-0244 |
-| [TASK-0250](../tasks/doing/TASK-0250-browser-agent-recipe-trace-ui.md) | Agent/recipe configuration and filtered browser trace/chat UI | M | TASK-0247, TASK-0248, TASK-0249 |
+| [TASK-0250](../tasks/review/TASK-0250-browser-agent-recipe-trace-ui.md) | Agent/recipe configuration and filtered browser trace/chat UI | M | TASK-0247, TASK-0248, TASK-0249 |
 | [TASK-0251](../tasks/backlog/TASK-0251-browser-python-export.md) | Executable Python and project export for browser tools/recipes | L | TASK-0247, TASK-0248, TASK-0246, TASK-0244 |
 | [TASK-0252](../tasks/backlog/TASK-0252-browser-typescript-export.md) | Executable TypeScript and project export with browser parity | L | TASK-0251 |
 | [TASK-0253](../tasks/backlog/TASK-0253-browser-e2e-handbook.md) | Integrated browser acceptance, example workflow and bilingual handbook | M | TASK-0250, TASK-0251, TASK-0252 |
@@ -131,3 +131,5 @@ The owner instructed: “Pull develop về branch hiện tại, và tiến hành
 - 2026-11-05: Owner started the chain. TASK-0241 branch is based on develop 3c83262a plus published planning commit b8f3a861 carried as 3beffe55. Readiness passed before source changes. Contract implementation and metadata-only gate are recorded in `docs/browser-contract.md`; browser runtime remains unavailable until egress/session proof.
 
 - 2026-11-06 TASK-0249: Settings UI in scoped review (REV-0239/QA-0239), full profile running; ten real Chrome cases passed. Existing branch retains TASK-0248 base 07d22fce pending explicit parent-sync permission; #313 final 50a536ce independently records predecessor full pass.
+
+- 2026-11-06 TASK-0250: editor/recipe/private trace/chat source 8dc9291d in scoped review (REV-0240/QA-0240), full verification running. URL bindings, inherited limits, root recipe preservation/selectors, typed workflow-tool selection and backend visitor filtering use existing surfaces; owner approval pending.

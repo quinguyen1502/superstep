@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0250
 - Title: Agent/recipe configuration and filtered browser trace/chat UI
-- Status: doing
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -106,3 +106,5 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 - 2026-11-06 implementation: existing Agent/MCP Data URL sources and recipe Start contract/action selectors, inherited limits and owner-protected browser trace detail. Root browser_recipe survives editor save/reload. Browser-containing run intermediate events are marked and filtered server-side for live/persisted visitor chat; legacy envelopes and later state echoes are covered. Browser review prompts are not persisted into chat turns; raw final worker envelopes reduce to facts. Existing shared React chat renders safe statuses. No schema/dependency/new node/tab/model loop. New UI removal uses exact-name confirmation; source uses shared API/i18n/tokens.
 - 2026-11-06 scoped evidence: final related backend 76 passed/1 optional PostgreSQL skip (24.55 s), then waiting-event metadata/approval/layers 27 passed (13.19 s). Root npm test passed (frontend 167, React 22, TypeScript SDK 102). Build/lint passed; new helper/presentation/API blob tests pass. Chrome initial full locale/theme matrix 8 passed (59.1 s); expanded mobile/recipe-tool/search/fetch + trace regression run 11 passed (1.4 min), plus existing Agent node regressions 2 passed before an interrupted harness run. Final lookup error-path rerun pending. Visual wide/narrow en/vi/light/dark images inspected outside Git at /private/tmp/superstep-browser-ui-shots-20261106. Full declared eight-command profile and scoped review/QA still pending.
 - 2026-11-06 predecessor update: TASK-0249 source 14b1560a passed all eight commands; latest docs 17da46fc published to #314. This branch retains reviewed 47a9b2bc and does not incorporate later metadata; no git merge has been performed. Parent-sync permission remains pending after automatic merge-review rejection. Owner review/merge approval pending.
+
+- 2026-11-06 scoped delivery: source 8dc9291d committed; final recipe/lookup UI rerun passed (2 cases, 26.9 s). REV-0240 / QA-0240 scoped conditional pass; full eight-command Factory verification running on committed source. Task remains review, owner approval pending; no merge performed.
