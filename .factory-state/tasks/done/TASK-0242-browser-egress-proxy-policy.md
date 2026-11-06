@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0242
 - Title: Enforce browser egress, whitelist and connection-level proxy policy
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -105,3 +105,7 @@ non-empty origin whitelist at the egress boundary (empty allowlist denies all
 page destinations), keep private/link-local/metadata IP denial always on, and
 ensure Browserless paths share the same DestinationPolicy contract (proof in
 TASK-0244).
+
+## Delivery (2026-11-06)
+
+Owner authorised browser implementation. Reconciled with Accepted DEC-0085; local factory verify full passed; required GitHub checks green on final head before merge.
