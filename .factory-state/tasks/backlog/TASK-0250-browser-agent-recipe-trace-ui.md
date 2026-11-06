@@ -8,7 +8,7 @@
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -23,13 +23,13 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 
 ### In Scope
 
-- Add browser tool grants, per-argument sources and recipe settings in existing Agent/MCP config; preserve Settings/Data/Execution tabs.
-- Extend existing run trace and chat presentation for ordered actions, bounded observations, protected screenshots, missing input, approval, challenge, expired and unknown states.
-- Explain provider/proxy/session state without debug endpoints, secret URLs or unrestricted page/form content; reuse shared React presentation when applicable.
+- Add browser tool grants for all nine operations, per-argument sources and recipe settings in existing Agent/MCP config; preserve Settings/Data/Execution tabs. Ungranted tools are not advertised. Builder cannot edit connection whitelist or always-on network rules from the node form.
+- Extend existing run trace and chat presentation for ordered actions, bounded observations, protected screenshots (filtered from public chat by default), missing input, whitelist denial, approval (when mutating approval ON), challenge, idle/expired and unknown states. Show cross-turn session continuity only to authorised builder/operator views.
+- Explain provider/proxy/whitelist/session state without debug endpoints, secret URLs or unrestricted page/form content; reuse shared React presentation when applicable.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -68,8 +68,8 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 ## Acceptance Criteria
 
 - No Browser-specific canvas node/tab taxonomy or second Agent/model control is introduced. Data/execution fields live in their conventional tabs.
-- URL-from-chat, workflow binding, search-first, ask-for-context and recipe invocation can be configured and inspected with current surfaces.
-- Public chat sees only permitted safe results/approval context; no raw session handles, remote endpoints, cookies, secret queries or private screenshots leak.
+- URL-from-chat, workflow binding, search-first, ask-for-context, tool grants and recipe invocation can be configured and inspected with current surfaces.
+- Public chat sees only permitted safe results/approval context; no raw session handles, remote endpoints, cookies, secret queries or private screenshots leak (screenshots filtered by default).
 - Keyboard/mobile/en/vi/light/dark state matrix and existing trace alignment/parallel-tool presentation remain correct.
 
 ## Validation Plan
@@ -93,6 +93,8 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0247 → TASK-0250 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

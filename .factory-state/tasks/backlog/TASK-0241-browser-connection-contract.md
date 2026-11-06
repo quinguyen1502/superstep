@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0241
-- Title: Browser contracts and scoped connection metadata
+- Title: Browser contracts, whitelist, toggles and scoped connection metadata
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,19 @@
 
 ## Objective
 
-Browser contracts and scoped connection metadata, satisfying the assigned acceptance criteria of REQ-0086.
+Browser contracts, required origin whitelist, safety toggles and scoped connection metadata, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Specify versioned bounded worker commands, tool schemas, trusted run/session context, provider/proxy capabilities and safe result/observation envelopes from ARCH-0002.
-- Extend existing managed connection/profile metadata, owner/org CRUD/discovery, encrypted secret handling and feature gating; add SQLAlchemy/Alembic revisions only where needed.
-- Resolve exact session transport, default bounds, profile provisioning shape and initial supported proxy protocol/auth matrix in reviewable contract notes. Preserve existing MCP transports and unrelated managed adapters.
+- Specify versioned bounded worker commands, tool schemas (nine operations including upload/download/evaluate_js), trusted run/conversation/session context, provider/proxy capabilities (local Playwright and Browserless), required origin whitelist shape and safe result/observation envelopes from ARCH-0002.
+- Extend existing managed connection/profile metadata with **mandatory non-empty origin/domain whitelist**, safety toggles (mutating-approval default OFF; allow JS/upload/download; download limits; session idle/max; action/page budget), owner/org CRUD/discovery, encrypted secret handling and feature gating; add SQLAlchemy/Alembic revisions only where needed.
+- Resolve exact session transport, proposed idle default (30 minutes), hard max, profile provisioning shape and initial supported proxy protocol/auth matrix in reviewable contract notes. Preserve existing MCP transports and unrelated managed adapters. Document always-on rules (private IP block, untrusted page content, secret redaction, no public Settings, kill-switch) as non-togglable.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -63,10 +63,11 @@ Browser contracts and scoped connection metadata, satisfying the assigned accept
 
 ## Acceptance Criteria
 
-- Connections can be configured/discovered without a fixed target URL; proxy is direct, explicit operator default or connection-specific, with credentials kept outside workflow/model metadata.
+- Connections can be configured/discovered without a single fixed target URL; saving without a non-empty origin whitelist is rejected; proxy is direct, explicit operator default or connection-specific, with credentials kept outside workflow/model metadata.
+- Safety toggles persist with documented defaults (mutating approval OFF; allow JS/upload/download off until enabled; idle 30 minutes proposed); always-on rules are not exposed as disable switches.
 - Wrong principal/org, invalid schema, unsupported capability and secret edit/keep/remove cases are rejected through the shared envelope/catalog.
 - Command/session identity and ordered-call context cannot be supplied or overridden by chat/model arguments; profile origin restrictions and result statuses are explicit.
-- A reviewed capability table names what local/remote/proxy combinations the next tasks must prove; provisional support is not advertised as verified.
+- A reviewed capability table names what local/Browserless/proxy combinations the next tasks must prove; provisional support is not advertised as verified; Browserless is required for the studio remote gate.
 
 ## Validation Plan
 
@@ -89,6 +90,8 @@ Browser contracts and scoped connection metadata, satisfying the assigned accept
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0238 → TASK-0241 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

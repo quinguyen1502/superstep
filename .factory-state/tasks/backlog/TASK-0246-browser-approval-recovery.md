@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0246
-- Title: Browser approvals, stale sessions and uncertain-effect recovery
+- Title: Configurable mutating approvals, stale sessions and uncertain-effect recovery
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,19 @@
 
 ## Objective
 
-Browser approvals, stale sessions and uncertain-effect recovery, satisfying the assigned acceptance criteria of REQ-0086.
+Configurable mutating-action approvals (default OFF), stale sessions and uncertain-effect recovery, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Apply conservative tool/action approval policy through existing Human/Agent approval and child-run mechanisms; reject/timeout is returned to the model.
+- Apply **connection-configurable** mutating-action approval through existing Human/Agent approval and child-run mechanisms. Default **OFF**: click, fill, upload, download and evaluate JS run immediately. When ON, those mutating actions wait for approval; reject/timeout is returned to the model. Navigate, snapshot, structured extraction and screenshot **never** wait on this toggle.
 - Track observation generations and distinguish confirmed results, before-effect failures and unknown external outcomes; do not reuse the generic operation cache as browser state.
-- Handle browser loss, expiry during approval, worker restart, late approval, cancellation and time-travel/replay without replaying uncertain UI effects.
+- Handle browser loss, idle/max expiry during approval or between chat turns, worker restart, late approval, cancellation and time-travel/replay without replaying uncertain UI effects — regardless of whether mutating approval is ON or OFF.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -63,10 +63,10 @@ Browser approvals, stale sessions and uncertain-effect recovery, satisfying the 
 
 ## Acceptance Criteria
 
-- Potential-effect operations require approval unless covered by explicit reviewed bounded policy; model/page text cannot mark itself safe.
-- Approval resumes only against a live authorised session and valid target/page references; changed target/arguments require renewed approval.
-- Unknown browser effects are not auto-repeated after timeout/crash/retry/fork. Recovered runs re-observe or stop with a clear session-lost state.
-- No false promise of exactly-once UI submission or persistent live browser after restart; confirm/reject/wait/expired/unknown transitions remain visible.
+- When mutating approval is ON, click/fill/upload/download/evaluate JS require approval; when OFF they run immediately. Navigate/snapshot/extract/screenshot never wait. Model/page text cannot mark itself safe or change the connection toggle.
+- Approval resumes only against a live authorised session and valid target/page references; changed target/arguments require renewed approval; expired approvals do not silently succeed.
+- Unknown browser effects are not auto-repeated after timeout/crash/retry/fork. Recovered runs re-observe or stop with a clear session-lost state. Crash survival is not promised even though cross-turn persistence is.
+- No false promise of exactly-once UI submission or persistent live browser after worker restart; confirm/reject/wait/expired/unknown transitions remain visible when approval applies.
 
 ## Validation Plan
 
@@ -89,6 +89,8 @@ Browser approvals, stale sessions and uncertain-effect recovery, satisfying the 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0243 → TASK-0246 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

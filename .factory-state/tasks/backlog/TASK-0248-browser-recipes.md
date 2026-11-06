@@ -8,7 +8,7 @@
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -25,11 +25,11 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 
 - Implement bounded versioned recipes over the shared action handlers with typed per-call inputs/output mapping; reuse workflow-as-tool composition where sufficient.
 - Expose recipe definitions/discovery/call through existing generic MCP/Agent selection without a vendor-specific node or a second expression/runtime language.
-- Snapshot recipe version at run planning; preserve connection/profile/proxy/approval/unknown-outcome policy and explicit layout failures.
+- Snapshot recipe version at run planning; preserve connection/profile/proxy/whitelist/toggle/approval/unknown-outcome policy and explicit layout failures. Recipes may use upload/download/evaluate_js only when the connection allows and the calling surface grants them.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -68,7 +68,7 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 ## Acceptance Criteria
 
 - lookup_shipment(url, order_id) accepts a different authorised URL per call and returns declared bounded state outputs.
-- Same action semantics and network/session policy apply to recipe and autonomous tools; recipe is callable by generic MCP nodes and existing Agent slots.
+- Same action semantics and network/session/whitelist/toggle policy apply to recipe and autonomous tools; recipe is callable by generic MCP nodes and existing Agent slots.
 - Unknown arguments, oversized sequences, inaccessible recipes and invalid versions are rejected; a changed selector/layout fails without secretly starting an Agent.
 - Recorded completed recipe results do not recreate missing page state or replay uncertain writes; deletes use exact-name confirmation through shared management UI.
 
@@ -93,6 +93,8 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0245 → TASK-0248 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

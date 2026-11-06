@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0245
-- Title: Run-bound sessions, ordered Agent calls and lifecycle integration
+- Title: Conversation/run-bound sessions, ordered Agent calls and lifecycle integration
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,20 @@
 
 ## Objective
 
-Run-bound sessions, ordered Agent calls and lifecycle integration, satisfying the assigned acceptance criteria of REQ-0086.
+Conversation/run-bound sessions that persist across chat turns, ordered Agent calls and lifecycle integration, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Bind browser ports to trusted effective principal/run/Agent-tool group/connection snapshots through RunService and existing tool call paths.
-- Keep sessions across rounds while serialising same-session commands in model call order, including parallel slots and multiple workers; preserve unrelated tool concurrency.
-- Integrate lease fencing, revocation, cancellation, bounds, idle expiry and terminal cleanup with the current run queue and MCP/Agent behavior.
+- Bind browser ports to trusted effective principal, **conversation id when chat-driven**, run/Agent-tool group and connection snapshots through RunService and existing tool call paths.
+- **Persist sessions across chat turns** of the same conversation, same effective user/principal and same connection until idle timeout (proposed default 30 minutes, configurable), hard max duration, cancel, conversation end or connection revoke. Still no promised survival across worker/browser crashes.
+- Keep sessions across Agent rounds while serialising same-session commands in model call order, including parallel slots and multiple workers; preserve unrelated tool concurrency.
+- Integrate lease fencing, revocation, cancellation, action/page budgets, idle/max expiry and terminal cleanup with the current run queue and MCP/Agent behavior.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -66,9 +67,10 @@ Run-bound sessions, ordered Agent calls and lifecycle integration, satisfying th
 ## Acceptance Criteria
 
 - Two same-round browser calls execute in deterministic tool-call order; thread lock acquisition order is not treated as an ordering guarantee.
+- A later chat turn in the same conversation/principal/connection can reattach a still-live session before idle/max expiry; a different conversation, principal or connection cannot.
 - Separate principals, visitor identities, runs, child groups and connections cannot discover/control one another's live sessions.
 - Unrelated tools/sessions retain parallel execution and existing result ordering; existing generic MCP per-call sessions remain compatible.
-- Cancellation, stale worker lease, connection revoke, timeout and terminal completion stop late commands and clean up resources.
+- Cancellation, stale worker lease, connection revoke, idle/max timeout and terminal completion stop late commands and clean up resources. Crash recovery is not promised.
 
 ## Validation Plan
 
@@ -91,6 +93,8 @@ Run-bound sessions, ordered Agent calls and lifecycle integration, satisfying th
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0242 → TASK-0245 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

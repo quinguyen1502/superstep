@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0243
-- Title: Isolated local Playwright runtime and bounded browser tools
+- Title: Isolated local Playwright runtime and nine bounded browser tools
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,20 @@
 
 ## Objective
 
-Isolated local Playwright runtime and bounded browser tools, satisfying the assigned acceptance criteria of REQ-0086.
+Isolated local Playwright runtime and nine bounded browser tools (including upload, download and evaluate JS), satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Add the isolated non-root Playwright worker image/process and bounded command transport; pin browser/package compatibility and resource limits.
-- Implement navigate, snapshot, click, fill, structured extract and screenshot using the same shared command vocabulary that recipes will call.
-- Attach page/session generation references, explicit cleanup, idle expiry and safe failure statuses. Persist only authorised protected screenshot references; no evaluate/shell/files/keyboard tools.
+- Add the isolated non-root Playwright worker image/process and bounded command transport; pin browser/package compatibility and resource limits (including action/page budget hooks).
+- Implement navigate, snapshot, click, fill, structured extract, screenshot, **upload**, **download** and **evaluate_js** using the same shared command vocabulary that recipes will call.
+- Bound new ops: upload only from authorised attachment/workspace file ids (never arbitrary host paths); download size and allowed types enforced; evaluate_js runs only in page context (no Node/shell) and returns untrusted data that cannot expand whitelist/access or skip approval.
+- Attach page/session generation references, explicit cleanup, idle/max expiry and safe failure statuses. Persist only authorised protected screenshot/download references; no shell or unrestricted host-filesystem tools.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -65,10 +66,11 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 
 ## Acceptance Criteria
 
-- A disposable fixture can be navigated, observed, filled, queried and captured with bounded results; stale element/page references fail visibly.
+- A disposable fixture can be navigated, observed, filled, queried, captured, uploaded-to, downloaded-from and evaluated-against with bounded results; stale element/page references fail visibly.
+- Upload from a disallowed path, oversize/disallowed download and evaluate_js escaping page context are denied with specific errors; results of evaluate_js are marked untrusted.
 - No browser runs in the API process or sees host filesystem/socket mounts or unrelated secrets; memory/process/time/size limits are enforced.
 - Terminal/cancel/expiry/error paths close resources; mock/dry runs launch no real worker/browser/network.
-- Protected screenshots cannot be obtained by another principal or through an unrestricted public URL; retention is explicit.
+- Protected screenshots/downloads cannot be obtained by another principal or through an unrestricted public URL; retention is explicit; public chat filtering defaults apply at the presentation layer.
 
 ## Validation Plan
 
@@ -91,6 +93,8 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0240 → TASK-0243 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

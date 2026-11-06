@@ -441,23 +441,23 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 ## Browser tools, recipes and proxies
 
-REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **proposed / planning only**, recorded on 2026-11-03 after the owner requested requirement capture and task breakdown. Existing Agent/MCP tools, dynamic chat/workflow/search URLs, shared browser connections with proxy/profile policy, reusable recipes, isolated local/remote browser sessions and executable Python/TypeScript exports. No implementation, deployment, provider purchase or merge authorised by this request.
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **proposed / planning only**, recorded on 2026-11-03 and **amended 2026-11-06** after owner review without acceptance. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Executable Python/TypeScript exports remain in the requirement as **deferred** work after studio. No implementation acceptance, deployment, provider purchase or merge authorised by this planning request. Draft implementation PRs #303–#315 started against the previous Proposed plan and need reconciliation after this amendment is accepted.
 
-- TASK-0241 — browser contracts and scoped connection metadata. **backlog**.
-- TASK-0242 — effective browser egress and connection-level proxy policy. **backlog**.
-- TASK-0243 — isolated local Playwright runtime and bounded operations. **backlog**.
-- TASK-0244 — remote browser capabilities and origin-scoped login profiles. **backlog**.
-- TASK-0245 — run-bound sessions, ordered Agent calls and lifecycle. **backlog**.
-- TASK-0246 — approvals, expired/lost sessions and uncertain-effect recovery. **backlog**.
-- TASK-0247 — dynamic URL bindings, search/fetch and missing context. **backlog**.
-- TASK-0248 — typed reusable recipes through existing tool surfaces. **backlog**.
-- TASK-0249 — connection/proxy/profile settings UI. **backlog**.
-- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **backlog**.
-- TASK-0251 — executable Python/plain and project exports. **backlog**.
-- TASK-0252 — executable TypeScript/plain and project exports. **backlog**.
-- TASK-0253 — integrated acceptance, example workflow and en/vi handbook. **backlog**.
+- TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **backlog** (studio).
+- TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **backlog** (studio).
+- TASK-0243 — isolated local Playwright runtime and nine bounded operations. **backlog** (studio).
+- TASK-0244 — Browserless remote capabilities and origin-scoped login profiles. **backlog** (studio; remote required).
+- TASK-0245 — conversation/run-bound sessions (cross-turn), ordered Agent calls and lifecycle. **backlog** (studio).
+- TASK-0246 — configurable mutating approvals, expired/lost sessions and uncertain-effect recovery. **backlog** (studio).
+- TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **backlog** (studio).
+- TASK-0248 — typed reusable recipes through existing tool surfaces. **backlog** (studio).
+- TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **backlog** (studio).
+- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **backlog** (studio).
+- TASK-0253 — studio integrated acceptance, example workflow and en/vi handbook. **backlog** (studio first milestone).
+- TASK-0251 — executable Python/plain and project exports. **backlog (deferred)** after studio acceptance.
+- TASK-0252 — executable TypeScript/plain and project exports. **backlog (deferred)** after studio acceptance.
 
-See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability and gates. Owner acceptance of the proposed package and `factory ready` precede task-start. Existing unrelated SDK task state is unchanged.
+See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability, deferred triggers and gates. Owner acceptance of the **amended** package and `factory ready` precede task-start. Existing unrelated SDK task state is unchanged.
 
 ## Releases
 

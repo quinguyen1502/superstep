@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0244
-- Title: Remote browser capabilities and origin-scoped login profiles
+- Title: Browserless remote capabilities and origin-scoped login profiles
 - Status: backlog
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,19 @@
 
 ## Objective
 
-Remote browser capabilities and origin-scoped login profiles, satisfying the assigned acceptance criteria of REQ-0086.
+Browserless remote capabilities (required for first studio delivery) and origin-scoped login profiles, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Implement the remote-browser provider against the command contract, without delegating the Agent loop.
-- Support operator-provisioned encrypted origin-filtered login state and explicit local/remote provider capability checking, including proxy/stealth options.
-- Require evidence of destination enforcement through the selected remote/proxy path; unsupported combinations return a specific refusal instead of silently dropping a setting.
+- Implement the **Browserless** remote-browser provider (https://www.browserless.io / CDP/browser API) against the command contract, without delegating the Agent loop. Local Playwright remains available; both are required for the studio remote gate — local-only does not satisfy this task.
+- Support operator-provisioned encrypted origin-filtered login state and explicit local/Browserless provider capability checking, including proxy/stealth options (stealth off by default; best-effort only).
+- Require evidence that Browserless paths enforce the same **origin whitelist**, destination, redirect, subresource and DNS/proxy policy as the local worker; unsupported combinations return a specific refusal and documented gap instead of silently dropping a setting or claiming local-only completion.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -67,10 +67,10 @@ Remote browser capabilities and origin-scoped login profiles, satisfying the ass
 
 ## Acceptance Criteria
 
-- A controlled remote fixture reaches the same action/result contract as local; provider endpoint tokens and proxy secrets are never exposed.
+- A controlled Browserless fixture reaches the same nine-action/result contract as local, including whitelist denials; provider endpoint tokens and proxy secrets are never exposed.
 - A login profile cannot be attached outside its authorised principal/origins; separate runs/org users do not share live tabs or cookie state.
-- Unsupported remote enforcement, profile filtering, proxy auth or stealth is refused and documented; no capability is inferred from a CDP URL.
-- Provider/proxy/profile configuration is immutable within a live session; revoke/update invalidates affected sessions.
+- Unsupported Browserless enforcement, profile filtering, proxy auth or stealth is refused and documented; no capability is inferred from a CDP URL; the owner must choose another path if parity cannot be proved — do not silently weaken policy.
+- Provider/proxy/profile/whitelist configuration is immutable within a live session; revoke/update invalidates affected sessions.
 
 ## Validation Plan
 
@@ -86,13 +86,15 @@ Remote browser capabilities and origin-scoped login profiles, satisfying the ass
 ## Open Questions
 
 - Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
-- Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
+- Prove Browserless destination/proxy/DNS/whitelist parity within the task; if proof fails, document refusal and escalate to the owner rather than claiming unsupported behavior or shipping local-only as complete.
 
 ## Activity Log
 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0241 → TASK-0244 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
