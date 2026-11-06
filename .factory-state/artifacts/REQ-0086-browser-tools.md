@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0086
-- Status: Proposed — owner authorised requirement capture and task breakdown on 2026-11-03; amended 2026-11-06 after owner review; implementation and detailed design acceptance remain pending
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-06 (Accepted; implementation authorised)
 - Source: Owner discussion on browser tools, autonomous browsing, dynamic URLs, portable exports and connection-level proxies; followed by “Tiến hành ghi nhận yêu cầu và break task đi”. Owner amendments on 2026-11-06 (Asia/Saigon) after reviewing the proposed package without accepting it as-is; additional flexible-but-safe config and risk guidance the same day.
 
 ## Summary
@@ -82,7 +82,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 - MCP export helpers are placeholders; `McpService.check_export` rejects managed connections. Deferred export work must not weaken existing refusals for other managed adapters.
 - Parallel Agent slots, approval waits, child runs, effect ledger, queue fencing and central error/locale handling already exist.
 - The interactive mockup is concept evidence, not approved production layout. It does not yet include the proxy section, whitelist editor or safety toggles and does not prove runtime, security or export behavior.
-- Draft implementation PRs #303–#315 were started against the previous Proposed plan before this amendment; they are not acceptance and will need reconciliation after this amended package is accepted (see PLAN-0006).
+- Draft implementation PRs #303–#315 were started against the previous Proposed plan before this amendment; after Acceptance they must be reconciled with this package before merge (see PLAN-0006).
 
 ## Desired Behavior
 

@@ -3,9 +3,9 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0253
-- Title: Studio integrated browser acceptance, example workflow and bilingual handbook
-- Status: backlog
+- Task ID: TASK-0245
+- Title: Conversation/run-bound sessions, ordered Agent calls and lifecycle integration
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -13,19 +13,20 @@
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
 - Plan: PLAN-0006
-- Size: M (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
+- Size: L (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
 
 ## Objective
 
-Studio first-milestone integrated browser acceptance, example workflow and bilingual handbook (export handbook deferred with TASK-0251/0252), satisfying the studio acceptance criteria of REQ-0086.
+Conversation/run-bound sessions that persist across chat turns, ordered Agent calls and lifecycle integration, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Provide a disposable tracking-portal fixture, fake search/proxy/Browserless endpoints and an offline example workflow covering chat/workflow/unknown URL, whitelist denial, multi-turn session and recipe paths.
-- Document local and Browserless setup, whitelist, proxy modes/capabilities, safety toggles and risks, profile scope, browser action/approval defaults, unknown outcomes and session idle/max behaviour. **Studio handbook only** for this milestone; executable export setup waits with TASK-0251/0252.
-- Run integrated security/permission/UI acceptance and declared project checks for studio; capture review/QA evidence and record residual Browserless limitations. Export parity suites are out of this milestone.
+- Bind browser ports to trusted effective principal, **conversation id when chat-driven**, run/Agent-tool group and connection snapshots through RunService and existing tool call paths.
+- **Persist sessions across chat turns** of the same conversation, same effective user/principal and same connection until idle timeout (proposed default 30 minutes, configurable), hard max duration, cancel, conversation end or connection revoke. Still no promised survival across worker/browser crashes.
+- Keep sessions across Agent rounds while serialising same-session commands in model call order, including parallel slots and multiple workers; preserve unrelated tool concurrency.
+- Integrate lease fencing, revocation, cancellation, action/page budgets, idle/max expiry and terminal cleanup with the current run queue and MCP/Agent behavior.
 
 ### Out Of Scope
 
@@ -41,11 +42,12 @@ Studio first-milestone integrated browser acceptance, example workflow and bilin
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0250-browser-agent-recipe-trace-ui.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0243-browser-local-runtime.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0244-browser-remote-profiles.md`.
 
 ## Expected Outputs
 
-- Example/template/fixtures, en/vi handbook, integrated traceability/evidence and completion handoff.
+- Run context/ports integration, session scheduler/lifecycle and concurrency/fencing evidence.
 
 ## Implementation Notes And Constraints
 
@@ -57,22 +59,23 @@ Studio first-milestone integrated browser acceptance, example workflow and bilin
 
 ## Dependencies
 
-- TASK-0250 — Agent/recipe configuration and filtered browser trace/chat UI
-- Owner accepts the amended REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
-- TASK-0251 and TASK-0252 are **not** dependencies of this studio milestone.
+- TASK-0243 — Isolated local Playwright runtime and bounded browser tools
+- TASK-0244 — Remote browser capabilities and origin-scoped login profiles
+- Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
 - Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
 
 ## Acceptance Criteria
 
-- REQ-0086 AC1–AC7, AC9 and studio AC10 map to real fixture/contract/UI evidence, including changed layout, ask-for-context, whitelist denials, Browserless policy failures, multi-turn session idle and cancellation/recovery. AC8/export evidence is explicitly deferred.
-- No live account, paid provider, automatic CAPTCHA solving, real external write or production cutover is needed for mandatory automated acceptance (Browserless fixtures may use controlled/fake control APIs).
-- Mock remains network-free; screenshots are protected/filtered and evidence stays outside Git. en/vi studio handbook/example/CHANGELOG accurately state supported capabilities, toggle defaults, risks and gaps.
-- Every studio delivery task has review/QA and dependency integration evidence; full Factory/project checks pass before the studio milestone is marked complete. Overall REQ-0086 remains incomplete until deferred exports finish. Owner approves any merge/release separately.
+- Two same-round browser calls execute in deterministic tool-call order; thread lock acquisition order is not treated as an ordering guarantee.
+- A later chat turn in the same conversation/principal/connection can reattach a still-live session before idle/max expiry; a different conversation, principal or connection cannot.
+- Separate principals, visitor identities, runs, child groups and connections cannot discover/control one another's live sessions.
+- Unrelated tools/sessions retain parallel execution and existing result ordering; existing generic MCP per-call sessions remain compatible.
+- Cancellation, stale worker lease, connection revoke, idle/max timeout and terminal completion stop late commands and clean up resources. Crash recovery is not promised.
 
 ## Validation Plan
 
-- Declared full Factory profile, factory validate/ready/ID checks; full backend including layers/envelope/migrations; root npm test/build/lint and targeted browser e2e.
-- Actual local/Browserless controlled browser, DNS/proxy/whitelist, permission, crash/approval ON/OFF and multi-turn session suites; studio handbook checks discovered from the current repository. Export parity waits with TASK-0251/0252.
+- Planned tests/test_browser_run_sessions.py with multi-worker/parallel races; regressions tests/test_parallel_agent_tools.py, tests/test_agent_node.py, tests/test_mcp.py and relevant run recovery/effect tests.
+- Assert ordered navigation/observation/click against real fixtures and enforce no late writes after fence loss.
 - At implementation: run appropriate declared project checks plus Factory validation/ID checks; each task records review and QA before completion.
 
 ## Assumptions
@@ -89,11 +92,11 @@ Studio first-milestone integrated browser acceptance, example workflow and bilin
 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
-- 2026-11-04: Renumbered: TASK-0250 → TASK-0253 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+- 2026-11-04: Renumbered: TASK-0242 → TASK-0245 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0253-browser-e2e-handbook`, from `develop` after the stated gates.
+- Future branch: `factory/task-0245-browser-run-sessions`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.

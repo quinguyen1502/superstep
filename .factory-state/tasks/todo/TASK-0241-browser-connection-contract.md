@@ -3,9 +3,9 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0245
-- Title: Conversation/run-bound sessions, ordered Agent calls and lifecycle integration
-- Status: backlog
+- Task ID: TASK-0241
+- Title: Browser contracts, whitelist, toggles and scoped connection metadata
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -13,20 +13,19 @@
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
 - Plan: PLAN-0006
-- Size: L (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
+- Size: M (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
 
 ## Objective
 
-Conversation/run-bound sessions that persist across chat turns, ordered Agent calls and lifecycle integration, satisfying the assigned acceptance criteria of REQ-0086.
+Browser contracts, required origin whitelist, safety toggles and scoped connection metadata, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Bind browser ports to trusted effective principal, **conversation id when chat-driven**, run/Agent-tool group and connection snapshots through RunService and existing tool call paths.
-- **Persist sessions across chat turns** of the same conversation, same effective user/principal and same connection until idle timeout (proposed default 30 minutes, configurable), hard max duration, cancel, conversation end or connection revoke. Still no promised survival across worker/browser crashes.
-- Keep sessions across Agent rounds while serialising same-session commands in model call order, including parallel slots and multiple workers; preserve unrelated tool concurrency.
-- Integrate lease fencing, revocation, cancellation, action/page budgets, idle/max expiry and terminal cleanup with the current run queue and MCP/Agent behavior.
+- Specify versioned bounded worker commands, tool schemas (nine operations including upload/download/evaluate_js), trusted run/conversation/session context, provider/proxy capabilities (local Playwright and Browserless), required origin whitelist shape and safe result/observation envelopes from ARCH-0002.
+- Extend existing managed connection/profile metadata with **mandatory non-empty origin/domain whitelist**, safety toggles (mutating-approval default OFF; allow JS/upload/download; download limits; session idle/max; action/page budget), owner/org CRUD/discovery, encrypted secret handling and feature gating; add SQLAlchemy/Alembic revisions only where needed.
+- Resolve exact session transport, proposed idle default (30 minutes), hard max, profile provisioning shape and initial supported proxy protocol/auth matrix in reviewable contract notes. Preserve existing MCP transports and unrelated managed adapters. Document always-on rules (private IP block, untrusted page content, secret redaction, no public Settings, kill-switch) as non-togglable.
 
 ### Out Of Scope
 
@@ -42,12 +41,11 @@ Conversation/run-bound sessions that persist across chat turns, ordered Agent ca
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0243-browser-local-runtime.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0244-browser-remote-profiles.md`.
+- Dependency artifacts: none; begin only after owner acceptance of the requirement/design/plan.
 
 ## Expected Outputs
 
-- Run context/ports integration, session scheduler/lifecycle and concurrency/fencing evidence.
+- Versioned contract, DTO/service/repository changes, migration if needed and contract/auth tests.
 
 ## Implementation Notes And Constraints
 
@@ -59,23 +57,22 @@ Conversation/run-bound sessions that persist across chat turns, ordered Agent ca
 
 ## Dependencies
 
-- TASK-0243 — Isolated local Playwright runtime and bounded browser tools
-- TASK-0244 — Remote browser capabilities and origin-scoped login profiles
+- None within PLAN-0006.
 - Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
 - Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
 
 ## Acceptance Criteria
 
-- Two same-round browser calls execute in deterministic tool-call order; thread lock acquisition order is not treated as an ordering guarantee.
-- A later chat turn in the same conversation/principal/connection can reattach a still-live session before idle/max expiry; a different conversation, principal or connection cannot.
-- Separate principals, visitor identities, runs, child groups and connections cannot discover/control one another's live sessions.
-- Unrelated tools/sessions retain parallel execution and existing result ordering; existing generic MCP per-call sessions remain compatible.
-- Cancellation, stale worker lease, connection revoke, idle/max timeout and terminal completion stop late commands and clean up resources. Crash recovery is not promised.
+- Connections can be configured/discovered without a single fixed target URL; saving without a non-empty origin whitelist is rejected; proxy is direct, explicit operator default or connection-specific, with credentials kept outside workflow/model metadata.
+- Safety toggles persist with documented defaults (mutating approval OFF; allow JS/upload/download off until enabled; idle 30 minutes proposed); always-on rules are not exposed as disable switches.
+- Wrong principal/org, invalid schema, unsupported capability and secret edit/keep/remove cases are rejected through the shared envelope/catalog.
+- Command/session identity and ordered-call context cannot be supplied or overridden by chat/model arguments; profile origin restrictions and result statuses are explicit.
+- A reviewed capability table names what local/Browserless/proxy combinations the next tasks must prove; provisional support is not advertised as verified; Browserless is required for the studio remote gate.
 
 ## Validation Plan
 
-- Planned tests/test_browser_run_sessions.py with multi-worker/parallel races; regressions tests/test_parallel_agent_tools.py, tests/test_agent_node.py, tests/test_mcp.py and relevant run recovery/effect tests.
-- Assert ordered navigation/observation/click against real fixtures and enforce no late writes after fence loss.
+- Planned tests/test_browser_connections.py and tests/test_browser_contract.py; regressions tests/test_mcp.py, tests/test_managed_tools.py, tests/test_layers.py, tests/test_api_envelope.py and tests/test_db_migrations.py.
+- Validate SQLite/Postgres migration round trips if schema changes; validate schema parity and secret redaction with fake repositories.
 - At implementation: run appropriate declared project checks plus Factory validation/ID checks; each task records review and QA before completion.
 
 ## Assumptions
@@ -92,11 +89,11 @@ Conversation/run-bound sessions that persist across chat turns, ordered Agent ca
 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
-- 2026-11-04: Renumbered: TASK-0242 → TASK-0245 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+- 2026-11-04: Renumbered: TASK-0238 → TASK-0241 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0245-browser-run-sessions`, from `develop` after the stated gates.
+- Future branch: `factory/task-0241-browser-connection-contract`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.

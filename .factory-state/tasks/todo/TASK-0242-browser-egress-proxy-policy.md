@@ -3,9 +3,9 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0248
-- Title: Reusable typed browser recipes through existing tool surfaces
-- Status: backlog
+- Task ID: TASK-0242
+- Title: Enforce browser egress, whitelist and connection-level proxy policy
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -13,19 +13,20 @@
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
 - Plan: PLAN-0006
-- Size: M (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
+- Size: L (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
 
 ## Objective
 
-Reusable typed browser recipes through existing tool surfaces, satisfying the assigned acceptance criteria of REQ-0086.
+Enforce browser egress, mandatory origin whitelist and connection-level proxy policy, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Implement bounded versioned recipes over the shared action handlers with typed per-call inputs/output mapping; reuse workflow-as-tool composition where sufficient.
-- Expose recipe definitions/discovery/call through existing generic MCP/Agent selection without a vendor-specific node or a second expression/runtime language.
-- Snapshot recipe version at run planning; preserve connection/profile/proxy/whitelist/toggle/approval/unknown-outcome policy and explicit layout failures. Recipes may use upload/download/evaluate_js only when the connection allows and the calling surface grants them.
+- Implement the effective local browser egress boundary, not only URL-input checks: validated resolution/connection for navigations, redirects and page-generated requests, including **mandatory origin/domain whitelist** denial.
+- Apply the same whitelist to Browserless/remote paths in the policy contract (enforcement proof completed with TASK-0244). Empty whitelist is invalid at the connection layer.
+- Apply explicit direct/default/custom proxy policy with encrypted auth; keep one route for a live session, validate endpoint and destination resolution, and refuse unsupported protocol/auth or remote-DNS enforcement. No silent fallback to direct.
+- Document/prove how browser networking, WebSocket/service-worker paths and a selected upstream proxy cannot escape the policy; always block private/link-local/metadata IPs; no broad private-network flag derived from runtime arguments.
 
 ### Out Of Scope
 
@@ -42,12 +43,10 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0245-browser-run-sessions.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
 
 ## Expected Outputs
 
-- Bounded recipe definitions/versioning, invocation/discovery and fixture-backed input/output/error tests.
+- Effective egress enforcement, proxy configuration/validation, adversarial fixture evidence and operator contract.
 
 ## Implementation Notes And Constraints
 
@@ -60,22 +59,20 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 ## Dependencies
 
 - TASK-0241 — Browser contracts and scoped connection metadata
-- TASK-0245 — Run-bound sessions, ordered Agent calls and lifecycle integration
-- TASK-0246 — Browser approvals, stale sessions and uncertain-effect recovery
 - Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
 - Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
 
 ## Acceptance Criteria
 
-- lookup_shipment(url, order_id) accepts a different authorised URL per call and returns declared bounded state outputs.
-- Same action semantics and network/session/whitelist/toggle policy apply to recipe and autonomous tools; recipe is callable by generic MCP nodes and existing Agent slots.
-- Unknown arguments, oversized sequences, inaccessible recipes and invalid versions are rejected; a changed selector/layout fails without secretly starting an Agent.
-- Recorded completed recipe results do not recreate missing page state or replay uncertain writes; deletes use exact-name confirmation through shared management UI.
+- Controlled browser fixtures demonstrate denial of private/loopback/link-local/metadata destinations and **off-whitelist origins** through navigation, redirects, subresources and proxy-resolved hosts, including DNS changes.
+- All allowed browser traffic follows the selected route; proxy failure cannot fall back to direct and credentials are not logged.
+- Policy checks cover actual connection/resolution at the egress boundary. Unsupported routes fail before browser use; checking only the MCP endpoint or page.goto is insufficient.
+- Production and narrow fixture-only network policies are separate; a chat URL cannot activate the fixture exception or bypass the whitelist.
 
 ## Validation Plan
 
-- Planned tests/test_browser_recipes.py with local fixtures and schema/version snapshots.
-- Regressions tests/test_mcp.py, tests/test_agent_workflow_tools.py and relevant effects/approval/recovery tests.
+- Planned tests/test_browser_network_policy.py and a controlled DNS/proxy/browser fixture suite; regressions shared net/HTTP/MCP tests identified from the current tree at implementation.
+- Run the real isolated Chromium egress suite with hostile redirect/subresource/proxy cases; record packet/proxy evidence with synthetic targets and no live secrets.
 - At implementation: run appropriate declared project checks plus Factory validation/ID checks; each task records review and QA before completion.
 
 ## Assumptions
@@ -92,11 +89,11 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
-- 2026-11-04: Renumbered: TASK-0245 → TASK-0248 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+- 2026-11-04: Renumbered: TASK-0239 → TASK-0242 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0248-browser-recipes`, from `develop` after the stated gates.
+- Future branch: `factory/task-0242-browser-egress-proxy-policy`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.

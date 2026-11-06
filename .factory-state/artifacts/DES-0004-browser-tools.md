@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Design ID: DES-0004
-- Status: Proposed — based on owner-directed mockups, proxy discussion and 2026-11-06 amendments; final production UX not approved
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-06 (Accepted; implementation authorised)
 - Related Requirements: REQ-0086
 - Related Architecture: ARCH-0002, DEC-0085
 

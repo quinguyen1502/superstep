@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Plan ID: PLAN-0006
-- Status: Proposed — owner authorised requirement capture and breakdown on 2026-11-03; amended 2026-11-06 after owner review without acceptance; delivery tasks remain in backlog pending acceptance/start
+- Status: Accepted on 2026-11-06. Owner authorised implementation ("Ok triển khai") after the amended package; studio tasks TASK-0241–0250 and studio-scoped TASK-0253 move to todo; TASK-0251/0252 remain deferred in backlog.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-06 (Accepted; implementation authorised)
 - Related Requirements: REQ-0086
 - Related Design: DES-0004
 - Related Architecture: ARCH-0002, DEC-0085
@@ -17,7 +17,7 @@
 
 ## Owner amendments (2026-11-06)
 
-The owner reviewed REQ-0086 / DEC-0085 / DES-0004 / ARCH-0002 / PLAN-0006 and asked to **change** the plan (not accept as-is). Clarifications dated 2026-11-06 (Asia/Saigon). Statuses remain **Proposed** until the owner accepts this amended package; DEC-0085 is not marked Accepted.
+The owner reviewed REQ-0086 / DEC-0085 / DES-0004 / ARCH-0002 / PLAN-0006 and asked to **change** the plan (not accept as-is). Clarifications dated 2026-11-06 (Asia/Saigon). Statuses are **Accepted** (2026-11-06). DEC-0085 is Accepted; implementation is authorised.
 
 1. **Relaxed default approvals.** Navigate, snapshot, structured extraction and screenshot never wait. Click, fill, upload, download and evaluate JS run immediately by default; each connection can turn on “require approval” for those mutating actions. Unknown effects / lost sessions / expired approvals never blindly replay writes. (AC6, TASK-0246, DEC point 6.)
 2. **Persist browser sessions across chat turns** of the same conversation, same effective user/principal and same connection until idle/expiry, cancel or conversation/run end. No promised survival across worker/browser crashes. Proposed idle default 30 minutes, configurable, plus hard max. (REQ sessions, DEC point 5, DES, ARCH, TASK-0245.)
@@ -54,21 +54,21 @@ Deliver browser connections, primitive tools for the existing Agent (nine operat
 
 | Task | Purpose | Size | Dependencies | Milestone |
 | --- | --- | --- | --- | --- |
-| [TASK-0241](../tasks/backlog/TASK-0241-browser-connection-contract.md) | Browser contracts, whitelist, toggles and scoped connection metadata | M | none | Studio |
-| [TASK-0242](../tasks/backlog/TASK-0242-browser-egress-proxy-policy.md) | Enforce browser egress, whitelist and connection-level proxy policy | L | TASK-0241 | Studio |
-| [TASK-0243](../tasks/backlog/TASK-0243-browser-local-runtime.md) | Isolated local Playwright runtime and nine bounded browser tools | M | TASK-0241, TASK-0242 | Studio |
-| [TASK-0244](../tasks/backlog/TASK-0244-browser-remote-profiles.md) | Browserless remote capabilities and origin-scoped login profiles | M | TASK-0241, TASK-0242, TASK-0243 | Studio (remote required) |
-| [TASK-0245](../tasks/backlog/TASK-0245-browser-run-sessions.md) | Conversation/run-bound sessions, ordered Agent calls and lifecycle | L | TASK-0243, TASK-0244 | Studio |
-| [TASK-0246](../tasks/backlog/TASK-0246-browser-approval-recovery.md) | Configurable mutating approvals, stale sessions and uncertain-effect recovery | L | TASK-0245 | Studio |
-| [TASK-0247](../tasks/backlog/TASK-0247-browser-url-web-tools.md) | Dynamic URL bindings, whitelist checks, search/fetch and missing-context flows | M | TASK-0241, TASK-0245, TASK-0246 | Studio |
-| [TASK-0248](../tasks/backlog/TASK-0248-browser-recipes.md) | Reusable typed browser recipes through existing tool surfaces | M | TASK-0241, TASK-0245, TASK-0246 | Studio |
-| [TASK-0249](../tasks/backlog/TASK-0249-browser-connection-settings-ui.md) | Connection, whitelist, proxy, toggles and profile configuration UI | M | TASK-0241, TASK-0242, TASK-0244 | Studio |
-| [TASK-0250](../tasks/backlog/TASK-0250-browser-agent-recipe-trace-ui.md) | Agent/recipe configuration and filtered browser trace/chat UI | M | TASK-0247, TASK-0248, TASK-0249 | Studio |
-| [TASK-0253](../tasks/backlog/TASK-0253-browser-e2e-handbook.md) | Studio integrated acceptance, example workflow and bilingual handbook | M | TASK-0250 | Studio first milestone |
+| [TASK-0241](../tasks/todo/TASK-0241-browser-connection-contract.md) | Browser contracts, whitelist, toggles and scoped connection metadata | M | none | Studio |
+| [TASK-0242](../tasks/todo/TASK-0242-browser-egress-proxy-policy.md) | Enforce browser egress, whitelist and connection-level proxy policy | L | TASK-0241 | Studio |
+| [TASK-0243](../tasks/todo/TASK-0243-browser-local-runtime.md) | Isolated local Playwright runtime and nine bounded browser tools | M | TASK-0241, TASK-0242 | Studio |
+| [TASK-0244](../tasks/todo/TASK-0244-browser-remote-profiles.md) | Browserless remote capabilities and origin-scoped login profiles | M | TASK-0241, TASK-0242, TASK-0243 | Studio (remote required) |
+| [TASK-0245](../tasks/todo/TASK-0245-browser-run-sessions.md) | Conversation/run-bound sessions, ordered Agent calls and lifecycle | L | TASK-0243, TASK-0244 | Studio |
+| [TASK-0246](../tasks/todo/TASK-0246-browser-approval-recovery.md) | Configurable mutating approvals, stale sessions and uncertain-effect recovery | L | TASK-0245 | Studio |
+| [TASK-0247](../tasks/todo/TASK-0247-browser-url-web-tools.md) | Dynamic URL bindings, whitelist checks, search/fetch and missing-context flows | M | TASK-0241, TASK-0245, TASK-0246 | Studio |
+| [TASK-0248](../tasks/todo/TASK-0248-browser-recipes.md) | Reusable typed browser recipes through existing tool surfaces | M | TASK-0241, TASK-0245, TASK-0246 | Studio |
+| [TASK-0249](../tasks/todo/TASK-0249-browser-connection-settings-ui.md) | Connection, whitelist, proxy, toggles and profile configuration UI | M | TASK-0241, TASK-0242, TASK-0244 | Studio |
+| [TASK-0250](../tasks/todo/TASK-0250-browser-agent-recipe-trace-ui.md) | Agent/recipe configuration and filtered browser trace/chat UI | M | TASK-0247, TASK-0248, TASK-0249 | Studio |
+| [TASK-0253](../tasks/todo/TASK-0253-browser-e2e-handbook.md) | Studio integrated acceptance, example workflow and bilingual handbook | M | TASK-0250 | Studio first milestone |
 | [TASK-0251](../tasks/backlog/TASK-0251-browser-python-export.md) | Executable Python and project export for browser tools/recipes | L | TASK-0247, TASK-0248, TASK-0246, TASK-0244 | **Deferred** after studio |
 | [TASK-0252](../tasks/backlog/TASK-0252-browser-typescript-export.md) | Executable TypeScript and project export with browser parity | L | TASK-0251 | **Deferred** after studio |
 
-Each linked task records its scope, outputs, dependencies, acceptance criteria and validation, and explicitly names the requirement/design/architecture/decision/discovery paths. All are currently **backlog**, not implementation authorisation. TASK-0251/0252 are backlog **deferred** with trigger below.
+Each linked task records its scope, outputs, dependencies, acceptance criteria and validation, and explicitly names the requirement/design/architecture/decision/discovery paths. Studio first-delivery tasks (0241–0250, studio 0253) move to **todo** on acceptance. TASK-0251/0252 stay backlog **deferred** with trigger below.
 
 ## Deferred / later
 
@@ -130,10 +130,10 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 
 ## Approval Needs And Limits
 
-- The owner requested recording requirements and breaking down tasks (2026-11-03), then amending the Proposed package (2026-11-06). This authorises this planning package and backlog artifacts only.
-- REQ-0086, DES-0004, ARCH-0002 and DEC-0085 retain **Proposed** status. Owner acceptance of this **amended** package is required before task promotion/start; `factory ready` must also pass before implementation source work.
-- Future implementation uses one branch `factory/task-NNNN-<slug>` and one task PR into `develop`; dependencies merge first unless an owner-authorised stack is explicitly recorded.
-- The original planning turn made no branch/commit/PR. On 2026-11-04 the owner explicitly authorised commit and push of the first proposed package. On 2026-11-06 the owner requested amendments on the open draft planning PR without accepting or merging. This amendment uses the existing planning branch and does not authorise implementation, migration execution, live provider/proxy/account setup, merge, release or deployment.
+- The owner requested recording requirements and breaking down tasks (2026-11-03), amended the Proposed package (2026-11-06), then accepted it and authorised implementation the same day ("Ok triển khai", sync latest develop first).
+- REQ-0086, DES-0004, ARCH-0002 and DEC-0085 are **Accepted** on 2026-11-06. Studio tasks are promoted to todo; implementation uses one branch `factory/task-NNNN-<slug>` and one task PR into `develop`; dependencies merge first unless an owner-authorised stack is explicitly recorded.
+- Draft implementation PRs #303–#315 must be reconciled with this Accepted package before merge. No release/version bump is authorised by this acceptance. Live Browserless secrets stay operator-supplied and are never printed.
+- TASK-0251/0252 remain deferred until after studio acceptance and integration.
 
 ## Assumptions And Open Questions
 
@@ -148,7 +148,7 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 - Executable local **and** Browserless browser fixtures, whitelist/proxy/security/recovery behavior pass. Unsupported combinations are explicit and documented. Local-only is not sufficient to close the remote requirement.
 - Bilingual studio docs/example and feature-disable/recovery instructions reflect the actual delivered capabilities, including toggles and risks.
 - **Later:** AC8 and TASK-0251/0252 after studio acceptance.
-- Planning completion does not mark the feature implemented or change Proposed statuses to Accepted.
+- Planning completion alone did not mark the feature implemented; on 2026-11-06 the owner Accepted the amended package and authorised implementation. Feature delivery still requires studio task PRs.
 
 ## Planning Activity
 
@@ -158,3 +158,4 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 - 2026-11-04: Owner requested publication (“Push đi”). Prepared this planning-only branch from develop 94c44366, preserving current release/SDK changes. Re-fetched and allocated against all refs in an isolated worktree; unpublished DEC-0084 and TASK-0238–0250 were renumbered to DEC-0085 and TASK-0241–0253 after collisions with merged work. All internal links, dependencies, future branch names and roadmap entries were updated together. Proposed statuses/backlog lifecycle are retained; no implementation or merge approval inferred.
 - 2026-11-04: Publication checks passed: unique IDs across working tree plus 83 refs; 19 artifact/task references and dependency DAG; whitespace; both mockup fragment scripts parsed by Node. The 23-file publication includes roadmap and three exploratory HTML previews. No application implementation test or dependency installation is claimed for this documentation-only commit.
 - 2026-11-06: Owner reviewed the proposed package and requested six amendments plus flexible-but-safe two-layer configuration and risk analysis. Amended REQ-0086, DEC-0085, DES-0004, ARCH-0002, PLAN-0006, DISC-0002, roadmap and TASK-0241–0253 on the open draft PR without marking Accepted or merging. Noted draft implementation PRs #303–#315 need reconciliation after acceptance. Statuses remain Proposed; TASK-0251/0252 deferred off the studio critical path.
+- 2026-11-06 (later): Owner accepted the amended package and authorised implementation ("Ok triển khai", sync latest develop first). Marked REQ-0086, DEC-0085, DES-0004, ARCH-0002 and PLAN-0006 Accepted; moved studio tasks TASK-0241–0250 and TASK-0253 to todo; left TASK-0251/0252 deferred in backlog. Draft PRs #303–#315 still require reconciliation before merge.

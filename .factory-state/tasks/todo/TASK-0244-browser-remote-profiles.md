@@ -3,9 +3,9 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0242
-- Title: Enforce browser egress, whitelist and connection-level proxy policy
-- Status: backlog
+- Task ID: TASK-0244
+- Title: Browserless remote capabilities and origin-scoped login profiles
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -13,20 +13,19 @@
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
 - Plan: PLAN-0006
-- Size: L (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
+- Size: M (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
 
 ## Objective
 
-Enforce browser egress, mandatory origin whitelist and connection-level proxy policy, satisfying the assigned acceptance criteria of REQ-0086.
+Browserless remote capabilities (required for first studio delivery) and origin-scoped login profiles, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Implement the effective local browser egress boundary, not only URL-input checks: validated resolution/connection for navigations, redirects and page-generated requests, including **mandatory origin/domain whitelist** denial.
-- Apply the same whitelist to Browserless/remote paths in the policy contract (enforcement proof completed with TASK-0244). Empty whitelist is invalid at the connection layer.
-- Apply explicit direct/default/custom proxy policy with encrypted auth; keep one route for a live session, validate endpoint and destination resolution, and refuse unsupported protocol/auth or remote-DNS enforcement. No silent fallback to direct.
-- Document/prove how browser networking, WebSocket/service-worker paths and a selected upstream proxy cannot escape the policy; always block private/link-local/metadata IPs; no broad private-network flag derived from runtime arguments.
+- Implement the **Browserless** remote-browser provider (https://www.browserless.io / CDP/browser API) against the command contract, without delegating the Agent loop. Local Playwright remains available; both are required for the studio remote gate — local-only does not satisfy this task.
+- Support operator-provisioned encrypted origin-filtered login state and explicit local/Browserless provider capability checking, including proxy/stealth options (stealth off by default; best-effort only).
+- Require evidence that Browserless paths enforce the same **origin whitelist**, destination, redirect, subresource and DNS/proxy policy as the local worker; unsupported combinations return a specific refusal and documented gap instead of silently dropping a setting or claiming local-only completion.
 
 ### Out Of Scope
 
@@ -43,10 +42,12 @@ Enforce browser egress, mandatory origin whitelist and connection-level proxy po
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0242-browser-egress-proxy-policy.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0243-browser-local-runtime.md`.
 
 ## Expected Outputs
 
-- Effective egress enforcement, proxy configuration/validation, adversarial fixture evidence and operator contract.
+- Remote provider implementation, scoped profile service/storage, capability matrix and compatibility tests.
 
 ## Implementation Notes And Constraints
 
@@ -59,20 +60,22 @@ Enforce browser egress, mandatory origin whitelist and connection-level proxy po
 ## Dependencies
 
 - TASK-0241 — Browser contracts and scoped connection metadata
+- TASK-0242 — Enforce browser egress and connection-level proxy policy
+- TASK-0243 — Isolated local Playwright runtime and bounded browser tools
 - Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
 - Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
 
 ## Acceptance Criteria
 
-- Controlled browser fixtures demonstrate denial of private/loopback/link-local/metadata destinations and **off-whitelist origins** through navigation, redirects, subresources and proxy-resolved hosts, including DNS changes.
-- All allowed browser traffic follows the selected route; proxy failure cannot fall back to direct and credentials are not logged.
-- Policy checks cover actual connection/resolution at the egress boundary. Unsupported routes fail before browser use; checking only the MCP endpoint or page.goto is insufficient.
-- Production and narrow fixture-only network policies are separate; a chat URL cannot activate the fixture exception or bypass the whitelist.
+- A controlled Browserless fixture reaches the same nine-action/result contract as local, including whitelist denials; provider endpoint tokens and proxy secrets are never exposed.
+- A login profile cannot be attached outside its authorised principal/origins; separate runs/org users do not share live tabs or cookie state.
+- Unsupported Browserless enforcement, profile filtering, proxy auth or stealth is refused and documented; no capability is inferred from a CDP URL; the owner must choose another path if parity cannot be proved — do not silently weaken policy.
+- Provider/proxy/profile/whitelist configuration is immutable within a live session; revoke/update invalidates affected sessions.
 
 ## Validation Plan
 
-- Planned tests/test_browser_network_policy.py and a controlled DNS/proxy/browser fixture suite; regressions shared net/HTTP/MCP tests identified from the current tree at implementation.
-- Run the real isolated Chromium egress suite with hostile redirect/subresource/proxy cases; record packet/proxy evidence with synthetic targets and no live secrets.
+- Planned tests/test_browser_remote.py and tests/test_browser_profiles.py with fake control APIs plus a controlled remote browser fixture.
+- Prove origin separation, secret redaction, provider capability errors and revoked-profile behavior; no purchased provider/live account required for automated checks.
 - At implementation: run appropriate declared project checks plus Factory validation/ID checks; each task records review and QA before completion.
 
 ## Assumptions
@@ -83,17 +86,17 @@ Enforce browser egress, mandatory origin whitelist and connection-level proxy po
 ## Open Questions
 
 - Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
-- Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
+- Prove Browserless destination/proxy/DNS/whitelist parity within the task; if proof fails, document refusal and escalate to the owner rather than claiming unsupported behavior or shipping local-only as complete.
 
 ## Activity Log
 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
-- 2026-11-04: Renumbered: TASK-0239 → TASK-0242 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+- 2026-11-04: Renumbered: TASK-0241 → TASK-0244 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0242-browser-egress-proxy-policy`, from `develop` after the stated gates.
+- Future branch: `factory/task-0244-browser-remote-profiles`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.

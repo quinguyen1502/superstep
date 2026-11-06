@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Architecture ID: ARCH-0002
-- Status: Proposed — planning authorised and amended 2026-11-06; technical implementation and migrations not approved
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-06 (Accepted; implementation authorised)
 - Related Requirements: REQ-0086
 
 ## Context

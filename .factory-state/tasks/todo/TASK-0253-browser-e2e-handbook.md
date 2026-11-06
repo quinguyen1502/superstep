@@ -3,9 +3,9 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0244
-- Title: Browserless remote capabilities and origin-scoped login profiles
-- Status: backlog
+- Task ID: TASK-0253
+- Title: Studio integrated browser acceptance, example workflow and bilingual handbook
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -17,15 +17,15 @@
 
 ## Objective
 
-Browserless remote capabilities (required for first studio delivery) and origin-scoped login profiles, satisfying the assigned acceptance criteria of REQ-0086.
+Studio first-milestone integrated browser acceptance, example workflow and bilingual handbook (export handbook deferred with TASK-0251/0252), satisfying the studio acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Implement the **Browserless** remote-browser provider (https://www.browserless.io / CDP/browser API) against the command contract, without delegating the Agent loop. Local Playwright remains available; both are required for the studio remote gate — local-only does not satisfy this task.
-- Support operator-provisioned encrypted origin-filtered login state and explicit local/Browserless provider capability checking, including proxy/stealth options (stealth off by default; best-effort only).
-- Require evidence that Browserless paths enforce the same **origin whitelist**, destination, redirect, subresource and DNS/proxy policy as the local worker; unsupported combinations return a specific refusal and documented gap instead of silently dropping a setting or claiming local-only completion.
+- Provide a disposable tracking-portal fixture, fake search/proxy/Browserless endpoints and an offline example workflow covering chat/workflow/unknown URL, whitelist denial, multi-turn session and recipe paths.
+- Document local and Browserless setup, whitelist, proxy modes/capabilities, safety toggles and risks, profile scope, browser action/approval defaults, unknown outcomes and session idle/max behaviour. **Studio handbook only** for this milestone; executable export setup waits with TASK-0251/0252.
+- Run integrated security/permission/UI acceptance and declared project checks for studio; capture review/QA evidence and record residual Browserless limitations. Export parity suites are out of this milestone.
 
 ### Out Of Scope
 
@@ -41,13 +41,11 @@ Browserless remote capabilities (required for first studio delivery) and origin-
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0242-browser-egress-proxy-policy.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0243-browser-local-runtime.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0250-browser-agent-recipe-trace-ui.md`.
 
 ## Expected Outputs
 
-- Remote provider implementation, scoped profile service/storage, capability matrix and compatibility tests.
+- Example/template/fixtures, en/vi handbook, integrated traceability/evidence and completion handoff.
 
 ## Implementation Notes And Constraints
 
@@ -59,23 +57,22 @@ Browserless remote capabilities (required for first studio delivery) and origin-
 
 ## Dependencies
 
-- TASK-0241 — Browser contracts and scoped connection metadata
-- TASK-0242 — Enforce browser egress and connection-level proxy policy
-- TASK-0243 — Isolated local Playwright runtime and bounded browser tools
-- Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
+- TASK-0250 — Agent/recipe configuration and filtered browser trace/chat UI
+- Owner accepts the amended REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
+- TASK-0251 and TASK-0252 are **not** dependencies of this studio milestone.
 - Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
 
 ## Acceptance Criteria
 
-- A controlled Browserless fixture reaches the same nine-action/result contract as local, including whitelist denials; provider endpoint tokens and proxy secrets are never exposed.
-- A login profile cannot be attached outside its authorised principal/origins; separate runs/org users do not share live tabs or cookie state.
-- Unsupported Browserless enforcement, profile filtering, proxy auth or stealth is refused and documented; no capability is inferred from a CDP URL; the owner must choose another path if parity cannot be proved — do not silently weaken policy.
-- Provider/proxy/profile/whitelist configuration is immutable within a live session; revoke/update invalidates affected sessions.
+- REQ-0086 AC1–AC7, AC9 and studio AC10 map to real fixture/contract/UI evidence, including changed layout, ask-for-context, whitelist denials, Browserless policy failures, multi-turn session idle and cancellation/recovery. AC8/export evidence is explicitly deferred.
+- No live account, paid provider, automatic CAPTCHA solving, real external write or production cutover is needed for mandatory automated acceptance (Browserless fixtures may use controlled/fake control APIs).
+- Mock remains network-free; screenshots are protected/filtered and evidence stays outside Git. en/vi studio handbook/example/CHANGELOG accurately state supported capabilities, toggle defaults, risks and gaps.
+- Every studio delivery task has review/QA and dependency integration evidence; full Factory/project checks pass before the studio milestone is marked complete. Overall REQ-0086 remains incomplete until deferred exports finish. Owner approves any merge/release separately.
 
 ## Validation Plan
 
-- Planned tests/test_browser_remote.py and tests/test_browser_profiles.py with fake control APIs plus a controlled remote browser fixture.
-- Prove origin separation, secret redaction, provider capability errors and revoked-profile behavior; no purchased provider/live account required for automated checks.
+- Declared full Factory profile, factory validate/ready/ID checks; full backend including layers/envelope/migrations; root npm test/build/lint and targeted browser e2e.
+- Actual local/Browserless controlled browser, DNS/proxy/whitelist, permission, crash/approval ON/OFF and multi-turn session suites; studio handbook checks discovered from the current repository. Export parity waits with TASK-0251/0252.
 - At implementation: run appropriate declared project checks plus Factory validation/ID checks; each task records review and QA before completion.
 
 ## Assumptions
@@ -86,17 +83,17 @@ Browserless remote capabilities (required for first studio delivery) and origin-
 ## Open Questions
 
 - Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
-- Prove Browserless destination/proxy/DNS/whitelist parity within the task; if proof fails, document refusal and escalate to the owner rather than claiming unsupported behavior or shipping local-only as complete.
+- Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
-- 2026-11-04: Renumbered: TASK-0241 → TASK-0244 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+- 2026-11-04: Renumbered: TASK-0250 → TASK-0253 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0244-browser-remote-profiles`, from `develop` after the stated gates.
+- Future branch: `factory/task-0253-browser-e2e-handbook`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.

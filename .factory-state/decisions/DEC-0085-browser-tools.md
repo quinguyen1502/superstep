@@ -4,17 +4,17 @@
 
 - Project: superstep
 - Decision ID: DEC-0085
-- Status: Proposed — not an approved technology or implementation decision; amended 2026-11-06 after owner review without acceptance
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-06 (Accepted; implementation authorised)
 - Related Requirements: REQ-0086
 - Related Architecture: ARCH-0002
 - Related Tasks: see PLAN-0006
 
 ## Context
 
-The owner researched browser tools, requested evolving mockups for autonomous navigation and dynamic URLs, discussed connection-level proxies, and then explicitly requested requirement capture and task breakdown. Current managed/MCP surfaces fit tool selection, but their per-call session and export behavior do not implement browser continuity or portability (DISC-0002). On 2026-11-06 the owner reviewed the proposed package, declined to accept it as-is, and requested six product amendments plus a flexible-but-safe two-layer configuration model with explicit toggles and written risk analysis.
+The owner researched browser tools, requested evolving mockups for autonomous navigation and dynamic URLs, discussed connection-level proxies, and then explicitly requested requirement capture and task breakdown. Current managed/MCP surfaces fit tool selection, but their per-call session and export behavior do not implement browser continuity or portability (DISC-0002). On 2026-11-06 the owner reviewed the proposed package, requested six product amendments plus a flexible-but-safe two-layer configuration model with explicit toggles and written risk analysis, then accepted the amended package and authorised implementation.
 
 ## Decision Proposed
 
@@ -74,10 +74,10 @@ This preserves Superstep's LangGraph Agent orchestration, makes dynamic URLs ord
 
 ## Approval
 
-- Approved By: no detailed design approver recorded yet.
-- Approved On: pending.
-- Scope And Limits: the owner authorised writing the requirement and proposed task decomposition on 2026-11-03, and amending the Proposed package on 2026-11-06. No implementation, migration execution, dependency installation, merge, deployment or release authorisation is inferred. Status remains Proposed until the owner accepts the amended package.
+- Approved By: Thái Quí Nguyễn (owner)
+- Approved On: 2026-11-06 (Asia/Saigon)
+- Scope And Limits: the owner accepted the amended package and authorised implementation into `develop` ("Ok triển khai", sync latest develop first). One task PR per delivery task; merge only when required checks are green. No release/version bump authorised by this acceptance. TASK-0251/0252 remain deferred.
 
 ## Review Or Revisit Trigger
 
-- Owner accepts/amends this amended package; Browserless destination/proxy/DNS proof fails; interactive profile capture, hosted browser-Agent integration or first-milestone export packaging is pulled forward; toggle defaults prove too permissive or too interruptive in practice.
+- Owner reopens this decision; Browserless destination/proxy/DNS proof fails; interactive profile capture, hosted browser-Agent integration or first-milestone export packaging is pulled forward; toggle defaults prove too permissive or too interruptive in practice.

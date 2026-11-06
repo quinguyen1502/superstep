@@ -3,9 +3,9 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0247
-- Title: Dynamic URL bindings, whitelist checks, search/fetch and missing-context flows
-- Status: backlog
+- Task ID: TASK-0246
+- Title: Configurable mutating approvals, stale sessions and uncertain-effect recovery
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -13,20 +13,19 @@
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
 - Plan: PLAN-0006
-- Size: M (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
+- Size: L (provisional; split again before task-start if the reviewed proof exceeds one independently reviewable delivery)
 
 ## Objective
 
-Dynamic URL bindings with connection whitelist enforcement, search/fetch and missing-context flows, satisfying the assigned acceptance criteria of REQ-0086.
+Configurable mutating-action approvals (default OFF), stale sessions and uncertain-effect recovery, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Add or reuse bounded fixed/workflow/model-filled argument bindings with authoritative validation and normal tool schemas; no mandatory start URL.
-- Enforce the connection **origin/domain whitelist** on any URL that would open the browser (chat, state, model-filled or search-selected). Off-whitelist destinations are denied before browser use.
-- Normalise one configured search adapter through existing MCP/HTTP where possible; implement guarded bounded fetch/extract that does not inherit browser cookies/proxy. Search/fetch destinations used only for reading may follow their own transport policy; destinations used to open the browser must still pass the browser whitelist.
-- Wire no-URL/missing-context behavior to existing chat/Human responses and declare unsupported/empty search/parameter/whitelist-denial states.
+- Apply **connection-configurable** mutating-action approval through existing Human/Agent approval and child-run mechanisms. Default **OFF**: click, fill, upload, download and evaluate JS run immediately. When ON, those mutating actions wait for approval; reject/timeout is returned to the model. Navigate, snapshot, structured extraction and screenshot **never** wait on this toggle.
+- Track observation generations and distinguish confirmed results, before-effect failures and unknown external outcomes; do not reuse the generic operation cache as browser state.
+- Handle browser loss, idle/max expiry during approval or between chat turns, worker restart, late approval, cancellation and time-travel/replay without replaying uncertain UI effects — regardless of whether mutating approval is ON or OFF.
 
 ### Out Of Scope
 
@@ -42,13 +41,11 @@ Dynamic URL bindings with connection whitelist enforcement, search/fetch and mis
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0245-browser-run-sessions.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
 
 ## Expected Outputs
 
-- Dynamic binding metadata/validation, search/fetch adapter contract and missing-input chat integration.
+- Approval/outcome/recovery integration, failure-mode contract and crash/expiry evidence.
 
 ## Implementation Notes And Constraints
 
@@ -60,24 +57,21 @@ Dynamic URL bindings with connection whitelist enforcement, search/fetch and mis
 
 ## Dependencies
 
-- TASK-0241 — Browser contracts and scoped connection metadata
 - TASK-0245 — Run-bound sessions, ordered Agent calls and lifecycle integration
-- TASK-0246 — Browser approvals, stale sessions and uncertain-effect recovery
 - Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
 - Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
 
 ## Acceptance Criteria
 
-- Chat URL, workflow URL and model-filled URL are validated runtime arguments; missing data never produces an invented destination; off-whitelist URLs are denied with a specific error.
-- Configured search yields candidate URLs before browser use; candidates outside the whitelist cannot be opened; insufficient task identity asks the user or returns the declared missing-input state.
-- Fetch-only tasks use no browser and do not inherit its proxy/profile; separate web transport secrets and destination policies remain enforced.
-- Prompt/tool/search outputs cannot change connection/profile/proxy/whitelist, and disabled/ungranted tools cannot be called by forged model arguments.
+- When mutating approval is ON, click/fill/upload/download/evaluate JS require approval; when OFF they run immediately. Navigate/snapshot/extract/screenshot never wait. Model/page text cannot mark itself safe or change the connection toggle.
+- Approval resumes only against a live authorised session and valid target/page references; changed target/arguments require renewed approval; expired approvals do not silently succeed.
+- Unknown browser effects are not auto-repeated after timeout/crash/retry/fork. Recovered runs re-observe or stop with a clear session-lost state. Crash survival is not promised even though cross-turn persistence is.
+- No false promise of exactly-once UI submission or persistent live browser after worker restart; confirm/reject/wait/expired/unknown transitions remain visible when approval applies.
 
 ## Validation Plan
 
-- Planned tests/test_browser_url_bindings.py and tests/test_web_discovery_tools.py with fake search/fetch providers.
-- Contract scenarios: URL in chat, state URL absent/present, search-first, no search configured, ambiguous carrier, malformed/credential-bearing/private URL, fetch-only and prompt injection.
-- Regressions Agent/MCP/schema/envelope and public-chat permission/filtering behavior.
+- Planned tests/test_browser_approval_recovery.py; regressions tests/test_agent_approval.py, tests/test_parallel_agent_tools.py and existing child-run/effect/restart tests.
+- Inject crashes after fixture-side effect but before acknowledgment and prove absence of a second effect; test expired-session/stale-ref approvals.
 - At implementation: run appropriate declared project checks plus Factory validation/ID checks; each task records review and QA before completion.
 
 ## Assumptions
@@ -94,11 +88,11 @@ Dynamic URL bindings with connection whitelist enforcement, search/fetch and mis
 
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
-- 2026-11-04: Renumbered: TASK-0244 → TASK-0247 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+- 2026-11-04: Renumbered: TASK-0243 → TASK-0246 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0247-browser-url-web-tools`, from `develop` after the stated gates.
+- Future branch: `factory/task-0246-browser-approval-recovery`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
