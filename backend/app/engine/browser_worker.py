@@ -137,7 +137,7 @@ class LocalBrowserWorker:
             return result
         except (BrowserWorkerError, ValidationError, ValueError, TypeError) as error:
             # Lost transport cannot establish whether a click/fill happened. Never retry here.
-            status = "expired" if isinstance(error, BrowserWorkerError) and error.status == "expired" else "unknown" if command.operation in {"click", "fill"} else "session_lost"
+            status = "expired" if isinstance(error, BrowserWorkerError) and error.status == "expired" else "unknown" if command.operation in {"click", "fill", "upload", "download", "evaluate"} else "session_lost"
             self.close()
             return WorkerResult(command_id=command.command_id, generation=self.generation, sequence=command.sequence, status=status, elapsed_ms=0)
         finally: self._arm_idle()

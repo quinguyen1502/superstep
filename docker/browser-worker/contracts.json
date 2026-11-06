@@ -11,6 +11,21 @@
             "title": "Principal Id",
             "type": "string"
           },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conversation Id"
+          },
           "run_id": {
             "maxLength": 128,
             "minLength": 1,
@@ -97,7 +112,10 @@
           "click",
           "fill",
           "extract",
-          "screenshot"
+          "screenshot",
+          "upload",
+          "download",
+          "evaluate"
         ],
         "title": "Operation",
         "type": "string"
@@ -142,7 +160,7 @@
             "default": "local",
             "enum": [
               "local",
-              "controlled_remote"
+              "browserless"
             ],
             "title": "Provider",
             "type": "string"
@@ -168,6 +186,7 @@
               "type": "string"
             },
             "maxItems": 50,
+            "minItems": 1,
             "title": "Allowed Origins",
             "type": "array"
           },
@@ -179,33 +198,81 @@
             "type": "integer"
           },
           "idle_timeout_s": {
-            "default": 120,
-            "maximum": 600,
-            "minimum": 30,
+            "default": 1800,
+            "maximum": 7200,
+            "minimum": 60,
             "title": "Idle Timeout S",
             "type": "integer"
           },
           "lifetime_s": {
-            "default": 600,
-            "maximum": 1800,
-            "minimum": 30,
+            "default": 3600,
+            "maximum": 14400,
+            "minimum": 120,
             "title": "Lifetime S",
             "type": "integer"
           },
           "max_actions": {
-            "default": 12,
-            "maximum": 100,
+            "default": 40,
+            "maximum": 200,
             "minimum": 1,
             "title": "Max Actions",
             "type": "integer"
           },
+          "max_pages": {
+            "default": 4,
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Max Pages",
+            "type": "integer"
+          },
+          "require_mutating_approval": {
+            "default": false,
+            "title": "Require Mutating Approval",
+            "type": "boolean"
+          },
+          "allow_evaluate_js": {
+            "default": false,
+            "title": "Allow Evaluate Js",
+            "type": "boolean"
+          },
+          "allow_upload": {
+            "default": false,
+            "title": "Allow Upload",
+            "type": "boolean"
+          },
+          "allow_download": {
+            "default": false,
+            "title": "Allow Download",
+            "type": "boolean"
+          },
+          "download_max_bytes": {
+            "default": 10485760,
+            "maximum": 52428800,
+            "minimum": 1024,
+            "title": "Download Max Bytes",
+            "type": "integer"
+          },
+          "download_allowed_types": {
+            "items": {
+              "maxLength": 128,
+              "minLength": 3,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9!#$&\\-^_+.]+/[A-Za-z0-9][A-Za-z0-9!#$&\\-^_+.]+$",
+              "type": "string"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Download Allowed Types",
+            "type": "array"
+          },
           "stealth": {
-            "const": false,
             "default": false,
             "title": "Stealth",
             "type": "boolean"
           }
         },
+        "required": [
+          "allowed_origins"
+        ],
         "title": "BrowserSettings",
         "type": "object"
       },
@@ -218,6 +285,21 @@
             "pattern": "^[A-Za-z0-9_.:-]+$",
             "title": "Principal Id",
             "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conversation Id"
           },
           "run_id": {
             "maxLength": 128,
@@ -547,6 +629,21 @@
             "title": "Principal Id",
             "type": "string"
           },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conversation Id"
+          },
           "run_id": {
             "maxLength": 128,
             "minLength": 1,
@@ -634,6 +731,21 @@
             "pattern": "^[A-Za-z0-9_.:-]+$",
             "title": "Principal Id",
             "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conversation Id"
           },
           "run_id": {
             "maxLength": 128,
@@ -890,6 +1002,19 @@
         ],
         "default": null,
         "title": "Artifact Id"
+      },
+      "evaluate_result": {
+        "anyOf": [
+          {
+            "maxLength": 16000,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Evaluate Result"
       }
     },
     "required": [

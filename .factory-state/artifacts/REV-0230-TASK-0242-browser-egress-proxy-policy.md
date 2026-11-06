@@ -57,3 +57,12 @@ TASK-0243 integrates supervisor/runtime and protected artifacts; TASK-0244 prove
 ## Review Decision
 
 Approved for QA; advisory self-review only. Owner approval remains necessary before done/merge.
+
+
+## 2026-11-06 reconciliation with Accepted plan
+
+- Merged `origin/develop` at f95ad1a1 (TASK-0241 #303 + Accepted plan #299).
+- `DestinationPolicy` now requires a non-empty origin whitelist by default; empty
+  allowlists raise `EgressDenied`. Page resolves fail closed when the origin is
+  absent from the list. Private/link-local/metadata IP denial unchanged.
+- Tests: `pytest tests/test_browser_network_policy.py tests/test_browser_contract.py tests/test_browser_connections.py` → 88 passed.

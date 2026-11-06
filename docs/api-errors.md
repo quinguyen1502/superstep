@@ -324,18 +324,10 @@ The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Cod
 
 | Code | Status | Meaning |
 | --- | --- | --- |
+| `BROWSER_ARTIFACT_NOT_FOUND` | 404 | Browser screenshot not found, expired, or not owned by the caller. |
+| `BROWSER_ARTIFACT_INVALID` | 400 | Browser screenshot exceeds the supported PNG bounds. |
 | `BROWSER_DISABLED` | 404 | Browser metadata/discovery is disabled by the operator. |
 | `BROWSER_RUNTIME_UNAVAILABLE` | 503 | No verified isolated browser runtime/trusted run context is available; no browser operation is started. |
-
-| Code | Status | Meaning |
-| --- | --- | --- |
-| `BROWSER_ARTIFACT_NOT_FOUND` | 404 | Screenshot missing, expired, or owned by another account. |
-| `BROWSER_ARTIFACT_INVALID` | 400 | Trusted capture did not produce a bounded viewport PNG. |
-
-Browser remote/profile errors (TASK-0244):
-
-| Code | HTTP | Meaning |
-|---|---|---|
 | `BROWSER_PROFILE_DENIED` | 403 | Browser login profile is unavailable for this principal or origin. |
 | `BROWSER_CAPABILITY_UNSUPPORTED` | 400 | Browser provider cannot enforce the requested capabilities. |
 | `BROWSER_CONTROL_UNAVAILABLE` | 503 | Browser control service is unavailable. |

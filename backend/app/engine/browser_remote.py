@@ -14,7 +14,7 @@ from .browser_contract import (WorkerEnvelope, BrowserSettings, ExecutionContext
                                WorkerControl, ARGUMENT_MODELS)
 from .browser_worker import LocalBrowserWorker, BrowserWorkerError
 
-CAPABILITIES = {'version': 1, 'provider': 'controlled_remote', 'boundary': 'network_none_unix_gateway_v1',
+CAPABILITIES = {'version': 1, 'provider': 'browserless', 'boundary': 'network_none_unix_gateway_v1',
                 'operations': list(ARGUMENT_MODELS), 'profile': 'https_host_only_v1',
                 'proxy': ['direct', 'operator_default', 'custom_http_none_basic'], 'stealth': False}
 
@@ -88,7 +88,7 @@ class RemoteBrowserWorker(LocalBrowserWorker):
         return self.transport.request(method, value.model_dump(), timeout)
 
     def start(self, *, secrets=None, approved_proxies=(), operator_default=None, profile_seed=None):
-        if self.started or self.closed or self.settings.provider != 'controlled_remote' or approved_proxies or operator_default:
+        if self.started or self.closed or self.settings.provider != 'browserless' or approved_proxies or operator_default:
             raise BrowserWorkerError('unsupported')
         from .browser_profiles import validate_profile, ProfileDenied
         try: self.settings = validate_profile(self.settings, self.context.principal_id, profile_seed)
@@ -120,8 +120,16 @@ class RemoteBrowserWorker(LocalBrowserWorker):
 
 
 def approved_transport(secrets, controllers):
-    """Select only an exact operator allowlisted endpoint; a connection cannot approve itself."""
-    endpoint = secrets.get('remote_endpoint')
-    selected = next((item for item in controllers if isinstance(item, ApprovedController) and item.endpoint == endpoint), None)
-    if selected is None: raise BrowserWorkerError('unsupported')
-    return RemoteTransport(selected, secrets.get('remote_token'))
+    """Bind a connection token to an operator-allowlisted Browserless control plane.
+
+    The connection never supplies or invents the control endpoint — only an approved
+    controller list from operator config may be used (Accepted DEC-0085 / PLAN-0006).
+    """
+    token = secrets.get('browserless_token')
+    approved = [item for item in controllers if isinstance(item, ApprovedController)]
+    if not isinstance(token, str) or not approved:
+        raise BrowserWorkerError('unsupported')
+    if len(approved) != 1:
+        # Multi-controller routing is operator config, not a connection-chosen CDP URL.
+        raise BrowserWorkerError('unsupported')
+    return RemoteTransport(approved[0], token)

@@ -7,7 +7,7 @@
 - Status: Observed repository evidence and research synthesis; not implementation approval
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 
 ## Scope
 
@@ -71,3 +71,7 @@ Official documentation consulted during this conversation (2026-11-02/03); no ve
 ## Recommended Follow-Up Artifacts
 
 - REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006, all linked in this delivery's plan.
+
+## Amendment note (2026-11-06)
+
+Owner amended the Proposed package without accepting it. Research above remains valid as repository evidence. Product scope changes that affect later proofs: Browserless is the required first remote provider; origin whitelist is mandatory; sessions persist across chat turns of the same conversation; upload/download and evaluate JS are in first delivery with bounds; mutating-approval defaults OFF; executable exports are deferred after studio; draft implementation PRs #303–#315 started against the prior Proposed wording and need reconciliation after acceptance. Reconfirm Browserless docs/capability claims at task-start: https://www.browserless.io and https://docs.browserless.io/ .
