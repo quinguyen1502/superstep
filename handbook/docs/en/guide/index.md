@@ -47,6 +47,12 @@ configuring nodes, wiring state, and reusing work across workflows.
 
     Register Streamable HTTP or stdio servers and call their tools.
 
+-   :material-compass-outline:{ .lg .middle } **[Browser tools](browser.md)**
+
+    ---
+
+    Isolated browser connections, whitelist, Agent URL sources and a first chat turn.
+
 -   :material-view-gallery-outline:{ .lg .middle } **[Workflow templates](templates.md)**
 
     ---

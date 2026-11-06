@@ -6,6 +6,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Added
 
+- **Browser Agent recipes, filtered trace and English handbook (TASK-0250 / TASK-0253).** Agent URL
+  bindings and reusable browser recipes use existing Settings/Data/Execution; public chat/history keep only
+  allowlisted browser facts. Guide → Browser tools documents connection whitelist, local vs self-hosted
+  controller, Agent grants and a first chat turn (English). Export parity remains TASK-0251/0252.
 - **Browser connection contract (TASK-0241, metadata only).** Managed `browser` adapter
   (feature-gated by `STUDIO_ENABLE_BROWSER`) with required origin whitelist, local and
   Browserless providers, connection safety toggles, and nine typed tool schemas

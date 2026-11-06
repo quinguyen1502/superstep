@@ -16,8 +16,10 @@ encrypted username/password. Operator route approval is still mandatory; saving
 settings does not approve an address. Failure never falls back to direct.
 SOCKS, HTTPS proxy transport, country selection and stealth bypass are unsupported.
 
-Allowed origins are exact HTTP(S) origins, one per line. Empty means public
-destinations subject to the enforced network policy, never internal access.
+Allowed origins are exact HTTP(S) origins, one per line. Browser connections
+require a non-empty whitelist; empty lists are rejected. Internal addresses stay
+blocked by network policy. (Web search/fetch connections may leave the list empty
+for public discovery under the same network policy.)
 Personal login profiles require a name, exact HTTPS origins and a bounded
 Playwright storage-state JSON seed. The server validates secure host-only cookies
 and origin scope; organisation connections cannot use profiles. Seeds are not

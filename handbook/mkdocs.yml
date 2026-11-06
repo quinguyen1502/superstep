@@ -44,6 +44,7 @@ nav:
       - Knowledge bases: guide/knowledge.md
       - MCP servers: guide/mcp.md
       - Google Drive tools: guide/google-drive.md
+      - Browser tools: guide/browser.md
       - Workflow templates: guide/templates.md
       - Versions: guide/versions.md
       - Export to Python: guide/python-export.md

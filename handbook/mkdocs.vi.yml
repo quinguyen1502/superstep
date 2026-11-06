@@ -43,6 +43,7 @@ nav:
       - Kho tri thức: guide/knowledge.md
       - Máy chủ MCP: guide/mcp.md
       - Công cụ Google Drive: guide/google-drive.md
+      - Công cụ trình duyệt: guide/browser.md
       - Mẫu workflow: guide/templates.md
       - Phiên bản: guide/versions.md
       - Xuất ra Python: guide/python-export.md
