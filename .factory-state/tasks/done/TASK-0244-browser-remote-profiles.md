@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0244
 - Title: Remote browser capabilities and origin-scoped login profiles
-- Status: review
+- Status: done (merged #309, REV-0234, QA-0234)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-05

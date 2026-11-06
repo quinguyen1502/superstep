@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0242
 - Title: Enforce browser egress, whitelist and connection-level proxy policy
-- Status: done
+- Status: done (merged #304, REV-0230, QA-0230)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06

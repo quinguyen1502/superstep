@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0241
 - Title: Browser contracts and scoped connection metadata
-- Status: done
+- Status: done (merged #303, REV-0229, QA-0229)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-04
