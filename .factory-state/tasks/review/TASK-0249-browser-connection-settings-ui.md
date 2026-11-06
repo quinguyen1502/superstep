@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0249
 - Title: Connection, proxy and profile configuration UI
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -30,7 +30,7 @@ Connection, proxy and profile configuration UI, satisfying the assigned acceptan
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- Agent/recipe/trace UI assigned to TASK-0250.
 
 ## Inputs And Related Artifacts
 
@@ -80,12 +80,12 @@ Connection, proxy and profile configuration UI, satisfying the assigned acceptan
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised full-chain implementation, controlled local fixtures and explicitly documented unmerged task stacks.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -98,3 +98,13 @@ Connection, proxy and profile configuration UI, satisfying the assigned acceptan
 
 - Future branch: `factory/task-0249-browser-connection-settings-ui`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-06 task-start: explicit stack on TASK-0248 07d22fce (REV-0238/QA-0238 scoped conditional, full checks running), TASK-0247 #312 (full pass) and TASK-0246 #311 (full pass), with #310/#309/#308/#304/#303/#299 prerequisites unmerged. This task's own 0241/0242/0244 dependencies have scoped review/QA. Task-start only; no source edited.
+
+- Task-start complete after factory ready exited 0; no source changed before the gate. Next extend the existing MCP Settings cards with typed browser/web forms, connection-level Network/Proxy, provider/profile/resource settings and write-only secret retention. Use shared exact-name removal confirmation, shadcn/theme tokens, en/vi strings, existing inline-card layout (no new dialog) and field errors. Node configuration later follows current General/Settings/Data/Execution conventions (owner amendment), with no new Browser node or extra tabs. Owner chain instruction authorises implementation, checks and visual QA next.
+
+- 2026-11-06 implementation: typed browser/web controls added to existing Settings inline cards. Connection-only provider/proxy/origin/profile/session settings, write-only secret retention and exact-name secret/profile removal use shared components. New client checks cover unsupported transports, canonical origin duplicates, profile scope and coupled session bounds. Six helper cases and locale checks pass; four real Chrome en/vi × light/dark create/edit/discover/proxy/profile/delete cases pass (42.4 s), including 390px/no-overflow/keyboard/anonymous access. Screenshots outside Git at `/private/tmp/superstep-browser-settings-shots-20261106`, visually inspected. Remote/feature-unavailable and generic MCP/HTTP regressions running; full verification pending.
+
+- 2026-11-06 scoped review/QA: REV-0239 / QA-0239 conditionally pass source 14b1560a; ten actual Chrome UI/regression cases passed. Full declared eight-command verification running on clean committed source. Settings docs added; owner approval pending. Predecessor #313 final 50a536ce has full passed checks; metadata sync is pending explicit permission after automatic merge-review rejection. No merge performed.
+
+- 2026-11-06 final verification: all eight declared commands passed source 14b1560a (backend 488.54 s); REV-0239/QA-0239 updated to scoped pass, owner approval pending. Draft PR #314: https://github.com/quinguyen1502/superstep/pull/314. No source changed after the full run; no merge performed.

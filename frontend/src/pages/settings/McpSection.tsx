@@ -20,24 +20,32 @@ import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api } from '@/lib/api'
 import { can, useMe } from '@/lib/rbac'
 import i18n from '@/lib/i18n'
-import type { McpList, McpServer } from '@/lib/mcp'
+import type { McpList, McpServer, ManagedSettings, McpSecretInput } from '@/lib/mcp'
+import { connectionFieldId, normalizeConnection, activeConnectionSecrets, connectionErrors, firstConnectionError, type ConnectionErrors } from '@/lib/browser-settings'
 import { cn } from '@/lib/utils'
 import { useOnChange } from '@/lib/use-when'
 import { ManagedConnectionFields } from '@/components/managed-connection-fields'
 import { ManagedOperations } from '@/components/managed-operations'
 
-type Secret = { name: string; value: string; stored: boolean }
-type Form = { name: string; transport: 'stdio' | 'http' | 'managed'; scope: 'user' | 'org'; command: string; args: string; url: string; secrets: Secret[]; adapter: string; settings: Record<string, string | number> }
+type Secret = McpSecretInput
+type Form = { name: string; transport: 'stdio' | 'http' | 'managed'; scope: 'user' | 'org'; command: string; args: string; url: string; secrets: Secret[]; adapter: string; settings: ManagedSettings }
 const toForm = (s?: McpServer): Form => ({ name: s?.name || '', transport: s?.transport || 'http', scope: s?.scope || 'user', command: s?.command || '',
   args: (s?.args || []).join('\n'), url: s?.url || '', secrets: Object.keys(s?.secrets || {}).map(name => ({ name, value: '', stored: true })), adapter: s?.adapter || '', settings: s?.settings || {} })
 /** Request body: an empty value of a stored secret means "keep it" (null). */
 const toBody = (f: Form) => ({ name: f.name, transport: f.transport, scope: f.scope, command: f.command || null, url: f.url || null,
-  adapter: f.adapter || null, settings: f.settings,
+  adapter: f.adapter || null, settings: normalizeConnection(f.adapter, f.settings),
   args: f.args.split('\n').map(a => a.trim()).filter(Boolean),
-  secrets: Object.fromEntries(f.secrets.filter(s => s.name.trim()).map(s => [s.name.trim(), s.stored && !s.value ? null : s.value])) })
+  secrets: Object.fromEntries(activeConnectionSecrets(f.adapter, normalizeConnection(f.adapter, f.settings), f.secrets).filter(s => s.name.trim()).map(s => [s.name.trim(), s.stored && !s.value ? null : s.value])) })
 
-function ServerFields({ form, set, idp, fixed, data }: { form: Form; set: (f: Form) => void; idp: string; fixed: boolean; data: McpList }) {
-  const { t } = useTranslation()
+function validConnection(form: Form, idp: string) {
+  const errors = form.transport === 'managed' ? connectionErrors(form.adapter, form.settings, form.secrets, form.scope) : {}
+  const first = firstConnectionError(errors)
+  if (first) requestAnimationFrame(() => document.getElementById(connectionFieldId(idp, first))?.focus())
+  return !first
+}
+
+function ServerFields({ form, set, idp, fixed, data, errors }: { form: Form; set: (f: Form) => void; idp: string; fixed: boolean; data: McpList; errors?: ConnectionErrors }) {
+  const { t } = useTranslation(), confirm = useConfirmDelete()
   const sec = (i: number, p: Partial<Secret>) => set({ ...form, secrets: form.secrets.map((s, j) => j === i ? { ...s, ...p } : s) })
   return <div className="space-y-3">
     <div className="grid gap-3 sm:grid-cols-3">
@@ -55,7 +63,7 @@ function ServerFields({ form, set, idp, fixed, data }: { form: Form; set: (f: Fo
           <SelectContent><SelectItem value="user">{t('approvals.scope.user')}</SelectItem><SelectItem value="org">{t('approvals.scope.org')}</SelectItem></SelectContent></Select></div>
     </div>
     {form.transport === 'managed' ? <ManagedConnectionFields adapters={data.managed_adapters || []} adapter={form.adapter} settings={form.settings}
-      secrets={form.secrets} fixed={fixed} idp={idp} onChange={patch => set({ ...form, ...patch })} /> : form.transport === 'http'
+      secrets={form.secrets} fixed={fixed} idp={idp} scope={form.scope} errors={errors} onChange={patch => set({ ...form, ...patch })} /> : form.transport === 'http'
       ? <div className="space-y-1.5"><Label htmlFor={`${idp}-url`}>{t('mcp.url')}</Label><Input id={`${idp}-url`} className="font-mono text-xs" placeholder="https://mcp.example.com/mcp" value={form.url} onChange={e => set({ ...form, url: e.target.value })} /></div>
       : <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor={`${idp}-command`}>{t('mcp.command')}</Label><Input id={`${idp}-command`} className="font-mono text-xs" placeholder="npx" value={form.command} onChange={e => set({ ...form, command: e.target.value })} /></div>
@@ -68,17 +76,24 @@ function ServerFields({ form, set, idp, fixed, data }: { form: Form; set: (f: Fo
         <Input aria-label={t('mcp.secretName')} className="w-48 font-mono text-xs" value={s.name} disabled={s.stored} onChange={e => sec(i, { name: e.target.value })} placeholder={form.transport === 'http' ? 'Authorization' : 'API_TOKEN'} />
         <Input aria-label={t('mcp.secretValue')} type="password" autoComplete="new-password" className="font-mono text-xs" value={s.value} onChange={e => sec(i, { value: e.target.value })}
           placeholder={s.stored ? t('mcp.keepSecret') : t('mcp.secretValue')} />
-        <Button variant="ghost" size="icon" aria-label={t('mcp.removeSecret')} onClick={() => set({ ...form, secrets: form.secrets.filter((_, j) => j !== i) })}><X /></Button>
+        <Button variant="ghost" size="icon" aria-label={t('mcp.removeSecret')} onClick={() => {
+          const remove = () => set({ ...form, secrets: form.secrets.filter((_, j) => j !== i) })
+          if (!s.name) { remove(); return }
+          confirm.ask({ title: t('browserSettings.clearSecretTitle', { name: s.name }), name: s.name, description: t('browserSettings.clearSecretBody'), onConfirm: remove })
+        }}><X /></Button>
       </div>)}
       <Button variant="outline" size="sm" onClick={() => set({ ...form, secrets: [...form.secrets, { name: '', value: '', stored: false }] })} id={`${idp}-add-secret`}><KeyRound />{t('mcp.addSecret')}</Button>
       <p className="text-xs text-muted-foreground">{t('mcp.secretHelp')}</p>
     </div>}
+    {confirm.dialog}
   </div>
 }
 
 function ServerCard({ s, data, reload, defaultOpen }: { s: McpServer; data: McpList; reload: () => void; defaultOpen: boolean }) {
   const { t } = useTranslation(); const [open, setOpen] = useState(defaultOpen); const [edit, setEdit] = useState(false); const [form, setForm] = useState(toForm(s))
   const act = useAction(reload); const confirmDel = useConfirmDelete()
+  const [submitted, setSubmitted] = useState(false)
+  const errors = submitted ? connectionErrors(form.adapter, form.settings, form.secrets, form.scope) : {}
   useOnChange(s, v => setForm(toForm(v)))
   return <Collapsible open={open} onOpenChange={setOpen} asChild>
     <Card data-testid={`mcp-card-${s.id}`} className="gap-4">
@@ -106,9 +121,9 @@ function ServerCard({ s, data, reload, defaultOpen }: { s: McpServer; data: McpL
             {x.description && <span className="text-xs text-muted-foreground">{x.description}</span>}</li>)}</ul>}
           {s.transport === 'managed' && <ManagedOperations serverId={s.id} />}
           {edit && <><Separator /><div className="space-y-3" data-testid="mcp-edit">
-            <ServerFields form={form} set={setForm} idp={`mcp-${s.id}`} fixed data={data} />
+            <ServerFields form={form} set={setForm} idp={`mcp-${s.id}`} fixed data={data} errors={errors} />
             <div className="flex flex-wrap gap-2">
-              <Button size="sm" disabled={act.busy} onClick={() => act.run(() => api(`/api/mcp/servers/${s.id}`, { method: 'PUT', json: toBody(form) }), t('mcp.saved'))}>{t('common.save')}</Button>
+              <Button size="sm" disabled={act.busy} onClick={() => { setSubmitted(true); if (validConnection(form, `mcp-${s.id}`)) act.run(() => api(`/api/mcp/servers/${s.id}`, { method: 'PUT', json: toBody(form) }), t('mcp.saved')) }}>{t('common.save')}</Button>
               <Button size="sm" variant="destructive" className="ml-auto" disabled={act.busy} id={`mcp-${s.id}-delete`}
                 onClick={() => confirmDel.ask({ title: t('mcp.deleteTitle', { name: s.name }), name: s.name, description: t('mcp.deleteBody'), onConfirm: () => act.run(() => api(`/api/mcp/servers/${s.id}`, { method: 'DELETE' }), '') })}><Trash2 />{t('mcp.delete')}</Button>
             </div></div></>}
@@ -123,8 +138,10 @@ export function McpSection() {
   const { t } = useTranslation()
   const [data, setData] = useState<McpList | null>(null); const [err, setErr] = useState(''); const manages = can(useMe(), 'resources.manage')
   const [adding, setAdding] = useState(false); const [form, setForm] = useState(toForm())
+  const [submitted, setSubmitted] = useState(false)
+  const errors = submitted ? connectionErrors(form.adapter, form.settings, form.secrets, form.scope) : {}
   const load = () => api<McpList>('/api/mcp/servers').then(d => { setData(d); setErr('') }).catch(e => setErr(e.message))
-  const create = useAction(() => { setAdding(false); setForm(toForm()); load() })
+  const create = useAction(() => { setAdding(false); setForm(toForm()); setSubmitted(false); load() })
   useEffect(() => { load() }, [])
   return <div className="space-y-4">
     {err && <ErrorAlert>{err}</ErrorAlert>}
@@ -132,8 +149,8 @@ export function McpSection() {
     {data && <Alert variant="warning" id="mcp-sandbox-note"><ShieldAlert /><AlertDescription>{t(data.stdio_enabled ? 'mcp.stdioOn' : 'mcp.stdioOff')}</AlertDescription></Alert>}
     {data && manages && (adding ? <Card className="gap-4" id="mcp-new"><CardHeader><CardTitle>{t('mcp.new')}</CardTitle><CardDescription>{t('mcp.newHelp')}</CardDescription></CardHeader>
       <CardContent className="space-y-3">{create.alerts}
-        <ServerFields form={form} set={setForm} idp="mcp-new" fixed={false} data={data} />
-        <div className="flex gap-2"><Button size="sm" disabled={create.busy} id="mcp-create" onClick={() => create.run(() => api('/api/mcp/servers', { method: 'POST', json: toBody(form) }), '')}>{t('mcp.create')}</Button>
+        <ServerFields form={form} set={setForm} idp="mcp-new" fixed={false} data={data} errors={errors} />
+        <div className="flex gap-2"><Button size="sm" disabled={create.busy} id="mcp-create" onClick={() => { setSubmitted(true); if (validConnection(form, 'mcp-new')) create.run(() => api('/api/mcp/servers', { method: 'POST', json: toBody(form) }), '') }}>{t('mcp.create')}</Button>
           <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>{t('common.cancel')}</Button></div></CardContent></Card>
       : <Button size="sm" onClick={() => setAdding(true)} id="mcp-add"><Plus />{t('mcp.new')}</Button>)}
     {!data && !err && <div className="space-y-3" aria-busy="true"><span className="sr-only">{t('common.loading')}</span>{Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-24 w-full" />)}</div>}
