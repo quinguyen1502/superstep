@@ -55,6 +55,17 @@ class DestinationPolicy:
         except (ValueError, TypeError): raise EgressDenied() from None
         if require_whitelist and not self.allowed_origins: raise EgressDenied()
         self.resolver = resolver
+        self.public_web = False
+
+    @classmethod
+    def public_discovery(cls, allowed_origins=(), *, resolver=socket.getaddrinfo):
+        """Optional origin filter for separate web search/fetch (TASK-0247). Empty means any global public IP."""
+        policy = cls(allowed_origins, resolver=resolver, require_whitelist=False) if allowed_origins else object.__new__(cls)
+        if not allowed_origins:
+            policy.allowed_origins = frozenset()
+            policy.resolver = resolver
+        policy.public_web = True
+        return policy
 
     @staticmethod
     def _origin(value):
@@ -76,9 +87,15 @@ class DestinationPolicy:
             if not host or any(ord(c) <= 32 or c in "\\/%@?#" or ord(c) == 127 for c in host): raise ValueError()
             host = host.lower().rstrip(".").encode("idna").decode("ascii")
             target_origin = origin(scheme, host, port)
-            if not infrastructure and target_origin not in self.allowed_origins: raise ValueError()
-            # Nonstandard ports must be explicitly named in the destination allowlist.
-            if not infrastructure and port not in {80, 443} and target_origin not in self.allowed_origins: raise ValueError()
+            # Browser (default): membership always required. public_web: empty allowlist means any global IP.
+            if not infrastructure:
+                if self.public_web:
+                    if self.allowed_origins and target_origin not in self.allowed_origins: raise ValueError()
+                    if port not in {80, 443} and (not self.allowed_origins or target_origin not in self.allowed_origins): raise ValueError()
+                else:
+                    if target_origin not in self.allowed_origins: raise ValueError()
+                    # Nonstandard ports must be explicitly named in the destination allowlist.
+                    if port not in {80, 443} and target_origin not in self.allowed_origins: raise ValueError()
             answers = self.resolver(host, port, type=socket.SOCK_STREAM, proto=socket.IPPROTO_TCP)
             addresses = tuple(dict.fromkeys(item[4][0] for item in answers))
             if not addresses or any(not self.address_allowed(value) for value in addresses): raise ValueError()
