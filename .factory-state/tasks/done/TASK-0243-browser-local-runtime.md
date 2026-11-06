@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0243
 - Title: Isolated local Playwright runtime and nine bounded browser tools
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -109,3 +109,7 @@ required whitelist + Browserless provider naming from upstream, mutating-approva
 default OFF (navigate/snapshot/extract/screenshot never wait; click/fill/upload/
 download/evaluate may wait when require_mutating_approval is on). Local Playwright
 runtime remains this task; Browserless proof stays TASK-0244.
+
+## Delivery (2026-11-06)
+
+Owner authorised browser implementation. Reconciled with Accepted DEC-0085; browser tests 100 passed / 1 skipped; required GitHub checks green on final head before merge.
