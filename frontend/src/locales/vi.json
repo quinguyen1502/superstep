@@ -2696,7 +2696,7 @@
       "basic": "Xác thực HTTP Basic"
     },
     "proxyHelp": "Áp dụng cho toàn bộ lưu lượng trình duyệt trong phiên. Quản trị phải cho phép tuyến tuỳ chỉnh/mặc định. Lỗi proxy không chuyển sang kết nối trực tiếp. Tìm kiếm/đọc web dùng kết nối riêng.",
-    "originHelp": "Mỗi dòng một địa chỉ gốc http(s) chính xác, không có đường dẫn hay ký tự đại diện. Để trống cho phép đích công khai theo chính sách mạng, không cho phép địa chỉ nội bộ.",
+    "originHelp": "Ít nhất một địa chỉ gốc http(s) chính xác mỗi dòng, không có đường dẫn hay ký tự đại diện. Kết nối trình duyệt bắt buộc whitelist không rỗng; địa chỉ nội bộ vẫn bị chặn theo chính sách mạng.",
     "profile": "Hồ sơ đăng nhập cá nhân",
     "profileHelp": "Trạng thái đăng nhập là riêng tư và chỉ dùng cho các địa chỉ HTTPS đã khai báo. Mỗi run có ngữ cảnh mới; trang web không thể đổi hồ sơ đã chọn.",
     "orgProfileHelp": "Hồ sơ đăng nhập chỉ dùng với kết nối cá nhân, không dùng với kết nối tổ chức.",

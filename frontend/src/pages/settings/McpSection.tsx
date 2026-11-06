@@ -21,7 +21,7 @@ import { api } from '@/lib/api'
 import { can, useMe } from '@/lib/rbac'
 import i18n from '@/lib/i18n'
 import type { McpList, McpServer, ManagedSettings, McpSecretInput } from '@/lib/mcp'
-import { connectionFieldId, normalizeConnection, activeConnectionSecrets, connectionErrors, type ConnectionErrors } from '@/lib/browser-settings'
+import { connectionFieldId, normalizeConnection, activeConnectionSecrets, connectionErrors, firstConnectionError, type ConnectionErrors } from '@/lib/browser-settings'
 import { cn } from '@/lib/utils'
 import { useOnChange } from '@/lib/use-when'
 import { ManagedConnectionFields } from '@/components/managed-connection-fields'
@@ -39,7 +39,7 @@ const toBody = (f: Form) => ({ name: f.name, transport: f.transport, scope: f.sc
 
 function validConnection(form: Form, idp: string) {
   const errors = form.transport === 'managed' ? connectionErrors(form.adapter, form.settings, form.secrets, form.scope) : {}
-  const first = Object.keys(errors)[0]
+  const first = firstConnectionError(errors)
   if (first) requestAnimationFrame(() => document.getElementById(connectionFieldId(idp, first))?.focus())
   return !first
 }

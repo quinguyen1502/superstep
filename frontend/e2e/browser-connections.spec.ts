@@ -68,6 +68,8 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await choose(page, 'mcp-new-transport', t.managedTools.transport)
     await choose(page, 'mcp-new-adapter', t.managedTools.adapters.browser)
     await expect(page.locator('#mcp-new-browser-settings')).toContainText(t.browserSettings.connectionHelp)
+    // Required whitelist (DEC-0085) must be valid so proxy is the focused first error.
+    await page.locator('#mcp-new-allowed_origins').fill('https://example.org')
     await choose(page, 'mcp-new-proxy_mode', t.browserSettings.proxyModes.custom)
     await page.locator('#mcp-new-proxy_server').fill('socks5://proxy.example.org:1080')
     await page.locator('#mcp-create').click()
@@ -77,7 +79,6 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await choose(page, 'mcp-new-proxy_auth', t.browserSettings.auth.basic)
     await page.locator('#mcp-new-proxy_username').fill('synthetic-proxy-user')
     await page.locator('#mcp-new-proxy_password').fill('synthetic-proxy-password')
-    await page.locator('#mcp-new-allowed_origins').fill('https://example.org')
     await page.locator('#mcp-new-profile-enabled').click()
     await page.locator('#mcp-new-profile_name').fill('personal-fixture')
     await page.locator('#mcp-new-profile_origins').fill('https://example.org')

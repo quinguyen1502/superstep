@@ -2696,7 +2696,7 @@
       "basic": "HTTP Basic authentication"
     },
     "proxyHelp": "Applies to all browser traffic for this session. The operator must approve custom/default routes. A proxy failure never falls back to direct. Search/fetch uses its separate connection.",
-    "originHelp": "One exact http(s) origin per line, without paths or wildcards. Empty allows public destinations under the enforced network policy; it does not allow internal addresses.",
+    "originHelp": "At least one exact http(s) origin per line, without paths or wildcards. Browser connections require a non-empty whitelist; internal addresses stay blocked by network policy.",
     "profile": "Personal login profile",
     "profileHelp": "Login state is personal and restricted to declared HTTPS origins. Each run gets a fresh context; pages cannot change the selected profile.",
     "orgProfileHelp": "Login profiles are available only on personal connections, not organisation connections.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { activeConnectionSecrets, browserDefaults, connectionErrors, normalizeConnection, webDefaults } from '../browser-settings'
+import { activeConnectionSecrets, browserDefaults, connectionErrors, firstConnectionError, normalizeConnection, webDefaults } from '../browser-settings'
 
 const stored = (name: string) => ({ name, value: '', stored: true })
 const withOrigins = (patch: Record<string, unknown> = {}) => ({ ...browserDefaults(), allowed_origins: ['https://example.org'], ...patch })
@@ -13,6 +13,17 @@ describe('browser connection drafts', () => {
     expect(connectionErrors('browser', withOrigins({ allowed_origins: ['https://example.org', 'https://EXAMPLE.org/'] }), [], 'user')).toHaveProperty('allowed_origins')
     expect(connectionErrors('browser', withOrigins(), [], 'user')).toEqual({})
   })
+  it('focuses proxy before allowed_origins when both are invalid', () => {
+    const errors = connectionErrors('browser', {
+      ...browserDefaults(),
+      allowed_origins: [],
+      proxy: { mode: 'custom', server: 'socks5://proxy.example.org:1080' },
+    }, [], 'user')
+    expect(errors).toHaveProperty('proxy_server')
+    expect(errors).toHaveProperty('allowed_origins')
+    expect(firstConnectionError(errors)).toBe('proxy_server')
+  })
+
   it('keeps stored browserless/basic/profile secrets without re-entry', () => {
     const settings = withOrigins({ provider: 'browserless', proxy: { mode: 'custom', auth: 'basic', server: 'http://proxy.example.org:3128' }, profile: { name: 'personal', origins: ['https://example.org'] } })
     const secrets = ['browserless_token', 'proxy_username', 'proxy_password', 'profile_state'].map(stored)

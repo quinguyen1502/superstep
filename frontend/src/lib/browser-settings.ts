@@ -3,6 +3,16 @@ import type { ManagedSettings, McpSecretInput } from './mcp'
 
 export type ConnectionErrors = Record<string, string>
 export const connectionFieldId = (idp: string, name: string) => `${idp}-${name}`
+/** Visual/DOM order so invalid-submit focus matches the form, not Object.keys insertion. */
+const CONNECTION_FOCUS_ORDER = [
+  'provider', 'browserless_token', 'proxy_mode', 'proxy_server', 'proxy_auth', 'proxy_username', 'proxy_password',
+  'allowed_origins', 'profile_name', 'profile_origins', 'profile_state',
+  'require_mutating_approval', 'allow_evaluate_js', 'allow_upload', 'allow_download',
+  'action_timeout_ms', 'idle_timeout_s', 'lifetime_s', 'max_actions', 'max_pages',
+  'enabled_tools', 'search_endpoint', 'search_headers',
+] as const
+export const firstConnectionError = (errors: ConnectionErrors) =>
+  CONNECTION_FOCUS_ORDER.find(name => name in errors) || Object.keys(errors)[0]
 export const object = (value: unknown): ManagedSettings => value && typeof value === 'object' && !Array.isArray(value) ? value as ManagedSettings : {}
 export const text = (value: unknown, fallback = '') => typeof value === 'string' ? value : fallback
 export const lines = (value: unknown): string[] => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
