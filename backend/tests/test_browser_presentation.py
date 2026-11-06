@@ -89,3 +89,9 @@ def test_browser_wait_does_not_persist_private_prompt_into_chat_turns():
         {'type': 'run_waiting', 'node': 'fill', 'browser_intent': 'private-intent', 'prompt': 'private target from page'}]))
     chat.answer(message, run, {'waiting': {'node': 'fill'}})
     assert saved[0].text == '' and saved[0].answered_by == 'reviewer'
+
+def test_visitor_event_preserves_transport_errors():
+    frame = {'type': 'error', 'error': {'code': 'RATE_LIMITED', 'message': 'slow down'}, 'ts': 1,
+             'browser_private': True, 'delta': {'command_id': 'x', 'generation': 1, 'status': 'unknown'}}
+    assert visitor_event(frame) == {'type': 'error', 'error': {'code': 'RATE_LIMITED', 'message': 'slow down'}, 'ts': 1}
+

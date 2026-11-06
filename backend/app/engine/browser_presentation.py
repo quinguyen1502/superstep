@@ -55,6 +55,9 @@ def private_workflow(workflow, ports, depth=0):
 def visitor_event(event):
     """Strip every intermediate payload on a browser run, including unrelated state echoes."""
     if not private_event(event): return event
+    # Transport/protocol errors (rate limits, auth) must keep their envelope for clients.
+    if event.get('type') == 'error' and isinstance(event.get('error'), dict):
+        return {key: event[key] for key in ('type', 'error', 'ts') if key in event}
     out = {key: event[key] for key in ('type', 'node', 'node_type', 'label', 'iteration', 'ts', 'duration_ms', 'status') if key in event}
     safe = facts(event.get('browser') or (event.get('agent') if isinstance(event.get('agent'), dict) else {}).get('browser'))
     if event.get('browser_intent'): safe = facts({'operation': event.get('tool'), 'status': 'approval_required'})
