@@ -148,3 +148,23 @@ class BrowserSessionRepository:
         with self.db.session() as s:
             n=s.execute(update(BrowserCommand).where(BrowserCommand.id==cid,BrowserCommand.status=='approval_required').values(status='pending')).rowcount
             s.commit();return n==1
+
+
+    def claim_for_run(self, sid, *, run_id, lease, principal_id, conversation_id, configuration):
+        """Move a live conversation-scoped session onto a later chat-turn run/lease."""
+        with self.db.session() as s:
+            n = s.execute(update(BrowserSession).where(
+                BrowserSession.id == sid,
+                BrowserSession.status.in_(['new', 'starting', 'ready', 'renewing']),
+                BrowserSession.principal_id == principal_id,
+                BrowserSession.conversation_id == conversation_id,
+                BrowserSession.configuration == configuration,
+            ).values(run_id=run_id, lease_generation=lease, touched=time.time())).rowcount
+            s.commit()
+            return n == 1
+
+    def for_conversation(self, conversation_id):
+        with self.db.session() as s:
+            return list(s.scalars(select(BrowserSession).where(
+                BrowserSession.conversation_id == conversation_id,
+                (BrowserSession.status.in_(['new', 'starting', 'ready', 'renewing'])) | BrowserSession.cleanup_pending.is_(True))))

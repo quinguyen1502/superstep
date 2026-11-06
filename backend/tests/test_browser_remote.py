@@ -49,7 +49,7 @@ def test_remote_contract_identity_approval_and_no_replay():
     service = BrowserControllerService(FakeWorker, max_sessions=1)
     with TestClient(create_app(service, TOKEN)) as client:
         transport = ApiTransport(client)
-        worker = RemoteBrowserWorker(context(), BrowserSettings(provider='controlled_remote'), transport)
+        worker = RemoteBrowserWorker(context(), BrowserSettings(provider='browserless', allowed_origins=['https://example.com']), transport)
         worker.start(secrets={'unrelated':'never-pass'})
         entry = service.entries[worker.session_id]
         command = worker.command('snapshot', {}, 0)
@@ -75,7 +75,7 @@ def test_control_api_auth_bounds_and_safe_errors():
         assert client.get('/v1/info').status_code == 401
         headers={'Authorization':'Bearer '+TOKEN}
         assert client.get('/v1/info', headers=headers).json()['data'] == CAPABILITIES
-        invalid = client.post('/v1/open', headers=headers, json={'remote_token':'must-not-echo'})
+        invalid = client.post('/v1/open', headers=headers, json={'browserless_token':'must-not-echo'})
         assert invalid.status_code == 422 and 'must-not-echo' not in invalid.text
         assert client.post('/v1/open', headers=headers, content=b'x'*(256*1024+1)).status_code == 413
         assert client.get('/docs',headers=headers).status_code == 404
@@ -91,7 +91,7 @@ def test_capability_refusal_before_open_and_lost_effect_is_unknown():
             if method=='open': return {'status':'ready','session_id':body['request_id'],'generation':1}
             if method=='close': return {'status':'closed'}
             raise BrowserWorkerError()
-    transport=Transport(); worker=RemoteBrowserWorker(context(),BrowserSettings(provider='controlled_remote'),transport)
+    transport=Transport(); worker=RemoteBrowserWorker(context(),BrowserSettings(provider='browserless', allowed_origins=['https://example.com']),transport)
     with pytest.raises(BrowserWorkerError) as caught: worker.start()
     assert caught.value.status=='unsupported' and transport.calls==['info']
     transport.bad=False; worker.start()
@@ -121,7 +121,7 @@ def test_tls_pinning_redirect_refusal_and_no_environment_proxy(monkeypatch):
 def test_endpoint_requires_independent_operator_approval_and_cleanup_filter(monkeypatch):
     from app.engine.browser_remote import approved_transport
     from app.engine.browser_cleanup import reap_controller
-    secrets={'remote_endpoint':'https://controller.example','remote_token':TOKEN}
+    secrets={'browserless_token':TOKEN}
     with pytest.raises(BrowserWorkerError): approved_transport(secrets, [])
     assert approved_transport(secrets,[ApprovedController('https://controller.example','10.0.0.4')]).controller.address=='10.0.0.4'
     calls=[]
@@ -142,7 +142,7 @@ def test_controller_capacity_counts_pending_cleanup_and_sweeps_tombstones():
     import time
     service=BrowserControllerService(FakeWorker,max_sessions=1)
     try:
-        def request(): return RemoteOpen(context=context(),settings=BrowserSettings(provider='controlled_remote'),request_id=uuid.uuid4().hex)
+        def request(): return RemoteOpen(context=context(),settings=BrowserSettings(provider='browserless', allowed_origins=['https://example.com']),request_id=uuid.uuid4().hex)
         first=request();service.open(first);entry=service.entries[first.request_id]
         entry.worker.closed=True;entry.worker.cleanup_pending=True
         with pytest.raises(AppError): service.open(request())
