@@ -2442,6 +2442,7 @@
     "noToolCalling": "{{provider}} cannot call tools. Choose a credential with tool calling for this Agent node."
   },
   "validation": {
+    "BROWSER_RECIPE_INVALID": "Browser recipe must be a version 1 linear browser workflow with valid typed inputs, outputs and targets",
     "NODE_ID_MISSING": "Every node needs an id",
     "EDGE_ENDS_MISSING": "Every edge needs a source and a target",
     "DUPLICATE_NODE_ID": "Duplicate node id: {{ids}}",

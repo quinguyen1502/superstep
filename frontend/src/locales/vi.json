@@ -2442,6 +2442,7 @@
     "noToolCalling": "{{provider}} không gọi được công cụ. Hãy chọn credential hỗ trợ gọi công cụ cho node Agent."
   },
   "validation": {
+    "BROWSER_RECIPE_INVALID": "Recipe trình duyệt phải là workflow tuyến tính phiên bản 1, có input, output và mục tiêu đúng kiểu",
     "NODE_ID_MISSING": "Node nào cũng cần có id",
     "EDGE_ENDS_MISSING": "Edge nào cũng cần có điểm đầu và điểm cuối",
     "DUPLICATE_NODE_ID": "Trùng id node: {{ids}}",
