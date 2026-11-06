@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0247
-- Title: Dynamic URL bindings, search/fetch and missing-context flows
-- Status: backlog
+- Title: Dynamic URL bindings, whitelist checks, search/fetch and missing-context flows
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,20 @@
 
 ## Objective
 
-Dynamic URL bindings, search/fetch and missing-context flows, satisfying the assigned acceptance criteria of REQ-0086.
+Dynamic URL bindings with connection whitelist enforcement, search/fetch and missing-context flows, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
 - Add or reuse bounded fixed/workflow/model-filled argument bindings with authoritative validation and normal tool schemas; no mandatory start URL.
-- Normalise one configured search adapter through existing MCP/HTTP where possible; implement guarded bounded fetch/extract that does not inherit browser cookies/proxy.
-- Wire no-URL/missing-context behavior to existing chat/Human responses and declare unsupported/empty search/parameter states.
+- Enforce the connection **origin/domain whitelist** on any URL that would open the browser (chat, state, model-filled or search-selected). Off-whitelist destinations are denied before browser use.
+- Normalise one configured search adapter through existing MCP/HTTP where possible; implement guarded bounded fetch/extract that does not inherit browser cookies/proxy. Search/fetch destinations used only for reading may follow their own transport policy; destinations used to open the browser must still pass the browser whitelist.
+- Wire no-URL/missing-context behavior to existing chat/Human responses and declare unsupported/empty search/parameter/whitelist-denial states.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -41,7 +42,7 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0245-browser-run-sessions.md`.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
 
@@ -67,10 +68,10 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 
 ## Acceptance Criteria
 
-- Chat URL, workflow URL and model-filled URL are validated runtime arguments; missing data never produces an invented destination.
-- Configured search yields candidate URLs before browser use; insufficient task identity asks the user or returns the declared missing-input state.
+- Chat URL, workflow URL and model-filled URL are validated runtime arguments; missing data never produces an invented destination; off-whitelist URLs are denied with a specific error.
+- Configured search yields candidate URLs before browser use; candidates outside the whitelist cannot be opened; insufficient task identity asks the user or returns the declared missing-input state.
 - Fetch-only tasks use no browser and do not inherit its proxy/profile; separate web transport secrets and destination policies remain enforced.
-- Prompt/tool/search outputs cannot change connection/profile/proxy/allowlist, and disabled tools cannot be called by forged model arguments.
+- Prompt/tool/search outputs cannot change connection/profile/proxy/whitelist, and disabled/ungranted tools cannot be called by forged model arguments.
 
 ## Validation Plan
 
@@ -94,6 +95,8 @@ Dynamic URL bindings, search/fetch and missing-context flows, satisfying the ass
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0244 → TASK-0247 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

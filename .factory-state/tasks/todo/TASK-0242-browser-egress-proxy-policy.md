@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0242
-- Title: Enforce browser egress and connection-level proxy policy
-- Status: backlog
+- Title: Enforce browser egress, whitelist and connection-level proxy policy
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,20 @@
 
 ## Objective
 
-Enforce browser egress and connection-level proxy policy, satisfying the assigned acceptance criteria of REQ-0086.
+Enforce browser egress, mandatory origin whitelist and connection-level proxy policy, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Implement the effective local browser egress boundary, not only URL-input checks: validated resolution/connection for navigations, redirects and page-generated requests.
-- Apply explicit direct/default/custom proxy policy with encrypted auth; keep one route for a live session, validate endpoint and destination resolution, and refuse unsupported protocol/auth or remote-DNS enforcement.
-- Document/prove how browser networking, WebSocket/service-worker paths and a selected upstream proxy cannot escape the policy; no broad private-network flag derived from runtime arguments.
+- Implement the effective local browser egress boundary, not only URL-input checks: validated resolution/connection for navigations, redirects and page-generated requests, including **mandatory origin/domain whitelist** denial.
+- Apply the same whitelist to Browserless/remote paths in the policy contract (enforcement proof completed with TASK-0244). Empty whitelist is invalid at the connection layer.
+- Apply explicit direct/default/custom proxy policy with encrypted auth; keep one route for a live session, validate endpoint and destination resolution, and refuse unsupported protocol/auth or remote-DNS enforcement. No silent fallback to direct.
+- Document/prove how browser networking, WebSocket/service-worker paths and a selected upstream proxy cannot escape the policy; always block private/link-local/metadata IPs; no broad private-network flag derived from runtime arguments.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -41,7 +42,7 @@ Enforce browser egress and connection-level proxy policy, satisfying the assigne
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
 
 ## Expected Outputs
 
@@ -63,10 +64,10 @@ Enforce browser egress and connection-level proxy policy, satisfying the assigne
 
 ## Acceptance Criteria
 
-- Controlled browser fixtures demonstrate denial of private/loopback/link-local/metadata destinations through navigation, redirects, subresources and proxy-resolved hosts, including DNS changes.
+- Controlled browser fixtures demonstrate denial of private/loopback/link-local/metadata destinations and **off-whitelist origins** through navigation, redirects, subresources and proxy-resolved hosts, including DNS changes.
 - All allowed browser traffic follows the selected route; proxy failure cannot fall back to direct and credentials are not logged.
 - Policy checks cover actual connection/resolution at the egress boundary. Unsupported routes fail before browser use; checking only the MCP endpoint or page.goto is insufficient.
-- Production and narrow fixture-only network policies are separate; a chat URL cannot activate the fixture exception.
+- Production and narrow fixture-only network policies are separate; a chat URL cannot activate the fixture exception or bypass the whitelist.
 
 ## Validation Plan
 
@@ -89,6 +90,8 @@ Enforce browser egress and connection-level proxy policy, satisfying the assigne
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0239 → TASK-0242 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 

@@ -19,6 +19,7 @@ import { TextLink } from '@/components/text-link'
 import { TemplateEditor, type TemplateField } from '@/components/template-editor'
 import { ModelPicker } from '@/components/model-picker'
 import { IncludeAttachments } from '@/components/include-attachments'
+import { StateFieldPicker } from '@/components/state-field-action'
 import { AutoApprovalSettings } from '@/components/auto-approval-settings'
 import { HumanApprovalSettings } from '@/components/human-approval-settings'
 import { HumanDeadlineSettings } from '@/components/human-deadline-settings'
@@ -191,13 +192,10 @@ type Props = { data: Record<string, any>; fields: TemplateField[]; creds: Creden
 /** Data tab (TASK-0121): the fields the agent writes its answer and steps to, and the history it reads. */
 export function AgentData({ data: d, fieldNames, listFields, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; onChange: Patch }) {
   const { t } = useTranslation()
-  const optional = (key: string, id: string) => <Select value={d[key] || 'none'} onValueChange={v => onChange({ [key]: v === 'none' ? '' : v })}>
-    <SelectTrigger className="w-full" id={id}><SelectValue /></SelectTrigger>
-    <SelectContent><SelectItem value="none">{t('agent.none')}</SelectItem>{listFields.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>
+  const optional = (key: string, id: string) => <StateFieldPicker id={id} value={d[key]} onChange={v => onChange({ [key]: v })}
+    types={['list']} options={listFields} noneLabel={t('agent.none')} />
   return <div className="space-y-3" id="agent-data">
-    <F label={t('field.outputField')}><Select value={d.output_field || undefined} onValueChange={v => onChange({ output_field: v })}>
-      <SelectTrigger className="w-full" id="agent-output"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
-      <SelectContent>{fieldNames.filter(Boolean).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select></F>
+    <F label={t('field.outputField')}><StateFieldPicker id="agent-output" value={d.output_field} onChange={v => onChange({ output_field: v })} options={fieldNames} /></F>
     <F label={t('agent.stepsField')} htmlFor="agent-steps-field">{optional('steps_field', 'agent-steps-field')}<p className="text-[11px] text-muted-foreground">{t('agent.stepsHint')}</p></F>
     <F label={t('agent.historyField')} htmlFor="agent-history-field">{optional('history_field', 'agent-history-field')}<p className="text-[11px] text-muted-foreground">{t('agent.historyHint')}</p></F>
   </div>

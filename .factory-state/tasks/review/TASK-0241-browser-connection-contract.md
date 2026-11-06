@@ -104,3 +104,14 @@ Browser contracts and scoped connection metadata, satisfying the assigned accept
 - 2026-11-05: Self-review REV-0229 and QA-0229 passed scoped contract/metadata acceptance; owner review and full backend regression still pending. Root npm test (280), build and lint passed. Task remains review, not done.
 
 - 2026-11-05: Draft PR #303 opened. Full declared backend suite passed: 1,234 passed / 65 skipped in 513.35 seconds. REV-0229 and QA-0229 updated with exact evidence. No owner approval/done/merge inferred. TASK-0242 proceeds on an explicitly documented stack as part of the authorised chain.
+
+## Reconciliation (2026-11-06)
+
+Reconciled with Accepted REQ-0086 / DEC-0085 after plan PR #299 merged into develop:
+
+- Provider rename: `controlled_cdp` → `browserless`; secret `browserless_token`.
+- Mandatory non-empty `allowed_origins`.
+- Nine tools: upload, download, evaluate (gated by connection allow_*).
+- Defaults: `require_mutating_approval=false`, idle 1800s, lifetime 3600s.
+- Optional `conversation_id` on ExecutionContext for cross-turn sessions.
+- Stealth only for browserless, default off.

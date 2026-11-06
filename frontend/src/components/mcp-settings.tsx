@@ -15,7 +15,7 @@ type Props = { server?: string; tool?: string; args?: Record<string, any>; field
 
 export function McpSettings({ server, tool, args = {}, fields, readOnly, onChange }: Props) {
   const { t } = useTranslation(); const [items, setItems] = useState<McpServer[] | null>(null); const [err, setErr] = useState('')
-  useEffect(() => { api<McpList>('/api/mcp/servers').then(d => setItems(d.servers)).catch(() => setItems([])) }, [])
+  useEffect(() => { api<McpList>('/api/mcp/servers').then(d => setItems(d.servers)).catch(e => { setItems([]); setErr(e.message) }) }, [])
   const s = items?.find(x => x.id === server)
   const def = s?.tools.find(x => x.name === tool)
   const props = Object.entries(def?.input_schema?.properties || {}); const req = def?.input_schema?.required || []
@@ -26,7 +26,7 @@ export function McpSettings({ server, tool, args = {}, fields, readOnly, onChang
     <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor="mcp-server">{t('editor.mcpServer')}</Label>
       <Select value={server || ''} onValueChange={v => onChange({ server_id: v, tool: '', arguments: {} })}>
         <SelectTrigger className="w-full" id="mcp-server"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
-        <SelectContent>{(items || []).map(x => <SelectItem key={x.id} value={x.id}>{x.name} · {x.transport}</SelectItem>)}</SelectContent>
+        <SelectContent emptyMessage={err || (items === null ? t('common.loading') : undefined)}>{(items || []).map(x => <SelectItem key={x.id} value={x.id}>{x.name} · {x.transport}</SelectItem>)}</SelectContent>
       </Select></div>
     {server && items && !s && <p className="text-[11px] text-destructive">{t('editor.mcpMissing')}</p>}
     {items && !items.length && <p className="text-[11px] text-muted-foreground" id="mcp-none">{t('editor.mcpNone')} <TextLink to="/settings/mcp" id="mcp-create">{t('editor.mcpCreate')}</TextLink></p>}

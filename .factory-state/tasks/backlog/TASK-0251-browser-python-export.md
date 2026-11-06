@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0251
 - Title: Executable Python and project export for browser tools/recipes
-- Status: backlog
+- Status: backlog (deferred — after studio browser tools are accepted and integrated)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,23 @@
 
 ## Objective
 
-Executable Python and project export for browser tools/recipes, satisfying the assigned acceptance criteria of REQ-0086.
+Executable Python and project export for browser tools/recipes (AC8), deferred until after studio delivery per owner amendment 2026-11-06.
 
 ## Scope
 
+### Deferred trigger
+
+- Start only after studio tasks TASK-0241–0250 and studio-scoped TASK-0253 are accepted and integrated. Not on the first-delivery critical path.
+
 ### In Scope
 
-- Generate self-contained browser/runtime helpers for Python and LangGraph projects, including the existing Agent loop, dynamic arguments, recipes, provider/proxy configuration and externally supplied secrets.
-- Carry effective network/session ordering, scoped profiles, bounds and approval/outcome semantics into the export; package dependencies and browser/container setup.
+- Generate self-contained browser/runtime helpers for Python and LangGraph projects, including the existing Agent loop, dynamic arguments, recipes, provider/proxy/whitelist/toggle configuration and externally supplied secrets.
+- Carry effective network/whitelist/session ordering (including cross-turn semantics where exportable), scoped profiles, bounds and approval/outcome semantics into the export; package dependencies and browser/container setup for local and Browserless.
 - Replace managed export refusal only for the supported browser adapter; preserve refusals for unrelated managed integrations and unsupported browser capabilities.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
 - Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
@@ -95,6 +99,8 @@ Executable Python and project export for browser tools/recipes, satisfying the a
 - 2026-11-03: Created by plan-tasks after successful fetch and a fresh `factory ids next TASK --all-refs` allocation. No source changes, branch, dependency installation, execution evidence or PR created.
 
 - 2026-11-04: Renumbered: TASK-0248 → TASK-0251 before publication after a fresh all-ref allocation; owner authorised commit/push only.
+
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
 
 ## Handoff Notes
 
