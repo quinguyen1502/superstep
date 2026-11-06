@@ -12,6 +12,11 @@ import pytest
 from app.api.deps import browser_artifact_service, get_db
 from app.core.errors import AppError
 from app.engine.browser_contract import BrowserSettings, ExecutionContext, WorkerCommand, WorkerOpen, WorkerResult
+
+
+def settings(**extra):
+    return BrowserSettings.model_validate({"allowed_origins": ["https://example.com"], **extra})
+
 from app.engine.browser_worker import BrowserWorkerError, LocalBrowserWorker
 from app.repositories.browser_artifacts import BrowserArtifactRepository
 from app.repositories.user_data import UserDataRepository
@@ -34,12 +39,12 @@ def test_generated_schemas_match_python_authority_contract():
     spec = importlib.util.spec_from_file_location("browser_contracts", ROOT / "scripts/browser-contracts.py")
     module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
     assert json.loads((ROOT / "docker/browser-worker/contracts.json").read_text()) == module.schemas()
-    assert WorkerOpen(context=context(), settings=BrowserSettings(), session_id="session-one").context == context()
+    assert WorkerOpen(context=context(), settings=settings(), session_id="session-one").context == context()
 
 
 def test_container_flags_and_credentials_never_in_argv(monkeypatch):
     calls = []
-    worker = LocalBrowserWorker(context(), BrowserSettings(), docker="synthetic-docker")
+    worker = LocalBrowserWorker(context(), settings(), docker="synthetic-docker")
     def docker(*argv, data=None, timeout=30):
         calls.append((argv, data))
         if argv[:3] == ("exec", worker.gateway, "python"): return "True"
@@ -61,7 +66,7 @@ def test_container_flags_and_credentials_never_in_argv(monkeypatch):
 
 
 def test_transport_loss_never_retries_effects_and_principal_override_denied(monkeypatch):
-    worker = LocalBrowserWorker(context(), BrowserSettings())
+    worker = LocalBrowserWorker(context(), settings())
     calls = []
     def fail(*args, **kwargs): calls.append(args); raise BrowserWorkerError()
     monkeypatch.setattr(worker, "_rpc", fail)
@@ -75,19 +80,19 @@ def test_transport_loss_never_retries_effects_and_principal_override_denied(monk
 
 
 def test_start_failure_cleans_resources_and_no_profile_downgrade(monkeypatch):
-    worker = LocalBrowserWorker(context(), BrowserSettings()); cleanup = []
+    worker = LocalBrowserWorker(context(), settings()); cleanup = []
     monkeypatch.setattr(worker, "_docker", lambda *args, **kwargs: (_ for _ in ()).throw(BrowserWorkerError()))
     monkeypatch.setattr(worker, "close", lambda: cleanup.append(True))
     with pytest.raises(BrowserWorkerError): worker.start()
     assert cleanup == [True]
-    worker = LocalBrowserWorker(context(), BrowserSettings(profile={"name": "profile", "origins": ["https://example.com"]}))
+    worker = LocalBrowserWorker(context(), settings(profile={"name": "profile", "origins": ["https://example.com"]}))
     monkeypatch.setattr(worker, "_docker", lambda *args, **kwargs: pytest.fail("unsupported profile launched a container"))
     with pytest.raises(BrowserWorkerError) as caught: worker.start()
     assert caught.value.status == "unsupported"
 
 
 def test_cleanup_failure_is_visible_and_can_be_retried(monkeypatch):
-    worker = LocalBrowserWorker(context(), BrowserSettings())
+    worker = LocalBrowserWorker(context(), settings())
     monkeypatch.setattr(worker, "_docker", lambda *a, **k: (_ for _ in ()).throw(BrowserWorkerError()))
     assert worker.close() is False and worker.closed and worker.cleanup_pending
     monkeypatch.setattr(worker, "_docker", lambda *a, **k: "")
@@ -143,7 +148,7 @@ def test_workflow_run_delete_purges_screenshot_bytes(c):
 
 def test_runtime_returns_persisted_capture_reference_and_refuses_missing_bytes(c):
     owner = user(c)
-    worker = LocalBrowserWorker(context(owner["id"]), BrowserSettings())
+    worker = LocalBrowserWorker(context(owner["id"]), settings())
     command = worker.command("screenshot", {}, 0)
     class Capture:
         def call(self, _): return WorkerResult(command_id=command.command_id, generation=1, sequence=0,

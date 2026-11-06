@@ -2710,9 +2710,9 @@
     "disabled": "Browser and web connections are disabled by the operator. Stored secrets remain hidden; enable the server feature before editing or discovery.",
     "providers": {
       "local": "Local isolated browser (Docker)",
-      "controlled_remote": "Operator-controlled remote browser"
+      "browserless": "Browserless (self-hosted Superstep controller)"
     },
-    "remoteHelp": "Use an independently approved HTTPS controller compatible with this runtime. Arbitrary CDP/WSS endpoints are unsupported. Leave stored secret fields empty to keep them.",
+    "remoteHelp": "Self-hosted Superstep browser controller labeled Browserless. Live Browserless.io is not configured here.",
     "network": "Network / Proxy",
     "proxyModes": {
       "direct": "Direct connection",
@@ -2724,7 +2724,7 @@
       "basic": "HTTP Basic authentication"
     },
     "proxyHelp": "Applies to all browser traffic for this session. The operator must approve custom/default routes. A proxy failure never falls back to direct. Search/fetch uses its separate connection.",
-    "originHelp": "One exact http(s) origin per line, without paths or wildcards. Empty allows public destinations under the enforced network policy; it does not allow internal addresses.",
+    "originHelp": "At least one exact http(s) origin per line, without paths or wildcards. Browser connections require a non-empty whitelist; internal addresses stay blocked by network policy.",
     "profile": "Personal login profile",
     "profileHelp": "Login state is personal and restricted to declared HTTPS origins. Each run gets a fresh context; pages cannot change the selected profile.",
     "orgProfileHelp": "Login profiles are available only on personal connections, not organisation connections.",
@@ -2754,8 +2754,6 @@
     "searchPlaceholder": "https://search.example.org/search",
     "fields": {
       "provider": "Browser provider",
-      "remote_endpoint": "Controller HTTPS origin (encrypted)",
-      "remote_token": "Controller token (encrypted)",
       "proxy_mode": "Proxy route",
       "proxy_server": "HTTP proxy origin",
       "proxy_auth": "Proxy authentication",
@@ -2770,7 +2768,13 @@
       "lifetime_s": "Maximum session lifetime (seconds)",
       "max_actions": "Maximum actions per session",
       "search_endpoint": "SearXNG HTTPS search endpoint",
-      "search_headers": "Search authentication headers JSON (encrypted)"
+      "search_headers": "Search authentication headers JSON (encrypted)",
+      "browserless_token": "Browserless control token",
+      "require_mutating_approval": "Require approval for mutating actions",
+      "allow_evaluate_js": "Allow evaluate JavaScript",
+      "allow_upload": "Allow file upload",
+      "allow_download": "Allow file download",
+      "max_pages": "Max pages"
     },
     "errors": {
       "unsupported": "This provider, version or capability is unsupported. Choose a supported option.",
@@ -2789,7 +2793,15 @@
       "idleLifetime": "Idle timeout must not exceed the maximum session lifetime.",
       "profileScope": "Every profile origin must also appear in the allowed origins."
     },
-    "range": "Allowed range: {{min}}–{{max}}"
+    "range": "Allowed range: {{min}}–{{max}}",
+    "help": {
+      "require_mutating_approval": "When off (default), click/fill/upload/download/evaluate run immediately. Navigate, snapshot, extract and screenshot never wait.",
+      "allow_evaluate_js": "Hide evaluate until enabled. Results stay untrusted.",
+      "allow_upload": "Hide upload until enabled.",
+      "allow_download": "Hide download until enabled. Downloads stay size and type bounded."
+    },
+    "safety": "Safety toggles"
+
   },
   "browserTools": {
     "urlSource": "URL source",

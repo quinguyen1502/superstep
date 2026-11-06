@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0248
 - Title: Reusable typed browser recipes through existing tool surfaces
-- Status: doing
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -109,3 +109,5 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 - `docs/browser-recipes.md` and `examples/browser/lookup_shipment.json` record exact backend support and UI/export follow-ups. Final source checks/full declared profile follow on committed task source.
 
 - Main-workspace source is 27cdf07d (+ predecessor documentation ffff56cd). Final recipe/envelope/layer/locale suite: 37 passed, 1 optional PostgreSQL skip. Full eight-command profile running. REV-0238/QA-0238 scoped conditional pass, final checks and locale wording review pending; owner approval not inferred.
+
+- Final canonical full profile on 27cdf07d passed all eight commands (backend 483.94 s). A later vi wording-only correction uses input/output per glossary; root npm 280 tests and backend locale/envelope 14 tests passed. REV-0238/QA-0238 scoped pass; owner review pending. One Draft PR, no merge/release.

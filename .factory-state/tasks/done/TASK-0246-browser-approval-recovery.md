@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0246
 - Title: Browser approvals, stale sessions and uncertain-effect recovery
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06

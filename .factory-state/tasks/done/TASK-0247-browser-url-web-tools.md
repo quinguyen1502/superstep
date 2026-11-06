@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0247
 - Title: Dynamic URL bindings, search/fetch and missing-context flows
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06

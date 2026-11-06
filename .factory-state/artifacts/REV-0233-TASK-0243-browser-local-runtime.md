@@ -61,3 +61,11 @@ Approved for QA within this delivery scope; advisory self-review does not approv
 - Renumbered: REV-0231 → REV-0233 after fresh all-ref allocation; develop already merged the earlier allocation for TASK-0256.
 
 - 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against rebased implementation 1b52abff in an isolated checkout: **1284 passed, 67 skipped**, 458.45 s, no failures. This includes develop 21ddce1a. Optional environment skips and existing warnings remain. Commit 22a5d935 only normalises source/license whitespace. Draft PR #308; owner review remains pending.
+
+## 2026-11-06 reconciliation with Accepted plan
+
+- Merged develop (TASK-0241 #303, TASK-0242 #304, plan #299).
+- Kept Accepted nine-tool Browserless contract; restored WorkerOpen/Control/Artifact.
+- WorkerEnvelope size check accepts nested pydantic models; contracts.json regenerated.
+- Artifact error codes restored; runtime tests use required whitelist.
+- Tests: browser contract/network/connections/runtime/migration → 100 passed, 1 skipped.

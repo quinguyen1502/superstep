@@ -24,8 +24,13 @@ def recipe():return json.loads((ROOT/'examples/browser/lookup_shipment.json').re
 
 
 def fixture(tmp_path,monkeypatch):
-    import app.services.browser_session_service as module
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);original=module.LocalBrowserWorker.call
+    import app.services.browser_session_service as module, json as _json
+    service,calls,workers=scoped_service(tmp_path,monkeypatch)
+    # Recipes that exercise human fill/click waits opt into mutating approval (DEC-0085 default OFF).
+    row=service.mcp.repo.get('browser'); settings=_json.loads(row.settings or '{}')
+    settings.setdefault('allowed_origins',['https://example.com']); settings['require_mutating_approval']=True
+    row.settings=_json.dumps(settings); service.mcp.repo.save(row)
+    original=module.LocalBrowserWorker.call
     def call(self,command):
         result=original(self,command).model_copy(update={'generation':self.generation})
         if command.operation in {'navigate','snapshot'}:
@@ -237,7 +242,7 @@ def test_generic_mcp_recipe_schema_human_receipts_and_completed_result_no_replay
     flow=recipe()
     with httpx.Client(base_url=base) as client:
         auth=client.post('/api/auth/register',json={'email':uuid.uuid4().hex+'@example.test','password':'secret12'}).json()['data'];jwt=auth['token']
-        conn=client.post('/api/mcp/servers',headers=H(jwt),json={'name':'Recipe browser','transport':'managed','adapter':'browser','settings':{}}).json()['data']
+        conn=client.post('/api/mcp/servers',headers=H(jwt),json={'name':'Recipe browser','transport':'managed','adapter':'browser','settings':{'allowed_origins':['https://example.com'],'require_mutating_approval':True}}).json()['data']
         flow['browser_recipe']['connection_id']=conn['id']
         for node in flow['nodes']:
             if node['type']=='mcp':node['data']['server_id']=conn['id']
