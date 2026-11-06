@@ -2,6 +2,16 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## Unreleased
+
+### Added
+
+- **Browser connection contract (TASK-0241, metadata only).** Managed `browser` adapter
+  (feature-gated by `STUDIO_ENABLE_BROWSER`) with required origin whitelist, local and
+  Browserless providers, connection safety toggles, and nine typed tool schemas
+  (navigate/snapshot/click/fill/extract/screenshot/upload/download/evaluate). No browser
+  process is launched yet; execution remains `BROWSER_RUNTIME_UNAVAILABLE` until later tasks.
+
 ## 0.11.2 (2026-11-05)
 
 ### Fixed

@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0241
-- Title: Browser contracts, whitelist, toggles and scoped connection metadata
-- Status: todo
+- Title: Browser contracts and scoped connection metadata
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-04
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,20 +17,19 @@
 
 ## Objective
 
-Browser contracts, required origin whitelist, safety toggles and scoped connection metadata, satisfying the assigned acceptance criteria of REQ-0086.
+Browser contracts and scoped connection metadata, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Specify versioned bounded worker commands, tool schemas (nine operations including upload/download/evaluate_js), trusted run/conversation/session context, provider/proxy capabilities (local Playwright and Browserless), required origin whitelist shape and safe result/observation envelopes from ARCH-0002.
-- Extend existing managed connection/profile metadata with **mandatory non-empty origin/domain whitelist**, safety toggles (mutating-approval default OFF; allow JS/upload/download; download limits; session idle/max; action/page budget), owner/org CRUD/discovery, encrypted secret handling and feature gating; add SQLAlchemy/Alembic revisions only where needed.
-- Resolve exact session transport, proposed idle default (30 minutes), hard max, profile provisioning shape and initial supported proxy protocol/auth matrix in reviewable contract notes. Preserve existing MCP transports and unrelated managed adapters. Document always-on rules (private IP block, untrusted page content, secret redaction, no public Settings, kill-switch) as non-togglable.
+- Specify versioned bounded worker commands, tool schemas, trusted run/session context, provider/proxy capabilities and safe result/observation envelopes from ARCH-0002.
+- Extend existing managed connection/profile metadata, owner/org CRUD/discovery, encrypted secret handling and feature gating; add SQLAlchemy/Alembic revisions only where needed.
+- Resolve exact session transport, default bounds, profile provisioning shape and initial supported proxy protocol/auth matrix in reviewable contract notes. Preserve existing MCP transports and unrelated managed adapters.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
-- Starting implementation under this planning-only request.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
 
 ## Inputs And Related Artifacts
 
@@ -63,11 +62,10 @@ Browser contracts, required origin whitelist, safety toggles and scoped connecti
 
 ## Acceptance Criteria
 
-- Connections can be configured/discovered without a single fixed target URL; saving without a non-empty origin whitelist is rejected; proxy is direct, explicit operator default or connection-specific, with credentials kept outside workflow/model metadata.
-- Safety toggles persist with documented defaults (mutating approval OFF; allow JS/upload/download off until enabled; idle 30 minutes proposed); always-on rules are not exposed as disable switches.
+- Connections can be configured/discovered without a fixed target URL; proxy is direct, explicit operator default or connection-specific, with credentials kept outside workflow/model metadata.
 - Wrong principal/org, invalid schema, unsupported capability and secret edit/keep/remove cases are rejected through the shared envelope/catalog.
 - Command/session identity and ordered-call context cannot be supplied or overridden by chat/model arguments; profile origin restrictions and result statuses are explicit.
-- A reviewed capability table names what local/Browserless/proxy combinations the next tasks must prove; provisional support is not advertised as verified; Browserless is required for the studio remote gate.
+- A reviewed capability table names what local/remote/proxy combinations the next tasks must prove; provisional support is not advertised as verified.
 
 ## Validation Plan
 
@@ -77,12 +75,12 @@ Browser contracts, required origin whitelist, safety toggles and scoped connecti
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the delivery chain on 2026-11-05; technical bounds/capability eligibility are specified in `docs/browser-contract.md`.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Scope/start accepted on 2026-11-05; no owner merge approval yet.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -91,9 +89,35 @@ Browser contracts, required origin whitelist, safety toggles and scoped connecti
 
 - 2026-11-04: Renumbered: TASK-0238 → TASK-0241 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
-- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
-
 ## Handoff Notes
 
 - Future branch: `factory/task-0241-browser-connection-contract`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Owner authorised the complete task chain. Prepared branch `factory/task-0241-browser-connection-contract` from origin/develop 3c83262a, with planning commit b8f3a861 carried as 3beffe55 (PR #299 remains unmerged). Local changes preserved in stash `browser-plan-before-develop-20261105`. No product source changed before readiness gate.
+
+- 2026-11-05: `factory ready` exited 0 with TASK-0241 in todo before source edits. Task-start complete; owner instruction already authorises implementation and required validation.
+
+- 2026-11-05: Implemented opt-in managed browser metadata/discovery, full secret masking, strict bounded v1 command/result and six tool schemas. Reused existing encrypted MCP storage without schema changes. Real calls fail before stateless managed ledger reservation until verified runtime/session work lands. `docs/browser-contract.md` records transport, bounds, proxy eligibility and remaining proof gates.
+- 2026-11-05: Targeted tests: 84 passed (browser contract/connections, MCP, managed tools, layers, envelope/locales, SQLite migration regressions). Factory validate and diff whitespace passed; full backend/build/lint are being collected. No product browser/provider traffic or migration introduced.
+
+- 2026-11-05: Self-review REV-0229 and QA-0229 passed scoped contract/metadata acceptance; owner review and full backend regression still pending. Root npm test (280), build and lint passed. Task remains review, not done.
+
+- 2026-11-05: Draft PR #303 opened. Full declared backend suite passed: 1,234 passed / 65 skipped in 513.35 seconds. REV-0229 and QA-0229 updated with exact evidence. No owner approval/done/merge inferred. TASK-0242 proceeds on an explicitly documented stack as part of the authorised chain.
+
+## Reconciliation (2026-11-06)
+
+Reconciled with Accepted REQ-0086 / DEC-0085 after plan PR #299 merged into develop:
+
+- Provider rename: `controlled_cdp` → `browserless`; secret `browserless_token`.
+- Mandatory non-empty `allowed_origins`.
+- Nine tools: upload, download, evaluate (gated by connection allow_*).
+- Defaults: `require_mutating_approval=false`, idle 1800s, lifetime 3600s.
+- Optional `conversation_id` on ExecutionContext for cross-turn sessions.
+- Stealth only for browserless, default off.
+
+## Delivery (2026-11-06)
+
+Owner authorised implementation ("Ok triển khai"). PR #303 reconciled with Accepted
+DEC-0085, local `factory verify run --profile full` passed, and required GitHub checks
+on the final head were green before merge.
