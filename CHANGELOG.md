@@ -11,6 +11,10 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
   Browserless providers, connection safety toggles, and nine typed tool schemas
   (navigate/snapshot/click/fill/extract/screenshot/upload/download/evaluate). No browser
   process is launched yet; execution remains `BROWSER_RUNTIME_UNAVAILABLE` until later tasks.
+- **Browser egress and proxy policy (TASK-0242).** Isolated destination policy pins
+  DNS once, blocks private/link-local/metadata addresses, requires a non-empty origin
+  whitelist for page traffic, and routes custom/operator proxies without silent direct
+  fallback. Gateway request rewriting redacts proxy credentials. Runtime still gated.
 
 ## 0.11.2 (2026-11-05)
 

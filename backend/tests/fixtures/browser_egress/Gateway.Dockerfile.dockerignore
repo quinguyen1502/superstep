@@ -1,0 +1,13 @@
+**
+!backend/
+!backend/tests/
+!backend/tests/fixtures/
+!backend/tests/fixtures/browser_egress/
+!backend/app/
+!backend/app/core/
+!backend/app/core/browser_urls.py
+!backend/app/engine/
+!backend/app/engine/browser_network.py
+!backend/app/engine/browser_gateway.py
+!backend/tests/fixtures/browser_egress/gateway_fixture.py
+!backend/tests/fixtures/browser_egress/fixture_server.py
