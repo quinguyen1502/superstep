@@ -14,7 +14,7 @@ const canonical = value => value && typeof value === 'object'
 const fingerprint = value => crypto.createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex')
 const state = { browser: null, context: null, page: null, open: null, generation: 1, pageGeneration: 0,
   sequence: 0, observation: null, elements: new Map(), approvals: new Set(), artifacts: new Map(),
-  busy: false, status: 'new', started: Date.now(), touched: Date.now(), denied: 0 }
+  secrets: [], busy: false, status: 'new', started: Date.now(), touched: Date.now(), denied: 0 }
 
 function permitted(value) {
   try {
@@ -47,11 +47,43 @@ async function expireIfNeeded() {
   if (state.status === 'ready' && ((!state.busy && now - state.touched >= state.open.settings.idle_timeout_s * 1000)
       || now - state.started >= state.open.settings.lifetime_s * 1000)) await shutdown('expired')
 }
+function profileState(value) {
+  const profile = value.settings.profile, seed = value.profile_seed
+  if (!profile) { if (seed) throw new Error('profile'); return undefined }
+  if (!seed || seed.principal_id !== value.context.principal_id) throw new Error('profile')
+  const origins = profile.origins, hosts = new Set()
+  for (const origin of origins) {
+    const url = new URL(origin)
+    if (url.protocol !== 'https:' || url.origin !== origin || url.hostname.endsWith('.')) throw new Error('profile')
+    hosts.add(url.hostname)
+  }
+  const seen = new Set()
+  for (const cookie of seed.state.cookies) {
+    const key = JSON.stringify([cookie.domain, cookie.path, cookie.name])
+    if (!hosts.has(cookie.domain) || cookie.domain.startsWith('.') || cookie.secure !== true || seen.has(key)
+        || (cookie.expires !== -1 && cookie.expires <= Date.now() / 1000) || /[\x00-\x1f\x7f;]/.test(cookie.value)) throw new Error('profile')
+    seen.add(key)
+  }
+  seen.clear()
+  for (const item of seed.state.origins) {
+    if (!origins.includes(item.origin) || seen.has(item.origin) || new Set(item.localStorage.map(x => x.name)).size !== item.localStorage.length) throw new Error('profile')
+    seen.add(item.origin)
+  }
+  if (Buffer.byteLength(JSON.stringify(seed)) > 64 * 1024 || !isDeepStrictEqual(value.settings.allowed_origins, origins)) throw new Error('profile')
+  state.secrets = [...seed.state.cookies.map(x => x.value), ...seed.state.origins.flatMap(x => x.localStorage.map(y => y.value))].filter(Boolean).sort((a, b) => b.length - a.length)
+  return seed.state
+}
+function safeText(value, length) {
+  let text = String(value || '')
+  for (const secret of state.secrets) text = text.split(secret).join('[redacted]')
+  return clip(text, length)
+}
 async function open(value) {
-  if (state.status !== 'new' || value.settings.provider !== 'local' || value.settings.profile) throw new Error('unsupported')
+  if (state.status !== 'new' || value.settings.provider !== 'local') throw new Error('unsupported')
+  const storageState = profileState(value)
   state.open = value; state.generation = value.generation; state.started = state.touched = Date.now()
   state.browser = await chromium.launch({ headless: true, chromiumSandbox: true, proxy: { server: 'http://127.0.0.1:3128' } })
-  state.context = await state.browser.newContext({ viewport: { width: 1024, height: 768 }, serviceWorkers: 'block', acceptDownloads: false })
+  state.context = await state.browser.newContext({ viewport: { width: 1024, height: 768 }, serviceWorkers: 'block', acceptDownloads: false, storageState })
   await state.context.route('**/*', route => {
     if (!permitted(route.request().url())) { state.denied++; return route.abort('blockedbyclient') }
     return route.continue()
@@ -98,7 +130,7 @@ async function snapshot() {
       const item = await describe(handle)
       const element_id = crypto.randomUUID()
       state.elements.set(element_id, { handle, fingerprint: fingerprint(item.identity) })
-      elements.push({ element_id, role: clip(item.role, 80), text: clip(item.text, 1000) })
+      elements.push({ element_id, role: clip(item.role, 80), text: safeText(item.text, 1000) })
     }
     if (generation !== state.pageGeneration) throw new Error('stale')
     const url = new URL(state.page.url())
@@ -156,11 +188,11 @@ async function execute(command) {
         result.extracted = {}
         for (const [name, element_id] of Object.entries(args.fields)) {
           const handle = await element({ observation_id: args.observation_id, element_id })
-          result.extracted[name] = clip((await describe(handle)).text, 4000)
+          result.extracted[name] = safeText((await describe(handle)).text, 4000)
         }
       } else if (command.operation === 'screenshot') {
         if (state.artifacts.size >= 4) throw new Error('limit')
-        const bytes = await state.page.screenshot({ type: 'png', fullPage: false, mask: [state.page.locator('input,textarea,select,[contenteditable]')], timeout })
+        const bytes = await state.page.screenshot({ type: 'png', fullPage: false, mask: [state.page.locator('input,textarea,select,[contenteditable]'), ...state.secrets.map(secret => state.page.getByText(secret, { exact: false }))], timeout })
         if (bytes.length > 2 * 1024 * 1024) throw new Error('limit')
         result.artifact_id = crypto.randomUUID(); state.artifacts.set(result.artifact_id, bytes)
       }

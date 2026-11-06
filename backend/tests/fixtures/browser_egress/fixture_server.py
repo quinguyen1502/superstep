@@ -23,7 +23,7 @@ def record(key, value):
 class Destination(BaseHTTPRequestHandler):
     def log_message(self, *args): pass
     def do_GET(self):
-        record("requests", {"path": self.path.split("?", 1)[0], "leaked_proxy_auth": "Proxy-Authorization" in self.headers})
+        record("requests", {"path": self.path.split("?", 1)[0], "leaked_proxy_auth": "Proxy-Authorization" in self.headers, "host": self.headers.get("Host", ""), "profile_cookie": self.headers.get("Cookie", "") == "login=synthetic-cookie"})
         if self.path.startswith("/redirect"):
             self.send_response(302); self.send_header("Location", "http://127.0.0.1:9090/private"); self.end_headers(); return
         if self.path.startswith("/hostile"):
@@ -33,6 +33,16 @@ class Destination(BaseHTTPRequestHandler):
             navigator.serviceWorker.register('/sw.js').catch(()=>{});</script></html>'''
         elif self.path.startswith("/sw.js"):
             body = b"self.addEventListener('activate',()=>fetch('http://127.0.0.1:9090/service-worker'))"
+        elif self.path.startswith("/profile"):
+            body = b'''<html><h1>Profile fixture</h1><p id="status">Anonymous</p><p>synthetic-cookie</p>
+            <script>if(localStorage.getItem('login')==='synthetic-storage')document.getElementById('status').textContent='Stored login';
+            document.body.insertAdjacentHTML('beforeend','<p>'+localStorage.getItem('login')+'</p>')</script></html>'''
+        elif self.path.startswith("/form"):
+            body = b'''<html><h1>Form fixture</h1><input aria-label="Name" value="sensitive-prefilled-value">
+            <button onclick="document.getElementById('status').textContent='Submitted'">Submit fixture</button>
+            <p id="status">Ready</p></html>'''
+        elif self.path.startswith("/hang"):
+            body = b'<html><button onclick="while(true){}">Hang fixture</button></html>'
         else: body = b"<html><h1>allowed fixture</h1></html>"
         self.send_response(200); self.send_header("Content-Type", "application/javascript" if self.path.startswith("/sw.js") else "text/html"); self.send_header("Content-Length", str(len(body)))
         self.end_headers(); self.wfile.write(body)

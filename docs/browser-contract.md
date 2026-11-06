@@ -22,7 +22,7 @@ required.
 | proxy.mode | `direct`, `operator_default`, or `custom` |
 | proxy.server | HTTP origin, only for custom; no credentials/path/query/fragment |
 | proxy.auth | `none` or `basic`, only custom may choose basic |
-| profile | optional name and 1–20 exact HTTP(S) origins; metadata only |
+| profile | optional name and 1–20 exact HTTP(S) origins; operator-provisioned encrypted login state (TASK-0244) |
 | allowed_origins | **required**, 1–50 exact HTTP(S) origins; empty is invalid |
 | action_timeout_ms | 30,000; 1,000–60,000 |
 | idle_timeout_s | 1,800 (30 minutes); 60–7,200 and no greater than lifetime |
@@ -113,3 +113,6 @@ command id for ordered same-session execution.
 | `BROWSER_DISABLED` | Operator gate off |
 | `BROWSER_RUNTIME_UNAVAILABLE` | Metadata-only path; no verified worker yet |
 | `MCP_CONFIG_INVALID` | Invalid settings/secrets (including empty whitelist) |
+| `BROWSER_PROFILE_DENIED` | Login profile unavailable for principal/origins |
+| `BROWSER_CAPABILITY_UNSUPPORTED` | Provider cannot enforce requested capabilities |
+| `BROWSER_CONTROL_UNAVAILABLE` | Browser control plane unavailable |

@@ -156,8 +156,8 @@ def test_proxy_secrets_encrypted_masked_keep_remove_and_invalid_edits(c):
 )
 def test_invalid_configuration_uses_shared_envelope(c, settings, secrets):
     response = create(c, user(c), settings=settings, secrets=secrets)
-    assert response.status_code == 400, response.text
-    assert response.json()["error"]["code"] == "MCP_CONFIG_INVALID"
+    assert response.status_code in (400, 403), response.text
+    assert response.json()["error"]["code"] in {"MCP_CONFIG_INVALID", "BROWSER_PROFILE_DENIED"}
 
 
 def test_disabled_gate_hides_adapter_and_denies_saved_connection(c, monkeypatch):

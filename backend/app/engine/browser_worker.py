@@ -18,6 +18,7 @@ from .browser_contract import (BrowserSettings, ExecutionContext, WorkerCommand,
                                WorkerOpen, WorkerArtifact, WorkerResult)
 from .sandbox.container import docker_exe
 from pydantic import ValidationError
+from .browser_profiles import validate_profile, ProfileDenied
 
 
 class BrowserWorkerError(Exception):
@@ -29,8 +30,11 @@ class BrowserWorkerError(Exception):
 class LocalBrowserWorker:
     def __init__(self, context: ExecutionContext, settings: BrowserSettings, *, docker=None,
                  image="superstep-browser-worker:1", gateway_image="superstep-browser-gateway:1",
-                 gateway_network="bridge", seccomp=None):
+                 gateway_network="bridge", seccomp=None, resource_owner=None):
         self.context, self.settings = context, settings
+        if resource_owner is not None and (not isinstance(resource_owner, str) or not resource_owner or len(resource_owner) > 64 or not all(c.isalnum() or c in "_-" for c in resource_owner)):
+            raise BrowserWorkerError("unsupported")
+        self._labels = () if resource_owner is None else ("--label", "superstep.browser.controller=" + resource_owner)
         self.docker, self.image, self.gateway_image, self.gateway_network = docker or docker_exe(), image, gateway_image, gateway_network
         self.seccomp = str(seccomp or Path(__file__).with_name("browser_seccomp.json"))
         self.session_id, self.generation = uuid.uuid4().hex, 1
@@ -68,20 +72,22 @@ class LocalBrowserWorker:
             return result
         except (ValueError, TypeError): raise BrowserWorkerError() from None
 
-    def start(self, *, secrets=None, approved_proxies=(), operator_default=None):
+    def start(self, *, secrets=None, approved_proxies=(), operator_default=None, profile_seed=None):
         if self.started or self.closed: raise BrowserWorkerError("failed_before_effect")
-        if self.settings.provider != "local" or self.settings.profile: raise BrowserWorkerError("unsupported")
+        if self.settings.provider != "local": raise BrowserWorkerError("unsupported")
+        try: self.settings = validate_profile(self.settings, self.context.principal_id, profile_seed)
+        except ProfileDenied: raise BrowserWorkerError("unsupported") from None
         configuration = {"allowed_origins": self.settings.allowed_origins, "proxy": self.settings.proxy.model_dump(),
             "secrets": {key: value for key, value in (secrets or {}).items() if key in {"proxy_username", "proxy_password"}},
             "approved_proxies": list(approved_proxies), "operator_default": operator_default, "lifetime_s": self.settings.lifetime_s}
         try:
-            self._docker("volume", "create", self.volume)
+            self._docker("volume", "create", *self._labels, self.volume)
             # --env-file is read by the local Docker client; only its private filename enters argv.
             # Nothing is mounted from the host into either untrusted browser or gateway.
             with tempfile.NamedTemporaryFile(mode="w+", prefix="ss-browser-config-", encoding="utf-8") as secret_file:
                 secret_file.write("STUDIO_BROWSER_GATEWAY_CONFIG=" + json.dumps(configuration, ensure_ascii=True, allow_nan=False) + "\n")
                 secret_file.flush()
-                self._docker("run", "-d", "--name", self.gateway, "--network", self.gateway_network,
+                self._docker("run", "-d", *self._labels, "--name", self.gateway, "--network", self.gateway_network,
                     "--read-only", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--pids-limit=64", "--memory=128m", "--memory-swap=128m", "--cpus=1",
                     "--tmpfs=/tmp:rw,nosuid,size=16m", "--env-file", secret_file.name,
                     "--mount", f"type=volume,src={self.volume},dst=/egress", self.gateway_image)
@@ -91,7 +97,7 @@ class LocalBrowserWorker:
                 if ready.strip() == "True": break
                 time.sleep(0.1)
             else: raise BrowserWorkerError("failed_before_effect")
-            self._docker("run", "-d", "--name", self.worker, "--network=none", "--init", "--read-only",
+            self._docker("run", "-d", *self._labels, "--name", self.worker, "--network=none", "--init", "--read-only",
                 "--cap-drop=ALL", "--security-opt=no-new-privileges", "--security-opt", f"seccomp={self.seccomp}",
                 "--pids-limit=128", "--memory=768m", "--memory-swap=768m", "--cpus=1", "--shm-size=256m",
                 "--env", "HOME=/tmp", "--tmpfs=/tmp:rw,nosuid,size=256m",
@@ -102,7 +108,7 @@ class LocalBrowserWorker:
                 if ready.strip() == "true": break
                 time.sleep(0.1)
             else: raise BrowserWorkerError("failed_before_effect")
-            opened = WorkerOpen(context=self.context, settings=self.settings, session_id=self.session_id, generation=self.generation)
+            opened = WorkerOpen(context=self.context, settings=self.settings, session_id=self.session_id, generation=self.generation, profile_seed=profile_seed)
             if self._rpc("open", opened).get("status") != "ready": raise BrowserWorkerError("failed_before_effect")
             self.started = True
             self._last_activity = time.monotonic(); self._arm_idle()

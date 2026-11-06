@@ -1,6 +1,4 @@
 """Browser connection metadata and discovery. Execution requires the later egress/runtime gates."""
-from urllib.parse import urlsplit
-
 from pydantic import ValidationError
 
 from ...core import config
@@ -10,7 +8,9 @@ from ...engine.browser_contract import BrowserSettings, tool_definitions
 
 class BrowserTools:
     id = "browser"
-    secret_fields = ("browserless_token", "proxy_username", "proxy_password")
+    # Browserless token is required for provider=browserless. profile_state is optional encrypted
+    # origin-scoped login seed (TASK-0244); proxy secrets follow proxy.auth.
+    secret_fields = ("browserless_token", "proxy_username", "proxy_password", "profile_state")
     settings_limit = 16384
     settings_schema = BrowserSettings.model_json_schema()
 
@@ -39,6 +39,14 @@ class BrowserTools:
                 raise AppError("MCP_CONFIG_INVALID", field="secrets.browserless_token")
         elif token is not None:
             raise AppError("MCP_CONFIG_INVALID", field="secrets.browserless_token")
+        from ...engine.browser_profiles import parse_seed, ProfileDenied
+        if parsed.profile:
+            try:
+                parse_seed(parsed, "user:" + str(uid), secrets.get("profile_state"))
+            except ProfileDenied:
+                raise AppError("BROWSER_PROFILE_DENIED") from None
+        elif "profile_state" in secrets:
+            raise AppError("BROWSER_PROFILE_DENIED")
         username, password = secrets.get("proxy_username"), secrets.get("proxy_password")
         if parsed.proxy.auth == "basic":
             if not username or not password:

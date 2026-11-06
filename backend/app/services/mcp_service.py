@@ -65,6 +65,7 @@ class McpService:
         if transport == "managed":
             implementation = self.managed.adapter(adapter)
             if not isinstance(settings, dict) or len(json.dumps(settings)) > getattr(implementation, "settings_limit", 4096): raise AppError("MCP_CONFIG_INVALID", field="settings")
+            if adapter == "browser" and settings.get("profile") and scope != "user": raise AppError("BROWSER_PROFILE_DENIED")
             return {"name": n, "command": None, "args": None, "url": None, "adapter": adapter, "settings": json.dumps(settings)}
         if transport == "stdio":
             if not config.mcp_stdio_enabled(): raise AppError("MCP_STDIO_DISABLED")
@@ -88,7 +89,7 @@ class McpService:
             if v is None:
                 if k in old: out[k] = old[k]
                 continue
-            if not isinstance(v, str) or len(v) > (16384 if k in {"service_account", "google_credentials"} else VALUE_MAX): raise AppError("MCP_CONFIG_INVALID", field="secrets")
+            if not isinstance(v, str) or len(v) > (65536 if k == "profile_state" else 16384 if k in {"service_account", "google_credentials"} else VALUE_MAX): raise AppError("MCP_CONFIG_INVALID", field="secrets")
             out[k] = v
         return out
 

@@ -344,6 +344,117 @@
         "title": "ExecutionContext",
         "type": "object"
       },
+      "ProfileCookie": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 256,
+            "minLength": 1,
+            "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 4096,
+            "title": "Value",
+            "type": "string"
+          },
+          "domain": {
+            "maxLength": 253,
+            "minLength": 1,
+            "title": "Domain",
+            "type": "string"
+          },
+          "path": {
+            "default": "/",
+            "maxLength": 1024,
+            "minLength": 1,
+            "pattern": "^/[^\\r\\n]*$",
+            "title": "Path",
+            "type": "string"
+          },
+          "expires": {
+            "default": -1.0,
+            "maximum": 253402300799,
+            "minimum": -1,
+            "title": "Expires",
+            "type": "number"
+          },
+          "httpOnly": {
+            "default": true,
+            "title": "Httponly",
+            "type": "boolean"
+          },
+          "secure": {
+            "const": true,
+            "default": true,
+            "title": "Secure",
+            "type": "boolean"
+          },
+          "sameSite": {
+            "default": "Lax",
+            "enum": [
+              "Strict",
+              "Lax",
+              "None"
+            ],
+            "title": "Samesite",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value",
+          "domain"
+        ],
+        "title": "ProfileCookie",
+        "type": "object"
+      },
+      "ProfileOrigin": {
+        "additionalProperties": false,
+        "properties": {
+          "origin": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Origin",
+            "type": "string"
+          },
+          "localStorage": {
+            "items": {
+              "$ref": "#/$defs/ProfileStorageItem"
+            },
+            "maxItems": 50,
+            "title": "Localstorage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "origin"
+        ],
+        "title": "ProfileOrigin",
+        "type": "object"
+      },
+      "ProfileSeed": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/$defs/ProfileState"
+          }
+        },
+        "required": [
+          "principal_id",
+          "state"
+        ],
+        "title": "ProfileSeed",
+        "type": "object"
+      },
       "ProfileSettings": {
         "additionalProperties": false,
         "properties": {
@@ -371,6 +482,51 @@
           "origins"
         ],
         "title": "ProfileSettings",
+        "type": "object"
+      },
+      "ProfileState": {
+        "additionalProperties": false,
+        "properties": {
+          "cookies": {
+            "items": {
+              "$ref": "#/$defs/ProfileCookie"
+            },
+            "maxItems": 100,
+            "title": "Cookies",
+            "type": "array"
+          },
+          "origins": {
+            "items": {
+              "$ref": "#/$defs/ProfileOrigin"
+            },
+            "maxItems": 20,
+            "title": "Origins",
+            "type": "array"
+          }
+        },
+        "title": "ProfileState",
+        "type": "object"
+      },
+      "ProfileStorageItem": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 4096,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "ProfileStorageItem",
         "type": "object"
       },
       "ProxySettings": {
@@ -440,6 +596,17 @@
         "minimum": 1,
         "title": "Generation",
         "type": "integer"
+      },
+      "profile_seed": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/ProfileSeed"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
       }
     },
     "required": [

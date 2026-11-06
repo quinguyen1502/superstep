@@ -139,6 +139,49 @@ class BrowserSettings(VersionedContract):
         return self
 
 
+class ProfileCookie(Contract):
+    name: Annotated[str, Field(min_length=1, max_length=256, pattern=r"^[!#$%&'*+.^_`|~0-9A-Za-z-]+$")]
+    value: Annotated[str, Field(max_length=4096, repr=False)]
+    domain: Annotated[str, Field(min_length=1, max_length=253)]
+    path: Annotated[str, Field(min_length=1, max_length=1024, pattern=r"^/[^\r\n]*$")] = "/"
+    expires: Annotated[float, Field(ge=-1, le=253402300799)] = -1.0
+    httpOnly: bool = True
+    secure: Literal[True] = True
+    sameSite: Literal["Strict", "Lax", "None"] = "Lax"
+
+    @field_validator("secure", mode="before")
+    @classmethod
+    def secure_only(cls, value):
+        if value is not True: raise ValueError("Profile cookies must be secure")
+        return value
+
+    @field_validator("value")
+    @classmethod
+    def safe_value(cls, value):
+        if any(ord(c) < 32 or ord(c) == 127 or c in ';' for c in value): raise ValueError("Invalid cookie value")
+        return value
+
+
+class ProfileStorageItem(Contract):
+    name: Annotated[str, Field(min_length=1, max_length=256)]
+    value: Annotated[str, Field(max_length=4096, repr=False)]
+
+
+class ProfileOrigin(Contract):
+    origin: Origin
+    localStorage: Annotated[list[ProfileStorageItem], Field(max_length=50)] = Field(default_factory=list)
+
+
+class ProfileState(Contract):
+    cookies: Annotated[list[ProfileCookie], Field(max_length=100)] = Field(default_factory=list)
+    origins: Annotated[list[ProfileOrigin], Field(max_length=20)] = Field(default_factory=list)
+
+
+class ProfileSeed(Contract):
+    principal_id: Identifier
+    state: ProfileState = Field(repr=False)
+
+
 class Navigate(Contract):
     url: Annotated[str, Field(min_length=1, max_length=4096)]
 
@@ -277,6 +320,7 @@ class WorkerOpen(WorkerEnvelope):
     settings: BrowserSettings
     session_id: Identifier
     generation: Annotated[int, Field(ge=1)] = 1
+    profile_seed: ProfileSeed | None = Field(default=None, repr=False)
 
 
 class WorkerControl(WorkerEnvelope):

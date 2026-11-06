@@ -43,7 +43,7 @@ Connection, proxy and profile configuration UI, satisfying the assigned acceptan
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
 - Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
 - Dependency artifact: `.factory-state/tasks/review/TASK-0242-browser-egress-proxy-policy.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0244-browser-remote-profiles.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0244-browser-remote-profiles.md`.
 
 ## Expected Outputs
 

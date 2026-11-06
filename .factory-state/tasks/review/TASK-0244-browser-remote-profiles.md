@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0244
 - Title: Remote browser capabilities and origin-scoped login profiles
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-05
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -30,7 +30,7 @@ Remote browser capabilities and origin-scoped login profiles, satisfying the ass
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- Hosted Agent loops, arbitrary third-party capability assertions and login capture UI.
 
 ## Inputs And Related Artifacts
 
@@ -80,12 +80,12 @@ Remote browser capabilities and origin-scoped login profiles, satisfying the ass
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the full chain; technical decisions are recorded in the linked architecture.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner chain/start accepted; no owner merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -98,3 +98,16 @@ Remote browser capabilities and origin-scoped login profiles, satisfying the ass
 
 - Future branch: `factory/task-0244-browser-remote-profiles`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Owner chain instruction authorises this explicit stack over TASK-0243 #308, TASK-0242 #304, TASK-0241 #303 and planning #299. Current task base incorporates develop 21ddce1a. Remote transport must preserve the proven local-worker boundary; unsupported raw CDP/stealth combinations will refuse.
+
+- 2026-11-05: factory ready passed before implementation; task-start complete. The owner instruction covers implementation and fixture checks following start.
+
+- 2026-11-05: Implemented controlled HTTPS remote worker and personal encrypted profile seed, with independent operator endpoint/address approval, exact capability/refusal semantics, own-label restart cleanup and six-operation/profile/proxy real Chromium evidence. ARCH-0002 and docs/browser-remote.md record refinement from provisional CDP metadata. REV-0234/QA-0234 are advisory; owner approval remains pending. Current run/principal/revocation/fencing integration remains TASK-0245 and managed execution is gated.
+
+- 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against isolated implementation commit 252aedff: **1300 passed, 67 skipped**, 458.78 s, no failures. Source is unchanged by subsequent documentation. Final real HTTPS/Chromium fixture and all declared SDK/root checks passed. Draft PR #309; owner review remains pending.
+
+
+## Activity Log
+
+- 2026-11-06: Reconciled with Accepted DEC-0085 / PLAN-0006 after merging develop (#303/#304/#308): provider `browserless`, required whitelist, `browserless_token` + optional `profile_state`, operator-allowlisted control plane, nine tools including upload/download/evaluate.

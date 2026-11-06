@@ -48,7 +48,7 @@ Executable Python and project export for browser tools/recipes (AC8), deferred u
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0247-browser-url-web-tools.md`.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0248-browser-recipes.md`.
 - Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0244-browser-remote-profiles.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0244-browser-remote-profiles.md`.
 
 ## Expected Outputs
 

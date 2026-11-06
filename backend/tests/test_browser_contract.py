@@ -196,7 +196,7 @@ def test_observations_and_results_are_bounded_no_raw_artifacts_or_control_urls()
     for extra in (
         {"screenshot_base64": "image"},
         {"cookies": []},
-        {"remote_endpoint": "wss://control.example"},
+        {"browserless_endpoint": "wss://control.example"},
         {"status": "success"},
         {"elapsed_ms": -1},
         {"artifact_id": "https://secret.example?token=secret"},
