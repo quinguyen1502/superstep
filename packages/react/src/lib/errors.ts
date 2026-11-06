@@ -6,6 +6,9 @@ export type ApiErrorBody = { code?: string; message?: string; details?: any }
 export function errorText(e: ApiErrorBody, translator: Pick<I18n, 'exists' | 't'> = i18n): string {
   const key = `errors.${e.code}`
   const params = e.details && typeof e.details === 'object' && !Array.isArray(e.details) ? e.details : {}
-  return String(e.code && translator.exists(key) ? translator.t(key, params) : e.message || translator.t("errors.HTTP_ERROR"))
+  const text = String(e.code && translator.exists(key) ? translator.t(key, params) : e.message || translator.t("errors.HTTP_ERROR"))
+  // Older run events can carry the code and rendered message without the
+  // interpolation details. Keep that readable message instead of raw tokens.
+  return /{{[^{}]+}}/.test(text) ? e.message || String(translator.t('errors.HTTP_ERROR')) : text
 }
 

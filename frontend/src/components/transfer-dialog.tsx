@@ -6,7 +6,7 @@ import { AlertTriangle, ArrowRightLeft, CircleCheck, Loader2 } from 'lucide-reac
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -35,8 +35,9 @@ export function TransferDialog({ workflowId, onDone }: { workflowId: string; onD
   }
   return <Dialog open={open} onOpenChange={reset}>
     <DialogTrigger asChild><Button variant="outline" size="sm" id="transfer-btn"><ArrowRightLeft />{t('transfer.button')}</Button></DialogTrigger>
-    <DialogContent className="sm:max-w-xl">
+    <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-xl">
       <DialogHeader><DialogTitle>{t('transfer.title')}</DialogTitle><DialogDescription>{t('transfer.intro')}</DialogDescription></DialogHeader>
+      <DialogBody className="space-y-4">
       <div className="flex items-end gap-2"><div className="flex-1 space-y-1.5"><Label htmlFor="transfer-email">{t('transfer.newOwner')}</Label>
         <Input id="transfer-email" type="email" placeholder="name@example.com" value={email} onChange={e => { setEmail(e.target.value); setP(null) }} onKeyDown={e => e.key === 'Enter' && email.trim() && preview()} /></div>
         <Button variant="outline" id="transfer-check" onClick={preview} disabled={!email.trim() || busy}>{busy && !p ? <Loader2 className="animate-spin" /> : null}{t('transfer.check')}</Button></div>
@@ -54,6 +55,7 @@ export function TransferDialog({ workflowId, onDone }: { workflowId: string; onD
         : <Alert id="transfer-clean"><CircleCheck /><AlertDescription>{t('transfer.clean', { email: p.new_owner })}</AlertDescription></Alert>)}
       {p && <div className="flex items-center gap-2"><Switch id="transfer-keep" checked={keep} onCheckedChange={setKeep} /><Label htmlFor="transfer-keep" className="font-normal">{t('transfer.keepAccess')}</Label></div>}
       {err && <p role="alert" className="text-sm text-destructive" id="transfer-error">{err}</p>}
+      </DialogBody>
       <DialogFooter><Button variant="outline" onClick={() => reset(false)}>{t('common.cancel')}</Button>
         <Button id="transfer-submit" onClick={submit} disabled={!p || busy}>{busy && p ? <Loader2 className="animate-spin" /> : <ArrowRightLeft />}{t('transfer.submit')}</Button></DialogFooter>
     </DialogContent>

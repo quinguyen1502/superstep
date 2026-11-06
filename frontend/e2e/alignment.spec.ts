@@ -42,6 +42,7 @@ for (const [lang, theme] of [['en', 'light'], ['vi', 'light'], ['en', 'dark'], [
     // editor header: every control in the top bar
     await page.goto(`/workflows/${wid}`); await expect(page.locator('#run-btn')).toBeVisible()
     // STATE SCHEMA field row at the default panel width: name, type and delete on one line, one height
+    await page.locator('#palette-state-tab').click()
     await expectRowAligned(await page.locator('[data-testid=state-field]').first().locator('> div > *').all(), { label: 'state field row' })
     await expectRowAligned(await visible(page, 'header :is(button, input, a[data-slot=button])'), { label: 'editor header' })
     await expectBaselineAligned([page.locator('#save-btn'), page.locator('#run-btn'), page.locator('#step-btn')], { label: 'editor header buttons' })
@@ -58,6 +59,7 @@ for (const [lang, theme] of [['en', 'light'], ['vi', 'light'], ['en', 'dark'], [
 
     // config panel: the LLM model field (input + load button) and the Human deadline switch row
     await page.locator('.react-flow__node[data-id="bot"]').click()
+    await page.locator('#config-tab-settings').click()
     const load = page.locator('[id$="-load"]').first(); await expect(load).toBeVisible()
     const inputId = (await load.getAttribute('id'))!.replace(/-load$/, '')
     await expectRowAligned([page.locator(`[id="${inputId}"]`), load], { label: 'model field' })
@@ -77,12 +79,13 @@ for (const lang of ['en', 'vi'] as const) {
     const wid = await newWorkflow(page, H, { name: 'Narrow', state: [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'meta', type: 'object' }],
       nodes: [N('s', 'start', 40), N('e', 'end', 300)], edges: [{ id: '1', source: 's', target: 'e' }] })
     await page.evaluate(l => { localStorage.setItem('lang', l); localStorage.setItem('lgs.editorPanels', JSON.stringify({ left: 180, right: 300, bottom: 260 })) }, lang)
-    await page.goto(`/workflows/${wid}`); await expect(page.locator('#reducer-messages')).toBeVisible()
+    await page.goto(`/workflows/${wid}`); await page.locator('#palette-state-tab').click(); await expect(page.locator('#reducer-messages')).toBeVisible()
     const panel = (await page.locator('#panel-left').boundingBox())!
     for (const vp of await page.locator('#panel-left [data-slot=scroll-area-viewport]').all()) {
       const { sw, cw } = await vp.evaluate(e => ({ sw: e.scrollWidth, cw: e.clientWidth }))
       expect(sw, 'left panel scroll viewport overflows').toBeLessThanOrEqual(cw)
     }
+    await page.locator('#palette-state-tab').click()
     for (const el of await page.locator('[data-testid=state-field] input, [data-testid=state-field] button, #reducer-messages, #reducer-meta').all()) {
       const b = (await el.boundingBox())!
       expect(b.x + b.width, 'control past the left panel edge').toBeLessThanOrEqual(panel.x + panel.width + 0.5)

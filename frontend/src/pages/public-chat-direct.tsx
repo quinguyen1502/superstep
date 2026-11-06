@@ -23,7 +23,9 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
     socket: `/ws/public/v1/chat/${slug}`, v1: true }), [base, slug, headers])
   const list = (pick?: string) => api<{ sessions: ChatSession[]; visitor_token?: string }>(`${base}/sessions`, { headers }).then(d => {
     setSessions(d.sessions); setSid(c => pick ?? (c && d.sessions.some(x => x.id === c) ? c : d.sessions[0]?.id ?? null)) })
-  const fail = (e: unknown) => { if (e instanceof ApiError && e.code === 'CHAT_NOT_PUBLISHED') setGone(true); else setErr((e as Error).message) }
+  // A failed session/message request belongs in the chat's error banner. Only
+  // loading the page metadata determines whether the entire page is unavailable.
+  const fail = (e: unknown) => setErr((e as Error).message)
   const chat = useChatRun(sid, 'visitor', () => { list().catch(() => {}) }, ep, setSid)
   const rate = (turnId: string, value: 'up' | 'down' | null, comment?: string) => {
     if (!sid) return
@@ -34,11 +36,14 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
     req.then(() => chat.reload()).catch(fail)
   }
   useEffect(() => {
+    let live = true
     api<Page>(base).then(p => {
+      if (!live) return
       const modes = Array.isArray(p.access) ? p.access : [p.access]
       if (!modes.includes('anonymous') && modes.includes('signed_in') && !p.signed_in) { location.href = loginUrl(false, `/c/${slug}`); return }
       setPage(p); if (p.title) document.title = p.title
-    }).catch(fail)
+    }).catch(e => { if (!live) return; if (e instanceof ApiError && e.code === 'CHAT_NOT_PUBLISHED') setGone(true); else fail(e) })
+    return () => { live = false }
   }, [base, slug])
   const logo = page ? publicLogoUrl(slug, page.logo) : undefined; const title = page?.title || t('chat.page.title')
   const ready = !!page
@@ -46,7 +51,7 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
   // the first message of a new chat creates it, then goes out once the chat is loaded (as in the studio Chat tab)
   const first = useRef(''); const { send: say, session } = chat
   const create = () => api<ChatSession>(`${base}/sessions`, { method: 'POST', json: { embed: !!embed }, headers })
-  const send = (text: string, files: ChatAttachment[] = []) => { if (sid) { say(text, files); return } first.current = text
+  const send = (text: string, files: ChatAttachment[] = []) => { setErr(''); if (sid) { say(text, files); return } first.current = text
     create().then(s => list(s.id)).catch(e => { first.current = ''; fail(e) }) }
   useEffect(() => { if (first.current && sid && session?.id === sid) { const x = first.current; first.current = ''; say(x) } }, [sid, session, say])
   // files (TASK-0177): the first file of a new chat creates it; the visitor token goes with every request
@@ -57,7 +62,7 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
     upload: f => ensure().then(id => uploadChatFile<ChatAttachment & { visitor_token?: string }>(`${base}/sessions/${id}/attachments`, f, headers)).then(d => { return d }),
     remove: id => sid ? api<{ visitor_token?: string }>(`${base}/sessions/${sid}/attachments/${id}`, { method: 'DELETE', headers }).then(() => {}) : Promise.resolve() } : null
   const links = useMemo<FileLinks | undefined>(() => sid ? { url: id => `${base}/sessions/${sid}/attachments/${id}`, headers } : undefined, [base, sid, headers])
-  const fresh = () => setSid(null)   // the next message starts a new chat
+  const fresh = () => { setErr(''); setSid(null) }   // the next message starts a new chat
 
   return <PublicChatView embed={embed} slug={slug} page={page} title={title} logo={logo} gone={gone} err={err || chat.error} ready={ready}
     sessions={sessions} sid={sid} setSid={setSid} fresh={fresh} send={send} files={files} onError={setErr} cancel={chat.cancel}

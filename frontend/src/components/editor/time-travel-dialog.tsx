@@ -40,7 +40,7 @@ export function TimeTravelDialog({ runId, open, onOpenChange, onFork }: { runId:
       <DialogHeader><DialogTitle>{t('timeTravel.title')}</DialogTitle><DialogDescription>{t('timeTravel.intro')}</DialogDescription></DialogHeader>
       {err && <Alert variant="destructive"><AlertDescription id="time-travel-error">{err}</AlertDescription></Alert>}
       {cps && !cps.length && <p className="text-sm text-muted-foreground">{t('timeTravel.none')}</p>}
-      {!!cps?.length && <div className="grid min-h-0 flex-1 grid-cols-[16rem_1fr] gap-3">
+      {!!cps?.length && <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-[16rem_minmax(0,1fr)]">
         <ScrollArea className="min-h-0 rounded-md border"><ol className="space-y-1 p-1" id="checkpoint-list">
           {cps.map(c => <li key={c.index}><button type="button" data-testid="checkpoint" aria-current={c.index === sel}
             onClick={() => choose(cps, c.index)}
@@ -51,12 +51,11 @@ export function TimeTravelDialog({ runId, open, onOpenChange, onFork }: { runId:
           </button></li>)}
         </ol></ScrollArea>
         <div className="flex min-h-0 flex-col gap-2">
-          <span className="flex items-baseline gap-2 text-xs font-medium text-muted-foreground">{t('timeTravel.state')}
-            {edited && <Badge variant="outline" id="time-travel-edited">{t('timeTravel.edited')}</Badge>}</span>
-          <JsonEditor id="checkpoint-state" value={text} onChange={setText} readOnly={!cp?.forkable} className="min-h-64 flex-1" />
+          <div role="group" aria-label={t('timeTravel.state')} className="min-h-64 min-w-0 flex-1"><JsonEditor id="checkpoint-state" value={text} onChange={setText} readOnly={!cp?.forkable} className="h-full" /></div>
         </div>
       </div>}
       <DialogFooter>
+        {edited && <Badge variant="outline" className="self-center sm:mr-auto" id="time-travel-edited">{t('timeTravel.edited')}</Badge>}
         {edited && <Button variant="ghost" id="time-travel-reset" onClick={() => cp && setText(pretty(cp.state))}><RotateCcw />{t('timeTravel.reset')}</Button>}
         <Button id="time-travel-fork" disabled={!cp?.forkable} onClick={fork}><GitBranch />{t('timeTravel.fork')}</Button>
       </DialogFooter>

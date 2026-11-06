@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 
@@ -48,9 +48,10 @@ export function ImportDialog() {
 
   return <Dialog open={open} onOpenChange={setOpen}>
     <DialogTrigger asChild><Button variant="outline" id="import-btn"><GitFork />{t('import.button')}</Button></DialogTrigger>
-    <DialogContent className="sm:max-w-2xl">
+    <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-2xl">
       <DialogHeader><DialogTitle>{t('import.title')}</DialogTitle>
         <DialogDescription>{t('import.desc')}</DialogDescription></DialogHeader>
+      <DialogBody className="space-y-4">
       <Alert variant="warning"><ShieldAlert /><AlertDescription className="text-xs">{t('import.warning')}</AlertDescription></Alert>
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList><TabsTrigger value="url"><GitFork />{t('import.url')}</TabsTrigger><TabsTrigger value="zip"><Upload />{t('import.zip')}</TabsTrigger></TabsList>
@@ -82,6 +83,7 @@ export function ImportDialog() {
           <div className="text-xs text-muted-foreground font-mono">{g.ref} · {g.nodes} nodes · {g.edges} edges · via {g.via}</div></button>)}
         {job.required_env.length > 0 && <p className="text-xs text-muted-foreground">{t('import.requiredEnv')} {job.required_env.map(k => <Badge key={k} variant="outline" className="mr-1">{k}</Badge>)} — {t('import.requiredEnvHint')}</p>}
       </div>}
+      </DialogBody>
       <DialogFooter>
         <Button variant="outline" onClick={() => setOpen(false)}>{t('common.close')}</Button>
         {job?.status === 'ready' ? <Button onClick={finalize} disabled={!pick} id="import-create">{t('import.create')}</Button>

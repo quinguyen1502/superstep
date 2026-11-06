@@ -29,7 +29,7 @@ function PlatformCard({ k, data, conns, slots, onSlots, reload, initialScope }: 
 }) {
   const { t } = useTranslation()
   const has = (s: Scope) => conns.some(c => c.scope === s)
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(() => conns.length > 0)
   const [tab, setTab] = useState<Scope>(initialScope || (has('org') && !has('user') ? 'org' : 'user'))
   useOnChange(initialScope, v => { if (v) setTab(v) })
   const connected = conns.length > 0

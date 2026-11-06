@@ -9,8 +9,8 @@ import { ATTACHMENT_KINDS, type AttachmentSettings } from '@/lib/chat'
 
 const CEILING = { max_files: 5, max_mb: 10 }   // the server's defaults, until the settings say otherwise
 
-export function ChatAttachmentSettings({ value, ceiling, lists, bad, onChange }: { value: AttachmentSettings; ceiling?: { max_files: number; max_mb: number }
-  lists: string[]; bad: string; onChange: (p: Partial<AttachmentSettings>) => void }) {
+export function ChatAttachmentSettings({ value, ceiling, lists, bad, fieldError, fieldAction, onChange }: { value: AttachmentSettings; ceiling?: { max_files: number; max_mb: number }
+  lists: string[]; bad: string; fieldError?: string; fieldAction?: React.ReactNode; onChange: (p: Partial<AttachmentSettings>) => void }) {
   const { t } = useTranslation(); const limit = ceiling ?? CEILING
   const row = (id: string, label: string, hint: string | null, control: React.ReactNode) => <div className="grid gap-1.5">
     <Label htmlFor={`chat-${id}`}>{label}</Label>{control}{hint && <p className="text-xs text-muted-foreground">{hint}</p>}</div>
@@ -33,9 +33,11 @@ export function ChatAttachmentSettings({ value, ceiling, lists, bad, onChange }:
               {row('attachments.max_mb', t('chat.files.settings.maxMb'), t('chat.files.settings.ceiling', { max: limit.max_mb }), <Input id="chat-attachments.max_mb" type="number" min={1} max={limit.max_mb}
                 aria-invalid={bad === 'attachments.max_mb' || undefined} value={value.max_mb} onChange={e => onChange({ max_mb: Number(e.target.value) })} />)}
             </div>
-            {row('attachments.field', t('chat.files.settings.field'), t('chat.files.settings.fieldHint'), <Select value={value.field} onValueChange={field => onChange({ field })}>
-              <SelectTrigger className="w-full" id="chat-attachments.field" aria-invalid={bad === 'attachments.field' || undefined}><SelectValue placeholder={t('chat.settings.pickField')} /></SelectTrigger>
-              <SelectContent>{[...new Set([value.field, ...lists])].filter(Boolean).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent></Select>)}
+            {row('attachments.field', t('chat.files.settings.field'), t('chat.files.settings.fieldHint'), <div className="flex min-w-0 items-center gap-2"><Select value={value.field} onValueChange={field => onChange({ field })}>
+              <SelectTrigger className="min-w-0 flex-1" id="chat-attachments.field" aria-invalid={!!fieldError || bad === 'attachments.field' || undefined}
+                aria-describedby={fieldError ? 'chat-attachment-field-error' : undefined}><SelectValue placeholder={t('chat.settings.pickField')} /></SelectTrigger>
+              <SelectContent>{[...new Set([value.field, ...lists])].filter(Boolean).map(o => <SelectItem key={o} value={o} disabled={!lists.includes(o)}>{o}</SelectItem>)}</SelectContent></Select>{fieldAction}</div>)}
+            {fieldError && <p role="alert" id="chat-attachment-field-error" className="text-xs text-destructive">{fieldError}</p>}
           </>}
         </div>
   </>

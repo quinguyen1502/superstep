@@ -13,15 +13,17 @@ import type { KnowledgeBase } from '@/lib/knowledge'
 
 export function RetrieverSettings({ kb, topK, onKb, onTopK }: { kb?: string; topK?: number; onKb: (v: string) => void; onTopK: (v: number) => void }) {
   const { t } = useTranslation(); const [items, setItems] = useState<KnowledgeBase[] | null>(null)
-  useEffect(() => { api<KnowledgeBase[]>('/api/knowledge-bases').then(setItems).catch(() => setItems([])) }, [])
+  const [err, setErr] = useState('')
+  useEffect(() => { api<KnowledgeBase[]>('/api/knowledge-bases').then(setItems).catch(e => { setItems([]); setErr(e.message) }) }, [])
   const missing = kb && items && !items.some(k => k.id === kb)
   return <div className="space-y-3" id="retriever-settings">
     <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor="retriever-kb">{t('editor.retrieverKb')}</Label>
       <Select value={kb || undefined} onValueChange={onKb}>
         <SelectTrigger className="w-full" id="retriever-kb"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
-        <SelectContent>{(items || []).map(k => <SelectItem key={k.id} value={k.id}>{k.name} · {t('kb.documents', { count: k.documents })}</SelectItem>)}</SelectContent>
+        <SelectContent emptyMessage={err || (items === null ? t('common.loading') : undefined)}>{(items || []).map(k => <SelectItem key={k.id} value={k.id}>{k.name} · {t('kb.documents', { count: k.documents })}</SelectItem>)}</SelectContent>
       </Select></div>
     {!kb && <p className="text-[11px] text-destructive" id="retriever-required">{t('editor.retrieverRequired')}</p>}
+    {err && <p role="alert" className="text-xs text-destructive">{err}</p>}
     {missing && <p className="text-[11px] text-destructive">{t('editor.retrieverMissing')}</p>}
     {items && !items.length && <p className="text-[11px] text-muted-foreground" id="retriever-none">{t('editor.retrieverNone')} <TextLink to="/settings/knowledge" id="retriever-create">{t('editor.retrieverCreate')}</TextLink></p>}
     <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor="retriever-topk">{t('editor.retrieverTopK')}</Label>

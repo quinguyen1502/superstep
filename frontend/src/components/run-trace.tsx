@@ -94,8 +94,8 @@ function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; met
   const left = Math.min(100, ((s.start - t0) * 1000 / total) * 100)
   const width = Math.max(1.5, Math.min(100 - left, ((s.duration ?? ((s.end ?? trace.end ?? s.start) - s.start) * 1000) / total) * 100))
   return <button type="button" onClick={onClick} data-span={s.key} aria-selected={selected}
-    className={cn('trace-row w-full grid grid-cols-[18px_minmax(0,1fr)_72px_minmax(80px,30%)] items-center gap-2 px-3 py-1 text-left text-xs hover:bg-accent/60 border-l-2 border-transparent',
-      selected && 'bg-accent border-l-primary', s.status === 'error' && 'bg-destructive/5 hover:bg-destructive/10')}>
+    className={cn('trace-row w-full grid grid-cols-[18px_minmax(0,1fr)_72px_minmax(80px,30%)] items-center gap-2 px-3 py-1 text-left text-xs border-l-2 border-transparent',
+      selected ? 'bg-border/60 hover:bg-border/60 border-l-primary' : s.status === 'error' ? 'bg-destructive/5 hover:bg-destructive/10' : 'hover:bg-accent/60')}>
     <StatusIcon s={s.status} className="size-3.5" />
     <span className={cn('flex items-center gap-1.5 min-w-0 overflow-hidden', agentOf(s.node) && 'pl-4')}>
       <span className={cn('rounded p-0.5', m.color)}><I className="size-3" /></span>
@@ -121,12 +121,16 @@ function DiffView({ s }: { s: Span }) {
   const { t } = useTranslation(); const rows = stateDiff(s.input, s.output)
   if (!rows.length) return <p className="text-muted-foreground text-xs p-2">{t('trace.noDiff')}</p>
   const v = (x: any) => typeof x === 'string' ? x : JSON.stringify(x)
-  return <div className="rounded-md border font-mono text-[11px] divide-y" id="trace-diff">
-    {rows.map(r => <div key={r.key} data-kind={r.kind} className={cn('grid grid-cols-[16px_120px_1fr] gap-2 px-2 py-1',
-      r.kind === 'added' && 'bg-success/10', r.kind === 'changed' && 'bg-warning/10', r.kind === 'removed' && 'bg-destructive/10', r.kind === 'same' && 'text-muted-foreground')}>
-      <span className={cn(r.kind === 'added' && 'text-success', r.kind === 'changed' && 'text-warning', r.kind === 'removed' && 'text-destructive')}>{{ added: '+', changed: '~', removed: '−', same: ' ' }[r.kind]}</span>
-      <Tip tip={r.key}><span className="truncate font-semibold">{r.key}</span></Tip>
-      <span className="break-all whitespace-pre-wrap">{r.kind === 'changed' ? <><span className="line-through opacity-60">{v(r.before)}</span>{' → '}<span>{v(r.after)}</span></> : v(r.kind === 'removed' ? r.before : r.after)}</span>
+  return <div className="space-y-2 font-mono text-xs" id="trace-diff">
+    {rows.map(r => <div key={r.key} data-kind={r.kind} className="min-w-0 overflow-hidden rounded-md border">
+      <div className={cn('flex min-w-0 items-center gap-2 border-b bg-muted/30 px-3 py-2',
+        r.kind === 'added' && 'bg-success/10', r.kind === 'changed' && 'bg-warning/10', r.kind === 'removed' && 'bg-destructive/10')}>
+        {r.kind !== 'same' && <span aria-hidden className={cn(r.kind === 'added' && 'text-success', r.kind === 'changed' && 'text-warning', r.kind === 'removed' && 'text-destructive')}>{{ added: '+', changed: '~', removed: '−' }[r.kind]}</span>}
+        <span className="min-w-0 wrap-anywhere font-semibold">{r.key}</span>
+      </div>
+      <div className="min-w-0 px-3 py-2 whitespace-pre-wrap wrap-anywhere">{r.kind === 'changed'
+        ? <><div className="text-muted-foreground line-through">{v(r.before)}</div><div>{v(r.after)}</div></>
+        : v(r.kind === 'removed' ? r.before : r.after)}</div>
     </div>)}
   </div>
 }
@@ -145,13 +149,13 @@ function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void
     <Tabs value={tab} onValueChange={setTab} className="flex-1 min-h-0 flex flex-col gap-0">
       <TabsList size="sm" className="mx-3 mt-1.5">{['input', 'output', 'diff', 'raw'].map(k => <TabsTrigger key={k} value={k}>{t(`trace.${k}`)}</TabsTrigger>)}</TabsList>
       <ScrollArea className="flex-1 min-h-0"><div className="p-3 pt-2">
-        {s.error && <Alert variant="destructive" className="mb-2 text-xs"><AlertTriangle /><AlertDescription className="break-all text-xs">{s.error}</AlertDescription></Alert>}
+        {s.error && <Alert variant="destructive" className="mb-2 text-xs"><AlertTriangle /><AlertDescription className="wrap-break-word text-xs">{s.error}</AlertDescription></Alert>}
         <TabsContent value="input"><JsonView value={s.input} /></TabsContent>
         <TabsContent value="output">{s.status === 'running' && s.live
           ? <div className="space-y-1" id="trace-live"><div className="flex items-center gap-1 text-[11px] text-muted-foreground"><Loader2 className="size-3 animate-spin" />{t('trace.streaming')}</div>
               <pre className="whitespace-pre-wrap break-words rounded-md border bg-muted/40 p-2 font-mono text-[11px]">{s.live}</pre></div>
           : <div className="space-y-2">{s.status !== 'error' && <JsonView value={s.agent ?? s.output} />}<CodeConsole stdout={s.code?.stdout} traceback={s.code?.traceback} id="trace-code-output" />
-              {s.status === 'error' && !s.code && <JsonView value={s.output} />}</div>}</TabsContent>
+              {s.status === 'error' && !s.code && <JsonView value={s.output} emptyMessage={t('trace.noOutputAfterError')} />}</div>}</TabsContent>
         <TabsContent value="diff"><DiffView s={s} /></TabsContent>
         <TabsContent value="raw"><JsonView value={s.events} /></TabsContent>
       </div></ScrollArea>

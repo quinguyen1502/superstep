@@ -245,8 +245,8 @@ or turn **Chat** off. The page then says the chat is not available.
 
 ### Visitor chats
 
-When the chat is published, the panel gets a **Visitors** list (in the narrow
-panel, a group in the session picker). It shows each visitor's chat read-only,
+Open **⋯ → Chat history & feedback → Visitors** to review published-page
+chats outside the Chat panel. It shows each visitor's chat read-only,
 with every step, until **Retention** deletes it. It shows no names or visitor
 ids. Visitors are not told that chats are kept, so say so in the intro if it
 matters.
@@ -256,10 +256,11 @@ helpful" mark can include a short note about what went wrong. They can change
 the mark or remove it. The same controls are on the embedded chat, because
 that is this page.
 
-In the Chat tab the builder sees the mark and the note on the answer. **Thumbs
-down** in the Visitors list keeps only the chats that have one. A line above
-the conversation shows how many marks were up, how many were down, and the
-share of down, over the last 7 days and the last 30 days. **Save as test
+In **Chat history & feedback** the builder sees the mark and note on each answer.
+**With dislikes** keeps only visitor chats with a negative rating. Summary cards
+show helpful/not-helpful counts and the negative share for this workflow over
+the last 7 and 30 days. The **Chats** tab lists your own Studio conversations;
+use the Chat panel to continue them. **Save as test
 case** on a rated answer opens a draft test of that run. When LangSmith
 tracing is on, the mark is also sent to that run's trace as feedback named
 `user_rating`.

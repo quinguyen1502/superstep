@@ -21,7 +21,7 @@ test('code mode: write, test with sample state, run, traceback, read-only for ed
   test.skip(!rt.available, `Code nodes cannot run here: ${rt.problem || rt.code_runtime}`)
   const wid = await newWorkflow(page, H, WF(`Code ${Date.now()}`))
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="c"]').click()
+  await page.locator('.react-flow__node[data-id="c"]').click(); await page.locator('#config-tab-settings').click()
   await page.locator('#tool-mode').click(); await page.getByRole('option', { name: /^Code \(Python/ }).click()
   await expect(page.locator('#code-source')).toContainText('def main(state)')  // starter
   await expect(page.locator('#code-packages')).toContainText('pydantic')
@@ -61,6 +61,7 @@ test('code mode: write, test with sample state, run, traceback, read-only for ed
   const ctx = await browser.newContext(); const ed = await ctx.newPage()
   await ed.goto('/login'); await signIn(ed, email, 'goodpass1'); await ed.goto(`/workflows/${wid}`)
   await ed.locator('.react-flow__node[data-id="c"]').click()
+  await ed.locator('#config-tab-settings').click()
   await expect(ed.locator('#code-read-only')).toBeVisible(); await expect(ed.locator('#code-test')).toHaveCount(0)
   await expect(ed.locator('#code-source')).toHaveAttribute('contenteditable', 'false')
   await ctx.close()

@@ -18,7 +18,7 @@ test('Teams card → /approve → run resumes; the link works once', async ({ pa
 
   const wid = (await (await page.request.post('/api/workflows', { headers: H, data: WF(`Teams ${Date.now()}`, { channel_id: ch.id, channel: 'teams', target: '' }) })).json()).data.id
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="ask"]').click(); await expect(page.locator('#approval-no-target')).toBeVisible()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click(); await expect(page.locator('#approval-no-target')).toBeVisible()
   await page.locator('#run-tab').click(); await page.locator('#run-input').fill('{"message": "order A100"}')
   await page.locator('#run-btn').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'waiting', { timeout: 30_000 })

@@ -78,7 +78,7 @@ test('the person chatting answers a Human node in the chat; a reviewer step wait
   await expect(page.getByTestId('chat-answer').last()).toContainText('Answer only half', { timeout: 20_000 })
 
   // the node's "Answered by" option in the config panel
-  await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#human-answered-by')).toContainText('Người chat')
 
   const rid = await newWorkflow(page, H, ASK(`Review ${Date.now()}`, 'reviewer')); await enable(page, H, rid)

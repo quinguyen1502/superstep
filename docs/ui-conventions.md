@@ -112,13 +112,21 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
     | `<span className="leading-none">21:07</span><span className="font-mono text-xs leading-none">2959fe</span>` | `<span className="inline-flex items-baseline gap-1.5 text-xs"><span className="tabular-nums">21:07</span><span className="font-mono tabular-nums">2959fe</span></span>` |
     | `<div className="flex gap-3 py-1.5">` toolbar | `<div className="flex h-11 items-center gap-2">` |
 
-12. **Node Config uses the same three tabs for every node** (TASK-0121). `components/editor/editor-config.tsx` shows the node's icon, id and Label above a tab bar with **Settings · Data · Execution** (vi: Cài đặt · Dữ liệu · Thực thi), always in that order, so a builder learns once where a setting lives.
+12. **Node Config uses the same tabs for every node** (TASK-0121; owner amendment TASK-0254). The owner requested **General · Settings · Data · Execution** (vi: Chung · Cài đặt · Dữ liệu · Thực thi) at the top on 2026-11-04. `components/editor/editor-config.tsx` puts the node's icon, id and Label in General. The tab selection is kept between nodes and unused tabs remain disabled.
+    - Palette/State schema and Config headers use the shared shadcn Tabs `panel` variant: rectangular tabs attached to the panel edge, no floating pill group, existing theme tokens and keyboard navigation.
+    - **General**: the node identity, description, Label and incoming/outgoing connections; initially selected, available for every graph node. Connection links navigate to the existing neighbour, rather than duplicating its editable settings (owner follow-up TASK-0256).
     - **Settings**: what the node does: credential, model, prompts, tools, mode, code, approvers and deadline, a condition's default label.
     - **Data**: every picker of a state field: output field, steps and history fields, a loop's items/item/index fields, the field a Condition branches on, a Decision's answer fields, and the input fields switch list.
     - **Execution**: how the node runs: retry, wait, timeout, cache TTL, and limits (Agent max rounds, For each max items).
     - A tab the node does not use stays in its place, disabled; never hide it or add a node-specific tab. The chosen tab is kept while another node is selected.
     - A tab whose content needs attention (a required output field, an Agent without tools) shows a `bg-destructive` dot.
     - A new node type puts each field in the tab this rule names. A settings component that would span tabs exports one part per tab (as `AgentSettings` / `AgentData` / `AgentExecution`).
+
+13. **Dialog scrolling and state-field quick actions** (owner follow-up TASK-0256).
+    - Long dialogs use a viewport-bounded flex `DialogContent`, fixed `DialogHeader` / `DialogFooter` and a scrollable `DialogBody` (or the existing equivalent `min-h-0 flex-1` ScrollArea). The dialog shell must not scroll its header or actions away. Reserve space for focus rings in the body.
+    - Empty Select menus must visibly explain that there are no options; loading and lookup errors must not masquerade as an empty result. The Studio SelectContent provides the shared empty state.
+    - State pickers use the shared StateFieldAction/StateFieldPicker where in-place creation is available. Creation is explicit, typed and undoable in the draft, not an automatic schema change. Saved-workflow settings must clearly disclose and request the workflow save before referencing new draft fields.
+    - Panel tabs have no box shadow; retain a visible keyboard outline and an active-tab border. Align Alert icons by grid layout, not per-call-site translation offsets.
 
 ## Review checklist
 

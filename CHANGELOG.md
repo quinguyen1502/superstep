@@ -2,6 +2,43 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## 0.11.2 (2026-11-05)
+
+### Fixed
+
+- Palette drag previews are clipped to the rounded card; time-travel columns align and preserve an accessible State label. Empty dropdowns visibly explain missing options, with distinct loading/error feedback for existing lookup flows.
+- Shared alerts and small controls align icons/text; Restore has balanced spacing. Attached panel tabs have no box shadow and retain a keyboard focus outline.
+- Long dialogs keep headers and actions visible while only the body scrolls, including Chat settings on small screens.
+- Chat runs from Studio, public pages and other tabs appear in the workflow run log while still running, then update progress/status without an application reload. Active-run durations no longer become negative.
+- Run-history observers close/reconnect cleanly and recheck existing workflow/run permissions. Invalidation messages contain no run contents; bounded chat-only snapshots do not enable queued-job replay.
+
+### Improved
+
+- General shows the existing node description and incoming/outgoing connections.
+- State pickers offer explicit named/typed creation with duplicate validation, immediate selection and Undo. Saved chat settings disclose when the workflow draft must also be saved.
+
+### Upgrade
+
+- Shared server/Python SDK/CLI/frontend version: **0.11.2**. React toolkit: **0.1.2**. TypeScript SDK stays **0.2.0**. No database migration or new dependency; back up normal application data before upgrading.
+- Running socket snapshots are display state, not a new durable replay guarantee. Existing queued-run recovery is unchanged. Native TASK-0227/0228, physical-device keyboard/native drag-ghost QA and live provider/bot cutovers are not included.
+
+## 0.11.1 (2026-11-05)
+
+### Fixed
+
+- Chat feedback controls stay on one row on narrow screens; comment inputs retain their complete focus ring. New chat sits before Expand and Close has a consistent visual size.
+- Workflow chat history, visitor dislike filtering and 7/30-day feedback totals move to **Chat history & feedback** in the workflow menu, keeping the Chat panel focused on conversations. Existing session visibility rules remain unchanged.
+- Node palette/State schema and General/Settings/Data/Execution use attached panel tabs. Trace errors, empty output, State diff and version comparisons have clearer layouts and messages.
+- New Google Sheets connections leave sheet name and data-column count empty. Existing settings are preserved. Channel cards initially expand only connected services; schedule time zones are selectable.
+- Public-page settings collapse from a plain heading with a chevron. Attachment configuration explains invalid state fields and prevents invalid saves. Sharing labels, notifications and exact-name deletion dialogs render consistently on narrow screens and in dark mode.
+- Public chat session-operation errors stay inline instead of incorrectly replacing an already loaded page with “Chat not available”; publication checks remain enforced. The separately reported deployment-specific first-message rejection still needs its URL/environment to diagnose.
+
+### Changed
+
+- Python/TypeScript workflow exports retain managed steps as explicit TODO placeholders that fail until implemented, including Agent tools and child workflows. Connection settings and credentials are excluded; unrelated generated code remains available.
+- Backend distributions now include the chat socket JSON schemas required when starting an installed wheel.
+- Shared server/Python SDK/CLI/frontend version: **0.11.1**. React toolkit: **0.1.1**. TypeScript SDK remains **0.2.0**. No database migration is introduced.
+
 ## 0.11.0 (2026-11-03)
 
 ### Added

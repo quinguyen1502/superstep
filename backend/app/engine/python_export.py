@@ -30,7 +30,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
-    "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "send_email", "addresses", "build_graph",
+    "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 
@@ -431,6 +431,15 @@ def retrieve(query: str, top_k: int) -> list:
     TODO: search your own index for `query`, for example with a LangChain vector store retriever."""
     return []
 ''',
+    "managed_operation": '''
+
+def managed_operation(tool: str, arguments: dict) -> Any:
+    """Placeholder for a Superstep managed connection. No external action is performed.
+    TODO: implement this tool with your own credentials, operation tracking,
+    idempotency and reconciliation before running the exported workflow.
+    Studio connection settings and secrets are deliberately not exported."""
+    raise NotImplementedError("Managed connection placeholder: implement the tool before running it")
+''',
     "call_mcp_tool": '''
 
 def call_mcp_tool(tool: str, arguments: dict) -> Any:
@@ -691,12 +700,14 @@ class _Writer(GraphWriter):
             self.add(f'    """{head}: the chunks of a knowledge base that best match the query (see retrieve)."""')
             self.add(ret(f"retrieve(render({const}_QUERY, state), top_k={_number(d.get('top_k'), int) or 4})"))
         elif t == "mcp":
+            call = "managed_operation" if d.get("_managed_export") else "call_mcp_tool"
             self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
             self.add("")
             self.add("")
             self.add(f"def {name}(state: {cls}) -> dict:")
-            self.add(f'    """{head}: calls the MCP tool {lit(_doc(d.get("tool")))} (see call_mcp_tool)."""')
-            self.add(ret(f"call_mcp_tool({lit(d.get('tool') or '')}, render_args({const}_ARGUMENTS, state))"))
+            self.add(f'    """{head}: MCP tool {lit(_doc(d.get("tool")))} (see {call})."""')
+            if d.get("_managed_export"): self.add("    # TODO: implement this managed step; the placeholder raises until replaced.")
+            self.add(ret(f"{call}({lit(d.get('tool') or '')}, render_args({const}_ARGUMENTS, state))"))
         elif t == "email":
             self.email(g, nid, cls, head)
         elif t == "subgraph":
@@ -1057,7 +1068,8 @@ class _Writer(GraphWriter):
             elif src == "knowledge":
                 self.add(f"        return retrieve(str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":
-                self.add(f"        return call_mcp_tool({lit(t.get('tool') or '')}, args)")
+                call = "managed_operation" if t.get("_managed_export") else "call_mcp_tool"
+                self.add(f"        return {call}({lit(t.get('tool') or '')}, args)")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:

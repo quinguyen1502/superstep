@@ -12,7 +12,7 @@ test('template filters: suggestions, tags, bad filter, edit as text, rendered ru
   const auth = await login(page)
   const wid = (await (await page.request.post('/api/workflows', { headers: auth, data: WF(`Filters ${Date.now()}`) })).json()).data.id
   await page.goto(`/workflows/${wid}`)
-  await page.locator('.react-flow__node[data-id="ask"]').click()
+  await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
   const prompt = page.locator('#human-prompt')
   await expect(prompt.locator('.template-tag')).toHaveText('order.id')
 

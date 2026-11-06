@@ -25,7 +25,7 @@ class Run(Base):
     trace_root: Mapped[Optional[str]] = mapped_column(Text)   # span id (hex) of the trace's root span: LangSmith's run id
     # human-in-the-loop (TASK-0006): owner of the run and the saved checkpoint while status == "waiting"
     owner: Mapped[Optional[str]] = mapped_column(Text, index=True)
-    checkpoint: Mapped[Optional[str]] = mapped_column(Text)  # JSON {node, state, workflow}; cleared when the run ends
+    checkpoint: Mapped[Optional[str]] = mapped_column(Text)  # recovery/wait state, or {kind:live_history} for socket display only; cleared at end
     source: Mapped[Optional[str]] = mapped_column(Text)  # ui | api (TASK-0007); NULL = ui (older runs)
     workflow_version: Mapped[Optional[int]] = mapped_column(Integer)  # version that ran; NULL = unsaved edits / older runs (TASK-0008)
     lease_gen: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # fencing token of the worker that owns it (TASK-0021)

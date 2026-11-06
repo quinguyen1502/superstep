@@ -4,7 +4,7 @@ import { AlertCircle, History, Info, RotateCcw, TriangleAlert } from 'lucide-rea
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useOpenState } from '@/lib/use-open-state'
@@ -12,6 +12,7 @@ import { api } from '@/lib/api'
 import { fmtDate } from '@/lib/i18n'
 import i18n from '@/lib/i18n'
 import { useLoadWhen } from '@/lib/use-when'
+import { JsonView } from '@/components/json-view'
 
 type Version = { version: number; name: string; created: number; author_email: string | null; note: string | null; node_count: number; current: boolean }
 type Child = { id: string; name: string; version: number; at: number }
@@ -23,7 +24,7 @@ type Diff = { a: number; b: number; identical: boolean; name: { before: string; 
 const label = (x: any) => x.id ?? x.name ?? '?'
 const edgeLabel = (e: any) => `${e.source} → ${e.target}${e.label ? ` (${e.label})` : ''}`
 
-function SectionView({ title, s, kind }: { title: string; s: Section; kind: 'nodes' | 'edges' | 'state' }) {
+function SectionView({ title, s, kind, a, b }: { title: string; s: Section; kind: 'nodes' | 'edges' | 'state'; a: number; b: number }) {
   const { t } = useTranslation()
   const name = (x: any) => kind === 'edges' ? edgeLabel(x) : `${label(x)}${x.type ? ` · ${x.type}` : ''}`
   const rows = [
@@ -33,13 +34,16 @@ function SectionView({ title, s, kind }: { title: string; s: Section; kind: 'nod
     ...(s.moved ?? []).map(id => ({ k: `>${id}`, v: 'secondary' as const, tag: t('versions.moved'), text: id })),
   ]
   if (!rows.length) return null
-  return <div className="space-y-1">
+  return <div className="space-y-2">
     <div className="text-xs font-medium text-muted-foreground">{title}</div>
-    {rows.map(r => <div key={r.k} data-testid="diff-row" className="text-xs space-y-1">
-      <div className="flex items-center gap-2"><Badge variant={r.v}>{r.tag}</Badge><span className="font-mono">{r.text}</span></div>
-      {'c' in r && r.c && <div className="grid grid-cols-2 gap-2 pl-2">
-        <pre className="rounded bg-muted p-1.5 overflow-auto max-h-32 text-[11px]">{JSON.stringify(r.c.before, null, 1)}</pre>
-        <pre className="rounded bg-muted p-1.5 overflow-auto max-h-32 text-[11px]">{JSON.stringify(r.c.after, null, 1)}</pre></div>}
+    {rows.map(r => <div key={r.k} data-testid="diff-row" className="min-w-0 overflow-hidden rounded-lg border text-xs">
+      <div className="flex items-start gap-2 bg-muted/30 px-3 py-2"><Badge variant={r.v}>{r.tag}</Badge><span className="min-w-0 wrap-anywhere font-mono">{r.text}</span></div>
+      {'c' in r && r.c && <div className="grid min-w-0 gap-px border-t bg-border sm:grid-cols-2">
+        {(['before', 'after'] as const).map(side => <div key={side} className="min-w-0 bg-background">
+          <div className="border-b px-3 py-2 font-medium text-muted-foreground">{t(`versions.${side}`, { n: side === 'before' ? a : b })}</div>
+          <JsonView value={Object.fromEntries(r.c!.fields.map(field => [field, r.c![side]?.[field]]))} className="rounded-none border-0 bg-background" />
+        </div>)}
+      </div>}
     </div>)}
   </div>
 }
@@ -71,20 +75,21 @@ export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => v
     }
     catch (e: any) { setErr(e.message) }
   }
-  const pick = (v: string, set: (s: string) => void) => <Select value={v} onValueChange={set}>
-    <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+  const pick = (v: string, set: (s: string) => void, side: 'before' | 'after') => <Select value={v} onValueChange={set}>
+    <SelectTrigger className="w-28" aria-label={t(`versions.${side}`, { n: v })}><SelectValue /></SelectTrigger>
     <SelectContent>{items.map(i => <SelectItem key={i.version} value={String(i.version)}>v{i.version}</SelectItem>)}</SelectContent>
   </Select>
   return <Dialog open={open} onOpenChange={setOpen}>
     {!controlled && <DialogTrigger asChild><Button size="sm" variant="outline" id="versions-btn" disabled={!wid}><History />{t('versions.button')}</Button></DialogTrigger>}
-    <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-4xl">
+    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-4xl">
       <DialogHeader><DialogTitle>{t('versions.title')}</DialogTitle><DialogDescription>{t('versions.desc')}</DialogDescription></DialogHeader>
+      <DialogBody className="space-y-4">
       {err && <Alert variant="destructive"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
       {!!children.length && <Alert variant="warning" id="versions-children"><TriangleAlert /><AlertDescription>{t('versions.childrenChanged', { count: children.length })}
         <ul className="mt-1 list-disc pl-4">{children.map(c => <li key={c.id}>{c.name} · v{c.version} · {fmtDate(c.at)}</li>)}</ul></AlertDescription></Alert>}
       {notice && <Alert id="versions-notice"><Info /><AlertDescription>{notice}</AlertDescription></Alert>}
-      <div className="grid grid-cols-1 gap-4 min-h-0 sm:grid-cols-[18rem_minmax(0,1fr)]">
-        <ScrollArea className="h-48 rounded-md border sm:h-96">
+      <div className="grid grid-cols-1 items-start gap-4 min-h-0 sm:grid-cols-[18rem_minmax(0,1fr)]">
+        <ScrollArea className="rounded-md border [&_[data-slot=scroll-area-viewport]]:max-h-48 sm:[&_[data-slot=scroll-area-viewport]]:max-h-96">
           <div className="p-1">{items.map(v => <div key={v.version} data-testid="version-row" className="rounded-md px-2 py-1.5 text-xs hover:bg-accent space-y-1">
             <div className="flex items-center gap-2">
               <span className="font-mono font-semibold">v{v.version}</span>
@@ -96,21 +101,22 @@ export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => v
             {!v.current && (confirm === v.version
               ? <div className="space-y-1">{dirty && <p className="text-warning" data-testid="restore-unsaved-warning">{t('versions.unsavedWarning')}</p>}<div className="flex gap-1"><Button size="xs" variant="destructive" data-testid="restore-confirm" onClick={() => restore(v.version)}>{t('versions.confirm', { n: v.version })}</Button>
                   <Button size="xs" variant="ghost" onClick={() => setConfirm(null)}>{t('common.cancel')}</Button></div></div>
-              : <Button size="xs" variant="ghost" data-testid="restore-btn" onClick={() => setConfirm(v.version)}><RotateCcw />{t('versions.restore')}</Button>)}
+              : <Button size="xs" variant="outline" data-testid="restore-btn" onClick={() => setConfirm(v.version)}><RotateCcw data-icon="inline-start" /><span>{t('versions.restore')}</span></Button>)}
           </div>)}
           {items.length < total && <Button variant="ghost" size="sm" className="w-full" id="versions-more" onClick={more}>{t('versions.loadMore')} ({t('versions.shown', { shown: items.length, total })})</Button>}</div>
         </ScrollArea>
         <div className="space-y-3 min-w-0">
-          <div className="flex items-center gap-2 text-xs"><span>{t('versions.compare')}</span>{pick(a, setA)}<span>→</span>{pick(b, setB)}</div>
-          <ScrollArea className="h-48 sm:h-80"><div className="space-y-3 pr-3" id="version-diff">
+          <div className="flex flex-wrap items-center gap-2 text-xs"><span>{t('versions.compare')}</span>{pick(a, setA, 'before')}<span aria-hidden>→</span>{pick(b, setB, 'after')}</div>
+          <div className="space-y-3" id="version-diff">
             {diff?.identical && <div className="text-xs text-muted-foreground">{t('versions.identical')}</div>}
             {diff?.name && <div className="text-xs"><Badge variant="warning">{t('versions.renamed')}</Badge> <span className="font-mono">{diff.name.before} → {diff.name.after}</span></div>}
-            {diff && <><SectionView title={t('versions.nodesTitle')} s={diff.nodes} kind="nodes" />
-              <SectionView title={t('versions.edgesTitle')} s={diff.edges} kind="edges" />
-              <SectionView title={t('versions.stateTitle')} s={diff.state} kind="state" /></>}
-          </div></ScrollArea>
+            {diff && <><SectionView title={t('versions.nodesTitle')} s={diff.nodes} kind="nodes" a={diff.a} b={diff.b} />
+              <SectionView title={t('versions.edgesTitle')} s={diff.edges} kind="edges" a={diff.a} b={diff.b} />
+              <SectionView title={t('versions.stateTitle')} s={diff.state} kind="state" a={diff.a} b={diff.b} /></>}
+          </div>
         </div>
       </div>
+      </DialogBody>
     </DialogContent>
   </Dialog>
 }

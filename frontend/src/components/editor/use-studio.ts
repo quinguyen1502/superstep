@@ -17,7 +17,7 @@ import { useTheme } from '@/lib/theme'
 import type { Channels } from '@/lib/approvals'
 import { type Credential } from '@/components/credentials-dialog'
 import { useProviders } from '@/lib/providers'
-import { buildTrace, withSummary } from '@/lib/trace'
+import { buildTrace, withSummary, type RunEvent } from '@/lib/trace'
 import { canvasId, clearMarks, markEvent, markRun } from '@/lib/run-marks'
 import type { BuiltinTool } from '@/lib/agent'
 import { useShortcuts } from '@/lib/use-shortcuts'
@@ -46,10 +46,14 @@ export function useStudio() {
   const providers = useProviders()
   const [channels, setChannels] = useState<Channels | null>(null)
   const [history, setHistory] = useState<any[]>([])
+  const historyScope = useRef<string | undefined>(id); historyScope.current = id ?? wid
+  const historyEpoch = useRef(0)
+  const historyRequest = useRef(0)
   const [tab, setTab] = useState('input')
   const [saves, setSaves] = useState(0)  // successful saves: the Code tab reloads the code after each (TASK-0071)
   const [running, setRunning] = useState(false)
   const [traceSel, setTraceSel] = useState<string | null>(null); const [replay, setReplay] = useState<string | null>(null)
+  const historySelection = useRef({ replay, running }); historySelection.current = { replay, running }
   const [loadErr, setLoadErr] = useState<{ status: number; msg: string } | null>(null)
   const [access, setAccess] = useState<Access>('owner'); const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
   const canSave = canEdit(access)  // viewers (share or global role) get a read-only editor; they can still run (TASK-0014)
@@ -77,11 +81,89 @@ export function useStudio() {
     setNodes(wf.needs_layout ? layoutGraph(wf.nodes, wf.edges, 'LR', false) : wf.nodes); setEdges(styleEdges(wf.edges))
     if (wf.source) setInput(defaultInput(wf.state || []))
   }
-  const loadHistory = (id?: string) => id ? api<any[]>(`/api/workflows/${id}/runs`).then(hs => { setHistory(hs); return hs }) : undefined
+  const loadHistory = (workflow?: string) => {
+    const epoch = historyEpoch.current; const request = ++historyRequest.current
+    return workflow ? api<any[]>(`/api/workflows/${workflow}/runs`).then(hs => {
+      if (historyScope.current !== workflow || request !== historyRequest.current) return []
+      setHistory(current => {
+        const live = current.filter(row => row._live && (epoch !== historyEpoch.current || !hs.some(h => h.id === row.id && !['running', 'queued'].includes(h.status))))
+        return [...live, ...hs.filter(h => !live.some(row => row.id === h.id))].sort((a, b) => b.started - a.started)
+      })
+      if (epoch === historyEpoch.current && historySelection.current.replay && !historySelection.current.running) {
+        const selected = hs.find(row => row.id === historySelection.current.replay)
+        if (selected) { setLog(withSummary(selected)); setNodes(ns => markRun(ns, selected.events || [])) }
+      }
+      return hs
+    }) : undefined
+  }
+  /** The existing Studio chat socket is the source of truth while a run is live, not a second polling loop. */
+  const observeChatRun = useCallback((event: RunEvent) => {
+    if (!wid || historyScope.current !== wid || !event.run_id) return
+    historyEpoch.current++
+    setHistory(rows => {
+      const old = rows.find(row => row.id === event.run_id)
+      const events = [...(old?.events || []), event]
+      const live = buildTrace(events)
+      const row = { ...old, id: event.run_id, source: 'chat', workflow_id: wid, events, _live: true,
+        started: old?.started ?? event.ts ?? Date.now() / 1000, ended: live.end ?? null,
+        status: live.status === 'idle' ? 'running' : live.status,
+        input: old?.input ?? {}, metrics: live.metrics ?? old?.metrics, trace_url: live.traceUrl ?? old?.trace_url }
+      return [row, ...rows.filter(h => h.id !== row.id)].sort((a, b) => b.started - a.started)
+    })
+    // Keep a selected live chat trace moving, without replacing a different run or switching tabs.
+    if (replay === event.run_id && !running) {
+      setLog(events => [...events.filter(e => e.type !== 'run_summary'), event]); setNodes(ns => markEvent(ns, event))
+    }
+  }, [wid, replay, running, setNodes])
+  const historyLoader = useRef(loadHistory); historyLoader.current = loadHistory
+  // Public-page/other-tab runs arrive through the existing Redis-backed fan-out hub.
+  // Push contains no run data: every snapshot is read through api() with normal visibility checks.
+  useEffect(() => {
+    if (!wid || source) return
+    let stopped = false, denied = false, connected = false, fetching = false, again = false
+    let socket: WebSocket | undefined, refreshTimer: ReturnType<typeof setTimeout> | undefined, reconnectTimer: ReturnType<typeof setTimeout> | undefined
+    let delay = 1000
+    const refresh = () => {
+      if (stopped || denied || document.hidden) return
+      if (fetching) { again = true; return }
+      fetching = true
+      Promise.resolve(historyLoader.current(wid)).catch(() => {}).finally(() => {
+        fetching = false
+        if (again) { again = false; schedule() }
+      })
+    }
+    const schedule = () => {
+      if (stopped || denied || refreshTimer) return
+      refreshTimer = setTimeout(() => { refreshTimer = undefined; refresh() }, 150)
+    }
+    const connect = () => {
+      if (stopped || denied) return
+      socket = new WebSocket(wsUrl(`/ws/workflows/${wid}/runs`))
+      socket.onmessage = ({ data }) => {
+        let event: { type?: string }; try { event = JSON.parse(data) } catch { return }
+        if (event.type === 'ready') { connected = true; delay = 1000; schedule() }
+        if (event.type === 'runs_changed') schedule()
+      }
+      socket.onclose = e => {
+        connected = false
+        if (stopped) return
+        if (e.code === 4401 || e.code === 4403) { denied = true; setHistory([]); return }
+        reconnectTimer = setTimeout(connect, delay); delay = Math.min(delay * 2, 30000)
+      }
+    }
+    connect()
+    const fallback = setInterval(() => { if (!connected) schedule() }, 5000)
+    document.addEventListener('visibilitychange', schedule); window.addEventListener('focus', schedule)
+    return () => {
+      stopped = true; clearTimeout(refreshTimer); clearTimeout(reconnectTimer); clearInterval(fallback); socket?.close()
+      document.removeEventListener('visibilitychange', schedule); window.removeEventListener('focus', schedule)
+    }
+  }, [wid, source])
   // the canvas shows the opened run, with the steps it took on the server (a workflow tool's parent after its child, TASK-0147)
   const openRun = (h: any) => { setLog(withSummary(h)); setReplay(h.id); setTraceSel(null); setTab('logs'); setNodes(ns => markRun(ns, h.events || [])) }
   // each workflow id loads the graph, its run history (?run=<id> opens that run), and the editor's lookups
   const openWorkflow = useEffectEvent(() => {
+    setHistory([]); historyEpoch.current++
     api(`/api/workflows/${id}`).then(wf => { setLoadErr(null); load(wf)
       // a workflow just made from a template: what it still needs (a knowledge base, a server...), as a save shows it
       const st = loc.state as { errors?: unknown; issues?: Issue[] } | null; const pending = st?.errors
@@ -108,6 +190,7 @@ export function useStudio() {
     try {
       const r = await api('/api/workflows', { method: 'POST', json: toJSON() })
       setWid(r.id); setErrors(issueTexts(r.errors, r.issues)); savedSnap.current = snap(); setSaves(n => n + 1); if (r.errors.length) setTab('input')
+      return r
     } catch (e: any) { setErrors([t('editor.saveFailed', { error: e.message })]); setTab('input') }
   }
   const mark = (id: string, patch: any) => setNodes(ns => ns.map(n => n.id === id ? { ...n, data: { ...n.data, ...patch } } : n))
@@ -230,7 +313,7 @@ export function useStudio() {
     ...Object.fromEntries(['delete', 'cut', 'paste', 'duplicate', 'layout'].map(k => [k, !editable])) }
   const paletteRef = useRef<Record<string, () => void>>({})
   // secondary editor actions (TASK-0028 follow-up): one list feeds the ⋯ menu and the command palette
-  const [dlg, setDlg] = useState<null | 'share' | 'versions' | 'api' | 'schedules' | 'chat' | 'chatSettings' | 'template' | 'json'>(null)
+  const [dlg, setDlg] = useState<null | 'share' | 'versions' | 'api' | 'schedules' | 'chat' | 'chatSettings' | 'chatHistory' | 'template' | 'json'>(null)
   const [ctx, setCtx] = useState<null | { kind: 'node' | 'edge'; id: string } | { kind: 'pane'; at: { x: number; y: number } }>(null)
   const nav = useNavigate(); const delWf = useDeleteWorkflow(() => nav('/workflows'))
   const isDirty = () => savedSnap.current !== null && snap() !== savedSnap.current
@@ -243,6 +326,7 @@ export function useStudio() {
     { id: 'action:api', group: 'actions', label: t('api.button'), icon: Webhook, menu: 'workflow', elementId: 'api-btn', disabled: !wid || access !== 'owner', run: () => setDlg('api') },
     { id: 'action:schedules', group: 'actions', label: t('schedules.button'), icon: CalendarClock, menu: 'workflow', elementId: 'schedules-btn', disabled: !wid || access !== 'owner', run: () => setDlg('schedules') },
     { id: 'action:chatTriggers', group: 'actions', label: t('chatTriggers.button'), icon: MessageSquare, menu: 'workflow', elementId: 'chat-triggers-btn', disabled: !wid || access !== 'owner' || !!source, run: () => setDlg('chat') },
+    { id: 'action:chatHistory', group: 'actions', label: t('chat.history.title'), icon: History, menu: 'workflow', elementId: 'chat-history-btn', disabled: !wid || !canChat, run: () => setDlg('chatHistory') },
     { id: 'action:chatSettings', group: 'actions', label: t('chat.settings.title'), icon: MessagesSquare, menu: 'workflow', elementId: 'chat-settings-menu', disabled: !wid || access !== 'owner' || !!source, run: () => setDlg('chatSettings') },
     { id: 'action:json', group: 'actions', label: t('editor.jsonTitle'), icon: Braces, menu: 'workflow', elementId: 'json-btn', run: () => setDlg('json') },
     { id: 'action:code', group: 'actions', label: t('codeView.button'), icon: FileCode2, menu: 'workflow', elementId: 'code-btn', keywords: ['langgraph', 'python', 'export'],
@@ -326,7 +410,7 @@ export function useStudio() {
     id, nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, state, setState, name, setName, wid, setSel,
     input, setInput, log, setLog, errors, setErrors, tools, mode, source, creds, setCreds, providers, channels, history,
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,
-    hist, load, openRun, toJSON, save, mark, run, respond, fork, cancelRun, removeIds,
+    hist, load, openRun, toJSON, save, mark, run, respond, fork, cancelRun, removeIds, observeChatRun, refreshHistory: loadHistory,
     clipNote, note, insert, editable, layoutDir, cheat, setCheat, insertAround, addNode, addNote, dlg, setDlg, ctx, setCtx,
     delWf, isDirty, saves, paletteCmds, addCentered, trace, traceMeta, step, continueRun, nodesView, edgesView, onEdgesView, onNodeClick, onConnect, onDrop,
     selNode, selEdge, upd, setRuntime, d, runTo, fieldNames, canvasLock, setCanvasLock, copyIds, chatOpen: chatOpen && canChat, setChatOpen, canChat,

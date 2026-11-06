@@ -27,6 +27,10 @@ import { TimeTravelDialog } from './time-travel-dialog'
 import { useStudioCtx } from './studio-context'
 import { useIsMobile } from '@/lib/use-viewport-width'
 
+const RUN_BADGES = { ok: 'success', running: 'warning', queued: 'warning', timeout: 'warning',
+  waiting: 'outline', cancelled: 'secondary', expired: 'secondary', paused: 'secondary' } as const
+const badgeFor = (status: string) => RUN_BADGES[status as keyof typeof RUN_BADGES] ?? 'destructive'
+
 /** Bottom panel (TASK-0085): Run (input | logs side by side, a picker for the last runs and a dialog with all of them),
  * Test (TASK-0067) and Code (TASK-0071). Chat lives in its own side panel (components/chat/chat-side-panel.tsx). */
 export function EditorRunPanel() {
@@ -71,7 +75,7 @@ export function EditorRunPanel() {
           <Select value={pick ? pick.id : ''} onValueChange={id => { const h = rows.find(x => x.id === id); if (h) openRun(h) }}>
             <SelectTrigger variant="ghost" className="w-auto min-w-56 max-md:min-w-0 max-md:flex-1" id="run-picker" aria-label={t('editor.pickRun')}><SelectValue placeholder={t('editor.pickRun')} /></SelectTrigger>
             <SelectContent>{rows.slice(0, 10).map(h => <SelectItem key={h.id} value={h.id}>
-              <Badge variant={h.status === 'ok' ? 'success' : h.status === 'waiting' ? 'outline' : h.status === 'cancelled' ? 'secondary' : 'destructive'}>{t(`status.${h.status}`)}</Badge>
+              <Badge variant={badgeFor(h.status)}>{t(`status.${h.status}`)}</Badge>
               <span className="inline-flex items-baseline gap-1.5 text-xs"><span className="tabular-nums text-muted-foreground" data-slot="run-time">{new Date(h.started * 1000).toLocaleTimeString(i18n.resolvedLanguage)}</span>
               <span className="font-mono tabular-nums" data-slot="run-id">{h.id}</span></span></SelectItem>)}</SelectContent></Select>
           <Button variant="ghost" id="history-all" onClick={() => setAllOpen(true)}><History /><span className="max-md:sr-only">{t('editor.viewAllRuns')}</span></Button>
@@ -118,7 +122,7 @@ export function EditorRunPanel() {
             {rows.map(h => <div key={h.id} className="flex items-center gap-1">
               <button data-testid="history-row" onClick={() => openRun(h)}
               className="min-w-0 flex-1 flex items-center gap-3 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent">
-              <span className="w-16 shrink-0"><Badge variant={h.status === 'ok' ? 'success' : h.status === 'timeout' ? 'warning' : h.status === 'cancelled' || h.status === 'expired' || h.status === 'paused' ? 'secondary' : h.status === 'waiting' ? 'outline' : 'destructive'}>{t(`status.${h.status}`)}</Badge></span>
+              <span className="w-16 shrink-0"><Badge variant={badgeFor(h.status)}>{t(`status.${h.status}`)}</Badge></span>
               <span className="w-20 shrink-0 text-muted-foreground tabular-nums">{new Date(h.started * 1000).toLocaleTimeString(i18n.resolvedLanguage)}</span>
               <span className="w-20 shrink-0 font-mono text-muted-foreground">{h.id}</span>
               <span className="flex w-28 shrink-0 items-center gap-1">
@@ -137,7 +141,7 @@ export function EditorRunPanel() {
                 {h.metrics && <span className="w-20 text-right" data-testid="history-tokens">{t('trace.tokens', { count: h.metrics.tokens })}</span>}
                 {h.metrics && <span className="w-12 text-right" data-testid="history-cost">{fmtCost(h.metrics.cost_usd)}</span>}
                 <span className="flex w-16 justify-end">{h.metrics?.error_count > 0 && <Badge variant="destructive">{t('trace.errorCount', { count: h.metrics.error_count })}</Badge>}</span>
-                <span className="w-14 text-right">{fmtMs(h.metrics?.duration_ms ?? (h.ended - h.started) * 1000)}</span>
+                <span className="w-14 text-right" data-testid="history-duration">{fmtMs(h.metrics?.duration_ms ?? Math.max(0, ((h.ended ?? Date.now() / 1000) - h.started) * 1000))}</span>
                 {h.trace_url && <ExternalLink className="size-3.5" aria-label={t('trace.openTrace')} />}{/* link itself is in the replayed timeline (no <a> inside a button) */}
               </span>
             </button>

@@ -18,6 +18,7 @@ from ..engine.ports import Ports
 from ..engine.runtime import resume_nodes, run_stream
 from ..models import Run
 from ..repositories import RunRepository, StaleLease, WorkflowRepository
+from .notification_hub import workflow_runs_channel
 from .job_queue import enqueue_resume
 from .run_bus import InMemoryRunBus, RunBus
 from . import time_travel
@@ -660,6 +661,20 @@ class RunService:
         self._close_waiting(r, {"type": "run_cancelled", "ts": time.time(), "reason": "api"}, "cancelled", uid)
 
     # ---- history ----
+    def watch_history(self, wid: str, uid: str, rid: str | None = None) -> bool:
+        """Same workflow/run visibility as history; shared viewers cannot learn of someone else's run."""
+        row = self._workflow(wid, uid)
+        if rid is None: return True
+        r = self.runs.get(rid)
+        everyone = self.access is None or self.access.access_of(row, uid) == "owner"
+        return bool(r and r.workflow_id == wid and (everyone or r.owner == uid))
+
+    def history_changed(self, wid: str | None, rid: str) -> None:
+        hub = getattr(self.notifier, "hub", None)
+        if not hub or not wid or wid == "adhoc": return
+        try: hub.publish(workflow_runs_channel(wid), {"type": "runs_changed", "run_id": rid})
+        except Exception: log.warning("live history invalidation failed for run %s", rid)
+
     def history(self, wid: str, uid: str, tests: bool = False) -> list[dict]:
         """tests: the workflow's test runs instead of its other runs (TASK-0067)."""
         row = self._workflow(wid, uid)
@@ -746,6 +761,7 @@ class RunService:
                           final_state=_dumps(final), status=status, started=t0, ended=t1, trace_id=trace_id, owner=uid or None, source=source, workflow_version=version,
                           checkpoint=_dumps(checkpoint) if checkpoint else None, resume_job=None, **root, **metrics),
                       **({"fence": fence} if fence is not None else {}))  # resume_job: a kept answer is used up (TASK-0127)
+        self.history_changed(wid, rid)
         for job in jobs:
             try: self.approvals.start(job)
             except Exception: log.exception("approval request for run %s failed", rid)
@@ -760,9 +776,25 @@ class RunService:
         Raises StaleLease when another worker claimed the run (this one must stop)."""
         cp = {"kind": "progress", **{k: ev[k] for k in RESUME_KEYS if k in ev}, "workflow": plan.workflow, "ts": time.time(),
               **({"trace": span.ref} if span else {})}
-        try: await asyncio.to_thread(self.runs.save_progress, rid, _dumps(cap_run([cap_event(e) for e in events])), _dumps(cp), plan.fence)
+        try:
+            await asyncio.to_thread(self.runs.save_progress, rid, _dumps(cap_run([cap_event(e) for e in events])), _dumps(cp), plan.fence)
+            await asyncio.to_thread(self.history_changed, plan.workflow_id, rid)
         except StaleLease: raise
         except Exception: log.warning("saving progress of run %s failed", rid)  # recovery falls back to a restart
+
+    def _save_live_history(self, rid, plan, events, started, uid) -> None:
+        """Display-only snapshot of a socket chat run, not a queue recovery checkpoint.
+
+        Tokens are excluded by emit(); cap the same way as terminal history. Never
+        clear a queue lease or replace a checkpointing worker's recovery state.
+        """
+        self.runs.add(Run(id=rid, workflow_id=plan.workflow_id or "adhoc", input=_dumps(plan.input),
+                          events=_dumps(cap_run([cap_event(e) for e in events])), status="running", started=started,
+                          ended=None, owner=uid or None, source=plan.source, workflow_version=plan.version,
+                          checkpoint=_dumps({"kind": "live_history"}), resume_job=None,
+                          duration_ms=None, tokens_in=None, tokens_out=None, cost_usd=None, error_count=None,
+                          code_runtime=code_runtime_of(events)))
+        self.history_changed(plan.workflow_id, rid)
 
     # ---- execution ----
     async def execute(self, plan: RunPlan, send: Callable[[dict], Awaitable[bool]],
@@ -868,6 +900,8 @@ class RunService:
             if span is not None and ev.get("type") in ("node_finished", "error"):
                 try: self.telemetry.node(span, ev)  # live span (TASK-0020)
                 except Exception: pass
+            if plan.source == "chat" and not plan.checkpointing and ev.get("type") in ("run_started", "run_resumed", "run_recovered", "node_started", "node_finished"):
+                await _write_in_thread(self._save_live_history, rid, plan, events, started, uid)
             try: await bus.apublish(rid, ev)
             except Exception: pass  # fan-out is best effort; the socket and history stay authoritative
             if connected: connected = await send(cap_event(ev))

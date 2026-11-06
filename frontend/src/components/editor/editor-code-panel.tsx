@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, Copy, Download, FileArchive } from 'lucide-react'
+import { Check, Copy, Download, FileArchive, TriangleAlert } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +11,7 @@ import { api } from '@/lib/api'
 import { EXPORT_LANGUAGES, exportUrl, fileExtension, projectUrl, saveExportLanguage, savedExportLanguage, type ExportLanguage } from '@/lib/code-export'
 import { useStudioCtx } from './studio-context'
 
-type CodeExport = { language: ExportLanguage; media_type: string; filename: string; version: number | null; code: string; nodes: Record<string, LineRange[]> }
+type CodeExport = { language: ExportLanguage; media_type: string; filename: string; version: number | null; code: string; nodes: Record<string, LineRange[]>; managed_placeholders?: boolean }
 
 /** Code tab (TASK-0071, REQ-0043): the saved workflow as LangGraph code, in Python or as LangGraph.js TypeScript
  * (TASK-0082, REQ-0047; the choice is remembered), or as a LangGraph project zip for `langgraph dev`; the node selected on the canvas shows where it is in the code. */
@@ -57,6 +57,7 @@ export function EditorCodePanel() {
       </Tooltip>
     </div>
     {err && <Alert variant="destructive"><AlertDescription>{err}</AlertDescription></Alert>}
+    {out?.language === language && out.managed_placeholders && <Alert variant="warning" id="code-managed-placeholders"><TriangleAlert /><AlertDescription>{t('codeView.managedPlaceholders')}</AlertDescription></Alert>}
     <CodeEditor readOnly language={out?.language ?? language} value={out?.language === language ? out.code : ''} marks={out?.language === language ? marks : []}
       id="code-view" className="flex-1" />
   </div>

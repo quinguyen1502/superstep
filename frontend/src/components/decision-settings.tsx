@@ -1,6 +1,7 @@
 /** Decision node settings (TASK-0050): a TypeSafe credential, the text Jev reads, and typed questions (choice, score, noul).
  * Removing a question, option or level edits the unsaved canvas, so it is undoable (Ctrl+Z) like deleting a node. */
 import { useTranslation } from 'react-i18next'
+import { StateFieldPicker } from '@/components/state-field-action'
 import { Plus, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -96,16 +97,12 @@ export function DecisionData({ data, fields, onChange }: Pick<Props, 'data' | 'f
   const setQ = (i: number, patch: Partial<Question>) => onChange({ questions: qs.map((q, k) => k === i ? { ...q, ...patch } : q) })
   return <div className="space-y-3" id="decision-data">
     {qs.map((q, i) => <Row key={q.id} label={t('decision.fieldFor', { id: q.id })} htmlFor={`dq-${i}-field`}>
-      <Select value={q.field || 'none'} onValueChange={v => setQ(i, { field: v === 'none' ? '' : v })}>
-        <SelectTrigger className="w-full" id={`dq-${i}-field`}><SelectValue /></SelectTrigger>
-        <SelectContent><SelectItem value="none">{t('decision.fieldNone')}</SelectItem>
-          {plain.filter(f => f.type === FIELD_TYPE[q.type]).map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
+      <StateFieldPicker value={q.field} onChange={v => setQ(i, { field: v })} id={`dq-${i}-field`} types={[FIELD_TYPE[q.type]]}
+        noneLabel={t('decision.fieldNone')} options={plain.filter(f => f.type === FIELD_TYPE[q.type]).map(f => f.name)} />
     </Row>)}
     <Row label={t('decision.outputField')} htmlFor="decision-output">
-      <Select value={data.output_field || 'none'} onValueChange={v => onChange({ output_field: v === 'none' ? '' : v })}>
-        <SelectTrigger className="w-full" id="decision-output"><SelectValue /></SelectTrigger>
-        <SelectContent><SelectItem value="none">{t('decision.fieldNone')}</SelectItem>
-          {plain.filter(f => f.type === 'object').map(f => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}</SelectContent></Select>
+      <StateFieldPicker value={data.output_field} onChange={v => onChange({ output_field: v })} id="decision-output" types={['object']}
+        noneLabel={t('decision.fieldNone')} options={plain.filter(f => f.type === 'object').map(f => f.name)} />
     </Row>
   </div>
 }

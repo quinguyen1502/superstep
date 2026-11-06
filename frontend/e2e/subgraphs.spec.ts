@@ -25,12 +25,14 @@ test('parallel branches, Join and a Subgraph node', async ({ page }) => {
   await page.goto(`/workflows/${saved.id}`)
   // palette has the new node types; the state schema shows the reducer
   await expect(page.getByText('Chờ mọi nhánh song song')).toBeVisible(); await expect(page.getByText('Chạy một workflow đã lưu')).toBeVisible()
+  await page.locator('#palette-state-tab').click()
   await expect(page.locator('#reducer-notes')).toContainText('Nối (gom tất cả)')
   // subgraph settings: the chosen workflow, open link
   await page.locator('.react-flow__node[data-id="sub"]').click()
+  await page.locator('#config-tab-settings').click()
   await expect(page.locator('#subgraph-workflow')).toContainText(CHILD.name)
   await expect(page.locator('#subgraph-open')).toHaveAttribute('href', `/workflows/${child}`)
-  await page.locator('.react-flow__node[data-id="join"]').click(); await expect(page.locator('#join-hint')).toBeVisible()
+  await page.locator('.react-flow__node[data-id="join"]').click(); await page.locator('#config-tab-settings').click(); await expect(page.locator('#join-hint')).toBeVisible()
   // run: both branches, the join once, the inner node of the subgraph in the trace, subgraph node marked done
   await page.locator('#run-btn').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })

@@ -29,8 +29,9 @@ export function ApiTriggerDialog(props: { wid?: string; open?: boolean; onOpenCh
   const { t } = useTranslation(); const [open, setOpen, controlled] = useOpenState(props.open, props.onOpenChange)
   const [items, setItems] = useState<Token[]>([]); const [name, setName] = useState(''); const [created, setCreated] = useState<Token | null>(null)
   const [err, setErr] = useState(''); const [copied, setCopied] = useState(false); const [showRevoked, setShowRevoked] = useState(false)
+  const [tab, setTab] = useState('tokens'); const [deliveriesRefresh, setDeliveriesRefresh] = useState(0)
   const load = () => wid && api<Token[]>(`/api/workflows/${wid}/tokens`).then(setItems).catch(e => setErr(e.message))
-  useLoadWhen(open, () => { setCreated(null); setErr(''); load() })
+  useLoadWhen(open, () => { setCreated(null); setErr(''); setTab('tokens'); load() })
   const add = async () => {
     setErr('')
     try { const tk = await api<Token>(`/api/workflows/${wid}/tokens`, { method: 'POST', json: { name: name || 'API token' } }); setCreated(tk); setName(''); load() }
@@ -52,8 +53,11 @@ export function ApiTriggerDialog(props: { wid?: string; open?: boolean; onOpenCh
     {!controlled && <DialogTrigger asChild><Button size="sm" variant="outline" id="api-btn" disabled={!wid}><Webhook />{t('api.button')}</Button></DialogTrigger>}
     <DialogContent className="sm:max-w-2xl max-h-[90dvh] flex flex-col overflow-hidden" id="api-dialog">
       <DialogHeader className="shrink-0"><DialogTitle>{t('api.title')}</DialogTitle><DialogDescription>{t('api.desc')}</DialogDescription></DialogHeader>
-      <Tabs defaultValue="tokens" className="flex min-h-0 flex-1 flex-col">
+      <Tabs value={tab} onValueChange={setTab} className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center gap-2">
       <TabsList className="shrink-0"><TabsTrigger value="tokens">{t('api.tokensTab')}</TabsTrigger><TabsTrigger value="deliveries" id="api-deliveries-tab">{t('deliveries.tab')}</TabsTrigger><TabsTrigger value="mcp" id="api-mcp-tab">{t('mcpServer.tab')}</TabsTrigger></TabsList>
+      {tab === 'deliveries' && <Tip tip={t('deliveries.refresh')}><Button variant="ghost" size="icon" className="ml-auto" id="deliveries-refresh" aria-label={t('deliveries.refresh')} onClick={() => setDeliveriesRefresh(n => n + 1)}><RefreshCw /></Button></Tip>}
+      </div>
       <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-1" id="api-scroll">
       {err && <Alert variant="destructive"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
       {(created?.token || created?.signing_secret) && <Alert id="api-new-token"><Check /><AlertDescription className="space-y-2">
@@ -66,7 +70,7 @@ export function ApiTriggerDialog(props: { wid?: string; open?: boolean; onOpenCh
             <Button variant="outline" size="icon" aria-label={t('api.copy')} onClick={() => copy(created.signing_secret!)}><Copy /></Button></div>
           <p className="text-xs text-muted-foreground">{t('api.signingHelp')}</p></div>}
       </AlertDescription></Alert>}
-      <TabsContent value="deliveries" className="pt-2"><DeliveriesList wid={wid} /></TabsContent>
+      <TabsContent value="deliveries" className="pt-2"><DeliveriesList wid={wid} refreshKey={deliveriesRefresh} /></TabsContent>
       <TabsContent value="mcp" className="pt-2"><McpServerTab wid={wid} open={open} token={created?.token} hasTokens={items.some(tk => !tk.revoked)} /></TabsContent>
       <TabsContent value="tokens" className="space-y-4 pt-2">
       {revokedCount > 0 && <div className="flex items-center justify-end gap-2">

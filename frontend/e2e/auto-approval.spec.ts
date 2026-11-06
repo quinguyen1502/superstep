@@ -34,7 +34,7 @@ for (const lang of ['en', 'vi'] as const) {
 
       // the Human node: suggest mode with the judge, limits and one rule
       await page.goto(`/workflows/${wid}`)
-      await page.locator('.react-flow__node[data-id="ask"]').click()
+      await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
       const human = page.locator('#human-auto'); await human.scrollIntoViewIfNeeded()
       await expect(human).toContainText(T.section)
       await expect(page.locator('#human-auto-credential')).toContainText(cred.name)
@@ -44,7 +44,7 @@ for (const lang of ['en', 'vi'] as const) {
       await shot(page, 'human', lang)
 
       // the Agent node's tool approval: auto mode
-      await page.locator('.react-flow__node[data-id="ag"]').click()
+      await page.locator('.react-flow__node[data-id="ag"]').click(); await page.locator('#config-tab-settings').click()
       const agent = page.locator('#agent-auto'); await agent.scrollIntoViewIfNeeded()
       await expect(agent).toContainText(T.section); await expect(page.locator('#agent-auto-notify')).toBeVisible()
       await shot(page, 'agent', lang)
@@ -75,7 +75,7 @@ for (const lang of ['en', 'vi'] as const) {
       await expect(page.locator(`#ai-review-pause-${wid}`)).toHaveAttribute('data-state', 'checked')
       await mine.scrollIntoViewIfNeeded(); await shot(page, 'approvals', lang)
       await page.reload(); await expect(page.locator(`#ai-review-pause-${wid}`)).toHaveAttribute('data-state', 'checked')
-      await page.goto(`/workflows/${wid}`); await page.locator('.react-flow__node[data-id="ask"]').click()
+      await page.goto(`/workflows/${wid}`); await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click()
       await expect(page.locator('#human-auto-paused')).toBeVisible()
       await page.request.put(`/api/approvals/auto/workflows/${wid}`, { headers: H, data: { paused: false } })
     })
