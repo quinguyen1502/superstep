@@ -8,10 +8,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 errors: list[str] = []
 
-guide = ROOT / 'handbook/docs/en/guide/browser.md'
-if not guide.is_file():
-    errors.append(f'missing {guide.relative_to(ROOT)}')
-else:
+guides = [ROOT / 'handbook/docs/en/guide/browser.md', ROOT / 'handbook/docs/vi/guide/browser.md']
+guide = guides[0]
+for g in guides:
+    if not g.is_file():
+        errors.append(f'missing {g.relative_to(ROOT)}')
+if guide.is_file():
     text = guide.read_text(encoding='utf-8')
     for needle in ('STUDIO_ENABLE_BROWSER', 'Allowed origins', 'Browserless', 'URL source', 'chat turn'):
         if needle not in text:
@@ -24,6 +26,9 @@ else:
 nav = (ROOT / 'handbook/mkdocs.yml').read_text(encoding='utf-8')
 if 'guide/browser.md' not in nav:
     errors.append('handbook/mkdocs.yml missing Browser tools nav entry')
+vi_nav = (ROOT / 'handbook/mkdocs.vi.yml').read_text(encoding='utf-8')
+if 'guide/browser.md' not in vi_nav:
+    errors.append('handbook/mkdocs.vi.yml missing Browser tools nav entry')
 
 example = ROOT / 'examples/browser/lookup_shipment.json'
 try:
