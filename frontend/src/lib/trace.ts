@@ -1,3 +1,4 @@
+import type { BrowserDetail } from './browser-trace'
 import i18n, { eventErrors, type ApiErrorBody } from '@/lib/i18n'
 // Turns the run event stream into one span per node execution (LangSmith/Langfuse-style trace).
 export type RunEvent = { type: string; node?: string; label?: string; node_type?: string; iteration?: number; duration_ms?: number
@@ -5,11 +6,11 @@ export type RunEvent = { type: string; node?: string; label?: string; node_type?
   metrics?: RunMetrics | null; trace_id?: string | null; trace_url?: string | null; prompt?: string; response?: string
   code_output?: CodeOutput; agent?: AgentStep; superstep?: number
   wait?: { kind: 'child'; run_id: string }; tool?: string; workflow_id?: string
-  outcome?: string; model?: string }  // a run waiting for a workflow tool's child run (TASK-0134)
+  outcome?: string; model?: string; browser?: BrowserDetail; browser_private?: boolean }  // a run waiting for a workflow tool's child run (TASK-0134)
 /** What one step of an Agent node did (TASK-0116, DEC-0063): a model call (`model`) or one tool call (`tool`). */
 export type AgentStep = { kind: 'model' | 'tool' | 'handoff'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
   tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected' | 'not_run'; to?: string; to_label?: string; reason?: string  // a hand-off (TASK-0182)
-  ms?: number
+  ms?: number; browser?: BrowserDetail
   approval?: 'approved' | 'rejected'  // a tool that needed approval (TASK-0117)
   child_run_id?: string; child_workflow_id?: string }  // a workflow tool's child run (TASK-0136)
 /** An Agent node `ag` runs as `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join`, `ag/__exit` and `ag/__handoff`. */
@@ -26,7 +27,7 @@ export type Span = { key: string; node: string; label: string; type: string; ite
   start: number; end?: number; duration?: number; input?: any; output?: any; error?: string; tokens?: number; cost?: number | null; usage?: Usage; events: RunEvent[]
   /** the AI judge of this waiting step (TASK-0198): its tokens and cost are part of the step's */
   review?: { outcome?: string; model?: string; usage: Usage }
-  live?: string; code?: CodeOutput; agent?: AgentStep; superstep?: number }  // TASK-0030: LLM text streamed so far (node_token deltas; not stored in run history)
+  live?: string; browser?: BrowserDetail; code?: CodeOutput; agent?: AgentStep; superstep?: number }  // TASK-0030: LLM text streamed so far (node_token deltas; not stored in run history)
 export type Trace = { runId?: string; spans: Span[]; status: 'idle' | 'running' | 'ok' | 'error' | 'cancelled' | 'timeout' | 'waiting' | 'expired' | 'paused'; start?: number; end?: number; total?: number
   tokens?: number; errors: string[]; final?: any; metrics?: RunMetrics; traceUrl?: string
   waiting?: { runId?: string; node?: string; label?: string; prompt?: string; child?: { runId: string; workflowId?: string; tool?: string } }
@@ -83,18 +84,18 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
     } else if (e.type === 'node_finished' && n) {
       let s = open(n)
       if (!s) { const it = (counts[n] = (counts[n] || 0) + 1); s = { key: `${n}#${it}`, node: n, label: e.label || meta(n).label || n, type: e.node_type || meta(n).type || 'code', iter: it, status: 'running', start: t(e, i) - (e.duration_ms || 0) / 1000, events: [] }; spans.push(s) }
-      Object.assign(s, { status: 'done', end: t(e, i), duration: e.duration_ms, input: hideAgents(e.input), output: e.delta, agent: e.agent, superstep: e.superstep, tokens: e.tokens ?? e.usage?.tokens ?? e.usage?.total_tokens, cost: e.usage?.cost_usd, usage: e.usage, code: e.code_output })
+      Object.assign(s, { status: 'done', end: t(e, i), duration: e.duration_ms, input: hideAgents(e.input), output: e.delta, browser: e.browser, agent: e.agent, superstep: e.superstep, tokens: e.tokens ?? e.usage?.tokens ?? e.usage?.total_tokens, cost: e.usage?.cost_usd, usage: e.usage, code: e.code_output })
       if (s.review) addReview(s, s.review.usage)  // the AI judge's usage stays on the step after it resumes (TASK-0198)
       s.events.push(e)
     } else if (e.type === 'error') {
       st.v = e.status === 'timeout' ? 'timeout' : 'error'; const msg = eventErrors(e).join('; ') || i18n.t('trace.error'); errors.push(msg)
       const s = (n ? open(n) ?? [...spans].reverse().find(x => x.node === n) : undefined) ?? (e.status === 'timeout' ? undefined : [...spans].reverse().find(x => x.status === 'running'))
-      if (s) { Object.assign(s, { status: 'error', end: t(e, i), duration: e.duration_ms ?? s.duration, error: msg, input: hideAgents(e.input) ?? s.input, code: e.code_output ?? s.code }); s.events.push(e) }
+      if (s) { Object.assign(s, { status: 'error', end: t(e, i), duration: e.duration_ms ?? s.duration, error: msg, browser: e.browser, input: hideAgents(e.input) ?? s.input, code: e.code_output ?? s.code }); s.events.push(e) }
     } else if (e.type === 'run_cancelled') { st.v = 'cancelled'
     } else if (e.type === 'run_expired') { st.v = 'expired'; waitingEv = undefined; spans.forEach(s => { if (s.status === 'waiting') s.status = 'cancelled' })
     } else if (e.type === 'run_finished') { if (st.v !== 'error') st.v = 'ok'; final = e.state
     } else if (e.type === 'run_summary') { summary = e
-    } else if (e.type === 'run_waiting') { st.v = 'waiting'; waitingEv = e; const s = n ? open(n) : undefined; if (s) { s.status = 'waiting'; s.events.push(e) }
+    } else if (e.type === 'run_waiting') { st.v = 'waiting'; waitingEv = e; const s = n ? open(n) : undefined; if (s) { s.status = 'waiting'; s.browser = e.browser; s.events.push(e) }
     } else if (e.type === 'approval_review' && n && e.usage) {
       const s = [...spans].reverse().find(x => x.node === n)
       if (s) { s.review = { outcome: e.outcome, model: e.model ?? e.usage.model, usage: e.usage }; s.events.push(e); addReview(s, e.usage) }

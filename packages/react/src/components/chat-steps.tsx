@@ -6,6 +6,7 @@ import { Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigg
 import { CodeBlock, CodeBlockContent } from '../ui/code-block.js'
 import { NODE_ICONS } from '../lib/node-icons.js'
 import { fmtMs } from '../lib/format.js'
+import { browserStatus } from '../lib/browser.js'
 import type { ChatStep, StepsMode } from '../lib/chat.js'
 import { Workflow } from 'lucide-react'
 import { useChatPresentation } from './presentation.js'
@@ -13,9 +14,10 @@ import { useChatPresentation } from './presentation.js'
 const json = (v: unknown) => typeof v === 'string' ? v : JSON.stringify(v, null, 2)
 
 function Line({ s }: { s: ChatStep }) {
-  const { t } = useTranslation(); const I = NODE_ICONS[s.type ?? ''] ?? Workflow
+  const { t } = useTranslation(); const status = browserStatus(s.browser?.status); const I = NODE_ICONS[s.type ?? ''] ?? Workflow
   return <TraceLine status={s.status === 'error' ? 'error' : s.status === 'running' ? 'running' : undefined} data-testid="chat-step" data-status={s.status}>
     <TraceIcon><I /></TraceIcon><TraceTitle>{t(`chat.step.${s.status}`, { label: s.label })}</TraceTitle>
+    {status && <TraceDescription data-testid="chat-browser-status">{t(`chat.browser.status.${status}`)}</TraceDescription>}
     {s.handoff_to && <TraceDescription data-testid="chat-step-handoff">{t('chat.step.handoff', { to: s.handoff_to })}</TraceDescription>}
     {s.duration_ms != null && <TraceDescription>{fmtMs(s.duration_ms)}</TraceDescription>}
   </TraceLine>

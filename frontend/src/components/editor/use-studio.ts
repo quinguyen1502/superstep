@@ -19,6 +19,7 @@ import { type Credential } from '@/components/credentials-dialog'
 import { useProviders } from '@/lib/providers'
 import { buildTrace, withSummary, type RunEvent } from '@/lib/trace'
 import { canvasId, clearMarks, markEvent, markRun } from '@/lib/run-marks'
+import type { BrowserRecipe } from '@/lib/browser-tools'
 import type { BuiltinTool } from '@/lib/agent'
 import { useShortcuts } from '@/lib/use-shortcuts'
 import { addHandoff, handoffEdges, HANDOFF_HANDLE, isHandoffEdge, pruneHandoffs, removeHandoffs } from '@/lib/handoffs'
@@ -33,6 +34,7 @@ export function useStudio() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [state, setState] = useState<Field[]>([])
   const [name, setName] = useState('Untitled')
+  const [browserRecipe, setBrowserRecipe] = useState<BrowserRecipe | undefined>()
   const [maxHandoffs, setMaxHandoffs] = useState<number | undefined>()   // the workflow's hand-off limit (TASK-0179); unset: the default
   const [wid, setWid] = useState<string | undefined>()
   const [sel, setSel] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null)
@@ -69,13 +71,14 @@ export function useStudio() {
   const hist = useGraphHistory(nodes, edges, state, h => { setNodes(h.nodes.map(n => ({ ...n }))); setEdges(styleEdges(h.edges)); setState(h.state) })
   // after a load, the first graph that renders becomes the saved snapshot and the start of the undo history
   const takeSnapshot = useEffectEvent(() => { if (takeBaseline.current) { takeBaseline.current = false; savedSnap.current = snap(); hist.reset(nodes, edges, state) } })
-  useEffect(() => { takeSnapshot() }, [nodes, edges, name, state, maxHandoffs])
+  useEffect(() => { takeSnapshot() }, [nodes, edges, name, state, maxHandoffs, browserRecipe])
   // a deleted Agent node leaves no hand-off pointing at it (TASK-0179); the same array when nothing changes
   const nodeKey = nodes.map(n => `${n.id}:${n.type}`).join('|')
   useEffect(() => { setNodes(ns => pruneHandoffs(ns)) }, [nodeKey, setNodes])
   const load = (wf: any) => {
     takeBaseline.current = true
     setName(wf.name); setWid(wf.id); setState(wf.state || []); setMaxHandoffs(typeof wf.max_handoffs === 'number' ? wf.max_handoffs : undefined)
+    setBrowserRecipe(wf.browser_recipe)
     setSource(wf.source || null)
     if (wf.access) { setAccess(wf.access); setOwnerEmail(wf.mine ? null : wf.owner_email ?? null) }
     setNodes(wf.needs_layout ? layoutGraph(wf.nodes, wf.edges, 'LR', false) : wf.nodes); setEdges(styleEdges(wf.edges))
@@ -182,7 +185,7 @@ export function useStudio() {
   useEffect(() => { openWorkflow() }, [id])
 
   const toJSON = () => ({
-    id: wid, name, state, ...(maxHandoffs === undefined ? {} : { max_handoffs: maxHandoffs }),
+    id: wid, name, state, ...(browserRecipe ? { browser_recipe: browserRecipe } : {}), ...(maxHandoffs === undefined ? {} : { max_handoffs: maxHandoffs }),
     nodes: nodes.map(n => ({ id: n.id, type: n.type, position: n.position, data: Object.fromEntries(Object.entries(n.data).filter(([k]) => !k.startsWith('_'))) })),
     edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, ...(e.label ? { label: String(e.label) } : {}), ...((e as any).conditional ? { conditional: true } : {}) })),
   })
@@ -287,7 +290,7 @@ export function useStudio() {
   // command palette (TASK-0028, DEC-0031): registry actions, add node, jump to node — re-registered each render so closures stay fresh
   const freshNode = (type: string) => ({
     id: `${type}_${Date.now().toString(36)}${idc.current++}`, type, position: { x: 0, y: 0 }, selected: true,
-    data: { ...DEFAULTS[type], ...samplePrompt(type) },
+    data: { ...DEFAULTS[type], ...samplePrompt(type), ...(type === 'mcp' && browserRecipe?.connection_id ? { server_id: browserRecipe.connection_id } : {}) },
   })
   const insertAround = (type: string, where: { dir: 'before' | 'after'; anchor: string } | { dir: 'edge'; edgeId: string }) => {
     const r = spliceNode(nodes, edges, freshNode(type), where)
@@ -298,7 +301,7 @@ export function useStudio() {
   const addNode = (type: string, pos: { x: number; y: number }, select = false) => {
     const id = `${type}_${Date.now().toString(36)}${idc.current++}`
     setNodes(ns => [...(select ? ns.map(n => n.selected ? { ...n, selected: false } : n) : ns), { id, type, position: pos, selected: select,
-      data: { ...DEFAULTS[type], ...samplePrompt(type) } }])
+      data: { ...DEFAULTS[type], ...samplePrompt(type), ...(type === 'mcp' && browserRecipe?.connection_id ? { server_id: browserRecipe.connection_id } : {}) } }])
     if (select) setSel({ kind: 'node', id })
   }
   /** A node of `type` on a free spot in the middle of the canvas (command palette, phone palette taps). */
@@ -406,7 +409,7 @@ export function useStudio() {
   }
   const fieldNames = state.map(f => f.name)
   const [canvasLock, setCanvasLock] = useState(false)
-  return { maxHandoffs, setMaxHandoffs,
+  return { browserRecipe, setBrowserRecipe, maxHandoffs, setMaxHandoffs,
     id, nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, state, setState, name, setName, wid, setSel,
     input, setInput, log, setLog, errors, setErrors, tools, mode, source, creds, setCreds, providers, channels, history,
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,

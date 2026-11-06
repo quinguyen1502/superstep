@@ -39,11 +39,12 @@ export class ApiError extends Error {
 }
 
 /** The one API client: sends the session cookie, unwraps the {success, data, error} envelope, throws ApiError (translated message). */
-export async function api<T = any>(path: string, opts: RequestInit & { json?: any } = {}): Promise<T> {
+export async function api<T = any>(path: string, opts: RequestInit & { json?: any; response?: 'blob' } = {}): Promise<T> {
   const headers: Record<string, string> = { 'X-Requested-With': 'studio', ...(opts.headers as any) }  // the server requires it on cookie writes (CSRF)
   if (opts.json !== undefined) { headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(opts.json) }
   let r: Response
   try { r = await fetch(path, { ...opts, headers }) } catch { throw new ApiError({ code: 'NETWORK_ERROR' }, 0) }
+  if (opts.response === 'blob' && r.ok) return await r.blob() as T
   const body = await r.json().catch(() => null)
   if (r.status === 401 && !path.startsWith('/api/auth')) { sessionExpired(); throw new ApiError(body?.error ?? { code: 'AUTH_TOKEN_EXPIRED' }, 401) }
   // deactivated by an admin (TASK-0014): drop the session; signing in again shows the reason

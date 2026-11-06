@@ -24,6 +24,11 @@ import { ModelFallbackSettings } from '@/components/model-fallback-settings'
 import { SubgraphSettings } from '@/components/subgraph-settings'
 import { RetrieverSettings } from '@/components/retriever-settings'
 import { McpSettings } from '@/components/mcp-settings'
+import { BrowserRecipeSettings, BrowserRecipeData } from '@/components/browser-recipe-config'
+import { BrowserMcpData } from '@/components/browser-mcp-data'
+import { useMcpServers } from '@/lib/use-mcp-servers'
+import { browserServer } from '@/lib/browser-tools'
+import { BrowserExecution } from '@/components/browser-execution'
 import { AgentData, AgentExecution, AgentSettings } from '@/components/agent-settings'
 import { AgentHandoffs, MaxHandoffs } from '@/components/agent-handoffs'
 import { Separator } from '@/components/ui/separator'
@@ -53,7 +58,13 @@ export function EditorConfig() {
   const [kept, setKept] = useState<string | null>(null)  // node whose edited code was kept on a language switch
   const [tab, setTab] = useState<ConfigTab>('general')  // kept while another node is selected
   const { t } = useTranslation()
-  const { access, nodes, edges, setEdges, setSel, maxHandoffs, setMaxHandoffs, wid, tools, creds, setCreds, providers, channels, edit, mark, selNode, selEdge, upd, setRuntime, d, fieldNames, state, input } = useStudioCtx()
+  const { browserRecipe, setBrowserRecipe, name, setNodes, access, nodes, edges, setEdges, setSel, maxHandoffs, setMaxHandoffs, wid, tools, creds, setCreds, providers, channels, edit, mark, selNode, selEdge, upd, setRuntime, d, fieldNames, state, input } = useStudioCtx()
+  const { servers } = useMcpServers()
+  const isBrowser = selNode?.type === 'mcp' && (browserServer(servers?.find(server => server.id === d.server_id)) || !!browserRecipe)
+  const observations: string[] = []
+  const earlier = new Set<string>(); let previous = selNode?.id
+  while (previous && !earlier.has(previous)) { earlier.add(previous); const incoming = edges.filter(edge => edge.target === previous); previous = incoming.length === 1 ? incoming[0].source : undefined }
+  for (const node of nodes) if (node.id !== selNode?.id && earlier.has(node.id) && node.type === 'mcp' && ['navigate', 'snapshot'].includes(String(node.data.tool)) && typeof node.data.output_field === 'string') observations.push(node.data.output_field)
   const codeRt = useCodeRuntime(); const me = useMe(); const canCode = can(me, 'code.write')  // Tool node Code mode (TASK-0055)
   const canAuto = access === 'owner' || !!me?.is_admin  // AI review answering on its own: owner or admin (TASK-0188, DEC-0075)
   const chatCreds = creds.filter(c => (providers.find(p => p.id === c.provider)?.kind ?? 'chat') === 'chat')  // TypeSafe keys: Decision nodes; SMTP: Send email
@@ -61,7 +72,7 @@ export function EditorConfig() {
   const type = selNode?.type || ''
   const node = !!selNode && type !== 'note'
   const runtime = RUNTIME.has(type)
-  const has: Record<ConfigTab, boolean> = { general: true, settings: type !== 'start' && type !== 'end', data: runtime || FIELD_PICKERS.has(type), execution: runtime || LIMITS.has(type) }
+  const has: Record<ConfigTab, boolean> = { general: true, settings: type !== 'end', data: type === 'start' || runtime || FIELD_PICKERS.has(type), execution: runtime || LIMITS.has(type) }
   const issue: Record<ConfigTab, boolean> = { general: false, settings: type === 'agent' && !(Array.isArray(d.tools) && d.tools.length), data: WRITERS.has(type) && !d.output_field, execution: false }
   const enabled = CONFIG_TABS.filter(k => has[k])
   const active = enabled.includes(tab) ? tab : enabled[0]
@@ -69,6 +80,7 @@ export function EditorConfig() {
   const pane = (k: ConfigTab, children: ReactNode) => <TabsContent value={k} className="space-y-3" id={`config-pane-${k}`} aria-labelledby={`config-tab-${k}`}>{children}</TabsContent>
 
   const settings = <>
+    {type === 'start' && <BrowserRecipeSettings value={browserRecipe} name={name} onChange={value => { setBrowserRecipe(value); if (value?.connection_id) setNodes(current => current.map(node => node.type === 'mcp' ? { ...node, data: { ...node.data, server_id: value.connection_id } } : node)) }} />}
     {type === 'llm' && <>
       <F label={t('editor.credential')}><Select value={d.credential_id || 'none'} onValueChange={v => upd('credential_id', v === 'none' ? '' : v)}>
         <SelectTrigger className="w-full" id="llm-credential"><SelectValue /></SelectTrigger>
@@ -123,7 +135,7 @@ export function EditorConfig() {
       <RetrieverSettings kb={d.knowledge_base_id} topK={d.top_k} onKb={v => upd('knowledge_base_id', v)} onTopK={v => upd('top_k', v)} />
       <F label={t('field.queryTemplate', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={3} id="retriever-query" value={d.query || ''} onChange={v => upd('query', v)} /></F>
     </>}
-    {type === 'mcp' && selNode && <McpSettings server={d.server_id} tool={d.tool} args={d.arguments} fields={state} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
+    {type === 'mcp' && selNode && <McpSettings hideArguments={isBrowser} recipeConnection={browserRecipe?.connection_id} server={d.server_id} tool={d.tool} args={d.arguments} fields={state} readOnly={!edit} onChange={p => mark(selNode.id, p)} />}
     {type === 'subgraph' && <SubgraphSettings wid={wid} value={d.workflow_id} onChange={v => upd('workflow_id', v)} />}
     {type === 'join' && <p className="text-[11px] text-muted-foreground" id="join-hint">{t('editor.joinHint')}</p>}
     {type === 'condition' && <>
@@ -136,8 +148,10 @@ export function EditorConfig() {
   </>
 
   const data = <>
+    {type === 'start' && <BrowserRecipeData value={browserRecipe} fields={state} onChange={setBrowserRecipe} />}
+    {isBrowser && selNode && <BrowserMcpData data={d} fields={state} observations={observations} recipe={!!browserRecipe} readOnly={!edit} onChange={patch => mark(selNode.id, patch)} />}
     {['llm', 'human', 'tool', 'retriever', 'mcp'].includes(type) && output}
-    {type === 'agent' && selNode && <AgentData data={d} fieldNames={fieldNames} listFields={state.filter(f => f.type === 'list').map(f => f.name)} onChange={p => mark(selNode.id, p)} />}
+    {type === 'agent' && selNode && <AgentData data={d} fields={state} readOnly={!edit} fieldNames={fieldNames} listFields={state.filter(f => f.type === 'list').map(f => f.name)} onChange={p => mark(selNode.id, p)} />}
     {type === 'email' && selNode && <EmailData data={d} fields={state} onChange={p => mark(selNode.id, p)} />}
     {type === 'decision' && selNode && <DecisionData data={d} fields={state} onChange={p => mark(selNode.id, p)} />}
     {type === 'condition' && <F label={t('editor.condField')}><StateFieldPicker value={d.field} onChange={v => upd('field', v)} options={fieldNames} /></F>}
@@ -154,6 +168,7 @@ export function EditorConfig() {
     {type === 'agent' && selNode && <AgentExecution data={d} onChange={p => mark(selNode.id, p)} />}
     {type === 'foreach' && <F label={t('editor.loopMax')}><Input id="loop-max" type="number" min={1} max={1000} value={d.max_items ?? 100} onChange={e => upd('max_items', e.target.value === '' ? undefined : Number(e.target.value))} /></F>}
     {runtime && <NodeRuntime data={d} onChange={setRuntime} />}
+    {(type === 'agent' || type === 'mcp') && <BrowserExecution connections={type === 'mcp' ? [d.server_id] : (d.tools || []).filter((tool: any) => tool.source === 'mcp').map((tool: any) => tool.server_id)} />}
   </>
 
   const title = <div className="text-xs font-semibold uppercase text-muted-foreground">{t('editor.config')}</div>

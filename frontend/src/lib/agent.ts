@@ -2,8 +2,9 @@
 export const SOURCES = ['mcp', 'http', 'builtin', 'knowledge', 'workflow'] as const
 export type ToolSource = typeof SOURCES[number]
 export type Schema = { type?: string; properties?: Record<string, { type?: string; description?: string }>; required?: string[] }
+import type { UrlBinding } from './browser-tools'
 export type AgentTool = { name: string; description?: string; source: ToolSource; approval?: boolean
-  server_id?: string; tool?: string; parameters?: Schema; function?: string; knowledge_base_id?: string; top_k?: number
+  server_id?: string; tool?: string; url_binding?: UrlBinding; parameters?: Schema; function?: string; knowledge_base_id?: string; top_k?: number
   method?: string; url?: string; body?: string
   workflow_id?: string; inputs?: string[]; outputs?: string[] }  // another saved workflow as a tool (REQ-0073)
 export type BuiltinTool = { name: string; doc?: string; parameters?: Schema | null }

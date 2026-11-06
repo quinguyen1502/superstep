@@ -20,7 +20,7 @@ from ..core import config, security
 from ..core.errors import AppError
 from ..models import ChatSession, WorkflowChatTrigger
 from ..repositories.chat_triggers import WEB
-from ..engine import agents
+from ..engine import agents, browser_presentation
 from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService, access_modes
 from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS
 from .chat_token_verifier import ChatAppUser, ChatTokenVerifier
@@ -29,13 +29,14 @@ SIG_LEN = 32
 DAY = 86400
 HIDDEN = ("start", "end", "agent", "agent_exit")  # as steps_of: an Agent shows its tool calls (and model calls in full)
 LABEL_KEYS = ("type", "node", "label", "node_type", "iteration", "ts")
-FULL_KEYS = ("duration_ms", "input", "delta", "errors", "code", "agent")
-QUESTION_KEYS = ("prompt", "options", "choices", "fields", "kind", "input_type", "placeholder")
+FULL_KEYS = ("duration_ms", "input", "delta", "errors", "code", "agent", "browser")
+QUESTION_KEYS = ("browser", "prompt", "options", "choices", "fields", "kind", "input_type", "placeholder")
 
 
 def public_event(ev: dict, mode: str, reply_field: str) -> Optional[dict]:
     """What the page may see of a run event (decision 4), or None: the reply's tokens, the steps in `mode`, the visitor's
     question, the final status and errors. Never the state, node input or output below `full`, metrics or trace links."""
+    ev = browser_presentation.visitor_event(ev)
     t, node_type = ev.get("type"), ev.get("node_type")
     if t == "run_started": return {"type": t, "run_id": ev.get("run_id"), "ts": ev.get("ts")}
     if t == "run_summary": return {"type": t, "run_id": ev.get("run_id"), "status": ev.get("status"), "ts": ev.get("ts")}

@@ -2366,6 +2366,34 @@
       "counts": "{{up}} hữu ích · {{down}} chưa hữu ích",
       "negativeShare": "{{share}} chưa hữu ích",
       "refresh": "Làm mới lịch sử"
+    },
+    "browser": {
+      "status": {
+        "confirmed": "Đã xác nhận",
+        "failed_before_effect": "Dừng trước thao tác",
+        "unknown": "Chưa xác định kết quả",
+        "approval_required": "Đang chờ người duyệt",
+        "challenge_required": "Site yêu cầu xác minh",
+        "expired": "Phiên hết hạn",
+        "session_lost": "Mất phiên",
+        "stale_observation": "Quan sát đã thay đổi",
+        "policy_denied": "Bị chính sách chặn",
+        "cancelled": "Đã huỷ",
+        "missing_input": "Cần URL",
+        "dry_run": "Chạy thử ngoại tuyến"
+      },
+      "help": {
+        "failed_before_effect": "Thao tác chưa bắt đầu. Kiểm tra cấu hình và quan sát hiện tại.",
+        "unknown": "Thao tác bên ngoài có thể đã xảy ra. Kiểm tra site thủ công; không tự động gửi lại.",
+        "approval_required": "Người duyệt đã xác minh cần quyết định cho đúng đích này.",
+        "challenge_required": "Site yêu cầu xác minh hoặc chuyển sang đăng nhập. Không hỗ trợ tự động vượt chặn.",
+        "expired": "Phiên đã hết hạn. Quan sát phiên mới và kiểm tra thao tác trước đó trước khi tiếp tục.",
+        "session_lost": "Không thể gắn lại trang hiện tại. Kiểm tra thao tác trước đó trước khi bắt đầu run mới.",
+        "stale_observation": "Quan sát lại và duyệt đích đã thay đổi trước thao tác khác.",
+        "policy_denied": "Kết nối đã lưu hoặc chính sách mạng từ chối thao tác. Kiểm tra tuyến và địa chỉ được phép.",
+        "cancelled": "Phiên trình duyệt đã bị huỷ. Không lên lịch tự động lặp lại.",
+        "missing_input": "Hỏi người dùng đích truy cập hoặc dùng công cụ tìm kiếm đã cấu hình rõ ràng."
+      }
     }
   },
   "timeTravel": {
@@ -2762,5 +2790,53 @@
       "profileScope": "Mọi địa chỉ của hồ sơ phải có trong danh sách địa chỉ gốc được phép."
     },
     "range": "Khoảng cho phép: {{min}}–{{max}}"
+  },
+  "browserTools": {
+    "urlSource": "Nguồn URL",
+    "sources": {
+      "model": "Agent điền",
+      "fixed": "URL cố định",
+      "state": "State của workflow"
+    },
+    "sourceHelp": {
+      "model": "Dùng URL được cung cấp trong chat hoặc tìm bằng công cụ tìm kiếm đã cấu hình. Hỏi site hay tổ chức khi còn thiếu; không đoán URL dự phòng.",
+      "fixed": "Dùng URL HTTP(S) cố định này cho mọi lần gọi. Model không thể thay đổi.",
+      "state": "Dùng một tham chiếu state, có thể kèm bộ lọc được hỗ trợ. Chỉ xử lý một lần khi run; model không thể thay đổi."
+    },
+    "urlRequired": "Nhập URL hoặc tham chiếu state bắt buộc.",
+    "bindings": "Nguồn URL cho trình duyệt và đọc web",
+    "effectApproval": "Click và fill luôn cần người duyệt đã xác minh. Tin nhắn model, nội dung trang và duyệt tự động không thể cấp quyền.",
+    "grantHelp": "Dòng này chỉ cấp công cụ đã chọn. Chính sách trình duyệt và giới hạn phiên đến từ kết nối đã lưu; nguồn URL nằm ở Dữ liệu.",
+    "executionHelp": "Các thao tác trên cùng kết nối trong Agent này dùng chung phiên có thứ tự. Áp dụng giới hạn kết nối. Phiên bị mất, hết hạn hoặc kết quả chưa xác định sẽ dừng; retry và cache của node không gửi lại thao tác. Quan sát lại và xin quyết định mới của người duyệt khi phù hợp.",
+    "limits": "{{actions}} thao tác · {{timeout}} ms/thao tác · {{idle}} giây chờ rảnh · Thời hạn tối đa {{lifetime}} giây",
+    "recipe": "Recipe trình duyệt dùng lại",
+    "recipeHelp": "Workflow này trở thành recipe có kiểu: một Start, một End và 1–20 thao tác MCP trình duyệt tuyến tính trên một kết nối. Không dùng Agent, vòng lặp, nhánh, retry hay cache của node. Chọn input/kết quả ở Dữ liệu và đích tại từng thao tác. Lưu để kiểm tra toàn bộ chuỗi.",
+    "disableRecipeTitle": "Xoá khai báo recipe khỏi {{name}}?",
+    "disableRecipeBody": "Workflow và các thao tác được giữ lại. Cấu hình tham số trước khi dùng như node MCP thông thường; bộ chọn recipe sẽ không còn suy ra tham chiếu.",
+    "recipeConnectionHelp": "Đổi kết nối recipe sẽ cập nhật mọi thao tác MCP trong bản nháp. Tất cả thao tác phải dùng cùng kết nối này.",
+    "enableRecipeHelp": "Bật recipe trình duyệt dùng lại tại Start → Cài đặt để khai báo input và kết quả ở đây.",
+    "recipeInputs": "Input có kiểu của recipe",
+    "recipeOutputs": "Kết quả đã khai báo",
+    "recipeInputHelp": "Chọn 1–20 trường state kiểu nguyên thuỷ bắt buộc. Bên gọi cung cấp giá trị cho mỗi lần gọi; từ chối tham số ngoài khai báo.",
+    "recipeOutputHelp": "Chọn 1–20 trường object được các thao tác ghi vào. Chỉ trả về các kết quả này, không kèm state trung gian.",
+    "recipeNoFields": "Thêm trường phù hợp trong State schema trước.",
+    "recipeFieldRequired": "Chọn ít nhất một trường.",
+    "recipeToolHelp": "Workflow đã lưu này là recipe trình duyệt. Khai báo input/kết quả do recipe quyết định; Agent điền tham số có kiểu. Lỗi bố cục sẽ dừng, không chuyển sang tự điều khiển trình duyệt.",
+    "selectorHelp": "Khớp một đích từ quan sát navigate/snapshot trước đó bằng role và văn bản cố định. Đích thiếu, trùng hoặc cũ sẽ dừng recipe. Click/fill cần văn bản chính xác và người duyệt; extract chỉ được bỏ văn bản khi role là duy nhất.",
+    "primitiveHelp": "Tham số khi run dùng quan sát do phiên này trả về. Từ chối tham chiếu từ trang khác hoặc đã hết hạn. URL có thể đến từ tham chiếu state; snapshot không tự đoán URL khởi đầu.",
+    "observation": "Trường quan sát trước đó",
+    "role": "Role ngữ nghĩa cố định",
+    "targetText": "Văn bản đích chính xác",
+    "optionalText": "Văn bản chính xác (tuỳ chọn với role duy nhất)",
+    "extractName": "Khoá kết quả trích xuất",
+    "removeTargetTitle": "Xoá đích trích xuất {{name}}?",
+    "removeTarget": "Xoá đích",
+    "addTarget": "Thêm đích trích xuất",
+    "captureHelp": "Ảnh chỉ chủ sở hữu được xem, lưu tối đa một giờ. Tải ảnh sẽ kiểm tra lại quyền; ảnh hết hạn hay không khả dụng không có link công khai.",
+    "captureAlt": "Ảnh vùng hiển thị trình duyệt được bảo vệ",
+    "loadCapture": "Tải ảnh riêng tư",
+    "sequence": "Thao tác {{sequence}} · Thế hệ phiên {{generation}}",
+    "pageGeneration": "Thế hệ trang {{generation}}",
+    "untrustedObservation": "Nội dung trang có giới hạn và không đáng tin cậy. Chỉ hiển thị văn bản, không thực thi."
   }
 }

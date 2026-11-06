@@ -110,12 +110,16 @@ def last_handoff(events: list) -> Optional[str]:
                  and a.get("kind") == "handoff" and isinstance(a.get("to"), str)), None)
 
 
-def steps_of(events: list, mode: str) -> list[dict]:
+def steps_of(events: list, mode: str, *, allow_browser=False) -> list[dict]:
     """The node steps of a run as a chat shows them (DEC-0053): none, labels (node, label, type, status) or full
     (plus duration, input, output and errors)."""
     if mode == "none": return []
+    from ..engine.browser_presentation import visitor_event, private_event
+    private = not allow_browser and any(private_event(event) for event in events)
     out: dict[str, dict] = {}
     for e in events:
+        if not allow_browser:
+            e = visitor_event({**e, 'browser_private': True} if private else e)
         t, nid = e.get("type"), e.get("node")
         hidden = ("start", "end", "agent", "agent_exit", "agent_join") + (() if mode == "full" else ("agent_model",))  # an Agent shows its tool calls; the join only orders them
         if t not in STEP_EVENTS or not nid or e.get("node_type") in hidden: continue
@@ -128,7 +132,7 @@ def steps_of(events: list, mode: str) -> list[dict]:
         if step and step.get("kind") == "tool" and step.get("tool"): s["label"] = f"{s['label'].rsplit(' › ', 1)[0]} › {step['tool']}"
         if step and step.get("kind") == "handoff": s["handoff_to"] = step.get("to_label") or step.get("to")  # TASK-0182
         if mode == "full":
-            for k in ("duration_ms", "input", "delta", "errors", "code"):
+            for k in ("duration_ms", "input", "delta", "errors", "code", "browser"):
                 if k in e: s[k] = e[k]
             if step: s["delta"] = step
             if step and step.get("child_run_id"): s["child_run_id"] = step["child_run_id"]  # a workflow tool's child run (TASK-0136)
@@ -279,7 +283,7 @@ class ChatSessionService:
 
     def get(self, sid: str, uid: str, view: str = "builder") -> dict:
         s, t = self._own(sid, uid)
-        return self.view(s, "full" if view != "visitor" else self.steps_mode(t))
+        return self.view(s, "full" if view != "visitor" else self.steps_mode(t), allow_browser=view != "visitor")
 
     @staticmethod
     def settings_json(t: WorkflowChatTrigger) -> dict:
@@ -289,22 +293,27 @@ class ChatSessionService:
     def steps_mode(t: WorkflowChatTrigger) -> str:
         return json.loads(t.settings or "{}").get("steps") or DEFAULTS["steps"]
 
-    def view(self, s: ChatSession, mode: str) -> dict:
+    def view(self, s: ChatSession, mode: str, *, allow_browser=False) -> dict:
         """A session's turns, each run's steps (in `mode`) with its first answer, and each turn's rating."""
         sid = s.id
         steps: dict[str, list] = {}
         found: set[str] = set()
+        browser_waits: set[str] = set()
         turns = self.sessions.turns(sid)
         ratings = {r.turn_id: r for r in self.sessions.ratings_of(sid)}
         for x in turns:
             if x.role == "assistant" and x.run_id and x.run_id not in steps:
                 r = self.runs.get(x.run_id)
-                if r is not None: found.add(x.run_id)
-                steps[x.run_id] = steps_of(json.loads(r.events or "[]") if r else [], mode)
+                if r is not None:
+                    found.add(x.run_id)
+                    if any(event.get('browser_intent') for event in json.loads(r.events or '[]')): browser_waits.add(x.run_id)
+                steps[x.run_id] = steps_of(json.loads(r.events or "[]") if r else [], mode, allow_browser=allow_browser)
         files = self._files(turns)
         out = []
         for x in turns:
             d = self._turn(x)
+            if not allow_browser and x.status == 'waiting' and x.run_id in browser_waits:
+                d['text'] = ''; d['answered_by'] = 'reviewer'
             d["attachments"] = [files[i] for i in self._ids(x) if i in files]
             d["rating"] = self._rating(ratings[x.id]) if x.id in ratings else None
             if x.role == "assistant": d["run_exists"] = bool(x.run_id and x.run_id in found)
@@ -496,7 +505,8 @@ class ChatSessionService:
         if not sid or self.sessions.get(sid) is None or t is None: return
         turn = ChatTurn(id=uuid.uuid4().hex[:12], session_id=sid, run_id=r.id, role="assistant", status=r.status, created=time.time())
         if r.status == "ok":
-            v = (res.get("final_state") or {}).get(t.reply_field)
+            from ..engine.browser_presentation import reply
+            v = reply((res.get("final_state") or {}).get(t.reply_field))
             turn.text = v if isinstance(v, str) else ("" if v is None else json.dumps(v, ensure_ascii=False))
             if (to := last_handoff(json.loads(r.events or "[]"))): self.sessions.set_fields(sid, active_agent=to)  # TASK-0181
         elif r.status == "waiting":
@@ -504,7 +514,7 @@ class ChatSessionService:
             node = (res.get("waiting") or {}).get("node") or ev.get("node")
             wf = (json.loads(r.checkpoint or "{}") or {}).get("workflow") or {}
             data = next((n.get("data") for n in wf.get("nodes") or [] if n.get("id") == node), None)
-            turn.text, turn.node, turn.answered_by = ev.get("prompt") or "", node, "reviewer" if ev.get("browser_intent") else answered_by(data)
+            turn.text, turn.node, turn.answered_by = "" if ev.get("browser_intent") else ev.get("prompt") or "", node, "reviewer" if ev.get("browser_intent") else answered_by(data)
         else:
             err = res.get("error"); turn.code = (err or {}).get("code") if isinstance(err, dict) else None
             turn.text = ((err or {}).get("message") if isinstance(err, dict) else err) or ""

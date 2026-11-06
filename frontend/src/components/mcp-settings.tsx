@@ -11,9 +11,9 @@ import { TemplateEditor, type TemplateField } from '@/components/template-editor
 import { api } from '@/lib/api'
 import type { McpList, McpServer } from '@/lib/mcp'
 
-type Props = { server?: string; tool?: string; args?: Record<string, any>; fields: TemplateField[]; readOnly?: boolean; onChange: (patch: Record<string, any>) => void }
+type Props = { hideArguments?: boolean; recipeConnection?: string; server?: string; tool?: string; args?: Record<string, any>; fields: TemplateField[]; readOnly?: boolean; onChange: (patch: Record<string, any>) => void }
 
-export function McpSettings({ server, tool, args = {}, fields, readOnly, onChange }: Props) {
+export function McpSettings({ server, tool, args = {}, fields, readOnly, onChange, hideArguments, recipeConnection }: Props) {
   const { t } = useTranslation(); const [items, setItems] = useState<McpServer[] | null>(null); const [err, setErr] = useState('')
   useEffect(() => { api<McpList>('/api/mcp/servers').then(d => setItems(d.servers)).catch(e => { setItems([]); setErr(e.message) }) }, [])
   const s = items?.find(x => x.id === server)
@@ -24,7 +24,7 @@ export function McpSettings({ server, tool, args = {}, fields, readOnly, onChang
   const asText = (v: any) => v === undefined ? '' : typeof v === 'string' ? v : JSON.stringify(v)
   return <div className="space-y-3" id="mcp-settings">
     <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor="mcp-server">{t('editor.mcpServer')}</Label>
-      <Select value={server || ''} onValueChange={v => onChange({ server_id: v, tool: '', arguments: {} })}>
+      <Select disabled={!!recipeConnection} value={server || ''} onValueChange={v => onChange({ server_id: v, tool: '', arguments: {} })}>
         <SelectTrigger className="w-full" id="mcp-server"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
         <SelectContent emptyMessage={err || (items === null ? t('common.loading') : undefined)}>{(items || []).map(x => <SelectItem key={x.id} value={x.id}>{x.name} · {x.transport}</SelectItem>)}</SelectContent>
       </Select></div>
@@ -32,7 +32,7 @@ export function McpSettings({ server, tool, args = {}, fields, readOnly, onChang
     {items && !items.length && <p className="text-[11px] text-muted-foreground" id="mcp-none">{t('editor.mcpNone')} <TextLink to="/settings/mcp" id="mcp-create">{t('editor.mcpCreate')}</TextLink></p>}
     {s && <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor="mcp-tool">{t('editor.mcpTool')}</Label>
       <div className="flex gap-2">
-        <Select value={tool || ''} onValueChange={v => onChange({ tool: v, arguments: {} })}>
+        <Select value={tool || ''} onValueChange={v => onChange({ tool: v, arguments: {}, target: undefined, targets: undefined })}>
           <SelectTrigger className="w-full min-w-0" id="mcp-tool"><SelectValue placeholder={s.tools.length ? t('common.choose') : t('editor.mcpNoTools')} /></SelectTrigger>
           <SelectContent>{s.tools.map(x => <SelectItem key={x.name} value={x.name}>{x.name}</SelectItem>)}</SelectContent>
         </Select>
@@ -42,7 +42,7 @@ export function McpSettings({ server, tool, args = {}, fields, readOnly, onChang
       {def?.description && <p className="text-[11px] text-muted-foreground" id="mcp-tool-desc">{def.description}</p>}
     </div>}
     {err && <p className="text-[11px] text-destructive">{err}</p>}
-    {props.length > 0 && <div className="space-y-2" id="mcp-args">
+    {!hideArguments && props.length > 0 && <div className="space-y-2" id="mcp-args">
       <p className="text-xs font-medium">{t('editor.mcpArgs')}</p>
       {props.map(([name, p]) => <div key={name} className="space-y-1">
         <Label className="text-xs text-muted-foreground" htmlFor={`mcp-arg-${name}`}>{name}{req.includes(name) && ' *'} <span className="font-mono text-[10px]">{p.type}</span></Label>

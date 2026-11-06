@@ -37,7 +37,7 @@ from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
-from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes
+from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes, browser_presentation
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
@@ -610,7 +610,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             step = {"tool": call["name"], "args": trace_args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
                     **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),
                     **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {}),
-                    **({'browser':{'operation':tool.get('tool'),'status':browser_details.get('status'),'approval':browser_details.get('approval_outcome')}} if browser_details is not None else {})}
+                    **({'browser':browser_presentation.detail(tool.get('tool'),browser_details)} if browser_details is not None else {})}
             message = {"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": shorten(result, RESULT_CHARS)}
             # the join appends this onto the conversation, in the model's order, whatever order the slots finish in
             return {channel: {"index": index, "message": message, "step": step,
