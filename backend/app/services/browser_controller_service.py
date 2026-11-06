@@ -41,7 +41,7 @@ class BrowserControllerService:
     def info(self): return CAPABILITIES.copy()
 
     def open(self, request):
-        if request.settings.provider != 'controlled_remote': raise AppError('BROWSER_CAPABILITY_UNSUPPORTED')
+        if request.settings.provider != 'browserless': raise AppError('BROWSER_CAPABILITY_UNSUPPORTED')
         if set(request.proxy_secrets) - {'proxy_username', 'proxy_password'}: raise AppError('BROWSER_CAPABILITY_UNSUPPORTED')
         # Local supervisor independently validates origin/profile state before launching containers.
         settings = request.settings.model_copy(update={'provider': 'local'})

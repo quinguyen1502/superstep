@@ -126,3 +126,13 @@ Primary references: [Docker network isolation](https://docs.docker.com/reference
 [Chromium proxy bypass behavior](https://chromium.googlesource.com/chromium/src/+/5e87dfef0c85687ea/net/docs/proxy.md),
 [Playwright Docker guidance](https://playwright.dev/docs/docker),
 [upstream seccomp profile](https://github.com/microsoft/playwright/blob/v1.64.1/utils/docker/seccomp_profile.json).
+
+## Origin whitelist (Accepted DEC-0085)
+
+Page destinations require a **non-empty** connection origin whitelist. An empty
+allowlist is rejected when constructing `DestinationPolicy` (and earlier at the
+connection settings layer in TASK-0241). Off-whitelist hosts, including redirects
+and subresources that surface through the gateway, are denied. Infrastructure
+dials (operator-approved proxies) use `infrastructure=True` and do not expand the
+page whitelist.
+

@@ -12,14 +12,14 @@
 
 ## Review Scope
 
-Explicit controlled_remote HTTPS worker transport/controller, operator endpoint/address approval, compatibility/refusal checks, immutable personal profile seed contract using encrypted MCP storage, principal/origin restrictions, known-secret text masking, own-label restart cleanup and controlled real-browser evidence. No public Studio launch/call API, extra Agent loop, vendor integration, login capture UI or deployment.
+Explicit browserless HTTPS worker transport/controller, operator endpoint/address approval, compatibility/refusal checks, immutable personal profile seed contract using encrypted MCP storage, principal/origin restrictions, known-secret text masking, own-label restart cleanup and controlled real-browser evidence. No public Studio launch/call API, extra Agent loop, vendor integration, login capture UI or deployment.
 
 ## Reference Artifacts
 
 - REQ-0086, DES-0004, ARCH-0002 remote/profile refinement, DEC-0085, PLAN-0006.
 - `.factory-state/tasks/review/TASK-0244-browser-remote-profiles.md`.
 - `docs/browser-remote.md`, `docs/browser-contract.md`, `docs/browser-runtime.md`.
-- TASK-0243 #308 / REV-0233 / QA-0233; prerequisites #304/#303/#299 remain unmerged.
+- TASK-0243 #308 / REV-0233 / QA-0233; prerequisites #303/#304/#308 are merged into develop; this PR reconciles with Accepted DEC-0085.
 
 ## Findings
 

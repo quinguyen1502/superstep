@@ -23,36 +23,36 @@ class BrowserSessionService:
         self.local_options,self.controllers=local_options or {},controllers
         self.approved_proxies,self.operator_default=approved_proxies,operator_default
 
-    def bind(self, owner, principal, run_id, lease, *, guard=None, cancelled=lambda:False, org_allowed=True):
+    def bind(self, owner, principal, run_id, lease, *, guard=None, cancelled=lambda:False, org_allowed=True, conversation_id=None):
         lost=False
         for row in self.repo.for_run(run_id):
             if row.lease_generation!=lease:
                 self.close(row,'lost');lost=True
-        scope=BrowserRunScope(self,owner,principal,run_id,lease,guard,cancelled,org_allowed)
+        scope=BrowserRunScope(self,owner,principal,run_id,lease,guard,cancelled,org_allowed,conversation_id)
         scope.lost=lost
         return scope
 
     @staticmethod
     def context(row):
-        return ExecutionContext(principal_id=row.principal_id,run_id=row.run_id,group_id=row.group_id,
+        return ExecutionContext(principal_id=row.principal_id,conversation_id=row.conversation_id,run_id=row.run_id,group_id=row.group_id,
             connection_id=row.connection_id,configuration=row.configuration,lease_generation=row.lease_generation)
 
     def _cleanup(self,row):
         context=self.context(row)
         try:
             if not row.worker_id: cleaned=True
-            elif row.provider=='controlled_remote':
+            elif row.provider=='browserless':
                 secrets=json.loads(crypto.decrypt(row.control_secret))
-                worker=RemoteBrowserWorker(context,BrowserSettings(provider='controlled_remote'),approved_transport(secrets,self.controllers))
+                worker=RemoteBrowserWorker(context,BrowserSettings(provider='browserless'),approved_transport(secrets,self.controllers))
                 worker.session_id=row.worker_id;cleaned=worker.close()
             else:
                 import re
                 if not re.fullmatch(r'[a-f0-9]{32}',row.worker_id): return False
-                worker=LocalBrowserWorker(context,BrowserSettings(),**self.local_options)
+                worker=LocalBrowserWorker(context,BrowserSettings.model_construct(provider='local',allowed_origins=['https://example.com']),**self.local_options)
                 worker.session_id=row.worker_id
                 worker.worker,worker.gateway,worker.volume=(f'ss-browser-{row.worker_id}-{part}' for part in ('worker','gateway','socket'))
                 cleaned=worker.close()
-        except (BrowserWorkerError,ValueError,TypeError): cleaned=False
+        except (BrowserWorkerError,ValueError,TypeError,ValidationError): cleaned=False
         self.repo.transition(row.id,['new','starting','ready','closed','lost','revoked','expired','unknown'],
                              row.status if row.status not in {'new','starting','ready'} else 'closed',cleanup_pending=not cleaned,control_secret=None if cleaned else row.control_secret)
         return cleaned
@@ -65,7 +65,10 @@ class BrowserSessionService:
 
     def close_run(self, rid, lease=None):
         for row in self.repo.list_active(run_id=rid):
-            if lease is None or row.lease_generation==lease:self.close(row)
+            if lease is not None and row.lease_generation!=lease: continue
+            # Conversation-scoped pages survive chat-turn run ends until idle/max/revoke (DEC-0085).
+            if row.conversation_id: continue
+            self.close(row)
 
     def close_owner(self, owner):
         for row in self.repo.for_user(owner):self.close(row,'revoked')
@@ -79,22 +82,25 @@ class BrowserSessionService:
                 self.close(row,'expired');continue
             connection=self.mcp.repo.get(row.connection_id)
             run=self.runs.get(row.run_id) if self.runs is not None else None
-            if (connection is None or browser_configuration(connection)!=row.configuration or
-                run is not None and (run.status not in {'running','waiting','paused','queued'} or (run.lease_gen or 1)!=row.lease_generation)):
+            if connection is None or browser_configuration(connection)!=row.configuration:
+                self.close(row,'revoked');continue
+            # Cross-turn conversation pages outlive a terminal chat run until idle/max/revoke.
+            if row.conversation_id: continue
+            if run is not None and (run.status not in {'running','waiting','paused','queued'} or (run.lease_gen or 1)!=row.lease_generation):
                 self.close(row,'revoked');continue
             if row.status=='ready' and row.worker_id:
                 try:
                     context=self.context(row);settings=BrowserSettings.model_validate(json.loads(connection.settings or '{}'))
-                    if row.provider=='controlled_remote':
+                    if row.provider=='browserless':
                         RemoteBrowserWorker.attach(context,settings,row.worker_id,approved_transport(self.mcp._stored(connection),self.controllers))
                     else:LocalBrowserWorker.attach(context,settings,row.worker_id,**self.local_options)
                 except (BrowserWorkerError,ValueError,TypeError):self.close(row,'expired')
 
 
 class BrowserRunScope:
-    def __init__(self, service, owner, principal, rid, lease, guard, cancelled, org):
+    def __init__(self, service, owner, principal, rid, lease, guard, cancelled, org, conversation_id=None):
         self.service,self.owner,self.principal,self.rid,self.lease=service,owner,principal,rid,lease
-        self.guard,self.cancelled,self.org=guard,cancelled,org
+        self.guard,self.cancelled,self.org,self.conversation_id=guard,cancelled,org,conversation_id
 
     def is_browser(self,sid):
         row=self.service.mcp.repo.get(sid)
@@ -124,15 +130,21 @@ class BrowserRunScope:
         for sid,items in groups.items():
             connection=self._connection(sid)
             gid='group:'+digest(group)[:48]
-            context=ExecutionContext(principal_id=self.principal,run_id=self.rid,group_id=gid,connection_id=sid,
+            scope_key=self.conversation_id or self.rid
+            context=ExecutionContext(principal_id=self.principal,conversation_id=self.conversation_id,run_id=self.rid,group_id=gid,connection_id=sid,
                                      configuration=browser_configuration(connection),lease_generation=self.lease)
             settings,_=BrowserProfileService.prepare(connection,context)
-            identity=digest([self.principal,self.rid,gid,sid])[:32]
+            identity=digest([self.principal,scope_key,gid,sid])[:32]
             now=time.time()
             row=self.service.repo.reserve_session(BrowserSession(id=identity,owner=self.owner,principal_id=self.principal,
-                run_id=self.rid,group_id=gid,connection_id=sid,configuration=context.configuration,lease_generation=self.lease,
+                conversation_id=self.conversation_id,run_id=self.rid,group_id=gid,connection_id=sid,configuration=context.configuration,lease_generation=self.lease,
                 provider=settings.provider,status='new',created=now,expires=now+settings.lifetime_s,touched=now))
             if row is None:raise BrowserWorkerError('expired')
+            if self.conversation_id and (row.run_id,row.lease_generation)!=(self.rid,self.lease):
+                if not self.service.repo.claim_for_run(row.id,run_id=self.rid,lease=self.lease,principal_id=self.principal,
+                        conversation_id=self.conversation_id,configuration=context.configuration):
+                    self.service.close(row,'lost');raise BrowserWorkerError('session_lost')
+                row=self.service.repo.get(row.id)
             if self.service.context(row)!=context:
                 self.service.close(row,'lost');raise BrowserWorkerError('session_lost')
             pairs=[(digest([identity,batch,item['index']])[:32],digest([item['tool'],item['arguments']])) for item in items]
@@ -146,16 +158,18 @@ class BrowserRunScope:
         connection=self._connection(row.connection_id)
         if row.lease_generation!=self.lease or row.principal_id!=self.principal or row.run_id!=self.rid:
             raise BrowserWorkerError('session_lost')
+        if (row.conversation_id or None)!=(self.conversation_id or None):
+            raise BrowserWorkerError('session_lost')
         return connection,*BrowserProfileService.prepare(connection,self.service.context(row))
 
     def _worker(self,row):
         connection,settings,seed=self._current(row)
         secrets=self.service.mcp._stored(connection);context=self.service.context(row)
-        remote=settings.provider=='controlled_remote'
+        remote=settings.provider=='browserless'
         transport=approved_transport(secrets,self.service.controllers) if remote else None
         if row.status=='new' and self.service.repo.transition(row.id,['new'],'starting'):
             worker=RemoteBrowserWorker(context,settings,transport) if remote else LocalBrowserWorker(context,settings,**self.service.local_options)
-            cleanup=crypto.encrypt(json.dumps({k:secrets[k] for k in ['remote_endpoint','remote_token']})) if remote else None
+            cleanup=crypto.encrypt(json.dumps({k:secrets[k] for k in ['browserless_token']})) if remote else None
             if not self.service.repo.transition(row.id,['starting'],'starting',worker_id=worker.session_id,control_secret=cleanup,cleanup_pending=True):raise BrowserWorkerError()
             try:
                 self._current(self.service.repo.get(row.id))
