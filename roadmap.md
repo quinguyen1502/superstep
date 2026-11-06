@@ -443,7 +443,7 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 ## Browser tools, recipes and proxies
 
-REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio delivery in progress via TASK-0241–0250 and studio-scoped TASK-0253 (todo). Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Executable Python/TypeScript exports (TASK-0251/0252) remain **deferred** after studio. Draft implementation PRs #303–#315 started against the previous Proposed plan and must be reconciled with the Accepted package before merge. No release/version bump authorised by acceptance alone.
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio delivery: TASK-0241–0250 merged; TASK-0253 (English handbook/acceptance) in progress. TASK-0251/0252 remain deferred. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Executable Python/TypeScript exports (TASK-0251/0252) remain **deferred** after studio. Implementation PRs #303–#315 reconciled with the Accepted package and merged into develop (#303–#315). No release/version bump authorised by acceptance alone.
 
 - TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **done** (merged #303).
 - TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **done** (merged #304).
@@ -454,8 +454,8 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (
 - TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **done** (merged #312).
 - TASK-0248 — typed reusable recipes through existing tool surfaces. **done** (merged #313).
 - TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **done** (merged #314).
-- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **review** (Draft #315, synced onto develop after #314).
-- TASK-0253 — studio integrated acceptance, example workflow and en/vi handbook. **todo** (studio first milestone).
+- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **done** (merged #315).
+- TASK-0253 — studio integrated acceptance, example workflow and English handbook. **doing** (factory/task-0253-browser-e2e-handbook).
 - TASK-0251 — executable Python/plain and project exports. **backlog (deferred)** after studio acceptance.
 - TASK-0252 — executable TypeScript/plain and project exports. **backlog (deferred)** after studio acceptance.
 
