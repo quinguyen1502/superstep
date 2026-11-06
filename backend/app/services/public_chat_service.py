@@ -79,8 +79,9 @@ class PublicChatService:
             return await asyncio.to_thread(self.verifier.verify, token, slug, t.id, origin)
         except AppError:
             if self.limiter is not None and (n := config.public_chat_rate_ip()):
-                ok, retry = await self.limiter.hit(f"pubchat-ip:{ip}", n, config.public_chat_rate_window())
-                if not ok: raise AppError("RATE_LIMITED", retry_after=retry) from None
+                hit = await self.limiter.hit(f"pubchat-ip:{ip}", n, config.public_chat_rate_window())
+                ok, retry = hit if isinstance(hit, tuple) and len(hit) == 2 else (True, 0)
+                if not ok: raise AppError("RATE_LIMITED", retry_after=int(retry or 1)) from None
             raise
 
     # ---- the published chat ----

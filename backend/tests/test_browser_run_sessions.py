@@ -75,14 +75,21 @@ def scoped_service(tmp_path,monkeypatch):
     monkeypatch.setenv('STUDIO_ENABLE_BROWSER','1')
     monkeypatch.setenv('STUDIO_ENABLE_BROWSER_RUNTIME','1')
     mcp=McpService(McpServerRepository(db))
-    mcp.repo.save(McpServer(id='browser',owner='owner',scope='user',transport='managed',adapter='browser',name='Browser',settings='{}',created=time.time()))
+    mcp.repo.save(McpServer(id='browser',owner='owner',scope='user',transport='managed',adapter='browser',name='Browser',settings='{"allowed_origins":["https://example.com"]}',created=time.time()))
     calls=[];workers={}
     class Worker(LocalBrowserWorker):
         def start(self,**kwargs):self.started=True;workers[self.session_id]=self;return self
         @classmethod
         def attach(cls,context,settings,worker_id,**kwargs):
             worker=workers.get(worker_id)
-            if worker is None or worker.closed or worker.context!=context:raise BrowserWorkerError()
+            if worker is None or worker.closed:raise BrowserWorkerError()
+            # Conversation pages may move to a later chat-turn run/lease (DEC-0085).
+            if worker.context!=context:
+                same=(worker.context.principal_id==context.principal_id and worker.context.connection_id==context.connection_id
+                      and worker.context.group_id==context.group_id
+                      and (worker.context.conversation_id or None)==(context.conversation_id or None))
+                if not same:raise BrowserWorkerError()
+                worker.context=context
             return worker
         def call(self,command):
             calls.append(command)
@@ -132,6 +139,28 @@ def test_run_scope_keeps_page_across_rounds_and_orders_threads(tmp_path,monkeypa
     service.close_run('run-one');assert next(iter(workers.values())).closed
 
 
+def test_cross_turn_conversation_reattaches_live_page(tmp_path,monkeypatch):
+    """Same conversation/principal/connection keeps the worker across chat-turn run ends."""
+    service,calls,workers=scoped_service(tmp_path,monkeypatch)
+    first=service.bind('owner','user:owner','run-one',1,conversation_id='chat-session-1')
+    ticket=first.prepare('agent','turn-1',[{'index':0,'server_id':'browser','tool':'navigate','arguments':{'url':'https://example.com/a'}}])[0]
+    assert first.call('agent',ticket,'navigate',{'url':'https://example.com/a'})['status']=='confirmed'
+    worker_id=next(iter(workers))
+    # First chat turn ends successfully: conversation session must survive close_run.
+    service.close_run('run-one',1)
+    assert not workers[worker_id].closed
+    second=service.bind('owner','user:owner','run-two',2,conversation_id='chat-session-1')
+    later=second.prepare('agent','turn-2',[{'index':0,'server_id':'browser','tool':'snapshot','arguments':{}}])
+    assert second.call('agent',later[0],'snapshot',{})['status']=='confirmed'
+    assert len(workers)==1 and list(workers)==[worker_id]
+    # A different conversation cannot reattach the same page.
+    import pytest
+    from app.engine.browser_worker import BrowserWorkerError
+    other=service.bind('owner','user:owner','run-three',1,conversation_id='chat-session-other')
+    with pytest.raises(BrowserWorkerError):
+        other.call('agent',later[0],'snapshot',{})
+
+
 def test_updated_connection_and_cancel_deny_late_commands(tmp_path,monkeypatch):
     service,calls,workers=scoped_service(tmp_path,monkeypatch)
     cancel=[False]
@@ -139,7 +168,7 @@ def test_updated_connection_and_cancel_deny_late_commands(tmp_path,monkeypatch):
     ticket=scope.prepare('agent','round-one',[{'index':0,'server_id':'browser','tool':'snapshot','arguments':{}}])[0]
     assert scope.call('agent',ticket,'snapshot',{})['status']=='confirmed'
     next_ticket=scope.prepare('agent','round-two',[{'index':0,'server_id':'browser','tool':'snapshot','arguments':{}}])[0]
-    row=service.mcp.repo.get('browser');row.settings='{"max_actions": 2}';service.mcp.repo.save(row)
+    row=service.mcp.repo.get('browser');row.settings='{"allowed_origins":["https://example.com"],"max_actions":2}';service.mcp.repo.save(row)
     assert scope.call('agent',next_ticket,'snapshot',{})['status']=='session_lost'
     assert len(calls)==1 and next(iter(workers.values())).closed
 
@@ -235,7 +264,7 @@ def test_connection_crud_revokes_and_pending_cleanup_survives_user_purge(tmp_pat
     service.mcp.browser_lifecycle=lambda:service
     root=next(iter(workers.values()));cls=type(root);close=cls.close
     monkeypatch.setattr(cls,'close',lambda self:False)  # daemon outage: cleanup is not verified
-    service.mcp.update('browser','owner','Changed',settings={'max_actions':3})
+    service.mcp.update('browser','owner','Changed',settings={'allowed_origins':['https://example.com'],'max_actions':3})
     assert service.repo.get(row.id).status=='revoked' and service.repo.get(row.id).cleanup_pending
     UserDataRepository(service.repo.db).purge('owner',runs=True)
     assert service.repo.get(row.id).cleanup_pending and service.mcp.repo.get('browser') is None

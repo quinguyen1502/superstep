@@ -16,6 +16,17 @@ from tests.test_agent_node import wf,call
 from tests.test_browser_run_sessions import scoped_service
 
 
+
+def enable_mutating_approval(service, connection_id='browser'):
+    """Accepted DEC-0085: mutating approval default OFF; tests that expect waits opt in."""
+    row=service.mcp.repo.get(connection_id)
+    settings=json.loads(row.settings or '{}')
+    settings.setdefault('allowed_origins',['https://example.com'])
+    settings['require_mutating_approval']=True
+    row.settings=json.dumps(settings)
+    service.mcp.repo.save(row)
+
+
 def runner_for(service):
     db=service.repo.db;waits=ApprovalRepository(db);users=UserRepository(db);runs=RunRepository(db);workflows=WorkflowRepository(db)
     approvals=ApprovalService(waits,users,workflows,runs,ChannelService(waits,users,{}),background=False,browser=lambda:service.approvals)
@@ -43,8 +54,20 @@ def responses(monkeypatch,items):
     monkeypatch.setattr(agents,'call_agent',lambda *args,**kwargs:next(iterator))
 
 
-def test_default_click_waits_and_only_real_owner_decision_grants_once(tmp_path,monkeypatch):
+def test_default_mutating_approval_off_runs_click_immediately(tmp_path,monkeypatch):
     service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    monkeypatch.setenv('STUDIO_AGENT_PARALLEL_TOOLS','4')
+    args={'observation_id':'observed','element_id':'button'}
+    responses(monkeypatch,[('',[call('navigate',{'url':'https://example.test/form'},'a'),
+        call('click',args,'b'),call('snapshot',{},'c')]),('Done',[])])
+    plan=runner.plan('owner',{'workflow':flow_for(['navigate','click','snapshot']),'input':{'message':'fixture'}});plan.run_id='default-off'
+    status,events=execute(runner,plan)
+    assert status=='ok' and [command.operation for command in calls]==['navigate','click','snapshot']
+    assert runner.approvals.repo.latest_wait('default-off') is None
+
+
+def test_mutating_approval_on_click_waits_and_only_real_owner_decision_grants_once(tmp_path,monkeypatch):
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     monkeypatch.setenv('STUDIO_AGENT_PARALLEL_TOOLS','4')
     args={'observation_id':'observed','element_id':'button'}
     responses(monkeypatch,[('',[call('navigate',{'url':'https://example.test/form?secret=must-not-trace'},'a'),
@@ -75,7 +98,7 @@ def test_default_click_waits_and_only_real_owner_decision_grants_once(tmp_path,m
 
 @pytest.mark.parametrize('decision,outcome',[('rejected','rejected'),('I changed my mind','rejected'),('approved','expired')])
 def test_reject_or_expired_approval_does_not_click(tmp_path,monkeypatch,decision,outcome):
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     responses(monkeypatch,[('',[call('click',{'observation_id':'o','element_id':'e'})]),('Not done',[])])
     plan=runner.plan('owner',{'workflow':flow_for(['click']),'input':{'message':'fixture'}});plan.run_id='reject-run'
     assert execute(runner,plan)[0]=='waiting'
@@ -89,7 +112,7 @@ def test_reject_or_expired_approval_does_not_click(tmp_path,monkeypatch,decision
 
 
 def test_changed_target_requires_new_observation_and_new_decision(tmp_path,monkeypatch):
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     responses(monkeypatch,[('',[call('click',{'observation_id':'o','element_id':'e'})]),('Target changed',[])])
     plan=runner.plan('owner',{'workflow':flow_for(['click']),'input':{'message':'fixture'}});plan.run_id='changed-run'
     assert execute(runner,plan)[0]=='waiting'
@@ -103,7 +126,7 @@ def test_changed_target_requires_new_observation_and_new_decision(tmp_path,monke
 def test_real_waiting_resume_hands_off_fence_without_reopening_page(tmp_path,monkeypatch):
     from app.models import Run
     from app.engine.browser_worker import BrowserWorkerError
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     responses(monkeypatch,[('',[call('navigate',{'url':'https://example.test/form'},'a')]),
         ('',[call('click',{'observation_id':'o','element_id':'e'},'b')]),('Done',[])])
     plan=runner.plan('owner',{'workflow':flow_for(['navigate','click']),'input':{'message':'fixture'}});plan.run_id='queued-approval'
@@ -124,7 +147,7 @@ def test_real_waiting_resume_hands_off_fence_without_reopening_page(tmp_path,mon
 
 def test_unknown_ack_is_not_retried_on_resume_or_fork(tmp_path,monkeypatch):
     from app.engine.browser_worker import BrowserWorkerError
-    service,calls,workers=scoped_service(tmp_path,monkeypatch)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service)
     scope=service.bind('owner','user:owner','run-one',1)
     args={'observation_id':'o','element_id':'e'}
     cid=scope.prepare('agent','one',[{'index':0,'server_id':'browser','tool':'click','arguments':args}])[0]
@@ -142,7 +165,7 @@ def test_unknown_ack_is_not_retried_on_resume_or_fork(tmp_path,monkeypatch):
 
 
 def test_ai_review_and_unverified_chat_cannot_grant_a_browser_intent(tmp_path,monkeypatch):
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     runner.approvals._policy=lambda *args:(_ for _ in ()).throw(AssertionError('AI policy must not classify browser actions'))
     responses(monkeypatch,[('',[call('fill',{'observation_id':'o','element_id':'e','value':'synthetic-secret-value'})])])
     plan=runner.plan('owner',{'workflow':flow_for(['fill']),'input':{'message':'fixture'}});plan.run_id='human-only'
@@ -163,7 +186,7 @@ def test_authenticated_inbox_reviewer_grants_but_stranger_does_not(c,tmp_path,mo
     service,calls,workers=scoped_service(tmp_path,monkeypatch)  # installs a synthetic worker, never Docker/network
     owner,reviewer,stranger=user(c),user(c),user(c)
     connection=c.post('/api/mcp/servers',headers=H(owner['token']),json={'name':'Browser approval fixture '+uuid.uuid4().hex[:6],
-        'transport':'managed','adapter':'browser','settings':{}}).json()['data']
+        'transport':'managed','adapter':'browser','settings':{'allowed_origins':['https://example.com'],'require_mutating_approval':True}}).json()['data']
     flow=flow_for(['click'])
     agent=next(node for node in flow['nodes'] if node['type']=='agent')
     agent['data']['tools'][0]['server_id']=connection['id']
@@ -198,7 +221,7 @@ def test_durable_decision_repairs_lost_enqueue_without_repeating_uncertain_effec
     from app.models import BrowserIntent,Run
     from app.services.run_worker import RunWorker
     from app.services.job_queue import InMemoryJobQueue
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     responses(monkeypatch,[('',[call('click',{'observation_id':'o','element_id':'e'})]),('Done',[])])
     plan=runner.plan('owner',{'workflow':flow_for(['click']),'input':{'message':'fixture'}});plan.run_id='lost-enqueue'
     assert execute(runner,plan)[0]=='waiting'
@@ -231,7 +254,7 @@ def test_durable_decision_repairs_lost_enqueue_without_repeating_uncertain_effec
 
 
 def test_browser_deadline_is_bounded_and_can_only_reject(tmp_path,monkeypatch):
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     responses(monkeypatch,[('',[call('click',{'observation_id':'o','element_id':'e'})])])
     flow=flow_for(['click'])
     agent=next(node for node in flow['nodes'] if node['type']=='agent')
@@ -247,7 +270,7 @@ def test_browser_deadline_is_bounded_and_can_only_reject(tmp_path,monkeypatch):
 
 def test_two_resuming_binders_share_one_fence_handoff(tmp_path,monkeypatch):
     from concurrent.futures import ThreadPoolExecutor
-    service,calls,workers=scoped_service(tmp_path,monkeypatch)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service)
     scope=service.bind('owner','user:owner','run-one',1)
     cid=scope.prepare('agent','read',[{'index':0,'server_id':'browser','tool':'snapshot','arguments':{}}])[0]
     assert scope.call('agent',cid,'snapshot',{})['status']=='confirmed'
@@ -261,7 +284,7 @@ def test_two_resuming_binders_share_one_fence_handoff(tmp_path,monkeypatch):
 
 
 def test_invalid_browser_fill_keeps_secrets_out_of_trace(tmp_path,monkeypatch):
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     responses(monkeypatch,[('',[call('fill',{'observation_id':'o','element_id':'e','value':'synthetic-private-value','unexpected':'synthetic-private-value'})]),('Refused',[])])
     plan=runner.plan('owner',{'workflow':flow_for(['fill']),'input':{'message':'fixture'}})
     status,events=execute(runner,plan)
@@ -276,7 +299,7 @@ def test_final_wave_answer_survives_crash_before_queue_claim(tmp_path,monkeypatc
     from app.models import McpServer
     from app.services.run_worker import RunWorker
     from app.services.job_queue import InMemoryJobQueue
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     monkeypatch.setenv('STUDIO_AGENT_PARALLEL_TOOLS','4')
     service.mcp.repo.save(McpServer(id='browser-two',owner='owner',scope='user',transport='managed',adapter='browser',name='Second browser',settings='{}',created=time.time()))
     flow=flow_for(['click']);agent=next(node for node in flow['nodes'] if node['type']=='agent')
@@ -307,7 +330,7 @@ def test_final_wave_answer_survives_crash_before_queue_claim(tmp_path,monkeypatc
 
 def test_account_purge_removes_target_text_even_when_cleanup_is_pending(tmp_path,monkeypatch):
     from app.repositories.user_data import UserDataRepository
-    service,calls,workers=scoped_service(tmp_path,monkeypatch);runner=runner_for(service)
+    service,calls,workers=scoped_service(tmp_path,monkeypatch);enable_mutating_approval(service);runner=runner_for(service)
     responses(monkeypatch,[('',[call('click',{'observation_id':'o','element_id':'e'})])])
     plan=runner.plan('owner',{'workflow':flow_for(['click']),'input':{'message':'fixture'}});plan.run_id='purge-browser-intent'
     assert execute(runner,plan)[0]=='waiting'

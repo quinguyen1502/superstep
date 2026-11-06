@@ -4,10 +4,11 @@ import json
 from .job_queue import enqueue_resume
 
 from ..core import config
+from ..engine.browser_contract import MUTATING_OPERATIONS, BrowserSettings
 from ..engine.browser_worker import BrowserWorkerError
 from ..models import BrowserIntent
 
-EFFECTS={'click','fill'}
+EFFECTS=MUTATING_OPERATIONS  # gated by connection require_mutating_approval (default OFF)
 HUMAN_CHANNELS={'studio','slack','telegram','teams','email','whatsapp'}
 
 
@@ -19,6 +20,17 @@ class BrowserApprovalService:
     def __init__(self,intents,waits,users,sessions,enqueue=None,active=None):
         self.intents,self.waits,self.users,self.sessions=intents,waits,users,sessions
         self.enqueue,self.active=enqueue,active
+
+
+    def _mutating_gate(self, scope, row, operation, force=False):
+        """Navigate/snapshot/extract/screenshot never wait; mutating waits only when toggle ON or forced."""
+        if force: return True
+        if operation not in EFFECTS: return False
+        try:
+            settings=BrowserSettings.model_validate(json.loads((scope._connection(row.connection_id).settings or '{}')))
+        except Exception:
+            settings=BrowserSettings.model_construct(provider='local', allowed_origins=['https://example.com'], require_mutating_approval=False)
+        return bool(settings.require_mutating_approval)
 
     @staticmethod
     def summary(intent):
@@ -32,7 +44,7 @@ class BrowserApprovalService:
             self.sessions.close(row,'lost')
             if getattr(error,'fenced',False):raise
             return {'state':'session_lost'}
-        if intent is None and operation not in EFFECTS and not force:return {'state':'allowed'}
+        if intent is None and not self._mutating_gate(scope,row,operation,force):return {'state':'allowed'}
         if ticket.status=='confirmed' and scope.resuming:return {'state':'allowed'}
         if intent is not None:
             if intent.status in {'pending','approved'} and (intent.expires<=time.time() or intent.status=='approved' and not self.valid_decision(intent)):
@@ -110,14 +122,14 @@ class BrowserApprovalService:
 
     def ready(self,cid,operation):
         intent=self.intents.get(cid)
-        if intent is None:return operation not in EFFECTS
+        if intent is None:return True  # gate already decided not to wait, or non-mutating
         if intent.status!='approved' or intent.consumed_at is not None or intent.expires<=time.time() or not self.valid_decision(intent):return False
         return True
 
     def consume(self,scope,row,ticket,worker,command):
         intent=self.intents.get(ticket.id)
         if intent is None:
-            if command.operation in EFFECTS:raise BrowserApprovalOutcome('waiting')
+            # Default-off path: mutating ops execute without a prior intent.
             return None
         if intent.expires<=time.time():
             self.intents.transition(ticket.id,['pending','approved'],'expired');raise BrowserApprovalOutcome('expired')

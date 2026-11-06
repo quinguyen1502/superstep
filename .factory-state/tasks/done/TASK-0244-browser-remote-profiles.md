@@ -106,3 +106,8 @@ Remote browser capabilities and origin-scoped login profiles, satisfying the ass
 - 2026-11-05: Implemented controlled HTTPS remote worker and personal encrypted profile seed, with independent operator endpoint/address approval, exact capability/refusal semantics, own-label restart cleanup and six-operation/profile/proxy real Chromium evidence. ARCH-0002 and docs/browser-remote.md record refinement from provisional CDP metadata. REV-0234/QA-0234 are advisory; owner approval remains pending. Current run/principal/revocation/fencing integration remains TASK-0245 and managed execution is gated.
 
 - 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against isolated implementation commit 252aedff: **1300 passed, 67 skipped**, 458.78 s, no failures. Source is unchanged by subsequent documentation. Final real HTTPS/Chromium fixture and all declared SDK/root checks passed. Draft PR #309; owner review remains pending.
+
+
+## Activity Log
+
+- 2026-11-06: Reconciled with Accepted DEC-0085 / PLAN-0006 after merging develop (#303/#304/#308): provider `browserless`, required whitelist, `browserless_token` + optional `profile_state`, operator-allowlisted control plane, nine tools including upload/download/evaluate.

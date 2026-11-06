@@ -11,7 +11,7 @@ from tests.test_browser_connections import c, api, user, H, create, enabled
 from tests.test_browser_runtime import context
 
 
-def settings(): return BrowserSettings(profile={'name': 'fixture-profile', 'origins': ['https://allowed.test:8443']})
+def settings(): return BrowserSettings(allowed_origins=['https://allowed.test:8443'], profile={'name': 'fixture-profile', 'origins': ['https://allowed.test:8443']})
 def state():
     return {'cookies': [{'name': 'login', 'value': 'synthetic-cookie', 'domain': 'allowed.test', 'path': '/', 'expires': -1,
                          'httpOnly': True, 'secure': True, 'sameSite': 'Lax'}],
@@ -22,7 +22,7 @@ def test_profile_effective_origins_are_closed_and_seed_bound():
     seed = parse_seed(settings(), 'user:owner', json.dumps(state()))
     assert validate_profile(settings(), 'user:owner', seed).allowed_origins == ['https://allowed.test:8443']
     with pytest.raises(ProfileDenied): validate_profile(settings(), 'user:other', seed)
-    with pytest.raises(ProfileDenied): validate_profile(BrowserSettings(), 'user:owner', seed)
+    with pytest.raises(ProfileDenied): validate_profile(BrowserSettings(allowed_origins=['https://allowed.test:8443']), 'user:owner', seed)
     with pytest.raises(ProfileDenied): validate_profile(settings(), 'user:owner', None)
 
 
@@ -31,7 +31,7 @@ def test_unsupported_profile_state_refuses(mutation):
     value, config = state(), settings()
     if mutation == 'domain': value['cookies'][0]['domain'] = '.allowed.test'
     if mutation == 'outside': value['origins'][0]['origin'] = 'https://other.test'
-    if mutation == 'http': config = BrowserSettings(profile={'name':'p','origins':['http://allowed.test']})
+    if mutation == 'http': config = BrowserSettings(allowed_origins=['http://allowed.test'], profile={'name':'p','origins':['http://allowed.test']})
     if mutation == 'expiry': value['cookies'][0]['expires'] = time.time() - 1
     if mutation == 'indexeddb': value['origins'][0]['indexedDB'] = []
     if mutation == 'insecure': value['cookies'][0]['secure'] = False
@@ -60,7 +60,7 @@ def test_profile_encrypted_personal_owner_only_and_update_invalidates(c):
         McpService(svc.repo,is_admin=lambda uid:True).update(row.id,owner['id'],'Org profile',settings=settings().model_dump())
     assert denied.value.code == 'BROWSER_PROFILE_DENIED'
     row.scope = 'user';svc.repo.save(row)
-    removed = c.put(f"/api/mcp/servers/{row.id}", headers=H(owner['token']), json={'name':'Removed profile','settings':{},'secrets':{}})
+    removed = c.put(f"/api/mcp/servers/{row.id}", headers=H(owner['token']), json={'name':'Removed profile','settings':{'allowed_origins':['https://example.com']},'secrets':{}})
     assert removed.status_code == 200
     changed = svc.repo.get(row.id)
     assert changed.secrets is None and browser_configuration(changed) != original_digest

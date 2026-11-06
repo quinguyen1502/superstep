@@ -1,4 +1,4 @@
-# Run-bound browser sessions
+# Conversation and run-bound browser sessions
 
 TASK-0245 connects the existing Agent/MCP runtime to isolated browser workers.
 TASK-0246 extends the approval/resume behavior described here; see
@@ -14,8 +14,10 @@ acceptance remain TASK-0246 onward; this task does not enable those implicitly.
 
 RunService constructs the browser port after assigning the run ID, resource
 owner, effective actor and worker fence. Group IDs hash the full Agent/node path
-and stay stable across rounds/tool slots. Session identity is principal + run +
-group + connection. Configuration includes encrypted credentials/profile state;
+and stay stable across rounds/tool slots. Session identity is principal + (conversation when chat-driven, else run) +
+group + connection. Chat-driven sessions **persist across turns** of the same
+conversation, principal and connection until idle timeout (default 30 minutes),
+hard max lifetime, cancel, conversation end or connection revoke. Configuration includes encrypted credentials/profile state;
 changes do not mutate a live page. Tool arguments cannot replace identity,
 profile/proxy/provider, generation, ticket or approval authority.
 
