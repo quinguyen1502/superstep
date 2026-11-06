@@ -25,7 +25,7 @@ class BrowserSessionService:
         self.approved_proxies,self.operator_default=approved_proxies,operator_default
 
     def bind(self, owner, principal, run_id, lease, *, guard=None, cancelled=lambda:False, org_allowed=True, allow_resume=False, forked_from=None, conversation_id=None):
-        lost=bool(forked_from and self.repo.for_run(forked_from))
+        lost=bool(forked_from and self.repo.has_history(forked_from))
         for row in self.repo.for_run(run_id):
             if row.lease_generation!=lease:
                 if not (allow_resume and self._handoff(row,owner,principal,lease,guard,cancelled)):

@@ -1,8 +1,9 @@
 """CAS scheduling shared by SQLite/Postgres workers; no cached observations or effects replay."""
 import time
-from sqlalchemy import select, update, func
+from sqlalchemy import select, update, func, literal
 from sqlalchemy.exc import IntegrityError
-from ..models.browser_session import BrowserSession, BrowserCommand, BrowserCapacity
+from ..models.browser_session import BrowserSession, BrowserCommand, BrowserCapacity, BrowserIntent
+from ..models.run import Run
 
 
 class BrowserSessionRepository:
@@ -111,6 +112,18 @@ class BrowserSessionRepository:
 
     def for_run(self,rid):
         with self.db.session() as s:return list(s.scalars(select(BrowserSession).where(BrowserSession.run_id==rid)))
+
+    def has_history(self,rid,*,uncertain=False):
+        """Include workflow-tool descendants, so a parent fork/retry cannot bypass child browser outcomes."""
+        tree=select(literal(rid).label('id'),literal(0).label('depth')).cte('browser_run_tree',recursive=True)
+        tree=tree.union_all(select(Run.id,(tree.c.depth+1).label('depth')).join(tree,Run.parent_run_id==tree.c.id).where(tree.c.depth<32))
+        query=select(BrowserSession.id).where(BrowserSession.run_id.in_(select(tree.c.id)))
+        if uncertain:
+            query=query.outerjoin(Run,Run.id==BrowserSession.run_id).outerjoin(BrowserCommand,BrowserCommand.session_id==BrowserSession.id)
+            query=query.outerjoin(BrowserIntent,BrowserIntent.command_id==BrowserCommand.id).where(
+                (BrowserCommand.status=='unknown')|(BrowserIntent.status=='unknown')|
+                (Run.status.in_(['error','timeout','cancelled','expired']) & BrowserIntent.consumed_at.is_not(None)))
+        with self.db.session() as s:return s.scalar(query.limit(1)) is not None
 
     def for_owner(self,owner):
         with self.db.session() as s:return list(s.scalars(select(BrowserSession).where(BrowserSession.owner==owner)))

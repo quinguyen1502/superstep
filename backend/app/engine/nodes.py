@@ -123,11 +123,19 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
     elif t == "mcp":
         def fn(state):
             from . import browser_approval
-            arguments=render_args(d.get('arguments') or {},state)
+            from . import browser_recipes
+            recipe=bool(d.get(browser_recipes.MARKER));group='recipe' if recipe else node['id']
+            if recipe and (ports.test or ports.mock_models):return {d['output_field']:{'status':'dry_run','operation':d['tool']}}
+            if recipe and (ports.browser is None or not ports.browser.is_browser(d['server_id'])):raise AppError('BROWSER_RUNTIME_UNAVAILABLE')
+            arguments=browser_recipes.arguments(d,state) if recipe else render_args(d.get('arguments') or {},state)
             key=effects.key(node['id']) if effects else None
-            ticket=ports.prepare_browsers(node['id'],key or node['id'],[{'index':0,'server_id':d['server_id'],'tool':d['tool'],'arguments':arguments}]).get(0)
-            result=browser_approval.check(ports,effects,node['id'],node['id'],ticket,d['server_id'],d['tool'],arguments,bool(d.get('approval')))
-            return {d['output_field']:result if result is not None else ports.call_mcp(d['server_id'],d['tool'],arguments,key,group=node['id'],ticket=ticket)}
+            ticket=ports.prepare_browsers(group,key or node['id'],[{'index':0,'server_id':d['server_id'],'tool':d['tool'],'arguments':arguments}]).get(0)
+            result=browser_approval.check(ports,effects,node['id'],group,ticket,d['server_id'],d['tool'],arguments,bool(d.get('approval')))
+            result=result if result is not None else ports.call_mcp(d['server_id'],d['tool'],arguments,key,group=group,ticket=ticket)
+            if recipe and (not isinstance(result,dict) or result.get('status')!='confirmed'):
+                outcome=(result.get('approval_outcome') or result.get('status')) if isinstance(result,dict) else 'invalid_result'
+                raise AppError('MCP_TOOL_FAILED',reason='Browser recipe stopped: '+str(outcome))
+            return {d['output_field']:result}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":

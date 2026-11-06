@@ -8,6 +8,7 @@ from typing import Any
 
 # code: (HTTP status, English message template)
 CATALOG: dict[str, tuple[int, str]] = {
+    "BROWSER_RECIPE_INVALID": (400, "Browser recipe must be a version 1 linear browser workflow with valid typed inputs, outputs and targets"),
     "BROWSER_PROFILE_DENIED": (403, "Browser login profile is unavailable for this principal or origin"),
     "BROWSER_CAPABILITY_UNSUPPORTED": (400, "Browser provider cannot enforce the requested capabilities"),
     "BROWSER_CONTROL_UNAVAILABLE": (503, "Browser control service is unavailable"),

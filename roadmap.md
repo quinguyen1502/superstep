@@ -451,8 +451,8 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (
 - TASK-0244 — Browserless remote (self-hosted Superstep controller) and origin-scoped login profiles. **done** (merged #309).
 - TASK-0245 — conversation/run-bound sessions (cross-turn), ordered Agent calls and lifecycle. **done** (merged #310).
 - TASK-0246 — configurable mutating approvals, expired/lost sessions and uncertain-effect recovery. **done** (merged #311).
-- TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **review** (PR #312).
-- TASK-0248 — typed reusable recipes through existing tool surfaces. **backlog** (studio).
+- TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **done** (merged #312).
+- TASK-0248 — typed reusable recipes through existing tool surfaces. **review** (PR #313).
 - TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **backlog** (studio).
 - TASK-0250 — Agent/recipe config and filtered trace/chat UI. **backlog** (studio).
 - TASK-0253 — studio integrated acceptance, example workflow and en/vi handbook. **backlog** (studio first milestone).

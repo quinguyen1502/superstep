@@ -64,10 +64,16 @@ def check(wf: Dict[str, Any], load: Loader, self_id: Optional[str] = None) -> Li
             child = load(ref)
             if child is None: errs.append(Issue("WORKFLOW_TOOL_NOT_FOUND", **who, workflow=ref)); continue
             if child.get("source"): errs.append(Issue("WORKFLOW_TOOL_IMPORTED", **who)); continue
+            from . import browser_recipes
+            recipe_errors=browser_recipes.errors(child)
+            if recipe_errors:errs.extend(recipe_errors);continue
+            recipe=browser_recipes.parsed(child)
             names = {f.get("name") for f in child.get("state") or [] if isinstance(f, dict)}
             for key, code in (("inputs", "WORKFLOW_TOOL_INPUT_UNKNOWN"), ("outputs", "WORKFLOW_TOOL_OUTPUT_UNKNOWN")):
                 want = t.get(key) if isinstance(t.get(key), list) else []  # other shapes: AGENT_TOOL_INPUTS / _OUTPUTS
-                errs.extend(Issue(code, **who, field=f) for f in want if isinstance(f, str) and f not in names)
+                allowed=set(getattr(recipe,key)) if recipe is not None else names
+                errs.extend(Issue(code, **who, field=f) for f in want if isinstance(f, str) and f not in allowed)
+                if recipe is not None and key=='inputs' and set(want)!=allowed:errs.append(Issue('AGENT_TOOL_INPUTS',**who))
             walk(child, stack + [ref], depth + 1)
     walk(wf, [self_id] if self_id else [], 0)
     return errs

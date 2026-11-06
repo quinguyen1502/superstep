@@ -13,6 +13,7 @@ from typing import Any, Optional
 from ..core import config
 from ..core.errors import AppError
 from ..engine.state_schema import state_schema
+from ..engine import browser_recipes
 from ..models import WorkflowToken
 from ..repositories import WorkflowRepository
 from .trigger_service import TriggerService
@@ -61,7 +62,7 @@ class WorkflowMcpService:
                "description": f"Run the Superstep workflow \"{w.name}\"" + (f": {desc}" if desc else ".") +
                               " Returns the final state; a run paused at a Human node returns status `waiting`, its run_id "
                               f"and prompt: answer it with {RESUME_RUN}. A run still going returns its run_id: poll {GET_RUN}.",
-               "input_schema": state_schema(wf, "Input")}
+               "input_schema": browser_recipes.input_schema(wf)}
         return [run,
                 {"name": GET_RUN, "title": "Get a run", "description": "Status and result of a run of this workflow.",
                  "input_schema": {"type": "object", "properties": RUN_ID, "required": ["run_id"]}},

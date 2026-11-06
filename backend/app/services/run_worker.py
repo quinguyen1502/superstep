@@ -61,6 +61,9 @@ class RunWorker:
             elif row.parent_run_id:  # a workflow tool's child run (TASK-0134): the snapshot its parent's plan took
                 plan = svc.plan_child(row)
                 plan.checkpointing, plan.fence, plan.attempt = True, gen, attempt
+            elif json.loads(row.checkpoint or '{}').get('kind')=='browser_recipe':
+                plan=svc.plan_recipe(row)
+                plan.checkpointing,plan.fence,plan.attempt=True,gen,attempt
             else:
                 plan = svc.plan(job["owner"], {"workflow_id": job["workflow_id"], "input": job.get("input") or {},
                                                **({"version": job["version"]} if job.get("version") else {})})  # a test suite on a stored version

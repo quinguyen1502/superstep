@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 from ..core import config
-from . import agents, approval_policy, attachments, handoffs, code_languages, code_runtime, deadlines, decisions, emails, foreach, model_policy
+from . import agents, approval_policy, attachments, handoffs, code_languages, code_runtime, deadlines, decisions, emails, foreach, model_policy, browser_recipes
 from .issues import Issue, at_node
 from .node_policy import errors as policy_errors
 from .templating import ref_errors, refs
@@ -58,7 +58,7 @@ def template_errors(nid: str, t: Any, d: Dict[str, Any], fields: set) -> List[st
 
 
 def validate(wf: Dict[str, Any]) -> List[str]:
-    errs: List[str] = []
+    errs: List[str] = browser_recipes.errors(wf)
     nodes = [n for n in wf.get("nodes", []) if isinstance(n, dict)]
     edges = [e for e in wf.get("edges", []) if isinstance(e, dict)]
     if any(not n.get("id") for n in nodes): return [Issue("NODE_ID_MISSING")]
