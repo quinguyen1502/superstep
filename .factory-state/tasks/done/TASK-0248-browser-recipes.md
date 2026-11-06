@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0248
 - Title: Reusable typed browser recipes through existing tool surfaces
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -25,12 +25,12 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 
 - Implement bounded versioned recipes over the shared action handlers with typed per-call inputs/output mapping; reuse workflow-as-tool composition where sufficient.
 - Expose recipe definitions/discovery/call through existing generic MCP/Agent selection without a vendor-specific node or a second expression/runtime language.
-- Snapshot recipe version at run planning; preserve connection/profile/proxy/whitelist/toggle/approval/unknown-outcome policy and explicit layout failures. Recipes may use upload/download/evaluate_js only when the connection allows and the calling surface grants them.
+- Snapshot recipe version at run planning; preserve connection/profile/proxy/approval/unknown-outcome policy and explicit layout failures.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
-- Starting implementation under this planning-only request.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Connection/recipe UI and executable exports assigned to later tasks.
 
 ## Inputs And Related Artifacts
 
@@ -41,9 +41,9 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0245-browser-run-sessions.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0245-browser-run-sessions.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0246-browser-approval-recovery.md`.
 
 ## Expected Outputs
 
@@ -68,7 +68,7 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 ## Acceptance Criteria
 
 - lookup_shipment(url, order_id) accepts a different authorised URL per call and returns declared bounded state outputs.
-- Same action semantics and network/session/whitelist/toggle policy apply to recipe and autonomous tools; recipe is callable by generic MCP nodes and existing Agent slots.
+- Same action semantics and network/session policy apply to recipe and autonomous tools; recipe is callable by generic MCP nodes and existing Agent slots.
 - Unknown arguments, oversized sequences, inaccessible recipes and invalid versions are rejected; a changed selector/layout fails without secretly starting an Agent.
 - Recorded completed recipe results do not recreate missing page state or replay uncertain writes; deletes use exact-name confirmation through shared management UI.
 
@@ -80,12 +80,12 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised full-chain implementation, local controlled fixtures and explicitly documented unmerged stacks.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -94,9 +94,20 @@ Reusable typed browser recipes through existing tool surfaces, satisfying the as
 
 - 2026-11-04: Renumbered: TASK-0245 → TASK-0248 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
-- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
-
 ## Handoff Notes
 
 - Future branch: `factory/task-0248-browser-recipes`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-06: Task-start under owner chain instruction. Isolated branch stacks on committed TASK-0247 3550dec1 (scoped REV-0237/QA-0237, full checks running), TASK-0246 #311 (full declared pass, REV-0236/QA-0236), #310/#309/#308/#304/#303/#299. TASK-0248 depends on reviewed TASK-0246; no claim of merged integration. No source edited during task-start.
+
+- Task-start complete: factory ready exited 0, no source edited before this gate. Implementation refinement: browser_recipe versioned root metadata selects typed input/output state fields and a fixed connection, restricts an ordinary workflow to one bounded linear MCP action chain, and uses existing workflow versions/Agent child snapshots/MCP exposure. Same-invocation MCP steps share one scoped browser group; literal role/text selectors bind existing bounded observations and fail on missing/ambiguous/stale layout. No separate recipe storage, CRUD, Agent loop or expression language. Owner chain instruction authorises implementation and declared checks next.
+
+- Implementation: versioned browser_recipe metadata constrains an ordinary workflow to a closed typed input/output contract and 1–20 linear MCP browser actions. Compiler derives a shared group, literal observation targets fail on missing/ambiguous/stale layouts, same six handlers/receipts/fences apply, and final output excludes intermediates. Existing Agent child snapshots and accepted API/MCP queue snapshots preserve definition/revision, including recovery before first progress. No new DB schema, recipe store or runtime language.
+- Review hardening: recursive SQLAlchemy browser history includes child runs for fork refusal; new recipe children are refused after an uncertain/failed consumed effect in the same parent run. Token/model resume text cannot grant a Human receipt. Rejected/expired outcomes remain explicit in recipe errors. BROWSER_RECIPE_INVALID is registered in catalog/docs/en+vi and shared validation messages.
+- Scoped browser/recipe/child/approval/MCP/effect/envelope/layer/locale regressions: 112 passed, 3 optional skips before the final snapshot/rejection additions. Later recipe/restart/layer run: 29 passed, 1 optional skip before the final rejection-only addition. SQLite/disposable PostgreSQL migrations/process CAS/recursive child history: 10 passed. Actual Chromium recipe proof passed two per-call URLs/IDs, six ordered shared-page actions and two Human approvals per call, declared-only output, changed layout stop, injected lost ack/unknown, exactly three intended POSTs and zero repeats. No screenshots committed.
+- `docs/browser-recipes.md` and `examples/browser/lookup_shipment.json` record exact backend support and UI/export follow-ups. Final source checks/full declared profile follow on committed task source.
+
+- Main-workspace source is 27cdf07d (+ predecessor documentation ffff56cd). Final recipe/envelope/layer/locale suite: 37 passed, 1 optional PostgreSQL skip. Full eight-command profile running. REV-0238/QA-0238 scoped conditional pass, final checks and locale wording review pending; owner approval not inferred.
+
+- Final canonical full profile on 27cdf07d passed all eight commands (backend 483.94 s). A later vi wording-only correction uses input/output per glossary; root npm 280 tests and backend locale/envelope 14 tests passed. REV-0238/QA-0238 scoped pass; owner review pending. One Draft PR, no merge/release.

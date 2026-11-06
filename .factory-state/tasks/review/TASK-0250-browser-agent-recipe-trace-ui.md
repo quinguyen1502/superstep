@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0250
 - Title: Agent/recipe configuration and filtered browser trace/chat UI
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -30,7 +30,7 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- New browser node/tab taxonomy, live provider setup, release and merge.
 
 ## Inputs And Related Artifacts
 
@@ -41,9 +41,9 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0247-browser-url-web-tools.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0248-browser-recipes.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0249-browser-connection-settings-ui.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0247-browser-url-web-tools.md`.
+- Dependency artifact: `.factory-state/tasks/doing/TASK-0248-browser-recipes.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0249-browser-connection-settings-ui.md`.
 
 ## Expected Outputs
 
@@ -80,12 +80,12 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised full-chain implementation and controlled fixtures on 2026-11-05; this task explicitly stacks on unmerged prerequisites.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner chain instruction accepts scope and start; owner review and merge approval remain pending.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -98,3 +98,15 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 
 - Future branch: `factory/task-0250-browser-agent-recipe-trace-ui`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-06 preparation: explicit stack on TASK-0249 47a9b2bc / Draft #314, scoped REV-0239/QA-0239 (ten real Chrome cases, full declared checks running on source 14b1560a). TASK-0248 final #313 / 50a536ce has full passed checks; this branch includes its source 27cdf07d/base 07d22fce but not final metadata/Vi follow-up. Parent sync awaits explicit permission after automatic merge-review rejection, with no merge performed. Other prerequisites #312/#311/#310/#309/#308/#304/#303/#299 remain unmerged. No source changed for TASK-0250.
+
+- 2026-11-06 task-start: factory ready exited 0 before source. Existing Agent/MCP and workflow settings will expose URL sources, recipe contracts/selectors and execution limits using General/Settings/Data/Execution tabs; owner-only trace observations/artifacts and filtered visitor states use current seams. No implementation source changed at task-start. Owner full-chain instruction authorises implementation and checks next.
+
+- 2026-11-06 implementation: existing Agent/MCP Data URL sources and recipe Start contract/action selectors, inherited limits and owner-protected browser trace detail. Root browser_recipe survives editor save/reload. Browser-containing run intermediate events are marked and filtered server-side for live/persisted visitor chat; legacy envelopes and later state echoes are covered. Browser review prompts are not persisted into chat turns; raw final worker envelopes reduce to facts. Existing shared React chat renders safe statuses. No schema/dependency/new node/tab/model loop. New UI removal uses exact-name confirmation; source uses shared API/i18n/tokens.
+- 2026-11-06 scoped evidence: final related backend 76 passed/1 optional PostgreSQL skip (24.55 s), then waiting-event metadata/approval/layers 27 passed (13.19 s). Root npm test passed (frontend 167, React 22, TypeScript SDK 102). Build/lint passed; new helper/presentation/API blob tests pass. Chrome initial full locale/theme matrix 8 passed (59.1 s); expanded mobile/recipe-tool/search/fetch + trace regression run 11 passed (1.4 min), plus existing Agent node regressions 2 passed before an interrupted harness run. Final lookup error-path rerun pending. Visual wide/narrow en/vi/light/dark images inspected outside Git at /private/tmp/superstep-browser-ui-shots-20261106. Full declared eight-command profile and scoped review/QA still pending.
+- 2026-11-06 predecessor update: TASK-0249 source 14b1560a passed all eight commands; latest docs 17da46fc published to #314. This branch retains reviewed 47a9b2bc and does not incorporate later metadata; no git merge has been performed. Parent-sync permission remains pending after automatic merge-review rejection. Owner review/merge approval pending.
+
+- 2026-11-06 scoped delivery: source 8dc9291d committed; final recipe/lookup UI rerun passed (2 cases, 26.9 s). REV-0240 / QA-0240 scoped conditional pass; full eight-command Factory verification running on committed source. Task remains review, owner approval pending; no merge performed.
+
+- 2026-11-06 final verification: all eight declared commands passed clean source 8dc9291d (backend 488.43 s). REV-0240/QA-0240 updated to scoped pass; owner approval pending. Draft PR #315: https://github.com/quinguyen1502/superstep/pull/315. No source changed after the full run; no merge performed.

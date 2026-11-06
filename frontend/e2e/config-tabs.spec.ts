@@ -44,9 +44,11 @@ test('Config tabs: same order for every node, kept across nodes, disabled in pla
   await expect(tab(page, 'general')).toHaveAttribute('data-state', 'active')
   await pick(page, 'llm'); await expect(tab(page, 'execution')).toHaveAttribute('data-state', 'active')
 
-  // Start has nothing to set beyond its label
+  // Start hosts browser-recipe Settings/Data; Execution stays disabled
   await pick(page, 'start')
-  for (const k of ['settings', 'data', 'execution']) await expect(tab(page, k)).toBeDisabled()
+  await expect(tab(page, 'settings')).toBeEnabled()
+  await expect(tab(page, 'data')).toBeEnabled()
+  await expect(tab(page, 'execution')).toBeDisabled()
   await expect(tab(page, 'general')).toHaveAttribute('data-state', 'active')
 
   // a Data choice is saved like before

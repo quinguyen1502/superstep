@@ -134,7 +134,10 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             result=result if result is not None else ports.call_mcp(d['server_id'],d['tool'],arguments,key,group=group,ticket=ticket)
             if recipe and (not isinstance(result,dict) or result.get('status')!='confirmed'):
                 outcome=(result.get('approval_outcome') or result.get('status')) if isinstance(result,dict) else 'invalid_result'
-                raise AppError('MCP_TOOL_FAILED',reason='Browser recipe stopped: '+str(outcome))
+                error = AppError('MCP_TOOL_FAILED',reason='Browser recipe stopped: '+str(outcome))
+                from .browser_presentation import detail
+                error.browser = detail(d['tool'], result if isinstance(result, dict) else {'status': 'failed_before_effect'})
+                raise error
             return {d['output_field']:result}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)

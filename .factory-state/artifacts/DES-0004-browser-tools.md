@@ -61,8 +61,8 @@ Use existing managed connection/MCP Settings, Agent/MCP config, run trace and ch
 - Connection: provider (local / Browserless), control endpoint secret, Network / Proxy (direct / configured system default / custom), write-only proxy username/password, optional country only when provider supports it, **required whitelist**, safety toggles, profile reference, resource/idle/budget bounds.
 - Node Settings: tools (nine operations), connection, Agent task/system prompt and optional recipe definitions.
 - Node Data: per-parameter source/value/description, output/state fields and recipe inputs/results.
-- Node Execution: per-action timeout, browser-action budget presentation, session scope/expiry presentation and relevant retry limitations.
-- Existing node config remains **Settings · Data · Execution**, with en/vi labels and the established fixed order. No production Browser-only tab strip copied from the mockup.
+- Node Execution: per-action timeout, browser-action budget, session scope/expiry presentation and relevant retry limitations.
+- Existing node config follows the owner amendment: **General · Settings · Data · Execution**, with en/vi labels and the established fixed order. No production Browser-only tab strip copied from the mockup.
 - Recipe UI stays within generic tools; do not introduce a global recipe marketplace or new main-navigation product area.
 
 ## Surface Or Screen States
@@ -118,3 +118,11 @@ Use existing managed connection/MCP Settings, Agent/MCP config, run trace and ch
 ## Impacted Artifacts
 
 - REQ-0086, ARCH-0002, DEC-0085, DISC-0002 and PLAN-0006; existing UI conventions remain authoritative.
+
+## Owner Delivery Authorisation — 2026-11-05
+
+The owner instructed: “Pull develop về branch hiện tại, và tiến hành chuỗi task này.” This accepts the proposed browser delivery scope and starts PLAN-0006 in dependency order. This supersedes earlier planning-only/pending-start statements; source onboarding approval statuses are unchanged. Implementation, fixture validation and task PRs are authorised; merges, production/provider setup, release and deployment are not. Task branches may stack on the published planning package; dependent implementation tasks require predecessor review/QA and an explicitly documented stack.
+
+## TASK-0250 production refinement — 2026-11-06
+
+Existing Start Settings/Data hosts browser_recipe root metadata on the ordinary workflow; MCP Data hosts literal semantic selectors and templates, Agent Data hosts URL sources, and Execution displays inherited connection limits. No new node/tab/navigation or second model. The owner amendment in docs/ui-conventions.md fixes General/Settings/Data/Execution order. Saved recipes use Another workflow with locked declared inputs/results. Visitor full steps for browser workflows expose only safe operation/status/approval facts, with raw intermediate state and captures retained for authorised Studio inspection. docs/browser-editor.md records exact behavior and final-output limits.

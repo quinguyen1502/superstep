@@ -27,7 +27,11 @@ import type { Credential } from '@/components/credentials-dialog'
 import { api } from '@/lib/api'
 import type { Channels } from '@/lib/approvals'
 import type { KnowledgeBase } from '@/lib/knowledge'
-import type { McpList, McpServer } from '@/lib/mcp'
+import { browserServer, type BrowserRecipe } from '@/lib/browser-tools'
+import { AgentBrowserData } from './agent-browser-data'
+import { useConfirmDelete } from './use-confirm-delete'
+import { useMcpServers } from '@/lib/use-mcp-servers'
+import type { McpServer } from '@/lib/mcp'
 import type { ProviderInfo } from '@/lib/providers'
 import { METHODS, PARAM_TYPES, SOURCES, defaultFields, newTool, toolName, type AgentTool, type BuiltinTool, type Schema, type ToolSource } from '@/lib/agent'
 
@@ -74,17 +78,22 @@ type Field = { name: string; type?: string }
  *  the fields of its final state the model gets back (result). The fields come from the workflow's latest version. */
 function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: AgentTool; others: string[]; workflows: Wf[] | null; set: (p: Partial<AgentTool>) => void }) {
   const { t } = useTranslation(); const [fields, setFields] = useState<Field[] | null>(null)
+  const [recipe, setRecipe] = useState<BrowserRecipe | undefined>()
+  const [error, setError] = useState('')
   useEffect(() => {
-    if (!tool.workflow_id) { setFields(null); return }
-    api<{ state?: Field[] }>(`/api/workflows/${tool.workflow_id}`).then(w => setFields(w.state || [])).catch(() => setFields([]))
+    if (!tool.workflow_id) { setFields(null); setRecipe(undefined); return }
+    let active = true
+    api<{ state?: Field[]; browser_recipe?: BrowserRecipe }>(`/api/workflows/${tool.workflow_id}`).then(w => { if (active) { setFields(w.state || []); setRecipe(w.browser_recipe); setError('') } }).catch(error => { if (active) { setFields([]); setRecipe(undefined); setError(error.message) } })
+    return () => { active = false }
   }, [tool.workflow_id])
   const missing = !!tool.workflow_id && !!workflows && !workflows.some(w => w.id === tool.workflow_id)
   const pick = (wid: string) => {
     const w = workflows?.find(x => x.id === wid)
-    api<{ state?: Field[] }>(`/api/workflows/${wid}`).then(full => {
+    setError('')
+    api<{ state?: Field[]; browser_recipe?: BrowserRecipe }>(`/api/workflows/${wid}`).then(full => {
       const names = (full.state || []).map(f => f.name)
-      set({ workflow_id: wid, name: toolName((w?.name || 'workflow').toLowerCase(), others), description: tool.description || w?.description || w?.name || '', ...defaultFields(names) })
-    }).catch(() => set({ workflow_id: wid }))
+      set({ workflow_id: wid, name: toolName((w?.name || 'workflow').toLowerCase(), others), description: tool.description || w?.description || w?.name || '', ...(full.browser_recipe ? { inputs: full.browser_recipe.inputs, outputs: full.browser_recipe.outputs } : defaultFields(names)) })
+    }).catch(error => setError(error.message))
   }
   const toggle = (key: 'inputs' | 'outputs', f: string, on: boolean) => {
     const cur = tool[key] || []; set({ [key]: on ? [...cur.filter(x => x !== f), f] : cur.filter(x => x !== f) })
@@ -98,15 +107,17 @@ function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: 
       {missing && <p className="text-[11px] text-destructive">{t('editor.subgraphMissing')}</p>}
       {workflows && !workflows.length && <p className="text-[11px] text-muted-foreground">{t('editor.subgraphNone')} <TextLink to="/workflows">{t('editor.subgraphCreate')}</TextLink></p>}
       <p className="text-[11px] text-muted-foreground">{t('agent.workflowHint')}</p></div>
+    {error && <p className="text-xs text-destructive" role="alert">{error}</p>}
+    {recipe && <p className="text-xs text-muted-foreground">{t('browserTools.recipeToolHelp')}</p>}
     {fields && fields.length > 0 && <div className="space-y-1" id={`${id}-fields`}>
       <div className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-2 text-[11px] text-muted-foreground">
         <span>{t('agent.workflowField')}</span><span className="text-center">{t('agent.workflowInput')}</span><span className="text-center">{t('agent.workflowOutput')}</span></div>
       {fields.map(f => <div key={f.name} className="grid grid-cols-[minmax(0,1fr)_72px_72px] items-center gap-2" data-testid="workflow-tool-field">
         <span className="truncate font-mono text-xs">{f.name} <span className="text-muted-foreground">{f.type || 'string'}</span></span>
         <span className="flex justify-center"><Switch size="sm" id={`${id}-in-${f.name}`} aria-label={t('agent.workflowInputOf', { field: f.name })}
-          checked={(tool.inputs || []).includes(f.name)} onCheckedChange={c => toggle('inputs', f.name, c)} /></span>
+          disabled={!!recipe} checked={(tool.inputs || []).includes(f.name)} onCheckedChange={c => toggle('inputs', f.name, c)} /></span>
         <span className="flex justify-center"><Switch size="sm" id={`${id}-out-${f.name}`} aria-label={t('agent.workflowOutputOf', { field: f.name })}
-          checked={(tool.outputs || []).includes(f.name)} onCheckedChange={c => toggle('outputs', f.name, c)} /></span>
+          disabled={!!recipe} checked={(tool.outputs || []).includes(f.name)} onCheckedChange={c => toggle('outputs', f.name, c)} /></span>
       </div>)}
       {!(tool.outputs || []).length && <p className="text-[11px] text-destructive" id={`${id}-outputs-required`}>{t('agent.workflowOutputsRequired')}</p>}
       <p className="text-[11px] text-muted-foreground">{t('agent.workflowFieldsHint')}</p></div>}
@@ -115,10 +126,11 @@ function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: 
 }
 
 function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, builtins, workflows, onChange, onMove, onRemove }: ToolProps) {
-  const { t } = useTranslation(); const I = ICONS[tool.source] ?? Wrench; const id = `agent-tool-${index}`
+  const { t } = useTranslation(); const confirm = useConfirmDelete(); const I = ICONS[tool.source] ?? Wrench; const id = `agent-tool-${index}`
   const set = (patch: Partial<AgentTool>) => onChange({ ...tool, ...patch })
   const others = taken.filter(n => n !== tool.name)
   const server = servers?.find(s => s.id === tool.server_id)
+  const mandatoryApproval = browserServer(server) && ['click', 'fill'].includes(tool.tool || '')
   const tpl = { fields: [...fields, { name: 'args', type: 'object' }], readOnly }
   return <Card className="gap-3 p-3" id={id} data-testid="agent-tool" data-source={tool.source}>
     <div className="flex items-center gap-2">
@@ -126,17 +138,17 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
       <span className="min-w-0 flex-1 truncate text-xs font-medium">{t(`agent.sources.${tool.source}`)}</span>
       <Button variant="ghost" size="icon-xs" aria-label={t('agent.moveUp', { name: tool.name })} disabled={index === 0} onClick={() => onMove(-1)}><ArrowUp /></Button>
       <Button variant="ghost" size="icon-xs" aria-label={t('agent.moveDown', { name: tool.name })} disabled={index === count - 1} onClick={() => onMove(1)}><ArrowDown /></Button>
-      <Button variant="ghost" size="icon-xs" aria-label={t('agent.removeTool', { name: tool.name })} id={`${id}-remove`} onClick={onRemove}><X /></Button>
+      <Button variant="ghost" size="icon-xs" aria-label={t('agent.removeTool', { name: tool.name })} id={`${id}-remove`} onClick={() => confirm.ask({ name: tool.name, title: t('agent.removeTool', { name: tool.name }), onConfirm: onRemove })}><X /></Button>
     </div>
     {tool.source === 'mcp' && <>
       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor={`${id}-server`}>{t('editor.mcpServer')}</Label>
-        <Select value={tool.server_id || undefined} onValueChange={v => set({ server_id: v, tool: '', parameters: undefined })}>
+        <Select value={tool.server_id || undefined} onValueChange={v => set({ server_id: v, tool: '', parameters: undefined, url_binding: undefined })}>
           <SelectTrigger className="w-full" id={`${id}-server`}><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
           <SelectContent>{(servers || []).map(s => <SelectItem key={s.id} value={s.id}>{s.name} · {s.transport}</SelectItem>)}</SelectContent></Select>
         {servers && !servers.length && <p className="text-[11px] text-muted-foreground">{t('editor.mcpNone')} <TextLink to="/settings/mcp">{t('editor.mcpCreate')}</TextLink></p>}</div>
       {server && <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor={`${id}-mcp-tool`}>{t('editor.mcpTool')}</Label>
         <Select value={tool.tool || undefined} onValueChange={v => { const def = server.tools.find(x => x.name === v)
-            set({ tool: v, name: toolName(v, others), description: def?.description || '', parameters: { type: 'object', ...(def?.input_schema || {}) } }) }}>
+            set({ tool: v, url_binding: undefined, name: toolName(v, others), description: def?.description || '', parameters: { type: 'object', ...(def?.input_schema || {}) } }) }}>
           <SelectTrigger className="w-full" id={`${id}-mcp-tool`}><SelectValue placeholder={server.tools.length ? t('common.choose') : t('editor.mcpNoTools')} /></SelectTrigger>
           <SelectContent>{server.tools.map(x => <SelectItem key={x.name} value={x.name}>{x.name}</SelectItem>)}</SelectContent></Select></div>}
     </>}
@@ -176,9 +188,11 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
     <div className="space-y-1.5"><Label className="text-xs text-muted-foreground" htmlFor={`${id}-description`}>{t('agent.toolDescription')}</Label>
       <Input id={`${id}-description`} value={tool.description || ''} onChange={e => set({ description: e.target.value })} /></div>
     <div className="flex items-center gap-2">
-      <Switch id={`${id}-approval`} size="sm" checked={!!tool.approval} onCheckedChange={c => set({ approval: c || undefined })} />
+      <Switch id={`${id}-approval`} size="sm" checked={mandatoryApproval || !!tool.approval} disabled={mandatoryApproval || readOnly} onCheckedChange={c => set({ approval: c || undefined })} />
       <Label htmlFor={`${id}-approval`} className="text-xs font-normal">{t('agent.needsApproval')}</Label>
     </div>
+    {browserServer(server) && <p className="text-xs text-muted-foreground">{t(mandatoryApproval ? 'browserTools.effectApproval' : 'browserTools.grantHelp')}</p>}
+    {confirm.dialog}
   </Card>
 }
 
@@ -190,7 +204,7 @@ type Props = { data: Record<string, any>; fields: TemplateField[]; creds: Creden
   providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch; wid?: string; canAuto?: boolean }
 
 /** Data tab (TASK-0121): the fields the agent writes its answer and steps to, and the history it reads. */
-export function AgentData({ data: d, fieldNames, listFields, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; onChange: Patch }) {
+export function AgentData({ data: d, fieldNames, listFields, fields, readOnly, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; fields: TemplateField[]; readOnly?: boolean; onChange: Patch }) {
   const { t } = useTranslation()
   const optional = (key: string, id: string) => <StateFieldPicker id={id} value={d[key]} onChange={v => onChange({ [key]: v })}
     types={['list']} options={listFields} noneLabel={t('agent.none')} />
@@ -198,6 +212,7 @@ export function AgentData({ data: d, fieldNames, listFields, onChange }: { data:
     <F label={t('field.outputField')}><StateFieldPicker id="agent-output" value={d.output_field} onChange={v => onChange({ output_field: v })} options={fieldNames} /></F>
     <F label={t('agent.stepsField')} htmlFor="agent-steps-field">{optional('steps_field', 'agent-steps-field')}<p className="text-[11px] text-muted-foreground">{t('agent.stepsHint')}</p></F>
     <F label={t('agent.historyField')} htmlFor="agent-history-field">{optional('history_field', 'agent-history-field')}<p className="text-[11px] text-muted-foreground">{t('agent.historyHint')}</p></F>
+    <AgentBrowserData tools={Array.isArray(d.tools) ? d.tools : []} fields={fields} readOnly={readOnly} onChange={tools => onChange({ tools })} />
   </div>
 }
 
@@ -212,15 +227,16 @@ export function AgentExecution({ data: d, onChange }: { data: Record<string, any
 /** Settings tab: model, prompts, tools and the approval settings for tools that need approval. */
 export function AgentSettings({ data: d, fields, creds, providers, channels, builtins, readOnly, nodeId, onChange, wid, canAuto = false }: Props) {
   const { t } = useTranslation()
-  const [servers, setServers] = useState<McpServer[] | null>(null); const [kbs, setKbs] = useState<KnowledgeBase[] | null>(null)
+  const { servers, error: serversError } = useMcpServers(); const [kbs, setKbs] = useState<KnowledgeBase[] | null>(null)
   useEffect(() => {
-    api<McpList>('/api/mcp/servers').then(x => setServers(x.servers)).catch(() => setServers([]))
     api<KnowledgeBase[]>('/api/knowledge-bases').then(setKbs).catch(() => setKbs([]))
   }, [])
   const [workflows, setWorkflows] = useState<Wf[] | null>(null)  // workflow tools: every workflow but this one
   useEffect(() => { api<Wf[]>('/api/workflows').then(ws => setWorkflows(ws.filter(w => w.id !== wid))).catch(() => setWorkflows([])) }, [wid])
   const tools: AgentTool[] = Array.isArray(d.tools) ? d.tools : []
   const names = tools.map(x => x.name)
+  const browserApproval = tools.some(tool => tool.source === 'mcp' && browserServer(servers?.find(server => server.id === tool.server_id)) && ['click', 'fill'].includes(tool.tool || ''))
+  const automaticApproval = tools.some(tool => tool.approval && !browserServer(servers?.find(server => server.id === tool.server_id)))
   // a stable key per tool card that moves with it, so a card's own state (parameter rows) never shows another tool
   const [keyed, setKeyed] = useState(() => ({ keys: tools.map((_, i) => i), next: tools.length }))
   let keys = keyed.keys
@@ -239,6 +255,7 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
     <F label={t('agent.systemPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={3} id="agent-system-prompt" value={d.system_prompt || ''} onChange={v => onChange({ system_prompt: v })} /></F>
     <F label={t('agent.taskPrompt', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={5} id="agent-prompt" value={d.prompt || ''} onChange={v => onChange({ prompt: v })} /></F>
     <Separator />
+    {serversError && <p className="text-xs text-destructive" role="alert">{serversError}</p>}
     <div className="flex items-center gap-2">
       <Switch id="agent-parallel" size="sm" checked={d.parallel_tool_calls !== false} disabled={readOnly}
         onCheckedChange={c => onChange({ parallel_tool_calls: c === true })} />
@@ -260,10 +277,10 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
       onMove={by => { const move = <T,>(xs: T[]) => { const next = [...xs]; const [it] = next.splice(i, 1); next.splice(i + by, 0, it); return next }
         setTools(move(tools), move(keys)) }}
       onRemove={() => setTools(tools.filter((_, j) => j !== i), keys.filter((_, j) => j !== i))} />)}
-    {tools.some(x => x.approval) && <>
+    {(browserApproval || tools.some(x => x.approval)) && <>
       <p className="text-[11px] text-muted-foreground" id="agent-approval-hint">{t('agent.approvalHint')}</p>
       <HumanApprovalSettings key={`${nodeId}-approval`} value={d.approval} channels={channels} onChange={v => onChange({ approval: v })} />
-      <AutoApprovalSettings key={`${nodeId}-auto`} idp="agent" value={d.approval?.auto} wid={wid} creds={creds} canAuto={canAuto} readOnly={readOnly} onChange={a => onChange({ approval: { ...(d.approval || {}), auto: a } })} />
+      {automaticApproval && <AutoApprovalSettings key={`${nodeId}-auto`} idp="agent" value={d.approval?.auto} wid={wid} creds={creds} canAuto={canAuto} readOnly={readOnly} onChange={a => onChange({ approval: { ...(d.approval || {}), auto: a } })} />}
       <HumanDeadlineSettings key={`${nodeId}-deadline`} value={d.deadline} onChange={v => onChange({ deadline: v })} />
     </>}
   </div>

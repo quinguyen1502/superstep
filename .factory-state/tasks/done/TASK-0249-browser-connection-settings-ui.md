@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0249
 - Title: Connection, proxy and profile configuration UI
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06

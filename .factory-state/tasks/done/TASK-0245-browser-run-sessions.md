@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0245
 - Title: Run-bound sessions, ordered Agent calls and lifecycle integration
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-05

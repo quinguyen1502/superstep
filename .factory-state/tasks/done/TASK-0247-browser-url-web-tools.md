@@ -4,8 +4,8 @@
 
 - Project: superstep
 - Task ID: TASK-0247
-- Title: Dynamic URL bindings, whitelist checks, search/fetch and missing-context flows
-- Status: todo
+- Title: Dynamic URL bindings, search/fetch and missing-context flows
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -17,21 +17,20 @@
 
 ## Objective
 
-Dynamic URL bindings with connection whitelist enforcement, search/fetch and missing-context flows, satisfying the assigned acceptance criteria of REQ-0086.
+Dynamic URL bindings, search/fetch and missing-context flows, satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
 - Add or reuse bounded fixed/workflow/model-filled argument bindings with authoritative validation and normal tool schemas; no mandatory start URL.
-- Enforce the connection **origin/domain whitelist** on any URL that would open the browser (chat, state, model-filled or search-selected). Off-whitelist destinations are denied before browser use.
-- Normalise one configured search adapter through existing MCP/HTTP where possible; implement guarded bounded fetch/extract that does not inherit browser cookies/proxy. Search/fetch destinations used only for reading may follow their own transport policy; destinations used to open the browser must still pass the browser whitelist.
-- Wire no-URL/missing-context behavior to existing chat/Human responses and declare unsupported/empty search/parameter/whitelist-denial states.
+- Normalise one configured search adapter through existing MCP/HTTP where possible; implement guarded bounded fetch/extract that does not inherit browser cookies/proxy.
+- Wire no-URL/missing-context behavior to existing chat/Human responses and declare unsupported/empty search/parameter states.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
-- Starting implementation under this planning-only request.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- UI/export work assigned to later tasks.
 
 ## Inputs And Related Artifacts
 
@@ -42,9 +41,9 @@ Dynamic URL bindings with connection whitelist enforcement, search/fetch and mis
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0245-browser-run-sessions.md`.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0246-browser-approval-recovery.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0245-browser-run-sessions.md`.
+- Dependency artifact: `.factory-state/tasks/review/TASK-0246-browser-approval-recovery.md`.
 
 ## Expected Outputs
 
@@ -68,10 +67,10 @@ Dynamic URL bindings with connection whitelist enforcement, search/fetch and mis
 
 ## Acceptance Criteria
 
-- Chat URL, workflow URL and model-filled URL are validated runtime arguments; missing data never produces an invented destination; off-whitelist URLs are denied with a specific error.
-- Configured search yields candidate URLs before browser use; candidates outside the whitelist cannot be opened; insufficient task identity asks the user or returns the declared missing-input state.
+- Chat URL, workflow URL and model-filled URL are validated runtime arguments; missing data never produces an invented destination.
+- Configured search yields candidate URLs before browser use; insufficient task identity asks the user or returns the declared missing-input state.
 - Fetch-only tasks use no browser and do not inherit its proxy/profile; separate web transport secrets and destination policies remain enforced.
-- Prompt/tool/search outputs cannot change connection/profile/proxy/whitelist, and disabled/ungranted tools cannot be called by forged model arguments.
+- Prompt/tool/search outputs cannot change connection/profile/proxy/allowlist, and disabled tools cannot be called by forged model arguments.
 
 ## Validation Plan
 
@@ -82,12 +81,12 @@ Dynamic URL bindings with connection whitelist enforcement, search/fetch and mis
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the complete chain, local Docker fixtures and explicitly documented stacked task delivery.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no owner merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -96,9 +95,18 @@ Dynamic URL bindings with connection whitelist enforcement, search/fetch and mis
 
 - 2026-11-04: Renumbered: TASK-0244 → TASK-0247 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
-- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
-
 ## Handoff Notes
 
 - Future branch: `factory/task-0247-browser-url-web-tools`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Owner chain instruction authorises TASK-0247 after TASK-0246 scoped review/QA. Explicit unmerged stack on TASK-0246 #311 (REV-0236/QA-0236; final full profile running on isolated committed source), #310/#309/#308/#304/#303/#299. Integration develop remains 21ddce1a. Task-start edits only; no implementation source changed.
+
+- Task-start: factory ready exited 0 before implementation. Scope: existing MCP argument templates for fixed/state URLs; narrow Agent url_binding for fixed/state/model URL authority; separate managed web search/fetch connection with enabled-tool enforcement, guarded direct transport and no browser state. One configured SearXNG JSON adapter, bounded normalized results, explicit missing-input/unsupported/empty outcomes. No mandatory start URL or new Agent loop. Next implement contracts/transport/binding integration, then fixtures/regressions and review/QA.
+
+- 2026-11-06 implementation: URLBinding model/fixed/state metadata reuses state references and resolves private effective arguments before ticket reservation. Missing/blank URL yields missing_input with no browser; fixed/state bindings cannot be model-overridden. Standalone MCP keeps existing argument templates. Separate managed web adapter exposes enabled search/fetch with SearXNG JSON normalization, encrypted search-only headers, fresh pinned verified-TLS direct clients and no browser cookie/proxy inheritance. Provider/result limits and unsupported states are explicit; no new schema/dependency.
+- Scoped final URL/web/Agent/browser approval/layers checks: 84 passed. Existing MCP/managed/parallel/approval/workflow-tool/public-chat/envelope regressions: 121 passed. Generated contracts and whitespace passed. `docs/browser-web-tools.md` records exact support, OS-DNS limit, no business-identity attestation, backend-only metadata and controlled fake-provider evidence. Source commit precedes full declared verification.
+
+- 2026-11-06 review/QA: REV-0237/QA-0237 scoped conditional pass, final full profile on 01b3727e pending. No blocking scoped finding; API-only metadata/UX and live-provider limits explicitly recorded. TASK-0246 predecessor final full checks passed and PR #311 evidence updated.
+
+- Final canonical full verification on 01b3727e: all eight declared commands passed, backend 478.82 s. Only documentation/evidence followed. REV-0237/QA-0237 scoped pass; owner review remains pending. Publish one Draft PR; no merge/release.

@@ -453,9 +453,9 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (
 - TASK-0246 — configurable mutating approvals, expired/lost sessions and uncertain-effect recovery. **done** (merged #311).
 - TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **done** (merged #312).
 - TASK-0248 — typed reusable recipes through existing tool surfaces. **done** (merged #313).
-- TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **review** (PR #314).
-- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **backlog** (studio).
-- TASK-0253 — studio integrated acceptance, example workflow and en/vi handbook. **backlog** (studio first milestone).
+- TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **done** (merged #314).
+- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **review** (Draft #315, synced onto develop after #314).
+- TASK-0253 — studio integrated acceptance, example workflow and en/vi handbook. **todo** (studio first milestone).
 - TASK-0251 — executable Python/plain and project exports. **backlog (deferred)** after studio acceptance.
 - TASK-0252 — executable TypeScript/plain and project exports. **backlog (deferred)** after studio acceptance.
 

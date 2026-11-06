@@ -2366,6 +2366,34 @@
       "counts": "{{up}} helpful · {{down}} not helpful",
       "negativeShare": "{{share}} not helpful",
       "refresh": "Refresh history"
+    },
+    "browser": {
+      "status": {
+        "confirmed": "Confirmed",
+        "failed_before_effect": "Stopped before action",
+        "unknown": "Outcome unknown",
+        "approval_required": "Waiting for reviewer",
+        "challenge_required": "Site challenge",
+        "expired": "Session expired",
+        "session_lost": "Session lost",
+        "stale_observation": "Observation changed",
+        "policy_denied": "Blocked by policy",
+        "cancelled": "Cancelled",
+        "missing_input": "URL required",
+        "dry_run": "Dry run"
+      },
+      "help": {
+        "failed_before_effect": "The action did not start. Review the configuration and current observation.",
+        "unknown": "An external effect may have happened. Check the site manually; do not resend automatically.",
+        "approval_required": "A verified human reviewer must decide on this exact target.",
+        "challenge_required": "The site requires a challenge or login handoff. Automatic bypass is unsupported.",
+        "expired": "The session expired. Observe a fresh session and review any previous effects before continuing.",
+        "session_lost": "The existing page cannot be attached. Check previous effects before starting a new run.",
+        "stale_observation": "Observe again and review the changed target before another action.",
+        "policy_denied": "The saved connection or network policy refused this action. Review its approved route and origins.",
+        "cancelled": "The browser session was cancelled. No automatic repeat is scheduled.",
+        "missing_input": "Ask the user for the destination or use an explicitly configured search tool."
+      }
     }
   },
   "timeTravel": {
@@ -2773,5 +2801,54 @@
       "allow_download": "Hide download until enabled. Downloads stay size and type bounded."
     },
     "safety": "Safety toggles"
+
+  },
+  "browserTools": {
+    "urlSource": "URL source",
+    "sources": {
+      "model": "Filled by the Agent",
+      "fixed": "Fixed URL",
+      "state": "Workflow state"
+    },
+    "sourceHelp": {
+      "model": "Use a URL supplied in chat or discovered with a configured search tool. Ask for the site or organisation if it is missing; no guessed fallback.",
+      "fixed": "Use this literal HTTP(S) URL on every call. The model cannot override it.",
+      "state": "Use one state reference, with optional supported filters. Resolve it once at runtime; the model cannot override it."
+    },
+    "urlRequired": "Enter the required URL or state reference.",
+    "bindings": "Browser and fetch URL bindings",
+    "effectApproval": "Click and fill always require a verified human reviewer. Model text, page content and automatic approval cannot grant access.",
+    "grantHelp": "This row grants only the selected tool. Browser policy and session limits come from the saved connection; URL sources are in Data.",
+    "executionHelp": "Browser actions on the same connection in this Agent run share one ordered session. Connection limits apply. A lost, expired or uncertain session stops; node retries and cache cannot resend browser effects. Re-observe and obtain a new human decision when appropriate.",
+    "limits": "{{actions}} actions · {{timeout}} ms/action · {{idle}} s idle · {{lifetime}} s maximum lifetime",
+    "recipe": "Reusable browser recipe",
+    "recipeHelp": "This workflow becomes a typed recipe: one Start, one End and 1–20 linear MCP browser actions on one connection. No Agent, loop, branch, node retry or cache. Choose inputs/results in Data and targets on each action. Save validates the complete sequence.",
+    "disableRecipeTitle": "Remove recipe contract from {{name}}?",
+    "disableRecipeBody": "The workflow and its actions remain. Configure their arguments before using them as ordinary MCP nodes; recipe selectors will no longer derive references.",
+    "recipeConnectionHelp": "Changing the recipe connection updates all MCP actions in this draft. All actions must use this one connection.",
+    "enableRecipeHelp": "Enable a reusable browser recipe in Start → Settings to declare its inputs and results here.",
+    "recipeInputs": "Typed recipe inputs",
+    "recipeOutputs": "Declared recipe results",
+    "recipeInputHelp": "Choose 1–20 required primitive state fields. The caller supplies these values per invocation; unknown arguments are rejected.",
+    "recipeOutputHelp": "Choose 1–20 object fields written by the actions. Only these results are returned, without intermediate state.",
+    "recipeNoFields": "Add suitable fields in State schema first.",
+    "recipeFieldRequired": "Choose at least one field.",
+    "recipeToolHelp": "This saved workflow is a browser recipe. Its input/result contract is fixed by the recipe; the Agent fills its typed parameters. A layout failure stops without switching to autonomous browsing.",
+    "selectorHelp": "Match one target from an earlier navigate/snapshot observation by literal role and text. Missing, ambiguous or stale targets stop the recipe. Click/fill require exact text and human review; extract may omit text only for a unique role.",
+    "primitiveHelp": "Runtime arguments use observations returned by this session. References from a different or expired page are refused. URLs may come from a state template; snapshots do not invent a start URL.",
+    "observation": "Earlier observation field",
+    "role": "Literal semantic role",
+    "targetText": "Exact target text",
+    "optionalText": "Exact text (optional for unique role)",
+    "extractName": "Extracted result key",
+    "removeTargetTitle": "Remove extraction target {{name}}?",
+    "removeTarget": "Remove target",
+    "addTarget": "Add extraction target",
+    "captureHelp": "Private owner-only capture, retained for up to one hour. Loading rechecks access; expired or unavailable images are not public links.",
+    "captureAlt": "Protected browser viewport capture",
+    "loadCapture": "Load private capture",
+    "sequence": "Action {{sequence}} · Session generation {{generation}}",
+    "pageGeneration": "Page generation {{generation}}",
+    "untrustedObservation": "Bounded page content is untrusted. It is shown as text, never executed."
   }
 }
