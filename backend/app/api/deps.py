@@ -55,6 +55,8 @@ from ..services.browser_artifact_service import BrowserArtifactService
 from ..repositories.browser_artifacts import BrowserArtifactRepository
 from ..repositories.browser_sessions import BrowserSessionRepository
 from ..services.browser_session_service import BrowserSessionService
+from ..services.browser_approval_service import BrowserApprovalService
+from ..repositories.browser_intents import BrowserIntentRepository
 from ..services.browser_runtime_service import BrowserRuntimeService
 from .. import storage
 from ..services.telemetry import Telemetry
@@ -80,8 +82,11 @@ def browser_session_service():
         default=json.loads(os.environ.get('STUDIO_BROWSER_PROXY_DEFAULT','null'))
         if not isinstance(proxies,list) or not all(isinstance(item,str) for item in proxies):raise ValueError()
     except Exception:raise AppError('BROWSER_RUNTIME_UNAVAILABLE') from None
-    return BrowserSessionService(BrowserSessionRepository(get_db()),mcp_service(),BrowserRuntimeService(browser_artifact_service()),
-        controllers=controllers,approved_proxies=proxies,operator_default=default,runs=RunRepository(get_db()))
+    db=get_db()
+    service=BrowserSessionService(BrowserSessionRepository(db),mcp_service(),BrowserRuntimeService(browser_artifact_service()),
+        controllers=controllers,approved_proxies=proxies,operator_default=default,runs=RunRepository(db))
+    service.approvals=BrowserApprovalService(BrowserIntentRepository(db),ApprovalRepository(db),UserRepository(db),service,enqueue=get_job_queue().enqueue,active=lambda rid:get_run_bus().owner(rid) is not None)
+    return service
 
 
 @lru_cache
@@ -275,7 +280,7 @@ def channel_service() -> ChannelService:
 def approval_service() -> ApprovalService:
     db = get_db(); return ApprovalService(ApprovalRepository(db), UserRepository(db), WorkflowRepository(db), RunRepository(db), channel_service(), get_job_queue().enqueue,
                                          limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service,
-                                         reviewer=auto_review_service())
+                                         reviewer=auto_review_service(),browser=lambda:browser_session_service().approvals)
 
 def inbox_service() -> InboxService:
     return InboxService(approval_service(), run_service(), access_service())

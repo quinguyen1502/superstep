@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0246
 - Title: Browser approvals, stale sessions and uncertain-effect recovery
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -30,7 +30,7 @@ Browser approvals, stale sessions and uncertain-effect recovery, satisfying the 
 ### Out Of Scope
 
 - Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
-- Starting implementation under this planning-only request.
+- UI configuration/export work assigned to later tasks.
 
 ## Inputs And Related Artifacts
 
@@ -76,12 +76,12 @@ Browser approvals, stale sessions and uncertain-effect recovery, satisfying the 
 
 ## Assumptions
 
-- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
+- Owner authorised the full chain, local Docker fixtures and documented stacked task delivery.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
+- Owner start accepted; no owner merge approval.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -94,3 +94,17 @@ Browser approvals, stale sessions and uncertain-effect recovery, satisfying the 
 
 - Future branch: `factory/task-0246-browser-approval-recovery`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
+
+- 2026-11-05: Explicit stack on TASK-0245 (REV-0235/QA-0235), TASK-0244 #309, TASK-0243 #308, TASK-0242 #304, TASK-0241 #303 and planning #299, all unmerged. Browser actions remain experimental/default off. Next delivery binds exact-target durable human decisions, genuine waiting-resume fence handoff and uncertain-effect refusal; no UI-text/model approval shortcut.
+
+- 2026-11-05: Task-start complete after factory ready passed; source unchanged during start. Owner chain instruction covers implementation next. TASK-0245 Draft PR #310.
+
+- 2026-11-05 implementation: Alembic 0057 stores exact-target single-use human receipts, wire generations and interrupted handoff context. Existing authenticated owner/reviewer/channel decisions alone grant click/fill; AI/deadlines/chat cannot grant. Live waiting resumes renew only the same page; queue generation + 1 prevents UI/first-queue epoch collision. Unknown/dispatched effects never retry. Accepted-decision queue gaps are durably recovered or rejected if the receipt is missing/expired.
+- Focused final contract/runtime/approval/session/migration/layer/envelope suite: 92 passed, 4 optional skips. Disposable PostgreSQL 17 Alpine + SQLite migrations/CAS/data checks: 9 passed. Final actual HTTPS/Chromium controller/proxy/profile/renewal proof passed; final actual approval Docker proof passed expiry, changed target, old fence/supervisor, lost acknowledgment, no repeated POST and late review refusal. Full declared Factory profile follows on committed source.
+- See `docs/browser-approvals.md`; REV-0236 and QA-0236 allocated after fresh all-ref fetch, to be written after declared validation.
+
+- Review follow-up: retain node→intent map after all waits of a browser wave are absorbed. Recovery uses the existing wave-ready path; a missing final receipt expires instead of granting. Independent-browser multi-approval tests prove zero duplicate clicks, with one permitted click when the other receipt is missing. Focused approval/child/restart/parallel/deadline regressions: 46 passed before the last purge-only test addition; three final wave/purge checks passed.
+
+- Full eight-command Factory profile passed on c7cb3af7; backend 483.79 s, all root/SDK build/lint/test/typecheck commands green. Applied review wave fix as e7f1ab8d; final source full profile running on identical isolated 2d0d6159. REV-0236/QA-0236 conditional scoped pass; owner review remains pending. Draft PR only; no merge.
+
+- 2026-11-06: Draft PR #311 https://github.com/quinguyen1502/superstep/pull/311. Final canonical full profile on isolated 2d0d6159 (same backend source as e7f1ab8d) passed all eight commands, backend 481.74 s. Final focused root approval/child/restart/parallel/deadline suite: 47 passed. REV-0236/QA-0236 scoped pass, owner review pending. Earlier isolated Node dependency-resolution failures superseded by exact-lockfile installation and complete pass; no source/dependency change.

@@ -25,7 +25,7 @@ class BrowserSessionRepository:
                 existing=s.get(BrowserSession,row.id)
                 if existing is not None:s.rollback();return existing
                 count=s.scalar(select(func.count()).select_from(BrowserSession).where(
-                    BrowserSession.status.in_(['new','starting','ready'])|BrowserSession.cleanup_pending.is_(True)))
+                    BrowserSession.status.in_(['new','starting','ready','renewing'])|BrowserSession.cleanup_pending.is_(True)))
                 if count>=self.max_active:s.rollback();return None
                 s.add(row);s.commit();return row
         except IntegrityError:
@@ -52,7 +52,7 @@ class BrowserSessionRepository:
                     position = row.next_order
                     if position + len(commands) > 300: return None
                     n = s.execute(update(BrowserSession).where(BrowserSession.id == sid, BrowserSession.next_order == position,
-                        BrowserSession.status.in_(['new','starting','ready'])).values(next_order=position+len(commands))).rowcount
+                        BrowserSession.status.in_(['new','starting','ready','renewing'])).values(next_order=position+len(commands))).rowcount
                     if n != 1: s.rollback();continue
                     result = [BrowserCommand(id=cid,session_id=sid,position=position+i,body_hash=digest,status='pending')
                               for i,(cid,digest) in enumerate(commands)]
@@ -75,8 +75,9 @@ class BrowserSessionRepository:
                 BrowserSession.status=='ready',BrowserSession.executing_order==command.position)
                 .values(touched=time.time())).rowcount
             if n!=1:s.rollback();return None
+            authority=s.get(BrowserSession,command.session_id)
             n=s.execute(update(BrowserCommand).where(BrowserCommand.id==cid,BrowserCommand.status=='pending')
-                        .values(status='executing',started=time.time())).rowcount
+                        .values(status='executing',started=time.time(),wire_sequence=authority.wire_sequence,generation=authority.generation)).rowcount
             if n!=1:s.rollback();return None
             s.commit();return self.get(command.session_id)
 
@@ -97,7 +98,7 @@ class BrowserSessionRepository:
 
     def list_active(self, *, run_id=None, connection_id=None):
         with self.db.session() as s:
-            q=select(BrowserSession).where((BrowserSession.status.in_(['new','starting','ready']))|BrowserSession.cleanup_pending.is_(True))
+            q=select(BrowserSession).where((BrowserSession.status.in_(['new','starting','ready','renewing']))|BrowserSession.cleanup_pending.is_(True))
             if run_id is not None:q=q.where(BrowserSession.run_id==run_id)
             if connection_id is not None:q=q.where(BrowserSession.connection_id==connection_id)
             return list(s.scalars(q))
@@ -134,16 +135,27 @@ class BrowserSessionRepository:
         with self.db.session() as s:
             command=s.get(BrowserCommand,cid)
             if command is None:return
-            n=s.execute(update(BrowserCommand).where(BrowserCommand.id==cid,BrowserCommand.status=='pending').values(status='skipped',ended=time.time())).rowcount
+            n=s.execute(update(BrowserCommand).where(BrowserCommand.id==cid,BrowserCommand.status.in_(['pending','approval_required'])).values(status='skipped',ended=time.time())).rowcount
             if n:self._advance_skipped(s,command.session_id)
             s.commit()
+
+    def hold(self,cid):
+        with self.db.session() as s:
+            n=s.execute(update(BrowserCommand).where(BrowserCommand.id==cid,BrowserCommand.status=='pending').values(status='approval_required')).rowcount
+            s.commit();return n==1
+
+    def release(self,cid):
+        with self.db.session() as s:
+            n=s.execute(update(BrowserCommand).where(BrowserCommand.id==cid,BrowserCommand.status=='approval_required').values(status='pending')).rowcount
+            s.commit();return n==1
+
 
     def claim_for_run(self, sid, *, run_id, lease, principal_id, conversation_id, configuration):
         """Move a live conversation-scoped session onto a later chat-turn run/lease."""
         with self.db.session() as s:
             n = s.execute(update(BrowserSession).where(
                 BrowserSession.id == sid,
-                BrowserSession.status.in_(['new', 'starting', 'ready']),
+                BrowserSession.status.in_(['new', 'starting', 'ready', 'renewing']),
                 BrowserSession.principal_id == principal_id,
                 BrowserSession.conversation_id == conversation_id,
                 BrowserSession.configuration == configuration,
@@ -155,5 +167,4 @@ class BrowserSessionRepository:
         with self.db.session() as s:
             return list(s.scalars(select(BrowserSession).where(
                 BrowserSession.conversation_id == conversation_id,
-                (BrowserSession.status.in_(['new', 'starting', 'ready'])) | BrowserSession.cleanup_pending.is_(True))))
-
+                (BrowserSession.status.in_(['new', 'starting', 'ready', 'renewing'])) | BrowserSession.cleanup_pending.is_(True))))

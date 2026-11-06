@@ -143,9 +143,12 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         holds = _holds(effects, i)
         primary = next((h for h in holds if h["kind"] == "approval"), holds[0])
         cp = {"node": primary["node"], "nodes": pending or [primary["node"]], "state": cp_state, "counts": cp_counts}
+        browser_intents={hold['node']:hold['browser_intent'] for hold in holds if hold.get('browser_intent')}
+        if browser_intents:cp['browser_intents']=browser_intents
+        if len(holds)==1 and primary.get('browser_intent'):cp['browser_intent']=primary['browser_intent']
         if len(holds) > 1: cp["waits"] = holds  # one resume after every wait of this superstep (TASK-0158)
         elif holds[0]["kind"] == "child": cp["wait"] = {"kind": "child", "run_id": holds[0]["run_id"]}
-        extra = {k: primary[k] for k in ("label", "tool", "arguments", "workflow_id") if primary.get(k) is not None}
+        extra = {k: primary[k] for k in ("label", "tool", "arguments", "workflow_id", "browser_intent") if primary.get(k) is not None}
         if len(holds) == 1 and primary["kind"] == "child": extra["wait"] = {"kind": "child", "run_id": primary["run_id"]}
         yield {"type": "run_waiting", **meta(primary["node"]), "prompt": primary.get("prompt") or "",
                **{k: cap_payload(v) for k, v in extra.items()}, "state": cap_payload(agents.visible(state)), "checkpoint": cp}
@@ -178,10 +181,10 @@ def _holds(effects, i: Interrupt) -> List[dict]:
         wait = extra.get("wait") if isinstance(extra.get("wait"), dict) else {}
         if wait.get("kind") == "child":
             found[i.node] = {"node": i.node, "kind": "child", "run_id": wait.get("run_id"), "prompt": i.prompt,
-                             **{k: extra[k] for k in ("label", "tool", "arguments", "workflow_id") if k in extra}}
+                             **{k: extra[k] for k in ("label", "tool", "arguments", "workflow_id", "browser_intent") if k in extra}}
         else:
             found[i.node] = {"node": i.node, "kind": "approval", "prompt": i.prompt,
-                             **{k: extra[k] for k in ("label", "tool", "arguments") if k in extra}}
+                             **{k: extra[k] for k in ("label", "tool", "arguments", "browser_intent") if k in extra}}
     return list(found.values())
 
 

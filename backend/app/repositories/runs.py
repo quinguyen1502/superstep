@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from ..models import Run, BrowserArtifact
-from ..models.browser_session import BrowserSession, BrowserCommand
+from ..models.browser_session import BrowserSession, BrowserCommand, BrowserIntent
 from ..models.database import Database
 
 NOT_TEST = or_(Run.source.is_(None), Run.source != "test")  # every run but workflow test runs (TASK-0067)
@@ -173,6 +173,8 @@ class RunRepository:
         with self.db.session() as s:
             s.execute(delete(BrowserArtifact).where(BrowserArtifact.run_id.in_(select(Run.id).where(Run.workflow_id == wid))))
             browser_ids=select(BrowserSession.id).where(BrowserSession.run_id.in_(select(Run.id).where(Run.workflow_id==wid)),BrowserSession.cleanup_pending.is_(False))
+            all_browser_ids=select(BrowserSession.id).where(BrowserSession.run_id.in_(select(Run.id).where(Run.workflow_id==wid)))
+            s.execute(delete(BrowserIntent).where(BrowserIntent.command_id.in_(select(BrowserCommand.id).where(BrowserCommand.session_id.in_(all_browser_ids)))))
             s.execute(delete(BrowserCommand).where(BrowserCommand.session_id.in_(browser_ids)))
             s.execute(delete(BrowserSession).where(BrowserSession.id.in_(browser_ids)))
             s.execute(delete(Run).where(Run.workflow_id == wid)); s.commit()

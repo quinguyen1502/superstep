@@ -52,6 +52,7 @@ class RunPlan:
     steps: Optional[int] = None  # stop after this many working supersteps (TASK-0036); None runs to the end
     until: Optional[str] = None  # pause after this node finishes (TASK-0036); None runs to the end
     forked: Optional[dict] = None  # {run_id, checkpoint, nodes, edited}: a new run forked from a checkpoint of another one
+    browser_lease: Optional[int] = None  # positive wire epoch = stored queue generation + 1; 1 covers an unclaimed UI run
     pending_wave: bool = False  # an answer of one wait in a wave was stored; the run stays waiting (TASK-0158)
     pending_event: Optional[dict] = None  # the next slot's run_waiting, so the panel stops showing the one just answered
 
@@ -124,7 +125,7 @@ def _follow_up_wait(cp: dict) -> Optional[dict]:
     w = next((x for x in waits if x.get("kind") == "approval"), None) or (waits[0] if waits else None)
     if not w: return None
     ev = {"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt") or "", "ts": time.time()}
-    for k in ("label", "tool", "arguments"):
+    for k in ("label", "tool", "arguments", "browser_intent"):
         if w.get(k) is not None: ev[k] = w[k]
     if w.get("kind") == "child" and w.get("run_id"):
         ev["wait"] = {"kind": "child", "run_id": w["run_id"]}
@@ -567,6 +568,7 @@ class RunService:
                 outcome, wrote = self.absorb_wave(rid, node=node, value=response)
                 if wrote and self.approvals is not None and not via_channel:
                     self.approvals.answered_slot(rid, node)  # stored first: a lost claim does not drop the answer
+                    if self.browser and self.browser.approvals:self.browser.approvals.direct_decision(rid,node,uid,response)
             if outcome == "stay":
                 fresh = self.runs.get(rid)
                 evs = json.loads(fresh.events or "[]") if fresh is not None else []
@@ -583,6 +585,7 @@ class RunService:
         elif self.approvals is not None and not via_channel:  # answered in the studio: the channel buttons stop working (TASK-0022)
             if self.approvals.decided_elsewhere(rid) or not self.approvals.claim(rid): raise AppError("RUN_NOT_WAITING")  # first answer wins (DEC-0043)
             self.approvals.close_run(rid, "answered")
+            if self.browser and self.browser.approvals:self.browser.approvals.direct_decision(rid,str(cp.get('node') or ''),uid,response)
         res = self.run_resources(r, uid)
         return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
                        self.credentials.resolver(res) if self.credentials else None,
@@ -748,7 +751,7 @@ class RunService:
             try:  # the waiting steps are written before the row, so a crash in between never loses them (TASK-0127)
                 if status == "waiting":
                     asked = [{"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt"), "label": w.get("label"),
-                              "tool": w.get("tool"), "arguments": w.get("arguments")}
+                              "tool": w.get("tool"), "arguments": w.get("arguments"), "browser_intent": w.get("browser_intent")}
                              for w in wave_waits if w.get("kind") == "approval"]
                     if not asked:
                         ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
@@ -837,7 +840,7 @@ class RunService:
             return status
         finally:
             if self.browser and status not in {"waiting","paused"}:
-                await _write_in_thread(self.browser.close_run,rid,plan.fence or 1)
+                await _write_in_thread(self.browser.close_run,rid,plan.browser_lease if plan.browser_lease is not None else (plan.fence+1 if plan.fence is not None else None))
             if status != "fenced": await _write_in_thread(self.bus.finish, rid)  # a fenced worker leaves the new owner's entry alone
 
     async def settled(self, rid: str, source: Optional[str] = None) -> None:
@@ -896,17 +899,21 @@ class RunService:
                     stored=self.runs.get(rid)
                     resource=self.run_resources(stored,uid) if stored is not None else self.resources_of(plan.workflow_id,uid)
                     org=self.policy.org_allowed(uid) if self.policy else True
+                    run_generation=plan.fence if plan.fence is not None else (stored.lease_gen if stored is not None else 0)
+                    plan.browser_lease=run_generation+1
                     def browser_guard():
-                        fence_guard=self._guard(rid,plan.fence)
-                        if fence_guard:fence_guard()
+                        current=self.runs.lease_gen(rid)
+                        if current is not None and current!=run_generation or current is None and run_generation!=0:raise StaleLease(rid)
                         if plan.workflow_id and plan.workflow_id!='adhoc' and self.workflows.get(plan.workflow_id) is None:
                             raise AppError('WORKFLOW_NOT_FOUND')
                     from ..repositories.chat_sessions import ChatSessionRepository
                     top=self.top_run(stored) if stored is not None else None
                     source_id=top.id if top is not None else rid
                     chat=ChatSessionRepository(self.runs.db).for_run(source_id)
-                    return self.browser.bind(resource,self.browser_principal(rid,plan,uid),rid,plan.fence or 1,
+                    return self.browser.bind(resource,self.browser_principal(rid,plan,uid),rid,plan.browser_lease,
                         guard=browser_guard,cancelled=plan.ports.cancelled,org_allowed=org,
+                        allow_resume=bool(plan.previous is not None and plan.previous.status=='waiting' and not plan.recovered),
+                        forked_from=(plan.forked or {}).get('run_id'),
                         conversation_id=chat.id if chat is not None else None)
                 plan.ports.browser=await asyncio.to_thread(bind_browser)
             plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools (TASK-0134)

@@ -13,7 +13,7 @@ const canonical = value => value && typeof value === 'object'
   ? Array.isArray(value) ? value.map(canonical) : Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value
 const fingerprint = value => crypto.createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex')
 const state = { browser: null, context: null, page: null, open: null, generation: 1, pageGeneration: 0,
-  sequence: 0, observation: null, elements: new Map(), approvals: new Set(), artifacts: new Map(),
+  sequence: 0, observation: null, elements: new Map(), approvals: new Map(), artifacts: new Map(),
   secrets: [], busy: false, status: 'new', started: Date.now(), touched: Date.now(), denied: 0 }
 
 function permitted(value) {
@@ -112,7 +112,7 @@ async function describe(handle) {
     const text = ['input', 'textarea', 'select'].includes(tag) || element.isContentEditable
       ? element.getAttribute('aria-label') || element.getAttribute('name') || '' : clone.textContent || ''
     return { role: element.getAttribute('role') || (tag === 'a' ? 'link' : tag === 'input' || tag === 'textarea' ? 'textbox' : tag),
-      text: Array.from(text.replace(/\s+/g, ' ').trim()).slice(0, 1000).join(''),
+      text: Array.from(text.replace(/\s+/g, ' ').trim()).slice(0, 16000).join(''),
       identity: [tag, element.getAttribute('type'), element.getAttribute('href'), element.getAttribute('role'),
         element.getAttribute('aria-label'), element.form?.action || '', element.form?.method || '', text.slice(0, 1000)] }
   })
@@ -130,7 +130,7 @@ async function snapshot() {
       const item = await describe(handle)
       const element_id = crypto.randomUUID()
       state.elements.set(element_id, { handle, fingerprint: fingerprint(item.identity) })
-      elements.push({ element_id, role: clip(item.role, 80), text: safeText(item.text, 1000) })
+      elements.push({ element_id, role: safeText(item.role, 80), text: safeText(item.text, 1000) })
     }
     if (generation !== state.pageGeneration) throw new Error('stale')
     const url = new URL(state.page.url())
@@ -162,7 +162,7 @@ async function execute(command) {
   if (state.busy || command.sequence !== state.sequence) return finish('stale_observation')
   if (state.sequence >= state.open.settings.max_actions) { await shutdown('expired'); return finish('expired') }
   const effect = ['click', 'fill'].includes(command.operation)
-  if (effect && !state.approvals.has(fingerprint(command))) return finish('approval_required')
+  if (effect && (state.approvals.get(fingerprint(command)) || 0) <= Date.now()) return finish('approval_required')
   state.busy = true; state.touched = Date.now(); state.sequence++
   state.approvals.delete(fingerprint(command))
   const timeout = Math.min(command.timeout_ms, state.open.settings.action_timeout_ms)
@@ -208,7 +208,7 @@ async function execute(command) {
   } finally { clearTimeout(timer); state.busy = false; state.touched = Date.now() }
 }
 
-const paths = { '/v1/open': 'WorkerOpen', '/v1/command': 'WorkerCommand', '/v1/approve': 'WorkerCommand',
+const paths = { '/v1/open': 'WorkerOpen', '/v1/command': 'WorkerCommand', '/v1/approve': 'WorkerApproval', '/v1/inspect': 'WorkerCommand', '/v1/renew': 'WorkerRenew', '/v1/supervisor_health': 'WorkerSupervisor',
   '/v1/artifact': 'WorkerArtifact', '/v1/close': 'WorkerControl', '/v1/health': 'WorkerControl' }
 const server = http.createServer(async (request, response) => {
   const send = (status, result) => { response.writeHead(status, { 'content-type': 'application/json' }); response.end(JSON.stringify(result)) }
@@ -219,14 +219,55 @@ const server = http.createServer(async (request, response) => {
     const value = JSON.parse(Buffer.concat(chunks).toString('utf8'))
     if (!validators[paths[request.url]](value)) return send(400, { status: 'invalid' })
     if (request.url === '/v1/open') return send(200, await open(value))
+    if (request.url === '/v1/supervisor_health') {
+      await expireIfNeeded()
+      return send(200, { status: state.status, idle_remaining_ms: Math.max(0, state.busy ? state.open.settings.idle_timeout_s * 1000 : state.open.settings.idle_timeout_s * 1000 - (Date.now() - state.touched)), lifetime_remaining_ms: Math.max(0, state.open.settings.lifetime_s * 1000 - (Date.now() - state.started)) })
+    }
     if (!identity(value)) return send(403, { status: 'denied' })
     await expireIfNeeded()
-    if (request.url === '/v1/health') return send(200, { status: state.status, idle_remaining_ms: Math.max(0, state.busy ? state.open.settings.idle_timeout_s * 1000 : state.open.settings.idle_timeout_s * 1000 - (Date.now() - state.touched)), lifetime_remaining_ms: Math.max(0, state.open.settings.lifetime_s * 1000 - (Date.now() - state.started)) })
+    if (request.url === '/v1/health') return send(200, { status: state.status, generation: state.generation, idle_remaining_ms: Math.max(0, state.busy ? state.open.settings.idle_timeout_s * 1000 : state.open.settings.idle_timeout_s * 1000 - (Date.now() - state.touched)), lifetime_remaining_ms: Math.max(0, state.open.settings.lifetime_s * 1000 - (Date.now() - state.started)) })
     if (request.url === '/v1/command') return send(200, await execute(value))
+    if (request.url === '/v1/renew') {
+      const old = { ...state.open.context }, next = { ...value.next_context }
+      if (state.status !== 'ready' || state.busy || next.lease_generation <= old.lease_generation) return send(409, { status: 'stale' })
+      delete old.lease_generation; delete next.lease_generation
+      if (!isDeepStrictEqual(old, next)) return send(403, { status: 'denied' })
+      state.open.context = value.next_context; state.generation++; state.approvals.clear()
+      return send(200, { status: 'ready', generation: state.generation })
+    }
+    if (request.url === '/v1/inspect') {
+      if (state.status !== 'ready' || state.busy || value.sequence !== state.sequence) return send(409, { status: 'stale' })
+      let target, target_hash, origin
+      try {
+        if (['click', 'fill'].includes(value.operation)) {
+          target = await describe(await element(value.arguments)); target_hash = fingerprint(target.identity)
+          origin = new URL(state.page.url()).origin
+        } else {
+          if (value.operation === 'navigate') {
+            if (!permitted(value.arguments.url)) return send(200, { status: 'policy_denied' })
+            origin = new URL(value.arguments.url).origin
+          } else {
+            origin = new URL(state.page.url()).origin
+            if (!permitted(state.page.url())) return send(200, { status: 'stale_observation' })
+            if (value.operation === 'extract') for (const element_id of Object.values(value.arguments.fields)) await element({ observation_id: value.arguments.observation_id, element_id })
+          }
+          target = { role: 'document', text: '' }
+          target_hash = fingerprint({ operation: value.operation, arguments: value.arguments, page: state.pageGeneration, observation: state.observation })
+        }
+      } catch { return send(200, { status: 'stale_observation' }) }
+      const result = { version: 1, generation: state.generation, page_generation: Math.max(1, state.pageGeneration),
+        target_hash, origin, role: safeText(target.role, 80), text: safeText(target.text, 1000) }
+      if (!validators.WorkerTarget(result)) throw new Error('target')
+      return send(200, result)
+    }
     if (request.url === '/v1/approve') {
       if (state.status !== 'ready' || state.busy || value.sequence !== state.sequence || !['click', 'fill'].includes(value.operation)) return send(409, { status: 'stale' })
-      await element(value.arguments)
-      state.approvals.clear(); state.approvals.add(fingerprint(value)); return send(200, { status: 'approved' })
+      let target
+      try { target = await describe(await element(value.arguments)) } catch { return send(200, { status: 'stale_observation' }) }
+      if (value.target_hash !== fingerprint(target.identity) || value.page_generation !== Math.max(1, state.pageGeneration)) return send(200, { status: 'stale_observation' })
+      if (value.expires_at_ms <= Date.now() || value.expires_at_ms > state.started + state.open.settings.lifetime_s * 1000) return send(200, { status: 'expired' })
+      const { target_hash, page_generation, expires_at_ms, ...command } = value
+      state.approvals.clear(); state.approvals.set(fingerprint(command), expires_at_ms); return send(200, { status: 'approved' })
     }
     if (request.url === '/v1/artifact') {
       const bytes = state.artifacts.get(value.artifact_id)

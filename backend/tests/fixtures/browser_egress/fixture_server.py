@@ -3,6 +3,7 @@ import base64
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import ipaddress
 import json
+from pathlib import Path
 import socket
 import ssl
 import threading
@@ -31,6 +32,9 @@ class Destination(BaseHTTPRequestHandler):
 
     def do_GET(self):
         record("requests", {"path": self.path.split("?", 1)[0], "leaked_proxy_auth": "Proxy-Authorization" in self.headers, "host": self.headers.get("Host", ""), "profile_cookie": self.headers.get("Cookie", "") == "login=synthetic-cookie"})
+        if self.path.startswith('/mutation-status'):
+            body=b'1' if Path('/tmp/browser-mutate').exists() else b'0'
+            self.send_response(200);self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body);return
         if self.path.startswith("/redirect"):
             self.send_response(302); self.send_header("Location", "http://127.0.0.1:9090/private"); self.end_headers(); return
         if self.path.startswith("/hostile"):
@@ -40,6 +44,9 @@ class Destination(BaseHTTPRequestHandler):
             navigator.serviceWorker.register('/sw.js').catch(()=>{});</script></html>'''
         elif self.path.startswith("/sw.js"):
             body = b"self.addEventListener('activate',()=>fetch('http://127.0.0.1:9090/service-worker'))"
+        elif self.path.startswith('/mutable-effect'):
+            body=b'''<html><h1>Mutable fixture</h1><button id="action" onclick="fetch('/effect',{method:'POST'})">Initial effect</button>
+            <script>setInterval(()=>fetch('/mutation-status').then(r=>r.text()).then(value=>{if(value==='1')document.getElementById('action').textContent='Changed effect'}),500)</script></html>'''
         elif self.path.startswith("/effect-form"):
             body = b'''<html><h1>Effect fixture</h1><button onclick="fetch('/effect',{method:'POST'}).then(()=>document.getElementById('status').textContent='Submitted')">Submit effect</button><p id="status">Ready</p></html>'''
         elif self.path.startswith("/profile"):

@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0243
 - Title: Isolated local Playwright runtime and nine bounded browser tools
-- Status: done
+- Status: done (merged #308, REV-0233, QA-0233)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06

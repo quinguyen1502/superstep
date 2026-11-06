@@ -229,6 +229,10 @@ class PublicChatService:
             turns = self.chat.sessions.turns(s.id); last = turns[-1] if turns else None
             if last is None or last.role != "assistant" or last.status != "waiting" or not last.run_id: raise AppError("RUN_NOT_WAITING")
             if last.answered_by == "reviewer": raise AppError("CHAT_ANSWER_BY_REVIEWER")
+            run=self.chat.runs.get(last.run_id)
+            checkpoint=json.loads(run.checkpoint or '{}') if run is not None else {}
+            shown_wait=next((wait for wait in checkpoint.get('waits') or [] if wait.get('node')==last.node),{})
+            if checkpoint.get('browser_intent') or shown_wait.get('browser_intent'):raise AppError('CHAT_ANSWER_BY_REVIEWER')
             if req.get("resume_run_id") not in (None, last.run_id): raise AppError("RUN_NOT_WAITING")
             shown = last.node if isinstance(last.node, str) and last.node else None
             node = req.get("node") if isinstance(req.get("node"), str) and req.get("node") else None

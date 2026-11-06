@@ -80,6 +80,13 @@ def main():
             assert extracted.extracted=={'status':'Submitted'}
             capture=worker.call(worker.command('screenshot',{},6));assert worker.artifact(capture.artifact_id).startswith(b'\x89PNG')
             assert worker.call(worker.command('navigate',{'url':'http://127.0.0.1:9090/private'},7)).status=='policy_denied'
+            next_context=context.model_copy(update={'lease_generation':2})
+            assert worker.renew(next_context)=={'status':'ready','generation':2}
+            renewed=RemoteBrowserWorker.attach(next_context,worker.settings,worker.session_id,transport,generation=2)
+            assert renewed.call(renewed.command('snapshot',{},8)).status=='confirmed'
+            try:RemoteBrowserWorker.attach(context,worker.settings,worker.session_id,transport)
+            except BrowserWorkerError:pass
+            else:raise AssertionError('Old fence controlled a renewed browser')
             worker.close()
             for mode in ['custom','operator_default']:
                 routed=RemoteBrowserWorker(context.model_copy(update={'group_id':mode}),

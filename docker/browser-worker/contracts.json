@@ -1015,6 +1015,37 @@
         ],
         "default": null,
         "title": "Evaluate Result"
+      },
+      "approval_outcome": {
+        "anyOf": [
+          {
+            "enum": [
+              "approved",
+              "rejected",
+              "expired",
+              "stale"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Approval Outcome"
+      },
+      "acknowledgement": {
+        "anyOf": [
+          {
+            "const": "already_completed",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Acknowledgement"
       }
     },
     "required": [
@@ -1025,6 +1056,343 @@
       "elapsed_ms"
     ],
     "title": "WorkerResult",
+    "type": "object"
+  },
+  "WorkerRenew": {
+    "$defs": {
+      "ExecutionContext": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conversation Id"
+          },
+          "run_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "group_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "configuration": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Configuration",
+            "type": "string"
+          },
+          "lease_generation": {
+            "minimum": 1,
+            "title": "Lease Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal_id",
+          "run_id",
+          "group_id",
+          "connection_id",
+          "configuration",
+          "lease_generation"
+        ],
+        "title": "ExecutionContext",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "context": {
+        "$ref": "#/$defs/ExecutionContext"
+      },
+      "session_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "generation": {
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      },
+      "next_context": {
+        "$ref": "#/$defs/ExecutionContext"
+      }
+    },
+    "required": [
+      "context",
+      "session_id",
+      "generation",
+      "next_context"
+    ],
+    "title": "WorkerRenew",
+    "type": "object"
+  },
+  "WorkerTarget": {
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "generation": {
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      },
+      "page_generation": {
+        "minimum": 1,
+        "title": "Page Generation",
+        "type": "integer"
+      },
+      "target_hash": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Target Hash",
+        "type": "string"
+      },
+      "origin": {
+        "maxLength": 2048,
+        "minLength": 1,
+        "title": "Origin",
+        "type": "string"
+      },
+      "role": {
+        "maxLength": 80,
+        "title": "Role",
+        "type": "string"
+      },
+      "text": {
+        "maxLength": 1000,
+        "title": "Text",
+        "type": "string"
+      }
+    },
+    "required": [
+      "generation",
+      "page_generation",
+      "target_hash",
+      "origin",
+      "role",
+      "text"
+    ],
+    "title": "WorkerTarget",
+    "type": "object"
+  },
+  "WorkerApproval": {
+    "$defs": {
+      "ExecutionContext": {
+        "additionalProperties": false,
+        "properties": {
+          "principal_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Principal Id",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conversation Id"
+          },
+          "run_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "group_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Group Id",
+            "type": "string"
+          },
+          "connection_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "configuration": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Configuration",
+            "type": "string"
+          },
+          "lease_generation": {
+            "minimum": 1,
+            "title": "Lease Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "principal_id",
+          "run_id",
+          "group_id",
+          "connection_id",
+          "configuration",
+          "lease_generation"
+        ],
+        "title": "ExecutionContext",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      },
+      "context": {
+        "$ref": "#/$defs/ExecutionContext"
+      },
+      "session_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Session Id",
+        "type": "string"
+      },
+      "generation": {
+        "minimum": 1,
+        "title": "Generation",
+        "type": "integer"
+      },
+      "sequence": {
+        "minimum": 0,
+        "title": "Sequence",
+        "type": "integer"
+      },
+      "command_id": {
+        "maxLength": 128,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_.:-]+$",
+        "title": "Command Id",
+        "type": "string"
+      },
+      "operation": {
+        "enum": [
+          "navigate",
+          "snapshot",
+          "click",
+          "fill",
+          "extract",
+          "screenshot",
+          "upload",
+          "download",
+          "evaluate"
+        ],
+        "title": "Operation",
+        "type": "string"
+      },
+      "arguments": {
+        "additionalProperties": true,
+        "title": "Arguments",
+        "type": "object"
+      },
+      "timeout_ms": {
+        "default": 30000,
+        "maximum": 60000,
+        "minimum": 1000,
+        "title": "Timeout Ms",
+        "type": "integer"
+      },
+      "expires_at_ms": {
+        "maximum": 253402300799000,
+        "minimum": 1,
+        "title": "Expires At Ms",
+        "type": "integer"
+      },
+      "target_hash": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Target Hash",
+        "type": "string"
+      },
+      "page_generation": {
+        "minimum": 1,
+        "title": "Page Generation",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "context",
+      "session_id",
+      "generation",
+      "sequence",
+      "command_id",
+      "operation",
+      "arguments",
+      "expires_at_ms",
+      "target_hash",
+      "page_generation"
+    ],
+    "title": "WorkerApproval",
+    "type": "object"
+  },
+  "WorkerSupervisor": {
+    "additionalProperties": false,
+    "properties": {
+      "version": {
+        "const": 1,
+        "default": 1,
+        "title": "Version",
+        "type": "integer"
+      }
+    },
+    "title": "WorkerSupervisor",
     "type": "object"
   }
 }

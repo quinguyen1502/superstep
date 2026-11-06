@@ -24,12 +24,18 @@ from app.repositories.browser_sessions import BrowserSessionRepository
 from app.services.mcp_service import McpService
 from app.services.browser_session_service import BrowserSessionService
 from app.services.browser_runtime_service import BrowserRuntimeService
+from app.services.browser_approval_service import BrowserApprovalService
+from app.repositories.browser_intents import BrowserIntentRepository
+from app.repositories import ApprovalRepository,UserRepository
+from app.models import ApprovalWait
 
 
 def service_for(url,docker,network):
     db=Database(url)
-    return BrowserSessionService(BrowserSessionRepository(db),McpService(McpServerRepository(db)),BrowserRuntimeService(None),
+    service=BrowserSessionService(BrowserSessionRepository(db),McpService(McpServerRepository(db)),BrowserRuntimeService(None),
         local_options={'docker':docker,'gateway_image':'superstep-browser-egress-gateway:task-0242','gateway_network':network})
+    service.approvals=BrowserApprovalService(BrowserIntentRepository(db),ApprovalRepository(db),UserRepository(db),service)
+    return service
 
 
 def execute(url,docker,network,ticket,operation,arguments,delay):
@@ -79,10 +85,12 @@ def main():
             arguments={'observation_id':observed['observation']['observation_id'],'element_id':button}
             click=scope.prepare('agent','round-two',[{'index':0,'server_id':'browser','tool':'click','arguments':arguments}])[0]
             assert scope.call('agent',click,'click',arguments)['status']=='approval_required'
-            # TEST ONLY trusted approval primitive. Durable Human verification remains TASK-0246.
+            # TEST ONLY: record a verified fixture-owner decision; production uses authenticated inbox/channel paths.
+            assert scope.action('fixture-click','agent',click,'click',arguments)['state']=='waiting'
+            wait=service.approvals.waits.add_wait(ApprovalWait(id=uuid.uuid4().hex,run_id='fixture-run',node_id='fixture-click',owner='fixture-owner',
+                status='closed',outcome='answered',created=time.time(),browser_intent_id=click),[])
+            assert service.approvals.record(wait,'fixture-owner','approved','studio')
             worker=LocalBrowserWorker.attach(service.context(row),settings,worker_id,docker=args.docker)
-            worker.approve(worker.command('click',arguments,2,click))
-            with db.session() as s:s.get(BrowserCommand,click).status='pending';s.commit()
             assert scope.call('agent',click,'click',arguments)['status']=='confirmed'
             final=scope.prepare('agent','round-three',[{'index':0,'server_id':'browser','tool':'snapshot','arguments':{}}])[0]
             current=scope.call('agent',final,'snapshot',{});assert current['status']=='confirmed'
@@ -95,7 +103,9 @@ def main():
             fresh=next(item['element_id'] for item in current['observation']['elements'] if item['role']=='button')
             denied_args={'observation_id':current['observation']['observation_id'],'element_id':fresh}
             denied=scope.prepare('agent','round-four',[{'index':0,'server_id':'browser','tool':'click','arguments':denied_args}])[0]
-            worker.approve(worker.command('click',denied_args,4,denied))
+            assert scope.action('fenced-click','agent',denied,'click',denied_args)['state']=='waiting'
+            wait=service.approvals.waits.add_wait(ApprovalWait(id=uuid.uuid4().hex,run_id='fixture-run',node_id='fenced-click',owner='fixture-owner',status='closed',outcome='answered',created=time.time(),browser_intent_id=denied),[])
+            assert service.approvals.record(wait,'fixture-owner','approved','studio')
             def fenced():raise StaleLease('fixture-run')
             scope.guard=fenced
             try:scope.call('agent',denied,'click',denied_args)

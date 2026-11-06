@@ -141,6 +141,11 @@ class ApprovalRepository:
             return s.scalars(select(ApprovalWait).where(ApprovalWait.run_id == rid, ApprovalWait.node_id == node,
                                                        ApprovalWait.status == "waiting")).first()
 
+    def latest_wait_for_node(self,rid,node):
+        with self.db.session() as s:
+            return s.scalar(select(ApprovalWait).where(ApprovalWait.run_id==rid,ApprovalWait.node_id==node)
+                .order_by(ApprovalWait.created.desc()).limit(1))
+
     def latest_wait(self, rid: str) -> Optional[ApprovalWait]:
         """The run's most recent waiting step, open or closed."""
         with self.db.session() as s:

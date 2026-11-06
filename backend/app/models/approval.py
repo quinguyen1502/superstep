@@ -106,6 +106,7 @@ class ApprovalWait(Base):
     outcome: Mapped[Optional[str]] = mapped_column(Text)  # answered | cancelled | expired | error | timeout | superseded | deadline
     created: Mapped[float] = mapped_column(Float)
     closed_at: Mapped[Optional[float]] = mapped_column(Float)
+    browser_intent_id: Mapped[Optional[str]] = mapped_column(Text)  # exact browser decision; no raw arguments
     # deadlines (TASK-0066): read from the run's own workflow snapshot when the step starts waiting
     approval: Mapped[Optional[str]] = mapped_column(Text)    # JSON: the node's data.approval (channel, target), for reminders
     deadline: Mapped[Optional[str]] = mapped_column(Text)    # JSON: engine.deadlines.parse() (seconds)

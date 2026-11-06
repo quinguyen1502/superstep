@@ -13,7 +13,7 @@ from pydantic import ValidationError
 
 from .api.error_handlers import register_error_handlers
 from .core.errors import AppError
-from .engine.browser_contract import WorkerCommand, WorkerArtifact, WorkerControl
+from .engine.browser_contract import WorkerCommand, WorkerArtifact, WorkerControl, WorkerApproval, WorkerRenew
 from .engine.browser_remote import RemoteOpen
 from .schemas.envelope import EnvelopeResponse
 from .services.browser_controller_service import BrowserControllerService
@@ -66,7 +66,7 @@ def create_app(controller=None, token=None):
             from starlette.concurrency import run_in_threadpool
             return await run_in_threadpool(controller.invoke, method, value)
         app.add_api_route('/v1/' + method, invoke, methods=['POST'], dependencies=[Depends(authorised)])
-    for method, model in [('command', WorkerCommand), ('approve', WorkerCommand), ('artifact', WorkerArtifact), ('close', WorkerControl), ('health', WorkerControl)]:
+    for method, model in [('command', WorkerCommand), ('approve', WorkerApproval), ('artifact', WorkerArtifact), ('close', WorkerControl), ('health', WorkerControl), ('inspect', WorkerCommand), ('renew', WorkerRenew)]:
         register(method, model)
     return app
 
