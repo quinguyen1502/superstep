@@ -2,7 +2,7 @@
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0057_browser_conversation_sessions"
+revision = "0057_browser_conv_sessions"
 down_revision = "0056_browser_sessions"
 branch_labels = depends_on = None
 
