@@ -33,12 +33,6 @@ class Destination(BaseHTTPRequestHandler):
             navigator.serviceWorker.register('/sw.js').catch(()=>{});</script></html>'''
         elif self.path.startswith("/sw.js"):
             body = b"self.addEventListener('activate',()=>fetch('http://127.0.0.1:9090/service-worker'))"
-        elif self.path.startswith("/form"):
-            body = b'''<html><h1>Form fixture</h1><input aria-label="Name" value="sensitive-prefilled-value">
-            <button onclick="document.getElementById('status').textContent='Submitted'">Submit fixture</button>
-            <p id="status">Ready</p></html>'''
-        elif self.path.startswith("/hang"):
-            body = b'<html><button onclick="while(true){}">Hang fixture</button></html>'
         else: body = b"<html><h1>allowed fixture</h1></html>"
         self.send_response(200); self.send_header("Content-Type", "application/javascript" if self.path.startswith("/sw.js") else "text/html"); self.send_header("Content-Length", str(len(body)))
         self.end_headers(); self.wfile.write(body)

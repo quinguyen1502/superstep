@@ -424,8 +424,6 @@
     }
   },
   "errors": {
-    "BROWSER_ARTIFACT_NOT_FOUND": "Không tìm thấy ảnh chụp trình duyệt hoặc ảnh đã hết hạn",
-    "BROWSER_ARTIFACT_INVALID": "Ảnh chụp trình duyệt vượt giới hạn PNG được hỗ trợ",
     "BROWSER_DISABLED": "Kết nối trình duyệt đang bị tắt",
     "BROWSER_RUNTIME_UNAVAILABLE": "Thực thi trình duyệt cần worker cô lập đã kiểm chứng và ngữ cảnh chạy tin cậy",
     "CHAT_REGENERATE_INVALID": "Chỉ tạo lại được câu trả lời cuối đã kết thúc",

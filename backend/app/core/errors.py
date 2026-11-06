@@ -8,8 +8,6 @@ from typing import Any
 
 # code: (HTTP status, English message template)
 CATALOG: dict[str, tuple[int, str]] = {
-    "BROWSER_ARTIFACT_NOT_FOUND": (404, "Browser screenshot not found or expired"),
-    "BROWSER_ARTIFACT_INVALID": (400, "Browser screenshot exceeds the supported PNG bounds"),
     "BROWSER_DISABLED": (404, "Browser connections are disabled"),
     "BROWSER_RUNTIME_UNAVAILABLE": (503, "Browser execution requires a verified isolated worker and trusted run context"),
     # generic / transport

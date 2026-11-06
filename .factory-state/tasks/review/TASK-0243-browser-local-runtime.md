@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Task ID: TASK-0243
-- Title: Isolated local Playwright runtime and bounded browser tools
+- Title: Isolated local Playwright runtime and nine bounded browser tools
 - Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-04
+- Updated: 2026-11-06
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -17,19 +17,21 @@
 
 ## Objective
 
-Isolated local Playwright runtime and bounded browser tools, satisfying the assigned acceptance criteria of REQ-0086.
+Isolated local Playwright runtime and nine bounded browser tools (including upload, download and evaluate JS), satisfying the assigned acceptance criteria of REQ-0086.
 
 ## Scope
 
 ### In Scope
 
-- Add the isolated non-root Playwright worker image/process and bounded command transport; pin browser/package compatibility and resource limits.
-- Implement navigate, snapshot, click, fill, structured extract and screenshot using the same shared command vocabulary that recipes will call.
-- Attach page/session generation references, explicit cleanup, idle expiry and safe failure statuses. Persist only authorised protected screenshot references; no evaluate/shell/files/keyboard tools.
+- Add the isolated non-root Playwright worker image/process and bounded command transport; pin browser/package compatibility and resource limits (including action/page budget hooks).
+- Implement navigate, snapshot, click, fill, structured extract, screenshot, **upload**, **download** and **evaluate_js** using the same shared command vocabulary that recipes will call.
+- Bound new ops: upload only from authorised attachment/workspace file ids (never arbitrary host paths); download size and allowed types enforced; evaluate_js runs only in page context (no Node/shell) and returns untrusted data that cannot expand whitelist/access or skip approval.
+- Attach page/session generation references, explicit cleanup, idle/max expiry and safe failure statuses. Persist only authorised protected screenshot/download references; no shell or unrestricted host-filesystem tools.
 
 ### Out Of Scope
 
-- Other PLAN-0006 task outputs; hosted browser-Agent delegation, arbitrary script/files, live provider/account setup, deployment, release and merge.
+- Other PLAN-0006 task outputs; hosted browser-Agent delegation, unrestricted host filesystem/shell, live provider/account setup, deployment, release and merge. Upload/download/evaluate JS are in first delivery with the bounds in REQ-0086; interactive profile capture and deferred exports remain out of this task unless listed below.
+- Starting implementation under this planning-only request.
 
 ## Inputs And Related Artifacts
 
@@ -40,8 +42,8 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/review/TASK-0241-browser-connection-contract.md`.
-- Dependency artifact: `.factory-state/tasks/review/TASK-0242-browser-egress-proxy-policy.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0241-browser-connection-contract.md`.
+- Dependency artifact: `.factory-state/tasks/backlog/TASK-0242-browser-egress-proxy-policy.md`.
 
 ## Expected Outputs
 
@@ -64,10 +66,11 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 
 ## Acceptance Criteria
 
-- A disposable fixture can be navigated, observed, filled, queried and captured with bounded results; stale element/page references fail visibly.
+- A disposable fixture can be navigated, observed, filled, queried, captured, uploaded-to, downloaded-from and evaluated-against with bounded results; stale element/page references fail visibly.
+- Upload from a disallowed path, oversize/disallowed download and evaluate_js escaping page context are denied with specific errors; results of evaluate_js are marked untrusted.
 - No browser runs in the API process or sees host filesystem/socket mounts or unrelated secrets; memory/process/time/size limits are enforced.
 - Terminal/cancel/expiry/error paths close resources; mock/dry runs launch no real worker/browser/network.
-- Protected screenshots cannot be obtained by another principal or through an unrestricted public URL; retention is explicit.
+- Protected screenshots/downloads cannot be obtained by another principal or through an unrestricted public URL; retention is explicit; public chat filtering defaults apply at the presentation layer.
 
 ## Validation Plan
 
@@ -77,12 +80,12 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 
 ## Assumptions
 
-- Owner authorised implementation of the chain and local Docker fixtures on 2026-11-05.
+- Owner authorised requirement capture and breakdown only. Technical defaults in the linked artifacts remain proposals until accepted.
 - Controlled fixtures and synthetic credentials supply mandatory evidence; real proxy/provider accounts are operator setup.
 
 ## Open Questions
 
-- Owner start accepted; no owner merge approval.
+- Owner confirmation of the proposed task set is pending; no implementation command is authorised by creation of this backlog artifact.
 - Resolve scoped technical capability/contract details from ARCH-0002 within the task; amend the plan rather than claiming unsupported behavior.
 
 ## Activity Log
@@ -91,18 +94,18 @@ Isolated local Playwright runtime and bounded browser tools, satisfying the assi
 
 - 2026-11-04: Renumbered: TASK-0240 → TASK-0243 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
+- 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
+
 ## Handoff Notes
 
 - Future branch: `factory/task-0243-browser-local-runtime`, from `develop` after the stated gates.
 - One task PR with review/QA; no merge without explicit owner approval.
 
-- 2026-11-05: Owner requested the chain and local Docker fixtures. Explicit stack on TASK-0242 (PR #304, REV-0230/QA-0230) and TASK-0241 (PR #303, REV-0229/QA-0229), neither merged. Scope is one local worker/artifact delivery using the proven gateway; Agent run binding remains TASK-0245.
+## Reconciliation (2026-11-06)
 
-- 2026-11-05: `factory ready` passed before worker source changes. Task-start complete. Production worker uses a separate image/build and generated schemas, not a promoted synthetic fixture image.
-
-- 2026-11-05: Added isolated worker/gateway images with locked compatible dependencies, generated schemas, private HTTP-over-Unix Docker-exec control, six bounded commands, exact-command approval primitive, stale/principal/generation checks and automatic resource watchdogs. Added owner-only stored screenshots, one-hour retention/purge and Alembic 0055. `docs/browser-runtime.md` records boundaries and dependency evidence.
-- 2026-11-05: Real worker smoke passed six operations and approval/stale/foreign-artifact/budget/idle/uncertain-effect/production-gateway denial cases. PostgreSQL/SQLite migration suite 4 passed; root npm 280/build/lint passed; targeted/focused backend checks and wheel asset packaging passed. REV-0233/QA-0233 recorded; full backend regression to be run against the task commit. Run/Agent binding and durable Human approval are not claimed implemented.
-
-- 2026-11-05: Final focused checks: 71 passed, 1 optional PostgreSQL skip. Review/QA IDs reallocated to 0233 because develop merged TASK-0256/0257 while this task was being verified.
-
-- 2026-11-05 full regression: declared `.venv/bin/python -m pytest` against rebased implementation 1b52abff in an isolated checkout: **1284 passed, 67 skipped**, 458.45 s, no failures. This includes develop 21ddce1a. Optional environment skips and existing warnings remain. Commit 22a5d935 only normalises source/license whitespace. Draft PR #308; owner review remains pending.
+After merging develop (TASK-0241 #303, TASK-0242 #304, Accepted plan #299): use the
+Accepted nine-tool contract (upload/download/evaluate gated by connection allow_*),
+required whitelist + Browserless provider naming from upstream, mutating-approval
+default OFF (navigate/snapshot/extract/screenshot never wait; click/fill/upload/
+download/evaluate may wait when require_mutating_approval is on). Local Playwright
+runtime remains this task; Browserless proof stays TASK-0244.
