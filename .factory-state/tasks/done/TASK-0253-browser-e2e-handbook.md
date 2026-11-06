@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0253
 - Title: Studio integrated browser acceptance, example workflow and bilingual handbook
-- Status: doing
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -99,4 +99,6 @@ Studio first-milestone integrated browser acceptance, example workflow and bilin
 - One task PR with review/QA; no merge without explicit owner approval.
 
 - 2026-11-06: Implementation started on `factory/task-0253-browser-e2e-handbook` stacked after TASK-0250. English-only Studio handbook guide and connection settings doc corrections; screenshots placeholders pending real Studio captures after #315 merges.
+
+- 2026-11-06: Merged #316 (English handbook guide + en/vi parity). English UI screenshots refreshed for connection settings and Agent URL binding. TASK-0251/0252 remain deferred.
 
