@@ -324,5 +324,7 @@ The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Cod
 
 | Code | Status | Meaning |
 | --- | --- | --- |
+| `BROWSER_ARTIFACT_NOT_FOUND` | 404 | Browser screenshot not found, expired, or not owned by the caller. |
+| `BROWSER_ARTIFACT_INVALID` | 400 | Browser screenshot exceeds the supported PNG bounds. |
 | `BROWSER_DISABLED` | 404 | Browser metadata/discovery is disabled by the operator. |
 | `BROWSER_RUNTIME_UNAVAILABLE` | 503 | No verified isolated browser runtime/trusted run context is available; no browser operation is started. |

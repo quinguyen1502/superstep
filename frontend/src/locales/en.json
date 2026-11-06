@@ -681,7 +681,9 @@
     "AUTO_APPROVAL_FORBIDDEN": "Only the workflow owner or an admin can turn on automatic AI approval",
     "AUTO_APPROVAL_DISABLED": "AI auto-approval is turned off on this server",
     "ATTACHMENT_MIGRATE_TARGET": "Unknown attachment storage '{{target}}' (use {{allowed}})",
-    "ATTACHMENT_MIGRATE_BATCH": "The batch size must be between 1 and {{max}}"
+    "ATTACHMENT_MIGRATE_BATCH": "The batch size must be between 1 and {{max}}",
+    "BROWSER_ARTIFACT_NOT_FOUND": "Browser screenshot not found or expired",
+    "BROWSER_ARTIFACT_INVALID": "Browser screenshot exceeds the supported PNG bounds"
   },
   "lang": {
     "en": "English",

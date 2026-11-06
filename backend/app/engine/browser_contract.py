@@ -38,8 +38,13 @@ class WorkerEnvelope(VersionedContract):
     def bounded_json(cls, value):
         if isinstance(value, cls):
             return value
+        def default(item):
+            dump = getattr(item, "model_dump", None)
+            if callable(dump):
+                return dump()
+            raise TypeError(type(item).__name__)
         try:
-            size = len(json.dumps(value, ensure_ascii=False, allow_nan=False).encode("utf-8"))
+            size = len(json.dumps(value, ensure_ascii=False, allow_nan=False, default=default).encode("utf-8"))
         except (TypeError, ValueError, UnicodeError, RecursionError):
             raise ValueError("Worker envelope must be finite UTF-8 JSON") from None
         if size > 256 * 1024:
@@ -266,6 +271,7 @@ class Observation(Contract):
         return http_url(value, origin=True)
 
 
+
 class WorkerOpen(WorkerEnvelope):
     context: ExecutionContext
     settings: BrowserSettings
@@ -283,25 +289,7 @@ class WorkerArtifact(WorkerControl):
     artifact_id: Identifier
 
 
-class ObservedElement(Contract):
-    element_id: Identifier
-    role: Annotated[str, Field(max_length=80)]
-    text: Annotated[str, Field(max_length=1000)]
-
-
-class Observation(Contract):
-    observation_id: Identifier
-    page_generation: Annotated[int, Field(ge=1)]
-    origin: Origin
-    text: Annotated[str, Field(max_length=16000)] = ""
-    elements: Annotated[list[ObservedElement], Field(max_length=200)] = Field(default_factory=list)
-
-    @field_validator("origin")
-    @classmethod
-    def check_origin(cls, value): return http_url(value, origin=True)
-
-
-class WorkerResult(WorkerEnvelope):class WorkerResult(WorkerEnvelope):
+class WorkerResult(WorkerEnvelope):
     command_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     sequence: Annotated[int, Field(ge=0)]
