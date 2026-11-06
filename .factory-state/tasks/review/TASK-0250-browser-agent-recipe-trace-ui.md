@@ -108,3 +108,5 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 - 2026-11-06 predecessor update: TASK-0249 source 14b1560a passed all eight commands; latest docs 17da46fc published to #314. This branch retains reviewed 47a9b2bc and does not incorporate later metadata; no git merge has been performed. Parent-sync permission remains pending after automatic merge-review rejection. Owner review/merge approval pending.
 
 - 2026-11-06 scoped delivery: source 8dc9291d committed; final recipe/lookup UI rerun passed (2 cases, 26.9 s). REV-0240 / QA-0240 scoped conditional pass; full eight-command Factory verification running on committed source. Task remains review, owner approval pending; no merge performed.
+
+- 2026-11-06 final verification: all eight declared commands passed clean source 8dc9291d (backend 488.43 s). REV-0240/QA-0240 updated to scoped pass; owner approval pending. Draft PR #315: https://github.com/quinguyen1502/superstep/pull/315. No source changed after the full run; no merge performed.

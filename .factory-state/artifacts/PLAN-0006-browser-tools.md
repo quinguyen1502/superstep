@@ -133,3 +133,5 @@ The owner instructed: “Pull develop về branch hiện tại, và tiến hành
 - 2026-11-06 TASK-0249: Settings UI in scoped review (REV-0239/QA-0239), full profile running; ten real Chrome cases passed. Existing branch retains TASK-0248 base 07d22fce pending explicit parent-sync permission; #313 final 50a536ce independently records predecessor full pass.
 
 - 2026-11-06 TASK-0250: editor/recipe/private trace/chat source 8dc9291d in scoped review (REV-0240/QA-0240), full verification running. URL bindings, inherited limits, root recipe preservation/selectors, typed workflow-tool selection and backend visitor filtering use existing surfaces; owner approval pending.
+
+- 2026-11-06 TASK-0250 final: all eight declared checks passed source 8dc9291d (backend 488.43 s), REV-0240/QA-0240 scoped pass, Draft #315. Owner approval pending; no merge.

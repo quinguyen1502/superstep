@@ -8,7 +8,7 @@
 - QA Owner: Codex (advisory; owner approval pending)
 - Created: 2026-11-06
 - Updated: 2026-11-06
-- Outcome: scoped conditional pass; full declared verification running
+- Outcome: scoped pass; full declared verification passed
 
 ## Scope And References
 
@@ -53,7 +53,7 @@ PLAN-0006, REV-0240, docs/browser-editor.md and docs/ui-conventions.md.
   (1.4 min). Existing Agent node regressions: 2 passed in earlier harness run.
   After final lookup handling: 2 passed (26.9 s). Harness selector/tab mistakes
   were corrected without changing product behavior.
-- Full Factory eight-command verification running on clean commit 8dc9291d.
+- Full Factory eight-command verification passed on clean commit 8dc9291d.
 
 ## UX And Accessibility Evidence
 
@@ -72,7 +72,7 @@ tests cover the same presentation seams without a Studio-only client in React.
 
 ## Gaps And Residual Risk
 
-Full canonical profile pending. Browser fixture UI statuses are controlled
+Full canonical profile passed. Browser fixture UI statuses are controlled
 presentation data; this task does not claim a fresh real Docker run for every
 theme. Actual worker/remote/proxy/effect proofs already exist in prerequisites;
 final consolidated acceptance is TASK-0253. Arbitrary model-authored final prose
@@ -82,7 +82,11 @@ stays off. No live account/provider setup, export claim, release or merge.
 
 ## QA Decision
 
-Conditionally passed for scoped review pending full profile and owner approval.
+Passed for scoped review after full profile; owner approval pending.
 No done/Ready/merge authority. Parent follow-up sync remains separately pending
 permission after automatic merge-review rejection; current committed source and
 verification are independent of that sync.
+
+## Final Full Verification — 2026-11-06
+
+Clean source 8dc9291d passed all eight declared commands: root build/lint/test 11.70/1.17/16.69 s, backend 488.43 s, Python SDK 14.97 s, TypeScript SDK build/test/typecheck 1.68/1.41/1.54 s. No source changed after that tested commit. Factory validation and all-ref ID check (111 refs) passed. Draft PR #315; owner approval pending. No done/Ready/merge authority.

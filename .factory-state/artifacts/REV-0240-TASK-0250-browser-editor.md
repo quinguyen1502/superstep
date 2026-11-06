@@ -8,7 +8,7 @@
 - Reviewer: Codex (self-review; owner review pending)
 - Created: 2026-11-06
 - Updated: 2026-11-06
-- Outcome: scoped conditional pass; full declared verification running
+- Outcome: scoped pass; full declared verification passed
 
 ## Scope And References
 
@@ -69,7 +69,7 @@ Wide/narrow light/dark screenshots were inspected outside Git.
   2 passed (26.9 s), with no source edits after source commit 8dc9291d.
 - Some initial test harness runs stopped on an incorrect CodeMirror selector or
   omitted mobile tab selection; corrected tests passed. No product relaxation.
-- Full eight-command Factory profile running on clean source 8dc9291d.
+- Full eight-command Factory profile passed on clean source 8dc9291d.
 
 ## Risks, Follow-Up And Decision
 
@@ -82,7 +82,10 @@ proofs belong to prerequisites and final integrated acceptance. No live provider
 or account setup. Runtime stays experimental/default off; exports remain
 TASK-0251/0252 and integrated handbook/acceptance TASK-0253.
 
-Conditionally approved for scoped QA pending full declared verification and owner
-approval. No done/Ready/merge authority. Parent sync remains a separate pending
+Approved for scoped QA after full declared verification; owner approval pending. No done/Ready/merge authority. Parent sync remains a separate pending
 permission after automatic approval review rejected git merge; it does not block
 current source verification or this Draft PR.
+
+## Final Full Verification — 2026-11-06
+
+Clean source 8dc9291d passed all eight declared commands: root build/lint/test 11.70/1.17/16.69 s, backend 488.43 s, Python SDK 14.97 s, TypeScript SDK build/test/typecheck 1.68/1.41/1.54 s. No source changed after that tested commit. Factory validation and all-ref ID check (111 refs) passed. Draft PR #315; owner approval pending. No done/Ready/merge authority.
