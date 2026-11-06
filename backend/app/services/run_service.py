@@ -922,10 +922,15 @@ class RunService:
                         if current is not None and current!=run_generation or current is None and run_generation!=0:raise StaleLease(rid)
                         if plan.workflow_id and plan.workflow_id!='adhoc' and self.workflows.get(plan.workflow_id) is None:
                             raise AppError('WORKFLOW_NOT_FOUND')
+                    from ..repositories.chat_sessions import ChatSessionRepository
+                    top=self.top_run(stored) if stored is not None else None
+                    source_id=top.id if top is not None else rid
+                    chat=ChatSessionRepository(self.runs.db).for_run(source_id)
                     return self.browser.bind(resource,self.browser_principal(rid,plan,uid),rid,plan.browser_lease,
                         guard=browser_guard,cancelled=plan.ports.cancelled,org_allowed=org,
                         allow_resume=bool(plan.previous is not None and plan.previous.status=='waiting' and not plan.recovered),
-                        forked_from=(plan.forked or {}).get('run_id'))
+                        forked_from=(plan.forked or {}).get('run_id'),
+                        conversation_id=chat.id if chat is not None else None)
                 plan.ports.browser=await asyncio.to_thread(bind_browser)
             plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools (TASK-0134)
         plan.effects = Effects(rid, plan.attempt, ledger=_RunLedger(self.ledger, rid, plan.fence) if self.ledger is not None else None,

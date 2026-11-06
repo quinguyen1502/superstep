@@ -231,20 +231,26 @@ def test_native_query_token_and_per_user_limits(monkeypatch):
 
 
 def test_failed_verifications_hit_the_message_ip_limit(monkeypatch):
-    _, _, slug, _ = setup(); monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_IP", "2")
-    ip = "198.51.100.73"
-    # Distinct IP avoids relying on other tests' limiter state.
+    """Failed JWT checks share the per-IP message budget (DEC-0077).
+
+    Drive the public HTTP path with a unique X-Forwarded-For so we never share
+    counters with other tests and never nest asyncio.run inside pytest-asyncio.
+    """
     from app.services.rate_limit import InMemoryRateLimiter
-    from app.api.deps import public_chat_service
-    import asyncio
-    svc = public_chat_service(); svc.limiter = InMemoryRateLimiter()
-    async def failures():
-        codes = []
-        for _ in range(3):
-            try: await svc.authenticate(slug, "bad.jwt.token", None, ip)
-            except Exception as e: codes.append(e.code)
-        return codes
-    assert asyncio.run(failures()) == ["CHAT_TOKEN_INVALID", "CHAT_TOKEN_INVALID", "RATE_LIMITED"]
+    import app.api.deps as deps
+    _, _, slug, _ = setup()
+    monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_IP", "2")
+    monkeypatch.setenv("STUDIO_TRUST_PROXY", "1")
+    # One shared in-memory limiter for every PublicChatService built this test.
+    limiter = InMemoryRateLimiter()
+    monkeypatch.setattr(deps, "get_rate_limiter", lambda: limiter)
+    ip = f"203.0.113.{(uuid.uuid4().int % 200) + 20}"
+    v = visitor()
+    codes = []
+    for _ in range(3):
+        response = v.get(f"{BASE}/{slug}/sessions", headers={**H("bad.jwt.token"), "X-Forwarded-For": ip})
+        codes.append(err(response))
+    assert codes == ["CHAT_TOKEN_INVALID", "CHAT_TOKEN_INVALID", "RATE_LIMITED"], codes
 
 
 def test_same_origin_browser_get_uses_only_a_verified_own_referrer(monkeypatch):
