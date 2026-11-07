@@ -64,6 +64,7 @@ nav:
       - Chat API: run/chat-api.md
       - React chat toolkit: run/chat-react.md
       - Chat widget: run/chat-widget.md
+      - Chat in a native app: run/chat-native-webview.md
       - Third-party chat auth: run/chat-third-party-auth.md
       - Workflow tests: run/tests.md
   - Operate:

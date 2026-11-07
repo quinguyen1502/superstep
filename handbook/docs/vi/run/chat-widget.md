@@ -152,8 +152,8 @@ E2e kiểm tra chat ẩn danh, token do server cấp, hai người dùng/lịch 
 Human, sự kiện nội dung truyền dần và đăng xuất về danh tính khách ban đầu.
 Trường hợp thu hồi key của ví dụ headless chạy cuối trên fixture mới. Bộ kiểm
 thử còn kiểm tra từ chối origin, file và đánh giá. Ảnh en/vi/sáng/tối chỉ là
-artifact CI tạm thời. Trang `/c/<slug>?embed=1` có API trong frame để wrapper
-native dùng sau; hướng dẫn theo nền tảng là phần việc riêng.
+artifact CI tạm thời. Với WebView iOS, Android và React Native mở
+`/c/<slug>?embed=1`, xem [Chat trong ứng dụng native](chat-native-webview.md).
 
 
 ## Sửa tin nhắn đã gửi

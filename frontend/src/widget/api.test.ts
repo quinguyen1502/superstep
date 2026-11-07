@@ -101,3 +101,45 @@ describe('iframe identity boundary', () => {
     stop(); await flush(); expect(f.win.Superstep).toBe(f.original)
   })
 })
+describe('native WebView bridge (TASK-0228)', () => {
+  const JWT2 = 'header.payload.fresh'
+  function native(kind: 'ios' | 'android' | 'rn') {
+    const sent: Record<string, unknown>[] = [], postMessage = (message: string) => { sent.push(JSON.parse(message)) }
+    const w = window as unknown as Record<string, unknown>
+    if (kind === 'ios') w.webkit = { messageHandlers: { superstep: { postMessage } } }
+    else if (kind === 'android') w.superstep = { postMessage }
+    else w.ReactNativeWebView = { postMessage }
+    cleanups.push(() => { delete w.webkit; delete w.superstep; delete w.ReactNativeWebView })
+    const bridge = createFrameBridge(window, 'help', false, () => [HOST]); cleanups.push(bridge.start())
+    return { bridge, sent }
+  }
+  it.each(['ios', 'android', 'rn'] as const)('announces to the %s host and asks it for a fresh token after the first one is used', async kind => {
+    const { bridge, sent } = native(kind)
+    expect(bridge.native).toBe(true)
+    bridge.announce(); expect(sent).toEqual([{ v: 1, type: MSG.ready, slug: 'help' }])
+    void (window.Superstep as WidgetAPI).identify(JWT).catch(() => {})
+    const epoch = bridge.getSnapshot().epoch; expect(bridge.getSnapshot().kind).toBe('app')
+    expect(await bridge.getToken(epoch)).toBe(JWT)
+    const next = bridge.getToken(epoch), again = bridge.getToken(epoch); await flush()
+    expect(sent.filter(m => m.type === MSG.request)).toHaveLength(1)
+    expect(sent.at(-1)).toMatchObject({ v: 1, type: MSG.request, slug: 'help' }); expect(JSON.stringify(sent)).not.toContain(JWT)
+    await (window.Superstep as WidgetAPI).identify(JWT2)
+    expect(await next).toBe(JWT2); expect(await again).toBe(JWT2); expect(bridge.getSnapshot().epoch).toBe(epoch)
+  })
+  it('stays a plain page without a native channel or inside a frame, and refuses a bad token', async () => {
+    const plain = createFrameBridge(window, 'help', false, () => [HOST]); cleanups.push(plain.start())
+    expect(plain.native).toBe(false)
+    await expect((window.Superstep as WidgetAPI).identify('not a token')).rejects.toMatchObject({ code: 'CHAT_TOKEN_INVALID' })
+    const node = document.createElement('iframe'); document.body.append(node)
+    ;(node.contentWindow as unknown as Record<string, unknown>).ReactNativeWebView = { postMessage: () => {} }
+    expect(createFrameBridge(node.contentWindow!, 'help', false, () => [HOST]).native).toBe(false)
+  })
+  it('times out when the app never answers', async () => {
+    vi.useFakeTimers(); cleanups.push(() => vi.useRealTimers())
+    const { bridge } = native('rn')
+    void (window.Superstep as WidgetAPI).identify(JWT).catch(() => {})
+    const epoch = bridge.getSnapshot().epoch; await bridge.getToken(epoch)
+    const next = bridge.getToken(epoch).catch(e => e); await vi.advanceTimersByTimeAsync(10001)
+    expect(await next).toMatchObject({ code: 'HTTP_ERROR' })
+  })
+})
