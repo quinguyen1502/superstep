@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Task ID: TASK-0228
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
-- Updated: 2026-11-03
+- Updated: 2026-11-07
 - Requirement IDs: REQ-0082
 - Design IDs: none
 - Architecture IDs: DEC-0080
@@ -75,6 +75,7 @@ Document and test the native iOS and Android WebView integration with the token 
 
 ## Activity Log
 
+- 2026-11-07: Owner resumed this deferred task ("Làm 0228 song song đi"). Implemented on `factory/task-0228-native-webview-bridge-guide` from `develop`. `frontend/src/widget/frame-bridge.ts`: when `/c/{slug}?embed=1` is the top-level document and a native channel exists (`webkit.messageHandlers.superstep`, `window.superstep` from `addWebMessageListener`, or `ReactNativeWebView`), the page sends `superstep-chat:ready` and, once the first app token was used, `superstep-chat:token-request` as JSON strings; the app answers with `Superstep.identify(token)`, which resolves all pending reads without an identity switch; 10 s timeout. Message names reuse the existing `superstep-chat:` prefix of the TASK-0225 widget protocol instead of the `superstep:` prefix sketched in DEC-0080. No backend or protocol change; inside a frame the widget bridge is unchanged. Handbook `run/chat-native-webview.md` (en, vi) with Swift (`WKScriptMessageHandler`, `callAsyncJavaScript`), Kotlin (`WebViewCompat.addWebMessageListener`) and React Native WebView snippets and the security rules (no `addJavascriptInterface`, origin and main-frame checks, token never in the URL). Unit tests (`api.test.ts`) and browser e2e `e2e/chat-native-bridge.spec.ts` (three simulated channels). Snippets are not run on a device or simulator; native file upload is out of scope.
 - 2026-11-03: Owner temporarily deferred this task and prioritised TASK-0229/0230 for 0.11.0. Remain in backlog, outside that release; resume only on owner request. This is deferral, not cancellation or completion. See PLAN-0002 and proposed DEC-0084.
 
 - 2026-10-31: proposed in PLAN-0002 from REQ-0082. Status backlog until the owner approves the plan.
@@ -82,3 +83,4 @@ Document and test the native iOS and Android WebView integration with the token 
 ## Handoff Notes
 
 - Branch `factory/task-0228-native-webview-bridge-guide` from `develop`.
+- Review: `.factory-state/artifacts/REV-0245-TASK-0228-native-webview-bridge.md`. QA: `.factory-state/artifacts/QA-0245-TASK-0228-native-webview-bridge.md`.

@@ -115,6 +115,29 @@ call as an ordinary workflow tool. Layout/selector failures stop; they do not
 flip into autonomous browsing. Example workflow:
 [`examples/browser/lookup_shipment.json`](https://github.com/quinguyen1502/superstep/blob/develop/examples/browser/lookup_shipment.json).
 
+## 5. Export a Python project
+
+Download the Python file or the LangGraph project after the workflow is saved.
+Browser steps become `browser_call` in that file. The file does not import
+Superstep and does not contain the controller token, proxy password, or profile
+state.
+
+- The default driver is `memory`: stdlib HTTP against the origin whitelist, so a
+  local fixture can run offline. `SUPERSTEP_BROWSER_DRIVER=playwright` uses local
+  Chromium. `browserless` reads `SUPERSTEP_BROWSER_ENDPOINT_*` and
+  `SUPERSTEP_BROWSER_TOKEN_*` from the environment. `.env.example` lists those
+  names with empty values.
+- The six default tools are navigate, snapshot, click, fill, extract, and
+  screenshot. Evaluate runs only when the connection allows it. Upload and
+  download are refused outside Studio even when the connection allows them,
+  because the portable runtime has no attachment store.
+- Commands on one session run one at a time. When mutating approval is on, the
+  helper pauses with `interrupt()` before the effect. A rejection does not change
+  the page. Lost and unknown outcomes are not retried.
+  `SUPERSTEP_BROWSER_FAULT` is a one-shot test hook; leave it empty.
+- The TypeScript export refuses browser steps with an explicit error. It does
+  not call a silent MCP stub. TypeScript parity is the following task.
+
 ## Risks and always-on rules
 
 | Area | Behaviour |

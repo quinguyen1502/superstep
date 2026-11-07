@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0251
 - Title: Executable Python and project export for browser tools/recipes
-- Status: backlog (deferred — after studio browser tools are accepted and integrated)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-07
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -101,6 +101,10 @@ Executable Python and project export for browser tools/recipes (AC8), deferred u
 - 2026-11-04: Renumbered: TASK-0248 → TASK-0251 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
+- 2026-11-07: Studio tasks through TASK-0253 and the handbook screenshot replacement are merged. The owner asked to proceed with this task and TASK-0252 through Ready pull requests. Deferral is lifted. Status moves to todo. TASK-0252 stays stacked until this task's branch exists. Do not merge until the owner asks.
+- 2026-11-07: `factory ready` passed with this task in todo. Branch `factory/task-0251-browser-python-export` from `develop` at `e26e39e9`. Moved to doing. TASK-0250 was moved to done on this branch because PR #315 had already merged. Implementation follows. Not validated. Not merged.
+- 2026-11-07: Python export implemented. Review REV-0242 found no blocking issues. QA QA-0242 passed. Tool-policy checks passed on this worktree with arm64 Node: backend pytest 1427 passed / 71 skipped in 522.03s; sdk/python pytest 229 passed / 8 skipped; repo-root npm build, lint, and test; sdk/typescript build, test (102), and typecheck. Handbook check passed. Status is done. Not merged. TASK-0252 remains stacked.
+- 2026-11-07: CI Python 3.12 failed `test_idle_timeout_drops_the_page_and_does_not_replay` because `time.monotonic()` on a freshly booted runner is below the 1800s idle. The test now sets `touched` to 100000 seconds before the clock. Local re-run of that test passed. Not merged.
 
 ## Handoff Notes
 

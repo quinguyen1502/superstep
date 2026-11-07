@@ -154,8 +154,8 @@ The e2e job covers anonymous chat, server-issued tokens, two users/history,
 Human answers, streaming events and logout restoring the guest identity. The
 headless terminal revocation case runs last on a fresh fixture. It also checks
 origin refusals, files and ratings. Screenshots en/vi/light/dark remain temporary
-CI artifacts. The `/c/<slug>?embed=1` page exposes the API inside its frame for
-future native wrappers; platform-specific guides remain separate work.
+CI artifacts. For iOS, Android and React Native WebViews of `/c/<slug>?embed=1`,
+see [Chat in a native app](chat-native-webview.md).
 
 
 ## Edit a sent message

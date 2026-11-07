@@ -4,15 +4,15 @@
 
 - Project: superstep
 - Plan ID: PLAN-0006
-- Status: Accepted on 2026-11-06. Owner authorised implementation ("Ok triển khai") after the amended package; studio tasks TASK-0241–0250 and studio-scoped TASK-0253 move to todo; TASK-0251/0252 remain deferred in backlog.
+- Status: Accepted on 2026-11-06. Studio tasks TASK-0241–0250 and TASK-0253 are merged. On 2026-11-07 the owner lifted the TASK-0251/0252 deferral. TASK-0251 is done on its branch (REV-0242, QA-0242); merge waits for the owner. TASK-0252 stays stacked until that pull request is Ready. AC8 stays open until both exports merge.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06 (Accepted; implementation authorised)
+- Updated: 2026-11-07 (export deferral lifted; TASK-0251 on its branch)
 - Related Requirements: REQ-0086
 - Related Design: DES-0004
 - Related Architecture: ARCH-0002, DEC-0085
 - Discovery: DISC-0002
-- Tasks: TASK-0241 through TASK-0253 (13 tasks; studio first milestone TASK-0241–0250 + studio-scoped TASK-0253; TASK-0251/0252 deferred)
+- Tasks: TASK-0241 through TASK-0253 (13 tasks; studio first milestone TASK-0241–0250 + TASK-0253 merged; TASK-0251 in progress; TASK-0252 stacked after it)
 - Workflow: large-task-workflow for the overall cross-cutting feature; each task has its own independently reviewable delivery and medium/large scoped evidence as appropriate.
 
 ## Owner amendments (2026-11-06)
@@ -65,18 +65,18 @@ Deliver browser connections, primitive tools for the existing Agent (nine operat
 | [TASK-0249](../tasks/todo/TASK-0249-browser-connection-settings-ui.md) | Connection, whitelist, proxy, toggles and profile configuration UI | M | TASK-0241, TASK-0242, TASK-0244 | Studio |
 | [TASK-0250](../tasks/todo/TASK-0250-browser-agent-recipe-trace-ui.md) | Agent/recipe configuration and filtered browser trace/chat UI | M | TASK-0247, TASK-0248, TASK-0249 | Studio |
 | [TASK-0253](../tasks/todo/TASK-0253-browser-e2e-handbook.md) | Studio integrated acceptance, example workflow and bilingual handbook | M | TASK-0250 | Studio first milestone |
-| [TASK-0251](../tasks/backlog/TASK-0251-browser-python-export.md) | Executable Python and project export for browser tools/recipes | L | TASK-0247, TASK-0248, TASK-0246, TASK-0244 | **Deferred** after studio |
-| [TASK-0252](../tasks/backlog/TASK-0252-browser-typescript-export.md) | Executable TypeScript and project export with browser parity | L | TASK-0251 | **Deferred** after studio |
+| [TASK-0251](../tasks/done/TASK-0251-browser-python-export.md) | Executable Python and project export for browser tools/recipes | L | TASK-0247, TASK-0248, TASK-0246, TASK-0244 | Done on its branch (REV-0242, QA-0242); merge waits |
+| [TASK-0252](../tasks/backlog/TASK-0252-browser-typescript-export.md) | Executable TypeScript and project export with browser parity | L | TASK-0251 | Stacked after 0251; not started |
 
-Each linked task records its scope, outputs, dependencies, acceptance criteria and validation, and explicitly names the requirement/design/architecture/decision/discovery paths. Studio first-delivery tasks (0241–0250, studio 0253) move to **todo** on acceptance. TASK-0251/0252 stay backlog **deferred** with trigger below.
+Each linked task records its scope, outputs, dependencies, acceptance criteria and validation, and explicitly names the requirement/design/architecture/decision/discovery paths. Studio first-delivery tasks are merged. The export deferral trigger has fired; TASK-0251 is in progress and TASK-0252 follows it.
 
 ## Deferred / later
 
 | Item | Reason deferred | Trigger to pick it up |
 | --- | --- | --- |
-| TASK-0251 executable Python/project export | Owner asked to finish studio first (amendment 4, 2026-11-06) | After studio browser tools (0241–0250 + studio 0253) are accepted and integrated |
-| TASK-0252 executable TypeScript/project export | Same; depends on 0251 | After TASK-0251 |
-| Export sections of handbook / AC8 evidence | Travel with 0251/0252 | Same as 0251 |
+| TASK-0251 executable Python/project export | Trigger met 2026-11-07. Implementation is on `factory/task-0251-browser-python-export`. | Owner merge after the Ready pull request |
+| TASK-0252 executable TypeScript/project export | Owner authorised a stack on TASK-0251. Not started until that pull request is Ready. | After the TASK-0251 Ready pull request |
+| Export sections of handbook / AC8 evidence | Python handbook note travels with TASK-0251. TypeScript note travels with TASK-0252. AC8 stays open until both merge. | Same as each export task |
 | Interactive profile capture / live-view login product | Operator-provisioned profiles suffice for v1 | Owner request after studio |
 | Hosted browser-Agent (Browser Use Cloud/Skyvern) | Browserless supplies browser only | Separate requirement if demanded |
 | Asymmetric remote providers beyond Browserless | Browserless is the first required remote | Browserless proof fails or owner names another provider |
@@ -104,7 +104,7 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 | AC5 call order, cross-turn persistence, concurrency, bounds and cleanup | TASK-0245 | Same-session ordered calls, multi-turn reuse, independent-tool overlap |
 | AC6 configurable approvals, expiry, recovery and unknown effects | TASK-0246, TASK-0250 | Approval ON/OFF, crash-after-effect, stale-ref and expiry/rejection tests |
 | AC7 reusable recipes and explicit layout failure | TASK-0248, TASK-0250 | Versioned typed inputs/results and fixture selector changes |
-| AC8 executable exports without secrets/stubs | TASK-0251, TASK-0252 (**deferred**) | Later: plain/project execution outside Superstep |
+| AC8 executable exports without secrets/stubs | TASK-0251, TASK-0252 | Python evidence is on the TASK-0251 branch. TypeScript evidence follows. AC8 stays open until both merge. |
 | AC9 accessible bilingual UI and private artifacts | TASK-0243, TASK-0249, TASK-0250 | Access/retention/public filtering, toggles/grants, keyboard/theme/locale evidence |
 | AC10 integrated studio evidence, docs and review/QA | TASK-0253 and studio delivery tasks | Full declared checks and studio requirement traceability; export evidence waits |
 
@@ -133,7 +133,7 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 - The owner requested recording requirements and breaking down tasks (2026-11-03), amended the Proposed package (2026-11-06), then accepted it and authorised implementation the same day ("Ok triển khai", sync latest develop first).
 - REQ-0086, DES-0004, ARCH-0002 and DEC-0085 are **Accepted** on 2026-11-06. Studio tasks are promoted to todo; implementation uses one branch `factory/task-NNNN-<slug>` and one task PR into `develop`; dependencies merge first unless an owner-authorised stack is explicitly recorded.
 - Draft implementation PRs #303–#315 must be reconciled with this Accepted package before merge. No release/version bump is authorised by this acceptance. Live Browserless secrets stay operator-supplied and are never printed.
-- TASK-0251/0252 remain deferred until after studio acceptance and integration.
+- On 2026-11-07 the owner lifted the TASK-0251/0252 deferral. TASK-0251 is on its branch. TASK-0252 is an owner-authorised stack after that pull request is Ready. Neither is merged. REQ-0086 is not fully done.
 
 ## Assumptions And Open Questions
 
@@ -147,7 +147,7 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 - **Studio first milestone:** AC1–AC7, AC9 and studio AC10 have linked passing evidence; studio delivery tasks (0241–0250, studio 0253) are reviewed/QA-verified, owner accepted, done and integrated through their authorised PRs.
 - Executable local **and** Browserless browser fixtures, whitelist/proxy/security/recovery behavior pass. Unsupported combinations are explicit and documented. Local-only is not sufficient to close the remote requirement.
 - Bilingual studio docs/example and feature-disable/recovery instructions reflect the actual delivered capabilities, including toggles and risks.
-- **Later:** AC8 and TASK-0251/0252 after studio acceptance.
+- **Exports:** the studio gate is merged. TASK-0251 is on its branch and TASK-0252 follows. AC8 stays open until both exports merge. Merge waits for the owner.
 - Planning completion alone did not mark the feature implemented; on 2026-11-06 the owner Accepted the amended package and authorised implementation. Feature delivery still requires studio task PRs.
 
 ## Planning Activity
@@ -171,3 +171,4 @@ The owner instructed: “Pull develop về branch hiện tại, và tiến hành
 - 2026-11-06 TASK-0250 final: all eight declared checks passed source 8dc9291d (backend 488.43 s), REV-0240/QA-0240 scoped pass, Draft #315. Owner approval pending; no merge.
 - 2026-11-06: Owner reviewed the proposed package and requested six amendments plus flexible-but-safe two-layer configuration and risk analysis. Amended REQ-0086, DEC-0085, DES-0004, ARCH-0002, PLAN-0006, DISC-0002, roadmap and TASK-0241–0253 on the open draft PR without marking Accepted or merging. Noted draft implementation PRs #303–#315 need reconciliation after acceptance. Statuses remain Proposed; TASK-0251/0252 deferred off the studio critical path.
 - 2026-11-06 (later): Owner accepted the amended package and authorised implementation ("Ok triển khai", sync latest develop first). Marked REQ-0086, DEC-0085, DES-0004, ARCH-0002 and PLAN-0006 Accepted; moved studio tasks TASK-0241–0250 and TASK-0253 to todo; left TASK-0251/0252 deferred in backlog. Draft PRs #303–#315 still require reconciliation before merge.
+- 2026-11-07: Studio tasks through TASK-0253 and handbook screenshots are merged. The owner lifted the export deferral and asked for TASK-0251 and TASK-0252 through Ready pull requests. TASK-0251 implementation is on `factory/task-0251-browser-python-export`. TASK-0252 stays stacked until that pull request is Ready. Merge waits for the owner. REQ-0086 is not marked done.
