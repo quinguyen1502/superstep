@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { api } from '@/lib/api'
+import { AppMeta } from '@/components/app-meta'
 import { useMe } from '@/lib/rbac'
 
 export function CliAuthorizePage() {
@@ -25,7 +26,8 @@ export function CliAuthorizePage() {
       setDone(path.endsWith('approve') ? 'approved' : 'denied')
     } catch (err: any) { setError(err.message || '') } finally { setBusy(false) }
   }
-  return <main className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center p-4">
+  return <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
+    <div className="flex flex-1 flex-col justify-center">
     <Card id="cli-authorize">
       <CardHeader>
         <CardTitle>{t('cliAuth.title')}</CardTitle>
@@ -50,5 +52,7 @@ export function CliAuthorizePage() {
         </>}
       </CardContent>
     </Card>
+    </div>
+    <AppMeta />
   </main>
 }

@@ -14,6 +14,7 @@ import { LanguageSwitcher } from '@/components/language-switcher'
 import { PasswordRules } from '@/components/password-rules'
 import { passwordOk } from '@/lib/password'
 import { LogoMark } from '@/components/logo'
+import { AppMeta } from '@/components/app-meta'
 
 const safeNext = (n: string | null) => (n && n.startsWith('/') && !n.startsWith('//') && !n.startsWith('/login') && !n.startsWith('/register') ? n : '/workflows')
 
@@ -44,8 +45,9 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     await signIn(`/api/auth/${mode}`, { email, password })
   }
   const other = isLogin ? '/register' : '/login'
-  return <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4 relative">
-    <div className="absolute top-4 right-4 flex gap-1"><LanguageSwitcher /><ThemeToggle /></div>
+  return <div className="relative flex min-h-dvh flex-col bg-muted/40">
+    <div className="absolute top-4 right-4 z-10 flex gap-1"><LanguageSwitcher /><ThemeToggle /></div>
+    <div className="flex flex-1 items-center justify-center p-4">
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
         <LogoMark className="mx-auto mb-2 size-10" />
@@ -76,5 +78,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         </CardFooter>
       </form>
     </Card>
+    </div>
+    <AppMeta />
   </div>
 }

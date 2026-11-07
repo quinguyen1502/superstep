@@ -21,6 +21,10 @@
     "newWorkflow": "New workflow",
     "copy": "Copy"
   },
+  "meta": {
+    "copyright": "Superstep · Qui Nguyen · {{year}}",
+    "version": "Version {{version}}"
+  },
   "status": {
     "ok": "ok",
     "error": "error",

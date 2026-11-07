@@ -29,6 +29,7 @@ import { can, canEdit, useMe, type Access } from '@/lib/rbac'
 import { useLoadWhen } from '@/lib/use-when'
 import { Tip } from '@/components/tip'
 import { Logo } from '@/components/logo'
+import { AppMeta } from '@/components/app-meta'
 
 type W = { id: string; name: string; updated: number; node_count: number; last_run_status: string | null; last_run_at: number | null; access: Access; mine: boolean; owner_email: string | null }
 
@@ -75,12 +76,12 @@ export function WorkflowsPage() {
     <TableRow className="hover:bg-transparent"><TableCell /* ui-class-ok: empty/loading table row spacing, layout not control sizing */ colSpan={5} className="py-14" id={id}><div className="flex flex-col items-center gap-2 text-center">
       <div className="rounded-full bg-muted p-3 text-muted-foreground">{icon}</div><div className="font-medium">{title}</div><div className="text-sm text-muted-foreground">{body}</div></div></TableCell></TableRow>
 
-  return <div className="min-h-screen bg-background text-foreground">
+  return <div className="flex min-h-dvh flex-col bg-background text-foreground">
     <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6">
       <Logo />
       <div className="ml-auto flex items-center gap-1"><PendingBadge /><NotificationBell /><LanguageSwitcher /><ThemeToggle /><UserMenu /></div>
     </header>
-    <main className="max-w-6xl mx-auto p-4 md:p-6 space-y-4">
+    <main className="mx-auto w-full max-w-6xl flex-1 space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><h1 className="text-2xl font-semibold tracking-tight">{t('list.title')}</h1><p className="text-sm text-muted-foreground" id="wf-count">{loading ? t('common.loading') : q.trim() ? t('list.filtered', { shown: shown.length, total: items.length }) : t('list.count', { count: items.length })}</p></div>
         <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
@@ -133,6 +134,7 @@ export function WorkflowsPage() {
         </Table>
       </Card>
     </main>
+    <AppMeta />
     <Dialog open={!!rename} onOpenChange={o => !o && setRename(null)}>
       <DialogContent><DialogHeader><DialogTitle>{t('list.renameTitle')}</DialogTitle></DialogHeader>
         <div className="space-y-1.5">

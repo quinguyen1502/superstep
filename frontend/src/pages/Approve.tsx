@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { api } from '@/lib/api'
+import { AppMeta } from '@/components/app-meta'
 import { fmtDate } from '@/lib/i18n'
 
 type Info = { decision: 'approved' | 'rejected'; status: string; kind: string; workflow_id: string | null; workflow_name: string | null
@@ -26,7 +27,8 @@ export function ApprovePage() {
   const runUrl = info?.workflow_id ? `/workflows/${info.workflow_id}?run=${info.run_id}` : null
   const expired = !!info?.expired  // decided by the server clock
   const rows: [string, string | null][] = info ? [[t('approve.workflow'), info.workflow_name], [t('approve.step'), info.label || info.run_id], [t('approve.question'), info.prompt], [t('approve.expires'), fmtDate(info.expires)]] : []
-  return <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+  return <div className="flex min-h-dvh flex-col bg-muted/40">
+    <div className="flex flex-1 items-center justify-center p-4">
     <Card className="w-full max-w-md" id="approve-card">
       <CardHeader>
         <div className="mb-2 w-fit rounded-lg bg-primary p-2 text-primary-foreground"><ShieldCheck className="size-5" /></div>
@@ -51,5 +53,7 @@ export function ApprovePage() {
             {busy && <Loader2 className="animate-spin" />}{t(info.decision === 'approved' ? 'approve.approve' : 'approve.reject')}</Button>}
       </CardFooter>
     </Card>
+    </div>
+    <AppMeta />
   </div>
 }

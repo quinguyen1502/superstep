@@ -22,6 +22,7 @@ import { ActivitySection } from './ActivitySection'
 import { can, useMe } from '@/lib/rbac'
 import { SECTIONS, type SectionId } from './sections'
 import { Logo } from '@/components/logo'
+import { AppMeta } from '@/components/app-meta'
 
 const COMPONENTS: Record<SectionId, ComponentType> = {
   profile: ProfileSection, tokens: TokensSection, channels: ChannelsSection, accounts: AccountsSection, audit: AuditSection, knowledge: KnowledgeSection,
@@ -35,12 +36,12 @@ export function SettingsPage() {
   // an unknown section, or one the role may not open (a bookmarked link): the first section instead
   if (!current || (me && current.permission && !can(me, current.permission))) return <Navigate to={`/settings/${SECTIONS[0].id}`} replace />
   const Component = COMPONENTS[current.id]
-  return <div className="min-h-dvh bg-background">
+  return <div className="flex min-h-dvh flex-col bg-background">
     <header className="flex h-14 items-center gap-3 border-b px-4 md:px-6">
       <Link to="/workflows"><Logo /></Link>
       <div className="ml-auto flex items-center gap-1"><LanguageSwitcher /><ThemeToggle /><UserMenu /></div>
     </header>
-    <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 md:flex-row md:p-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-4 md:flex-row md:p-6">
       <aside className="min-w-0 shrink-0 md:w-56">
         <Button variant="ghost" size="sm" asChild className="mb-3 -ml-2"><Link to="/workflows" id="settings-back"><ArrowLeft />{t('settings.back')}</Link></Button>
         <h1 className="mb-3 text-2xl font-semibold tracking-tight">{t('settings.title')}</h1>
@@ -56,5 +57,6 @@ export function SettingsPage() {
         <Component />
       </main>
     </div>
+    <AppMeta />
   </div>
 }

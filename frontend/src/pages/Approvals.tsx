@@ -20,6 +20,7 @@ import { api } from '@/lib/api'
 import { INBOX_POLL_MS, type InboxItem } from '@/lib/approvals'
 import { fmtDate } from '@/lib/i18n'
 import { Logo } from '@/components/logo'
+import { AppMeta } from '@/components/app-meta'
 
 export function ApprovalsPage() {
   const { t } = useTranslation()
@@ -38,12 +39,12 @@ export function ApprovalsPage() {
     try { await api(`/api/approvals/inbox/${it.run_id}`, { method: 'POST', json: { response, node: it.node } }); setSent(s => s.includes(key) ? s : [...s, key]) }
     catch (e: any) { setErr(e.message) } finally { setBusy(null); load() }
   }
-  return <div className="min-h-dvh bg-background text-foreground">
+  return <div className="flex min-h-dvh flex-col bg-background text-foreground">
     <header className="flex h-14 items-center gap-3 border-b px-6">
       <Link to="/workflows"><Logo /></Link>
       <div className="ml-auto flex items-center gap-1"><PendingBadge /><NotificationBell /><LanguageSwitcher /><ThemeToggle /><UserMenu /></div>
     </header>
-    <main className="mx-auto max-w-3xl space-y-4 p-6" id="approvals-page">
+    <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 p-6" id="approvals-page">
       <Button variant="ghost" size="sm" asChild className="-ml-2"><Link to="/workflows" id="approvals-back"><ArrowLeft />{t('settings.back')}</Link></Button>
       <div><h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">{t('inbox.title')}{!!items?.length && <Badge variant="secondary" id="inbox-count">{items.length}</Badge>}</h1>
         <p className="text-sm text-muted-foreground">{t('inbox.intro')}</p></div>
@@ -76,5 +77,6 @@ export function ApprovalsPage() {
       </Card>)}
       <AiReviewPanel onError={setErr} />
     </main>
+    <AppMeta />
   </div>
 }
