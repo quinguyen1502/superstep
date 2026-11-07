@@ -9,6 +9,7 @@ from typing import Any, Callable, Optional
 from ..core import config, crypto
 from ..core.errors import AppError
 from ..engine import mcp_client
+from ..engine.browser_export import public_policy, with_env
 from ..models import McpServer
 from ..repositories import McpServerRepository
 from ..repositories.mcp_operations import McpOperationRepository
@@ -201,11 +202,13 @@ class McpService:
         return lambda sid, tool, args, key, dry: self.call(uid, sid, tool, args, org_allowed, key, dry)
 
     def check_export(self, graphs):
-        """Mark managed references for explicit, non-executable export placeholders (TASK-0254).
+        """Mark managed references on the temporary export graphs (TASK-0254, TASK-0251).
 
-        Only the temporary export graphs are annotated; no connection settings or secrets are copied.
+        Browser connections receive a public policy and an alias. Other managed adapters stay
+        explicit placeholders. No connection secrets are copied, and the annotations are not saved.
         """
         managed = False
+        aliases = {}
         for graph in graphs:
             for node in graph.get("nodes") or []:
                 data = node.get("data") or {}
@@ -213,11 +216,31 @@ class McpService:
                 for reference in references:
                     if not isinstance(reference, dict): continue
                     reference.pop("_managed_export", None)  # internal export metadata is never trusted from stored input
-                    row = self.repo.get(reference.get("server_id")) if isinstance(reference, dict) and reference.get("server_id") else None
-                    if row is not None and row.transport == "managed":
+                    reference.pop("_browser_export", None)
+                    row = self.repo.get(reference.get("server_id")) if reference.get("server_id") else None
+                    if row is None or row.transport != "managed":
+                        continue
+                    if row.adapter == "browser" and (policy := self._browser_policy(row, aliases)) is not None:
+                        reference["_browser_export"] = policy
+                    else:
                         reference["_managed_export"] = True
                         managed = True
         return managed
+
+    @staticmethod
+    def _browser_policy(row, aliases):
+        try:
+            raw = json.loads(row.settings or "{}")
+        except (TypeError, ValueError):
+            return None
+        policy = public_policy(raw)
+        if policy is None:
+            return None
+        alias = aliases.get(row.id)
+        if alias is None:
+            alias = f"browser_{len(aliases) + 1}"
+            aliases[row.id] = alias
+        return {"alias": alias, "policy": with_env(alias, policy)}
 
     def operations(self, uid, sid):
         self._visible(sid, uid)

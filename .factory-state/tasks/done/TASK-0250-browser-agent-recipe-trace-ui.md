@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0250
 - Title: Agent/recipe configuration and filtered browser trace/chat UI
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-06
@@ -110,3 +110,4 @@ Agent/recipe configuration and filtered browser trace/chat UI, satisfying the as
 - 2026-11-06 scoped delivery: source 8dc9291d committed; final recipe/lookup UI rerun passed (2 cases, 26.9 s). REV-0240 / QA-0240 scoped conditional pass; full eight-command Factory verification running on committed source. Task remains review, owner approval pending; no merge performed.
 
 - 2026-11-06 final verification: all eight declared commands passed clean source 8dc9291d (backend 488.43 s). REV-0240/QA-0240 updated to scoped pass; owner approval pending. Draft PR #315: https://github.com/quinguyen1502/superstep/pull/315. No source changed after the full run; no merge performed.
+- 2026-11-07: Owner asked to correct this task's lifecycle. PR #315 is already merged. Review REV-0240 and QA QA-0240 were recorded before that merge. Status is done. No product source changed with this move.

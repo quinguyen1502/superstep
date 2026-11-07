@@ -17,6 +17,7 @@ from __future__ import annotations
 import ast, builtins, inspect, io, json, keyword, re, tokenize
 from typing import Any, Dict, List, Optional
 from . import agents, approval_policy, attachments, foreach
+from .browser_export import PY_RUNTIME, export_binding
 from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWriter, camel as _camel, number as _number,
                             one_line as _one_line, slug)
 from .templating import VAR_RE, _ONE_FILTER, refs
@@ -33,6 +34,8 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
+RESERVED |= {"browser_call", "bind_browser_url", "browser_prepare", "browser_interrupt", "browser_decide",
+             "BROWSER_POLICY", "BrowserError", "SessionLost", "UnknownEffect"}
 
 
 RULE = re.compile(r"# --- (.+?) -+")
@@ -573,6 +576,11 @@ class _Writer(GraphWriter):
             self.add("\n\n# --- Studio services ------------------------------------------------------------------------------------")
             self.add("# These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
             for k in stubs: self.add(STUBS[k].rstrip())
+        if "browser" in self.uses:
+            self.add("\n\n# --- Browser ---------------------------------------------------------------------------------------------")
+            self.add("# Secrets are read from the environment at run time. BROWSER_POLICY has no tokens, passwords or cookies.")
+            self.add(f"BROWSER_POLICY = {lit(self.browser_policies)}")
+            self.add(PY_RUNTIME.rstrip())
         if self.extra:
             self.add("\n\n# --- Tool functions -------------------------------------------------------------------------------------")
             for src in self.extra.values(): self.add("\n\n" + src)
@@ -700,14 +708,23 @@ class _Writer(GraphWriter):
             self.add(f'    """{head}: the chunks of a knowledge base that best match the query (see retrieve)."""')
             self.add(ret(f"retrieve(render({const}_QUERY, state), top_k={_number(d.get('top_k'), int) or 4})"))
         elif t == "mcp":
-            call = "managed_operation" if d.get("_managed_export") else "call_mcp_tool"
-            self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
-            self.add("")
-            self.add("")
-            self.add(f"def {name}(state: {cls}) -> dict:")
-            self.add(f'    """{head}: MCP tool {lit(_doc(d.get("tool")))} (see {call})."""')
-            if d.get("_managed_export"): self.add("    # TODO: implement this managed step; the placeholder raises until replaced.")
-            self.add(ret(f"{call}({lit(d.get('tool') or '')}, render_args({const}_ARGUMENTS, state))"))
+            info = d.get("_browser_export")
+            if isinstance(info, dict):
+                self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
+                self.add("")
+                self.add("")
+                self.add(f"def {name}(state: {cls}) -> dict:")
+                self.add(f'    """{head}: browser tool {lit(_doc(d.get("tool")))} (see browser_call)."""')
+                self.add(ret(self.browser_expr(info, d, f"render_args({const}_ARGUMENTS, state)")))
+            else:
+                call = "managed_operation" if d.get("_managed_export") else "call_mcp_tool"
+                self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
+                self.add("")
+                self.add("")
+                self.add(f"def {name}(state: {cls}) -> dict:")
+                self.add(f'    """{head}: MCP tool {lit(_doc(d.get("tool")))} (see {call})."""')
+                if d.get("_managed_export"): self.add("    # TODO: implement this managed step; the placeholder raises until replaced.")
+                self.add(ret(f"{call}({lit(d.get('tool') or '')}, render_args({const}_ARGUMENTS, state))"))
         elif t == "email":
             self.email(g, nid, cls, head)
         elif t == "subgraph":
@@ -1018,6 +1035,8 @@ class _Writer(GraphWriter):
         self.add("            try:")
         self.add(f"                status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
         self.add("            except Exception as error:  # the model hears about the failure and can try something else")
+        self.add("                if type(error).__name__ in (\"GraphInterrupt\", \"GraphBubbleUp\"):")
+        self.add("                    raise  # browser approval pauses the run; it is not a failed tool call")
         self.add("                status, result = \"error\", f\"The tool failed: {error}\"")
         self.add("        step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
         self.add("                \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
@@ -1049,6 +1068,15 @@ class _Writer(GraphWriter):
         if d.get("steps_field"): out.append(f"{lit(d['steps_field'])}: chat[\"steps\"]")
         self.add(f"    return {{{', '.join(out)}, {chat}: None}}")
 
+    def browser_expr(self, info: dict, data: dict, args_expr: str) -> str:
+        tool = data.get("tool") or ""
+        binding = export_binding(data.get("url_binding"))
+        target = data.get("target") if isinstance(data.get("target"), dict) else None
+        targets = data.get("targets") if isinstance(data.get("targets"), dict) else None
+        prepared = f"browser_prepare({lit(tool)}, {args_expr}, {lit(target)}, {lit(targets)}, state)"
+        bound = f"bind_browser_url({lit(binding)}, {prepared}, state)"
+        return f"browser_call({lit(info.get('alias') or '')}, {lit(tool)}, {bound}, state)"
+
     def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
         """call_<agent>_tool(): what each of the Agent node's tools does."""
         self.add("")
@@ -1068,8 +1096,12 @@ class _Writer(GraphWriter):
             elif src == "knowledge":
                 self.add(f"        return retrieve(str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":
-                call = "managed_operation" if t.get("_managed_export") else "call_mcp_tool"
-                self.add(f"        return {call}({lit(t.get('tool') or '')}, args)")
+                info = t.get("_browser_export")
+                if isinstance(info, dict):
+                    self.add(f"        return {self.browser_expr(info, t, 'args')}")
+                else:
+                    call = "managed_operation" if t.get("_managed_export") else "call_mcp_tool"
+                    self.add(f"        return {call}({lit(t.get('tool') or '')}, args)")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:

@@ -75,11 +75,19 @@ class Graph:
         managed_nodes = {n.get("id") for n in raw.get("nodes") or [] if n.get("type") == "mcp" and (n.get("data") or {}).get("_managed_export") is True}
         managed_tools = {(n.get("id"), tool.get("name")) for n in raw.get("nodes") or [] if n.get("type") == "agent"
                          for tool in (n.get("data") or {}).get("tools") or [] if isinstance(tool, dict) and tool.get("_managed_export") is True}
+        browser_nodes = {n.get("id"): (n.get("data") or {}).get("_browser_export") for n in raw.get("nodes") or []
+                         if isinstance(n, dict) and n.get("type") == "mcp" and isinstance((n.get("data") or {}).get("_browser_export"), dict)}
+        browser_tools = {(n.get("id"), tool.get("name")): tool.get("_browser_export") for n in raw.get("nodes") or []
+                         if isinstance(n, dict) and n.get("type") == "agent"
+                         for tool in (n.get("data") or {}).get("tools") or []
+                         if isinstance(tool, dict) and isinstance(tool.get("_browser_export"), dict)}
         for n in self.wf["nodes"]:
             if n["id"] in managed_nodes: n["data"]["_managed_export"] = True
+            if n["id"] in browser_nodes: n["data"]["_browser_export"] = browser_nodes[n["id"]]
             for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
                 if isinstance(t, dict) and t.get("source") == "workflow": t["workflow_id"] = kept.get((n["id"], t.get("name"))) or ""
                 if isinstance(t, dict) and (n["id"], t.get("name")) in managed_tools: t["_managed_export"] = True
+                if isinstance(t, dict) and (n["id"], t.get("name")) in browser_tools: t["_browser_export"] = browser_tools[(n["id"], t.get("name"))]
         self.refs = {n["id"]: (n.get("data") or {}).get("workflow_id") or "" for n in raw.get("nodes") or []
                      if isinstance(n, dict) and n.get("type") == "subgraph"}
         # workflow tools of Agent nodes (TASK-0137, DEC-0066): their own graphs, with their own state, called by the tool
@@ -116,6 +124,7 @@ class GraphWriter:
         self.lines: List[str] = []
         self.spans: Dict[str, List[List[int]]] = {}
         self.uses: set = set()
+        self.browser_policies: Dict[str, dict] = {}
         self.built: Dict[str, Tuple[Graph, str, str]] = {}  # child workflow id -> (graph, build function, state name)
 
     # -- output --
@@ -219,7 +228,7 @@ class GraphWriter:
             if t == "human": self.uses.add("human")
             if t == "tool" and d.get("mode") == "code": self.uses.add("code")
             if t == "retriever": self.uses.add("retrieve")
-            if t == "mcp": self.uses.add("managed_operation" if d.get("_managed_export") else "call_mcp_tool")
+            if t == "mcp": self.note_mcp(d)
             if t == "email": self.uses.add("send_email")
             if t == "agent":
                 self.uses.update({"templates", "model", "agent"})
@@ -227,9 +236,18 @@ class GraphWriter:
                 sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
                 if "knowledge" in sources: self.uses.add("retrieve")
                 for tool in d.get("tools") or []:
-                    if isinstance(tool, dict) and tool.get("source") == "mcp":
-                        self.uses.add("managed_operation" if tool.get("_managed_export") else "call_mcp_tool")
+                    if isinstance(tool, dict) and tool.get("source") == "mcp": self.note_mcp(tool)
                 if agents.needs_approval(d): self.uses.add("human")
+
+    def note_mcp(self, data: dict) -> None:
+        """A browser connection emits its helper. Every other MCP reference stays a stub."""
+        info = data.get("_browser_export")
+        if isinstance(info, dict) and isinstance(info.get("alias"), str) and isinstance(info.get("policy"), dict):
+            self.browser_policies[info["alias"]] = info["policy"]
+            self.uses.add("browser")
+            self.uses.add("templates")
+            return
+        self.uses.add("managed_operation" if data.get("_managed_export") else "call_mcp_tool")
 
     def inputs(self, g: Graph, nid: str) -> List[str]:
         """The node's input fields when they are all state fields (as `node_policy.input_schema`), else none."""
