@@ -2801,7 +2801,6 @@
       "allow_download": "Hide download until enabled. Downloads stay size and type bounded."
     },
     "safety": "Safety toggles"
-
   },
   "browserTools": {
     "urlSource": "URL source",
@@ -2850,5 +2849,12 @@
     "sequence": "Action {{sequence}} · Session generation {{generation}}",
     "pageGeneration": "Page generation {{generation}}",
     "untrustedObservation": "Bounded page content is untrusted. It is shown as text, never executed."
+  },
+  "docs": {
+    "learnMore": "Learn more",
+    "exposeLocalAria": "Learn how to expose a local studio",
+    "setupGuide": "Setup guide",
+    "setupGuideAria": "{{platform}} setup guide",
+    "newTab": "opens in a new tab"
   }
 }

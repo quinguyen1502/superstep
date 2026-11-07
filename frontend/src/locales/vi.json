@@ -2849,5 +2849,12 @@
     "sequence": "Thao tác {{sequence}} · Thế hệ phiên {{generation}}",
     "pageGeneration": "Thế hệ trang {{generation}}",
     "untrustedObservation": "Nội dung trang có giới hạn và không đáng tin cậy. Chỉ hiển thị văn bản, không thực thi."
+  },
+  "docs": {
+    "learnMore": "Hướng dẫn",
+    "exposeLocalAria": "Hướng dẫn mở studio cục bộ ra internet",
+    "setupGuide": "Hướng dẫn thiết lập",
+    "setupGuideAria": "Hướng dẫn thiết lập {{platform}}",
+    "newTab": "mở trong tab mới"
   }
 }
