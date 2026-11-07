@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0252
 - Title: Executable TypeScript and project export with browser parity
-- Status: backlog (deferred — after studio browser tools are accepted and integrated; depends on TASK-0251)
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06
+- Updated: 2026-11-07
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -45,7 +45,7 @@ Executable TypeScript and project export with browser parity (AC8), deferred unt
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Standards: `AGENTS.md`, `docs/backend-architecture.md`, `docs/ui-conventions.md`; DEC-0008/0009/0010/0018/0033/0063/0066/0069/0081 referenced by the requirement/architecture.
-- Dependency artifact: `.factory-state/tasks/backlog/TASK-0251-browser-python-export.md`.
+- Dependency artifact: `.factory-state/tasks/done/TASK-0251-browser-python-export.md`.
 
 ## Expected Outputs
 
@@ -63,7 +63,7 @@ Executable TypeScript and project export with browser parity (AC8), deferred unt
 
 - TASK-0251 — Executable Python and project export for browser tools/recipes
 - Owner accepts REQ-0086, DES-0004, ARCH-0002/DEC-0085 and PLAN-0006 before promotion to todo/task-start.
-- Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack.
+- Start from the integration branch after dependencies are merged, or explicitly document an owner-authorised stack. This delivery is stacked on `factory/task-0251-browser-python-export` at `c39064ed` (PR #321). The owner authorised that stack on 2026-11-07 because TASK-0251 is not merged yet.
 
 ## Acceptance Criteria
 
@@ -95,8 +95,10 @@ Executable TypeScript and project export with browser parity (AC8), deferred unt
 - 2026-11-04: Renumbered: TASK-0249 → TASK-0252 before publication after a fresh all-ref allocation; owner authorised commit/push only.
 
 - 2026-11-06: Amended for owner clarifications on open draft PR #299 (relaxed mutating-approval defaults; session persistence across chat turns; Browserless required; deferred exports; upload/download + evaluate JS; mandatory origin whitelist; two-layer flexible-but-safe toggles and risk analysis). Status remains backlog; not implementation authorisation. Draft implementation PRs #303–#315 need reconciliation after package acceptance.
+- 2026-11-07: Studio tasks through TASK-0253 and the handbook screenshot replacement are merged. The owner asked to proceed with TASK-0251 and this task through Ready pull requests. Deferral is lifted. Branch `factory/task-0252-browser-typescript-export` is an owner-authorised stack on `factory/task-0251-browser-python-export` at `c39064ed` (PR #321), because that pull request is not merged. Review REV-0244. QA QA-0244. Status is done. Not merged. REQ-0086 AC8 stays open until both export pull requests merge.
+- 2026-11-07: Tool-policy checks passed on this worktree with arm64 Node v22.12.0: backend pytest 1435 passed / 71 skipped in 526.00s; focused export pytest 45 passed / 30 skipped in 50.67s; sdk/python pytest 229 passed / 8 skipped in 13.75s; repo-root npm build, lint, and test (frontend 169, react package 22); sdk/typescript build, test (102), and typecheck. Handbook check passed. Deno is not installed locally; the TypeScript browser tests ran on Node strip-types. Not merged.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0252-browser-typescript-export`, from `develop` after the stated gates.
-- One task PR with review/QA; no merge without explicit owner approval.
+- Branch: `factory/task-0252-browser-typescript-export`, stacked on `factory/task-0251-browser-python-export` (`c39064ed`, PR #321).
+- One task PR with review/QA. Base the pull request on the TASK-0251 branch so the diff is only this task. Merge TASK-0251 first. No merge without explicit owner approval.

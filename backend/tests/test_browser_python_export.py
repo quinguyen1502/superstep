@@ -17,7 +17,7 @@ from io import BytesIO
 import pytest
 
 from app.api.deps import get_db
-from app.engine.browser_export import TS_BROWSER_REFUSAL, public_policy
+from app.engine.browser_export import public_policy
 from app.repositories import McpServerRepository
 from tests.test_browser_connections import create
 from tests.test_chat_trigger_runs import H, c, user
@@ -173,7 +173,7 @@ def test_recipe_runs_outside_superstep_without_secrets_or_a_fixed_url(c, site, t
     saved = c.get(f"/api/workflows/{wid}", headers=H(owner["token"])).json()["data"]
     assert "_browser_export" not in json.dumps(saved) and "_managed_export" not in json.dumps(saved)
     typescript = _code(c, owner, wid, "typescript")
-    assert TS_BROWSER_REFUSAL in typescript["code"]
+    assert "function browserCall(" in typescript["code"] or "async function browserCall(" in typescript["code"]
     assert "callMcpTool(" not in typescript["code"] and "managedOperation(" not in typescript["code"]
     driver = (
         "import json\n"
@@ -438,7 +438,7 @@ def test_agent_parallel_calls_keep_session_order(c, site, tmp_path):
     code = _code(c, owner, _save(c, owner, graph))["code"]
     assert "browser_call(" in code and site["slow"] in code and sid not in code
     typescript = _code(c, owner, _save(c, owner, graph), "typescript")["code"]
-    assert TS_BROWSER_REFUSAL in typescript and "callMcpTool(" not in typescript
+    assert "browserCall(" in typescript and "callMcpTool(" not in typescript
     driver = (
         "import json\n"
         "final = build_graph().invoke({'message': 'navigate_a navigate_b'})\n"
