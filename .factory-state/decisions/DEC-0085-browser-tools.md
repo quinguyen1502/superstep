@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Decision ID: DEC-0085
-- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding.
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved decision 10 and then asked for the task split. TASK-0261 and TASK-0262 are in todo. Task-start is not authorised.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06 (Accepted; implementation authorised)
+- Updated: 2026-11-07 (export-driver clarification recorded)
 - Related Requirements: REQ-0086
 - Related Architecture: ARCH-0002
 - Related Tasks: see PLAN-0006
@@ -27,6 +27,7 @@ The owner researched browser tools, requested evolving mockups for autonomous na
 7. Deliver nine bounded first-version operations: navigate, snapshot, click, fill, structured extraction, screenshot, **upload**, **download** and **evaluate JavaScript**, with connection allow-toggles and Agent tool grants. Upload only from authorised attachments/workspace files; download size/type limited; evaluate JS sandboxed to page context (no Node/shell); results treated as untrusted page data.
 8. Use a **two-layer configuration model**: (A) connection/operator controls for whitelist, proxy, runtimes, profile, mutating-approval toggle, allow-JS/upload/download, download limits, session idle/max and action/page budget; always-on private-IP block, untrusted page content, secret redaction, no public Settings and kill-switch. (B) Agent-node/builder grants of individual tools; ungranted tools are not advertised; builder cannot widen whitelist or disable network enforcement.
 9. **Defer executable Python/TypeScript and project exports** (TASK-0251, TASK-0252) until after studio browser tools are accepted and integrated. Preserve existing managed export refusals. First studio milestone completion does not require AC8 export evidence.
+10. **Two export drivers** (owner wording approved 2026-11-07). The fixture driver `memory` stays the TASK-0251 and TASK-0252 contract: static HTTP GET, no redirect following, click only through an `href`, fill stored in session memory, evaluate limited to `document.title` and `document.body.innerText` on the stored HTML, and whitelisted private origins reachable on this driver only. A later implementation may add live `playwright` and `browserless` drivers that keep one browser and one page per alias until idle, lifetime expiry, or process exit. That page is not a Studio conversation lease. On those drivers, navigate and an `href` click pass the whitelist before open, a click without an `href` and a fill act on the live element, and the runtime stores the resulting HTML for snapshot and extract. Live evaluate is a page-context expression of at most 4,000 characters when the connection allows it, with an untrusted result and no Node, shell, or filesystem access. Every live redirect hop stays on the whitelist and off private addresses, or it does not become the current page. Profile JSON supplied in `SUPERSTEP_BROWSER_PROFILE_*` applies cookies and localStorage only to an origin that is both listed and whitelisted, and only before the first navigation. The generated file contains the variable name. Invalid JSON does not open a page. `max_pages` counts document navigations and refuses the next one. `stealth` is passed only for Browserless. Upload, download, and screenshot bytes stay refused in the export. Screenshot results stay `{captured: true, inline_bytes: false}`. Other managed adapters, MCP stdio/HTTP, and the retriever stay explicit stubs. This decision does not reopen TASK-0251 or TASK-0252. The planned implementation is TASK-0261, then TASK-0262. Neither task is started.
 
 ## Risk analysis (toggles and always-on controls)
 
@@ -46,6 +47,7 @@ The owner researched browser tools, requested evolving mockups for autonomous na
 | Page content to model | Prompt injection from page text | Always treat as untrusted; never follow page instructions to reveal secrets or expand access |
 | Private/link-local/metadata IPs | Classic SSRF to internal services | Always blocked; not togglable |
 | Stealth (Browserless, default off) | False sense of firewall/CAPTCHA bypass | Documented best-effort only; off unless chosen |
+| Live export driver | A long-lived Playwright page can follow a redirect off the whitelist or apply profile cookies too broadly | One page per alias until idle, lifetime, or process exit; every hop rechecked; profile JSON applies only to origins that are both listed and whitelisted; no cookies in the generated file |
 | Kill-switch | Incomplete drain leaving writes to replay | Drain/terminate; preserve audit; never replay writes as rollback |
 
 Recommended safe-flexible defaults: whitelist required; mutating approval OFF but visible; JS/upload/download available in v1 but only effective when connection allows and builder grants the tools; session persist ON with 30m idle; screenshots filtered from public chat by default; stealth off unless chosen.
@@ -77,6 +79,7 @@ This preserves Superstep's LangGraph Agent orchestration, makes dynamic URLs ord
 - Approved By: Thái Quí Nguyễn (owner)
 - Approved On: 2026-11-06 (Asia/Saigon)
 - Scope And Limits: the owner accepted the amended package and authorised implementation into `develop` ("Ok triển khai", sync latest develop first). One task PR per delivery task; merge only when required checks are green. No release/version bump authorised by this acceptance. TASK-0251/0252 remain deferred.
+- 2026-11-07 addendum: the owner approved decision 10 ("ok ghi vào"). The approval covers that wording only. It does not merge the fixture-export pull requests, create live-driver tasks, or authorise implementation of decision 10.
 
 ## Review Or Revisit Trigger
 
