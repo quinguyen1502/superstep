@@ -31,7 +31,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
-    "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
+    "call_llm", "offline_service", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 RESERVED |= {"browser_call", "bind_browser_url", "browser_prepare", "browser_interrupt", "browser_decide",
@@ -190,6 +190,7 @@ def call_llm(prompt: str, model: str) -> str:
         return reply.content
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
 '''
+
 
 FILES = '''
 # --- Attachments ---------------------------------------------------------------------------------------------
@@ -426,12 +427,27 @@ def shorten(text: str, n: int) -> str:
     return text if len(text) <= n else text[:n] + f"… (shortened from {len(text)} characters)"
 '''
 
+OFFLINE_SERVICE = '''
+
+def offline_service(kind: str, name: str) -> bool:
+    """Offline example mode (LLM_PROVIDER unset): like the studio's mock run, a Studio service gives an empty result
+    and says so on stderr. With LLM_PROVIDER set the run is real, so an unimplemented service stops it instead of
+    returning a made-up value."""
+    if os.environ.get("LLM_PROVIDER"):
+        raise NotImplementedError(f"{kind} {name!r} uses a Superstep service that is not exported: implement it "
+                                  "(see the TODO above) before running with LLM_PROVIDER set")
+    print(f"(offline mock) {kind} {name!r} is not implemented: empty result", file=sys.stderr)
+    return True
+'''
+
 STUBS = {
     "retrieve": '''
 
 def retrieve(query: str, top_k: int) -> list:
     """Retriever nodes search a Superstep knowledge base, which this file cannot reach.
-    TODO: search your own index for `query`, for example with a LangChain vector store retriever."""
+    TODO: search your own index for `query`, for example with a LangChain vector store retriever.
+    Until then: empty in offline mock mode, an error when LLM_PROVIDER is set."""
+    offline_service("Knowledge base search", query[:60])
     return []
 ''',
     "managed_operation": '''
@@ -447,7 +463,9 @@ def managed_operation(tool: str, arguments: dict) -> Any:
 
 def call_mcp_tool(tool: str, arguments: dict) -> Any:
     """MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
-    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters."""
+    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters.
+    Until then: None in offline mock mode, an error when LLM_PROVIDER is set."""
+    offline_service("MCP tool", tool)
     return None
 ''',
     "send_email": '''
@@ -460,7 +478,9 @@ def addresses(value: Any) -> list:
 def send_email(message: dict) -> dict:
     """Send email nodes send through an SMTP credential in Superstep. This file never sends: like a studio dry run,
     it prints the message and returns what it would have sent.
-    TODO: send it with smtplib and your own SMTP settings."""
+    TODO: send it with smtplib and your own SMTP settings. Until then the dry run is refused when LLM_PROVIDER is set,
+    so a real run never reports an e-mail it did not send as handled."""
+    offline_service("Send email", message["subject"][:60])
     print(f"(e-mail not sent) to {', '.join(message['to'])}: {message['subject']}")
     return {"sent": False, "dry_run": True, "to": message["to"], "cc": message["cc"], "bcc": message["bcc"],
             "subject": message["subject"], "message_id": None, "preview": message["body"][:2000]}
@@ -551,7 +571,7 @@ class _Writer(GraphWriter):
             doc += ["Code nodes run here as written on the canvas, without the studio's sandbox: read them first.", ""]
         doc += ["Credentials, knowledge bases, MCP servers and approval channels are not exported.", '"""',
                 "from __future__ import annotations", ""]
-        std = sorted(m for m in {"json", "os", "re", "string", *self.imports} if uses(m))
+        std = sorted(m for m in {"json", "os", "re", "string", "sys", *self.imports} if uses(m))
         typing = sorted(n for n in ("Annotated", "Any", "Dict", "List", "Optional", "TypedDict") if uses(n))
         out = [f"import {m}" for m in std] + ([f"from typing import {', '.join(typing)}"] if typing else []) + [""]
         if uses("httpx"): out += ["import httpx", ""]
@@ -575,6 +595,7 @@ class _Writer(GraphWriter):
         if stubs:
             self.add("\n\n# --- Studio services ------------------------------------------------------------------------------------")
             self.add("# These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
+            if any(k != "managed_operation" for k in stubs): self.add(OFFLINE_SERVICE.rstrip())
             for k in stubs: self.add(STUBS[k].rstrip())
         if "browser" in self.uses:
             self.add("\n\n# --- Browser ---------------------------------------------------------------------------------------------")
@@ -732,6 +753,10 @@ class _Writer(GraphWriter):
             build = self.built[ref][1] if ref in self.built else None
             self.add(f"# {head}: the workflow \"{_doc(self.built[ref][0].title) if build else ref}\" runs as a subgraph.")
             self.add(f"# build_graph() adds {build or 'it'}() as the node: a compiled graph can be a node of another graph.")
+            if build is None:
+                self.add(f"def {name}(state: {cls}) -> dict:")
+                self.add(f'    """{head}: TODO: the workflow {_doc(ref)} was not found when this file was exported."""')
+                self.add(f"    raise LookupError({lit(f'{head}: the subgraph workflow {ref} was not found when this file was exported (deleted, or not shared with you)')})")
         else:  # subgraph_exit or an unknown type: a pass-through
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}."""')
@@ -845,7 +870,7 @@ class _Writer(GraphWriter):
             if fn in self.extra: self.add(ret(f"{fn}(state)"))
             else:
                 self.add(f"    # TODO: the function {lit(fn)} is not registered on this server any more.")
-                self.add(ret("None"))
+                self.add(f"    raise LookupError({lit(f'{head}: the function {fn} is not registered on the Superstep server any more: add it to this file')})")
 
     def email(self, g: _Graph, nid: str, cls: str, head: str) -> None:
         d = g.nodes[nid].get("data") or {}; name, const = g.names[nid], g.names[nid].upper()
@@ -1092,7 +1117,7 @@ class _Writer(GraphWriter):
                 if fn in self.extra: self.add(f"        return {fn}({{**state, **args}})  # the arguments over the state, as in the studio")
                 else:
                     self.add(f"        # TODO: the function {lit(fn)} is not registered on this server any more.")
-                    self.add("        return None")
+                    self.add(f"        raise LookupError({lit(f'tool {tname}: the function {fn} is not registered on the Superstep server any more: add it to this file')})")
             elif src == "knowledge":
                 self.add(f"        return retrieve(str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":
@@ -1112,7 +1137,7 @@ class _Writer(GraphWriter):
                     self.add(f"        return {{k: final.get(k) for k in {lit(outputs)}}}")
                 else:
                     self.add(f"        # TODO: the workflow {lit(ref)} was not found (deleted, or not shared with you).")
-                    self.add("        return None")
+                    self.add(f"        raise LookupError({lit(f'tool {tname}: the workflow {ref} was not found when this file was exported (deleted, or not shared with you)')})")
             elif src == "http":
                 method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
                 key = self.http_key(const, t)
@@ -1167,7 +1192,7 @@ class _Writer(GraphWriter):
             fn = g.names[nid]
             if n["type"] == "subgraph":
                 ref = g.refs.get(nid) or ""
-                fn = f"{self.built[ref][1]}()" if ref in self.built else "StateGraph(dict).compile()  # TODO: the subgraph was not found"
+                fn = f"{self.built[ref][1]}()" if ref in self.built else g.names[nid]  # missing: the node raises LookupError
             kw = []
             retry = d.get("retry") if isinstance(d.get("retry"), dict) else {}
             if (attempts := _number(retry.get("max_attempts"), int)) is not None:

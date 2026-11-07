@@ -74,7 +74,7 @@ Final state: {...}
 | Tool: function | code của hàm, được chép vào |
 | Tool: HTTP | một request `httpx` |
 | Tool: Code | code của node, nằm trong hàm của node |
-| Retriever, MCP, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio (kể cả công cụ kho tri thức và MCP của node Agent) |
+| Retriever, MCP, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio (kể cả công cụ kho tri thức và MCP của node Agent). Khi offline chúng trả kết quả rỗng và in `(offline mock) …` ra stderr; khi đặt `LLM_PROVIDER` chúng dừng run cho tới khi bạn tự hiện thực |
 | Note | một comment |
 | Retry, cache, trường input | `RetryPolicy`, `CachePolicy`, `input_schema` trong `add_node` |
 | Timeout | một comment: LangGraph không dừng được node đang chặn |
@@ -286,8 +286,12 @@ TypeScript chỉ chạy bằng `npm run example`, không chạy khi server impor
   người duyệt và địa chỉ chuyển cấp.
 - Các tính năng của studio quanh một run: trace, lịch sử run, khôi phục sau
   khi khởi động lại, kênh duyệt và hạn chót, theo dõi chi phí, timeout của node.
-- Lời gọi Retriever, MCP và Send email thật: stub trả về kết quả rỗng, không
-  gì cả, hoặc thư lẽ ra sẽ gửi.
+- Lời gọi Retriever, MCP và Send email thật. Khi offline, stub trả về kết quả
+  rỗng, không gì cả, hoặc thư lẽ ra sẽ gửi, và báo điều đó trên stderr. Khi đặt
+  `LLM_PROVIDER`, chúng raise (Python) hoặc throw (TypeScript), để một run thật
+  không coi dịch vụ còn thiếu là đã xong.
+- Subgraph, công cụ workflow hoặc hàm bị thiếu lúc export: node hoặc công cụ đó
+  báo lỗi nêu tên nó khi run chạy tới.
 
 Hai kết quả có thể khác studio: node Decision với model thật hỏi LLM thay vì
 TypeSafe Jev, và một trường có reducer mà subgraph cũng ghi sẽ được gộp thêm một

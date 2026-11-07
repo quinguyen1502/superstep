@@ -75,7 +75,7 @@ Final state: {...}
 | Tool: function | the function's code, copied in |
 | Tool: HTTP | an `httpx` request |
 | Tool: Code | the node's code, inside the node function |
-| Retriever, MCP, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base and MCP tools) |
+| Retriever, MCP, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base and MCP tools). Offline they return an empty result and print `(offline mock) …` on stderr; with `LLM_PROVIDER` set they stop the run until you implement them |
 | Note | a comment |
 | Retry, cache, input fields | `RetryPolicy`, `CachePolicy`, `input_schema` on `add_node` |
 | Timeout | a comment: LangGraph cannot stop a node that blocks |
@@ -289,8 +289,12 @@ workflow, starts `langgraph dev` on it and calls it with the SDK.
   channels, approvers and escalation addresses.
 - Studio features around a run: the trace, run history, recovery after a
   restart, approval channels and deadlines, cost tracking, node timeouts.
-- Real Retriever, MCP and Send email calls: the stubs return an empty result,
-  nothing, or the message that would have been sent.
+- Real Retriever, MCP and Send email calls. Offline the stubs return an empty
+  result, nothing, or the message that would have been sent, and say so on
+  stderr. With `LLM_PROVIDER` set they raise (Python) or throw (TypeScript), so a
+  real run never treats a missing service as done.
+- A subgraph, workflow tool or function that was missing at export time: its
+  node or tool fails with an error naming it when the run reaches it.
 
 Two results can differ from the studio: a Decision node with a real model asks
 the LLM instead of TypeSafe Jev, and a field with a reducer that a subgraph also

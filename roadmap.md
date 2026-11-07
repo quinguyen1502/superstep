@@ -468,6 +468,15 @@ REQ-0087, DES-0005, DEC-0086 and PLAN-0007: **Accepted 2026-11-07** (DEC-0086 op
 - TASK-0259 — handbook page "Expose a local studio" (Cloudflare Tunnel, ngrok, Dev Tunnels, `STUDIO_PUBLIC_URL`). **done** (#320).
 - TASK-0260 — contextual handbook links in Settings → Channels. **done** (this PR).
 
+## Code export gap fixes
+
+REQ-0088, DEC-0087, PLAN-0008 (owner-authorised 2026-11-07).
+
+- TASK-0263 — service stubs fail fast in live runs; missing targets fail. **done**.
+- TASK-0264 — export model fallback. **backlog**.
+- TASK-0265 — HTTP safeguards in exports. **backlog**.
+- TASK-0266 — remaining gaps, proposal awaiting owner decision.
+
 ## Releases
 
 - TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,

@@ -416,7 +416,9 @@ def test_graph_values_never_become_code():
 
 MCP_STUB = '''def call_mcp_tool(tool: str, arguments: dict) -> Any:
     """MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
-    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters."""
+    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters.
+    Until then: None in offline mock mode, an error when LLM_PROVIDER is set."""
+    offline_service("MCP tool", tool)
     return None'''
 
 MCP_SLOW = '''def call_mcp_tool(tool: str, arguments: dict) -> Any:
