@@ -18,7 +18,7 @@ Python export live page for Playwright and Browserless on `factory/task-0261-bro
 
 - Criterion: With `SUPERSTEP_BROWSER_DRIVER=playwright` or `browserless`, one alias uses one page until idle, lifetime expiry, or process exit.
   - Result: pass
-  - Evidence: `test_live_page_reuses_one_browser_for_click_fill_and_evaluate` records one `launch` before the first `stop`, then a second `launch` only after idle closes the browser. The recovered navigate is `confirmed`. `atexit` has `_shutdown_live` registered. Browserless uses `connect_over_cdp` once in `test_live_profile_and_browserless_stealth` and does not call `launch`. Lifetime uses the same `_close_live` path as idle and is not a separate live case.
+  - Evidence: `test_live_page_reuses_one_browser_for_click_fill_and_evaluate` records one `launch` before the first `stop`, then a second `launch` only after idle closes the browser. The recovered navigate is `confirmed`. Process exit runs the registered `_shutdown_live` closer: the stub log gains one `stop` after the process ends. Python 3.12 does not shrink `atexit._ncallbacks` when `unregister` clears a slot, so the check does not use that counter. Browserless uses `connect_over_cdp` once in `test_live_profile_and_browserless_stealth` and does not call `launch`. Lifetime uses the same `_close_live` path as idle and is not a separate live case.
 
 - Criterion: A click without an `href` and a fill change the live page. A later snapshot or extract sees the stored HTML from that page.
   - Result: pass

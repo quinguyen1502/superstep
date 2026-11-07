@@ -127,7 +127,9 @@ def _run(tmp_path, code, driver, env=None, files=None):
     base = {k: v for k, v in os.environ.items() if k != "PYTHONPATH" and not k.startswith("SUPERSTEP_BROWSER")}
     if env:
         base.update(env)
-    return subprocess.run([sys.executable, "-I", "graph.py"], cwd=folder, env=base, capture_output=True, text=True, timeout=90)
+    done = subprocess.run([sys.executable, "-I", "graph.py"], cwd=folder, env=base, capture_output=True, text=True, timeout=90)
+    done.export_dir = folder
+    return done
 
 
 def _mcp(sid, nid, tool, arguments, output, **extra):
@@ -728,7 +730,7 @@ def _stub_files(config=None):
 
 
 _LIVE_HEADER = """
-import atexit, json, os, sys
+import json, os, sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 alias = next(iter(BROWSER_POLICY))
@@ -736,16 +738,6 @@ alias = next(iter(BROWSER_POLICY))
 def _log():
     path = Path("playwright-log.json")
     return json.loads(path.read_text()) if path.is_file() else []
-
-def _atexit():
-    handlers = getattr(atexit, "_exithandlers", None)
-    if handlers is not None:
-        return any(getattr(item[0], "__name__", "") == "_shutdown_live" for item in handlers)
-    before = atexit._ncallbacks()
-    atexit.unregister(_shutdown_live)
-    changed = atexit._ncallbacks() < before
-    atexit.register(_shutdown_live)
-    return changed
 """
 
 
@@ -820,11 +812,11 @@ print(json.dumps({
     "again": again["status"],
     "upload_code": upload_code,
     "upload_message": upload_message,
-    "atexit": _atexit(),
     "log": _log(),
 }))
 """
-    body = _loads(_run(tmp_path, code, driver, files=_stub_files()))
+    done = _run(tmp_path, code, driver, files=_stub_files())
+    body = _loads(done)
     log = body["log"]
     launches = [item for item in log if item.get("op") == "launch"]
     assert len(launches) == 2
@@ -846,7 +838,11 @@ print(json.dumps({
     assert any(item.get("op") == "stop" for item in log)
     assert body["upload_code"] == "capability_refused"
     assert "refused outside Studio" in body["upload_message"] and "True" in body["upload_message"]
-    assert body["atexit"] is True
+    # Python 3.12 clears an atexit slot without shrinking _ncallbacks, so compare
+    # the stub log after the process exits. The registered closer stops the live browser.
+    during = sum(1 for item in body["log"] if item.get("op") == "stop")
+    after = json.loads((done.export_dir / "playwright-log.json").read_text())
+    assert sum(1 for item in after if item.get("op") == "stop") == during + 1
     assert "SO-1" not in code
 
 
