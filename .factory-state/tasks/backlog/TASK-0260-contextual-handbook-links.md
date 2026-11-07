@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0260
 - Title: Contextual handbook links in Channels settings
-- Status: backlog (awaiting owner acceptance of REQ-0087)
+- Status: backlog (accepted; ready)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-06
 - Updated: 2026-11-06

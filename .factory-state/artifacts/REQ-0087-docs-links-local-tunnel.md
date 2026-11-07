@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0087
-- Status: Proposed — awaiting owner acceptance (earlier chat wireframes were proposals only, not factory-approved)
+- Status: Accepted — owner approved REQ-0087 and PR #319 with DEC-0086 option A on 2026-11-07; Teams/e-mail links and tour deferred
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-06
 - Source: Owner chat 2026-11-06 ("triển khai phần link documentation và tunnel"), following the earlier documentation-links/tunnel proposal
@@ -35,7 +35,7 @@ Out of scope: guided tours/onboarding walkthroughs, a docs search or embedded do
 - One helper builds handbook URLs; the base follows DEC-0086. en/vi locale parity tests pass; shadcn default sizes and existing toolbar/alert patterns are kept.
 - Full Factory verify/validate, review and QA artifacts per task; all required CI green before any merge.
 
-## Open Questions
+## Resolved Questions
 
-- Handbook link base for self-hosted installs (DEC-0086 options).
-- Whether Teams/e-mail settings also get links in this delivery or a follow-up.
+- Link base: DEC-0086 option A, fixed published handbook URLs (owner, 2026-11-07).
+- Teams/e-mail links and any tour are deferred to future requirements (owner, 2026-11-07).

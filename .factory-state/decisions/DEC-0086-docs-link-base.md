@@ -2,7 +2,7 @@
 
 - Decision ID: DEC-0086
 - Project: superstep
-- Status: Proposed — needs owner choice before TASK-0260
+- Status: Accepted 2026-11-07 — owner chose option A (fixed published handbook links)
 - Created/Updated: 2026-11-06
 - Related: REQ-0087, DES-0005, PLAN-0007
 
@@ -15,3 +15,5 @@ Options:
 - **C:** runtime `STUDIO_DOCS_URL` exposed through an API field. Most flexible, but adds a new server setting and API surface.
 
 Recommendation A keeps scope minimal and matches the current single published handbook; B can follow if a fork needs it.
+
+Outcome: option A accepted by the owner on 2026-11-07. B/C are not implemented.

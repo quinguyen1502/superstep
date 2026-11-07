@@ -2,7 +2,7 @@
 
 - Design ID: DES-0005
 - Project: superstep
-- Status: Proposed
+- Status: Accepted 2026-11-07
 - Created/Updated: 2026-11-06
 - Related: REQ-0087, DEC-0086, PLAN-0007
 

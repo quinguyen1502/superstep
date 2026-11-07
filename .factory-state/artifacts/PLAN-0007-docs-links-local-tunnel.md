@@ -2,7 +2,7 @@
 
 - Plan ID: PLAN-0007
 - Project: superstep
-- Status: Proposed — implementation waits for owner acceptance of REQ-0087 and a DEC-0086 choice
+- Status: Accepted 2026-11-07 — owner-authorised implementation of TASK-0259 then TASK-0260
 - Created/Updated: 2026-11-06
 - Related: REQ-0087, DES-0005, DEC-0086
 
