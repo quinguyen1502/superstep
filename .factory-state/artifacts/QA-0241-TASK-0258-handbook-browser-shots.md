@@ -6,8 +6,8 @@
 - QA ID: QA-0241
 - Task ID: TASK-0258
 - QA Owner: Grok (advisory; owner asked to finish the PR, not to merge)
-- Created: 2026-11-07
-- Updated: 2026-11-07
+- Created: 2026-11-06
+- Updated: 2026-11-06
 - Outcome: pass
 
 ## Validation Scope

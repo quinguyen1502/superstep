@@ -1,15 +1,19 @@
 schema_version: 1
 status: installed
-updated_at: '2026-11-02T17:14:11.833901+00:00'
-source_sha256: 8959ea974e67660a876e87856ab8e608d081f671d9c4be9780ba066633a2bcaf
+updated_at: '2026-11-07T02:39:49.476398+00:00'
+source_sha256: c5bab9fc1f0b899582088e5bc5139f8bf4b8bc32efefca472ddc2514bf63fcc1
 inputs:
-  package-lock.json: 91198d91baccdff69fbbd222ad6d815eddcd206621d919a0483c9334bce9b4e2
+  package-lock.json: 37dabacb6989ca5b17144ae44a0627fd926f5b4507b39be5dbb85aca0aba286a
   package.json: 85cc3138b716b5d7b5db0e8ec62a39ae2707786d2f69d934a17f8514e1dc8802
-  backend/pyproject.toml: c68f83d93caf5cf47367a9b2fdb27c5a7efd25a9a7827a0ff0c959a8d84d5971
+  backend/pyproject.toml: 91a55e692880a9ffdbf02b702b6d8e5c03e64ef4e4ad338229b9aa2562ec1c77
   backend/requirements.txt: 54ceaed1fd8bc336f25d2909b35f3ea9b5999950307e6ce3cd521d690e31bc23
-  frontend/package.json: 7e0921bf22d4f5e5a7f364d9526d8cef498a86e91a8766968ef1d739e5f0148d
+  backend/tests/fixtures/browser_egress/package-lock.json: 7d473f76bd80b413eaa1fd132eecc9320d7dc510182bf57289f2e96f8f7fef80
+  backend/tests/fixtures/browser_egress/package.json: cf9c4a332d6da465d1cba484a73242ca73dab1889fe0ac28f480c9e17832b20d
+  docker/browser-worker/package-lock.json: 6e44f8037ba763d110132cc9a9df2069614a023322a50dc3fc9495f00f7ff0b2
+  docker/browser-worker/package.json: 8fdaedec3830ef17feed515a7df998b14c570fc53a7488dce93137f55cb0b91e
+  frontend/package.json: fec44d75d7b8a884388b977259230a8fa35e7f63ee93aa925045bb56b6f26e46
   handbook/requirements.txt: 58b3379a8c8a1f8ee2acc05126743ab404dcc6f96d045c25313dd18313b079c7
-  packages/react/package.json: 5c5be18b3dc6d9ffe7f8382798cdbad415d6a57546e03b7679fd425c7d7ab97d
+  packages/react/package.json: 26eb205434fc4d28038cb4e519fbbf62ea9a966682cc3d6676f6b116d9bd0c1e
   sdk/python/pyproject.toml: 1f9e874a99d972c2d024fd4b017408d3439de2d77b2c1c5e6013271011784775
   sdk/typescript/package.json: 25550d618bf86053219d1e111c3de020cfe424e930b48e1a8cbf4a522df5b85e
 commands:
@@ -29,7 +33,7 @@ commands:
   - ls
   - --depth=0
   - --include=dev
-  started_at: '2026-11-02T17:13:50.946884+00:00'
+  started_at: '2026-11-07T02:39:06.688428+00:00'
   returncode: 0
   status: observed
   integrity:
@@ -40,6 +44,76 @@ commands:
     - --include=dev
     returncode: 0
     status: observed
+- target_id: node:backend/tests/fixtures/browser_egress
+  manager: npm
+  working_dir: backend/tests/fixtures/browser_egress
+  argv:
+  - npm
+  - ci
+  - --include=dev
+  manifest: backend/tests/fixtures/browser_egress/package.json
+  requires_network: true
+  expected_paths:
+  - backend/tests/fixtures/browser_egress/node_modules
+  integrity_argv:
+  - npm
+  - ls
+  - --depth=0
+  - --include=dev
+  started_at: '2026-11-07T02:39:12.777720+00:00'
+  returncode: 0
+  status: observed
+  integrity:
+    argv:
+    - npm
+    - ls
+    - --depth=0
+    - --include=dev
+    returncode: 0
+    status: observed
+- target_id: node:docker/browser-worker
+  manager: npm
+  working_dir: docker/browser-worker
+  argv:
+  - npm
+  - ci
+  - --include=dev
+  manifest: docker/browser-worker/package.json
+  requires_network: true
+  expected_paths:
+  - docker/browser-worker/node_modules
+  integrity_argv:
+  - npm
+  - ls
+  - --depth=0
+  - --include=dev
+  started_at: '2026-11-07T02:39:13.285174+00:00'
+  returncode: 0
+  status: observed
+  integrity:
+    argv:
+    - npm
+    - ls
+    - --depth=0
+    - --include=dev
+    returncode: 0
+    status: observed
+- target_id: python-venv:backend
+  manager: venv
+  working_dir: backend
+  argv:
+  - python
+  - -m
+  - venv
+  - .venv
+  manifest: backend/pyproject.toml
+  requires_network: false
+  expected_paths:
+  - backend/.venv/bin/python
+  integrity_argv: []
+  started_at: '2026-11-07T02:39:13.844662+00:00'
+  returncode: 0
+  status: observed
 - target_id: python:backend
   manager: pip
   working_dir: backend
@@ -55,7 +129,23 @@ commands:
   expected_paths:
   - backend/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-11-02T17:13:58.510541+00:00'
+  started_at: '2026-11-07T02:39:15.326265+00:00'
+  returncode: 0
+  status: observed
+- target_id: python-venv:sdk/python
+  manager: venv
+  working_dir: sdk/python
+  argv:
+  - python
+  - -m
+  - venv
+  - .venv
+  manifest: sdk/python/pyproject.toml
+  requires_network: false
+  expected_paths:
+  - sdk/python/.venv/bin/python
+  integrity_argv: []
+  started_at: '2026-11-07T02:39:38.255217+00:00'
   returncode: 0
   status: observed
 - target_id: python:sdk/python
@@ -73,7 +163,23 @@ commands:
   expected_paths:
   - sdk/python/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-11-02T17:14:06.069158+00:00'
+  started_at: '2026-11-07T02:39:39.770843+00:00'
+  returncode: 0
+  status: observed
+- target_id: python-venv:handbook
+  manager: venv
+  working_dir: handbook
+  argv:
+  - python
+  - -m
+  - venv
+  - .venv
+  manifest: handbook/requirements.txt
+  requires_network: false
+  expected_paths:
+  - handbook/.venv/bin/python
+  integrity_argv: []
+  started_at: '2026-11-07T02:39:44.252558+00:00'
   returncode: 0
   status: observed
 - target_id: python:handbook
@@ -91,7 +197,7 @@ commands:
   expected_paths:
   - handbook/.venv/bin/python
   integrity_argv: []
-  started_at: '2026-11-02T17:14:10.968282+00:00'
+  started_at: '2026-11-07T02:39:45.755476+00:00'
   returncode: 0
   status: observed
 failure: null
