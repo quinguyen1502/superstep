@@ -31,7 +31,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
-    "call_llm", "offline_service", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
+    "call_llm", "call_llm_fallback", "fails_over", "offline_service", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 RESERVED |= {"browser_call", "bind_browser_url", "browser_prepare", "browser_interrupt", "browser_decide",
@@ -180,17 +180,43 @@ def mock_llm(prompt: str, model: str) -> str:
     return f"[mock:{model}] Answer: {tail[:200]}"
 
 
-def call_llm(prompt: str, model: str) -> str:
+def call_llm(prompt: str, model: str, provider: Optional[str] = None) -> str:
     if not LLM_PROVIDER:
         return mock_llm(prompt, model)
     from langchain.chat_models import init_chat_model
 
-    reply = init_chat_model(model, model_provider=LLM_PROVIDER).invoke(prompt)
+    reply = init_chat_model(model, model_provider=provider or LLM_PROVIDER).invoke(prompt)
     if isinstance(reply.content, str):
         return reply.content
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
 '''
 
+
+FALLBACK = '''
+
+# --- Model fallback ------------------------------------------------------------------------------------------
+# An LLM node with a fallback model, as in the studio: the primary model first; only when it is unreachable, answers
+# badly (HTTP 5xx) or is not found (HTTP 404) the fallback model, once. Other errors (a bad key, a refused request)
+# stop the node. The fallback uses LLM_FALLBACK_PROVIDER, or LLM_PROVIDER; its key comes from the environment too.
+# Offline (no LLM_PROVIDER) only the primary mock answers, as in a studio dry run.
+def fails_over(error: Exception) -> bool:
+    status = getattr(error, "status_code", None)
+    if not isinstance(status, int): status = getattr(getattr(error, "response", None), "status_code", None)
+    if isinstance(status, int): return status == 404 or status >= 500
+    return isinstance(error, (ConnectionError, TimeoutError)) or type(error).__name__ in (
+        "APIConnectionError", "APITimeoutError", "ConnectError", "ConnectTimeout", "ReadTimeout")
+
+
+def call_llm_fallback(prompt: str, model: str, fallback: str) -> str:
+    if not LLM_PROVIDER:
+        return call_llm(prompt, model)
+    try:
+        return call_llm(prompt, model)
+    except Exception as error:
+        if not fails_over(error): raise
+        print(f"(model fallback) {model} failed ({type(error).__name__}); trying {fallback}", file=sys.stderr)
+    return call_llm(prompt, fallback, os.environ.get("LLM_FALLBACK_PROVIDER") or LLM_PROVIDER)
+'''
 
 FILES = '''
 # --- Attachments ---------------------------------------------------------------------------------------------
@@ -586,6 +612,7 @@ class _Writer(GraphWriter):
     def body(self, graphs: List[_Graph], main: _Graph) -> None:
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
+        if "fallback" in self.uses: self.add("\n" + FALLBACK.rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
         if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
         if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -684,7 +711,10 @@ class _Writer(GraphWriter):
             self.add(f'    """{head}."""')
             self.add(f"    prompt = render({const}_PROMPT, state)")
             files = attachments.field_of(d)
+            fb = d.get("fallback") if isinstance(d.get("fallback"), dict) else None  # only the model name: never its credential
+            if fb and files: self.add("    # TODO: the studio's fallback model is not applied to messages with attachments in this file.")
             self.add(ret(f"call_llm_files(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, state.get({lit(files)}))" if files
+                         else f"call_llm_fallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())})" if fb
                          else f"call_llm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
         elif t == "human":
             self.add(f"{const}_PROMPT = {lit(d.get('prompt') or '')}")

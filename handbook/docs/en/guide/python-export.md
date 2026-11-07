@@ -67,6 +67,7 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, then `call_llm(prompt, model)` |
 | Condition | a node that changes nothing, and `add_conditional_edges` with a router function and a label → node map |
 | Human | `interrupt(...)` pauses the run; `Command(resume=answer)` continues it |
+| LLM with a fallback model | `call_llm_fallback(prompt, model, fallback)`: the fallback model once, only when the primary is unreachable, answers HTTP 5xx or is not found (404); `LLM_FALLBACK_PROVIDER` picks its provider (default `LLM_PROVIDER`). Offline only the primary mock answers. Not applied to nodes that send attachments |
 | Agent | an entry, a model and a tool function with two routers, and an end function; `interrupt(...)` before a tool that needs approval |
 | Join | a node, and `add_edge([branch, branch], join)`: it runs once all branches finished |
 | For each | a loop position field and a router that returns `each` or `done` |
@@ -216,6 +217,7 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | Tool: function | a stub that throws: the function is Python on the server |
 | Tool: HTTP | `fetch`, without following redirects |
 | Retriever, MCP, Send email | stubs with a `TODO`, as in the Python file |
+| LLM with a fallback model | `callLlmFallback`, with the same rules as the Python file |
 | Agent | the entry, model, tool and end steps, as in the Python file; `callAgent` is the mock, or `initChatModel` with `bindTools` when `LLM_PROVIDER` is set. Built-in tools are stubs that throw |
 | Retry, cache, input fields, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` on `addNode` |
 
