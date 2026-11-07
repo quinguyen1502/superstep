@@ -465,8 +465,8 @@ See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for depende
 
 REQ-0087, DES-0005, DEC-0086 and PLAN-0007: **Accepted 2026-11-07** (DEC-0086 option A). Teams/e-mail links and tour deferred.
 
-- TASK-0259 — handbook page "Expose a local studio" (Cloudflare Tunnel, ngrok, Dev Tunnels, `STUDIO_PUBLIC_URL`). **backlog**.
-- TASK-0260 — contextual handbook links in Settings → Channels. **backlog**.
+- TASK-0259 — handbook page "Expose a local studio" (Cloudflare Tunnel, ngrok, Dev Tunnels, `STUDIO_PUBLIC_URL`). **done** (#320).
+- TASK-0260 — contextual handbook links in Settings → Channels. **done** (this PR).
 
 ## Releases
 
