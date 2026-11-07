@@ -8,7 +8,7 @@ from __future__ import annotations
 import re, unicodedata
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple
-from . import agents, foreach
+from . import agents, approval_policy, deadlines, foreach
 from .templates import sanitize
 
 SKIP = ("start", "end", "note")  # canvas nodes that are not LangGraph nodes
@@ -69,9 +69,46 @@ class Graph:
         # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it (TASK-0137)
         kept = {(n.get("id"), t.get("name")): t.get("workflow_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                 for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "workflow"}
-        managed_nodes = {n.get("id") for n in raw.get("nodes") or [] if n.get("type") == "mcp" and (n.get("data") or {}).get("_managed_export") is True}
-        managed_tools = {(n.get("id"), tool.get("name")) for n in raw.get("nodes") or [] if n.get("type") == "agent"
-                         for tool in (n.get("data") or {}).get("tools") or [] if isinstance(tool, dict) and tool.get("_managed_export") is True}
+        def kept_managed(value):
+            """True stays the placeholder. A real adapter id is kept. A browser row is never this flag."""
+            if value is True: return True
+            if isinstance(value, str) and value and value != "browser": return value
+            return None
+
+        managed_nodes, managed_tools = {}, {}
+        for n in raw.get("nodes") or []:
+            if not isinstance(n, dict): continue
+            data = n.get("data") or {}
+            if n.get("type") == "mcp" and (flag := kept_managed(data.get("_managed_export"))) is not None:
+                managed_nodes[n.get("id")] = flag
+            if n.get("type") == "agent":
+                for tool in data.get("tools") or []:
+                    if isinstance(tool, dict) and (flag := kept_managed(tool.get("_managed_export"))) is not None:
+                        managed_tools[(n.get("id"), tool.get("name"))] = flag
+        # credentials, the judge and the deadline are read from the raw node: sanitize blanks the ids and drops
+        # escalation addresses, and a judge with no credential does not parse (REQ-0090)
+        raw_llm, raw_fallback, raw_policy, raw_deadline = {}, {}, {}, {}
+        for n in raw.get("nodes") or []:
+            if not isinstance(n, dict): continue
+            data, kind = n.get("data") or {}, n.get("type")
+            if kind in ("llm", "agent", "decision"): raw_llm[n.get("id")] = str(data.get("credential_id") or "")
+            if kind == "llm" and isinstance(data.get("fallback"), dict):
+                raw_fallback[n.get("id")] = str(data["fallback"].get("credential_id") or "")
+            if kind in ("human", "agent"):
+                policy = approval_policy.parse(data)
+                if policy:
+                    judge = policy.get("judge") or {}
+                    # TASK-0188: the file may name the mode, rules and model, never the judge credential or instructions
+                    raw_policy[n.get("id")] = ({"mode": policy["mode"], "max_per_day": policy.get("max_per_day"),
+                        "min_confidence": policy.get("min_confidence"),
+                        "rules": [{k: rule.get(k) for k in ("field", "op", "value", "effect")} for rule in policy.get("rules") or []],
+                        "judge": {"model": judge.get("model") or ""}},
+                        str(judge.get("credential_id") or ""))
+                parsed = deadlines.parse(data)
+                if parsed:
+                    kept = {"after": parsed["after"], "on_timeout": parsed.get("on_timeout") or "reject"}
+                    if parsed.get("remind_every"): kept["remind_every"] = parsed["remind_every"]
+                    raw_deadline[n.get("id")] = kept
         browser_nodes = {n.get("id"): (n.get("data") or {}).get("_browser_export") for n in raw.get("nodes") or []
                          if isinstance(n, dict) and n.get("type") == "mcp" and isinstance((n.get("data") or {}).get("_browser_export"), dict)}
         browser_tools = {(n.get("id"), tool.get("name")): tool.get("_browser_export") for n in raw.get("nodes") or []
@@ -101,11 +138,16 @@ class Graph:
             for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
                 if isinstance(t, dict) and (n["id"], t.get("name")) in raw_tool_server: t["_mcp_server"] = str(raw_tool_server[(n["id"], t.get("name"))] or "")
         for n in self.wf["nodes"]:
-            if n["id"] in managed_nodes: n["data"]["_managed_export"] = True
+            if n["id"] in managed_nodes: n["data"]["_managed_export"] = managed_nodes[n["id"]]
             if n["id"] in browser_nodes: n["data"]["_browser_export"] = browser_nodes[n["id"]]
+            if raw_llm.get(n["id"]): n["data"]["_llm_credential"] = raw_llm[n["id"]]
+            if raw_fallback.get(n["id"]): n["data"]["_fallback_credential"] = raw_fallback[n["id"]]
+            if n["id"] in raw_policy:
+                n["data"]["_approval_policy"], n["data"]["_judge_credential"] = raw_policy[n["id"]]
+            if n["id"] in raw_deadline: n["data"]["_deadline"] = raw_deadline[n["id"]]
             for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
                 if isinstance(t, dict) and t.get("source") == "workflow": t["workflow_id"] = kept.get((n["id"], t.get("name"))) or ""
-                if isinstance(t, dict) and (n["id"], t.get("name")) in managed_tools: t["_managed_export"] = True
+                if isinstance(t, dict) and (n["id"], t.get("name")) in managed_tools: t["_managed_export"] = managed_tools[(n["id"], t.get("name"))]
                 if isinstance(t, dict) and (n["id"], t.get("name")) in browser_tools: t["_browser_export"] = browser_tools[(n["id"], t.get("name"))]
         self.refs = {n["id"]: (n.get("data") or {}).get("workflow_id") or "" for n in raw.get("nodes") or []
                      if isinstance(n, dict) and n.get("type") == "subgraph"}
@@ -241,6 +283,8 @@ class GraphWriter:
             if t in ("llm", "human", "retriever", "decision", "email", "mcp") or (t == "tool" and d.get("mode") == "http"):
                 self.uses.add("templates")
             if t in ("llm", "decision"): self.uses.add("model")
+            if t in ("llm", "agent", "decision"): self.llm_slot(str(d.get("_llm_credential") or ""))
+            if t == "llm": self.llm_slot(str(d.get("_fallback_credential") or ""))
             if t == "llm" and isinstance(d.get("fallback"), dict): self.uses.add("fallback")  # TASK-0264
             if t in ("llm", "agent") and d.get("include_attachments"): self.uses.add("files")  # TASK-0176
             if t == "llm" and isinstance(d.get("fallback"), dict) and d.get("include_attachments"): self.uses.add("fallback_files")  # TASK-0267
@@ -263,18 +307,34 @@ class GraphWriter:
                 for tool in d.get("tools") or []:
                     if isinstance(tool, dict) and tool.get("source") == "mcp": self.note_mcp(tool)
                 if agents.needs_approval(d): self.uses.add("human")
+            if t in ("human", "agent"):
+                self.llm_slot(str(d.get("_judge_credential") or ""))
+                if self.approval_extra(d):
+                    self.uses.add("approval")
+                    self.uses.add("model")  # the review helper calls the model even when the graph has no LLM node
+                    kind = str(((d.get("approval") or {}).get("channel") if isinstance(d.get("approval"), dict) else "") or "").strip().lower()
+                    if kind: self.__dict__.setdefault("approval_channels", set()).add(kind)
+
+    def approval_extra(self, data: dict) -> bool:
+        """A channel, a deadline or an AI-review policy: the file then carries the approval helpers."""
+        approval = data.get("approval") if isinstance(data.get("approval"), dict) else {}
+        return bool(approval.get("channel") or data.get("_deadline") or data.get("_approval_policy"))
 
     def note_mcp(self, data: dict) -> None:
-        """A browser connection emits its helper. Every other MCP reference stays a stub."""
+        """A browser connection emits its helper. A managed adapter gets MANAGED_<n>. Anything else is MCP."""
         info = data.get("_browser_export")
         if isinstance(info, dict) and isinstance(info.get("alias"), str) and isinstance(info.get("policy"), dict):
             self.browser_policies[info["alias"]] = info["policy"]
             self.uses.add("browser")
             self.uses.add("templates")
             return
-        self.uses.add("managed_operation" if data.get("_managed_export") else "call_mcp_tool")
-        if not data.get("_managed_export"):  # TASK-0269: each server's environment variable prefix, in order of first use
-            self.mcp_prefix(data)
+        managed = data.get("_managed_export")
+        if managed:
+            self.uses.add("managed_operation")
+            if isinstance(managed, str): self.managed_prefix(data)  # True is the placeholder: no prefix, two arguments
+            return
+        self.uses.add("call_mcp_tool")
+        self.mcp_prefix(data)  # TASK-0269: each server's environment variable prefix, in order of first use
 
     def kb_prefix(self, data: dict) -> str:
         """KNOWLEDGE_BASE_<n>: the environment variable prefix of a Retriever node's or Agent tool's knowledge base,
@@ -291,6 +351,34 @@ class GraphWriter:
         sid = str(data.get("_mcp_server") or "")
         if sid not in servers: servers[sid] = f"MCP_SERVER_{len(servers) + 1}"
         return servers[sid]
+
+    def llm_slot(self, credential: str) -> str:
+        """LLM_CRED_<n> for one Studio credential, numbered in order of first use. An empty id is not a slot, and the
+        id itself is never written. When the slot's provider is unset, the node keeps LLM_PROVIDER."""
+        credential = str(credential or "")
+        if not credential: return ""
+        slots = self.__dict__.setdefault("llm_slots", {})
+        if credential not in slots: slots[credential] = f"LLM_CRED_{len(slots) + 1}"
+        return slots[credential]
+
+    def managed_prefix(self, data: dict) -> str:
+        """MANAGED_<n> for one managed server, in order of first use. A blank server id does not collapse two nodes."""
+        servers = self.__dict__.setdefault("managed_servers", {})
+        sid = str(data.get("_mcp_server") or "") or f"anon:{id(data)}"
+        if sid not in servers: servers[sid] = f"MANAGED_{len(servers) + 1}"
+        return servers[sid]
+
+    def export_env_names(self) -> List[str]:
+        """Literal environment names this file reads, so a project .env.example can list the numbered ones."""
+        names: List[str] = []
+        for slot in getattr(self, "llm_slots", {}).values():
+            names += [f"{slot}_PROVIDER", f"{slot}_API_KEY", f"{slot}_BASE_URL"]
+        for prefix in getattr(self, "managed_servers", {}).values():
+            names += [f"{prefix}_SETTINGS", f"{prefix}_SECRETS"]
+        for kind in sorted(getattr(self, "approval_channels", ())):
+            if kind == "telegram": names += ["APPROVAL_TELEGRAM_BOT_TOKEN", "APPROVAL_TELEGRAM_CHAT_ID"]
+            else: names.append(f"APPROVAL_{kind.upper()}_WEBHOOK_URL")
+        return names
 
     def inputs(self, g: Graph, nid: str) -> List[str]:
         """The node's input fields when they are all state fields (as `node_policy.input_schema`), else none."""

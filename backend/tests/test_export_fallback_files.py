@@ -22,7 +22,7 @@ PY_FAKE = '''class FakeError(Exception):
         super().__init__(f"status {status}"); self.status_code = status
 
 
-def call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None) -> str:
+def call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None, slot: Optional[str] = None) -> str:
     text, images = with_files(prompt, files)
     print(f"CALL {model} {provider or LLM_PROVIDER} {'|'.join(f['name'] for f in files)} {len(text)}", file=sys.stderr)
     mode = os.environ.get("FAKE_PRIMARY", "ok")
@@ -33,9 +33,9 @@ def call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] 
     return f"from {model}"
 
 
-def _real_call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None) -> str:'''
+def _real_call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None, slot: Optional[str] = None) -> str:'''
 
-TS_FAKE = '''async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string): Promise<string> {
+TS_FAKE = '''async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string, slot?: string): Promise<string> {
   const list = fileList(files);
   const [text] = withFiles(prompt, list);
   console.error(`CALL ${model} ${provider || LLM_PROVIDER} ${list.map((f) => f.name).join("|")} ${text.length}`);
@@ -48,7 +48,7 @@ TS_FAKE = '''async function callLlmFiles(prompt: string, model: string, files: u
   return `from ${model}`;
 }
 
-async function _realCallLlmFiles(prompt: string, model: string, files: unknown, provider?: string): Promise<string> {'''
+async function _realCallLlmFiles(prompt: string, model: string, files: unknown, provider?: string, slot?: string): Promise<string> {'''
 
 
 def calls(stderr): return re.findall(r"^CALL (\S+) (\S+) (\S+) (\d+)", stderr, re.M)
@@ -56,7 +56,7 @@ def calls(stderr): return re.findall(r"^CALL (\S+) (\S+) (\S+) (\d+)", stderr, r
 
 def py_run(tmp_path, base, live, **fake):
     code = X.to_python(WF, "FallbackFiles", 1, {}, EXAMPLE).code
-    head = "def call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None) -> str:"
+    head = "def call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None, slot: Optional[str] = None) -> str:"
     assert code.count(head) == 1 and "primary-cred" not in code and "backup-cred" not in code and "TODO: the studio's fallback" not in code
     f = tmp_path / f"ff_{uuid.uuid4().hex[:6]}.py"; f.write_text(code.replace(head, PY_FAKE))
     env = {k: v for k, v in os.environ.items() if k not in KEYS and k != "PYTHONPATH"}
@@ -67,7 +67,7 @@ def py_run(tmp_path, base, live, **fake):
 
 def ts_run(tmp_path, base, live, **fake):
     code = T.to_typescript(WF, "FallbackFiles", 1, {}, EXAMPLE).code
-    head = "async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string): Promise<string> {"
+    head = "async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string, slot?: string): Promise<string> {"
     assert code.count(head) == 1 and "primary-cred" not in code and "backup-cred" not in code and "TODO: the studio's fallback" not in code
     f = tmp_path / f"ff_{uuid.uuid4().hex[:6]}.ts"; f.write_text(code.replace(head, TS_FAKE))
     env = {k: v for k, v in base.items() if k != "LLM_PROVIDER"}

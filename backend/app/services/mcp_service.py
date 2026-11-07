@@ -204,8 +204,9 @@ class McpService:
     def check_export(self, graphs):
         """Mark managed references on the temporary export graphs (TASK-0254, TASK-0251).
 
-        Browser connections receive a public policy and an alias. Other managed adapters stay
-        explicit placeholders. No connection secrets are copied, and the annotations are not saved.
+        Browser connections receive a public policy and an alias. Other managed adapters are
+        named so the export can call them from MANAGED_<n> environment JSON. An invalid browser
+        stays a placeholder. No connection secrets are copied, and the annotations are not saved.
         """
         managed = False
         aliases = {}
@@ -223,7 +224,10 @@ class McpService:
                     if row.adapter == "browser" and (policy := self._browser_policy(row, aliases)) is not None:
                         reference["_browser_export"] = policy
                     else:
-                        reference["_managed_export"] = True
+                        # A real adapter id is callable from MANAGED_<n> env JSON. An invalid browser stays the
+                        # placeholder (True), and the string "browser" is never stored as an adapter (REQ-0090).
+                        adapter = row.adapter if isinstance(row.adapter, str) and row.adapter and row.adapter != "browser" else True
+                        reference["_managed_export"] = adapter
                         managed = True
         return managed
 

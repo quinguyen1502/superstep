@@ -67,6 +67,9 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, then `call_llm(prompt, model)` |
 | Condition | a node that changes nothing, and `add_conditional_edges` with a router function and a label → node map |
 | Human | `interrupt(...)` pauses the run; `Command(resume=answer)` continues it |
+| Per-node model credential | `LLM_CRED_<n>`: one slot per Studio credential, shared by the nodes that use it. Set `LLM_CRED_<n>_PROVIDER`, `LLM_CRED_<n>_API_KEY` and, when the provider needs it, `LLM_CRED_<n>_BASE_URL`. An unset slot provider keeps `LLM_PROVIDER`, and the offline mock when that is unset too. A set slot provider with no key stops the run and names `LLM_CRED_<n>_API_KEY`. The credential id is not written |
+| Human channel, deadline and AI review | `notify_approval`, `wait_approval` and, when a policy is set, `review_approval`. Slack, Teams and a generic channel use `APPROVAL_<KIND>_WEBHOOK_URL` (JSON `{"text": ...}`); Telegram uses `APPROVAL_TELEGRAM_BOT_TOKEN` and `APPROVAL_TELEGRAM_CHAT_ID`. The decision is still the local answer. A deadline waits, reminds at most five times, then approves, rejects, or waits once more and rejects. Suggest mode never answers. Auto mode approves only when the judge says approve with enough confidence; a reject rule rejects. Low confidence, a judge reject, an error, a missing key and the daily cap ask a person. Approvers, escalation addresses and credential ids are not written |
+| Managed connection | `managed_operation(tool, arguments, prefix, adapter)` reads JSON from `MANAGED_<n>_SETTINGS` and `MANAGED_<n>_SECRETS`. The host is resolved once and pinned; redirects are not followed. The same arguments return the stored result; different arguments conflict; an unknown outcome is not retried (`SUPERSTEP_MANAGED_STATE`). Not configured: offline a dry run; with `LLM_PROVIDER` set the run stops and names the variables. A step with no adapter still raises the placeholder |
 | LLM with a fallback model | `call_llm_fallback(prompt, model, fallback)`: the fallback model once, only when the primary is unreachable, answers HTTP 5xx or is not found (404); `LLM_FALLBACK_PROVIDER` picks its provider (default `LLM_PROVIDER`). Offline only the primary mock answers; a node that sends attachments uses `call_llm_files_fallback`, which gives the fallback model the same files |
 | Agent | an entry, a model and a tool function with two routers, and an end function; `interrupt(...)` before a tool that needs approval |
 | Join | a node, and `add_edge([branch, branch], join)`: it runs once all branches finished |
@@ -211,6 +214,9 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | LLM | `render(PROMPT, state)`, then `callLlm(prompt, model)`: the mock, or `initChatModel` when `LLM_PROVIDER` is set |
 | Condition, For each | `addConditionalEdges` with a router function |
 | Human | `interrupt(...)`; `new Command({ resume })` continues the run |
+| Per-node model credential | `LLM_CRED_<n>` on `callLlm`, `callLlmFallback`, `callAgent` and `decide`, with the same slot rules as the Python file |
+| Human channel, deadline and AI review | `notifyApproval`, `waitApproval` and `reviewApproval`, with the same channel, deadline and AI-review rules as the Python file |
+| Managed connection | `managedOperation(tool, args, prefix, adapter)`, with the same `MANAGED_<n>_SETTINGS` and `MANAGED_<n>_SECRETS` rules as the Python file. A step with no adapter still throws the placeholder |
 | Join | `addEdge([branch, branch], join)` |
 | Decision | `decide(text, question)` for each question |
 | Subgraph | `build_<child>()`, a compiled graph added as a node |
@@ -291,13 +297,15 @@ workflow, starts `langgraph dev` on it and calls it with the SDK.
 
 ## What is not in the file
 
-- Credentials, API keys, SMTP settings, knowledge bases, MCP server addresses and secrets, approval
-  channels, approvers and escalation addresses.
+- Credential ids and secret values, SMTP passwords, knowledge-base ids, MCP server ids and secrets,
+  approval targets, approvers and escalation addresses. Slot names, the channel kind, deadline timing
+  and the review policy (without the judge credential or the judge instructions) are written; the values stay in the environment.
 - Studio features around a run: the trace, run history, recovery after a
-  restart, approval channels and deadlines, cost tracking, node timeouts.
-- MCP server addresses, the Superstep URL and token, and SMTP settings: you set
-  them as environment variables. Without them, offline the MCP, Retriever and Send
-  email calls return an empty result, nothing, or the message that would have
+  restart, cost tracking and node timeouts. A channel notice, a deadline and AI
+  review run in the exported file from environment variables; they are not the studio's approval service.
+- MCP server addresses, the Superstep URL and token, SMTP settings, and managed-connection
+  settings and secrets: you set them as environment variables. Without them, offline the MCP, Retriever,
+  Send email and managed calls return an empty result, nothing, a dry run, or the message that would have
   been sent, and say so on stderr. With `LLM_PROVIDER` set they raise (Python) or
   throw (TypeScript), so a real run never treats a missing service as done.
 - A subgraph, workflow tool or function that was missing at export time: its

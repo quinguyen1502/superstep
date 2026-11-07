@@ -95,8 +95,10 @@ nhật ký ghi lại họ có đồng ý với mô hình hay không.
 
 ## Xuất code
 
-Bản xuất Python, TypeScript và dự án LangGraph chỉ giữ đồ thị: ở đó người trả
-lời mọi yêu cầu, và có ghi chú trong code. Xuất workflow và template giữ cài
-đặt AI duyệt nhưng bỏ credential của mô hình duyệt.
+Bản xuất Python và TypeScript giữ policy duyệt nhưng bỏ credential và hướng dẫn của mô hình.
+Chế độ gợi ý in ý kiến và vẫn hỏi người. Chế độ tự động có thể duyệt, hoặc từ chối
+theo rule từ chối, qua slot `LLM_CRED_<n>` của mô hình duyệt. Thiếu key, độ tin cậy
+thấp, mô hình từ chối và trần theo ngày đều hỏi người. Xuất workflow và template giữ
+cài đặt AI duyệt nhưng bỏ credential của mô hình duyệt.
 
 Xem thêm [Duyệt bởi người](human-approval.md) và [node Agent](../guide/agent.md).

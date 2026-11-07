@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0266
 - Title: Proposal: remaining export gaps needing owner decision
-- Status: backlog (proposal; real MCP/retriever/SMTP adapters split out and owner-authorised as TASK-0269..0271 under REQ-0089; the rest still needs an owner decision)
+- Status: backlog (proposal; adapters shipped as TASK-0269..0271; cross-language code declined by the owner on 2026-11-07; approval, per-node credentials and managed connections authorised as REQ-0090)
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-07
 - Updated: 2026-11-07
@@ -25,3 +25,4 @@ Cross-language code nodes (TS export cannot run Python code/server functions; Py
 
 - 2026-11-07: Created.
 - 2026-11-07: Owner "Làm đi" (REQ-0089): adapters split into TASK-0269 (MCP), TASK-0270 (Retriever), TASK-0271 (Send email). Cross-language code, advanced approvals, per-node providers and managed connections remain proposals here.
+- 2026-11-07: Owner declined cross-language code nodes ("ko cần làm phần này"). The other three are authorised as REQ-0090 (TASK-0273 slots, TASK-0274 approval, TASK-0275 managed connections). This proposal stays in backlog for the declined item only.

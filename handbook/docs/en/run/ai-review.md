@@ -98,8 +98,10 @@ records whether they agreed with the model.
 
 ## Exports
 
-Python, TypeScript and LangGraph project exports keep the graph only: there,
-people answer every request. A note in the code says so. Workflow export and
+Python and TypeScript exports keep the review policy without the judge credential or the judge instructions.
+Suggest mode prints an opinion and still asks a person. Auto mode can approve, or
+reject on a reject rule, using the judge's `LLM_CRED_<n>` slot. A missing key, low
+confidence, a judge reject and the daily cap ask a person. Workflow export and
 templates keep the AI review settings without the judge credential.
 
 See also [Human approval](human-approval.md) and the [Agent node](../guide/agent.md).
