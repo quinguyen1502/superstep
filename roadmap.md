@@ -443,7 +443,7 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 ## Browser tools, recipes and proxies
 
-REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio first milestone landed: TASK-0241–0250 + TASK-0253 merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323 (REV-0244, QA-0244). On 2026-11-07 the owner recorded two export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0251, QA-0251). TASK-0262 is done in PR #334 (REV-0254, QA-0254) and is not merged. AC11 stays open until PR #334 merges. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Implementation PRs #303–#316 reconciled with the Accepted package and merged into develop. No release/version bump authorised by acceptance alone.
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio first milestone landed: TASK-0241–0250 + TASK-0253 merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323 (REV-0244, QA-0244). On 2026-11-07 the owner recorded two export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Implementation PRs #303–#316 reconciled with the Accepted package and merged into develop. No release/version bump authorised by acceptance alone.
 
 - TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **done** (merged #303).
 - TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **done** (merged #304).
@@ -456,10 +456,10 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (
 - TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **done** (merged #314).
 - TASK-0250 — Agent/recipe config and filtered trace/chat UI. **done** (merged #315).
 - TASK-0253 — studio integrated acceptance, example workflow and English handbook. **done** (merged #316).
-- TASK-0251 — executable Python/plain and project exports. **done**, merged in PR #321 (REV-0242, QA-0242).
+- TASK-0251 — executable Python/plain and project exports. **done**, merged in PR #321 (REV-0255, QA-0255).
 - TASK-0252 — executable TypeScript/plain and project exports. **done**, merged in PR #323 (REV-0244, QA-0244).
-- TASK-0261 — live Playwright/Browserless page in the Python export. **done**, merged in PR #329 (`10300e20`, REV-0251, QA-0251).
-- TASK-0262 — the same live page in the TypeScript export. **done** in PR #334 (REV-0254, QA-0254). Not merged.
+- TASK-0261 — live Playwright/Browserless page in the Python export. **done**, merged in PR #329 (`10300e20`, REV-0256, QA-0256).
+- TASK-0262 — the same live page in the TypeScript export. **done**, merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). AC11 closed.
 
 See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability, deferred triggers and gates. Owner acceptance of the **amended** package and `factory ready` precede task-start. Existing unrelated SDK task state is unchanged.
 
@@ -487,8 +487,8 @@ REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Làm đi").
 - TASK-0268 — LLM fallback for messages with attachments. **done**.
 - TASK-0269 — MCP export adapter. **done**.
 - TASK-0270 — Retriever export adapter. **done**.
-- TASK-0271 — Send email export adapter. **done**.
-- TASK-0272 — Factory metadata cleanup (TASK-0253 review, distinct REV/QA ids). planned.
+- TASK-0271 — Send email export adapter. **done**, merged in PR #333 (`bbbd23b2`).
+- TASK-0272 — Factory metadata cleanup (TASK-0253 review, distinct REV/QA ids). **done** (REV-0258, QA-0258). Not merged.
 
 ## Releases
 

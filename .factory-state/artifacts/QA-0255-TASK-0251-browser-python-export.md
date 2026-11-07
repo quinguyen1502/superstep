@@ -3,7 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- QA ID: QA-0242
+- QA ID: QA-0255
+- Renumbered: QA-0242 → QA-0255 on 2026-11-07 (TASK-0272). PR #320 merged first and keeps QA-0242 for TASK-0259.
 - Task ID: TASK-0251
 - QA Owner: Grok (advisory; not owner approval)
 - Created: 2026-11-07
@@ -16,7 +17,7 @@ Python and LangGraph project export of browser tools and recipes on
 `factory/task-0251-browser-python-export` at base `e26e39e9`. Evidence is
 `backend/tests/test_browser_python_export.py` executed with `python -I`, plus
 the declared tool-policy commands. TypeScript parity is TASK-0252 and is not
-claimed here. Review REV-0242 recorded no blocking findings.
+claimed here. Review REV-0255 recorded no blocking findings.
 
 ## Acceptance Criteria Coverage
 

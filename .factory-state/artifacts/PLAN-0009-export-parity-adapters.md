@@ -16,3 +16,5 @@
 | TASK-0272 | Factory metadata cleanup: real TASK-0253 review, distinct REV/QA ids, status reconciliation, validate | S |
 
 Order: 0267+0268 (one PR), adapters (scoped PRs), then 0272. Each merged only with all required CI green. No edits to browser export paths (TASK-0261/0262).
+
+TASK-0267 through TASK-0271 are merged. TASK-0271 merged in PR #333 (`bbbd23b2`). TASK-0272 is done (REV-0258, QA-0258) and is not merged. REQ-0089 is not marked done.

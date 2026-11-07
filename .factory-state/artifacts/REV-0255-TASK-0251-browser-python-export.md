@@ -3,7 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- Review ID: REV-0242
+- Review ID: REV-0255
+- Renumbered: REV-0242 → REV-0255 on 2026-11-07 (TASK-0272). PR #320 merged first and keeps REV-0242 for TASK-0259.
 - Task ID: TASK-0251
 - Reviewer: Grok (advisory; not owner approval)
 - Created: 2026-11-07

@@ -7,7 +7,7 @@
 - Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved the export-driver clarification below. That approval records the wording. It does not create implementation tasks.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-07 (TASK-0261 merged in PR #329; TASK-0262 done in PR #334, not merged; AC11 open)
+- Updated: 2026-11-07 (owner closed AC11 after PR #334 merged; REQ-0086 not marked done)
 - Source: Owner discussion on browser tools, autonomous browsing, dynamic URLs, portable exports and connection-level proxies; followed by “Tiến hành ghi nhận yêu cầu và break task đi”. Owner amendments on 2026-11-06 (Asia/Saigon) after reviewing the proposed package without accepting it as-is; additional flexible-but-safe config and risk guidance the same day.
 
 ## Summary
@@ -40,7 +40,7 @@ The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the po
 6. **Budgets.** `max_pages` counts document navigations and refuses the next one. `stealth` is passed only when the provider is Browserless.
 7. **Still refused in the export.** Upload and download stay `capability_refused` outside Studio, including when the allow flag is on. A screenshot result stays `{captured: true, inline_bytes: false}` with no image bytes in the result or the generated source. Telegram, Sheets, HTTP API, Slack, WhatsApp, Email, Teams, Drive, web search, MCP stdio/HTTP, and the retriever stay explicit stubs.
 
-AC8 for TASK-0251 and TASK-0252 is on develop: PR #321 and PR #323. Live-driver behavior is AC11, tracked by TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0251, QA-0251). TASK-0262 is done in PR #334 (REV-0254, QA-0254) and is not merged. AC11 stays open until PR #334 merges.
+AC8 for TASK-0251 and TASK-0252 is on develop: PR #321 and PR #323. Live-driver behavior is AC11, tracked by TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done.
 
 ## Problem Or Opportunity
 
@@ -141,7 +141,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 - AC6: When mutating approval is ON, allow/reject/expiry behave correctly. When OFF, mutating actions run immediately. Challenge-required, lost-session and uncertain external outcomes are visible, resumable where valid and never cause blind replay of effects. Navigate/snapshot/extract/screenshot never wait on the mutating-approval toggle.
 - AC7: Recipes share the runtime, accept typed per-call arguments, expose bounded outputs through current tool surfaces and explicitly fail on selector/layout mismatch.
 - AC8: Python/TypeScript plain and project exports execute the fixture-driver scenarios independently, retaining bindings, proxy/policy, session ordering and approval semantics. No secret or silent stub escapes; unsupported capability gets a specific refusal. Tracked by TASK-0251 and TASK-0252. AC11 is not required to close AC8.
-- AC11: Live `playwright` and `browserless` export drivers keep one page per alias and follow the 2026-11-07 rules for click, fill, evaluate, redirect hops, profile JSON, `max_pages`, and Browserless-only stealth. Upload, download, and screenshot bytes stay refused. Tracked by TASK-0261 and TASK-0262.
+- AC11: Live `playwright` and `browserless` export drivers keep one page per alias and follow the 2026-11-07 rules for click, fill, evaluate, redirect hops, profile JSON, `max_pages`, and Browserless-only stealth. Upload, download, and screenshot bytes stay refused. Tracked by TASK-0261 and TASK-0262. Closed on 2026-11-07 after PR #329 (`10300e20`) and PR #334 (`ddafdd18`) merged. The recorded proof is the stub control flow. Chromium was not launched.
 - AC9: Accessible responsive en/vi UI and filtered trace/chat cover unconfigured, ready, running, waiting, failed, unknown, expired and completed states. Connection toggles and Agent tool grants are explicit. Screenshots remain owner-protected with retention and public-output filtering by default.
 - AC10: Mock mode is offline; fixture/contract/security/UI tests, layer/envelope/locale checks, full project validation, bilingual studio handbook, task review/QA and studio integration evidence pass before the first milestone is complete. Export handbook/parity waits with AC8.
 
@@ -159,7 +159,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 
 - Owner acceptance of this amended package (REQ/DES/ARCH/DEC/PLAN and tasks) is pending before moving studio delivery tasks to todo.
 - Browserless destination/proxy/DNS enforcement parity must be proved in TASK-0244; if it fails, document refusal and ask the owner for another path — do not silently drop remote from the requirement.
-- TASK-0261 is merged in PR #329 (`10300e20`, REV-0251, QA-0251). TASK-0262 is done in PR #334 (REV-0254, QA-0254) and is not merged. AC11 stays open until PR #334 merges. REQ-0086 is not done.
+- TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done.
 
 ## Related Artifacts
 
