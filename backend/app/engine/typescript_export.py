@@ -45,7 +45,7 @@ GLOBALS = {
     "URLSearchParams", "performance"}
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
-    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER",
+    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "offlineService",
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
@@ -485,13 +485,27 @@ function shorten(s: string, n: number): string {
 }
 ''' % {"langchain": LANGCHAIN}
 
+OFFLINE_SERVICE = r'''
+/** Offline example mode (LLM_PROVIDER unset): like the studio's mock run, a Studio service gives an empty result and
+ * says so on stderr. With LLM_PROVIDER set the run is real, so an unimplemented service stops it instead of returning
+ * a made-up value. */
+function offlineService(kind: string, name: string): void {
+  if (env("LLM_PROVIDER")) {
+    throw new Error(`${kind} ${JSON.stringify(name)} uses a Superstep service that is not exported: implement it ` +
+      "(see the TODO above) before running with LLM_PROVIDER set");
+  }
+  console.error(`(offline mock) ${kind} ${JSON.stringify(name)} is not implemented: empty result`);
+}
+'''
+
 STUBS = {
     "retrieve": r'''
 /** Retriever nodes search a Superstep knowledge base, which this file cannot reach.
  * TODO: search your own index for `query`, for example with a LangChain.js vector store retriever
  * (`vectorStore.asRetriever(topK).invoke(query)`). */
 async function retrieve(query: string, topK: number): Promise<unknown[]> {
-  void query, topK;
+  void topK;
+  offlineService("Knowledge base search", query.slice(0, 60));
   return [];
 }
 ''',
@@ -509,7 +523,8 @@ async function managedOperation(tool: string, args: unknown): Promise<never> {
 /** MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
  * TODO: call the tool with an MCP client, for example @langchain/mcp-adapters (MultiServerMCPClient). */
 async function callMcpTool(tool: string, args: unknown): Promise<unknown> {
-  void tool, args;
+  void args;
+  offlineService("MCP tool", tool);
   return null;
 }
 ''',
@@ -526,6 +541,7 @@ type Message = { to: string[]; cc: string[]; bcc: string[]; subject: string; bod
  * it prints the message and returns what it would have sent.
  * TODO: send it with your own mail library and SMTP settings from environment variables. */
 async function sendEmail(message: Message): Promise<Record<string, unknown>> {
+  offlineService("Send email", message.subject.slice(0, 60));
   console.log(`(e-mail not sent) to ${message.to.join(", ")}: ${message.subject}`);
   return { sent: false, dry_run: true, to: message.to, cc: message.cc, bcc: message.bcc, subject: message.subject,
     message_id: null, preview: message.body.slice(0, 2000) };
@@ -623,6 +639,7 @@ class _Writer(GraphWriter):
         if stubs:
             self.add("\n// --- Studio services ------------------------------------------------------------------------------------")
             self.add("// These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
+            if any(k != "managed_operation" for k in stubs): self.add(OFFLINE_SERVICE.rstrip())
             for k in stubs: self.add(STUBS[k].rstrip())
         if "browser" in self.uses:
             self.add("\n// --- Browser ---------------------------------------------------------------------------------------------")
@@ -779,6 +796,12 @@ class _Writer(GraphWriter):
             build = self.built[ref][1] if ref in self.built else None
             self.add(f"// {head}: the workflow \"{_doc(self.built[ref][0].title) if build else _doc(ref)}\" runs as a subgraph.")
             self.add(f"// buildGraph() adds {build or 'it'}() as the node: a compiled graph can be a node of another graph.")
+            if build is None:
+                self.add(f"/** {head}: TODO: the workflow {_doc(ref)} was not found when this file was exported. */")
+                self.add(sig)
+                self.add("  void state;")
+                self.add(f"  throw new Error({lit(f'{head}: the subgraph workflow {ref} was not found when this file was exported (deleted, or not shared with you)')});")
+                self.add("}")
         else:  # subgraph_exit or an unknown type: a pass-through
             self.add(f"/** {head}. */")
             self.add(sig)
@@ -1177,7 +1200,7 @@ class _Writer(GraphWriter):
                     self.add(f"    return Object.fromEntries({lit(outputs)}.map((k) => [k, final[k]]));")
                 else:
                     self.add(f"    // TODO: the workflow {lit(ref)} was not found (deleted, or not shared with you).")
-                    self.add("    return null;")
+                    self.add(f"    throw new Error({lit(f'tool {tname}: the workflow {ref} was not found when this file was exported (deleted, or not shared with you)')});")
             elif src == "http":
                 method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
                 key = self.http_key(const, t)
@@ -1246,7 +1269,7 @@ class _Writer(GraphWriter):
             fn = g.names[nid]
             if n["type"] == "subgraph":
                 ref = g.refs.get(nid) or ""
-                fn = f"{self.built[ref][1]}()" if ref in self.built else f"new StateGraph({cls}).compile() /* TODO: the subgraph was not found */"
+                fn = f"{self.built[ref][1]}()" if ref in self.built else g.names[nid]  # missing: the node throws
             opts = []
             retry = d.get("retry") if isinstance(d.get("retry"), dict) else {}
             if (attempts := number(retry.get("max_attempts"), int)) is not None:
