@@ -30,7 +30,7 @@ Unchanged product intent: no new Browser canvas node; no second Agent loop; no h
 
 ## Owner clarification (2026-11-07) — export drivers
 
-The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the portable-browser contract after the fixture exports. It does not reopen TASK-0251 or TASK-0252, does not authorise `plan-tasks` or implementation, and does not weaken refusals for other managed adapters.
+The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the portable-browser contract after the fixture exports. It does not reopen TASK-0251 or TASK-0252 and does not weaken refusals for other managed adapters. On 2026-11-07 the owner asked for the task split: TASK-0261 (Python) then TASK-0262 (TypeScript). Creating those tasks does not authorise task-start.
 
 1. **Fixture driver `memory`.** The default export driver stays a static HTTP GET. It does not follow redirects. Click follows an `href` only. Fill stores the value in session memory. Evaluate accepts only `document.title` and `document.body.innerText` from the stored HTML. A whitelisted private origin is reachable on this driver only. TASK-0251 and TASK-0252 implement this contract.
 2. **Live drivers `playwright` and `browserless`.** A later implementation keeps one browser and one page per alias for the life of the process. The page closes on idle, on lifetime expiry, or when the process exits. This is not a Studio conversation lease. Navigate, and a click that has an `href`, pass the whitelist and then open the URL. A click without an `href` acts on the live element. Fill types into the live element. After each change the runtime stores the page HTML for snapshot and extract.
@@ -40,7 +40,7 @@ The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the po
 6. **Budgets.** `max_pages` counts document navigations and refuses the next one. `stealth` is passed only when the provider is Browserless.
 7. **Still refused in the export.** Upload and download stay `capability_refused` outside Studio, including when the allow flag is on. A screenshot result stays `{captured: true, inline_bytes: false}` with no image bytes in the result or the generated source. Telegram, Sheets, HTTP API, Slack, WhatsApp, Email, Teams, Drive, web search, MCP stdio/HTTP, and the retriever stay explicit stubs.
 
-AC8 for TASK-0251 and TASK-0252 closes on the fixture contract once those pull requests merge. Live-driver behavior is a later acceptance. Split it into a Python task and a TypeScript task only after the owner asks for `plan-tasks`.
+AC8 for TASK-0251 and TASK-0252 closes on the fixture contract once those pull requests merge. Live-driver behavior is AC11, tracked by TASK-0261 and TASK-0262. Those tasks are in todo. Task-start is not authorised by the split.
 
 ## Problem Or Opportunity
 
@@ -140,7 +140,8 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 - AC5: Same-session calls execute in deterministic call order despite parallel Agent slots; different sessions/unrelated tools can retain concurrency. Sessions persist across chat turns of the same conversation/principal/connection until idle/max/cancel. Cancel/expiry/fencing closes resources and stops late commands.
 - AC6: When mutating approval is ON, allow/reject/expiry behave correctly. When OFF, mutating actions run immediately. Challenge-required, lost-session and uncertain external outcomes are visible, resumable where valid and never cause blind replay of effects. Navigate/snapshot/extract/screenshot never wait on the mutating-approval toggle.
 - AC7: Recipes share the runtime, accept typed per-call arguments, expose bounded outputs through current tool surfaces and explicitly fail on selector/layout mismatch.
-- AC8: Python/TypeScript plain and project exports execute the fixture-driver scenarios independently, retaining bindings, proxy/policy, session ordering and approval semantics. No secret or silent stub escapes; unsupported capability gets a specific refusal. Tracked by TASK-0251 and TASK-0252. The 2026-11-07 live-driver rules are a later acceptance and are not required to close AC8.
+- AC8: Python/TypeScript plain and project exports execute the fixture-driver scenarios independently, retaining bindings, proxy/policy, session ordering and approval semantics. No secret or silent stub escapes; unsupported capability gets a specific refusal. Tracked by TASK-0251 and TASK-0252. AC11 is not required to close AC8.
+- AC11: Live `playwright` and `browserless` export drivers keep one page per alias and follow the 2026-11-07 rules for click, fill, evaluate, redirect hops, profile JSON, `max_pages`, and Browserless-only stealth. Upload, download, and screenshot bytes stay refused. Tracked by TASK-0261 and TASK-0262.
 - AC9: Accessible responsive en/vi UI and filtered trace/chat cover unconfigured, ready, running, waiting, failed, unknown, expired and completed states. Connection toggles and Agent tool grants are explicit. Screenshots remain owner-protected with retention and public-output filtering by default.
 - AC10: Mock mode is offline; fixture/contract/security/UI tests, layer/envelope/locale checks, full project validation, bilingual studio handbook, task review/QA and studio integration evidence pass before the first milestone is complete. Export handbook/parity waits with AC8.
 
@@ -158,7 +159,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 
 - Owner acceptance of this amended package (REQ/DES/ARCH/DEC/PLAN and tasks) is pending before moving studio delivery tasks to todo.
 - Browserless destination/proxy/DNS enforcement parity must be proved in TASK-0244; if it fails, document refusal and ask the owner for another path — do not silently drop remote from the requirement.
-- The 2026-11-07 clarification records the fixture driver and the live-driver contract. Live-driver implementation tasks are not created until the owner asks for `plan-tasks`.
+- TASK-0261 and TASK-0262 are created in todo. Task-start still waits for the owner.
 
 ## Related Artifacts
 
