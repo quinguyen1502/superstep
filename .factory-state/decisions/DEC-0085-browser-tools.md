@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Decision ID: DEC-0085
-- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved decision 10 and then asked for the task split. TASK-0261 is done in PR #329 (REV-0251, QA-0251) and is not merged. TASK-0262 stays in todo.
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved decision 10 and then asked for the task split. TASK-0261 is merged in PR #329 (`10300e20`, REV-0251, QA-0251). TASK-0262 is done in PR #334 (REV-0254, QA-0254) and is not merged. AC11 stays open until PR #334 merges.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-07 (export-driver clarification recorded)
+- Updated: 2026-11-07 (TASK-0261 merged in PR #329; TASK-0262 done in PR #334, not merged)
 - Related Requirements: REQ-0086
 - Related Architecture: ARCH-0002
 - Related Tasks: see PLAN-0006

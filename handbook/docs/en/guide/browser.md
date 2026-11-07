@@ -138,9 +138,12 @@ state.
   helper pauses with `interrupt()` before the effect. A rejection does not change
   the page. Lost and unknown outcomes are not retried.
   `SUPERSTEP_BROWSER_FAULT` is a one-shot test hook; leave it empty.
-- The TypeScript export uses the same helper as `browserCall`. It follows the
-  same whitelist, session order, approval, and refusal rules. Run it with
-  Node (`npx tsx`) or Deno. Playwright is an optional `npm install playwright`.
+- The TypeScript export uses the same helper as `browserCall`. Playwright and
+  Browserless keep one page until the idle timeout, the lifetime, or process
+  exit. Click, fill, and evaluate run on that page. Every redirect hop must stay
+  on the whitelist and off private addresses. The memory driver does not follow
+  redirects. Run it with Node (`npx tsx`) or Deno. Playwright is an optional
+  `npm install playwright`.
 
 ## Risks and always-on rules
 
