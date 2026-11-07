@@ -87,6 +87,11 @@ class Graph:
         raw_kb = {n.get("id"): (n.get("data") or {}).get("knowledge_base_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "retriever"}
         raw_tool_kb = {(n.get("id"), t.get("name")): t.get("knowledge_base_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                        for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "knowledge"}
+        # a Send email node sends only when it has an SMTP credential in the studio (else a dry run): keep that fact,
+        # never the credential (TASK-0271)
+        raw_mail = {n.get("id"): bool((n.get("data") or {}).get("credential_id")) for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "email"}
+        for n in self.wf["nodes"]:
+            if n["id"] in raw_mail: n["data"]["_email_sends"] = raw_mail[n["id"]]
         for n in self.wf["nodes"]:
             if n["id"] in raw_kb: n["data"]["_knowledge_base"] = str(raw_kb[n["id"]] or "")
             for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
