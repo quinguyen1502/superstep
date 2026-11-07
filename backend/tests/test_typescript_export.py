@@ -56,7 +56,7 @@ def test_policies_reducers_fan_in_and_inputs():
 
 def test_every_node_type_maps_or_is_a_clear_stub():
     code = T.to_typescript(TOOLS, "Tools").code
-    assert "TODO: search your own index" not in code  # no retriever in TOOLS
+    assert "SUPERSTEP_TOKEN" not in code  # no retriever in TOOLS
     assert "calls the Python function lookup_order: not implemented in TS export" in code
     assert "set ${prefix}_URL to the server's Streamable HTTP address" in code and "await decide(text" in code and "(e-mail not sent)" in code
     loop = T.to_typescript(LOOP, "Loop").code
@@ -110,7 +110,7 @@ def test_agent_nodes_are_exported(c):
     assert "SECRET" not in code and "--allow-net" in code and "callAgent" in code
     assert [out.names[k] for k in ("ag", "ag/__model", "ag/__tool", "ag/__exit")] == ["helper_one", "helper_one_model", "helper_one_tool", "helper_one_end"]
     assert '"agent_helper_one": Annotation<AgentChat | null>(),  // an Agent node\'s conversation' in code
-    assert 'return await callMcpTool("MCP_SERVER_1", "add", args);' in code and 'return await retrieve(String(args.query || ""), 2);' in code
+    assert 'return await callMcpTool("MCP_SERVER_1", "add", args);' in code and 'return await retrieve("KNOWLEDGE_BASE_1", String(args.query || ""), 2);' in code
     assert "they go in the query string" in code and '"POST", url, body);' in code  # GET: query string; POST: its body template
     assert 'throw new Error("lookup_order is a Python function' in code and "here they throw" in code
     assert 'const question = "Helper \\"one\\" wants to call " + call.name' in code and "also go to a channel" in code

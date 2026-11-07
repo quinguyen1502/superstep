@@ -76,7 +76,8 @@ Final state: {...}
 | Tool: HTTP | `http_request(...)` dùng `httpx`: chỉ http(s), từ chối địa chỉ nội bộ trừ khi `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, không theo redirect, `user:pass@` gửi dạng Basic auth, có `Idempotency-Key` theo run và request (`SUPERSTEP_RUN_ID`). Như trong studio, tên miền chỉ được phân giải một lần và request kết nối tới đúng địa chỉ đã kiểm tra; header Host, TLS SNI và kiểm tra chứng chỉ vẫn dùng tên miền |
 | Tool: Code | code của node, nằm trong hàm của node |
 | MCP (node và công cụ MCP của Agent) | `call_mcp_tool(prefix, tool, arguments)`: gọi MCP thật qua Streamable HTTP (`initialize`, `tools/call`), như studio. Mỗi máy chủ có một tiền tố `MCP_SERVER_<n>` (các node cùng máy chủ dùng chung; id máy chủ không được ghi ra); đặt `<PREFIX>_URL` và nếu cần `<PREFIX>_HEADERS` (một đối tượng JSON, ví dụ header `Authorization`). URL là cấu hình của bạn và được gọi đúng như vậy, không theo redirect; không hỗ trợ máy chủ stdio. Khi chưa cấu hình: offline trả `None` và in `(offline mock) …`; khi đặt `LLM_PROVIDER` thì dừng run và nêu tên biến cần đặt |
-| Retriever, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio (kể cả công cụ kho tri thức của node Agent). Khi offline chúng trả kết quả rỗng và in `(offline mock) …` ra stderr; khi đặt `LLM_PROVIDER` chúng dừng run cho tới khi bạn tự hiện thực |
+| Retriever (node và công cụ kho tri thức của Agent) | `retrieve(prefix, query, top_k)` gọi tìm kiếm kho tri thức trên máy chủ Superstep của bạn (`POST /api/knowledge-bases/<id>/search`), nên đoạn văn và điểm số giống studio. Mỗi kho tri thức có một tiền tố `KNOWLEDGE_BASE_<n>` (id của nó không được ghi ra); đặt `SUPERSTEP_URL`, `SUPERSTEP_TOKEN` (Bearer token của người dùng đọc được kho) và `<PREFIX>_ID`. Lỗi từ studio (ví dụ `KB_NOT_FOUND`) dừng run. Khi chưa cấu hình: offline trả danh sách rỗng và in `(offline mock) …`; khi đặt `LLM_PROVIDER` thì dừng run và nêu tên các biến |
+| Send email | hàm stub có `TODO`: cần dịch vụ của studio. Khi offline chúng trả kết quả rỗng và in `(offline mock) …` ra stderr; khi đặt `LLM_PROVIDER` chúng dừng run cho tới khi bạn tự hiện thực |
 | Note | một comment |
 | Retry, cache, trường input | `RetryPolicy`, `CachePolicy`, `input_schema` trong `add_node` |
 | Timeout | một comment: LangGraph không dừng được node đang chặn |
@@ -218,7 +219,8 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | Tool: function | stub ném lỗi: hàm là Python trên server |
 | Tool: HTTP | `httpRequest(...)` dùng `node:http`/`node:https` (Node và Deno đều hỗ trợ), cùng các biện pháp bảo vệ như file Python; chạy Deno với `--allow-net` |
 | MCP | `callMcpTool(prefix, tool, args)` dùng `fetch`, cấu hình và hoạt động như file Python |
-| Retriever, Send email | stub có `TODO`, như file Python |
+| Retriever | `retrieve(prefix, query, topK)` dùng `fetch`, cấu hình và hoạt động như file Python |
+| Send email | stub có `TODO`, như file Python |
 | LLM có model dự phòng | `callLlmFallback`, cùng quy tắc với file Python |
 | Agent | các bước vào, model, công cụ và kết thúc, như file Python; `callAgent` là mock, hoặc `initChatModel` với `bindTools` khi đặt `LLM_PROVIDER`. Công cụ có sẵn là stub ném lỗi |
 | Retry, cache, trường đầu vào, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` trong `addNode` |
@@ -290,7 +292,7 @@ TypeScript chỉ chạy bằng `npm run example`, không chạy khi server impor
   người duyệt và địa chỉ chuyển cấp.
 - Các tính năng của studio quanh một run: trace, lịch sử run, khôi phục sau
   khi khởi động lại, kênh duyệt và hạn chót, theo dõi chi phí, timeout của node.
-- Lời gọi Retriever và Send email thật (lời gọi MCP là thật khi đã đặt `<PREFIX>_URL`). Khi offline, stub trả về kết quả
+- Lời gọi Send email thật (lời gọi MCP và Retriever là thật khi đã cấu hình). Khi offline, stub trả về kết quả
   rỗng, không gì cả, hoặc thư lẽ ra sẽ gửi, và báo điều đó trên stderr. Khi đặt
   `LLM_PROVIDER`, chúng raise (Python) hoặc throw (TypeScript), để một run thật
   không coi dịch vụ còn thiếu là đã xong.

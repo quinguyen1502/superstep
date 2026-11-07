@@ -631,13 +631,35 @@ function offlineService(kind: string, name: string): void {
 
 STUBS = {
     "retrieve": r'''
-/** Retriever nodes search a Superstep knowledge base, which this file cannot reach.
- * TODO: search your own index for `query`, for example with a LangChain.js vector store retriever
- * (`vectorStore.asRetriever(topK).invoke(query)`). */
-async function retrieve(query: string, topK: number): Promise<unknown[]> {
-  void topK;
-  offlineService("Knowledge base search", query.slice(0, 60));
-  return [];
+/** Retriever nodes (and Agent knowledge tools) search a Superstep knowledge base. This file asks your Superstep
+ * server, so the chunks and scores are the studio's own: POST <SUPERSTEP_URL>/api/knowledge-bases/<id>/search.
+ * Configure with environment variables (never written here): SUPERSTEP_URL, SUPERSTEP_TOKEN (a Bearer token of a
+ * user who can read the knowledge base) and <PREFIX>_ID, the knowledge base id, for each prefix listed above.
+ * Not configured: an empty list in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set. */
+async function retrieve(prefix: string, query: string, topK: number): Promise<unknown[]> {
+  const base = env("SUPERSTEP_URL"), token = env("SUPERSTEP_TOKEN"), kid = env(`${prefix}_ID`);
+  const missing = ([["SUPERSTEP_URL", base], ["SUPERSTEP_TOKEN", token], [`${prefix}_ID`, kid]] as const).filter(([, v]) => !v).map(([n]) => n);
+  if (missing.length) {
+    if (env("LLM_PROVIDER")) throw new Error(`Knowledge base search ${prefix}: set ${missing.join(", ")} to search it`);
+    console.error(`(offline mock) Knowledge base search ${JSON.stringify(query.slice(0, 60))}: ${missing.join(", ")} not set: empty result`);
+    return [];
+  }
+  let status = 0;
+  let body: { success?: boolean; data?: unknown; error?: { code?: unknown; message?: unknown } | null };
+  try {
+    const r = await fetch(`${base!.replace(/\/+$/, "")}/api/knowledge-bases/${kid}/search`, { method: "POST", redirect: "manual",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ query, top_k: topK }),
+      signal: AbortSignal.timeout(30_000) });
+    status = r.status;
+    body = await r.json();
+  } catch (error) {
+    throw new Error(`Knowledge base search ${prefix}: no answer from ${base} (${String((error as { name?: unknown })?.name ?? "Error")})`);
+  }
+  if (!body?.success) {
+    const e = body?.error ?? {};
+    throw new Error(`Knowledge base search ${prefix}: ${String(e.code ?? `HTTP ${status}`)} ${String(e.message ?? "").slice(0, 200)}`.trimEnd());
+  }
+  return Array.isArray(body.data) ? body.data : [];
 }
 ''',
     "managed_operation": r'''
@@ -835,6 +857,9 @@ class _Writer(GraphWriter):
             self.add("\n// --- Studio services ------------------------------------------------------------------------------------")
             self.add("// These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
             if any(k != "managed_operation" for k in stubs): self.add(OFFLINE_SERVICE.rstrip())
+            if "retrieve" in stubs:
+                self.add("\n// Knowledge bases: before a real run set SUPERSTEP_URL, SUPERSTEP_TOKEN and <PREFIX>_ID for")
+                self.add(f"// {', '.join(getattr(self, 'knowledge_bases', {}).values())}. Nodes and tools on the same knowledge base share a prefix.")
             if "call_mcp_tool" in stubs:
                 self.add("\n// MCP servers: before a real run set <PREFIX>_URL (and <PREFIX>_HEADERS if the server needs them) for")
                 self.add(f"// {', '.join(getattr(self, 'mcp_servers', {}).values())}. MCP nodes and tools on the same Superstep server share a prefix.")
@@ -969,7 +994,7 @@ class _Writer(GraphWriter):
             self.add("")
             self.add(f"/** {head}: the chunks of a knowledge base that best match the query (see retrieve). */")
             self.add(sig)
-            self.add(ret(f"await retrieve(render({const}_QUERY, state), {number(d.get('top_k'), int) or 4})"))
+            self.add(ret(f"await retrieve({lit(self.kb_prefix(d))}, render({const}_QUERY, state), {number(d.get('top_k'), int) or 4})"))
             self.add("}")
         elif t == "mcp":
             info = d.get("_browser_export")
@@ -1373,7 +1398,7 @@ class _Writer(GraphWriter):
                 self.add(f"    // TODO: port the server's Python function {_doc(fn)} to TypeScript (the Python export has its source).")
                 self.add(f"    throw new Error({lit(f'{fn} is a Python function of the Superstep server: not implemented in TS export')});")
             elif src == "knowledge":
-                self.add(f"    return await retrieve(String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
+                self.add(f"    return await retrieve({lit(self.kb_prefix(t))}, String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
                 info = t.get("_browser_export")
                 if isinstance(info, dict):

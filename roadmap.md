@@ -486,7 +486,7 @@ REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Làm đi").
 - TASK-0267 — HTTP Tool connects to the checked address (DNS rebinding), SNI/certificate on the name. **done**.
 - TASK-0268 — LLM fallback for messages with attachments. **done**.
 - TASK-0269 — MCP export adapter. **done**.
-- TASK-0270 — Retriever export adapter. planned.
+- TASK-0270 — Retriever export adapter. **done**.
 - TASK-0271 — Send email export adapter. planned.
 - TASK-0272 — Factory metadata cleanup (TASK-0253 review, distinct REV/QA ids). planned.
 
