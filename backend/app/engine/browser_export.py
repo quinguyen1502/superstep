@@ -76,8 +76,10 @@ def export_binding(data) -> dict:
 # Inserted after `BROWSER_POLICY = ...`. Names `render` and `os` come from the exporter header.
 # Keep this source free of triple-single-quotes. Regexes use double-quoted raw strings.
 PY_RUNTIME = r'''
+import atexit
 import importlib
 import ipaddress
+import json
 import threading
 import time
 import urllib.error
@@ -127,6 +129,12 @@ class _Session:
         self.touched = now
         self.started = now
         self.actions = 0
+        self.manager = None
+        self.browser = None
+        self.context = None
+        self.live = None
+        self.nav_error = None
+        self.documents = 0
 
 
 class _DenyRedirect(urllib.request.HTTPRedirectHandler):
@@ -414,60 +422,306 @@ def _proxy_for(policy):
     return {"server": proxy.get("server"), "username": _env(env.get("proxy_username")), "password": _env(env.get("proxy_password"))}
 
 
-def _playwright_html(policy, url):
+def _close_live(session):
+    context, browser, manager = session.context, session.browser, session.manager
+    session.live = None
+    session.context = None
+    session.browser = None
+    session.manager = None
+    session.documents = 0
+    session.nav_error = None
+    for closer in (getattr(context, "close", None), getattr(browser, "close", None), getattr(manager, "stop", None)):
+        if closer is None:
+            continue
+        try:
+            closer()
+        except Exception:
+            pass
+
+
+def _shutdown_live():
+    with _guard:
+        sessions = list(_sessions.values())
+    for session in sessions:
+        _close_live(session)
+
+
+atexit.register(_shutdown_live)
+
+
+def _listed_origins(policy):
+    found = []
+    for item in (policy.get("profile") or {}).get("origins") or []:
+        try:
+            found.append(_origin_of(item))
+        except BrowserError:
+            continue
+    return found
+
+
+def _domain_match(host, domain):
+    host = (host or "").lower().rstrip(".")
+    domain = (domain or "").lower().lstrip(".").rstrip(".")
+    if not host or not domain:
+        return False
+    return host == domain or host.endswith("." + domain)
+
+
+def _profile_state(policy):
+    # Parsed before a browser starts. The generated file stores the env name, never this JSON.
+    if not policy.get("profile"):
+        return None
+    raw = _env((policy.get("env") or {}).get("profile"))
+    try:
+        data = json.loads(raw)
+    except Exception:
+        raise BrowserError("profile_invalid", "profile JSON is invalid") from None
+    if not isinstance(data, dict):
+        raise BrowserError("profile_invalid", "profile JSON is invalid")
+    listed = _listed_origins(policy)
+    cookies = []
+    for cookie in data.get("cookies") or []:
+        if not isinstance(cookie, dict):
+            continue
+        name, value, domain = cookie.get("name"), cookie.get("value"), cookie.get("domain")
+        if not isinstance(name, str) or not name or not isinstance(value, str) or not isinstance(domain, str):
+            continue
+        if cookie.get("secure") is not True:
+            continue
+        matched = False
+        for origin in listed:
+            host = urlsplit(origin).hostname or ""
+            if not _domain_match(host, domain) or _private_host(host):
+                continue
+            try:
+                _allowed(policy, origin)
+            except BrowserError:
+                continue
+            matched = True
+            break
+        if not matched:
+            continue
+        path = cookie.get("path") if isinstance(cookie.get("path"), str) and cookie.get("path").startswith("/") else "/"
+        item = {"name": name, "value": value, "domain": domain, "path": path, "httpOnly": bool(cookie.get("httpOnly")), "secure": True}
+        if cookie.get("sameSite") in ("Strict", "Lax", "None"):
+            item["sameSite"] = cookie.get("sameSite")
+        expires = cookie.get("expires")
+        if isinstance(expires, (int, float)) and not isinstance(expires, bool) and expires >= 0:
+            item["expires"] = expires
+        cookies.append(item)
+    origins = []
+    for entry in data.get("origins") or []:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            origin = _origin_of(str(entry.get("origin") or ""))
+        except BrowserError:
+            continue
+        host = urlsplit(origin).hostname or ""
+        if origin not in listed or _private_host(host):
+            continue
+        try:
+            _allowed(policy, origin)
+        except BrowserError:
+            continue
+        stored = []
+        for pair in entry.get("localStorage") or []:
+            if isinstance(pair, dict) and isinstance(pair.get("name"), str) and isinstance(pair.get("value"), str):
+                stored.append({"name": pair["name"], "value": pair["value"]})
+        origins.append({"origin": origin, "localStorage": stored})
+    return {"cookies": cookies, "origins": origins}
+
+
+def _abandon(browser, manager):
+    for closer in (getattr(browser, "close", None), getattr(manager, "stop", None)):
+        if closer is None:
+            continue
+        try:
+            closer()
+        except Exception:
+            pass
+
+
+def _route_live(session, policy, route):
+    request = route.request
+    url = getattr(request, "url", "") or ""
+    if (urlsplit(url).scheme or "").lower() in ("about", "data", "blob"):
+        route.continue_()
+        return
+    try:
+        _allowed(policy, url)
+        _require_public(url)
+    except BrowserError as error:
+        if (getattr(request, "resource_type", "") or "") == "document":
+            session.nav_error = error
+        route.abort()
+        return
+    route.continue_()
+
+
+def _open_live(session, policy):
+    if session.live is not None:
+        return
+    profile = _profile_state(policy)
+    kind = _driver()
     try:
         sync_api = importlib.import_module("playwright.sync_api")
     except Exception:
+        if kind == "browserless":
+            raise BrowserError("capability_refused", "playwright is required for browserless connect_over_cdp") from None
         raise BrowserError("capability_refused", "playwright is not installed; install playwright and chromium, or set SUPERSTEP_BROWSER_DRIVER=memory") from None
-    manager = sync_api.sync_playwright().start()
+    manager = None
     browser = None
     try:
-        browser = manager.chromium.launch(headless=True, proxy=_proxy_for(policy))
-        page = browser.new_page()
-        page.goto(url, timeout=int(policy.get("action_timeout_ms") or 30000))
-        return page.content()
-    finally:
-        if browser is not None:
-            browser.close()
-        manager.stop()
-
-
-def _browserless_html(policy, url):
-    try:
-        sync_api = importlib.import_module("playwright.sync_api")
+        manager = sync_api.sync_playwright().start()
+        if kind == "browserless":
+            env = policy.get("env") or {}
+            endpoint, token = _env(env.get("endpoint")), _env(env.get("token"))
+            if not endpoint or not token:
+                raise BrowserError("token_missing", "Browserless endpoint and token must be set in the environment")
+            sep = "&" if "?" in endpoint else "?"
+            target = endpoint + sep + "token=" + token
+            # stealth is a Browserless query only. Local chromium.launch must not receive it.
+            if policy.get("stealth"):
+                target += "&stealth=true"
+            browser = manager.chromium.connect_over_cdp(target)
+        else:
+            kwargs = {"headless": True}
+            proxy = _proxy_for(policy)
+            if isinstance(proxy, dict):
+                kwargs["proxy"] = proxy
+            browser = manager.chromium.launch(**kwargs)
+        context = browser.new_context(**({"storage_state": profile} if profile is not None else {}))
+        context.route("**/*", lambda route: _route_live(session, policy, route))
+        page = context.new_page()
+    except BrowserError:
+        _abandon(browser, manager)
+        raise
     except Exception:
-        raise BrowserError("capability_refused", "playwright is required for browserless connect_over_cdp") from None
-    env = policy.get("env") or {}
-    endpoint, token = _env(env.get("endpoint")), _env(env.get("token"))
-    if not endpoint or not token:
-        raise BrowserError("token_missing", "Browserless endpoint and token must be set in the environment")
-    sep = "&" if "?" in endpoint else "?"
-    manager = sync_api.sync_playwright().start()
-    browser = None
+        _abandon(browser, manager)
+        raise BrowserError("fetch_failed", "launch failed") from None
+    session.manager = manager
+    session.browser = browser
+    session.context = context
+    session.live = page
+
+
+def _restore_live(session, before, timeout):
+    if session.live is None or (session.live.url or "") == before:
+        return
     try:
-        # The token stays in this process. It is not printed and it is not part of the generated source.
-        browser = manager.chromium.connect_over_cdp(endpoint + sep + "token=" + token)
-        page = browser.new_page()
-        page.goto(url, timeout=int(policy.get("action_timeout_ms") or 30000))
-        return page.content()
-    finally:
-        if browser is not None:
-            browser.close()
-        manager.stop()
+        session.live.go_back(timeout=timeout)
+    except Exception:
+        _close_live(session)
+        return
+    if (session.live.url or "") != before:
+        _close_live(session)
 
 
-def _fetch(policy, url):
+def _goto_live(session, policy, url):
+    _open_live(session, policy)
+    limit = int(policy.get("max_pages") or 4)
+    if session.documents >= limit:
+        raise BrowserError("limit", "max_pages reached")
+    before = session.live.url or ""
+    session.nav_error = None
+    timeout = int(policy.get("action_timeout_ms") or 30000)
+    failed = None
+    try:
+        session.live.goto(url, timeout=timeout)
+    except BrowserError as error:
+        failed = error
+    except Exception:
+        failed = session.nav_error if session.nav_error is not None else BrowserError("fetch_failed", "fetch failed")
+    if session.nav_error is not None:
+        failed = session.nav_error
+    session.nav_error = None
+    if failed is not None:
+        _restore_live(session, before, timeout)
+        raise failed from None
+    session.documents += 1
+    try:
+        return session.live.content()
+    except Exception:
+        raise BrowserError("fetch_failed", "fetch failed") from None
+
+
+def _fetch(session, policy, url):
     # Every driver honors the whitelist. Playwright and Browserless also refuse private hosts before launch.
+    # max_pages applies to the live page only. The memory driver stays a static fetch.
     _allowed(policy, url)
     kind = _driver()
     if kind in ("playwright", "browserless"):
         _require_public(url)
-        if kind == "playwright":
-            return _playwright_html(policy, url)
-        return _browserless_html(policy, url)
+        return _goto_live(session, policy, url)
     if kind != "memory":
         raise BrowserError("capability_refused", "SUPERSTEP_BROWSER_DRIVER must be memory, playwright, or browserless")
     return _http_get(url, policy)
+
+
+def _locator(session, element_id):
+    return session.live.locator("[id=" + json.dumps(element_id) + "]")
+
+
+def _live_click(session, policy, element):
+    before = session.live.url or session.page.url or ""
+    timeout = int(policy.get("action_timeout_ms") or 30000)
+    session.nav_error = None
+    failed = None
+    try:
+        _locator(session, element["element_id"]).click(timeout=timeout)
+    except BrowserError as error:
+        failed = error
+    except Exception:
+        failed = session.nav_error if session.nav_error is not None else BrowserError("fetch_failed", "click failed")
+    if session.nav_error is not None:
+        failed = session.nav_error
+    session.nav_error = None
+    if failed is not None:
+        _restore_live(session, before, timeout)
+        raise failed from None
+    after = session.live.url or before
+    if after != before:
+        limit = int(policy.get("max_pages") or 4)
+        if session.documents >= limit:
+            _restore_live(session, before, timeout)
+            raise BrowserError("limit", "max_pages reached")
+        try:
+            _allowed(policy, after)
+            _require_public(after)
+        except BrowserError:
+            _restore_live(session, before, timeout)
+            raise
+        session.documents += 1
+    try:
+        html = session.live.content()
+    except Exception:
+        raise BrowserError("fetch_failed", "fetch failed") from None
+    return _store(session, after, html, "click")
+
+
+def _live_fill(session, policy, element, value):
+    timeout = int(policy.get("action_timeout_ms") or 30000)
+    session.nav_error = None
+    text = value if isinstance(value, str) else ""
+    try:
+        _locator(session, element["element_id"]).fill(text, timeout=timeout)
+    except BrowserError:
+        raise
+    except Exception:
+        error = session.nav_error if session.nav_error is not None else BrowserError("fetch_failed", "fill failed")
+        session.nav_error = None
+        raise error from None
+    if session.nav_error is not None:
+        error = session.nav_error
+        session.nav_error = None
+        raise error
+    url = session.live.url or session.page.url or ""
+    try:
+        html = session.live.content()
+    except Exception:
+        raise BrowserError("fetch_failed", "fetch failed") from None
+    return _store(session, url, html, "fill")
 
 
 def _store(session, url, html, operation):
@@ -501,9 +755,11 @@ def _expire(session, policy):
     life = float(policy.get("lifetime_s") or 0)
     idle = float(policy.get("idle_timeout_s") or 0)
     if life and now - session.started > life:
+        _close_live(session)
         session.page = _Page()
         raise SessionLost("lifetime exceeded")
     if idle and now - session.touched > idle:
+        _close_live(session)
         session.page = _Page()
         raise SessionLost("idle timeout")
 
@@ -512,6 +768,7 @@ def _command(session, policy, alias, tool, arguments):
     _expire(session, policy)
     fault = _fault()
     if fault == "lost":
+        _close_live(session)
         session.page = _Page()
         raise SessionLost("injected lost session")
     if fault == "unknown":
@@ -534,7 +791,7 @@ def _command(session, policy, alias, tool, arguments):
         url = arguments.get("url")
         if not isinstance(url, str) or not url.strip() or url.strip().lower().startswith("javascript:"):
             raise BrowserError("missing_url" if not isinstance(url, str) or not url.strip() else "whitelist_denied", "navigate needs an http(s) url")
-        return _store(session, url.strip(), _fetch(policy, url.strip()), "navigate")
+        return _store(session, url.strip(), _fetch(session, policy, url.strip()), "navigate")
     if tool == "snapshot":
         session.actions += 1
         session.seq += 1
@@ -550,12 +807,16 @@ def _command(session, policy, alias, tool, arguments):
         if element.get("href"):
             target = urljoin(session.page.url or "", element["href"])
             _allowed(policy, target)
-            return _store(session, target, _fetch(policy, target), "click")
+            return _store(session, target, _fetch(session, policy, target), "click")
+        if session.live is not None:
+            return _live_click(session, policy, element)
         session.actions += 1
         session.seq += 1
         return _ok("click", session.seq, clicked=element["element_id"])
     if tool == "fill":
         element = _element(session, arguments.get("element_id"))
+        if session.live is not None:
+            return _live_fill(session, policy, element, arguments.get("value"))
         session.page.values[element["element_id"]] = arguments.get("value")
         session.actions += 1
         session.seq += 1
@@ -571,8 +832,18 @@ def _command(session, policy, alias, tool, arguments):
     if tool == "evaluate":
         if not policy.get("allow_evaluate_js"):
             raise BrowserError("capability_refused", "evaluate is disabled on this connection")
-        expression = arguments.get("expression") or ""
-        if expression == "document.title":
+        raw = arguments.get("expression")
+        expression = raw if isinstance(raw, str) else ""
+        if session.live is not None:
+            if len(expression) > 4000:
+                raise BrowserError("capability_refused", "evaluate expression exceeds 4000 characters")
+            try:
+                value = session.live.evaluate(expression)
+            except BrowserError:
+                raise
+            except Exception:
+                raise BrowserError("fetch_failed", "evaluate failed") from None
+        elif expression == "document.title":
             value = _title(session.page.html)
         elif expression == "document.body.innerText":
             value = _body_text(session.page.html)

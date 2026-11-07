@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0261
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-07
 - Updated: 2026-11-07
@@ -124,9 +124,15 @@ Keep one Playwright or Browserless page per browser alias in the Python project 
 ## Activity Log
 
 - 2026-11-07: Created by plan-tasks after `git fetch --all --prune` and `factory ids next TASK --all-refs` returned TASK-0261. Pair is TASK-0262. No product code, dependency install, or implementation branch.
+- 2026-11-07: Owner said task-start. Branch `factory/task-0261-browser-python-live-export` from `develop` `78b289c3`. Status doing. No source edits.
+- 2026-11-07: Owner said làm đi. Python live page is implemented in `backend/app/engine/browser_export.py`. Memory fixture behavior is unchanged. `backend/tests/test_browser_python_export.py` runs the live control flow through a stub `playwright` package beside `graph.py`. Playwright is not installed in the local venv (`find_spec` is None), and the live driver refuses loopback, so Chromium was not launched. A skip was not counted as a pass. Focused pytest: 16 passed. `python3 scripts/check-browser-handbook.py` passed. `git diff --check` passed.
+- 2026-11-07: Tool-policy validation on this branch. Backend pytest 1440 passed, 71 skipped, 541.90s. SDK Python pytest 229 passed, 8 skipped, 16.49s. Repo-root npm build, lint (warnings only, 0 errors), and test passed on arm64 Node (frontend 177, react 22, sdk typescript 102). SDK TypeScript build, test (102), and typecheck passed. Handbook check and `git diff --check` passed. `factory verify` was not run through the x86_64 venv.
+- 2026-11-07: Review REV-0251, no blocking findings, approved for QA. QA QA-0251, pass with follow-up. Chromium was not launched. Owner asked to finish the pull request without merging. Status done. PR #329.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0261-browser-python-live-export`, from `develop`.
-- Do not start until the owner asks. TASK-0262 waits for this task.
+- Branch: `factory/task-0261-browser-python-live-export`. Draft PR #329 becomes Ready in this step. Do not merge until the owner asks.
+- Review: `.factory-state/artifacts/REV-0251-TASK-0261-browser-python-live-export.md`. QA: `.factory-state/artifacts/QA-0251-TASK-0261-browser-python-live-export.md`.
+- TASK-0262 stays in todo. Do not start it until this pull request is on develop and the owner says task-start.
+- Live control flow is proven with the stub. A real Playwright and Chromium launch is still a follow-up. REQ-0086 AC11 stays open.
 - PR #323 is merged. It is not a blocker for this Python task.

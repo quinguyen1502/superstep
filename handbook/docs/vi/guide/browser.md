@@ -69,7 +69,10 @@ mật khẩu proxy hay trạng thái profile.
 - Driver mặc định là `memory`: HTTP thư viện chuẩn trong whitelist, chạy được
   với fixture cục bộ. `SUPERSTEP_BROWSER_DRIVER=playwright` dùng Chromium cục bộ.
   `browserless` đọc `SUPERSTEP_BROWSER_ENDPOINT_*` và `SUPERSTEP_BROWSER_TOKEN_*`.
-  `.env.example` liệt kê tên biến với giá trị để trống.
+  `.env.example` liệt kê tên biến với giá trị để trống. Playwright và Browserless
+  giữ một trang đến khi hết idle, hết lifetime, hoặc tiến trình thoát.
+  Click, fill và evaluate chạy trên trang đó. Mỗi redirect phải còn trong
+  whitelist và không trỏ tới địa chỉ riêng. Driver memory không theo redirect.
 - Sáu công cụ mặc định: navigate, snapshot, click, fill, extract, screenshot.
   Evaluate chỉ chạy khi kết nối cho phép. Upload và download bị từ chối ngoài
   Studio dù kết nối bật, vì runtime mang đi không có kho tệp đính kèm.
