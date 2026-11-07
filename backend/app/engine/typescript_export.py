@@ -16,6 +16,7 @@ from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
 from . import agents, approval_policy, attachments, foreach
+from .browser_export import TS_BROWSER_REFUSAL
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .templating import VAR_RE, _ONE_FILTER, refs
 
@@ -744,14 +745,21 @@ class _Writer(GraphWriter):
             self.add(ret(f"await retrieve(render({const}_QUERY, state), {number(d.get('top_k'), int) or 4})"))
             self.add("}")
         elif t == "mcp":
-            call = "managedOperation" if d.get("_managed_export") else "callMcpTool"
-            self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
-            self.add("")
-            self.add(f"/** {head}: MCP tool {lit(_doc(d.get('tool')))} (see {call}). */")
-            self.add(sig)
-            if d.get("_managed_export"): self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
-            self.add(ret(f"await {call}({lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
-            self.add("}")
+            if isinstance(d.get("_browser_export"), dict):
+                self.add(f"/** {head}: browser tool {lit(_doc(d.get('tool')))}. */")
+                self.add(sig)
+                self.add("  void state;")
+                self.add(f"  throw new Error({lit(TS_BROWSER_REFUSAL)});")
+                self.add("}")
+            else:
+                call = "managedOperation" if d.get("_managed_export") else "callMcpTool"
+                self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
+                self.add("")
+                self.add(f"/** {head}: MCP tool {lit(_doc(d.get('tool')))} (see {call}). */")
+                self.add(sig)
+                if d.get("_managed_export"): self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
+                self.add(ret(f"await {call}({lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
+                self.add("}")
         elif t == "email":
             self.email(g, nid, cls, head, sig)
         elif t == "agent":
@@ -1130,8 +1138,11 @@ class _Writer(GraphWriter):
             elif src == "knowledge":
                 self.add(f"    return await retrieve(String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
-                call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
-                self.add(f"    return await {call}({lit(t.get('tool') or '')}, args);")
+                if isinstance(t.get("_browser_export"), dict):
+                    self.add(f"    throw new Error({lit(TS_BROWSER_REFUSAL)});")
+                else:
+                    call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
+                    self.add(f"    return await {call}({lit(t.get('tool') or '')}, args);")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:

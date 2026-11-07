@@ -59,3 +59,23 @@ thể tải ảnh chụp riêng; chat công khai chỉ thấy sự kiện đư�
 Trên **Bắt đầu → Cài đặt**, bật recipe trình duyệt dùng lại, chọn cùng kết nối,
 khai báo input/result ở **Dữ liệu**. Ví dụ:
 [lookup_shipment.json](https://github.com/quinguyen1502/superstep/blob/develop/examples/browser/lookup_shipment.json).
+
+## 5. Xuất project Python
+
+Tải file Python hoặc project LangGraph sau khi lưu workflow. Bước trình duyệt
+thành `browser_call`. File không import Superstep và không chứa token điều khiển,
+mật khẩu proxy hay trạng thái profile.
+
+- Driver mặc định là `memory`: HTTP thư viện chuẩn trong whitelist, chạy được
+  với fixture cục bộ. `SUPERSTEP_BROWSER_DRIVER=playwright` dùng Chromium cục bộ.
+  `browserless` đọc `SUPERSTEP_BROWSER_ENDPOINT_*` và `SUPERSTEP_BROWSER_TOKEN_*`.
+  `.env.example` liệt kê tên biến với giá trị để trống.
+- Sáu công cụ mặc định: navigate, snapshot, click, fill, extract, screenshot.
+  Evaluate chỉ chạy khi kết nối cho phép. Upload và download bị từ chối ngoài
+  Studio dù kết nối bật, vì runtime mang đi không có kho tệp đính kèm.
+- Lệnh trên cùng một phiên chạy lần lượt. Khi bật duyệt thao tác ghi, helper
+  dừng bằng `interrupt()` trước khi đổi trang. Từ chối thì trang không đổi.
+  Mất phiên hoặc hiệu ứng không chắc chắn không bị chạy lại.
+  `SUPERSTEP_BROWSER_FAULT` là móc thử một lần; hãy để trống.
+- Bản xuất TypeScript từ chối bước trình duyệt bằng lỗi rõ ràng, không gọi MCP
+  giả. Bản TypeScript tương đương là task kế tiếp.
