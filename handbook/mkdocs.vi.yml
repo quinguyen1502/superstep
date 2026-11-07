@@ -73,6 +73,7 @@ nav:
       - Vai trò và chia sẻ: operate/access.md
       - Nhà cung cấp LLM: operate/providers.md
       - Kênh duyệt: operate/channels.md
+      - Mở studio cục bộ ra internet: operate/expose-local.md
       - Môi trường chạy Code: operate/code-runtime.md
       - Quan sát hệ thống: operate/observability.md
       - Import repo LangGraph: operate/import.md

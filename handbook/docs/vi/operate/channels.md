@@ -16,9 +16,9 @@ của node Human và trong **Cài đặt → Nhật ký**.
 | Microsoft Teams | Link trong Adaptive Card | `STUDIO_PUBLIC_URL`, một webhook của Workflows |
 
 Mỗi kết nối là cá nhân (dùng cho workflow của bạn) hoặc toàn tổ chức (do
-admin tạo). Khi phát triển ở máy, một tunnel như
-`cloudflared tunnel --url http://localhost:8000` hoặc `ngrok http 8000` cho
-bạn URL HTTPS công khai.
+admin tạo). Với studio chạy trên máy bạn, xem
+[Mở studio cục bộ ra internet](expose-local.md) để có `STUDIO_PUBLIC_URL`
+HTTPS công khai bằng tunnel.
 
 ## Slack
 

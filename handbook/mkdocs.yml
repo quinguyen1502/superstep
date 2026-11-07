@@ -74,6 +74,7 @@ nav:
       - Roles and sharing: operate/access.md
       - LLM providers: operate/providers.md
       - Approval channels: operate/channels.md
+      - Expose a local studio: operate/expose-local.md
       - Code runtime: operate/code-runtime.md
       - Observability: operate/observability.md
       - Import a LangGraph repo: operate/import.md
