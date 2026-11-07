@@ -126,7 +126,10 @@ state.
   local fixture can run offline. `SUPERSTEP_BROWSER_DRIVER=playwright` uses local
   Chromium. `browserless` reads `SUPERSTEP_BROWSER_ENDPOINT_*` and
   `SUPERSTEP_BROWSER_TOKEN_*` from the environment. `.env.example` lists those
-  names with empty values.
+  names with empty values. Playwright and Browserless keep one page until the
+  idle timeout, the lifetime, or process exit. Click, fill, and evaluate run on
+  that page. Every redirect hop must stay on the whitelist and off private
+  addresses. The memory driver does not follow redirects.
 - The six default tools are navigate, snapshot, click, fill, extract, and
   screenshot. Evaluate runs only when the connection allows it. Upload and
   download are refused outside Studio even when the connection allows them,

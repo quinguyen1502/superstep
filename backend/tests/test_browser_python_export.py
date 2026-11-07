@@ -113,17 +113,23 @@ def _code(c, owner, wid, language="python"):
     return response.json()["data"]
 
 
-def _run(tmp_path, code, driver, env=None):
+def _run(tmp_path, code, driver, env=None, files=None):
     """Run the export as ``__main__``. LangGraph resolves annotations in that module."""
     folder = tmp_path / uuid.uuid4().hex
     folder.mkdir()
     guard = 'if __name__ == "__main__":\n    main()\n'
     assert guard in code
     (folder / "graph.py").write_text(code.replace(guard, "") + "\n" + driver)
+    for name, content in (files or {}).items():
+        path = folder / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
     base = {k: v for k, v in os.environ.items() if k != "PYTHONPATH" and not k.startswith("SUPERSTEP_BROWSER")}
     if env:
         base.update(env)
-    return subprocess.run([sys.executable, "-I", "graph.py"], cwd=folder, env=base, capture_output=True, text=True, timeout=90)
+    done = subprocess.run([sys.executable, "-I", "graph.py"], cwd=folder, env=base, capture_output=True, text=True, timeout=90)
+    done.export_dir = folder
+    return done
 
 
 def _mcp(sid, nid, tool, arguments, output, **extra):
@@ -532,3 +538,461 @@ def test_profile_and_private_drivers_fail_closed(c, site, tmp_path):
     assert private.returncode == 0, private.stderr[-3000:]
     assert private.stdout.strip() == "private_address"
     assert not site["handler"].hits
+
+
+def _browser_code(c, owner, settings=None, secrets=None, url="https://example.com/"):
+    extra = {"secrets": secrets} if secrets is not None else {}
+    response = create(c, owner, settings=settings or {}, **extra)
+    assert response.status_code == 200, response.text
+    sid = response.json()["data"]["id"]
+    wid = _save(c, owner, _chain(sid, [_mcp(sid, "open", "navigate", {"url": url}, "page")]))
+    return _code(c, owner, wid)["code"]
+
+
+_PLAYWRIGHT_STUB = r'''
+import json
+from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parent.parent
+_LOG = _ROOT / "playwright-log.json"
+_PAGE = """<html><head><title>Live</title></head><body>
+<input id="order" />
+<button id="go">Go</button>
+<p id="status">Ready</p>
+<a id="next" href="/next">Next</a>
+</body></html>"""
+
+
+def _record(event):
+    data = json.loads(_LOG.read_text()) if _LOG.is_file() else []
+    data.append(event)
+    _LOG.write_text(json.dumps(data))
+
+
+def _redact(url):
+    if "token=" not in url:
+        return url
+    head, _, tail = url.partition("token=")
+    value, sep, rest = tail.partition("&")
+    return head + "token=redacted" + (("&" + rest) if sep else "")
+
+
+class _Locator:
+    def __init__(self, page, selector):
+        self.page = page
+        self.selector = selector
+
+    def click(self, timeout=None):
+        _record({"op": "click", "selector": self.selector})
+        dest = self.page.context.config.get("click_to", {}).get(self.selector)
+        if not dest:
+            self.page.html = self.page.html.replace(">Go</button>", ">Clicked</button>")
+            return
+        if self.page.context.dispatch(dest, "document"):
+            raise RuntimeError("navigation aborted")
+        self.page.move(dest, self.page.context.config.get("html", {}).get(dest, _PAGE))
+
+    def fill(self, value, timeout=None):
+        _record({"op": "fill", "selector": self.selector})
+        needle = '<input id="order" />'
+        if needle in self.page.html:
+            self.page.html = self.page.html.replace(needle, '<input id="order" value="' + str(value) + '" />', 1)
+
+
+class _Page:
+    def __init__(self, context):
+        self.context = context
+        self.url = "about:blank"
+        self.html = "<html><head><title>Blank</title></head><body></body></html>"
+        self.previous = ""
+        self.previous_html = self.html
+
+    def move(self, url, html):
+        self.previous = self.url
+        self.previous_html = self.html
+        self.url = url
+        self.html = html
+
+    def goto(self, url, timeout=None):
+        _record({"op": "goto", "url": url})
+        self.context.dispatch("https://evil.test/app.js", "script")
+        hops = [url]
+        hop = self.context.config.get("redirects", {}).get(url)
+        if hop:
+            hops.append(hop)
+        final = url
+        for target in hops:
+            if self.context.dispatch(target, "document"):
+                raise RuntimeError("navigation aborted")
+            final = target
+        self.move(final, self.context.config.get("html", {}).get(final, _PAGE))
+
+    def content(self):
+        return self.html
+
+    def locator(self, selector):
+        return _Locator(self, selector)
+
+    def evaluate(self, expression):
+        _record({"op": "evaluate", "length": len(expression)})
+        return "live:" + expression[:24]
+
+    def go_back(self, timeout=None):
+        _record({"op": "go_back", "url": self.url})
+        if self.previous:
+            self.url = self.previous
+            self.html = self.previous_html
+
+
+class _Context:
+    def __init__(self, browser, storage_state=None):
+        self.browser = browser
+        self.route_handler = None
+        path = _ROOT / "stub-config.json"
+        self.config = json.loads(path.read_text()) if path.is_file() else {}
+        _record({"op": "context", "storage_state": storage_state})
+
+    def route(self, pattern, handler):
+        self.route_handler = handler
+
+    def dispatch(self, url, resource):
+        state = {"aborted": False}
+
+        class _Route:
+            def continue_(self):
+                _record({"op": "continue", "url": url, "resource": resource})
+
+            def abort(self):
+                state["aborted"] = True
+                _record({"op": "abort", "url": url, "resource": resource})
+
+        route = _Route()
+        route.request = type("Req", (), {"url": url, "resource_type": resource})()
+        if self.route_handler is not None:
+            self.route_handler(route)
+        return state["aborted"]
+
+    def new_page(self):
+        page = _Page(self)
+        self.dispatch("about:blank", "document")
+        return page
+
+    def close(self):
+        _record({"op": "context_close"})
+
+
+class _Browser:
+    def __init__(self):
+        self.storage = None
+
+    def new_context(self, **kwargs):
+        return _Context(self, kwargs.get("storage_state"))
+
+    def new_page(self):
+        return self.new_context().new_page()
+
+    def close(self):
+        _record({"op": "browser_close"})
+
+
+class _Chromium:
+    def launch(self, **kwargs):
+        _record({"op": "launch", "keys": sorted(kwargs)})
+        return _Browser()
+
+    def connect_over_cdp(self, url):
+        _record({"op": "connect", "url": _redact(url)})
+        return _Browser()
+
+
+class _Manager:
+    def __init__(self):
+        self.chromium = _Chromium()
+
+    def start(self):
+        return self
+
+    def stop(self):
+        _record({"op": "stop"})
+
+
+def sync_playwright():
+    _record({"op": "start"})
+    return _Manager()
+'''
+
+
+def _stub_files(config=None):
+    files = {"playwright/__init__.py": "", "playwright/sync_api.py": _PLAYWRIGHT_STUB}
+    if config is not None:
+        files["stub-config.json"] = json.dumps(config)
+    return files
+
+
+_LIVE_HEADER = """
+import json, os, sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+alias = next(iter(BROWSER_POLICY))
+
+def _log():
+    path = Path("playwright-log.json")
+    return json.loads(path.read_text()) if path.is_file() else []
+"""
+
+
+def _loads(done):
+    assert done.returncode == 0, done.stderr[-4000:]
+    return json.loads(done.stdout)
+
+
+def test_memory_driver_does_not_count_max_pages(c, site, tmp_path):
+    owner = user(c)
+    code = _browser_code(c, owner, {"allowed_origins": [site["origin"]], "max_pages": 1}, url=site["url"])
+    driver = (
+        "import json\n"
+        "alias = next(iter(BROWSER_POLICY))\n"
+        f"url = {site['url']!r}\n"
+        "first = browser_call(alias, 'navigate', {'url': url}, {})\n"
+        "second = browser_call(alias, 'navigate', {'url': url}, {})\n"
+        "print(json.dumps({'first': first['status'], 'second': second['status'], 'max_pages': BROWSER_POLICY[alias]['max_pages']}))\n"
+    )
+    body = _loads(_run(tmp_path, code, driver))
+    assert body["max_pages"] == 1
+    assert body["first"] == "confirmed" and body["second"] == "confirmed"
+    assert len(site["handler"].hits) == 2
+
+
+def test_live_page_reuses_one_browser_for_click_fill_and_evaluate(c, tmp_path):
+    owner = user(c)
+    code = _browser_code(c, owner, {"allow_evaluate_js": True, "allow_upload": True})
+    tree = ast.parse(code)
+    imported = {alias.name.split(".")[0] for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
+    assert "playwright" not in imported
+    driver = _LIVE_HEADER + """
+os.environ["SUPERSTEP_BROWSER_DRIVER"] = "playwright"
+opened = browser_call(alias, "navigate", {"url": "https://example.com/"}, {})
+clicked = browser_call(alias, "click", {"observation_id": opened["observation"]["observation_id"], "element_id": "go"}, {})
+filled = browser_call(alias, "fill", {"observation_id": clicked["observation"]["observation_id"], "element_id": "order", "value": "SO-1"}, {})
+snap = browser_call(alias, "snapshot", {}, {})
+extract = browser_call(alias, "extract", {"observation_id": snap["observation"]["observation_id"], "fields": {"order": "order"}}, {})
+followed = browser_call(alias, "click", {"observation_id": snap["observation"]["observation_id"], "element_id": "next"}, {})
+expression = 'document.querySelector("#status")'
+evaluated = browser_call(alias, "evaluate", {"observation_id": followed["observation"]["observation_id"], "expression": expression}, {})
+long_code = None
+try:
+    browser_call(alias, "evaluate", {"observation_id": followed["observation"]["observation_id"], "expression": "x" * 4001}, {})
+except BrowserError as error:
+    long_code = error.code
+shot = browser_call(alias, "screenshot", {}, {})
+session = _sessions[alias]
+session.touched = time.monotonic() - 100000
+idle = None
+try:
+    browser_call(alias, "snapshot", {}, {})
+except SessionLost as error:
+    idle = error.code
+page_after = _sessions[alias].page.url
+again = browser_call(alias, "navigate", {"url": "https://example.com/"}, {})
+upload_code, upload_message = None, ""
+try:
+    browser_call(alias, "upload", {"observation_id": again["observation"]["observation_id"], "element_id": "order", "source_kind": "attachment", "source_id": "file-1"}, {})
+except BrowserError as error:
+    upload_code, upload_message = error.code, str(error)
+print(json.dumps({
+    "clicked": clicked["observation"]["elements"],
+    "snap": snap["observation"]["elements"],
+    "extract": extract["fields"],
+    "followed": followed["url"],
+    "evaluated": evaluated["value"],
+    "long_code": long_code,
+    "shot": shot,
+    "idle": idle,
+    "page_after": page_after,
+    "again": again["status"],
+    "upload_code": upload_code,
+    "upload_message": upload_message,
+    "log": _log(),
+}))
+"""
+    done = _run(tmp_path, code, driver, files=_stub_files())
+    body = _loads(done)
+    log = body["log"]
+    launches = [item for item in log if item.get("op") == "launch"]
+    assert len(launches) == 2
+    assert all(item["keys"] == ["headless"] for item in launches)
+    first_stop = next(index for index, item in enumerate(log) if item.get("op") == "stop")
+    assert sum(1 for item in log[:first_stop] if item.get("op") == "launch") == 1
+    assert not any(item.get("op") == "connect" for item in log)
+    assert any(item.get("op") == "abort" and item.get("url") == "https://evil.test/app.js" and item.get("resource") == "script" for item in log)
+    assert any(item.get("op") == "continue" and item.get("url") == "about:blank" for item in log)
+    assert body["clicked"][1]["text"] == "Clicked" or any(item["text"] == "Clicked" for item in body["clicked"])
+    assert any(item["element_id"] == "order" and item["text"] == "SO-1" for item in body["snap"])
+    assert body["extract"]["order"] == "SO-1"
+    assert body["followed"] == "https://example.com/next"
+    assert body["evaluated"].startswith("live:")
+    assert body["long_code"] == "capability_refused"
+    assert [item for item in log if item.get("op") == "evaluate"] == [{"op": "evaluate", "length": len('document.querySelector("#status")')}]
+    assert body["shot"]["captured"] is True and body["shot"]["inline_bytes"] is False
+    assert body["idle"] == "session_lost" and body["page_after"] == "" and body["again"] == "confirmed"
+    assert any(item.get("op") == "stop" for item in log)
+    assert body["upload_code"] == "capability_refused"
+    assert "refused outside Studio" in body["upload_message"] and "True" in body["upload_message"]
+    # Python 3.12 clears an atexit slot without shrinking _ncallbacks, so compare
+    # the stub log after the process exits. The registered closer stops the live browser.
+    during = sum(1 for item in body["log"] if item.get("op") == "stop")
+    after = json.loads((done.export_dir / "playwright-log.json").read_text())
+    assert sum(1 for item in after if item.get("op") == "stop") == during + 1
+    assert "SO-1" not in code
+
+
+def test_live_redirect_does_not_replace_the_page(c, tmp_path):
+    owner = user(c)
+    code = _browser_code(c, owner, {"allowed_origins": ["https://example.com", "http://127.0.0.1"]})
+    driver = _LIVE_HEADER + """
+os.environ["SUPERSTEP_BROWSER_DRIVER"] = "playwright"
+opened = browser_call(alias, "navigate", {"url": "https://example.com/"}, {})
+def hop(url):
+    try:
+        browser_call(alias, "navigate", {"url": url}, {})
+        return None
+    except BrowserError as error:
+        return error.code
+print(json.dumps({
+    "opened": opened["url"],
+    "denied": hop("https://example.com/hop"),
+    "private": hop("https://example.com/loop"),
+    "page": _sessions[alias].page.url,
+    "log": _log(),
+}))
+"""
+    config = {"redirects": {
+        "https://example.com/hop": "https://evil.test/",
+        "https://example.com/loop": "http://127.0.0.1/secret",
+    }}
+    body = _loads(_run(tmp_path, code, driver, files=_stub_files(config)))
+    assert body["opened"] == "https://example.com/"
+    assert body["denied"] == "whitelist_denied"
+    assert body["private"] == "private_address"
+    assert body["page"] == "https://example.com/"
+    urls = {(item.get("url"), item.get("resource")) for item in body["log"] if item.get("op") == "abort"}
+    assert ("https://evil.test/", "document") in urls
+    assert ("http://127.0.0.1/secret", "document") in urls
+    assert [item.get("url") for item in body["log"] if item.get("op") == "goto"] == [
+        "https://example.com/", "https://example.com/hop", "https://example.com/loop",
+    ]
+
+
+def test_live_max_pages_refuses_the_next_document(c, tmp_path):
+    owner = user(c)
+    code = _browser_code(c, owner, {"max_pages": 1})
+    selector = "[id=" + json.dumps("go") + "]"
+    driver = _LIVE_HEADER + f"""
+os.environ["SUPERSTEP_BROWSER_DRIVER"] = "playwright"
+opened = browser_call(alias, "navigate", {{"url": "https://example.com/"}}, {{}})
+obs = opened["observation"]["observation_id"]
+click_code = click_message = None
+try:
+    browser_call(alias, "click", {{"observation_id": obs, "element_id": "go"}}, {{}})
+except BrowserError as error:
+    click_code, click_message = error.code, str(error)
+nav_code = nav_message = None
+try:
+    browser_call(alias, "navigate", {{"url": "https://example.com/again"}}, {{}})
+except BrowserError as error:
+    nav_code, nav_message = error.code, str(error)
+print(json.dumps({{
+    "page": _sessions[alias].page.url,
+    "click_code": click_code,
+    "click_message": click_message,
+    "nav_code": nav_code,
+    "nav_message": nav_message,
+    "log": _log(),
+}}))
+"""
+    body = _loads(_run(tmp_path, code, driver, files=_stub_files({"click_to": {selector: "https://example.com/clicked"}})))
+    assert body["page"] == "https://example.com/"
+    assert body["click_code"] == "limit" and "max_pages" in body["click_message"]
+    assert body["nav_code"] == "limit" and "max_pages" in body["nav_message"]
+    assert [item.get("url") for item in body["log"] if item.get("op") == "goto"] == ["https://example.com/"]
+    assert any(item.get("op") == "go_back" for item in body["log"])
+    assert [item for item in body["log"] if item.get("op") == "launch"] == [{"op": "launch", "keys": ["headless"]}]
+
+
+def test_live_profile_and_browserless_stealth(c, tmp_path):
+    owner = user(c)
+    origin = "https://allowed.test:8443"
+    seed = {
+        "cookies": [
+            {"name": "login", "value": "synthetic-cookie", "domain": "allowed.test", "path": "/", "expires": -1,
+             "httpOnly": True, "secure": True, "sameSite": "Lax"},
+        ],
+        "origins": [
+            {"origin": origin, "localStorage": [{"name": "login", "value": "synthetic-storage"}]},
+        ],
+    }
+    # The stored secret must match the profile origin. The runtime env is wider so the helper drops the rest.
+    runtime_seed = {
+        "cookies": seed["cookies"] + [
+            {"name": "other", "value": "other-cookie", "domain": "evil.test", "path": "/", "expires": -1,
+             "httpOnly": True, "secure": True, "sameSite": "Lax"},
+        ],
+        "origins": seed["origins"] + [
+            {"origin": "https://evil.test", "localStorage": [{"name": "x", "value": "nope"}]},
+        ],
+    }
+    code = _browser_code(
+        c, owner,
+        {"allowed_origins": [origin], "profile": {"name": "fixture-profile", "origins": [origin]}},
+        secrets={"profile_state": json.dumps(seed)},
+        url=origin + "/",
+    )
+    assert "synthetic-cookie" not in code and "synthetic-storage" not in code and "other-cookie" not in code
+    invalid = _LIVE_HEADER + """
+os.environ["SUPERSTEP_BROWSER_DRIVER"] = "playwright"
+os.environ[BROWSER_POLICY[alias]["env"]["profile"]] = "{"
+try:
+    browser_call(alias, "navigate", {"url": "https://allowed.test:8443/"}, {})
+    failed = None
+except BrowserError as error:
+    failed = error.code
+print(json.dumps({"failed": failed, "log": _log()}))
+"""
+    invalid_body = _loads(_run(tmp_path, code, invalid, files=_stub_files()))
+    assert invalid_body["failed"] == "profile_invalid"
+    assert invalid_body["log"] == []
+    applied = _LIVE_HEADER + """
+os.environ["SUPERSTEP_BROWSER_DRIVER"] = "playwright"
+os.environ[BROWSER_POLICY[alias]["env"]["profile"]] = os.environ["PROFILE_SEED"]
+opened = browser_call(alias, "navigate", {"url": "https://allowed.test:8443/"}, {})
+print(json.dumps({"status": opened["status"], "log": _log()}))
+"""
+    applied_body = _loads(_run(tmp_path, code, applied, env={"PROFILE_SEED": json.dumps(runtime_seed)}, files=_stub_files()))
+    assert applied_body["status"] == "confirmed"
+    states = [item.get("storage_state") for item in applied_body["log"] if item.get("op") == "context"]
+    assert len(states) == 1 and states[0]["cookies"] == [{
+        "name": "login", "value": "synthetic-cookie", "domain": "allowed.test", "path": "/",
+        "httpOnly": True, "secure": True, "sameSite": "Lax",
+    }]
+    assert states[0]["origins"] == [{"origin": origin, "localStorage": [{"name": "login", "value": "synthetic-storage"}]}]
+    assert [item for item in applied_body["log"] if item.get("op") == "launch"] == [{"op": "launch", "keys": ["headless"]}]
+    hosted = _browser_code(
+        c, owner,
+        {"provider": "browserless", "stealth": True, "allowed_origins": ["https://example.com"]},
+        secrets={"browserless_token": "fixture-browserless-token"},
+    )
+    assert "runtime-token" not in hosted and "fixture-browserless-token" not in hosted
+    hosted_driver = _LIVE_HEADER + """
+os.environ["SUPERSTEP_BROWSER_DRIVER"] = "browserless"
+env = BROWSER_POLICY[alias]["env"]
+os.environ[env["endpoint"]] = "https://browserless.example/session"
+os.environ[env["token"]] = "runtime-token"
+opened = browser_call(alias, "navigate", {"url": "https://example.com/"}, {})
+print(json.dumps({"status": opened["status"], "log": _log()}))
+"""
+    hosted_body = _loads(_run(tmp_path, hosted, hosted_driver, files=_stub_files()))
+    assert hosted_body["status"] == "confirmed"
+    connects = [item.get("url") for item in hosted_body["log"] if item.get("op") == "connect"]
+    assert connects == ["https://browserless.example/session?token=redacted&stealth=true"]
+    assert not any(item.get("op") == "launch" for item in hosted_body["log"])
+    assert "runtime-token" not in json.dumps(hosted_body["log"])

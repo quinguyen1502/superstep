@@ -443,7 +443,7 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 ## Browser tools, recipes and proxies
 
-REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio first milestone landed: TASK-0241–0250 + TASK-0253 merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323 (REV-0244, QA-0244). On 2026-11-07 the owner recorded two export drivers and asked for TASK-0261 and TASK-0262. Those tasks are in todo and are not started. AC11 stays open until the live-driver tasks merge. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Implementation PRs #303–#316 reconciled with the Accepted package and merged into develop. No release/version bump authorised by acceptance alone.
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio first milestone landed: TASK-0241–0250 + TASK-0253 merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323 (REV-0244, QA-0244). On 2026-11-07 the owner recorded two export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is done in PR #329 (REV-0251, QA-0251) and is not merged. TASK-0262 stays in todo. AC11 stays open until TASK-0262 merges. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Implementation PRs #303–#316 reconciled with the Accepted package and merged into develop. No release/version bump authorised by acceptance alone.
 
 - TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **done** (merged #303).
 - TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **done** (merged #304).
@@ -458,7 +458,7 @@ REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (
 - TASK-0253 — studio integrated acceptance, example workflow and English handbook. **done** (merged #316).
 - TASK-0251 — executable Python/plain and project exports. **done**, merged in PR #321 (REV-0242, QA-0242).
 - TASK-0252 — executable TypeScript/plain and project exports. **done**, merged in PR #323 (REV-0244, QA-0244).
-- TASK-0261 — live Playwright/Browserless page in the Python export. **todo**. Task-start waits for the owner.
+- TASK-0261 — live Playwright/Browserless page in the Python export. **done** in PR #329 (REV-0251, QA-0251). Not merged.
 - TASK-0262 — the same live page in the TypeScript export. **todo**. Starts after TASK-0261 is on develop.
 
 See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability, deferred triggers and gates. Owner acceptance of the **amended** package and `factory ready` precede task-start. Existing unrelated SDK task state is unchanged.

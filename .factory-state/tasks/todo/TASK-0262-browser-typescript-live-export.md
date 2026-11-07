@@ -42,7 +42,7 @@ Give the TypeScript project export the same live Playwright and Browserless page
 - Decision: `.factory-state/decisions/DEC-0085-browser-tools.md` decision 10.
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
-- Python contract: `.factory-state/tasks/todo/TASK-0261-browser-python-live-export.md` and its merged helper.
+- Python contract: `.factory-state/tasks/done/TASK-0261-browser-python-live-export.md` and its helper in PR #329. Merge that pull request before task-start.
 - Fixture TypeScript helper from TASK-0252, merged in PR #323: `.factory-state/tasks/done/TASK-0252-browser-typescript-export.md`.
 
 ## Related Artifacts

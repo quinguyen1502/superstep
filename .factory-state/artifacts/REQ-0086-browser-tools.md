@@ -40,7 +40,7 @@ The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the po
 6. **Budgets.** `max_pages` counts document navigations and refuses the next one. `stealth` is passed only when the provider is Browserless.
 7. **Still refused in the export.** Upload and download stay `capability_refused` outside Studio, including when the allow flag is on. A screenshot result stays `{captured: true, inline_bytes: false}` with no image bytes in the result or the generated source. Telegram, Sheets, HTTP API, Slack, WhatsApp, Email, Teams, Drive, web search, MCP stdio/HTTP, and the retriever stay explicit stubs.
 
-AC8 for TASK-0251 and TASK-0252 is on develop: PR #321 and PR #323. Live-driver behavior is AC11, tracked by TASK-0261 and TASK-0262. Those tasks are in todo. Task-start is not authorised by the split.
+AC8 for TASK-0251 and TASK-0252 is on develop: PR #321 and PR #323. Live-driver behavior is AC11, tracked by TASK-0261 and TASK-0262. TASK-0261 is done in PR #329 (REV-0251, QA-0251) and is not merged. TASK-0262 stays in todo. AC11 stays open until TASK-0262 merges.
 
 ## Problem Or Opportunity
 
@@ -159,7 +159,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 
 - Owner acceptance of this amended package (REQ/DES/ARCH/DEC/PLAN and tasks) is pending before moving studio delivery tasks to todo.
 - Browserless destination/proxy/DNS enforcement parity must be proved in TASK-0244; if it fails, document refusal and ask the owner for another path — do not silently drop remote from the requirement.
-- TASK-0261 and TASK-0262 are created in todo. Task-start still waits for the owner.
+- TASK-0261 is done on `factory/task-0261-browser-python-live-export` in PR #329 (REV-0251, QA-0251) and is not merged. TASK-0262 stays in todo. AC11 stays open.
 
 ## Related Artifacts
 
