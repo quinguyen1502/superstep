@@ -31,7 +31,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
-    "call_llm", "call_llm_fallback", "fails_over", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "MCP_PROTOCOL", "managed_operation", "send_email", "addresses", "build_graph",
+    "call_llm", "call_llm_fallback", "fails_over", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "MCP_PROTOCOL", "managed_operation", "send_email", "addresses", "EMAIL_RE", "EMAIL_RUN_ID", "PinnedSMTP", "PinnedSMTPSSL", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 RESERVED |= {"browser_call", "bind_browser_url", "browser_prepare", "browser_interrupt", "browser_decide",
@@ -637,15 +637,104 @@ def addresses(value: Any) -> list:
     return [p.strip() for x in items if x not in (None, "") for p in re.split(r"[,;\\n]", str(x)) if p.strip()]
 
 
+EMAIL_RE = re.compile(r"^[^@\\s<>,;\\"]+@[^@\\s<>,;\\"]+\\.[^@\\s<>,;\\"]+$")
+EMAIL_RUN_ID = os.environ.get("SUPERSTEP_RUN_ID") or os.urandom(8).hex()
+
+
+class PinnedSMTP(smtplib.SMTP):
+    """Connects to the checked address; the host name stays the name, so STARTTLS verifies the certificate for it."""
+    def __init__(self, ip: str, **kw):
+        self.ip = ip
+        super().__init__(**kw)
+
+    def _get_socket(self, host, port, timeout):
+        return socket.create_connection((self.ip, port), timeout, self.source_address)
+
+
+class PinnedSMTPSSL(smtplib.SMTP_SSL):
+    def __init__(self, ip: str, **kw):
+        self.ip = ip
+        super().__init__(**kw)
+
+    def _get_socket(self, host, port, timeout):
+        return self.context.wrap_socket(socket.create_connection((self.ip, port), timeout, self.source_address), server_hostname=host)
+
+
 def send_email(message: dict) -> dict:
-    """Send email nodes send through an SMTP credential in Superstep. This file never sends: like a studio dry run,
-    it prints the message and returns what it would have sent.
-    TODO: send it with smtplib and your own SMTP settings. Until then the dry run is refused when LLM_PROVIDER is set,
-    so a real run never reports an e-mail it did not send as handled."""
-    offline_service("Send email", message["subject"][:60])
-    print(f"(e-mail not sent) to {', '.join(message['to'])}: {message['subject']}")
-    return {"sent": False, "dry_run": True, "to": message["to"], "cc": message["cc"], "bcc": message["bcc"],
-            "subject": message["subject"], "message_id": None, "preview": message["body"][:2000]}
+    """Send email nodes, as in the studio: a node with an SMTP credential in Superstep sends; one without makes a dry
+    run (prints the message, returns what would have been sent). Sending uses environment variables only (never this
+    file): SMTP_HOST, SMTP_FROM, and optionally SMTP_PORT (587, or 465 with ssl), SMTP_SECURITY (starttls, the
+    default and required; ssl; or none), SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_NAME. As in the studio the host is
+    resolved once, private addresses are refused unless STUDIO_SMTP_ALLOW_PRIVATE=1, and the connection goes to the
+    checked address. Not configured: a dry run in offline mock mode (LLM_PROVIDER unset), an error when it is set."""
+    rcpt = list(dict.fromkeys(message["to"] + message["cc"] + message["bcc"]))
+    if not rcpt:
+        raise ValueError(f"Send email {message['node']}: no recipient")
+    bad = [a for a in rcpt if not EMAIL_RE.match(a)]
+    if bad:
+        raise ValueError(f"Send email {message['node']}: {bad[0][:100]!r} is not an e-mail address")
+    head = {"to": message["to"], "cc": message["cc"], "bcc": message["bcc"], "subject": message["subject"][:998]}
+    host, sender = os.environ.get("SMTP_HOST"), os.environ.get("SMTP_FROM")
+    if not message["sends"] or not (host and sender):
+        missing = ", ".join(n for n, v in (("SMTP_HOST", host), ("SMTP_FROM", sender)) if not v)
+        if message["sends"] and os.environ.get("LLM_PROVIDER"):
+            raise RuntimeError(f"Send email {message['node']}: set {missing} to send it")
+        why = f"{missing} not set" if message["sends"] else "no SMTP credential on this node in the studio"
+        print(f"(offline mock) Send email {message['subject'][:60]!r}: dry run, {why}", file=sys.stderr)
+        print(f"(e-mail not sent) to {', '.join(message['to'])}: {message['subject']}")
+        return {"sent": False, "dry_run": True, **head, "message_id": None, "preview": message["body"][:2000]}
+    security = (os.environ.get("SMTP_SECURITY") or "starttls").lower()
+    if security not in ("starttls", "ssl", "none"):
+        raise ValueError("SMTP_SECURITY must be starttls, ssl or none")
+    port = int(os.environ.get("SMTP_PORT") or (465 if security == "ssl" else 587))
+    try:
+        infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+    except OSError:
+        raise RuntimeError(f"Send email {message['node']}: cannot resolve {host}") from None
+    found = [ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos]
+    if not found:
+        raise RuntimeError(f"Send email {message['node']}: cannot resolve {host}")
+    if any(a.is_private or a.is_loopback or a.is_link_local or a.is_reserved or a.is_multicast or a.is_unspecified for a in found) \\
+            and os.environ.get("STUDIO_SMTP_ALLOW_PRIVATE") != "1":
+        raise PermissionError(f"Send email {message['node']}: {host} is a private address; set STUDIO_SMTP_ALLOW_PRIVATE=1 to allow it")
+    domain = sender.rsplit("@", 1)[-1]
+    key = hashlib.sha256(json.dumps([EMAIL_RUN_ID, message["node"], rcpt, message["subject"], message["body"]]).encode()).hexdigest()[:32]
+    mid = f"<{key}@{domain}>"  # the same run and message keep the same Message-ID, so a retried send can be recognised
+    msg = EmailMessage()
+    name = os.environ.get("SMTP_FROM_NAME")
+    msg["From"] = formataddr((name, sender)) if name else sender
+    msg["To"] = ", ".join(message["to"])
+    if message["cc"]:
+        msg["Cc"] = ", ".join(message["cc"])
+    msg["Subject"] = " ".join(message["subject"].split())[:998]
+    msg["Message-ID"] = mid
+    msg.set_content(message["body"])
+    ip = str(found[0])
+    try:
+        if security == "ssl":
+            conn = PinnedSMTPSSL(ip, timeout=20, context=ssl.create_default_context())
+        else:
+            conn = PinnedSMTP(ip, timeout=20)
+        conn.connect(host, port)
+        if security == "starttls":
+            conn.ehlo()
+            if not conn.has_extn("starttls"):
+                conn.close()
+                raise RuntimeError(f"Send email {message['node']}: {host} does not offer STARTTLS (set SMTP_SECURITY=none to send without TLS)")
+            conn.starttls(context=ssl.create_default_context())
+            conn.ehlo()
+        if os.environ.get("SMTP_USERNAME"):
+            conn.login(os.environ["SMTP_USERNAME"], os.environ.get("SMTP_PASSWORD") or "")
+        try:
+            refused = conn.send_message(msg, from_addr=sender, to_addrs=rcpt)
+        finally:
+            try:
+                conn.quit()
+            except (OSError, smtplib.SMTPException):
+                pass
+    except (OSError, smtplib.SMTPException) as error:
+        raise RuntimeError(f"Send email {message['node']}: {type(error).__name__}: {str(error)[:200]}") from None
+    return {"sent": True, "dry_run": False, **head, "message_id": mid, "refused": sorted(refused)}
 ''',
 }
 
@@ -733,9 +822,11 @@ class _Writer(GraphWriter):
             doc += ["Code nodes run here as written on the canvas, without the studio's sandbox: read them first.", ""]
         doc += ["Credentials, knowledge bases, MCP servers and approval channels are not exported.", '"""',
                 "from __future__ import annotations", ""]
-        std = sorted(m for m in {"hashlib", "ipaddress", "json", "os", "re", "socket", "string", "sys", *self.imports} if uses(m))
+        std = sorted(m for m in {"hashlib", "ipaddress", "json", "os", "re", "smtplib", "socket", "ssl", "string", "sys", *self.imports} if uses(m))
         typing = sorted(n for n in ("Annotated", "Any", "Dict", "List", "Optional", "TypedDict") if uses(n))
         out = [f"import {m}" for m in std] + ([f"from typing import {', '.join(typing)}"] if typing else []) + [""]
+        mail = [line for n, line in (("EmailMessage", "from email.message import EmailMessage"), ("formataddr", "from email.utils import formataddr")) if uses(n)]
+        if mail: out = out[:-1] + mail + [""]
         if uses("httpx"): out += ["import httpx", ""]
         lg = [line for name, line in (("InMemoryCache", "from langgraph.cache.memory import InMemoryCache"),
                                       ("MemorySaver", "from langgraph.checkpoint.memory import MemorySaver")) if uses(name)]
@@ -1056,6 +1147,8 @@ class _Writer(GraphWriter):
                      if d.get(k) else f"        {lit(k)}: [],")
         self.add(f"        \"subject\": \" \".join(render({const}_SUBJECT, state).split()),")
         self.add(f"        \"body\": render({const}_BODY, state),")
+        self.add(f"        \"node\": {lit(name)},")
+        self.add(f"        \"sends\": {bool(d.get('_email_sends'))},  # an SMTP credential in the studio (not exported): a real send")
         self.add("    }")
         out = d.get("output_field")
         if out: self.add(f"    return {{{lit(out)}: send_email(message)}}")

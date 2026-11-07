@@ -24,6 +24,7 @@ from .templating import VAR_RE, _ONE_FILTER, refs
 LANGGRAPH = "npm:@langchain/langgraph@^1.5"
 CHECKPOINT = "npm:@langchain/langgraph-checkpoint@^1"
 LANGCHAIN = "npm:langchain@^1"
+NODEMAILER = "npm:nodemailer@^6"  # Send email nodes with SMTP configured (TASK-0271)
 TS_TYPES = {"string": "string", "number": "number", "integer": "number", "boolean": "boolean",
             "object": "Record<string, unknown>", "list": "unknown[]"}
 REDUCERS = {"append": ("appendItems", "unknown[]", "[]"), "merge": ("mergeObjects", "Record<string, unknown>", "{}"),
@@ -47,7 +48,7 @@ HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
-    "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
+    "sendEmail", "addresses", "EMAIL_RE", "EMAIL_RUN_ID", "nodemailer", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
     "BrowserError", "SessionLost", "UnknownEffect", "sessions",
     "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS", "JSON_TYPES", "WORDS", "Schema", "ToolSpec", "ToolCall", "ChatMessage",
@@ -539,19 +540,6 @@ HTTP = r'''
 // Node's http(s) modules make the request (Deno supports them too); Deno needs --allow-net.
 const HTTP_RUN_ID = env("SUPERSTEP_RUN_ID") || crypto.randomUUID();
 
-function blockedAddress(ip: string): boolean {
-  const v4 = ip.startsWith("::ffff:") && ip.includes(".") ? ip.slice(7) : ip;
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(v4)) {
-    const [a, b, c] = v4.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0 && (c === 0 || c === 2)) ||
-      (a === 198 && (b === 18 || b === 19)) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113);
-  }
-  const x = ip.toLowerCase();
-  return x === "::" || x === "::1" || /^f[cd]/.test(x) || /^fe[89ab]/.test(x) || x.startsWith("ff") || x.startsWith("2001:db8") ||
-    x.startsWith("::ffff:") || x.startsWith("64:ff9b:") || x.startsWith("100::");
-}
-
 async function httpRequest(node: string, method: string, url: string, body?: string): Promise<unknown> {
   let target: URL;
   try {
@@ -613,6 +601,22 @@ function concatBytes(chunks: Uint8Array[]): Uint8Array {
   let at = 0;
   for (const c of chunks) { out.set(c, at); at += c.byteLength; }
   return out;
+}
+'''
+
+NET = r'''
+/** A private, loopback, link-local, reserved, multicast or unspecified address (as the studio's core/net.blocked). */
+function blockedAddress(ip: string): boolean {
+  const v4 = ip.startsWith("::ffff:") && ip.includes(".") ? ip.slice(7) : ip;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(v4)) {
+    const [a, b, c] = v4.split(".").map(Number);
+    return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+      (a === 198 && (b === 18 || b === 19)) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113);
+  }
+  const x = ip.toLowerCase();
+  return x === "::" || x === "::1" || /^f[cd]/.test(x) || /^fe[89ab]/.test(x) || x.startsWith("ff") || x.startsWith("2001:db8") ||
+    x.startsWith("::ffff:") || x.startsWith("64:ff9b:") || x.startsWith("100::");
 }
 '''
 
@@ -749,18 +753,64 @@ function addresses(value: unknown): string[] {
     .flatMap((x) => String(x).split(/[,;\n]/)).map((p) => p.trim()).filter(Boolean);
 }
 
-type Message = { to: string[]; cc: string[]; bcc: string[]; subject: string; body: string };
+type Message = { to: string[]; cc: string[]; bcc: string[]; subject: string; body: string; node: string; sends: boolean };
+const EMAIL_RE = /^[^@\s<>,;"]+@[^@\s<>,;"]+\.[^@\s<>,;"]+$/;
+const EMAIL_RUN_ID = env("SUPERSTEP_RUN_ID") || crypto.randomUUID();
 
-/** Send email nodes send through an SMTP credential in Superstep. This file never sends: like a studio dry run,
- * it prints the message and returns what it would have sent.
- * TODO: send it with your own mail library and SMTP settings from environment variables. */
+/** Send email nodes, as in the studio: a node with an SMTP credential in Superstep sends; one without makes a dry run
+ * (prints the message, returns what would have been sent). Sending uses nodemailer and environment variables only
+ * (never this file): SMTP_HOST, SMTP_FROM, and optionally SMTP_PORT (587, or 465 with ssl), SMTP_SECURITY (starttls,
+ * the default and required; ssl; or none), SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_NAME. As in the studio the host is
+ * resolved once, private addresses are refused unless STUDIO_SMTP_ALLOW_PRIVATE=1, and the connection goes to the
+ * checked address (TLS still checks the name). Not configured: a dry run offline (LLM_PROVIDER unset), else an error. */
 async function sendEmail(message: Message): Promise<Record<string, unknown>> {
-  offlineService("Send email", message.subject.slice(0, 60));
-  console.log(`(e-mail not sent) to ${message.to.join(", ")}: ${message.subject}`);
-  return { sent: false, dry_run: true, to: message.to, cc: message.cc, bcc: message.bcc, subject: message.subject,
-    message_id: null, preview: message.body.slice(0, 2000) };
+  const rcpt = [...new Set([...message.to, ...message.cc, ...message.bcc])];
+  if (!rcpt.length) throw new Error(`Send email ${message.node}: no recipient`);
+  const bad = rcpt.filter((a) => !EMAIL_RE.test(a));
+  if (bad.length) throw new Error(`Send email ${message.node}: ${JSON.stringify(bad[0].slice(0, 100))} is not an e-mail address`);
+  const head = { to: message.to, cc: message.cc, bcc: message.bcc, subject: message.subject.slice(0, 998) };
+  const host = env("SMTP_HOST"), sender = env("SMTP_FROM");
+  if (!message.sends || !host || !sender) {
+    const missing = ([["SMTP_HOST", host], ["SMTP_FROM", sender]] as const).filter(([, v]) => !v).map(([n]) => n).join(", ");
+    if (message.sends && env("LLM_PROVIDER")) throw new Error(`Send email ${message.node}: set ${missing} to send it`);
+    const why = message.sends ? `${missing} not set` : "no SMTP credential on this node in the studio";
+    console.error(`(offline mock) Send email ${JSON.stringify(message.subject.slice(0, 60))}: dry run, ${why}`);
+    console.log(`(e-mail not sent) to ${message.to.join(", ")}: ${message.subject}`);
+    return { sent: false, dry_run: true, ...head, message_id: null, preview: message.body.slice(0, 2000) };
+  }
+  const security = (env("SMTP_SECURITY") || "starttls").toLowerCase();
+  if (!["starttls", "ssl", "none"].includes(security)) throw new Error("SMTP_SECURITY must be starttls, ssl or none");
+  const port = Number(env("SMTP_PORT") || (security === "ssl" ? 465 : 587));
+  const dns = (await import("node:dns")).default;
+  const found = await dns.promises.lookup(host, { all: true, verbatim: true }).catch(() => []);
+  if (!found.length) throw new Error(`Send email ${message.node}: cannot resolve ${host}`);
+  if (found.some((a) => blockedAddress(a.address)) && env("STUDIO_SMTP_ALLOW_PRIVATE") !== "1") {
+    throw new Error(`Send email ${message.node}: ${host} is a private address; set STUDIO_SMTP_ALLOW_PRIVATE=1 to allow it`);
+  }
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([EMAIL_RUN_ID, message.node, rcpt, message.subject, message.body])));
+  const key = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  const mid = `<${key}@${sender.split("@").pop()}>`;  // the same run and message keep the same Message-ID
+  // deno-lint-ignore no-explicit-any
+  const nodemailer: any = (await import("%(nodemailer)s")).default;
+  const transport = nodemailer.createTransport({
+    host: found[0].address, port, secure: security === "ssl", requireTLS: security === "starttls", ignoreTLS: security === "none",
+    tls: { servername: host }, connectionTimeout: 20_000, greetingTimeout: 20_000, socketTimeout: 20_000,
+    ...(env("SMTP_USERNAME") ? { auth: { user: env("SMTP_USERNAME"), pass: env("SMTP_PASSWORD") || "" } } : {}),
+  });
+  const name = env("SMTP_FROM_NAME");
+  let info: { rejected?: unknown[] };
+  try {
+    info = await transport.sendMail({ from: name ? { name, address: sender } : sender, to: message.to, cc: message.cc, bcc: message.bcc,
+      subject: message.subject.split(/\s+/).filter(Boolean).join(" ").slice(0, 998), text: message.body, messageId: mid,
+      envelope: { from: sender, to: rcpt } });
+  } catch (error) {
+    throw new Error(`Send email ${message.node}: ${String((error as Error)?.message ?? error).slice(0, 200)}`);
+  } finally {
+    transport.close();
+  }
+  return { sent: true, dry_run: false, ...head, message_id: mid, refused: (info.rejected ?? []).map(String).sort() };
 }
-''',
+''' % {"nodemailer": NODEMAILER},
 }
 
 REDUCER_CODE = {
@@ -845,6 +895,7 @@ class _Writer(GraphWriter):
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add(MODEL.rstrip())
         if "fallback" in self.uses: self.add(FALLBACK.rstrip())
+        if "http" in self.uses or "send_email" in self.uses: self.add(NET.rstrip())
         if "http" in self.uses: self.add(HTTP.rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
@@ -1164,6 +1215,8 @@ class _Writer(GraphWriter):
             self.add(f"    {k}: addresses(renderArgs({lit(d[k])}, state))," if d.get(k) else f"    {k}: [],")
         self.add(f"    subject: render({const}_SUBJECT, state).split(/\\s+/).filter(Boolean).join(\" \"),")
         self.add(f"    body: render({const}_BODY, state),")
+        self.add(f"    node: {lit(g.names[nid])},")
+        self.add(f"    sends: {'true' if d.get('_email_sends') else 'false'},  // an SMTP credential in the studio (not exported): a real send")
         self.add("  };")
         out = d.get("output_field")
         if out: self.add(f"  return asUpdate({{ {lit(out)}: await sendEmail(message) }});")

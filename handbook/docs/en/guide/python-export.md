@@ -78,7 +78,7 @@ Final state: {...}
 | Tool: Code | the node's code, inside the node function |
 | MCP (node and Agent MCP tool) | `call_mcp_tool(prefix, tool, arguments)`: a real MCP call over Streamable HTTP (`initialize`, `tools/call`), as the studio makes it. Each server gets a prefix `MCP_SERVER_<n>` (nodes on the same server share it; the server id is not written); set `<PREFIX>_URL` and, if needed, `<PREFIX>_HEADERS` (a JSON object, for example an `Authorization` header). The URL is your configuration and is called as given, without redirects; stdio servers are not supported. Not configured: offline it returns `None` and prints `(offline mock) …`; with `LLM_PROVIDER` set it stops the run naming the variable |
 | Retriever (node and Agent knowledge tool) | `retrieve(prefix, query, top_k)` asks your Superstep server's knowledge base search (`POST /api/knowledge-bases/<id>/search`), so chunks and scores are the studio's. Each knowledge base gets a prefix `KNOWLEDGE_BASE_<n>` (its id is not written); set `SUPERSTEP_URL`, `SUPERSTEP_TOKEN` (a Bearer token of a user who can read it) and `<PREFIX>_ID`. A studio error (for example `KB_NOT_FOUND`) stops the run. Not configured: offline an empty list and `(offline mock) …`; with `LLM_PROVIDER` set the run stops naming the variables |
-| Send email | a stub with a `TODO`: it needs studio services. Offline they return an empty result and print `(offline mock) …` on stderr; with `LLM_PROVIDER` set they stop the run until you implement them |
+| Send email | `send_email(message)`, as in the studio: a node with an SMTP credential in the studio sends, one without makes a dry run. Sending uses `smtplib` and environment variables only: `SMTP_HOST`, `SMTP_FROM`, optional `SMTP_PORT`, `SMTP_SECURITY` (`starttls`, the default and required; `ssl`; `none`), `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_NAME`. The host is resolved once and connected to by that address; private addresses need `STUDIO_SMTP_ALLOW_PRIVATE=1`. Bcc stays out of the headers; the same run and message keep the same `Message-ID`. Not configured: offline a dry run with `(offline mock) …`; with `LLM_PROVIDER` set the run stops naming the variables |
 | Note | a comment |
 | Retry, cache, input fields | `RetryPolicy`, `CachePolicy`, `input_schema` on `add_node` |
 | Timeout | a comment: LangGraph cannot stop a node that blocks |
@@ -220,7 +220,7 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | Tool: HTTP | `httpRequest(...)` with `node:http`/`node:https` (supported by Node and Deno), with the same safeguards as the Python file; run Deno with `--allow-net` |
 | MCP | `callMcpTool(prefix, tool, args)` with `fetch`, configured and behaving as in the Python file |
 | Retriever | `retrieve(prefix, query, topK)` with `fetch`, configured and behaving as in the Python file |
-| Send email | a stub with a `TODO`, as in the Python file |
+| Send email | `sendEmail(message)` with `nodemailer` (`npm:nodemailer@^6`, loaded only when it sends), configured and behaving as in the Python file |
 | LLM with a fallback model | `callLlmFallback`, with the same rules as the Python file |
 | Agent | the entry, model, tool and end steps, as in the Python file; `callAgent` is the mock, or `initChatModel` with `bindTools` when `LLM_PROVIDER` is set. Built-in tools are stubs that throw |
 | Retry, cache, input fields, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` on `addNode` |
@@ -295,10 +295,11 @@ workflow, starts `langgraph dev` on it and calls it with the SDK.
   channels, approvers and escalation addresses.
 - Studio features around a run: the trace, run history, recovery after a
   restart, approval channels and deadlines, cost tracking, node timeouts.
-- Real Send email calls (MCP and Retriever calls are real once configured). Offline the stubs return an empty
-  result, nothing, or the message that would have been sent, and say so on
-  stderr. With `LLM_PROVIDER` set they raise (Python) or throw (TypeScript), so a
-  real run never treats a missing service as done.
+- MCP server addresses, the Superstep URL and token, and SMTP settings: you set
+  them as environment variables. Without them, offline the MCP, Retriever and Send
+  email calls return an empty result, nothing, or the message that would have
+  been sent, and say so on stderr. With `LLM_PROVIDER` set they raise (Python) or
+  throw (TypeScript), so a real run never treats a missing service as done.
 - A subgraph, workflow tool or function that was missing at export time: its
   node or tool fails with an error naming it when the run reaches it.
 
