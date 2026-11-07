@@ -29,7 +29,7 @@ No schema migration, UI component, locale catalog, or secret value was added. Th
 - TASK-0262 acceptance criteria
 - REQ-0086 AC11
 - DES-0004, ARCH-0002, DEC-0085 decision 10, PLAN-0006
-- TASK-0261 and REV-0251 for the Python contract this task copies
+- TASK-0261 and REV-0256 for the Python contract this task copies
 - `docs/backend-architecture.md` (the embedded runtime imports nothing from `app`)
 
 ## Findings

@@ -37,7 +37,7 @@ The Python helper clock is unchanged.
 ## Reference Artifacts
 
 - TASK-0252 acceptance criteria
-- REQ-0086 AC8 (TypeScript half; Python is TASK-0251 / REV-0242 / QA-0242)
+- REQ-0086 AC8 (TypeScript half; Python is TASK-0251 / REV-0255 / QA-0255)
 - DES-0004, ARCH-0002, DEC-0085, PLAN-0006
 - `docs/backend-architecture.md` (service may call engine; the embedded runtime imports nothing from `app`)
 

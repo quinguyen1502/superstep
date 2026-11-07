@@ -3,7 +3,8 @@
 ## Metadata
 
 - Project: superstep
-- QA ID: QA-0251
+- QA ID: QA-0256
+- Renumbered: QA-0251 → QA-0256 on 2026-11-07 (TASK-0272). PR #331 merged first and keeps QA-0251 for TASK-0269.
 - Task ID: TASK-0261
 - QA Owner: Grok (advisory; not owner approval)
 - Created: 2026-11-07
@@ -12,7 +13,7 @@
 
 ## Validation Scope
 
-Python export live page for Playwright and Browserless on `factory/task-0261-browser-python-live-export`, pull request #329. The `memory` driver stays the TASK-0251 fixture. Live control flow is executed by a stub `playwright` package written beside `graph.py` and imported by the generated helper. Playwright is not installed (`find_spec` is None). Chromium was not launched. Review REV-0251 recorded no blocking findings.
+Python export live page for Playwright and Browserless on `factory/task-0261-browser-python-live-export`, pull request #329. The `memory` driver stays the TASK-0251 fixture. Live control flow is executed by a stub `playwright` package written beside `graph.py` and imported by the generated helper. Playwright is not installed (`find_spec` is None). Chromium was not launched. Review REV-0256 recorded no blocking findings.
 
 ## Acceptance Criteria Coverage
 

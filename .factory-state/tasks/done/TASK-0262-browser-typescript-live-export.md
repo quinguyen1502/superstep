@@ -76,7 +76,7 @@ Give the TypeScript project export the same live Playwright and Browserless page
 
 - TASK-0261 merged to `develop` in PR #329 (`10300e20`).
 - TASK-0252 is merged in PR #323. The TypeScript fixture helper is on `develop`.
-- Review REV-0254 and QA QA-0254 are recorded on this branch. PR #334 is not merged.
+- Review REV-0254 and QA QA-0254 are recorded on this branch. PR #334 is merged (`ddafdd18`).
 
 ## Acceptance Criteria
 
@@ -116,7 +116,7 @@ Give the TypeScript project export the same live Playwright and Browserless page
 
 ## Handoff Notes
 
-- Branch: `factory/task-0262-browser-typescript-live-export`. PR #334 is Ready in this step and is not merged.
+- Branch: `factory/task-0262-browser-typescript-live-export`. PR #334 is merged (`ddafdd18`).
 - Review: `.factory-state/artifacts/REV-0254-TASK-0262-browser-typescript-live-export.md`. QA: `.factory-state/artifacts/QA-0254-TASK-0262-browser-typescript-live-export.md`.
-- TASK-0261 is merged in PR #329 (`10300e20`). REQ-0086 is not done. AC11 stays open until PR #334 merges.
+- TASK-0261 is merged in PR #329 (`10300e20`). REQ-0086 is not marked done. AC11 is closed.
 - Live control flow is proven with the stub. A real Playwright and Chromium launch is still a follow-up. Deno was not run.

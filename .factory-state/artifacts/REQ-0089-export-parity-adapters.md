@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0089
-- Status: Owner-authorised 2026-11-07 ("Làm đi" on the recommended next sequence after REQ-0088: 1 HTTP pinning and fallback with attachments, 2 split TASK-0266 and implement real MCP / Retriever / email export adapters, 3 honest factory metadata cleanup)
+- Status: Owner-authorised 2026-11-07 ("Làm đi" on the recommended next sequence after REQ-0088: 1 HTTP pinning and fallback with attachments, 2 split TASK-0266 and implement real MCP / Retriever / email export adapters, 3 honest factory metadata cleanup). Steps 1 and 2 are merged, including PR #333 (`bbbd23b2`) for TASK-0271. Step 3 is TASK-0272 (REV-0258, QA-0258) and is not merged. REQ-0089 is not marked done.
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-07
 - Related: REQ-0088, DEC-0087, DEC-0088, PLAN-0009, TASK-0266 (split by this requirement); browser export (REQ-0086, TASK-0251/0252/0261/0262) and native TASK-0227 excluded

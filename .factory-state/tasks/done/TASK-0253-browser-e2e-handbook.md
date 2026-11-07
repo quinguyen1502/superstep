@@ -101,4 +101,5 @@ Studio first-milestone integrated browser acceptance, example workflow and bilin
 - 2026-11-06: Implementation started on `factory/task-0253-browser-e2e-handbook` stacked after TASK-0250. English-only Studio handbook guide and connection settings doc corrections; screenshots placeholders pending real Studio captures after #315 merges.
 
 - 2026-11-06: Merged #316 (English handbook guide + en/vi parity). English UI screenshots refreshed for connection settings and Agent URL binding. TASK-0251/0252 remain deferred.
+- 2026-11-07: TASK-0272 recorded the missing review. Review REV-0257. QA QA-0257. `scripts/check-browser-handbook.py` passed. This does not re-run the original pull-request suite.
 
