@@ -68,8 +68,10 @@ exports are deferred.
    - Require approval for mutating actions — **off** (navigate / snapshot /
      extract / screenshot never wait).
    - Allow evaluate / upload / download — **off** until you need them.
-10. Save, then **Discover tools**. You should see the nine browser operations
-    when the adapter is enabled.
+10. Save, then **Discover tools**. With the safety toggles left at their
+    defaults, the card lists six tools: navigate, snapshot, click, fill,
+    extract and screenshot. Evaluate, upload and download appear after those
+    toggles are turned on.
 
 ![Browser connection settings](../images/browser-connection-settings.png)
 
