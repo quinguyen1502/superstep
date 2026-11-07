@@ -63,6 +63,7 @@ nav:
       - Chat API: run/chat-api.md
       - Bộ giao diện React chat: run/chat-react.md
       - Widget chat: run/chat-widget.md
+      - Chat trong ứng dụng native: run/chat-native-webview.md
       - Xác thực chat bên thứ ba: run/chat-third-party-auth.md
       - Kiểm thử workflow: run/tests.md
   - Vận hành:
