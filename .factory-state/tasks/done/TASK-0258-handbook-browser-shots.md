@@ -7,8 +7,8 @@
 - Title: Replace handbook browser mockups with real Studio screenshots
 - Status: done
 - Owner: Thái Quí Nguyễn
-- Created: 2026-11-06
-- Updated: 2026-11-06
+- Created: 2026-11-07
+- Updated: 2026-11-07
 - Requirement IDs: REQ-0086
 - Design IDs: DES-0004
 - Architecture IDs: ARCH-0002, DEC-0085
@@ -95,15 +95,15 @@ Replace the two AI-generated images that PR #317 stored as handbook screenshots 
 
 ## Activity Log
 
-- 2026-11-06: Allocated TASK-0258 with `factory ids next TASK --all-refs` after `git fetch --all --prune`. Branch `factory/task-0258-handbook-browser-shots` from `develop` at `e1c4284d`. Not committed.
-- 2026-11-06: `factory ready` passed while this task was in todo. Moved to doing. Replaced the four handbook PNGs with Chrome captures of the local Studio UI (`STUDIO_ENABLE_BROWSER=1`, browser runtime off, mock model, temporary SQLite). Workflow id on this machine was `689d7560`. Not committed. Validation not run.
-- 2026-11-06: Kept the discovered "Demo isolated browser" card as `browser-connection-settings.png` (the figure follows Discover tools). The create form stays out of Git. English and Vietnamese guides now say discovery lists six tools at the default toggles, and evaluate/upload/download after those toggles are on. Not committed. Validation not run.
-- 2026-11-06: Owner asked to commit this branch. Validation not run. Not pushed.
-- 2026-11-06: Validation on this branch. `factory verify run --profile full` recorded a failure in `.factory-state/verification/latest.yaml` because the x86_64 backend virtualenv launched Node as x64, and the installed native bindings are darwin-arm64. Those four commands were run again with arm64 Node and passed: `npm run build` (12s), `npm run lint` (1s, warnings only), `npm run test` (18s), and `sdk/typescript` `npm run test` (1s). Passed on the first run: backend pytest (505s), sdk/python pytest (15s), sdk/typescript build (7s), sdk/typescript typecheck (3s). Not QA-passed. The false factory record was not kept.
-- 2026-11-06: Review REV-0241. No blocking findings. Approved for QA. Advisory only; not owner approval of the product change.
-- 2026-11-06: QA QA-0241. Acceptance criteria passed by artifact inspection and the recorded eight tool-policy commands. Outcome pass. Passed to done. Merge is not authorized.
-- 2026-11-06: Owner asked to finish PR #318. Moved this task to done on this branch. Squash, final checks, `--force-with-lease`, and Draft-to-Ready follow on the same PR. Do not merge.
-- 2026-11-06: Final checks on the squashed tree passed. `git diff --check` passed. Tool-policy: frontend build 12s, lint 1s (warnings only), test 18s (frontend 169, React 22, TypeScript SDK 102); backend pytest 1416 passed, 71 skipped, 492.72s; sdk/python 229 passed, 8 skipped, 14s; sdk/typescript build 2s, test 102 passed in 1s, typecheck 1s. Node commands used arm64 Node. `factory validate` still reports the pre-existing TASK-0253 review-reference error that already fails on `develop`; this branch does not change that file. Do not merge.
+- 2026-11-07: Allocated TASK-0258 with `factory ids next TASK --all-refs` after `git fetch --all --prune`. Branch `factory/task-0258-handbook-browser-shots` from `develop` at `e1c4284d`. Not committed.
+- 2026-11-07: `factory ready` passed while this task was in todo. Moved to doing. Replaced the four handbook PNGs with Chrome captures of the local Studio UI (`STUDIO_ENABLE_BROWSER=1`, browser runtime off, mock model, temporary SQLite). Workflow id on this machine was `689d7560`. Not committed. Validation not run.
+- 2026-11-07: Kept the discovered "Demo isolated browser" card as `browser-connection-settings.png` (the figure follows Discover tools). The create form stays out of Git. English and Vietnamese guides now say discovery lists six tools at the default toggles, and evaluate/upload/download after those toggles are on. Not committed. Validation not run.
+- 2026-11-07: Owner asked to commit this branch. Validation not run. Not pushed.
+- 2026-11-07: Validation on this branch. `factory verify run --profile full` recorded a failure in `.factory-state/verification/latest.yaml` because the x86_64 backend virtualenv launched Node as x64, and the installed native bindings are darwin-arm64. Those four commands were run again with arm64 Node and passed: `npm run build` (12s), `npm run lint` (1s, warnings only), `npm run test` (18s), and `sdk/typescript` `npm run test` (1s). Passed on the first run: backend pytest (505s), sdk/python pytest (15s), sdk/typescript build (7s), sdk/typescript typecheck (3s). Not QA-passed. The false factory record was not kept.
+- 2026-11-07: Review REV-0241. No blocking findings. Approved for QA. Advisory only; not owner approval of the product change.
+- 2026-11-07: QA QA-0241. Acceptance criteria passed by artifact inspection and the recorded eight tool-policy commands. Outcome pass. Passed to done. Merge is not authorized.
+- 2026-11-07: Owner asked to finish PR #318. Moved this task to done on this branch. Squash, final checks, `--force-with-lease`, and Draft-to-Ready follow on the same PR. Do not merge.
+- 2026-11-07: Final checks on the squashed tree passed. `git diff --check` passed. Tool-policy: frontend build 12s, lint 1s (warnings only), test 18s (frontend 169, React 22, TypeScript SDK 102); backend pytest 1416 passed, 71 skipped, 492.72s; sdk/python 229 passed, 8 skipped, 14s; sdk/typescript build 2s, test 102 passed in 1s, typecheck 1s. Node commands used arm64 Node. `factory validate` still reports the pre-existing TASK-0253 review-reference error that already fails on `develop`; this branch does not change that file. Do not merge.
 
 ## Handoff Notes
 
