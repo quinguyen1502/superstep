@@ -13,15 +13,20 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { PasswordRules } from '@/components/password-rules'
 import { passwordOk } from '@/lib/password'
 import { api } from '@/lib/api'
+import { AppMeta } from '@/components/app-meta'
 
 function Frame({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
-  return <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4 relative">
-    <div className="absolute top-4 right-4 flex gap-1"><LanguageSwitcher /><ThemeToggle /></div>
+  return <div className="relative flex min-h-dvh flex-col bg-muted/40">
+    <div className="absolute top-4 right-4 z-10 flex gap-1"><LanguageSwitcher /><ThemeToggle /></div>
+    <div className="flex flex-1 items-center justify-center p-4">
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
         <div className="mx-auto mb-2 rounded-lg bg-primary text-primary-foreground p-2 w-fit"><KeyRound className="size-5" /></div>
         <CardTitle className="text-xl">{title}</CardTitle><CardDescription>{hint}</CardDescription>
-      </CardHeader>{children}</Card></div>
+      </CardHeader>{children}</Card>
+    </div>
+    <AppMeta />
+  </div>
 }
 
 /** E-mail a reset link when the server can send mail; otherwise say who can make one. Same answer for every address. */
