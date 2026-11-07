@@ -537,3 +537,7 @@ TASK-0255 finalises the 2026-11-05 release metadata and checked publication hand
 ## 0.11.2 Release
 
 TASK-0257 prepares the owner-authorised 0.11.2 release of TASK-0256 (#305). It is explicitly stacked on #305 while final CI runs; release integration waits for #305, then a release-only diff against integrated develop. Shared app/Python/CLI/frontend/installer moves to 0.11.2, React to 0.1.2 and TypeScript stays 0.2.0. Checked main integration, immutable tags, GitHub Release and configured PyPI/npm/four GHCR images are authorised; publication is pending verification, not implied by source status. No migration, new dependency, native delivery or provider/bot cutover.
+
+## 0.12.0 Release
+
+TASK-0276 prepares the owner-authorised 0.12.0 release of integrated develop at `ca278c23` (PR #336). Shared app, Python SDK, CLI, frontend and installer move to 0.12.0. React moves to 0.1.3 because the toolkit renders allowlisted browser facts. TypeScript SDK stays 0.2.0 and is not republished. Migrations `0055` through `0058` ship with the browser tools. Checked main integration, immutable `v0.12.0` and `sdk-react-v0.1.3` tags, GitHub Release and configured PyPI, npm and GHCR publication are authorised. Publication is pending verification. TASK-0227 and cross-language code nodes stay out. REQ-0086, REQ-0089 and REQ-0090 stay not done.
