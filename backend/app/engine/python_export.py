@@ -525,12 +525,30 @@ def offline_service(kind: str, name: str) -> bool:
 STUBS = {
     "retrieve": '''
 
-def retrieve(query: str, top_k: int) -> list:
-    """Retriever nodes search a Superstep knowledge base, which this file cannot reach.
-    TODO: search your own index for `query`, for example with a LangChain vector store retriever.
-    Until then: empty in offline mock mode, an error when LLM_PROVIDER is set."""
-    offline_service("Knowledge base search", query[:60])
-    return []
+def retrieve(prefix: str, query: str, top_k: int) -> list:
+    """Retriever nodes (and Agent knowledge tools) search a Superstep knowledge base. This file asks your Superstep
+    server, so the chunks and scores are the studio's own: POST <SUPERSTEP_URL>/api/knowledge-bases/<id>/search.
+    Configure with environment variables (never written here): SUPERSTEP_URL, SUPERSTEP_TOKEN (a Bearer token of a
+    user who can read the knowledge base) and <PREFIX>_ID, the knowledge base id, for each prefix listed above.
+    Not configured: an empty list in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set."""
+    base, token, kid = os.environ.get("SUPERSTEP_URL"), os.environ.get("SUPERSTEP_TOKEN"), os.environ.get(f"{prefix}_ID")
+    missing = [n for n, v in (("SUPERSTEP_URL", base), ("SUPERSTEP_TOKEN", token), (f"{prefix}_ID", kid)) if not v]
+    if missing:
+        if os.environ.get("LLM_PROVIDER"):
+            raise RuntimeError(f"Knowledge base search {prefix}: set {', '.join(missing)} to search it")
+        print(f"(offline mock) Knowledge base search {query[:60]!r}: {', '.join(missing)} not set: empty result", file=sys.stderr)
+        return []
+    url = f"{base.rstrip('/')}/api/knowledge-bases/{kid}/search"
+    try:
+        r = httpx.post(url, json={"query": query, "top_k": top_k}, headers={"Authorization": f"Bearer {token}"}, timeout=30,
+                       follow_redirects=False)
+        body = r.json()
+    except (httpx.HTTPError, ValueError) as error:
+        raise RuntimeError(f"Knowledge base search {prefix}: no answer from {base} ({type(error).__name__})") from None
+    if not (isinstance(body, dict) and body.get("success")):
+        error = (body.get("error") if isinstance(body, dict) else None) or {}
+        raise RuntimeError(f"Knowledge base search {prefix}: {error.get('code') or 'HTTP ' + str(r.status_code)} {str(error.get('message') or '')[:200]}".rstrip())
+    return body.get("data") or []
 ''',
     "managed_operation": '''
 
@@ -743,6 +761,9 @@ class _Writer(GraphWriter):
             self.add("\n\n# --- Studio services ------------------------------------------------------------------------------------")
             self.add("# These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
             if any(k != "managed_operation" for k in stubs): self.add(OFFLINE_SERVICE.rstrip())
+            if "retrieve" in stubs:
+                self.add("\n\n# Knowledge bases: before a real run set SUPERSTEP_URL, SUPERSTEP_TOKEN and <PREFIX>_ID for")
+                self.add(f"# {', '.join(getattr(self, 'knowledge_bases', {}).values())}. Nodes and tools on the same knowledge base share a prefix.")
             if "call_mcp_tool" in stubs:
                 self.add("\n\n# MCP servers: before a real run set <PREFIX>_URL (and <PREFIX>_HEADERS if the server needs them) for")
                 self.add(f"# {', '.join(getattr(self, 'mcp_servers', {}).values())}. MCP nodes and tools on the same Superstep server share a prefix.")
@@ -881,7 +902,7 @@ class _Writer(GraphWriter):
             self.add("")
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}: the chunks of a knowledge base that best match the query (see retrieve)."""')
-            self.add(ret(f"retrieve(render({const}_QUERY, state), top_k={_number(d.get('top_k'), int) or 4})"))
+            self.add(ret(f"retrieve({lit(self.kb_prefix(d))}, render({const}_QUERY, state), top_k={_number(d.get('top_k'), int) or 4})"))
         elif t == "mcp":
             info = d.get("_browser_export")
             if isinstance(info, dict):
@@ -1268,7 +1289,7 @@ class _Writer(GraphWriter):
                     self.add(f"        # TODO: the function {lit(fn)} is not registered on this server any more.")
                     self.add(f"        raise LookupError({lit(f'tool {tname}: the function {fn} is not registered on the Superstep server any more: add it to this file')})")
             elif src == "knowledge":
-                self.add(f"        return retrieve(str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
+                self.add(f"        return retrieve({lit(self.kb_prefix(t))}, str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":
                 info = t.get("_browser_export")
                 if isinstance(info, dict):

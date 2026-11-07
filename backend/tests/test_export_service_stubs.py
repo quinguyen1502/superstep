@@ -49,7 +49,8 @@ def test_python_offline_mock_is_announced(tmp_path):
 
 def test_python_live_run_refuses_unimplemented_services(tmp_path):
     p = py(tmp_path, SERVICES, live=True)
-    assert p.returncode != 0 and "NotImplementedError" in p.stderr and "Knowledge base search" in p.stderr
+    # the first service reached is the Retriever: unconfigured in a live run it names what to set (TASK-0270)
+    assert p.returncode != 0 and "Knowledge base search KNOWLEDGE_BASE_1: set SUPERSTEP_URL" in p.stderr
     assert "(e-mail not sent)" not in p.stdout and "Final state:" not in p.stdout
 
 
@@ -69,7 +70,7 @@ def test_typescript_offline_mock_is_announced(tmp_path, deno_env):  # noqa: F811
 
 def test_typescript_live_run_refuses_unimplemented_services(tmp_path, deno_env):  # noqa: F811
     p = ts(tmp_path, deno_env, SERVICES, live=True)
-    assert p.returncode != 0 and "uses a Superstep service that is not exported" in p.stderr
+    assert p.returncode != 0 and "Knowledge base search KNOWLEDGE_BASE_1: set SUPERSTEP_URL" in p.stderr
     assert "Final state:" not in p.stdout
 
 

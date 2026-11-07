@@ -83,6 +83,14 @@ class Graph:
         raw_server = {n.get("id"): (n.get("data") or {}).get("server_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "mcp"}
         raw_tool_server = {(n.get("id"), t.get("name")): t.get("server_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                            for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "mcp"}
+        # the same for knowledge bases (TASK-0270): Retriever nodes and Agent knowledge tools
+        raw_kb = {n.get("id"): (n.get("data") or {}).get("knowledge_base_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "retriever"}
+        raw_tool_kb = {(n.get("id"), t.get("name")): t.get("knowledge_base_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
+                       for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "knowledge"}
+        for n in self.wf["nodes"]:
+            if n["id"] in raw_kb: n["data"]["_knowledge_base"] = str(raw_kb[n["id"]] or "")
+            for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
+                if isinstance(t, dict) and (n["id"], t.get("name")) in raw_tool_kb: t["_knowledge_base"] = str(raw_tool_kb[(n["id"], t.get("name"))] or "")
         for n in self.wf["nodes"]:
             if n["id"] in raw_server: n["data"]["_mcp_server"] = str(raw_server[n["id"]] or "")
             for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
@@ -236,7 +244,7 @@ class GraphWriter:
             if t == "human": self.uses.add("human")
             if t == "tool" and d.get("mode") == "code": self.uses.add("code")
             if t == "tool" and d.get("mode") == "http": self.uses.add("http")  # TASK-0265
-            if t == "retriever": self.uses.add("retrieve")
+            if t == "retriever": self.uses.add("retrieve"); self.kb_prefix(d)
             if t == "mcp": self.note_mcp(d)
             if t == "email": self.uses.add("send_email")
             if t == "agent":
@@ -244,6 +252,8 @@ class GraphWriter:
                 if self.handoff_raw(g, n["id"]): self.uses.add("handoff")
                 sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
                 if "knowledge" in sources: self.uses.add("retrieve")
+                for tool in d.get("tools") or []:
+                    if isinstance(tool, dict) and tool.get("source") == "knowledge": self.kb_prefix(tool)
                 if "http" in sources: self.uses.add("http")
                 for tool in d.get("tools") or []:
                     if isinstance(tool, dict) and tool.get("source") == "mcp": self.note_mcp(tool)
@@ -260,6 +270,14 @@ class GraphWriter:
         self.uses.add("managed_operation" if data.get("_managed_export") else "call_mcp_tool")
         if not data.get("_managed_export"):  # TASK-0269: each server's environment variable prefix, in order of first use
             self.mcp_prefix(data)
+
+    def kb_prefix(self, data: dict) -> str:
+        """KNOWLEDGE_BASE_<n>: the environment variable prefix of a Retriever node's or Agent tool's knowledge base,
+        numbered in order of first use (TASK-0270). The Studio knowledge base id is never written to the file."""
+        bases = self.__dict__.setdefault("knowledge_bases", {})
+        kid = str(data.get("_knowledge_base") or "")
+        if kid not in bases: bases[kid] = f"KNOWLEDGE_BASE_{len(bases) + 1}"
+        return bases[kid]
 
     def mcp_prefix(self, data: dict) -> str:
         """MCP_SERVER_<n>: the environment variable prefix of a node's or tool's MCP server, numbered in order of first

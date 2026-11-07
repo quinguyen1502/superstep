@@ -255,7 +255,7 @@ def test_agent_with_every_tool_source(tmp_path):
     code = out.code
     assert "SECRET" not in code and unused_imports(code) == set() and "pip install langgraph httpx" in code
     assert [out.names[k] for k in ("ag", "ag/__model", "ag/__tool", "ag/__exit")] == ["helper_one", "helper_one_model", "helper_one_tool", "helper_one_end"]
-    assert 'return call_mcp_tool("MCP_SERVER_1", "add", args)' in code and 'retrieve(str(args.get("query") or ""), top_k=2)' in code
+    assert 'return call_mcp_tool("MCP_SERVER_1", "add", args)' in code and 'retrieve("KNOWLEDGE_BASE_1", str(args.get("query") or ""), top_k=2)' in code
     assert "url, body, query)" in code and "body = json.dumps(args" not in code  # GET: query string; POST with a body template
     assert 'question = ("Helper \\"one\\" wants to call "' in code and "also go to a channel" in code
     assert 'builder.add_conditional_edges("helper_one_model", route_helper_one_model, {"tool": "helper_one_tool", "done": "helper_one_end"})' in code
