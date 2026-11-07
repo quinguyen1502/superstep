@@ -475,7 +475,7 @@ REQ-0087, DES-0005, DEC-0086 and PLAN-0007: **Accepted 2026-11-07** (DEC-0086 op
 REQ-0088, DEC-0087, PLAN-0008 (owner-authorised 2026-11-07).
 
 - TASK-0263 — service stubs fail fast in live runs; missing targets fail. **done**.
-- TASK-0264 — export model fallback. **backlog**.
+- TASK-0264 — export model fallback. **done**.
 - TASK-0265 — HTTP safeguards in exports. **backlog**.
 - TASK-0266 — remaining gaps, proposal awaiting owner decision.
 

@@ -45,7 +45,7 @@ GLOBALS = {
     "URLSearchParams", "performance"}
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
-    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "offlineService",
+    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService",
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
@@ -220,14 +220,41 @@ function mockLlm(prompt: string, model: string): string {
   return `[mock:${model}] Answer: ${[...tail].slice(0, 200).join("")}`;
 }
 
-async function callLlm(prompt: string, model: string): Promise<string> {
+async function callLlm(prompt: string, model: string, provider?: string): Promise<string> {
   if (!LLM_PROVIDER) return mockLlm(prompt, model);
   const { initChatModel } = await import("%(langchain)s");
-  const reply = await (await initChatModel(model, { modelProvider: LLM_PROVIDER })).invoke(prompt);
+  const reply = await (await initChatModel(model, { modelProvider: provider || LLM_PROVIDER })).invoke(prompt);
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
 ''' % {"langchain": LANGCHAIN}
+
+
+FALLBACK = r'''
+// --- Model fallback ------------------------------------------------------------------------------------------
+// An LLM node with a fallback model, as in the studio: the primary model first; only when it is unreachable, answers
+// badly (HTTP 5xx) or is not found (HTTP 404) the fallback model, once. Other errors (a bad key, a refused request)
+// stop the node. The fallback uses LLM_FALLBACK_PROVIDER, or LLM_PROVIDER; its key comes from the environment too.
+// Offline (no LLM_PROVIDER) only the primary mock answers, as in a studio dry run.
+function failsOver(error: unknown): boolean {
+  const e = error as { status?: unknown; statusCode?: unknown; response?: { status?: unknown }; name?: unknown; code?: unknown };
+  const status = [e?.status, e?.statusCode, e?.response?.status].find((s) => typeof s === "number") as number | undefined;
+  if (status !== undefined) return status === 404 || status >= 500;
+  return ["APIConnectionError", "APIConnectionTimeoutError", "TimeoutError", "FetchError"].includes(String(e?.name)) ||
+    ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND"].includes(String(e?.code));
+}
+
+async function callLlmFallback(prompt: string, model: string, fallback: string): Promise<string> {
+  if (!LLM_PROVIDER) return await callLlm(prompt, model);
+  try {
+    return await callLlm(prompt, model);
+  } catch (error) {
+    if (!failsOver(error)) throw error;
+    console.error(`(model fallback) ${model} failed (${String((error as { name?: unknown })?.name ?? "Error")}); trying ${fallback}`);
+  }
+  return await callLlm(prompt, fallback, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER);
+}
+'''
 
 FILES = r'''
 // --- Attachments ---------------------------------------------------------------------------------------------
@@ -630,6 +657,7 @@ class _Writer(GraphWriter):
         self.add(ENV.rstrip())
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add(MODEL.rstrip())
+        if "fallback" in self.uses: self.add(FALLBACK.rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
         if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -723,7 +751,10 @@ class _Writer(GraphWriter):
             self.add(sig)
             self.add(f"  const prompt = render({const}_PROMPT, state);")
             files = attachments.field_of(d)
+            fb = d.get("fallback") if isinstance(d.get("fallback"), dict) else None  # only the model name: never its credential
+            if fb and files: self.add("  // TODO: the studio's fallback model is not applied to messages with attachments in this file.")
             self.add(ret(f"await callLlmFiles(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, (state as Record<string, unknown>)[{lit(files)}])" if files
+                         else f"await callLlmFallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())})" if fb
                          else f"await callLlm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
             self.add("}")
         elif t == "human":

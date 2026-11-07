@@ -10,7 +10,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from . import agents, foreach
 from .templates import sanitize
-from ..core.errors import AppError
 
 SKIP = ("start", "end", "note")  # canvas nodes that are not LangGraph nodes
 TITLES = {"agent": "Agent", "llm": "LLM", "foreach": "For each", "mcp": "MCP", "email": "Send email", "subgraph_exit": "Subgraph exit"}
@@ -65,8 +64,6 @@ class Graph:
     """One workflow (the exported one or a subgraph child), after `sanitize`, with its LangGraph names."""
 
     def __init__(self, raw: dict, title: str, wid: Optional[str]):
-        if any(n.get("type") == "llm" and (n.get("data") or {}).get("fallback") is not None for n in raw.get("nodes") or []):
-            raise AppError("MODEL_POLICY_EXPORT_UNAVAILABLE")
         self.raw, self.title, self.wid = raw, title, wid
         self.wf = sanitize(raw)
         # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it (TASK-0137)
@@ -222,6 +219,7 @@ class GraphWriter:
             if t in ("llm", "human", "retriever", "decision", "email", "mcp") or (t == "tool" and d.get("mode") == "http"):
                 self.uses.add("templates")
             if t in ("llm", "decision"): self.uses.add("model")
+            if t == "llm" and isinstance(d.get("fallback"), dict): self.uses.add("fallback")  # TASK-0264
             if t in ("llm", "agent") and d.get("include_attachments"): self.uses.add("files")  # TASK-0176
             if t in ("condition", "decision"): self.uses.add("routing")
             if t == "decision": self.uses.add("decide")

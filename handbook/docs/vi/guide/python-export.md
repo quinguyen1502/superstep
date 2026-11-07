@@ -66,6 +66,7 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, rồi `call_llm(prompt, model)` |
 | Condition | một node không đổi gì, và `add_conditional_edges` với hàm router và bảng nhãn → node |
 | Human | `interrupt(...)` dừng run; `Command(resume=answer)` chạy tiếp |
+| LLM có model dự phòng | `call_llm_fallback(prompt, model, fallback)`: gọi model dự phòng một lần, chỉ khi model chính không kết nối được, trả HTTP 5xx hoặc không tồn tại (404); `LLM_FALLBACK_PROVIDER` chọn provider của nó (mặc định `LLM_PROVIDER`). Khi offline chỉ mock của model chính trả lời. Không áp dụng cho node gửi tệp đính kèm |
 | Agent | một hàm vào, một hàm model và một hàm công cụ với hai router, và một hàm kết thúc; `interrupt(...)` trước công cụ cần duyệt |
 | Join | một node, và `add_edge([nhánh, nhánh], join)`: chạy một lần khi mọi nhánh xong |
 | For each | một trường vị trí vòng lặp và một router trả về `each` hoặc `done` |
@@ -216,6 +217,7 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | Tool: function | stub ném lỗi: hàm là Python trên server |
 | Tool: HTTP | `fetch`, không đi theo chuyển hướng |
 | Retriever, MCP, Send email | stub có `TODO`, như file Python |
+| LLM có model dự phòng | `callLlmFallback`, cùng quy tắc với file Python |
 | Agent | các bước vào, model, công cụ và kết thúc, như file Python; `callAgent` là mock, hoặc `initChatModel` với `bindTools` khi đặt `LLM_PROVIDER`. Công cụ có sẵn là stub ném lỗi |
 | Retry, cache, trường đầu vào, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` trong `addNode` |
 
