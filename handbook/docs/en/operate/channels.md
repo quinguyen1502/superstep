@@ -16,9 +16,9 @@ Human node's channel list and in **Settings → Audit log**.
 | Microsoft Teams | Links in an Adaptive Card | `STUDIO_PUBLIC_URL`, a Workflows webhook |
 
 A connection is personal (usable on your own workflows) or organisation-wide
-(admins create those). For local development, a tunnel such as
-`cloudflared tunnel --url http://localhost:8000` or `ngrok http 8000` gives a
-public HTTPS URL.
+(admins create those). For a studio on your own machine, see
+[Expose a local studio](expose-local.md) to get a public HTTPS
+`STUDIO_PUBLIC_URL` with a tunnel.
 
 ## Slack
 
