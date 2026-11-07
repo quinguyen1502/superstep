@@ -477,7 +477,18 @@ REQ-0088, DEC-0087, PLAN-0008 (owner-authorised 2026-11-07).
 - TASK-0263 — service stubs fail fast in live runs; missing targets fail. **done**.
 - TASK-0264 — export model fallback. **done**.
 - TASK-0265 — HTTP safeguards in exports. **done**.
-- TASK-0266 — remaining gaps, proposal awaiting owner decision.
+- TASK-0266 — remaining gaps, proposal awaiting owner decision (adapters split out to REQ-0089).
+
+## Code export parity and adapters
+
+REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Làm đi").
+
+- TASK-0267 — HTTP Tool connects to the checked address (DNS rebinding), SNI/certificate on the name. **done**.
+- TASK-0268 — LLM fallback for messages with attachments. **done**.
+- TASK-0269 — MCP export adapter. planned.
+- TASK-0270 — Retriever export adapter. planned.
+- TASK-0271 — Send email export adapter. planned.
+- TASK-0272 — Factory metadata cleanup (TASK-0253 review, distinct REV/QA ids). planned.
 
 ## Releases
 

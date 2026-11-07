@@ -218,6 +218,21 @@ def call_llm_fallback(prompt: str, model: str, fallback: str) -> str:
     return call_llm(prompt, fallback, os.environ.get("LLM_FALLBACK_PROVIDER") or LLM_PROVIDER)
 '''
 
+FALLBACK_FILES = '''
+
+
+def call_llm_files_fallback(prompt: str, model: str, fallback: str, files: Any) -> str:
+    """call_llm_fallback() for a message with files: the fallback model gets the same prompt and files, once."""
+    if not LLM_PROVIDER:
+        return call_llm_files(prompt, model, files)
+    try:
+        return call_llm_files(prompt, model, files)
+    except Exception as error:
+        if not fails_over(error): raise
+        print(f"(model fallback) {model} failed ({type(error).__name__}); trying {fallback}", file=sys.stderr)
+    return call_llm_files(prompt, fallback, files, os.environ.get("LLM_FALLBACK_PROVIDER") or LLM_PROVIDER)
+'''
+
 FILES = '''
 # --- Attachments ---------------------------------------------------------------------------------------------
 # Files a chat sent with the message, for nodes with "Include attachments": a list of {name, type, text?, text_cut?,
@@ -253,7 +268,7 @@ def files_note(files: Any) -> str:
     return "Attachments: " + ", ".join(f"{'image' if is_image(f) else 'document'} {f.get('name')}" for f in files if isinstance(f, dict))
 
 
-def call_llm_files(prompt: str, model: str, files: Any) -> str:
+def call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None) -> str:
     """call_llm() with the files sent with the message."""
     files = files if isinstance(files, list) else []
     if not LLM_PROVIDER:
@@ -262,7 +277,7 @@ def call_llm_files(prompt: str, model: str, files: Any) -> str:
     from langchain_core.messages import HumanMessage
 
     text, images = with_files(prompt, files)
-    reply = init_chat_model(model, model_provider=LLM_PROVIDER).invoke([HumanMessage([{"type": "text", "text": text}] + images)] if images else text)
+    reply = init_chat_model(model, model_provider=provider or LLM_PROVIDER).invoke([HumanMessage([{"type": "text", "text": text}] + images)] if images else text)
     if isinstance(reply.content, str):
         return reply.content
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
@@ -460,7 +475,8 @@ HTTP = '''
 # and unspecified addresses are refused unless STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1; redirects are never followed;
 # user:password@ in the URL is sent as Basic auth, not in the URL. Each request carries an Idempotency-Key from
 # SUPERSTEP_RUN_ID (random per process when unset), the node and the request, so a retried request repeats its key.
-# Unlike the studio, the connection is not pinned to the checked address.
+# As in the studio, the host is resolved once, every address is checked, and the connection goes to that checked
+# address (no second lookup a DNS rebind could change); the Host header, TLS SNI and certificate check keep the name.
 HTTP_RUN_ID = os.environ.get("SUPERSTEP_RUN_ID") or os.urandom(8).hex()
 
 
@@ -472,15 +488,21 @@ def http_request(node: str, method: str, url: str, body: str, params: Optional[d
         infos = socket.getaddrinfo(target.host, target.port or (443 if target.scheme == "https" else 80), proto=socket.IPPROTO_TCP)
     except OSError as error:
         raise ValueError(f"{node}: cannot resolve {target.host!r}") from error
-    addresses = {ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos}
+    addresses = [ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos]
+    if not addresses:
+        raise ValueError(f"{node}: cannot resolve {target.host!r}")
     blocked = [a for a in addresses if a.is_private or a.is_loopback or a.is_link_local or a.is_reserved or a.is_multicast or a.is_unspecified]
     if blocked and os.environ.get("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") != "1":
         raise PermissionError(f"{node}: {target.host} is a private address; set STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1 to allow it")
     auth = (target.username, target.password) if target.username else None
     clean = target.copy_with(username=None, password=None)
     key = hashlib.sha256(json.dumps([HTTP_RUN_ID, node, method, str(clean), params, body]).encode()).hexdigest()[:32]
-    response = httpx.request(method, clean, params=params or None, content=body.encode() or None, auth=auth, timeout=30,
-                             follow_redirects=False, headers={"Content-Type": "application/json", "Idempotency-Key": key})
+    pinned = clean.copy_with(host=str(addresses[0]))  # connect to the checked address, never resolve again
+    headers = {"Content-Type": "application/json", "Idempotency-Key": key, "Host": clean.netloc.decode("ascii")}
+    with httpx.Client(timeout=30, follow_redirects=False) as client:
+        request = client.build_request(method, pinned, params=params or None, content=body.encode() or None, headers=headers,
+                                       extensions={"sni_hostname": target.host} if target.scheme == "https" else {})
+        response = client.send(request, auth=auth)
     try:
         return response.json()
     except ValueError:
@@ -651,6 +673,7 @@ class _Writer(GraphWriter):
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
         if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
         if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
+        if "fallback_files" in self.uses: self.add(FALLBACK_FILES.rstrip())
         if "routing" in self.uses: self.add("\n" + ROUTING.rstrip())
         if "decide" in self.uses: self.add("\n" + DECIDE.rstrip())
         stubs = [k for k in STUBS if k in self.uses]
@@ -747,8 +770,8 @@ class _Writer(GraphWriter):
             self.add(f"    prompt = render({const}_PROMPT, state)")
             files = attachments.field_of(d)
             fb = d.get("fallback") if isinstance(d.get("fallback"), dict) else None  # only the model name: never its credential
-            if fb and files: self.add("    # TODO: the studio's fallback model is not applied to messages with attachments in this file.")
-            self.add(ret(f"call_llm_files(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, state.get({lit(files)}))" if files
+            self.add(ret(f"call_llm_files_fallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())}, state.get({lit(files)}))" if fb and files
+                         else f"call_llm_files(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, state.get({lit(files)}))" if files
                          else f"call_llm_fallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())})" if fb
                          else f"call_llm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
         elif t == "human":

@@ -45,13 +45,13 @@ GLOBALS = {
     "URLSearchParams", "performance"}
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
-    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "HTTP_RUN_ID",
+    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
     "BrowserError", "SessionLost", "UnknownEffect", "sessions",
     "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS", "JSON_TYPES", "WORDS", "Schema", "ToolSpec", "ToolCall", "ChatMessage",
-    "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "FileRecord", "isImage", "fileList", "withFiles", "filesNote", "callLlmFiles", "callAgentFiles", "checkArguments", "toolText", "shorten", "Question", "Message",
+    "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "FileRecord", "isImage", "fileList", "withFiles", "filesNote", "callLlmFiles", "callLlmFilesFallback", "callAgentFiles", "checkArguments", "toolText", "shorten", "Question", "Message",
     *(r[0] for r in REDUCERS.values())}
 
 
@@ -293,18 +293,33 @@ function filesNote(files: unknown): string {
 }
 
 /** callLlm() with the files sent with the message. */
-async function callLlmFiles(prompt: string, model: string, files: unknown): Promise<string> {
+async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string): Promise<string> {
   const list = fileList(files);
   if (!LLM_PROVIDER) return mockLlm(prompt, model) + (list.length ? `\n${filesNote(list)}` : "");
   const [text, images] = withFiles(prompt, list);
   const { initChatModel } = await import("%(langchain)s");
   const ask = images.length ? [{ role: "user", content: [{ type: "text", text }, ...images] }] : text;
   // deno-lint-ignore no-explicit-any
-  const reply = await (await initChatModel(model, { modelProvider: LLM_PROVIDER })).invoke(ask as any);
+  const reply = await (await initChatModel(model, { modelProvider: provider || LLM_PROVIDER })).invoke(ask as any);
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
 ''' % {"langchain": LANGCHAIN}
+
+FALLBACK_FILES = r'''
+
+/** callLlmFallback() for a message with files: the fallback model gets the same prompt and files, once. */
+async function callLlmFilesFallback(prompt: string, model: string, fallback: string, files: unknown): Promise<string> {
+  if (!LLM_PROVIDER) return await callLlmFiles(prompt, model, files);
+  try {
+    return await callLlmFiles(prompt, model, files);
+  } catch (error) {
+    if (!failsOver(error)) throw error;
+    console.error(`(model fallback) ${model} failed (${String((error as { name?: unknown })?.name ?? "Error")}); trying ${fallback}`);
+  }
+  return await callLlmFiles(prompt, fallback, files, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER);
+}
+'''
 
 AGENT_FILES = r'''
 
@@ -519,7 +534,9 @@ HTTP = r'''
 // and unspecified addresses are refused unless STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1; redirects are never followed;
 // user:password@ in the URL is sent as Basic auth, not in the URL. Each request carries an Idempotency-Key from
 // SUPERSTEP_RUN_ID (random per process when unset), the node and the request, so a retried request repeats its key.
-// Unlike the studio, the connection is not pinned to the checked address. Deno needs --allow-net.
+// As in the studio, the host is resolved once, every address is checked, and the connection goes to that checked
+// address (no second lookup a DNS rebind could change); the Host header, TLS SNI and certificate check keep the name.
+// Node's http(s) modules make the request (Deno supports them too); Deno needs --allow-net.
 const HTTP_RUN_ID = env("SUPERSTEP_RUN_ID") || crypto.randomUUID();
 
 function blockedAddress(ip: string): boolean {
@@ -546,9 +563,11 @@ async function httpRequest(node: string, method: string, url: string, body?: str
     throw new Error(`${node}: only http(s) URLs can be called, not ${JSON.stringify(url.slice(0, 100))}`);
   }
   const host = target.hostname.replace(/^\[|\]$/g, "");
-  const { lookup } = await import("node:dns/promises");
-  const addresses = (await lookup(host, { all: true })).map((a) => a.address);
-  if (addresses.some(blockedAddress) && env("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") !== "1") {
+  const dns = (await import("node:dns")).default;
+  const found = await dns.promises.lookup(host, { all: true, verbatim: true }).catch(() => []);
+  const addresses = found.map((a) => ({ address: a.address, family: a.family }));
+  if (!addresses.length) throw new Error(`${node}: cannot resolve ${JSON.stringify(host)}`);
+  if (addresses.some((a) => blockedAddress(a.address)) && env("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") !== "1") {
     throw new Error(`${node}: ${host} is a private address; set STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1 to allow it`);
   }
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -558,13 +577,42 @@ async function httpRequest(node: string, method: string, url: string, body?: str
   }
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([HTTP_RUN_ID, node, method, target.href, body ?? null])));
   headers["Idempotency-Key"] = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
-  const response = await fetch(target.href, { method, body: body || undefined, headers, redirect: "manual", signal: AbortSignal.timeout(30_000) });
-  const raw = await response.text();
+  const pin = addresses[0];  // the checked address: the request never resolves the name again
+  const https = target.protocol === "https:";
+  type Res = { on(event: string, listener: (chunk: Uint8Array) => void): void };
+  type Req = { on(event: string, listener: (error: Error) => void): void; destroy(error: Error): void; end(data?: Uint8Array): void };
+  const lib = (https ? (await import("node:https")).default : (await import("node:http")).default) as unknown as
+    { request(options: Record<string, unknown>, onResponse: (res: Res) => void): Req };
+  const data = body ? new TextEncoder().encode(body) : undefined;
+  if (data) headers["Content-Length"] = String(data.byteLength);
+  const raw = await new Promise<string>((resolve, reject) => {
+    const req = lib.request({
+      protocol: target.protocol, hostname: host, port: target.port || (https ? 443 : 80), path: target.pathname + target.search,
+      method, headers, agent: false, timeout: 30_000, ...(https ? { servername: host } : {}),
+      lookup: (_name: string, options: { all?: boolean }, done: (...a: unknown[]) => void) =>
+        options?.all ? done(null, [pin]) : done(null, pin.address, pin.family),
+    }, (res) => {
+      const chunks: Uint8Array[] = [];
+      res.on("data", (c: Uint8Array) => chunks.push(c));
+      res.on("end", () => resolve(new TextDecoder().decode(concatBytes(chunks))));
+      res.on("error", reject as unknown as (chunk: Uint8Array) => void);
+    });
+    req.on("timeout", () => req.destroy(new Error(`${node}: the request timed out after 30 s`)));
+    req.on("error", reject);
+    req.end(data);
+  });
   try {
     return JSON.parse(raw);
   } catch {
     return raw;
   }
+}
+
+function concatBytes(chunks: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(chunks.reduce((n, c) => n + c.byteLength, 0));
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.byteLength; }
+  return out;
 }
 '''
 
@@ -718,6 +766,7 @@ class _Writer(GraphWriter):
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
         if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
+        if "fallback_files" in self.uses: self.add(FALLBACK_FILES.rstrip())
         if "routing" in self.uses or "decide" in self.uses: self.add(ROUTING.rstrip())
         if "decide" in self.uses: self.add(DECIDE.rstrip())
         stubs = [k for k in STUBS if k in self.uses]
@@ -809,8 +858,8 @@ class _Writer(GraphWriter):
             self.add(f"  const prompt = render({const}_PROMPT, state);")
             files = attachments.field_of(d)
             fb = d.get("fallback") if isinstance(d.get("fallback"), dict) else None  # only the model name: never its credential
-            if fb and files: self.add("  // TODO: the studio's fallback model is not applied to messages with attachments in this file.")
-            self.add(ret(f"await callLlmFiles(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, (state as Record<string, unknown>)[{lit(files)}])" if files
+            self.add(ret(f"await callLlmFilesFallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())}, (state as Record<string, unknown>)[{lit(files)}])" if fb and files
+                         else f"await callLlmFiles(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, (state as Record<string, unknown>)[{lit(files)}])" if files
                          else f"await callLlmFallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())})" if fb
                          else f"await callLlm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
             self.add("}")

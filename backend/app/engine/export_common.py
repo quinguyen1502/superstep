@@ -221,6 +221,7 @@ class GraphWriter:
             if t in ("llm", "decision"): self.uses.add("model")
             if t == "llm" and isinstance(d.get("fallback"), dict): self.uses.add("fallback")  # TASK-0264
             if t in ("llm", "agent") and d.get("include_attachments"): self.uses.add("files")  # TASK-0176
+            if t == "llm" and isinstance(d.get("fallback"), dict) and d.get("include_attachments"): self.uses.add("fallback_files")  # TASK-0267
             if t in ("condition", "decision"): self.uses.add("routing")
             if t == "decision": self.uses.add("decide")
             if t == "human": self.uses.add("human")
