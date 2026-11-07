@@ -73,7 +73,7 @@ Final state: {...}
 | Decision | `decide(text, question)` cho từng câu hỏi |
 | Subgraph | workflow con thành graph riêng `build_<child>()`, được thêm như một node |
 | Tool: function | code của hàm, được chép vào |
-| Tool: HTTP | một request `httpx` |
+| Tool: HTTP | `http_request(...)` dùng `httpx`: chỉ http(s), từ chối địa chỉ nội bộ trừ khi `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, không theo redirect, `user:pass@` gửi dạng Basic auth, có `Idempotency-Key` theo run và request (`SUPERSTEP_RUN_ID`). Kết nối không được ghim vào địa chỉ đã kiểm tra như trong studio |
 | Tool: Code | code của node, nằm trong hàm của node |
 | Retriever, MCP, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio (kể cả công cụ kho tri thức và MCP của node Agent). Khi offline chúng trả kết quả rỗng và in `(offline mock) …` ra stderr; khi đặt `LLM_PROVIDER` chúng dừng run cho tới khi bạn tự hiện thực |
 | Note | một comment |
@@ -215,7 +215,7 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | Tool: Code bằng TypeScript | code của node giữ nguyên; các import được chuyển lên đầu file |
 | Tool: Code bằng Python | stub ném lỗi `not implemented in TS export`: hãy chuyển sang TypeScript |
 | Tool: function | stub ném lỗi: hàm là Python trên server |
-| Tool: HTTP | `fetch`, không đi theo chuyển hướng |
+| Tool: HTTP | `httpRequest(...)` dùng `fetch`, cùng các biện pháp bảo vệ như file Python; chạy Deno với `--allow-net` |
 | Retriever, MCP, Send email | stub có `TODO`, như file Python |
 | LLM có model dự phòng | `callLlmFallback`, cùng quy tắc với file Python |
 | Agent | các bước vào, model, công cụ và kết thúc, như file Python; `callAgent` là mock, hoặc `initChatModel` với `bindTools` khi đặt `LLM_PROVIDER`. Công cụ có sẵn là stub ném lỗi |

@@ -45,7 +45,7 @@ GLOBALS = {
     "URLSearchParams", "performance"}
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
-    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService",
+    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "HTTP_RUN_ID",
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
@@ -512,6 +512,62 @@ function shorten(s: string, n: number): string {
 }
 ''' % {"langchain": LANGCHAIN}
 
+
+HTTP = r'''
+// --- HTTP ------------------------------------------------------------------------------------------------------
+// HTTP Tool requests keep the studio's safeguards: http(s) only; private, loopback, link-local, reserved, multicast
+// and unspecified addresses are refused unless STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1; redirects are never followed;
+// user:password@ in the URL is sent as Basic auth, not in the URL. Each request carries an Idempotency-Key from
+// SUPERSTEP_RUN_ID (random per process when unset), the node and the request, so a retried request repeats its key.
+// Unlike the studio, the connection is not pinned to the checked address. Deno needs --allow-net.
+const HTTP_RUN_ID = env("SUPERSTEP_RUN_ID") || crypto.randomUUID();
+
+function blockedAddress(ip: string): boolean {
+  const v4 = ip.startsWith("::ffff:") && ip.includes(".") ? ip.slice(7) : ip;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(v4)) {
+    const [a, b, c] = v4.split(".").map(Number);
+    return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+      (a === 198 && (b === 18 || b === 19)) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113);
+  }
+  const x = ip.toLowerCase();
+  return x === "::" || x === "::1" || /^f[cd]/.test(x) || /^fe[89ab]/.test(x) || x.startsWith("ff") || x.startsWith("2001:db8") ||
+    x.startsWith("::ffff:") || x.startsWith("64:ff9b:") || x.startsWith("100::");
+}
+
+async function httpRequest(node: string, method: string, url: string, body?: string): Promise<unknown> {
+  let target: URL;
+  try {
+    target = new URL(url);
+  } catch {
+    throw new Error(`${node}: only http(s) URLs can be called, not ${JSON.stringify(url.slice(0, 100))}`);
+  }
+  if (!["http:", "https:"].includes(target.protocol) || !target.hostname) {
+    throw new Error(`${node}: only http(s) URLs can be called, not ${JSON.stringify(url.slice(0, 100))}`);
+  }
+  const host = target.hostname.replace(/^\[|\]$/g, "");
+  const { lookup } = await import("node:dns/promises");
+  const addresses = (await lookup(host, { all: true })).map((a) => a.address);
+  if (addresses.some(blockedAddress) && env("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") !== "1") {
+    throw new Error(`${node}: ${host} is a private address; set STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1 to allow it`);
+  }
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (target.username) {
+    headers.Authorization = "Basic " + btoa(`${decodeURIComponent(target.username)}:${decodeURIComponent(target.password)}`);
+    target.username = ""; target.password = "";
+  }
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([HTTP_RUN_ID, node, method, target.href, body ?? null])));
+  headers["Idempotency-Key"] = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  const response = await fetch(target.href, { method, body: body || undefined, headers, redirect: "manual", signal: AbortSignal.timeout(30_000) });
+  const raw = await response.text();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+'''
+
 OFFLINE_SERVICE = r'''
 /** Offline example mode (LLM_PROVIDER unset): like the studio's mock run, a Studio service gives an empty result and
  * says so on stderr. With LLM_PROVIDER set the run is real, so an unimplemented service stops it instead of returning
@@ -658,6 +714,7 @@ class _Writer(GraphWriter):
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add(MODEL.rstrip())
         if "fallback" in self.uses: self.add(FALLBACK.rstrip())
+        if "http" in self.uses: self.add(HTTP.rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
         if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -917,18 +974,8 @@ class _Writer(GraphWriter):
             self.add(f"/** {head}: an HTTP request; the JSON reply (or the text) is the result.")
             self.add(" * The studio only calls public addresses and never follows redirects. */")
             self.add(sig)
-            self.add(f"  const body = render({const}_BODY, state);")
-            self.add(f"  const response = await fetch(render({const}_URL, state), {{")
-            self.add(f"    method: {lit(method)}, body: {'undefined' if method in ('GET', 'HEAD') else 'body || undefined'},")
-            self.add("    headers: { \"Content-Type\": \"application/json\" }, redirect: \"manual\", signal: AbortSignal.timeout(30_000),")
-            self.add("  });")
-            self.add("  const raw = await response.text();")
-            self.add("  let result: unknown;")
-            self.add("  try {")
-            self.add("    result = JSON.parse(raw);")
-            self.add("  } catch {")
-            self.add("    result = raw;")
-            self.add("  }")
+            body = "undefined" if method in ("GET", "HEAD") else f"render({const}_BODY, state)"
+            self.add(f"  const result = await httpRequest({lit(nid)}, {lit(method)}, render({const}_URL, state), {body});")
             self.add(ret("result"))
             self.add("}")
         elif mode == "code" and lang == "typescript":
@@ -1247,16 +1294,7 @@ class _Writer(GraphWriter):
                 elif method != "GET":
                     self.add(f"    const body = render({key}_BODY, values);")
                     send = "body || undefined"
-                self.add("    const response = await fetch(url, {")
-                self.add(f"      method: {lit(method)}, body: {send},")
-                self.add("      headers: { \"Content-Type\": \"application/json\" }, redirect: \"manual\", signal: AbortSignal.timeout(30_000),")
-                self.add("    });")
-                self.add("    const raw = await response.text();")
-                self.add("    try {")
-                self.add("      return JSON.parse(raw);")
-                self.add("    } catch {")
-                self.add("      return raw;")
-                self.add("    }")
+                self.add(f"    return await httpRequest({lit(name + ':' + tname)}, {lit(method)}, url, {send.replace(' || undefined', '')});")
             else:
                 self.add(f"    throw new Error({lit(f'unknown tool source {src!r}')});")
             self.add("  }")

@@ -74,7 +74,7 @@ Final state: {...}
 | Decision | `decide(text, question)` for each question |
 | Subgraph | the child workflow as its own graph, `build_<child>()`, added as a node |
 | Tool: function | the function's code, copied in |
-| Tool: HTTP | an `httpx` request |
+| Tool: HTTP | `http_request(...)` with `httpx`: http(s) only, private addresses refused unless `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, no redirects, `user:pass@` as Basic auth, an `Idempotency-Key` per run and request (`SUPERSTEP_RUN_ID`). The connection is not pinned to the checked address as in the studio |
 | Tool: Code | the node's code, inside the node function |
 | Retriever, MCP, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base and MCP tools). Offline they return an empty result and print `(offline mock) …` on stderr; with `LLM_PROVIDER` set they stop the run until you implement them |
 | Note | a comment |
@@ -215,7 +215,7 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | Tool: Code in TypeScript | the node's code as written; its imports move to the top of the file |
 | Tool: Code in Python | a stub that throws `not implemented in TS export`: port it |
 | Tool: function | a stub that throws: the function is Python on the server |
-| Tool: HTTP | `fetch`, without following redirects |
+| Tool: HTTP | `httpRequest(...)` with `fetch`, with the same safeguards as the Python file; run Deno with `--allow-net` |
 | Retriever, MCP, Send email | stubs with a `TODO`, as in the Python file |
 | LLM with a fallback model | `callLlmFallback`, with the same rules as the Python file |
 | Agent | the entry, model, tool and end steps, as in the Python file; `callAgent` is the mock, or `initChatModel` with `bindTools` when `LLM_PROVIDER` is set. Built-in tools are stubs that throw |

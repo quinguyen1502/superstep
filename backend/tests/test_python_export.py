@@ -256,7 +256,7 @@ def test_agent_with_every_tool_source(tmp_path):
     assert "SECRET" not in code and unused_imports(code) == set() and "pip install langgraph httpx" in code
     assert [out.names[k] for k in ("ag", "ag/__model", "ag/__tool", "ag/__exit")] == ["helper_one", "helper_one_model", "helper_one_tool", "helper_one_end"]
     assert 'return call_mcp_tool("add", args)' in code and 'retrieve(str(args.get("query") or ""), top_k=2)' in code
-    assert "params=query or None" in code and "body = json.dumps(args" not in code  # GET: query string; POST with a body template
+    assert "url, body, query)" in code and "body = json.dumps(args" not in code  # GET: query string; POST with a body template
     assert 'question = ("Helper \\"one\\" wants to call "' in code and "also go to a channel" in code
     assert 'builder.add_conditional_edges("helper_one_model", route_helper_one_model, {"tool": "helper_one_tool", "done": "helper_one_end"})' in code
     assert "def wave_cap(enabled: bool)" in code and "HELPER_ONE_PARALLEL = True" in code
@@ -269,7 +269,7 @@ def test_agent_with_every_tool_source(tmp_path):
 def test_http_tool_compiles_without_running():
     code = X.to_python(HTTP, "Http").code
     compile(code, "http.py", "exec")
-    assert "import httpx" in code and 'httpx.request("POST"' in code and "pip install langgraph httpx" in code
+    assert "import httpx" in code and 'http_request("' in code and '"POST", render(' in code and "pip install langgraph httpx" in code
     assert unused_imports(code) == set()
 
 
