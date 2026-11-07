@@ -4,10 +4,10 @@
 
 - Project: superstep
 - Requirement ID: REQ-0086
-- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding.
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved the export-driver clarification below. That approval records the wording. It does not create implementation tasks.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-06 (Accepted; implementation authorised)
+- Updated: 2026-11-07 (export-driver clarification recorded)
 - Source: Owner discussion on browser tools, autonomous browsing, dynamic URLs, portable exports and connection-level proxies; followed by “Tiến hành ghi nhận yêu cầu và break task đi”. Owner amendments on 2026-11-06 (Asia/Saigon) after reviewing the proposed package without accepting it as-is; additional flexible-but-safe config and risk guidance the same day.
 
 ## Summary
@@ -27,6 +27,20 @@ Recorded after the owner reviewed the proposed package and asked to change it (n
 7. **Flexible-but-safe two-layer configuration** with explicit user-facing toggles and written risk analysis (see Business Rules and DES-0004 / DEC-0085 / PLAN-0006). Connection-level operator controls set infrastructure and safety bounds; Agent-node builder controls only which tools are granted. The builder cannot widen the connection whitelist or disable network enforcement.
 
 Unchanged product intent: no new Browser canvas node; no second Agent loop; no hosted browser-Agent (Browser Use Cloud/Skyvern); proxy on the connection (direct / operator system default / custom) with no chat override and no silent fallback to direct; stealth is optional Browserless capability, not a bypass guarantee; screenshots protected; public chat has no Settings access; typed-name deletes; en+vi; Settings/Data/Execution tabs; search/fetch stay separate tools and do not inherit the browser proxy.
+
+## Owner clarification (2026-11-07) — export drivers
+
+The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the portable-browser contract after the fixture exports. It does not reopen TASK-0251 or TASK-0252, does not authorise `plan-tasks` or implementation, and does not weaken refusals for other managed adapters.
+
+1. **Fixture driver `memory`.** The default export driver stays a static HTTP GET. It does not follow redirects. Click follows an `href` only. Fill stores the value in session memory. Evaluate accepts only `document.title` and `document.body.innerText` from the stored HTML. A whitelisted private origin is reachable on this driver only. TASK-0251 and TASK-0252 implement this contract.
+2. **Live drivers `playwright` and `browserless`.** A later implementation keeps one browser and one page per alias for the life of the process. The page closes on idle, on lifetime expiry, or when the process exits. This is not a Studio conversation lease. Navigate, and a click that has an `href`, pass the whitelist and then open the URL. A click without an `href` acts on the live element. Fill types into the live element. After each change the runtime stores the page HTML for snapshot and extract.
+3. **Evaluate on a live driver.** The expression runs in the page, at most 4,000 characters, and only when the connection allows evaluate. The result is untrusted page data. The expression cannot use Node, a shell, or the filesystem. The `memory` driver keeps the two-expression allowlist.
+4. **Redirects on a live driver.** Every hop stays on the whitelist and is not a private address. A hop that fails that check does not become the current page.
+5. **Profile.** The operator supplies JSON in `SUPERSTEP_BROWSER_PROFILE_*`. Cookies and localStorage apply only to an origin that is both in the profile and on the whitelist, and only before the first navigation. The generated file contains the variable name. Invalid JSON does not open a page.
+6. **Budgets.** `max_pages` counts document navigations and refuses the next one. `stealth` is passed only when the provider is Browserless.
+7. **Still refused in the export.** Upload and download stay `capability_refused` outside Studio, including when the allow flag is on. A screenshot result stays `{captured: true, inline_bytes: false}` with no image bytes in the result or the generated source. Telegram, Sheets, HTTP API, Slack, WhatsApp, Email, Teams, Drive, web search, MCP stdio/HTTP, and the retriever stay explicit stubs.
+
+AC8 for TASK-0251 and TASK-0252 closes on the fixture contract once those pull requests merge. Live-driver behavior is a later acceptance. Split it into a Python task and a TypeScript task only after the owner asks for `plan-tasks`.
 
 ## Problem Or Opportunity
 
@@ -53,7 +67,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 - **Recipes:** bounded typed action sequences with per-call arguments such as `url` and `order_id`; invoke through existing MCP nodes/Agent tool slots, or existing workflow-as-tool composition. Share runtime and action semantics with autonomous tools; no second orchestration language.
 - **Sessions:** private to the effective execution principal, conversation (when chat-driven), run/Agent-tool group and connection. Persist across chat turns of the **same** conversation, same effective user/principal and same connection until idle timeout, hard max duration, cancel, conversation end or connection revoke. Still no promised live-browser survival across worker/browser crashes. Ordered same-session commands, fencing and explicit expired-session recovery remain required.
 - **Security/reliability:** enforced network boundary covering destinations, redirects, subresources, DNS changes, browser networking and selected proxy paths; owner/org access checks; scoped login state; configurable mutating-action approval; conservative handling of unknown outcomes.
-- **Exports (deferred after studio):** Python, TypeScript and project packages for Agent browser tools and recipes remain in the requirement as later work (TASK-0251, TASK-0252). Trigger: after studio browser tools are accepted and integrated. Secrets are externally supplied, not exported. Explicit refusal for a configured unsupported capability, never silent omission or MCP placeholders.
+- **Exports:** Python, TypeScript and project packages for Agent browser tools and recipes are TASK-0251 and TASK-0252 for the fixture driver, plus the 2026-11-07 live-driver clarification above. Secrets are externally supplied, not exported. Explicit refusal for a configured unsupported capability, never silent omission or MCP placeholders. Other managed adapters stay refusals.
 - **Experience:** current Settings/managed connections, Agent/MCP settings and run trace/chat; screenshots as protected artifacts filtered from public chat by default; clear statuses; offline fixtures/mock; bilingual handbook covering studio for the first milestone; an example workflow.
 - **Stealth:** optional Browserless capability, disabled unless explicitly selected; unsupported settings fail clearly. Document that stealth is best-effort bot-detection mitigation, not a general firewall, access-control or CAPTCHA bypass guarantee.
 
@@ -92,7 +106,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 4. Agent observes actual page state, selects granted actions, receives bounded results and repeats in the same scoped session until the goal, limit or a declared stop state is reached. Across chat turns of the same conversation the session may still be live until idle/max expiry.
 5. A recipe receives `url` and other typed inputs on each call and executes its reviewed sequence. A changed layout fails visibly instead of silently changing the recipe into an autonomous Agent.
 6. Proxy/provider/profile/whitelist selections apply throughout the session and are visible without exposing secrets. A capability or policy failure stops before the prohibited action.
-7. Supported exported projects (later phase) reproduce these contracts with credentials supplied independently and without requiring a live Superstep instance.
+7. Supported exported projects reproduce the fixture-driver contract, and later the live-driver rules in the 2026-11-07 clarification, with credentials supplied independently and without requiring a live Superstep instance. Upload, download, screenshot bytes, and non-browser managed adapters stay refused in the export.
 
 ## Business Rules
 
@@ -126,7 +140,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 - AC5: Same-session calls execute in deterministic call order despite parallel Agent slots; different sessions/unrelated tools can retain concurrency. Sessions persist across chat turns of the same conversation/principal/connection until idle/max/cancel. Cancel/expiry/fencing closes resources and stops late commands.
 - AC6: When mutating approval is ON, allow/reject/expiry behave correctly. When OFF, mutating actions run immediately. Challenge-required, lost-session and uncertain external outcomes are visible, resumable where valid and never cause blind replay of effects. Navigate/snapshot/extract/screenshot never wait on the mutating-approval toggle.
 - AC7: Recipes share the runtime, accept typed per-call arguments, expose bounded outputs through current tool surfaces and explicitly fail on selector/layout mismatch.
-- AC8 (deferred): Python/TypeScript plain and project exports execute supported fixture scenarios independently, retaining bindings, proxy/policy, session ordering and approval semantics. No secret or silent stub escapes; unsupported capability gets a specific refusal. Not required for the first studio milestone; tracked by TASK-0251/0252 after studio acceptance.
+- AC8: Python/TypeScript plain and project exports execute the fixture-driver scenarios independently, retaining bindings, proxy/policy, session ordering and approval semantics. No secret or silent stub escapes; unsupported capability gets a specific refusal. Tracked by TASK-0251 and TASK-0252. The 2026-11-07 live-driver rules are a later acceptance and are not required to close AC8.
 - AC9: Accessible responsive en/vi UI and filtered trace/chat cover unconfigured, ready, running, waiting, failed, unknown, expired and completed states. Connection toggles and Agent tool grants are explicit. Screenshots remain owner-protected with retention and public-output filtering by default.
 - AC10: Mock mode is offline; fixture/contract/security/UI tests, layer/envelope/locale checks, full project validation, bilingual studio handbook, task review/QA and studio integration evidence pass before the first milestone is complete. Export handbook/parity waits with AC8.
 
@@ -144,7 +158,7 @@ HTTP/API tools cannot interact with JavaScript applications or portal workflows 
 
 - Owner acceptance of this amended package (REQ/DES/ARCH/DEC/PLAN and tasks) is pending before moving studio delivery tasks to todo.
 - Browserless destination/proxy/DNS enforcement parity must be proved in TASK-0244; if it fails, document refusal and ask the owner for another path — do not silently drop remote from the requirement.
-- Deferred export packaging details remain for the later phase after studio acceptance.
+- The 2026-11-07 clarification records the fixture driver and the live-driver contract. Live-driver implementation tasks are not created until the owner asks for `plan-tasks`.
 
 ## Related Artifacts
 
