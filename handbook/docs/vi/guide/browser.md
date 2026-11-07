@@ -33,7 +33,9 @@ Bản giao Studio đầu tiên ưu tiên hướng dẫn tiếng Anh (Guide → B
 4. Proxy HTTP tuỳ chọn (không SOCKS; lỗi proxy không chuyển sang direct).
 5. Công tắc an toàn: phê duyệt thao tác thay đổi mặc định **tắt**; evaluate/
    upload/download mặc định **tắt**.
-6. Lưu rồi **Khám phá công cụ**.
+6. Lưu rồi **Khám phá công cụ**. Với công tắc an toàn để mặc định, thẻ liệt kê
+   sáu công cụ: navigate, snapshot, click, fill, extract và screenshot.
+   Evaluate, upload và download xuất hiện khi bật các công tắc đó.
 
 ![Cài đặt kết nối trình duyệt](../images/browser-connection-settings.png)
 
