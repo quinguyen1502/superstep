@@ -66,6 +66,9 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, rồi `call_llm(prompt, model)` |
 | Condition | một node không đổi gì, và `add_conditional_edges` với hàm router và bảng nhãn → node |
 | Human | `interrupt(...)` dừng run; `Command(resume=answer)` chạy tiếp |
+| Credential mô hình theo node | `LLM_CRED_<n>`: một slot cho mỗi credential trong Studio, dùng chung giữa các node. Đặt `LLM_CRED_<n>_PROVIDER`, `LLM_CRED_<n>_API_KEY` và, khi provider cần, `LLM_CRED_<n>_BASE_URL`. Slot chưa đặt provider thì giữ `LLM_PROVIDER`, và mock offline khi biến đó cũng chưa đặt. Slot đã đặt provider nhưng thiếu key thì dừng run và nêu tên `LLM_CRED_<n>_API_KEY`. Id credential không được ghi ra |
+| Kênh duyệt, hạn chót và AI duyệt | `notify_approval`, `wait_approval` và, khi có policy, `review_approval`. Slack, Teams và kênh chung dùng `APPROVAL_<KIND>_WEBHOOK_URL` (JSON `{"text": ...}`); Telegram dùng `APPROVAL_TELEGRAM_BOT_TOKEN` và `APPROVAL_TELEGRAM_CHAT_ID`. Quyết định vẫn là câu trả lời tại chỗ. Hạn chót chờ, nhắc tối đa năm lần, rồi duyệt, từ chối, hoặc chờ thêm một vòng rồi từ chối. Chế độ gợi ý không tự trả lời. Chế độ tự động chỉ duyệt khi mô hình nói approve với đủ độ tin cậy; rule từ chối thì từ chối. Độ tin cậy thấp, mô hình từ chối, lỗi, thiếu key và trần theo ngày đều hỏi người. Người duyệt, địa chỉ chuyển cấp và id credential không được ghi ra |
+| Kết nối managed | `managed_operation(tool, arguments, prefix, adapter)` đọc JSON từ `MANAGED_<n>_SETTINGS` và `MANAGED_<n>_SECRETS`. Tên máy được phân giải một lần và ghim; không theo redirect. Cùng đối số thì trả kết quả đã lưu; đối số khác thì xung đột; kết quả không rõ thì không gửi lại (`SUPERSTEP_MANAGED_STATE`). Chưa cấu hình: offline là lần chạy thử; khi đặt `LLM_PROVIDER` thì dừng run và nêu tên biến. Bước không có adapter vẫn ném placeholder |
 | LLM có model dự phòng | `call_llm_fallback(prompt, model, fallback)`: gọi model dự phòng một lần, chỉ khi model chính không kết nối được, trả HTTP 5xx hoặc không tồn tại (404); `LLM_FALLBACK_PROVIDER` chọn provider của nó (mặc định `LLM_PROVIDER`). Khi offline chỉ mock của model chính trả lời; node gửi tệp đính kèm dùng `call_llm_files_fallback`, model dự phòng nhận đúng các tệp đó |
 | Agent | một hàm vào, một hàm model và một hàm công cụ với hai router, và một hàm kết thúc; `interrupt(...)` trước công cụ cần duyệt |
 | Join | một node, và `add_edge([nhánh, nhánh], join)`: chạy một lần khi mọi nhánh xong |
@@ -211,6 +214,9 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | LLM | `render(PROMPT, state)`, rồi `callLlm(prompt, model)`: mock, hoặc `initChatModel` khi đặt `LLM_PROVIDER` |
 | Condition, For each | `addConditionalEdges` với một hàm router |
 | Human | `interrupt(...)`; `new Command({ resume })` chạy tiếp |
+| Credential mô hình theo node | `LLM_CRED_<n>` trên `callLlm`, `callLlmFallback`, `callAgent` và `decide`, cùng quy tắc slot với file Python |
+| Kênh duyệt, hạn chót và AI duyệt | `notifyApproval`, `waitApproval` và `reviewApproval`, cùng quy tắc kênh, hạn chót và AI duyệt với file Python |
+| Kết nối managed | `managedOperation(tool, args, prefix, adapter)`, cùng quy tắc `MANAGED_<n>_SETTINGS` và `MANAGED_<n>_SECRETS` với file Python. Bước không có adapter vẫn ném placeholder |
 | Join | `addEdge([nhánh, nhánh], join)` |
 | Decision | `decide(text, question)` cho từng câu hỏi |
 | Subgraph | `build_<child>()`, một graph đã compile được thêm làm node |
@@ -288,13 +294,15 @@ TypeScript chỉ chạy bằng `npm run example`, không chạy khi server impor
 
 ## Những gì không có trong file
 
-- Credential, API key, cấu hình SMTP, kho tri thức, địa chỉ và bí mật máy chủ MCP, kênh duyệt,
-  người duyệt và địa chỉ chuyển cấp.
+- Id credential và giá trị bí mật, mật khẩu SMTP, id kho tri thức, id và bí mật máy chủ MCP,
+  đích kênh duyệt, người duyệt và địa chỉ chuyển cấp. Tên slot, loại kênh, thời gian hạn chót
+  và policy duyệt (không có credential hay hướng dẫn của mô hình) được ghi ra; giá trị nằm trong biến môi trường.
 - Các tính năng của studio quanh một run: trace, lịch sử run, khôi phục sau
-  khi khởi động lại, kênh duyệt và hạn chót, theo dõi chi phí, timeout của node.
-- Địa chỉ máy chủ MCP, URL và token Superstep, cấu hình SMTP: bạn đặt chúng
-  bằng biến môi trường. Khi thiếu, lúc offline các lời gọi MCP, Retriever và Send
-  email trả kết quả rỗng, không gì cả, hoặc thư lẽ ra sẽ gửi, và báo điều đó trên
+  khi khởi động lại, theo dõi chi phí và timeout của node. Thông báo kênh, hạn chót và AI duyệt
+  chạy trong file đã xuất bằng biến môi trường; đó không phải dịch vụ duyệt của studio.
+- Địa chỉ máy chủ MCP, URL và token Superstep, cấu hình SMTP, cùng settings và secrets của kết nối
+  managed: bạn đặt chúng bằng biến môi trường. Khi thiếu, lúc offline các lời gọi MCP, Retriever, Send
+  email và managed trả kết quả rỗng, không gì cả, lần chạy thử, hoặc thư lẽ ra sẽ gửi, và báo điều đó trên
   stderr. Khi đặt `LLM_PROVIDER`, chúng raise (Python) hoặc throw (TypeScript), để
   một run thật không coi dịch vụ còn thiếu là đã xong.
 - Subgraph, công cụ workflow hoặc hàm bị thiếu lúc export: node hoặc công cụ đó

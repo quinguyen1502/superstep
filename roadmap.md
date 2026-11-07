@@ -477,7 +477,7 @@ REQ-0088, DEC-0087, PLAN-0008 (owner-authorised 2026-11-07).
 - TASK-0263 — service stubs fail fast in live runs; missing targets fail. **done**.
 - TASK-0264 — export model fallback. **done**.
 - TASK-0265 — HTTP safeguards in exports. **done**.
-- TASK-0266 — remaining gaps, proposal awaiting owner decision (adapters split out to REQ-0089).
+- TASK-0266 — remaining gaps. Adapters moved to REQ-0089. On 2026-11-07 the owner declined cross-language code nodes and authorised the other three as REQ-0090.
 
 ## Code export parity and adapters
 
@@ -488,7 +488,17 @@ REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Làm đi").
 - TASK-0269 — MCP export adapter. **done**.
 - TASK-0270 — Retriever export adapter. **done**.
 - TASK-0271 — Send email export adapter. **done**, merged in PR #333 (`bbbd23b2`).
-- TASK-0272 — Factory metadata cleanup (TASK-0253 review, distinct REV/QA ids). **done** (REV-0258, QA-0258). Not merged.
+- TASK-0272 — Factory metadata cleanup (TASK-0253 review, distinct REV/QA ids). **done** (REV-0258, QA-0258), merged in PR #335 (`5f68852f`).
+
+## Export slots, approvals and managed connections
+
+REQ-0090, DEC-0089, PLAN-0010 (owner-authorised 2026-11-07). Cross-language code nodes stay declined on TASK-0266.
+
+- TASK-0273 — per-node LLM credential slots. **done** (REV-0259, QA-0259) on PR #336.
+- TASK-0274 — approval channel, deadline, reminders and AI review. **done** (REV-0260, QA-0260) on PR #336.
+- TASK-0275 — managed connection calls from environment JSON. **done** (REV-0261, QA-0261) on PR #336.
+
+These three share `factory/req-0090-export-remaining` because the exporters are one pair of files. REQ-0086, REQ-0089 and REQ-0090 stay not done.
 
 ## Releases
 

@@ -7,7 +7,9 @@ so `deno run` / `deno check` work as is; for Node, drop the `npm:` prefixes.
 
 The graph is read through `templates.sanitize` (`export_common`), so no credential reaches the file: keys come from
 environment variables at run time. TypeScript Code nodes are inlined as written; Python Code nodes and registered
-Python tool functions become stubs that throw. Retriever, MCP and Send email nodes call stubs, as in the Python file.
+Python tool functions become stubs that throw. Retriever, MCP and Send email nodes call the studio's services through
+environment variables, as in the Python file. A node credential is an LLM_CRED_<n> slot. Approval extras and managed
+connections are included when a node has them.
 An Agent node is its model and tool steps in a loop, as in the Python file (TASK-0125, DEC-0063); its built-in tools are
 Python functions, so they throw too, and the model is told the tool failed.
 The output is a pure function of its input: the same graph gives the same bytes.
@@ -19,6 +21,7 @@ from . import agents, approval_policy, attachments, foreach
 from .browser_export import export_binding
 from .browser_export_ts import TS_RUNTIME
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
+from .export_runtime import TS_APPROVAL, TS_MANAGED
 from .templating import VAR_RE, _ONE_FILTER, refs
 
 LANGGRAPH = "npm:@langchain/langgraph@^1.5"
@@ -47,7 +50,8 @@ GLOBALS = {
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
-    "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
+    "DECISION_MODEL", "mockLlm", "callLlm", "resolveModel", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
+    "reviewApproval", "waitApproval", "notifyApproval", "approvalPost", "managedHttp", "managedBlocked", "ManagedUnknown",
     "sendEmail", "addresses", "EMAIL_RE", "EMAIL_RUN_ID", "nodemailer", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
     "BrowserError", "SessionLost", "UnknownEffect", "sessions",
@@ -221,10 +225,29 @@ function mockLlm(prompt: string, model: string): string {
   return `[mock:${model}] Answer: ${[...tail].slice(0, 200).join("")}`;
 }
 
-async function callLlm(prompt: string, model: string, provider?: string): Promise<string> {
-  if (!LLM_PROVIDER) return mockLlm(prompt, model);
+/** [provider, initChatModel extras]. A set LLM_CRED_<n>_PROVIDER wins, even when LLM_PROVIDER is unset. */
+function resolveModel(provider: string | undefined, slot?: string): [string | null, Record<string, string>] {
+  if (slot) {
+    const named = env(`${slot}_PROVIDER`);
+    if (named) {
+      const key = env(`${slot}_API_KEY`);
+      if (!key) throw new Error(`LLM credential ${slot}: set ${slot}_API_KEY`);
+      const kwargs: Record<string, string> = { apiKey: key };
+      const base = env(`${slot}_BASE_URL`);
+      if (base) kwargs.baseUrl = base;
+      return [named, kwargs];
+    }
+  }
+  if (!LLM_PROVIDER) return [null, {}];
+  return [provider || LLM_PROVIDER, {}];
+}
+
+async function callLlm(prompt: string, model: string, provider?: string, slot?: string): Promise<string> {
+  const [chosen, kwargs] = resolveModel(provider, slot);
+  if (!chosen) return mockLlm(prompt, model);
   const { initChatModel } = await import("%(langchain)s");
-  const reply = await (await initChatModel(model, { modelProvider: provider || LLM_PROVIDER })).invoke(prompt);
+  // deno-lint-ignore no-explicit-any
+  const reply = await (await initChatModel(model, { modelProvider: chosen, ...kwargs } as any)).invoke(prompt);
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
@@ -236,7 +259,8 @@ FALLBACK = r'''
 // An LLM node with a fallback model, as in the studio: the primary model first; only when it is unreachable, answers
 // badly (HTTP 5xx) or is not found (HTTP 404) the fallback model, once. Other errors (a bad key, a refused request)
 // stop the node. The fallback uses LLM_FALLBACK_PROVIDER, or LLM_PROVIDER; its key comes from the environment too.
-// Offline (no LLM_PROVIDER) only the primary mock answers, as in a studio dry run.
+// Offline (no LLM_PROVIDER and no slot provider) only the primary mock answers, as in a studio dry run.
+// A set slot provider is used even when LLM_PROVIDER is unset; an unset slot keeps LLM_PROVIDER.
 function failsOver(error: unknown): boolean {
   const e = error as { status?: unknown; statusCode?: unknown; response?: { status?: unknown }; name?: unknown; code?: unknown };
   const status = [e?.status, e?.statusCode, e?.response?.status].find((s) => typeof s === "number") as number | undefined;
@@ -245,15 +269,15 @@ function failsOver(error: unknown): boolean {
     ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND"].includes(String(e?.code));
 }
 
-async function callLlmFallback(prompt: string, model: string, fallback: string): Promise<string> {
-  if (!LLM_PROVIDER) return await callLlm(prompt, model);
+async function callLlmFallback(prompt: string, model: string, fallback: string, slot?: string, fallbackSlot?: string): Promise<string> {
+  if (!resolveModel(undefined, slot)[0]) return await callLlm(prompt, model, undefined, slot);
   try {
-    return await callLlm(prompt, model);
+    return await callLlm(prompt, model, undefined, slot);
   } catch (error) {
     if (!failsOver(error)) throw error;
     console.error(`(model fallback) ${model} failed (${String((error as { name?: unknown })?.name ?? "Error")}); trying ${fallback}`);
   }
-  return await callLlm(prompt, fallback, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER);
+  return await callLlm(prompt, fallback, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER, fallbackSlot);
 }
 '''
 
@@ -294,14 +318,15 @@ function filesNote(files: unknown): string {
 }
 
 /** callLlm() with the files sent with the message. */
-async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string): Promise<string> {
+async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string, slot?: string): Promise<string> {
   const list = fileList(files);
-  if (!LLM_PROVIDER) return mockLlm(prompt, model) + (list.length ? `\n${filesNote(list)}` : "");
+  const [chosen, kwargs] = resolveModel(provider, slot);
+  if (!chosen) return mockLlm(prompt, model) + (list.length ? `\n${filesNote(list)}` : "");
   const [text, images] = withFiles(prompt, list);
   const { initChatModel } = await import("%(langchain)s");
   const ask = images.length ? [{ role: "user", content: [{ type: "text", text }, ...images] }] : text;
   // deno-lint-ignore no-explicit-any
-  const reply = await (await initChatModel(model, { modelProvider: provider || LLM_PROVIDER })).invoke(ask as any);
+  const reply = await (await initChatModel(model, { modelProvider: chosen, ...kwargs } as any)).invoke(ask as any);
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
@@ -310,24 +335,24 @@ async function callLlmFiles(prompt: string, model: string, files: unknown, provi
 FALLBACK_FILES = r'''
 
 /** callLlmFallback() for a message with files: the fallback model gets the same prompt and files, once. */
-async function callLlmFilesFallback(prompt: string, model: string, fallback: string, files: unknown): Promise<string> {
-  if (!LLM_PROVIDER) return await callLlmFiles(prompt, model, files);
+async function callLlmFilesFallback(prompt: string, model: string, fallback: string, files: unknown, slot?: string, fallbackSlot?: string): Promise<string> {
+  if (!resolveModel(undefined, slot)[0]) return await callLlmFiles(prompt, model, files, undefined, slot);
   try {
-    return await callLlmFiles(prompt, model, files);
+    return await callLlmFiles(prompt, model, files, undefined, slot);
   } catch (error) {
     if (!failsOver(error)) throw error;
     console.error(`(model fallback) ${model} failed (${String((error as { name?: unknown })?.name ?? "Error")}); trying ${fallback}`);
   }
-  return await callLlmFiles(prompt, fallback, files, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER);
+  return await callLlmFiles(prompt, fallback, files, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER, fallbackSlot);
 }
 '''
 
 AGENT_FILES = r'''
 
 /** callAgent() for a conversation whose user message carries `files`. */
-async function callAgentFiles(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): Promise<[string, ToolCall[]]> {
+async function callAgentFiles(messages: ChatMessage[], tools: ToolSpec[] | null, model: string, slot?: string): Promise<[string, ToolCall[]]> {
   const files = messages.filter((m) => m.role === "user").flatMap((m) => fileList(m.files));
-  if (!LLM_PROVIDER) {
+  if (!resolveModel(undefined, slot)[0]) {
     const [text, calls] = mockAgent(messages, tools, model);
     return [text && files.length ? `${text}\n${filesNote(files)}` : text, calls];
   }
@@ -335,7 +360,7 @@ async function callAgentFiles(messages: ChatMessage[], tools: ToolSpec[] | null,
     if (!m.files) return m;
     const [content, images] = withFiles(m.content, m.files);
     return { role: "user", content, images };
-  }), tools, model);
+  }), tools, model, slot);
 }
 '''
 
@@ -374,21 +399,22 @@ const DECISION_MODEL = env("DECISION_MODEL") ?? "gpt-4o-mini";
 type Question = { id: string; type: string; instructions: string; options?: string[]; levels?: string[]; field?: string };
 
 /** The answer to one question: an option label ("choice"), a level index ("score") or 0 to 1 ("noul"). */
-async function decide(text: string, question: Question): Promise<unknown> {
+async function decide(text: string, question: Question, slot?: string): Promise<unknown> {
   const { type: kind, instructions } = question;
+  const offline = !resolveModel(undefined, slot)[0];
   if (kind === "choice") {
     const labels = question.options ?? [];
-    if (!LLM_PROVIDER) {
+    if (offline) {
       const low = text.toLowerCase();
       return labels.find((x) => new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRe(x.toLowerCase())}(?![\\p{L}\\p{N}_])`, "u").test(low)) ?? labels[0];
     }
-    const reply = await callLlm(`${instructions}\n\nText:\n${text}\n\nAnswer with one of: ${labels.join(", ")}`, DECISION_MODEL);
+    const reply = await callLlm(`${instructions}\n\nText:\n${text}\n\nAnswer with one of: ${labels.join(", ")}`, DECISION_MODEL, undefined, slot);
     return pickBranch(reply.trim(), labels) ?? labels[0];
   }
-  if (!LLM_PROVIDER) return kind === "score" ? 0.0 : 0.5;
+  if (offline) return kind === "score" ? 0.0 : 0.5;
   const reply = kind === "score"
-    ? await callLlm(`${instructions}\n\nText:\n${text}\n\nLevels:\n${(question.levels ?? []).map((l, i) => `${i}: ${l}`).join("\n")}\n\nAnswer with the level number.`, DECISION_MODEL)
-    : await callLlm(`${instructions}\n\nText:\n${text}\n\nHow likely is it true, from 0 to 1? Answer with a number.`, DECISION_MODEL);
+    ? await callLlm(`${instructions}\n\nText:\n${text}\n\nLevels:\n${(question.levels ?? []).map((l, i) => `${i}: ${l}`).join("\n")}\n\nAnswer with the level number.`, DECISION_MODEL, undefined, slot)
+    : await callLlm(`${instructions}\n\nText:\n${text}\n\nHow likely is it true, from 0 to 1? Answer with a number.`, DECISION_MODEL, undefined, slot);
   const found = /\d+(?:\.\d+)?/.exec(reply);
   return found ? parseFloat(found[0]) : 0.0;
 }
@@ -475,10 +501,12 @@ function mockAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: str
 }
 
 /** One model call: [text, tool calls]. With tools null the model has to answer. */
-async function callAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): Promise<[string, ToolCall[]]> {
-  if (!LLM_PROVIDER) return mockAgent(messages, tools, model);
+async function callAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: string, slot?: string): Promise<[string, ToolCall[]]> {
+  const [chosen, kwargs] = resolveModel(undefined, slot);
+  if (!chosen) return mockAgent(messages, tools, model);
   const { initChatModel } = await import("%(langchain)s");
-  const llm = await initChatModel(model, { modelProvider: LLM_PROVIDER });
+  // deno-lint-ignore no-explicit-any
+  const llm = await initChatModel(model, { modelProvider: chosen, ...kwargs } as any);
   // LangChain.js turns { role, content, tool_calls, tool_call_id } objects into its message classes.
   // deno-lint-ignore no-explicit-any
   const history: any[] = messages.map((m) =>
@@ -903,11 +931,12 @@ class _Writer(GraphWriter):
         if "fallback_files" in self.uses: self.add(FALLBACK_FILES.rstrip())
         if "routing" in self.uses or "decide" in self.uses: self.add(ROUTING.rstrip())
         if "decide" in self.uses: self.add(DECIDE.rstrip())
-        stubs = [k for k in STUBS if k in self.uses]
-        if stubs:
+        if "approval" in self.uses: self.add(TS_APPROVAL.rstrip())
+        stubs = [k for k in STUBS if k in self.uses and k != "managed_operation"]
+        if stubs or "managed_operation" in self.uses:
             self.add("\n// --- Studio services ------------------------------------------------------------------------------------")
             self.add("// These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
-            if any(k != "managed_operation" for k in stubs): self.add(OFFLINE_SERVICE.rstrip())
+            if stubs: self.add(OFFLINE_SERVICE.rstrip())
             if "retrieve" in stubs:
                 self.add("\n// Knowledge bases: before a real run set SUPERSTEP_URL, SUPERSTEP_TOKEN and <PREFIX>_ID for")
                 self.add(f"// {', '.join(getattr(self, 'knowledge_bases', {}).values())}. Nodes and tools on the same knowledge base share a prefix.")
@@ -916,6 +945,9 @@ class _Writer(GraphWriter):
                 self.add(f"// {', '.join(getattr(self, 'mcp_servers', {}).values())}. MCP nodes and tools on the same Superstep server share a prefix.")
                 self.add('const MCP_PROTOCOL = "2025-06-18";')
             for k in stubs: self.add(STUBS[k].rstrip())
+        if "managed_operation" in self.uses: self.add(TS_MANAGED.rstrip())
+        if names := self.export_env_names():
+            self.add("// Environment names for this file: " + " ".join(names))
         if "browser" in self.uses:
             self.add("\n// --- Browser ---------------------------------------------------------------------------------------------")
             self.add("// Secrets are read from the environment at run time. BROWSER_POLICY has no tokens, passwords or cookies.")
@@ -982,6 +1014,44 @@ class _Writer(GraphWriter):
             self.add("/** A node's result: the fields it changes (their values come from the canvas, typed at run time). */")
             self.add("const asUpdate = (fields: Record<string, unknown>) => fields as Update;")
 
+    def ts_slots(self, d: dict, attrs: tuple, holes: int = 0) -> str:
+        """Positional slot arguments. A provider hole stays `undefined` so the slot is not read as the provider."""
+        values = [self.llm_slot(str(d.get(attr) or "")) for attr in attrs]
+        if not any(values): return ""
+        parts = ["undefined"] * holes + [lit(value) if value else "undefined" for value in values]
+        return ", " + ", ".join(parts)
+
+    def mcp_call(self, data: dict, call: str, tool_expr: str, args_expr: str) -> str:
+        managed = data.get("_managed_export")
+        if call != "managedOperation":
+            return f"callMcpTool({lit(self.mcp_prefix(data))}, {tool_expr}, {args_expr})"
+        if not isinstance(managed, str):
+            return f"managedOperation({tool_expr}, {args_expr})"
+        return f"managedOperation({tool_expr}, {args_expr}, {lit(self.managed_prefix(data))}, {lit(managed)})"
+
+    def approval_answer(self, name: str, d: dict, question_expr: str, prompt_expr: str, pad: str, wrap: bool = False) -> None:
+        approval = d.get("approval") if isinstance(d.get("approval"), dict) else {}
+        kind = str(approval.get("channel") or "").strip().lower()
+        policy = d.get("_approval_policy") if isinstance(d.get("_approval_policy"), dict) else None
+        deadline = d.get("_deadline") if isinstance(d.get("_deadline"), dict) else None
+        judge = self.llm_slot(str(d.get("_judge_credential") or ""))
+        self.add(f"{pad}const request = {{ node: {lit(name)}, question: {question_expr}, prompt: {prompt_expr} }} as Ask;")
+        if wrap:
+            self.add(f"{pad}request.tool = call.name;")
+            self.add(f"{pad}request.args = call.args && typeof call.args === \"object\" ? call.args as Record<string, unknown> : {{}};")
+        else:
+            self.add(f"{pad}request.state = state as Record<string, unknown>;")
+        if kind: self.add(f"{pad}request.channel = {lit(kind)};")
+        if deadline: self.add(f"{pad}request.deadline = {lit(deadline)};")
+        if policy: self.add(f"{pad}request.policy = {lit(policy)};")
+        if judge: self.add(f"{pad}request.judge_slot = {lit(judge)};")
+        if policy:
+            self.add(f"{pad}const reviewed = await reviewApproval(request);")
+            answered = "reviewed !== null && reviewed !== undefined ? reviewed : String(interrupt(request))" if wrap else "reviewed !== null && reviewed !== undefined ? reviewed : interrupt(request)"
+            self.add(f"{pad}{'const ' if not wrap else ''}answer = {answered};")
+        else:
+            self.add(f"{pad}{'const ' if not wrap else ''}answer = {'String(interrupt(request))' if wrap else 'interrupt(request)'};")
+
     def node(self, g: Graph, nid: str, cls: str) -> None:
         n = g.nodes[nid]; t, d = n["type"], n.get("data") or {}
         name, label = g.names[nid], _doc(d.get("label") or nid)
@@ -999,10 +1069,16 @@ class _Writer(GraphWriter):
             self.add(f"  const prompt = render({const}_PROMPT, state);")
             files = attachments.field_of(d)
             fb = d.get("fallback") if isinstance(d.get("fallback"), dict) else None  # only the model name: never its credential
-            self.add(ret(f"await callLlmFilesFallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())}, (state as Record<string, unknown>)[{lit(files)}])" if fb and files
-                         else f"await callLlmFiles(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, (state as Record<string, unknown>)[{lit(files)}])" if files
-                         else f"await callLlmFallback(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, {lit(str(fb.get('model') or '').strip())})" if fb
-                         else f"await callLlm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
+            model = lit(d.get("model") or "gpt-4o-mini")
+            if fb and files:
+                expr = f"await callLlmFilesFallback(prompt, {model}, {lit(str(fb.get('model') or '').strip())}, (state as Record<string, unknown>)[{lit(files)}]{self.ts_slots(d, ('_llm_credential', '_fallback_credential'))})"
+            elif files:
+                expr = f"await callLlmFiles(prompt, {model}, (state as Record<string, unknown>)[{lit(files)}]{self.ts_slots(d, ('_llm_credential',), holes=1)})"
+            elif fb:
+                expr = f"await callLlmFallback(prompt, {model}, {lit(str(fb.get('model') or '').strip())}{self.ts_slots(d, ('_llm_credential', '_fallback_credential'))})"
+            else:
+                expr = f"await callLlm(prompt, {model}{self.ts_slots(d, ('_llm_credential',), holes=1)})"
+            self.add(ret(expr))
             self.add("}")
         elif t == "human":
             self.add(f"const {const}_PROMPT = {lit(d.get('prompt') or '')};")
@@ -1014,11 +1090,14 @@ class _Writer(GraphWriter):
             extra = []
             if (d.get("approval") or {}).get("channel"): extra.append(f"also asks on {_doc(str(d['approval']['channel']).title())}")
             if d.get("deadline"): extra.append("has a deadline with reminders")
-            if approval_policy.mode(d) != "off": extra.append("has AI review of the request (people answer every request here)")
+            if approval_policy.mode(d) != "off": extra.append("has AI review of the request")
             if extra: self.add(f" * In Superstep this node {' and '.join(extra)}; that is not part of LangGraph.")
             self.add(" */")
             self.add(sig)
-            self.add(f"  const answer = interrupt({{ node: {lit(name)}, question: render({const}_PROMPT, state) }});")
+            if self.approval_extra(d):
+                self.approval_answer(name, d, f"render({const}_PROMPT, state)", f"render({const}_PROMPT, state)", "  ")
+            else:
+                self.add(f"  const answer = interrupt({{ node: {lit(name)}, question: render({const}_PROMPT, state) }});")
             self.add(ret("answer"))
             self.add("}")
         elif t == "condition":
@@ -1062,9 +1141,8 @@ class _Writer(GraphWriter):
                 self.add("")
                 self.add(f"/** {head}: MCP tool {lit(_doc(d.get('tool')))} (see {call}). */")
                 self.add(sig)
-                if d.get("_managed_export"): self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
-                server = "" if d.get("_managed_export") else f"{lit(self.mcp_prefix(d))}, "
-                self.add(ret(f"await {call}({server}{lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
+                if d.get("_managed_export") is True: self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
+                self.add(ret(f"await {self.mcp_call(d, call, lit(d.get('tool') or ''), f'renderArgs({const}_ARGUMENTS, state)')}"))
                 self.add("}")
         elif t == "email":
             self.email(g, nid, cls, head, sig)
@@ -1145,7 +1223,7 @@ class _Writer(GraphWriter):
         self.add("  const update: Record<string, unknown> = {};")
         self.add("  const answers: Record<string, unknown> = {};")
         self.add(f"  for (const question of {const}_QUESTIONS) {{")
-        self.add("    const answer = await decide(text, { ...question, instructions: render(question.instructions, state) });")
+        self.add(f"    const answer = await decide(text, {{ ...question, instructions: render(question.instructions, state) }}{self.ts_slots(d, ('_llm_credential',))});")
         self.add("    answers[question.id] = { type: question.type, [question.type]: answer };")
         self.add("    if (question.field) update[question.field] = answer;")
         self.add("  }")
@@ -1295,9 +1373,9 @@ class _Writer(GraphWriter):
             self.add("    chat.no_more = true;")
             self.add("  }")
             self.add(f"  const tools = can ? [...{const}_TOOLS, ...{const}_HANDOFF_TOOLS] : {const}_TOOLS;")
-            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : tools, {lit(d.get('model') or 'gpt-4o-mini')});")
+            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : tools, {lit(d.get('model') or 'gpt-4o-mini')}{self.ts_slots(d, ('_llm_credential',))});")
         else:
-            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')});")
+            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')}{self.ts_slots(d, ('_llm_credential',))});")
         self.add("  const calls: ToolCall[] = last ? [] : asked.map((c, i) => ({ id: String(c.id || `call_${i}`), name: String(c.name || \"\"), args: c.args }));")
         self.add("  if (!last) chat.rounds += 1;")
         self.add("  chat.messages = [...chat.messages, { role: \"assistant\", content: text, ...(calls.length ? { tool_calls: calls } : {}) }];")
@@ -1358,7 +1436,7 @@ class _Writer(GraphWriter):
         if (d.get("approval") or {}).get("channel") or d.get("deadline"):
             self.add(" * In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
         if approval_policy.mode(d) != "off":
-            self.add(" * In Superstep a model can review the request first (AI review); here people answer every request.")
+            self.add(" * In Superstep a model can review the request first (AI review); suggest mode still asks, and auto mode may answer.")
         self.add(" */")
         self.add(f"async function {tool}(state: {cls}): Promise<Update> {{")
         self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
@@ -1379,7 +1457,10 @@ class _Writer(GraphWriter):
             self.add(f"      const question = {lit(who + ' wants to call ')} + call.name + \" with these arguments:\\n\"")
             self.add("        + JSON.stringify(call.args, null, 2)")
             self.add("        + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\";")
-            self.add(f"      answer = String(interrupt({{ node: {lit(name)}, question }}));")
+            if self.approval_extra(d):
+                self.approval_answer(name, d, "question", "question", "      ", wrap=True)
+            else:
+                self.add(f"      answer = String(interrupt({{ node: {lit(name)}, question }}));")
             self.add("    }")
         self.add("    const started = performance.now();")
         self.add("    let status: string, result: string;")
@@ -1458,8 +1539,7 @@ class _Writer(GraphWriter):
                     self.add(f"    return {self.browser_expr(info, t, 'args')};")
                 else:
                     call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
-                    server = "" if t.get("_managed_export") else f"{lit(self.mcp_prefix(t))}, "
-                    self.add(f"    return await {call}({server}{lit(t.get('tool') or '')}, args);")
+                    self.add(f"    return await {self.mcp_call(t, call, lit(t.get('tool') or ''), 'args')};")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:
@@ -1631,12 +1711,21 @@ class _Writer(GraphWriter):
         self.add("  const print = (node: string, delta: unknown) => console.log(`[${node}] ${JSON.stringify(delta)}`);")
         if has_human:
             self.add("  const answers = Object.fromEntries(Object.entries(EXAMPLE_ANSWERS).map(([k, v]) => [k, [...v]]));")
-            self.add("  type Ask = { node: string; question: string };")
-            self.add("  const answerFor = (request: Ask): string => {")
-            self.add("    const value = (answers[request.node]?.shift() ?? globalThis.prompt?.(`${request.question}\\n>`)) || \"(no answer)\";")
-            self.add("    console.log(`>> ${request.node}: ${value}`);")
-            self.add("    return value;")
-            self.add("  };")
+            if "approval" in self.uses:
+                self.add("  // Ask is declared with the approval helpers.")
+                self.add("  const answerFor = async (request: Ask): Promise<string> => {")
+                self.add("    const queued = answers[request.node]?.shift();")
+                self.add("    const value = queued !== undefined ? queued : (await notifyApproval(request), await waitApproval(request));")
+                self.add("    console.log(`>> ${request.node}: ${value}`);")
+                self.add("    return value;")
+                self.add("  };")
+            else:
+                self.add("  type Ask = { node: string; question: string };")
+                self.add("  const answerFor = (request: Ask): string => {")
+                self.add("    const value = (answers[request.node]?.shift() ?? globalThis.prompt?.(`${request.question}\\n>`)) || \"(no answer)\";")
+                self.add("    console.log(`>> ${request.node}: ${value}`);")
+                self.add("    return value;")
+                self.add("  };")
             self.add("")
             self.add("  type Input = Parameters<typeof graph.stream>[0];")
             self.add("  const resume = (value: unknown) => new Command({ resume: value }) as unknown as Input;")
@@ -1651,10 +1740,15 @@ class _Writer(GraphWriter):
             self.add("      }")
             self.add("    }")
             self.add("    if (!waiting.length) break;")
-            self.add("    payload = waiting.length === 1")
-            self.add("      ? resume(answerFor(waiting[0].value))")
-            self.add("      // several Human nodes wait at once (parallel branches): answer each by its interrupt id")
-            self.add("      : resume(Object.fromEntries(waiting.map((i) => [i.id, answerFor(i.value)])));")
+            if "approval" in self.uses:
+                self.add("    payload = waiting.length === 1")
+                self.add("      ? resume(await answerFor(waiting[0].value))")
+                self.add("      : resume(Object.fromEntries(await Promise.all(waiting.map(async (i) => [i.id, await answerFor(i.value)] as const))));")
+            else:
+                self.add("    payload = waiting.length === 1")
+                self.add("      ? resume(answerFor(waiting[0].value))")
+                self.add("      // several Human nodes wait at once (parallel branches): answer each by its interrupt id")
+                self.add("      : resume(Object.fromEntries(waiting.map((i) => [i.id, answerFor(i.value)])));")
             self.add("  }")
         else:
             self.add("  // streamMode \"updates\": what each node returned, step by step (subgraphs: inside subgraphs too).")
