@@ -111,7 +111,7 @@ def test_agent_nodes_are_exported(c):
     assert [out.names[k] for k in ("ag", "ag/__model", "ag/__tool", "ag/__exit")] == ["helper_one", "helper_one_model", "helper_one_tool", "helper_one_end"]
     assert '"agent_helper_one": Annotation<AgentChat | null>(),  // an Agent node\'s conversation' in code
     assert 'return await callMcpTool("add", args);' in code and 'return await retrieve(String(args.query || ""), 2);' in code
-    assert "they go in the query string" in code and 'method: "POST", body: body || undefined' in code  # GET: query string; POST: its body template
+    assert "they go in the query string" in code and '"POST", url, body);' in code  # GET: query string; POST: its body template
     assert 'throw new Error("lookup_order is a Python function' in code and "here they throw" in code
     assert 'const question = "Helper \\"one\\" wants to call " + call.name' in code and "also go to a channel" in code
     assert '.addConditionalEdges("helper_one_model", route_helper_one_model, { tool: "helper_one_tool", done: "helper_one_end" })' in code

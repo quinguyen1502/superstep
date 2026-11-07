@@ -31,7 +31,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
-    "call_llm", "call_llm_fallback", "fails_over", "offline_service", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
+    "call_llm", "call_llm_fallback", "fails_over", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 RESERVED |= {"browser_call", "bind_browser_url", "browser_prepare", "browser_interrupt", "browser_decide",
@@ -453,6 +453,40 @@ def shorten(text: str, n: int) -> str:
     return text if len(text) <= n else text[:n] + f"… (shortened from {len(text)} characters)"
 '''
 
+HTTP = '''
+
+# --- HTTP ------------------------------------------------------------------------------------------------------
+# HTTP Tool requests keep the studio's safeguards: http(s) only; private, loopback, link-local, reserved, multicast
+# and unspecified addresses are refused unless STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1; redirects are never followed;
+# user:password@ in the URL is sent as Basic auth, not in the URL. Each request carries an Idempotency-Key from
+# SUPERSTEP_RUN_ID (random per process when unset), the node and the request, so a retried request repeats its key.
+# Unlike the studio, the connection is not pinned to the checked address.
+HTTP_RUN_ID = os.environ.get("SUPERSTEP_RUN_ID") or os.urandom(8).hex()
+
+
+def http_request(node: str, method: str, url: str, body: str, params: Optional[dict] = None) -> Any:
+    target = httpx.URL(url)
+    if target.scheme not in ("http", "https") or not target.host:
+        raise ValueError(f"{node}: only http(s) URLs can be called, not {url[:100]!r}")
+    try:
+        infos = socket.getaddrinfo(target.host, target.port or (443 if target.scheme == "https" else 80), proto=socket.IPPROTO_TCP)
+    except OSError as error:
+        raise ValueError(f"{node}: cannot resolve {target.host!r}") from error
+    addresses = {ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos}
+    blocked = [a for a in addresses if a.is_private or a.is_loopback or a.is_link_local or a.is_reserved or a.is_multicast or a.is_unspecified]
+    if blocked and os.environ.get("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") != "1":
+        raise PermissionError(f"{node}: {target.host} is a private address; set STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1 to allow it")
+    auth = (target.username, target.password) if target.username else None
+    clean = target.copy_with(username=None, password=None)
+    key = hashlib.sha256(json.dumps([HTTP_RUN_ID, node, method, str(clean), params, body]).encode()).hexdigest()[:32]
+    response = httpx.request(method, clean, params=params or None, content=body.encode() or None, auth=auth, timeout=30,
+                             follow_redirects=False, headers={"Content-Type": "application/json", "Idempotency-Key": key})
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
+'''
+
 OFFLINE_SERVICE = '''
 
 def offline_service(kind: str, name: str) -> bool:
@@ -597,7 +631,7 @@ class _Writer(GraphWriter):
             doc += ["Code nodes run here as written on the canvas, without the studio's sandbox: read them first.", ""]
         doc += ["Credentials, knowledge bases, MCP servers and approval channels are not exported.", '"""',
                 "from __future__ import annotations", ""]
-        std = sorted(m for m in {"json", "os", "re", "string", "sys", *self.imports} if uses(m))
+        std = sorted(m for m in {"hashlib", "ipaddress", "json", "os", "re", "socket", "string", "sys", *self.imports} if uses(m))
         typing = sorted(n for n in ("Annotated", "Any", "Dict", "List", "Optional", "TypedDict") if uses(n))
         out = [f"import {m}" for m in std] + ([f"from typing import {', '.join(typing)}"] if typing else []) + [""]
         if uses("httpx"): out += ["import httpx", ""]
@@ -613,6 +647,7 @@ class _Writer(GraphWriter):
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
         if "fallback" in self.uses: self.add("\n" + FALLBACK.rstrip())
+        if "http" in self.uses: self.add(HTTP.rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
         if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
         if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -873,13 +908,7 @@ class _Writer(GraphWriter):
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}: an HTTP request; the JSON reply (or the text) is the result.')
             self.add("    The studio only calls public addresses and never follows redirects.\"\"\"")
-            self.add(f"    body = render({const}_BODY, state)")
-            self.add(f"    response = httpx.request({lit(d.get('method') or 'GET')}, render({const}_URL, state), content=body.encode() or None,")
-            self.add("                             headers={\"Content-Type\": \"application/json\"}, timeout=30, follow_redirects=False)")
-            self.add("    try:")
-            self.add("        result = response.json()")
-            self.add("    except ValueError:")
-            self.add("        result = response.text")
+            self.add(f"    result = http_request({lit(nid)}, {lit(d.get('method') or 'GET')}, render({const}_URL, state), render({const}_BODY, state))")
             self.add(ret("result"))
         elif mode == "code" and (d.get("language") or "python") != "python":
             lang = str(d.get("language"))  # TASK-0079: another language cannot be pasted into a Python file
@@ -1178,12 +1207,7 @@ class _Writer(GraphWriter):
                 if not body and method in ("POST", "PUT", "PATCH"):
                     self.add("        body = json.dumps(args, ensure_ascii=False)  # no body template: the arguments as JSON")
                 if query: self.add("        query = {k: tool_text(v) for k, v in args.items()}  # the URL does not use the arguments")
-                self.add(f"        response = httpx.request({lit(method)}, url, {'params=query or None, ' if query else ''}content=body.encode() or None,")
-                self.add("                                 headers={\"Content-Type\": \"application/json\"}, timeout=30, follow_redirects=False)")
-                self.add("        try:")
-                self.add("            return response.json()")
-                self.add("        except ValueError:")
-                self.add("            return response.text")
+                self.add(f"        return http_request({lit(name + ':' + tname)}, {lit(method)}, url, body{', query' if query else ''})")
             else:
                 self.add(f"        raise ValueError({lit(f'unknown tool source {src!r}')})")
         self.add("    raise ValueError(f\"unknown tool {name}\")")

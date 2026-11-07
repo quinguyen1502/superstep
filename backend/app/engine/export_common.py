@@ -225,6 +225,7 @@ class GraphWriter:
             if t == "decision": self.uses.add("decide")
             if t == "human": self.uses.add("human")
             if t == "tool" and d.get("mode") == "code": self.uses.add("code")
+            if t == "tool" and d.get("mode") == "http": self.uses.add("http")  # TASK-0265
             if t == "retriever": self.uses.add("retrieve")
             if t == "mcp": self.note_mcp(d)
             if t == "email": self.uses.add("send_email")
@@ -233,6 +234,7 @@ class GraphWriter:
                 if self.handoff_raw(g, n["id"]): self.uses.add("handoff")
                 sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
                 if "knowledge" in sources: self.uses.add("retrieve")
+                if "http" in sources: self.uses.add("http")
                 for tool in d.get("tools") or []:
                     if isinstance(tool, dict) and tool.get("source") == "mcp": self.note_mcp(tool)
                 if agents.needs_approval(d): self.uses.add("human")
