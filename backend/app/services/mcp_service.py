@@ -9,6 +9,7 @@ from typing import Any, Callable, Optional
 from ..core import config, crypto
 from ..core.errors import AppError
 from ..engine import mcp_client
+from ..engine.browser_export import public_policy, with_env
 from ..models import McpServer
 from ..repositories import McpServerRepository
 from ..repositories.mcp_operations import McpOperationRepository
@@ -23,8 +24,9 @@ SECRET_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]{0,63}$")
 
 class McpService:
     def __init__(self, repo: McpServerRepository, is_admin: Callable[[str], bool] = lambda uid: False,
-                 org_allowed: Callable[[str], bool] = lambda uid: True, channels=None, quota=None):
+                 org_allowed: Callable[[str], bool] = lambda uid: True, channels=None, quota=None, browser_lifecycle=None):
         self.repo, self.is_admin, self.org_allowed = repo, is_admin, org_allowed
+        self.browser_lifecycle = browser_lifecycle
         self.managed = ManagedToolService(McpOperationRepository(repo.db), channels, quota)
 
     # ---- views ----
@@ -41,7 +43,8 @@ class McpService:
         return {"servers": [self.public(r, uid, admin) for r in self.repo.visible(uid)], "is_admin": admin,
                 "stdio_enabled": config.mcp_stdio_enabled(), "org_usable": self.org_allowed(uid),
                 "managed_adapters": [{"id": adapter.id, "settings_schema": adapter.settings_schema, "secret_fields": list(adapter.secret_fields)}
-                                     for adapter in self.managed.adapters.values()]}
+                                     for adapter in self.managed.adapters.values()
+                                     if adapter.id not in {"browser","web"} or config.browser_enabled()]}
 
     def _visible(self, sid: str, uid: str) -> McpServer:
         r = self.repo.get(sid)
@@ -64,6 +67,7 @@ class McpService:
         if transport == "managed":
             implementation = self.managed.adapter(adapter)
             if not isinstance(settings, dict) or len(json.dumps(settings)) > getattr(implementation, "settings_limit", 4096): raise AppError("MCP_CONFIG_INVALID", field="settings")
+            if adapter == "browser" and settings.get("profile") and scope != "user": raise AppError("BROWSER_PROFILE_DENIED")
             return {"name": n, "command": None, "args": None, "url": None, "adapter": adapter, "settings": json.dumps(settings)}
         if transport == "stdio":
             if not config.mcp_stdio_enabled(): raise AppError("MCP_STDIO_DISABLED")
@@ -87,7 +91,7 @@ class McpService:
             if v is None:
                 if k in old: out[k] = old[k]
                 continue
-            if not isinstance(v, str) or len(v) > (16384 if k in {"service_account", "google_credentials"} else VALUE_MAX): raise AppError("MCP_CONFIG_INVALID", field="secrets")
+            if not isinstance(v, str) or len(v) > (65536 if k == "profile_state" else 16384 if k in {"service_account", "google_credentials"} else VALUE_MAX): raise AppError("MCP_CONFIG_INVALID", field="secrets")
             out[k] = v
         return out
 
@@ -99,7 +103,7 @@ class McpService:
     @staticmethod
     def _apply_secrets(r: McpServer, sec: dict) -> None:
         r.secrets = crypto.encrypt(json.dumps(sec)) if sec else None
-        r.secret_hints = json.dumps({k: "••••" if k in {"headers", "google_credentials"} else crypto.mask(v) for k, v in sec.items()})
+        r.secret_hints = json.dumps({k: "••••" if r.adapter in {"browser","web"} or k in {"headers", "google_credentials"} else crypto.mask(v) for k, v in sec.items()})
 
     # ---- CRUD ----
     def create(self, uid: str, name: str, transport: str, scope: str = "user", command: str | None = None, args: Any = None,
@@ -119,13 +123,18 @@ class McpService:
         v = self._check(uid, r.scope, r.transport, name, command, args if args is not None else [], url, r.adapter, config_values)
         sec = self._secrets(secrets, self._stored(r))
         if r.transport == "managed": self.managed.validate(uid, r.adapter, config_values, sec)
+        lifecycle=self.browser_lifecycle() if r.adapter=='browser' and self.browser_lifecycle else None
         for k, val in v.items(): setattr(r, k, val)
         self._apply_secrets(r, sec)
         r.tools, r.tools_at = None, None  # the configuration changed: discover again
-        return self.public(self.repo.save(r), uid, self.is_admin(uid))
+        saved=self.repo.save(r)
+        if lifecycle:lifecycle.revoke(sid)
+        return self.public(saved, uid, self.is_admin(uid))
 
     def delete(self, sid: str, uid: str) -> dict:
-        self._editable(sid, uid); self.repo.delete(sid); return {"ok": True}
+        row=self._editable(sid, uid)
+        if row.adapter=="browser" and self.browser_lifecycle:self.browser_lifecycle().revoke(sid)
+        self.repo.delete(sid); return {"ok": True}
 
     # ---- connection ----
     def _spec(self, r: McpServer) -> dict:
@@ -193,11 +202,14 @@ class McpService:
         return lambda sid, tool, args, key, dry: self.call(uid, sid, tool, args, org_allowed, key, dry)
 
     def check_export(self, graphs):
-        """Mark managed references for explicit, non-executable export placeholders (TASK-0254).
+        """Mark managed references on the temporary export graphs (TASK-0254, TASK-0251).
 
-        Only the temporary export graphs are annotated; no connection settings or secrets are copied.
+        Browser connections receive a public policy and an alias. Other managed adapters are
+        named so the export can call them from MANAGED_<n> environment JSON. An invalid browser
+        stays a placeholder. No connection secrets are copied, and the annotations are not saved.
         """
         managed = False
+        aliases = {}
         for graph in graphs:
             for node in graph.get("nodes") or []:
                 data = node.get("data") or {}
@@ -205,11 +217,34 @@ class McpService:
                 for reference in references:
                     if not isinstance(reference, dict): continue
                     reference.pop("_managed_export", None)  # internal export metadata is never trusted from stored input
-                    row = self.repo.get(reference.get("server_id")) if isinstance(reference, dict) and reference.get("server_id") else None
-                    if row is not None and row.transport == "managed":
-                        reference["_managed_export"] = True
+                    reference.pop("_browser_export", None)
+                    row = self.repo.get(reference.get("server_id")) if reference.get("server_id") else None
+                    if row is None or row.transport != "managed":
+                        continue
+                    if row.adapter == "browser" and (policy := self._browser_policy(row, aliases)) is not None:
+                        reference["_browser_export"] = policy
+                    else:
+                        # A real adapter id is callable from MANAGED_<n> env JSON. An invalid browser stays the
+                        # placeholder (True), and the string "browser" is never stored as an adapter (REQ-0090).
+                        adapter = row.adapter if isinstance(row.adapter, str) and row.adapter and row.adapter != "browser" else True
+                        reference["_managed_export"] = adapter
                         managed = True
         return managed
+
+    @staticmethod
+    def _browser_policy(row, aliases):
+        try:
+            raw = json.loads(row.settings or "{}")
+        except (TypeError, ValueError):
+            return None
+        policy = public_policy(raw)
+        if policy is None:
+            return None
+        alias = aliases.get(row.id)
+        if alias is None:
+            alias = f"browser_{len(aliases) + 1}"
+            aliases[row.id] = alias
+        return {"alias": alias, "policy": with_env(alias, policy)}
 
     def operations(self, uid, sid):
         self._visible(sid, uid)

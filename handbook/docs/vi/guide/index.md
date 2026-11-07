@@ -47,6 +47,12 @@ node, nối state, và dùng lại công sức giữa các workflow.
 
     Đăng ký máy chủ Streamable HTTP hoặc stdio và gọi công cụ của chúng.
 
+-   :material-compass-outline:{ .lg .middle } **[Công cụ trình duyệt](browser.md)**
+
+    ---
+
+    Kết nối trình duyệt cách ly, whitelist, nguồn URL trên Agent và lượt chat đầu.
+
 -   :material-view-gallery-outline:{ .lg .middle } **[Mẫu workflow](templates.md)**
 
     ---

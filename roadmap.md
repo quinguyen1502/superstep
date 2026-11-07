@@ -441,6 +441,65 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 - TASK-0237 Managed Google Drive — done, merged into develop through #284 on 2026-11-02 after 20 passing checks (REV-0214, QA-0214).
 
+## Browser tools, recipes and proxies
+
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio first milestone landed: TASK-0241–0250 + TASK-0253 merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323 (REV-0244, QA-0244). On 2026-11-07 the owner recorded two export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Implementation PRs #303–#316 reconciled with the Accepted package and merged into develop. No release/version bump authorised by acceptance alone.
+
+- TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **done** (merged #303).
+- TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **done** (merged #304).
+- TASK-0243 — isolated local Playwright runtime and nine bounded operations. **done** (merged #308).
+- TASK-0244 — Browserless remote (self-hosted Superstep controller) and origin-scoped login profiles. **done** (merged #309).
+- TASK-0245 — conversation/run-bound sessions (cross-turn), ordered Agent calls and lifecycle. **done** (merged #310).
+- TASK-0246 — configurable mutating approvals, expired/lost sessions and uncertain-effect recovery. **done** (merged #311).
+- TASK-0247 — dynamic URL bindings, whitelist checks, search/fetch and missing context. **done** (merged #312).
+- TASK-0248 — typed reusable recipes through existing tool surfaces. **done** (merged #313).
+- TASK-0249 — connection/whitelist/proxy/toggle/profile settings UI. **done** (merged #314).
+- TASK-0250 — Agent/recipe config and filtered trace/chat UI. **done** (merged #315).
+- TASK-0253 — studio integrated acceptance, example workflow and English handbook. **done** (merged #316).
+- TASK-0251 — executable Python/plain and project exports. **done**, merged in PR #321 (REV-0255, QA-0255).
+- TASK-0252 — executable TypeScript/plain and project exports. **done**, merged in PR #323 (REV-0244, QA-0244).
+- TASK-0261 — live Playwright/Browserless page in the Python export. **done**, merged in PR #329 (`10300e20`, REV-0256, QA-0256).
+- TASK-0262 — the same live page in the TypeScript export. **done**, merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). AC11 closed.
+
+See [PLAN-0006](.factory-state/artifacts/PLAN-0006-browser-tools.md) for dependencies, requirement traceability, deferred triggers and gates. Owner acceptance of the **amended** package and `factory ready` precede task-start. Existing unrelated SDK task state is unchanged.
+
+## Documentation links and local tunnel
+
+REQ-0087, DES-0005, DEC-0086 and PLAN-0007: **Accepted 2026-11-07** (DEC-0086 option A). Teams/e-mail links and tour deferred.
+
+- TASK-0259 — handbook page "Expose a local studio" (Cloudflare Tunnel, ngrok, Dev Tunnels, `STUDIO_PUBLIC_URL`). **done** (#320).
+- TASK-0260 — contextual handbook links in Settings → Channels. **done** (this PR).
+
+## Code export gap fixes
+
+REQ-0088, DEC-0087, PLAN-0008 (owner-authorised 2026-11-07).
+
+- TASK-0263 — service stubs fail fast in live runs; missing targets fail. **done**.
+- TASK-0264 — export model fallback. **done**.
+- TASK-0265 — HTTP safeguards in exports. **done**.
+- TASK-0266 — remaining gaps. Adapters moved to REQ-0089. On 2026-11-07 the owner declined cross-language code nodes and authorised the other three as REQ-0090.
+
+## Code export parity and adapters
+
+REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Làm đi").
+
+- TASK-0267 — HTTP Tool connects to the checked address (DNS rebinding), SNI/certificate on the name. **done**.
+- TASK-0268 — LLM fallback for messages with attachments. **done**.
+- TASK-0269 — MCP export adapter. **done**.
+- TASK-0270 — Retriever export adapter. **done**.
+- TASK-0271 — Send email export adapter. **done**, merged in PR #333 (`bbbd23b2`).
+- TASK-0272 — Factory metadata cleanup (TASK-0253 review, distinct REV/QA ids). **done** (REV-0258, QA-0258), merged in PR #335 (`5f68852f`).
+
+## Export slots, approvals and managed connections
+
+REQ-0090, DEC-0089, PLAN-0010 (owner-authorised 2026-11-07). Cross-language code nodes stay declined on TASK-0266.
+
+- TASK-0273 — per-node LLM credential slots. **done** (REV-0259, QA-0259) on PR #336.
+- TASK-0274 — approval channel, deadline, reminders and AI review. **done** (REV-0260, QA-0260) on PR #336.
+- TASK-0275 — managed connection calls from environment JSON. **done** (REV-0261, QA-0261) on PR #336.
+
+These three share `factory/req-0090-export-remaining` because the exporters are one pair of files. REQ-0086, REQ-0089 and REQ-0090 stay not done.
+
 ## Releases
 
 - TASK-0124 Version 0.7.0: comparison pages, workflows as MCP tools, runs across restarts, Agent node, phone layout,
@@ -478,3 +537,7 @@ TASK-0255 finalises the 2026-11-05 release metadata and checked publication hand
 ## 0.11.2 Release
 
 TASK-0257 prepares the owner-authorised 0.11.2 release of TASK-0256 (#305). It is explicitly stacked on #305 while final CI runs; release integration waits for #305, then a release-only diff against integrated develop. Shared app/Python/CLI/frontend/installer moves to 0.11.2, React to 0.1.2 and TypeScript stays 0.2.0. Checked main integration, immutable tags, GitHub Release and configured PyPI/npm/four GHCR images are authorised; publication is pending verification, not implied by source status. No migration, new dependency, native delivery or provider/bot cutover.
+
+## 0.12.0 Release
+
+TASK-0276 prepares the owner-authorised 0.12.0 release of integrated develop at `ca278c23` (PR #336). Shared app, Python SDK, CLI, frontend and installer move to 0.12.0. React moves to 0.1.3 because the toolkit renders allowlisted browser facts. TypeScript SDK stays 0.2.0 and is not republished. Migrations `0055` through `0058` ship with the browser tools. Checked main integration, immutable `v0.12.0` and `sdk-react-v0.1.3` tags, GitHub Release and configured PyPI, npm and GHCR publication are authorised. Publication is pending verification. TASK-0227 and cross-language code nodes stay out. REQ-0086, REQ-0089 and REQ-0090 stay not done.

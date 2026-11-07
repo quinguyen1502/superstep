@@ -20,7 +20,7 @@ from ..core import config, security
 from ..core.errors import AppError
 from ..models import ChatSession, WorkflowChatTrigger
 from ..repositories.chat_triggers import WEB
-from ..engine import agents
+from ..engine import agents, browser_presentation
 from .chat_session_service import DEFAULTS, PUBLIC, ChatSessionService, access_modes
 from .chat_attachment_service import DEFAULTS as ATTACH_DEFAULTS
 from .chat_token_verifier import ChatAppUser, ChatTokenVerifier
@@ -29,13 +29,14 @@ SIG_LEN = 32
 DAY = 86400
 HIDDEN = ("start", "end", "agent", "agent_exit")  # as steps_of: an Agent shows its tool calls (and model calls in full)
 LABEL_KEYS = ("type", "node", "label", "node_type", "iteration", "ts")
-FULL_KEYS = ("duration_ms", "input", "delta", "errors", "code", "agent")
-QUESTION_KEYS = ("prompt", "options", "choices", "fields", "kind", "input_type", "placeholder")
+FULL_KEYS = ("duration_ms", "input", "delta", "errors", "code", "agent", "browser")
+QUESTION_KEYS = ("browser", "prompt", "options", "choices", "fields", "kind", "input_type", "placeholder")
 
 
 def public_event(ev: dict, mode: str, reply_field: str) -> Optional[dict]:
     """What the page may see of a run event (decision 4), or None: the reply's tokens, the steps in `mode`, the visitor's
     question, the final status and errors. Never the state, node input or output below `full`, metrics or trace links."""
+    ev = browser_presentation.visitor_event(ev)
     t, node_type = ev.get("type"), ev.get("node_type")
     if t == "run_started": return {"type": t, "run_id": ev.get("run_id"), "ts": ev.get("ts")}
     if t == "run_summary": return {"type": t, "run_id": ev.get("run_id"), "status": ev.get("status"), "ts": ev.get("ts")}
@@ -79,8 +80,9 @@ class PublicChatService:
             return await asyncio.to_thread(self.verifier.verify, token, slug, t.id, origin)
         except AppError:
             if self.limiter is not None and (n := config.public_chat_rate_ip()):
-                ok, retry = await self.limiter.hit(f"pubchat-ip:{ip}", n, config.public_chat_rate_window())
-                if not ok: raise AppError("RATE_LIMITED", retry_after=retry) from None
+                hit = await self.limiter.hit(f"pubchat-ip:{ip}", n, config.public_chat_rate_window())
+                ok, retry = hit if isinstance(hit, tuple) and len(hit) == 2 else (True, 0)
+                if not ok: raise AppError("RATE_LIMITED", retry_after=int(retry or 1)) from None
             raise
 
     # ---- the published chat ----
@@ -228,6 +230,10 @@ class PublicChatService:
             turns = self.chat.sessions.turns(s.id); last = turns[-1] if turns else None
             if last is None or last.role != "assistant" or last.status != "waiting" or not last.run_id: raise AppError("RUN_NOT_WAITING")
             if last.answered_by == "reviewer": raise AppError("CHAT_ANSWER_BY_REVIEWER")
+            run=self.chat.runs.get(last.run_id)
+            checkpoint=json.loads(run.checkpoint or '{}') if run is not None else {}
+            shown_wait=next((wait for wait in checkpoint.get('waits') or [] if wait.get('node')==last.node),{})
+            if checkpoint.get('browser_intent') or shown_wait.get('browser_intent'):raise AppError('CHAT_ANSWER_BY_REVIEWER')
             if req.get("resume_run_id") not in (None, last.run_id): raise AppError("RUN_NOT_WAITING")
             shown = last.node if isinstance(last.node, str) and last.node else None
             node = req.get("node") if isinstance(req.get("node"), str) and req.get("node") else None

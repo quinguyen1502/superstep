@@ -424,6 +424,13 @@
     }
   },
   "errors": {
+    "BROWSER_PROFILE_DENIED": "Hồ sơ đăng nhập trình duyệt không được cấp cho danh tính hoặc origin này",
+    "BROWSER_CAPABILITY_UNSUPPORTED": "Nhà cung cấp trình duyệt không thể thực thi các khả năng được yêu cầu",
+    "BROWSER_CONTROL_UNAVAILABLE": "Dịch vụ điều khiển trình duyệt không khả dụng",
+    "BROWSER_ARTIFACT_NOT_FOUND": "Không tìm thấy ảnh chụp trình duyệt hoặc ảnh đã hết hạn",
+    "BROWSER_ARTIFACT_INVALID": "Ảnh chụp trình duyệt vượt giới hạn PNG được hỗ trợ",
+    "BROWSER_DISABLED": "Kết nối trình duyệt đang bị tắt",
+    "BROWSER_RUNTIME_UNAVAILABLE": "Thực thi trình duyệt cần worker cô lập đã kiểm chứng và ngữ cảnh chạy tin cậy",
     "CHAT_REGENERATE_INVALID": "Chỉ tạo lại được câu trả lời cuối đã kết thúc",
     "CHAT_REGENERATE_UNSUPPORTED": "Máy chủ này chưa hỗ trợ tạo lại câu trả lời chat",
     "CHAT_EDIT_INVALID": "Tin nhắn này không sửa được",
@@ -679,7 +686,8 @@
     "AUTO_APPROVAL_FORBIDDEN": "Chỉ chủ workflow hoặc admin mới bật được chế độ AI tự duyệt",
     "AUTO_APPROVAL_DISABLED": "AI tự duyệt đang bị tắt trên máy chủ này",
     "ATTACHMENT_MIGRATE_TARGET": "Không có nơi lưu tệp đính kèm '{{target}}' (dùng {{allowed}})",
-    "ATTACHMENT_MIGRATE_BATCH": "Số tệp mỗi đợt phải từ 1 đến {{max}}"
+    "ATTACHMENT_MIGRATE_BATCH": "Số tệp mỗi đợt phải từ 1 đến {{max}}",
+    "BROWSER_RECIPE_INVALID": "Recipe trình duyệt phải là workflow tuyến tính phiên bản 1, có input, output và mục tiêu đúng kiểu"
   },
   "lang": {
     "en": "English",
@@ -1145,7 +1153,9 @@
       "slack": "Thao tác Slack",
       "whatsapp": "Thao tác WhatsApp",
       "email": "Thao tác email",
-      "teams": "Thao tác Microsoft Teams"
+      "teams": "Thao tác Microsoft Teams",
+      "browser": "Trình duyệt cách ly",
+      "web": "Tìm kiếm và đọc web"
     },
     "fields": {
       "folder_id": "ID thư mục Google Drive được phép truy cập",
@@ -2356,6 +2366,34 @@
       "counts": "{{up}} hữu ích · {{down}} chưa hữu ích",
       "negativeShare": "{{share}} chưa hữu ích",
       "refresh": "Làm mới lịch sử"
+    },
+    "browser": {
+      "status": {
+        "confirmed": "Đã xác nhận",
+        "failed_before_effect": "Dừng trước thao tác",
+        "unknown": "Chưa xác định kết quả",
+        "approval_required": "Đang chờ người duyệt",
+        "challenge_required": "Site yêu cầu xác minh",
+        "expired": "Phiên hết hạn",
+        "session_lost": "Mất phiên",
+        "stale_observation": "Quan sát đã thay đổi",
+        "policy_denied": "Bị chính sách chặn",
+        "cancelled": "Đã huỷ",
+        "missing_input": "Cần URL",
+        "dry_run": "Chạy thử ngoại tuyến"
+      },
+      "help": {
+        "failed_before_effect": "Thao tác chưa bắt đầu. Kiểm tra cấu hình và quan sát hiện tại.",
+        "unknown": "Thao tác bên ngoài có thể đã xảy ra. Kiểm tra site thủ công; không tự động gửi lại.",
+        "approval_required": "Người duyệt đã xác minh cần quyết định cho đúng đích này.",
+        "challenge_required": "Site yêu cầu xác minh hoặc chuyển sang đăng nhập. Không hỗ trợ tự động vượt chặn.",
+        "expired": "Phiên đã hết hạn. Quan sát phiên mới và kiểm tra thao tác trước đó trước khi tiếp tục.",
+        "session_lost": "Không thể gắn lại trang hiện tại. Kiểm tra thao tác trước đó trước khi bắt đầu run mới.",
+        "stale_observation": "Quan sát lại và duyệt đích đã thay đổi trước thao tác khác.",
+        "policy_denied": "Kết nối đã lưu hoặc chính sách mạng từ chối thao tác. Kiểm tra tuyến và địa chỉ được phép.",
+        "cancelled": "Phiên trình duyệt đã bị huỷ. Không lên lịch tự động lặp lại.",
+        "missing_input": "Hỏi người dùng đích truy cập hoặc dùng công cụ tìm kiếm đã cấu hình rõ ràng."
+      }
     }
   },
   "timeTravel": {
@@ -2434,6 +2472,7 @@
     "noToolCalling": "{{provider}} không gọi được công cụ. Hãy chọn credential hỗ trợ gọi công cụ cho node Agent."
   },
   "validation": {
+    "BROWSER_RECIPE_INVALID": "Recipe trình duyệt phải là workflow tuyến tính phiên bản 1, có input, output và mục tiêu đúng kiểu",
     "NODE_ID_MISSING": "Node nào cũng cần có id",
     "EDGE_ENDS_MISSING": "Edge nào cũng cần có điểm đầu và điểm cuối",
     "DUPLICATE_NODE_ID": "Trùng id node: {{ids}}",
@@ -2664,5 +2703,158 @@
       "escalated": "{{n}} chuyển cho người",
       "suggested": "{{n}} đã gợi ý"
     }
+  },
+  "browserSettings": {
+    "connectionHelp": "Không cần URL khởi đầu. URL đến từ lần gọi công cụ hoặc input của workflow. Khám phá chỉ liệt kê công cụ; runtime kiểm tra nhà cung cấp cách ly khi run bắt đầu.",
+    "webHelp": "Kết nối tìm kiếm/đọc web riêng. Không dùng trạng thái đăng nhập, cookie hay proxy của trình duyệt.",
+    "disabled": "Quản trị đã tắt kết nối trình duyệt và web. Khoá đã lưu vẫn bị ẩn; hãy bật tính năng trên máy chủ trước khi chỉnh sửa hoặc khám phá.",
+    "providers": {
+      "local": "Trình duyệt cách ly trên máy chủ (Docker)",
+      "browserless": "Browserless (bộ điều khiển Superstep tự lưu trữ)"
+    },
+    "remoteHelp": "Bộ điều khiển Superstep tự lưu trữ gắn nhãn Browserless. Không cấu hình Browserless.io trực tiếp tại đây.",
+    "network": "Mạng / Proxy",
+    "proxyModes": {
+      "direct": "Kết nối trực tiếp",
+      "operator_default": "Proxy mặc định của quản trị",
+      "custom": "Proxy HTTP tuỳ chỉnh"
+    },
+    "auth": {
+      "none": "Không xác thực proxy",
+      "basic": "Xác thực HTTP Basic"
+    },
+    "proxyHelp": "Áp dụng cho toàn bộ lưu lượng trình duyệt trong phiên. Quản trị phải cho phép tuyến tuỳ chỉnh/mặc định. Lỗi proxy không chuyển sang kết nối trực tiếp. Tìm kiếm/đọc web dùng kết nối riêng.",
+    "originHelp": "Ít nhất một địa chỉ gốc http(s) chính xác mỗi dòng, không có đường dẫn hay ký tự đại diện. Kết nối trình duyệt bắt buộc whitelist không rỗng; địa chỉ nội bộ vẫn bị chặn theo chính sách mạng.",
+    "profile": "Hồ sơ đăng nhập cá nhân",
+    "profileHelp": "Trạng thái đăng nhập là riêng tư và chỉ dùng cho các địa chỉ HTTPS đã khai báo. Mỗi run có ngữ cảnh mới; trang web không thể đổi hồ sơ đã chọn.",
+    "orgProfileHelp": "Hồ sơ đăng nhập chỉ dùng với kết nối cá nhân, không dùng với kết nối tổ chức.",
+    "profileStateHelp": "JSON trạng thái lưu trữ Playwright (cookies và origins), tối đa 64 KiB. Chỉ hỗ trợ cookie bảo mật gắn với đúng máy chủ và địa chỉ HTTPS chính xác. Không ghi ngược thay đổi đăng nhập vào trạng thái đã lưu.",
+    "resources": "Giới hạn phiên và thao tác",
+    "resourceHelp": "Phiên hết hạn hoặc bị mất sẽ dừng thao tác trình duyệt. Việc duyệt không kéo dài giới hạn. Runtime của quản trị thực thi giới hạn CPU/bộ nhớ.",
+    "stealthHelp": "Không hỗ trợ chế độ stealth hay vượt firewall/CAPTCHA. Proxy định tuyến lưu lượng, không đảm bảo truy cập được site có bảo vệ.",
+    "webTools": "Công cụ web được bật",
+    "tools": {
+      "search": "Tìm URL ứng viên",
+      "fetch": "Đọc nội dung trang công khai"
+    },
+    "noWebTools": "Chưa bật công cụ nào. Khám phá trả về danh sách rỗng và từ chối lần gọi.",
+    "searchHelp": "SearXNG cần cung cấp tìm kiếm JSON tại endpoint HTTPS cố định này. Header xác thực tuỳ chọn được mã hoá và chỉ gửi tới tìm kiếm, không gửi tới site được đọc. Không dùng chuyển hướng hay cookie trình duyệt.",
+    "webOriginHelp": "Địa chỉ gốc được phép cho kết quả ứng viên và trang được đọc. Mỗi yêu cầu thực tế phải qua chính sách địa chỉ công khai. Không kế thừa proxy trình duyệt hay proxy web tuỳ chỉnh.",
+    "stored": "Đã lưu mã hoá",
+    "secretPlaceholder": "Nhập giá trị mới",
+    "clearSecret": "Xoá khoá đã lưu",
+    "clearSecretTitle": "Xoá khoá đã lưu {{name}}?",
+    "clearSecretBody": "Lưu kết nối để xoá khoá này. Để trống ô mà không xoá sẽ giữ nguyên giá trị đã lưu.",
+    "removeProfile": "Xoá hồ sơ",
+    "removeProfileTitle": "Xoá hồ sơ {{name}}?",
+    "removeProfileBody": "Lưu kết nối để xoá hồ sơ và trạng thái đăng nhập đã mã hoá. Các phiên trình duyệt đang hoạt động sẽ bị thu hồi.",
+    "originPlaceholder": "Mỗi dòng một địa chỉ gốc, ví dụ https://example.org",
+    "httpsOriginPlaceholder": "Mỗi dòng một địa chỉ HTTPS, ví dụ https://example.org",
+    "proxyPlaceholder": "http://proxy.example.org:3128",
+    "searchPlaceholder": "https://search.example.org/search",
+    "fields": {
+      "provider": "Nhà cung cấp trình duyệt",
+      "proxy_mode": "Tuyến proxy",
+      "proxy_server": "Địa chỉ gốc proxy HTTP",
+      "proxy_auth": "Xác thực proxy",
+      "proxy_username": "Tên người dùng proxy (mã hoá)",
+      "proxy_password": "Mật khẩu proxy (mã hoá)",
+      "allowed_origins": "Địa chỉ gốc được phép",
+      "profile_name": "Tên hồ sơ",
+      "profile_origins": "Địa chỉ HTTPS của hồ sơ",
+      "profile_state": "JSON trạng thái hồ sơ (mã hoá)",
+      "action_timeout_ms": "Thời gian chờ thao tác (ms)",
+      "idle_timeout_s": "Thời gian chờ rảnh (giây)",
+      "lifetime_s": "Thời hạn phiên tối đa (giây)",
+      "max_actions": "Số thao tác tối đa mỗi phiên",
+      "search_endpoint": "Endpoint HTTPS tìm kiếm SearXNG",
+      "search_headers": "JSON header xác thực tìm kiếm (mã hoá)",
+      "browserless_token": "Token điều khiển Browserless",
+      "require_mutating_approval": "Yêu cầu duyệt thao tác thay đổi trang",
+      "allow_evaluate_js": "Cho phép evaluate JavaScript",
+      "allow_upload": "Cho phép tải tệp lên",
+      "allow_download": "Cho phép tải tệp xuống",
+      "max_pages": "Số trang tối đa"
+    },
+    "errors": {
+      "unsupported": "Không hỗ trợ nhà cung cấp, phiên bản hoặc khả năng này. Chọn tuỳ chọn được hỗ trợ.",
+      "origins": "Nhập tối đa 50 địa chỉ gốc http(s) chính xác, mỗi dòng một địa chỉ, không có đường dẫn, credential hay ký tự đại diện.",
+      "httpsOrigins": "Nhập 1–20 địa chỉ gốc HTTPS chính xác, không có đường dẫn, credential hay ký tự đại diện.",
+      "searchEndpoint": "Cấu hình endpoint HTTPS SearXNG cố định, không có credential, query hay fragment.",
+      "headers": "Nhập đối tượng JSON có tối đa 20 header xác thực HTTP với giá trị chuỗi không rỗng.",
+      "controller": "Nhập địa chỉ gốc HTTPS bộ điều khiển, không có credential, đường dẫn, query hay fragment, hoặc giữ giá trị đã lưu.",
+      "token": "Nhập token 32–4096 ký tự ASCII hiển thị, không có khoảng trắng, hoặc giữ giá trị đã lưu.",
+      "proxy": "Chỉ hỗ trợ địa chỉ gốc proxy HTTP. Nhập credential ở ô riêng; không thêm đường dẫn, query hay fragment.",
+      "requiredSecret": "Nhập khoá bắt buộc này hoặc giữ giá trị đã lưu.",
+      "personalProfile": "Hồ sơ đăng nhập cần kết nối cá nhân.",
+      "profileName": "Dùng 1–128 chữ cái, chữ số, dấu gạch dưới, chấm, hai chấm hoặc gạch nối cho tên hồ sơ.",
+      "profileState": "Nhập JSON trạng thái lưu trữ dạng đối tượng, tối đa 64 KiB. Máy chủ kiểm tra cookie và phạm vi địa chỉ.",
+      "resource": "Nhập số nguyên trong khoảng nhỏ nhất và lớn nhất được hiển thị.",
+      "idleLifetime": "Thời gian chờ rảnh không được vượt thời hạn phiên tối đa.",
+      "profileScope": "Mọi địa chỉ của hồ sơ phải có trong danh sách địa chỉ gốc được phép."
+    },
+    "range": "Khoảng cho phép: {{min}}–{{max}}",
+    "help": {
+      "require_mutating_approval": "Khi tắt (mặc định), click/fill/upload/download/evaluate chạy ngay. Navigate, snapshot, extract và screenshot không bao giờ chờ.",
+      "allow_evaluate_js": "Ẩn evaluate cho đến khi bật. Kết quả vẫn không đáng tin cậy.",
+      "allow_upload": "Ẩn upload cho đến khi bật.",
+      "allow_download": "Ẩn download cho đến khi bật. Tải xuống vẫn giới hạn kích thước và loại."
+    },
+    "safety": "Công tắc an toàn"
+  },
+  "browserTools": {
+    "urlSource": "Nguồn URL",
+    "sources": {
+      "model": "Agent điền",
+      "fixed": "URL cố định",
+      "state": "State của workflow"
+    },
+    "sourceHelp": {
+      "model": "Dùng URL được cung cấp trong chat hoặc tìm bằng công cụ tìm kiếm đã cấu hình. Hỏi site hay tổ chức khi còn thiếu; không đoán URL dự phòng.",
+      "fixed": "Dùng URL HTTP(S) cố định này cho mọi lần gọi. Model không thể thay đổi.",
+      "state": "Dùng một tham chiếu state, có thể kèm bộ lọc được hỗ trợ. Chỉ xử lý một lần khi run; model không thể thay đổi."
+    },
+    "urlRequired": "Nhập URL hoặc tham chiếu state bắt buộc.",
+    "bindings": "Nguồn URL cho trình duyệt và đọc web",
+    "effectApproval": "Click và fill luôn cần người duyệt đã xác minh. Tin nhắn model, nội dung trang và duyệt tự động không thể cấp quyền.",
+    "grantHelp": "Dòng này chỉ cấp công cụ đã chọn. Chính sách trình duyệt và giới hạn phiên đến từ kết nối đã lưu; nguồn URL nằm ở Dữ liệu.",
+    "executionHelp": "Các thao tác trên cùng kết nối trong Agent này dùng chung phiên có thứ tự. Áp dụng giới hạn kết nối. Phiên bị mất, hết hạn hoặc kết quả chưa xác định sẽ dừng; retry và cache của node không gửi lại thao tác. Quan sát lại và xin quyết định mới của người duyệt khi phù hợp.",
+    "limits": "{{actions}} thao tác · {{timeout}} ms/thao tác · {{idle}} giây chờ rảnh · Thời hạn tối đa {{lifetime}} giây",
+    "recipe": "Recipe trình duyệt dùng lại",
+    "recipeHelp": "Workflow này trở thành recipe có kiểu: một Start, một End và 1–20 thao tác MCP trình duyệt tuyến tính trên một kết nối. Không dùng Agent, vòng lặp, nhánh, retry hay cache của node. Chọn input/kết quả ở Dữ liệu và đích tại từng thao tác. Lưu để kiểm tra toàn bộ chuỗi.",
+    "disableRecipeTitle": "Xoá khai báo recipe khỏi {{name}}?",
+    "disableRecipeBody": "Workflow và các thao tác được giữ lại. Cấu hình tham số trước khi dùng như node MCP thông thường; bộ chọn recipe sẽ không còn suy ra tham chiếu.",
+    "recipeConnectionHelp": "Đổi kết nối recipe sẽ cập nhật mọi thao tác MCP trong bản nháp. Tất cả thao tác phải dùng cùng kết nối này.",
+    "enableRecipeHelp": "Bật recipe trình duyệt dùng lại tại Start → Cài đặt để khai báo input và kết quả ở đây.",
+    "recipeInputs": "Input có kiểu của recipe",
+    "recipeOutputs": "Kết quả đã khai báo",
+    "recipeInputHelp": "Chọn 1–20 trường state kiểu nguyên thuỷ bắt buộc. Bên gọi cung cấp giá trị cho mỗi lần gọi; từ chối tham số ngoài khai báo.",
+    "recipeOutputHelp": "Chọn 1–20 trường object được các thao tác ghi vào. Chỉ trả về các kết quả này, không kèm state trung gian.",
+    "recipeNoFields": "Thêm trường phù hợp trong State schema trước.",
+    "recipeFieldRequired": "Chọn ít nhất một trường.",
+    "recipeToolHelp": "Workflow đã lưu này là recipe trình duyệt. Khai báo input/kết quả do recipe quyết định; Agent điền tham số có kiểu. Lỗi bố cục sẽ dừng, không chuyển sang tự điều khiển trình duyệt.",
+    "selectorHelp": "Khớp một đích từ quan sát navigate/snapshot trước đó bằng role và văn bản cố định. Đích thiếu, trùng hoặc cũ sẽ dừng recipe. Click/fill cần văn bản chính xác và người duyệt; extract chỉ được bỏ văn bản khi role là duy nhất.",
+    "primitiveHelp": "Tham số khi run dùng quan sát do phiên này trả về. Từ chối tham chiếu từ trang khác hoặc đã hết hạn. URL có thể đến từ tham chiếu state; snapshot không tự đoán URL khởi đầu.",
+    "observation": "Trường quan sát trước đó",
+    "role": "Role ngữ nghĩa cố định",
+    "targetText": "Văn bản đích chính xác",
+    "optionalText": "Văn bản chính xác (tuỳ chọn với role duy nhất)",
+    "extractName": "Khoá kết quả trích xuất",
+    "removeTargetTitle": "Xoá đích trích xuất {{name}}?",
+    "removeTarget": "Xoá đích",
+    "addTarget": "Thêm đích trích xuất",
+    "captureHelp": "Ảnh chỉ chủ sở hữu được xem, lưu tối đa một giờ. Tải ảnh sẽ kiểm tra lại quyền; ảnh hết hạn hay không khả dụng không có link công khai.",
+    "captureAlt": "Ảnh vùng hiển thị trình duyệt được bảo vệ",
+    "loadCapture": "Tải ảnh riêng tư",
+    "sequence": "Thao tác {{sequence}} · Thế hệ phiên {{generation}}",
+    "pageGeneration": "Thế hệ trang {{generation}}",
+    "untrustedObservation": "Nội dung trang có giới hạn và không đáng tin cậy. Chỉ hiển thị văn bản, không thực thi."
+  },
+  "docs": {
+    "learnMore": "Hướng dẫn",
+    "exposeLocalAria": "Hướng dẫn mở studio cục bộ ra internet",
+    "setupGuide": "Hướng dẫn thiết lập",
+    "setupGuideAria": "Hướng dẫn thiết lập {{platform}}",
+    "newTab": "mở trong tab mới"
   }
 }

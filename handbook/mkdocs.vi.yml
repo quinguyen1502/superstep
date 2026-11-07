@@ -43,6 +43,7 @@ nav:
       - Kho tri thức: guide/knowledge.md
       - Máy chủ MCP: guide/mcp.md
       - Công cụ Google Drive: guide/google-drive.md
+      - Công cụ trình duyệt: guide/browser.md
       - Mẫu workflow: guide/templates.md
       - Phiên bản: guide/versions.md
       - Xuất ra Python: guide/python-export.md
@@ -62,6 +63,7 @@ nav:
       - Chat API: run/chat-api.md
       - Bộ giao diện React chat: run/chat-react.md
       - Widget chat: run/chat-widget.md
+      - Chat trong ứng dụng native: run/chat-native-webview.md
       - Xác thực chat bên thứ ba: run/chat-third-party-auth.md
       - Kiểm thử workflow: run/tests.md
   - Vận hành:
@@ -72,6 +74,7 @@ nav:
       - Vai trò và chia sẻ: operate/access.md
       - Nhà cung cấp LLM: operate/providers.md
       - Kênh duyệt: operate/channels.md
+      - Mở studio cục bộ ra internet: operate/expose-local.md
       - Môi trường chạy Code: operate/code-runtime.md
       - Quan sát hệ thống: operate/observability.md
       - Import repo LangGraph: operate/import.md

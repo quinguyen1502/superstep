@@ -2,6 +2,25 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## 0.12.0 (2026-11-07)
+
+### Added
+
+- **Browser tools.** A managed browser connection with an origin whitelist, a local Docker Playwright worker or a self-hosted Browserless controller, login profiles, sessions that continue across chat turns, approval before a mutating action, dynamic URLs, typed recipes, Settings, and a filtered trace. Public chat shows only allowlisted browser facts. English and Vietnamese handbook pages include screenshots. Python and TypeScript exports can run the browser tools, including one live page. The connection stays off until `STUDIO_ENABLE_BROWSER=1`. The local runtime also needs `STUDIO_ENABLE_BROWSER_RUNTIME=1`.
+- **Code export closer to a running workflow.** HTTP calls pin the checked address. Model fallback can carry attachments. MCP uses Streamable HTTP, Retriever calls the knowledge-base API, and Send email uses SMTP. A model credential can use its own `LLM_CRED_<n>` slot. A human approval can post a channel notice, wait for a deadline, and apply AI review. A managed connection reads `MANAGED_<n>_SETTINGS` and `MANAGED_<n>_SECRETS`. Credential ids, channel targets, judge instructions and connection secrets are not written into the file. A step with no adapter still raises a placeholder.
+- **Local studio access.** The handbook explains how to open a local studio through a tunnel, and Settings → Channels links to the matching guide.
+- **WebView token bridge.** A host page can pass a chat token into an iOS, Android or React Native WebView. The handbook has the snippets. This is not a published React Native package.
+
+### Changed
+
+- An exported service stub fails immediately when `LLM_PROVIDER` is set and its required variable is missing. An offline run still announces a mock.
+
+### Upgrade
+
+- Shared server, Python SDK, CLI, frontend and installer: **0.12.0**. React toolkit: **0.1.3**. TypeScript SDK stays **0.2.0**.
+- Apply migrations `0055_browser_artifacts`, `0056_browser_sessions`, `0057_browser_conv_sessions` and `0058_browser_approvals` before serving traffic. They add browser artifact, session, conversation and approval records. Back up the database first. No new required Python or npm dependency.
+- Browser stays disabled until the flags above are set. The React Native package (TASK-0227) and cross-language code nodes are not in this release. No live provider or bot cutover is included.
+
 ## 0.11.2 (2026-11-05)
 
 ### Fixed

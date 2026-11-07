@@ -9,6 +9,15 @@ await i18n.init({ lng: 'en', resources: { en: { translation: { chat: { waitingRe
 const render = (node: React.ReactNode) => renderToStaticMarkup(<I18nextProvider i18n={i18n}>{node}</I18nextProvider>)
 
 describe('presentation without a Studio application', () => {
+  it('renders safe browser status with host translations and no capture action', () => {
+    i18n.addResource('en', 'translation', 'chat.browser.status.unknown', 'Outcome unknown')
+    const html = render(<ChatThread turns={[{ id: 'browser-stop', role: 'assistant', text: '', status: 'error', created: 1,
+      steps: [{ node: 'click', label: 'Browser action', type: 'mcp', status: 'error', browser: { operation: 'click', status: 'unknown' } }] }]}
+      mode="full" events={[]} trace={{ spans: [] }} pending={null} running={false} />)
+    expect(html).toContain('Outcome unknown')
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('artifact_id')
+  })
   it('renders a logo without a router, API or browser globals', () => {
     const html = render(<ChatLogo title="Portal" />)
     expect(html).toContain('data-logo="initial"')

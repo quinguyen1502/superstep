@@ -6,7 +6,9 @@ the state as a `TypedDict`, one function per node, `build_graph()` with `add_nod
 `pip install langgraph`, offline with a mock model unless `LLM_PROVIDER` is set (owner, REQ-0043 Q1).
 
 The graph is read through `templates.sanitize`, so no credential, knowledge base, server, channel, approver or
-secret-like value reaches the file. Retriever, MCP and Send email nodes call stubs (they need studio services).
+secret-like value reaches the file. Retriever, MCP and Send email nodes call the studio's services through environment
+variables. A node credential is an LLM_CRED_<n> slot. Approval channels, deadlines and AI review are included when a
+node has them. Managed connections read MANAGED_<n> JSON from the environment.
 A Subgraph node becomes its child workflow's own compiled graph, added as a node (Q3). An Agent node becomes the
 studio's own expansion (TASK-0119, DEC-0063): an entry node, a model node and a tool node in a loop with two routers,
 and an end node; approval is `interrupt()`, and its knowledge base and MCP tools use the same stubs. Comments are
@@ -17,8 +19,10 @@ from __future__ import annotations
 import ast, builtins, inspect, io, json, keyword, re, tokenize
 from typing import Any, Dict, List, Optional
 from . import agents, approval_policy, attachments, foreach
+from .browser_export import PY_RUNTIME, export_binding
 from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWriter, camel as _camel, number as _number,
                             one_line as _one_line, slug)
+from .export_runtime import PY_APPROVAL, PY_MANAGED
 from .templating import VAR_RE, _ONE_FILTER, refs
 from .tools import TOOLS
 
@@ -30,9 +34,12 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
-    "call_llm", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
+    "call_llm", "call_llm_fallback", "fails_over", "resolve_model", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "MCP_PROTOCOL", "managed_operation", "send_email", "addresses", "EMAIL_RE", "EMAIL_RUN_ID", "PinnedSMTP", "PinnedSMTPSSL", "build_graph",
+    "select", "review_approval", "wait_approval", "notify_approval", "approval_post", "approval_judge", "EmailMessage", "ManagedUnknown", "managed_http", "managed_dispatch",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
+RESERVED |= {"browser_call", "bind_browser_url", "browser_prepare", "browser_interrupt", "browser_decide",
+             "BROWSER_POLICY", "BrowserError", "SessionLost", "UnknownEffect"}
 
 
 RULE = re.compile(r"# --- (.+?) -+")
@@ -177,15 +184,78 @@ def mock_llm(prompt: str, model: str) -> str:
     return f"[mock:{model}] Answer: {tail[:200]}"
 
 
-def call_llm(prompt: str, model: str) -> str:
+def resolve_model(provider, slot=None):
+    """(provider, init_chat_model kwargs). A set LLM_CRED_<n>_PROVIDER wins, even when LLM_PROVIDER is unset.
+    No provider means the offline mock. The credential id is never read here: only the slot name."""
+    if slot:
+        named = os.environ.get(slot + "_PROVIDER")
+        if named:
+            key = os.environ.get(slot + "_API_KEY")
+            if not key:
+                raise RuntimeError("LLM credential " + slot + ": set " + slot + "_API_KEY")
+            kwargs = {"api_key": key}
+            base = os.environ.get(slot + "_BASE_URL")
+            if base:
+                kwargs["base_url"] = base
+            return named, kwargs
     if not LLM_PROVIDER:
+        return None, {}
+    return provider or LLM_PROVIDER, {}
+
+
+def call_llm(prompt: str, model: str, provider: Optional[str] = None, slot: Optional[str] = None) -> str:
+    chosen, kwargs = resolve_model(provider, slot)
+    if chosen is None:
         return mock_llm(prompt, model)
     from langchain.chat_models import init_chat_model
 
-    reply = init_chat_model(model, model_provider=LLM_PROVIDER).invoke(prompt)
+    reply = init_chat_model(model, model_provider=chosen, **kwargs).invoke(prompt)
     if isinstance(reply.content, str):
         return reply.content
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
+'''
+
+
+FALLBACK = '''
+
+# --- Model fallback ------------------------------------------------------------------------------------------
+# An LLM node with a fallback model, as in the studio: the primary model first; only when it is unreachable, answers
+# badly (HTTP 5xx) or is not found (HTTP 404) the fallback model, once. Other errors (a bad key, a refused request)
+# stop the node. The fallback uses LLM_FALLBACK_PROVIDER, or LLM_PROVIDER; its key comes from the environment too.
+# Offline (no LLM_PROVIDER and no slot provider) only the primary mock answers, as in a studio dry run.
+# A set slot provider is used even when LLM_PROVIDER is unset; an unset slot keeps LLM_PROVIDER.
+def fails_over(error: Exception) -> bool:
+    status = getattr(error, "status_code", None)
+    if not isinstance(status, int): status = getattr(getattr(error, "response", None), "status_code", None)
+    if isinstance(status, int): return status == 404 or status >= 500
+    return isinstance(error, (ConnectionError, TimeoutError)) or type(error).__name__ in (
+        "APIConnectionError", "APITimeoutError", "ConnectError", "ConnectTimeout", "ReadTimeout")
+
+
+def call_llm_fallback(prompt: str, model: str, fallback: str, slot=None, fallback_slot=None) -> str:
+    if resolve_model(None, slot)[0] is None:
+        return call_llm(prompt, model, slot=slot)
+    try:
+        return call_llm(prompt, model, slot=slot)
+    except Exception as error:
+        if not fails_over(error): raise
+        print(f"(model fallback) {model} failed ({type(error).__name__}); trying {fallback}", file=sys.stderr)
+    return call_llm(prompt, fallback, os.environ.get("LLM_FALLBACK_PROVIDER") or LLM_PROVIDER, slot=fallback_slot)
+'''
+
+FALLBACK_FILES = '''
+
+
+def call_llm_files_fallback(prompt: str, model: str, fallback: str, files: Any, slot=None, fallback_slot=None) -> str:
+    """call_llm_fallback() for a message with files: the fallback model gets the same prompt and files, once."""
+    if resolve_model(None, slot)[0] is None:
+        return call_llm_files(prompt, model, files, slot=slot)
+    try:
+        return call_llm_files(prompt, model, files, slot=slot)
+    except Exception as error:
+        if not fails_over(error): raise
+        print(f"(model fallback) {model} failed ({type(error).__name__}); trying {fallback}", file=sys.stderr)
+    return call_llm_files(prompt, fallback, files, os.environ.get("LLM_FALLBACK_PROVIDER") or LLM_PROVIDER, fallback_slot)
 '''
 
 FILES = '''
@@ -223,16 +293,17 @@ def files_note(files: Any) -> str:
     return "Attachments: " + ", ".join(f"{'image' if is_image(f) else 'document'} {f.get('name')}" for f in files if isinstance(f, dict))
 
 
-def call_llm_files(prompt: str, model: str, files: Any) -> str:
+def call_llm_files(prompt: str, model: str, files: Any, provider: Optional[str] = None, slot: Optional[str] = None) -> str:
     """call_llm() with the files sent with the message."""
     files = files if isinstance(files, list) else []
-    if not LLM_PROVIDER:
+    chosen, kwargs = resolve_model(provider, slot)
+    if chosen is None:
         return mock_llm(prompt, model) + (f"\\n{files_note(files)}" if files else "")
     from langchain.chat_models import init_chat_model
     from langchain_core.messages import HumanMessage
 
     text, images = with_files(prompt, files)
-    reply = init_chat_model(model, model_provider=LLM_PROVIDER).invoke([HumanMessage([{"type": "text", "text": text}] + images)] if images else text)
+    reply = init_chat_model(model, model_provider=chosen, **kwargs).invoke([HumanMessage([{"type": "text", "text": text}] + images)] if images else text)
     if isinstance(reply.content, str):
         return reply.content
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
@@ -240,10 +311,10 @@ def call_llm_files(prompt: str, model: str, files: Any) -> str:
 
 AGENT_FILES = '''
 
-def call_agent_files(messages: list, tools: Optional[list], model: str) -> tuple:
+def call_agent_files(messages: list, tools: Optional[list], model: str, slot=None) -> tuple:
     """call_agent() for a conversation whose user message carries `files`."""
     files = [f for m in messages if m["role"] == "user" for f in m.get("files") or []]
-    if not LLM_PROVIDER:
+    if resolve_model(None, slot)[0] is None:
         text, calls = mock_agent(messages, tools, model)
         return (f"{text}\\n{files_note(files)}" if text and files else text), calls
     out = []
@@ -252,7 +323,7 @@ def call_agent_files(messages: list, tools: Optional[list], model: str) -> tuple
             text, images = with_files(m["content"], m["files"])
             m = {"role": "user", "content": text, "images": images}
         out.append(m)
-    return call_agent(out, tools, model)
+    return call_agent(out, tools, model, slot)
 '''
 
 ROUTING = '''
@@ -283,23 +354,24 @@ DECIDE = '''
 DECISION_MODEL = os.environ.get("DECISION_MODEL", "gpt-4o-mini")
 
 
-def decide(text: str, question: dict) -> Any:
+def decide(text: str, question: dict, slot=None) -> Any:
     """The answer to one question: an option label ("choice"), a level index ("score") or 0 to 1 ("noul")."""
     kind, instructions = question["type"], question["instructions"]
+    offline = resolve_model(None, slot)[0] is None
     if kind == "choice":
         labels = question["options"]
-        if not LLM_PROVIDER:
+        if offline:
             low = text.casefold()
             return next((x for x in labels if re.search(rf"(?<!\\w){re.escape(x.casefold())}(?!\\w)", low)), labels[0])
-        reply = call_llm(f"{instructions}\\n\\nText:\\n{text}\\n\\nAnswer with one of: {', '.join(labels)}", DECISION_MODEL)
+        reply = call_llm(f"{instructions}\\n\\nText:\\n{text}\\n\\nAnswer with one of: {', '.join(labels)}", DECISION_MODEL, slot=slot)
         return pick_branch(reply.strip(), labels) or labels[0]
-    if not LLM_PROVIDER:
+    if offline:
         return 0.0 if kind == "score" else 0.5
     if kind == "score":
         levels = "\\n".join(f"{i}: {level}" for i, level in enumerate(question["levels"]))
-        reply = call_llm(f"{instructions}\\n\\nText:\\n{text}\\n\\nLevels:\\n{levels}\\n\\nAnswer with the level number.", DECISION_MODEL)
+        reply = call_llm(f"{instructions}\\n\\nText:\\n{text}\\n\\nLevels:\\n{levels}\\n\\nAnswer with the level number.", DECISION_MODEL, slot=slot)
     else:
-        reply = call_llm(f"{instructions}\\n\\nText:\\n{text}\\n\\nHow likely is it true, from 0 to 1? Answer with a number.", DECISION_MODEL)
+        reply = call_llm(f"{instructions}\\n\\nText:\\n{text}\\n\\nHow likely is it true, from 0 to 1? Answer with a number.", DECISION_MODEL, slot=slot)
     found = re.search(r"\\d+(?:\\.\\d+)?", reply)
     return float(found.group()) if found else 0.0
 '''
@@ -372,9 +444,10 @@ def mock_agent(messages: list, tools: Optional[list], model: str) -> tuple:
     return f"[mock:{model}] Answer: {said[:200]}", []
 
 
-def call_agent(messages: list, tools: Optional[list], model: str) -> tuple:
+def call_agent(messages: list, tools: Optional[list], model: str, slot=None) -> tuple:
     """One model call: (text, tool calls [{id, name, args}]). With tools None the model has to answer."""
-    if not LLM_PROVIDER:
+    chosen, kwargs = resolve_model(None, slot)
+    if chosen is None:
         return mock_agent(messages, tools, model)
     from langchain.chat_models import init_chat_model
     from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -390,7 +463,7 @@ def call_agent(messages: list, tools: Optional[list], model: str) -> tuple:
             images = m.get("images") or []
             content = [{"type": "text", "text": m["content"]}] + images if images else m["content"]
             history.append(SystemMessage(m["content"]) if m["role"] == "system" else HumanMessage(content))
-    llm = init_chat_model(model, model_provider=LLM_PROVIDER)
+    llm = init_chat_model(model, model_provider=chosen, **kwargs)
     if tools:
         llm = llm.bind_tools([{"type": "function", "function": t} for t in tools])
     reply = llm.invoke(history)
@@ -423,13 +496,87 @@ def shorten(text: str, n: int) -> str:
     return text if len(text) <= n else text[:n] + f"… (shortened from {len(text)} characters)"
 '''
 
+HTTP = '''
+
+# --- HTTP ------------------------------------------------------------------------------------------------------
+# HTTP Tool requests keep the studio's safeguards: http(s) only; private, loopback, link-local, reserved, multicast
+# and unspecified addresses are refused unless STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1; redirects are never followed;
+# user:password@ in the URL is sent as Basic auth, not in the URL. Each request carries an Idempotency-Key from
+# SUPERSTEP_RUN_ID (random per process when unset), the node and the request, so a retried request repeats its key.
+# As in the studio, the host is resolved once, every address is checked, and the connection goes to that checked
+# address (no second lookup a DNS rebind could change); the Host header, TLS SNI and certificate check keep the name.
+HTTP_RUN_ID = os.environ.get("SUPERSTEP_RUN_ID") or os.urandom(8).hex()
+
+
+def http_request(node: str, method: str, url: str, body: str, params: Optional[dict] = None) -> Any:
+    target = httpx.URL(url)
+    if target.scheme not in ("http", "https") or not target.host:
+        raise ValueError(f"{node}: only http(s) URLs can be called, not {url[:100]!r}")
+    try:
+        infos = socket.getaddrinfo(target.host, target.port or (443 if target.scheme == "https" else 80), proto=socket.IPPROTO_TCP)
+    except OSError as error:
+        raise ValueError(f"{node}: cannot resolve {target.host!r}") from error
+    addresses = [ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos]
+    if not addresses:
+        raise ValueError(f"{node}: cannot resolve {target.host!r}")
+    blocked = [a for a in addresses if a.is_private or a.is_loopback or a.is_link_local or a.is_reserved or a.is_multicast or a.is_unspecified]
+    if blocked and os.environ.get("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") != "1":
+        raise PermissionError(f"{node}: {target.host} is a private address; set STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1 to allow it")
+    auth = (target.username, target.password) if target.username else None
+    clean = target.copy_with(username=None, password=None)
+    key = hashlib.sha256(json.dumps([HTTP_RUN_ID, node, method, str(clean), params, body]).encode()).hexdigest()[:32]
+    pinned = clean.copy_with(host=str(addresses[0]))  # connect to the checked address, never resolve again
+    headers = {"Content-Type": "application/json", "Idempotency-Key": key, "Host": clean.netloc.decode("ascii")}
+    with httpx.Client(timeout=30, follow_redirects=False) as client:
+        request = client.build_request(method, pinned, params=params or None, content=body.encode() or None, headers=headers,
+                                       extensions={"sni_hostname": target.host} if target.scheme == "https" else {})
+        response = client.send(request, auth=auth)
+    try:
+        return response.json()
+    except ValueError:
+        return response.text
+'''
+
+OFFLINE_SERVICE = '''
+
+def offline_service(kind: str, name: str) -> bool:
+    """Offline example mode (LLM_PROVIDER unset): like the studio's mock run, a Studio service gives an empty result
+    and says so on stderr. With LLM_PROVIDER set the run is real, so an unimplemented service stops it instead of
+    returning a made-up value."""
+    if os.environ.get("LLM_PROVIDER"):
+        raise NotImplementedError(f"{kind} {name!r} uses a Superstep service that is not exported: implement it "
+                                  "(see the TODO above) before running with LLM_PROVIDER set")
+    print(f"(offline mock) {kind} {name!r} is not implemented: empty result", file=sys.stderr)
+    return True
+'''
+
 STUBS = {
     "retrieve": '''
 
-def retrieve(query: str, top_k: int) -> list:
-    """Retriever nodes search a Superstep knowledge base, which this file cannot reach.
-    TODO: search your own index for `query`, for example with a LangChain vector store retriever."""
-    return []
+def retrieve(prefix: str, query: str, top_k: int) -> list:
+    """Retriever nodes (and Agent knowledge tools) search a Superstep knowledge base. This file asks your Superstep
+    server, so the chunks and scores are the studio's own: POST <SUPERSTEP_URL>/api/knowledge-bases/<id>/search.
+    Configure with environment variables (never written here): SUPERSTEP_URL, SUPERSTEP_TOKEN (a Bearer token of a
+    user who can read the knowledge base) and <PREFIX>_ID, the knowledge base id, for each prefix listed above.
+    Not configured: an empty list in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set."""
+    base, token, kid = os.environ.get("SUPERSTEP_URL"), os.environ.get("SUPERSTEP_TOKEN"), os.environ.get(f"{prefix}_ID")
+    missing = [n for n, v in (("SUPERSTEP_URL", base), ("SUPERSTEP_TOKEN", token), (f"{prefix}_ID", kid)) if not v]
+    if missing:
+        if os.environ.get("LLM_PROVIDER"):
+            raise RuntimeError(f"Knowledge base search {prefix}: set {', '.join(missing)} to search it")
+        print(f"(offline mock) Knowledge base search {query[:60]!r}: {', '.join(missing)} not set: empty result", file=sys.stderr)
+        return []
+    url = f"{base.rstrip('/')}/api/knowledge-bases/{kid}/search"
+    try:
+        r = httpx.post(url, json={"query": query, "top_k": top_k}, headers={"Authorization": f"Bearer {token}"}, timeout=30,
+                       follow_redirects=False)
+        body = r.json()
+    except (httpx.HTTPError, ValueError) as error:
+        raise RuntimeError(f"Knowledge base search {prefix}: no answer from {base} ({type(error).__name__})") from None
+    if not (isinstance(body, dict) and body.get("success")):
+        error = (body.get("error") if isinstance(body, dict) else None) or {}
+        raise RuntimeError(f"Knowledge base search {prefix}: {error.get('code') or 'HTTP ' + str(r.status_code)} {str(error.get('message') or '')[:200]}".rstrip())
+    return body.get("data") or []
 ''',
     "managed_operation": '''
 
@@ -442,10 +589,74 @@ def managed_operation(tool: str, arguments: dict) -> Any:
 ''',
     "call_mcp_tool": '''
 
-def call_mcp_tool(tool: str, arguments: dict) -> Any:
-    """MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
-    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters."""
-    return None
+def call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:
+    """MCP nodes call a tool on an MCP server, as Superstep does: one short Streamable HTTP session (initialize,
+    tools/call). Each server is configured only by environment variables (never by this file), with its prefix
+    MCP_SERVER_<n> (see MCP servers above): <PREFIX>_URL, the server's Streamable HTTP address, and optionally <PREFIX>_HEADERS, a JSON object of headers such
+    as {"Authorization": "Bearer ..."}. The URL is your own configuration: it is called as given, without redirects.
+    Not configured: None in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set."""
+    url = os.environ.get(f"{prefix}_URL")
+    if not url:
+        if os.environ.get("LLM_PROVIDER"):
+            raise RuntimeError(f"MCP tool {tool!r}: set {prefix}_URL to the server's Streamable HTTP address to call it")
+        print(f"(offline mock) MCP tool {tool!r}: {prefix}_URL is not set: empty result", file=sys.stderr)
+        return None
+    try:
+        extra = json.loads(os.environ.get(f"{prefix}_HEADERS") or "{}")
+    except ValueError:
+        raise RuntimeError(f"{prefix}_HEADERS must be a JSON object") from None
+    if not isinstance(extra, dict):
+        raise RuntimeError(f"{prefix}_HEADERS must be a JSON object")
+    session: Optional[str] = None
+    with httpx.Client(timeout=30, follow_redirects=False) as client:
+        def rpc(message: dict) -> Optional[dict]:
+            nonlocal session
+            headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+                       "MCP-Protocol-Version": MCP_PROTOCOL, **{str(k): str(v) for k, v in extra.items()},
+                       **({"Mcp-Session-Id": session} if session else {})}
+            try:
+                r = client.post(url, content=json.dumps(message), headers=headers)
+            except httpx.HTTPError as error:
+                raise RuntimeError(f"MCP server {prefix}: connection failed ({type(error).__name__})") from None
+            if r.status_code >= 400:
+                raise RuntimeError(f"MCP server {prefix}: HTTP {r.status_code}")
+            session = r.headers.get("mcp-session-id") or session
+            if "id" not in message or r.status_code == 202:
+                return None
+            if "text/event-stream" in r.headers.get("content-type", ""):
+                found = [json.loads(line[5:]) for line in r.text.splitlines() if line.startswith("data:") and line[5:].strip()]
+            else:
+                found = [r.json()] if r.content else []
+            reply = next((m for m in found if isinstance(m, dict) and m.get("id") == message["id"]), None)
+            if reply is None:
+                raise RuntimeError(f"MCP server {prefix}: no response to {message['method']}")
+            if "error" in reply:
+                raise RuntimeError(f"MCP server {prefix}: {message['method']}: {str((reply['error'] or {}).get('message') or reply['error'])[:300]}")
+            return reply.get("result") or {}
+
+        try:
+            rpc({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                 "params": {"protocolVersion": MCP_PROTOCOL, "capabilities": {}, "clientInfo": {"name": "superstep-export", "version": "1.0"}}})
+            rpc({"jsonrpc": "2.0", "method": "notifications/initialized"})
+            result = rpc({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": tool, "arguments": arguments}}) or {}
+        finally:
+            if session:
+                try:
+                    client.delete(url, headers={**{str(k): str(v) for k, v in extra.items()}, "Mcp-Session-Id": session})
+                except httpx.HTTPError:
+                    pass
+    texts = [c.get("text", "") for c in result.get("content") or [] if isinstance(c, dict) and c.get("type") == "text"]
+    if result.get("isError"):
+        raise RuntimeError(f"MCP tool {tool!r} failed: {(chr(10).join(texts) or 'the tool reported an error')[:500]}")
+    if result.get("structuredContent") is not None:
+        return result["structuredContent"]
+    if texts and len(texts) == len(result.get("content") or []):
+        joined = "\\n".join(texts)
+        try:
+            return json.loads(joined)
+        except ValueError:
+            return joined
+    return result.get("content") or []
 ''',
     "send_email": '''
 
@@ -454,13 +665,104 @@ def addresses(value: Any) -> list:
     return [p.strip() for x in items if x not in (None, "") for p in re.split(r"[,;\\n]", str(x)) if p.strip()]
 
 
+EMAIL_RE = re.compile(r"^[^@\\s<>,;\\"]+@[^@\\s<>,;\\"]+\\.[^@\\s<>,;\\"]+$")
+EMAIL_RUN_ID = os.environ.get("SUPERSTEP_RUN_ID") or os.urandom(8).hex()
+
+
+class PinnedSMTP(smtplib.SMTP):
+    """Connects to the checked address; the host name stays the name, so STARTTLS verifies the certificate for it."""
+    def __init__(self, ip: str, **kw):
+        self.ip = ip
+        super().__init__(**kw)
+
+    def _get_socket(self, host, port, timeout):
+        return socket.create_connection((self.ip, port), timeout, self.source_address)
+
+
+class PinnedSMTPSSL(smtplib.SMTP_SSL):
+    def __init__(self, ip: str, **kw):
+        self.ip = ip
+        super().__init__(**kw)
+
+    def _get_socket(self, host, port, timeout):
+        return self.context.wrap_socket(socket.create_connection((self.ip, port), timeout, self.source_address), server_hostname=host)
+
+
 def send_email(message: dict) -> dict:
-    """Send email nodes send through an SMTP credential in Superstep. This file never sends: like a studio dry run,
-    it prints the message and returns what it would have sent.
-    TODO: send it with smtplib and your own SMTP settings."""
-    print(f"(e-mail not sent) to {', '.join(message['to'])}: {message['subject']}")
-    return {"sent": False, "dry_run": True, "to": message["to"], "cc": message["cc"], "bcc": message["bcc"],
-            "subject": message["subject"], "message_id": None, "preview": message["body"][:2000]}
+    """Send email nodes, as in the studio: a node with an SMTP credential in Superstep sends; one without makes a dry
+    run (prints the message, returns what would have been sent). Sending uses environment variables only (never this
+    file): SMTP_HOST, SMTP_FROM, and optionally SMTP_PORT (587, or 465 with ssl), SMTP_SECURITY (starttls, the
+    default and required; ssl; or none), SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_NAME. As in the studio the host is
+    resolved once, private addresses are refused unless STUDIO_SMTP_ALLOW_PRIVATE=1, and the connection goes to the
+    checked address. Not configured: a dry run in offline mock mode (LLM_PROVIDER unset), an error when it is set."""
+    rcpt = list(dict.fromkeys(message["to"] + message["cc"] + message["bcc"]))
+    if not rcpt:
+        raise ValueError(f"Send email {message['node']}: no recipient")
+    bad = [a for a in rcpt if not EMAIL_RE.match(a)]
+    if bad:
+        raise ValueError(f"Send email {message['node']}: {bad[0][:100]!r} is not an e-mail address")
+    head = {"to": message["to"], "cc": message["cc"], "bcc": message["bcc"], "subject": message["subject"][:998]}
+    host, sender = os.environ.get("SMTP_HOST"), os.environ.get("SMTP_FROM")
+    if not message["sends"] or not (host and sender):
+        missing = ", ".join(n for n, v in (("SMTP_HOST", host), ("SMTP_FROM", sender)) if not v)
+        if message["sends"] and os.environ.get("LLM_PROVIDER"):
+            raise RuntimeError(f"Send email {message['node']}: set {missing} to send it")
+        why = f"{missing} not set" if message["sends"] else "no SMTP credential on this node in the studio"
+        print(f"(offline mock) Send email {message['subject'][:60]!r}: dry run, {why}", file=sys.stderr)
+        print(f"(e-mail not sent) to {', '.join(message['to'])}: {message['subject']}")
+        return {"sent": False, "dry_run": True, **head, "message_id": None, "preview": message["body"][:2000]}
+    security = (os.environ.get("SMTP_SECURITY") or "starttls").lower()
+    if security not in ("starttls", "ssl", "none"):
+        raise ValueError("SMTP_SECURITY must be starttls, ssl or none")
+    port = int(os.environ.get("SMTP_PORT") or (465 if security == "ssl" else 587))
+    try:
+        infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
+    except OSError:
+        raise RuntimeError(f"Send email {message['node']}: cannot resolve {host}") from None
+    found = [ipaddress.ip_address(info[4][0].split("%")[0]) for info in infos]
+    if not found:
+        raise RuntimeError(f"Send email {message['node']}: cannot resolve {host}")
+    if any(a.is_private or a.is_loopback or a.is_link_local or a.is_reserved or a.is_multicast or a.is_unspecified for a in found) \\
+            and os.environ.get("STUDIO_SMTP_ALLOW_PRIVATE") != "1":
+        raise PermissionError(f"Send email {message['node']}: {host} is a private address; set STUDIO_SMTP_ALLOW_PRIVATE=1 to allow it")
+    domain = sender.rsplit("@", 1)[-1]
+    key = hashlib.sha256(json.dumps([EMAIL_RUN_ID, message["node"], rcpt, message["subject"], message["body"]]).encode()).hexdigest()[:32]
+    mid = f"<{key}@{domain}>"  # the same run and message keep the same Message-ID, so a retried send can be recognised
+    msg = EmailMessage()
+    name = os.environ.get("SMTP_FROM_NAME")
+    msg["From"] = formataddr((name, sender)) if name else sender
+    msg["To"] = ", ".join(message["to"])
+    if message["cc"]:
+        msg["Cc"] = ", ".join(message["cc"])
+    msg["Subject"] = " ".join(message["subject"].split())[:998]
+    msg["Message-ID"] = mid
+    msg.set_content(message["body"])
+    ip = str(found[0])
+    try:
+        if security == "ssl":
+            conn = PinnedSMTPSSL(ip, timeout=20, context=ssl.create_default_context())
+        else:
+            conn = PinnedSMTP(ip, timeout=20)
+        conn.connect(host, port)
+        if security == "starttls":
+            conn.ehlo()
+            if not conn.has_extn("starttls"):
+                conn.close()
+                raise RuntimeError(f"Send email {message['node']}: {host} does not offer STARTTLS (set SMTP_SECURITY=none to send without TLS)")
+            conn.starttls(context=ssl.create_default_context())
+            conn.ehlo()
+        if os.environ.get("SMTP_USERNAME"):
+            conn.login(os.environ["SMTP_USERNAME"], os.environ.get("SMTP_PASSWORD") or "")
+        try:
+            refused = conn.send_message(msg, from_addr=sender, to_addrs=rcpt)
+        finally:
+            try:
+                conn.quit()
+            except (OSError, smtplib.SMTPException):
+                pass
+    except (OSError, smtplib.SMTPException) as error:
+        raise RuntimeError(f"Send email {message['node']}: {type(error).__name__}: {str(error)[:200]}") from None
+    return {"sent": True, "dry_run": False, **head, "message_id": mid, "refused": sorted(refused)}
 ''',
 }
 
@@ -548,9 +850,11 @@ class _Writer(GraphWriter):
             doc += ["Code nodes run here as written on the canvas, without the studio's sandbox: read them first.", ""]
         doc += ["Credentials, knowledge bases, MCP servers and approval channels are not exported.", '"""',
                 "from __future__ import annotations", ""]
-        std = sorted(m for m in {"json", "os", "re", "string", *self.imports} if uses(m))
+        std = sorted(m for m in {"hashlib", "ipaddress", "json", "os", "re", "select", "smtplib", "socket", "ssl", "string", "sys", "time", *self.imports} if uses(m))
         typing = sorted(n for n in ("Annotated", "Any", "Dict", "List", "Optional", "TypedDict") if uses(n))
         out = [f"import {m}" for m in std] + ([f"from typing import {', '.join(typing)}"] if typing else []) + [""]
+        mail = [line for n, line in (("EmailMessage", "from email.message import EmailMessage"), ("formataddr", "from email.utils import formataddr")) if uses(n)]
+        if mail: out = out[:-1] + mail + [""]
         if uses("httpx"): out += ["import httpx", ""]
         lg = [line for name, line in (("InMemoryCache", "from langgraph.cache.memory import InMemoryCache"),
                                       ("MemorySaver", "from langgraph.checkpoint.memory import MemorySaver")) if uses(name)]
@@ -563,16 +867,37 @@ class _Writer(GraphWriter):
     def body(self, graphs: List[_Graph], main: _Graph) -> None:
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
+        if "fallback" in self.uses: self.add("\n" + FALLBACK.rstrip())
+        if "http" in self.uses: self.add(HTTP.rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
         if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
         if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
+        if "fallback_files" in self.uses: self.add(FALLBACK_FILES.rstrip())
         if "routing" in self.uses: self.add("\n" + ROUTING.rstrip())
         if "decide" in self.uses: self.add("\n" + DECIDE.rstrip())
-        stubs = [k for k in STUBS if k in self.uses]
-        if stubs:
+        if "approval" in self.uses: self.add("\n" + PY_APPROVAL.rstrip())
+        stubs = [k for k in STUBS if k in self.uses and k != "managed_operation"]
+        if stubs or "managed_operation" in self.uses:
             self.add("\n\n# --- Studio services ------------------------------------------------------------------------------------")
             self.add("# These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
+            if stubs: self.add(OFFLINE_SERVICE.rstrip())
+            if "retrieve" in stubs:
+                self.add("\n\n# Knowledge bases: before a real run set SUPERSTEP_URL, SUPERSTEP_TOKEN and <PREFIX>_ID for")
+                self.add(f"# {', '.join(getattr(self, 'knowledge_bases', {}).values())}. Nodes and tools on the same knowledge base share a prefix.")
+            if "call_mcp_tool" in stubs:
+                self.add("\n\n# MCP servers: before a real run set <PREFIX>_URL (and <PREFIX>_HEADERS if the server needs them) for")
+                self.add(f"# {', '.join(getattr(self, 'mcp_servers', {}).values())}. MCP nodes and tools on the same Superstep server share a prefix.")
+                self.add('MCP_PROTOCOL = "2025-06-18"')
             for k in stubs: self.add(STUBS[k].rstrip())
+        if "managed_operation" in self.uses:
+            self.add(PY_MANAGED.rstrip())
+        if names := self.export_env_names():
+            self.add("# Environment names for this file: " + " ".join(names))
+        if "browser" in self.uses:
+            self.add("\n\n# --- Browser ---------------------------------------------------------------------------------------------")
+            self.add("# Secrets are read from the environment at run time. BROWSER_POLICY has no tokens, passwords or cookies.")
+            self.add(f"BROWSER_POLICY = {lit(self.browser_policies)}")
+            self.add(PY_RUNTIME.rstrip())
         if self.extra:
             self.add("\n\n# --- Tool functions -------------------------------------------------------------------------------------")
             for src in self.extra.values(): self.add("\n\n" + src)
@@ -633,6 +958,46 @@ class _Writer(GraphWriter):
             body = ", ".join(f"{lit(n)}: {a}" for n, a in rows)
             self.add(f"{cls} = TypedDict({lit(cls)}, {{{body}}}, total=False)")
 
+    def slot_tail(self, d: dict, attrs: tuple, keywords: tuple) -> str:
+        """`, slot="LLM_CRED_1"` for the credentials this node has. Empty when it has none, so the call stays as before."""
+        parts = []
+        for attr, kw in zip(attrs, keywords):
+            slot = self.llm_slot(str(d.get(attr) or ""))
+            if slot: parts.append(f"{kw}={lit(slot)}")
+        return (", " + ", ".join(parts)) if parts else ""
+
+    def mcp_call(self, data: dict, call: str, tool_expr: str, args_expr: str) -> str:
+        """A managed adapter passes its prefix and name. The placeholder keeps the two-argument call."""
+        managed = data.get("_managed_export")
+        if call != "managed_operation":
+            return f"call_mcp_tool({lit(self.mcp_prefix(data))}, {tool_expr}, {args_expr})"
+        if not isinstance(managed, str):
+            return f"managed_operation({tool_expr}, {args_expr})"
+        return f"managed_operation({tool_expr}, {args_expr}, {lit(self.managed_prefix(data))}, {lit(managed)})"
+
+    def approval_answer(self, name: str, d: dict, question_expr: str, prompt_expr: str, pad: str, wrap: bool = False) -> None:
+        """Build `request` and set `answer`. Review runs before interrupt, so a rule reject never asks."""
+        approval = d.get("approval") if isinstance(d.get("approval"), dict) else {}
+        kind = str(approval.get("channel") or "").strip().lower()
+        policy = d.get("_approval_policy") if isinstance(d.get("_approval_policy"), dict) else None
+        deadline = d.get("_deadline") if isinstance(d.get("_deadline"), dict) else None
+        judge = self.llm_slot(str(d.get("_judge_credential") or ""))
+        self.add(f"{pad}request = {{\"node\": {lit(name)}, \"question\": {question_expr}, \"prompt\": {prompt_expr}}}")
+        if wrap:  # an Agent tool call: the model named the tool and the arguments
+            self.add(f"{pad}request[\"tool\"] = call[\"name\"]")
+            self.add(f"{pad}request[\"args\"] = call[\"args\"] if isinstance(call[\"args\"], dict) else {{}}")
+        else:
+            self.add(f"{pad}request[\"state\"] = state")
+        if kind: self.add(f"{pad}request[\"channel\"] = {lit(kind)}")
+        if deadline: self.add(f"{pad}request[\"deadline\"] = {lit(deadline)}")
+        if policy: self.add(f"{pad}request[\"policy\"] = {lit(policy)}")
+        if judge: self.add(f"{pad}request[\"judge_slot\"] = {lit(judge)}")
+        if policy:
+            self.add(f"{pad}reviewed = review_approval(request)")
+            self.add(f"{pad}answer = reviewed if reviewed is not None else {'str(interrupt(request))' if wrap else 'interrupt(request)'}")
+        else:
+            self.add(f"{pad}answer = {'str(interrupt(request))' if wrap else 'interrupt(request)'}")
+
     def ann(self, f: dict) -> str:
         typ = PY_TYPES.get(f.get("type", "string"), "Any")
         r = f.get("reducer") or "replace"
@@ -655,8 +1020,17 @@ class _Writer(GraphWriter):
             self.add(f'    """{head}."""')
             self.add(f"    prompt = render({const}_PROMPT, state)")
             files = attachments.field_of(d)
-            self.add(ret(f"call_llm_files(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, state.get({lit(files)}))" if files
-                         else f"call_llm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
+            fb = d.get("fallback") if isinstance(d.get("fallback"), dict) else None  # only the model name: never its credential
+            model = lit(d.get("model") or "gpt-4o-mini")
+            if fb and files:
+                expr = f"call_llm_files_fallback(prompt, {model}, {lit(str(fb.get('model') or '').strip())}, state.get({lit(files)}){self.slot_tail(d, ('_llm_credential', '_fallback_credential'), ('slot', 'fallback_slot'))})"
+            elif files:
+                expr = f"call_llm_files(prompt, {model}, state.get({lit(files)}){self.slot_tail(d, ('_llm_credential',), ('slot',))})"
+            elif fb:
+                expr = f"call_llm_fallback(prompt, {model}, {lit(str(fb.get('model') or '').strip())}{self.slot_tail(d, ('_llm_credential', '_fallback_credential'), ('slot', 'fallback_slot'))})"
+            else:
+                expr = f"call_llm(prompt, {model}{self.slot_tail(d, ('_llm_credential',), ('slot',))})"
+            self.add(ret(expr))
         elif t == "human":
             self.add(f"{const}_PROMPT = {lit(d.get('prompt') or '')}")
             self.add("")
@@ -669,10 +1043,13 @@ class _Writer(GraphWriter):
             extra = []
             if (d.get("approval") or {}).get("channel"): extra.append(f"also asks on {str(d['approval']['channel']).title()}")
             if d.get("deadline"): extra.append("has a deadline with reminders")
-            if approval_policy.mode(d) != "off": extra.append("has AI review of the request (people answer every request here)")
+            if approval_policy.mode(d) != "off": extra.append("has AI review of the request")
             if extra: self.add(f"    In Superstep this node {' and '.join(extra)}; that is not part of LangGraph.")
             self.add('    """')
-            self.add(f"    answer = interrupt({{\"node\": {lit(name)}, \"question\": render({const}_PROMPT, state)}})")
+            if self.approval_extra(d):
+                self.approval_answer(name, d, f"render({const}_PROMPT, state)", f"render({const}_PROMPT, state)", "    ")
+            else:
+                self.add(f"    answer = interrupt({{\"node\": {lit(name)}, \"question\": render({const}_PROMPT, state)}})")
             self.add(ret("answer"))
         elif t == "condition":
             self.add(f"def {name}(state: {cls}) -> dict:")
@@ -698,16 +1075,25 @@ class _Writer(GraphWriter):
             self.add("")
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}: the chunks of a knowledge base that best match the query (see retrieve)."""')
-            self.add(ret(f"retrieve(render({const}_QUERY, state), top_k={_number(d.get('top_k'), int) or 4})"))
+            self.add(ret(f"retrieve({lit(self.kb_prefix(d))}, render({const}_QUERY, state), top_k={_number(d.get('top_k'), int) or 4})"))
         elif t == "mcp":
-            call = "managed_operation" if d.get("_managed_export") else "call_mcp_tool"
-            self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
-            self.add("")
-            self.add("")
-            self.add(f"def {name}(state: {cls}) -> dict:")
-            self.add(f'    """{head}: MCP tool {lit(_doc(d.get("tool")))} (see {call})."""')
-            if d.get("_managed_export"): self.add("    # TODO: implement this managed step; the placeholder raises until replaced.")
-            self.add(ret(f"{call}({lit(d.get('tool') or '')}, render_args({const}_ARGUMENTS, state))"))
+            info = d.get("_browser_export")
+            if isinstance(info, dict):
+                self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
+                self.add("")
+                self.add("")
+                self.add(f"def {name}(state: {cls}) -> dict:")
+                self.add(f'    """{head}: browser tool {lit(_doc(d.get("tool")))} (see browser_call)."""')
+                self.add(ret(self.browser_expr(info, d, f"render_args({const}_ARGUMENTS, state)")))
+            else:
+                call = "managed_operation" if d.get("_managed_export") else "call_mcp_tool"
+                self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
+                self.add("")
+                self.add("")
+                self.add(f"def {name}(state: {cls}) -> dict:")
+                self.add(f'    """{head}: MCP tool {lit(_doc(d.get("tool")))} (see {call})."""')
+                if d.get("_managed_export") is True: self.add("    # TODO: implement this managed step; the placeholder raises until replaced.")
+                self.add(ret(self.mcp_call(d, call, lit(d.get("tool") or ""), f"render_args({const}_ARGUMENTS, state)")))
         elif t == "email":
             self.email(g, nid, cls, head)
         elif t == "subgraph":
@@ -715,6 +1101,10 @@ class _Writer(GraphWriter):
             build = self.built[ref][1] if ref in self.built else None
             self.add(f"# {head}: the workflow \"{_doc(self.built[ref][0].title) if build else ref}\" runs as a subgraph.")
             self.add(f"# build_graph() adds {build or 'it'}() as the node: a compiled graph can be a node of another graph.")
+            if build is None:
+                self.add(f"def {name}(state: {cls}) -> dict:")
+                self.add(f'    """{head}: TODO: the workflow {_doc(ref)} was not found when this file was exported."""')
+                self.add(f"    raise LookupError({lit(f'{head}: the subgraph workflow {ref} was not found when this file was exported (deleted, or not shared with you)')})")
         else:  # subgraph_exit or an unknown type: a pass-through
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}."""')
@@ -783,7 +1173,8 @@ class _Writer(GraphWriter):
         self.add("    answers = {}")
         self.add(f"    for question in {const}_QUESTIONS:")
         self.add("        instructions = render(question[\"instructions\"], state)")
-        self.add("        answer = decide(text, {**question, \"instructions\": instructions})")
+        slot = self.slot_tail(d, ("_llm_credential",), ("slot",))
+        self.add(f"        answer = decide(text, {{**question, \"instructions\": instructions}}{slot})")
         self.add("        answers[question[\"id\"]] = {\"type\": question[\"type\"], question[\"type\"]: answer}")
         self.add("        if question.get(\"field\"):")
         self.add("            update[question[\"field\"]] = answer")
@@ -801,13 +1192,7 @@ class _Writer(GraphWriter):
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}: an HTTP request; the JSON reply (or the text) is the result.')
             self.add("    The studio only calls public addresses and never follows redirects.\"\"\"")
-            self.add(f"    body = render({const}_BODY, state)")
-            self.add(f"    response = httpx.request({lit(d.get('method') or 'GET')}, render({const}_URL, state), content=body.encode() or None,")
-            self.add("                             headers={\"Content-Type\": \"application/json\"}, timeout=30, follow_redirects=False)")
-            self.add("    try:")
-            self.add("        result = response.json()")
-            self.add("    except ValueError:")
-            self.add("        result = response.text")
+            self.add(f"    result = http_request({lit(nid)}, {lit(d.get('method') or 'GET')}, render({const}_URL, state), render({const}_BODY, state))")
             self.add(ret("result"))
         elif mode == "code" and (d.get("language") or "python") != "python":
             lang = str(d.get("language"))  # TASK-0079: another language cannot be pasted into a Python file
@@ -828,7 +1213,7 @@ class _Writer(GraphWriter):
             if fn in self.extra: self.add(ret(f"{fn}(state)"))
             else:
                 self.add(f"    # TODO: the function {lit(fn)} is not registered on this server any more.")
-                self.add(ret("None"))
+                self.add(f"    raise LookupError({lit(f'{head}: the function {fn} is not registered on the Superstep server any more: add it to this file')})")
 
     def email(self, g: _Graph, nid: str, cls: str, head: str) -> None:
         d = g.nodes[nid].get("data") or {}; name, const = g.names[nid], g.names[nid].upper()
@@ -844,6 +1229,8 @@ class _Writer(GraphWriter):
                      if d.get(k) else f"        {lit(k)}: [],")
         self.add(f"        \"subject\": \" \".join(render({const}_SUBJECT, state).split()),")
         self.add(f"        \"body\": render({const}_BODY, state),")
+        self.add(f"        \"node\": {lit(name)},")
+        self.add(f"        \"sends\": {bool(d.get('_email_sends'))},  # an SMTP credential in the studio (not exported): a real send")
         self.add("    }")
         out = d.get("output_field")
         if out: self.add(f"    return {{{lit(out)}: send_email(message)}}")
@@ -919,9 +1306,9 @@ class _Writer(GraphWriter):
             self.add("        chat[\"messages\"] = [{\"role\": \"system\", \"content\": NO_MORE}] + chat[\"messages\"]")
             self.add("        chat[\"no_more\"] = True")
             self.add(f"    tools = {const}_TOOLS + ({const}_HANDOFF_TOOLS if can else [])")
-            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else tools, {lit(d.get('model') or 'gpt-4o-mini')})")
+            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else tools, {lit(d.get('model') or 'gpt-4o-mini')}{self.slot_tail(d, ('_llm_credential',), ('slot',))})")
         else:
-            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')})")
+            self.add(f"    text, calls = {call}(chat[\"messages\"], None if last else {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')}{self.slot_tail(d, ('_llm_credential',), ('slot',))})")
         self.add("    calls = [] if last else [{\"id\": str(c.get(\"id\") or f\"call_{i}\"), \"name\": str(c.get(\"name\") or \"\"), \"args\": c.get(\"args\")}")
         self.add("                             for i, c in enumerate(calls)]")
         self.add("    if not last:")
@@ -984,7 +1371,7 @@ class _Writer(GraphWriter):
         if (d.get("approval") or {}).get("channel") or d.get("deadline"):
             self.add("    In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
         if approval_policy.mode(d) != "off":
-            self.add("    In Superstep a model can review the request first (AI review); here people answer every request.")
+            self.add("    In Superstep a model can review the request first (AI review); suggest mode still asks, and auto mode may answer.")
         self.add('    """')
         self.add(f"    chat = dict(state[{chat}])")
         self.add("    pending = list(chat[\"pending\"])")
@@ -1004,7 +1391,10 @@ class _Writer(GraphWriter):
             self.add(f"            question = ({lit(who + ' wants to call ')} + call[\"name\"] + \" with these arguments:\\n\"")
             self.add("                        + json.dumps(call[\"args\"], ensure_ascii=False, indent=2)")
             self.add("                        + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\")")
-            self.add(f"            answer = str(interrupt({{\"node\": {lit(name)}, \"question\": question}}))")
+            if self.approval_extra(d):
+                self.approval_answer(name, d, "question", "question", "            ", wrap=True)
+            else:
+                self.add(f"            answer = str(interrupt({{\"node\": {lit(name)}, \"question\": question}}))")
         self.add("        started = time.perf_counter()")
         self.add("        if spec is None:")
         self.add(f"            status, result = \"error\", f\"Unknown tool {{call['name']}}: use one of {{', '.join(sorted(t['name'] for t in {const}_TOOLS))}}\"")
@@ -1018,6 +1408,8 @@ class _Writer(GraphWriter):
         self.add("            try:")
         self.add(f"                status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
         self.add("            except Exception as error:  # the model hears about the failure and can try something else")
+        self.add("                if type(error).__name__ in (\"GraphInterrupt\", \"GraphBubbleUp\"):")
+        self.add("                    raise  # browser approval pauses the run; it is not a failed tool call")
         self.add("                status, result = \"error\", f\"The tool failed: {error}\"")
         self.add("        step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
         self.add("                \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
@@ -1049,6 +1441,15 @@ class _Writer(GraphWriter):
         if d.get("steps_field"): out.append(f"{lit(d['steps_field'])}: chat[\"steps\"]")
         self.add(f"    return {{{', '.join(out)}, {chat}: None}}")
 
+    def browser_expr(self, info: dict, data: dict, args_expr: str) -> str:
+        tool = data.get("tool") or ""
+        binding = export_binding(data.get("url_binding"))
+        target = data.get("target") if isinstance(data.get("target"), dict) else None
+        targets = data.get("targets") if isinstance(data.get("targets"), dict) else None
+        prepared = f"browser_prepare({lit(tool)}, {args_expr}, {lit(target)}, {lit(targets)}, state)"
+        bound = f"bind_browser_url({lit(binding)}, {prepared}, state)"
+        return f"browser_call({lit(info.get('alias') or '')}, {lit(tool)}, {bound}, state)"
+
     def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
         """call_<agent>_tool(): what each of the Agent node's tools does."""
         self.add("")
@@ -1064,12 +1465,16 @@ class _Writer(GraphWriter):
                 if fn in self.extra: self.add(f"        return {fn}({{**state, **args}})  # the arguments over the state, as in the studio")
                 else:
                     self.add(f"        # TODO: the function {lit(fn)} is not registered on this server any more.")
-                    self.add("        return None")
+                    self.add(f"        raise LookupError({lit(f'tool {tname}: the function {fn} is not registered on the Superstep server any more: add it to this file')})")
             elif src == "knowledge":
-                self.add(f"        return retrieve(str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
+                self.add(f"        return retrieve({lit(self.kb_prefix(t))}, str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":
-                call = "managed_operation" if t.get("_managed_export") else "call_mcp_tool"
-                self.add(f"        return {call}({lit(t.get('tool') or '')}, args)")
+                info = t.get("_browser_export")
+                if isinstance(info, dict):
+                    self.add(f"        return {self.browser_expr(info, t, 'args')}")
+                else:
+                    call = "managed_operation" if t.get("_managed_export") else "call_mcp_tool"
+                    self.add(f"        return {self.mcp_call(t, call, lit(t.get('tool') or ''), 'args')}")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:
@@ -1080,7 +1485,7 @@ class _Writer(GraphWriter):
                     self.add(f"        return {{k: final.get(k) for k in {lit(outputs)}}}")
                 else:
                     self.add(f"        # TODO: the workflow {lit(ref)} was not found (deleted, or not shared with you).")
-                    self.add("        return None")
+                    self.add(f"        raise LookupError({lit(f'tool {tname}: the workflow {ref} was not found when this file was exported (deleted, or not shared with you)')})")
             elif src == "http":
                 method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
                 key = self.http_key(const, t)
@@ -1091,12 +1496,7 @@ class _Writer(GraphWriter):
                 if not body and method in ("POST", "PUT", "PATCH"):
                     self.add("        body = json.dumps(args, ensure_ascii=False)  # no body template: the arguments as JSON")
                 if query: self.add("        query = {k: tool_text(v) for k, v in args.items()}  # the URL does not use the arguments")
-                self.add(f"        response = httpx.request({lit(method)}, url, {'params=query or None, ' if query else ''}content=body.encode() or None,")
-                self.add("                                 headers={\"Content-Type\": \"application/json\"}, timeout=30, follow_redirects=False)")
-                self.add("        try:")
-                self.add("            return response.json()")
-                self.add("        except ValueError:")
-                self.add("            return response.text")
+                self.add(f"        return http_request({lit(name + ':' + tname)}, {lit(method)}, url, body{', query' if query else ''})")
             else:
                 self.add(f"        raise ValueError({lit(f'unknown tool source {src!r}')})")
         self.add("    raise ValueError(f\"unknown tool {name}\")")
@@ -1135,7 +1535,7 @@ class _Writer(GraphWriter):
             fn = g.names[nid]
             if n["type"] == "subgraph":
                 ref = g.refs.get(nid) or ""
-                fn = f"{self.built[ref][1]}()" if ref in self.built else "StateGraph(dict).compile()  # TODO: the subgraph was not found"
+                fn = f"{self.built[ref][1]}()" if ref in self.built else g.names[nid]  # missing: the node raises LookupError
             kw = []
             retry = d.get("retry") if isinstance(d.get("retry"), dict) else {}
             if (attempts := _number(retry.get("max_attempts"), int)) is not None:
@@ -1231,7 +1631,14 @@ class _Writer(GraphWriter):
             self.add("")
             self.add("    def answer_for(request: dict) -> str:")
             self.add("        queue = answers.get(request[\"node\"]) or []")
-            self.add("        value = queue.pop(0) if queue else input(f\"{request['question']}\\n> \")")
+            if "approval" in self.uses:
+                self.add("        if queue:")
+                self.add("            value = queue.pop(0)")
+                self.add("        else:  # a queued example answer never notifies and never waits out a deadline")
+                self.add("            notify_approval(request)")
+                self.add("            value = wait_approval(request)")
+            else:
+                self.add("        value = queue.pop(0) if queue else input(f\"{request['question']}\\n> \")")
             self.add("        print(f\">> {request['node']}: {value}\")")
             self.add("        return value")
             self.add("")

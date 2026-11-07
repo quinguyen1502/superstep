@@ -44,7 +44,7 @@ Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server,
 | TASK-0225 widget JS API | 3 | M | 0218, 0223 | `window.Superstep`, events, theming, `identify` |
 | TASK-0226 web docs and examples | 3 | S | 0224, 0225 | handbook pages, e2e pages |
 | TASK-0227 `@superstep/react-native` | deferred | L | 0220 | RN components, Expo example, `sdk-rn-v*` publish |
-| TASK-0228 native WebView guide and bridge | deferred | M | 0225 | bridge protocol, Swift and Kotlin guide, browser e2e |
+| TASK-0228 native WebView guide and bridge | resumed 2026-11-07 | M | 0225 | bridge protocol, Swift and Kotlin guide, browser e2e; done on its task PR (REV/QA-0245) |
 | TASK-0229 edit message | 0.11.0 priority | L | 0216 | DEC-0084 Accepted; shared branch foundation + edit merged (#292, 42333ffc) |
 | TASK-0230 regenerate answer | 0.11.0 priority | M | 0229 | DEC-0084 Accepted; regeneration merged (#293, d2119965) |
 

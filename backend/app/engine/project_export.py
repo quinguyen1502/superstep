@@ -20,6 +20,11 @@ TS_MAIN_PROJECT = 'if (process.env.RUN_EXAMPLE === "1") await main();'
 NPM_SPEC = re.compile(r"""(["'])npm:((?:@[\w.-]+/)?[\w.-]+)(?:@([^"']+))?\1""")
 PY_ENV = re.compile(r"""os\.(?:environ\.get|getenv)\(\s*["'](\w+)["']|os\.environ\[\s*["'](\w+)["']\s*\]""")
 TS_ENV = re.compile(r"""\benv\(\s*["'](\w+)["']\s*\)|process\.env\.(\w+)""")
+BROWSER_ENV = re.compile(r"SUPERSTEP_BROWSER_[A-Z0-9_]+")
+# Numbered slots are built by concatenation, so the literal scanner cannot see them. The export lists the
+# assigned names in a comment; this picks those names up for .env.example (REQ-0090).
+EXPORT_ENV = re.compile(
+    r"\b((?:LLM_CRED|MANAGED)_\d+|APPROVAL_[A-Z0-9]+)_(?:PROVIDER|API_KEY|BASE_URL|SETTINGS|SECRETS|WEBHOOK_URL|BOT_TOKEN|CHAT_ID)\b")
 # Keys a real model needs when LLM_PROVIDER is set, and LangSmith tracing (read by LangGraph itself).
 MODEL_ENV = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"]
 TRACING_ENV = ["LANGSMITH_API_KEY", "LANGSMITH_TRACING", "LANGSMITH_PROJECT"]
@@ -28,6 +33,8 @@ TRACING_ENV = ["LANGSMITH_API_KEY", "LANGSMITH_TRACING", "LANGSMITH_PROJECT"]
 def _env_vars(code: str, pattern: re.Pattern) -> List[str]:
     seen: Dict[str, None] = {}
     for m in pattern.finditer(code): seen[next(g for g in m.groups() if g)] = None
+    for name in BROWSER_ENV.findall(code): seen.setdefault(name, None)
+    for m in EXPORT_ENV.finditer(code): seen.setdefault(m.group(0), None)
     return list(seen)
 
 
@@ -54,7 +61,7 @@ def _py_requirements(code: str) -> List[str]:
     return [LANGGRAPH_PY] + sorted(mods)
 
 
-def _readme(title: str, graph_id: str, file: str, python: bool) -> str:
+def _readme(title: str, graph_id: str, file: str, python: bool, code: str = "") -> str:
     install = ['pip install -U "langgraph-cli[inmem]"', "pip install -r requirements.txt"] if python else ["npm install"]
     dev = "langgraph dev" if python else "npm run dev"
     example = f"python {file}" if python else "npm run example"
@@ -75,12 +82,28 @@ def _readme(title: str, graph_id: str, file: str, python: bool) -> str:
         "- `.env.example`: the environment variables the graph reads.", "",
         "## Notes", "",
         "- LLM nodes use an offline mock model unless `LLM_PROVIDER` is set.",
-        "- Credentials, knowledge bases, MCP servers and approval channels are not exported. Retriever, MCP and Send",
-        "  email nodes are stubs.",
-        "- Managed connection steps are explicit placeholders that raise/throw until implemented. Add your own",
-        "  credentials, operation tracking, idempotency and reconciliation; Studio secrets are never included.",
-        "- Human-in-the-loop nodes use `interrupt()`: in Studio, resume the paused thread with the answer. AI review of",
-        "  approvals (suggest or automatic answers) is a Superstep feature: here people answer every request.", ""])
+        "- Credentials stay in the environment. A node with its own model credential uses `LLM_CRED_<n>` when that",
+        "  slot's provider is set, and `LLM_PROVIDER` when it is not. The credential id is never written.",
+        "- Retriever nodes call your Superstep server. MCP nodes call Streamable HTTP. Send email uses the SMTP",
+        "  environment variables. Each one names the missing variable when `LLM_PROVIDER` is set and it is not configured.",
+        "- Managed connections read `MANAGED_<n>_SETTINGS` and `MANAGED_<n>_SECRETS`. A step with no adapter is still a",
+        "  placeholder that raises. Studio secrets are never included.",
+        "- Human-in-the-loop nodes use `interrupt()`: in Studio, resume the paused thread with the answer. A channel,",
+        "  a deadline or AI review is included: suggest mode still asks a person, and auto mode may approve or reject.",
+        *(["- Browser steps use the embedded helper (`browser_call` or `browserCall`). The default driver is `memory`:",
+           "  stdlib HTTP against the origin whitelist. Set `SUPERSTEP_BROWSER_DRIVER=playwright` for local Chromium",
+           "  (Python: `pip install playwright`, then install the browser; TypeScript: `npm install playwright`)",
+           "  or `browserless`, and fill the empty",
+           "  `SUPERSTEP_BROWSER_ENDPOINT_*` / `SUPERSTEP_BROWSER_TOKEN_*` names from `.env.example`.",
+           "  In the Python and TypeScript exports, Playwright and Browserless keep one page until idle, lifetime,",
+           "  or process exit; click, fill, and evaluate run on that page, and every redirect must stay on the",
+           "  whitelist. The memory driver stays static HTTP and does not follow redirects.",
+           "- Upload and download are refused outside Studio. Evaluate runs only when the connection allows it; the",
+           "  memory driver accepts only `document.title` and `document.body.innerText`.",
+           "- `SUPERSTEP_BROWSER_FAULT` is a one-shot test hook (`lost` or `unknown`). Leave it empty. Lost and unknown",
+           "  outcomes are not retried. Same-session commands run one at a time. Mutating approval uses `interrupt()`."]
+          if ("def browser_call(" in code or "function browserCall(" in code) else []),
+        ""])
 
 
 def _python(code: str, title: str, graph_id: str) -> Dict[str, str]:
@@ -98,7 +121,7 @@ def _python(code: str, title: str, graph_id: str) -> Dict[str, str]:
     return {file: body, "langgraph.json": json.dumps(config, indent=2) + "\n", "pyproject.toml": pyproject,
             "requirements.txt": "\n".join(reqs) + "\n# for a real model (LLM_PROVIDER): langchain and a provider, e.g. langchain-openai\n",
             ".env.example": _env_example(_env_vars(code, PY_ENV), "call_llm(" in code),
-            "README.md": _readme(title, graph_id, file, True)}
+            "README.md": _readme(title, graph_id, file, True, code)}
 
 
 def _typescript(code: str, title: str, graph_id: str) -> Dict[str, str]:
@@ -124,7 +147,7 @@ def _typescript(code: str, title: str, graph_id: str) -> Dict[str, str]:
     return {file: body, "langgraph.json": json.dumps(config, indent=2) + "\n", "package.json": json.dumps(pkg, indent=2) + "\n",
             "tsconfig.json": json.dumps(tsconfig, indent=2) + "\n",
             ".env.example": _env_example(_env_vars(code, TS_ENV), "callLlm(" in code),
-            "README.md": _readme(title, graph_id, file, False)}
+            "README.md": _readme(title, graph_id, file, False, code)}
 
 
 def project_files(language: str, code: str, title: str) -> Dict[str, str]:

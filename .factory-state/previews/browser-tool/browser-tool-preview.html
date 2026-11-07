@@ -1,0 +1,3053 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://persistent.oaistatic.com/plugins/visualize/; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Superstep — Browser tools</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+
+</head>
+<body>
+<iframe id="codex-visualization" sandbox="allow-scripts" referrerpolicy="no-referrer" title="Superstep — Browser tools" data-srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://persistent.oaistatic.com/plugins/visualize/; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Superstep — Browser tools&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 16px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans:
+    -apple-system-body, ui-sans-serif, -apple-system, system-ui, &quot;Segoe UI&quot;,
+    Helvetica, &quot;Apple Color Emoji&quot;, Arial, sans-serif, &quot;Segoe UI Emoji&quot;,
+    &quot;Segoe UI Symbol&quot;;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 8px);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  -webkit-font-smoothing: antialiased;
+  font-size: var(--font-size-base);
+  line-height: calc(var(--font-size-base) * 1.625);
+  font-weight: var(--font-weight-normal);
+}
+
+.cursor-interaction {
+  cursor: var(--cursor-interaction, pointer);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+  text-underline-offset: 2px;
+  font-weight: inherit;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+.table {
+  font-family: var(--font-sans);
+}
+
+h1 {
+  font-size: calc(var(--font-size-base) * 1.5);
+  line-height: 1.3333333333;
+}
+
+h2 {
+  font-size: calc(var(--font-size-base) * 1.25);
+  line-height: 1.4;
+}
+h3 {
+  font-size: calc(var(--font-size-base) * 1.125);
+  line-height: 1.5555555556;
+}
+h4 {
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+}
+h5,
+h6 {
+  font-size: var(--font-size-base);
+  line-height: calc(var(--font-size-base) * 1.625);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+b,
+strong,
+th {
+  font-weight: 600;
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+pre,
+pre code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: calc(var(--font-size-base) * 0.875);
+  line-height: calc(var(--font-size-base) * 1.625);
+  font-family: var(--font-sans);
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+.table :is(th, td):not(:last-child) {
+  padding-inline-end: calc(var(--font-size-base) * 1.5);
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead :is(th, td) {
+  border-bottom-color: var(--border-strong, var(--input));
+  padding-block: calc(var(--font-size-base) / 2);
+  line-height: var(--font-size-base);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+.table tbody :is(th, td) {
+  padding-block: calc(var(--font-size-base) * 0.625);
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 8px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+.widget {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  box-shadow: 0 0 0 0.5px var(--border-strong, var(--border));
+  color: var(--foreground);
+  background: var(--background);
+}
+
+#widget &gt; :not(.card, .widget, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  border: 1px solid var(--border);
+  corner-shape: var(--corner-shape);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+  font-family: var(--font-sans);
+  padding: 5px 12px;
+  border-color: color-mix(
+    in oklab,
+    light-dark(var(--primary-foreground), var(--foreground)) 5%,
+    transparent
+  );
+  border-radius: var(--radius-2xl);
+  color: light-dark(var(--primary-foreground), var(--foreground));
+  background: light-dark(var(--foreground), var(--popover));
+  box-shadow: 0 8px 18px rgb(15 23 42 / 20%);
+  letter-spacing: -0.15px;
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  color: color-mix(in srgb, var(--foreground) 40%, var(--muted-foreground));
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  font-family: var(--font-sans);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 1;
+}
+
+small,
+.text-small {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+/* Match inline alignment without overriding a containing flex or grid layout. */
+.btn,
+.nav-link,
+.form-control,
+.form-select,
+.form-range,
+.form-check {
+  vertical-align: middle;
+}
+
+.btn,
+.nav-link {
+  --btn-size: calc(12px + 2 * var(--control-spacing, 12px));
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  corner-shape: var(--corner-shape);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: inherit;
+  font-family: var(--font-sans);
+  height: fit-content;
+  min-height: var(--btn-size);
+  padding-inline: var(--control-spacing, 12px);
+  border-color: transparent;
+  border-radius: var(--radius-full);
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+}
+
+.btn {
+  border-color: var(--border);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+}
+
+/* Codex Button size=&quot;compact&quot;; appearance stays with the button variant. */
+.btn-sm {
+  --btn-size: 24px;
+  padding-inline: 8px;
+  font-size: calc(var(--font-size-base) * 12 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 12 / 16), 1px);
+  line-height: 16px;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: var(--cursor-interaction, pointer);
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+}
+
+.btn-primary {
+  border-color: var(--border);
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: border-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: border-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--muted-foreground);
+  background: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+/* Shared preview chrome; product styles stay inside each variant. */
+.viz-dotted-background {
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--foreground) 14%, transparent) 0.8px,
+    transparent 0.8px
+  );
+  background-position: center;
+  background-size: 16px 16px;
+}
+
+.viz-carousel {
+  position: relative;
+  min-width: 0;
+}
+
+.viz-carousel:has(&gt; .viz-carousel-controls) {
+  min-height: calc(60px + var(--viz-carousel-picker-height, 0px));
+  padding-bottom: 60px;
+}
+
+.viz-carousel &gt; [data-variant][hidden] {
+  display: none !important;
+}
+
+.viz-carousel &gt; [data-variant] {
+  isolation: isolate;
+}
+
+.viz-carousel-controls {
+  --viz-carousel-hover: light-dark(
+    color-mix(in srgb, var(--foreground) 5.4%, transparent),
+    color-mix(in srgb, var(--foreground) 7.8%, transparent)
+  );
+  position: absolute;
+  z-index: 2;
+  bottom: 8px;
+  left: 50%;
+  display: flex;
+  width: max-content;
+  /* Leave room for the host&#x27;s design-controls launcher at the trailing edge. */
+  max-width: calc(100% - 96px);
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+  /* Match the settings dropdown chrome independently of the content font size. */
+  font-size: 13px;
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+  transform: translateX(-50%);
+  user-select: none;
+}
+
+/* Keep authored mockup button styles out of the shared carousel chrome. */
+.viz-carousel-controls button,
+.viz-carousel-picker &gt; summary {
+  display: flex !important;
+  height: auto !important;
+  min-height: 30px;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px;
+  padding: 0 6px !important;
+  -webkit-app-region: no-drag;
+  border: 0 !important;
+  border-radius: 14px !important;
+  color: inherit !important;
+  background: transparent !important;
+  font: inherit !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.viz-carousel-controls &gt; button,
+.viz-carousel-picker &gt; summary {
+  position: relative;
+  isolation: isolate;
+}
+
+.viz-carousel-controls &gt; button {
+  --icon-size: 16px;
+  width: 30px !important;
+  padding: 0 !important;
+}
+
+.viz-carousel-picker &gt; summary {
+  padding-inline: 12px !important;
+}
+
+.viz-carousel-controls .viz-carousel-caret {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  margin: 0;
+  color: inherit;
+  transform: rotate(180deg);
+}
+
+.viz-carousel-controls &gt; button &gt; svg,
+.viz-carousel-controls .viz-carousel-caret,
+.viz-carousel-count {
+  opacity: 0.5;
+}
+
+.viz-carousel-controls &gt; button::before,
+.viz-carousel-picker &gt; summary::before {
+  position: absolute;
+  z-index: -1;
+  inset: 3px;
+  border-radius: 12px;
+  content: &quot;&quot;;
+  pointer-events: none;
+}
+
+.viz-carousel-controls &gt; button:hover::before,
+.viz-carousel-picker &gt; summary:hover::before {
+  background: var(--viz-carousel-hover);
+}
+
+.viz-carousel-controls &gt; button,
+.viz-carousel-controls [data-lucide],
+.viz-carousel-controls .lucide {
+  flex-shrink: 0;
+}
+
+.viz-carousel-picker {
+  min-width: 0;
+}
+
+.viz-carousel-picker &gt; summary {
+  min-width: 0;
+  list-style: none;
+}
+
+.viz-carousel-picker &gt; summary::-webkit-details-marker {
+  display: none;
+}
+
+.viz-carousel-count {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.viz-carousel-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viz-carousel-options {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  left: 0;
+  display: flex;
+  max-height: 240px;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--background);
+  box-shadow: 0 4px 12px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 25%));
+}
+
+.viz-carousel-options &gt; button {
+  border-radius: max(0px, calc(var(--radius-lg) - 5px)) !important;
+  width: 100% !important;
+  min-height: 28px;
+  justify-content: flex-start !important;
+  padding: 4px 8px !important;
+  font-size: var(--font-size-small) !important;
+  text-align: start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.viz-carousel-options &gt; [aria-current=&quot;true&quot;],
+.viz-carousel-options &gt; button:hover {
+  background: var(--viz-carousel-hover) !important;
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  padding-inline: calc(4px + var(--control-spacing, 12px) / 2);
+  border-color: var(--input);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--popover) 96%, transparent);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 1.4285714286;
+}
+.form-control:is(
+  [type=&quot;file&quot;],
+  [type=&quot;date&quot;],
+  [type=&quot;datetime-local&quot;],
+  [type=&quot;month&quot;],
+  [type=&quot;week&quot;],
+  [type=&quot;color&quot;]
+) {
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  line-height: 18px;
+}
+.form-control:is(
+  [type=&quot;date&quot;],
+  [type=&quot;datetime-local&quot;],
+  [type=&quot;month&quot;],
+  [type=&quot;week&quot;]
+) {
+  padding-inline: var(--control-spacing, 12px);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+  padding: 0;
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+  min-height: calc(10px + 2 * var(--control-spacing, 12px));
+  padding-inline: var(--control-spacing, 12px);
+  margin-inline-end: var(--control-spacing, 12px);
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  resize: vertical;
+  min-height: 96px;
+  padding: 8px 10px;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: none;
+}
+.form-control:disabled {
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  opacity: 1;
+}
+.form-control[aria-invalid=&quot;true&quot;] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: fit-content;
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  margin: 0;
+  /* The secondary icon role is 14px at compact density and 16px at web density. */
+  --icon-size: calc(10px + var(--control-spacing, 12px) / 2);
+  /* Settings dropdowns retain a 12px inset and a 4px text-to-chevron gap. */
+  padding: 0 calc(16px + var(--icon-size)) 0 12px;
+  outline: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.6px),
+      var(--muted-foreground) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    ),
+    linear-gradient(
+      135deg,
+      transparent calc(50% - 0.6px),
+      var(--muted-foreground) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    );
+  background-position:
+    calc(100% - 12px - var(--icon-size) / 2) 50%,
+    calc(100% - 12px - var(--icon-size) * 0.18) 50%;
+  background-repeat: no-repeat;
+  background-size: calc(var(--icon-size) * 0.32) calc(var(--icon-size) * 0.32);
+  cursor: var(--cursor-interaction, default);
+  font-size: calc(var(--font-size-base) * 14 / 16);
+  font-size: round(nearest, calc(var(--font-size-base) * 14 / 16), 1px);
+  font-weight: var(--font-weight-normal);
+  line-height: 18px;
+}
+
+.form-select :is(option, optgroup) {
+  color: var(--popover-foreground);
+  background-color: var(--popover);
+}
+
+.form-select :is(option, optgroup):disabled {
+  color: var(--muted-foreground);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: light-dark(
+    color-mix(in srgb, var(--foreground) 5.5%, transparent),
+    color-mix(in srgb, var(--foreground) 8%, transparent)
+  );
+}
+
+.form-select:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+.form-select:disabled {
+  opacity: 0.4;
+}
+
+.form-check {
+  display: flex;
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  corner-shape: round;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  width: calc(10px + var(--control-spacing, 12px) / 2);
+  height: calc(10px + var(--control-spacing, 12px) / 2);
+  border-color: var(--border-strong, var(--input));
+  border-radius: calc(var(--radius-sm) / 2);
+  background-color: transparent;
+  color: var(--foreground);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:is(:checked, :indeterminate) {
+  border-color: var(--border-strong, var(--input));
+  background-color: color-mix(in srgb, var(--popover) 96%, transparent);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+  background-color: var(--foreground);
+}
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:indeterminate::before {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 65%;
+  height: 6.65%;
+  margin: auto;
+  border-radius: var(--radius-full);
+  background: var(--foreground);
+  mask: none;
+  content: &quot;&quot;;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  border-radius: var(--radius-full);
+  width: 16px;
+  height: 16px;
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--input);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 0;
+  background: radial-gradient(
+    circle,
+    var(--primary-foreground) 0 3px,
+    var(--foreground) 3px
+  );
+  box-shadow: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:focus-visible {
+  border-color: var(--ring);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+.form-check:not(.form-switch) .form-check-input[type=&quot;radio&quot;]:disabled,
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;radio&quot;]:disabled
+  + .form-check-label {
+  opacity: 0.5;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+  border-color: #fff;
+  background: #fff;
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--blue);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+  outline: none;
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  accent-color: var(--primary);
+  height: calc(12px + 2 * var(--control-spacing, 12px));
+  min-height: calc(12px + 2 * var(--control-spacing, 12px));
+  outline: none;
+  border-radius: var(--radius-full);
+  color: var(--foreground);
+  background: transparent;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  background: var(--form-range-track, var(--border));
+  height: 2px;
+  border-radius: var(--radius-full);
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  margin-top: -9px;
+  border-color: transparent;
+  background: currentColor;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Outline the native track and thumb, preserving the larger input hit area. */
+.form-range:focus-visible::-webkit-slider-runnable-track {
+  outline: 2px auto Highlight;
+  outline-color: -webkit-focus-ring-color;
+}
+
+.form-range::-moz-range-track {
+  background: var(--form-range-track, var(--border));
+  height: 2px;
+  border-radius: var(--radius-full);
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  border-color: transparent;
+  background: currentColor;
+  box-shadow: var(--shadow-sm);
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid Highlight;
+  outline-offset: 2px;
+}
+
+.form-range:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--blue);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.viz-carousel-controls :is(button, summary):focus-visible {
+  outline: 2px solid var(--ring) !important;
+  outline-offset: 2px !important;
+}
+
+/* Web recipes are the default, including on renderers without inline style queries. */
+@supports (border-radius: if(style(--corner-shape: round): 1px; else: 2px)) {
+  /* Match the host&#x27;s proportional text-sm scale at every text preference. */
+  .tooltip,
+  .viz-badge,
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    font-size: if(
+      style(--corner-shape: round): round(
+          nearest,
+          calc(var(--font-size-base) * 14 / 16),
+          1px
+        );
+        else: round(nearest, calc(var(--font-size-base) * 13 / 14), 1px)
+    );
+  }
+
+  .btn-sm {
+    font-size: if(
+      style(--corner-shape: round): round(
+          nearest,
+          calc(var(--font-size-base) * 12 / 16),
+          1px
+        );
+        else: round(nearest, calc(var(--font-size-base) * 12 / 14), 1px)
+    );
+  }
+
+  .btn,
+  .nav-link,
+  .form-select {
+    border-radius: if(
+      style(--corner-shape: round): var(--radius-full); else: var(--radius-lg)
+    );
+  }
+
+  .form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+    border-radius: if(
+      style(--corner-shape: round): calc(var(--radius-sm) / 2);
+        else: calc(var(--radius-lg) * 0.4)
+    );
+  }
+
+  .tooltip {
+    font-weight: if(
+      style(--corner-shape: round): 600; else: var(--font-weight-normal)
+    );
+  }
+}
+
+@media (pointer: coarse) {
+  .viz-carousel:has(&gt; .viz-carousel-controls) {
+    min-height: calc(76px + var(--viz-carousel-picker-height, 0px));
+    padding-bottom: 76px;
+  }
+
+  .btn,
+  .nav-link,
+  .viz-carousel-controls button,
+  .viz-carousel-picker &gt; summary,
+  .form-control,
+  .form-select {
+    --btn-size: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, calc(var(--font-size-base) * 14 / 16));
+    font-size: max(
+      16px,
+      round(nearest, calc(var(--font-size-base) * 14 / 16), 1px)
+    );
+  }
+  .form-control:is(
+    [type=&quot;file&quot;],
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;week&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;color&quot;]
+  ) {
+    height: 44px;
+    min-height: 44px;
+    font-size: max(16px, calc(var(--font-size-base) * 14 / 16));
+    font-size: max(
+      16px,
+      round(nearest, calc(var(--font-size-base) * 14 / 16), 1px)
+    );
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;script type=&quot;application/json&quot; id=&quot;codex-visualization-widget-state&quot;&gt;__CODEX_VISUALIZATION_WIDGET_STATE__&lt;/script&gt;
+&lt;script&gt;(() =&gt; {
+  const root = document.documentElement;
+  const mediaQuery = globalThis.matchMedia(&quot;(prefers-color-scheme: dark)&quot;);
+  const apply = Reflect.apply;
+  const isArray = Array.isArray;
+  const hasOwn = Object.hasOwn;
+  const parentWindow = globalThis.parent;
+  const stringify = JSON.stringify;
+  const parse = JSON.parse;
+  const encode = TextEncoder.prototype.encode.bind(new TextEncoder());
+  const initialStateElement = document.getElementById(
+    &quot;codex-visualization-widget-state&quot;,
+  );
+  const initialGlobals = parse(initialStateElement?.textContent ?? &quot;{}&quot;);
+  initialStateElement?.remove();
+  /** @type {Record&lt;string, unknown&gt; | null} */
+  let state = initialGlobals.widgetState ?? null;
+  const statePersistence = initialGlobals.statePersistence ?? &quot;none&quot;;
+  let nextStateRequestId = 0;
+  /** @type {Map&lt;number, { resolve: () =&gt; void; reject: (error: Error) =&gt; void; timeout: ReturnType&lt;typeof globalThis.setTimeout&gt;; serializedState: string }&gt;} */
+  const pendingStateWrites = new Map();
+  const persistenceError = () =&gt;
+    Object.assign(
+      new Error(&quot;The host could not persist the widget state update&quot;),
+      {
+        code: -32000,
+        data: { code: &quot;widget_state_persistence_failed&quot;, retryable: false },
+      },
+    );
+  /**
+   * @param {object} prototype
+   * @param {string} property
+   */
+  const getPrototypeGetter = (prototype, property) =&gt; {
+    // oxlint-disable-next-line typescript/unbound-method -- invoked through captured Reflect.apply
+    const getter = Object.getOwnPropertyDescriptor(prototype, property)?.get;
+    if (getter == null) {
+      throw new Error(`Missing ${property} getter`);
+    }
+    return getter;
+  };
+  const getMessageData = getPrototypeGetter(MessageEvent.prototype, &quot;data&quot;);
+  const getMessagePorts = getPrototypeGetter(MessageEvent.prototype, &quot;ports&quot;);
+  const getMessageSource = getPrototypeGetter(MessageEvent.prototype, &quot;source&quot;);
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const addHostMessageListener = MessagePort.prototype.addEventListener;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const postHostMessage = MessagePort.prototype.postMessage;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const startHostPort = MessagePort.prototype.start;
+  // oxlint-disable-next-line typescript/unbound-method -- captured before the untrusted fragment runs
+  const stopMessagePropagation = Event.prototype.stopImmediatePropagation;
+  /** @type {MessagePort | null} */
+  let hostPort = null;
+  const postToHost = (type, payload) =&gt; {
+    if (hostPort != null) {
+      apply(postHostMessage, hostPort, [{ type, ...payload }]);
+    }
+  };
+  const openExternal = ({ href }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;open-external&quot;, { href });
+    }
+  };
+  const sendFollowUpMessage = ({ context, prompt, title }) =&gt; {
+    if (globalThis.navigator.userActivation?.isActive === true) {
+      postToHost(&quot;follow-up&quot;, { context, prompt, title });
+    }
+    return Promise.resolve();
+  };
+  /**
+   * @param {Record&lt;string, unknown&gt; | ((previous: Record&lt;string, unknown&gt; | null) =&gt; Record&lt;string, unknown&gt;)} next
+   * @returns {Promise&lt;void&gt;}
+   */
+  const setWidgetState = async (next) =&gt; {
+    const nextState = typeof next === &quot;function&quot; ? next(state) : next;
+    if (
+      nextState == null ||
+      typeof nextState !== &quot;object&quot; ||
+      isArray(nextState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const inputState = stringify(
+      nextState,
+      (_key, /** @type {unknown} */ value) =&gt; {
+        if (
+          typeof value === &quot;undefined&quot; ||
+          typeof value === &quot;function&quot; ||
+          typeof value === &quot;symbol&quot; ||
+          (typeof value === &quot;number&quot; &amp;&amp; !Number.isFinite(value))
+        ) {
+          throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+        }
+        return value;
+      },
+    );
+    const parsedState = parse(inputState);
+    if (
+      parsedState == null ||
+      typeof parsedState !== &quot;object&quot; ||
+      isArray(parsedState)
+    ) {
+      throw new TypeError(&quot;Widget state must be a JSON object&quot;);
+    }
+    const storedState = {
+      modelContent: null,
+      privateContent: null,
+      ...parsedState,
+    };
+    const serializedState = stringify(storedState);
+    if (encode(serializedState).length &gt; 16 * 1024) {
+      throw new TypeError(
+        &quot;Widget state must be a JSON object of at most 16 KiB&quot;,
+      );
+    }
+    if (
+      hasOwn(storedState, &quot;imageIds&quot;) &amp;&amp;
+      (!isArray(storedState.imageIds) ||
+        storedState.imageIds.some(
+          (/** @type {unknown} */ id) =&gt; typeof id !== &quot;string&quot;,
+        ))
+    ) {
+      throw new TypeError(&quot;Widget state imageIds must be an array of strings&quot;);
+    }
+    if (storedState.imageIds?.length &gt; 0) {
+      throw Object.assign(
+        new TypeError(&quot;Visualization state does not support image attachments&quot;),
+        { code: -32602, data: { code: &quot;images_unsupported&quot; } },
+      );
+    }
+    state = storedState;
+    globalThis.openai.widgetState = state;
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: { widgetState: state } },
+      }),
+    );
+    if (statePersistence === &quot;none&quot;) {
+      throw persistenceError();
+    }
+    const id = ++nextStateRequestId;
+    return new Promise((resolve, reject) =&gt; {
+      const timeout = globalThis.setTimeout(() =&gt; {
+        pendingStateWrites.delete(id);
+        reject(persistenceError());
+      }, 30_000);
+      pendingStateWrites.set(id, { resolve, reject, timeout, serializedState });
+      postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+    });
+  };
+  const syncTheme = () =&gt; {
+    const theme = mediaQuery.matches ? &quot;dark&quot; : &quot;light&quot;;
+    root.dataset.theme = theme;
+    globalThis.openai = {
+      ...globalThis.openai,
+      openExternal,
+      sendFollowUpMessage,
+      setWidgetState,
+      theme,
+      visualizationStyleVariables: {},
+      visualizationTheme: theme,
+      widgetState: state,
+      statePersistence,
+      stateModelContext: &quot;none&quot;,
+    };
+    globalThis.dispatchEvent(
+      new CustomEvent(&quot;openai:set_globals&quot;, {
+        detail: { globals: globalThis.openai },
+      }),
+    );
+  };
+  const sendHeight = () =&gt; {
+    postToHost(&quot;height&quot;, {
+      height: Math.ceil(
+        Math.max(
+          document.body.scrollHeight,
+          document.body.getBoundingClientRect().height,
+        ),
+      ),
+    });
+  };
+
+  globalThis.addEventListener(
+    &quot;message&quot;,
+    (event) =&gt; {
+      const data = apply(getMessageData, event, []);
+      const ports = apply(getMessagePorts, event, []);
+      const source = apply(getMessageSource, event, []);
+      if (
+        hostPort != null ||
+        source !== parentWindow ||
+        typeof data !== &quot;object&quot; ||
+        data?.type !== &quot;codex-visualization-initialize&quot; ||
+        !isArray(ports) ||
+        ports.length !== 1
+      ) {
+        return;
+      }
+      apply(stopMessagePropagation, event, []);
+      const nextHostPort = ports[0];
+      try {
+        apply(addHostMessageListener, nextHostPort, [
+          &quot;message&quot;,
+          (event) =&gt; {
+            const data = apply(getMessageData, event, []);
+            if (typeof data === &quot;object&quot; &amp;&amp; data?.type === &quot;measure&quot;) {
+              sendHeight();
+            } else if (
+              typeof data === &quot;object&quot; &amp;&amp;
+              data?.type === &quot;widget-state-result&quot;
+            ) {
+              /** @type {unknown} */
+              const id = data.id;
+              if (typeof id !== &quot;number&quot;) {
+                return;
+              }
+              const pending = pendingStateWrites.get(id);
+              if (pending != null) {
+                pendingStateWrites.delete(id);
+                globalThis.clearTimeout(pending.timeout);
+                if (data.ok === true) {
+                  pending.resolve();
+                } else {
+                  pending.reject(persistenceError());
+                }
+              }
+            }
+          },
+        ]);
+        apply(startHostPort, nextHostPort, []);
+      } catch {
+        return;
+      }
+      hostPort = nextHostPort;
+      for (const [id, { serializedState }] of pendingStateWrites) {
+        postToHost(&quot;widget-state-write&quot;, { id, state: serializedState });
+      }
+      sendHeight();
+    },
+    { capture: true },
+  );
+  document.currentScript?.remove();
+  mediaQuery.addEventListener(&quot;change&quot;, syncTheme);
+  globalThis.addEventListener(&quot;click&quot;, (event) =&gt; {
+    if (event.defaultPrevented) {
+      return;
+    }
+    let element = null;
+    if (event.target instanceof globalThis.Element) {
+      element = event.target;
+    } else if (event.target instanceof globalThis.Node) {
+      element = event.target.parentElement;
+    }
+    const link = element?.closest(&quot;a[href]&quot;);
+    const href = link?.getAttribute(&quot;href&quot;);
+    if (href == null) {
+      return;
+    }
+    if (href.startsWith(&quot;#&quot;)) {
+      let id;
+      try {
+        id = decodeURIComponent(href.slice(1));
+      } catch {
+        return;
+      }
+      const target = id.length === 0 ? root : document.getElementById(id);
+      if (
+        target == null ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      event.preventDefault();
+      postToHost(&quot;scroll-to&quot;, {
+        top: target.getBoundingClientRect().top + globalThis.scrollY,
+      });
+      return;
+    }
+    event.preventDefault();
+    openExternal({ href });
+  });
+  new ResizeObserver(sendHeight).observe(document.body);
+  syncTheme();
+})();
+&lt;/script&gt;
+&lt;div id=&quot;ss-browser-workspace&quot; aria-label=&quot;Superstep — Browser connection, Agent tools và recipes&quot;&gt;
+&lt;style&gt;
+#ss-browser-workspace{color-scheme:light dark;--bw-bg:light-dark(#fff,#171717);--bw-fg:light-dark(#18181b,#fafafa);--bw-soft:light-dark(#f5f5f5,#232323);--bw-dim:light-dark(#66666e,#aaaab2);--bw-border:light-dark(#e4e4e7,#38383c);--bw-primary:light-dark(#18181b,#fafafa);--bw-on-primary:light-dark(#fafafa,#18181b);--bw-success:light-dark(#256847,#9fd9b6);--bw-success-bg:light-dark(#eef7f0,#203126);--bw-warning:light-dark(#805915,#efcb85);--bw-warning-bg:light-dark(#faf3e6,#342c20);font:400 14px/1.5 Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,&quot;Segoe UI&quot;,sans-serif;color:var(--bw-fg)}
+#ss-browser-workspace *{box-sizing:border-box}#ss-browser-workspace [hidden]{display:none!important}#ss-browser-workspace button,#ss-browser-workspace input,#ss-browser-workspace textarea,#ss-browser-workspace select{font:inherit;color:inherit}#ss-browser-workspace button{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:1px solid var(--bw-border);border-radius:6px;padding:7px 11px;background:var(--bw-bg);font-weight:500}#ss-browser-workspace button:hover{background:var(--bw-soft)}#ss-browser-workspace button:disabled{opacity:.5}#ss-browser-workspace .bw-primary{background:var(--bw-primary);color:var(--bw-on-primary);border-color:var(--bw-primary)}#ss-browser-workspace input:not([type=checkbox]),#ss-browser-workspace textarea,#ss-browser-workspace select{width:100%;min-width:0;border:1px solid var(--bw-border);border-radius:6px;padding:8px 10px;background:var(--bw-bg)}#ss-browser-workspace input[type=checkbox]{width:15px;height:15px;margin:3px 0;accent-color:var(--bw-primary);flex-shrink:0}#ss-browser-workspace textarea{resize:vertical}#ss-browser-workspace label{display:grid;gap:6px}#ss-browser-workspace h2,#ss-browser-workspace h3,#ss-browser-workspace p{margin:0;font:inherit}#ss-browser-workspace h2,#ss-browser-workspace h3{font-weight:500}#ss-browser-workspace svg{width:16px;height:16px;flex-shrink:0}#ss-browser-workspace code,#ss-browser-workspace pre{font:400 12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}#ss-browser-workspace .bw-app{background:var(--bw-bg);border:1px solid var(--bw-border);border-radius:10px;overflow:hidden}#ss-browser-workspace .bw-chrome{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 105px 16px 19px;border-bottom:1px solid var(--bw-border)}#ss-browser-workspace .bw-brand{display:flex;align-items:center;gap:7px;font-weight:500;letter-spacing:-.3px}#ss-browser-workspace .bw-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}#ss-browser-workspace .bw-between{justify-content:space-between}#ss-browser-workspace .bw-dim{color:var(--bw-dim)}#ss-browser-workspace .bw-small{font-size:12px}#ss-browser-workspace .bw-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:5px;background:var(--bw-soft);font-size:12px;color:var(--bw-dim)}#ss-browser-workspace .bw-good{background:var(--bw-success-bg);color:var(--bw-success)}#ss-browser-workspace .bw-warn{background:var(--bw-warning-bg);color:var(--bw-warning)}#ss-browser-workspace .bw-toolbar{padding:11px 18px;display:flex;justify-content:space-between;align-items:center;gap:9px;border-bottom:1px solid var(--bw-border)}#ss-browser-workspace .bw-workspace{display:grid;grid-template-columns:minmax(220px,.72fr) minmax(0,1.8fr)}#ss-browser-workspace .bw-canvas{background:var(--bw-soft);background-image:radial-gradient(var(--bw-border) 1px,transparent 1px);background-size:18px 18px;padding:21px;border-right:1px solid var(--bw-border);display:flex;flex-direction:column;gap:20px}#ss-browser-workspace .bw-flow{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:20px 0 30px}#ss-browser-workspace .bw-node{display:flex;align-items:center;gap:10px;text-align:left;justify-content:flex-start;width:100%;max-width:250px;background:var(--bw-bg);border:1px solid var(--bw-border);border-radius:8px;padding:13px}#ss-browser-workspace .bw-node-selected{border-color:var(--bw-primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--bw-primary) 9%,transparent)}#ss-browser-workspace .bw-node span.bw-small{display:block;margin-top:3px}#ss-browser-workspace .bw-icon{display:inline-flex;padding:8px;border-radius:6px;background:var(--bw-soft);align-self:flex-start}#ss-browser-workspace .bw-edge{height:38px;width:1px;background:var(--bw-dim);position:relative;opacity:.6}#ss-browser-workspace .bw-edge:after{content:&quot;&quot;;position:absolute;left:-3px;bottom:0;border-left:3px solid transparent;border-right:3px solid transparent;border-top:5px solid var(--bw-dim)}#ss-browser-workspace .bw-canvas-foot{display:grid;gap:8px}#ss-browser-workspace .bw-mini{display:flex;gap:7px;align-items:center;font-size:12px;color:var(--bw-dim)}#ss-browser-workspace .bw-inspector{min-width:0}#ss-browser-workspace .bw-title{padding:18px 21px 13px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}#ss-browser-workspace .bw-heading{font-weight:500;font-size:16px;letter-spacing:-.2px}#ss-browser-workspace .bw-tabs{display:flex;flex-wrap:wrap;gap:3px;padding:0 15px 11px;border-bottom:1px solid var(--bw-border)}#ss-browser-workspace .bw-tabs button{padding:6px 9px;border-color:transparent;color:var(--bw-dim);background:transparent}#ss-browser-workspace .bw-tabs button[aria-selected=true]{background:var(--bw-soft);color:var(--bw-fg)}#ss-browser-workspace .bw-pane{padding:19px 21px;min-height:580px}#ss-browser-workspace .bw-stack{display:grid;gap:17px}#ss-browser-workspace .bw-stack-tight{display:grid;gap:11px}#ss-browser-workspace .bw-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}#ss-browser-workspace .bw-block{display:grid;gap:13px;border:1px solid var(--bw-border);border-radius:7px;padding:13px}#ss-browser-workspace .bw-label{font-weight:500}#ss-browser-workspace .bw-check{display:flex;align-items:flex-start;gap:9px;font-weight:400}#ss-browser-workspace .bw-check span{min-width:0}#ss-browser-workspace .bw-check small{display:block;color:var(--bw-dim);font-size:12px;margin-top:2px}#ss-browser-workspace .bw-tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}#ss-browser-workspace .bw-tool-grid code{display:block;color:var(--bw-dim);font-size:11px}#ss-browser-workspace .bw-info{display:flex;align-items:flex-start;gap:8px;padding:11px 12px;background:var(--bw-soft);border-radius:6px;color:var(--bw-dim);font-size:12px}#ss-browser-workspace .bw-info svg{margin-top:2px}#ss-browser-workspace .bw-binding{background:var(--bw-soft);border-radius:6px;padding:12px;display:grid;gap:10px}#ss-browser-workspace .bw-binding-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#ss-browser-workspace .bw-binding-head select{width:auto;max-width:100%;padding:5px 8px;font-size:12px;background:var(--bw-bg)}#ss-browser-workspace .bw-footer{padding:12px 20px;border-top:1px solid var(--bw-border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#ss-browser-workspace .bw-recipe-layout{display:grid;grid-template-columns:1fr 1.2fr;gap:12px;align-items:start}#ss-browser-workspace .bw-recipe-steps{display:grid;gap:7px}#ss-browser-workspace .bw-recipe-steps button{justify-content:flex-start;text-align:left;font-weight:400;padding:10px;align-items:flex-start}#ss-browser-workspace .bw-recipe-steps button[aria-pressed=true]{border-color:var(--bw-primary);background:var(--bw-soft)}#ss-browser-workspace .bw-num{display:flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid var(--bw-border);border-radius:5px;font-size:12px;flex-shrink:0}#ss-browser-workspace .bw-recipe-detail{display:grid;gap:11px;padding:12px;background:var(--bw-soft);border-radius:6px;min-width:0}#ss-browser-workspace .bw-recipe-detail input{font-size:12px!important}#ss-browser-workspace .bw-samples{display:flex;flex-wrap:wrap;gap:6px}#ss-browser-workspace .bw-samples button{font-size:12px;padding:5px 8px;font-weight:400}#ss-browser-workspace .bw-samples button[aria-pressed=true]{border-color:var(--bw-primary);background:var(--bw-soft)}#ss-browser-workspace .bw-chat{display:flex;align-items:flex-start;gap:9px;background:var(--bw-soft);padding:12px;border-radius:7px}#ss-browser-workspace .bw-chat p{overflow-wrap:anywhere}#ss-browser-workspace .bw-feed{display:grid;gap:0}#ss-browser-workspace .bw-feed-row{display:grid;grid-template-columns:20px 1fr auto;gap:8px;padding:10px 0;border-bottom:1px solid var(--bw-border);align-items:start}#ss-browser-workspace .bw-feed-row:last-child{border-bottom:0}#ss-browser-workspace .bw-feed-row code{display:block;font-size:11px;color:var(--bw-dim)}#ss-browser-workspace .bw-feed-mark{color:var(--bw-success)}#ss-browser-workspace .bw-page{border:1px solid var(--bw-border);border-radius:7px;overflow:hidden}#ss-browser-workspace .bw-page-head{padding:9px 12px;background:var(--bw-soft);border-bottom:1px solid var(--bw-border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}#ss-browser-workspace .bw-page-url{font-size:12px;color:var(--bw-dim);padding:8px 12px;border-bottom:1px solid var(--bw-border);overflow-wrap:anywhere}#ss-browser-workspace .bw-page-body{padding:14px;display:grid;gap:10px}#ss-browser-workspace .bw-page-field{border:1px solid var(--bw-border);border-radius:6px;padding:8px 10px;overflow-wrap:anywhere}#ss-browser-workspace .bw-result{padding:12px;background:var(--bw-soft);border-radius:6px;display:grid;gap:7px}#ss-browser-workspace .bw-result pre{margin:0;white-space:pre-wrap}#ss-browser-workspace .bw-next{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}#ss-browser-workspace .bw-code{min-height:350px;resize:none;font:400 12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace!important;background:var(--bw-soft)!important}#ss-browser-workspace .bw-note{padding:9px 17px;border-top:1px solid var(--bw-border);background:var(--bw-soft);font-size:12px;color:var(--bw-dim);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}#ss-browser-workspace details&gt;summary{font-size:12px;color:var(--bw-dim)}#ss-browser-workspace details&gt;div{margin-top:10px}#ss-browser-workspace .bw-zero{padding:10px 0;font-size:12px;color:var(--bw-dim)}
+@media(max-width:760px){#ss-browser-workspace .bw-workspace{grid-template-columns:1fr}#ss-browser-workspace .bw-canvas{border-right:0;border-bottom:1px solid var(--bw-border);padding:15px;gap:12px}#ss-browser-workspace .bw-flow{flex-direction:row;padding:0 0 7px}#ss-browser-workspace .bw-node{min-width:0;flex:1;width:auto;font-size:12px;padding:9px;gap:6px}#ss-browser-workspace .bw-node .bw-icon{display:none}#ss-browser-workspace .bw-node .bw-small{font-size:11px}#ss-browser-workspace .bw-edge{height:1px;width:17px;flex-shrink:0}#ss-browser-workspace .bw-edge:after{left:auto;right:0;bottom:-3px;border-left:5px solid var(--bw-dim);border-top:3px solid transparent;border-bottom:3px solid transparent;border-right:0}#ss-browser-workspace .bw-canvas-foot{display:flex;gap:12px;flex-wrap:wrap}#ss-browser-workspace .bw-pane{min-height:0}#ss-browser-workspace .bw-crumb{display:none}}
+@media(max-width:430px){#ss-browser-workspace .bw-grid,#ss-browser-workspace .bw-recipe-layout{grid-template-columns:1fr}#ss-browser-workspace .bw-pane{padding:16px}#ss-browser-workspace .bw-tool-grid{grid-template-columns:1fr}#ss-browser-workspace .bw-tabs{padding-left:10px;padding-right:10px}#ss-browser-workspace .bw-tabs button{font-size:12px;padding:7px}#ss-browser-workspace .bw-title{padding:16px;flex-wrap:wrap}#ss-browser-workspace .bw-chrome{padding-left:15px}#ss-browser-workspace .bw-recipe-steps{grid-template-columns:1fr 1fr}}
+@media(pointer:coarse){#ss-browser-workspace button{min-height:44px}#ss-browser-workspace input:not([type=checkbox]),#ss-browser-workspace select,#ss-browser-workspace textarea{font-size:16px;min-height:44px}#ss-browser-workspace .bw-check{min-height:44px}}
+&lt;/style&gt;
+&lt;div class=&quot;bw-app&quot;&gt;
+  &lt;header class=&quot;bw-chrome&quot;&gt;&lt;div class=&quot;bw-brand&quot;&gt;&lt;i data-lucide=&quot;workflow&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;superstep&lt;/div&gt;&lt;span class=&quot;bw-dim bw-crumb&quot;&gt;/ Workflows /&lt;/span&gt;&lt;span&gt;Trợ lý giao hàng&lt;/span&gt;&lt;span class=&quot;bw-badge&quot;&gt;Bản nháp&lt;/span&gt;&lt;/header&gt;
+  &lt;div class=&quot;bw-toolbar&quot;&gt;&lt;div class=&quot;bw-row&quot;&gt;&lt;span class=&quot;bw-badge&quot;&gt;Thiết kế&lt;/span&gt;&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-save-label&quot;&gt;Đã lưu&lt;/span&gt;&lt;/div&gt;&lt;button type=&quot;button&quot; class=&quot;bw-primary cursor-interaction&quot; id=&quot;bw-run&quot;&gt;&lt;i data-lucide=&quot;play&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Chạy thử&lt;/button&gt;&lt;/div&gt;
+  &lt;div class=&quot;bw-workspace&quot;&gt;
+    &lt;aside class=&quot;bw-canvas&quot; aria-label=&quot;Workflow và các tools được cấp&quot;&gt;
+      &lt;div class=&quot;bw-row bw-between&quot;&gt;&lt;span class=&quot;bw-small bw-dim&quot;&gt;Workflow&lt;/span&gt;&lt;span class=&quot;bw-badge&quot;&gt;3 node&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;bw-flow&quot;&gt;
+        &lt;div class=&quot;bw-node&quot;&gt;&lt;span class=&quot;bw-icon&quot;&gt;&lt;i data-lucide=&quot;log-in&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;&lt;div&gt;Bắt đầu&lt;span class=&quot;bw-small bw-dim&quot;&gt;Tin nhắn người dùng&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;bw-edge&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+        &lt;button type=&quot;button&quot; class=&quot;bw-node bw-node-selected cursor-interaction&quot; id=&quot;bw-agent-node&quot;&gt;&lt;span class=&quot;bw-icon&quot;&gt;&lt;i data-lucide=&quot;bot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;&lt;span&gt;Trợ lý giao hàng&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-node-tools&quot;&gt;Browser · 6 tools&lt;/span&gt;&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-node-web&quot;&gt;Web search · Web fetch&lt;/span&gt;&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-node-recipe&quot; hidden&gt;Recipe · Tra cứu vận đơn&lt;/span&gt;&lt;/span&gt;&lt;/button&gt;&lt;div class=&quot;bw-edge&quot; aria-hidden=&quot;true&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;bw-node&quot;&gt;&lt;span class=&quot;bw-icon&quot;&gt;&lt;i data-lucide=&quot;flag&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/span&gt;&lt;div&gt;Kết thúc&lt;span class=&quot;bw-small bw-dim&quot;&gt;Trả lời trong chat&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;/div&gt;
+      &lt;div class=&quot;bw-canvas-foot&quot;&gt;&lt;div class=&quot;bw-mini&quot;&gt;&lt;i data-lucide=&quot;globe&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span id=&quot;bw-canvas-connection&quot;&gt;Browser nội bộ&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;bw-mini&quot;&gt;&lt;i data-lucide=&quot;message-square&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;URL lấy theo từng yêu cầu&lt;/div&gt;&lt;/div&gt;
+    &lt;/aside&gt;
+    &lt;main class=&quot;bw-inspector&quot;&gt;
+      &lt;div class=&quot;bw-title&quot;&gt;&lt;div&gt;&lt;div class=&quot;bw-heading&quot; id=&quot;bw-title&quot;&gt;Tools của Agent&lt;/div&gt;&lt;p class=&quot;bw-small bw-dim&quot; id=&quot;bw-subtitle&quot;&gt;Trợ lý giao hàng · Dùng model hiện tại&lt;/p&gt;&lt;/div&gt;&lt;span class=&quot;bw-badge&quot; id=&quot;bw-surface-tag&quot;&gt;Agent&lt;/span&gt;&lt;/div&gt;
+      &lt;nav class=&quot;bw-tabs&quot; role=&quot;tablist&quot; aria-label=&quot;Browser trong Superstep&quot;&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; role=&quot;tab&quot; id=&quot;bw-tab-agent&quot; data-tab=&quot;agent&quot; aria-controls=&quot;bw-pane-agent&quot; aria-selected=&quot;true&quot;&gt;Agent tools&lt;/button&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; role=&quot;tab&quot; id=&quot;bw-tab-connection&quot; data-tab=&quot;connection&quot; aria-controls=&quot;bw-pane-connection&quot; aria-selected=&quot;false&quot;&gt;Kết nối&lt;/button&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; role=&quot;tab&quot; id=&quot;bw-tab-recipe&quot; data-tab=&quot;recipe&quot; aria-controls=&quot;bw-pane-recipe&quot; aria-selected=&quot;false&quot;&gt;Recipes&lt;/button&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; role=&quot;tab&quot; id=&quot;bw-tab-demo&quot; data-tab=&quot;demo&quot; aria-controls=&quot;bw-pane-demo&quot; aria-selected=&quot;false&quot;&gt;Lần chạy&lt;/button&gt;
+        &lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; role=&quot;tab&quot; id=&quot;bw-tab-export&quot; data-tab=&quot;export&quot; aria-controls=&quot;bw-pane-export&quot; aria-selected=&quot;false&quot;&gt;Export&lt;/button&gt;
+      &lt;/nav&gt;
+      &lt;section class=&quot;bw-pane&quot; id=&quot;bw-pane-agent&quot; role=&quot;tabpanel&quot; aria-labelledby=&quot;bw-tab-agent&quot;&gt;
+        &lt;div class=&quot;bw-stack&quot;&gt;
+          &lt;label&gt;Nhiệm vụ của Agent&lt;textarea rows=&quot;2&quot; maxlength=&quot;1200&quot; id=&quot;bw-task&quot;&gt;Hỗ trợ tra cứu vận đơn từ yêu cầu trong chat. Dùng URL người dùng cung cấp; tìm website khi biết hãng. Hỏi lại nếu thiếu thông tin.&lt;/textarea&gt;&lt;/label&gt;
+          &lt;div class=&quot;bw-row bw-between&quot;&gt;&lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; id=&quot;bw-enable-browser&quot; checked&gt;&lt;span class=&quot;bw-label&quot;&gt;Browser tools&lt;/span&gt;&lt;/label&gt;&lt;button type=&quot;button&quot; class=&quot;cursor-interaction&quot; id=&quot;bw-open-connection&quot;&gt;&lt;i data-lucide=&quot;settings-2&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Cấu hình kết nối&lt;/button&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-stack-tight&quot; id=&quot;bw-browser-settings&quot;&gt;
+            &lt;label&gt;Kết nối&lt;select id=&quot;bw-connection&quot;&gt;&lt;option value=&quot;local&quot;&gt;Browser nội bộ&lt;/option&gt;&lt;option value=&quot;remote&quot;&gt;Browserless · Remote&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+            &lt;div class=&quot;bw-tool-grid&quot; aria-label=&quot;Browser tools được cấp&quot;&gt;
+              &lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; data-tool=&quot;navigate&quot; checked&gt;&lt;span&gt;Mở trang&lt;code&gt;browser_navigate(url)&lt;/code&gt;&lt;/span&gt;&lt;/label&gt;
+              &lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; data-tool=&quot;snapshot&quot; checked&gt;&lt;span&gt;Quan sát trang&lt;code&gt;browser_snapshot()&lt;/code&gt;&lt;/span&gt;&lt;/label&gt;
+              &lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; data-tool=&quot;click&quot; checked&gt;&lt;span&gt;Bấm phần tử&lt;code&gt;browser_click(ref)&lt;/code&gt;&lt;/span&gt;&lt;/label&gt;
+              &lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; data-tool=&quot;fill&quot; checked&gt;&lt;span&gt;Điền dữ liệu&lt;code&gt;browser_fill(ref, value)&lt;/code&gt;&lt;/span&gt;&lt;/label&gt;
+              &lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; data-tool=&quot;extract&quot; checked&gt;&lt;span&gt;Đọc kết quả&lt;code&gt;browser_extract(schema)&lt;/code&gt;&lt;/span&gt;&lt;/label&gt;
+              &lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; data-tool=&quot;screenshot&quot; checked&gt;&lt;span&gt;Chụp ảnh&lt;code&gt;browser_screenshot()&lt;/code&gt;&lt;/span&gt;&lt;/label&gt;
+            &lt;/div&gt;
+            &lt;div class=&quot;bw-binding&quot;&gt;&lt;div class=&quot;bw-binding-head&quot;&gt;&lt;span class=&quot;bw-label&quot;&gt;Tham số &lt;code&gt;url&lt;/code&gt;&lt;/span&gt;&lt;select id=&quot;bw-url-source&quot; aria-label=&quot;Nguồn tham số URL&quot;&gt;&lt;option value=&quot;agent&quot;&gt;Agent điền từ ngữ cảnh&lt;/option&gt;&lt;option value=&quot;workflow&quot;&gt;Dữ liệu workflow&lt;/option&gt;&lt;option value=&quot;fixed&quot;&gt;Giá trị cố định&lt;/option&gt;&lt;/select&gt;&lt;/div&gt;&lt;label id=&quot;bw-url-hint-wrap&quot; class=&quot;bw-small&quot;&gt;Hướng dẫn cho Agent&lt;input id=&quot;bw-url-hint&quot; maxlength=&quot;400&quot; value=&quot;Lấy URL từ tin nhắn hoặc kết quả tìm kiếm; hỏi lại khi chưa đủ thông tin.&quot;&gt;&lt;/label&gt;&lt;label id=&quot;bw-url-input-wrap&quot; class=&quot;bw-small&quot; hidden&gt;&lt;span id=&quot;bw-url-input-label&quot;&gt;Trường dữ liệu workflow&lt;/span&gt;&lt;input id=&quot;bw-url-input&quot; maxlength=&quot;2048&quot; value=&quot;{{state.target_url}}&quot; spellcheck=&quot;false&quot;&gt;&lt;/label&gt;&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-url-help&quot;&gt;Không cần URL lúc thiết kế. Agent truyền URL khi gọi browser_navigate.&lt;/span&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;bw-grid&quot;&gt;&lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; id=&quot;bw-search&quot; checked&gt;&lt;span&gt;Web search&lt;small&gt;Tìm URL khi đã biết cần tìm gì&lt;/small&gt;&lt;/span&gt;&lt;/label&gt;&lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; id=&quot;bw-fetch&quot; checked&gt;&lt;span&gt;Web fetch&lt;small&gt;Đọc trang mà không cần thao tác&lt;/small&gt;&lt;/span&gt;&lt;/label&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-grid&quot;&gt;&lt;label&gt;Tối đa hành động browser&lt;select id=&quot;bw-limit&quot;&gt;&lt;option value=&quot;4&quot;&gt;4 hành động&lt;/option&gt;&lt;option value=&quot;8&quot;&gt;8 hành động&lt;/option&gt;&lt;option value=&quot;12&quot; selected&gt;12 hành động&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;label&gt;Khi thiếu thông tin&lt;select id=&quot;bw-missing&quot;&gt;&lt;option value=&quot;ask&quot;&gt;Hỏi người dùng trong chat&lt;/option&gt;&lt;option value=&quot;stop&quot;&gt;Trả trạng thái thiếu thông tin&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;
+          &lt;label class=&quot;bw-check&quot;&gt;&lt;input type=&quot;checkbox&quot; id=&quot;bw-write-approval&quot; checked&gt;&lt;span&gt;Duyệt trước hành động thay đổi dữ liệu&lt;small&gt;Ví dụ gửi biểu mẫu cập nhật, đặt hàng hoặc thanh toán.&lt;/small&gt;&lt;/span&gt;&lt;/label&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+      &lt;section class=&quot;bw-pane&quot; id=&quot;bw-pane-connection&quot; role=&quot;tabpanel&quot; aria-labelledby=&quot;bw-tab-connection&quot; hidden&gt;
+        &lt;div class=&quot;bw-stack&quot;&gt;
+          &lt;div class=&quot;bw-info&quot;&gt;&lt;i data-lucide=&quot;link&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Kết nối dùng chung cho Agent tools và recipes.&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-grid&quot;&gt;&lt;label&gt;Tên kết nối&lt;input id=&quot;bw-connection-name&quot; maxlength=&quot;80&quot; value=&quot;Browser nội bộ&quot;&gt;&lt;/label&gt;&lt;label&gt;Provider&lt;select id=&quot;bw-provider&quot;&gt;&lt;option value=&quot;local&quot;&gt;Playwright · Local worker&lt;/option&gt;&lt;option value=&quot;remote&quot;&gt;Browserless · Remote&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;
+          &lt;div id=&quot;bw-remote-settings&quot; class=&quot;bw-stack-tight&quot; hidden&gt;&lt;label&gt;Browser endpoint&lt;input value=&quot;Đã cấu hình trong kho bí mật&quot; readonly aria-label=&quot;Browser endpoint được bảo vệ&quot;&gt;&lt;/label&gt;&lt;label class=&quot;bw-check&quot;&gt;&lt;input id=&quot;bw-stealth&quot; type=&quot;checkbox&quot;&gt;&lt;span&gt;Stealth của provider&lt;small&gt;Khả năng truy cập phụ thuộc website.&lt;/small&gt;&lt;/span&gt;&lt;/label&gt;&lt;/div&gt;
+          &lt;label&gt;Hồ sơ đăng nhập&lt;select id=&quot;bw-profile&quot;&gt;&lt;option value=&quot;fresh&quot;&gt;Phiên mới · Chưa đăng nhập&lt;/option&gt;&lt;option value=&quot;carrier&quot;&gt;Tài khoản hãng vận chuyển · tracking.example&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+          &lt;label&gt;Chính sách website&lt;select id=&quot;bw-policy&quot;&gt;&lt;option value=&quot;public&quot;&gt;Cho phép website công khai&lt;/option&gt;&lt;option value=&quot;allowlist&quot;&gt;Chỉ các domain trong danh sách&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+          &lt;label id=&quot;bw-domains-wrap&quot; hidden&gt;Domain được phép&lt;textarea rows=&quot;2&quot; maxlength=&quot;500&quot; id=&quot;bw-domains&quot; spellcheck=&quot;false&quot;&gt;tracking.example&lt;/textarea&gt;&lt;/label&gt;
+          &lt;div class=&quot;bw-info&quot;&gt;&lt;i data-lucide=&quot;shield-check&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Chặn địa chỉ nội bộ và kiểm tra cả redirect. Hồ sơ đăng nhập chỉ áp dụng cho domain đã liên kết.&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-grid&quot;&gt;&lt;label&gt;Hết hạn khi không hoạt động&lt;select id=&quot;bw-idle&quot;&gt;&lt;option&gt;30 giây&lt;/option&gt;&lt;option selected&gt;2 phút&lt;/option&gt;&lt;option&gt;5 phút&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;label&gt;Giới hạn mỗi thao tác&lt;select id=&quot;bw-timeout&quot;&gt;&lt;option selected&gt;30 giây&lt;/option&gt;&lt;option&gt;60 giây&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-block&quot;&gt;&lt;div class=&quot;bw-row bw-between&quot;&gt;&lt;span class=&quot;bw-label&quot;&gt;Vòng đời phiên&lt;/span&gt;&lt;span class=&quot;bw-badge&quot;&gt;Theo lượt Agent&lt;/span&gt;&lt;/div&gt;&lt;p class=&quot;bw-small bw-dim&quot;&gt;Mở khi cần, giữ nguyên tab qua các tool calls, đóng khi kết thúc hoặc hết hạn.&lt;/p&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+      &lt;section class=&quot;bw-pane&quot; id=&quot;bw-pane-recipe&quot; role=&quot;tabpanel&quot; aria-labelledby=&quot;bw-tab-recipe&quot; hidden&gt;
+        &lt;div class=&quot;bw-stack&quot;&gt;
+          &lt;div class=&quot;bw-row bw-between&quot;&gt;&lt;div&gt;&lt;h3&gt;Tra cứu vận đơn&lt;/h3&gt;&lt;code class=&quot;bw-dim&quot;&gt;lookup_shipment(url, order_id)&lt;/code&gt;&lt;/div&gt;&lt;span class=&quot;bw-badge&quot;&gt;Recipe&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-info&quot;&gt;&lt;i data-lucide=&quot;list-ordered&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span&gt;Chuỗi thao tác cho tác vụ lặp lại. URL và mã đơn được truyền vào mỗi lần gọi.&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-row&quot;&gt;&lt;span class=&quot;bw-badge&quot;&gt;url · string · bắt buộc&lt;/span&gt;&lt;span class=&quot;bw-badge&quot;&gt;order_id · string · bắt buộc&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-recipe-layout&quot; id=&quot;bw-recipe-layout&quot; aria-label=&quot;Các bước recipe&quot;&gt;
+            &lt;div class=&quot;bw-recipe-steps&quot;&gt;&lt;button type=&quot;button&quot; data-step=&quot;0&quot; aria-pressed=&quot;true&quot; class=&quot;cursor-interaction&quot;&gt;&lt;span class=&quot;bw-num&quot;&gt;1&lt;/span&gt;&lt;span&gt;Mở trang&lt;br&gt;&lt;code&gt;{{url}}&lt;/code&gt;&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; data-step=&quot;1&quot; aria-pressed=&quot;false&quot; class=&quot;cursor-interaction&quot;&gt;&lt;span class=&quot;bw-num&quot;&gt;2&lt;/span&gt;&lt;span&gt;Điền mã&lt;br&gt;&lt;code&gt;{{order_id}}&lt;/code&gt;&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; data-step=&quot;2&quot; aria-pressed=&quot;false&quot; class=&quot;cursor-interaction&quot;&gt;&lt;span class=&quot;bw-num&quot;&gt;3&lt;/span&gt;&lt;span&gt;Bấm tra cứu&lt;/span&gt;&lt;/button&gt;&lt;button type=&quot;button&quot; data-step=&quot;3&quot; aria-pressed=&quot;false&quot; class=&quot;cursor-interaction&quot;&gt;&lt;span class=&quot;bw-num&quot;&gt;4&lt;/span&gt;&lt;span&gt;Lấy trạng thái&lt;/span&gt;&lt;/button&gt;&lt;/div&gt;
+            &lt;div class=&quot;bw-recipe-detail&quot; id=&quot;bw-recipe-detail&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;label class=&quot;bw-check&quot;&gt;&lt;input id=&quot;bw-recipe-enabled&quot; type=&quot;checkbox&quot;&gt;&lt;span&gt;Cho Agent gọi recipe này&lt;small&gt;Thêm lookup_shipment vào tools của Agent.&lt;/small&gt;&lt;/span&gt;&lt;/label&gt;
+          &lt;div class=&quot;bw-row bw-between&quot;&gt;&lt;code&gt;status → state.order_status&lt;/code&gt;&lt;button id=&quot;bw-test-recipe&quot; type=&quot;button&quot; class=&quot;cursor-interaction&quot;&gt;&lt;i data-lucide=&quot;play&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Thử recipe&lt;/button&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+      &lt;section class=&quot;bw-pane&quot; id=&quot;bw-pane-demo&quot; role=&quot;tabpanel&quot; aria-labelledby=&quot;bw-tab-demo&quot; hidden&gt;
+        &lt;div class=&quot;bw-stack&quot;&gt;
+          &lt;div class=&quot;bw-samples&quot; role=&quot;group&quot; aria-label=&quot;Ví dụ hội thoại&quot;&gt;&lt;button type=&quot;button&quot; data-sample=&quot;chat&quot; aria-pressed=&quot;true&quot; class=&quot;cursor-interaction&quot;&gt;URL từ chat&lt;/button&gt;&lt;button type=&quot;button&quot; data-sample=&quot;workflow&quot; aria-pressed=&quot;false&quot; class=&quot;cursor-interaction&quot;&gt;URL từ workflow&lt;/button&gt;&lt;button type=&quot;button&quot; data-sample=&quot;search&quot; aria-pressed=&quot;false&quot; class=&quot;cursor-interaction&quot;&gt;Chưa có website&lt;/button&gt;&lt;button type=&quot;button&quot; data-sample=&quot;ask&quot; aria-pressed=&quot;false&quot; class=&quot;cursor-interaction&quot;&gt;Cần hỏi thêm&lt;/button&gt;&lt;/div&gt;
+          &lt;label&gt;Tin nhắn người dùng&lt;textarea id=&quot;bw-message&quot; rows=&quot;2&quot; maxlength=&quot;1500&quot;&gt;Tra trạng thái đơn SS-2048 tại https://tracking.example/lookup giúp tôi.&lt;/textarea&gt;&lt;/label&gt;
+          &lt;details&gt;&lt;summary class=&quot;cursor-interaction&quot;&gt;Dữ liệu workflow và tùy chọn chạy thử&lt;/summary&gt;&lt;div class=&quot;bw-stack-tight&quot;&gt;&lt;div class=&quot;bw-grid&quot;&gt;&lt;label&gt;state.target_url&lt;input id=&quot;bw-state-url&quot; maxlength=&quot;2048&quot; value=&quot;https://tracking.example/lookup&quot; spellcheck=&quot;false&quot;&gt;&lt;/label&gt;&lt;label&gt;Chạy&lt;select id=&quot;bw-demo-kind&quot;&gt;&lt;option value=&quot;agent&quot;&gt;Agent&lt;/option&gt;&lt;option value=&quot;recipe&quot;&gt;Recipe · lookup_shipment&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;&lt;label&gt;Tình huống website&lt;select id=&quot;bw-page-scenario&quot;&gt;&lt;option value=&quot;normal&quot;&gt;Bố cục thông thường&lt;/option&gt;&lt;option value=&quot;changed&quot;&gt;Website đổi bố cục&lt;/option&gt;&lt;option value=&quot;challenge&quot;&gt;Website yêu cầu xác minh&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;&lt;/details&gt;
+          &lt;div class=&quot;bw-row bw-between&quot;&gt;&lt;span class=&quot;bw-badge&quot; id=&quot;bw-demo-status&quot; aria-live=&quot;polite&quot;&gt;Sẵn sàng&lt;/span&gt;&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-demo-progress&quot;&gt;0 hành động&lt;/span&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-page&quot;&gt;&lt;div class=&quot;bw-page-head&quot;&gt;&lt;span class=&quot;bw-small&quot;&gt;Quan sát · Minh họa&lt;/span&gt;&lt;span class=&quot;bw-badge&quot; id=&quot;bw-page-tag&quot;&gt;Chưa mở browser&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;bw-page-url&quot; id=&quot;bw-page-url&quot;&gt;Chưa xác định URL&lt;/div&gt;&lt;div class=&quot;bw-page-body&quot; id=&quot;bw-page-content&quot; aria-live=&quot;polite&quot;&gt;&lt;p class=&quot;bw-dim bw-small&quot;&gt;Agent đọc yêu cầu trước khi quyết định cần mở browser hay không.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-next&quot;&gt;&lt;div&gt;&lt;span class=&quot;bw-small bw-dim&quot;&gt;Tiếp theo&lt;/span&gt;&lt;code id=&quot;bw-next&quot; style=&quot;display:block&quot;&gt;Đọc yêu cầu và chọn tool&lt;/code&gt;&lt;/div&gt;&lt;button id=&quot;bw-next-step&quot; type=&quot;button&quot; class=&quot;cursor-interaction&quot;&gt;&lt;i data-lucide=&quot;step-forward&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Chạy bước tiếp&lt;/button&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-feed&quot; id=&quot;bw-feed&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;bw-result&quot;&gt;&lt;div class=&quot;bw-row bw-between&quot;&gt;&lt;span&gt;Kết quả về workflow&lt;/span&gt;&lt;span class=&quot;bw-small bw-dim&quot;&gt;Dữ liệu mô phỏng&lt;/span&gt;&lt;/div&gt;&lt;pre id=&quot;bw-result&quot;&gt;Chưa chạy&lt;/pre&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+      &lt;section class=&quot;bw-pane&quot; id=&quot;bw-pane-export&quot; role=&quot;tabpanel&quot; aria-labelledby=&quot;bw-tab-export&quot; hidden&gt;
+        &lt;div class=&quot;bw-stack&quot;&gt;&lt;div class=&quot;bw-grid&quot;&gt;&lt;label&gt;Phạm vi&lt;select id=&quot;bw-export-kind&quot;&gt;&lt;option value=&quot;agent&quot;&gt;Agent và tools&lt;/option&gt;&lt;option value=&quot;recipe&quot;&gt;Recipe · lookup_shipment&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;label&gt;Ngôn ngữ&lt;select id=&quot;bw-language&quot;&gt;&lt;option value=&quot;python&quot;&gt;Python&lt;/option&gt;&lt;option value=&quot;typescript&quot;&gt;TypeScript&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-export-label&quot;&gt;Khung export dự kiến · Chưa phải project hoàn chỉnh&lt;/span&gt;&lt;textarea id=&quot;bw-code&quot; class=&quot;bw-code&quot; readonly spellcheck=&quot;false&quot; aria-label=&quot;Khung export minh họa&quot;&gt;&lt;/textarea&gt;&lt;div class=&quot;bw-info&quot;&gt;&lt;i data-lucide=&quot;package&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;span id=&quot;bw-export-note&quot;&gt;Giữ vòng lặp Agent và nguồn tham số lúc chạy. Project dự kiến kèm browser helpers, dependencies và cấu hình môi trường.&lt;/span&gt;&lt;/div&gt;&lt;button id=&quot;bw-select-code&quot; type=&quot;button&quot; class=&quot;cursor-interaction&quot;&gt;&lt;i data-lucide=&quot;text-select&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;Chọn mã minh họa&lt;/button&gt;&lt;/div&gt;
+      &lt;/section&gt;
+      &lt;footer class=&quot;bw-footer&quot;&gt;&lt;span class=&quot;bw-small bw-dim&quot; id=&quot;bw-footer&quot;&gt;Browser theo lượt Agent · URL theo từng lần gọi&lt;/span&gt;&lt;button type=&quot;button&quot; id=&quot;bw-save&quot; class=&quot;cursor-interaction&quot;&gt;Lưu cấu hình&lt;/button&gt;&lt;/footer&gt;
+    &lt;/main&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;bw-note&quot;&gt;&lt;span&gt;Mockup tương tác · Không truy cập website thật&lt;/span&gt;&lt;span&gt;Connection · Agent tools · Recipes&lt;/span&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;script&gt;
+(() =&gt; {
+  const root=document.getElementById(&#x27;ss-browser-workspace&#x27;);
+  const q=s=&gt;root.querySelector(s);
+  const qa=s=&gt;Array.from(root.querySelectorAll(s));
+  const initial={tab:&#x27;agent&#x27;,provider:&#x27;local&#x27;,name:&#x27;Browser nội bộ&#x27;,profile:&#x27;fresh&#x27;,policy:&#x27;public&#x27;,domains:&#x27;tracking.example&#x27;,idle:&#x27;2 phút&#x27;,timeout:&#x27;30 giây&#x27;,stealth:false,browser:true,search:true,fetch:true,limit:12,missing:&#x27;ask&#x27;,approval:true,urlSource:&#x27;agent&#x27;,urlHint:&#x27;Lấy URL từ tin nhắn hoặc kết quả tìm kiếm; hỏi lại khi chưa đủ thông tin.&#x27;,urlExpression:&#x27;{{state.target_url}}&#x27;,fixedUrl:&#x27;https://tracking.example/lookup&#x27;,task:&#x27;Hỗ trợ tra cứu vận đơn từ yêu cầu trong chat. Dùng URL người dùng cung cấp; tìm website khi biết hãng. Hỏi lại nếu thiếu thông tin.&#x27;,sample:&#x27;chat&#x27;,message:&#x27;Tra trạng thái đơn SS-2048 tại https://tracking.example/lookup giúp tôi.&#x27;,stateUrl:&#x27;https://tracking.example/lookup&#x27;,runKind:&#x27;agent&#x27;,scenario:&#x27;normal&#x27;,recipeEnabled:false,recipeStep:0,fillSelector:&#x27;[name=&quot;order_id&quot;]&#x27;,clickSelector:&#x27;button[type=&quot;submit&quot;]&#x27;,extractSelector:&#x27;[data-testid=&quot;order-status&quot;]&#x27;,exportKind:&#x27;agent&#x27;,language:&#x27;python&#x27;,tools:{navigate:true,snapshot:true,click:true,fill:true,extract:true,screenshot:true}};
+  const state={...initial,tools:{...initial.tools}};
+  const ui={detail:true};
+  const run={index:0,plan:[],auto:false,timer:null};
+  const esc=s=&gt;String(s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,c=&gt;({&#x27;&amp;&#x27;:&#x27;&amp;amp;&#x27;,&#x27;&lt;&#x27;:&#x27;&amp;lt;&#x27;,&#x27;&gt;&#x27;:&#x27;&amp;gt;&#x27;,&#x27;&quot;&#x27;:&#x27;&amp;quot;&#x27;,&quot;&#x27;&quot;:&#x27;&amp;#39;&#x27;}[c]));
+  const icon=name=&gt;&#x27;&lt;i data-lucide=&quot;&#x27;+name+&#x27;&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&#x27;;
+  function icons(){if(globalThis.lucide)lucide.createIcons({attrs:{width:16,height:16}});}
+  function persist(){
+    const snapshot={modelContent:{browserWorkspace:{view:state.tab,urlSource:state.urlSource,provider:state.provider,recipeEnabled:state.recipeEnabled,sample:state.sample}},privateContent:{browserWorkspaceV3:{...state,tools:{...state.tools}}}};
+    if(JSON.stringify(snapshot).length&lt;15000&amp;&amp;window.openai?.setWidgetState)window.openai.setWidgetState(snapshot).catch(()=&gt;{});
+  }
+  function show(tab,save=true){
+    state.tab=tab;
+    qa(&#x27;[data-tab]&#x27;).forEach(el=&gt;el.setAttribute(&#x27;aria-selected&#x27;,String(el.dataset.tab===tab)));
+    [&#x27;agent&#x27;,&#x27;connection&#x27;,&#x27;recipe&#x27;,&#x27;demo&#x27;,&#x27;export&#x27;].forEach(name=&gt;q(&#x27;#bw-pane-&#x27;+name).hidden=name!==tab);
+    const titles={agent:[&#x27;Tools của Agent&#x27;,&#x27;Trợ lý giao hàng · Dùng model hiện tại&#x27;,&#x27;Agent&#x27;],connection:[&#x27;Browser connection&#x27;,&#x27;Cài đặt dùng chung · Kết nối và hồ sơ&#x27;,&#x27;Connection&#x27;],recipe:[&#x27;Browser recipe&#x27;,&#x27;Tra cứu vận đơn · Chuỗi thao tác tái sử dụng&#x27;,&#x27;Recipe&#x27;],demo:[&#x27;Lần chạy thử&#x27;,&#x27;Hội thoại → chọn tools → trả kết quả&#x27;,&#x27;Mô phỏng&#x27;],export:[&#x27;Export code&#x27;,&#x27;Python / TypeScript · Khung dự kiến&#x27;,&#x27;Code&#x27;]};
+    q(&#x27;#bw-title&#x27;).textContent=titles[tab][0];q(&#x27;#bw-subtitle&#x27;).textContent=titles[tab][1];q(&#x27;#bw-surface-tag&#x27;).textContent=titles[tab][2];
+    if(tab===&#x27;demo&#x27;)renderRun();
+    if(tab===&#x27;export&#x27;)renderCode();
+    if(save)persist();
+  }
+  function connectionName(){return state.name.trim()||(state.provider===&#x27;local&#x27;?&#x27;Browser nội bộ&#x27;:&#x27;Browserless · Remote&#x27;);}
+  function renderBindings(){
+    q(&#x27;#bw-url-hint-wrap&#x27;).hidden=state.urlSource!==&#x27;agent&#x27;;
+    q(&#x27;#bw-url-input-wrap&#x27;).hidden=state.urlSource===&#x27;agent&#x27;;
+    q(&#x27;#bw-url-input-label&#x27;).textContent=state.urlSource===&#x27;fixed&#x27;?&#x27;URL cố định&#x27;:&#x27;Trường dữ liệu workflow&#x27;;
+    q(&#x27;#bw-url-input&#x27;).value=state.urlSource===&#x27;fixed&#x27;?state.fixedUrl:state.urlExpression;
+    q(&#x27;#bw-url-help&#x27;).textContent={agent:&#x27;Không cần URL lúc thiết kế. Agent truyền URL khi gọi browser_navigate.&#x27;,workflow:&#x27;Lấy đúng giá trị từ state lúc chạy; thiếu dữ liệu thì hỏi lại hoặc trả trạng thái.&#x27;,fixed:&#x27;Giới hạn browser_navigate vào URL đã cấu hình.&#x27;}[state.urlSource];
+  }
+  function renderDecor(){
+    q(&#x27;#bw-browser-settings&#x27;).hidden=!state.browser;
+    q(&#x27;#bw-remote-settings&#x27;).hidden=state.provider!==&#x27;remote&#x27;;
+    q(&#x27;#bw-domains-wrap&#x27;).hidden=state.policy!==&#x27;allowlist&#x27;;
+    q(&#x27;#bw-connection&#x27;).value=state.provider;q(&#x27;#bw-provider&#x27;).value=state.provider;
+    const option=q(&#x27;#bw-connection option[value=&quot;&#x27;+state.provider+&#x27;&quot;]&#x27;);
+    option.textContent=connectionName();
+    const count=Object.values(state.tools).filter(Boolean).length;
+    q(&#x27;#bw-node-tools&#x27;).textContent=state.browser?&#x27;Browser · &#x27;+count+&#x27; tools&#x27;:&#x27;Browser tools chưa được cấp&#x27;;
+    q(&#x27;#bw-node-web&#x27;).textContent=[state.search?&#x27;Web search&#x27;:&#x27;&#x27;,state.fetch?&#x27;Web fetch&#x27;:&#x27;&#x27;].filter(Boolean).join(&#x27; · &#x27;);
+    q(&#x27;#bw-node-web&#x27;).hidden=!state.search&amp;&amp;!state.fetch;
+    q(&#x27;#bw-node-recipe&#x27;).hidden=!state.recipeEnabled;
+    q(&#x27;#bw-canvas-connection&#x27;).textContent=connectionName();
+    q(&#x27;#bw-footer&#x27;).textContent=state.tab===&#x27;connection&#x27;?&#x27;Kết nối dùng chung · Hồ sơ theo domain&#x27;:state.tab===&#x27;recipe&#x27;?&#x27;Recipe nhận URL và dữ liệu cho từng lần gọi&#x27;:&#x27;Browser theo lượt Agent · URL theo từng lần gọi&#x27;;
+    qa(&#x27;[data-sample]&#x27;).forEach(el=&gt;el.setAttribute(&#x27;aria-pressed&#x27;,String(el.dataset.sample===state.sample)));
+    icons();
+  }
+  function renderRecipe(){
+    const items=[
+      [&#x27;Mở URL từ input&#x27;,&#x27;Địa chỉ trang&#x27;,&#x27;{{args.url}}&#x27;,&#x27;Giá trị lấy từ tham số url của mỗi lần gọi.&#x27;],
+      [&#x27;Điền mã vận đơn&#x27;,&#x27;Phần tử trên trang&#x27;,state.fillSelector,&#x27;Giá trị điền: {{args.order_id}}&#x27;],
+      [&#x27;Bấm tra cứu&#x27;,&#x27;Phần tử trên trang&#x27;,state.clickSelector,&#x27;Đây là thao tác đã cấu hình của recipe.&#x27;],
+      [&#x27;Lấy trạng thái&#x27;,&#x27;Phần tử chứa kết quả&#x27;,state.extractSelector,&#x27;Nội dung văn bản → status.&#x27;]
+    ];
+    const row=items[state.recipeStep];
+    q(&#x27;#bw-recipe-detail&#x27;).innerHTML=&#x27;&lt;h3&gt;&#x27;+row[0]+&#x27;&lt;/h3&gt;&lt;label class=&quot;bw-small&quot;&gt;&#x27;+row[1]+&#x27;&lt;input id=&quot;bw-recipe-value&quot; maxlength=&quot;300&quot; spellcheck=&quot;false&quot; value=&quot;&#x27;+esc(row[2])+&#x27;&quot;&#x27;+(state.recipeStep===0?&#x27; readonly&#x27;:&#x27;&#x27;)+&#x27;&gt;&lt;/label&gt;&lt;p class=&quot;bw-small bw-dim&quot;&gt;&#x27;+row[3]+&#x27;&lt;/p&gt;&#x27;;
+    q(&#x27;#bw-recipe-value&#x27;).addEventListener(&#x27;input&#x27;,e=&gt;{
+      const key=[&#x27;&#x27;,&#x27;fillSelector&#x27;,&#x27;clickSelector&#x27;,&#x27;extractSelector&#x27;][state.recipeStep];
+      if(key){state[key]=e.target.value;invalidate();renderCode();persist();}
+    });
+    qa(&#x27;[data-step]&#x27;).forEach(el=&gt;el.setAttribute(&#x27;aria-pressed&#x27;,String(Number(el.dataset.step)===state.recipeStep)));
+    q(&#x27;#bw-recipe-detail&#x27;).hidden=!ui.detail;
+    q(&#x27;#bw-recipe-layout&#x27;).style.gridTemplateColumns=ui.detail?&#x27;&#x27;:&#x27;1fr&#x27;;
+  }
+  function finishStep(title,status,message,more={}){return {tool:&#x27;workflow&#x27;,title,detail:message,page:&#x27;stopped&#x27;,result:{status,message,...more},done:true};}
+  function ask(message){return finishStep(state.missing===&#x27;ask&#x27;?&#x27;Hỏi người dùng&#x27;:&#x27;Thiếu thông tin&#x27;,state.missing===&#x27;ask&#x27;?&#x27;needs_input&#x27;:&#x27;missing_input&#x27;,message);}
+  function targetCheck(raw,withBrowser){
+    let u;
+    try{u=new URL(raw);}catch{return [&#x27;invalid_url&#x27;,&#x27;URL chưa hợp lệ.&#x27;];}
+    if(![&#x27;http:&#x27;,&#x27;https:&#x27;].includes(u.protocol)||u.username||u.password)return [&#x27;invalid_url&#x27;,&#x27;Cần URL HTTP/HTTPS không chứa credentials.&#x27;];
+    const host=u.hostname.toLowerCase();
+    if(host===&#x27;localhost&#x27;||host.endsWith(&#x27;.localhost&#x27;)||host.endsWith(&#x27;.local&#x27;)||/^(127\.|10\.|0\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)||host.includes(&#x27;:&#x27;))return [&#x27;target_blocked&#x27;,&#x27;Địa chỉ nội bộ hoặc địa chỉ đặc biệt bị chặn trong ví dụ này.&#x27;];
+    if(withBrowser&amp;&amp;state.policy===&#x27;allowlist&#x27;){
+      const allowed=state.domains.split(/[,\n]/).map(s=&gt;s.trim().toLowerCase()).filter(Boolean);
+      if(!allowed.includes(host))return [&#x27;domain_not_allowed&#x27;,&#x27;Domain &#x27;+host+&#x27; chưa được phép trong kết nối.&#x27;];
+    }
+    if(withBrowser&amp;&amp;state.profile===&#x27;carrier&#x27;&amp;&amp;host!==&#x27;tracking.example&#x27;)return [&#x27;profile_scope_mismatch&#x27;,&#x27;Hồ sơ đăng nhập chỉ được dùng với tracking.example.&#x27;];
+    return null;
+  }
+  function buildPlan(){
+    const plan=[];
+    const order=(state.message.match(/\bSS-\d+\b/i)||[])[0]||&#x27;&#x27;;
+    const extracted=(state.message.match(/https?:\/\/[^\s&lt;&gt;&quot;&#x27;)]+/i)||[])[0]?.replace(/[.,;!?]+$/,&#x27;&#x27;)||&#x27;&#x27;;
+    const recipe=state.runKind===&#x27;recipe&#x27;;
+    let url=&#x27;&#x27;;
+    if(recipe){
+      url=state.stateUrl.trim();
+      if(!url||!order)return [ask(&#x27;Recipe cần url và order_id. Hãy cung cấp đủ hai tham số.&#x27;)];
+      plan.push({tool:&#x27;lookup_shipment&#x27;,title:&#x27;Gọi recipe Tra cứu vận đơn&#x27;,detail:&#x27;url=&#x27;+url+&#x27; · order_id=&#x27;+order,page:&#x27;blank&#x27;});
+    }else if(state.urlSource===&#x27;fixed&#x27;){
+      url=state.fixedUrl.trim();
+      if(!url)return [ask(&#x27;Chưa có giá trị URL cố định.&#x27;)];
+      plan.push({tool:&#x27;input&#x27;,title:&#x27;Dùng URL đã cấu hình&#x27;,detail:url,page:&#x27;blank&#x27;});
+    }else if(state.urlSource===&#x27;workflow&#x27;){
+      if(state.urlExpression.trim()!==&#x27;{{state.target_url}}&#x27;)return [ask(&#x27;Ví dụ này có trường state.target_url. Hãy chọn trường đó hoặc bổ sung dữ liệu tương ứng.&#x27;)];
+      url=state.stateUrl.trim();
+      if(!url)return [ask(&#x27;Workflow chưa có state.target_url. Anh gửi URL cần truy cập giúp tôi.&#x27;)];
+      plan.push({tool:&#x27;input&#x27;,title:&#x27;Lấy URL từ dữ liệu workflow&#x27;,detail:&#x27;state.target_url → &#x27;+url,page:&#x27;blank&#x27;});
+    }else if(extracted){
+      url=extracted;
+      plan.push({tool:&#x27;input&#x27;,title:&#x27;Lấy URL từ tin nhắn&#x27;,detail:url,page:&#x27;blank&#x27;});
+    }else{
+      const named=state.message.toLowerCase().includes(&#x27;giao nhanh mẫu&#x27;);
+      if(!named)return [ask(&#x27;Anh muốn tra đơn trên website hoặc hãng vận chuyển nào?&#x27;)];
+      if(!state.search)return [ask(&#x27;Chưa có URL và Web search chưa được cấp. Anh gửi link website giúp tôi.&#x27;)];
+      url=&#x27;https://carrier.example/lookup&#x27;;
+      plan.push({tool:&#x27;web_search&#x27;,title:&#x27;Tìm website của hãng Giao Nhanh Mẫu&#x27;,detail:&#x27;query=&quot;Giao Nhanh Mẫu website chính thức&quot;&#x27;,page:&#x27;search&#x27;,url,resultPreview:&#x27;Kết quả mẫu: carrier.example/lookup&#x27;});
+    }
+    const readOnly=!recipe&amp;&amp;!order;
+    const useFetch=readOnly&amp;&amp;state.fetch;
+    const issue=targetCheck(url,!useFetch);
+    if(issue)return [...plan,finishStep(&#x27;Không truy cập URL&#x27;,issue[0],issue[1])];
+    if(useFetch)return [...plan,{tool:&#x27;web_fetch&#x27;,title:&#x27;Đọc nội dung trang&#x27;,detail:url+&#x27; · Không dùng hồ sơ browser&#x27;,page:&#x27;fetch&#x27;,url,done:true,result:{status:&#x27;completed&#x27;,content:&#x27;Nội dung trang mẫu đã được đọc bằng Web fetch.&#x27;,url}}];
+    if(!recipe&amp;&amp;!state.browser)return [...plan,finishStep(&#x27;Browser chưa được cấp&#x27;,&#x27;tool_not_enabled&#x27;,&#x27;Bật Browser tools hoặc cấp Web fetch cho tác vụ chỉ đọc.&#x27;)];
+    const action=(tool,title,detail,page,extra={})=&gt;({tool,title,detail,page,url,browser:true,...extra});
+    const changed=state.scenario===&#x27;changed&#x27;;
+    const challenge=state.scenario===&#x27;challenge&#x27;;
+    plan.push(action(&#x27;browser_navigate&#x27;,&#x27;Mở URL lúc chạy&#x27;,url,challenge?&#x27;challenge&#x27;:changed?&#x27;menu&#x27;:&#x27;lookup&#x27;));
+    if(challenge){
+      plan.push(action(&#x27;browser_snapshot&#x27;,&#x27;Nhận diện trang yêu cầu xác minh&#x27;,&#x27;Website yêu cầu người dùng xác minh.&#x27;,&#x27;challenge&#x27;,{done:true,result:{status:&#x27;challenge_required&#x27;,message:&#x27;Chuyển người dùng hoặc Human node để xử lý.&#x27;}}));
+    }else if(recipe&amp;&amp;changed){
+      plan.push(action(&#x27;recipe_step&#x27;,&#x27;Không tìm thấy ô đã cấu hình&#x27;,state.fillSelector,&#x27;menu&#x27;,{done:true,result:{status:&#x27;recipe_element_not_found&#x27;,message:&#x27;Recipe cần cập nhật selector hoặc chuyển cho Agent xử lý.&#x27;}}));
+    }else{
+      if(!recipe&amp;&amp;changed)plan.push(action(&#x27;browser_snapshot&#x27;,&#x27;Quan sát bố cục mới&#x27;,&#x27;Trang chủ có liên kết “Đơn hàng” [ref=e1].&#x27;,&#x27;menu&#x27;),action(&#x27;browser_click&#x27;,&#x27;Mở mục Đơn hàng&#x27;,&#x27;ref=e1 → Biểu mẫu tra cứu&#x27;,&#x27;lookup&#x27;));
+      if(!recipe)plan.push(action(&#x27;browser_snapshot&#x27;,&#x27;Quan sát trang hiện tại&#x27;,&#x27;Ô “Mã vận đơn” [ref=e2] · Nút “Tra cứu” [ref=e3]&#x27;,&#x27;lookup&#x27;));
+      if(order){
+        plan.push(action(&#x27;browser_fill&#x27;,&#x27;Điền mã vận đơn&#x27;,recipe?state.fillSelector+&#x27; ← &#x27;+order:&#x27;ref=e2 ← &#x27;+order,&#x27;filled&#x27;),action(&#x27;browser_click&#x27;,&#x27;Bấm tra cứu&#x27;,recipe?state.clickSelector:&#x27;ref=e3 · Tra cứu chỉ đọc&#x27;,&#x27;result&#x27;));
+        if(!recipe)plan.push(action(&#x27;browser_snapshot&#x27;,&#x27;Quan sát kết quả mới&#x27;,&#x27;Vùng kết quả [ref=e4]: Đang giao&#x27;,&#x27;result&#x27;));
+      }
+      plan.push(action(&#x27;browser_extract&#x27;,order?&#x27;Đọc trạng thái vận đơn&#x27;:&#x27;Đọc thông tin trên trang&#x27;,recipe?state.extractSelector:order?&#x27;ref=e4 → order_status&#x27;:&#x27;Nội dung trang hiện tại&#x27;,order?&#x27;result&#x27;:&#x27;lookup&#x27;,{done:true,result:order?{status:&#x27;completed&#x27;,order_id:order,order_status:&#x27;Đang giao&#x27;,url}:{status:&#x27;completed&#x27;,content:&#x27;Nội dung trang mẫu.&#x27;,url}}));
+    }
+    let actions=0;
+    const bounded=[];
+    for(const step of plan){
+      if(step.browser){
+        const toolKey=step.tool.replace(&#x27;browser_&#x27;,&#x27;&#x27;);
+        if(!recipe&amp;&amp;Object.hasOwn(state.tools,toolKey)&amp;&amp;!state.tools[toolKey]){bounded.push(finishStep(&#x27;Tool chưa được cấp&#x27;,&#x27;tool_not_enabled&#x27;,step.tool+&#x27; chưa được cấp cho Agent.&#x27;));break;}
+        if(!recipe&amp;&amp;actions&gt;=state.limit){bounded.push(finishStep(&#x27;Đạt giới hạn hành động&#x27;,&#x27;action_limit_reached&#x27;,&#x27;Dừng sau &#x27;+actions+&#x27; hành động browser.&#x27;));break;}
+        actions++;
+      }
+      bounded.push(step);
+    }
+    return bounded;
+  }
+  function stopAuto(){clearTimeout(run.timer);run.auto=false;q(&#x27;#bw-run&#x27;).disabled=false;}
+  function invalidate(){stopAuto();run.index=0;run.plan=buildPlan();renderRun();q(&#x27;#bw-save-label&#x27;).textContent=&#x27;Chưa lưu&#x27;;}
+  function renderRun(){
+    if(!run.plan.length)run.plan=buildPlan();
+    run.index=Math.min(run.index,run.plan.length);
+    const seen=run.plan.slice(0,run.index);
+    const last=seen[seen.length-1];
+    const pageStep=seen.filter(s=&gt;s.browser||[&#x27;search&#x27;,&#x27;fetch&#x27;].includes(s.page)).at(-1);
+    const complete=run.index&gt;=run.plan.length;
+    const result=complete?last?.result||{status:&#x27;completed&#x27;}:{status:run.index?&#x27;running&#x27;:&#x27;ready&#x27;};
+    const status=q(&#x27;#bw-demo-status&#x27;);
+    status.className=&#x27;bw-badge &#x27;+(complete?(result.status===&#x27;completed&#x27;?&#x27;bw-good&#x27;:&#x27;bw-warn&#x27;):&#x27;&#x27;);
+    const names={completed:&#x27;Hoàn tất&#x27;,needs_input:&#x27;Đang chờ người dùng&#x27;,missing_input:&#x27;Thiếu thông tin&#x27;,challenge_required:&#x27;Cần xác minh&#x27;,domain_not_allowed:&#x27;Domain chưa được phép&#x27;,profile_scope_mismatch:&#x27;Sai phạm vi hồ sơ&#x27;,target_blocked:&#x27;URL bị chặn&#x27;,invalid_url:&#x27;URL chưa hợp lệ&#x27;,tool_not_enabled:&#x27;Thiếu tool&#x27;,action_limit_reached:&#x27;Đạt giới hạn&#x27;,recipe_element_not_found:&#x27;Recipe cần cập nhật&#x27;};
+    status.textContent=complete?names[result.status]||&#x27;Đã dừng&#x27;:run.auto?&#x27;Đang mô phỏng&#x27;:run.index?&#x27;Đang chạy từng bước&#x27;:&#x27;Sẵn sàng&#x27;;
+    const browserCount=seen.filter(s=&gt;s.browser).length;
+    q(&#x27;#bw-demo-progress&#x27;).textContent=browserCount+&#x27; hành động browser&#x27;+(browserCount&amp;&amp;!complete?&#x27; · Cùng một phiên&#x27;:&#x27;&#x27;);
+    q(&#x27;#bw-next&#x27;).textContent=complete?&#x27;Kết thúc lượt chạy&#x27;:run.plan[run.index].tool+&#x27; · &#x27;+run.plan[run.index].title;
+    q(&#x27;#bw-next-step&#x27;).disabled=complete||run.auto;
+    let page=pageStep?.page||&#x27;blank&#x27;;
+    if(last?.page===&#x27;stopped&#x27;&amp;&amp;!pageStep)page=&#x27;blank&#x27;;
+    const pageNames={blank:&#x27;Chưa mở browser&#x27;,search:&#x27;Kết quả tìm kiếm mẫu&#x27;,fetch:&#x27;Đọc bằng Web fetch&#x27;,menu:&#x27;Bố cục mới&#x27;,lookup:&#x27;Biểu mẫu tra cứu&#x27;,filled:&#x27;Đã điền mã&#x27;,result:&#x27;Có kết quả&#x27;,challenge:&#x27;Yêu cầu xác minh&#x27;};
+    q(&#x27;#bw-page-tag&#x27;).textContent=pageNames[page];
+    q(&#x27;#bw-page-url&#x27;).textContent=page===&#x27;search&#x27;?&#x27;URL đang được tìm&#x27;:pageStep?.url||&#x27;Chưa xác định URL&#x27;;
+    const order=(state.message.match(/\bSS-\d+\b/i)||[])[0]||&#x27;&#x27;;
+    let html=&#x27;&#x27;;
+    if(page===&#x27;search&#x27;)html=&#x27;&lt;h3&gt;Giao Nhanh Mẫu · Website hãng vận chuyển&lt;/h3&gt;&lt;code&gt;https://carrier.example/lookup&lt;/code&gt;&lt;span class=&quot;bw-small bw-dim&quot;&gt;Một kết quả tìm kiếm mô phỏng để Agent chọn URL.&lt;/span&gt;&#x27;;
+    else if(page===&#x27;menu&#x27;)html=&#x27;&lt;h3&gt;Cổng vận chuyển&lt;/h3&gt;&lt;div class=&quot;bw-row&quot;&gt;&lt;span class=&quot;bw-badge&quot;&gt;Trang chủ&lt;/span&gt;&lt;span class=&quot;bw-badge&quot;&gt;Đơn hàng&lt;/span&gt;&lt;span class=&quot;bw-badge&quot;&gt;Hỗ trợ&lt;/span&gt;&lt;/div&gt;&#x27;;
+    else if([&#x27;lookup&#x27;,&#x27;filled&#x27;,&#x27;result&#x27;].includes(page))html=&#x27;&lt;h3&gt;Tra cứu vận đơn&lt;/h3&gt;&lt;span class=&quot;bw-small bw-dim&quot;&gt;Mã vận đơn&lt;/span&gt;&lt;div class=&quot;bw-page-field&quot;&gt;&#x27;+(page===&#x27;lookup&#x27;?&#x27;&lt;span class=&quot;bw-dim&quot;&gt;Nhập mã vận đơn&lt;/span&gt;&#x27;:esc(order))+&#x27;&lt;/div&gt;&lt;div class=&quot;bw-row&quot;&gt;&lt;span class=&quot;bw-badge&quot;&gt;Tra cứu&lt;/span&gt;&#x27;+(page===&#x27;result&#x27;?&#x27;&lt;span class=&quot;bw-badge bw-good&quot;&gt;Đang giao&lt;/span&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;;
+    else if(page===&#x27;challenge&#x27;)html=&#x27;&lt;h3&gt;Vui lòng xác minh để tiếp tục&lt;/h3&gt;&lt;p class=&quot;bw-small bw-dim&quot;&gt;Agent trả trạng thái để chuyển người xử lý.&lt;/p&gt;&#x27;;
+    else if(page===&#x27;fetch&#x27;)html=&#x27;&lt;h3&gt;Nội dung trang đã đọc&lt;/h3&gt;&lt;p class=&quot;bw-small bw-dim&quot;&gt;Không mở browser và không sử dụng cookie của hồ sơ browser.&lt;/p&gt;&#x27;;
+    else html=&#x27;&lt;p class=&quot;bw-small bw-dim&quot;&gt;&#x27;+esc(complete?result.message||&#x27;Chưa mở browser.&#x27;:&#x27;Agent đọc yêu cầu trước khi quyết định cần mở browser hay không.&#x27;)+&#x27;&lt;/p&gt;&#x27;;
+    q(&#x27;#bw-page-content&#x27;).innerHTML=html;
+    q(&#x27;#bw-feed&#x27;).innerHTML=seen.length?seen.map((step,i)=&gt;&#x27;&lt;div class=&quot;bw-feed-row&quot;&gt;&lt;span class=&quot;bw-feed-mark&quot;&gt;&#x27;+(step.done&amp;&amp;step.result?.status!==&#x27;completed&#x27;?&#x27;!&#x27;:&#x27;✓&#x27;)+&#x27;&lt;/span&gt;&lt;span&gt;&#x27;+esc(step.title)+&#x27;&lt;code&gt;&#x27;+esc(step.tool)+&#x27; · &#x27;+esc(step.detail)+&#x27;&lt;/code&gt;&lt;/span&gt;&lt;span class=&quot;bw-small bw-dim&quot;&gt;&#x27;+(i+1)+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;).join(&#x27;&#x27;):&#x27;&lt;div class=&quot;bw-zero&quot;&gt;Chưa có tool nào được gọi.&lt;/div&gt;&#x27;;
+    q(&#x27;#bw-result&#x27;).textContent=JSON.stringify(result,null,2);
+  }
+  function next(){if(run.auto)return;if(run.index&lt;run.plan.length)run.index++;renderRun();}
+  function start(){
+    stopAuto();run.index=0;run.plan=buildPlan();run.auto=true;q(&#x27;#bw-run&#x27;).disabled=true;show(&#x27;demo&#x27;);
+    const advance=()=&gt;{run.index++;renderRun();if(run.index&gt;=run.plan.length){stopAuto();renderRun();return;}run.timer=setTimeout(advance,350);};
+    run.timer=setTimeout(advance,350);
+  }
+  function renderCode(){
+    const recipe=state.exportKind===&#x27;recipe&#x27;;
+    const lit=JSON.stringify;
+    const enabled=Object.entries(state.tools).filter(([,v])=&gt;v).map(([k])=&gt;&#x27;browser_&#x27;+k);
+    const binding={source:state.urlSource,...(state.urlSource===&#x27;fixed&#x27;?{value:state.fixedUrl}:state.urlSource===&#x27;workflow&#x27;?{expression:state.urlExpression}:{description:state.urlHint})};
+    const policy={public_only:true,...(state.policy===&#x27;allowlist&#x27;?{allowed_domains:state.domains.split(/[,\n]/).map(s=&gt;s.trim()).filter(Boolean)}:{})};
+    let py,ts;
+    if(recipe){
+      py=[&#x27;# Recipe nhận URL lúc gọi, không chứa URL cố định.&#x27;,&#x27;from playwright.async_api import async_playwright&#x27;,&#x27;&#x27;,&#x27;async def lookup_shipment(url: str, order_id: str):&#x27;,&#x27;    # Kèm outbound policy và cấu hình provider trong project.&#x27;,&#x27;    async with async_playwright() as p:&#x27;,&#x27;        browser = await p.chromium.launch(headless=True)&#x27;,&#x27;        try:&#x27;,&#x27;            page = await browser.new_page()&#x27;,&#x27;            await page.goto(url)&#x27;,&#x27;            await page.locator(&#x27;+lit(state.fillSelector)+&#x27;).fill(order_id)&#x27;,&#x27;            await page.locator(&#x27;+lit(state.clickSelector)+&#x27;).click()&#x27;,&#x27;            result = page.locator(&#x27;+lit(state.extractSelector)+&#x27;)&#x27;,&#x27;            await result.wait_for(state=&quot;visible&quot;)&#x27;,&#x27;            return {&quot;status&quot;: await result.inner_text()}&#x27;,&#x27;        finally:&#x27;,&#x27;            await browser.close()&#x27;].join(&#x27;\n&#x27;);
+      ts=[&#x27;// Recipe nhận URL lúc gọi.&#x27;,&#x27;import { chromium } from &quot;playwright&quot;;&#x27;,&#x27;&#x27;,&#x27;export async function lookupShipment(url: string, orderId: string) {&#x27;,&#x27;  // Kèm outbound policy và cấu hình provider trong project.&#x27;,&#x27;  const browser = await chromium.launch({ headless: true });&#x27;,&#x27;  try {&#x27;,&#x27;    const page = await browser.newPage();&#x27;,&#x27;    await page.goto(url);&#x27;,&#x27;    await page.locator(&#x27;+lit(state.fillSelector)+&#x27;).fill(orderId);&#x27;,&#x27;    await page.locator(&#x27;+lit(state.clickSelector)+&#x27;).click();&#x27;,&#x27;    const result = page.locator(&#x27;+lit(state.extractSelector)+&#x27;);&#x27;,&#x27;    await result.waitFor({ state: &quot;visible&quot; });&#x27;,&#x27;    return { status: await result.innerText() };&#x27;,&#x27;  } finally { await browser.close(); }&#x27;,&#x27;}&#x27;].join(&#x27;\n&#x27;);
+    }else{
+      const configuration={provider:state.provider,url_binding:binding,browser_tools:state.browser?enabled:[],web_search:state.search,web_fetch:state.fetch,recipe:state.recipeEnabled?&#x27;lookup_shipment&#x27;:null,max_browser_actions:state.limit,require_write_approval:state.approval,policy};
+      const configJson=JSON.stringify(configuration,null,2);
+      py=[&#x27;# Khung dự kiến; browser_runtime là module đi kèm export.&#x27;,&#x27;import json&#x27;,&#x27;from browser_runtime import BrowserSession, build_tools&#x27;,&#x27;from agent import configured_agent&#x27;,&#x27;&#x27;,&#x27;config = json.loads(&#x27;+JSON.stringify(configJson)+&#x27;)&#x27;,&#x27;&#x27;,&#x27;async def run(message, workflow_state):&#x27;,&#x27;    async with BrowserSession(config) as session:&#x27;,&#x27;        tools = build_tools(session, config, workflow_state)&#x27;,&#x27;        # URL là tham số lúc chạy; Agent hiện có điều phối.&#x27;,&#x27;        return await configured_agent(tools).ainvoke({&#x27;,&#x27;            &quot;messages&quot;: [(&quot;user&quot;, message)]&#x27;,&#x27;        })&#x27;].join(&#x27;\n&#x27;);
+      ts=[&#x27;// Khung dự kiến; các module đi kèm project export.&#x27;,&#x27;import { BrowserSession, buildTools } from &quot;./browser-runtime.js&quot;;&#x27;,&#x27;import { configuredAgent } from &quot;./agent.js&quot;;&#x27;,&#x27;&#x27;,&#x27;const config = &#x27;+configJson+&#x27;;&#x27;,&#x27;&#x27;,&#x27;export async function run(message: string, state: WorkflowState) {&#x27;,&#x27;  const session = await BrowserSession.open(config);&#x27;,&#x27;  try {&#x27;,&#x27;    const tools = buildTools(session, config, state);&#x27;,&#x27;    // Agent hiện có chọn tools và URL cho từng lần gọi.&#x27;,&#x27;    return await configuredAgent(tools).invoke({&#x27;,&#x27;      messages: [{ role: &quot;user&quot;, content: message }]&#x27;,&#x27;    });&#x27;,&#x27;  } finally { await session.close(); }&#x27;,&#x27;}&#x27;].join(&#x27;\n&#x27;);
+    }
+    if(recipe&amp;&amp;state.provider===&#x27;remote&#x27;){
+      py=py.replace(&#x27;from playwright.async_api import async_playwright&#x27;,&#x27;import os\nfrom playwright.async_api import async_playwright&#x27;).replace(&#x27;p.chromium.launch(headless=True)&#x27;,&#x27;p.chromium.connect_over_cdp(os.environ[&quot;BROWSER_WS_ENDPOINT&quot;])&#x27;);
+      ts=ts.replace(&#x27;chromium.launch({ headless: true })&#x27;,&#x27;chromium.connectOverCDP(process.env.BROWSER_WS_ENDPOINT!)&#x27;);
+    }
+    q(&#x27;#bw-code&#x27;).value=state.language===&#x27;python&#x27;?py:ts;
+    q(&#x27;#bw-export-note&#x27;).textContent=recipe?&#x27;Recipe nhận url và order_id cho mỗi lần gọi. Khung này chưa bao gồm toàn bộ policy, hồ sơ và đóng gói dependencies.&#x27;:&#x27;Giữ vòng lặp Agent và nguồn tham số lúc chạy. Các helpers browser/model được đóng gói cùng project; đoạn này chỉ minh họa cấu trúc.&#x27;;
+  }
+  const samples={
+    chat:{message:&#x27;Tra trạng thái đơn SS-2048 tại https://tracking.example/lookup giúp tôi.&#x27;,source:&#x27;agent&#x27;},
+    workflow:{message:&#x27;Tra trạng thái vận đơn SS-2048 bằng website đã được workflow chọn.&#x27;,source:&#x27;workflow&#x27;},
+    search:{message:&#x27;Tìm website chính thức của hãng Giao Nhanh Mẫu và tra đơn SS-2048.&#x27;,source:&#x27;agent&#x27;},
+    ask:{message:&#x27;Tra giúp tôi vận đơn SS-2048.&#x27;,source:&#x27;agent&#x27;}
+  };
+  function selectSample(key){
+    state.sample=key;state.message=samples[key].message;state.urlSource=samples[key].source;state.runKind=&#x27;agent&#x27;;
+    q(&#x27;#bw-message&#x27;).value=state.message;q(&#x27;#bw-url-source&#x27;).value=state.urlSource;q(&#x27;#bw-demo-kind&#x27;).value=&#x27;agent&#x27;;
+    renderBindings();renderDecor();invalidate();renderCode();persist();
+  }
+  const fields={
+    &#x27;bw-task&#x27;:&#x27;task&#x27;,&#x27;bw-url-hint&#x27;:&#x27;urlHint&#x27;,&#x27;bw-connection-name&#x27;:&#x27;name&#x27;,&#x27;bw-profile&#x27;:&#x27;profile&#x27;,&#x27;bw-policy&#x27;:&#x27;policy&#x27;,&#x27;bw-domains&#x27;:&#x27;domains&#x27;,&#x27;bw-idle&#x27;:&#x27;idle&#x27;,&#x27;bw-timeout&#x27;:&#x27;timeout&#x27;,&#x27;bw-stealth&#x27;:&#x27;stealth&#x27;,&#x27;bw-enable-browser&#x27;:&#x27;browser&#x27;,&#x27;bw-search&#x27;:&#x27;search&#x27;,&#x27;bw-fetch&#x27;:&#x27;fetch&#x27;,&#x27;bw-limit&#x27;:&#x27;limit&#x27;,&#x27;bw-missing&#x27;:&#x27;missing&#x27;,&#x27;bw-write-approval&#x27;:&#x27;approval&#x27;,&#x27;bw-recipe-enabled&#x27;:&#x27;recipeEnabled&#x27;,&#x27;bw-message&#x27;:&#x27;message&#x27;,&#x27;bw-state-url&#x27;:&#x27;stateUrl&#x27;,&#x27;bw-demo-kind&#x27;:&#x27;runKind&#x27;,&#x27;bw-page-scenario&#x27;:&#x27;scenario&#x27;,&#x27;bw-export-kind&#x27;:&#x27;exportKind&#x27;,&#x27;bw-language&#x27;:&#x27;language&#x27;
+  };
+  function restore(snapshot){
+    stopAuto();
+    const saved=snapshot?.privateContent?.browserWorkspaceV3;
+    if(saved&amp;&amp;typeof saved===&#x27;object&#x27;){
+      for(const key of Object.keys(initial))if(key!==&#x27;tools&#x27;&amp;&amp;typeof saved[key]===typeof initial[key])state[key]=saved[key];
+      for(const key of Object.keys(initial.tools))if(typeof saved.tools?.[key]===&#x27;boolean&#x27;)state.tools[key]=saved.tools[key];
+    }
+    const enums={tab:[&#x27;agent&#x27;,&#x27;connection&#x27;,&#x27;recipe&#x27;,&#x27;demo&#x27;,&#x27;export&#x27;],provider:[&#x27;local&#x27;,&#x27;remote&#x27;],profile:[&#x27;fresh&#x27;,&#x27;carrier&#x27;],policy:[&#x27;public&#x27;,&#x27;allowlist&#x27;],urlSource:[&#x27;agent&#x27;,&#x27;workflow&#x27;,&#x27;fixed&#x27;],missing:[&#x27;ask&#x27;,&#x27;stop&#x27;],scenario:[&#x27;normal&#x27;,&#x27;changed&#x27;,&#x27;challenge&#x27;],runKind:[&#x27;agent&#x27;,&#x27;recipe&#x27;],exportKind:[&#x27;agent&#x27;,&#x27;recipe&#x27;],language:[&#x27;python&#x27;,&#x27;typescript&#x27;]};
+    for(const [key,allowed]of Object.entries(enums))if(!allowed.includes(state[key]))state[key]=initial[key];
+    if(![4,8,12].includes(state.limit))state.limit=12;
+    if(![0,1,2,3].includes(state.recipeStep))state.recipeStep=0;
+    for(const [id,key]of Object.entries(fields)){const el=q(&#x27;#&#x27;+id);if(el.type===&#x27;checkbox&#x27;)el.checked=state[key];else el.value=String(state[key]);}
+    qa(&#x27;[data-tool]&#x27;).forEach(el=&gt;el.checked=state.tools[el.dataset.tool]);
+    q(&#x27;#bw-url-source&#x27;).value=state.urlSource;
+    renderBindings();renderDecor();renderRecipe();run.index=0;run.plan=buildPlan();renderRun();renderCode();show(state.tab,false);
+    q(&#x27;#bw-save-label&#x27;).textContent=&#x27;Đã lưu&#x27;;
+  }
+  qa(&#x27;[data-tab]&#x27;).forEach(el=&gt;el.addEventListener(&#x27;click&#x27;,()=&gt;{show(el.dataset.tab);renderDecor();}));
+  qa(&#x27;[data-tool]&#x27;).forEach(el=&gt;el.addEventListener(&#x27;change&#x27;,()=&gt;{state.tools[el.dataset.tool]=el.checked;renderDecor();invalidate();renderCode();persist();}));
+  qa(&#x27;[data-step]&#x27;).forEach(el=&gt;el.addEventListener(&#x27;click&#x27;,()=&gt;{state.recipeStep=Number(el.dataset.step);renderRecipe();persist();}));
+  qa(&#x27;[data-sample]&#x27;).forEach(el=&gt;el.addEventListener(&#x27;click&#x27;,()=&gt;selectSample(el.dataset.sample)));
+  for(const[id,key]of Object.entries(fields)){
+    const el=q(&#x27;#&#x27;+id);
+    el.addEventListener(el.tagName===&#x27;TEXTAREA&#x27;||el.tagName===&#x27;INPUT&#x27;&amp;&amp;el.type!==&#x27;checkbox&#x27;?&#x27;input&#x27;:&#x27;change&#x27;,()=&gt;{
+      state[key]=el.type===&#x27;checkbox&#x27;?el.checked:key===&#x27;limit&#x27;?Number(el.value):el.value;
+      renderDecor();invalidate();renderCode();persist();
+    });
+  }
+  [&#x27;bw-provider&#x27;,&#x27;bw-connection&#x27;].forEach(id=&gt;q(&#x27;#&#x27;+id).addEventListener(&#x27;change&#x27;,e=&gt;{
+    state.provider=e.target.value;state.name=state.provider===&#x27;remote&#x27;?&#x27;Browserless · Remote&#x27;:&#x27;Browser nội bộ&#x27;;q(&#x27;#bw-connection-name&#x27;).value=state.name;renderDecor();invalidate();renderCode();persist();
+  }));
+  q(&#x27;#bw-url-source&#x27;).addEventListener(&#x27;change&#x27;,e=&gt;{state.urlSource=e.target.value;renderBindings();invalidate();renderCode();persist();});
+  q(&#x27;#bw-url-input&#x27;).addEventListener(&#x27;input&#x27;,e=&gt;{state[state.urlSource===&#x27;fixed&#x27;?&#x27;fixedUrl&#x27;:&#x27;urlExpression&#x27;]=e.target.value;invalidate();renderCode();persist();});
+  q(&#x27;#bw-agent-node&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{show(&#x27;agent&#x27;);renderDecor();});
+  q(&#x27;#bw-open-connection&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{show(&#x27;connection&#x27;);renderDecor();});
+  q(&#x27;#bw-test-recipe&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{state.runKind=&#x27;recipe&#x27;;q(&#x27;#bw-demo-kind&#x27;).value=&#x27;recipe&#x27;;invalidate();show(&#x27;demo&#x27;);renderDecor();persist();});
+  q(&#x27;#bw-run&#x27;).addEventListener(&#x27;click&#x27;,start);
+  q(&#x27;#bw-next-step&#x27;).addEventListener(&#x27;click&#x27;,next);
+  q(&#x27;#bw-save&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{q(&#x27;#bw-save-label&#x27;).textContent=&#x27;Đã lưu trong bản xem thử&#x27;;persist();});
+  q(&#x27;#bw-select-code&#x27;).addEventListener(&#x27;click&#x27;,()=&gt;{q(&#x27;#bw-code&#x27;).focus();q(&#x27;#bw-code&#x27;).select();});
+  window.addEventListener(&#x27;openai:set_globals&#x27;,e=&gt;{if(e.detail?.globals?.widgetState)restore(e.detail.globals.widgetState);});
+  restore(window.openai?.widgetState);
+  if(globalThis.Tweak){const tweak=new Tweak({container:q(&#x27;#bw-recipe-layout&#x27;),onChange:renderRecipe});tweak.addToggle(ui,&#x27;detail&#x27;,{label:&#x27;Hiện chi tiết thao tác recipe&#x27;});}
+})();
+&lt;/script&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (event) =&gt; {
+    for (const target of event.composedPath()) {
+      if (target?.nodeType === Node.ELEMENT_NODE) {
+        const trigger = target.closest(&quot;[data-tooltip]&quot;);
+        if (trigger) return trigger;
+      }
+    }
+    return null;
+  };
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handlers = {
+    pointerover: handlePointerOpen,
+    pointerdown: handlePointer,
+    pointercancel: handlePointer,
+    click: handleTouchClick,
+    pointerout: handleLeave,
+    focusin: handleFocusIn,
+    focusout: handleLeave,
+    keydown: handleKeyDown,
+    contextmenu: handleContextMenu,
+  };
+  const roots = new Map();
+  const handledEvents = new WeakSet();
+  const handleEvent = (event) =&gt; {
+    if (handledEvents.has(event)) return;
+    handledEvents.add(event);
+    handlers[event.type](event);
+  };
+  const discoverRoots = (node) =&gt; {
+    if (node.shadowRoot) listen(node.shadowRoot);
+    for (const element of node.querySelectorAll(&quot;*&quot;)) {
+      if (element.shadowRoot) listen(element.shadowRoot);
+    }
+  };
+  const listen = (root) =&gt; {
+    if (roots.has(root)) return;
+    for (const type of Object.keys(handlers)) root.addEventListener(type, handleEvent);
+    const observer = new window.MutationObserver((records) =&gt; {
+      for (const { addedNodes } of records) {
+        for (const node of addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) discoverRoots(node);
+        }
+      }
+      for (const [root, cleanup] of roots) {
+        if (root.host &amp;&amp; !root.host.isConnected) {
+          cleanup();
+          roots.delete(root);
+        }
+      }
+      if (activeTrigger &amp;&amp; !activeTrigger.isConnected) closeTooltip(false);
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    roots.set(root, () =&gt; {
+      observer.disconnect();
+      for (const type of Object.keys(handlers)) root.removeEventListener(type, handleEvent);
+    });
+    discoverRoots(root);
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    for (const cleanup of roots.values()) cleanup();
+    roots.clear();
+    tooltip = null;
+  };
+
+  // Events between children of one shadow root never reach the document.
+  listen(document);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-carousel&quot;&gt;
+  (() =&gt; {
+    for (const root of document.querySelectorAll(&quot;.viz-carousel&quot;)) {
+      const panels = Array.from(
+        root.querySelectorAll(&quot;:scope &gt; [data-variant]&quot;),
+      );
+      if (panels.length === 0) {
+        continue;
+      }
+      root.setAttribute(&quot;role&quot;, &quot;group&quot;);
+      panels.forEach((panel, index) =&gt; {
+        panel.hidden = index !== 0;
+        panel.setAttribute(&quot;role&quot;, &quot;group&quot;);
+        if (!panel.hasAttribute(&quot;aria-label&quot;)) {
+          panel.setAttribute(&quot;aria-label&quot;, panel.dataset.variant);
+        }
+      });
+      root.dataset.activeVariant = panels[0].dataset.variant;
+      if (panels.length === 1) {
+        continue;
+      }
+
+      const controls = document.createElement(&quot;div&quot;);
+      controls.className = &quot;viz-carousel-controls&quot;;
+      // Portable copy of the settings dropdown&#x27;s legacy glyph; no 14px icon-package preset matches it.
+      // https://github.com/openai/openai/blob/master/codex/codex-apps/webview/src/icons/chevron.svg
+      controls.innerHTML = `
+      &lt;button type=&quot;button&quot; class=&quot;viz-carousel-previous cursor-interaction&quot;&gt;&lt;i data-lucide=&quot;chevron-left&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;
+      &lt;details class=&quot;viz-carousel-picker&quot;&gt;
+        &lt;summary class=&quot;cursor-interaction&quot;&gt;
+          &lt;span class=&quot;viz-carousel-count tabular-nums&quot;&gt;&lt;/span&gt;
+          &lt;span class=&quot;viz-carousel-name&quot;&gt;&lt;/span&gt;
+          &lt;svg class=&quot;viz-carousel-caret&quot; width=&quot;14&quot; height=&quot;14&quot; viewBox=&quot;0 0 20 21&quot; fill=&quot;none&quot; aria-hidden=&quot;true&quot; focusable=&quot;false&quot;&gt;
+            &lt;path d=&quot;M15.2793 7.71101C15.539 7.45131 15.961 7.45131 16.2207 7.71101C16.4804 7.97071 16.4804 8.39272 16.2207 8.65242L10.4707 14.4024C10.211 14.6621 9.78902 14.6621 9.52932 14.4024L3.77932 8.65242L3.69436 8.54792C3.52385 8.28979 3.55205 7.93828 3.77932 7.71101C4.00659 7.48374 4.3581 7.45554 4.61623 7.62605L4.72073 7.71101L10 12.9903L15.2793 7.71101Z&quot; fill=&quot;currentColor&quot; stroke=&quot;currentColor&quot; stroke-width=&quot;0.6&quot; /&gt;
+          &lt;/svg&gt;
+        &lt;/summary&gt;
+        &lt;div class=&quot;viz-carousel-options&quot;&gt;&lt;/div&gt;
+      &lt;/details&gt;
+      &lt;button type=&quot;button&quot; class=&quot;viz-carousel-next cursor-interaction&quot;&gt;&lt;i data-lucide=&quot;chevron-right&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&lt;/button&gt;`;
+      const previous = controls.querySelector(&quot;.viz-carousel-previous&quot;);
+      const next = controls.querySelector(&quot;.viz-carousel-next&quot;);
+      const picker = controls.querySelector(&quot;.viz-carousel-picker&quot;);
+      const summary = picker.querySelector(&quot;summary&quot;);
+      const count = controls.querySelector(&quot;.viz-carousel-count&quot;);
+      const name = controls.querySelector(&quot;.viz-carousel-name&quot;);
+      const options = controls.querySelector(&quot;.viz-carousel-options&quot;);
+      const status = document.createElement(&quot;span&quot;);
+      status.className = &quot;sr-only&quot;;
+      status.setAttribute(&quot;role&quot;, &quot;status&quot;);
+      status.setAttribute(&quot;aria-live&quot;, &quot;polite&quot;);
+      status.setAttribute(&quot;aria-atomic&quot;, &quot;true&quot;);
+      previous.setAttribute(
+        &quot;aria-label&quot;,
+        root.dataset.previousLabel ?? &quot;Previous variant&quot;,
+      );
+      next.setAttribute(&quot;aria-label&quot;, root.dataset.nextLabel ?? &quot;Next variant&quot;);
+
+      let active = 0;
+      let mousePointerId = null;
+      let summaryPointerHandled = false;
+      summary.addEventListener(&quot;pointerdown&quot;, (event) =&gt; {
+        summaryPointerHandled =
+          event.pointerType === &quot;mouse&quot; &amp;&amp; event.button === 0 &amp;&amp; !event.ctrlKey;
+        if (!summaryPointerHandled) {
+          return;
+        }
+        event.preventDefault();
+        summary.focus({ preventScroll: true });
+        picker.open = !picker.open;
+        mousePointerId = picker.open ? event.pointerId : null;
+      });
+      summary.addEventListener(&quot;click&quot;, (event) =&gt; {
+        if (summaryPointerHandled &amp;&amp; event.detail &gt; 0) {
+          event.preventDefault();
+        }
+      });
+      const choices = panels.map((panel, index) =&gt; {
+        const choice = document.createElement(&quot;button&quot;);
+        choice.type = &quot;button&quot;;
+        choice.className = &quot;cursor-interaction&quot;;
+        choice.textContent = panel.dataset.variant;
+        choice.addEventListener(&quot;click&quot;, () =&gt; {
+          select(index);
+          summary.focus();
+        });
+        choice.addEventListener(&quot;pointerup&quot;, (event) =&gt; {
+          if (
+            picker.open &amp;&amp;
+            event.pointerType === &quot;mouse&quot; &amp;&amp;
+            event.button === 0 &amp;&amp;
+            event.pointerId === mousePointerId
+          ) {
+            choice.click();
+          }
+        });
+        options.appendChild(choice);
+        return choice;
+      });
+      const select = (index) =&gt; {
+        const changed = active !== index;
+        active = index;
+        panels.forEach((panel, position) =&gt; {
+          panel.hidden = position !== active;
+          choices[position].setAttribute(
+            &quot;aria-current&quot;,
+            String(position === active),
+          );
+        });
+        root.dataset.activeVariant = panels[active].dataset.variant;
+        count.textContent = `${active + 1} / ${panels.length}`;
+        name.textContent = panels[active].dataset.variant;
+        picker.open = false;
+        mousePointerId = null;
+        if (changed) {
+          status.textContent = `${count.textContent}: ${name.textContent}`;
+        }
+      };
+      previous.addEventListener(&quot;click&quot;, () =&gt;
+        select((active + panels.length - 1) % panels.length),
+      );
+      next.addEventListener(&quot;click&quot;, () =&gt;
+        select((active + 1) % panels.length),
+      );
+      picker.addEventListener(&quot;keydown&quot;, (event) =&gt; {
+        if (event.key === &quot;Escape&quot; &amp;&amp; picker.open) {
+          event.preventDefault();
+          picker.open = false;
+          mousePointerId = null;
+          summary.focus();
+          return;
+        }
+        if (event.altKey || event.ctrlKey || event.metaKey) {
+          return;
+        }
+        const index = choices.indexOf(document.activeElement);
+        let nextIndex;
+        if (event.key === &quot;ArrowDown&quot;) {
+          nextIndex = index &lt; 0 ? active : (index + 1) % choices.length;
+        } else if (event.key === &quot;ArrowUp&quot;) {
+          nextIndex = index &lt; 0 ? active : (index + choices.length - 1) % choices.length;
+        } else if (picker.open &amp;&amp; event.key === &quot;Home&quot;) {
+          nextIndex = 0;
+        } else if (picker.open &amp;&amp; event.key === &quot;End&quot;) {
+          nextIndex = choices.length - 1;
+        } else {
+          return;
+        }
+        event.preventDefault();
+        picker.open = true;
+        choices[nextIndex].focus();
+      });
+      picker.addEventListener(&quot;focusout&quot;, (event) =&gt; {
+        if (!picker.contains(event.relatedTarget)) {
+          picker.open = false;
+          mousePointerId = null;
+        }
+      });
+      const dismiss = (event) =&gt; {
+        if (!summary.contains(event.target)) {
+          mousePointerId = null;
+        }
+        if (!picker.contains(event.target)) {
+          picker.open = false;
+        }
+      };
+      const endPointerSelection = () =&gt; {
+        mousePointerId = null;
+      };
+      const sizePicker = () =&gt; {
+        root.style.setProperty(
+          &quot;--viz-carousel-picker-height&quot;,
+          `${picker.open ? options.offsetHeight : 0}px`,
+        );
+      };
+      picker.addEventListener(&quot;toggle&quot;, sizePicker);
+      window.addEventListener(&quot;resize&quot;, sizePicker);
+      document.addEventListener(&quot;pointerdown&quot;, dismiss);
+      document.addEventListener(&quot;pointerup&quot;, endPointerSelection);
+      document.addEventListener(&quot;pointercancel&quot;, endPointerSelection);
+      window.addEventListener(&quot;blur&quot;, endPointerSelection);
+      window.addEventListener(
+        &quot;pagehide&quot;,
+        () =&gt; {
+          document.removeEventListener(&quot;pointerdown&quot;, dismiss);
+          document.removeEventListener(&quot;pointerup&quot;, endPointerSelection);
+          document.removeEventListener(&quot;pointercancel&quot;, endPointerSelection);
+          window.removeEventListener(&quot;blur&quot;, endPointerSelection);
+          window.removeEventListener(&quot;resize&quot;, sizePicker);
+        },
+        { once: true },
+      );
+      root.append(controls, status);
+      select(0);
+    }
+  })();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+
+<script>(() => {
+  const frame = document.getElementById("codex-visualization");
+  if (!(frame instanceof HTMLIFrameElement)) {
+    return;
+  }
+  const isShare = document.documentElement.classList.contains(
+    "visualization-share-root",
+  );
+  let viewportHeight = globalThis.innerHeight;
+  let sizeFingerprint = null;
+  let sizeWriteTimeout;
+  let lastSize = null;
+  let pendingSize = null;
+  const storageKey = `codex:visualization-widget-state-v2:${JSON.stringify([
+    globalThis.location.pathname,
+    globalThis.location.search,
+  ])}`;
+  const sizeStorageKey = `${storageKey}:share-size-v1`;
+  const parseState = (serializedState) => {
+    if (
+      typeof serializedState !== "string" ||
+      new TextEncoder().encode(serializedState).length > 16 * 1024
+    ) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    /** @type {unknown} */
+    const state = JSON.parse(serializedState);
+    if (
+      state == null ||
+      typeof state !== "object" ||
+      Array.isArray(state) ||
+      ("imageIds" in state &&
+        (!Array.isArray(state.imageIds) || state.imageIds.length > 0))
+    ) {
+      throw new TypeError("Widget state must be a JSON object");
+    }
+    const storedState = { modelContent: null, privateContent: null, ...state };
+    const canonicalState = JSON.stringify(
+      storedState,
+      (_key, /** @type {unknown} */ value) => {
+        if (typeof value === "number" && !Number.isFinite(value)) {
+          throw new TypeError("Widget state must contain finite numbers");
+        }
+        return value;
+      },
+    );
+    if (new TextEncoder().encode(canonicalState).length > 16 * 1024) {
+      throw new TypeError(
+        "Widget state must be a JSON object of at most 16 KiB",
+      );
+    }
+    return storedState;
+  };
+  let storage = null;
+  let state = null;
+  try {
+    const localStorage = globalThis.localStorage;
+    const probeKey = `${storageKey}:probe`;
+    localStorage.setItem(probeKey, "1");
+    localStorage.removeItem(probeKey);
+    storage = localStorage;
+    const savedState = storage.getItem(storageKey);
+    if (savedState != null) {
+      try {
+        state = parseState(savedState);
+      } catch {
+        // Invalid saved state does not disable future writes.
+      }
+    }
+  } catch {
+    storage = null;
+  }
+  const persistSize = () => {
+    globalThis.clearTimeout(sizeWriteTimeout);
+    if (pendingSize == null) {
+      return;
+    }
+    try {
+      storage?.setItem(sizeStorageKey, pendingSize);
+    } catch {
+      // A denied or full cache must not affect the visualization.
+    }
+    pendingSize = null;
+  };
+  if (isShare) {
+    globalThis.addEventListener("pagehide", persistSize);
+  }
+  const initialGlobals = {
+    widgetState: state,
+    statePersistence: storage == null ? "none" : "local",
+  };
+
+  const channel = new MessageChannel();
+  channel.port1.addEventListener("message", (event) => {
+    const data = event.data;
+    if (typeof data !== "object" || data == null) {
+      return;
+    }
+    if (data.type === "widget-state-write") {
+      if (!Number.isSafeInteger(data.id) || data.id <= 0) {
+        return;
+      }
+      let ok = false;
+      try {
+        if (storage != null) {
+          const state = parseState(data.state);
+          storage.setItem(storageKey, JSON.stringify(state));
+          ok = true;
+        }
+      } catch {
+        // Storage denial, quota limits, and invalid state return a failed receipt.
+      }
+      channel.port1.postMessage({
+        type: "widget-state-result",
+        id: data.id,
+        ok,
+      });
+      return;
+    }
+    if (data.type === "height") {
+      const height = data.height;
+      if (
+        typeof height !== "number" ||
+        !Number.isFinite(height) ||
+        height < 0
+      ) {
+        return;
+      }
+      if (height <= 10_000) {
+        const width = isShare && storage != null ? frame.clientWidth : null;
+        frame.style.height = Math.ceil(height) + "px";
+        if (isShare && storage != null) {
+          const size = JSON.stringify({
+            fingerprint: sizeFingerprint,
+            width,
+            viewportHeight: globalThis.innerHeight,
+            dark: globalThis.matchMedia("(prefers-color-scheme: dark)").matches,
+            scale: globalThis.devicePixelRatio,
+            height: Math.ceil(height),
+          });
+          if (size !== lastSize) {
+            lastSize = size;
+            pendingSize = size;
+            globalThis.clearTimeout(sizeWriteTimeout);
+            sizeWriteTimeout = globalThis.setTimeout(persistSize, 100);
+          }
+        }
+      }
+      if (isShare) {
+        // Keep unusually tall content accessible without accepting an unbounded height.
+        if (height > 10_000 && Number.parseFloat(frame.style.height) === 0) {
+          frame.style.removeProperty("height");
+        }
+        frame.scrolling = height > 10_000 ? "auto" : "no";
+        document.documentElement.classList.add("visualization-share-ready");
+      }
+      return;
+    }
+    if (data.type === "scroll-to") {
+      const top = data.top;
+      if (
+        typeof top === "number" &&
+        Number.isFinite(top) &&
+        top >= 0 &&
+        globalThis.navigator.userActivation?.isActive === true
+      ) {
+        globalThis.scrollTo({
+          top: Math.ceil(
+            globalThis.scrollY + frame.getBoundingClientRect().top + top,
+          ),
+        });
+      }
+      return;
+    }
+    if (data.type === "open-external") {
+      const rawHref = data.href;
+      if (typeof rawHref !== "string") {
+        return;
+      }
+      let href;
+      try {
+        const url = new URL(rawHref, document.baseURI);
+        if (url.protocol !== "https:") {
+          return;
+        }
+        href = url.href;
+      } catch {
+        return;
+      }
+      if (globalThis.navigator.userActivation?.isActive === true) {
+        const anchor = document.createElement("a");
+        anchor.href = href;
+        anchor.rel = "noopener noreferrer";
+        anchor.target = "_blank";
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+      }
+      return;
+    }
+    if (data.type === "follow-up") {
+      const prompt = data.prompt;
+      if (
+        typeof prompt !== "string" ||
+        globalThis.navigator.userActivation?.isActive !== true
+      ) {
+        return;
+      }
+      const title = data.title;
+      globalThis.prompt(typeof title === "string" ? title : prompt, prompt);
+    }
+  });
+  channel.port1.start();
+  const srcdoc = frame.dataset.srcdoc;
+  if (srcdoc == null) {
+    return;
+  }
+  globalThis.addEventListener("resize", () => {
+    const height = Number.parseFloat(frame.style.height);
+    if (!isShare && (!Number.isFinite(height) || height <= viewportHeight)) {
+      frame.style.removeProperty("height");
+    }
+    viewportHeight = globalThis.innerHeight;
+    channel.port1.postMessage({ type: "measure" });
+  });
+  frame.addEventListener(
+    "load",
+    () => {
+      frame.contentWindow?.postMessage(
+        { type: "codex-visualization-initialize" },
+        "*",
+        [channel.port2],
+      );
+    },
+    { once: true },
+  );
+  // Match the trusted bootstrap element, not the same text in an authored title.
+  const frameHtml = srcdoc.replace(
+    '<script type="application/json" id="codex-visualization-widget-state">__CODEX_VISUALIZATION_WIDGET_STATE__<\/script>',
+    () =>
+      '<script type="application/json" id="codex-visualization-widget-state">' +
+      JSON.stringify(initialGlobals).replaceAll("<", "\\u003c") +
+      "<\/script>",
+  );
+  if (isShare && storage != null) {
+    // Fingerprint the rendered document, including restored widget state, without
+    // storing its content. This is a layout cache, not a security identity.
+    let hash = 5381;
+    for (let index = 0; index < frameHtml.length; index += 1) {
+      hash = (hash * 33 + frameHtml.charCodeAt(index)) % 4_294_967_296;
+    }
+    sizeFingerprint = hash.toString(36);
+    try {
+      const size = JSON.parse(storage.getItem(sizeStorageKey) ?? "null");
+      if (
+        size?.fingerprint === sizeFingerprint &&
+        size.width === frame.clientWidth &&
+        size.viewportHeight === globalThis.innerHeight &&
+        size.dark ===
+          globalThis.matchMedia("(prefers-color-scheme: dark)").matches &&
+        size.scale === globalThis.devicePixelRatio &&
+        typeof size.height === "number" &&
+        Number.isFinite(size.height) &&
+        size.height >= 0 &&
+        size.height <= 10_000
+      ) {
+        frame.style.height = size.height + "px";
+      }
+    } catch {
+      // Ignore missing or invalid cache entries and measure the live frame.
+    }
+  }
+  frame.srcdoc = frameHtml;
+  delete frame.dataset.srcdoc;
+})();
+</script>
+</body>
+</html>

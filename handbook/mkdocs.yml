@@ -44,6 +44,7 @@ nav:
       - Knowledge bases: guide/knowledge.md
       - MCP servers: guide/mcp.md
       - Google Drive tools: guide/google-drive.md
+      - Browser tools: guide/browser.md
       - Workflow templates: guide/templates.md
       - Versions: guide/versions.md
       - Export to Python: guide/python-export.md
@@ -63,6 +64,7 @@ nav:
       - Chat API: run/chat-api.md
       - React chat toolkit: run/chat-react.md
       - Chat widget: run/chat-widget.md
+      - Chat in a native app: run/chat-native-webview.md
       - Third-party chat auth: run/chat-third-party-auth.md
       - Workflow tests: run/tests.md
   - Operate:
@@ -73,6 +75,7 @@ nav:
       - Roles and sharing: operate/access.md
       - LLM providers: operate/providers.md
       - Approval channels: operate/channels.md
+      - Expose a local studio: operate/expose-local.md
       - Code runtime: operate/code-runtime.md
       - Observability: operate/observability.md
       - Import a LangGraph repo: operate/import.md

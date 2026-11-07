@@ -37,7 +37,7 @@ from .limits import safe_error
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
-from . import attachments, subgraphs
+from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes, browser_presentation
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
@@ -120,10 +120,15 @@ def parameters(t: Dict[str, Any]) -> Dict[str, Any]:
     if src == "knowledge": return QUERY
     if src == "builtin": return PARAMETERS.get(t.get("function") or "") or {"type": "object", "properties": {}}
     if src == "workflow":  # the child's state fields the model fills, typed from the snapshot once a run is planned
+        if browser_recipes.parsed(t.get('snapshot') or {}) is not None:return browser_recipes.input_schema(t['snapshot'])
         props, want = state_schema(t.get("snapshot") or {})["properties"], field_list(t.get("inputs"))
         return {"type": "object", "properties": {f: props.get(f) or {"type": "string"} for f in want}, "required": want}
     p = t.get("parameters")
-    return p if isinstance(p, dict) and p else {"type": "object", "properties": {}}
+    p = p if isinstance(p, dict) and p else {"type": "object", "properties": {}}
+    if t.get('url_binding') and web_contract.binding(t).source!='model':
+        p=copy.deepcopy(p);p.get('properties',{}).pop('url',None)
+        p['required']=[name for name in p.get('required',[]) if name!='url']
+    return p
 
 
 def specs(d: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -195,10 +200,10 @@ def http_request(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[
     return http_send(nid, method, url, body, headers)
 
 
-def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects]) -> Any:
+def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None) -> Any:
     src = t.get("source")
     if src == "mcp":
-        return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None)
+        return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None, group=group, ticket=ticket)
     if src == "knowledge":
         if ports.retrieve is None: raise RuntimeError("Agent knowledge base tools need a knowledge base service")
         return ports.retrieve(t.get("knowledge_base_id") or "", str(args.get("query") or ""), int(t.get("top_k") or 4))
@@ -234,6 +239,11 @@ def errors(nid: str, d: Dict[str, Any], schema: List[Dict[str, Any]]) -> List[st
         seen.add(name)
         if src not in SOURCES: errs.append(Issue("AGENT_TOOL_SOURCE", **who, source=src)); continue
         if src == "mcp" and not (t.get("server_id") and t.get("tool")): errs.append(Issue("AGENT_TOOL_MCP", **who))
+        if 'url_binding' in t:
+            try:
+                if src!='mcp' or t.get('tool') not in {'navigate','fetch'}:raise ValueError()
+                web_contract.binding(t)
+            except (ValueError,TypeError):errs.append(Issue('AGENT_TOOL_PARAMETERS',**who))
         if src == "builtin" and t.get("function") not in TOOLS: errs.append(Issue("AGENT_TOOL_FUNCTION", **who, function=t.get("function")))
         if src == "knowledge":
             if not t.get("knowledge_base_id"): errs.append(Issue("AGENT_TOOL_KB", **who))
@@ -263,6 +273,7 @@ def templates(d: Dict[str, Any]) -> List[str]:
     out = [d.get("system_prompt") or "", d.get("prompt") or ""]
     for t in d.get("tools") or []:
         if isinstance(t, dict) and t.get("source") == "http": out += [t.get("url") or "", t.get("body") or ""]
+        if isinstance(t,dict) and isinstance(t.get('url_binding'),dict) and t['url_binding'].get('source')=='state':out.append(t['url_binding'].get('value') or '')
     return out
 
 
@@ -493,6 +504,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             if not hit: p["rounds"] = p.get("rounds", 0) + 1
             p["limit_hit"] = hit
             p.setdefault("messages", []).append({"role": "assistant", "content": out, **({"tool_calls": calls} if calls else {})})
+            configured={item.get('name'):item for item in d.get('tools') or []}
             first = next((c for c in calls if c["name"] in hand), None) if can else None
             if first is not None:  # the hand-off wins: the other calls of the round are answered, not run (TASK-0180)
                 h = hand[first["name"]]; args = first.get("args") if isinstance(first.get("args"), dict) else {}
@@ -501,19 +513,29 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                     done = c is first
                     msg = f"Handed off to {h['label']}" if done else NOT_RUN
                     p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": msg})
-                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": c["args"], "result": NOT_RUN, "status": "not_run", "ms": 0})
+                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"]), "result": NOT_RUN, "status": "not_run", "ms": 0})
                 p["pending"], p["handoff"] = [], {"to": h["target"], "label": h["label"], "reason": reason, "tool": first["name"]}
                 p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": False,
-                             "tool_calls": [{"name": c["name"], "args": c["args"]} for c in calls]}
+                             "tool_calls": [{"name": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"])} for c in calls]}
                 return {key: p}
-            p["pending"] = calls[:MAX_CALLS_PER_ROUND]
+            p["pending"] = copy.deepcopy(calls[:MAX_CALLS_PER_ROUND])
+            batch=[]
+            for index,call in enumerate(p['pending']):
+                tool=configured.get(call['name'])
+                if tool and tool.get('url_binding'):
+                    try:call['_resolved_args']=web_contract.bind_url(tool,call.get('args'),state)
+                    except (ValueError,TypeError):call['_binding_error']='The configured URL binding cannot be overridden or resolved'
+                if tool and tool.get('source')=='mcp' and not arg_error(parameters(tool),call.get('args')):
+                    if not call.get('_binding_error'):batch.append({'index':index,'server_id':tool.get('server_id') or '', 'tool':tool.get('tool') or '', 'arguments':call.get('_resolved_args',call['args'])})
+            tickets=ports.prepare_browsers(owner(node),effects.key(nid) if effects else f"round:{p['rounds']}",batch)
+            for index,ticket in tickets.items():p['pending'][index]['_browser_ticket']=ticket
             for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run
                 why = f"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round"
                 p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": why})
-                p.setdefault("steps", []).append({"tool": c["name"], "args": c["args"], "result": why, "status": "refused", "ms": 0})
+                p.setdefault("steps", []).append({"tool": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"]), "result": why, "status": "refused", "ms": 0})
             if not calls: p["answer"] = out
             p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": hit,
-                         "tool_calls": [{"name": c["name"], "args": c["args"]} for c in calls]}
+                         "tool_calls": [{"name": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"])} for c in calls]}
             return {key: p}
         return fn
 
@@ -524,11 +546,17 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             pending = ((state.get(key) or {}).get("pending")) or []
             if index > len(pending): return {}  # a slot the router did not Send
             call = pending[index - 1]
-            tool, args = by_name.get(call["name"]), call.get("args")
-            bad = None if tool is None else arg_error(parameters(tool), args)
+            tool, args = by_name.get(call["name"]), call.get('_resolved_args',call.get("args"))
+            bad = None if tool is None else call.get('_binding_error') or arg_error(parameters(tool),call.get('args'))
             decided = None
+            browser_result=None;browser_details=None
+            browser=bool(tool is not None and tool.get('source')=='mcp' and ports.browser is not None and not (ports.test or ports.mock_models) and ports.browser.is_browser(tool.get('server_id')))
+            missing_browser_url=bool(browser and not call.get('_binding_error') and tool.get('tool')=='navigate' and web_contract.missing_url(args))
+            if missing_browser_url:bad=None
+            if browser and not bad:
+                browser_result=browser_approval.check(ports,effects,nid,owner(node),call.get('_browser_ticket'),tool.get('server_id'),tool.get('tool'),args,bool(tool.get('approval')))
             got = child_result(resume, nid) if tool is not None and tool.get("source") == "workflow" else None
-            if tool is not None and not bad and tool.get("approval") and got is None:  # a call that cannot run is not shown to an approver;
+            if tool is not None and not bad and tool.get("approval") and got is None and not browser:  # a call that cannot run is not shown to an approver;
                 # a child that finished ran after its approval
                 decided = answer(resume, nid)
                 if decided is None:
@@ -541,6 +569,9 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 status, result = "error", f"Unknown tool {call['name']}: use one of {', '.join(sorted(n for n in by_name if n))}"
             elif bad:
                 status, result = "error", f"Invalid arguments for {call['name']}: {bad}"
+            elif browser_result is not None:
+                status,result=('rejected' if browser_result.get('approval_outcome')=='rejected' else 'waiting' if browser_result.get('deferred') else 'error'),text(browser_result)
+                browser_details=browser_result
             elif decided is not None and decided.strip().lower() != APPROVED:
                 status, result = "rejected", rejection(decided)
             elif got is not None:
@@ -549,6 +580,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             elif tool.get("source") == "workflow":  # start the child run (once per call) and wait for it (DEC-0066)
                 try:
                     if ports.start_child is None: raise RuntimeError("workflow tools need the run service")
+                    browser_recipes.validate_input(tool.get('snapshot') or {},args)
                     call_key = f"{effects.key(nid) if effects else nid}#{call['id']}"
                     inp = {f: args[f] for f in field_list(tool.get("inputs")) if f in args}
                     cid = ports.start_child(call_key, tool.get("snapshot") or {}, tool.get("version"), inp,
@@ -562,14 +594,23 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                              "workflow_id": tool.get("workflow_id")}
                     _pause(effects, {"node": nid, "kind": "child", "run_id": cid, **extra}, AwaitChild(nid, cid, extra))
             else:
-                try: status, result = "ok", text(run_tool(nid, tool, args, state, ports, effects))
+                try:
+                    value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'))
+                    status,result='ok',text(value)
+                    if browser and isinstance(value,dict):
+                        browser_details=value
+                        if value.get('status')!='confirmed':status='waiting' if value.get('deferred') else 'error'
                 except Exception as e:
                     if getattr(e, "fenced", False): raise  # this worker lost the run
                     status, result = "error", f"{FAILED}: {safe_error(e)}"
+            if call.get('_browser_ticket') and status in {'rejected','error'} and ports.browser is not None:
+                ports.browser.skip(owner(node),call['_browser_ticket'])
             ms = round((time.perf_counter() - t0) * 1000, 2)
-            step = {"tool": call["name"], "args": args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
+            trace_args=browser_approval.trace_arguments(ports,tool,args)
+            step = {"tool": call["name"], "args": trace_args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
                     **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),
-                    **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {})}
+                    **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {}),
+                    **({'browser':browser_presentation.detail(tool.get('tool'),browser_details)} if browser_details is not None else {})}
             message = {"role": "tool", "tool_call_id": call["id"], "name": call["name"], "content": shorten(result, RESULT_CHARS)}
             # the join appends this onto the conversation, in the model's order, whatever order the slots finish in
             return {channel: {"index": index, "message": message, "step": step,

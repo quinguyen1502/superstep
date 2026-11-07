@@ -115,9 +115,9 @@ def test_non_chat_credential_is_rejected_and_templates_clear_alternate_reference
         model_policy.run(DATA, CREDS["primary"], resolve, lambda *_: "must not call", None, lambda _: None)
     clean = sanitize(graph())
     assert clean["nodes"][1]["data"]["fallback"] == {"credential_id": "", "model": "second"}
-    for export in (to_python, to_typescript):
-        with pytest.raises(AppError) as caught: export(graph(), "example")
-        assert caught.value.code == "MODEL_POLICY_EXPORT_UNAVAILABLE"
+    for export in (to_python, to_typescript):  # TASK-0264: exported with the fallback model name, never a credential id
+        code = export(graph(), "example").code
+        assert '"second"' in code and "backup" not in code and "primary" not in code.replace("primary model", "").replace("primary mock", "")
 
 
 def test_another_users_alternate_cannot_be_used_by_a_saved_run(monkeypatch):

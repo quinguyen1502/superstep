@@ -7,7 +7,9 @@ so `deno run` / `deno check` work as is; for Node, drop the `npm:` prefixes.
 
 The graph is read through `templates.sanitize` (`export_common`), so no credential reaches the file: keys come from
 environment variables at run time. TypeScript Code nodes are inlined as written; Python Code nodes and registered
-Python tool functions become stubs that throw. Retriever, MCP and Send email nodes call stubs, as in the Python file.
+Python tool functions become stubs that throw. Retriever, MCP and Send email nodes call the studio's services through
+environment variables, as in the Python file. A node credential is an LLM_CRED_<n> slot. Approval extras and managed
+connections are included when a node has them.
 An Agent node is its model and tool steps in a loop, as in the Python file (TASK-0125, DEC-0063); its built-in tools are
 Python functions, so they throw too, and the model is told the tool failed.
 The output is a pure function of its input: the same graph gives the same bytes.
@@ -16,12 +18,16 @@ from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
 from . import agents, approval_policy, attachments, foreach
+from .browser_export import export_binding
+from .browser_export_ts import TS_RUNTIME
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
+from .export_runtime import TS_APPROVAL, TS_MANAGED
 from .templating import VAR_RE, _ONE_FILTER, refs
 
 LANGGRAPH = "npm:@langchain/langgraph@^1.5"
 CHECKPOINT = "npm:@langchain/langgraph-checkpoint@^1"
 LANGCHAIN = "npm:langchain@^1"
+NODEMAILER = "npm:nodemailer@^6"  # Send email nodes with SMTP configured (TASK-0271)
 TS_TYPES = {"string": "string", "number": "number", "integer": "number", "boolean": "boolean",
             "object": "Record<string, unknown>", "list": "unknown[]"}
 REDUCERS = {"append": ("appendItems", "unknown[]", "[]"), "merge": ("mergeObjects", "Record<string, unknown>", "{}"),
@@ -43,11 +49,14 @@ GLOBALS = {
     "URLSearchParams", "performance"}
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
-    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER",
-    "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
-    "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
+    "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
+    "DECISION_MODEL", "mockLlm", "callLlm", "resolveModel", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
+    "reviewApproval", "waitApproval", "notifyApproval", "approvalPost", "managedHttp", "managedBlocked", "ManagedUnknown",
+    "sendEmail", "addresses", "EMAIL_RE", "EMAIL_RUN_ID", "nodemailer", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
+    "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
+    "BrowserError", "SessionLost", "UnknownEffect", "sessions",
     "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS", "JSON_TYPES", "WORDS", "Schema", "ToolSpec", "ToolCall", "ChatMessage",
-    "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "FileRecord", "isImage", "fileList", "withFiles", "filesNote", "callLlmFiles", "callAgentFiles", "checkArguments", "toolText", "shorten", "Question", "Message",
+    "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "FileRecord", "isImage", "fileList", "withFiles", "filesNote", "callLlmFiles", "callLlmFilesFallback", "callAgentFiles", "checkArguments", "toolText", "shorten", "Question", "Message",
     *(r[0] for r in REDUCERS.values())}
 
 
@@ -216,14 +225,61 @@ function mockLlm(prompt: string, model: string): string {
   return `[mock:${model}] Answer: ${[...tail].slice(0, 200).join("")}`;
 }
 
-async function callLlm(prompt: string, model: string): Promise<string> {
-  if (!LLM_PROVIDER) return mockLlm(prompt, model);
+/** [provider, initChatModel extras]. A set LLM_CRED_<n>_PROVIDER wins, even when LLM_PROVIDER is unset. */
+function resolveModel(provider: string | undefined, slot?: string): [string | null, Record<string, string>] {
+  if (slot) {
+    const named = env(`${slot}_PROVIDER`);
+    if (named) {
+      const key = env(`${slot}_API_KEY`);
+      if (!key) throw new Error(`LLM credential ${slot}: set ${slot}_API_KEY`);
+      const kwargs: Record<string, string> = { apiKey: key };
+      const base = env(`${slot}_BASE_URL`);
+      if (base) kwargs.baseUrl = base;
+      return [named, kwargs];
+    }
+  }
+  if (!LLM_PROVIDER) return [null, {}];
+  return [provider || LLM_PROVIDER, {}];
+}
+
+async function callLlm(prompt: string, model: string, provider?: string, slot?: string): Promise<string> {
+  const [chosen, kwargs] = resolveModel(provider, slot);
+  if (!chosen) return mockLlm(prompt, model);
   const { initChatModel } = await import("%(langchain)s");
-  const reply = await (await initChatModel(model, { modelProvider: LLM_PROVIDER })).invoke(prompt);
+  // deno-lint-ignore no-explicit-any
+  const reply = await (await initChatModel(model, { modelProvider: chosen, ...kwargs } as any)).invoke(prompt);
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
 ''' % {"langchain": LANGCHAIN}
+
+
+FALLBACK = r'''
+// --- Model fallback ------------------------------------------------------------------------------------------
+// An LLM node with a fallback model, as in the studio: the primary model first; only when it is unreachable, answers
+// badly (HTTP 5xx) or is not found (HTTP 404) the fallback model, once. Other errors (a bad key, a refused request)
+// stop the node. The fallback uses LLM_FALLBACK_PROVIDER, or LLM_PROVIDER; its key comes from the environment too.
+// Offline (no LLM_PROVIDER and no slot provider) only the primary mock answers, as in a studio dry run.
+// A set slot provider is used even when LLM_PROVIDER is unset; an unset slot keeps LLM_PROVIDER.
+function failsOver(error: unknown): boolean {
+  const e = error as { status?: unknown; statusCode?: unknown; response?: { status?: unknown }; name?: unknown; code?: unknown };
+  const status = [e?.status, e?.statusCode, e?.response?.status].find((s) => typeof s === "number") as number | undefined;
+  if (status !== undefined) return status === 404 || status >= 500;
+  return ["APIConnectionError", "APIConnectionTimeoutError", "TimeoutError", "FetchError"].includes(String(e?.name)) ||
+    ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "ENOTFOUND"].includes(String(e?.code));
+}
+
+async function callLlmFallback(prompt: string, model: string, fallback: string, slot?: string, fallbackSlot?: string): Promise<string> {
+  if (!resolveModel(undefined, slot)[0]) return await callLlm(prompt, model, undefined, slot);
+  try {
+    return await callLlm(prompt, model, undefined, slot);
+  } catch (error) {
+    if (!failsOver(error)) throw error;
+    console.error(`(model fallback) ${model} failed (${String((error as { name?: unknown })?.name ?? "Error")}); trying ${fallback}`);
+  }
+  return await callLlm(prompt, fallback, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER, fallbackSlot);
+}
+'''
 
 FILES = r'''
 // --- Attachments ---------------------------------------------------------------------------------------------
@@ -262,25 +318,41 @@ function filesNote(files: unknown): string {
 }
 
 /** callLlm() with the files sent with the message. */
-async function callLlmFiles(prompt: string, model: string, files: unknown): Promise<string> {
+async function callLlmFiles(prompt: string, model: string, files: unknown, provider?: string, slot?: string): Promise<string> {
   const list = fileList(files);
-  if (!LLM_PROVIDER) return mockLlm(prompt, model) + (list.length ? `\n${filesNote(list)}` : "");
+  const [chosen, kwargs] = resolveModel(provider, slot);
+  if (!chosen) return mockLlm(prompt, model) + (list.length ? `\n${filesNote(list)}` : "");
   const [text, images] = withFiles(prompt, list);
   const { initChatModel } = await import("%(langchain)s");
   const ask = images.length ? [{ role: "user", content: [{ type: "text", text }, ...images] }] : text;
   // deno-lint-ignore no-explicit-any
-  const reply = await (await initChatModel(model, { modelProvider: LLM_PROVIDER })).invoke(ask as any);
+  const reply = await (await initChatModel(model, { modelProvider: chosen, ...kwargs } as any)).invoke(ask as any);
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
 ''' % {"langchain": LANGCHAIN}
 
+FALLBACK_FILES = r'''
+
+/** callLlmFallback() for a message with files: the fallback model gets the same prompt and files, once. */
+async function callLlmFilesFallback(prompt: string, model: string, fallback: string, files: unknown, slot?: string, fallbackSlot?: string): Promise<string> {
+  if (!resolveModel(undefined, slot)[0]) return await callLlmFiles(prompt, model, files, undefined, slot);
+  try {
+    return await callLlmFiles(prompt, model, files, undefined, slot);
+  } catch (error) {
+    if (!failsOver(error)) throw error;
+    console.error(`(model fallback) ${model} failed (${String((error as { name?: unknown })?.name ?? "Error")}); trying ${fallback}`);
+  }
+  return await callLlmFiles(prompt, fallback, files, env("LLM_FALLBACK_PROVIDER") || LLM_PROVIDER, fallbackSlot);
+}
+'''
+
 AGENT_FILES = r'''
 
 /** callAgent() for a conversation whose user message carries `files`. */
-async function callAgentFiles(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): Promise<[string, ToolCall[]]> {
+async function callAgentFiles(messages: ChatMessage[], tools: ToolSpec[] | null, model: string, slot?: string): Promise<[string, ToolCall[]]> {
   const files = messages.filter((m) => m.role === "user").flatMap((m) => fileList(m.files));
-  if (!LLM_PROVIDER) {
+  if (!resolveModel(undefined, slot)[0]) {
     const [text, calls] = mockAgent(messages, tools, model);
     return [text && files.length ? `${text}\n${filesNote(files)}` : text, calls];
   }
@@ -288,7 +360,7 @@ async function callAgentFiles(messages: ChatMessage[], tools: ToolSpec[] | null,
     if (!m.files) return m;
     const [content, images] = withFiles(m.content, m.files);
     return { role: "user", content, images };
-  }), tools, model);
+  }), tools, model, slot);
 }
 '''
 
@@ -327,21 +399,22 @@ const DECISION_MODEL = env("DECISION_MODEL") ?? "gpt-4o-mini";
 type Question = { id: string; type: string; instructions: string; options?: string[]; levels?: string[]; field?: string };
 
 /** The answer to one question: an option label ("choice"), a level index ("score") or 0 to 1 ("noul"). */
-async function decide(text: string, question: Question): Promise<unknown> {
+async function decide(text: string, question: Question, slot?: string): Promise<unknown> {
   const { type: kind, instructions } = question;
+  const offline = !resolveModel(undefined, slot)[0];
   if (kind === "choice") {
     const labels = question.options ?? [];
-    if (!LLM_PROVIDER) {
+    if (offline) {
       const low = text.toLowerCase();
       return labels.find((x) => new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRe(x.toLowerCase())}(?![\\p{L}\\p{N}_])`, "u").test(low)) ?? labels[0];
     }
-    const reply = await callLlm(`${instructions}\n\nText:\n${text}\n\nAnswer with one of: ${labels.join(", ")}`, DECISION_MODEL);
+    const reply = await callLlm(`${instructions}\n\nText:\n${text}\n\nAnswer with one of: ${labels.join(", ")}`, DECISION_MODEL, undefined, slot);
     return pickBranch(reply.trim(), labels) ?? labels[0];
   }
-  if (!LLM_PROVIDER) return kind === "score" ? 0.0 : 0.5;
+  if (offline) return kind === "score" ? 0.0 : 0.5;
   const reply = kind === "score"
-    ? await callLlm(`${instructions}\n\nText:\n${text}\n\nLevels:\n${(question.levels ?? []).map((l, i) => `${i}: ${l}`).join("\n")}\n\nAnswer with the level number.`, DECISION_MODEL)
-    : await callLlm(`${instructions}\n\nText:\n${text}\n\nHow likely is it true, from 0 to 1? Answer with a number.`, DECISION_MODEL);
+    ? await callLlm(`${instructions}\n\nText:\n${text}\n\nLevels:\n${(question.levels ?? []).map((l, i) => `${i}: ${l}`).join("\n")}\n\nAnswer with the level number.`, DECISION_MODEL, undefined, slot)
+    : await callLlm(`${instructions}\n\nText:\n${text}\n\nHow likely is it true, from 0 to 1? Answer with a number.`, DECISION_MODEL, undefined, slot);
   const found = /\d+(?:\.\d+)?/.exec(reply);
   return found ? parseFloat(found[0]) : 0.0;
 }
@@ -428,10 +501,12 @@ function mockAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: str
 }
 
 /** One model call: [text, tool calls]. With tools null the model has to answer. */
-async function callAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: string): Promise<[string, ToolCall[]]> {
-  if (!LLM_PROVIDER) return mockAgent(messages, tools, model);
+async function callAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: string, slot?: string): Promise<[string, ToolCall[]]> {
+  const [chosen, kwargs] = resolveModel(undefined, slot);
+  if (!chosen) return mockAgent(messages, tools, model);
   const { initChatModel } = await import("%(langchain)s");
-  const llm = await initChatModel(model, { modelProvider: LLM_PROVIDER });
+  // deno-lint-ignore no-explicit-any
+  const llm = await initChatModel(model, { modelProvider: chosen, ...kwargs } as any);
   // LangChain.js turns { role, content, tool_calls, tool_call_id } objects into its message classes.
   // deno-lint-ignore no-explicit-any
   const history: any[] = messages.map((m) =>
@@ -481,14 +556,142 @@ function shorten(s: string, n: number): string {
 }
 ''' % {"langchain": LANGCHAIN}
 
+
+HTTP = r'''
+// --- HTTP ------------------------------------------------------------------------------------------------------
+// HTTP Tool requests keep the studio's safeguards: http(s) only; private, loopback, link-local, reserved, multicast
+// and unspecified addresses are refused unless STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1; redirects are never followed;
+// user:password@ in the URL is sent as Basic auth, not in the URL. Each request carries an Idempotency-Key from
+// SUPERSTEP_RUN_ID (random per process when unset), the node and the request, so a retried request repeats its key.
+// As in the studio, the host is resolved once, every address is checked, and the connection goes to that checked
+// address (no second lookup a DNS rebind could change); the Host header, TLS SNI and certificate check keep the name.
+// Node's http(s) modules make the request (Deno supports them too); Deno needs --allow-net.
+const HTTP_RUN_ID = env("SUPERSTEP_RUN_ID") || crypto.randomUUID();
+
+async function httpRequest(node: string, method: string, url: string, body?: string): Promise<unknown> {
+  let target: URL;
+  try {
+    target = new URL(url);
+  } catch {
+    throw new Error(`${node}: only http(s) URLs can be called, not ${JSON.stringify(url.slice(0, 100))}`);
+  }
+  if (!["http:", "https:"].includes(target.protocol) || !target.hostname) {
+    throw new Error(`${node}: only http(s) URLs can be called, not ${JSON.stringify(url.slice(0, 100))}`);
+  }
+  const host = target.hostname.replace(/^\[|\]$/g, "");
+  const dns = (await import("node:dns")).default;
+  const found = await dns.promises.lookup(host, { all: true, verbatim: true }).catch(() => []);
+  const addresses = found.map((a) => ({ address: a.address, family: a.family }));
+  if (!addresses.length) throw new Error(`${node}: cannot resolve ${JSON.stringify(host)}`);
+  if (addresses.some((a) => blockedAddress(a.address)) && env("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") !== "1") {
+    throw new Error(`${node}: ${host} is a private address; set STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1 to allow it`);
+  }
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (target.username) {
+    headers.Authorization = "Basic " + btoa(`${decodeURIComponent(target.username)}:${decodeURIComponent(target.password)}`);
+    target.username = ""; target.password = "";
+  }
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([HTTP_RUN_ID, node, method, target.href, body ?? null])));
+  headers["Idempotency-Key"] = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  const pin = addresses[0];  // the checked address: the request never resolves the name again
+  const https = target.protocol === "https:";
+  type Res = { on(event: string, listener: (chunk: Uint8Array) => void): void };
+  type Req = { on(event: string, listener: (error: Error) => void): void; destroy(error: Error): void; end(data?: Uint8Array): void };
+  const lib = (https ? (await import("node:https")).default : (await import("node:http")).default) as unknown as
+    { request(options: Record<string, unknown>, onResponse: (res: Res) => void): Req };
+  const data = body ? new TextEncoder().encode(body) : undefined;
+  if (data) headers["Content-Length"] = String(data.byteLength);
+  const raw = await new Promise<string>((resolve, reject) => {
+    const req = lib.request({
+      protocol: target.protocol, hostname: host, port: target.port || (https ? 443 : 80), path: target.pathname + target.search,
+      method, headers, agent: false, timeout: 30_000, ...(https ? { servername: host } : {}),
+      lookup: (_name: string, options: { all?: boolean }, done: (...a: unknown[]) => void) =>
+        options?.all ? done(null, [pin]) : done(null, pin.address, pin.family),
+    }, (res) => {
+      const chunks: Uint8Array[] = [];
+      res.on("data", (c: Uint8Array) => chunks.push(c));
+      res.on("end", () => resolve(new TextDecoder().decode(concatBytes(chunks))));
+      res.on("error", reject as unknown as (chunk: Uint8Array) => void);
+    });
+    req.on("timeout", () => req.destroy(new Error(`${node}: the request timed out after 30 s`)));
+    req.on("error", reject);
+    req.end(data);
+  });
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw;
+  }
+}
+
+function concatBytes(chunks: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(chunks.reduce((n, c) => n + c.byteLength, 0));
+  let at = 0;
+  for (const c of chunks) { out.set(c, at); at += c.byteLength; }
+  return out;
+}
+'''
+
+NET = r'''
+/** A private, loopback, link-local, reserved, multicast or unspecified address (as the studio's core/net.blocked). */
+function blockedAddress(ip: string): boolean {
+  const v4 = ip.startsWith("::ffff:") && ip.includes(".") ? ip.slice(7) : ip;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(v4)) {
+    const [a, b, c] = v4.split(".").map(Number);
+    return a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+      (a === 198 && (b === 18 || b === 19)) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113);
+  }
+  const x = ip.toLowerCase();
+  return x === "::" || x === "::1" || /^f[cd]/.test(x) || /^fe[89ab]/.test(x) || x.startsWith("ff") || x.startsWith("2001:db8") ||
+    x.startsWith("::ffff:") || x.startsWith("64:ff9b:") || x.startsWith("100::");
+}
+'''
+
+OFFLINE_SERVICE = r'''
+/** Offline example mode (LLM_PROVIDER unset): like the studio's mock run, a Studio service gives an empty result and
+ * says so on stderr. With LLM_PROVIDER set the run is real, so an unimplemented service stops it instead of returning
+ * a made-up value. */
+function offlineService(kind: string, name: string): void {
+  if (env("LLM_PROVIDER")) {
+    throw new Error(`${kind} ${JSON.stringify(name)} uses a Superstep service that is not exported: implement it ` +
+      "(see the TODO above) before running with LLM_PROVIDER set");
+  }
+  console.error(`(offline mock) ${kind} ${JSON.stringify(name)} is not implemented: empty result`);
+}
+'''
+
 STUBS = {
     "retrieve": r'''
-/** Retriever nodes search a Superstep knowledge base, which this file cannot reach.
- * TODO: search your own index for `query`, for example with a LangChain.js vector store retriever
- * (`vectorStore.asRetriever(topK).invoke(query)`). */
-async function retrieve(query: string, topK: number): Promise<unknown[]> {
-  void query, topK;
-  return [];
+/** Retriever nodes (and Agent knowledge tools) search a Superstep knowledge base. This file asks your Superstep
+ * server, so the chunks and scores are the studio's own: POST <SUPERSTEP_URL>/api/knowledge-bases/<id>/search.
+ * Configure with environment variables (never written here): SUPERSTEP_URL, SUPERSTEP_TOKEN (a Bearer token of a
+ * user who can read the knowledge base) and <PREFIX>_ID, the knowledge base id, for each prefix listed above.
+ * Not configured: an empty list in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set. */
+async function retrieve(prefix: string, query: string, topK: number): Promise<unknown[]> {
+  const base = env("SUPERSTEP_URL"), token = env("SUPERSTEP_TOKEN"), kid = env(`${prefix}_ID`);
+  const missing = ([["SUPERSTEP_URL", base], ["SUPERSTEP_TOKEN", token], [`${prefix}_ID`, kid]] as const).filter(([, v]) => !v).map(([n]) => n);
+  if (missing.length) {
+    if (env("LLM_PROVIDER")) throw new Error(`Knowledge base search ${prefix}: set ${missing.join(", ")} to search it`);
+    console.error(`(offline mock) Knowledge base search ${JSON.stringify(query.slice(0, 60))}: ${missing.join(", ")} not set: empty result`);
+    return [];
+  }
+  let status = 0;
+  let body: { success?: boolean; data?: unknown; error?: { code?: unknown; message?: unknown } | null };
+  try {
+    const r = await fetch(`${base!.replace(/\/+$/, "")}/api/knowledge-bases/${kid}/search`, { method: "POST", redirect: "manual",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ query, top_k: topK }),
+      signal: AbortSignal.timeout(30_000) });
+    status = r.status;
+    body = await r.json();
+  } catch (error) {
+    throw new Error(`Knowledge base search ${prefix}: no answer from ${base} (${String((error as { name?: unknown })?.name ?? "Error")})`);
+  }
+  if (!body?.success) {
+    const e = body?.error ?? {};
+    throw new Error(`Knowledge base search ${prefix}: ${String(e.code ?? `HTTP ${status}`)} ${String(e.message ?? "").slice(0, 200)}`.trimEnd());
+  }
+  return Array.isArray(body.data) ? body.data : [];
 }
 ''',
     "managed_operation": r'''
@@ -502,11 +705,73 @@ async function managedOperation(tool: string, args: unknown): Promise<never> {
 }
 ''',
     "call_mcp_tool": r'''
-/** MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
- * TODO: call the tool with an MCP client, for example @langchain/mcp-adapters (MultiServerMCPClient). */
-async function callMcpTool(tool: string, args: unknown): Promise<unknown> {
-  void tool, args;
-  return null;
+/** MCP nodes call a tool on an MCP server, as Superstep does: one short Streamable HTTP session (initialize,
+ * tools/call). Each server is configured only by environment variables (never by this file), with its prefix
+ * MCP_SERVER_<n> (see MCP servers above): <PREFIX>_URL, the server's Streamable HTTP address, and optionally <PREFIX>_HEADERS, a JSON object of headers such
+ * as {"Authorization": "Bearer ..."}. The URL is your own configuration: it is called as given, without redirects.
+ * Not configured: null in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set. */
+async function callMcpTool(prefix: string, tool: string, args: unknown): Promise<unknown> {
+  const url = env(`${prefix}_URL`);
+  if (!url) {
+    if (env("LLM_PROVIDER")) throw new Error(`MCP tool ${JSON.stringify(tool)}: set ${prefix}_URL to the server's Streamable HTTP address to call it`);
+    console.error(`(offline mock) MCP tool ${JSON.stringify(tool)}: ${prefix}_URL is not set: empty result`);
+    return null;
+  }
+  let extra: Record<string, string>;
+  try {
+    const parsed = JSON.parse(env(`${prefix}_HEADERS`) || "{}");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    extra = Object.fromEntries(Object.entries(parsed).map(([k, v]) => [k, String(v)]));
+  } catch {
+    throw new Error(`${prefix}_HEADERS must be a JSON object`);
+  }
+  let session: string | null = null;
+  const rpc = async (message: { id?: number; method: string; [k: string]: unknown }): Promise<Record<string, unknown> | null> => {
+    let r: Response;
+    try {
+      r = await fetch(url, { method: "POST", body: JSON.stringify(message), redirect: "manual", signal: AbortSignal.timeout(30_000),
+        headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": MCP_PROTOCOL,
+          ...extra, ...(session ? { "Mcp-Session-Id": session } : {}) } });
+    } catch (error) {
+      throw new Error(`MCP server ${prefix}: connection failed (${String((error as { name?: unknown })?.name ?? "Error")})`);
+    }
+    const raw = await r.text();
+    if (r.status >= 300) throw new Error(`MCP server ${prefix}: HTTP ${r.status}`);
+    session = r.headers.get("mcp-session-id") ?? session;
+    if (message.id === undefined || r.status === 202) return null;
+    const found: unknown[] = (r.headers.get("content-type") ?? "").includes("text/event-stream")
+      ? raw.split(/\r?\n/).filter((l) => l.startsWith("data:") && l.slice(5).trim()).map((l) => JSON.parse(l.slice(5)))
+      : raw ? [JSON.parse(raw)] : [];
+    const reply = found.find((m) => m !== null && typeof m === "object" && (m as { id?: unknown }).id === message.id) as
+      { result?: Record<string, unknown>; error?: { message?: unknown } } | undefined;
+    if (!reply) throw new Error(`MCP server ${prefix}: no response to ${message.method}`);
+    if (reply.error !== undefined) throw new Error(`MCP server ${prefix}: ${message.method}: ${String(reply.error?.message ?? JSON.stringify(reply.error)).slice(0, 300)}`);
+    return reply.result ?? {};
+  };
+  let result: Record<string, unknown>;
+  try {
+    await rpc({ jsonrpc: "2.0", id: 1, method: "initialize",
+      params: { protocolVersion: MCP_PROTOCOL, capabilities: {}, clientInfo: { name: "superstep-export", version: "1.0" } } });
+    await rpc({ jsonrpc: "2.0", method: "notifications/initialized" });
+    result = (await rpc({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: tool, arguments: args } })) ?? {};
+  } finally {
+    if (session) {
+      await fetch(url, { method: "DELETE", redirect: "manual", headers: { ...extra, "Mcp-Session-Id": session } })
+        .then((r) => r.body?.cancel()).catch(() => {});
+    }
+  }
+  const content = Array.isArray(result.content) ? result.content as { type?: unknown; text?: unknown }[] : [];
+  const texts = content.filter((c) => c?.type === "text").map((c) => String(c.text ?? ""));
+  if (result.isError) throw new Error(`MCP tool ${JSON.stringify(tool)} failed: ${(texts.join("\n") || "the tool reported an error").slice(0, 500)}`);
+  if (result.structuredContent !== undefined && result.structuredContent !== null) return result.structuredContent;
+  if (texts.length && texts.length === content.length) {
+    try {
+      return JSON.parse(texts.join("\n"));
+    } catch {
+      return texts.join("\n");
+    }
+  }
+  return content;
 }
 ''',
     "send_email": r'''
@@ -516,17 +781,64 @@ function addresses(value: unknown): string[] {
     .flatMap((x) => String(x).split(/[,;\n]/)).map((p) => p.trim()).filter(Boolean);
 }
 
-type Message = { to: string[]; cc: string[]; bcc: string[]; subject: string; body: string };
+type Message = { to: string[]; cc: string[]; bcc: string[]; subject: string; body: string; node: string; sends: boolean };
+const EMAIL_RE = /^[^@\s<>,;"]+@[^@\s<>,;"]+\.[^@\s<>,;"]+$/;
+const EMAIL_RUN_ID = env("SUPERSTEP_RUN_ID") || crypto.randomUUID();
 
-/** Send email nodes send through an SMTP credential in Superstep. This file never sends: like a studio dry run,
- * it prints the message and returns what it would have sent.
- * TODO: send it with your own mail library and SMTP settings from environment variables. */
+/** Send email nodes, as in the studio: a node with an SMTP credential in Superstep sends; one without makes a dry run
+ * (prints the message, returns what would have been sent). Sending uses nodemailer and environment variables only
+ * (never this file): SMTP_HOST, SMTP_FROM, and optionally SMTP_PORT (587, or 465 with ssl), SMTP_SECURITY (starttls,
+ * the default and required; ssl; or none), SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_NAME. As in the studio the host is
+ * resolved once, private addresses are refused unless STUDIO_SMTP_ALLOW_PRIVATE=1, and the connection goes to the
+ * checked address (TLS still checks the name). Not configured: a dry run offline (LLM_PROVIDER unset), else an error. */
 async function sendEmail(message: Message): Promise<Record<string, unknown>> {
-  console.log(`(e-mail not sent) to ${message.to.join(", ")}: ${message.subject}`);
-  return { sent: false, dry_run: true, to: message.to, cc: message.cc, bcc: message.bcc, subject: message.subject,
-    message_id: null, preview: message.body.slice(0, 2000) };
+  const rcpt = [...new Set([...message.to, ...message.cc, ...message.bcc])];
+  if (!rcpt.length) throw new Error(`Send email ${message.node}: no recipient`);
+  const bad = rcpt.filter((a) => !EMAIL_RE.test(a));
+  if (bad.length) throw new Error(`Send email ${message.node}: ${JSON.stringify(bad[0].slice(0, 100))} is not an e-mail address`);
+  const head = { to: message.to, cc: message.cc, bcc: message.bcc, subject: message.subject.slice(0, 998) };
+  const host = env("SMTP_HOST"), sender = env("SMTP_FROM");
+  if (!message.sends || !host || !sender) {
+    const missing = ([["SMTP_HOST", host], ["SMTP_FROM", sender]] as const).filter(([, v]) => !v).map(([n]) => n).join(", ");
+    if (message.sends && env("LLM_PROVIDER")) throw new Error(`Send email ${message.node}: set ${missing} to send it`);
+    const why = message.sends ? `${missing} not set` : "no SMTP credential on this node in the studio";
+    console.error(`(offline mock) Send email ${JSON.stringify(message.subject.slice(0, 60))}: dry run, ${why}`);
+    console.log(`(e-mail not sent) to ${message.to.join(", ")}: ${message.subject}`);
+    return { sent: false, dry_run: true, ...head, message_id: null, preview: message.body.slice(0, 2000) };
+  }
+  const security = (env("SMTP_SECURITY") || "starttls").toLowerCase();
+  if (!["starttls", "ssl", "none"].includes(security)) throw new Error("SMTP_SECURITY must be starttls, ssl or none");
+  const port = Number(env("SMTP_PORT") || (security === "ssl" ? 465 : 587));
+  const dns = (await import("node:dns")).default;
+  const found = await dns.promises.lookup(host, { all: true, verbatim: true }).catch(() => []);
+  if (!found.length) throw new Error(`Send email ${message.node}: cannot resolve ${host}`);
+  if (found.some((a) => blockedAddress(a.address)) && env("STUDIO_SMTP_ALLOW_PRIVATE") !== "1") {
+    throw new Error(`Send email ${message.node}: ${host} is a private address; set STUDIO_SMTP_ALLOW_PRIVATE=1 to allow it`);
+  }
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([EMAIL_RUN_ID, message.node, rcpt, message.subject, message.body])));
+  const key = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  const mid = `<${key}@${sender.split("@").pop()}>`;  // the same run and message keep the same Message-ID
+  // deno-lint-ignore no-explicit-any
+  const nodemailer: any = (await import("%(nodemailer)s")).default;
+  const transport = nodemailer.createTransport({
+    host: found[0].address, port, secure: security === "ssl", requireTLS: security === "starttls", ignoreTLS: security === "none",
+    tls: { servername: host }, connectionTimeout: 20_000, greetingTimeout: 20_000, socketTimeout: 20_000,
+    ...(env("SMTP_USERNAME") ? { auth: { user: env("SMTP_USERNAME"), pass: env("SMTP_PASSWORD") || "" } } : {}),
+  });
+  const name = env("SMTP_FROM_NAME");
+  let info: { rejected?: unknown[] };
+  try {
+    info = await transport.sendMail({ from: name ? { name, address: sender } : sender, to: message.to, cc: message.cc, bcc: message.bcc,
+      subject: message.subject.split(/\s+/).filter(Boolean).join(" ").slice(0, 998), text: message.body, messageId: mid,
+      envelope: { from: sender, to: rcpt } });
+  } catch (error) {
+    throw new Error(`Send email ${message.node}: ${String((error as Error)?.message ?? error).slice(0, 200)}`);
+  } finally {
+    transport.close();
+  }
+  return { sent: true, dry_run: false, ...head, message_id: mid, refused: (info.rejected ?? []).map(String).sort() };
 }
-''',
+''' % {"nodemailer": NODEMAILER},
 }
 
 REDUCER_CODE = {
@@ -610,16 +922,37 @@ class _Writer(GraphWriter):
         self.add(ENV.rstrip())
         if "templates" in self.uses: self.add(TEMPLATES.rstrip())
         if "model" in self.uses: self.add(MODEL.rstrip())
+        if "fallback" in self.uses: self.add(FALLBACK.rstrip())
+        if "http" in self.uses or "send_email" in self.uses: self.add(NET.rstrip())
+        if "http" in self.uses: self.add(HTTP.rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
         if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
+        if "fallback_files" in self.uses: self.add(FALLBACK_FILES.rstrip())
         if "routing" in self.uses or "decide" in self.uses: self.add(ROUTING.rstrip())
         if "decide" in self.uses: self.add(DECIDE.rstrip())
-        stubs = [k for k in STUBS if k in self.uses]
-        if stubs:
+        if "approval" in self.uses: self.add(TS_APPROVAL.rstrip())
+        stubs = [k for k in STUBS if k in self.uses and k != "managed_operation"]
+        if stubs or "managed_operation" in self.uses:
             self.add("\n// --- Studio services ------------------------------------------------------------------------------------")
             self.add("// These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
+            if stubs: self.add(OFFLINE_SERVICE.rstrip())
+            if "retrieve" in stubs:
+                self.add("\n// Knowledge bases: before a real run set SUPERSTEP_URL, SUPERSTEP_TOKEN and <PREFIX>_ID for")
+                self.add(f"// {', '.join(getattr(self, 'knowledge_bases', {}).values())}. Nodes and tools on the same knowledge base share a prefix.")
+            if "call_mcp_tool" in stubs:
+                self.add("\n// MCP servers: before a real run set <PREFIX>_URL (and <PREFIX>_HEADERS if the server needs them) for")
+                self.add(f"// {', '.join(getattr(self, 'mcp_servers', {}).values())}. MCP nodes and tools on the same Superstep server share a prefix.")
+                self.add('const MCP_PROTOCOL = "2025-06-18";')
             for k in stubs: self.add(STUBS[k].rstrip())
+        if "managed_operation" in self.uses: self.add(TS_MANAGED.rstrip())
+        if names := self.export_env_names():
+            self.add("// Environment names for this file: " + " ".join(names))
+        if "browser" in self.uses:
+            self.add("\n// --- Browser ---------------------------------------------------------------------------------------------")
+            self.add("// Secrets are read from the environment at run time. BROWSER_POLICY has no tokens, passwords or cookies.")
+            self.add(f"const BROWSER_POLICY = {lit(self.browser_policies)};")
+            self.add(TS_RUNTIME.replace("__LANGGRAPH_SPEC__", json.dumps(LANGGRAPH)).rstrip())
         reducers = [k for k in REDUCERS if k in self.uses]
         if reducers:
             self.add("\n// --- Reducers -------------------------------------------------------------------------------------------")
@@ -681,6 +1014,44 @@ class _Writer(GraphWriter):
             self.add("/** A node's result: the fields it changes (their values come from the canvas, typed at run time). */")
             self.add("const asUpdate = (fields: Record<string, unknown>) => fields as Update;")
 
+    def ts_slots(self, d: dict, attrs: tuple, holes: int = 0) -> str:
+        """Positional slot arguments. A provider hole stays `undefined` so the slot is not read as the provider."""
+        values = [self.llm_slot(str(d.get(attr) or "")) for attr in attrs]
+        if not any(values): return ""
+        parts = ["undefined"] * holes + [lit(value) if value else "undefined" for value in values]
+        return ", " + ", ".join(parts)
+
+    def mcp_call(self, data: dict, call: str, tool_expr: str, args_expr: str) -> str:
+        managed = data.get("_managed_export")
+        if call != "managedOperation":
+            return f"callMcpTool({lit(self.mcp_prefix(data))}, {tool_expr}, {args_expr})"
+        if not isinstance(managed, str):
+            return f"managedOperation({tool_expr}, {args_expr})"
+        return f"managedOperation({tool_expr}, {args_expr}, {lit(self.managed_prefix(data))}, {lit(managed)})"
+
+    def approval_answer(self, name: str, d: dict, question_expr: str, prompt_expr: str, pad: str, wrap: bool = False) -> None:
+        approval = d.get("approval") if isinstance(d.get("approval"), dict) else {}
+        kind = str(approval.get("channel") or "").strip().lower()
+        policy = d.get("_approval_policy") if isinstance(d.get("_approval_policy"), dict) else None
+        deadline = d.get("_deadline") if isinstance(d.get("_deadline"), dict) else None
+        judge = self.llm_slot(str(d.get("_judge_credential") or ""))
+        self.add(f"{pad}const request = {{ node: {lit(name)}, question: {question_expr}, prompt: {prompt_expr} }} as Ask;")
+        if wrap:
+            self.add(f"{pad}request.tool = call.name;")
+            self.add(f"{pad}request.args = call.args && typeof call.args === \"object\" ? call.args as Record<string, unknown> : {{}};")
+        else:
+            self.add(f"{pad}request.state = state as Record<string, unknown>;")
+        if kind: self.add(f"{pad}request.channel = {lit(kind)};")
+        if deadline: self.add(f"{pad}request.deadline = {lit(deadline)};")
+        if policy: self.add(f"{pad}request.policy = {lit(policy)};")
+        if judge: self.add(f"{pad}request.judge_slot = {lit(judge)};")
+        if policy:
+            self.add(f"{pad}const reviewed = await reviewApproval(request);")
+            answered = "reviewed !== null && reviewed !== undefined ? reviewed : String(interrupt(request))" if wrap else "reviewed !== null && reviewed !== undefined ? reviewed : interrupt(request)"
+            self.add(f"{pad}{'const ' if not wrap else ''}answer = {answered};")
+        else:
+            self.add(f"{pad}{'const ' if not wrap else ''}answer = {'String(interrupt(request))' if wrap else 'interrupt(request)'};")
+
     def node(self, g: Graph, nid: str, cls: str) -> None:
         n = g.nodes[nid]; t, d = n["type"], n.get("data") or {}
         name, label = g.names[nid], _doc(d.get("label") or nid)
@@ -697,8 +1068,17 @@ class _Writer(GraphWriter):
             self.add(sig)
             self.add(f"  const prompt = render({const}_PROMPT, state);")
             files = attachments.field_of(d)
-            self.add(ret(f"await callLlmFiles(prompt, {lit(d.get('model') or 'gpt-4o-mini')}, (state as Record<string, unknown>)[{lit(files)}])" if files
-                         else f"await callLlm(prompt, {lit(d.get('model') or 'gpt-4o-mini')})"))
+            fb = d.get("fallback") if isinstance(d.get("fallback"), dict) else None  # only the model name: never its credential
+            model = lit(d.get("model") or "gpt-4o-mini")
+            if fb and files:
+                expr = f"await callLlmFilesFallback(prompt, {model}, {lit(str(fb.get('model') or '').strip())}, (state as Record<string, unknown>)[{lit(files)}]{self.ts_slots(d, ('_llm_credential', '_fallback_credential'))})"
+            elif files:
+                expr = f"await callLlmFiles(prompt, {model}, (state as Record<string, unknown>)[{lit(files)}]{self.ts_slots(d, ('_llm_credential',), holes=1)})"
+            elif fb:
+                expr = f"await callLlmFallback(prompt, {model}, {lit(str(fb.get('model') or '').strip())}{self.ts_slots(d, ('_llm_credential', '_fallback_credential'))})"
+            else:
+                expr = f"await callLlm(prompt, {model}{self.ts_slots(d, ('_llm_credential',), holes=1)})"
+            self.add(ret(expr))
             self.add("}")
         elif t == "human":
             self.add(f"const {const}_PROMPT = {lit(d.get('prompt') or '')};")
@@ -710,11 +1090,14 @@ class _Writer(GraphWriter):
             extra = []
             if (d.get("approval") or {}).get("channel"): extra.append(f"also asks on {_doc(str(d['approval']['channel']).title())}")
             if d.get("deadline"): extra.append("has a deadline with reminders")
-            if approval_policy.mode(d) != "off": extra.append("has AI review of the request (people answer every request here)")
+            if approval_policy.mode(d) != "off": extra.append("has AI review of the request")
             if extra: self.add(f" * In Superstep this node {' and '.join(extra)}; that is not part of LangGraph.")
             self.add(" */")
             self.add(sig)
-            self.add(f"  const answer = interrupt({{ node: {lit(name)}, question: render({const}_PROMPT, state) }});")
+            if self.approval_extra(d):
+                self.approval_answer(name, d, f"render({const}_PROMPT, state)", f"render({const}_PROMPT, state)", "  ")
+            else:
+                self.add(f"  const answer = interrupt({{ node: {lit(name)}, question: render({const}_PROMPT, state) }});")
             self.add(ret("answer"))
             self.add("}")
         elif t == "condition":
@@ -741,17 +1124,26 @@ class _Writer(GraphWriter):
             self.add("")
             self.add(f"/** {head}: the chunks of a knowledge base that best match the query (see retrieve). */")
             self.add(sig)
-            self.add(ret(f"await retrieve(render({const}_QUERY, state), {number(d.get('top_k'), int) or 4})"))
+            self.add(ret(f"await retrieve({lit(self.kb_prefix(d))}, render({const}_QUERY, state), {number(d.get('top_k'), int) or 4})"))
             self.add("}")
         elif t == "mcp":
-            call = "managedOperation" if d.get("_managed_export") else "callMcpTool"
-            self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
-            self.add("")
-            self.add(f"/** {head}: MCP tool {lit(_doc(d.get('tool')))} (see {call}). */")
-            self.add(sig)
-            if d.get("_managed_export"): self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
-            self.add(ret(f"await {call}({lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
-            self.add("}")
+            info = d.get("_browser_export")
+            if isinstance(info, dict):
+                self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
+                self.add("")
+                self.add(f"/** {head}: browser tool {lit(_doc(d.get('tool')))}. */")
+                self.add(sig)
+                self.add(ret(self.browser_expr(info, d, f"renderArgs({const}_ARGUMENTS, state)")))
+                self.add("}")
+            else:
+                call = "managedOperation" if d.get("_managed_export") else "callMcpTool"
+                self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
+                self.add("")
+                self.add(f"/** {head}: MCP tool {lit(_doc(d.get('tool')))} (see {call}). */")
+                self.add(sig)
+                if d.get("_managed_export") is True: self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
+                self.add(ret(f"await {self.mcp_call(d, call, lit(d.get('tool') or ''), f'renderArgs({const}_ARGUMENTS, state)')}"))
+                self.add("}")
         elif t == "email":
             self.email(g, nid, cls, head, sig)
         elif t == "agent":
@@ -761,6 +1153,12 @@ class _Writer(GraphWriter):
             build = self.built[ref][1] if ref in self.built else None
             self.add(f"// {head}: the workflow \"{_doc(self.built[ref][0].title) if build else _doc(ref)}\" runs as a subgraph.")
             self.add(f"// buildGraph() adds {build or 'it'}() as the node: a compiled graph can be a node of another graph.")
+            if build is None:
+                self.add(f"/** {head}: TODO: the workflow {_doc(ref)} was not found when this file was exported. */")
+                self.add(sig)
+                self.add("  void state;")
+                self.add(f"  throw new Error({lit(f'{head}: the subgraph workflow {ref} was not found when this file was exported (deleted, or not shared with you)')});")
+                self.add("}")
         else:  # subgraph_exit or an unknown type: a pass-through
             self.add(f"/** {head}. */")
             self.add(sig)
@@ -825,7 +1223,7 @@ class _Writer(GraphWriter):
         self.add("  const update: Record<string, unknown> = {};")
         self.add("  const answers: Record<string, unknown> = {};")
         self.add(f"  for (const question of {const}_QUESTIONS) {{")
-        self.add("    const answer = await decide(text, { ...question, instructions: render(question.instructions, state) });")
+        self.add(f"    const answer = await decide(text, {{ ...question, instructions: render(question.instructions, state) }}{self.ts_slots(d, ('_llm_credential',))});")
         self.add("    answers[question.id] = { type: question.type, [question.type]: answer };")
         self.add("    if (question.field) update[question.field] = answer;")
         self.add("  }")
@@ -845,18 +1243,8 @@ class _Writer(GraphWriter):
             self.add(f"/** {head}: an HTTP request; the JSON reply (or the text) is the result.")
             self.add(" * The studio only calls public addresses and never follows redirects. */")
             self.add(sig)
-            self.add(f"  const body = render({const}_BODY, state);")
-            self.add(f"  const response = await fetch(render({const}_URL, state), {{")
-            self.add(f"    method: {lit(method)}, body: {'undefined' if method in ('GET', 'HEAD') else 'body || undefined'},")
-            self.add("    headers: { \"Content-Type\": \"application/json\" }, redirect: \"manual\", signal: AbortSignal.timeout(30_000),")
-            self.add("  });")
-            self.add("  const raw = await response.text();")
-            self.add("  let result: unknown;")
-            self.add("  try {")
-            self.add("    result = JSON.parse(raw);")
-            self.add("  } catch {")
-            self.add("    result = raw;")
-            self.add("  }")
+            body = "undefined" if method in ("GET", "HEAD") else f"render({const}_BODY, state)"
+            self.add(f"  const result = await httpRequest({lit(nid)}, {lit(method)}, render({const}_URL, state), {body});")
             self.add(ret("result"))
             self.add("}")
         elif mode == "code" and lang == "typescript":
@@ -905,6 +1293,8 @@ class _Writer(GraphWriter):
             self.add(f"    {k}: addresses(renderArgs({lit(d[k])}, state))," if d.get(k) else f"    {k}: [],")
         self.add(f"    subject: render({const}_SUBJECT, state).split(/\\s+/).filter(Boolean).join(\" \"),")
         self.add(f"    body: render({const}_BODY, state),")
+        self.add(f"    node: {lit(g.names[nid])},")
+        self.add(f"    sends: {'true' if d.get('_email_sends') else 'false'},  // an SMTP credential in the studio (not exported): a real send")
         self.add("  };")
         out = d.get("output_field")
         if out: self.add(f"  return asUpdate({{ {lit(out)}: await sendEmail(message) }});")
@@ -983,9 +1373,9 @@ class _Writer(GraphWriter):
             self.add("    chat.no_more = true;")
             self.add("  }")
             self.add(f"  const tools = can ? [...{const}_TOOLS, ...{const}_HANDOFF_TOOLS] : {const}_TOOLS;")
-            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : tools, {lit(d.get('model') or 'gpt-4o-mini')});")
+            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : tools, {lit(d.get('model') or 'gpt-4o-mini')}{self.ts_slots(d, ('_llm_credential',))});")
         else:
-            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')});")
+            self.add(f"  const [text, asked] = await {call}(chat.messages, last ? null : {const}_TOOLS, {lit(d.get('model') or 'gpt-4o-mini')}{self.ts_slots(d, ('_llm_credential',))});")
         self.add("  const calls: ToolCall[] = last ? [] : asked.map((c, i) => ({ id: String(c.id || `call_${i}`), name: String(c.name || \"\"), args: c.args }));")
         self.add("  if (!last) chat.rounds += 1;")
         self.add("  chat.messages = [...chat.messages, { role: \"assistant\", content: text, ...(calls.length ? { tool_calls: calls } : {}) }];")
@@ -1046,7 +1436,7 @@ class _Writer(GraphWriter):
         if (d.get("approval") or {}).get("channel") or d.get("deadline"):
             self.add(" * In Superstep the approval can also go to a channel and have a deadline; that is not part of LangGraph.")
         if approval_policy.mode(d) != "off":
-            self.add(" * In Superstep a model can review the request first (AI review); here people answer every request.")
+            self.add(" * In Superstep a model can review the request first (AI review); suggest mode still asks, and auto mode may answer.")
         self.add(" */")
         self.add(f"async function {tool}(state: {cls}): Promise<Update> {{")
         self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
@@ -1067,7 +1457,10 @@ class _Writer(GraphWriter):
             self.add(f"      const question = {lit(who + ' wants to call ')} + call.name + \" with these arguments:\\n\"")
             self.add("        + JSON.stringify(call.args, null, 2)")
             self.add("        + \"\\nApprove to run it, or reject it. A text reply rejects it and tells the model why.\";")
-            self.add(f"      answer = String(interrupt({{ node: {lit(name)}, question }}));")
+            if self.approval_extra(d):
+                self.approval_answer(name, d, "question", "question", "      ", wrap=True)
+            else:
+                self.add(f"      answer = String(interrupt({{ node: {lit(name)}, question }}));")
             self.add("    }")
         self.add("    const started = performance.now();")
         self.add("    let status: string, result: string;")
@@ -1083,6 +1476,8 @@ class _Writer(GraphWriter):
         self.add("      try {")
         self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
         self.add("      } catch (error) {  // the model hears about the failure and can try something else")
+        self.add("        const paused = error instanceof Error ? error.name : \"\";")
+        self.add("        if (paused === \"GraphInterrupt\" || paused === \"GraphBubbleUp\") throw error;")
         self.add("        [status, result] = [\"error\", `The tool failed: ${error instanceof Error ? error.message : error}`];")
         self.add("      }")
         self.add("    }")
@@ -1113,6 +1508,15 @@ class _Writer(GraphWriter):
         self.add(f"  return asUpdate({{ {', '.join(out)}, {chat}: null }});")
         self.add("}")
 
+    def browser_expr(self, info: dict, data: dict, args_expr: str) -> str:
+        tool = data.get("tool") or ""
+        binding = export_binding(data.get("url_binding"))
+        target = data.get("target") if isinstance(data.get("target"), dict) else None
+        targets = data.get("targets") if isinstance(data.get("targets"), dict) else None
+        prepared = f"browserPrepare({lit(tool)}, {args_expr}, {lit(target)}, {lit(targets)}, state)"
+        bound = f"bindBrowserUrl({lit(binding)}, {prepared}, state)"
+        return f"await browserCall({lit(info.get('alias') or '')}, {lit(tool)}, {bound}, state)"
+
     def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
         """call_<agent>_tool(): what each of the Agent node's tools does."""
         self.add("")
@@ -1128,10 +1532,14 @@ class _Writer(GraphWriter):
                 self.add(f"    // TODO: port the server's Python function {_doc(fn)} to TypeScript (the Python export has its source).")
                 self.add(f"    throw new Error({lit(f'{fn} is a Python function of the Superstep server: not implemented in TS export')});")
             elif src == "knowledge":
-                self.add(f"    return await retrieve(String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
+                self.add(f"    return await retrieve({lit(self.kb_prefix(t))}, String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
-                call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
-                self.add(f"    return await {call}({lit(t.get('tool') or '')}, args);")
+                info = t.get("_browser_export")
+                if isinstance(info, dict):
+                    self.add(f"    return {self.browser_expr(info, t, 'args')};")
+                else:
+                    call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
+                    self.add(f"    return await {self.mcp_call(t, call, lit(t.get('tool') or ''), 'args')};")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:
@@ -1144,7 +1552,7 @@ class _Writer(GraphWriter):
                     self.add(f"    return Object.fromEntries({lit(outputs)}.map((k) => [k, final[k]]));")
                 else:
                     self.add(f"    // TODO: the workflow {lit(ref)} was not found (deleted, or not shared with you).")
-                    self.add("    return null;")
+                    self.add(f"    throw new Error({lit(f'tool {tname}: the workflow {ref} was not found when this file was exported (deleted, or not shared with you)')});")
             elif src == "http":
                 method, url, body = (t.get("method") or "GET").upper(), t.get("url") or "", t.get("body") or ""
                 key = self.http_key(const, t)
@@ -1160,16 +1568,7 @@ class _Writer(GraphWriter):
                 elif method != "GET":
                     self.add(f"    const body = render({key}_BODY, values);")
                     send = "body || undefined"
-                self.add("    const response = await fetch(url, {")
-                self.add(f"      method: {lit(method)}, body: {send},")
-                self.add("      headers: { \"Content-Type\": \"application/json\" }, redirect: \"manual\", signal: AbortSignal.timeout(30_000),")
-                self.add("    });")
-                self.add("    const raw = await response.text();")
-                self.add("    try {")
-                self.add("      return JSON.parse(raw);")
-                self.add("    } catch {")
-                self.add("      return raw;")
-                self.add("    }")
+                self.add(f"    return await httpRequest({lit(name + ':' + tname)}, {lit(method)}, url, {send.replace(' || undefined', '')});")
             else:
                 self.add(f"    throw new Error({lit(f'unknown tool source {src!r}')});")
             self.add("  }")
@@ -1213,7 +1612,7 @@ class _Writer(GraphWriter):
             fn = g.names[nid]
             if n["type"] == "subgraph":
                 ref = g.refs.get(nid) or ""
-                fn = f"{self.built[ref][1]}()" if ref in self.built else f"new StateGraph({cls}).compile() /* TODO: the subgraph was not found */"
+                fn = f"{self.built[ref][1]}()" if ref in self.built else g.names[nid]  # missing: the node throws
             opts = []
             retry = d.get("retry") if isinstance(d.get("retry"), dict) else {}
             if (attempts := number(retry.get("max_attempts"), int)) is not None:
@@ -1312,12 +1711,21 @@ class _Writer(GraphWriter):
         self.add("  const print = (node: string, delta: unknown) => console.log(`[${node}] ${JSON.stringify(delta)}`);")
         if has_human:
             self.add("  const answers = Object.fromEntries(Object.entries(EXAMPLE_ANSWERS).map(([k, v]) => [k, [...v]]));")
-            self.add("  type Ask = { node: string; question: string };")
-            self.add("  const answerFor = (request: Ask): string => {")
-            self.add("    const value = (answers[request.node]?.shift() ?? globalThis.prompt?.(`${request.question}\\n>`)) || \"(no answer)\";")
-            self.add("    console.log(`>> ${request.node}: ${value}`);")
-            self.add("    return value;")
-            self.add("  };")
+            if "approval" in self.uses:
+                self.add("  // Ask is declared with the approval helpers.")
+                self.add("  const answerFor = async (request: Ask): Promise<string> => {")
+                self.add("    const queued = answers[request.node]?.shift();")
+                self.add("    const value = queued !== undefined ? queued : (await notifyApproval(request), await waitApproval(request));")
+                self.add("    console.log(`>> ${request.node}: ${value}`);")
+                self.add("    return value;")
+                self.add("  };")
+            else:
+                self.add("  type Ask = { node: string; question: string };")
+                self.add("  const answerFor = (request: Ask): string => {")
+                self.add("    const value = (answers[request.node]?.shift() ?? globalThis.prompt?.(`${request.question}\\n>`)) || \"(no answer)\";")
+                self.add("    console.log(`>> ${request.node}: ${value}`);")
+                self.add("    return value;")
+                self.add("  };")
             self.add("")
             self.add("  type Input = Parameters<typeof graph.stream>[0];")
             self.add("  const resume = (value: unknown) => new Command({ resume: value }) as unknown as Input;")
@@ -1332,10 +1740,15 @@ class _Writer(GraphWriter):
             self.add("      }")
             self.add("    }")
             self.add("    if (!waiting.length) break;")
-            self.add("    payload = waiting.length === 1")
-            self.add("      ? resume(answerFor(waiting[0].value))")
-            self.add("      // several Human nodes wait at once (parallel branches): answer each by its interrupt id")
-            self.add("      : resume(Object.fromEntries(waiting.map((i) => [i.id, answerFor(i.value)])));")
+            if "approval" in self.uses:
+                self.add("    payload = waiting.length === 1")
+                self.add("      ? resume(await answerFor(waiting[0].value))")
+                self.add("      : resume(Object.fromEntries(await Promise.all(waiting.map(async (i) => [i.id, await answerFor(i.value)] as const))));")
+            else:
+                self.add("    payload = waiting.length === 1")
+                self.add("      ? resume(answerFor(waiting[0].value))")
+                self.add("      // several Human nodes wait at once (parallel branches): answer each by its interrupt id")
+                self.add("      : resume(Object.fromEntries(waiting.map((i) => [i.id, answerFor(i.value)])));")
             self.add("  }")
         else:
             self.add("  // streamMode \"updates\": what each node returned, step by step (subgraphs: inside subgraphs too).")

@@ -14,6 +14,9 @@ import { api } from '@/lib/api'
 import { useAction } from './use-action'
 import { CopyField } from '@/components/copy-field'
 import { ChannelLogo } from '@/components/approvals/channel-logo'
+import { HandbookLink } from '@/components/handbook-link'
+
+const GUIDE: Record<string, string> = { slack: 'slack', telegram: 'telegram', whatsapp: 'whatsapp-cloud-api' }
 
 export { ErrorAlert } from './error-alert'
 
@@ -50,7 +53,8 @@ export function ConnectionItem({ c, k, publicUrl, onChange }: { c: Channel; k: C
       <CopyField id={`${idp}-shared`} label={t('approvals.sharedUrl')} value={shared} />
       <p className="text-xs text-muted-foreground">{t('approvals.sharedHelp', { team: c.team_id })}</p></>
       : <CopyField id={`${idp}-url`} label={t('approvals.callbackUrl')} value={url} />}
-    {!publicUrl && <p className="text-xs text-muted-foreground">{t('approvals.publicUrlMissing')}</p>}
+    {!publicUrl && <p className="text-xs text-muted-foreground" id={`${idp}-public-url-missing`}>{t('approvals.publicUrlMissing')}{' '}
+      <HandbookLink id={`${idp}-public-url-help`} page="operate/expose-local" label={t('docs.learnMore')} ariaLabel={t('docs.exposeLocalAria')} /></p>}
     <ChatSetup c={c} idp={idp} />
     {!c.editable && <p className="text-xs text-muted-foreground">{t('approvals.orgReadOnly')}</p>}
     {edit && <SecretFields k={k} vals={vals} setVals={setVals} idp={idp} placeholder={t('approvals.keepSecret')} />}
@@ -97,7 +101,9 @@ export function AddConnection({ k, scope, onChange, collapsed = false }: { k: Ch
     <div className="space-y-1.5"><Label htmlFor={`${idp}-name`}>{t('approvals.name')}<span className="text-muted-foreground"> · {t('approvals.optional')}</span></Label>
       <Input id={`${idp}-name`} value={name} onChange={e => setName(e.target.value)} placeholder={t('approvals.namePh')} /></div>
     <SecretFields k={k} vals={vals} setVals={setVals} idp={idp} />
-    <p className="text-xs text-muted-foreground">{t(`approvals.help.${k.kind}`)}</p>
+    <p className="text-xs text-muted-foreground">{t(`approvals.help.${k.kind}`)}{GUIDE[k.kind] && <>{' '}
+      <HandbookLink id={`${idp}-guide`} page="operate/channels" anchor={GUIDE[k.kind]} label={t('docs.setupGuide')}
+        ariaLabel={t('docs.setupGuideAria', { platform: t(`approvals.kind.${k.kind}`) })} /></>}</p>
     {alerts}
     <div className="flex justify-end"><Button size="sm" id={`${idp}-save`} disabled={busy || !filled(k, vals)}
       onClick={() => run(() => api('/api/approvals/channels', { method: 'POST', json: { kind: k.kind, scope, name, ...vals } }), t('approvals.saved'))}><Save />{t('approvals.save')}</Button></div>

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "superstep-backend"
-version = "0.11.2"
+version = "0.12.0"
 license = "MIT"
 description = "FastAPI backend for Superstep (compiler, runner, auth, repo import)"
 requires-python = ">=3.12"
@@ -42,6 +42,7 @@ dev = ["boto3>=1.34"]  # tests run the s3 backend against MinIO and a stubbed cl
 
 [tool.setuptools.package-data]
 "app.api" = ["schemas/chat_ws_v1/*.json"]
+"app.engine" = ["browser_seccomp.json", "browser_seccomp.LICENSE"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

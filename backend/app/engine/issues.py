@@ -9,6 +9,7 @@ back to the English text. `MESSAGES` is the one English source; `tests/test_vali
 from __future__ import annotations
 
 from typing import Any, Dict, Iterable, List, Optional
+from ..core.errors import CATALOG
 
 _NODE = "Node {node}: "
 _AGENT_TOOL = "Agent node {node}: tool {tool}: "
@@ -35,6 +36,7 @@ REF_INNER = {
 INNER = {**CODE_INNER, **REF_INNER}
 
 MESSAGES: Dict[str, str] = {
+    "BROWSER_RECIPE_INVALID": CATALOG["BROWSER_RECIPE_INVALID"][1],
     # graph
     "NODE_ID_MISSING": "Every node needs an id",
     "EDGE_ENDS_MISSING": "Every edge needs a source and a target",

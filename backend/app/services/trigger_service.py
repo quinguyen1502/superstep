@@ -24,9 +24,10 @@ def _hash(token: str) -> str: return hashlib.sha256(token.encode()).hexdigest()
 
 class TriggerService:
     def __init__(self, workflows: WorkflowRepository, runs: RunRepository, tokens: WorkflowTokenRepository, jobs: JobQueue,
-                 limiter: Optional[RateLimiter] = None, access=None):
+                 limiter: Optional[RateLimiter] = None, access=None,versions=None):
         self.workflows, self.runs, self.tokens, self.jobs, self.limiter = workflows, runs, tokens, jobs, limiter
         self.access = access  # AccessService (TASK-0014): tokens need the "share" action (owner or admin)
+        self.versions=versions
 
     # ---- token management (owner, JWT) ----
     def _owned(self, wid: str, uid: str):
@@ -114,9 +115,18 @@ class TriggerService:
               before_enqueue=None) -> str:
         """Record a queued API run of the workflow's latest version and hand it to the worker. `before_enqueue(rid)`
         runs between the two (e.g. to link the run to a thread before a worker can pick it up)."""
+        from ..engine import browser_recipes
+        row=self.workflows.get(wid);wf=json.loads(row.data or '{}') if row is not None else {}
+        recipe=browser_recipes.parsed(wf)
+        checkpoint=None;version=None
+        if recipe is not None:
+            browser_recipes.validate_input(wf,inp)
+            checkpoint=json.dumps({'kind':'browser_recipe','workflow':wf},ensure_ascii=False)
+            latest=self.versions.latest(wid) if self.versions else None
+            version=latest.version if latest is not None and latest.data==row.data else None
         rid = uuid.uuid4().hex[:10]
         self.runs.add(Run(id=rid, workflow_id=wid, input=json.dumps(inp, ensure_ascii=False), events="[]", status="queued",
-                          started=time.time(), owner=owner, source="api", callback_url=callback_url, callback_token_id=token_id if callback_url else None))
+                          started=time.time(), owner=owner, source="api",checkpoint=checkpoint,workflow_version=version, callback_url=callback_url, callback_token_id=token_id if callback_url else None))
         if before_enqueue is not None: before_enqueue(rid)
         self.jobs.enqueue({"run_id": rid, "workflow_id": wid, "owner": owner, "input": inp, "callback_url": callback_url, "token_id": token_id})
         return rid

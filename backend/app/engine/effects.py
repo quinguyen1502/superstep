@@ -48,18 +48,19 @@ class Effects:
     def headers(self, node_id: str) -> dict:
         return {"Idempotency-Key": self.key(node_id), "X-Studio-Run-Id": self.run_id, "X-Studio-Attempt": str(self.attempt)}
 
-    def wrap(self, node: Dict[str, Any], fn: Callable[[dict], dict]) -> Callable[[dict], dict]:
+    def wrap(self, node: Dict[str, Any], fn: Callable[[dict], dict], cache=None) -> Callable[[dict], dict]:
         """Ledger + guard around a side-effect node; other node types are pure and run as they are."""
         if node["type"] not in SIDE_EFFECT_TYPES: return fn
         nid = node["id"]
 
         def run(state):
             it = self.counts.get(nid, 1)
-            if self.ledger is not None and (hit := self.ledger.get(nid, it)) is not None:
+            cache_ok = cache is None or cache(state)
+            if cache_ok and self.ledger is not None and (hit := self.ledger.get(nid, it)) is not None:
                 self.reused.add(nid); return hit
             if self.guard is not None: self.guard()
             out = fn(state)
-            if self.ledger is not None: self.ledger.put(nid, it, out or {}, self.key(nid))
+            if cache_ok and self.ledger is not None: self.ledger.put(nid, it, out or {}, self.key(nid))
             return out
         return run
 

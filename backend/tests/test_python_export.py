@@ -255,8 +255,8 @@ def test_agent_with_every_tool_source(tmp_path):
     code = out.code
     assert "SECRET" not in code and unused_imports(code) == set() and "pip install langgraph httpx" in code
     assert [out.names[k] for k in ("ag", "ag/__model", "ag/__tool", "ag/__exit")] == ["helper_one", "helper_one_model", "helper_one_tool", "helper_one_end"]
-    assert 'return call_mcp_tool("add", args)' in code and 'retrieve(str(args.get("query") or ""), top_k=2)' in code
-    assert "params=query or None" in code and "body = json.dumps(args" not in code  # GET: query string; POST with a body template
+    assert 'return call_mcp_tool("MCP_SERVER_1", "add", args)' in code and 'retrieve("KNOWLEDGE_BASE_1", str(args.get("query") or ""), top_k=2)' in code
+    assert "url, body, query)" in code and "body = json.dumps(args" not in code  # GET: query string; POST with a body template
     assert 'question = ("Helper \\"one\\" wants to call "' in code and "also go to a channel" in code
     assert 'builder.add_conditional_edges("helper_one_model", route_helper_one_model, {"tool": "helper_one_tool", "done": "helper_one_end"})' in code
     assert "def wave_cap(enabled: bool)" in code and "HELPER_ONE_PARALLEL = True" in code
@@ -269,7 +269,7 @@ def test_agent_with_every_tool_source(tmp_path):
 def test_http_tool_compiles_without_running():
     code = X.to_python(HTTP, "Http").code
     compile(code, "http.py", "exec")
-    assert "import httpx" in code and 'httpx.request("POST"' in code and "pip install langgraph httpx" in code
+    assert "import httpx" in code and 'http_request("' in code and '"POST", render(' in code and "pip install langgraph httpx" in code
     assert unused_imports(code) == set()
 
 
@@ -414,12 +414,9 @@ def test_graph_values_never_become_code():
     assert "initial_interval=0.5" in code and "cache_policy" not in code and "top_k=4" in code
 
 
-MCP_STUB = '''def call_mcp_tool(tool: str, arguments: dict) -> Any:
-    """MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
-    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters."""
-    return None'''
+MCP_STUB = '''def call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:'''  # TASK-0269: the adapter's head
 
-MCP_SLOW = '''def call_mcp_tool(tool: str, arguments: dict) -> Any:
+MCP_SLOW = '''def call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:
     t0 = time.perf_counter()
     time.sleep({"alpha": 0.2, "beta": 0.05, "gamma": 0.12}[tool])
     t1 = time.perf_counter()
@@ -427,7 +424,10 @@ MCP_SLOW = '''def call_mcp_tool(tool: str, arguments: dict) -> Any:
         fh.write(f"{tool} {t0:.6f} {t1:.6f}\\n")
     if tool == "beta" and os.environ.get("WAVE_FAIL") == "1":
         raise RuntimeError("down")
-    return tool'''
+    return tool
+
+
+def _real_call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:'''
 
 
 def _wave_workflow(parallel=True):

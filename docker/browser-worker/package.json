@@ -1,0 +1,9 @@
+{
+  "name": "superstep-browser-worker",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "playwright-core": "1.64.1",
+    "ajv": "8.20.0"
+  }
+}

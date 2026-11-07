@@ -4,7 +4,7 @@ import json, time
 from typing import Any, Dict, List, Optional
 from langgraph.checkpoint.memory import InMemorySaver
 from .compiler import compile_workflow
-from . import agents, foreach
+from . import agents, foreach, browser_recipes, browser_presentation
 from .effects import Effects
 from .errors import Interrupt, ValidationError
 from .issues import Issue
@@ -32,6 +32,7 @@ PY_TYPES = {"number": (int, float), "integer": (int,), "boolean": (bool,), "list
 def check_input(wf: Dict[str, Any], inputs: Any) -> List[str]:
     """Run input must be a JSON object whose known fields match the state schema types."""
     if not isinstance(inputs, dict): return [Issue("INPUT_NOT_OBJECT")]
+    browser_recipes.validate_input(wf,inputs)
     errs = []
     for f in wf.get("state", []) or []:
         name, typ = f.get("name"), f.get("type", "string")
@@ -82,8 +83,10 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         if isinstance(go, str) and go: inputs[agents.START_KEY] = go
     state = dict(inputs); cp_state, cp_counts = dict(state), dict(counts); first = True
 
+    browser_private = browser_presentation.private_workflow(wf, ports)
     def meta(nid):
-        return {"node": nid, "label": nodes[nid]["data"].get("label"), "node_type": nodes[nid]["type"]}
+        return {"node": nid, "label": nodes[nid]["data"].get("label"), "node_type": nodes[nid]["type"],
+                **({'browser_private': True} if browser_private else {})}
 
     def started(nid):
         counts[nid] = counts.get(nid, 0) + 1
@@ -133,7 +136,9 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                 finished_ids.add(nid)
                 yield {"type": "node_finished", **meta(nid), "iteration": counts.get(nid, 1), "superstep": superstep,
                        "duration_ms": round((time.perf_counter() - t0) * 1000, 2),
-                       "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),  # input: time travel forks from it
+                       "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),
+                       **({'browser': browser_presentation.detail(nodes[nid]['data'].get('tool'), delta.get(nodes[nid]['data'].get('output_field')) or {})}
+                          if nodes[nid]['type'] == 'mcp' and browser_private and ports is not None and ports.browser is not None and ports.browser.is_browser(nodes[nid]['data'].get('server_id')) else {}),  # input: time travel forks from it
                        **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did (TASK-0116)
                        **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
                        **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
@@ -143,12 +148,16 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         holds = _holds(effects, i)
         primary = next((h for h in holds if h["kind"] == "approval"), holds[0])
         cp = {"node": primary["node"], "nodes": pending or [primary["node"]], "state": cp_state, "counts": cp_counts}
+        browser_intents={hold['node']:hold['browser_intent'] for hold in holds if hold.get('browser_intent')}
+        if browser_intents:cp['browser_intents']=browser_intents
+        if len(holds)==1 and primary.get('browser_intent'):cp['browser_intent']=primary['browser_intent']
         if len(holds) > 1: cp["waits"] = holds  # one resume after every wait of this superstep (TASK-0158)
         elif holds[0]["kind"] == "child": cp["wait"] = {"kind": "child", "run_id": holds[0]["run_id"]}
-        extra = {k: primary[k] for k in ("label", "tool", "arguments", "workflow_id") if primary.get(k) is not None}
+        extra = {k: primary[k] for k in ("label", "tool", "arguments", "workflow_id", "browser_intent") if primary.get(k) is not None}
         if len(holds) == 1 and primary["kind"] == "child": extra["wait"] = {"kind": "child", "run_id": primary["run_id"]}
         yield {"type": "run_waiting", **meta(primary["node"]), "prompt": primary.get("prompt") or "",
-               **{k: cap_payload(v) for k, v in extra.items()}, "state": cap_payload(agents.visible(state)), "checkpoint": cp}
+               **{k: cap_payload(v) for k, v in extra.items()}, "state": cap_payload(agents.visible(state)), "checkpoint": cp,
+               **({'browser': browser_presentation.facts({'operation': primary.get('tool'), 'status': 'approval_required'})} if primary.get('browser_intent') else {})}
         return
     except Exception as e:  # attribute runtime failures to the node that was running
         if getattr(e, "fenced", False): raise  # this worker lost the run: the service layer stops without writing
@@ -156,6 +165,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", **(meta(nid) if nid in nodes else {}), "iteration": counts.get(nid, 1) if nid else None,
                "duration_ms": round((time.perf_counter() - t0) * 1000, 2), "input": cap_payload(dict(state)),
                "code": getattr(e, "code", "NODE_FAILED"), "errors": [safe_error(e)],
+               **({"browser": e.browser} if isinstance(getattr(e, "browser", None), dict) else {}),
                **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                **({"code_output": cap_payload(e.output)} if getattr(e, "output", None) else {})}
         return
@@ -164,7 +174,11 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", "node": until, "code": "RUN_NODE_NOT_REACHED", "errors": [msg],
                "error": {"code": "RUN_NODE_NOT_REACHED", "message": msg, "details": {"node": until}}}
         return
-    yield {"type": "run_finished", "state": agents.visible(foreach.visible(state))}
+    try:final=browser_recipes.outputs(wf,agents.visible(foreach.visible(state)))
+    except Exception as error:
+        yield {'type':'error','code':getattr(error,'code','NODE_FAILED'),'errors':[safe_error(error)]}
+        return
+    yield {"type": "run_finished", "state": final}
 
 
 def _holds(effects, i: Interrupt) -> List[dict]:
@@ -178,10 +192,10 @@ def _holds(effects, i: Interrupt) -> List[dict]:
         wait = extra.get("wait") if isinstance(extra.get("wait"), dict) else {}
         if wait.get("kind") == "child":
             found[i.node] = {"node": i.node, "kind": "child", "run_id": wait.get("run_id"), "prompt": i.prompt,
-                             **{k: extra[k] for k in ("label", "tool", "arguments", "workflow_id") if k in extra}}
+                             **{k: extra[k] for k in ("label", "tool", "arguments", "workflow_id", "browser_intent") if k in extra}}
         else:
             found[i.node] = {"node": i.node, "kind": "approval", "prompt": i.prompt,
-                             **{k: extra[k] for k in ("label", "tool", "arguments") if k in extra}}
+                             **{k: extra[k] for k in ("label", "tool", "arguments", "browser_intent") if k in extra}}
     return list(found.values())
 
 

@@ -51,6 +51,13 @@ from ..services.chat_session_service import ChatSessionService
 from ..services.public_chat_service import PublicChatService
 from ..services.chat_attachment_service import ChatAttachmentService
 from ..services.attachment_files import AttachmentFiles
+from ..services.browser_artifact_service import BrowserArtifactService
+from ..repositories.browser_artifacts import BrowserArtifactRepository
+from ..repositories.browser_sessions import BrowserSessionRepository
+from ..services.browser_session_service import BrowserSessionService
+from ..services.browser_approval_service import BrowserApprovalService
+from ..repositories.browser_intents import BrowserIntentRepository
+from ..services.browser_runtime_service import BrowserRuntimeService
 from .. import storage
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
@@ -60,6 +67,26 @@ from ..services.workflow_test_service import WorkflowTestService
 @lru_cache
 def get_db() -> Database:
     return Database()
+
+
+def browser_artifact_service() -> BrowserArtifactService:
+    return BrowserArtifactService(BrowserArtifactRepository(get_db()))
+
+
+def browser_session_service():
+    import json, os
+    from ..engine.browser_remote import ApprovedController
+    try:
+        controllers=[ApprovedController(**item) for item in json.loads(os.environ.get('STUDIO_BROWSER_CONTROLLERS','[]'))]
+        proxies=json.loads(os.environ.get('STUDIO_BROWSER_PROXY_ORIGINS','[]'))
+        default=json.loads(os.environ.get('STUDIO_BROWSER_PROXY_DEFAULT','null'))
+        if not isinstance(proxies,list) or not all(isinstance(item,str) for item in proxies):raise ValueError()
+    except Exception:raise AppError('BROWSER_RUNTIME_UNAVAILABLE') from None
+    db=get_db()
+    service=BrowserSessionService(BrowserSessionRepository(db),mcp_service(),BrowserRuntimeService(browser_artifact_service()),
+        controllers=controllers,approved_proxies=proxies,operator_default=default,runs=RunRepository(db))
+    service.approvals=BrowserApprovalService(BrowserIntentRepository(db),ApprovalRepository(db),UserRepository(db),service,enqueue=get_job_queue().enqueue,active=lambda rid:get_run_bus().owner(rid) is not None)
+    return service
 
 
 @lru_cache
@@ -74,7 +101,7 @@ def get_job_queue() -> JobQueue:
 
 @lru_cache
 def run_worker() -> RunWorker:
-    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service)
+    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service,browser=browser_session_service)
 
 
 @lru_cache
@@ -159,7 +186,7 @@ def chat_attachment_service() -> ChatAttachmentService:
 
 def trigger_service() -> TriggerService:
     db = get_db(); return TriggerService(WorkflowRepository(db), RunRepository(db), WorkflowTokenRepository(db), get_job_queue(), get_rate_limiter(),
-                                         access=access_service())
+                                         access=access_service(),versions=WorkflowVersionRepository(db))
 
 
 def workflow_mcp_service() -> WorkflowMcpService:
@@ -215,7 +242,7 @@ def ownership_service() -> OwnershipService:
 
 def user_service() -> UserService:
     db = get_db()
-    return UserService(UserRepository(db), access_service(), audit_service(), UserDataRepository(db), ownership_service(), WorkflowRepository(db))
+    return UserService(UserRepository(db), access_service(), audit_service(), UserDataRepository(db), ownership_service(), WorkflowRepository(db),browser=browser_session_service)
 
 def share_service() -> ShareService:
     db = get_db(); return ShareService(WorkflowShareRepository(db), UserRepository(db), access_service(), TeamRepository(db), audit_service())
@@ -237,7 +264,7 @@ def run_service() -> RunService:
     db = get_db(); return RunService(WorkflowRepository(db), RunRepository(db), credential_service(), get_run_bus(), get_telemetry(), WorkflowVersionRepository(db), notification_service(), NodeResultRepository(db), approval_service(), delivery_service,
                       knowledge=knowledge_service(), mcp=mcp_service(), access=access_service(),
                       policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service,
-                      jobs=get_job_queue)
+                      jobs=get_job_queue,browser=browser_session_service() if config.browser_runtime_enabled() else None)
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),
@@ -253,7 +280,7 @@ def channel_service() -> ChannelService:
 def approval_service() -> ApprovalService:
     db = get_db(); return ApprovalService(ApprovalRepository(db), UserRepository(db), WorkflowRepository(db), RunRepository(db), channel_service(), get_job_queue().enqueue,
                                          limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service,
-                                         reviewer=auto_review_service())
+                                         reviewer=auto_review_service(),browser=lambda:browser_session_service().approvals)
 
 def inbox_service() -> InboxService:
     return InboxService(approval_service(), run_service(), access_service())
@@ -270,7 +297,7 @@ def knowledge_service() -> KnowledgeService:
 def mcp_service() -> McpService:
     db = get_db(); users = UserRepository(db)
     return McpService(McpServerRepository(db), lambda uid: bool((u := users.get_by_id(uid)) and u.active and P.can(u.role, P.ORG_MANAGE)),
-                      policy_service().org_allowed, channel_service(), get_counter())
+                      policy_service().org_allowed, channel_service(), get_counter(),browser_lifecycle=browser_session_service)
 
 def import_service() -> ImportService:
     return ImportService(workflow_service())

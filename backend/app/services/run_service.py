@@ -52,6 +52,7 @@ class RunPlan:
     steps: Optional[int] = None  # stop after this many working supersteps (TASK-0036); None runs to the end
     until: Optional[str] = None  # pause after this node finishes (TASK-0036); None runs to the end
     forked: Optional[dict] = None  # {run_id, checkpoint, nodes, edited}: a new run forked from a checkpoint of another one
+    browser_lease: Optional[int] = None  # positive wire epoch = stored queue generation + 1; 1 covers an unclaimed UI run
     pending_wave: bool = False  # an answer of one wait in a wave was stored; the run stays waiting (TASK-0158)
     pending_event: Optional[dict] = None  # the next slot's run_waiting, so the panel stops showing the one just answered
 
@@ -124,7 +125,7 @@ def _follow_up_wait(cp: dict) -> Optional[dict]:
     w = next((x for x in waits if x.get("kind") == "approval"), None) or (waits[0] if waits else None)
     if not w: return None
     ev = {"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt") or "", "ts": time.time()}
-    for k in ("label", "tool", "arguments"):
+    for k in ("label", "tool", "arguments", "browser_intent"):
         if w.get(k) is not None: ev[k] = w[k]
     if w.get("kind") == "child" and w.get("run_id"):
         ev["wait"] = {"kind": "child", "run_id": w["run_id"]}
@@ -186,7 +187,7 @@ class RunService:
                  telemetry: Telemetry | None = None, versions=None, notifier=None, ledger=None, approvals=None,
                  deliveries: Optional[Callable[[], object]] = None, knowledge=None, mcp=None, access=None, policy=None, quota=None, audit=None,
                  tests: Optional[Callable[[], object]] = None, chat: Optional[Callable[[], object]] = None,
-                 jobs: Optional[Callable[[], object]] = None):
+                 jobs: Optional[Callable[[], object]] = None, browser=None):
         """credentials: CredentialService (optional; without it, nodes with credential_id fail clearly).
         bus: RunBus for cross-process cancel + event fan-out (in-memory when not given)."""
         self.workflows, self.runs, self.credentials = workflows, runs, credentials
@@ -199,6 +200,7 @@ class RunService:
         self.approvals = approvals  # ApprovalService (optional): Slack/Telegram approval requests of Human nodes (TASK-0022)
         self.knowledge = knowledge  # KnowledgeService (optional): Retriever nodes (TASK-0012)
         self.audit = audit  # AuditService (optional): Code nodes running without isolation (TASK-0056)
+        self.browser = browser  # trusted browser lifecycle service (TASK-0245)
         self.mcp = mcp  # McpService (optional): MCP tool nodes (TASK-0013)
         self.policy = policy  # PolicyService (optional): org resources at run time (TASK-0029)
         self.access = access  # AccessService (optional): shared workflows and roles (TASK-0014); None = owner-only
@@ -220,6 +222,7 @@ class RunService:
         if row is not None: return self.cancel_waiting(rid, uid)
         if self.bus.owner(rid) != uid: raise AppError("RUN_NOT_FOUND")  # unknown, finished or not yours
         self.bus.request_cancel(rid)
+        if self.browser:self.browser.close_run(rid)
 
     # ---- planning / validation of the client request ----
     def plan(self, uid: str, req, *, allow_form: bool = False) -> RunPlan:
@@ -246,6 +249,8 @@ class RunService:
             v = self.versions.get(wid, n) if wid and edits and self.versions is not None and isinstance(n, int) and not isinstance(n, bool) else None
             if v is None: raise AppError("VERSION_NOT_FOUND")
             wf = json.loads(v.data or "{}")
+        from ..engine import browser_recipes
+        browser_recipes.validate_input(wf,inp)
         version = n if n is not None else self._version_of(wid, wf)
         res = row.owner if row is not None and row.owner else uid  # a saved workflow uses its owner's resources (DEC-0023)
         wf, invalid = self._expand(res, wid, wf)
@@ -324,9 +329,14 @@ class RunService:
     def _child_starter(self, rid: str, plan: RunPlan, uid: str):
         """ports.start_child of one run: insert the child (once per call key) and queue it."""
         def start(key: str, wf: dict, version: Optional[int], inp: dict, meta: dict) -> str:
+            from ..engine import browser_recipes
+            browser_recipes.validate_input(wf,inp)
             if self.jobs is None: raise RuntimeError("workflow tools need the job queue")
             found = self.runs.child_of(rid, key)
             if found is not None: return found.id
+            if browser_recipes.parsed(wf) is not None and self.browser is not None and (
+                getattr(getattr(plan.ports,'browser',None),'lost',False) or self.browser.repo.has_history(rid,uncertain=True)):
+                raise AppError('BROWSER_RUNTIME_UNAVAILABLE')
             depth, r = 1, self.runs.get(rid)
             while r is not None and r.parent_run_id: depth += 1; r = self.runs.get(r.parent_run_id)
             if depth > subgraphs.MAX_DEPTH: raise AppError("WORKFLOW_TOOL_TOO_DEEP", max=subgraphs.MAX_DEPTH)
@@ -342,8 +352,16 @@ class RunService:
         """The first segment of a child run: the snapshot its parent's plan took (DEC-0066 decision 2)."""
         cp = json.loads(r.checkpoint or "{}"); uid = r.owner or ""
         res = self.run_resources(r, uid)
+        from ..engine import browser_recipes
+        browser_recipes.validate_input(cp.get('workflow') or {},json.loads(r.input or '{}'))
         return RunPlan(r.workflow_id, cp.get("workflow") or {}, json.loads(r.input or "{}"), self.credentials.resolver(res) if self.credentials else None,
                        run_id=r.id, source="tool", version=r.workflow_version, ports=self.run_ports(r, uid))
+
+    def plan_recipe(self,r:Run)->RunPlan:
+        """A queued recipe uses its accepted snapshot; current workflow access is still required."""
+        self._workflow(r.workflow_id,r.owner or '',P.RUN)
+        plan=self.plan_child(r);plan.source=r.source or 'api'
+        return plan
 
     def child_value(self, r: Run) -> dict:
         """What the parent's tool step gets from a finished child: its status, final state or error, and usage."""
@@ -524,6 +542,7 @@ class RunService:
     def _close_waiting(self, r: Run, ev: dict, status: str, uid: str) -> None:
         """End a waiting run without executing it (cancel / expiry): one more trace segment, no node spans."""
         cp = json.loads(r.checkpoint or "{}")
+        if self.browser:self.browser.close_run(r.id)
         self.record(r.id, r.workflow_id, json.loads(r.input or "{}"), json.loads(r.events or "[]") + [ev], None, status, r.started, uid,
                     source=r.source or "ui", version=r.workflow_version, trace_parent=cp.get("trace"), trace_events=[] if cp.get("trace") else None)
         if (cp.get("wait") or {}).get("kind") == "child" or any(
@@ -564,6 +583,7 @@ class RunService:
                 outcome, wrote = self.absorb_wave(rid, node=node, value=response)
                 if wrote and self.approvals is not None and not via_channel:
                     self.approvals.answered_slot(rid, node)  # stored first: a lost claim does not drop the answer
+                    if self.browser and self.browser.approvals:self.browser.approvals.direct_decision(rid,node,uid,response)
             if outcome == "stay":
                 fresh = self.runs.get(rid)
                 evs = json.loads(fresh.events or "[]") if fresh is not None else []
@@ -580,6 +600,7 @@ class RunService:
         elif self.approvals is not None and not via_channel:  # answered in the studio: the channel buttons stop working (TASK-0022)
             if self.approvals.decided_elsewhere(rid) or not self.approvals.claim(rid): raise AppError("RUN_NOT_WAITING")  # first answer wins (DEC-0043)
             self.approvals.close_run(rid, "answered")
+            if self.browser and self.browser.approvals:self.browser.approvals.direct_decision(rid,str(cp.get('node') or ''),uid,response)
         res = self.run_resources(r, uid)
         return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
                        self.credentials.resolver(res) if self.credentials else None,
@@ -603,7 +624,8 @@ class RunService:
         from there (same checkpoint shape as HITL; parallel branches and imported graphs included, TASK-0021);
         without one it starts over. Either way the lost segment's root span is exported first (DEC-0018)."""
         cp = json.loads(r.checkpoint or "null") or {}
-        snapshot = cp.get("workflow") if r.parent_run_id else None  # a child restarts on its parent's snapshot (TASK-0134)
+        recipe_snapshot=cp.get('kind')=='browser_recipe'
+        snapshot = cp.get("workflow") if r.parent_run_id or recipe_snapshot else None  # child/accepted recipe snapshots survive before first progress
         if cp.get("kind") != "progress": cp = {}
         lost = cp.get("trace")
         if lost:
@@ -612,7 +634,7 @@ class RunService:
         common = dict(run_id=r.id, source=r.source or "api", trace_parent=lost, checkpointing=True, fence=fence, attempt=attempt)
         if not (cp.get("node") or cp.get("nodes")):  # nothing finished yet: restart from the beginning
             if snapshot is not None:
-                plan = self.plan_child(r)
+                plan = self.plan_recipe(r) if recipe_snapshot and not r.parent_run_id else self.plan_child(r)
                 for k, v in common.items(): setattr(plan, k, v)
                 return plan
             pin = {"version": r.workflow_version} if r.source == "test" and r.workflow_version else {}  # a test run keeps its version
@@ -745,7 +767,7 @@ class RunService:
             try:  # the waiting steps are written before the row, so a crash in between never loses them (TASK-0127)
                 if status == "waiting":
                     asked = [{"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt"), "label": w.get("label"),
-                              "tool": w.get("tool"), "arguments": w.get("arguments")}
+                              "tool": w.get("tool"), "arguments": w.get("arguments"), "browser_intent": w.get("browser_intent")}
                              for w in wave_waits if w.get("kind") == "approval"]
                     if not asked:
                         ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
@@ -797,6 +819,24 @@ class RunService:
         self.history_changed(plan.workflow_id, rid)
 
     # ---- execution ----
+    def browser_principal(self,rid,plan,uid):
+        from .browser_session_service import digest
+        from ..repositories.chat_sessions import ChatSessionRepository
+        from ..repositories.chat_messages import ChatMessageRepository
+        row=self.runs.get(rid)
+        top=self.top_run(row) if row is not None else None
+        source_id=top.id if top is not None else rid
+        source=top.source if top is not None else plan.source
+        session=ChatSessionRepository(self.runs.db).for_run(source_id)
+        if session is not None:
+            if session.external_user:return 'app:'+digest([session.trigger_id,session.app_key_id,session.external_user])[:48]
+            if session.owner:return 'user:'+session.owner
+            return 'visitor:'+digest([session.trigger_id,session.visitor,session.id])[:48]
+        message=ChatMessageRepository(self.runs.db).by_run(source_id)
+        if message is not None:return 'channel:'+digest([message.channel_id,message.team,message.sender])[:48]
+        if source=='chat':return 'chat:'+digest(source_id)[:48]  # never upgrade an unknown chat actor to resource owner
+        return 'user:'+((top.owner if top is not None else None) or (plan.previous.owner if plan.previous else None) or uid)
+
     async def execute(self, plan: RunPlan, send: Callable[[dict], Awaitable[bool]],
                       listen: Callable[[], Awaitable[str]], uid: str = "") -> str:
         """Stream events through `send` (returns False once the client is gone). `listen` resolves to
@@ -815,6 +855,8 @@ class RunService:
             if status != "fenced": await self.settled(rid, plan.source)
             return status
         finally:
+            if self.browser and status not in {"waiting","paused"}:
+                await _write_in_thread(self.browser.close_run,rid,plan.browser_lease if plan.browser_lease is not None else (plan.fence+1 if plan.fence is not None else None))
             if status != "fenced": await _write_in_thread(self.bus.finish, rid)  # a fenced worker leaves the new owner's entry alone
 
     async def settled(self, rid: str, source: Optional[str] = None) -> None:
@@ -868,6 +910,28 @@ class RunService:
 
         if plan.ports is not None:  # a Code node's sandbox is killed when the run is cancelled or times out (TASK-0053)
             plan.ports.cancelled = lambda: cancel.is_set() or bus.is_cancelled(rid)
+            if self.browser and config.browser_runtime_enabled():
+                def bind_browser():
+                    stored=self.runs.get(rid)
+                    resource=self.run_resources(stored,uid) if stored is not None else self.resources_of(plan.workflow_id,uid)
+                    org=self.policy.org_allowed(uid) if self.policy else True
+                    run_generation=plan.fence if plan.fence is not None else (stored.lease_gen if stored is not None else 0)
+                    plan.browser_lease=run_generation+1
+                    def browser_guard():
+                        current=self.runs.lease_gen(rid)
+                        if current is not None and current!=run_generation or current is None and run_generation!=0:raise StaleLease(rid)
+                        if plan.workflow_id and plan.workflow_id!='adhoc' and self.workflows.get(plan.workflow_id) is None:
+                            raise AppError('WORKFLOW_NOT_FOUND')
+                    from ..repositories.chat_sessions import ChatSessionRepository
+                    top=self.top_run(stored) if stored is not None else None
+                    source_id=top.id if top is not None else rid
+                    chat=ChatSessionRepository(self.runs.db).for_run(source_id)
+                    return self.browser.bind(resource,self.browser_principal(rid,plan,uid),rid,plan.browser_lease,
+                        guard=browser_guard,cancelled=plan.ports.cancelled,org_allowed=org,
+                        allow_resume=bool(plan.previous is not None and plan.previous.status=='waiting' and not plan.recovered),
+                        forked_from=(plan.forked or {}).get('run_id'),
+                        conversation_id=chat.id if chat is not None else None)
+                plan.ports.browser=await asyncio.to_thread(bind_browser)
             plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools (TASK-0134)
         plan.effects = Effects(rid, plan.attempt, ledger=_RunLedger(self.ledger, rid, plan.fence) if self.ledger is not None else None,
                           guard=self._guard(rid, plan.fence))

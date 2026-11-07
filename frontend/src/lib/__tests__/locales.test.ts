@@ -14,6 +14,7 @@ const vars = (s: string) => [...s.matchAll(/{{\s*([\w.]+)\s*}}/g)].map((m) => m[
 
 /** vi strings that may stay identical to en: brand names, IDs, examples, and glossary terms kept in English. */
 const SAME_OK = new Set([
+  'browserSettings.proxyPlaceholder', 'browserSettings.searchPlaceholder', // literal example URLs
   'activity.types.workflow',
   'agent.workflow',
   'chat.page.title',

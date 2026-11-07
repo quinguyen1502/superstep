@@ -67,15 +67,21 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, then `call_llm(prompt, model)` |
 | Condition | a node that changes nothing, and `add_conditional_edges` with a router function and a label → node map |
 | Human | `interrupt(...)` pauses the run; `Command(resume=answer)` continues it |
+| Per-node model credential | `LLM_CRED_<n>`: one slot per Studio credential, shared by the nodes that use it. Set `LLM_CRED_<n>_PROVIDER`, `LLM_CRED_<n>_API_KEY` and, when the provider needs it, `LLM_CRED_<n>_BASE_URL`. An unset slot provider keeps `LLM_PROVIDER`, and the offline mock when that is unset too. A set slot provider with no key stops the run and names `LLM_CRED_<n>_API_KEY`. The credential id is not written |
+| Human channel, deadline and AI review | `notify_approval`, `wait_approval` and, when a policy is set, `review_approval`. Slack, Teams and a generic channel use `APPROVAL_<KIND>_WEBHOOK_URL` (JSON `{"text": ...}`); Telegram uses `APPROVAL_TELEGRAM_BOT_TOKEN` and `APPROVAL_TELEGRAM_CHAT_ID`. The decision is still the local answer. A deadline waits, reminds at most five times, then approves, rejects, or waits once more and rejects. Suggest mode never answers. Auto mode approves only when the judge says approve with enough confidence; a reject rule rejects. Low confidence, a judge reject, an error, a missing key and the daily cap ask a person. Approvers, escalation addresses and credential ids are not written |
+| Managed connection | `managed_operation(tool, arguments, prefix, adapter)` reads JSON from `MANAGED_<n>_SETTINGS` and `MANAGED_<n>_SECRETS`. The host is resolved once and pinned; redirects are not followed. The same arguments return the stored result; different arguments conflict; an unknown outcome is not retried (`SUPERSTEP_MANAGED_STATE`). Not configured: offline a dry run; with `LLM_PROVIDER` set the run stops and names the variables. A step with no adapter still raises the placeholder |
+| LLM with a fallback model | `call_llm_fallback(prompt, model, fallback)`: the fallback model once, only when the primary is unreachable, answers HTTP 5xx or is not found (404); `LLM_FALLBACK_PROVIDER` picks its provider (default `LLM_PROVIDER`). Offline only the primary mock answers; a node that sends attachments uses `call_llm_files_fallback`, which gives the fallback model the same files |
 | Agent | an entry, a model and a tool function with two routers, and an end function; `interrupt(...)` before a tool that needs approval |
 | Join | a node, and `add_edge([branch, branch], join)`: it runs once all branches finished |
 | For each | a loop position field and a router that returns `each` or `done` |
 | Decision | `decide(text, question)` for each question |
 | Subgraph | the child workflow as its own graph, `build_<child>()`, added as a node |
 | Tool: function | the function's code, copied in |
-| Tool: HTTP | an `httpx` request |
+| Tool: HTTP | `http_request(...)` with `httpx`: http(s) only, private addresses refused unless `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, no redirects, `user:pass@` as Basic auth, an `Idempotency-Key` per run and request (`SUPERSTEP_RUN_ID`). As in the studio, the host is resolved once and the request connects to that checked address; the Host header, TLS SNI and certificate check keep the name |
 | Tool: Code | the node's code, inside the node function |
-| Retriever, MCP, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base and MCP tools) |
+| MCP (node and Agent MCP tool) | `call_mcp_tool(prefix, tool, arguments)`: a real MCP call over Streamable HTTP (`initialize`, `tools/call`), as the studio makes it. Each server gets a prefix `MCP_SERVER_<n>` (nodes on the same server share it; the server id is not written); set `<PREFIX>_URL` and, if needed, `<PREFIX>_HEADERS` (a JSON object, for example an `Authorization` header). The URL is your configuration and is called as given, without redirects; stdio servers are not supported. Not configured: offline it returns `None` and prints `(offline mock) …`; with `LLM_PROVIDER` set it stops the run naming the variable |
+| Retriever (node and Agent knowledge tool) | `retrieve(prefix, query, top_k)` asks your Superstep server's knowledge base search (`POST /api/knowledge-bases/<id>/search`), so chunks and scores are the studio's. Each knowledge base gets a prefix `KNOWLEDGE_BASE_<n>` (its id is not written); set `SUPERSTEP_URL`, `SUPERSTEP_TOKEN` (a Bearer token of a user who can read it) and `<PREFIX>_ID`. A studio error (for example `KB_NOT_FOUND`) stops the run. Not configured: offline an empty list and `(offline mock) …`; with `LLM_PROVIDER` set the run stops naming the variables |
+| Send email | `send_email(message)`, as in the studio: a node with an SMTP credential in the studio sends, one without makes a dry run. Sending uses `smtplib` and environment variables only: `SMTP_HOST`, `SMTP_FROM`, optional `SMTP_PORT`, `SMTP_SECURITY` (`starttls`, the default and required; `ssl`; `none`), `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_NAME`. The host is resolved once and connected to by that address; private addresses need `STUDIO_SMTP_ALLOW_PRIVATE=1`. Bcc stays out of the headers; the same run and message keep the same `Message-ID`. Not configured: offline a dry run with `(offline mock) …`; with `LLM_PROVIDER` set the run stops naming the variables |
 | Note | a comment |
 | Retry, cache, input fields | `RetryPolicy`, `CachePolicy`, `input_schema` on `add_node` |
 | Timeout | a comment: LangGraph cannot stop a node that blocks |
@@ -208,14 +214,20 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | LLM | `render(PROMPT, state)`, then `callLlm(prompt, model)`: the mock, or `initChatModel` when `LLM_PROVIDER` is set |
 | Condition, For each | `addConditionalEdges` with a router function |
 | Human | `interrupt(...)`; `new Command({ resume })` continues the run |
+| Per-node model credential | `LLM_CRED_<n>` on `callLlm`, `callLlmFallback`, `callAgent` and `decide`, with the same slot rules as the Python file |
+| Human channel, deadline and AI review | `notifyApproval`, `waitApproval` and `reviewApproval`, with the same channel, deadline and AI-review rules as the Python file |
+| Managed connection | `managedOperation(tool, args, prefix, adapter)`, with the same `MANAGED_<n>_SETTINGS` and `MANAGED_<n>_SECRETS` rules as the Python file. A step with no adapter still throws the placeholder |
 | Join | `addEdge([branch, branch], join)` |
 | Decision | `decide(text, question)` for each question |
 | Subgraph | `build_<child>()`, a compiled graph added as a node |
 | Tool: Code in TypeScript | the node's code as written; its imports move to the top of the file |
 | Tool: Code in Python | a stub that throws `not implemented in TS export`: port it |
 | Tool: function | a stub that throws: the function is Python on the server |
-| Tool: HTTP | `fetch`, without following redirects |
-| Retriever, MCP, Send email | stubs with a `TODO`, as in the Python file |
+| Tool: HTTP | `httpRequest(...)` with `node:http`/`node:https` (supported by Node and Deno), with the same safeguards as the Python file; run Deno with `--allow-net` |
+| MCP | `callMcpTool(prefix, tool, args)` with `fetch`, configured and behaving as in the Python file |
+| Retriever | `retrieve(prefix, query, topK)` with `fetch`, configured and behaving as in the Python file |
+| Send email | `sendEmail(message)` with `nodemailer` (`npm:nodemailer@^6`, loaded only when it sends), configured and behaving as in the Python file |
+| LLM with a fallback model | `callLlmFallback`, with the same rules as the Python file |
 | Agent | the entry, model, tool and end steps, as in the Python file; `callAgent` is the mock, or `initChatModel` with `bindTools` when `LLM_PROVIDER` is set. Built-in tools are stubs that throw |
 | Retry, cache, input fields, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` on `addNode` |
 
@@ -285,12 +297,19 @@ workflow, starts `langgraph dev` on it and calls it with the SDK.
 
 ## What is not in the file
 
-- Credentials, API keys, SMTP settings, knowledge bases, MCP servers, approval
-  channels, approvers and escalation addresses.
+- Credential ids and secret values, SMTP passwords, knowledge-base ids, MCP server ids and secrets,
+  approval targets, approvers and escalation addresses. Slot names, the channel kind, deadline timing
+  and the review policy (without the judge credential or the judge instructions) are written; the values stay in the environment.
 - Studio features around a run: the trace, run history, recovery after a
-  restart, approval channels and deadlines, cost tracking, node timeouts.
-- Real Retriever, MCP and Send email calls: the stubs return an empty result,
-  nothing, or the message that would have been sent.
+  restart, cost tracking and node timeouts. A channel notice, a deadline and AI
+  review run in the exported file from environment variables; they are not the studio's approval service.
+- MCP server addresses, the Superstep URL and token, SMTP settings, and managed-connection
+  settings and secrets: you set them as environment variables. Without them, offline the MCP, Retriever,
+  Send email and managed calls return an empty result, nothing, a dry run, or the message that would have
+  been sent, and say so on stderr. With `LLM_PROVIDER` set they raise (Python) or
+  throw (TypeScript), so a real run never treats a missing service as done.
+- A subgraph, workflow tool or function that was missing at export time: its
+  node or tool fails with an error naming it when the run reaches it.
 
 Two results can differ from the studio: a Decision node with a real model asks
 the LLM instead of TypeSafe Jev, and a field with a reducer that a subgraph also

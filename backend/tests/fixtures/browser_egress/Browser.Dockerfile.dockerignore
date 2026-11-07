@@ -1,0 +1,8 @@
+**
+!backend/
+!backend/tests/
+!backend/tests/fixtures/
+!backend/tests/fixtures/browser_egress/
+!backend/tests/fixtures/browser_egress/package.json
+!backend/tests/fixtures/browser_egress/package-lock.json
+!backend/tests/fixtures/browser_egress/browser_fixture.cjs

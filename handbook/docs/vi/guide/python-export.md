@@ -66,15 +66,21 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, rồi `call_llm(prompt, model)` |
 | Condition | một node không đổi gì, và `add_conditional_edges` với hàm router và bảng nhãn → node |
 | Human | `interrupt(...)` dừng run; `Command(resume=answer)` chạy tiếp |
+| Credential mô hình theo node | `LLM_CRED_<n>`: một slot cho mỗi credential trong Studio, dùng chung giữa các node. Đặt `LLM_CRED_<n>_PROVIDER`, `LLM_CRED_<n>_API_KEY` và, khi provider cần, `LLM_CRED_<n>_BASE_URL`. Slot chưa đặt provider thì giữ `LLM_PROVIDER`, và mock offline khi biến đó cũng chưa đặt. Slot đã đặt provider nhưng thiếu key thì dừng run và nêu tên `LLM_CRED_<n>_API_KEY`. Id credential không được ghi ra |
+| Kênh duyệt, hạn chót và AI duyệt | `notify_approval`, `wait_approval` và, khi có policy, `review_approval`. Slack, Teams và kênh chung dùng `APPROVAL_<KIND>_WEBHOOK_URL` (JSON `{"text": ...}`); Telegram dùng `APPROVAL_TELEGRAM_BOT_TOKEN` và `APPROVAL_TELEGRAM_CHAT_ID`. Quyết định vẫn là câu trả lời tại chỗ. Hạn chót chờ, nhắc tối đa năm lần, rồi duyệt, từ chối, hoặc chờ thêm một vòng rồi từ chối. Chế độ gợi ý không tự trả lời. Chế độ tự động chỉ duyệt khi mô hình nói approve với đủ độ tin cậy; rule từ chối thì từ chối. Độ tin cậy thấp, mô hình từ chối, lỗi, thiếu key và trần theo ngày đều hỏi người. Người duyệt, địa chỉ chuyển cấp và id credential không được ghi ra |
+| Kết nối managed | `managed_operation(tool, arguments, prefix, adapter)` đọc JSON từ `MANAGED_<n>_SETTINGS` và `MANAGED_<n>_SECRETS`. Tên máy được phân giải một lần và ghim; không theo redirect. Cùng đối số thì trả kết quả đã lưu; đối số khác thì xung đột; kết quả không rõ thì không gửi lại (`SUPERSTEP_MANAGED_STATE`). Chưa cấu hình: offline là lần chạy thử; khi đặt `LLM_PROVIDER` thì dừng run và nêu tên biến. Bước không có adapter vẫn ném placeholder |
+| LLM có model dự phòng | `call_llm_fallback(prompt, model, fallback)`: gọi model dự phòng một lần, chỉ khi model chính không kết nối được, trả HTTP 5xx hoặc không tồn tại (404); `LLM_FALLBACK_PROVIDER` chọn provider của nó (mặc định `LLM_PROVIDER`). Khi offline chỉ mock của model chính trả lời; node gửi tệp đính kèm dùng `call_llm_files_fallback`, model dự phòng nhận đúng các tệp đó |
 | Agent | một hàm vào, một hàm model và một hàm công cụ với hai router, và một hàm kết thúc; `interrupt(...)` trước công cụ cần duyệt |
 | Join | một node, và `add_edge([nhánh, nhánh], join)`: chạy một lần khi mọi nhánh xong |
 | For each | một trường vị trí vòng lặp và một router trả về `each` hoặc `done` |
 | Decision | `decide(text, question)` cho từng câu hỏi |
 | Subgraph | workflow con thành graph riêng `build_<child>()`, được thêm như một node |
 | Tool: function | code của hàm, được chép vào |
-| Tool: HTTP | một request `httpx` |
+| Tool: HTTP | `http_request(...)` dùng `httpx`: chỉ http(s), từ chối địa chỉ nội bộ trừ khi `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, không theo redirect, `user:pass@` gửi dạng Basic auth, có `Idempotency-Key` theo run và request (`SUPERSTEP_RUN_ID`). Như trong studio, tên miền chỉ được phân giải một lần và request kết nối tới đúng địa chỉ đã kiểm tra; header Host, TLS SNI và kiểm tra chứng chỉ vẫn dùng tên miền |
 | Tool: Code | code của node, nằm trong hàm của node |
-| Retriever, MCP, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio (kể cả công cụ kho tri thức và MCP của node Agent) |
+| MCP (node và công cụ MCP của Agent) | `call_mcp_tool(prefix, tool, arguments)`: gọi MCP thật qua Streamable HTTP (`initialize`, `tools/call`), như studio. Mỗi máy chủ có một tiền tố `MCP_SERVER_<n>` (các node cùng máy chủ dùng chung; id máy chủ không được ghi ra); đặt `<PREFIX>_URL` và nếu cần `<PREFIX>_HEADERS` (một đối tượng JSON, ví dụ header `Authorization`). URL là cấu hình của bạn và được gọi đúng như vậy, không theo redirect; không hỗ trợ máy chủ stdio. Khi chưa cấu hình: offline trả `None` và in `(offline mock) …`; khi đặt `LLM_PROVIDER` thì dừng run và nêu tên biến cần đặt |
+| Retriever (node và công cụ kho tri thức của Agent) | `retrieve(prefix, query, top_k)` gọi tìm kiếm kho tri thức trên máy chủ Superstep của bạn (`POST /api/knowledge-bases/<id>/search`), nên đoạn văn và điểm số giống studio. Mỗi kho tri thức có một tiền tố `KNOWLEDGE_BASE_<n>` (id của nó không được ghi ra); đặt `SUPERSTEP_URL`, `SUPERSTEP_TOKEN` (Bearer token của người dùng đọc được kho) và `<PREFIX>_ID`. Lỗi từ studio (ví dụ `KB_NOT_FOUND`) dừng run. Khi chưa cấu hình: offline trả danh sách rỗng và in `(offline mock) …`; khi đặt `LLM_PROVIDER` thì dừng run và nêu tên các biến |
+| Send email | `send_email(message)`, như studio: node có credential SMTP trong studio thì gửi, node không có thì chạy thử (dry run). Gửi bằng `smtplib` và chỉ biến môi trường: `SMTP_HOST`, `SMTP_FROM`, tùy chọn `SMTP_PORT`, `SMTP_SECURITY` (`starttls` mặc định và bắt buộc; `ssl`; `none`), `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_NAME`. Tên máy chủ được phân giải một lần và kết nối tới đúng địa chỉ đó; địa chỉ nội bộ cần `STUDIO_SMTP_ALLOW_PRIVATE=1`. Bcc không nằm trong header; cùng run và cùng thư thì giữ cùng `Message-ID`. Khi chưa cấu hình: offline chạy thử và in `(offline mock) …`; khi đặt `LLM_PROVIDER` thì dừng run và nêu tên các biến |
 | Note | một comment |
 | Retry, cache, trường input | `RetryPolicy`, `CachePolicy`, `input_schema` trong `add_node` |
 | Timeout | một comment: LangGraph không dừng được node đang chặn |
@@ -208,14 +214,20 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | LLM | `render(PROMPT, state)`, rồi `callLlm(prompt, model)`: mock, hoặc `initChatModel` khi đặt `LLM_PROVIDER` |
 | Condition, For each | `addConditionalEdges` với một hàm router |
 | Human | `interrupt(...)`; `new Command({ resume })` chạy tiếp |
+| Credential mô hình theo node | `LLM_CRED_<n>` trên `callLlm`, `callLlmFallback`, `callAgent` và `decide`, cùng quy tắc slot với file Python |
+| Kênh duyệt, hạn chót và AI duyệt | `notifyApproval`, `waitApproval` và `reviewApproval`, cùng quy tắc kênh, hạn chót và AI duyệt với file Python |
+| Kết nối managed | `managedOperation(tool, args, prefix, adapter)`, cùng quy tắc `MANAGED_<n>_SETTINGS` và `MANAGED_<n>_SECRETS` với file Python. Bước không có adapter vẫn ném placeholder |
 | Join | `addEdge([nhánh, nhánh], join)` |
 | Decision | `decide(text, question)` cho từng câu hỏi |
 | Subgraph | `build_<child>()`, một graph đã compile được thêm làm node |
 | Tool: Code bằng TypeScript | code của node giữ nguyên; các import được chuyển lên đầu file |
 | Tool: Code bằng Python | stub ném lỗi `not implemented in TS export`: hãy chuyển sang TypeScript |
 | Tool: function | stub ném lỗi: hàm là Python trên server |
-| Tool: HTTP | `fetch`, không đi theo chuyển hướng |
-| Retriever, MCP, Send email | stub có `TODO`, như file Python |
+| Tool: HTTP | `httpRequest(...)` dùng `node:http`/`node:https` (Node và Deno đều hỗ trợ), cùng các biện pháp bảo vệ như file Python; chạy Deno với `--allow-net` |
+| MCP | `callMcpTool(prefix, tool, args)` dùng `fetch`, cấu hình và hoạt động như file Python |
+| Retriever | `retrieve(prefix, query, topK)` dùng `fetch`, cấu hình và hoạt động như file Python |
+| Send email | `sendEmail(message)` dùng `nodemailer` (`npm:nodemailer@^6`, chỉ tải khi gửi), cấu hình và hoạt động như file Python |
+| LLM có model dự phòng | `callLlmFallback`, cùng quy tắc với file Python |
 | Agent | các bước vào, model, công cụ và kết thúc, như file Python; `callAgent` là mock, hoặc `initChatModel` với `bindTools` khi đặt `LLM_PROVIDER`. Công cụ có sẵn là stub ném lỗi |
 | Retry, cache, trường đầu vào, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` trong `addNode` |
 
@@ -282,12 +294,19 @@ TypeScript chỉ chạy bằng `npm run example`, không chạy khi server impor
 
 ## Những gì không có trong file
 
-- Credential, API key, cấu hình SMTP, kho tri thức, máy chủ MCP, kênh duyệt,
-  người duyệt và địa chỉ chuyển cấp.
+- Id credential và giá trị bí mật, mật khẩu SMTP, id kho tri thức, id và bí mật máy chủ MCP,
+  đích kênh duyệt, người duyệt và địa chỉ chuyển cấp. Tên slot, loại kênh, thời gian hạn chót
+  và policy duyệt (không có credential hay hướng dẫn của mô hình) được ghi ra; giá trị nằm trong biến môi trường.
 - Các tính năng của studio quanh một run: trace, lịch sử run, khôi phục sau
-  khi khởi động lại, kênh duyệt và hạn chót, theo dõi chi phí, timeout của node.
-- Lời gọi Retriever, MCP và Send email thật: stub trả về kết quả rỗng, không
-  gì cả, hoặc thư lẽ ra sẽ gửi.
+  khi khởi động lại, theo dõi chi phí và timeout của node. Thông báo kênh, hạn chót và AI duyệt
+  chạy trong file đã xuất bằng biến môi trường; đó không phải dịch vụ duyệt của studio.
+- Địa chỉ máy chủ MCP, URL và token Superstep, cấu hình SMTP, cùng settings và secrets của kết nối
+  managed: bạn đặt chúng bằng biến môi trường. Khi thiếu, lúc offline các lời gọi MCP, Retriever, Send
+  email và managed trả kết quả rỗng, không gì cả, lần chạy thử, hoặc thư lẽ ra sẽ gửi, và báo điều đó trên
+  stderr. Khi đặt `LLM_PROVIDER`, chúng raise (Python) hoặc throw (TypeScript), để
+  một run thật không coi dịch vụ còn thiếu là đã xong.
+- Subgraph, công cụ workflow hoặc hàm bị thiếu lúc export: node hoặc công cụ đó
+  báo lỗi nêu tên nó khi run chạy tới.
 
 Hai kết quả có thể khác studio: node Decision với model thật hỏi LLM thay vì
 TypeSafe Jev, và một trường có reducer mà subgraph cũng ghi sẽ được gộp thêm một
