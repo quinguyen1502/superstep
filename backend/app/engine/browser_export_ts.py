@@ -52,6 +52,11 @@ class Session {
   touched = nowSeconds();
   started = this.touched;
   actions = 0;
+  browser: PwBrowser | null = null;
+  context: PwContext | null = null;
+  live: PwPage | null = null;
+  navError: BrowserError | null = null;
+  documents = 0;
 
   async exclusive<T>(fn: () => Promise<T>): Promise<T> {
     const previous = this.tail;
@@ -391,6 +396,33 @@ function proxyFor(policy: Record<string, unknown>): { server: string; username?:
   return { server: proxy.server, username: envGet(env.proxy_username), password: envGet(env.proxy_password) };
 }
 
+interface PwRoute {
+  request: { url?: string | (() => string); resourceType?: string | (() => string); resource_type?: string };
+  continue(): Promise<void> | void;
+  abort(): Promise<void> | void;
+}
+interface PwLocator {
+  click(options?: { timeout?: number }): Promise<void>;
+  fill(value: string, options?: { timeout?: number }): Promise<void>;
+}
+interface PwPage {
+  url?: string | (() => string);
+  goto(url: string, options?: { timeout?: number }): Promise<unknown>;
+  content(): Promise<string>;
+  locator(selector: string): PwLocator;
+  evaluate(expression: string): Promise<unknown>;
+  goBack(options?: { timeout?: number }): Promise<unknown>;
+}
+interface PwContext {
+  route(pattern: string, handler: (route: PwRoute) => Promise<void> | void): Promise<void> | void;
+  newPage(): Promise<PwPage>;
+  close(): Promise<void>;
+}
+interface PwBrowser {
+  newContext(options?: { storageState?: object }): Promise<PwContext>;
+  close(): Promise<void>;
+}
+
 async function loadPlaywright(): Promise<{ chromium: { launch(options: object): Promise<PwBrowser>; connectOverCDP(endpoint: string): Promise<PwBrowser> } }> {
   try {
     return await import("playwright");
@@ -403,55 +435,308 @@ async function loadPlaywright(): Promise<{ chromium: { launch(options: object): 
   }
 }
 
-interface PwBrowser { newPage(): Promise<{ goto(url: string, options: { timeout: number }): Promise<unknown>; content(): Promise<string> }>; close(): Promise<void> }
+function callString(target: object | null, value: string | (() => string) | undefined): string {
+  if (typeof value === "function") {
+    try { return value.call(target) || ""; } catch { return ""; }
+  }
+  return value || "";
+}
 
-async function playwrightHtml(policy: Record<string, unknown>, url: string): Promise<string> {
-  const sync = await loadPlaywright();
-  const browser = await sync.chromium.launch({ headless: true, proxy: proxyFor(policy) });
-  try {
-    const page = await browser.newPage();
-    await page.goto(url, { timeout: Number(policy.action_timeout_ms || 30000) });
-    return await page.content();
-  } finally {
-    await browser.close();
+function pageUrl(page: PwPage | null): string {
+  return page ? callString(page, page.url) : "";
+}
+
+function requestResource(request: PwRoute["request"]): string {
+  const named = callString(request, request.resourceType);
+  return named || request.resource_type || "";
+}
+
+async function closeLive(session: Session): Promise<void> {
+  const context = session.context;
+  const browser = session.browser;
+  session.live = null;
+  session.context = null;
+  session.browser = null;
+  session.documents = 0;
+  session.navError = null;
+  for (const target of [context, browser]) {
+    if (!target || typeof target.close !== "function") continue;
+    try { await target.close(); } catch { /* already closed */ }
   }
 }
 
-async function browserlessHtml(policy: Record<string, unknown>, url: string): Promise<string> {
+let shutdownStarted = false;
+async function shutdownLive(): Promise<void> {
+  if (shutdownStarted) return;
+  shutdownStarted = true;
+  for (const session of [...sessions.values()]) await closeLive(session);
+}
+
+if (typeof process !== "undefined" && typeof process.on === "function") {
+  process.on("beforeExit", () => { void shutdownLive(); });
+}
+
+function listedOrigins(policy: Record<string, unknown>): string[] {
+  const found: string[] = [];
+  const profile = (policy.profile || {}) as { origins?: unknown[] };
+  for (const item of profile.origins || []) {
+    try { found.push(originOf(String(item))); } catch { /* skip */ }
+  }
+  return found;
+}
+
+function domainMatch(host: string, domain: string): boolean {
+  const left = (host || "").toLowerCase().replace(/\.$/, "");
+  const right = (domain || "").toLowerCase().replace(/^\./, "").replace(/\.$/, "");
+  if (!left || !right) return false;
+  return left === right || left.endsWith("." + right);
+}
+
+function profileState(policy: Record<string, unknown>): { cookies: object[]; origins: object[] } | null {
+  if (!policy.profile) return null;
   const env = (policy.env || {}) as Record<string, string>;
-  const endpoint = envGet(env.endpoint);
-  const token = envGet(env.token);
-  if (!endpoint || !token) throw new BrowserError("token_missing", "Browserless endpoint and token must be set in the environment");
-  let sync: Awaited<ReturnType<typeof loadPlaywright>>;
+  let data: { cookies?: unknown[]; origins?: unknown[] };
   try {
-    sync = await loadPlaywright();
+    const parsed = JSON.parse(envGet(env.profile));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("shape");
+    data = parsed as { cookies?: unknown[]; origins?: unknown[] };
+  } catch {
+    throw new BrowserError("profile_invalid", "profile JSON is invalid");
+  }
+  const listed = listedOrigins(policy);
+  const cookies: object[] = [];
+  for (const cookie of data.cookies || []) {
+    if (!cookie || typeof cookie !== "object") continue;
+    const item = cookie as Record<string, unknown>;
+    const name = item.name;
+    const value = item.value;
+    const domain = item.domain;
+    if (typeof name !== "string" || !name || typeof value !== "string" || typeof domain !== "string" || item.secure !== true) continue;
+    let matched = false;
+    for (const origin of listed) {
+      let host = "";
+      try { host = new URL(origin).hostname || ""; } catch { host = ""; }
+      if (!domainMatch(host, domain) || privateHost(host)) continue;
+      try { allowedOrigin(policy, origin); } catch { continue; }
+      matched = true;
+      break;
+    }
+    if (!matched) continue;
+    const path = typeof item.path === "string" && item.path.startsWith("/") ? item.path : "/";
+    const stored: Record<string, unknown> = { name, value, domain, path, httpOnly: Boolean(item.httpOnly), secure: true };
+    if (item.sameSite === "Strict" || item.sameSite === "Lax" || item.sameSite === "None") stored.sameSite = item.sameSite;
+    if (typeof item.expires === "number" && item.expires >= 0) stored.expires = item.expires;
+    cookies.push(stored);
+  }
+  const origins: object[] = [];
+  for (const entry of data.origins || []) {
+    if (!entry || typeof entry !== "object") continue;
+    const row = entry as { origin?: unknown; localStorage?: unknown[] };
+    let origin = "";
+    try { origin = originOf(String(row.origin || "")); } catch { continue; }
+    let host = "";
+    try { host = new URL(origin).hostname || ""; } catch { host = ""; }
+    if (!listed.includes(origin) || privateHost(host)) continue;
+    try { allowedOrigin(policy, origin); } catch { continue; }
+    const stored: Array<{ name: string; value: string }> = [];
+    for (const pair of row.localStorage || []) {
+      if (pair && typeof pair === "object") {
+        const fields = pair as { name?: unknown; value?: unknown };
+        if (typeof fields.name === "string" && typeof fields.value === "string") stored.push({ name: fields.name, value: fields.value });
+      }
+    }
+    origins.push({ origin, localStorage: stored });
+  }
+  return { cookies, origins };
+}
+
+async function abandon(browser: PwBrowser | null): Promise<void> {
+  if (!browser) return;
+  try { await browser.close(); } catch { /* launch failed */ }
+}
+
+async function routeLive(session: Session, policy: Record<string, unknown>, route: PwRoute): Promise<void> {
+  const url = callString(route.request, route.request.url);
+  let scheme = "";
+  try { scheme = new URL(url).protocol.replace(":", "").toLowerCase(); } catch { scheme = ""; }
+  if (scheme === "about" || scheme === "data" || scheme === "blob") {
+    await route.continue();
+    return;
+  }
+  try {
+    allowedOrigin(policy, url);
+    requirePublic(url);
   } catch (error) {
-    if (error instanceof BrowserError && error.code === "capability_refused") {
+    if (error instanceof BrowserError && requestResource(route.request) === "document") session.navError = error;
+    await route.abort();
+    return;
+  }
+  await route.continue();
+}
+
+async function openLive(session: Session, policy: Record<string, unknown>): Promise<void> {
+  if (session.live) return;
+  const profile = profileState(policy);
+  const kind = driverName();
+  let loaded: Awaited<ReturnType<typeof loadPlaywright>>;
+  try {
+    loaded = await loadPlaywright();
+  } catch (error) {
+    if (kind === "browserless" && error instanceof BrowserError && error.code === "capability_refused") {
       throw new BrowserError("capability_refused", "playwright is required for browserless connect_over_cdp");
     }
     throw error;
   }
-  const sep = endpoint.includes("?") ? "&" : "?";
-  const browser = await sync.chromium.connectOverCDP(endpoint + sep + "token=" + token);
+  let browser: PwBrowser | null = null;
   try {
-    const page = await browser.newPage();
-    await page.goto(url, { timeout: Number(policy.action_timeout_ms || 30000) });
-    return await page.content();
-  } finally {
-    await browser.close();
+    if (kind === "browserless") {
+      const env = (policy.env || {}) as Record<string, string>;
+      const endpoint = envGet(env.endpoint);
+      const token = envGet(env.token);
+      if (!endpoint || !token) throw new BrowserError("token_missing", "Browserless endpoint and token must be set in the environment");
+      const sep = endpoint.includes("?") ? "&" : "?";
+      let target = endpoint + sep + "token=" + token;
+      // stealth is a Browserless query only. Local chromium.launch must not receive it.
+      if (policy.stealth) target += "&stealth=true";
+      browser = await loaded.chromium.connectOverCDP(target);
+    } else {
+      const options: { headless: boolean; proxy?: object } = { headless: true };
+      const proxy = proxyFor(policy);
+      if (proxy) options.proxy = proxy;
+      browser = await loaded.chromium.launch(options);
+    }
+    const context = await browser.newContext(profile ? { storageState: profile } : {});
+    await context.route("**/*", (route) => routeLive(session, policy, route));
+    session.browser = browser;
+    session.context = context;
+    session.live = await context.newPage();
+  } catch (error) {
+    await abandon(browser);
+    if (error instanceof BrowserError) throw error;
+    throw new BrowserError("fetch_failed", "launch failed");
   }
 }
 
-async function fetchPage(policy: Record<string, unknown>, url: string): Promise<string> {
+async function restoreLive(session: Session, before: string, timeout: number): Promise<void> {
+  const page = session.live;
+  if (!page || pageUrl(page) === before) return;
+  try {
+    await page.goBack({ timeout });
+  } catch {
+    await closeLive(session);
+    return;
+  }
+  if (pageUrl(session.live) !== before) await closeLive(session);
+}
+
+async function gotoLive(session: Session, policy: Record<string, unknown>, url: string): Promise<string> {
+  await openLive(session, policy);
+  const limit = Number(policy.max_pages || 4);
+  if (session.documents >= limit) throw new BrowserError("limit", "max_pages reached");
+  const page = session.live as PwPage;
+  const before = pageUrl(page);
+  session.navError = null;
+  const timeout = Number(policy.action_timeout_ms || 30000);
+  let failed: Error | null = null;
+  try {
+    await page.goto(url, { timeout });
+  } catch (error) {
+    failed = error instanceof BrowserError ? error : (session.navError || new BrowserError("fetch_failed", "fetch failed"));
+  }
+  if (session.navError) failed = session.navError;
+  session.navError = null;
+  if (failed) {
+    await restoreLive(session, before, timeout);
+    throw failed;
+  }
+  session.documents += 1;
+  try {
+    return await page.content();
+  } catch {
+    throw new BrowserError("fetch_failed", "fetch failed");
+  }
+}
+
+async function fetchPage(session: Session, policy: Record<string, unknown>, url: string): Promise<string> {
+  // max_pages applies to the live page only. The memory driver stays a static fetch.
   allowedOrigin(policy, url);
   const kind = driverName();
   if (kind === "playwright" || kind === "browserless") {
     requirePublic(url);
-    if (kind === "playwright") return playwrightHtml(policy, url);
-    return browserlessHtml(policy, url);
+    return gotoLive(session, policy, url);
   }
   if (kind !== "memory") throw new BrowserError("capability_refused", "SUPERSTEP_BROWSER_DRIVER must be memory, playwright, or browserless");
   return httpGet(url, policy);
+}
+
+function liveLocator(session: Session, elementId: string): PwLocator {
+  return (session.live as PwPage).locator("[id=" + JSON.stringify(elementId) + "]");
+}
+
+async function liveClick(session: Session, policy: Record<string, unknown>, element: Page["elements"][number]): Promise<Record<string, unknown>> {
+  const page = session.live as PwPage;
+  const before = pageUrl(page) || session.page.url || "";
+  const timeout = Number(policy.action_timeout_ms || 30000);
+  session.navError = null;
+  let failed: Error | null = null;
+  try {
+    await liveLocator(session, element.element_id).click({ timeout });
+  } catch (error) {
+    failed = error instanceof BrowserError ? error : (session.navError || new BrowserError("fetch_failed", "click failed"));
+  }
+  if (session.navError) failed = session.navError;
+  session.navError = null;
+  if (failed) {
+    await restoreLive(session, before, timeout);
+    throw failed;
+  }
+  const after = pageUrl(session.live) || before;
+  if (after !== before) {
+    const limit = Number(policy.max_pages || 4);
+    if (session.documents >= limit) {
+      await restoreLive(session, before, timeout);
+      throw new BrowserError("limit", "max_pages reached");
+    }
+    try {
+      allowedOrigin(policy, after);
+      requirePublic(after);
+    } catch (error) {
+      await restoreLive(session, before, timeout);
+      throw error;
+    }
+    session.documents += 1;
+  }
+  let html = "";
+  try {
+    html = await (session.live as PwPage).content();
+  } catch {
+    throw new BrowserError("fetch_failed", "fetch failed");
+  }
+  return storePage(session, after, html, "click");
+}
+
+async function liveFill(session: Session, policy: Record<string, unknown>, element: Page["elements"][number], value: unknown): Promise<Record<string, unknown>> {
+  const timeout = Number(policy.action_timeout_ms || 30000);
+  session.navError = null;
+  const text = typeof value === "string" ? value : "";
+  try {
+    await liveLocator(session, element.element_id).fill(text, { timeout });
+  } catch (error) {
+    const failed = error instanceof BrowserError ? error : (session.navError || new BrowserError("fetch_failed", "fill failed"));
+    session.navError = null;
+    throw failed;
+  }
+  if (session.navError) {
+    const failed = session.navError;
+    session.navError = null;
+    throw failed;
+  }
+  const url = pageUrl(session.live) || session.page.url || "";
+  try {
+    return storePage(session, url, await (session.live as PwPage).content(), "fill");
+  } catch {
+    throw new BrowserError("fetch_failed", "fetch failed");
+  }
 }
 
 function storePage(session: Session, url: string, html: string, operation: string): Record<string, unknown> {
@@ -481,24 +766,27 @@ function elementOf(session: Session, elementId: unknown): Page["elements"][numbe
   throw new BrowserError("missing_target", "element_id is not on the current page");
 }
 
-function expire(session: Session, policy: Record<string, unknown>): void {
+async function expire(session: Session, policy: Record<string, unknown>): Promise<void> {
   const now = nowSeconds();
   const life = Number(policy.lifetime_s || 0);
   const idle = Number(policy.idle_timeout_s || 0);
   if (life && now - session.started > life) {
+    await closeLive(session);
     session.page = new Page();
     throw new SessionLost("lifetime exceeded");
   }
   if (idle && now - session.touched > idle) {
+    await closeLive(session);
     session.page = new Page();
     throw new SessionLost("idle timeout");
   }
 }
 
 async function command(session: Session, policy: Record<string, unknown>, alias: string, tool: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
-  expire(session, policy);
+  await expire(session, policy);
   const fault = takeFault();
   if (fault === "lost") {
+    await closeLive(session);
     session.page = new Page();
     throw new SessionLost("injected lost session");
   }
@@ -521,7 +809,7 @@ async function command(session: Session, policy: Record<string, unknown>, alias:
     if (typeof url !== "string" || !url.trim() || url.trim().toLowerCase().startsWith("javascript:")) {
       throw new BrowserError(typeof url === "string" && url.trim() ? "whitelist_denied" : "missing_url", "navigate needs an http(s) url");
     }
-    return storePage(session, url.trim(), await fetchPage(policy, url.trim()), "navigate");
+    return storePage(session, url.trim(), await fetchPage(session, policy, url.trim()), "navigate");
   }
   if (tool === "snapshot") {
     session.actions += 1;
@@ -540,14 +828,16 @@ async function command(session: Session, policy: Record<string, unknown>, alias:
     if (element.href) {
       const target = new URL(element.href, session.page.url || undefined).href;
       allowedOrigin(policy, target);
-      return storePage(session, target, await fetchPage(policy, target), "click");
+      return storePage(session, target, await fetchPage(session, policy, target), "click");
     }
+    if (session.live) return liveClick(session, policy, element);
     session.actions += 1;
     session.seq += 1;
     return ok("click", session.seq, { clicked: element.element_id });
   }
   if (tool === "fill") {
     const element = elementOf(session, args.element_id);
+    if (session.live) return liveFill(session, policy, element, args.value);
     session.page.values[element.element_id] = args.value;
     session.actions += 1;
     session.seq += 1;
@@ -568,9 +858,18 @@ async function command(session: Session, policy: Record<string, unknown>, alias:
   }
   if (tool === "evaluate") {
     if (!policy.allow_evaluate_js) throw new BrowserError("capability_refused", "evaluate is disabled on this connection");
-    const expression = String(args.expression || "");
-    let value = "";
-    if (expression === "document.title") value = titleOf(session.page.html);
+    const raw = args.expression;
+    const expression = typeof raw === "string" ? raw : "";
+    let value: unknown = "";
+    if (session.live) {
+      if (expression.length > 4000) throw new BrowserError("capability_refused", "evaluate expression exceeds 4000 characters");
+      try {
+        value = await session.live.evaluate(expression);
+      } catch (error) {
+        if (error instanceof BrowserError) throw error;
+        throw new BrowserError("fetch_failed", "evaluate failed");
+      }
+    } else if (expression === "document.title") value = titleOf(session.page.html);
     else if (expression === "document.body.innerText") value = bodyText(session.page.html);
     else throw new BrowserError("capability_refused", "only document.title and document.body.innerText are allowed");
     session.actions += 1;

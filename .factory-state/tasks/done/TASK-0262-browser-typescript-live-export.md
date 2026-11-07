@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0262
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-07
 - Updated: 2026-11-07
@@ -42,7 +42,7 @@ Give the TypeScript project export the same live Playwright and Browserless page
 - Decision: `.factory-state/decisions/DEC-0085-browser-tools.md` decision 10.
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
-- Python contract: `.factory-state/tasks/done/TASK-0261-browser-python-live-export.md` and its helper in PR #329. Merge that pull request before task-start.
+- Python contract: `.factory-state/tasks/done/TASK-0261-browser-python-live-export.md` and its helper, merged in PR #329 (`10300e20`).
 - Fixture TypeScript helper from TASK-0252, merged in PR #323: `.factory-state/tasks/done/TASK-0252-browser-typescript-export.md`.
 
 ## Related Artifacts
@@ -74,9 +74,9 @@ Give the TypeScript project export the same live Playwright and Browserless page
 
 ## Dependencies
 
-- TASK-0261 merged to `develop`.
+- TASK-0261 merged to `develop` in PR #329 (`10300e20`).
 - TASK-0252 is merged in PR #323. The TypeScript fixture helper is on `develop`.
-- Task-start waits for a separate owner instruction. This file does not authorise implementation.
+- Review REV-0254 and QA QA-0254 are recorded on this branch. PR #334 is not merged.
 
 ## Acceptance Criteria
 
@@ -109,9 +109,14 @@ Give the TypeScript project export the same live Playwright and Browserless page
 ## Activity Log
 
 - 2026-11-07: Created by plan-tasks after `git fetch --all --prune` and `factory ids next TASK --all-refs` returned TASK-0261. This task is TASK-0262. No product code, dependency install, or implementation branch.
+- 2026-11-07: Owner said làm hết chuỗi task. TASK-0261 is on develop (merge 10300e20). Branch `factory/task-0262-browser-typescript-live-export` from that commit. Status doing.
+- 2026-11-07: TypeScript live page is implemented in `backend/app/engine/browser_export_ts.py`. Memory fixture behavior is unchanged. Node tests run the live control flow through a stub `playwright` package. Playwright is not installed, and Chromium was not launched. A skip was not counted as a pass. Focused export pytest: `tests/test_browser_typescript_export.py`, `tests/test_browser_python_export.py`, `tests/test_typescript_export.py`, `tests/test_project_export.py` — 48 passed, 29 skipped. Handbook check and `git diff --check` passed.
+- 2026-11-07: Tool-policy validation. Backend pytest 1481 passed, 106 skipped, 588.76s. SDK Python pytest 229 passed, 8 skipped, 14.01s. Repo-root npm build, lint (warnings only, 0 errors), and test passed on arm64 Node (frontend 177, react 22, sdk typescript 102). SDK TypeScript build, test (102), and typecheck passed. `factory verify` was not run through the x86_64 venv.
+- 2026-11-07: Review REV-0254, no blocking findings, approved for QA. QA QA-0254, pass with follow-up. Chromium was not launched. Deno was not run. Owner asked to finish the chain through a Ready pull request without merging. Status done. PR #334.
 
 ## Handoff Notes
 
-- Future branch: `factory/task-0262-browser-typescript-live-export`, from `develop` after TASK-0261 merges.
-- Do not start until the owner asks. Merge TASK-0261 first.
-- PR #323 is merged. Cut this branch from `develop` after TASK-0261 merges.
+- Branch: `factory/task-0262-browser-typescript-live-export`. PR #334 is Ready in this step and is not merged.
+- Review: `.factory-state/artifacts/REV-0254-TASK-0262-browser-typescript-live-export.md`. QA: `.factory-state/artifacts/QA-0254-TASK-0262-browser-typescript-live-export.md`.
+- TASK-0261 is merged in PR #329 (`10300e20`). REQ-0086 is not done. AC11 stays open until PR #334 merges.
+- Live control flow is proven with the stub. A real Playwright and Chromium launch is still a follow-up. Deno was not run.

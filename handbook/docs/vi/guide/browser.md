@@ -80,6 +80,8 @@ mật khẩu proxy hay trạng thái profile.
   dừng bằng `interrupt()` trước khi đổi trang. Từ chối thì trang không đổi.
   Mất phiên hoặc hiệu ứng không chắc chắn không bị chạy lại.
   `SUPERSTEP_BROWSER_FAULT` là móc thử một lần; hãy để trống.
-- Bản xuất TypeScript dùng cùng helper `browserCall`. Whitelist, thứ tự phiên,
-  duyệt thao tác và từ chối khả năng giống bản Python. Chạy bằng Node
-  (`npx tsx`) hoặc Deno. Playwright là `npm install playwright` khi cần.
+- Bản xuất TypeScript dùng cùng helper `browserCall`. Playwright và Browserless
+  giữ một trang đến khi hết idle, hết lifetime, hoặc tiến trình thoát.
+  Click, fill và evaluate chạy trên trang đó. Mỗi redirect phải còn trong
+  whitelist và không trỏ tới địa chỉ riêng. Driver memory không theo redirect.
+  Chạy bằng Node (`npx tsx`) hoặc Deno. Playwright là `npm install playwright` khi cần.

@@ -90,7 +90,7 @@ def site():
         server.shutdown()
 
 
-def _run(tmp_path, code, driver, env=None):
+def _run(tmp_path, code, driver, env=None, files=None):
     folder = tmp_path / uuid.uuid4().hex
     folder.mkdir()
     assert GUARD in code
@@ -100,13 +100,19 @@ def _run(tmp_path, code, driver, env=None):
     source = source.replace('from "npm:@langchain/langgraph@^1.5"', 'from "./langgraph-stub.ts"')
     source = source.replace('from "npm:@langchain/langgraph-checkpoint@^1"', 'from "./langgraph-stub.ts"')
     (folder / "graph.ts").write_text(source + "\n" + driver)
+    for name, content in (files or {}).items():
+        path = folder / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
     base = {k: v for k, v in os.environ.items() if not k.startswith("SUPERSTEP_BROWSER")}
     if env:
         base.update(env)
-    return subprocess.run(
+    done = subprocess.run(
         ["node", "--experimental-strip-types", "--disable-warning=ExperimentalWarning", "graph.ts"],
         cwd=folder, env=base, capture_output=True, text=True, timeout=90,
     )
+    done.export_dir = folder
+    return done
 
 
 def _body(done):
@@ -332,3 +338,412 @@ def test_invalid_browser_settings_stay_a_placeholder(c, site):
     assert data["managed_placeholders"] is True
     assert "browserCall(" not in data["code"]
     assert "Managed connection placeholder" in data["code"] or "managedOperation" in data["code"]
+
+
+_PLAYWRIGHT_STUB = r'''
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const logPath = path.join(root, "playwright-log.json");
+const pageHtml = `<html><head><title>Live</title></head><body>
+<input id="order" />
+<button id="go">Go</button>
+<p id="status">Ready</p>
+<a id="next" href="/next">Next</a>
+</body></html>`;
+
+function record(event) {
+  const data = fs.existsSync(logPath) ? JSON.parse(fs.readFileSync(logPath, "utf8")) : [];
+  data.push(event);
+  fs.writeFileSync(logPath, JSON.stringify(data));
+}
+
+function redact(url) {
+  const marker = "token=";
+  const at = url.indexOf(marker);
+  if (at < 0) return url;
+  const rest = url.slice(at + marker.length);
+  const cut = rest.indexOf("&");
+  return url.slice(0, at) + "token=redacted" + (cut < 0 ? "" : rest.slice(cut));
+}
+
+function loadConfig() {
+  const file = path.join(root, "stub-config.json");
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
+}
+
+class Locator {
+  constructor(page, selector) {
+    this.page = page;
+    this.selector = selector;
+  }
+  async click() {
+    record({ op: "click", selector: this.selector });
+    const dest = (this.page.context.config.click_to || {})[this.selector];
+    if (!dest) {
+      this.page.html = this.page.html.replace(">Go</button>", ">Clicked</button>");
+      return;
+    }
+    if (this.page.context.dispatch(dest, "document")) throw new Error("navigation aborted");
+    this.page.move(dest, (this.page.context.config.html || {})[dest] || pageHtml);
+  }
+  async fill(value) {
+    record({ op: "fill", selector: this.selector });
+    const needle = '<input id="order" />';
+    if (this.page.html.includes(needle)) {
+      this.page.html = this.page.html.replace(needle, `<input id="order" value="${String(value)}" />`);
+    }
+  }
+}
+
+class Page {
+  constructor(context) {
+    this.context = context;
+    this._url = "about:blank";
+    this.html = "<html><head><title>Blank</title></head><body></body></html>";
+    this.previous = "";
+    this.previousHtml = this.html;
+  }
+  url() { return this._url; }
+  move(url, html) {
+    this.previous = this._url;
+    this.previousHtml = this.html;
+    this._url = url;
+    this.html = html;
+  }
+  async goto(url) {
+    record({ op: "goto", url });
+    this.context.dispatch("https://evil.test/app.js", "script");
+    const hops = [url];
+    const hop = (this.context.config.redirects || {})[url];
+    if (hop) hops.push(hop);
+    let final = url;
+    for (const target of hops) {
+      if (this.context.dispatch(target, "document")) throw new Error("navigation aborted");
+      final = target;
+    }
+    this.move(final, (this.context.config.html || {})[final] || pageHtml);
+  }
+  async content() { return this.html; }
+  locator(selector) { return new Locator(this, selector); }
+  async evaluate(expression) {
+    record({ op: "evaluate", length: expression.length });
+    return "live:" + expression.slice(0, 24);
+  }
+  async goBack() {
+    record({ op: "go_back", url: this._url });
+    if (this.previous) {
+      this._url = this.previous;
+      this.html = this.previousHtml;
+    }
+  }
+}
+
+class Context {
+  constructor(browser, storageState) {
+    this.browser = browser;
+    this.handler = null;
+    this.config = loadConfig();
+    record({ op: "context", storage_state: storageState ?? null });
+  }
+  async route(_pattern, handler) { this.handler = handler; }
+  dispatch(url, resource) {
+    let aborted = false;
+    const route = {
+      request: { url, resourceType: resource },
+      continue() { record({ op: "continue", url, resource }); },
+      abort() { aborted = true; record({ op: "abort", url, resource }); },
+    };
+    if (this.handler) this.handler(route);
+    return aborted;
+  }
+  async newPage() {
+    const page = new Page(this);
+    this.dispatch("about:blank", "document");
+    return page;
+  }
+  async close() { record({ op: "context_close" }); }
+}
+
+class Browser {
+  async newContext(options = {}) {
+    return new Context(this, options.storageState);
+  }
+  async close() { record({ op: "close" }); }
+}
+
+export const chromium = {
+  async launch(options = {}) {
+    record({ op: "launch", keys: Object.keys(options).sort() });
+    return new Browser();
+  },
+  async connectOverCDP(url) {
+    record({ op: "connect", url: redact(url) });
+    return new Browser();
+  },
+};
+'''
+
+
+def _stub_files(config=None):
+    files = {
+        "node_modules/playwright/package.json": '{"type":"module"}\n',
+        "node_modules/playwright/index.js": _PLAYWRIGHT_STUB,
+    }
+    if config is not None:
+        files["stub-config.json"] = json.dumps(config)
+    return files
+
+
+def _ts_code(c, owner, settings=None, secrets=None, url="https://example.com/"):
+    extra = {"secrets": secrets} if secrets is not None else {}
+    response = create(c, owner, settings=settings or {}, **extra)
+    assert response.status_code == 200, response.text
+    sid = response.json()["data"]["id"]
+    wid = _save(c, owner, _chain(sid, [_mcp(sid, "open", "navigate", {"url": url}, "page")]))
+    return _code(c, owner, wid, "typescript")["code"]
+
+
+_LIVE_HEADER = """
+import fs from "node:fs";
+const alias = Object.keys(BROWSER_POLICY)[0];
+function readLog() {
+  return fs.existsSync("playwright-log.json") ? JSON.parse(fs.readFileSync("playwright-log.json", "utf8")) : [];
+}
+"""
+
+
+def test_memory_driver_does_not_count_max_pages(c, site, tmp_path):
+    owner = user(c)
+    code = _ts_code(c, owner, {"allowed_origins": [site["origin"]], "max_pages": 1}, url=site["url"])
+    driver = (
+        "const alias = Object.keys(BROWSER_POLICY)[0];\n"
+        f"const url = {json.dumps(site['url'])};\n"
+        "const first = await browserCall(alias, 'navigate', { url }, {});\n"
+        "const second = await browserCall(alias, 'navigate', { url }, {});\n"
+        "console.log(JSON.stringify({ first: first.status, second: second.status, max_pages: BROWSER_POLICY[alias].max_pages }));\n"
+    )
+    body = _body(_run(tmp_path, code, driver))
+    assert body["max_pages"] == 1
+    assert body["first"] == "confirmed" and body["second"] == "confirmed"
+    assert len(site["handler"].hits) == 2
+
+
+def test_live_page_reuses_one_browser_for_click_fill_and_evaluate(c, tmp_path):
+    owner = user(c)
+    code = _ts_code(c, owner, {"allow_evaluate_js": True, "allow_upload": True})
+    assert "npm:playwright" not in code and 'import "playwright"' not in code
+    driver = _LIVE_HEADER + """
+process.env.SUPERSTEP_BROWSER_DRIVER = "playwright";
+const opened = await browserCall(alias, "navigate", { url: "https://example.com/" }, {});
+const clicked = await browserCall(alias, "click", { observation_id: opened.observation.observation_id, element_id: "go" }, {});
+const filled = await browserCall(alias, "fill", { observation_id: clicked.observation.observation_id, element_id: "order", value: "SO-1" }, {});
+const snap = await browserCall(alias, "snapshot", {}, {});
+const extract = await browserCall(alias, "extract", { observation_id: snap.observation.observation_id, fields: { order: "order" } }, {});
+const followed = await browserCall(alias, "click", { observation_id: snap.observation.observation_id, element_id: "next" }, {});
+const expression = 'document.querySelector("#status")';
+const evaluated = await browserCall(alias, "evaluate", { observation_id: followed.observation.observation_id, expression }, {});
+let longCode = null;
+try {
+  await browserCall(alias, "evaluate", { observation_id: followed.observation.observation_id, expression: "x".repeat(4001) }, {});
+} catch (error) { longCode = error.code; }
+const shot = await browserCall(alias, "screenshot", {}, {});
+const session = sessions.get(alias);
+session.touched = Date.now() / 1000 - 100000;
+let idle = null;
+try { await browserCall(alias, "snapshot", {}, {}); } catch (error) { idle = error.code; }
+const pageAfter = sessions.get(alias).page.url;
+const again = await browserCall(alias, "navigate", { url: "https://example.com/" }, {});
+let uploadCode = null;
+let uploadMessage = "";
+try {
+  await browserCall(alias, "upload", { observation_id: again.observation.observation_id, element_id: "order", source_kind: "attachment", source_id: "file-1" }, {});
+} catch (error) { uploadCode = error.code; uploadMessage = String(error.message || error); }
+console.log(JSON.stringify({
+  clicked: clicked.observation.elements,
+  snap: snap.observation.elements,
+  extract: extract.fields,
+  followed: followed.url,
+  evaluated: evaluated.value,
+  longCode,
+  shot,
+  idle,
+  pageAfter,
+  again: again.status,
+  uploadCode,
+  uploadMessage,
+  log: readLog(),
+}));
+"""
+    done = _run(tmp_path, code, driver, files=_stub_files())
+    body = _body(done)
+    log = body["log"]
+    launches = [item for item in log if item.get("op") == "launch"]
+    assert len(launches) == 2
+    assert all(item["keys"] == ["headless"] for item in launches)
+    first_close = next(index for index, item in enumerate(log) if item.get("op") == "close")
+    assert sum(1 for item in log[:first_close] if item.get("op") == "launch") == 1
+    assert not any(item.get("op") == "connect" for item in log)
+    assert any(item.get("op") == "abort" and item.get("url") == "https://evil.test/app.js" and item.get("resource") == "script" for item in log)
+    assert any(item.get("op") == "continue" and item.get("url") == "about:blank" for item in log)
+    assert any(item["text"] == "Clicked" for item in body["clicked"])
+    assert any(item["element_id"] == "order" and item["text"] == "SO-1" for item in body["snap"])
+    assert body["extract"]["order"] == "SO-1"
+    assert body["followed"] == "https://example.com/next"
+    assert str(body["evaluated"]).startswith("live:")
+    assert body["longCode"] == "capability_refused"
+    assert [item for item in log if item.get("op") == "evaluate"] == [{"op": "evaluate", "length": len('document.querySelector("#status")')}]
+    assert body["shot"]["captured"] is True and body["shot"]["inline_bytes"] is False
+    assert body["idle"] == "session_lost" and body["pageAfter"] == "" and body["again"] == "confirmed"
+    assert body["uploadCode"] == "capability_refused"
+    assert "refused outside Studio" in body["uploadMessage"] and "true" in body["uploadMessage"]
+    assert "SO-1" not in code
+    during = sum(1 for item in log if item.get("op") == "close")
+    after = json.loads((done.export_dir / "playwright-log.json").read_text())
+    assert sum(1 for item in after if item.get("op") == "close") == during + 1
+
+
+def test_live_redirect_does_not_replace_the_page(c, tmp_path):
+    owner = user(c)
+    code = _ts_code(c, owner, {"allowed_origins": ["https://example.com", "http://127.0.0.1"]})
+    driver = _LIVE_HEADER + """
+process.env.SUPERSTEP_BROWSER_DRIVER = "playwright";
+const opened = await browserCall(alias, "navigate", { url: "https://example.com/" }, {});
+async function hop(url) {
+  try { await browserCall(alias, "navigate", { url }, {}); return null; }
+  catch (error) { return error.code; }
+}
+console.log(JSON.stringify({
+  opened: opened.url,
+  denied: await hop("https://example.com/hop"),
+  private: await hop("https://example.com/loop"),
+  page: sessions.get(alias).page.url,
+  log: readLog(),
+}));
+"""
+    config = {"redirects": {
+        "https://example.com/hop": "https://evil.test/",
+        "https://example.com/loop": "http://127.0.0.1/secret",
+    }}
+    body = _body(_run(tmp_path, code, driver, files=_stub_files(config)))
+    assert body["opened"] == "https://example.com/"
+    assert body["denied"] == "whitelist_denied"
+    assert body["private"] == "private_address"
+    assert body["page"] == "https://example.com/"
+    urls = {(item.get("url"), item.get("resource")) for item in body["log"] if item.get("op") == "abort"}
+    assert ("https://evil.test/", "document") in urls
+    assert ("http://127.0.0.1/secret", "document") in urls
+    assert [item.get("url") for item in body["log"] if item.get("op") == "goto"] == [
+        "https://example.com/", "https://example.com/hop", "https://example.com/loop",
+    ]
+
+
+def test_live_max_pages_refuses_the_next_document(c, tmp_path):
+    owner = user(c)
+    code = _ts_code(c, owner, {"max_pages": 1})
+    selector = "[id=" + json.dumps("go") + "]"
+    driver = _LIVE_HEADER + """
+process.env.SUPERSTEP_BROWSER_DRIVER = "playwright";
+const opened = await browserCall(alias, "navigate", { url: "https://example.com/" }, {});
+const obs = opened.observation.observation_id;
+let clickCode = null;
+let clickMessage = "";
+try {
+  await browserCall(alias, "click", { observation_id: obs, element_id: "go" }, {});
+} catch (error) { clickCode = error.code; clickMessage = String(error.message || error); }
+let navCode = null;
+let navMessage = "";
+try {
+  await browserCall(alias, "navigate", { url: "https://example.com/again" }, {});
+} catch (error) { navCode = error.code; navMessage = String(error.message || error); }
+console.log(JSON.stringify({
+  page: sessions.get(alias).page.url,
+  clickCode, clickMessage, navCode, navMessage,
+  log: readLog(),
+}));
+"""
+    body = _body(_run(tmp_path, code, driver, files=_stub_files({"click_to": {selector: "https://example.com/clicked"}})))
+    assert body["page"] == "https://example.com/"
+    assert body["clickCode"] == "limit" and "max_pages" in body["clickMessage"]
+    assert body["navCode"] == "limit" and "max_pages" in body["navMessage"]
+    assert [item.get("url") for item in body["log"] if item.get("op") == "goto"] == ["https://example.com/"]
+    assert any(item.get("op") == "go_back" for item in body["log"])
+    assert [item for item in body["log"] if item.get("op") == "launch"] == [{"op": "launch", "keys": ["headless"]}]
+
+
+def test_live_profile_and_browserless_stealth(c, tmp_path):
+    owner = user(c)
+    origin = "https://allowed.test:8443"
+    seed = {
+        "cookies": [
+            {"name": "login", "value": "synthetic-cookie", "domain": "allowed.test", "path": "/", "expires": -1,
+             "httpOnly": True, "secure": True, "sameSite": "Lax"},
+        ],
+        "origins": [
+            {"origin": origin, "localStorage": [{"name": "login", "value": "synthetic-storage"}]},
+        ],
+    }
+    runtime_seed = {
+        "cookies": seed["cookies"] + [
+            {"name": "other", "value": "other-cookie", "domain": "evil.test", "path": "/", "expires": -1,
+             "httpOnly": True, "secure": True, "sameSite": "Lax"},
+        ],
+        "origins": seed["origins"] + [
+            {"origin": "https://evil.test", "localStorage": [{"name": "x", "value": "nope"}]},
+        ],
+    }
+    code = _ts_code(
+        c, owner,
+        {"allowed_origins": [origin], "profile": {"name": "fixture-profile", "origins": [origin]}},
+        secrets={"profile_state": json.dumps(seed)},
+        url=origin + "/",
+    )
+    assert "synthetic-cookie" not in code and "synthetic-storage" not in code and "other-cookie" not in code
+    invalid = _LIVE_HEADER + """
+process.env.SUPERSTEP_BROWSER_DRIVER = "playwright";
+process.env[BROWSER_POLICY[alias].env.profile] = "{";
+let failed = null;
+try { await browserCall(alias, "navigate", { url: "https://allowed.test:8443/" }, {}); }
+catch (error) { failed = error.code; }
+console.log(JSON.stringify({ failed, log: readLog() }));
+"""
+    invalid_body = _body(_run(tmp_path, code, invalid, files=_stub_files()))
+    assert invalid_body["failed"] == "profile_invalid"
+    assert invalid_body["log"] == []
+    applied = _LIVE_HEADER + """
+process.env.SUPERSTEP_BROWSER_DRIVER = "playwright";
+process.env[BROWSER_POLICY[alias].env.profile] = process.env.PROFILE_SEED;
+const opened = await browserCall(alias, "navigate", { url: "https://allowed.test:8443/" }, {});
+console.log(JSON.stringify({ status: opened.status, log: readLog() }));
+"""
+    applied_body = _body(_run(tmp_path, code, applied, env={"PROFILE_SEED": json.dumps(runtime_seed)}, files=_stub_files()))
+    assert applied_body["status"] == "confirmed"
+    states = [item.get("storage_state") for item in applied_body["log"] if item.get("op") == "context"]
+    assert len(states) == 1 and states[0]["cookies"] == [{
+        "name": "login", "value": "synthetic-cookie", "domain": "allowed.test", "path": "/",
+        "httpOnly": True, "secure": True, "sameSite": "Lax",
+    }]
+    assert states[0]["origins"] == [{"origin": origin, "localStorage": [{"name": "login", "value": "synthetic-storage"}]}]
+    assert [item for item in applied_body["log"] if item.get("op") == "launch"] == [{"op": "launch", "keys": ["headless"]}]
+    hosted = _ts_code(
+        c, owner,
+        {"provider": "browserless", "stealth": True, "allowed_origins": ["https://example.com"]},
+        secrets={"browserless_token": "fixture-browserless-token"},
+    )
+    assert "runtime-token" not in hosted and "fixture-browserless-token" not in hosted
+    hosted_driver = _LIVE_HEADER + """
+process.env.SUPERSTEP_BROWSER_DRIVER = "browserless";
+const hostedEnv = BROWSER_POLICY[alias].env;
+process.env[hostedEnv.endpoint] = "https://browserless.example/session";
+process.env[hostedEnv.token] = "runtime-token";
+const opened = await browserCall(alias, "navigate", { url: "https://example.com/" }, {});
+console.log(JSON.stringify({ status: opened.status, log: readLog() }));
+"""
+    hosted_body = _body(_run(tmp_path, hosted, hosted_driver, files=_stub_files()))
+    assert hosted_body["status"] == "confirmed"
+    connects = [item.get("url") for item in hosted_body["log"] if item.get("op") == "connect"]
+    assert connects == ["https://browserless.example/session?token=redacted&stealth=true"]
+    assert not any(item.get("op") == "launch" for item in hosted_body["log"])
+    assert "runtime-token" not in json.dumps(hosted_body["log"])

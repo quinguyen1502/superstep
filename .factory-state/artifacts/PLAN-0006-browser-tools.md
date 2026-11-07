@@ -4,15 +4,15 @@
 
 - Project: superstep
 - Plan ID: PLAN-0006
-- Status: Accepted on 2026-11-06. Studio tasks TASK-0241–0250 and TASK-0253 are merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323. On 2026-11-07 the owner recorded the live-export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is done in PR #329 (REV-0251, QA-0251) and is not merged yet. TASK-0262 stays in todo. AC8 fixture evidence is on develop. AC11 stays open until TASK-0262 merges.
+- Status: Accepted on 2026-11-06. Studio tasks TASK-0241–0250 and TASK-0253 are merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323. On 2026-11-07 the owner recorded the live-export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0251, QA-0251). TASK-0262 is done in PR #334 (REV-0254, QA-0254) and is not merged. AC8 fixture evidence is on develop. AC11 stays open until PR #334 merges.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
-- Updated: 2026-11-07 (TASK-0261 Ready in PR #329; TASK-0262 still todo)
+- Updated: 2026-11-07 (TASK-0261 merged in PR #329; TASK-0262 done in PR #334, not merged)
 - Related Requirements: REQ-0086
 - Related Design: DES-0004
 - Related Architecture: ARCH-0002, DEC-0085
 - Discovery: DISC-0002
-- Tasks: TASK-0241 through TASK-0253, plus TASK-0261 and TASK-0262 (studio first milestone merged; TASK-0251 and TASK-0252 merged; TASK-0261 done in PR #329, not merged; TASK-0262 todo)
+- Tasks: TASK-0241 through TASK-0253, plus TASK-0261 and TASK-0262 (studio first milestone merged; TASK-0251 and TASK-0252 merged; TASK-0261 merged in PR #329; TASK-0262 done in PR #334, not merged)
 - Workflow: large-task-workflow for the overall cross-cutting feature; each task has its own independently reviewable delivery and medium/large scoped evidence as appropriate.
 
 ## Owner amendments (2026-11-06)
@@ -67,10 +67,10 @@ Deliver browser connections, primitive tools for the existing Agent (nine operat
 | [TASK-0253](../tasks/todo/TASK-0253-browser-e2e-handbook.md) | Studio integrated acceptance, example workflow and bilingual handbook | M | TASK-0250 | Studio first milestone |
 | [TASK-0251](../tasks/done/TASK-0251-browser-python-export.md) | Executable Python and project export for browser tools/recipes | L | TASK-0247, TASK-0248, TASK-0246, TASK-0244 | Merged in PR #321 (REV-0242, QA-0242) |
 | [TASK-0252](../tasks/done/TASK-0252-browser-typescript-export.md) | Executable TypeScript and project export with browser parity | L | TASK-0251 | Merged in PR #323 (REV-0244, QA-0244) |
-| [TASK-0261](../tasks/done/TASK-0261-browser-python-live-export.md) | Live Playwright/Browserless page in the Python export | M | TASK-0251 | Done in PR #329 (REV-0251, QA-0251). Not merged |
-| [TASK-0262](../tasks/todo/TASK-0262-browser-typescript-live-export.md) | Live Playwright/Browserless page in the TypeScript export | M | TASK-0261, TASK-0252 | Todo. Starts after TASK-0261 merges |
+| [TASK-0261](../tasks/done/TASK-0261-browser-python-live-export.md) | Live Playwright/Browserless page in the Python export | M | TASK-0251 | Merged in PR #329 (`10300e20`, REV-0251, QA-0251) |
+| [TASK-0262](../tasks/done/TASK-0262-browser-typescript-live-export.md) | Live Playwright/Browserless page in the TypeScript export | M | TASK-0261, TASK-0252 | Done in PR #334 (REV-0254, QA-0254). Not merged |
 
-Each linked task records its scope, outputs, dependencies, acceptance criteria and validation, and explicitly names the requirement/design/architecture/decision/discovery paths. Studio first-delivery tasks are merged. TASK-0251 and TASK-0252 are merged. TASK-0261 is done in PR #329 and is not merged. TASK-0262 stays in todo.
+Each linked task records its scope, outputs, dependencies, acceptance criteria and validation, and explicitly names the requirement/design/architecture/decision/discovery paths. Studio first-delivery tasks are merged. TASK-0251 and TASK-0252 are merged. TASK-0261 is merged in PR #329. TASK-0262 is done in PR #334 and is not merged.
 
 ## Deferred / later
 
@@ -78,8 +78,8 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 | --- | --- | --- |
 | TASK-0251 executable Python/project export | Merged in PR #321. | Done |
 | TASK-0252 executable TypeScript/project export | Merged in PR #323. | Done |
-| TASK-0261 live Python export page | Specified by DEC-0085 decision 10. Done in PR #329 (REV-0251, QA-0251). Not merged. | Owner asks to merge |
-| TASK-0262 live TypeScript export page | Same contract as TASK-0261. In todo. | TASK-0261 on develop, then owner says task-start |
+| TASK-0261 live Python export page | Specified by DEC-0085 decision 10. Merged in PR #329 (`10300e20`, REV-0251, QA-0251). | Done |
+| TASK-0262 live TypeScript export page | Same contract as TASK-0261. Done in PR #334 (REV-0254, QA-0254). Not merged. | Owner asks to merge |
 | Export sections of handbook / AC8 evidence | Python and TypeScript fixture notes merged with TASK-0251 and TASK-0252. Live-driver handbook notes travel with TASK-0261 and TASK-0262. | TASK-0261 and TASK-0262 |
 | Interactive profile capture / live-view login product | Operator-provisioned profiles suffice for v1 | Owner request after studio |
 | Hosted browser-Agent (Browser Use Cloud/Skyvern) | Browserless supplies browser only | Separate requirement if demanded |
@@ -93,7 +93,7 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 3. **Run semantics and behavior:** TASK-0245, TASK-0246, then TASK-0247 and TASK-0248. Preserve same-session call order, **cross-turn conversation persistence**, principal isolation, configurable approval/outcome/recovery semantics, then dynamic URL/search/fetch (with whitelist) and recipes. Existing non-browser concurrency remains compatible.
 4. **User experience:** TASK-0249 follows the stable connection/provider/whitelist/toggle contract. TASK-0250 integrates tool grants, bindings, recipes and trace/chat with standard Settings/Data/Execution tabs.
 5. **Studio integration (first milestone):** TASK-0253. Consolidate studio AC traceability (AC1–AC7, AC9, studio parts of AC10), disposable example, en/vi studio handbook, actual worker/proxy/Browserless/UI evidence and full declared checks. AC8/export handbook are out of this milestone.
-6. **Portable code:** TASK-0251 and TASK-0252 are merged. TASK-0261, then TASK-0262, add the live Playwright/Browserless page from DEC-0085 decision 10. The `memory` fixture contract stays. Upload, download, and screenshot bytes stay refused.
+6. **Portable code:** TASK-0251, TASK-0252, and TASK-0261 are merged. TASK-0262 adds the same live Playwright/Browserless page to the TypeScript export and is done in PR #334, not merged. The `memory` fixture contract stays. Upload, download, and screenshot bytes stay refused.
 
 **Studio critical path:** contracts → egress/whitelist → local runtime (nine tools) → Browserless/profile gate → conversation sessions → approval/recovery → bindings/recipes → UI → studio acceptance. Settings/UI follow their explicit dependencies. Exports are **not** on the first-delivery critical path.
 
@@ -109,7 +109,7 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 | AC6 configurable approvals, expiry, recovery and unknown effects | TASK-0246, TASK-0250 | Approval ON/OFF, crash-after-effect, stale-ref and expiry/rejection tests |
 | AC7 reusable recipes and explicit layout failure | TASK-0248, TASK-0250 | Versioned typed inputs/results and fixture selector changes |
 | AC8 executable exports without secrets/stubs | TASK-0251, TASK-0252 | Fixture evidence is on develop: PR #321 and PR #323. |
-| AC11 live export page | TASK-0261, TASK-0262 | TASK-0261 is done in PR #329 and is not merged. TASK-0262 is todo. `memory` stays the fixture driver. |
+| AC11 live export page | TASK-0261, TASK-0262 | TASK-0261 is merged in PR #329. TASK-0262 is done in PR #334 (REV-0254, QA-0254) and is not merged. AC11 stays open until PR #334 merges. `memory` stays the fixture driver. |
 | AC9 accessible bilingual UI and private artifacts | TASK-0243, TASK-0249, TASK-0250 | Access/retention/public filtering, toggles/grants, keyboard/theme/locale evidence |
 | AC10 integrated studio evidence, docs and review/QA | TASK-0253 and studio delivery tasks | Full declared checks and studio requirement traceability; export evidence waits |
 
@@ -152,7 +152,7 @@ Each linked task records its scope, outputs, dependencies, acceptance criteria a
 - **Studio first milestone:** AC1–AC7, AC9 and studio AC10 have linked passing evidence; studio delivery tasks (0241–0250, studio 0253) are reviewed/QA-verified, owner accepted, done and integrated through their authorised PRs.
 - Executable local **and** Browserless browser fixtures, whitelist/proxy/security/recovery behavior pass. Unsupported combinations are explicit and documented. Local-only is not sufficient to close the remote requirement.
 - Bilingual studio docs/example and feature-disable/recovery instructions reflect the actual delivered capabilities, including toggles and risks.
-- **Exports:** the studio gate is merged. TASK-0251 and TASK-0252 are merged. TASK-0261 is done in PR #329 (REV-0251, QA-0251) and is not merged. TASK-0262 stays in todo. AC11 stays open until TASK-0262 merges.
+- **Exports:** the studio gate is merged. TASK-0251 and TASK-0252 are merged. TASK-0261 is merged in PR #329 (REV-0251, QA-0251). TASK-0262 is done in PR #334 (REV-0254, QA-0254) and is not merged. AC11 stays open until PR #334 merges.
 - Planning completion alone did not mark the feature implemented; on 2026-11-06 the owner Accepted the amended package and authorised implementation. Feature delivery still requires studio task PRs.
 
 ## Planning Activity
@@ -180,4 +180,5 @@ The owner instructed: “Pull develop về branch hiện tại, và tiến hành
 - 2026-11-07: TASK-0252 TypeScript export is done on `factory/task-0252-browser-typescript-export` (REV-0244, QA-0244) and merged in PR #323.
 - 2026-11-07: The owner asked for plan-tasks on the live export drivers. Created TASK-0261 and TASK-0262 in todo after `factory ids next TASK --all-refs` returned TASK-0261. No implementation branch and no task-start.
 - 2026-11-07: Owner said task-start for TASK-0261. Branch `factory/task-0261-browser-python-live-export` from `develop` `78b289c3`. No source edits.
-- 2026-11-07: TASK-0261 Python live page is done in PR #329 (REV-0251, QA-0251). Not merged. Chromium was not launched. TASK-0262 stays in todo. REQ-0086 is not marked done.
+- 2026-11-07: TASK-0261 Python live page was recorded done in PR #329 (REV-0251, QA-0251) before that pull request merged. Chromium was not launched. REQ-0086 is not marked done.
+- 2026-11-07: TASK-0261 merged in PR #329 (`10300e20`). TASK-0262 TypeScript live page is done in PR #334 (REV-0254, QA-0254) and is not merged. Chromium was not launched. Deno was not run. REQ-0086 is not marked done. AC11 stays open until PR #334 merges.
