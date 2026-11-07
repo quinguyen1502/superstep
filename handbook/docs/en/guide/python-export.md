@@ -76,7 +76,8 @@ Final state: {...}
 | Tool: function | the function's code, copied in |
 | Tool: HTTP | `http_request(...)` with `httpx`: http(s) only, private addresses refused unless `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, no redirects, `user:pass@` as Basic auth, an `Idempotency-Key` per run and request (`SUPERSTEP_RUN_ID`). As in the studio, the host is resolved once and the request connects to that checked address; the Host header, TLS SNI and certificate check keep the name |
 | Tool: Code | the node's code, inside the node function |
-| Retriever, MCP, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base and MCP tools). Offline they return an empty result and print `(offline mock) …` on stderr; with `LLM_PROVIDER` set they stop the run until you implement them |
+| MCP (node and Agent MCP tool) | `call_mcp_tool(prefix, tool, arguments)`: a real MCP call over Streamable HTTP (`initialize`, `tools/call`), as the studio makes it. Each server gets a prefix `MCP_SERVER_<n>` (nodes on the same server share it; the server id is not written); set `<PREFIX>_URL` and, if needed, `<PREFIX>_HEADERS` (a JSON object, for example an `Authorization` header). The URL is your configuration and is called as given, without redirects; stdio servers are not supported. Not configured: offline it returns `None` and prints `(offline mock) …`; with `LLM_PROVIDER` set it stops the run naming the variable |
+| Retriever, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base). Offline they return an empty result and print `(offline mock) …` on stderr; with `LLM_PROVIDER` set they stop the run until you implement them |
 | Note | a comment |
 | Retry, cache, input fields | `RetryPolicy`, `CachePolicy`, `input_schema` on `add_node` |
 | Timeout | a comment: LangGraph cannot stop a node that blocks |
@@ -216,7 +217,8 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | Tool: Code in Python | a stub that throws `not implemented in TS export`: port it |
 | Tool: function | a stub that throws: the function is Python on the server |
 | Tool: HTTP | `httpRequest(...)` with `node:http`/`node:https` (supported by Node and Deno), with the same safeguards as the Python file; run Deno with `--allow-net` |
-| Retriever, MCP, Send email | stubs with a `TODO`, as in the Python file |
+| MCP | `callMcpTool(prefix, tool, args)` with `fetch`, configured and behaving as in the Python file |
+| Retriever, Send email | stubs with a `TODO`, as in the Python file |
 | LLM with a fallback model | `callLlmFallback`, with the same rules as the Python file |
 | Agent | the entry, model, tool and end steps, as in the Python file; `callAgent` is the mock, or `initChatModel` with `bindTools` when `LLM_PROVIDER` is set. Built-in tools are stubs that throw |
 | Retry, cache, input fields, timeout | `retryPolicy`, `cachePolicy`, `input`, `timeout` on `addNode` |
@@ -287,11 +289,11 @@ workflow, starts `langgraph dev` on it and calls it with the SDK.
 
 ## What is not in the file
 
-- Credentials, API keys, SMTP settings, knowledge bases, MCP servers, approval
+- Credentials, API keys, SMTP settings, knowledge bases, MCP server addresses and secrets, approval
   channels, approvers and escalation addresses.
 - Studio features around a run: the trace, run history, recovery after a
   restart, approval channels and deadlines, cost tracking, node timeouts.
-- Real Retriever, MCP and Send email calls. Offline the stubs return an empty
+- Real Retriever and Send email calls (MCP calls are real once `<PREFIX>_URL` is set). Offline the stubs return an empty
   result, nothing, or the message that would have been sent, and say so on
   stderr. With `LLM_PROVIDER` set they raise (Python) or throw (TypeScript), so a
   real run never treats a missing service as done.

@@ -31,7 +31,7 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
-    "call_llm", "call_llm_fallback", "fails_over", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "managed_operation", "send_email", "addresses", "build_graph",
+    "call_llm", "call_llm_fallback", "fails_over", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "MCP_PROTOCOL", "managed_operation", "send_email", "addresses", "build_graph",
     "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "builder", "time", "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS",
     "JSON_TYPES", "agent_task", "mock_agent", "call_agent", "is_image", "with_files", "files_note", "call_llm_files", "call_agent_files", "check_arguments", "tool_text", "shorten", *REDUCERS.values()}
 RESERVED |= {"browser_call", "bind_browser_url", "browser_prepare", "browser_interrupt", "browser_decide",
@@ -543,12 +543,74 @@ def managed_operation(tool: str, arguments: dict) -> Any:
 ''',
     "call_mcp_tool": '''
 
-def call_mcp_tool(tool: str, arguments: dict) -> Any:
-    """MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
-    TODO: call the tool with an MCP client, for example the `mcp` package or langchain-mcp-adapters.
-    Until then: None in offline mock mode, an error when LLM_PROVIDER is set."""
-    offline_service("MCP tool", tool)
-    return None
+def call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:
+    """MCP nodes call a tool on an MCP server, as Superstep does: one short Streamable HTTP session (initialize,
+    tools/call). Each server is configured only by environment variables (never by this file), with its prefix
+    MCP_SERVER_<n> (see MCP servers above): <PREFIX>_URL, the server's Streamable HTTP address, and optionally <PREFIX>_HEADERS, a JSON object of headers such
+    as {"Authorization": "Bearer ..."}. The URL is your own configuration: it is called as given, without redirects.
+    Not configured: None in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set."""
+    url = os.environ.get(f"{prefix}_URL")
+    if not url:
+        if os.environ.get("LLM_PROVIDER"):
+            raise RuntimeError(f"MCP tool {tool!r}: set {prefix}_URL to the server's Streamable HTTP address to call it")
+        print(f"(offline mock) MCP tool {tool!r}: {prefix}_URL is not set: empty result", file=sys.stderr)
+        return None
+    try:
+        extra = json.loads(os.environ.get(f"{prefix}_HEADERS") or "{}")
+    except ValueError:
+        raise RuntimeError(f"{prefix}_HEADERS must be a JSON object") from None
+    if not isinstance(extra, dict):
+        raise RuntimeError(f"{prefix}_HEADERS must be a JSON object")
+    session: Optional[str] = None
+    with httpx.Client(timeout=30, follow_redirects=False) as client:
+        def rpc(message: dict) -> Optional[dict]:
+            nonlocal session
+            headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+                       "MCP-Protocol-Version": MCP_PROTOCOL, **{str(k): str(v) for k, v in extra.items()},
+                       **({"Mcp-Session-Id": session} if session else {})}
+            try:
+                r = client.post(url, content=json.dumps(message), headers=headers)
+            except httpx.HTTPError as error:
+                raise RuntimeError(f"MCP server {prefix}: connection failed ({type(error).__name__})") from None
+            if r.status_code >= 400:
+                raise RuntimeError(f"MCP server {prefix}: HTTP {r.status_code}")
+            session = r.headers.get("mcp-session-id") or session
+            if "id" not in message or r.status_code == 202:
+                return None
+            if "text/event-stream" in r.headers.get("content-type", ""):
+                found = [json.loads(line[5:]) for line in r.text.splitlines() if line.startswith("data:") and line[5:].strip()]
+            else:
+                found = [r.json()] if r.content else []
+            reply = next((m for m in found if isinstance(m, dict) and m.get("id") == message["id"]), None)
+            if reply is None:
+                raise RuntimeError(f"MCP server {prefix}: no response to {message['method']}")
+            if "error" in reply:
+                raise RuntimeError(f"MCP server {prefix}: {message['method']}: {str((reply['error'] or {}).get('message') or reply['error'])[:300]}")
+            return reply.get("result") or {}
+
+        try:
+            rpc({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                 "params": {"protocolVersion": MCP_PROTOCOL, "capabilities": {}, "clientInfo": {"name": "superstep-export", "version": "1.0"}}})
+            rpc({"jsonrpc": "2.0", "method": "notifications/initialized"})
+            result = rpc({"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": tool, "arguments": arguments}}) or {}
+        finally:
+            if session:
+                try:
+                    client.delete(url, headers={**{str(k): str(v) for k, v in extra.items()}, "Mcp-Session-Id": session})
+                except httpx.HTTPError:
+                    pass
+    texts = [c.get("text", "") for c in result.get("content") or [] if isinstance(c, dict) and c.get("type") == "text"]
+    if result.get("isError"):
+        raise RuntimeError(f"MCP tool {tool!r} failed: {(chr(10).join(texts) or 'the tool reported an error')[:500]}")
+    if result.get("structuredContent") is not None:
+        return result["structuredContent"]
+    if texts and len(texts) == len(result.get("content") or []):
+        joined = "\\n".join(texts)
+        try:
+            return json.loads(joined)
+        except ValueError:
+            return joined
+    return result.get("content") or []
 ''',
     "send_email": '''
 
@@ -681,6 +743,10 @@ class _Writer(GraphWriter):
             self.add("\n\n# --- Studio services ------------------------------------------------------------------------------------")
             self.add("# These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
             if any(k != "managed_operation" for k in stubs): self.add(OFFLINE_SERVICE.rstrip())
+            if "call_mcp_tool" in stubs:
+                self.add("\n\n# MCP servers: before a real run set <PREFIX>_URL (and <PREFIX>_HEADERS if the server needs them) for")
+                self.add(f"# {', '.join(getattr(self, 'mcp_servers', {}).values())}. MCP nodes and tools on the same Superstep server share a prefix.")
+                self.add('MCP_PROTOCOL = "2025-06-18"')
             for k in stubs: self.add(STUBS[k].rstrip())
         if "browser" in self.uses:
             self.add("\n\n# --- Browser ---------------------------------------------------------------------------------------------")
@@ -833,7 +899,8 @@ class _Writer(GraphWriter):
                 self.add(f"def {name}(state: {cls}) -> dict:")
                 self.add(f'    """{head}: MCP tool {lit(_doc(d.get("tool")))} (see {call})."""')
                 if d.get("_managed_export"): self.add("    # TODO: implement this managed step; the placeholder raises until replaced.")
-                self.add(ret(f"{call}({lit(d.get('tool') or '')}, render_args({const}_ARGUMENTS, state))"))
+                server = "" if d.get("_managed_export") else f"{lit(self.mcp_prefix(d))}, "
+                self.add(ret(f"{call}({server}{lit(d.get('tool') or '')}, render_args({const}_ARGUMENTS, state))"))
         elif t == "email":
             self.email(g, nid, cls, head)
         elif t == "subgraph":
@@ -1208,7 +1275,8 @@ class _Writer(GraphWriter):
                     self.add(f"        return {self.browser_expr(info, t, 'args')}")
                 else:
                     call = "managed_operation" if t.get("_managed_export") else "call_mcp_tool"
-                    self.add(f"        return {call}({lit(t.get('tool') or '')}, args)")
+                    server = "" if t.get("_managed_export") else f"{lit(self.mcp_prefix(t))}, "
+                    self.add(f"        return {call}({server}{lit(t.get('tool') or '')}, args)")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:

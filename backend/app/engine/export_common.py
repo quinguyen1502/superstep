@@ -78,6 +78,15 @@ class Graph:
                          if isinstance(n, dict) and n.get("type") == "agent"
                          for tool in (n.get("data") or {}).get("tools") or []
                          if isinstance(tool, dict) and isinstance(tool.get("_browser_export"), dict)}
+        # sanitize blanks MCP server ids too; keep which nodes share a server, by an internal key that is never written
+        # out: the exporters turn it into an environment variable prefix (TASK-0269)
+        raw_server = {n.get("id"): (n.get("data") or {}).get("server_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "mcp"}
+        raw_tool_server = {(n.get("id"), t.get("name")): t.get("server_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
+                           for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "mcp"}
+        for n in self.wf["nodes"]:
+            if n["id"] in raw_server: n["data"]["_mcp_server"] = str(raw_server[n["id"]] or "")
+            for t in (n.get("data") or {}).get("tools") or [] if n.get("type") == "agent" else []:
+                if isinstance(t, dict) and (n["id"], t.get("name")) in raw_tool_server: t["_mcp_server"] = str(raw_tool_server[(n["id"], t.get("name"))] or "")
         for n in self.wf["nodes"]:
             if n["id"] in managed_nodes: n["data"]["_managed_export"] = True
             if n["id"] in browser_nodes: n["data"]["_browser_export"] = browser_nodes[n["id"]]
@@ -249,6 +258,16 @@ class GraphWriter:
             self.uses.add("templates")
             return
         self.uses.add("managed_operation" if data.get("_managed_export") else "call_mcp_tool")
+        if not data.get("_managed_export"):  # TASK-0269: each server's environment variable prefix, in order of first use
+            self.mcp_prefix(data)
+
+    def mcp_prefix(self, data: dict) -> str:
+        """MCP_SERVER_<n>: the environment variable prefix of a node's or tool's MCP server, numbered in order of first
+        use; nodes on the same server share it. The Studio server id itself is never written to the file."""
+        servers = self.__dict__.setdefault("mcp_servers", {})
+        sid = str(data.get("_mcp_server") or "")
+        if sid not in servers: servers[sid] = f"MCP_SERVER_{len(servers) + 1}"
+        return servers[sid]
 
     def inputs(self, g: Graph, nid: str) -> List[str]:
         """The node's input fields when they are all state fields (as `node_policy.input_schema`), else none."""

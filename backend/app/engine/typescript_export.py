@@ -46,7 +46,7 @@ GLOBALS = {
 HELPERS = {
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
-    "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
+    "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
     "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
     "BrowserError", "SessionLost", "UnknownEffect", "sessions",
@@ -651,12 +651,73 @@ async function managedOperation(tool: string, args: unknown): Promise<never> {
 }
 ''',
     "call_mcp_tool": r'''
-/** MCP nodes call a tool on an MCP server connected in Superstep, which this file does not include.
- * TODO: call the tool with an MCP client, for example @langchain/mcp-adapters (MultiServerMCPClient). */
-async function callMcpTool(tool: string, args: unknown): Promise<unknown> {
-  void args;
-  offlineService("MCP tool", tool);
-  return null;
+/** MCP nodes call a tool on an MCP server, as Superstep does: one short Streamable HTTP session (initialize,
+ * tools/call). Each server is configured only by environment variables (never by this file), with its prefix
+ * MCP_SERVER_<n> (see MCP servers above): <PREFIX>_URL, the server's Streamable HTTP address, and optionally <PREFIX>_HEADERS, a JSON object of headers such
+ * as {"Authorization": "Bearer ..."}. The URL is your own configuration: it is called as given, without redirects.
+ * Not configured: null in offline mock mode (LLM_PROVIDER unset), an error when LLM_PROVIDER is set. */
+async function callMcpTool(prefix: string, tool: string, args: unknown): Promise<unknown> {
+  const url = env(`${prefix}_URL`);
+  if (!url) {
+    if (env("LLM_PROVIDER")) throw new Error(`MCP tool ${JSON.stringify(tool)}: set ${prefix}_URL to the server's Streamable HTTP address to call it`);
+    console.error(`(offline mock) MCP tool ${JSON.stringify(tool)}: ${prefix}_URL is not set: empty result`);
+    return null;
+  }
+  let extra: Record<string, string>;
+  try {
+    const parsed = JSON.parse(env(`${prefix}_HEADERS`) || "{}");
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
+    extra = Object.fromEntries(Object.entries(parsed).map(([k, v]) => [k, String(v)]));
+  } catch {
+    throw new Error(`${prefix}_HEADERS must be a JSON object`);
+  }
+  let session: string | null = null;
+  const rpc = async (message: { id?: number; method: string; [k: string]: unknown }): Promise<Record<string, unknown> | null> => {
+    let r: Response;
+    try {
+      r = await fetch(url, { method: "POST", body: JSON.stringify(message), redirect: "manual", signal: AbortSignal.timeout(30_000),
+        headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", "MCP-Protocol-Version": MCP_PROTOCOL,
+          ...extra, ...(session ? { "Mcp-Session-Id": session } : {}) } });
+    } catch (error) {
+      throw new Error(`MCP server ${prefix}: connection failed (${String((error as { name?: unknown })?.name ?? "Error")})`);
+    }
+    const raw = await r.text();
+    if (r.status >= 300) throw new Error(`MCP server ${prefix}: HTTP ${r.status}`);
+    session = r.headers.get("mcp-session-id") ?? session;
+    if (message.id === undefined || r.status === 202) return null;
+    const found: unknown[] = (r.headers.get("content-type") ?? "").includes("text/event-stream")
+      ? raw.split(/\r?\n/).filter((l) => l.startsWith("data:") && l.slice(5).trim()).map((l) => JSON.parse(l.slice(5)))
+      : raw ? [JSON.parse(raw)] : [];
+    const reply = found.find((m) => m !== null && typeof m === "object" && (m as { id?: unknown }).id === message.id) as
+      { result?: Record<string, unknown>; error?: { message?: unknown } } | undefined;
+    if (!reply) throw new Error(`MCP server ${prefix}: no response to ${message.method}`);
+    if (reply.error !== undefined) throw new Error(`MCP server ${prefix}: ${message.method}: ${String(reply.error?.message ?? JSON.stringify(reply.error)).slice(0, 300)}`);
+    return reply.result ?? {};
+  };
+  let result: Record<string, unknown>;
+  try {
+    await rpc({ jsonrpc: "2.0", id: 1, method: "initialize",
+      params: { protocolVersion: MCP_PROTOCOL, capabilities: {}, clientInfo: { name: "superstep-export", version: "1.0" } } });
+    await rpc({ jsonrpc: "2.0", method: "notifications/initialized" });
+    result = (await rpc({ jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: tool, arguments: args } })) ?? {};
+  } finally {
+    if (session) {
+      await fetch(url, { method: "DELETE", redirect: "manual", headers: { ...extra, "Mcp-Session-Id": session } })
+        .then((r) => r.body?.cancel()).catch(() => {});
+    }
+  }
+  const content = Array.isArray(result.content) ? result.content as { type?: unknown; text?: unknown }[] : [];
+  const texts = content.filter((c) => c?.type === "text").map((c) => String(c.text ?? ""));
+  if (result.isError) throw new Error(`MCP tool ${JSON.stringify(tool)} failed: ${(texts.join("\n") || "the tool reported an error").slice(0, 500)}`);
+  if (result.structuredContent !== undefined && result.structuredContent !== null) return result.structuredContent;
+  if (texts.length && texts.length === content.length) {
+    try {
+      return JSON.parse(texts.join("\n"));
+    } catch {
+      return texts.join("\n");
+    }
+  }
+  return content;
 }
 ''',
     "send_email": r'''
@@ -774,6 +835,10 @@ class _Writer(GraphWriter):
             self.add("\n// --- Studio services ------------------------------------------------------------------------------------")
             self.add("// These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
             if any(k != "managed_operation" for k in stubs): self.add(OFFLINE_SERVICE.rstrip())
+            if "call_mcp_tool" in stubs:
+                self.add("\n// MCP servers: before a real run set <PREFIX>_URL (and <PREFIX>_HEADERS if the server needs them) for")
+                self.add(f"// {', '.join(getattr(self, 'mcp_servers', {}).values())}. MCP nodes and tools on the same Superstep server share a prefix.")
+                self.add('const MCP_PROTOCOL = "2025-06-18";')
             for k in stubs: self.add(STUBS[k].rstrip())
         if "browser" in self.uses:
             self.add("\n// --- Browser ---------------------------------------------------------------------------------------------")
@@ -922,7 +987,8 @@ class _Writer(GraphWriter):
                 self.add(f"/** {head}: MCP tool {lit(_doc(d.get('tool')))} (see {call}). */")
                 self.add(sig)
                 if d.get("_managed_export"): self.add("  // TODO: implement this managed step; the placeholder throws until replaced.")
-                self.add(ret(f"await {call}({lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
+                server = "" if d.get("_managed_export") else f"{lit(self.mcp_prefix(d))}, "
+                self.add(ret(f"await {call}({server}{lit(d.get('tool') or '')}, renderArgs({const}_ARGUMENTS, state))"))
                 self.add("}")
         elif t == "email":
             self.email(g, nid, cls, head, sig)
@@ -1314,7 +1380,8 @@ class _Writer(GraphWriter):
                     self.add(f"    return {self.browser_expr(info, t, 'args')};")
                 else:
                     call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
-                    self.add(f"    return await {call}({lit(t.get('tool') or '')}, args);")
+                    server = "" if t.get("_managed_export") else f"{lit(self.mcp_prefix(t))}, "
+                    self.add(f"    return await {call}({server}{lit(t.get('tool') or '')}, args);")
             elif src == "workflow":
                 ref = t.get("workflow_id") or ""; inputs, outputs = agents.field_list(t.get("inputs")), agents.field_list(t.get("outputs"))
                 if ref in self.built:
