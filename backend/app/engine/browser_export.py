@@ -9,11 +9,6 @@ import re
 
 from .browser_contract import BrowserSettings
 
-TS_BROWSER_REFUSAL = (
-    "Browser tools are exported as Python. This TypeScript file refuses them "
-    "instead of calling a silent MCP stub."
-)
-
 _ENV_SAFE = re.compile(r"[^A-Z0-9]+")
 
 
