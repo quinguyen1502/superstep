@@ -66,14 +66,14 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, rồi `call_llm(prompt, model)` |
 | Condition | một node không đổi gì, và `add_conditional_edges` với hàm router và bảng nhãn → node |
 | Human | `interrupt(...)` dừng run; `Command(resume=answer)` chạy tiếp |
-| LLM có model dự phòng | `call_llm_fallback(prompt, model, fallback)`: gọi model dự phòng một lần, chỉ khi model chính không kết nối được, trả HTTP 5xx hoặc không tồn tại (404); `LLM_FALLBACK_PROVIDER` chọn provider của nó (mặc định `LLM_PROVIDER`). Khi offline chỉ mock của model chính trả lời. Không áp dụng cho node gửi tệp đính kèm |
+| LLM có model dự phòng | `call_llm_fallback(prompt, model, fallback)`: gọi model dự phòng một lần, chỉ khi model chính không kết nối được, trả HTTP 5xx hoặc không tồn tại (404); `LLM_FALLBACK_PROVIDER` chọn provider của nó (mặc định `LLM_PROVIDER`). Khi offline chỉ mock của model chính trả lời; node gửi tệp đính kèm dùng `call_llm_files_fallback`, model dự phòng nhận đúng các tệp đó |
 | Agent | một hàm vào, một hàm model và một hàm công cụ với hai router, và một hàm kết thúc; `interrupt(...)` trước công cụ cần duyệt |
 | Join | một node, và `add_edge([nhánh, nhánh], join)`: chạy một lần khi mọi nhánh xong |
 | For each | một trường vị trí vòng lặp và một router trả về `each` hoặc `done` |
 | Decision | `decide(text, question)` cho từng câu hỏi |
 | Subgraph | workflow con thành graph riêng `build_<child>()`, được thêm như một node |
 | Tool: function | code của hàm, được chép vào |
-| Tool: HTTP | `http_request(...)` dùng `httpx`: chỉ http(s), từ chối địa chỉ nội bộ trừ khi `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, không theo redirect, `user:pass@` gửi dạng Basic auth, có `Idempotency-Key` theo run và request (`SUPERSTEP_RUN_ID`). Kết nối không được ghim vào địa chỉ đã kiểm tra như trong studio |
+| Tool: HTTP | `http_request(...)` dùng `httpx`: chỉ http(s), từ chối địa chỉ nội bộ trừ khi `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, không theo redirect, `user:pass@` gửi dạng Basic auth, có `Idempotency-Key` theo run và request (`SUPERSTEP_RUN_ID`). Như trong studio, tên miền chỉ được phân giải một lần và request kết nối tới đúng địa chỉ đã kiểm tra; header Host, TLS SNI và kiểm tra chứng chỉ vẫn dùng tên miền |
 | Tool: Code | code của node, nằm trong hàm của node |
 | Retriever, MCP, Send email | hàm stub có `TODO`: chúng cần dịch vụ của studio (kể cả công cụ kho tri thức và MCP của node Agent). Khi offline chúng trả kết quả rỗng và in `(offline mock) …` ra stderr; khi đặt `LLM_PROVIDER` chúng dừng run cho tới khi bạn tự hiện thực |
 | Note | một comment |
@@ -215,7 +215,7 @@ Các package là import `npm:` (`npm:@langchain/langgraph@^1.5`), nên Deno tự
 | Tool: Code bằng TypeScript | code của node giữ nguyên; các import được chuyển lên đầu file |
 | Tool: Code bằng Python | stub ném lỗi `not implemented in TS export`: hãy chuyển sang TypeScript |
 | Tool: function | stub ném lỗi: hàm là Python trên server |
-| Tool: HTTP | `httpRequest(...)` dùng `fetch`, cùng các biện pháp bảo vệ như file Python; chạy Deno với `--allow-net` |
+| Tool: HTTP | `httpRequest(...)` dùng `node:http`/`node:https` (Node và Deno đều hỗ trợ), cùng các biện pháp bảo vệ như file Python; chạy Deno với `--allow-net` |
 | Retriever, MCP, Send email | stub có `TODO`, như file Python |
 | LLM có model dự phòng | `callLlmFallback`, cùng quy tắc với file Python |
 | Agent | các bước vào, model, công cụ và kết thúc, như file Python; `callAgent` là mock, hoặc `initChatModel` với `bindTools` khi đặt `LLM_PROVIDER`. Công cụ có sẵn là stub ném lỗi |

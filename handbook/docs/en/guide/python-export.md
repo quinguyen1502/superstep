@@ -67,14 +67,14 @@ Final state: {...}
 | LLM | `render(PROMPT, state)`, then `call_llm(prompt, model)` |
 | Condition | a node that changes nothing, and `add_conditional_edges` with a router function and a label → node map |
 | Human | `interrupt(...)` pauses the run; `Command(resume=answer)` continues it |
-| LLM with a fallback model | `call_llm_fallback(prompt, model, fallback)`: the fallback model once, only when the primary is unreachable, answers HTTP 5xx or is not found (404); `LLM_FALLBACK_PROVIDER` picks its provider (default `LLM_PROVIDER`). Offline only the primary mock answers. Not applied to nodes that send attachments |
+| LLM with a fallback model | `call_llm_fallback(prompt, model, fallback)`: the fallback model once, only when the primary is unreachable, answers HTTP 5xx or is not found (404); `LLM_FALLBACK_PROVIDER` picks its provider (default `LLM_PROVIDER`). Offline only the primary mock answers; a node that sends attachments uses `call_llm_files_fallback`, which gives the fallback model the same files |
 | Agent | an entry, a model and a tool function with two routers, and an end function; `interrupt(...)` before a tool that needs approval |
 | Join | a node, and `add_edge([branch, branch], join)`: it runs once all branches finished |
 | For each | a loop position field and a router that returns `each` or `done` |
 | Decision | `decide(text, question)` for each question |
 | Subgraph | the child workflow as its own graph, `build_<child>()`, added as a node |
 | Tool: function | the function's code, copied in |
-| Tool: HTTP | `http_request(...)` with `httpx`: http(s) only, private addresses refused unless `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, no redirects, `user:pass@` as Basic auth, an `Idempotency-Key` per run and request (`SUPERSTEP_RUN_ID`). The connection is not pinned to the checked address as in the studio |
+| Tool: HTTP | `http_request(...)` with `httpx`: http(s) only, private addresses refused unless `STUDIO_HTTP_TOOL_ALLOW_PRIVATE=1`, no redirects, `user:pass@` as Basic auth, an `Idempotency-Key` per run and request (`SUPERSTEP_RUN_ID`). As in the studio, the host is resolved once and the request connects to that checked address; the Host header, TLS SNI and certificate check keep the name |
 | Tool: Code | the node's code, inside the node function |
 | Retriever, MCP, Send email | stubs with a `TODO`: they need studio services (also for an Agent node's knowledge base and MCP tools). Offline they return an empty result and print `(offline mock) …` on stderr; with `LLM_PROVIDER` set they stop the run until you implement them |
 | Note | a comment |
@@ -215,7 +215,7 @@ drop the `npm:` prefixes and versions, run `npm i @langchain/langgraph
 | Tool: Code in TypeScript | the node's code as written; its imports move to the top of the file |
 | Tool: Code in Python | a stub that throws `not implemented in TS export`: port it |
 | Tool: function | a stub that throws: the function is Python on the server |
-| Tool: HTTP | `httpRequest(...)` with `fetch`, with the same safeguards as the Python file; run Deno with `--allow-net` |
+| Tool: HTTP | `httpRequest(...)` with `node:http`/`node:https` (supported by Node and Deno), with the same safeguards as the Python file; run Deno with `--allow-net` |
 | Retriever, MCP, Send email | stubs with a `TODO`, as in the Python file |
 | LLM with a fallback model | `callLlmFallback`, with the same rules as the Python file |
 | Agent | the entry, model, tool and end steps, as in the Python file; `callAgent` is the mock, or `initChatModel` with `bindTools` when `LLM_PROVIDER` is set. Built-in tools are stubs that throw |
