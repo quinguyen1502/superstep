@@ -16,7 +16,8 @@ from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
 from . import agents, approval_policy, attachments, foreach
-from .browser_export import TS_BROWSER_REFUSAL
+from .browser_export import export_binding
+from .browser_export_ts import TS_RUNTIME
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .templating import VAR_RE, _ONE_FILTER, refs
 
@@ -47,6 +48,8 @@ HELPERS = {
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER",
     "DECISION_MODEL", "mockLlm", "callLlm", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "managedOperation",
     "sendEmail", "addresses", "asUpdate", "buildGraph", "EXAMPLE_INPUT", "EXAMPLE_ANSWERS", "main", "graph", "pyJson",
+    "browserCall", "bindBrowserUrl", "browserPrepare", "browserInterrupt", "browserDecide", "BROWSER_POLICY",
+    "BrowserError", "SessionLost", "UnknownEffect", "sessions",
     "MAX_CALLS_PER_ROUND", "RESULT_CHARS", "STEP_CHARS", "JSON_TYPES", "WORDS", "Schema", "ToolSpec", "ToolCall", "ChatMessage",
     "AgentStep", "AgentChat", "agentTask", "mockAgent", "callAgent", "FileRecord", "isImage", "fileList", "withFiles", "filesNote", "callLlmFiles", "callAgentFiles", "checkArguments", "toolText", "shorten", "Question", "Message",
     *(r[0] for r in REDUCERS.values())}
@@ -621,6 +624,11 @@ class _Writer(GraphWriter):
             self.add("\n// --- Studio services ------------------------------------------------------------------------------------")
             self.add("// These nodes use services of the Superstep server. The stubs keep the graph running; replace them.")
             for k in stubs: self.add(STUBS[k].rstrip())
+        if "browser" in self.uses:
+            self.add("\n// --- Browser ---------------------------------------------------------------------------------------------")
+            self.add("// Secrets are read from the environment at run time. BROWSER_POLICY has no tokens, passwords or cookies.")
+            self.add(f"const BROWSER_POLICY = {lit(self.browser_policies)};")
+            self.add(TS_RUNTIME.replace("__LANGGRAPH_SPEC__", json.dumps(LANGGRAPH)).rstrip())
         reducers = [k for k in REDUCERS if k in self.uses]
         if reducers:
             self.add("\n// --- Reducers -------------------------------------------------------------------------------------------")
@@ -745,11 +753,13 @@ class _Writer(GraphWriter):
             self.add(ret(f"await retrieve(render({const}_QUERY, state), {number(d.get('top_k'), int) or 4})"))
             self.add("}")
         elif t == "mcp":
-            if isinstance(d.get("_browser_export"), dict):
+            info = d.get("_browser_export")
+            if isinstance(info, dict):
+                self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
+                self.add("")
                 self.add(f"/** {head}: browser tool {lit(_doc(d.get('tool')))}. */")
                 self.add(sig)
-                self.add("  void state;")
-                self.add(f"  throw new Error({lit(TS_BROWSER_REFUSAL)});")
+                self.add(ret(self.browser_expr(info, d, f"renderArgs({const}_ARGUMENTS, state)")))
                 self.add("}")
             else:
                 call = "managedOperation" if d.get("_managed_export") else "callMcpTool"
@@ -1091,6 +1101,8 @@ class _Writer(GraphWriter):
         self.add("      try {")
         self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
         self.add("      } catch (error) {  // the model hears about the failure and can try something else")
+        self.add("        const paused = error instanceof Error ? error.name : \"\";")
+        self.add("        if (paused === \"GraphInterrupt\" || paused === \"GraphBubbleUp\") throw error;")
         self.add("        [status, result] = [\"error\", `The tool failed: ${error instanceof Error ? error.message : error}`];")
         self.add("      }")
         self.add("    }")
@@ -1121,6 +1133,15 @@ class _Writer(GraphWriter):
         self.add(f"  return asUpdate({{ {', '.join(out)}, {chat}: null }});")
         self.add("}")
 
+    def browser_expr(self, info: dict, data: dict, args_expr: str) -> str:
+        tool = data.get("tool") or ""
+        binding = export_binding(data.get("url_binding"))
+        target = data.get("target") if isinstance(data.get("target"), dict) else None
+        targets = data.get("targets") if isinstance(data.get("targets"), dict) else None
+        prepared = f"browserPrepare({lit(tool)}, {args_expr}, {lit(target)}, {lit(targets)}, state)"
+        bound = f"bindBrowserUrl({lit(binding)}, {prepared}, state)"
+        return f"await browserCall({lit(info.get('alias') or '')}, {lit(tool)}, {bound}, state)"
+
     def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
         """call_<agent>_tool(): what each of the Agent node's tools does."""
         self.add("")
@@ -1138,8 +1159,9 @@ class _Writer(GraphWriter):
             elif src == "knowledge":
                 self.add(f"    return await retrieve(String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
-                if isinstance(t.get("_browser_export"), dict):
-                    self.add(f"    throw new Error({lit(TS_BROWSER_REFUSAL)});")
+                info = t.get("_browser_export")
+                if isinstance(info, dict):
+                    self.add(f"    return {self.browser_expr(info, t, 'args')};")
                 else:
                     call = "managedOperation" if t.get("_managed_export") else "callMcpTool"
                     self.add(f"    return await {call}({lit(t.get('tool') or '')}, args);")

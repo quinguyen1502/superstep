@@ -40,7 +40,7 @@ The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the po
 6. **Budgets.** `max_pages` counts document navigations and refuses the next one. `stealth` is passed only when the provider is Browserless.
 7. **Still refused in the export.** Upload and download stay `capability_refused` outside Studio, including when the allow flag is on. A screenshot result stays `{captured: true, inline_bytes: false}` with no image bytes in the result or the generated source. Telegram, Sheets, HTTP API, Slack, WhatsApp, Email, Teams, Drive, web search, MCP stdio/HTTP, and the retriever stay explicit stubs.
 
-AC8 for TASK-0251 and TASK-0252 closes on the fixture contract once those pull requests merge. Live-driver behavior is AC11, tracked by TASK-0261 and TASK-0262. Those tasks are in todo. Task-start is not authorised by the split.
+AC8 for TASK-0251 and TASK-0252 is on develop: PR #321 and PR #323. Live-driver behavior is AC11, tracked by TASK-0261 and TASK-0262. Those tasks are in todo. Task-start is not authorised by the split.
 
 ## Problem Or Opportunity
 

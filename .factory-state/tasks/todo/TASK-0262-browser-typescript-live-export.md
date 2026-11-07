@@ -43,7 +43,7 @@ Give the TypeScript project export the same live Playwright and Browserless page
 - Discovery: `.factory-state/artifacts/DISC-0002-browser-tools-research.md`.
 - Plan: `.factory-state/artifacts/PLAN-0006-browser-tools.md`.
 - Python contract: `.factory-state/tasks/todo/TASK-0261-browser-python-live-export.md` and its merged helper.
-- Fixture TypeScript helper from TASK-0252. Until PR #323 merges, that task file is `.factory-state/tasks/backlog/TASK-0252-browser-typescript-export.md`.
+- Fixture TypeScript helper from TASK-0252, merged in PR #323: `.factory-state/tasks/done/TASK-0252-browser-typescript-export.md`.
 
 ## Related Artifacts
 
@@ -75,7 +75,7 @@ Give the TypeScript project export the same live Playwright and Browserless page
 ## Dependencies
 
 - TASK-0261 merged to `develop`.
-- TASK-0252 merged to `develop` (PR #323), so the TypeScript fixture helper exists before this task starts.
+- TASK-0252 is merged in PR #323. The TypeScript fixture helper is on `develop`.
 - Task-start waits for a separate owner instruction. This file does not authorise implementation.
 
 ## Acceptance Criteria
@@ -114,4 +114,4 @@ Give the TypeScript project export the same live Playwright and Browserless page
 
 - Future branch: `factory/task-0262-browser-typescript-live-export`, from `develop` after TASK-0261 merges.
 - Do not start until the owner asks. Merge TASK-0261 first.
-- PR #323 must be on `develop` before this branch is cut.
+- PR #323 is merged. Cut this branch from `develop` after TASK-0261 merges.

@@ -129,4 +129,4 @@ Keep one Playwright or Browserless page per browser alias in the Python project 
 
 - Future branch: `factory/task-0261-browser-python-live-export`, from `develop`.
 - Do not start until the owner asks. TASK-0262 waits for this task.
-- Merge PR #323 on its own schedule. It is not a blocker for this Python task.
+- PR #323 is merged. It is not a blocker for this Python task.

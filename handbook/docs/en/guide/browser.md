@@ -135,8 +135,9 @@ state.
   helper pauses with `interrupt()` before the effect. A rejection does not change
   the page. Lost and unknown outcomes are not retried.
   `SUPERSTEP_BROWSER_FAULT` is a one-shot test hook; leave it empty.
-- The TypeScript export refuses browser steps with an explicit error. It does
-  not call a silent MCP stub. TypeScript parity is the following task.
+- The TypeScript export uses the same helper as `browserCall`. It follows the
+  same whitelist, session order, approval, and refusal rules. Run it with
+  Node (`npx tsx`) or Deno. Playwright is an optional `npm install playwright`.
 
 ## Risks and always-on rules
 
