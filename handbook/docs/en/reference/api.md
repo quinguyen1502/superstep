@@ -144,6 +144,9 @@ nginx, not a session or streaming endpoint.
     GET    /api/workflows/{wid}/tokens          POST   /api/workflows/{wid}/tokens
     DELETE /api/workflows/{wid}/tokens/{tid}    POST   /api/workflows/{wid}/tokens/{tid}/rotate-secret
     POST   /api/hooks/workflows/{wid}/runs      GET    /api/hooks/workflows/{wid}/runs/{run_id}
+    GET    /api/hooks/workflows/{wid}/schedules                 POST   /api/hooks/workflows/{wid}/schedules
+    POST   /api/hooks/workflows/{wid}/schedules/preview         (workflow token; nothing stored)
+    PATCH  /api/hooks/workflows/{wid}/schedules/{sid}           DELETE /api/hooks/workflows/{wid}/schedules/{sid}
     GET    /api/workflows/{wid}/deliveries      POST   /api/workflows/{wid}/deliveries/{did}/redeliver
     GET    /api/workflows/{wid}/mcp             PUT    /api/workflows/{wid}/mcp
     POST   /mcp                                 (MCP Streamable HTTP, workflow token)
@@ -171,7 +174,10 @@ nginx, not a session or streaming endpoint.
     ```text
     GET    /api/workflows/{wid}/schedules       POST   /api/workflows/{wid}/schedules
     PATCH  /api/workflows/{wid}/schedules/{sid} DELETE /api/workflows/{wid}/schedules/{sid}
-    POST   /api/schedules/preview
+    POST   /api/schedules/preview               (studio JWT)
+    GET    /api/hooks/workflows/{wid}/schedules                 POST   /api/hooks/workflows/{wid}/schedules
+    POST   /api/hooks/workflows/{wid}/schedules/preview         (workflow token)
+    PATCH  /api/hooks/workflows/{wid}/schedules/{sid}           DELETE /api/hooks/workflows/{wid}/schedules/{sid}
     ```
 
 ??? abstract "Chat triggers"

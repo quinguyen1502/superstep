@@ -7,10 +7,10 @@
 - Status: Accepted
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
-- Updated: 2026-10-19
+- Updated: 2026-11-08
 - Related Requirements: REQ-0033, REQ-0004
 - Related Architecture:
-- Related Tasks: TASK-0046
+- Related Tasks: TASK-0046, TASK-0278
 
 ## Context
 
@@ -53,4 +53,4 @@ REQ-0004 left open whether a cron or schedule trigger was needed. The owner aske
 
 ## Follow-Up
 
-- None
+- 2026-11-08 (TASK-0278): The public workflow-token API manages schedules of that one workflow (`GET`/`POST /api/hooks/workflows/{wid}/schedules`, `POST .../schedules/preview`, `PATCH`/`DELETE .../schedules/{sid}`). It reuses `ScheduleService`. The token owner is the schedule owner, the same share right this decision already requires. Firing is unchanged: `RunWorker.maintain()` still calls `ScheduleService.fire_due()`.

@@ -216,6 +216,25 @@ Options of `runAndWait` and `wait`: `timeoutMs` (default 300000, `null` waits
 forever), `pollIntervalMs` (1000), `maxPollIntervalMs` (10000), `backoff`
 (1.5), `signal`. `run` also takes `callbackUrl`.
 
+## Schedules
+
+A workflow token lists, creates, updates, deletes and previews cron schedules
+of its own workflow. A schedule runs as the token's owner.
+`previewSchedule` returns the next fire times and stores nothing.
+
+```ts
+const schedule = await client.createSchedule('0 9 * * MON-FRI', {
+  name: 'Morning', timezone: 'Asia/Ho_Chi_Minh', input: { message: 'hi' },
+})
+await client.updateSchedule(schedule.id, { enabled: false })
+const times = await client.previewSchedule('@daily', { timezone: 'UTC' })
+await client.deleteSchedule(schedule.id)
+```
+
+`listSchedules()` returns the workflow's schedules. `SCHEDULE_CRON_INVALID`
+and `SCHEDULE_LIMIT` are `InvalidRequestError`. `SCHEDULE_NOT_FOUND` is
+`NotFoundError`.
+
 ### Cancel with AbortSignal
 
 Every method takes `signal`; aborting stops the request and the polling and
@@ -234,8 +253,8 @@ error code), `status`, `message` and `details`.
 | --- | --- |
 | `AuthenticationError` | Missing, invalid, expired or revoked workflow/chat authentication |
 | `PermissionDeniedError` | Forbidden chat origin or HTTP 403 |
-| `NotFoundError` | `404 RUN_NOT_FOUND` |
-| `InvalidRequestError` | `400 RUN_INPUT_INVALID`, `CALLBACK_URL_INVALID`; `422 VALIDATION_ERROR` |
+| `NotFoundError` | `404 RUN_NOT_FOUND`, `SCHEDULE_NOT_FOUND` |
+| `InvalidRequestError` | `400 RUN_INPUT_INVALID`, `CALLBACK_URL_INVALID`, `SCHEDULE_CRON_INVALID`, `SCHEDULE_LIMIT`; `422 VALIDATION_ERROR` |
 | `PayloadTooLargeError` | `413 RUN_INPUT_TOO_LARGE` |
 | `RateLimitError` | `429 RATE_LIMITED`; `retryAfter` holds the seconds to wait |
 | `ServerError` | `5xx` |
@@ -256,7 +275,7 @@ try {
 
 ## Types
 
-`Run`, `RunResult`, `RunStatus`, `RunMetrics` and the raw `paths`,
+`Run`, `Schedule`, `RunResult`, `RunStatus`, `RunMetrics` and the raw `paths`,
 `operations` and `components` are exported alongside `ChatEvent`, `ChatResult`,
 `ChatSession`, `ChatTurn` and other chat types. `src/schema.ts` comes from the
 public spec; `src/chat/frames.ts` comes from the backend's v1 JSON Schemas:

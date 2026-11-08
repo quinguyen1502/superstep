@@ -6,16 +6,17 @@ below cover workflow runs and headless chat. Chat support is available in the
 repository ahead of the next owner-approved package release.
 
 Other services start a workflow over HTTP with a **workflow token**, then poll
-for the result. This page covers the two public endpoints, the official Python
-and TypeScript SDKs, and the errors to handle. For callbacks, signatures and
-deliveries, see [API triggers and webhooks](api-triggers.md). Every field is
-in the [Public API reference](../reference/public-api.md).
+for the result. The same token manages that workflow's schedules. This page
+covers those public endpoints, the official Python and TypeScript SDKs, and
+the errors to handle. For callbacks, signatures and deliveries, see
+[API triggers and webhooks](api-triggers.md). Every field is in the
+[Public API reference](../reference/public-api.md).
 
 ## Concepts
 
 | Term | Meaning |
 | --- | --- |
-| Workflow token | A secret `wft_...` that starts runs of **one** workflow. Send it as `X-Workflow-Token: wft_...` or `Authorization: Bearer wft_...`. Besides these endpoints it only works with the [LangGraph-compatible API](agent-server-api.md) and the [MCP server](mcp-server.md) of the same workflow. |
+| Workflow token | A secret `wft_...` for **one** workflow. Send it as `X-Workflow-Token: wft_...` or `Authorization: Bearer wft_...`. It starts runs and manages schedules of that workflow. It also works with the [LangGraph-compatible API](agent-server-api.md) and the [MCP server](mcp-server.md) of the same workflow. |
 | Run | One execution of the workflow's latest saved version. `input` is its initial state. |
 | Status | `queued` and `running` while it goes; then `ok`, `error`, `cancelled`, `timeout`, `waiting` (paused at a Human node) or `expired`. |
 | Envelope | Every response is `{"success", "data", "error"}`. On failure `error.code` is a stable code; `error.message` is English for logs. |
@@ -24,6 +25,11 @@ in the [Public API reference](../reference/public-api.md).
 | --- | --- | --- |
 | `POST /api/hooks/workflows/{wid}/runs` | `startRun` | Start a run. `202` with `poll_url` and a `Location` header, or `200` with the result in `sync` mode. |
 | `GET /api/hooks/workflows/{wid}/runs/{run_id}` | `getRun` | Status and, once finished, `final_state`, `error`, `metrics`. |
+| `GET /api/hooks/workflows/{wid}/schedules` | `listSchedules` | Schedules of this workflow. |
+| `POST /api/hooks/workflows/{wid}/schedules` | `createSchedule` | Create a cron schedule. `201` with the schedule. |
+| `PATCH /api/hooks/workflows/{wid}/schedules/{sid}` | `updateSchedule` | Change the fields you send. |
+| `DELETE /api/hooks/workflows/{wid}/schedules/{sid}` | `deleteSchedule` | Delete one schedule. `data` is `{"ok": true}`. |
+| `POST /api/hooks/workflows/{wid}/schedules/preview` | `previewSchedule` | Next fire times of an expression. Nothing is stored. |
 
 ## Create a token
 
@@ -223,6 +229,46 @@ TypeScript targets SDK 0.2.0. Python retains the SDK/CLI/server's shared version
 until the next approved release; no Python downgrade to 0.2.0 is planned.
 Package publication and release tags require the owner's release approval.
 
+## Schedules
+
+A workflow token manages cron schedules of that one workflow. Each fire starts
+a run as the token's owner, using the schedule's `input`. A workflow holds at
+most 20 schedules. These calls are not rate limited. With `STUDIO_WORKER=0`
+on every process, a schedule is stored and does not fire.
+
+=== "curl"
+
+    ```bash
+    curl -X POST "$SUPERSTEP_BASE_URL/api/hooks/workflows/$WID/schedules" \
+      -H "X-Workflow-Token: $SUPERSTEP_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"name":"Morning","cron":"0 9 * * MON-FRI","timezone":"Asia/Ho_Chi_Minh","input":{"message":"hi"}}'
+    ```
+
+=== "Python"
+
+    ```python
+    schedule = client.create_schedule(
+        "0 9 * * MON-FRI", name="Morning", timezone="Asia/Ho_Chi_Minh", input={"message": "hi"})
+    client.update_schedule(schedule["id"], enabled=False)
+    client.preview_schedule("@daily", timezone="UTC")  # Unix times; nothing is stored
+    client.delete_schedule(schedule["id"])
+    ```
+
+=== "TypeScript"
+
+    ```ts
+    const schedule = await client.createSchedule('0 9 * * MON-FRI', {
+      name: 'Morning', timezone: 'Asia/Ho_Chi_Minh', input: { message: 'hi' },
+    })
+    await client.updateSchedule(schedule.id, { enabled: false })
+    await client.previewSchedule('@daily', { timezone: 'UTC' })  // Unix seconds; nothing is stored
+    await client.deleteSchedule(schedule.id)
+    ```
+
+`list_schedules()` / `listSchedules()` returns the workflow's schedules.
+`preview_schedule` / `previewSchedule` returns the next fire times.
+
 ## Errors
 
 Errors use the envelope and a stable `code`:
@@ -236,6 +282,9 @@ Errors use the envelope and a stable `code`:
 | --- | --- | --- | --- |
 | 401 | `TRIGGER_TOKEN_INVALID` | Missing, wrong or revoked token, or a token of another workflow | `AuthenticationError` |
 | 404 | `RUN_NOT_FOUND` | Unknown run, or a run of another workflow | `NotFoundError` |
+| 404 | `SCHEDULE_NOT_FOUND` | Unknown schedule of this workflow | `NotFoundError` |
+| 400 | `SCHEDULE_CRON_INVALID` | The cron expression or time zone is not valid | `InvalidRequestError` |
+| 400 | `SCHEDULE_LIMIT` | The workflow already has 20 schedules | `InvalidRequestError` |
 | 400 | `RUN_INPUT_INVALID` | `input` is not a JSON object | `InvalidRequestError` |
 | 400 | `CALLBACK_URL_INVALID` | `callback_url` is not a public http(s) URL | `InvalidRequestError` |
 | 422 | `VALIDATION_ERROR` | Malformed body; `details` lists `{field, message}` | `InvalidRequestError` |

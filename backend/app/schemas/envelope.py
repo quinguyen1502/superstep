@@ -46,7 +46,7 @@ class Envelope(BaseModel, Generic[T]):
 
 
 EXAMPLE_PARAMS = {"max_kb": 256, "retry_after": 12, "seconds": 30, "allowed": "document, image", "max_mb": 10, "max": 5,
-                  "field": "value"}  # fills message templates in OpenAPI examples
+                  "field": "value", "reason": "invalid expression"}  # fills message templates in OpenAPI examples
 
 
 def error_responses(*codes: str) -> dict:

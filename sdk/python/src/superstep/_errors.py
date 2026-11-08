@@ -33,11 +33,11 @@ class PermissionDeniedError(SuperstepError):
 
 
 class NotFoundError(SuperstepError):
-    """404, e.g. RUN_NOT_FOUND."""
+    """404, e.g. RUN_NOT_FOUND or SCHEDULE_NOT_FOUND."""
 
 
 class InvalidRequestError(SuperstepError):
-    """400 / 422: RUN_INPUT_INVALID, CALLBACK_URL_INVALID, VALIDATION_ERROR (see `details`)."""
+    """400 / 422: RUN_INPUT_INVALID, SCHEDULE_CRON_INVALID, SCHEDULE_LIMIT, VALIDATION_ERROR (see `details`)."""
 
 
 class PayloadTooLargeError(SuperstepError):
@@ -79,6 +79,9 @@ BY_CODE: Dict[str, Type[SuperstepError]] = {
     "PAYLOAD_TOO_LARGE": PayloadTooLargeError,
     "RATE_LIMITED": RateLimitError,
     "INTERNAL_ERROR": ServerError,
+    "SCHEDULE_NOT_FOUND": NotFoundError,
+    "SCHEDULE_CRON_INVALID": InvalidRequestError,
+    "SCHEDULE_LIMIT": InvalidRequestError,
     # the Chat API v1 (TASK-0215)
     "CHAT_NOT_PUBLISHED": NotFoundError,
     "CHAT_SESSION_NOT_FOUND": NotFoundError,

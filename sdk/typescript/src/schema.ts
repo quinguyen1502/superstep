@@ -50,6 +50,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/hooks/workflows/{wid}/schedules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List schedules
+         * @description Schedules of this workflow. A workflow token sees only its own workflow.
+         */
+        get: operations["listSchedules"];
+        put?: never;
+        /**
+         * Create a schedule
+         * @description Create a cron schedule. Each fire starts a run with `input` as the schedule's owner (the token owner).
+         *
+         *     At most 20 schedules per workflow. A missed time fires once and is not replayed.
+         */
+        post: operations["createSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hooks/workflows/{wid}/schedules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a schedule
+         * @description Next fire times of a cron expression in an IANA time zone. Requires a token for this workflow and stores nothing.
+         */
+        post: operations["previewSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/hooks/workflows/{wid}/schedules/{sid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a schedule
+         * @description Delete one schedule of this workflow. Runs it already started are left in the history.
+         */
+        delete: operations["deleteSchedule"];
+        options?: never;
+        head?: never;
+        /**
+         * Update a schedule
+         * @description Change the fields you send. Omitted fields stay as they are. Turning a schedule on clears its off note.
+         */
+        patch: operations["updateSchedule"];
+        trace?: never;
+    };
     "/api/public/v1/chat/{slug}": {
         parameters: {
             query?: never;
@@ -965,6 +1035,192 @@ export interface components {
             child_run_id?: string | null;
         };
         /**
+         * Schedule
+         * @description One cron schedule of the workflow. A due schedule starts a run as the token's owner.
+         */
+        Schedule: {
+            /**
+             * Id
+             * @example a1b2c3d4e5
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Cron
+             * @description Five-field cron expression, or a macro such as `@daily`.
+             * @example 0 9 * * MON-FRI
+             */
+            cron: string;
+            /**
+             * Timezone
+             * @description IANA time zone.
+             * @example Asia/Ho_Chi_Minh
+             */
+            timezone: string;
+            /**
+             * Input
+             * @description Initial state of each run this schedule starts.
+             */
+            input: {
+                [key: string]: unknown;
+            };
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Next Runs
+             * @description Upcoming fire times as Unix seconds. Empty while the schedule is off.
+             */
+            next_runs: number[];
+            /**
+             * Last Run
+             * @description Unix seconds of the last fire, if any.
+             */
+            last_run?: number | null;
+            /** Last Run Id */
+            last_run_id?: string | null;
+            /**
+             * Note
+             * @description Why the scheduler turned the schedule off, when it did.
+             */
+            note?: string | null;
+            /**
+             * Created
+             * @description Unix seconds.
+             */
+            created: number;
+        };
+        /** ScheduleDeleted */
+        ScheduleDeleted: {
+            /**
+             * Ok
+             * @default true
+             * @constant
+             */
+            ok: true;
+        };
+        /**
+         * ScheduleDeletedEnvelope
+         * @description Success envelope of a deleted schedule.
+         */
+        ScheduleDeletedEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["ScheduleDeleted"];
+            /** Error */
+            error?: null;
+        };
+        /**
+         * ScheduleEnvelope
+         * @description Success envelope carrying one schedule.
+         */
+        ScheduleEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["Schedule"];
+            /** Error */
+            error?: null;
+        };
+        /** ScheduleIn */
+        ScheduleIn: {
+            /**
+             * Name
+             * @default Schedule
+             */
+            name: string;
+            /** Cron */
+            cron: string;
+            /**
+             * Timezone
+             * @default UTC
+             */
+            timezone: string;
+            /** Input */
+            input?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+        };
+        /**
+         * ScheduleListEnvelope
+         * @description Success envelope carrying the workflow's schedules.
+         */
+        ScheduleListEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["Schedule"][];
+            /** Error */
+            error?: null;
+        };
+        /** SchedulePatch */
+        SchedulePatch: {
+            /** Name */
+            name?: string | null;
+            /** Cron */
+            cron?: string | null;
+            /** Timezone */
+            timezone?: string | null;
+            /** Input */
+            input?: {
+                [key: string]: unknown;
+            } | null;
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** SchedulePreview */
+        SchedulePreview: {
+            /** Cron */
+            cron: string;
+            /**
+             * Timezone
+             * @default UTC
+             */
+            timezone: string;
+        };
+        /**
+         * SchedulePreviewEnvelope
+         * @description Success envelope of a cron preview.
+         */
+        SchedulePreviewEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            data: components["schemas"]["SchedulePreviewResult"];
+            /** Error */
+            error?: null;
+        };
+        /**
+         * SchedulePreviewResult
+         * @description Next fire times of a cron expression. Preview stores nothing.
+         */
+        SchedulePreviewResult: {
+            /**
+             * Next Runs
+             * @description The next fire times of the expression, as Unix seconds.
+             */
+            next_runs: number[];
+        };
+        /**
          * StartRunRequest
          * @example {
          *       "input": {
@@ -1120,6 +1376,290 @@ export interface operations {
             };
             /** @description RUN_NOT_FOUND */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    listSchedules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workflow id (shown in the editor URL and the API dialog). */
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The workflow's schedules, soonest unchanged. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleListEnvelope"];
+                };
+            };
+            /** @description TRIGGER_TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    createSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workflow id (shown in the editor URL and the API dialog). */
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleIn"];
+            };
+        };
+        responses: {
+            /** @description The schedule. The first fire is `next_runs[0]` when it is enabled. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleEnvelope"];
+                };
+            };
+            /** @description SCHEDULE_CRON_INVALID, SCHEDULE_LIMIT, RUN_INPUT_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description TRIGGER_TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RUN_INPUT_TOO_LARGE */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    previewSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workflow id (shown in the editor URL and the API dialog). */
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulePreview"];
+            };
+        };
+        responses: {
+            /** @description The next fire times. Nothing is stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchedulePreviewEnvelope"];
+                };
+            };
+            /** @description SCHEDULE_CRON_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description TRIGGER_TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    deleteSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workflow id (shown in the editor URL and the API dialog). */
+                wid: string;
+                /** @description Schedule id returned when the schedule was created. */
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schedule is gone. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleDeletedEnvelope"];
+                };
+            };
+            /** @description TRIGGER_TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description SCHEDULE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    updateSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Workflow id (shown in the editor URL and the API dialog). */
+                wid: string;
+                /** @description Schedule id returned when the schedule was created. */
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchedulePatch"];
+            };
+        };
+        responses: {
+            /** @description The schedule after the change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleEnvelope"];
+                };
+            };
+            /** @description SCHEDULE_CRON_INVALID, RUN_INPUT_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description TRIGGER_TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description SCHEDULE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description RUN_INPUT_TOO_LARGE */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };

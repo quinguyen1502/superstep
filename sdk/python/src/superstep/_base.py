@@ -38,12 +38,30 @@ class Config:
         url = f"{self.base_url}/api/hooks/workflows/{quote(self.workflow_id, safe='')}/runs"
         return f"{url}/{quote(run_id, safe='')}" if run_id else url
 
+    def schedules_url(self, schedule_id: Optional[str] = None, *, preview: bool = False) -> str:
+        if not self.token or not self.workflow_id: raise ConfigError("Workflow schedules require workflow_id and token", code="CONFIG_MISSING")
+        url = f"{self.base_url}/api/hooks/workflows/{quote(self.workflow_id, safe='')}/schedules"
+        if preview: return f"{url}/preview"
+        return f"{url}/{quote(schedule_id, safe='')}" if schedule_id else url
+
 
 def start_body(input: Optional[Dict[str, Any]], mode: str, callback_url: Optional[str]) -> Dict[str, Any]:
     if mode not in ("async", "sync"): raise ValueError("mode must be 'async' or 'sync'")
     body: Dict[str, Any] = {"input": input or {}, "mode": mode}
     if callback_url: body["callback_url"] = callback_url
     return body
+
+
+def schedule_body(cron: str, *, name: str = "Schedule", timezone: str = "UTC", input: Optional[Dict[str, Any]] = None,
+                  enabled: bool = True) -> Dict[str, Any]:
+    return {"name": name, "cron": cron, "timezone": timezone, "input": input or {}, "enabled": enabled}
+
+
+def schedule_patch(fields: Dict[str, Any]) -> Dict[str, Any]:
+    allowed = ("name", "cron", "timezone", "input", "enabled")
+    unknown = [key for key in fields if key not in allowed]
+    if unknown: raise TypeError("Unknown schedule field: " + ", ".join(sorted(unknown)))
+    return {key: fields[key] for key in allowed if key in fields}
 
 
 def unwrap(status: int, headers: Dict[str, str], payload: Any) -> Any:
