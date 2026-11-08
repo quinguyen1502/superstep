@@ -545,3 +545,7 @@ TASK-0276 prepares the owner-authorised 0.12.0 release of integrated develop at 
 ## Studio copyright and version
 
 TASK-0277 shows the handbook copyright line (Superstep, Qui Nguyen, the year) and the running server version from `GET /api/health` on Studio sign-in and list pages. The editor canvas and public chat stay unchanged. **done** (REV-0263, QA-0263) on PR #339.
+
+## React Native package
+
+The owner resumed TASK-0227 on 2026-11-08. `@superstep/react-native` 0.1.0, the Expo example and the `sdk-rn-v*` publish job are done on `factory/task-0227-react-native-package` (REV-0264, QA-0264). Simulator screenshots remain open. No tag or npm publish yet. REQ-0082 stays not done. The 0.12.0 note above still records that this package was outside that release.

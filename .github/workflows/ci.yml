@@ -135,6 +135,24 @@ jobs:
       - run: npm test
         working-directory: .
 
+  react-native:
+    name: React Native package (Jest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            packages/react-native/package-lock.json
+      - name: Install and build the TypeScript SDK
+        run: npm ci --workspace=@superstep/sdk --include-workspace-root=false && npm run build --workspace=@superstep/sdk
+      - name: Test @superstep/react-native
+        working-directory: packages/react-native
+        run: npm ci && npm test
+
   e2e:
     # The Playwright suite (en and vi) on every pull request and push (TASK-0199). Three shards keep each job near
     # five minutes; a shard starts its own backend, Vite, mock chat API and SMTP sink (playwright.config.ts).

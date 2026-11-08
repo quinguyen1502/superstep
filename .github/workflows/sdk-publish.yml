@@ -4,6 +4,7 @@ name: Publish SDKs
 #   v<version>          sdk/python      -> PyPI   "superstep" (same number as the server)
 #   sdk-py-v<version>   sdk/python      -> PyPI   "superstep"
 #   sdk-react-v<version> packages/react -> npm    "@superstep/react"
+#   sdk-rn-v<version>   packages/react-native -> npm "@superstep/react-native"
 #   sdk-ts-v<version>   sdk/typescript  -> npm    "@superstep/sdk"
 # The tag version must equal the package version. A v* tag must also equal
 # backend/pyproject.toml. Nothing is published from branches or pull requests.
@@ -15,7 +16,7 @@ name: Publish SDKs
 #         environment "npm". Provenance uses the id-token permission.
 on:
   push:
-    tags: ["v*", "sdk-py-v*", "sdk-ts-v*", "sdk-react-v*"]
+    tags: ["v*", "sdk-py-v*", "sdk-ts-v*", "sdk-react-v*", "sdk-rn-v*"]
 
 permissions:
   contents: read
@@ -125,5 +126,31 @@ jobs:
       - run: npm run lint --workspace=@superstep/react && npm test --workspace=@superstep/react
       - run: npm pack --dry-run --workspace=@superstep/react
       - run: npm publish --workspace=@superstep/react --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  react-native:
+    if: startsWith(github.ref_name, 'sdk-rn-v')
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Install and build the TypeScript SDK
+        run: npm ci --workspace=@superstep/sdk --include-workspace-root=false && npm run build --workspace=@superstep/sdk
+      - name: Tag matches the React Native package version
+        working-directory: packages/react-native
+        run: |
+          v=$(node -p "require('./package.json').version")
+          [ "sdk-rn-v$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != package $v"; exit 1; }
+      - name: Test, pack and publish
+        working-directory: packages/react-native
+        run: npm ci && npm test && npm run build && npm pack --dry-run && npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

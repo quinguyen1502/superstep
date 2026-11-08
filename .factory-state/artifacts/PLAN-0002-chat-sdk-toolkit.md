@@ -43,7 +43,7 @@ Owner amendment on 2026-11-02: Python now shares version 0.10.2 with CLI/server,
 | TASK-0224 `useChat`, components, theming | 3 | M | 0220, 0223 | public components, scoped CSS, `sdk-react-v*` publish |
 | TASK-0225 widget JS API | 3 | M | 0218, 0223 | `window.Superstep`, events, theming, `identify` |
 | TASK-0226 web docs and examples | 3 | S | 0224, 0225 | handbook pages, e2e pages |
-| TASK-0227 `@superstep/react-native` | deferred | L | 0220 | RN components, Expo example, `sdk-rn-v*` publish |
+| TASK-0227 `@superstep/react-native` | done 2026-11-08; screenshots still open | L | 0220 | RN components, Expo example, `sdk-rn-v*` publish |
 | TASK-0228 native WebView guide and bridge | resumed 2026-11-07 | M | 0225 | bridge protocol, Swift and Kotlin guide, browser e2e; done on its task PR (REV/QA-0245) |
 | TASK-0229 edit message | 0.11.0 priority | L | 0216 | DEC-0084 Accepted; shared branch foundation + edit merged (#292, 42333ffc) |
 | TASK-0230 regenerate answer | 0.11.0 priority | M | 0229 | DEC-0084 Accepted; regeneration merged (#293, d2119965) |
@@ -156,3 +156,9 @@ Both revision tasks are integrated: #292 at 42333ffc and #293 at d2119965, each 
 ## Owner 0.11.0 Release Instruction
 
 After reviewing candidate #294 and its feature summary, the owner explicitly instructed “Phát hành đi”. This accepts TASK-0238 and authorises #294 integration, develop-to-main release merge, v0.11.0 and independent SDK tags, GitHub Release and configured registry publication. Reviewed e8b21129 has 22 successful checks/two expected skips; local full 8/8, artifact/migration/handbook checks pass. Final lifecycle-only head must pass exact-head CI before merging; publication outcomes are checked separately. This supersedes pending-owner/release statements for this candidate, while native TASK-0227/0228 and overall REQ-0082 remain incomplete.
+
+## TASK-0227 resumed (2026-11-08)
+
+The owner asked to implement TASK-0227 ("triển khai 227"). Earlier sentences that say native work remains deferred stay as history. TASK-0228 stays done. REQ-0082 stays Accepted and incomplete until the owner says otherwise. No `sdk-rn-v*` tag and no npm publish are authorised by this resume.
+
+2026-11-08 finish-pr: the task is done on this branch with REV-0264 and QA-0264. The simulator and emulator screenshots stay open. No tag and no npm publish.
