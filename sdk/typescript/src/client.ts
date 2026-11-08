@@ -13,6 +13,8 @@ export type StartRunRequest = Schemas['StartRunRequest']
 export type RunStatus = RunResult['status']
 /** A run as returned by `run()` and `getRun()`. A just-queued run has only `run_id`, `status` and `poll_url`. */
 export type Run = Partial<Omit<RunResult, 'run_id' | 'status'>> & { run_id: string; status: RunStatus; poll_url?: string }
+export type Schedule = Schemas['Schedule']
+export type ScheduleDeleted = Schemas['ScheduleDeleted']
 
 export const VERSION = '0.2.0'
 const PENDING: readonly RunStatus[] = ['queued', 'running']
@@ -47,6 +49,19 @@ export interface WaitOptions extends RequestOptions {
   backoff?: number
 }
 export interface RunAndWaitOptions extends WaitOptions { callbackUrl?: string }
+export interface ScheduleWrite extends RequestOptions {
+  name?: string
+  timezone?: string
+  input?: Record<string, unknown>
+  enabled?: boolean
+}
+export interface ScheduleChange {
+  name?: string
+  cron?: string
+  timezone?: string
+  input?: Record<string, unknown>
+  enabled?: boolean
+}
 
 type Env = Record<string, string | undefined>
 const env = (): Env => (globalThis as { process?: { env?: Env } }).process?.env ?? {}
@@ -127,13 +142,51 @@ export class Superstep {
     return isDone(started) ? started : this.wait(started.run_id, options)
   }
 
+  /** Schedules of this workflow. */
+  listSchedules(options: RequestOptions = {}): Promise<Schedule[]> {
+    return this.sendData('GET', this.schedulesUrl(), options.signal)
+  }
+
+  /** Create a cron schedule. Each fire starts a run as the token's owner. */
+  createSchedule(cron: string, options: ScheduleWrite = {}): Promise<Schedule> {
+    const body = { name: options.name ?? 'Schedule', cron, timezone: options.timezone ?? 'UTC', input: options.input ?? {}, enabled: options.enabled ?? true }
+    return this.sendData('POST', this.schedulesUrl(), options.signal, body)
+  }
+
+  /** Change the fields you pass. Omitted fields stay as they are. */
+  updateSchedule(scheduleId: string, change: ScheduleChange = {}, options: RequestOptions = {}): Promise<Schedule> {
+    return this.sendData('PATCH', this.schedulesUrl(scheduleId), options.signal, scheduleChange(change))
+  }
+
+  /** Delete one schedule. Runs it already started stay in the history. */
+  deleteSchedule(scheduleId: string, options: RequestOptions = {}): Promise<ScheduleDeleted> {
+    return this.sendData('DELETE', this.schedulesUrl(scheduleId), options.signal)
+  }
+
+  /** Next fire times as Unix seconds. Nothing is stored. */
+  async previewSchedule(cron: string, options: ScheduleWrite = {}): Promise<number[]> {
+    const data = await this.sendData<{ next_runs: number[] }>('POST', this.schedulesUrl(undefined, true), options.signal, { cron, timezone: options.timezone ?? 'UTC' })
+    return data.next_runs
+  }
+
   private runsUrl(runId?: string): string {
     if (!this.workflowId || !this.token) throw new ConfigError('Workflow runs require workflowId and token', { code: 'CONFIG_MISSING' })
     const url = `${this.baseUrl}/api/hooks/workflows/${encodeURIComponent(this.workflowId)}/runs`
     return runId ? `${url}/${encodeURIComponent(runId)}` : url
   }
 
-  private async send(method: string, url: string, signal?: AbortSignal, body?: unknown): Promise<Run> {
+  private schedulesUrl(scheduleId?: string, preview = false): string {
+    if (!this.workflowId || !this.token) throw new ConfigError('Workflow schedules require workflowId and token', { code: 'CONFIG_MISSING' })
+    const url = `${this.baseUrl}/api/hooks/workflows/${encodeURIComponent(this.workflowId)}/schedules`
+    if (preview) return `${url}/preview`
+    return scheduleId ? `${url}/${encodeURIComponent(scheduleId)}` : url
+  }
+
+  private send(method: string, url: string, signal?: AbortSignal, body?: unknown): Promise<Run> {
+    return this.sendData<Run>(method, url, signal, body)
+  }
+
+  private async sendData<T>(method: string, url: string, signal?: AbortSignal, body?: unknown): Promise<T> {
     const headers: Record<string, string> = { 'X-Workflow-Token': this.token, Accept: 'application/json' }
     if (body !== undefined) headers['Content-Type'] = 'application/json'
     let res: Response
@@ -143,6 +196,16 @@ export class Superstep {
       if (signal?.aborted) throw err  // let AbortError through unchanged
       throw new APIConnectionError(err instanceof Error ? err.message : String(err), { code: 'CONNECTION_ERROR' })
     }
-    return envelope<Run>(res)
+    return envelope<T>(res)
   }
+}
+
+const SCHEDULE_FIELDS = ['name', 'cron', 'timezone', 'input', 'enabled'] as const
+
+function scheduleChange(change: ScheduleChange): Record<string, unknown> {
+  const unknown = Object.keys(change).filter((key) => !(SCHEDULE_FIELDS as readonly string[]).includes(key))
+  if (unknown.length) throw new TypeError(`Unknown schedule field: ${unknown.join(', ')}`)
+  const body: Record<string, unknown> = {}
+  for (const key of SCHEDULE_FIELDS) if (change[key] !== undefined) body[key] = change[key]
+  return body
 }

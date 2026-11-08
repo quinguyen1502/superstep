@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from ._base import DEFAULT_TIMEOUT, Config, parse, poll_delays, start_body
+from ._base import DEFAULT_TIMEOUT, Config, parse, poll_delays, schedule_body, schedule_patch, start_body, unwrap
 from ._chat import AsyncChatClient, ChatClient
 from ._errors import APIConnectionError, WaitTimeoutError
 from ._models import Run
@@ -49,10 +49,16 @@ class Client(_Common):
         self._http = http_client or httpx.Client(timeout=timeout)
         self._owns_http = http_client is None
 
-    def _send(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Run:
+    def _call(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Any:
         try: r = self._http.request(method, url, json=body, headers=self.config.headers)
         except httpx.HTTPError as e: raise APIConnectionError(str(e) or type(e).__name__, code="CONNECTION_ERROR") from e
-        return parse(r.status_code, dict(r.headers), _json(r))
+        return r.status_code, dict(r.headers), _json(r)
+
+    def _send(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Run:
+        return parse(*self._call(method, url, body))
+
+    def _data(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Any:
+        return unwrap(*self._call(method, url, body))
 
     def chat(self, slug: str, **options) -> ChatClient:
         chat = ChatClient(slug, base_url=self.config.base_url, http_client=self._http, **options)
@@ -82,6 +88,27 @@ class Client(_Common):
         if started.done: return started
         return self.wait(started.run_id, timeout=timeout, poll_interval=poll_interval, max_poll_interval=max_poll_interval, backoff=backoff)
 
+    def list_schedules(self) -> Any:
+        """Schedules of this workflow."""
+        return self._data("GET", self.config.schedules_url())
+
+    def create_schedule(self, cron: str, *, name: str = "Schedule", timezone: str = "UTC", input: Optional[Dict[str, Any]] = None,
+                        enabled: bool = True) -> Dict[str, Any]:
+        """Create a cron schedule. Each fire starts a run as the token's owner."""
+        return self._data("POST", self.config.schedules_url(), schedule_body(cron, name=name, timezone=timezone, input=input, enabled=enabled))
+
+    def update_schedule(self, schedule_id: str, **fields: Any) -> Dict[str, Any]:
+        """Change the fields you pass. Omitted fields stay as they are."""
+        return self._data("PATCH", self.config.schedules_url(schedule_id), schedule_patch(fields))
+
+    def delete_schedule(self, schedule_id: str) -> Dict[str, Any]:
+        """Delete one schedule. Runs it already started stay in the history."""
+        return self._data("DELETE", self.config.schedules_url(schedule_id))
+
+    def preview_schedule(self, cron: str, *, timezone: str = "UTC") -> list:
+        """Next fire times as Unix seconds. Nothing is stored."""
+        return self._data("POST", self.config.schedules_url(preview=True), {"cron": cron, "timezone": timezone})["next_runs"]
+
     def close(self) -> None:
         for chat in self._chats: chat.close()
         if self._owns_http: self._http.close()
@@ -100,10 +127,16 @@ class AsyncClient(_Common):
         self._http = http_client or httpx.AsyncClient(timeout=timeout)
         self._owns_http = http_client is None
 
-    async def _send(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Run:
+    async def _call(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Any:
         try: r = await self._http.request(method, url, json=body, headers=self.config.headers)
         except httpx.HTTPError as e: raise APIConnectionError(str(e) or type(e).__name__, code="CONNECTION_ERROR") from e
-        return parse(r.status_code, dict(r.headers), _json(r))
+        return r.status_code, dict(r.headers), _json(r)
+
+    async def _send(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Run:
+        return parse(*await self._call(method, url, body))
+
+    async def _data(self, method: str, url: str, body: Optional[Dict[str, Any]] = None) -> Any:
+        return unwrap(*await self._call(method, url, body))
 
     def chat(self, slug: str, **options) -> AsyncChatClient:
         chat = AsyncChatClient(slug, base_url=self.config.base_url, http_client=self._http, **options)
@@ -129,6 +162,22 @@ class AsyncClient(_Common):
         started = await self.run(input, callback_url=callback_url)
         if started.done: return started
         return await self.wait(started.run_id, timeout=timeout, poll_interval=poll_interval, max_poll_interval=max_poll_interval, backoff=backoff)
+
+    async def list_schedules(self) -> Any:
+        return await self._data("GET", self.config.schedules_url())
+
+    async def create_schedule(self, cron: str, *, name: str = "Schedule", timezone: str = "UTC", input: Optional[Dict[str, Any]] = None,
+                              enabled: bool = True) -> Dict[str, Any]:
+        return await self._data("POST", self.config.schedules_url(), schedule_body(cron, name=name, timezone=timezone, input=input, enabled=enabled))
+
+    async def update_schedule(self, schedule_id: str, **fields: Any) -> Dict[str, Any]:
+        return await self._data("PATCH", self.config.schedules_url(schedule_id), schedule_patch(fields))
+
+    async def delete_schedule(self, schedule_id: str) -> Dict[str, Any]:
+        return await self._data("DELETE", self.config.schedules_url(schedule_id))
+
+    async def preview_schedule(self, cron: str, *, timezone: str = "UTC") -> list:
+        return (await self._data("POST", self.config.schedules_url(preview=True), {"cron": cron, "timezone": timezone}))["next_runs"]
 
     async def aclose(self) -> None:
         for chat in self._chats: await chat.aclose()

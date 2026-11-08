@@ -11,11 +11,12 @@ from fastapi.openapi.utils import get_openapi
 from .routes.hooks import PUBLIC_TAG, router as hooks_router
 from .routes.public_chat import CHAT_TAG, v1_router
 
-TITLE, VERSION = "Superstep public API", "1.1.0"
-DESCRIPTION = """Start workflow runs from other services and read their results, and talk to a published chat.
+TITLE, VERSION = "Superstep public API", "1.2.0"
+DESCRIPTION = """Start workflow runs from other services, manage that workflow's schedules, and talk to a published chat.
 
 Authenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner
-creates tokens in the editor under **⋯ → API**; each token starts runs of one workflow only.
+creates tokens in the editor under **⋯ → API**; each token acts on one workflow only. A schedule it creates runs as
+the token's owner.
 
 Every response is an envelope: `{"success": true, "data": …, "error": null}` or
 `{"success": false, "data": null, "error": {"code", "message", "details"}}`. `code` is the stable contract.
@@ -30,7 +31,7 @@ CHAT_DESCRIPTION = "Chat API v1: a published chat page, its chats, files and rat
 
 def public_openapi() -> dict:
     spec = get_openapi(title=TITLE, version=VERSION, description=DESCRIPTION, routes=hooks_router.routes + v1_router.routes,
-                       tags=[{"name": PUBLIC_TAG, "description": "Workflow-trigger API for external callers (workflow token)."},
+                       tags=[{"name": PUBLIC_TAG, "description": "Workflow-trigger API for external callers (workflow token): runs and schedules."},
                              {"name": CHAT_TAG, "description": CHAT_DESCRIPTION}])
     schemes = spec["components"].setdefault("securitySchemes", {})
     schemes["ChatUserToken"] = {"type": "http", "scheme": "bearer", "bearerFormat": "JWT",

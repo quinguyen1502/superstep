@@ -200,6 +200,24 @@ whatever its final status; check `run.status`.
 `callback_url=` on `run()` and `run_and_wait()` asks the server to POST the
 result to your URL when the run ends.
 
+## Schedules
+
+A workflow token lists, creates, updates, deletes and previews cron schedules
+of its own workflow. A schedule runs as the token's owner.
+`preview_schedule` returns the next fire times and stores nothing.
+
+```python
+schedule = client.create_schedule(
+    "0 9 * * MON-FRI", name="Morning", timezone="Asia/Ho_Chi_Minh", input={"message": "hi"})
+client.update_schedule(schedule["id"], enabled=False)
+times = client.preview_schedule("@daily", timezone="UTC")
+client.delete_schedule(schedule["id"])
+```
+
+`list_schedules()` returns the workflow's schedules. `AsyncClient` has the
+same methods as coroutines. `SCHEDULE_CRON_INVALID` and `SCHEDULE_LIMIT` raise
+`InvalidRequestError`. `SCHEDULE_NOT_FOUND` raises `NotFoundError`.
+
 ## Async
 
 ```python
@@ -222,8 +240,8 @@ API's stable error code), `status`, `message` and `details`.
 | Exception | When |
 | --- | --- |
 | `AuthenticationError` | `401 TRIGGER_TOKEN_INVALID`: missing, wrong or revoked token, or a token of another workflow |
-| `NotFoundError` | `404 RUN_NOT_FOUND` |
-| `InvalidRequestError` | `400 RUN_INPUT_INVALID`, `CALLBACK_URL_INVALID`; `422 VALIDATION_ERROR` |
+| `NotFoundError` | `404 RUN_NOT_FOUND`, `SCHEDULE_NOT_FOUND` |
+| `InvalidRequestError` | `400 RUN_INPUT_INVALID`, `CALLBACK_URL_INVALID`, `SCHEDULE_CRON_INVALID`, `SCHEDULE_LIMIT`; `422 VALIDATION_ERROR` |
 | `PayloadTooLargeError` | `413 RUN_INPUT_TOO_LARGE` |
 | `RateLimitError` | `429 RATE_LIMITED`; `retry_after` holds the seconds to wait |
 | `ServerError` | `5xx` |

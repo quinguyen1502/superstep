@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Superstep public API",
-    "description": "Start workflow runs from other services and read their results, and talk to a published chat.\n\nAuthenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner\ncreates tokens in the editor under **⋯ → API**; each token starts runs of one workflow only.\n\nEvery response is an envelope: `{\"success\": true, \"data\": …, \"error\": null}` or\n`{\"success\": false, \"data\": null, \"error\": {\"code\", \"message\", \"details\"}}`. `code` is the stable contract.\n\n**Chat API v1** (`/api/public/v1/chat/{slug}`): the published chat page of a workflow. An anonymous visitor is identified\nby a visitor token: send `X-Chat-Visitor: new` once, keep the `visitor_token` of the answer and send it back in\n`X-Chat-Visitor`. Messages are sent over the WebSocket `/ws/public/v1/chat/{slug}`. Clients must ignore fields they do\nnot know: v1 only grows.\n",
-    "version": "1.1.0"
+    "description": "Start workflow runs from other services, manage that workflow's schedules, and talk to a published chat.\n\nAuthenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner\ncreates tokens in the editor under **⋯ → API**; each token acts on one workflow only. A schedule it creates runs as\nthe token's owner.\n\nEvery response is an envelope: `{\"success\": true, \"data\": …, \"error\": null}` or\n`{\"success\": false, \"data\": null, \"error\": {\"code\", \"message\", \"details\"}}`. `code` is the stable contract.\n\n**Chat API v1** (`/api/public/v1/chat/{slug}`): the published chat page of a workflow. An anonymous visitor is identified\nby a visitor token: send `X-Chat-Visitor: new` once, keep the `visitor_token` of the answer and send it back in\n`X-Chat-Visitor`. Messages are sent over the WebSocket `/ws/public/v1/chat/{slug}`. Clients must ignore fields they do\nnot know: v1 only grows.\n",
+    "version": "1.2.0"
   },
   "paths": {
     "/api/hooks/workflows/{wid}/runs": {
@@ -283,6 +283,674 @@
                       "error": {
                         "code": "RUN_NOT_FOUND",
                         "message": "Run not found, already finished or not yours"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hooks/workflows/{wid}/schedules": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "List schedules",
+        "description": "Schedules of this workflow. A workflow token sees only its own workflow.",
+        "operationId": "listSchedules",
+        "security": [
+          {
+            "WorkflowToken": []
+          },
+          {
+            "WorkflowBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow id (shown in the editor URL and the API dialog).",
+              "examples": [
+                "example"
+              ],
+              "title": "Wid"
+            },
+            "description": "Workflow id (shown in the editor URL and the API dialog)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The workflow's schedules, soonest unchanged.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleListEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "TRIGGER_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "TRIGGER_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TRIGGER_TOKEN_INVALID",
+                        "message": "Missing, invalid or revoked workflow token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Create a schedule",
+        "description": "Create a cron schedule. Each fire starts a run with `input` as the schedule's owner (the token owner).\n\nAt most 20 schedules per workflow. A missed time fires once and is not replayed.",
+        "operationId": "createSchedule",
+        "security": [
+          {
+            "WorkflowToken": []
+          },
+          {
+            "WorkflowBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow id (shown in the editor URL and the API dialog).",
+              "examples": [
+                "example"
+              ],
+              "title": "Wid"
+            },
+            "description": "Workflow id (shown in the editor URL and the API dialog)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The schedule. The first fire is `next_runs[0]` when it is enabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "TRIGGER_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "TRIGGER_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TRIGGER_TOKEN_INVALID",
+                        "message": "Missing, invalid or revoked workflow token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "SCHEDULE_CRON_INVALID, SCHEDULE_LIMIT, RUN_INPUT_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "SCHEDULE_CRON_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SCHEDULE_CRON_INVALID",
+                        "message": "Schedule: invalid expression"
+                      }
+                    }
+                  },
+                  "SCHEDULE_LIMIT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SCHEDULE_LIMIT",
+                        "message": "A workflow can have at most 5 schedules"
+                      }
+                    }
+                  },
+                  "RUN_INPUT_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RUN_INPUT_INVALID",
+                        "message": "Run input must be a JSON object"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "RUN_INPUT_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RUN_INPUT_TOO_LARGE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RUN_INPUT_TOO_LARGE",
+                        "message": "Run input is too large (max 256 KB)"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hooks/workflows/{wid}/schedules/preview": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Preview a schedule",
+        "description": "Next fire times of a cron expression in an IANA time zone. Requires a token for this workflow and stores nothing.",
+        "operationId": "previewSchedule",
+        "security": [
+          {
+            "WorkflowToken": []
+          },
+          {
+            "WorkflowBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow id (shown in the editor URL and the API dialog).",
+              "examples": [
+                "example"
+              ],
+              "title": "Wid"
+            },
+            "description": "Workflow id (shown in the editor URL and the API dialog)."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePreview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The next fire times. Nothing is stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchedulePreviewEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "TRIGGER_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "TRIGGER_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TRIGGER_TOKEN_INVALID",
+                        "message": "Missing, invalid or revoked workflow token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "SCHEDULE_CRON_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "SCHEDULE_CRON_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SCHEDULE_CRON_INVALID",
+                        "message": "Schedule: invalid expression"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hooks/workflows/{wid}/schedules/{sid}": {
+      "patch": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Update a schedule",
+        "description": "Change the fields you send. Omitted fields stay as they are. Turning a schedule on clears its off note.",
+        "operationId": "updateSchedule",
+        "security": [
+          {
+            "WorkflowToken": []
+          },
+          {
+            "WorkflowBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow id (shown in the editor URL and the API dialog).",
+              "examples": [
+                "example"
+              ],
+              "title": "Wid"
+            },
+            "description": "Workflow id (shown in the editor URL and the API dialog)."
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Schedule id returned when the schedule was created.",
+              "examples": [
+                "a1b2c3d4e5"
+              ],
+              "title": "Sid"
+            },
+            "description": "Schedule id returned when the schedule was created."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The schedule after the change.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "TRIGGER_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "TRIGGER_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TRIGGER_TOKEN_INVALID",
+                        "message": "Missing, invalid or revoked workflow token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SCHEDULE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "SCHEDULE_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SCHEDULE_NOT_FOUND",
+                        "message": "Schedule not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "SCHEDULE_CRON_INVALID, RUN_INPUT_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "SCHEDULE_CRON_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SCHEDULE_CRON_INVALID",
+                        "message": "Schedule: invalid expression"
+                      }
+                    }
+                  },
+                  "RUN_INPUT_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RUN_INPUT_INVALID",
+                        "message": "Run input must be a JSON object"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "RUN_INPUT_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RUN_INPUT_TOO_LARGE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RUN_INPUT_TOO_LARGE",
+                        "message": "Run input is too large (max 256 KB)"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Delete a schedule",
+        "description": "Delete one schedule of this workflow. Runs it already started are left in the history.",
+        "operationId": "deleteSchedule",
+        "security": [
+          {
+            "WorkflowToken": []
+          },
+          {
+            "WorkflowBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Workflow id (shown in the editor URL and the API dialog).",
+              "examples": [
+                "example"
+              ],
+              "title": "Wid"
+            },
+            "description": "Workflow id (shown in the editor URL and the API dialog)."
+          },
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Schedule id returned when the schedule was created.",
+              "examples": [
+                "a1b2c3d4e5"
+              ],
+              "title": "Sid"
+            },
+            "description": "Schedule id returned when the schedule was created."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The schedule is gone.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleDeletedEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "TRIGGER_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "TRIGGER_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TRIGGER_TOKEN_INVALID",
+                        "message": "Missing, invalid or revoked workflow token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SCHEDULE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "SCHEDULE_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SCHEDULE_NOT_FOUND",
+                        "message": "Schedule not found"
                       }
                     }
                   }
@@ -4117,6 +4785,363 @@
         "title": "RunWaiting",
         "description": "Set when status is `waiting`: the Human node the run is paused at, or the child run of a workflow tool it waits for."
       },
+      "Schedule": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "examples": [
+              "a1b2c3d4e5"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "cron": {
+            "type": "string",
+            "title": "Cron",
+            "description": "Five-field cron expression, or a macro such as `@daily`.",
+            "examples": [
+              "0 9 * * MON-FRI"
+            ]
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "description": "IANA time zone.",
+            "examples": [
+              "Asia/Ho_Chi_Minh"
+            ]
+          },
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input",
+            "description": "Initial state of each run this schedule starts."
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "next_runs": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Next Runs",
+            "description": "Upcoming fire times as Unix seconds. Empty while the schedule is off."
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run",
+            "description": "Unix seconds of the last fire, if any."
+          },
+          "last_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run Id"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note",
+            "description": "Why the scheduler turned the schedule off, when it did."
+          },
+          "created": {
+            "type": "number",
+            "title": "Created",
+            "description": "Unix seconds."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "cron",
+          "timezone",
+          "input",
+          "enabled",
+          "next_runs",
+          "created"
+        ],
+        "title": "Schedule",
+        "description": "One cron schedule of the workflow. A due schedule starts a run as the token's owner."
+      },
+      "ScheduleDeleted": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true,
+            "title": "Ok",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "ScheduleDeleted"
+      },
+      "ScheduleDeletedEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/ScheduleDeleted"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ScheduleDeletedEnvelope",
+        "description": "Success envelope of a deleted schedule."
+      },
+      "ScheduleEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ScheduleEnvelope",
+        "description": "Success envelope carrying one schedule."
+      },
+      "ScheduleIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Name",
+            "default": "Schedule"
+          },
+          "cron": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Cron"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Timezone",
+            "default": "UTC"
+          },
+          "input": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "cron"
+        ],
+        "title": "ScheduleIn"
+      },
+      "ScheduleListEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Schedule"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ScheduleListEnvelope",
+        "description": "Success envelope carrying the workflow's schedules."
+      },
+      "SchedulePatch": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "cron": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cron"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "title": "SchedulePatch"
+      },
+      "SchedulePreview": {
+        "properties": {
+          "cron": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Cron"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Timezone",
+            "default": "UTC"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cron"
+        ],
+        "title": "SchedulePreview"
+      },
+      "SchedulePreviewEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "$ref": "#/components/schemas/SchedulePreviewResult"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "SchedulePreviewEnvelope",
+        "description": "Success envelope of a cron preview."
+      },
+      "SchedulePreviewResult": {
+        "properties": {
+          "next_runs": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Next Runs",
+            "description": "The next fire times of the expression, as Unix seconds."
+          }
+        },
+        "type": "object",
+        "required": [
+          "next_runs"
+        ],
+        "title": "SchedulePreviewResult",
+        "description": "Next fire times of a cron expression. Preview stores nothing."
+      },
       "StartRunRequest": {
         "properties": {
           "input": {
@@ -4195,7 +5220,7 @@
   "tags": [
     {
       "name": "public",
-      "description": "Workflow-trigger API for external callers (workflow token)."
+      "description": "Workflow-trigger API for external callers (workflow token): runs and schedules."
     },
     {
       "name": "Chat",

@@ -121,7 +121,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
   - `check_callback_url`, the SSRF guard.
 - `services/run_worker.py`: `RunWorker` dequeues a job, skips it if it is no longer `queued`, sets it to `running`, then calls `RunService.plan` and `execute` (no socket: `send` is a no-op and cancel comes via the RunBus), then delivers the webhook.
   - Started by the app lifespan when `STUDIO_WORKER` is not `0`; `app/worker.py` runs it standalone.
-- Routes: `api/routes/triggers.py` (owner, JWT) and `api/routes/hooks.py` (public, workflow token; tag `public`). `api/openapi_public.py` builds the public-only spec from `hooks.py` (`/openapi.public.json`, `/docs/public`, `docs/api/openapi.public.json`).
+- Routes: `api/routes/triggers.py` (owner, JWT) and `api/routes/hooks.py` (public, workflow token; tag `public`). The public routes also list, create, update, delete and preview that workflow's schedules; the token owner is the schedule owner. `api/openapi_public.py` builds the public-only spec from `hooks.py` (`/openapi.public.json`, `/docs/public`, `docs/api/openapi.public.json`).
 
 ## Workflow versions (TASK-0008, DEC-0015)
 

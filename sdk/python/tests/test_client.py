@@ -98,3 +98,34 @@ def test_poll_delays():
     d = poll_delays(0.5, 2, 2)
     assert [next(d) for _ in range(5)] == [0.5, 1, 2, 2, 2]
     with pytest.raises(ValueError): next(poll_delays(0, 1, 1))
+
+
+SCHEDULE = {"id": "s1", "name": "Morning", "cron": "0 9 * * MON-FRI", "timezone": "Asia/Ho_Chi_Minh", "input": {"message": "hi"},
+            "enabled": True, "next_runs": [1.0], "last_run": None, "last_run_id": None, "note": None, "created": 1.0}
+
+
+def test_schedules_call_the_public_paths(no_env):
+    rec = Recorder(env(SCHEDULE, 201), env([SCHEDULE]), env({**SCHEDULE, "enabled": False}), env({"ok": True}), env({"next_runs": [9.0, 10.0]}))
+    client = make(rec)
+    created = client.create_schedule("0 9 * * MON-FRI", name="Morning", timezone="Asia/Ho_Chi_Minh", input={"message": "hi"})
+    assert created["id"] == "s1" and rec.requests[0].method == "POST" and str(rec.requests[0].url).endswith("/schedules")
+    assert rec.body() == {"name": "Morning", "cron": "0 9 * * MON-FRI", "timezone": "Asia/Ho_Chi_Minh", "input": {"message": "hi"}, "enabled": True}
+    assert client.list_schedules()[0]["id"] == "s1" and rec.requests[1].method == "GET"
+    assert client.update_schedule("s 1", enabled=False)["enabled"] is False
+    assert rec.requests[2].method == "PATCH" and str(rec.requests[2].url).endswith("/schedules/s%201") and rec.body(2) == {"enabled": False}
+    assert client.delete_schedule("s1") == {"ok": True} and rec.requests[3].method == "DELETE"
+    assert client.preview_schedule("@daily") == [9.0, 10.0]
+    assert rec.requests[4].method == "POST" and str(rec.requests[4].url).endswith("/schedules/preview") and rec.body(4) == {"cron": "@daily", "timezone": "UTC"}
+    with pytest.raises(TypeError): client.update_schedule("s1", colour="red")
+
+
+@pytest.mark.parametrize("code,call", [
+    ("SCHEDULE_CRON_INVALID", lambda c: c.create_schedule("nope")),
+    ("SCHEDULE_LIMIT", lambda c: c.create_schedule("@daily")),
+    ("SCHEDULE_NOT_FOUND", lambda c: c.delete_schedule("missing"))])
+def test_schedule_errors_are_typed(no_env, code, call):
+    status = 404 if code == "SCHEDULE_NOT_FOUND" else 400
+    cls = NotFoundError if status == 404 else InvalidRequestError
+    with pytest.raises(cls) as e:
+        call(make(Recorder(err(code, status))))
+    assert e.value.code == code

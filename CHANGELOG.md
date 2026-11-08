@@ -2,6 +2,12 @@
 
 All notable changes to Superstep. Versions follow [Semantic Versioning](https://semver.org/); dates are in UTC+7.
 
+## Unreleased
+
+### Added
+
+- **Public schedule API.** A workflow token can list, create, update, delete and preview cron schedules of its own workflow (`/api/hooks/workflows/{wid}/schedules`). The Python and TypeScript clients gain the matching methods. Package versions are unchanged. A schedule still runs as the token's owner, and it fires only while a worker is running.
+
 ## 0.12.0 (2026-11-07)
 
 ### Added

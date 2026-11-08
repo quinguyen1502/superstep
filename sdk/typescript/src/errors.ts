@@ -31,9 +31,9 @@ export class APIConnectionError extends SuperstepError {}
 export class AuthenticationError extends SuperstepError {}
 /** 403: the authenticated caller is not allowed to use this resource or origin. */
 export class PermissionDeniedError extends SuperstepError {}
-/** 404, e.g. RUN_NOT_FOUND. */
+/** 404, e.g. RUN_NOT_FOUND or SCHEDULE_NOT_FOUND. */
 export class NotFoundError extends SuperstepError {}
-/** 400 / 422: RUN_INPUT_INVALID, CALLBACK_URL_INVALID, VALIDATION_ERROR (see `details`). */
+/** 400 / 422: RUN_INPUT_INVALID, SCHEDULE_CRON_INVALID, SCHEDULE_LIMIT, VALIDATION_ERROR (see `details`). */
 export class InvalidRequestError extends SuperstepError {}
 /** 413 RUN_INPUT_TOO_LARGE. */
 export class PayloadTooLargeError extends SuperstepError {}
@@ -72,6 +72,9 @@ export const BY_CODE: Record<string, ErrorClass> = {
   PAYLOAD_TOO_LARGE: PayloadTooLargeError,
   RATE_LIMITED: RateLimitError,
   INTERNAL_ERROR: ServerError,
+  SCHEDULE_NOT_FOUND: NotFoundError,
+  SCHEDULE_CRON_INVALID: InvalidRequestError,
+  SCHEDULE_LIMIT: InvalidRequestError,
   // the Chat API v1 (TASK-0215)
   CHAT_NOT_PUBLISHED: NotFoundError,
   CHAT_SESSION_NOT_FOUND: NotFoundError,

@@ -31,3 +31,13 @@ async def test_async_errors_and_timeout(no_env, no_async_sleep):
         await make(Recorder(err("TRIGGER_TOKEN_INVALID", 401))).get_run("r1")
     with pytest.raises(WaitTimeoutError):
         await make(Recorder(env(QUEUED, 202), env(RUNNING))).run_and_wait({}, timeout=0)
+
+
+async def test_async_schedules(no_env):
+    rec = Recorder(env({"id": "s1", "enabled": True}, 201), env({"next_runs": [9.0]}))
+    async with make(rec) as client:
+        created = await client.create_schedule("@daily", name="Nightly")
+        times = await client.preview_schedule("0 9 * * MON-FRI", timezone="Asia/Ho_Chi_Minh")
+    assert created["id"] == "s1" and times == [9.0]
+    assert rec.body() == {"name": "Nightly", "cron": "@daily", "timezone": "UTC", "input": {}, "enabled": True}
+    assert str(rec.requests[1].url).endswith("/schedules/preview")

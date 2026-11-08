@@ -6,16 +6,17 @@ mô tả workflow và chat headless. Phần chat đã có trong mã nguồn, ch�
 hành package tiếp theo được chủ dự án duyệt.
 
 Dịch vụ khác khởi chạy workflow qua HTTP bằng **token của workflow**, rồi hỏi
-lại (poll) để lấy kết quả. Trang này mô tả hai endpoint công khai, SDK chính
-thức cho Python và TypeScript, và các lỗi cần xử lý. Callback, chữ ký và lịch
-sử gửi webhook nằm ở [API trigger và webhook](api-triggers.md). Mọi trường đều
-có trong [Tham chiếu API công khai](../reference/public-api.md).
+lại (poll) để lấy kết quả. Cùng token đó quản lý lịch chạy của workflow. Trang
+này mô tả các endpoint công khai đó, SDK chính thức cho Python và TypeScript,
+và các lỗi cần xử lý. Callback, chữ ký và lịch sử gửi webhook nằm ở
+[API trigger và webhook](api-triggers.md). Mọi trường đều có trong
+[Tham chiếu API công khai](../reference/public-api.md).
 
 ## Khái niệm
 
 | Thuật ngữ | Nghĩa |
 | --- | --- |
-| Token của workflow | Secret `wft_...` chỉ khởi chạy được run của **một** workflow. Gửi dưới dạng `X-Workflow-Token: wft_...` hoặc `Authorization: Bearer wft_...`. Ngoài các endpoint này, token chỉ dùng được với [API tương thích LangGraph](agent-server-api.md) và [MCP server](mcp-server.md) của cùng workflow. |
+| Token của workflow | Secret `wft_...` cho **một** workflow. Gửi dưới dạng `X-Workflow-Token: wft_...` hoặc `Authorization: Bearer wft_...`. Token khởi chạy run và quản lý lịch chạy của workflow đó. Token cũng dùng được với [API tương thích LangGraph](agent-server-api.md) và [MCP server](mcp-server.md) của cùng workflow. |
 | Run | Một lần thực thi phiên bản đã lưu mới nhất của workflow. `input` là state ban đầu. |
 | Trạng thái | `queued` và `running` khi đang chạy; sau đó là `ok`, `error`, `cancelled`, `timeout`, `waiting` (dừng ở node Human) hoặc `expired`. |
 | Envelope | Mọi phản hồi đều có dạng `{"success", "data", "error"}`. Khi lỗi, `error.code` là mã ổn định; `error.message` là tiếng Anh, dùng cho log. |
@@ -24,6 +25,11 @@ có trong [Tham chiếu API công khai](../reference/public-api.md).
 | --- | --- | --- |
 | `POST /api/hooks/workflows/{wid}/runs` | `startRun` | Khởi chạy run. Trả `202` kèm `poll_url` và header `Location`, hoặc `200` kèm kết quả ở chế độ `sync`. |
 | `GET /api/hooks/workflows/{wid}/runs/{run_id}` | `getRun` | Trạng thái, và khi đã xong thì có `final_state`, `error`, `metrics`. |
+| `GET /api/hooks/workflows/{wid}/schedules` | `listSchedules` | Các lịch chạy của workflow này. |
+| `POST /api/hooks/workflows/{wid}/schedules` | `createSchedule` | Tạo lịch cron. Trả `201` kèm lịch vừa tạo. |
+| `PATCH /api/hooks/workflows/{wid}/schedules/{sid}` | `updateSchedule` | Đổi các trường được gửi. |
+| `DELETE /api/hooks/workflows/{wid}/schedules/{sid}` | `deleteSchedule` | Xóa một lịch. `data` là `{"ok": true}`. |
+| `POST /api/hooks/workflows/{wid}/schedules/preview` | `previewSchedule` | Các lần chạy tới của một biểu thức. Không lưu gì. |
 
 ## Tạo token
 
@@ -223,6 +229,46 @@ TypeScript hướng tới SDK 0.2.0. Python giữ version chung với CLI/server
 đợt release được duyệt tiếp theo, không hạ version xuống 0.2.0. Publish
 package và tạo release tag cần chủ dự án duyệt riêng.
 
+## Lịch chạy
+
+Token của workflow quản lý lịch cron của đúng workflow đó. Mỗi lần đến giờ,
+hệ thống khởi chạy một run với tư cách chủ token, dùng `input` của lịch. Một
+workflow có tối đa 20 lịch. Các lời gọi này không bị giới hạn tần suất. Khi
+mọi process đều đặt `STUDIO_WORKER=0`, lịch được lưu nhưng không chạy.
+
+=== "curl"
+
+    ```bash
+    curl -X POST "$SUPERSTEP_BASE_URL/api/hooks/workflows/$WID/schedules" \
+      -H "X-Workflow-Token: $SUPERSTEP_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"name":"Morning","cron":"0 9 * * MON-FRI","timezone":"Asia/Ho_Chi_Minh","input":{"message":"hi"}}'
+    ```
+
+=== "Python"
+
+    ```python
+    schedule = client.create_schedule(
+        "0 9 * * MON-FRI", name="Morning", timezone="Asia/Ho_Chi_Minh", input={"message": "hi"})
+    client.update_schedule(schedule["id"], enabled=False)
+    client.preview_schedule("@daily", timezone="UTC")  # thời điểm Unix; không lưu gì
+    client.delete_schedule(schedule["id"])
+    ```
+
+=== "TypeScript"
+
+    ```ts
+    const schedule = await client.createSchedule('0 9 * * MON-FRI', {
+      name: 'Morning', timezone: 'Asia/Ho_Chi_Minh', input: { message: 'hi' },
+    })
+    await client.updateSchedule(schedule.id, { enabled: false })
+    await client.previewSchedule('@daily', { timezone: 'UTC' })  // giây Unix; không lưu gì
+    await client.deleteSchedule(schedule.id)
+    ```
+
+`list_schedules()` / `listSchedules()` trả về các lịch của workflow.
+`preview_schedule` / `previewSchedule` trả về các lần chạy tới.
+
 ## Lỗi
 
 Lỗi dùng envelope và một `code` ổn định:
@@ -236,6 +282,9 @@ Lỗi dùng envelope và một `code` ổn định:
 | --- | --- | --- | --- |
 | 401 | `TRIGGER_TOKEN_INVALID` | Thiếu token, sai, đã thu hồi, hoặc token của workflow khác | `AuthenticationError` |
 | 404 | `RUN_NOT_FOUND` | Run không tồn tại, hoặc thuộc workflow khác | `NotFoundError` |
+| 404 | `SCHEDULE_NOT_FOUND` | Không có lịch này trong workflow | `NotFoundError` |
+| 400 | `SCHEDULE_CRON_INVALID` | Biểu thức cron hoặc múi giờ không hợp lệ | `InvalidRequestError` |
+| 400 | `SCHEDULE_LIMIT` | Workflow đã có 20 lịch | `InvalidRequestError` |
 | 400 | `RUN_INPUT_INVALID` | `input` không phải JSON object | `InvalidRequestError` |
 | 400 | `CALLBACK_URL_INVALID` | `callback_url` không phải URL http(s) công khai | `InvalidRequestError` |
 | 422 | `VALIDATION_ERROR` | Body sai dạng; `details` liệt kê `{field, message}` | `InvalidRequestError` |
