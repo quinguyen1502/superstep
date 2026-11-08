@@ -14,7 +14,7 @@ Start the sample host from the repository root, as described in
 npm ci --workspace=@superstep/sdk --include-workspace-root=false
 npm run build --workspace=@superstep/sdk
 cd examples/react-native
-npm install
+npm ci
 npx expo start
 ```
 
