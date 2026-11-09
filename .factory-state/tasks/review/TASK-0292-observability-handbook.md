@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0292
 - Title: Handbook: observability, readiness, Usage page and alerts
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
 - Updated: 2026-11-09
@@ -47,3 +47,12 @@ Rewrite `operate/observability.md` in en and vi for the new surface.
 ## Activity Log
 
 - 2026-11-09: Created by planning on branch factory/plan-observability. No implementation.
+- 2026-11-10: Handbook `operate/observability.md` in en and vi with the same structure: health and readiness, metrics (enable, collector, full metric and label tables, cardinality rules), Grafana with Compose, alerts with default thresholds, the Usage page (who sees it, top-level runs only, estimated cost, unpriced runs and `STUDIO_PRICES`), traces, Jaeger, logs, and the `tzdata` note for schedules. No factory IDs.
+- 2026-11-10: Real screenshots: `settings-usage.png` (captured in English by the new `usage en` case in `frontend/e2e/handbook.spec.ts` and written to both image folders, as the handbook now does for its other shots) and `grafana-overview.png` (the provisioned dashboard on the local smoke stack, same image in both folders).
+- 2026-11-10: Validation: `zensical build` and `zensical build -f mkdocs.vi.yml` (No issues found), `python check_images.py site` (all images found).
+- 2026-11-10: Review REV-0278 and QA-0278. Moved to review.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0278-TASK-0292-observability-handbook.md`
+- QA: `.factory-state/artifacts/QA-0278-TASK-0292-observability-handbook.md`
