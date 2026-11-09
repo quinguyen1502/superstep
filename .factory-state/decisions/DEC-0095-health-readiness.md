@@ -2,7 +2,7 @@
 
 - Decision ID: DEC-0095
 - Project: superstep
-- Status: Proposed 2026-11-09, awaiting owner acceptance with REQ-0094
+- Status: Accepted 2026-11-09 (Asia/Saigon) by the owner (pt275u, accepting the plan), with REQ-0094; deploy templates stay on `/api/health` for now
 - Created/Updated: 2026-11-09
 - Related: REQ-0094, PLAN-0013, TASK-0284
 

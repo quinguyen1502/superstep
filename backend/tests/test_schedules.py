@@ -125,3 +125,13 @@ def test_scheduler_stops_when_the_owner_loses_access_and_drops_deleted_workflows
     s2 = c.post(f"/api/workflows/{wid2}/schedules", json={"cron": "@daily"}, headers=H(tok2)).json()["data"]
     c.delete(f"/api/workflows/{wid2}", headers=H(tok2)); _make_due(s2["id"]); schedule_service().fire_due()
     assert repo.get(s2["id"]) is None
+
+
+def test_zones_resolve_without_system_zone_data(tmp_path):
+    """The `tzdata` package backs zoneinfo when the image has no /usr/share/zoneinfo (browsers in Vietnam send Asia/Saigon)."""
+    import os, subprocess, sys
+    code = "from app.services import cron; print(cron.zone('Asia/Saigon').key, cron.zone('Asia/Ho_Chi_Minh').key)"
+    out = subprocess.run([sys.executable, "-c", code], env={**os.environ, "PYTHONTZPATH": str(tmp_path)},
+                         cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))), capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.split() == ["Asia/Saigon", "Asia/Ho_Chi_Minh"]

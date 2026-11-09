@@ -279,6 +279,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "DEMO_NODE_DISABLED": (403, "{node} nodes are turned off in the public demo"),
     "DEMO_READ_ONLY": (403, "The public demo is read-only: you can open, edit and run workflows, but not save changes"),
     "CODE_RUNTIME_OFF": (400, "Code nodes are turned off on this server (STUDIO_ENABLE_CODE_NODES)"),
+    "SERVICE_NOT_READY": (503, "The service is not ready: the database or Redis does not answer"),
     "CODE_RUNTIME_UNAVAILABLE": (503, "Code nodes cannot run on this server: {reason}"),
     "CODE_INVALID": (400, "Code node {node}: {reason}"),
     "CODE_FAILED": (400, "Code node {node} raised {error}"),

@@ -1,7 +1,7 @@
 """Engine/session factory and schema migration (Alembic) bootstrap."""
 import os
 from contextlib import contextmanager
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event, literal, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -35,6 +35,11 @@ class Database:
 
     def session(self) -> Session:
         return self._factory()
+
+    def ping(self) -> bool:
+        """One round trip to the database (readiness probe)."""
+        with self.engine.connect() as conn:
+            return conn.execute(select(literal(1))).scalar() == 1
 
     def migrate(self) -> None:
         """Upgrade to the latest Alembic revision (idempotent; adopts pre-Alembic SQLite files).

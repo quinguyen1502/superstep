@@ -13,6 +13,7 @@ redis>=5
 fakeredis>=2.20
 opentelemetry-sdk>=1.27
 opentelemetry-exporter-otlp-proto-http>=1.27
+tzdata  # IANA zones for schedules on images without system zone data
 pypdf
 pyyaml>=6  # the AsyncAPI document of the chat socket
 jsonschema>=4.18  # chat socket contract tests

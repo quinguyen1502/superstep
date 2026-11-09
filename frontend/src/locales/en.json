@@ -679,6 +679,7 @@
     "DEMO_READ_ONLY": "The public demo is read-only: you can open, edit and run workflows, but not save changes",
     "CODE_RUNTIME_OFF": "Code nodes are turned off on this server (STUDIO_ENABLE_CODE_NODES)",
     "CODE_RUNTIME_UNAVAILABLE": "Code nodes cannot run on this server: {{reason}}",
+    "SERVICE_NOT_READY": "The service is not ready: the database or Redis does not answer",
     "CODE_INVALID": "Code node {{node}}: {{reason}}",
     "CODE_FAILED": "Code node {{node}} raised {{error}}",
     "CODE_TIMEOUT": "Code node {{node}} was stopped after {{seconds}} s",

@@ -1,6 +1,6 @@
 import json
 from typing import Optional
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from ..models import Run, BrowserArtifact
 from ..models.browser_session import BrowserSession, BrowserCommand, BrowserIntent
@@ -38,6 +38,10 @@ class RunRepository:
             q = update(Run).where(Run.id == rid, Run.status == row.status, Run.lease_gen == row.lease_gen).values(status="running", lease_gen=gen)
             if s.execute(q).rowcount != 1: s.rollback(); return None
             s.commit(); return gen
+
+    def oldest_started(self, status: str) -> Optional[float]:
+        """Start time of the oldest run in `status` (readiness: how long the oldest queued run has waited)."""
+        with self.db.session() as s: return s.scalar(select(func.min(Run.started)).where(Run.status == status))
 
     def lease_gen(self, rid: str) -> Optional[int]:
         with self.db.session() as s: return s.scalar(select(Run.lease_gen).where(Run.id == rid))

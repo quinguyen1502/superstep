@@ -3,8 +3,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from ...core import config
+from ...core.errors import AppError
 from ...engine.tools import PARAMETERS, TOOLS
-from ..deps import attachment_files, current_user, get_db, get_run_bus, get_telemetry
+from ..deps import attachment_files, current_user, get_db, get_probes, get_run_bus, get_telemetry
 
 router = APIRouter(prefix="/api", tags=["meta"])
 
@@ -22,10 +23,21 @@ def backend_version() -> str:
 
 @router.get("/health")
 def health():
+    """Liveness: 200 while this process serves HTTP. It does not query the database; `/api/ready` does.
+    The fields stay for backward compatibility."""
     bus = get_run_bus()
     return {"ok": True, "llm_mode": config.llm_mode(), "database": get_db().engine.dialect.name,
             "run_bus": bus.kind, "run_bus_ok": bus.ping(), "tracing": get_telemetry().enabled,
             "import_enabled": config.import_enabled(), "version": backend_version(), **_storage()}
+
+
+@router.get("/ready")
+def ready():
+    """Readiness: the database answers, and Redis does when REDIS_URL is set; otherwise 503 SERVICE_NOT_READY with the
+    same report in `details`. Queue depth and worker heartbeats are reported but never fail it. No sign-in."""
+    report = get_probes().ready()
+    if not report["ok"]: raise AppError("SERVICE_NOT_READY", details=report)
+    return report
 
 
 def _storage() -> dict:

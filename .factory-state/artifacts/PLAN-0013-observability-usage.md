@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0013
-- Status: Proposed 2026-11-09, awaiting owner acceptance of REQ-0094, DEC-0094 and DEC-0095
+- Status: Accepted 2026-11-09 (Asia/Saigon) by the owner (pt275u, accepting the plan); REQ-0094, DEC-0094 and DEC-0095 accepted; in progress
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-09
 - Related Requirements: REQ-0094

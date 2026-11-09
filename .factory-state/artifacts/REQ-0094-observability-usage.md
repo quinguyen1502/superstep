@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0094
-- Status: Proposed, awaiting owner acceptance (pt274u: "OK, plan the implementation"). Direction already agreed in chat on 2026-11-09; nothing is implemented by this requirement's planning PR.
+- Status: Accepted 2026-11-09 (Asia/Saigon) by the owner (pt275u, accepting the plan). Implementation in progress per PLAN-0013.
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-09
 - Source: Owner chat 2026-11-09: observability research (pt271u), placement and preview (pt272u), Grafana versus in-app split (pt273u), plan request (pt274u)

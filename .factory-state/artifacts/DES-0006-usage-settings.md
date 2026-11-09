@@ -2,7 +2,7 @@
 
 - Design ID: DES-0006
 - Project: superstep
-- Status: Proposed 2026-11-09, awaiting owner acceptance
+- Status: Accepted 2026-11-09 (Asia/Saigon) by the owner (pt275u, accepting the plan) together with REQ-0094
 - Created/Updated: 2026-11-09
 - Related: REQ-0094, PLAN-0013, TASK-0288, TASK-0289, TASK-0290
 
