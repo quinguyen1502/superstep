@@ -32,7 +32,7 @@ const RUN_BADGES = { ok: 'success', running: 'warning', queued: 'warning', timeo
 const badgeFor = (status: string) => RUN_BADGES[status as keyof typeof RUN_BADGES] ?? 'destructive'
 
 /** Bottom panel: Run (input | logs side by side, a picker for the last runs and a dialog with all of them),
- * Test and Code. Chat lives in its own side panel (components/chat/chat-side-panel.tsx).
+ * Test and Code. Chat lives in its own side panel (components/chat/chat-side-panel.tsx). */
 export function EditorRunPanel() {
   const { t } = useTranslation()
   const { input, setInput, log, setLog, errors, history, tab, setTab, running, traceSel, setTraceSel, replay, setReplay, openRun, respond, fork, trace, traceMeta, wid, source, edit } = useStudioCtx()

@@ -4,7 +4,7 @@ import { Logo, LogoMark } from '@/components/logo'
 
 const html = (el: React.ReactElement) => renderToStaticMarkup(el)
 
-describe('Logo',  => {
+describe('Logo', () => {
   it('draws the Step-up mark with theme tokens only, no hard-coded colours', () => {
     const out = html(<LogoMark />)
     expect(out).toContain('fill-primary'); expect(out).toContain('stroke-primary-foreground'); expect(out).toContain('fill-brand-accent')

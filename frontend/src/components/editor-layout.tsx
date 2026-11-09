@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
  * loading skeleton and the next workflow open with the same sizes.
  * Chat is a full-height column right of all of it, 340–760px, its width saved the same way. Config stays
  * beside the chat; `rightCollapsed` folds it away (narrow screens with nothing selected) and drags back open.
- * With `mobile` set (phones, ) the panes stack instead and a bottom tab bar switches between them.
+ * With `mobile` set (phones, ) the panes stack instead and a bottom tab bar switches between them. */
 export function EditorLayout({ header, left, canvas, right, bottom, chat, rightCollapsed = false, className, busy, mobile }: {
   header: ReactNode; left: ReactNode; canvas: ReactNode; right: ReactNode; bottom: ReactNode; chat?: ReactNode; rightCollapsed?: boolean; className?: string; busy?: boolean
   mobile?: MobileViews

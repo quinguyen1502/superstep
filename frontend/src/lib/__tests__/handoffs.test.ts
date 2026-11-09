@@ -15,7 +15,7 @@ describe('hand-offs', () => {
   })
 })
 
-describe('hand-off links on the canvas',  => {
+describe('hand-off links on the canvas', () => {
   const ag = (id: string, handoffs?: any[]) => ({ id, type: 'agent', data: { label: id.toUpperCase(), ...(handoffs ? { handoffs } : {}) } })
   const nodes = () => [ag('tri', [{ target: 'bill', description: 'money' }]), ag('bill'), ag('tech'), { id: 'e', type: 'end', data: {} }]
 

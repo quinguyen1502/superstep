@@ -36,7 +36,7 @@ function useLivePush(onPush: (n: Note, unread: number) => void) {
 }
 
 /** In-app notifications: bell with unread count, list, mark read. Live push with polling as the fallback,
- * and a settings dialog for the user's channels.
+ * and a settings dialog for the user's channels. */
 export function NotificationBell() {
   const { t } = useTranslation(); const nav = useNavigate()
   const [items, setItems] = useState<Note[]>([]); const [unread, setUnread] = useState(0); const [settings, setSettings] = useState(false)

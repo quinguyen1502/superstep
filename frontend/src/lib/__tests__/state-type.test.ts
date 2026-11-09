@@ -3,7 +3,7 @@ import { stateCompletions, stateFields, stateType, tsType } from '@/lib/state-ty
 import { EditorState } from '@codemirror/state'
 import { CompletionContext } from '@codemirror/autocomplete'
 
-describe('State type for TypeScript Code nodes',  => {
+describe('State type for TypeScript Code nodes', () => {
   it('maps every schema type and quotes names that are not identifiers', () => {
     expect(stateType([{ name: 'message', type: 'string' }, { name: 'count', type: 'integer' }, { name: 'score', type: 'number' },
       { name: 'ok', type: 'boolean' }, { name: 'data', type: 'object' }, { name: 'items', type: 'list' }, { name: 'my-field', type: 'string' }]))

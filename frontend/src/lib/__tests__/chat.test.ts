@@ -13,7 +13,7 @@ const EVENTS: RunEvent[] = [
   { type: 'node_finished', node: 'bot', node_type: 'llm', label: 'Bot', duration_ms: 12, input: { q: 'hi' }, delta: { reply: 'Hello' } },
 ]
 
-describe('chat',  => {
+describe('chat', () => {
   it('streams only the tokens of the reply field', () => {
     expect(liveReply(EVENTS, 'reply')).toBe('Hello')
     expect(liveReply(EVENTS, 'other')).toBe('')

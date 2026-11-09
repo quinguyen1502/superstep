@@ -13,7 +13,7 @@ export type CodeRuntime = {
 /** Why Code mode is off: the public demo, or the server setting. */
 export const codeOffKey = (rt: CodeRuntime | null | undefined) => rt?.demo ? 'code.demoOff' : 'code.off'
 
-/** The facts of one language; falls back to the top-level (Python) facts for servers from . */
+/** The facts of one language; falls back to the top-level (Python) facts for servers from. */
 export function languageInfo(rt: CodeRuntime | null, id: string): CodeLanguageInfo | null {
   if (!rt) return null
   return rt.languages?.find(l => l.id === id)

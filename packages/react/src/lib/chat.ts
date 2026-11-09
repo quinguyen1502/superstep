@@ -14,7 +14,7 @@ export type AttachmentKind = typeof ATTACHMENT_KINDS[number]
 export type AttachmentLimits = { enabled: boolean; kinds: AttachmentKind[]; max_files: number; max_mb: number }
 export type ChatAttachment = { id: string; name: string; kind: AttachmentKind; mime: string; size: number }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
- browser?: BrowserFacts; duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string; handoff_to?: string } // child_run_id: a workflow tool's run; handoff_to: the agent a hand-off went to
+  browser?: BrowserFacts; duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string; handoff_to?: string }  // child_run_id: a workflow tool's run; handoff_to: the agent a hand-off went to
 export type ChatRating = { value: 'up' | 'down'; comment: string; updated: number }
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
   node?: string | null; answered_by?: AnsweredBy | null; code?: string | null; created: number; steps?: ChatStep[]
@@ -23,10 +23,10 @@ export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; s
 export const initialOf = (title: string) => (Array.from(title.trim())[0] ?? '?').toLocaleUpperCase()
 
 /** The reply streamed so far: the `node_token` deltas of the nodes that write the reply field. A node that streams
- * again (an Agent's next model call, a loop) replaces its earlier text, as its field is replaced.
+ * again (an Agent's next model call, a loop) replaces its earlier text, as its field is replaced. */
 export function liveReply(events: RunEvent[], replyField?: string): string {
   const parts = new Map<string, { it: number; text: string }>()
-  for (const e of events) { // no field: the public socket sends the reply's tokens only
+  for (const e of events) {   // no field: the public socket sends the reply's tokens only
     if (e.type !== 'node_token' || (replyField !== undefined && (e as any).field !== replyField) || typeof e.delta !== 'string' || !e.node) continue
     const it = e.iteration ?? 1; const p = parts.get(e.node)
     parts.set(e.node, p && p.it === it ? { it, text: p.text + e.delta } : p && p.it > it ? p : { it, text: e.delta })

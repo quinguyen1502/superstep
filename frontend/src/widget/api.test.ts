@@ -101,7 +101,7 @@ describe('iframe identity boundary', () => {
     stop(); await flush(); expect(f.win.Superstep).toBe(f.original)
   })
 })
-describe('native WebView bridge',  => {
+describe('native WebView bridge', () => {
   const JWT2 = 'header.payload.fresh'
   function native(kind: 'ios' | 'android' | 'rn') {
     const sent: Record<string, unknown>[] = [], postMessage = (message: string) => { sent.push(JSON.parse(message)) }
