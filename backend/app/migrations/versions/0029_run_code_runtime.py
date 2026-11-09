@@ -1,4 +1,4 @@
-"""TASK-0056: where a run's Code nodes ran (docker | subprocess), so history shows unisolated runs later."""
+"""where a run's Code nodes ran (docker | subprocess), so history shows unisolated runs later."""
 from alembic import op
 import sqlalchemy as sa
 

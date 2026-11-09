@@ -1,4 +1,4 @@
-"""The `fs` backend (TASK-0192, REQ-0080, DEC-0074): a folder, `STUDIO_ATTACHMENT_FS_PATH` (default
+"""The `fs` backend: a folder, `STUDIO_ATTACHMENT_FS_PATH` (default
 /data/attachments). In the all-in-one image that is the data volume; in the full stack `api` and `worker` mount the
 same volume at /data. Keys are relative paths made by the service; anything that would leave the folder is refused.
 Writes go to a temporary file in the same folder, then replace the target, so a reader never sees half a file."""
@@ -21,7 +21,7 @@ class FsStore(AttachmentStore):
 
     def unsafe(self) -> str | None:
         """The folder must not be, or hold, the studio's own data (database file, secret key, imports): the orphan sweep
-        would otherwise run over them (TASK-0203)."""
+        would otherwise run over them."""
         for p in self.protected:
             if p == self.root or self.root in p.parents:
                 return "the attachment folder must not be or contain the data folder; use a subfolder such as /data/attachments"

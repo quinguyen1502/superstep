@@ -1,4 +1,4 @@
-"""JSON Schema of a workflow's state fields: the input/state schema of `/api/lg` assistants and of the MCP tool (TASK-0114)."""
+"""JSON Schema of a workflow's state fields: the input/state schema of `/api/lg` assistants and of the MCP tool."""
 from typing import Any, Dict
 
 JSON_TYPES = {"string": "string", "number": "number", "integer": "integer", "boolean": "boolean", "object": "object", "list": "array"}

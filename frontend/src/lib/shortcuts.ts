@@ -1,4 +1,4 @@
-/** Editor keyboard shortcuts (TASK-0023, DEC-0026): one registry used by the key handler, the cheat sheet and the
+/** Editor keyboard shortcuts: one registry used by the key handler, the cheat sheet and the
  * command palette. Combos are written platform-neutral: `mod` = ⌘ on macOS, Ctrl elsewhere. */
 export type ShortcutGroup = 'general' | 'canvas' | 'history' | 'clipboard' | 'run'
 export type Shortcut = { id: string; keys: string[]; group: ShortcutGroup; allowInInputs?: boolean }
@@ -22,7 +22,7 @@ export const SHORTCUTS: Shortcut[] = [
   { id: 'zoomIn', keys: ['mod+='], group: 'canvas' },
   { id: 'zoomOut', keys: ['mod+-'], group: 'canvas' },
   { id: 'layout', keys: ['shift+l'], group: 'canvas' },
-  { id: 'chat', keys: ['shift+c'], group: 'general' },  // toggle the Chat side panel (TASK-0085)
+  { id: 'chat', keys: ['shift+c'], group: 'general' },  // toggle the Chat side panel
 ]
 export const GROUPS: ShortcutGroup[] = ['general', 'canvas', 'history', 'clipboard', 'run']
 

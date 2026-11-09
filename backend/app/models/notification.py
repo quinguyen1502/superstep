@@ -5,7 +5,7 @@ from .base import Base
 
 
 class Notification(Base):
-    """In-app notification for one user (TASK-0020), e.g. a run waiting for a human response."""
+    """In-app notification for one user, e.g. a run waiting for a human response."""
     __tablename__ = "notifications"
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     user_id: Mapped[str] = mapped_column(Text, index=True)

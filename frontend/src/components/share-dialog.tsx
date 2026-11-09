@@ -1,4 +1,4 @@
-/** Share a workflow (TASK-0014): owner or admin adds users by email as viewer (open, run) or editor (also edit). */
+/** Share a workflow: owner or admin adds users by email as viewer (open, run) or editor (also edit). */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Loader2, Share2, Trash2, UserPlus, Users } from 'lucide-react'

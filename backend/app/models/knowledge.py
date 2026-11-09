@@ -1,4 +1,4 @@
-"""Knowledge bases (TASK-0012): documents split into chunks with an embedding each.
+"""Knowledge bases: documents split into chunks with an embedding each.
 
 `embedding` is a pgvector `vector` column on Postgres when the extension is installed (similarity search in SQL) and
 JSON text everywhere else (SQLite, or Postgres without pgvector), searched by brute force in the repository."""
@@ -17,7 +17,7 @@ class KnowledgeBase(Base):
     model: Mapped[Optional[str]] = mapped_column(Text)          # embedding model (default text-embedding-3-small)
     credential_id: Mapped[Optional[str]] = mapped_column(Text)  # OpenAI-compatible credential; none = env key or mock
     embedder: Mapped[Optional[str]] = mapped_column(Text)       # effective embedder of the stored vectors, e.g. mock:256
-    dims: Mapped[Optional[int]] = mapped_column(Integer)        # dimension of the stored vectors (TASK-0030); NULL = empty / legacy
+    dims: Mapped[Optional[int]] = mapped_column(Integer)        # dimension of the stored vectors; NULL = empty / legacy
     created: Mapped[float] = mapped_column(Float)
 
 

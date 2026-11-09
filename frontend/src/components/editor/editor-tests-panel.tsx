@@ -21,12 +21,12 @@ import { agentOf } from '@/lib/trace'
 import { cn } from '@/lib/utils'
 import { useStudioCtx } from './studio-context'
 
-/** Workflow tests (TASK-0067, REQ-0042): test cases with an input, Human answers and checks; Run all / run one on the
+/** Workflow tests: test cases with an input, Human answers and checks; Run all / run one on the
  * saved version, with the offline mock model as an option; each case's checks with expected and actual values.
- * TASK-0068: each result compared with the latest suite run on an earlier version, Run against version, the suite
+ * each result compared with the latest suite run on an earlier version, Run against version, the suite
  * history, and checks that name a node or field no longer in the graph marked as stale. */
 type Kind = 'status' | 'field' | 'node' | 'tool' | 'duration' | 'cost'
-/** `tool`: whether an Agent node (`node`) called the tool and the call ran (TASK-0119). */
+/** `tool`: whether an Agent node (`node`) called the tool and the call ran. */
 export type TestCheck = { kind: Kind; value?: string; field?: string; op?: string; node?: string; ran?: boolean; tool?: string; called?: boolean; max?: number }
 type CheckResult = TestCheck & { passed: boolean | null; expected: string; actual: string | null; reason: string | null }
 type Change = 'regression' | 'fixed' | 'still_failing' | 'still_passing' | 'new'
@@ -203,7 +203,7 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
   const [name, setName] = useState(value?.name ?? ''); const [input, setInput] = useState(value ? JSON.stringify(value.input, null, 2) : runInput)
   const [answers, setAnswers] = useState<Record<string, string[]>>(value?.answers ?? {})
   const [checks, setChecks] = useState<TestCheck[]>(value?.checks ?? [blank('status')]); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
-  // Human nodes, and Agent nodes with a tool that needs approval (answered under the Agent node's id, TASK-0117)
+  // Human nodes, and Agent nodes with a tool that needs approval (answered under the Agent node's id, )
   const humans = nodes.filter(n => n.type === 'human' || (n.type === 'agent' && needsApproval(n.data))); const graphNodes = nodes.filter(n => n.type !== 'note')
   const agentNodes = nodes.filter(n => n.type === 'agent'); const toolsOf = (nid: string) => toolNames(nodes.find(n => n.id === nid)?.data)
   const setCheck = (i: number, c: TestCheck) => setChecks(cs => cs.map((x, j) => j === i ? c : x))

@@ -7,12 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CANVAS_MIN, CHAT_WIDTH, PANEL_MIN, chatStore, panelStore, type PanelSizes } from '@/lib/panel-sizes'
 import { cn } from '@/lib/utils'
 
-/** Editor chrome (TASK-0038, REQ-0026): the 56px header, then palette | canvas | config over the run panel. The three
+/** Editor chrome: the 56px header, then palette | canvas | config over the run panel. The three
  * borders drag; the canvas takes what is left. Sizes are read once per mount and saved after a user drag only, so the
  * loading skeleton and the next workflow open with the same sizes.
- * Chat (TASK-0085) is a full-height column right of all of it, 340–760px, its width saved the same way. Config stays
+ * Chat is a full-height column right of all of it, 340–760px, its width saved the same way. Config stays
  * beside the chat; `rightCollapsed` folds it away (narrow screens with nothing selected) and drags back open.
- * With `mobile` set (phones, TASK-0121) the panes stack instead and a bottom tab bar switches between them. */
+ * With `mobile` set (phones, ) the panes stack instead and a bottom tab bar switches between them. */
 export function EditorLayout({ header, left, canvas, right, bottom, chat, rightCollapsed = false, className, busy, mobile }: {
   header: ReactNode; left: ReactNode; canvas: ReactNode; right: ReactNode; bottom: ReactNode; chat?: ReactNode; rightCollapsed?: boolean; className?: string; busy?: boolean
   mobile?: MobileViews
@@ -25,7 +25,7 @@ export type MobileView = 'canvas' | 'nodes' | 'config' | 'run' | 'chat'
 /** Phone layout: which pane shows, and a dot on Config while a node or edge is selected. */
 export type MobileViews = { view: MobileView; onView: (v: MobileView) => void; selected?: boolean }
 
-/** Phones (TASK-0121): one pane at a time under the header, picked from a tab bar at the bottom. Every pane stays
+/** Phones: one pane at a time under the header, picked from a tab bar at the bottom. Every pane stays
  * mounted (only hidden), so the canvas keeps its viewport and the run panel its scroll when you switch. */
 function MobileEditorLayout({ header, left, canvas, right, bottom, chat, className, busy, view, onView, selected }: {
   header: ReactNode; left: ReactNode; canvas: ReactNode; right: ReactNode; bottom: ReactNode; chat?: ReactNode; className?: string; busy?: boolean

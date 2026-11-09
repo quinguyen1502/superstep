@@ -1,4 +1,4 @@
-/** Agent node tools (TASK-0118, REQ-0072): the shapes the settings edit and the engine reads (`engine/agents.py`). */
+/** Agent node tools: the shapes the settings edit and the engine reads (`engine/agents.py`). */
 export const SOURCES = ['mcp', 'http', 'builtin', 'knowledge', 'workflow'] as const
 export type ToolSource = typeof SOURCES[number]
 export type Schema = { type?: string; properties?: Record<string, { type?: string; description?: string }>; required?: string[] }
@@ -6,7 +6,7 @@ import type { UrlBinding } from './browser-tools'
 export type AgentTool = { name: string; description?: string; source: ToolSource; approval?: boolean
   server_id?: string; tool?: string; url_binding?: UrlBinding; parameters?: Schema; function?: string; knowledge_base_id?: string; top_k?: number
   method?: string; url?: string; body?: string
-  workflow_id?: string; inputs?: string[]; outputs?: string[] }  // another saved workflow as a tool (REQ-0073)
+  workflow_id?: string; inputs?: string[]; outputs?: string[] }  // another saved workflow as a tool
 export type BuiltinTool = { name: string; doc?: string; parameters?: Schema | null }
 
 export const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -29,9 +29,9 @@ export function newTool(source: ToolSource, taken: string[]): AgentTool {
   return { name, source, description: '' }
 }
 
-/** An Agent node's tool names, for the Tests panel's "tool called" check (TASK-0119). */
+/** An Agent node's tool names, for the Tests panel's "tool called" check. */
 export const toolNames = (data: unknown): string[] => (((data as { tools?: AgentTool[] })?.tools) ?? []).map(t => t.name).filter(Boolean)
-/** Whether an Agent node asks a person before a tool call: test cases answer it like a Human node (TASK-0117). */
+/** Whether an Agent node asks a person before a tool call: test cases answer it like a Human node. */
 export const needsApproval = (data: unknown): boolean => (((data as { tools?: AgentTool[] })?.tools) ?? []).some(t => t.approval)
 
 /** The fields a workflow tool sends and gets back when its workflow is picked: `message` in and `answer` out when the

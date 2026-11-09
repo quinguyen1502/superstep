@@ -1,4 +1,4 @@
-/** A chat answer as Markdown (TASK-0085), styled by shadcn/typeset (`typeset typeset-chat`), with fenced code routed to
+/** A chat answer as Markdown, styled by shadcn/typeset (`typeset typeset-chat`), with fenced code routed to
  *  the shadcn Code Block as the Message pattern says. Sanitised: no raw HTML (react-markdown escapes it, `skipHtml`),
  *  only http(s)/mailto/in-page/relative links (opened in a new tab without the opener), no remote images. */
 import Markdown, { type Components } from 'react-markdown'

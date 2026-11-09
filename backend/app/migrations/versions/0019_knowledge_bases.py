@@ -1,4 +1,4 @@
-"""TASK-0012: knowledge bases, documents and chunks for the Retriever node.
+"""knowledge bases, documents and chunks for the Retriever node.
 
 On Postgres the `vector` extension (pgvector) is enabled when available and kb_chunks.embedding becomes a `vector`
 column; without the extension (plain Postgres image) or on SQLite it is JSON text and search is brute force."""

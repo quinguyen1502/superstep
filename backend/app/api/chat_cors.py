@@ -1,4 +1,4 @@
-"""Public chat CORS is token-only, independent of the studio's global CORS configuration (DEC-0077)."""
+"""Public chat CORS is token-only, independent of the studio's global CORS configuration."""
 from __future__ import annotations
 import re
 from urllib.parse import urlsplit

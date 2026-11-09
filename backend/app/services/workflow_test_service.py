@@ -1,4 +1,4 @@
-"""Workflow tests (TASK-0067, REQ-0042, DEC-0044): saved test cases and the suite runs that check them.
+"""Workflow tests: saved test cases and the suite runs that check them.
 
 A test case is an input, the answers to give at Human nodes (in order, per node) and checks (engine.checks). A suite
 runs some or all cases against the workflow's saved version. Each case is an ordinary queued run with
@@ -7,7 +7,7 @@ the suite's `mock` option every LLM node uses the offline mock. At most STUDIO_T
 once; when a test run settles (RunService.settled -> `on_settled`) the suite records it, or answers its Human node with
 the next scripted answer, and starts the next case. One suite runs per workflow at a time.
 
-A suite result is compared with the latest finished suite run on an earlier version (TASK-0068): per case regression,
+A suite result is compared with the latest finished suite run on an earlier version: per case regression,
 fixed, still failing, still passing or new. A suite can also run on a stored earlier version, and a draft case can be
 made from a run (its input, its Human answers in order and checks that the run passes).
 
@@ -40,7 +40,7 @@ def _id() -> str: return uuid.uuid4().hex[:12]
 
 
 def answer_key(node: Optional[str]) -> Optional[str]:
-    """Answers are listed per Human node, and an Agent node's tool approvals under the Agent node's id (TASK-0117)."""
+    """Answers are listed per Human node, and an Agent node's tool approvals under the Agent node's id."""
     return agents.agent_of_step(node or "") or node
 
 
@@ -204,7 +204,7 @@ class WorkflowTestService:
                 self.jobs.enqueue({"kind": "langsmith_suite", "suite_id": sid})  # network: the worker sends it, not this request
 
     def test_job(self, rid: str) -> Optional[dict]:
-        """The `test` field of a test run's queue job, rebuilt from its suite (start-up recovery, TASK-0115)."""
+        """The `test` field of a test run's queue job, rebuilt from its suite (start-up recovery, )."""
         res = self.repo.result_for_run(rid); s = self.repo.suite(res.suite_id) if res else None
         return {"mock": bool(s.mock)} if s else None
 
@@ -261,7 +261,7 @@ class WorkflowTestService:
         if s.status != "running": self.repo.finish_result(res.id, "cancelled", now); return
         if run.status == "waiting":
             events = json.loads(run.events or "[]")
-            if next((e for e in reversed(events) if e.get("type") == "run_waiting"), {}).get("wait"): return  # a workflow tool's child runs (TASK-0137)
+            if next((e for e in reversed(events) if e.get("type") == "run_waiting"), {}).get("wait"): return  # a workflow tool's child runs
             node = next((e.get("node") for e in reversed(events) if e.get("type") == "run_waiting"), None)
             used = sum(1 for e in events if e.get("type") == "run_resumed" and e.get("node") == node)
             answers = case["answers"].get(answer_key(node)) or []

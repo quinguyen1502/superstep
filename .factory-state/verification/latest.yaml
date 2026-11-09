@@ -1,5 +1,5 @@
 schema_version: 1
-status: passed
+status: failed
 profile: quick
 results:
 - check_id: policy:frontend-lint
@@ -7,22 +7,22 @@ results:
   working_dir: .
   command: npm run lint
   source: .factory-state/tooling/tool-policy.yaml
-  status: passed
-  returncode: 0
+  status: failed
+  returncode: 1
 - check_id: policy:frontend-test
   kind: test
   working_dir: .
   command: npm run test
   source: .factory-state/tooling/tool-policy.yaml
-  status: passed
-  returncode: 0
+  status: failed
+  returncode: 2
 - check_id: policy:backend-test
   kind: test
   working_dir: backend
   command: .venv/bin/python -m pytest
   source: .factory-state/tooling/tool-policy.yaml
-  status: passed
-  returncode: 0
+  status: failed
+  returncode: 1
 - check_id: policy:sdk-python-test
   kind: test
   working_dir: sdk/python

@@ -1,4 +1,4 @@
-/** Chat settings, Attachments section (TASK-0177, REQ-0077): on or off, the kinds, files per message and size (within
+/** Chat settings, Attachments section: on or off, the kinds, files per message and size (within
  *  the operator's ceiling from the settings response) and the state field that receives the file records. */
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'

@@ -1,4 +1,4 @@
-/** My chat accounts (TASK-0022): slot types, the slot list hook, and the slot key. */
+/** My chat accounts: slot types, the slot list hook, and the slot key. */
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 

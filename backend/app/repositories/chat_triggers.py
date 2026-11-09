@@ -5,7 +5,7 @@ from ..models import ChatAppKey, ChatLogo, WorkflowChatTrigger
 from ..models.database import Database
 
 
-WEB = "web"  # channel_id and place of a workflow's web chat trigger (TASK-0084)
+WEB = "web"  # channel_id and place of a workflow's web chat trigger
 
 
 class ChatTriggerRepository:
@@ -58,7 +58,7 @@ class ChatTriggerRepository:
             s.execute(delete(ChatLogo).where(ChatLogo.trigger_id.in_(select(WorkflowChatTrigger.id).where(WorkflowChatTrigger.workflow_id == wid))))
             s.execute(delete(WorkflowChatTrigger).where(WorkflowChatTrigger.workflow_id == wid)); s.commit()
 
-    # ---- a web chat's logo (TASK-0145) ----
+    # ---- a web chat's logo ----
     def logo(self, tid: str) -> Optional[ChatLogo]:
         with self.db.session() as s: return s.get(ChatLogo, tid)
 

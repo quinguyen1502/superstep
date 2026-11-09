@@ -1,8 +1,8 @@
-"""Workflows as MCP tools (TASK-0114, DEC-0061): what the MCP server at /mcp lists and calls.
+"""Workflows as MCP tools: what the MCP server at /mcp lists and calls.
 
 A workflow token (`wft_…`) scopes a client to one workflow. A personal access token does not: the API layer checks
 that the user can open the workflow named by `X-Superstep-Workflow` and calls `tools_for` / `call_for` with the user
-id, the workflow id and the PAT id (TASK-0171). No `WorkflowToken` row is created for a PAT. Either way the client
+id, the workflow id and the PAT id. No `WorkflowToken` row is created for a PAT. Either way the client
 sees three tools: `run_<workflow>` (input schema = the workflow's state fields), `get_run` and `resume_run`. The owner
 opts the workflow in (`mcp_enabled`); otherwise every call answers MCP_SERVER_DISABLED. Runs are ordinary queued API
 runs (history source `api`). A run that pauses at a Human node returns `status: waiting`; `resume_run` answers it.

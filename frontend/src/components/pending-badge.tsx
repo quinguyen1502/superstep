@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useInboxCount } from '@/lib/use-inbox-count'
 
-/** Header entry to the Approvals inbox (TASK-0019, TASK-0065), with the number of steps waiting for the user. */
+/** Header entry to the Approvals inbox, with the number of steps waiting for the user. */
 export function PendingBadge() {
   const { t } = useTranslation(); const nav = useNavigate(); const n = useInboxCount()
   const label = n ? t('human.pendingCount', { count: n }) : t('inbox.title')

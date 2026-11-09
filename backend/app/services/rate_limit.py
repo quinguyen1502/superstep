@@ -1,4 +1,4 @@
-"""Fixed-window rate limiter (TASK-0019). Redis (shared by all processes, async client so the event loop
+"""Fixed-window rate limiter. Redis (shared by all processes, async client so the event loop
 never blocks) when REDIS_URL is set, otherwise in-memory (single process)."""
 import asyncio, math, threading, time
 from .redis_async import async_redis
@@ -47,7 +47,7 @@ def make_rate_limiter(url: Optional[str]) -> RateLimiter:
     return RedisRateLimiter(url) if url else InMemoryRateLimiter()
 
 
-# --- TASK-0051: a blocking counter for quotas checked inside a run (the engine runs in a worker thread) ---
+# --- : a blocking counter for quotas checked inside a run (the engine runs in a worker thread) ---
 class Counter(Protocol):
     kind: str
     def add(self, key: str, n: int, window: int) -> tuple[int, int]: ...  # (count in this window after adding, retry_after_s)

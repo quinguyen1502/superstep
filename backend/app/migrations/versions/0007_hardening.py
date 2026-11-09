@@ -1,4 +1,4 @@
-"""Phase-2 hardening (TASK-0019): workflow_tokens.signing_secret (encrypted webhook HMAC secret). Idempotent.
+"""Phase-2 hardening: workflow_tokens.signing_secret (encrypted webhook HMAC secret). Idempotent.
 
 Revision ID: 0007_hardening
 Revises: 0006_workflow_versions

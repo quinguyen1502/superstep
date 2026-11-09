@@ -1,4 +1,4 @@
-"""users.lang: the language of chat messages sent for the user (TASK-0022 follow-up). Idempotent.
+"""users.lang: the language of chat messages sent for the user ( follow-up). Idempotent.
 
 Set by the studio's language switcher through the notification preferences; NULL means English.
 

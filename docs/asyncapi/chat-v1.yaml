@@ -71,7 +71,7 @@ components:
     client_auth:
       type: object
       description: 'Who is chatting, before the message: an anonymous visitor token, or a user token signed by the app''s
-        backend (TASK-0218).'
+        backend.'
       required:
       - type
       properties:

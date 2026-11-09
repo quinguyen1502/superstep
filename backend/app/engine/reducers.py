@@ -1,4 +1,4 @@
-"""State reducers (TASK-0011): how a node's output is combined with the current value of a state field.
+"""State reducers: how a node's output is combined with the current value of a state field.
 
 replace (default) - the new value wins; two parallel branches writing the same field in one step is an error.
 append            - list concatenation; a non-list output is appended as one item (collects parallel results).

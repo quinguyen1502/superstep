@@ -86,7 +86,7 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_ATTACHMENT_STORAGE` | `db` | Where chat attachment bytes are kept: `db` (in the database), `fs` (a folder) or `s3` (S3-compatible storage). Files keep the place they were stored in, so a change applies to new files. See [Chat: Attachments](../run/chat.md#attachments) |
 | `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | The folder of the `fs` backend. In docker compose, `api` and `worker` share it on the `apidata` volume. It must not be or contain the data folder |
 | `STUDIO_ATTACHMENT_S3_BUCKET` | (empty) | The bucket of the `s3` backend. Required for `s3` |
-| `STUDIO_ATTACHMENT_S3_PREFIX` | (empty) | A folder inside the bucket, so several installs can share one bucket. Leave it empty only on a bucket used by nothing else (TASK-0203) |
+| `STUDIO_ATTACHMENT_S3_PREFIX` | (empty) | A folder inside the bucket, so several installs can share one bucket. Leave it empty only on a bucket used by nothing else |
 | `STUDIO_ATTACHMENT_S3_ENDPOINT` | (empty) | The service URL for S3-compatible storage (R2, B2, MinIO). Empty means AWS S3 |
 | `STUDIO_ATTACHMENT_S3_REGION` | (empty) | The bucket's region; `auto` for Cloudflare R2 |
 | `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` for services that need path-style URLs, such as MinIO |

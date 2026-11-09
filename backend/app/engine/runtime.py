@@ -47,22 +47,22 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     """Yield per-node events: started / finished(duration, input=state before, delta=output) / error. Sync generator.
     A Human node without a response yields `run_waiting` {node, prompt, checkpoint} and stops.
     steps: stop after this many supersteps that contain a node other than Start or End, yielding `run_paused`
-    {node, nodes, state, checkpoint} before the next superstep starts (TASK-0036). None runs to the end.
+    {node, nodes, state, checkpoint} before the next superstep starts. None runs to the end.
     A superstep that is only Start does not count, so the first step still reaches the first working node.
     until: pause after this node has finished. If the run ends without it, yield RUN_NODE_NOT_REACHED.
     resume = {"node" | "nodes", "state", "counts"?, "value"?} continues at that node (or those parallel nodes) with the
-    saved state: with "value" a paused Human node gets its response (TASK-0006); without it the run continues from a
-    progress checkpoint (recovery of queue jobs, TASK-0020).
-    Progress checkpoints come from LangGraph itself (TASK-0021): the graph is compiled with an in-memory saver and its
+    saved state: with "value" a paused Human node gets its response; without it the run continues from a
+    progress checkpoint (recovery of queue jobs, ).
+    Progress checkpoints come from LangGraph itself: the graph is compiled with an in-memory saver and its
     superstep checkpoints are observed (`stream_mode="checkpoints"`), so a step with several parallel nodes (fan-out)
     is resumable too. Each yields `_checkpoint` {node, nodes, state, counts}; callers must not forward it to clients.
-    effects: idempotency keys + node-result ledger + fencing guard for side-effect nodes (TASK-0021).
+    effects: idempotency keys + node-result ledger + fencing guard for side-effect nodes.
     ports: user-bound services for Retriever / MCP nodes (engine.ports.Ports)."""
     if resume is None and (bad := check_input(wf, inputs)): raise ValidationError(bad)
-    wf = agents.expand(wf)  # usually expanded already by the run service (idempotent, TASK-0116)
+    wf = agents.expand(wf)  # usually expanded already by the run service (idempotent, )
     if until and any(n["id"] == until and n.get("type") == "agent" for n in wf["nodes"]): until = f"{until}{agents.SEP}{agents.EXIT}"  # the whole agent
-    usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished (TASK-0010)
-    code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished (TASK-0053)
+    usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished
+    code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished
     model_attempts: Dict[str, List[dict]] = {}
     held = None
     if resume and ("value" in resume or resume.get("answers") or resume.get("children")):
@@ -102,14 +102,14 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
 
     try:
         for mode, chunk in app.stream(inputs, cfg, stream_mode=["updates", "checkpoints", "custom"]):
-            if mode == "custom":  # live LLM text (TASK-0030): sent to the client, never stored (node_finished has the result)
+            if mode == "custom":  # live LLM text: sent to the client, never stored (node_finished has the result)
                 if isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("model_attempt"):
                     model_attempts.setdefault(chunk["node"], []).append(chunk["model_attempt"])
                 elif isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("code_output"):
-                    code_out[chunk["node"]] = chunk["code_output"]  # Code node stdout (TASK-0053), stored on node_finished
+                    code_out[chunk["node"]] = chunk["code_output"]  # Code node stdout, stored on node_finished
                 elif isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("delta"):
                     yield {"type": "node_token", "node": chunk["node"], "iteration": counts.get(chunk["node"], 1), "delta": chunk["delta"],
-                           "field": nodes[chunk["node"]]["data"].get("output_field")}  # the state field the text goes to (a chat's reply, TASK-0084)
+                           "field": nodes[chunk["node"]]["data"].get("output_field")}  # the state field the text goes to (a chat's reply, )
                 continue
             if mode == "checkpoints":  # superstep boundary: the nodes that run next, all inputs settled
                 nxt = [n for n in (chunk.get("next") or []) if n in nodes]
@@ -139,7 +139,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                        "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),
                        **({'browser': browser_presentation.detail(nodes[nid]['data'].get('tool'), delta.get(nodes[nid]['data'].get('output_field')) or {})}
                           if nodes[nid]['type'] == 'mcp' and browser_private and ports is not None and ports.browser is not None and ports.browser.is_browser(nodes[nid]['data'].get('server_id')) else {}),  # input: time travel forks from it
-                       **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did (TASK-0116)
+                       **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did
                        **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
                        **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                        **({"code_output": cap_payload(code_out.pop(nid))} if nid in code_out else {})}
@@ -151,7 +151,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         browser_intents={hold['node']:hold['browser_intent'] for hold in holds if hold.get('browser_intent')}
         if browser_intents:cp['browser_intents']=browser_intents
         if len(holds)==1 and primary.get('browser_intent'):cp['browser_intent']=primary['browser_intent']
-        if len(holds) > 1: cp["waits"] = holds  # one resume after every wait of this superstep (TASK-0158)
+        if len(holds) > 1: cp["waits"] = holds  # one resume after every wait of this superstep
         elif holds[0]["kind"] == "child": cp["wait"] = {"kind": "child", "run_id": holds[0]["run_id"]}
         extra = {k: primary[k] for k in ("label", "tool", "arguments", "workflow_id", "browser_intent") if primary.get(k) is not None}
         if len(holds) == 1 and primary["kind"] == "child": extra["wait"] = {"kind": "child", "run_id": primary["run_id"]}

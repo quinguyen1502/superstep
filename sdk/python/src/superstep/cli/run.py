@@ -1,4 +1,4 @@
-"""`run` and `runs` (TASK-0169, DEC-0071 decision 5).
+"""`run` and `runs`.
 
 The socket stays open until the run ends: closing it cancels the run. A waiting run is not answered.
 """

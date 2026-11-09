@@ -1,4 +1,4 @@
-/** Cron schedules of a workflow (TASK-0046): list, turn on/off, delete, and add one with a live preview of its next runs. */
+/** Cron schedules of a workflow: list, turn on/off, delete, and add one with a live preview of its next runs. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, CalendarClock, Plus, Trash2 } from 'lucide-react'

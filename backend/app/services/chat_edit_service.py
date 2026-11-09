@@ -1,4 +1,4 @@
-"""Non-destructive chat revisions (DEC-0084). Publication and execution admission are separate, durable steps."""
+"""Non-destructive chat revisions. Publication and execution admission are separate, durable steps."""
 import hashlib, json, re, tempfile, time, uuid
 from ..core.errors import AppError
 from ..core import config

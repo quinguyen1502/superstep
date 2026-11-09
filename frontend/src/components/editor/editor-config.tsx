@@ -44,7 +44,7 @@ import { Sel, F } from './parts'
 import { useStudioCtx } from './studio-context'
 import { StateFieldPicker } from '@/components/state-field-action'
 
-/** Config tabs (TASK-0121, owner amendment TASK-0254): General for identity/label, then the same three tabs.
+/** Config tabs: General for identity/label, then the same three tabs.
  *  Settings: what the node does. Data: every picker of a state field (what it reads and writes, which fields it sees).
  *  Execution: how it runs (retry, timeout, cache, limits). A tab a node does not use stays in its place, disabled. */
 const CONFIG_TABS = ['general', 'settings', 'data', 'execution'] as const
@@ -53,7 +53,7 @@ const FIELD_PICKERS = new Set(['email', 'decision', 'condition', 'foreach'])  //
 const LIMITS = new Set(['foreach'])  // an execution limit without RUNTIME's retry / timeout / cache
 const WRITERS = new Set(['llm', 'tool', 'human', 'retriever', 'mcp', 'agent'])  // output_field required (backend engine/validator.py)
 
-/** Right panel: config of the selected node or edge (TASK-0040). */
+/** Right panel: config of the selected node or edge. */
 export function EditorConfig() {
   const [kept, setKept] = useState<string | null>(null)  // node whose edited code was kept on a language switch
   const [tab, setTab] = useState<ConfigTab>('general')  // kept while another node is selected
@@ -65,8 +65,8 @@ export function EditorConfig() {
   const earlier = new Set<string>(); let previous = selNode?.id
   while (previous && !earlier.has(previous)) { earlier.add(previous); const incoming = edges.filter(edge => edge.target === previous); previous = incoming.length === 1 ? incoming[0].source : undefined }
   for (const node of nodes) if (node.id !== selNode?.id && earlier.has(node.id) && node.type === 'mcp' && ['navigate', 'snapshot'].includes(String(node.data.tool)) && typeof node.data.output_field === 'string') observations.push(node.data.output_field)
-  const codeRt = useCodeRuntime(); const me = useMe(); const canCode = can(me, 'code.write')  // Tool node Code mode (TASK-0055)
-  const canAuto = access === 'owner' || !!me?.is_admin  // AI review answering on its own: owner or admin (TASK-0188, DEC-0075)
+  const codeRt = useCodeRuntime(); const me = useMe(); const canCode = can(me, 'code.write')  // Tool node Code mode
+  const canAuto = access === 'owner' || !!me?.is_admin  // AI review answering on its own: owner or admin
   const chatCreds = creds.filter(c => (providers.find(p => p.id === c.provider)?.kind ?? 'chat') === 'chat')  // TypeSafe keys: Decision nodes; SMTP: Send email
   const tpl = { fields: state, readOnly: !edit, placeholder: t('template.placeholder', { open: '{{' }) }
   const type = selNode?.type || ''

@@ -1,4 +1,4 @@
-// TASK-0177: the composer's checks before an upload use the same codes and limits as the API.
+// the composer's checks before an upload use the same codes and limits as the API.
 import { describe, expect, it } from 'vitest'
 import { acceptOf, attachmentKind, attachmentProblem, fileSize, type AttachmentLimits } from '@/lib/chat'
 

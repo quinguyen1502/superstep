@@ -1,4 +1,4 @@
-/** Editor panel sizes in px (TASK-0038, REQ-0026). One localStorage key in this browser; never part of the workflow,
+/** Editor panel sizes in px. One localStorage key in this browser; never part of the workflow,
  * so another author does not inherit them. Missing, corrupt or too-small values fall back to the defaults / minimums. */
 export type PanelSizes = { left: number; right: number; bottom: number }
 
@@ -21,7 +21,7 @@ export const panelStore = {
   write: (s: PanelSizes) => { try { localStorage.setItem(PANEL_KEY, JSON.stringify(s)) } catch { /* storage disabled: sizes last for this page */ } },
 }
 
-/** The Chat side panel (TASK-0085): open or not, and its width in px (340–760). Same rules as the panel sizes:
+/** The Chat side panel: open or not, and its width in px (340–760). Same rules as the panel sizes:
  * one key in this browser, corrupt or out-of-range values fall back to the default / the nearest bound. */
 export type ChatPanelState = { open: boolean; width: number }
 export const CHAT_KEY = 'lgs.chatPanel'

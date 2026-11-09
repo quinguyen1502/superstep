@@ -14,7 +14,7 @@ type Note = { id: string; kind: 'run_waiting' | 'run_expired' | 'run_reminder' |
   params: { workflow_name?: string | null; label?: string | null; prompt?: string | null } }
 const POLL_MS = 30_000
 
-/** Live push (TASK-0021): WebSocket /ws/notifications; reconnects with backoff. Returns whether it is connected. */
+/** Live push: WebSocket /ws/notifications; reconnects with backoff. Returns whether it is connected. */
 function useLivePush(onPush: (n: Note, unread: number) => void) {
   const [live, setLive] = useState(false); const cb = useRef(onPush)
   useEffect(() => { cb.current = onPush })
@@ -35,8 +35,8 @@ function useLivePush(onPush: (n: Note, unread: number) => void) {
   return live
 }
 
-/** In-app notifications (TASK-0020): bell with unread count, list, mark read. Live push with polling as the fallback,
- *  and a settings dialog for the user's channels (TASK-0021). */
+/** In-app notifications: bell with unread count, list, mark read. Live push with polling as the fallback,
+ * and a settings dialog for the user's channels. */
 export function NotificationBell() {
   const { t } = useTranslation(); const nav = useNavigate()
   const [items, setItems] = useState<Note[]>([]); const [unread, setUnread] = useState(0); const [settings, setSettings] = useState(false)

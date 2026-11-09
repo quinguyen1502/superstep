@@ -53,7 +53,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "AGENT_HANDOFF_LIMIT": (400, "Max hand-offs per run must be 0-{max}"),
     "WORKFLOW_TOO_LARGE": (413, "Workflow is too large (max {max_kb} KB)"),
     "WORKFLOW_INVALID": (400, "Workflow is invalid"),
-    # templates (TASK-0025)
+    # templates
     "TEMPLATE_NOT_FOUND": (404, "Template not found"),
     "TEMPLATE_READ_ONLY": (403, "This template cannot be deleted"),
     "TEMPLATE_INVALID": (400, "Not a valid template file"),
@@ -83,13 +83,13 @@ CATALOG: dict[str, tuple[int, str]] = {
     "SCHEDULE_NOT_FOUND": (404, "Schedule not found"),
     "SCHEDULE_CRON_INVALID": (400, "Schedule: {reason}"),
     "SCHEDULE_LIMIT": (400, "A workflow can have at most {max} schedules"),
-    # chat triggers (TASK-0074)
+    # chat triggers
     "CHAT_TRIGGER_NOT_FOUND": (404, "Chat trigger not found"),
     "CHAT_TRIGGER_COMMAND_TAKEN": (409, "Another chat trigger already answers '{command}' there"),
     "CHAT_TRIGGER_LIMIT": (400, "A workflow can have at most {max} chat triggers"),
     "CHAT_TRIGGER_CONFIG_INVALID": (400, "Chat trigger: invalid {field}"),
     "CHAT_TRIGGER_SCOPE_MISSING": (400, "The Slack app lacks the scopes chat triggers need: {scopes}. Reinstall it with them"),
-    # chat-trigger refusals (TASK-0075): answered in the chat and kept in the approval audit log
+    # chat-trigger refusals: answered in the chat and kept in the approval audit log
     "CHAT_IDENTITY_UNKNOWN": (403, "Their {kind} account is not linked to Superstep"),
     "CHAT_IDENTITY_UNVERIFIED": (403, "Their {kind} account is linked but not verified"),
     "CHAT_FORBIDDEN": (403, "They may not run this workflow"),
@@ -109,7 +109,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "CHAT_MESSAGE_TOO_LONG": (400, "The message is longer than {max} characters"),
     "CHAT_RUN_WAITING": (409, "Answer the question in the chat first"),
     "CHAT_ANSWER_BY_REVIEWER": (409, "A reviewer answers this step in the Approvals inbox"),
-    # the published chat page (TASK-0140, DEC-0067)
+    # the published chat page
     "CHAT_NOT_PUBLISHED": (404, "This chat is not available"),
     "CHAT_SLUG_INVALID": (400, "The chat address must be 3 to 64 lowercase letters, digits or hyphens"),
     "CHAT_SLUG_TAKEN": (409, "Another chat already uses the address '{slug}'"),
@@ -143,7 +143,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "CHAT_FRAME_INVALID": (400, "Invalid chat frame: {reason}"),
     "CHAT_RATING_NOT_ALLOWED": (409, "This message cannot be rated"),
     "CHAT_RATING_INVALID": (400, "Rating: invalid {field}"),
-    # workflow tests (TASK-0067)
+    # workflow tests
     "TEST_NOT_FOUND": (404, "Test case not found"),
     "TEST_CASE_INVALID": (400, "Test case: {reason}"),
     "TEST_CASES_LIMIT": (400, "A workflow can have at most {max} test cases"),
@@ -165,7 +165,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "MODEL_POLICY_EXPORT_UNAVAILABLE": (400, "Model fallback policies are not yet supported by code exports; remove the policy to export"),
     "HTTP_TOOL_URL_BLOCKED": (400, "HTTP Tool node {node}: the URL must be a public http(s) address"),
     "TEMPLATE_REF_INVALID": (400, "Template error: {reason}"),
-    # approval channels (TASK-0022)
+    # approval channels
     "CHANNEL_KIND_UNSUPPORTED": (400, "Unsupported approval channel: {kind}"),
     "CHANNEL_CONFIG_INVALID": (400, "Channel setting {field} is missing or invalid"),
     "CHANNEL_NOT_FOUND": (404, "Approval channel not configured"),
@@ -190,7 +190,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "CREDENTIAL_KEY_REQUIRED": (400, "API key is required"),
     "CREDENTIAL_BASE_URL_INVALID": (400, "Base URL must start with http:// or https://"),
     "CREDENTIAL_DECRYPT_FAILED": (500, "Could not decrypt credential (was the secret key changed?)"),
-    # knowledge bases (TASK-0012)
+    # knowledge bases
     "KB_NOT_FOUND": (404, "Knowledge base not found or not yours"),
     "KB_NAME_REQUIRED": (400, "Knowledge base name is required"),
     "KB_NAME_TOO_LONG": (400, "Knowledge base name must be at most {max} characters"),
@@ -203,7 +203,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "KB_QUERY_REQUIRED": (400, "Enter a search query"),
     "KB_EMBEDDING_FAILED": (502, "Embedding failed: {reason}"),
     "KB_EMBEDDER_CHANGED": (409, "The embedding model or key changed since the documents were indexed; re-index the knowledge base"),
-    # MCP servers (TASK-0013)
+    # MCP servers
     "MCP_SERVER_NOT_FOUND": (404, "MCP server not found"),
     "MCP_NAME_REQUIRED": (400, "MCP server name is required"),
     "MCP_NAME_TOO_LONG": (400, "MCP server name must be at most {max} characters"),
@@ -227,7 +227,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "IMPORT_JOB_NOT_FOUND": (404, "Import job not found"),
     "IMPORT_NOT_READY": (400, "Import job is not ready or the graph is invalid"),
     "IMPORT_DISABLED": (404, "Repo import is disabled (set STUDIO_ENABLE_IMPORT=1 to enable this experimental feature)"),
-    # RBAC and sharing (TASK-0014)
+    # RBAC and sharing
     "AUTH_ACCOUNT_DISABLED": (403, "This account has been deactivated"),
     "PERMISSION_DENIED": (403, "Your role does not allow this ({permission})"),
     "USER_NOT_FOUND": (404, "User not found"),
@@ -238,11 +238,11 @@ CATALOG: dict[str, tuple[int, str]] = {
     "SHARE_ROLE_INVALID": (400, "Share role must be viewer or editor"),
     "SHARE_OWNER": (400, "The owner already has full access"),
     "SHARE_NOT_FOUND": (404, "This workflow is not shared with that user"),
-    # Slack app distribution (TASK-0014)
+    # Slack app distribution
     "SLACK_OAUTH_NOT_CONFIGURED": (503, "Add to Slack is not configured (SLACK_CLIENT_ID / SLACK_CLIENT_SECRET)"),
     "SLACK_OAUTH_STATE_INVALID": (400, "The Slack sign-in link is invalid or expired, please try again"),
     "SLACK_OAUTH_FAILED": (502, "Slack did not complete the installation: {reason}"),
-    # Phase 3 hardening (TASK-0029)
+    # Phase 3 hardening
     "TEAM_NOT_FOUND": (404, "Team not found"),
     "TEAM_NAME_REQUIRED": (400, "Team name is required"),
     "TEAM_NAME_TAKEN": (409, "A team with this name already exists"),
@@ -253,7 +253,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "USER_HAS_WORKFLOWS": (409, "This user owns {count} workflow(s): choose who takes them over first"),
     "USER_DELETE_MODE_INVALID": (400, "Mode must be anonymize or delete"),
     "WORKFLOW_IN_USE": (409, "{count} workflow(s) use this workflow as a subgraph"),
-    # LLM providers (TASK-0030)
+    # LLM providers
     "PROVIDER_UNREACHABLE": (502, "Could not reach {provider} at {base_url}: is the server running and reachable from the API?"),
     "PROVIDER_AUTH_FAILED": (400, "{provider} rejected the API key: {reason}"),
     "PROVIDER_BAD_RESPONSE": (502, "{provider} returned an unexpected response: {reason}"),
@@ -263,7 +263,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "WORKFLOW_TOOL_TOO_DEEP": (400, "Workflow tools nest more than {max} runs deep; this call was not started"),
     "KB_EMBEDDING_DIMENSION_MISMATCH": (409, "The embedding model returns {got}-dimensional vectors but this knowledge base stores {expected}-dimensional ones; re-index the knowledge base"),
     "CREDENTIAL_HEADER_UNSUPPORTED": (400, "{provider} does not accept the header {header}"),
-    # Send email nodes and SMTP credentials (TASK-0051)
+    # Send email nodes and SMTP credentials
     "CREDENTIAL_SETTINGS_INVALID": (400, "Check the setting {field}"),
     "EMAIL_HOST_BLOCKED": (400, "The SMTP host {host} is a private or local address (allowed only with STUDIO_SMTP_ALLOW_PRIVATE=1)"),
     "EMAIL_AUTH_FAILED": (400, "The SMTP server rejected the sign-in: {reason}"),
@@ -274,7 +274,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "EMAIL_TOO_MANY_RECIPIENTS": (400, "Send email node {node}: at most {max} recipients"),
     "EMAIL_RATE_LIMITED": (429, "Send email nodes may reach {limit} recipients per hour; try again in {retry} s"),
     "ORG_RESOURCE_NOT_ALLOWED": (403, "Your role may not use organization-wide resources at run time ({kind})"),
-    # Tool node Code mode (TASK-0053)
+    # Tool node Code mode
     "DEMO_CODE_DISABLED": (403, "Code nodes are turned off in the public demo"),
     "DEMO_NODE_DISABLED": (403, "{node} nodes are turned off in the public demo"),
     "DEMO_READ_ONLY": (403, "The public demo is read-only: you can open, edit and run workflows, but not save changes"),

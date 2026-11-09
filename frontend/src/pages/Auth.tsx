@@ -21,7 +21,7 @@ const safeNext = (n: string | null) => (n && n.startsWith('/') && !n.startsWith(
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { t } = useTranslation(); const nav = useNavigate(); const isLogin = mode === 'login'
   const [params] = useSearchParams(); const expired = params.get('expired') === '1'; const next = safeNext(params.get('next'))
-  const reset = params.get('reset') === '1'  // back from a password reset (TASK-0045)
+  const reset = params.get('reset') === '1'  // back from a password reset
   const [email, setEmail] = useState<string>(useLocation().state?.email || '')  // router state, not the URL
   // the demo hint and e-mail exist only where the server seeds the demo account (not in production)
   const [demo, setDemo] = useState(false)

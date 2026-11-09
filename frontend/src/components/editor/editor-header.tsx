@@ -32,13 +32,13 @@ import { LogoMark } from '@/components/logo'
 
 const isMacPlatform = isMac()
 
-/** Top bar: name, run controls, undo/redo, the ⋯ menu, dialogs, and account controls (TASK-0040). */
+/** Top bar: name, run controls, undo/redo, the ⋯ menu, dialogs, and account controls. */
 export function EditorHeader() {
   const { t } = useTranslation()
   const { input, name, setName, wid, setErrors, mode, source, setTab, running, access, ownerEmail, edit, canSave, hist, load, toJSON, save, run, cancelRun, layoutDir, cheat, setCheat, dlg, setDlg, delWf, isDirty, paletteCmds, trace, step, continueRun, selNode, d, runTo, chatOpen, setChatOpen, canChat } = useStudioCtx()
   // ⋯ tooltip: hidden while the menu is open and until the pointer leaves after closing it
   const [moreOpen, setMoreOpen] = useState(false); const [moreTip, setMoreTip] = useState(false); const moreTipBlock = useRef(false)
-  // phones (TASK-0121): one row of back, name and icon-only actions; account controls stay on the workflow list
+  // phones: one row of back, name and icon-only actions; account controls stay on the workflow list
   return <header className="h-14 shrink-0 grid grid-cols-[minmax(min-content,1fr)_minmax(0,auto)_minmax(min-content,1fr)] items-center border-b px-4 max-md:flex max-md:gap-1 max-md:px-2">
       <div className="mr-3 flex min-w-0 items-center gap-2 max-md:mr-0">
         <Tip tip={t('editor.backToList')}><Button variant="ghost" size="icon" asChild><Link to="/workflows" id="back-btn"><ArrowLeft /></Link></Button></Tip>
@@ -95,7 +95,7 @@ export function EditorHeader() {
       </Dialog>
       {delWf.dialog}
       {/* the right column is never narrower than its icons, so it cannot cover the centre actions; the info badges
-          take what is left (TASK-0039) and hide whole when they do not fit, never as a clipped half badge */}
+          take what is left and hide whole when they do not fit, never as a clipped half badge */}
       <div className="@container flex min-w-0 flex-1 items-center justify-end overflow-hidden max-md:hidden" id="header-info">
       <div className="flex items-center gap-2">
       {source && <Tip tip={t('editor.importedTip', { src: source.repo_url || 'zip', ref: source.ref })}><Badge variant="secondary" className="gap-1"><GitFork className="size-3" />{t('editor.imported')}</Badge></Tip>}

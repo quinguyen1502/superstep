@@ -1,4 +1,4 @@
-"""Personal data of one user, for account deletion / anonymisation (TASK-0029). Org-scope resources are kept."""
+"""Personal data of one user, for account deletion / anonymisation. Org-scope resources are kept."""
 from ..models.browser_session import BrowserSession, BrowserCommand, BrowserIntent
 from sqlalchemy import delete, select, update
 from ..models import (ApprovalChannel, ChannelIdentity, Credential, KbChunk, KbDocument, KnowledgeBase, McpServer, Notification, Run, WorkflowTemplate,

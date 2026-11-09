@@ -1,6 +1,6 @@
-"""Export a workflow as one readable, runnable LangGraph.js TypeScript file (TASK-0082, REQ-0047, DEC-0051).
+"""Export a workflow as one readable, runnable LangGraph.js TypeScript file.
 
-The TypeScript twin of `python_export` (TASK-0070): the state as an `Annotation.Root` with the same reducers, one
+The TypeScript twin of `python_export`: the state as an `Annotation.Root` with the same reducers, one
 function per node, `buildGraph()` with `addNode` / `addEdge` / `addConditionalEdges`, and a `main()` that runs an
 example. It imports only `@langchain/langgraph` (and LangChain.js when `LLM_PROVIDER` is set), as `npm:` specifiers,
 so `deno run` / `deno check` work as is; for Node, drop the `npm:` prefixes.
@@ -10,7 +10,7 @@ environment variables at run time. TypeScript Code nodes are inlined as written;
 Python tool functions become stubs that throw. Retriever, MCP and Send email nodes call the studio's services through
 environment variables, as in the Python file. A node credential is an LLM_CRED_<n> slot. Approval extras and managed
 connections are included when a node has them.
-An Agent node is its model and tool steps in a loop, as in the Python file (TASK-0125, DEC-0063); its built-in tools are
+An Agent node is its model and tool steps in a loop, as in the Python file; its built-in tools are
 Python functions, so they throw too, and the model is told the tool failed.
 The output is a pure function of its input: the same graph gives the same bytes.
 """
@@ -27,7 +27,7 @@ from .templating import VAR_RE, _ONE_FILTER, refs
 LANGGRAPH = "npm:@langchain/langgraph@^1.5"
 CHECKPOINT = "npm:@langchain/langgraph-checkpoint@^1"
 LANGCHAIN = "npm:langchain@^1"
-NODEMAILER = "npm:nodemailer@^6"  # Send email nodes with SMTP configured (TASK-0271)
+NODEMAILER = "npm:nodemailer@^6"  # Send email nodes with SMTP configured
 TS_TYPES = {"string": "string", "number": "number", "integer": "number", "boolean": "boolean",
             "object": "Record<string, unknown>", "list": "unknown[]"}
 REDUCERS = {"append": ("appendItems", "unknown[]", "[]"), "merge": ("mergeObjects", "Record<string, unknown>", "{}"),
@@ -1003,7 +1003,7 @@ class _Writer(GraphWriter):
         for f in self.all_fields(g): self.add(f"  {lit(f['name'])}: {self.ann(f)},")
         for c in g.cursors.values(): self.add(f"  {lit(c)}: Annotation<number>(),  // loop position of a For each node")
         for a in g.agents.values(): self.add(f"  {lit(a['chat'])}: Annotation<AgentChat | null>(),  // an Agent node's conversation")
-        if self.has_handoffs(g):  # TASK-0183
+        if self.has_handoffs(g):
             self.add(f"  {lit(self.HANDOFF_FIELD)}: Annotation<Handoff | null>(),  // a hand-off on its way to the next agent")
             self.add(f"  {lit(self.COUNT_FIELD)}: Annotation<number>(),  // hand-offs so far in this run")
             self.add(f"  {lit(self.START_FIELD)}: Annotation<string>(),  // input: start at this agent (a chat continues with the agent that answered last)")
@@ -1304,7 +1304,7 @@ class _Writer(GraphWriter):
         self.add("}")
 
     def agent(self, g: Graph, nid: str, cls: str, head: str, sig: str) -> None:
-        """An Agent node as the studio runs it (DEC-0063), as in the Python file: an entry node, the model node and the
+        """An Agent node as the studio runs it, as in the Python file: an entry node, the model node and the
         tool node in a loop, and an end node, with the conversation in its own state field."""
         d = g.nodes[nid].get("data") or {}; name, const, a = g.names[nid], g.names[nid].upper(), g.agents[nid]
         chat, model, tool, end = lit(a["chat"]), a["model"], a["tool"], a["exit"]
@@ -1687,7 +1687,7 @@ class _Writer(GraphWriter):
             i = queue.pop()
             if i in seen: continue
             seen.add(i); queue += [e["target"] for e in g.edges if e["source"] == i]
-            if i in g.agents: queue += [h["target"] for h in self.handoff_raw(g, i)]  # hand-off targets (TASK-0183)
+            if i in g.agents: queue += [h["target"] for h in self.handoff_raw(g, i)]  # hand-off targets
         return seen
 
     def run(self, main: Graph) -> None:

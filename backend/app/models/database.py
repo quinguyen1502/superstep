@@ -38,7 +38,7 @@ class Database:
 
     def migrate(self) -> None:
         """Upgrade to the latest Alembic revision (idempotent; adopts pre-Alembic SQLite files).
-        Serialised across processes (TASK-0019): a Postgres advisory lock held for the migration transaction,
+        Serialised across processes: a Postgres advisory lock held for the migration transaction,
         or an exclusive file lock next to a SQLite database file, so API replicas + workers can start together."""
         from alembic import command
         from alembic.config import Config

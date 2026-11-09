@@ -1,4 +1,4 @@
-"""TASK-0074: chat triggers (REQ-0044) and the granted Slack scopes of a connection."""
+"""chat triggers and the granted Slack scopes of a connection."""
 from alembic import op
 import sqlalchemy as sa
 

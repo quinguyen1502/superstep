@@ -1,6 +1,6 @@
-"""The chat socket protocol v1 (TASK-0216, REQ-0082, DEC-0078): typed frames on /ws/public/v1/chat/{slug}.
+"""The chat socket protocol v1: typed frames on /ws/public/v1/chat/{slug}.
 
-The client sends at most one `auth`, then one `message` or `answer` (one message per connection, decision 6 of PLAN-0002),
+The client sends at most one `auth`, then one `message` or `answer` (one message per connection, decision 6 ),
 and may send `cancel`. The server sends `ready`, then the run as `run_started`, `token`, `step`, `question`, `turn`, and
 `done` or `error`; every server frame carries `v: 1` and a per-connection `seq`. The JSON Schema of both sides is in
 `app/api/schemas/chat_ws_v1/` and the AsyncAPI document in docs/asyncapi/chat-v1.yaml.

@@ -1,4 +1,4 @@
-"""Result webhooks (TASK-0007, hardened in TASK-0019 / DEC-0016).
+"""Result webhooks.
 
 - SSRF guard and DNS-rebinding-safe pinned IP from `core/net.py` (shared with MCP and HTTP Tool nodes);
   private targets are refused unless STUDIO_ALLOW_PRIVATE_CALLBACKS=1. The host is resolved at delivery time.
@@ -40,7 +40,7 @@ def _mac(secret: str, body: bytes, ts: int) -> str:
 
 def sign(secrets: "str | list[str]", body: bytes, ts: Optional[int] = None) -> str:
     """`t=<ts>,v1=<mac>[,v1=<mac>…]`, one v1 per active secret (during a rotation grace period both the new
-    and the previous secret sign, so receivers can switch over without dropping callbacks; TASK-0020)."""
+    and the previous secret sign, so receivers can switch over without dropping callbacks; )."""
     ts = int(ts if ts is not None else time.time())
     secrets = [secrets] if isinstance(secrets, str) else secrets
     return ",".join([f"t={ts}"] + [f"v1={_mac(s, body, ts)}" for s in secrets])

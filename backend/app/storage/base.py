@@ -1,4 +1,4 @@
-"""The storage port (TASK-0191, DEC-0074 decision 1)."""
+"""The storage port."""
 from __future__ import annotations
 import re, time, uuid
 from abc import ABC, abstractmethod
@@ -8,7 +8,7 @@ CHUNK = 64 * 1024  # bytes per streamed piece
 PROBE_PREFIX = "_probe/"
 
 
-Data = Union[bytes, BinaryIO]  # put() takes the bytes or a readable, seekable file (an upload spooled to disk, TASK-0200)
+Data = Union[bytes, BinaryIO]  # put() takes the bytes or a readable, seekable file (an upload spooled to disk, )
 
 
 def as_bytes(data: Data) -> bytes:
@@ -34,7 +34,7 @@ KEY_RE = re.compile(r"^[A-Za-z0-9_-]{1,128}/[A-Za-z0-9_-]{1,128}/[0-9a-f]{32}$")
 
 
 def is_service_key(key: str) -> bool:
-    """A key the attachment service makes (TASK-0203). The orphan sweep deletes nothing else, so files of other systems
+    """A key the attachment service makes. The orphan sweep deletes nothing else, so files of other systems
     or of an install under a nested folder or prefix are never touched."""
     return bool(KEY_RE.match(key or ""))
 
@@ -44,7 +44,7 @@ class AttachmentStore(ABC):
     `inline` backends keep the bytes on the row itself (`db`): the service writes them with the row."""
     name: str = ""
     inline: bool = False
-    location: str = ""  # where this store keeps objects (folder, or bucket/prefix); recorded on each row (TASK-0203)
+    location: str = ""  # where this store keeps objects (folder, or bucket/prefix); recorded on each row
 
     def unsafe(self) -> str | None:
         """Why this configuration must not be used (nothing is written or swept there), or None."""

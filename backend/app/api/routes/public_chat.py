@@ -1,6 +1,6 @@
-"""The published chat page's API (TASK-0140, REQ-0074, DEC-0067), by slug and without the run right.
+"""The published chat page's API, by slug and without the run right.
 
-Public Chat API v1 (TASK-0215, REQ-0082, DEC-0078): every route below is served at /api/public/v1/chat/{slug}/...
+Public Chat API v1: every route below is served at /api/public/v1/chat/{slug}/...
 and is in the public OpenAPI under the `Chat` tag; the unversioned /api/public/chat/... paths are aliases of v1 with the
 same handlers (kept for the page, the embed and widget.js; not in the specs).
 
@@ -8,13 +8,13 @@ GET  /api/public/chat/{slug}                      the page: title, intro, sugges
 GET  /api/public/chat/{slug}/sessions             {sessions}: the visitor's chats     POST a new chat ({embed?})
 GET  /api/public/chat/{slug}/sessions/{sid}       one of them, in the page's steps mode
 GET  /api/public/chat/{slug}/sessions/{sid}/turns?after=<turn_id>  the turns after that one (incremental history)
-GET  /api/public/chat/{slug}/logo?v=<hash>        the chat's logo image (TASK-0145)
-POST /api/public/chat/{slug}/sessions/{sid}/attachments        one file (multipart `file`), before the message (TASK-0174)
+GET /api/public/chat/{slug}/logo?v=<hash> the chat's logo image
+POST /api/public/chat/{slug}/sessions/{sid}/attachments one file (multipart `file`), before the message
 GET  /api/public/chat/{slug}/sessions/{sid}/attachments/{aid}  download it      DELETE it while unsent
-WS   /ws/public/v1/chat/{slug}                    the chat socket protocol v1 (TASK-0216): typed frames, see ws_public_chat_v1
+WS /ws/public/v1/chat/{slug} the chat socket protocol v1: typed frames, see ws_public_chat_v1
 WS   /ws/public/chat/{slug}                       {chat_session_id, message} or {chat_session_id, response, node?}: the run
-                                                  streams as public_event()s (TASK-0141); ?visitor= for the widget
-GET  /api/public/chat-frame?path=/c/{slug}        the page's frame-ancestors in Content-Security-Policy (TASK-0143):
+                                                  streams as public_events; ?visitor= for the widget
+GET /api/public/chat-frame?path=/c/{slug} the page's frame-ancestors in Content-Security-Policy:
                                                   nginx asks it with auth_request (X-Original-URI) before serving /c/
 
 An anonymous visitor is the HttpOnly cookie `studio_chat_<hash>`, or the `X-Chat-Visitor` header (the widget, which
@@ -89,15 +89,15 @@ def logo_response(logo, versioned: bool, scope: str = "public") -> Response:
 MULTIPART_SLACK = 64 * 1024  # the multipart envelope around one file
 
 
-UPLOAD_PIECE = 1024 * 1024  # read an upload in pieces of this size (TASK-0200)
+UPLOAD_PIECE = 1024 * 1024  # read an upload in pieces of this size
 
 
 async def read_upload(request: Request) -> tuple[str, BinaryIO]:
     """(file name, file) of a one-file multipart upload. A body that says it is larger than the operator's ceiling is
-    refused before it is read (TASK-0174, DEC-0072 decision 3). The multipart parser then spools the whole part to a
+    refused before it is read. The multipart parser then spools the whole part to a
     temporary file before the ceiling is checked, so a body without a Content-Length (chunked) is only bounded by the
     proxy in front (nginx client_max_body_size, which also buffers it and sends a length); the file is then copied in
-    pieces and refused past the ceiling, so it is never one bytes object (TASK-0200, corrected in TASK-0203). The
+    pieces and refused past the ceiling, so it is never one bytes object. The
     caller closes the file."""
     ceiling = config.chat_attachment_max_mb() * 1024 * 1024
     too_large = AppError("CHAT_ATTACHMENT_TOO_LARGE", max_mb=config.chat_attachment_max_mb())
@@ -123,8 +123,8 @@ async def read_upload(request: Request) -> tuple[str, BinaryIO]:
 
 
 def file_response(a, chunks) -> Response:
-    """A chat file, always as a download that the browser must not sniff or render (REQ-0077). The bytes are streamed
-    from the attachment storage through the backend, whatever the backend: never a bucket URL (DEC-0074 decision 3)."""
+    """A chat file, always as a download that the browser must not sniff or render. The bytes are streamed
+    from the attachment storage through the backend, whatever the backend: never a bucket URL ( decision 3)."""
     ascii_name = a.name.encode("ascii", "ignore").decode().replace('"', "") or "file"
     return StreamingResponse(chunks, media_type=a.mime, headers={
         "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{quote(a.name)}", "Content-Length": str(a.size),
@@ -344,7 +344,7 @@ TURN_WAIT, TURN_POLL = 2.0, 0.05  # how long v1 waits for the answer turn to be 
 
 @root_router.websocket("/ws/public/v1/chat/{slug}")
 async def ws_public_chat_v1(ws: WebSocket, slug: str):
-    """The chat socket protocol v1 (TASK-0216, DEC-0078; services/chat_ws_v1.py): `ready`, then an optional `auth` and
+    """The chat socket protocol v1: `ready`, then an optional `auth` and
     one `message` or `answer`; the run streams as typed frames with `v` and `seq`, then `turn` (when saved in time),
     `done` and the socket closes. A frame that is not v1 is an `error` frame with CHAT_FRAME_INVALID."""
     await ws.accept()

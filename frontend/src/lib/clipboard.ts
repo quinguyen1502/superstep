@@ -1,11 +1,11 @@
-/** Copy / cut / paste / duplicate of canvas nodes (TASK-0026, DEC-0029). Pure functions + a tiny localStorage store, so
+/** Copy / cut / paste / duplicate of canvas nodes. Pure functions + a tiny localStorage store, so
  * a selection can be pasted into another workflow in the same browser. Start/End are never copied; only edges whose two
  * ends are both copied come along; pasted elements get fresh ids. */
 import type { Edge, Node } from '@xyflow/react'
 import { PROTECTED } from '@/lib/graph-ops'
 
 export const CLIP_FORMAT = 'superstep/nodes', CLIP_VERSION = 1, CLIP_KEY = 'lgs.clipboard'
-const FORMATS = new Set<string>([CLIP_FORMAT, 'langgraph-studio/nodes'])  // the v0.1.0 name is still pasted (TASK-0058)
+const FORMATS = new Set<string>([CLIP_FORMAT, 'langgraph-studio/nodes'])  // the v0.1.0 name is still pasted
 export type ClipNode = { id: string; type: string; position: { x: number; y: number }; data: Record<string, unknown> }
 export type ClipEdge = { id: string; source: string; target: string; label?: unknown; sourceHandle?: string | null; data?: unknown }
 export type Clip = { format: typeof CLIP_FORMAT; version: number; nodes: ClipNode[]; edges: ClipEdge[] }

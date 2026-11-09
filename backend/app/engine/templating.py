@@ -1,4 +1,4 @@
-"""`{{state.field}}` templating for prompts, URLs, bodies, queries and tool arguments (TASK-0044, DEC-0034).
+"""`{{state.field}}` templating for prompts, URLs, bodies, queries and tool arguments.
 
 A reference is `{{ state.<field>[.<key>|.<index>]... [| filter[(arg)]]... }}`:
 - the path walks dicts by key and lists by index; anything missing gives None, which renders as ""

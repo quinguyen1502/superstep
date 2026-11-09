@@ -1,4 +1,4 @@
-"""Chat attachments (TASK-0174, REQ-0077, DEC-0072): files a person attaches to a chat message.
+"""Chat attachments: files a person attaches to a chat message.
 
 A file is uploaded before the message is sent, one per request, and belongs to the session until the message takes it
 (`turn_id`). Its kind is read from the bytes, never from the name or the browser: PDF, PNG, JPEG, WebP, or UTF-8 text
@@ -34,7 +34,7 @@ SIGNATURES = ((b"%PDF-", "application/pdf", "document", (".pdf",)),
               (b"\x89PNG\r\n\x1a\n", "image/png", "image", (".png",)),
               (b"\xff\xd8\xff", "image/jpeg", "image", (".jpg", ".jpeg")))
 TEXT_TYPES = {".txt": "text/plain", ".md": "text/markdown", ".csv": "text/csv"}
-DOCUMENT_EXTS = {".pdf", *TEXT_TYPES}  # read whole for the text; an image is checked from its first HEAD bytes (TASK-0200)
+DOCUMENT_EXTS = {".pdf", *TEXT_TYPES}  # read whole for the text; an image is checked from its first HEAD bytes
 HEAD = 64
 
 
@@ -75,7 +75,7 @@ def public(a) -> dict:
 class ChatAttachmentService:
     def __init__(self, repo: ChatAttachmentRepository, chat: "ChatSessionService", pub: Optional["PublicChatService"] = None,
                  files: Optional[AttachmentFiles] = None):
-        """files: where the bytes go (TASK-0191, DEC-0074); the chat session service's by default."""
+        """files: where the bytes go; the chat session service's by default."""
         self.repo, self.chat, self.pub = repo, chat, pub
         self.files = files or chat.files
 
@@ -85,7 +85,7 @@ class ChatAttachmentService:
         s = self.pub.own(t, sid, v)
         self._allowed(settings_of(st))
         await self.pub.check_message(t, st, v, ip, daily=False)  # an upload counts as a message for the rate limits
-        return await asyncio.to_thread(self.store, s, st, name, data), v  # file I/O off the event loop (TASK-0203)
+        return await asyncio.to_thread(self.store, s, st, name, data), v  # file I/O off the event loop
 
     def public_file(self, slug: str, sid: str, aid: str, token, user) -> tuple[ChatAttachment, "Visitor"]:
         t, st = self.pub.published(slug); v = self.pub.visitor(slug, st, token, user)
@@ -121,7 +121,7 @@ class ChatAttachmentService:
     def store(self, s: ChatSession, st: dict, name, data: Data) -> dict:
         """Checks and keeps one unsent file of session `s`, under the chat's settings `st`. `data` is the bytes or a
         seekable file (an upload spooled by the route): an image is checked from its first bytes and written to the
-        backend in pieces; a document is read whole for its text (TASK-0200)."""
+        backend in pieces; a document is read whole for its text."""
         a = settings_of(st); self._allowed(a)
         f = io.BytesIO(data) if isinstance(data, (bytes, bytearray)) else data
         f.seek(0, io.SEEK_END); size = f.tell(); f.seek(0)

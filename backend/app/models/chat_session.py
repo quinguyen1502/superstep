@@ -5,7 +5,7 @@ from .base import Base
 
 
 class ChatSession(Base):
-    """One conversation with a workflow's chat (TASK-0084, REQ-0048, DEC-0052). Phase 1 has studio sessions of a
+    """One conversation with a workflow's chat. Phase 1 has studio sessions of a
     signed-in builder; `channel` and `visitor` leave room for the published page and the embed (phase 2)."""
     __tablename__ = "chat_sessions"
     __table_args__ = (Index("ix_chat_sessions_workflow_owner", "workflow_id", "owner"),
@@ -20,7 +20,7 @@ class ChatSession(Base):
     app_key_id: Mapped[Optional[str]] = mapped_column(Text)  # issuing key, retained for audit after revocation
     title: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     last_run_id: Mapped[Optional[str]] = mapped_column(Text)
-    active_agent: Mapped[Optional[str]] = mapped_column(Text)  # the Agent a hand-off left the conversation with (TASK-0181)
+    active_agent: Mapped[Optional[str]] = mapped_column(Text)  # the Agent a hand-off left the conversation with
     created: Mapped[float] = mapped_column(Float, nullable=False)
     updated: Mapped[float] = mapped_column(Float, nullable=False, index=True)  # the retention clock
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
@@ -42,7 +42,7 @@ class ChatTurn(Base):
     node: Mapped[Optional[str]] = mapped_column(Text)  # the Human node a waiting turn asks for
     answered_by: Mapped[Optional[str]] = mapped_column(Text)  # visitor | reviewer, for a waiting turn
     code: Mapped[Optional[str]] = mapped_column(Text)  # the error code of a failed turn
-    attachments: Mapped[Optional[str]] = mapped_column(Text)  # JSON list of chat_attachments ids, in order (DEC-0072)
+    attachments: Mapped[Optional[str]] = mapped_column(Text)  # JSON list of chat_attachments ids, in order
     created: Mapped[float] = mapped_column(Float, nullable=False)
     inherited: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
 
@@ -64,7 +64,7 @@ class ChatEdit(Base):
 
 
 class ChatRating(Base):
-    """One thumbs up or down on a finished answer (TASK-0162, REQ-0075, DEC-0070). The turn id is the key, so a
+    """One thumbs up or down on a finished answer. The turn id is the key, so a
     second rating replaces the first."""
     __tablename__ = "chat_ratings"
     __table_args__ = (Index("ix_chat_ratings_workflow_updated", "workflow_id", "updated"),)
@@ -79,7 +79,7 @@ class ChatRating(Base):
 
 
 class ChatAttachment(Base):
-    """A file a person attached to a chat message (TASK-0174, REQ-0077, DEC-0072 decision 1). The bytes live here, not in
+    """A file a person attached to a chat message. The bytes live here, not in
     `chat_turns`, so listing turns never loads files. `turn_id` is None until the message is sent; an unsent upload is
     swept after an hour."""
     __tablename__ = "chat_attachments"
@@ -92,9 +92,9 @@ class ChatAttachment(Base):
     mime: Mapped[str] = mapped_column(Text, nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
     data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)  # the bytes for storage "db"; empty for fs and s3
-    storage: Mapped[str] = mapped_column(Text, nullable=False, default="db", server_default="db")  # where the bytes are (TASK-0191, DEC-0074)
+    storage: Mapped[str] = mapped_column(Text, nullable=False, default="db", server_default="db")  # where the bytes are
     key: Mapped[Optional[str]] = mapped_column(Text)  # the object key for fs and s3: <workflow>/<session>/<attachment id>
-    location: Mapped[Optional[str]] = mapped_column(Text)  # fs folder or s3 bucket/prefix the object was written to (TASK-0203)
+    location: Mapped[Optional[str]] = mapped_column(Text)  # fs folder or s3 bucket/prefix the object was written to
     text: Mapped[Optional[str]] = mapped_column(Text)  # a document's extracted text, capped
     text_cut: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created: Mapped[float] = mapped_column(Float, nullable=False, index=True)

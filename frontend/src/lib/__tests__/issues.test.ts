@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import i18n, { eventErrors, issueTexts } from '../i18n'
 
-// TASK-0132: validation messages are shown in the UI language by their code, else as the server's English text.
+// validation messages are shown in the UI language by their code, else as the server's English text.
 describe('issueTexts', () => {
   afterAll(() => i18n.changeLanguage('en'))
 

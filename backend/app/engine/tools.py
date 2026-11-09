@@ -4,7 +4,7 @@ import os, re, time
 from typing import Any, Callable, Dict
 
 TOOLS: Dict[str, Callable[[Dict[str, Any]], Any]] = {}
-PARAMETERS: Dict[str, Dict[str, Any]] = {}  # name -> JSON Schema of the arguments an Agent node's model fills (TASK-0116)
+PARAMETERS: Dict[str, Dict[str, Any]] = {}  # name -> JSON Schema of the arguments an Agent node's model fills
 NO_PARAMETERS: Dict[str, Any] = {"type": "object", "properties": {}}
 
 def register_tool(name: str, parameters: Dict[str, Any] | None = None):
@@ -42,7 +42,7 @@ REQUEST_REFUND_PARAMETERS = {"type": "object", "properties": {"message": {"type"
 
 @register_tool("request_refund", REQUEST_REFUND_PARAMETERS)  # one line: the Python export copies the function without its decorator
 def request_refund(state: Dict[str, Any], locale: str = "en") -> str:
-    """Example function: request a refund for the order id (e.g. A100) in state.message. Nothing is paid (TASK-0119)."""
+    """Example function: request a refund for the order id (e.g. A100) in state.message. Nothing is paid."""
     lang = locale if locale in REFUND_TEXT else "en"
     m = re.search(r"\b([A-Z]\d{3})\b", str(state.get("message", "")).upper())
     return REFUND_TEXT[lang][1].format(oid=m.group(1)) if m else REFUND_TEXT[lang][0]

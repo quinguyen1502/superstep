@@ -1,4 +1,4 @@
-/** MCP servers (TASK-0013): API types shared by the settings section and the MCP node settings. */
+/** MCP servers: API types shared by the settings section and the MCP node settings. */
 export type McpTool = { name: string; description: string; input_schema: { properties?: Record<string, { type?: string; description?: string }>; required?: string[] } }
 export type ManagedSettings = Record<string, unknown>
 export type McpSecretInput = { name: string; value: string; stored: boolean }

@@ -1,4 +1,4 @@
-"""The AI judge of an approval (TASK-0187, REQ-0081, DEC-0075 decision 3).
+"""The AI judge of an approval.
 
 A separate model call, never the agent being reviewed: a fixed system text, the builder's instructions as policy and
 the request as delimited, untrusted data. No tools. The answer must be JSON {decision, confidence, reason, flags}; any
@@ -26,7 +26,7 @@ SYSTEM = (
 class JudgeError(Exception):
     def __init__(self, cause: str, detail: str = "", usage: Optional[Dict[str, Any]] = None):
         super().__init__(detail or cause); self.cause = cause  # too_long | timeout | error | invalid
-        self.usage = usage  # an invalid answer still used tokens (TASK-0198)
+        self.usage = usage  # an invalid answer still used tokens
 
 
 def request_text(request: Dict[str, Any]) -> str:
@@ -57,7 +57,7 @@ def ask(instructions: str, request: Dict[str, Any], model: str, cred: Dict[str, 
         invoke: Optional[Callable[[str, str, Dict[str, Any]], Tuple[str, Dict[str, Any]]]] = None) -> Dict[str, Any]:
     """{decision, confidence, reason, flags, usage}. Raises JudgeError(too_long | timeout | error | invalid).
     A request longer than REQUEST_MAX is never judged: the judge would only see its start, and a part it cannot see
-    (a recipient after a long body) could be approved unseen. It goes to people (fail-safe, DEC-0075; TASK-0204)."""
+    (a recipient after a long body) could be approved unseen. It goes to people (fail-safe, )."""
     if len(request_text(request)) > REQUEST_MAX: raise JudgeError("too_long", f"the request is longer than {REQUEST_MAX} characters")
     pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     fut = pool.submit(invoke or _invoke, prompt(instructions, request), model, cred)

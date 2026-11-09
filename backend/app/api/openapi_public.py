@@ -1,5 +1,5 @@
 """The public-only OpenAPI spec: the routes tagged `public` (the workflow-trigger API) and the Chat API v1 (tag `Chat`,
-TASK-0215), nothing else.
+), nothing else.
 
 Served at GET /openapi.public.json (Swagger view at /docs/public) and committed as docs/api/openapi.public.json by
 scripts/gen_public_openapi.py; the SDKs and the handbook API reference are built from that file.

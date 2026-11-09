@@ -1,13 +1,13 @@
-"""Approval through external channels (TASK-0022, DEC-0019).
+"""Approval through external channels.
 
 User (JWT): channel connections (personal; org-wide ones need an admin), own channel identities (link, one-time code, verify), audit log.
 Platforms (no JWT; verified by signature / secret header): POST /api/approvals/callback/{kind}/{channel_id}, or the
 shared POST /api/approvals/callback/slack routed by team_id. GET on the same URL answers WhatsApp's verification.
-Link channels (e-mail, Teams, TASK-0047): GET /api/approvals/link?token= shows the request, POST /api/approvals/link
+Link channels (e-mail, Teams, ): GET /api/approvals/link?token= shows the request, POST /api/approvals/link
 records the signed-in user's decision.
-Approvals inbox (TASK-0065, DEC-0043): GET /api/approvals/inbox lists the waiting steps the user owns or may answer,
+Approvals inbox: GET /api/approvals/inbox lists the waiting steps the user owns or may answer,
 POST /api/approvals/inbox/{run_id} {response} answers one.
-AI review kill switches (TASK-0186, REQ-0081): GET/PUT /api/approvals/auto (organisation, admin), GET /api/approvals/auto/workflows (the user's workflows with AI review, TASK-0188), GET/PUT /api/approvals/auto/workflows/{wid} (owner or admin).
+AI review kill switches: GET/PUT /api/approvals/auto (organisation, admin), GET /api/approvals/auto/workflows (the user's workflows with AI review, ), GET/PUT /api/approvals/auto/workflows/{wid} (owner or admin).
 """
 import asyncio
 from typing import Optional
@@ -41,7 +41,7 @@ def test_channel(cid: str, user=Depends(need(P.RESOURCES_MANAGE)), svc=Depends(c
 @router.post("/channels/{cid}/register-webhook")
 def register_webhook(cid: str, user=Depends(need(P.RESOURCES_MANAGE)), svc=Depends(channel_service)): return svc.register_webhook(user["id"], cid)
 
-# ---- Add to Slack (TASK-0014) ----
+# ---- Add to Slack ----
 @router.get("/slack/oauth")
 def slack_oauth_info(user=Depends(current_user), svc=Depends(slack_oauth_service)): return svc.info()
 
@@ -108,7 +108,7 @@ async def callback_challenge(kind: str, cid: str, request: Request, svc=Depends(
     return PlainTextResponse(await asyncio.to_thread(svc.challenge, kind, cid, dict(request.query_params)))
 
 
-# ---- link channels (TASK-0047) ----
+# ---- link channels ----
 @router.get("/link")
 def link_info(token: str, user=Depends(current_user), svc=Depends(approval_service)): return svc.link_info(token, user["id"])
 
@@ -117,7 +117,7 @@ def decide_link(body: dict = Body(...), user=Depends(current_user), svc=Depends(
     return svc.decide_link(str(body.get("token") or ""), user["id"])
 
 
-# ---- the Approvals inbox (TASK-0065) ----
+# ---- the Approvals inbox ----
 @router.get("/inbox")
 def inbox(user=Depends(current_user), svc=Depends(inbox_service)): return svc.list(user["id"])
 
@@ -128,7 +128,7 @@ def answer(run_id: str, body=Body(None), user=Depends(current_user), svc=Depends
     return svc.answer(user["id"], run_id, data.get("response"), node if isinstance(node, str) and node else None)
 
 
-# ---- AI review of approvals: kill switches (TASK-0186, REQ-0081) ----
+# ---- AI review of approvals: kill switches ----
 @router.get("/auto")
 def auto_status(user=Depends(current_user), svc=Depends(auto_approval_service)): return svc.status(user["id"])
 

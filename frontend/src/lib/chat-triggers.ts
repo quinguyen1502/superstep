@@ -1,4 +1,4 @@
-/** Chat triggers (TASK-0074 to TASK-0076, DEC-0046): types and the sample message the dialog shows. */
+/** Chat triggers ( to ): types and the sample message the dialog shows. */
 
 export type ChatTrigger = { id: string; name: string; channel_id: string; kind: string | null; channel_name: string | null; place: string
   event?: EventPolicy | null

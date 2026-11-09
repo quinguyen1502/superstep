@@ -1,4 +1,4 @@
-/** AI review of approvals (TASK-0188, REQ-0081, DEC-0075): the `approval.auto` policy of a Human node or of an Agent's
+/** AI review of approvals: the `approval.auto` policy of a Human node or of an Agent's
  * tool approval, and the API shapes of the kill switches and counts. The server validates and runs it. */
 export const AUTO_MODES = ['off', 'suggest', 'auto'] as const
 export const RULE_OPS = ['equals', 'not_equals', 'contains', 'not_contains', 'matches', 'gt', 'lt', 'empty'] as const

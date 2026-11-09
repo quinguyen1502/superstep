@@ -1,4 +1,4 @@
-"""Per-run summary metrics + trace id (TASK-0010). Idempotent like 0001/0002.
+"""Per-run summary metrics + trace id. Idempotent like 0001/0002.
 
 Revision ID: 0003_run_metrics
 Revises: 0002_credentials

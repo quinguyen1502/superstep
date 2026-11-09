@@ -95,7 +95,7 @@ CHECKPOINT_MAX = 2_000_000  # bytes of a serialized checkpoint; larger ones are 
 
 
 def attach_saver(g):
-    """Progress checkpoints (TASK-0021): give a graph WITHOUT its own checkpointer an in-memory LangGraph saver, so its
+    """Progress checkpoints: give a graph WITHOUT its own checkpointer an in-memory LangGraph saver, so its
     superstep checkpoints can be serialized to the server and restored in a fresh subprocess. None when not possible."""
     if getattr(g, "checkpointer", None) is not None: return None  # the repo manages its own persistence
     try:

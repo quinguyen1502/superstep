@@ -1,4 +1,4 @@
-/** One chat's turns and its live run (TASK-0085): a message or a Human answer goes over the run socket like a studio
+/** One chat's turns and its live run: a message or a Human answer goes over the run socket like a studio
  *  run, so the steps and the reply stream; public v1 endpoints use their typed handshake/frames, adapted to the same
  *  presentation. When the socket closes the session is read again for the saved answer. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -25,7 +25,7 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
   const [running, setRunning] = useState(false); const [error, setError] = useState('')
   const [queuedEdit, setQueuedEdit] = useState<ChatEdit | null>(null)
   const ws = useRef<WebSocket | null>(null); const alive = useRef(true)
-  // TASK-0209: the message being shown. A settle of an older message must not clear a newer one's pending turn.
+  // the message being shown. A settle of an older message must not clear a newer one's pending turn.
   const gen = useRef(0)
   const settled = useRef(onSettled); useEffect(() => { settled.current = onSettled })
   const select = useRef(onSelect); useEffect(() => { select.current = onSelect })
@@ -80,7 +80,7 @@ export function useChatRun(sid: string | null, view: ChatView, onSettled?: () =>
       if (runId) settle(sid, runId, resumeOf ? before : 0, mine); else { setRunning(false); setPending(null) } }
   }, [sid, settle, ep])
 
-  /** Sends a message, with the files already uploaded for it (TASK-0177): shown on the pending turn until the answer. */
+  /** Sends a message, with the files already uploaded for it: shown on the pending turn until the answer. */
   const [pendingFiles, setPendingFiles] = useState<ChatAttachment[]>([])
   const send = useCallback((text: string, files: ChatAttachment[] = []) => { setPendingFiles(files)
     stream(files.length ? { message: text, attachment_ids: files.map(f => f.id) } : { message: text }, text, 0) }, [stream])

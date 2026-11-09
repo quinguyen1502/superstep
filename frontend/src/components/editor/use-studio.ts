@@ -27,7 +27,7 @@ import { useGraphHistory } from '@/lib/use-graph-history'
 import { removeElements, selectionIds, spliceNode } from '@/lib/graph-ops'
 import { META, INSERTABLE, DEFAULTS, samplePrompt, MENU_OF, MENU_IDS, ACTION_ICONS, styleEdges, defaultInput, LOOP_LABELS, type Field, type LogItem } from './meta'
 
-/** Editor state and actions (TASK-0040: moved out of pages/Editor.tsx). Panels read it through StudioContext. */
+/** Editor state and actions. Panels read it through StudioContext. */
 export function useStudio() {
   const { t } = useTranslation(); const { id } = useParams(); const [params] = useSearchParams(); const loc = useLocation()
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
@@ -35,7 +35,7 @@ export function useStudio() {
   const [state, setState] = useState<Field[]>([])
   const [name, setName] = useState('Untitled')
   const [browserRecipe, setBrowserRecipe] = useState<BrowserRecipe | undefined>()
-  const [maxHandoffs, setMaxHandoffs] = useState<number | undefined>()   // the workflow's hand-off limit (TASK-0179); unset: the default
+  const [maxHandoffs, setMaxHandoffs] = useState<number | undefined>()   // the workflow's hand-off limit; unset: the default
   const [wid, setWid] = useState<string | undefined>()
   const [sel, setSel] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null)
   const [input, setInput] = useState(() => i18n.t('samples.input'))
@@ -52,27 +52,27 @@ export function useStudio() {
   const historyEpoch = useRef(0)
   const historyRequest = useRef(0)
   const [tab, setTab] = useState('input')
-  const [saves, setSaves] = useState(0)  // successful saves: the Code tab reloads the code after each (TASK-0071)
+  const [saves, setSaves] = useState(0)  // successful saves: the Code tab reloads the code after each
   const [running, setRunning] = useState(false)
   const [traceSel, setTraceSel] = useState<string | null>(null); const [replay, setReplay] = useState<string | null>(null)
   const historySelection = useRef({ replay, running }); historySelection.current = { replay, running }
   const [loadErr, setLoadErr] = useState<{ status: number; msg: string } | null>(null)
   const [access, setAccess] = useState<Access>('owner'); const [ownerEmail, setOwnerEmail] = useState<string | null>(null)
-  const canSave = canEdit(access)  // viewers (share or global role) get a read-only editor; they can still run (TASK-0014)
+  const canSave = canEdit(access)  // viewers (share or global role) get a read-only editor; they can still run
   const demo = useDemoMode()
   const edit = canSave || !!demo  // the public demo: visitors edit locally and run, but never save
   const { dark } = useTheme()
   const rf = useReactFlow(); const idc = useRef(1); const wsRef = useRef<WebSocket | null>(null)
 
-  // unsaved-changes tracking (TASK-0019): snapshot of the saved graph, taken after load/save
+  // unsaved-changes tracking: snapshot of the saved graph, taken after load/save
   const savedSnap = useRef<string | null>(null); const takeBaseline = useRef(false)
   const snap = () => { const { id: _id, ...rest } = toJSON(); return JSON.stringify(rest) }
-  // undo/redo (TASK-0024): snapshots of nodes, edges and the state schema; reset whenever a workflow is (re)loaded
+  // undo/redo: snapshots of nodes, edges and the state schema; reset whenever a workflow is (re)loaded
   const hist = useGraphHistory(nodes, edges, state, h => { setNodes(h.nodes.map(n => ({ ...n }))); setEdges(styleEdges(h.edges)); setState(h.state) })
   // after a load, the first graph that renders becomes the saved snapshot and the start of the undo history
   const takeSnapshot = useEffectEvent(() => { if (takeBaseline.current) { takeBaseline.current = false; savedSnap.current = snap(); hist.reset(nodes, edges, state) } })
   useEffect(() => { takeSnapshot() }, [nodes, edges, name, state, maxHandoffs, browserRecipe])
-  // a deleted Agent node leaves no hand-off pointing at it (TASK-0179); the same array when nothing changes
+  // a deleted Agent node leaves no hand-off pointing at it; the same array when nothing changes
   const nodeKey = nodes.map(n => `${n.id}:${n.type}`).join('|')
   useEffect(() => { setNodes(ns => pruneHandoffs(ns)) }, [nodeKey, setNodes])
   const load = (wf: any) => {
@@ -162,7 +162,7 @@ export function useStudio() {
       document.removeEventListener('visibilitychange', schedule); window.removeEventListener('focus', schedule)
     }
   }, [wid, source])
-  // the canvas shows the opened run, with the steps it took on the server (a workflow tool's parent after its child, TASK-0147)
+  // the canvas shows the opened run, with the steps it took on the server (a workflow tool's parent after its child, )
   const openRun = (h: any) => { setLog(withSummary(h)); setReplay(h.id); setTraceSel(null); setTab('logs'); setNodes(ns => markRun(ns, h.events || [])) }
   // each workflow id loads the graph, its run history (?run=<id> opens that run), and the editor's lookups
   const openWorkflow = useEffectEvent(() => {
@@ -238,7 +238,7 @@ export function useStudio() {
   const fork = (runId: string, checkpoint: number, state?: Record<string, unknown>) => stream({ fork: { run_id: runId, checkpoint, ...(state ? { state } : {}) } })
   const cancelRun = () => wsRef.current?.readyState === WebSocket.OPEN && wsRef.current.send(JSON.stringify({ type: 'cancel' }))
   const removeIds = (nodeIds: string[], edgeIds: string[] = []) => {
-    if (edgeIds.some(isHandoffEdge)) {  // a hand-off link is a target of its Agent node, not a workflow edge (TASK-0182)
+    if (edgeIds.some(isHandoffEdge)) {  // a hand-off link is a target of its Agent node, not a workflow edge
       setNodes(ns => removeHandoffs(ns, edgeIds)); edgeIds = edgeIds.filter(id => !isHandoffEdge(id))
       if (sel && isHandoffEdge(sel.id)) setSel(null)
       if (!nodeIds.length && !edgeIds.length) return
@@ -246,7 +246,7 @@ export function useStudio() {
     const r = removeElements(nodes, edges, nodeIds, edgeIds); if (!r.removed) return
     setNodes(r.nodes); setEdges(r.edges); if (sel && (nodeIds.includes(sel.id) || edgeIds.includes(sel.id))) setSel(null)
   }
-  // clipboard (TASK-0026, DEC-0029): pure copy/paste in lib/clipboard.ts; one paste = one render = one undo step
+  // clipboard: pure copy/paste in lib/clipboard.ts; one paste = one render = one undo step
   const clipMem = useRef<Clip | null>(null); const pasteN = useRef(0)
   const [clipNote, setClipNote] = useState(''); const noteTimer = useRef<number>(0)
   const note = (m: string) => { setClipNote(m); window.clearTimeout(noteTimer.current); noteTimer.current = window.setTimeout(() => setClipNote(''), 2500) }
@@ -268,16 +268,16 @@ export function useStudio() {
   const copyIds = (ids: string[], cut = false) => { const c = copySelection(nodes, edges, ids); if (c) keep(c, cut) }  // node context menu
 
   const editable = edit && !source
-  // auto-layout (TASK-0027, DEC-0030): one setNodes = one undo step; direction remembered per browser
+  // auto-layout: one setNodes = one undo step; direction remembered per browser
   const [layoutDir, setLayoutDir] = useState<Direction>(() => (localStorage.getItem('lgs.layoutDir') as Direction) === 'TB' ? 'TB' : 'LR')
   const tidy = (dir: Direction = layoutDir) => {
     if (!editable) return false
     if (dir !== layoutDir) { setLayoutDir(dir); localStorage.setItem('lgs.layoutDir', dir) }
     setNodes(ns => layoutGraph(ns, edges, dir)); window.setTimeout(() => rf.fitView({ duration: 250 }), 30)
   }
-    // keyboard shortcuts (TASK-0023): one registry (lib/shortcuts.ts) drives this map and the cheat sheet
+    // keyboard shortcuts: one registry (lib/shortcuts.ts) drives this map and the cheat sheet
   const [cheat, setCheat] = useState(false)
-  // the Chat side panel (TASK-0085): open state survives a reload, like its width (lib/panel-sizes.ts)
+  // the Chat side panel: open state survives a reload, like its width (lib/panel-sizes.ts)
   const [chatOpen, setChatOpenState] = useState(() => chatStore.read().open)
   const canChat = !!wid && !source
   const setChatOpen = (open: boolean) => { setChatOpenState(open); chatStore.write({ open }) }
@@ -302,7 +302,7 @@ export function useStudio() {
     chat: () => { if (!canChat) return false; setChatOpen(!chatOpen) },
   }
   useShortcuts(handlers)
-  // command palette (TASK-0028, DEC-0031): registry actions, add node, jump to node — re-registered each render so closures stay fresh
+  // command palette: registry actions, add node, jump to node — re-registered each render so closures stay fresh
   const freshNode = (type: string) => ({
     id: `${type}_${Date.now().toString(36)}${idc.current++}`, type, position: { x: 0, y: 0 }, selected: true,
     data: { ...DEFAULTS[type], ...samplePrompt(type), ...(type === 'mcp' && browserRecipe?.connection_id ? { server_id: browserRecipe.connection_id } : {}) },
@@ -330,7 +330,7 @@ export function useStudio() {
   const off: Record<string, boolean> = { save: !canSave, run: running, stop: !running, undo: !hist.canUndo, redo: !hist.canRedo,
     ...Object.fromEntries(['delete', 'cut', 'paste', 'duplicate', 'layout'].map(k => [k, !editable])) }
   const paletteRef = useRef<Record<string, () => void>>({})
-  // secondary editor actions (TASK-0028 follow-up): one list feeds the ⋯ menu and the command palette
+  // secondary editor actions ( follow-up): one list feeds the ⋯ menu and the command palette
   const [dlg, setDlg] = useState<null | 'share' | 'versions' | 'api' | 'schedules' | 'chat' | 'chatSettings' | 'chatHistory' | 'template' | 'json'>(null)
   const [ctx, setCtx] = useState<null | { kind: 'node' | 'edge'; id: string } | { kind: 'pane'; at: { x: number; y: number } }>(null)
   const nav = useNavigate(); const delWf = useDeleteWorkflow(() => nav('/workflows'))
@@ -390,14 +390,14 @@ export function useStudio() {
       setTraceSel(spans[cur >= 0 ? (cur + 1) % spans.length : spans.length - 1].key); setTab('logs')
     }
   }
-  const edgesView = useMemo(() => [...edges, ...handoffEdges(nodes)], [edges, nodes])  // hand-off links are derived (TASK-0182)
+  const edgesView = useMemo(() => [...edges, ...handoffEdges(nodes)], [edges, nodes])  // hand-off links are derived
   const onEdgesView = useCallback((changes: EdgeChange[]) => {
     const gone = changes.filter(c => c.type === 'remove' && isHandoffEdge(c.id)).map(c => (c as { id: string }).id)
     if (gone.length) setNodes(ns => removeHandoffs(ns, gone))
     onEdgesChange(changes.filter(c => !('id' in c && isHandoffEdge(c.id))))
   }, [onEdgesChange, setNodes])
   const onConnect = useCallback((c: Connection) => c.sourceHandle === HANDOFF_HANDLE ? setNodes(ns => addHandoff(ns, c.source, c.target)) : setEdges(es => {
-    // a For each node's first edge is its loop body, the second leaves the loop (TASK-0049)
+    // a For each node's first edge is its loop body, the second leaves the loop
     const loop = rf.getNode(c.source)?.type === 'foreach' ? LOOP_LABELS.find(l => !es.some(e => e.source === c.source && e.label === l)) : undefined
     return addEdge({ ...c, id: 'e' + Date.now(), ...(loop ? { label: loop } : {}) }, es)
   }), [setEdges, setNodes, rf])

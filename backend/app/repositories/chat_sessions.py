@@ -22,7 +22,7 @@ def _pending_stale(value: str) -> bool:
 
 
 class ChatSessionRepository:
-    """Chat sessions and their turns (TASK-0084)."""
+    """Chat sessions and their turns."""
     def __init__(self, db: Database): self.db = db
 
     def add(self, row: ChatSession) -> ChatSession:
@@ -196,8 +196,8 @@ class ChatSessionRepository:
 
     def list_public(self, trigger_id: str, owner: Optional[str] = None, visitor: Optional[str] = None, limit: int = 50, thumbs_down: bool = False,
                     external_user: Optional[str] = None) -> list[ChatSession]:
-        """The published page's chats (DEC-0067): one visitor's (the studio user for signed_in, else the visitor id), or all.
-        `thumbs_down` keeps chats that have at least one thumbs down (DEC-0070)."""
+        """The published page's chats: one visitor's (the studio user for signed_in, else the visitor id), or all.
+        `thumbs_down` keeps chats that have at least one thumbs down."""
         with self.db.session() as s:
             q = select(ChatSession).where(ChatSession.trigger_id == trigger_id, ChatSession.channel.in_(("web", "embed")))
             if external_user is not None: q = q.where(ChatSession.external_user == external_user, ChatSession.owner.is_(None), ChatSession.visitor.is_(None))
@@ -209,7 +209,7 @@ class ChatSessionRepository:
 
     def _drop_session(self, s, ids) -> None:
         s.execute(update(ChatEdit).where(ChatEdit.branch_id.in_(ids)).values(message="", attachments="[]"))
-        s.execute(delete(ChatAttachment).where(ChatAttachment.session_id.in_(ids)))  # a file goes with its session (TASK-0174)
+        s.execute(delete(ChatAttachment).where(ChatAttachment.session_id.in_(ids)))  # a file goes with its session
         s.execute(delete(ChatRating).where(ChatRating.session_id.in_(ids)))
         s.execute(delete(ChatTurn).where(ChatTurn.session_id.in_(ids)))
 

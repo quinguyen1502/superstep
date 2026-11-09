@@ -1,4 +1,4 @@
-"""Workflow versions + runs.workflow_version (TASK-0008). Idempotent; existing workflows become v1.
+"""Workflow versions + runs.workflow_version. Idempotent; existing workflows become v1.
 
 Revision ID: 0006_workflow_versions
 Revises: 0005_api_triggers

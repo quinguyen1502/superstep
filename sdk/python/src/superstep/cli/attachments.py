@@ -1,4 +1,4 @@
-"""`attachments migrate` for one instance (TASK-0194, REQ-0080, DEC-0074).
+"""`attachments migrate` for one instance.
 
 Runs `python -m app.admin_cmd attachments-migrate` in the API container, which copies each chat file to the new
 backend, checks its size and SHA-256, switches the row and deletes the old copy. A stopped run is safe to start again;

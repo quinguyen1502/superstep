@@ -1,4 +1,4 @@
-/** Chat file transfers (TASK-0177): upload one file, and save one as a download with the chat's headers. */
+/** Chat file transfers: upload one file, and save one as a download with the chat's headers. */
 import { api } from '@/lib/api'
 import type { ChatAttachment } from '@/lib/chat'
 

@@ -1,4 +1,4 @@
-"""Chat attachment storage (TASK-0191, REQ-0080, DEC-0074): where a row's bytes are."""
+"""Chat attachment storage: where a row's bytes are."""
 from alembic import op
 import sqlalchemy as sa
 

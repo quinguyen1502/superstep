@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { TextLink } from '@/components/text-link'
 import type { Trace } from '@/lib/trace'
 
-/** Shown above the run timeline while a run waits for the child run of an Agent node's workflow tool (TASK-0135,
- *  DEC-0066): which workflow it is, its status and a link to it. Nobody answers here: the run goes on by itself when the
+/** Shown above the run timeline while a run waits for the child run of an Agent node's workflow tool (,
+ * ): which workflow it is, its status and a link to it. Nobody answers here: the run goes on by itself when the
  *  child ends, and an approval inside the child is in the Approvals inbox. */
 export function ChildWaitPanel({ child, name, status }: { child: NonNullable<NonNullable<Trace['waiting']>['child']>; name?: string | null; status?: string }) {
   const { t } = useTranslation()

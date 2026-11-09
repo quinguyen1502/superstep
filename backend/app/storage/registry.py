@@ -1,4 +1,4 @@
-"""The configured backends (TASK-0191). New files go to `config.attachment_storage()`; a row's own `storage` decides
+"""The configured backends. New files go to `config.attachment_storage`; a row's own `storage` decides
 where its bytes are read from, so every backend a row names must still be reachable."""
 from __future__ import annotations
 import threading, time
@@ -16,10 +16,10 @@ class Stores:
 
     def get(self, name: str, location: Optional[str] = None) -> AttachmentStore:
         """The configured store of `name`, or, with `location`, the store at that folder or bucket/prefix (a row written
-        before the setting changed, TASK-0203). No location is the configured one."""
+        before the setting changed, ). No location is the configured one."""
         if not location: return self._make(name, None)
         try: store = self._make(name, None)
-        except StoreError: return self._make(name, location)  # the backend is no longer configured: the row's location is enough (TASK-0207)
+        except StoreError: return self._make(name, location)  # the backend is no longer configured: the row's location is enough
         return store if location == store.location else self._make(name, location)
 
     def _make(self, name: str, location: Optional[str]) -> AttachmentStore:

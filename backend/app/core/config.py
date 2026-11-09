@@ -17,7 +17,7 @@ def normalise_db_url(url: str) -> str:
 
 DATABASE_URL = normalise_db_url(os.environ.get("DATABASE_URL") or f"sqlite:///{STUDIO_DB}")
 
-# --- redis (TASK-0009): optional; unset = in-memory run bus (single process) ---
+# --- redis: optional; unset = in-memory run bus (single process) ---
 REDIS_URL = os.environ.get("REDIS_URL") or None
 
 # --- auth ---
@@ -35,7 +35,7 @@ def _int(name: str, default: int) -> int:
     try: return int(os.environ.get(name, default))
     except ValueError: return default
 
-# --- runtime limits (TASK-0004); functions so env changes apply per run ---
+# --- runtime limits; functions so env changes apply per run ---
 def run_timeout() -> float: return float(os.environ.get("STUDIO_RUN_TIMEOUT", 120))
 def event_max() -> int: return _int("STUDIO_EVENT_MAX_BYTES", 256 * 1024)
 def run_max() -> int: return _int("STUDIO_RUN_MAX_BYTES", 2 * 1024 * 1024)
@@ -43,7 +43,7 @@ def input_max() -> int: return _int("STUDIO_INPUT_MAX_BYTES", 256 * 1024)
 def workflow_max() -> int: return _int("STUDIO_WORKFLOW_MAX_BYTES", 1024 * 1024)
 def recursion_limit() -> int: return _int("STUDIO_RECURSION_LIMIT", 25)
 def agent_parallel_tools() -> int:
-    """Tool calls of one Agent round that may run at once (REQ-0076, DEC-0069).
+    """Tool calls of one Agent round that may run at once.
 
     Default 4. The Agent setting `parallel_tool_calls` false forces one call. Set
     STUDIO_AGENT_PARALLEL_TOOLS to 1..8 to change the cap. Invalid values stay at 1. Other integers clamp to 1..8.
@@ -56,49 +56,49 @@ def agent_parallel_tools() -> int:
 def allow_private_callbacks() -> bool: return os.environ.get("STUDIO_ALLOW_PRIVATE_CALLBACKS") == "1"
 def worker_enabled() -> bool: return os.environ.get("STUDIO_WORKER", "1") != "0"  # run queued jobs in this API process
 def worker_concurrency() -> int: return max(1, _int("STUDIO_WORKER_CONCURRENCY", 2))
-def auto_approval_enabled() -> bool:  # STUDIO_AUTO_APPROVAL=off: AI review of approvals never answers (REQ-0081)
+def auto_approval_enabled() -> bool:  # STUDIO_AUTO_APPROVAL=off: AI review of approvals never answers
     return (os.environ.get("STUDIO_AUTO_APPROVAL") or "on").strip().lower() not in ("0", "off", "false", "no")
 def wait_ttl() -> float: return max(0.0, float(os.environ.get("STUDIO_WAIT_TTL", 7 * 86400)))  # waiting runs expire (0 = never)
 def sync_wait_max() -> float: return max(0.0, float(os.environ.get("STUDIO_SYNC_WAIT_MAX", 30)))  # sync trigger: then 202 + poll URL
 def trigger_rate_limit() -> int: return max(0, _int("STUDIO_TRIGGER_RATE_LIMIT", 60))  # runs per token per window (0 = off)
 def trigger_rate_window() -> int: return max(1, _int("STUDIO_TRIGGER_RATE_WINDOW", 60))  # seconds
 def chat_trigger_rate_limit() -> int: return max(0, _int("STUDIO_CHAT_TRIGGER_RATE_LIMIT", 60))  # runs per sender and chat trigger per STUDIO_TRIGGER_RATE_WINDOW (0 = off)
-# the published chat page (TASK-0140, DEC-0067): fixed windows of STUDIO_PUBLIC_CHAT_RATE_WINDOW seconds, 0 = off
+# the published chat page: fixed windows of STUDIO_PUBLIC_CHAT_RATE_WINDOW seconds, 0 = off
 def public_chat_rate_visitor() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_VISITOR", 10))  # messages per visitor
 def public_chat_rate_ip() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_IP", 30))  # messages per client IP
 def public_chat_rate_user() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_USER", public_chat_rate_ip()))
 def public_chat_rate_read() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_READ", 120))  # page, session reads and new chats per client IP
 def public_chat_rate_window() -> int: return max(1, _int("STUDIO_PUBLIC_CHAT_RATE_WINDOW", 60))
 def chat_attachment_max_mb() -> int:
-    """The ceiling on a chat attachment's size in MB (REQ-0077, DEC-0072 decision 3); each chat may only lower it."""
+    """The ceiling on a chat attachment's size in MB; each chat may only lower it."""
     return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_MB", 10))
 def chat_attachment_max_files() -> int:
-    """The ceiling on files per chat message (DEC-0072 decision 3); each chat may only lower it."""
+    """The ceiling on files per chat message ( decision 3); each chat may only lower it."""
     return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_FILES", 5))
 def attachment_storage() -> str:
-    """Where new chat attachment bytes go (TASK-0191, REQ-0080, DEC-0074): db (default), fs or s3."""
+    """Where new chat attachment bytes go: db (default), fs or s3."""
     return (os.environ.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip().lower()
 def data_paths() -> list[str]:
-    """Files and folders the studio keeps its own data in (TASK-0203): an `fs` attachment folder must not be or hold them."""
+    """Files and folders the studio keeps its own data in: an `fs` attachment folder must not be or hold them."""
     paths = [home_dir(), os.environ.get("STUDIO_SECRET_KEY_FILE") or os.path.join(home_dir(), "secret.key"),
              os.environ.get("STUDIO_DB", STUDIO_DB)]  # the SQLite file even on Postgres: a later switch back must not lose it
     if os.environ.get("STUDIO_IMPORT_DIR"): paths.append(os.environ["STUDIO_IMPORT_DIR"])
     return [os.path.abspath(os.path.expanduser(p)) for p in paths]
 def max_body_mb() -> int:
-    """The largest request body in MB outside the upload routes (TASK-0207)."""
+    """The largest request body in MB outside the upload routes."""
     return max(1, _int("STUDIO_MAX_BODY_MB", 10))
 def attachment_s3() -> dict:
-    """The `s3` attachment backend's settings (TASK-0193). Empty keys use the default AWS credential chain."""
+    """The `s3` attachment backend's settings. Empty keys use the default AWS credential chain."""
     e = lambda k: (os.environ.get(f"STUDIO_ATTACHMENT_S3_{k}") or "").strip()  # noqa: E731
     return {"bucket": e("BUCKET"), "prefix": e("PREFIX"), "endpoint": e("ENDPOINT"), "region": e("REGION"),
             "access_key": e("ACCESS_KEY_ID"), "secret_key": e("SECRET_ACCESS_KEY"),
             "path_style": e("PATH_STYLE").lower() in ("1", "true", "yes", "on"),
-            "part_mb": max(5, _int("STUDIO_ATTACHMENT_S3_MULTIPART_MB", 8))}  # TASK-0200: larger files go up in parts of this size
+            "part_mb": max(5, _int("STUDIO_ATTACHMENT_S3_MULTIPART_MB", 8))}  # larger files go up in parts of this size
 def attachment_fs_path() -> str:
-    """The folder of the `fs` attachment backend (TASK-0192); on the data volume by default."""
+    """The folder of the `fs` attachment backend; on the data volume by default."""
     return (os.environ.get("STUDIO_ATTACHMENT_FS_PATH") or "/data/attachments").strip()
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
-# --- TASK-0020 ---
+# --- ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))
 def webhook_backoff_base() -> float: return max(0.0, float(os.environ.get("STUDIO_WEBHOOK_BACKOFF_BASE", 2)))  # s; delay = base * 2^(n-1)
 def webhook_backoff_max() -> float: return max(0.0, float(os.environ.get("STUDIO_WEBHOOK_BACKOFF_MAX", 300)))
@@ -109,7 +109,7 @@ def recover_max_attempts() -> int: return max(1, _int("STUDIO_RECOVER_MAX_ATTEMP
 def job_reap_every() -> float: return max(0.2, float(os.environ.get("STUDIO_JOB_REAP_EVERY", 15)))
 def static_dir() -> str: return os.environ.get("STUDIO_STATIC_DIR", "")  # built frontend served by the API (all-in-one image); empty = off
 def public_url() -> str: return (os.environ.get("STUDIO_PUBLIC_URL") or "").rstrip("/")  # links in e-mails
-# --- TASK-0045: sign-in hardening ---
+# --- : sign-in hardening ---
 def login_max_failures() -> int: return max(1, _int("STUDIO_LOGIN_MAX_FAILURES", 5))  # failed sign-ins per e-mail before a lockout
 def login_window() -> int: return max(1, _int("STUDIO_LOGIN_WINDOW", 15 * 60))  # s in which failures are counted
 def login_lock() -> int: return max(1, _int("STUDIO_LOGIN_LOCK", 15 * 60))  # s an e-mail stays locked
@@ -119,7 +119,7 @@ def cookie_secure() -> bool:  # the session cookie needs HTTPS; production defau
 def home_dir() -> str:
     """Default directory for the generated secret key and repo imports (Docker sets both paths to /data instead).
     `~/.superstep`, or the v0.1.0 `~/.langgraph-studio` while only that one exists, so stored credentials still decrypt
-    after the rename (TASK-0058)."""
+    after the rename."""
     new, old = os.path.expanduser("~/.superstep"), os.path.expanduser("~/.langgraph-studio")
     return old if not os.path.exists(new) and os.path.isdir(old) else new
 
@@ -140,43 +140,43 @@ def smtp() -> dict | None:
     return {"host": host, "port": _int("SMTP_PORT", 587), "username": os.environ.get("SMTP_USER") or None,
             "password": os.environ.get("SMTP_PASSWORD") or None, "sender": os.environ.get("SMTP_FROM") or "studio@localhost",
             "security": security, "allow_private": True, "tls_optional": True}
-# --- TASK-0051: Send email nodes ---
+# --- : Send email nodes ---
 def email_node_allow_private() -> bool: return os.environ.get("STUDIO_SMTP_ALLOW_PRIVATE") == "1"  # SMTP credentials may use private/loopback hosts
 def email_node_hourly_limit() -> int: return max(1, _int("STUDIO_EMAIL_NODE_HOURLY_LIMIT", 100))  # e-mails Send email nodes may send per resource owner per hour
 def notify_webhook() -> tuple[str, str | None] | None:
     url = os.environ.get("STUDIO_NOTIFY_WEBHOOK_URL", "").strip()
     return (url, os.environ.get("STUDIO_NOTIFY_WEBHOOK_SECRET") or None) if url else None
 def otel_metrics() -> bool: return os.environ.get("STUDIO_OTEL_METRICS", "").lower() in ("1", "true", "yes", "on")
-# --- TASK-0022: approval through external channels ---
+# --- : approval through external channels ---
 def approval_ttl() -> float: return max(60.0, float(os.environ.get("STUDIO_APPROVAL_TTL", 24 * 3600)))  # approval buttons expire (s)
 def slack_api_url() -> str: return (os.environ.get("SLACK_API_URL") or "https://slack.com/api").rstrip("/")
-# Add to Slack / OAuth app distribution (TASK-0014): all three from the Slack app's "Basic Information" page
+# Add to Slack / OAuth app distribution: all three from the Slack app's "Basic Information" page
 def slack_client_id() -> str: return (os.environ.get("SLACK_CLIENT_ID") or "").strip()
 def slack_client_secret() -> str: return (os.environ.get("SLACK_CLIENT_SECRET") or "").strip()
 def slack_signing_secret() -> str: return (os.environ.get("SLACK_SIGNING_SECRET") or "").strip()
 def slack_oauth_url() -> str: return (os.environ.get("SLACK_OAUTH_URL") or "https://slack.com/oauth/v2/authorize").rstrip("/")
 SLACK_BOT_SCOPES = "chat:write,chat:write.public,im:write,app_mentions:read,im:history"  # same as the manual setup (handbook); the last two: chat triggers
 def telegram_api_url() -> str: return (os.environ.get("TELEGRAM_API_URL") or "https://api.telegram.org").rstrip("/")
-def whatsapp_api_url() -> str: return (os.environ.get("WHATSAPP_API_URL") or "https://graph.facebook.com/v21.0").rstrip("/")  # TASK-0047
+def whatsapp_api_url() -> str: return (os.environ.get("WHATSAPP_API_URL") or "https://graph.facebook.com/v21.0").rstrip("/")
 def llm_mode() -> str: return "openai" if os.environ.get("OPENAI_API_KEY") else "mock"
-# --- TASK-0022 follow-up: identity verification codes sent by the bot ---
+# --- follow-up: identity verification codes sent by the bot ---
 def identity_code_ttl() -> float: return max(60.0, float(os.environ.get("STUDIO_IDENTITY_CODE_TTL", 600)))  # a code is valid (s)
 def identity_code_attempts() -> int: return max(1, _int("STUDIO_IDENTITY_CODE_ATTEMPTS", 5))  # wrong codes before a new one is needed
 def identity_code_resend() -> int: return max(0, _int("STUDIO_IDENTITY_CODE_RESEND", 30))     # min seconds between two codes
-# --- TASK-0022 follow-up: org-wide approval channels ---
+# --- follow-up: org-wide approval channels ---
 def admin_emails() -> set[str]: return {e.strip().lower() for e in (os.environ.get("STUDIO_ADMIN_EMAILS") or "").split(",") if e.strip()}
-def default_role() -> str:  # role of newly registered accounts (TASK-0014): editor | viewer (admin is never a default)
+def default_role() -> str:  # role of newly registered accounts: editor | viewer (admin is never a default)
     r = (os.environ.get("STUDIO_DEFAULT_ROLE") or "editor").strip().lower()
     return r if r in ("editor", "viewer") else "editor"
-# --- TASK-0022 follow-up: rate limits of the public approval callbacks (fixed window, shared via Redis) ---
+# --- follow-up: rate limits of the public approval callbacks (fixed window, shared via Redis) ---
 def callback_rate_limit_ip() -> int: return max(0, _int("STUDIO_CALLBACK_RATE_LIMIT_IP", 60))        # per client IP and window (0 = off)
 def callback_rate_limit_channel() -> int: return max(0, _int("STUDIO_CALLBACK_RATE_LIMIT_CHANNEL", 300))  # per connection / Slack team
 def callback_rate_window() -> int: return max(1, _int("STUDIO_CALLBACK_RATE_WINDOW", 60))
-# --- TASK-0013: MCP servers ---
+# --- : MCP servers ---
 def mcp_stdio_enabled() -> bool: return os.environ.get("STUDIO_MCP_STDIO") == "1"  # stdio servers run processes on the API host: off by default
 def mcp_allow_private() -> bool: return os.environ.get("STUDIO_MCP_ALLOW_PRIVATE") == "1"  # HTTP servers on private/loopback addresses
 def mcp_timeout() -> float: return max(1.0, float(os.environ.get("STUDIO_MCP_TIMEOUT", 30)))  # per MCP session (s)
-# --- TASK-0039: HTTP Tool nodes, CORS ---
+# --- : HTTP Tool nodes, CORS ---
 def http_tool_allow_private() -> bool: return os.environ.get("STUDIO_HTTP_TOOL_ALLOW_PRIVATE") == "1"  # HTTP Tool nodes may call private/loopback addresses
 def http_tool_timeout() -> float: return max(1.0, float(os.environ.get("STUDIO_HTTP_TOOL_TIMEOUT", 30)))  # per request (s)
 def cors_origins() -> list[str]:
@@ -184,7 +184,7 @@ def cors_origins() -> list[str]:
     raw = os.environ.get("STUDIO_CORS_ORIGINS")
     if raw is None: return [] if IS_PROD else ["*"]
     return [o.strip().rstrip("/") for o in raw.split(",") if o.strip()]
-# --- TASK-0015: repo import is experimental and off until STUDIO_ENABLE_IMPORT=1 ---
+# --- : repo import is experimental and off until STUDIO_ENABLE_IMPORT=1 ---
 def import_enabled() -> bool: return os.environ.get("STUDIO_ENABLE_IMPORT") == "1"
 def import_runtime() -> str:
     """``docker`` when import is enabled, unless STUDIO_IMPORT_RUNTIME=subprocess."""
@@ -203,16 +203,16 @@ def import_network() -> str:
 def import_host_dir() -> str | None:
     value = (os.environ.get("STUDIO_IMPORT_HOST_DIR") or "").strip()
     return value or None
-# --- TASK-0053: Tool node Code mode (REQ-0039, DEC-0041); off until STUDIO_ENABLE_CODE_NODES=1 ---
-CODE_RUNTIMES = ("docker", "subprocess", "remote")  # subprocess (TASK-0056) is NOT isolation; remote = the sandbox service
+# --- : Tool node Code mode; off until STUDIO_ENABLE_CODE_NODES=1 ---
+CODE_RUNTIMES = ("docker", "subprocess", "remote")  # subprocess is NOT isolation; remote = the sandbox service
 def code_runtime() -> str:
     """``off`` unless enabled; then STUDIO_CODE_RUNTIME (``docker`` by default). Never falls back to another runtime."""
     if os.environ.get("STUDIO_ENABLE_CODE_NODES") != "1" or demo_mode(): return "off"
     choice = (os.environ.get("STUDIO_CODE_RUNTIME") or "docker").strip().lower()
     return choice if choice in CODE_RUNTIMES else "off"
 def code_languages() -> list[str]:
-    """STUDIO_CODE_LANGUAGES (TASK-0079): the Code-mode languages offered, comma-separated; ``python,typescript`` by
-    default since TASK-0080 (TypeScript reports itself unavailable until its image or the deno binary is there)."""
+    """STUDIO_CODE_LANGUAGES: the Code-mode languages offered, comma-separated; ``python,typescript`` by
+    default (TypeScript reports itself unavailable until its image or the deno binary is there)."""
     raw = os.environ.get("STUDIO_CODE_LANGUAGES") or "python,typescript"
     return [x.strip().lower() for x in raw.split(",") if x.strip()]
 def sandbox_url() -> str:
@@ -231,10 +231,10 @@ def code_cpus() -> str: return os.environ.get("STUDIO_CODE_CPUS", "0.5") or "0.5
 def code_pids() -> int: return max(16, _int("STUDIO_CODE_PIDS", 64))
 def code_max_seconds() -> int: return max(1, _int("STUDIO_CODE_MAX_SECONDS", 30))  # per call, also caps the node timeout
 def code_concurrency() -> int: return max(1, _int("STUDIO_CODE_CONCURRENCY", 4))  # containers at once per process
-def test_cases_max() -> int: return max(1, _int("STUDIO_TEST_CASES_MAX", 50))  # test cases per workflow (TASK-0067)
-def test_parallel() -> int: return max(1, _int("STUDIO_TEST_PARALLEL", 4))     # test runs of one suite at a time (TASK-0067)
+def test_cases_max() -> int: return max(1, _int("STUDIO_TEST_CASES_MAX", 50))  # test cases per workflow
+def test_parallel() -> int: return max(1, _int("STUDIO_TEST_PARALLEL", 4))     # test runs of one suite at a time
 def code_test_per_minute() -> int: return max(1, _int("STUDIO_CODE_TEST_PER_MINUTE", 20))  # Test with sample state, per user
-# --- TASK-0080 (DEC-0049): TypeScript on Deno ---
+# --- : TypeScript on Deno ---
 CODE_TS_DEFAULT_PACKAGES = ["npm:zod@3", "npm:date-fns@4"]  # exactly what docker/studio-code-ts caches (deps.ts)
 def code_ts_image() -> str: return os.environ.get("STUDIO_CODE_TS_IMAGE", "studio-code-ts:1") or "studio-code-ts:1"
 def code_ts_packages() -> list[str]:

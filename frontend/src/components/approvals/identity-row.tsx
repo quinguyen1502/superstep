@@ -1,4 +1,4 @@
-/** My chat accounts (TASK-0022): one slot per platform / Slack workspace; link -> one-time code by DM -> verify. */
+/** My chat accounts: one slot per platform / Slack workspace; link -> one-time code by DM -> verify. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RotateCw, Send, ShieldCheck } from 'lucide-react'

@@ -1,4 +1,4 @@
-/** The Code tab's export languages (TASK-0082, REQ-0047): Python (TASK-0070) or LangGraph.js TypeScript. */
+/** The Code tab's export languages: Python or LangGraph.js TypeScript. */
 export const EXPORT_LANGUAGES = ['python', 'typescript'] as const
 export type ExportLanguage = typeof EXPORT_LANGUAGES[number]
 export const EXPORT_LANGUAGE_KEY = 'codeView.language'

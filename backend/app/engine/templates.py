@@ -1,10 +1,10 @@
-"""Workflow templates (TASK-0025, DEC-0028): built-in starters, the sanitiser shared by save-as/export/import, and the
+"""Workflow templates: built-in starters, the sanitiser shared by save-as/export/import, and the
 portable file format. Pure functions; persistence and permissions live in TemplateService."""
 from __future__ import annotations
 import copy
 
 FORMAT, VERSION = "superstep/template", 1
-FORMATS = (FORMAT, "langgraph-studio/template")  # files exported by v0.1.0 still import (TASK-0058)
+FORMATS = (FORMAT, "langgraph-studio/template")  # files exported by v0.1.0 still import
 
 # node data fields that point at per-user resources or secrets: never copied into a template
 REF_FIELDS = ("credential_id", "knowledge_base_id", "server_id", "channel_id", "workflow_id")
@@ -22,16 +22,16 @@ def sanitize(wf: dict) -> dict:
             if f in d: d[f] = ""
         if isinstance(d.get("fallback"), dict):
             d["fallback"] = {"credential_id": "", "model": d["fallback"].get("model", "")}
-        if isinstance(d.get("tools"), list):  # an Agent node's tools point at servers and knowledge bases too (TASK-0119)
+        if isinstance(d.get("tools"), list):  # an Agent node's tools point at servers and knowledge bases too
             d["tools"] = [{k: "" if k in REF_FIELDS else v for k, v in t.items() if not k.startswith("_") and k.lower() not in SECRET_KEYS}
                           if isinstance(t, dict) else t for t in d["tools"]]
-        if isinstance(d.get("approval"), dict):  # a Human node keeps only the channel kind, not the connection, target or approvers (TASK-0064)
+        if isinstance(d.get("approval"), dict):  # a Human node keeps only the channel kind, not the connection, target or approvers
             a = d["approval"]; d["approval"] = {"channel": a["channel"]} if a.get("channel") else {}
-            if isinstance(a.get("auto"), dict):  # AI review (TASK-0188): the policy stays, the judge's credential goes
+            if isinstance(a.get("auto"), dict):  # AI review: the policy stays, the judge's credential goes
                 auto = copy.deepcopy(a["auto"]); judge = auto.get("judge")
                 if isinstance(judge, dict): auto["judge"] = {**judge, "credential_id": ""}
                 d["approval"]["auto"] = auto
-        if isinstance(d.get("deadline"), dict):  # the timing stays, the escalation addresses go, like approvers (TASK-0066)
+        if isinstance(d.get("deadline"), dict):  # the timing stays, the escalation addresses go, like approvers
             d["deadline"] = {k: v for k, v in d["deadline"].items() if k != "escalate_to"}
         out["nodes"].append({"id": n["id"], "type": n["type"], "position": n.get("position") or {"x": 0, "y": 0}, "data": d})
     for e in wf.get("edges") or []:
@@ -119,7 +119,7 @@ def _s(*fields: str) -> list[dict]:
 
 def _ask(i, x, y, label, prompt, field, kind=None, due=None):
     """A Human node. A channel template stores only the kind; the user picks the connection, target and approvers.
-    due: (after, remind_every, on_timeout), the node's deadline (TASK-0066)."""
+    due: (after, remind_every, on_timeout), the node's deadline."""
     return _n(i, "human", x, y, label=label, prompt=prompt, output_field=field, **({"approval": {"channel": kind}} if kind else {}),
               **({"deadline": dict(zip(("after", "remind_every", "on_timeout"), due))} if due else {}))
 
@@ -132,7 +132,7 @@ def _choice(qid, instructions, *options):
     return {"id": qid, "type": "choice", "instructions": instructions, "field": qid, "options": [{"label": l, "description": d} for l, d in options]}
 
 
-# Real processes, each on the channel that suits it (TASK-0064). Every Human node also waits in the studio until a
+# Real processes, each on the channel that suits it. Every Human node also waits in the studio until a
 # connection is picked, and LLM / Decision nodes answer from the offline mocks without keys.
 BUILTINS += [
     {"id": "builtin-refund-approval", "name": "Refund approval", "description": "Finance approves a customer's refund in Slack; the customer gets an e-mail either way.", "workflow": {
@@ -236,7 +236,7 @@ BUILTINS += [
 
 
 
-# An Agent node (TASK-0119, REQ-0072): the model picks the tools; a refund waits for a person's approval first.
+# An Agent node: the model picks the tools; a refund waits for a person's approval first.
 BUILTINS += [
     {"id": "builtin-support-agent", "name": "Support agent", "description": "An agent looks up orders and the refund policy; a person approves each refund it requests.", "workflow": {
         "state": _s("message", "answer", "steps:list"),
@@ -254,7 +254,7 @@ BUILTINS += [
         "edges": [_e("e1", "start", "agent"), _e("e2", "agent", "end")]}},
 ]
 
-# Workflows as Agent tools (TASK-0137, REQ-0073, DEC-0066): a supervisor Agent calls two specialist workflows, which
+# Workflows as Agent tools: a supervisor Agent calls two specialist workflows, which
 # are created with it ("helpers"). A tool's `helper` names the helper whose new id becomes its `workflow_id`.
 def _desk(label, prompt, *tools):
     return {"state": _s("message", "answer"),
@@ -288,7 +288,7 @@ BUILTINS += [
         "edges": [_e("e1", "start", "agent"), _e("e2", "agent", "end")]}},
 ]
 
-# Agent hand-offs (TASK-0184, REQ-0078, DEC-0073): Triage answers order questions itself and hands the conversation to
+# Agent hand-offs: Triage answers order questions itself and hands the conversation to
 # Billing or Technical, which answer the person directly. In a chat the next message stays with the agent that answered.
 _ORDER = _tool("lookup_order", "Find the delivery status of an order", "builtin", function="lookup_order")
 
@@ -315,7 +315,7 @@ BUILTINS += [
         "edges": [_e("e1", "start", "triage"), _e("e2", "triage", "end"), _e("e3", "billing", "end"), _e("e4", "technical", "end")]}},
 ]
 
-# Test cases of each built-in template (TASK-0069, REQ-0042), in the shape of the workflow tests API. They pass with the
+# Test cases of each built-in template, in the shape of the workflow tests API. They pass with the
 # offline mock model: a Condition takes the label it finds as a whole word, and the Decision mock the label it finds in the
 # state, so the inputs name their branch. A workflow made from the template gets a copy; saved templates carry none.
 def _case(name, inp, answers=None, *checks): return {"name": name, "input": inp, "answers": answers or {}, "checks": [OK, *checks]}

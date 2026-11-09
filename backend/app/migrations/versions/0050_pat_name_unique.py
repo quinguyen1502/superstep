@@ -1,6 +1,6 @@
-"""Active token names are unique per user in the database (TASK-0213): a partial unique index on (user_id, name) over
+"""Active token names are unique per user in the database: a partial unique index on (user_id, name) over
 rows that are not revoked, so two creates with the same name at the same moment cannot both succeed. Revoked rows are
-left out because a revoked token's name can be used again (DEC-0071). Active duplicates already in the table are
+left out because a revoked token's name can be used again. Active duplicates already in the table are
 renamed first: the oldest keeps the name, later ones get `name (2)`, `name (3)`... like PatService._free_name."""
 from alembic import op
 import sqlalchemy as sa

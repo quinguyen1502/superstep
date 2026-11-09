@@ -1,4 +1,4 @@
-"""Private browser screenshots with bounded retention (TASK-0243)."""
+"""Private browser screenshots with bounded retention."""
 from alembic import op
 import sqlalchemy as sa
 

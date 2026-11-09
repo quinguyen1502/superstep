@@ -41,37 +41,37 @@ async def expire_waiting_loop() -> None:
 
 def create_app() -> FastAPI:
     check_secret(); crypto.check_key()
-    code_runtime.warn_if_unisolated()  # TASK-0056: once at start-up
+    code_runtime.warn_if_unisolated()  # once at start-up
     bootstrap(get_db(), jobs=get_job_queue())  # alembic upgrade head + demo user + example workflow
-    try:  # rows from 0.10.1 learn the folder or bucket/prefix they were written to (TASK-0203)
+    try:  # rows from 0.10.1 learn the folder or bucket/prefix they were written to
         from .api.deps import attachment_files
         attachment_files().backfill_locations()
     except Exception as e: logging.getLogger(__name__).warning("attachment locations not recorded (%s)", type(e).__name__)
-    mcp_app = McpApp()  # MCP server for workflow tokens (TASK-0114)
+    mcp_app = McpApp()  # MCP server for workflow tokens
     @asynccontextmanager
     async def lifespan(_app):
-        w = run_worker() if config.worker_enabled() else None  # executes queued API runs (TASK-0007)
+        w = run_worker() if config.worker_enabled() else None  # executes queued API runs
         if w:
             w.start(config.worker_concurrency())
-            await w.recover_unfinished()  # in-memory queue: runs that were going when the server stopped (TASK-0115)
-        sweeper = asyncio.create_task(expire_waiting_loop())  # TASK-0019: waiting runs past STUDIO_WAIT_TTL -> expired
+            await w.recover_unfinished()  # in-memory queue: runs that were going when the server stopped
+        sweeper = asyncio.create_task(expire_waiting_loop())  # waiting runs past STUDIO_WAIT_TTL -> expired
         async with mcp_app.running(): yield
         sweeper.cancel()
         if w: await w.stop()
 
     app = FastAPI(title="Superstep", default_response_class=EnvelopeResponse, lifespan=lifespan)  # every REST response is an envelope
-    if origins := config.cors_origins():  # STUDIO_CORS_ORIGINS; production default: same-origin only (TASK-0039)
+    if origins := config.cors_origins():  # STUDIO_CORS_ORIGINS; production default: same-origin only
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
     redact_tokens("uvicorn.access", "uvicorn.error")  # WebSocket URLs carry ?token=<JWT>
     register_error_handlers(app)
-    app.add_middleware(BodyLimit)  # request body ceilings without a proxy too (TASK-0207)
+    app.add_middleware(BodyLimit)  # request body ceilings without a proxy too
     app.add_middleware(ChatCors, public=public_chat_service)
     if config.demo_mode(): install_demo_guard(app)  # STUDIO_DEMO_MODE: the shared visitor account is read-only
     for r in ROUTERS: app.include_router(r)
     app.router.routes.append(Route(MCP_PATH, endpoint=mcp_app))  # Streamable HTTP, all methods
-    install_asyncapi(app)  # GET /asyncapi.public.yaml: the chat socket protocol v1 (TASK-0216)
+    install_asyncapi(app)  # GET /asyncapi.public.yaml: the chat socket protocol v1
     install_public_docs(app)  # GET /openapi.public.json + /docs/public: the workflow-trigger API only
-    # all-in-one image (TASK-PaaS): the built UI on the same origin, after the API routes; frame headers (TASK-0143)
+    # all-in-one image: the built UI on the same origin, after the API routes; frame headers
     mount_frontend(app, config.static_dir(), lambda slug: public_chat_service().frame_ancestors(slug))
     return app
 

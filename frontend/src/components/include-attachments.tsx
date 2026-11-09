@@ -1,4 +1,4 @@
-/** "Include attachments" for an LLM or Agent node (TASK-0177, REQ-0077): a switch, and the list field that holds the
+/** "Include attachments" for an LLM or Agent node: a switch, and the list field that holds the
  *  chat's files (default `files`). Documents reach the model as text, images as images when the model can see them. */
 import { useTranslation } from 'react-i18next'
 import { Label } from '@/components/ui/label'

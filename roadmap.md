@@ -492,7 +492,7 @@ REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Làm đi").
 
 ## Export slots, approvals and managed connections
 
-REQ-0090, DEC-0089, PLAN-0010 (owner-authorised 2026-11-07). Cross-language code nodes stay declined on TASK-0266.
+REQ-0090, DEC-0090, PLAN-0010 (owner-authorised 2026-11-07). Cross-language code nodes stay declined on TASK-0266.
 
 - TASK-0273 — per-node LLM credential slots. **done** (REV-0259, QA-0259) on PR #336.
 - TASK-0274 — approval channel, deadline, reminders and AI review. **done** (REV-0260, QA-0260) on PR #336.
@@ -549,3 +549,9 @@ TASK-0277 shows the handbook copyright line (Superstep, Qui Nguyen, the year) an
 ## React Native package
 
 The owner resumed TASK-0227 on 2026-11-08. `@superstep/react-native` 0.1.0, the Expo example and the `sdk-rn-v*` publish job are done on `factory/task-0227-react-native-package` (REV-0264, QA-0264). Simulator screenshots remain open. No tag or npm publish yet. REQ-0082 stays not done. The 0.12.0 note above still records that this package was outside that release.
+
+## Hygiene and handbook sync
+
+REQ-0091, DEC-0090, PLAN-0011 (owner-authorised 2026-11-09).
+
+- TASK-0279 — comment hygiene, Vite `import.meta.dirname`, Vietnamese handbook sync. **done**.

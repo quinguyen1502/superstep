@@ -49,7 +49,7 @@ def _strings(v: Any) -> List[str]:
 
 def template_errors(nid: str, t: Any, d: Dict[str, Any], fields: set) -> List[str]:
     out = []
-    extra = {"args"} if t == "agent" else set()  # an agent's HTTP tool reads the model's arguments (TASK-0116)
+    extra = {"args"} if t == "agent" else set()  # an agent's HTTP tool reads the model's arguments
     for text in templates_of(t, d):
         for r in refs(text):
             if fields and r.field not in fields | extra: out.append(Issue("VARIABLE_UNKNOWN", node=nid, field=r.field))
@@ -102,7 +102,7 @@ def validate(wf: Dict[str, Any]) -> List[str]:
         if t not in TYPES:
             errs.append(Issue("NODE_TYPE_INVALID", node=nid, type=t))
         if t in STEPS: continue
-        if t == "note":  # a comment on the canvas: no edges, and it is not part of the run (REQ-0025)
+        if t == "note":  # a comment on the canvas: no edges, and it is not part of the run
             if any(e["source"] == nid or e["target"] == nid for e in edges):
                 errs.append(Issue("NOTE_CONNECTED", node=nid, label=d.get("label") or nid))
             continue
@@ -181,7 +181,7 @@ def validate(wf: Dict[str, Any]) -> List[str]:
     for i in sorted(plain):
         if not state_.get(i) and dfs(i, []): break
     errs += handoffs.limit_errors(wf)
-    # reachability (a hand-off target is reached through its source agent, TASK-0179)
+    # reachability (a hand-off target is reached through its source agent, )
     if len(starts) == 1:
         jumps: Dict[str, List[str]] = {}
         for a, b in handoffs.links(nodes): jumps.setdefault(a, []).append(b)
@@ -195,7 +195,7 @@ def validate(wf: Dict[str, Any]) -> List[str]:
             if n["id"] not in seen: errs.append(Issue("NODE_UNREACHABLE", node=n["id"]))
     used = sorted({code_languages.language_of(n.get("data")) for n in nodes
                    if n.get("type") == "tool" and (n.get("data") or {}).get("mode") == "code"})
-    for lang in used:  # per language: Docker and its image, checked at most every 30 s (TASK-0053, TASK-0079)
+    for lang in used:  # per language: Docker and its image, checked at most every 30 s
         why = code_runtime.unavailable(lang)
         if why == "demo": errs.append(Issue("CODE_OFF_DEMO")); break
         if why == "off": errs.append(Issue("CODE_OFF")); break

@@ -1,4 +1,4 @@
-"""Per-chat server credentials (DEC-0077). The encrypted secret is never a public field."""
+"""Per-chat server credentials. The encrypted secret is never a public field."""
 from typing import Optional
 from sqlalchemy import Float, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column

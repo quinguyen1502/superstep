@@ -4,7 +4,7 @@ import { liveReply, liveSteps } from '@/lib/chat'
 import { newTool, toolName } from '@/lib/agent'
 
 const conv = { 'agent:ag': { messages: [{ role: 'user', content: 'B200?' }] } }
-/** An Agent node `ag` (label Helper) as the engine streams it (TASK-0116): one tool round, then the answer. */
+/** An Agent node `ag` (label Helper) as the engine streams it: one tool round, then the answer. */
 const EVENTS: RunEvent[] = [
   { type: 'node_started', node: 'ag', node_type: 'agent', label: 'Helper', iteration: 1 },
   { type: 'node_finished', node: 'ag', node_type: 'agent', label: 'Helper', iteration: 1, input: { message: 'B200?' }, delta: {} },
@@ -24,7 +24,7 @@ const EVENTS: RunEvent[] = [
   { type: 'node_finished', node: 'ag/__exit', node_type: 'agent_exit', label: 'Helper › end', iteration: 1, input: { message: 'B200?', ...conv }, delta: { answer: 'In transit' } },
 ]
 
-describe('Agent node in traces and chats (TASK-0118)', () => {
+describe('Agent node in traces and chats', () => {
   it('knows the Agent node of a step and hides the conversation', () => {
     expect(agentOf('ag/__tool')).toBe('ag'); expect(agentOf('ag/__tool/2')).toBe('ag'); expect(agentOf('sub/ag/__join')).toBe('sub/ag')
     expect(agentOf('sub/ag/__model')).toBe('sub/ag'); expect(agentOf('ag')).toBeUndefined()
@@ -65,7 +65,7 @@ describe('Agent node in traces and chats (TASK-0118)', () => {
   })
 })
 
-describe('a tool wave that waits in two slots (DEC-0069)', () => {
+describe('a tool wave that waits in two slots', () => {
   it('resumes once and keeps one row per slot', () => {
     const tool = (slot: number, type: string, extra: Partial<RunEvent> = {}) =>
       ({ type, node: `agent/__tool/${slot}`, node_type: 'agent_tool', label: 'Supervisor › tool', iteration: 1, ...extra }) as RunEvent
@@ -83,7 +83,7 @@ describe('a tool wave that waits in two slots (DEC-0069)', () => {
   })
 })
 
-describe('AI review usage on the waiting step (TASK-0198)', () => {
+describe('AI review usage on the waiting step', () => {
   it('adds the judge tokens and cost to the Human node row', () => {
     const usage = { provider: 'openai', model: 'gpt-4o-mini', tokens_in: 1000, tokens_out: 200, tokens: 1200, cost_usd: 0.00027 }
     const trace = buildTrace([

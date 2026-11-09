@@ -1,4 +1,4 @@
-"""Approval channel connections (TASK-0022, DEC-0019): personal ones and org-wide ones managed by admins.
+"""Approval channel connections: personal ones and org-wide ones managed by admins.
 
 scope "user": the owner's own Slack app / Telegram bot, usable on the owner's Human nodes only.
 scope "org":  created by an admin (users.is_admin), usable by every user; only admins edit or delete it.
@@ -23,8 +23,8 @@ def callback_path(kind: str, cid: Optional[str] = None) -> str:
 class ChannelService:
     def __init__(self, repo: ApprovalRepository, users: UserRepository, adapters: dict[str, ApprovalChannel], org_allowed=None, triggers=None):
         self.repo, self.users, self.adapters = repo, users, adapters
-        self.org_allowed = org_allowed or (lambda uid: True)  # PolicyService.org_allowed (TASK-0029): roles that may use org connections
-        self.triggers = triggers  # ChatTriggerRepository (TASK-0074): a deleted connection stops its chat triggers
+        self.org_allowed = org_allowed or (lambda uid: True)  # PolicyService.org_allowed: roles that may use org connections
+        self.triggers = triggers  # ChatTriggerRepository: a deleted connection stops its chat triggers
 
     def adapter(self, kind: str) -> ApprovalChannel:
         if kind not in self.adapters: raise AppError("CHANNEL_KIND_UNSUPPORTED", kind=kind)
@@ -91,10 +91,10 @@ class ChannelService:
             except AppError: continue
         return out
 
-    # ---- chat triggers (TASK-0074, DEC-0046) ----
+    # ---- chat triggers ----
     def missing_scopes(self, c: ChannelRow) -> Optional[list[str]]:
         """Scopes chat triggers need that the connection's token lacks, as last read from the platform; None: unknown
-        (saved before TASK-0074 and not tested since)."""
+        (saved and not tested since)."""
         need = self.adapter(c.kind).chat_scopes
         if not need: return []
         if c.scopes is None: return None

@@ -30,17 +30,17 @@ class WorkflowService:
                  jobs=None, export_resources=None):
         self.repo, self.runs, self.versions = workflows, runs, versions
         self.access, self.shares, self.users = access, shares, users
-        self.teams, self.audit = teams, audit  # TeamRepository, AuditService (TASK-0029)  # AccessService etc. (TASK-0014); None = owner-only
-        self.tests = tests  # WorkflowTestRepository (optional): test cases and results go with the workflow (TASK-0067)
-        self.chat_sessions = chat_sessions  # ChatSessionRepository (optional): and its chats (TASK-0084)
-        self.chat_triggers = chat_triggers  # ChatTriggerRepository (optional): so do its chat triggers (TASK-0074)
+        self.teams, self.audit = teams, audit  # TeamRepository, AuditService # AccessService etc.; None = owner-only
+        self.tests = tests  # WorkflowTestRepository (optional): test cases and results go with the workflow
+        self.chat_sessions = chat_sessions  # ChatSessionRepository (optional): and its chats
+        self.chat_triggers = chat_triggers  # ChatTriggerRepository (optional): so do its chat triggers
         self.jobs = jobs  # deletes LangSmith feedback when the workflow's ratings go (optional)
         self.export_resources = export_resources  # mark runtime-only resources for explicit export placeholders
 
-    # -- persistence: every write goes through here so versions stay in sync (TASK-0008) --
+    # -- persistence: every write goes through here so versions stay in sync --
     def _write(self, wid: str, name: str, wf: dict, uid: str, *, new: bool = True, note: str | None = None,
                before: dict | None = None) -> None:
-        """`before` is the graph the code is compared with for `code.write` (TASK-0054): the stored one by default."""
+        """`before` is the graph the code is compared with for `code.write`: the stored one by default."""
         if self.access is not None:
             if before is None and not new: before = json.loads((self.repo.get(wid) or Workflow(data="{}")).data or "{}")
             self.access.require_code(uid, before, wf)
@@ -127,8 +127,8 @@ class WorkflowService:
         return self.export(wid, uid, version, "python")
 
     def export(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT) -> dict:
-        """The workflow's latest version (or `version`) as a readable LangGraph file in `language`: Python (TASK-0070,
-        REQ-0043) or TypeScript / LangGraph.js (TASK-0082, REQ-0047). Subgraph children come with the viewer's access,
+        """The workflow's latest version (or `version`) as a readable LangGraph file in `language`: Python (,
+        ) or TypeScript / LangGraph.js. Subgraph children come with the viewer's access,
         as in a run; the first test case is the example input."""
         exporter = exporters.EXPORTERS.get(language)
         if exporter is None: raise AppError("EXPORT_LANGUAGE_UNSUPPORTED", language=str(language)[:40], supported=", ".join(exporters.EXPORTERS))
@@ -139,7 +139,7 @@ class WorkflowService:
         load = self._loader(uid)
         if (errs := subgraphs.check(wf, load, wid)): raise AppError("WORKFLOW_INVALID", details=errs)
         children: dict = {}
-        def collect(g: dict) -> None:  # subgraphs and workflow tools' workflows (TASK-0137), every level
+        def collect(g: dict) -> None:  # subgraphs and workflow tools' workflows, every level
             for _, ref in subgraphs.all_refs(g):
                 if ref and ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
         collect(wf)
@@ -158,7 +158,7 @@ class WorkflowService:
                 "content": project_export.to_project(out["language"], out["code"], name)}
 
     def owned(self, wid: str, uid: str, action: str = P.VIEW) -> Workflow:
-        """The workflow if `uid` may perform `action` on it (owner, share or admin, TASK-0014)."""
+        """The workflow if `uid` may perform `action` on it (owner, share or admin, )."""
         if self.access is not None: return self.access.workflow(wid, uid, action)
         w = self.repo.get_owned(wid, uid)
         if w is None: raise AppError("WORKFLOW_NOT_FOUND")
@@ -207,23 +207,23 @@ class WorkflowService:
         old = json.loads(ex.data or "{}") if ex else {}
         wf["name"] = clean_name(wf.get("name", "Untitled workflow"))
         if not ex: wf["name"] = unique_name(self.repo.names_for_owner(uid), wf["name"])
-        if (bad := handoffs.refusal(wf)): raise AppError(bad[0], **bad[1])  # hand-off targets (TASK-0179)
+        if (bad := handoffs.refusal(wf)): raise AppError(bad[0], **bad[1])  # hand-off targets
         wf.pop("source", None)  # never trust client-provided source metadata
         if old.get("source"): wf["source"] = old["source"]
         self._write(wid, wf.get("name", "Untitled"), wf, uid, new=not ex, before=old)  # the owner never changes
         return {"id": wid, **({"errors": [], "issues": []} if wf.get("source") else self.checked(wf, uid, wid))}
 
     def validate(self, wf: dict, uid: str, wid=None):
-        """Static checks, with subgraph references resolved against this user's workflows (TASK-0011)."""
+        """Static checks, with subgraph references resolved against this user's workflows."""
         return subgraphs.validate_with(wf, self._loader(uid), wid or wf.get("id"))
 
     def checked(self, wf: dict, uid: str, wid=None) -> dict:
-        """The static checks as the API sends them: English `errors`, and their codes for the editor (TASK-0132)."""
+        """The static checks as the API sends them: English `errors`, and their codes for the editor."""
         errs = self.validate(wf, uid, wid)
         return {"errors": errs, "issues": issues_of(errs)}
 
     def _loader(self, uid: str):
-        """Subgraph references resolve to workflows this user can open (own, shared, any for admins; TASK-0014)."""
+        """Subgraph references resolve to workflows this user can open (own, shared, any for admins; )."""
         def load(ref: str):
             if self.access is not None: row = self.repo.get(ref) if self.access.may(ref, uid) else None
             else: row = self.repo.get_owned(ref, uid)
@@ -245,7 +245,7 @@ class WorkflowService:
 
     def dependents(self, wid: str, uid: str) -> list[dict]:
         """Workflows that embed `wid` as a subgraph or call it as an Agent tool. Names are shown only where the caller has
-        access (TASK-0029)."""
+        access."""
         out = []
         for w in self.repo.referencing(wid):
             if any(ref == wid for _, ref in subgraphs.all_refs(json.loads(w.data or "{}"))):

@@ -1,4 +1,4 @@
-/** A published chat's logo and its stand-ins (TASK-0145, REQ-0074): the uploaded image, or the first letter of the chat's
+/** A published chat's logo and its stand-ins: the uploaded image, or the first letter of the chat's
  *  title in a primary square; both are squares with rounded corners (the root's radius, `rounded-md` unless the caller
  *  sets one); and the illustration the page's welcome shows when the chat has no logo. Theme tokens only,
  *  so both follow light and dark. */

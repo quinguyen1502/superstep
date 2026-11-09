@@ -34,26 +34,26 @@ class RunPlan:
     workflow: dict
     input: dict
     resolve: Optional[Callable[[str], dict]] = None  # credential lookup bound to the run's user
-    # resuming a waiting run (TASK-0006): same run id, earlier events, {node, value, state}
+    # resuming a waiting run: same run id, earlier events, {node, value, state}
     run_id: Optional[str] = None
     previous: Optional["Run"] = None
     resume: Optional[dict] = None
-    source: str = "ui"  # ui | api (TASK-0007) | schedule | test (TASK-0067)
-    version: Optional[int] = None  # stored workflow version that runs; None = unsaved edits (TASK-0008)
-    trace_parent: Optional[dict] = None  # {trace_id, span_id} of the previous trace segment (TASK-0020)
-    recovered: bool = False       # continuing a queue job whose worker died (TASK-0020)
-    checkpointing: bool = False   # save a progress checkpoint after each node (queue jobs, TASK-0020)
-    fence: Optional[int] = None   # lease generation of the queue job (TASK-0021): every write carries it
+    source: str = "ui"  # ui | api | schedule | test
+    version: Optional[int] = None  # stored workflow version that runs; None = unsaved edits
+    trace_parent: Optional[dict] = None  # {trace_id, span_id} of the previous trace segment
+    recovered: bool = False       # continuing a queue job whose worker died
+    checkpointing: bool = False   # save a progress checkpoint after each node (queue jobs, )
+    fence: Optional[int] = None   # lease generation of the queue job: every write carries it
     attempt: int = 1              # queue delivery attempt, sent to side effects as X-Studio-Attempt
     effects: Optional[Effects] = None  # idempotency keys / ledger / fencing guard, set by RunService._execute
-    resumed_by: Optional[dict] = None  # {channel, user_id} when an approval channel answered (TASK-0022)
-    ports: Optional[Ports] = None  # knowledge base / MCP services bound to the run's user (TASK-0012/0013)
-    invalid: Optional[list] = None  # subgraph reference errors found while planning (TASK-0011), reported as WORKFLOW_INVALID
-    steps: Optional[int] = None  # stop after this many working supersteps (TASK-0036); None runs to the end
-    until: Optional[str] = None  # pause after this node finishes (TASK-0036); None runs to the end
+    resumed_by: Optional[dict] = None  # {channel, user_id} when an approval channel answered
+    ports: Optional[Ports] = None  # knowledge base / MCP services bound to the run's user (/0013)
+    invalid: Optional[list] = None  # subgraph reference errors found while planning, reported as WORKFLOW_INVALID
+    steps: Optional[int] = None  # stop after this many working supersteps; None runs to the end
+    until: Optional[str] = None  # pause after this node finishes; None runs to the end
     forked: Optional[dict] = None  # {run_id, checkpoint, nodes, edited}: a new run forked from a checkpoint of another one
     browser_lease: Optional[int] = None  # positive wire epoch = stored queue generation + 1; 1 covers an unclaimed UI run
-    pending_wave: bool = False  # an answer of one wait in a wave was stored; the run stays waiting (TASK-0158)
+    pending_wave: bool = False  # an answer of one wait in a wave was stored; the run stays waiting
     pending_event: Optional[dict] = None  # the next slot's run_waiting, so the panel stops showing the one just answered
 
     @property
@@ -68,7 +68,7 @@ class RunPlan:
 
 def error_event(error: dict, **extra) -> dict:
     """WebSocket error event: structured `error` {code, message, details?} plus the legacy `errors` list, and the
-    codes of validation messages in `issues` (TASK-0132)."""
+    codes of validation messages in `issues`."""
     details = error.get("details")
     errors = details if isinstance(details, list) and details else [error["message"]]
     return {"type": "error", **extra, "error": error, "errors": errors,
@@ -88,7 +88,7 @@ RESPONSE_MAX = 10_000  # characters of a human response
 
 
 def human_response(response, *, allow_form: bool = False) -> str | dict:
-    """Chat v1 opts into bounded JSON forms; other callers retain DEC-0013 text/boolean semantics."""
+    """Chat v1 opts into bounded JSON forms; other callers retain text/boolean semantics."""
     if isinstance(response, bool): response = "approved" if response else "rejected"
     if allow_form and isinstance(response, dict):
         try:
@@ -134,13 +134,13 @@ def _follow_up_wait(cp: dict) -> Optional[dict]:
 
 log = get_logger("runs")
 def code_runtime_of(events: list) -> Optional[str]:
-    """Where this run's Code nodes ran (TASK-0056): `subprocess` if any call ran unisolated, else `docker`, else None."""
+    """Where this run's Code nodes ran: `subprocess` if any call ran unisolated, else `docker`, else None."""
     seen = {(e.get("code_output") or {}).get("runtime") for e in events if isinstance(e, dict) and isinstance(e.get("code_output"), dict)}
     return "subprocess" if "subprocess" in seen else ("docker" if "docker" in seen else None)
 
 
 CANCEL_API = object()  # worker -> loop marker: the bus reported a cancel request
-FENCED = object()      # worker -> loop marker: another worker claimed this run (stale lease, TASK-0021)
+FENCED = object()      # worker -> loop marker: another worker claimed this run (stale lease, )
 RESUME_KEYS = ("node", "nodes", "state", "counts", "blob")  # what a progress checkpoint stores to continue from
 
 
@@ -174,7 +174,7 @@ def _parse_until(req: dict) -> Optional[str]:
 
 
 def _write_in_thread(fn, *args, **kwargs) -> asyncio.Future:
-    """Run a write (run history, run bus entry) on a worker thread, submitted now and never cancelled (TASK-0059/0060).
+    """Run a write (run history, run bus entry) on a worker thread, submitted now and never cancelled (/0060).
     Cancelling the task that awaits it (client gone, server or test client shutting its loop down) raises CancelledError
     there but does not drop the write: plain `await asyncio.to_thread(...)` cancels the queued work item if no thread
     has picked it up."""
@@ -194,27 +194,27 @@ class RunService:
         self.bus = bus or InMemoryRunBus()
         self.versions = versions  # WorkflowVersionRepository (optional): tags runs with the version they ran
         self.telemetry = telemetry or Telemetry(exporters=[], metric_readers=[])  # no-op unless an exporter is configured
-        self.notifier = notifier  # NotificationService (optional): in-app/e-mail/webhook when a run waits or expires (TASK-0020)
-        self.ledger = ledger      # NodeResultRepository (optional): node-result ledger of queue jobs (TASK-0021)
+        self.notifier = notifier  # NotificationService (optional): in-app/e-mail/webhook when a run waits or expires
+        self.ledger = ledger      # NodeResultRepository (optional): node-result ledger of queue jobs
         self.deliveries = deliveries  # -> DeliveryService (optional): callback_url webhook when an API run settles
-        self.approvals = approvals  # ApprovalService (optional): Slack/Telegram approval requests of Human nodes (TASK-0022)
-        self.knowledge = knowledge  # KnowledgeService (optional): Retriever nodes (TASK-0012)
-        self.audit = audit  # AuditService (optional): Code nodes running without isolation (TASK-0056)
-        self.browser = browser  # trusted browser lifecycle service (TASK-0245)
-        self.mcp = mcp  # McpService (optional): MCP tool nodes (TASK-0013)
-        self.policy = policy  # PolicyService (optional): org resources at run time (TASK-0029)
-        self.access = access  # AccessService (optional): shared workflows and roles (TASK-0014); None = owner-only
-        self.quota = quota  # rate_limit.Counter (optional): recipients Send email nodes may reach per owner per hour (TASK-0051)
-        self.tests = tests  # -> WorkflowTestService (optional): records a finished test run, answers a waiting one (TASK-0067)
-        self.chat = chat  # -> ChatRunService (optional): answers a chat-trigger run in its thread (TASK-0075)
-        self.jobs = jobs  # -> JobQueue (optional): child runs of workflow tools and their parents' resumes (TASK-0134)
+        self.approvals = approvals  # ApprovalService (optional): Slack/Telegram approval requests of Human nodes
+        self.knowledge = knowledge  # KnowledgeService (optional): Retriever nodes
+        self.audit = audit  # AuditService (optional): Code nodes running without isolation
+        self.browser = browser  # trusted browser lifecycle service
+        self.mcp = mcp  # McpService (optional): MCP tool nodes
+        self.policy = policy  # PolicyService (optional): org resources at run time
+        self.access = access  # AccessService (optional): shared workflows and roles; None = owner-only
+        self.quota = quota  # rate_limit.Counter (optional): recipients Send email nodes may reach per owner per hour
+        self.tests = tests  # -> WorkflowTestService (optional): records a finished test run, answers a waiting one
+        self.chat = chat  # -> ChatRunService (optional): answers a chat-trigger run in its thread
+        self.jobs = jobs  # -> JobQueue (optional): child runs of workflow tools and their parents' resumes
 
     # ---- cancel from any API process (POST /api/runs/{id}/cancel) ----
     def cancel(self, rid: str, uid: str) -> None:
         row = self.runs.get(rid) if self.bus.owner(rid) is None else None  # not running here or elsewhere
         if row is not None and row.status == "queued" and row.owner == uid:  # API run not picked up yet: worker skips it
             self.runs.set_status(rid, "cancelled")
-            if row.parent_run_id: self.resume_parent(rid)  # a cancelled child still answers its parent (TASK-0134)
+            if row.parent_run_id: self.resume_parent(rid)  # a cancelled child still answers its parent
             return None
         if row is not None and row.status == "paused":
             if row.owner != uid: raise AppError("RUN_NOT_FOUND")
@@ -244,7 +244,7 @@ class RunService:
         wf = stored if stored.get("source") or not edits else (req.get("workflow") or stored)  # unsaved edits need edit access
         if not isinstance(wf, dict) or size(wf) > config.workflow_max(): raise AppError("WORKFLOW_TOO_LARGE", max_kb=config.workflow_max() // 1024)
         if config.demo_mode() and P.code_sources(wf): raise AppError("DEMO_CODE_DISABLED")  # the clear code, not WORKFLOW_INVALID
-        n = req.get("version")  # a stored version's snapshot instead (workflow tests run against version, TASK-0068)
+        n = req.get("version")  # a stored version's snapshot instead (workflow tests run against version, )
         if n is not None:
             v = self.versions.get(wid, n) if wid and edits and self.versions is not None and isinstance(n, int) and not isinstance(n, bool) else None
             if v is None: raise AppError("VERSION_NOT_FOUND")
@@ -252,15 +252,15 @@ class RunService:
         from ..engine import browser_recipes
         browser_recipes.validate_input(wf,inp)
         version = n if n is not None else self._version_of(wid, wf)
-        res = row.owner if row is not None and row.owner else uid  # a saved workflow uses its owner's resources (DEC-0023)
+        res = row.owner if row is not None and row.owner else uid  # a saved workflow uses its owner's resources
         wf, invalid = self._expand(res, wid, wf)
         if (steps is not None or until) and (wf.get("source") or {}).get("kind") == "langgraph_import":
-            raise AppError("RUN_REQUEST_INVALID")  # imported graphs stay full-run only (TASK-0036)
+            raise AppError("RUN_REQUEST_INVALID")  # imported graphs stay full-run only
         return RunPlan(wid, wf, inp, self.credentials.resolver(res) if self.credentials else None, version=version, invalid=invalid,
                        ports=self.ports(res, uid), steps=steps, until=until)
 
     def _plan_chat(self, uid: str, req: dict, steps, until) -> RunPlan:
-        """A chat message or a visitor's answer from the chat (TASK-0084): the run gets the history as input and
+        """A chat message or a visitor's answer from the chat: the run gets the history as input and
         source "chat"; ChatRunService.on_settled writes the answer turn."""
         web = self.chat().web if self.chat else None
         sid = req["chat_session_id"]
@@ -290,7 +290,7 @@ class RunService:
 
     def ports(self, uid: str, actor: Optional[str] = None) -> Ports:
         """Services nodes may call during a run, bound to the resource owner `uid`. Org-wide MCP servers follow the admin
-        policy for the person running (`actor`, TASK-0029)."""
+        policy for the person running (`actor`, )."""
         org = self.policy.org_allowed(actor or uid) if self.policy is not None else True
         web = self.chat().web if self.chat else None
         return Ports(retrieve=self.knowledge.retriever(uid) if self.knowledge else None, mcp_call=self.mcp.caller(uid, org) if self.mcp else None,
@@ -298,7 +298,7 @@ class RunService:
                      email_quota=self.email_quota(uid), code_audit=self.code_audit(actor or uid),
                      attachment=web.file_loader(uid) if web is not None else None)
 
-    # ---- child runs of workflow tools (TASK-0134, DEC-0066) ----
+    # ---- child runs of workflow tools ----
     def top_run(self, r: Run) -> Run:
         """The run at the top of a chain of workflow tool calls (the run itself when it has no parent)."""
         for _ in range(subgraphs.MAX_DEPTH + 2):
@@ -308,17 +308,17 @@ class RunService:
         return r
 
     def run_resources(self, r: Run, uid: str) -> str:
-        """Whose resources a stored run uses: a child run uses its top parent's, as an inlined subgraph would (DEC-0023)."""
+        """Whose resources a stored run uses: a child run uses its top parent's, as an inlined subgraph would."""
         top = self.top_run(r) if r.parent_run_id else r
         return self.resources_of(top.workflow_id, top.owner or uid if top is not r else uid)
 
     def under_test(self, r: Run) -> bool:
-        """A child run under a workflow test run (TASK-0137): it keeps the test rules, and a question for a person inside it
+        """A child run under a workflow test run: it keeps the test rules, and a question for a person inside it
         is not sent anywhere; the test cancels it and the parent's tool call fails."""
         return bool(r.parent_run_id) and self.top_run(r).source == "test"
 
     def run_ports(self, r: Run, uid: str) -> Ports:
-        """Ports of a stored run's next segment. A child of a workflow test run keeps the test rules (DEC-0044) without
+        """Ports of a stored run's next segment. A child of a workflow test run keeps the test rules without
         becoming a test run itself."""
         ports = self.ports(self.run_resources(r, uid), uid)
         top = self.top_run(r) if r.parent_run_id else r
@@ -349,7 +349,7 @@ class RunService:
         return start
 
     def plan_child(self, r: Run) -> RunPlan:
-        """The first segment of a child run: the snapshot its parent's plan took (DEC-0066 decision 2)."""
+        """The first segment of a child run: the snapshot its parent's plan took ( decision 2)."""
         cp = json.loads(r.checkpoint or "{}"); uid = r.owner or ""
         res = self.run_resources(r, uid)
         from ..engine import browser_recipes
@@ -376,7 +376,7 @@ class RunService:
 
     def absorb_wave(self, rid: str, node: Optional[str] = None, value=None, child: Optional[dict] = None) -> tuple[str, bool]:
         """Store one settled wait of a wave. The string is 'plain' when this run is not waiting on a wave, 'stay' when
-        other waits remain, 'go' when this was the last and the checkpoint is ready for the one resume (TASK-0158).
+        other waits remain, 'go' when this was the last and the checkpoint is ready for the one resume.
         The bool is whether this call stored the settle. A lost compare-and-set stores nothing, so the caller must not
         close the wait first."""
         def apply(cp: dict) -> tuple[str, bool]:
@@ -442,7 +442,7 @@ class RunService:
 
     @staticmethod
     def apply_test(plan: RunPlan, test: Optional[dict]) -> RunPlan:
-        """A workflow test run (TASK-0067, DEC-0044): Send email nodes do a dry run; with `mock`, every LLM and Decision node
+        """A workflow test run: Send email nodes do a dry run; with `mock`, every LLM and Decision node
         uses the offline mock. The queue job carries `test`, so a resumed or recovered segment keeps it."""
         if test is None: return plan
         plan.source = "test"; plan.ports = plan.ports or Ports()
@@ -450,7 +450,7 @@ class RunService:
         return plan
 
     def code_audit(self, uid: str) -> Optional[Callable[[], None]]:
-        """Audit entry for the first Code call that runs on the host without isolation (TASK-0056)."""
+        """Audit entry for the first Code call that runs on the host without isolation."""
         if self.audit is None: return None
         return lambda: self.audit.record(uid or None, "system.code_runtime_subprocess", "system", None, "Code nodes", runtime="subprocess")
 
@@ -460,8 +460,8 @@ class RunService:
         return lambda n: take_email_quota(self.quota, uid, n)
 
     def _expand(self, uid: str, wid: Optional[str], wf: dict) -> tuple[dict, Optional[list]]:
-        """Inline subgraph nodes (TASK-0011) with the workflows this user may read, copy in the children of workflow tools
-        (TASK-0133, DEC-0066), then add Agent nodes' steps (TASK-0116). The expanded graph is what runs and what checkpoints
+        """Inline subgraph nodes with the workflows this user may read, copy in the children of workflow tools
+        , then add Agent nodes' steps. The expanded graph is what runs and what checkpoints
         store, so a resumed or recovered run continues on the same graph even if a child changed."""
         if wf.get("source"): return wf, None
         load = self.workflow_loader(uid)
@@ -521,10 +521,10 @@ class RunService:
         plan.forked = {"run_id": r.id, "checkpoint": i, "nodes": cp["nodes"], "edited": state != cp["state"]}
         return plan
 
-    # ---- human-in-the-loop (TASK-0006) ----
+    # ---- human-in-the-loop ----
     def waiting_run(self, rid: str, uid: str) -> Run:
         r = self.runs.get(rid)
-        if r is None or r.owner != uid: raise AppError("RUN_NOT_FOUND")  # owner only (DEC-0013)
+        if r is None or r.owner != uid: raise AppError("RUN_NOT_FOUND")  # owner only
         if r.status != "waiting" or not r.checkpoint: raise AppError("RUN_NOT_WAITING")
         if self.expire_if_stale(r): raise AppError("RUN_EXPIRED")
         return r
@@ -562,9 +562,9 @@ class RunService:
 
     def plan_resume(self, uid: str, rid: str, response, via_channel: bool = False, steps: Optional[int] = None, until: Optional[str] = None,
                     child: Optional[dict] = None, node: Optional[str] = None, wave: bool = False, allow_form: bool = False) -> RunPlan:
-        """child: the finished child run a run waits for (TASK-0134), from the worker only. A run waiting for a child
+        """child: the finished child run a run waits for, from the worker only. A run waiting for a child
         cannot be answered by a person, and a child's result cannot answer a person's question.
-        wave: the checkpoint already holds every answer of a settled wave (TASK-0158). node: which approval this answer is for."""
+        wave: the checkpoint already holds every answer of a settled wave. node: which approval this answer is for."""
         row = self.runs.get(rid)
         if row is not None and row.status == "paused" and not via_channel:
             if row.owner != uid: raise AppError("RUN_NOT_FOUND")  # owner only, same as a human resume
@@ -597,8 +597,8 @@ class RunService:
         if (child is None) == (wait.get("kind") == "child") or (child is not None and wait.get("run_id") != child.get("child_run_id")):
             raise AppError("RUN_NOT_WAITING")
         if child is not None: response = child
-        elif self.approvals is not None and not via_channel:  # answered in the studio: the channel buttons stop working (TASK-0022)
-            if self.approvals.decided_elsewhere(rid) or not self.approvals.claim(rid): raise AppError("RUN_NOT_WAITING")  # first answer wins (DEC-0043)
+        elif self.approvals is not None and not via_channel:  # answered in the studio: the channel buttons stop working
+            if self.approvals.decided_elsewhere(rid) or not self.approvals.claim(rid): raise AppError("RUN_NOT_WAITING")  # first answer wins
             self.approvals.close_run(rid, "answered")
             if self.browser and self.browser.approvals:self.browser.approvals.direct_decision(rid,str(cp.get('node') or ''),uid,response)
         res = self.run_resources(r, uid)
@@ -608,7 +608,7 @@ class RunService:
                        version=r.workflow_version, trace_parent=cp.get("trace"), ports=self.run_ports(r, uid))
 
     def _plan_paused(self, r: Run, uid: str, steps: Optional[int], until: Optional[str] = None) -> RunPlan:
-        """Continue a one-step pause (TASK-0036). No human response, and no approval notification."""
+        """Continue a one-step pause. No human response, and no approval notification."""
         if not r.checkpoint: raise AppError("RUN_NOT_WAITING")
         cp = json.loads(r.checkpoint)
         resume = {k: cp[k] for k in RESUME_KEYS if k in cp}
@@ -621,8 +621,8 @@ class RunService:
 
     def plan_recover(self, r: Run, fence: Optional[int] = None, attempt: int = 2) -> RunPlan:
         """A recovered queue job (its worker died or lost its lease mid-run). With a progress checkpoint it continues
-        from there (same checkpoint shape as HITL; parallel branches and imported graphs included, TASK-0021);
-        without one it starts over. Either way the lost segment's root span is exported first (DEC-0018)."""
+        from there (same checkpoint shape as HITL; parallel branches and imported graphs included, );
+        without one it starts over. Either way the lost segment's root span is exported first."""
         cp = json.loads(r.checkpoint or "null") or {}
         recipe_snapshot=cp.get('kind')=='browser_recipe'
         snapshot = cp.get("workflow") if r.parent_run_id or recipe_snapshot else None  # child/accepted recipe snapshots survive before first progress
@@ -672,7 +672,7 @@ class RunService:
         out = []; self.expire_waiting()
         for r in self.runs.list_waiting(uid):
             ev = next((e for e in reversed(json.loads(r.events or "[]")) if e.get("type") == "run_waiting"), {})
-            if ev.get("wait"): continue  # waiting for a child run, not for a person (TASK-0134)
+            if ev.get("wait"): continue  # waiting for a child run, not for a person
             w = self.workflows.get(r.workflow_id) if r.workflow_id and r.workflow_id != "adhoc" else None
             out.append({"id": r.id, "workflow_id": r.workflow_id, "workflow_name": w.name if w else None, "node": ev.get("node"),
                         "label": ev.get("label"), "prompt": ev.get("prompt"), "started": r.started, "waiting_since": r.ended})
@@ -698,15 +698,15 @@ class RunService:
         except Exception: log.warning("live history invalidation failed for run %s", rid)
 
     def history(self, wid: str, uid: str, tests: bool = False) -> list[dict]:
-        """tests: the workflow's test runs instead of its other runs (TASK-0067)."""
+        """tests: the workflow's test runs instead of its other runs."""
         row = self._workflow(wid, uid)
         everyone = self.access is None or self.access.access_of(row, uid) == "owner"  # owner and admins see every run
         rows = [r for r in self.runs.list_for_workflow(wid, tests=tests) if everyone or r.owner == uid]
-        chat = self.chat().runs_info([r.id for r in rows if r.source == "chat"]) if self.chat else {}  # TASK-0075: who sent the message
+        chat = self.chat().runs_info([r.id for r in rows if r.source == "chat"]) if self.chat else {}  # who sent the message
         return [self.row(r, uid, chat) for r in rows]
 
     def run_detail(self, rid: str, uid: str) -> dict:
-        """One run as the history lists it (TASK-0136: a workflow tool's child steps in its parent's trace)."""
+        """One run as the history lists it (: a workflow tool's child steps in its parent's trace)."""
         return self.row(self._readable_run(rid, uid), uid)
 
     def row(self, r: Run, uid: str, chat: Optional[dict] = None) -> dict:
@@ -718,7 +718,7 @@ class RunService:
                  **self.links(r, uid)}
 
     def links(self, r: Run, uid: str) -> dict:
-        """A workflow tool's child run names its parent; a parent waiting for a child names the child (TASK-0135). Names of
+        """A workflow tool's child run names its parent; a parent waiting for a child names the child. Names of
         workflows the caller cannot open are left out."""
         def ref(x: Optional[Run]) -> Optional[dict]:
             if x is None: return None
@@ -751,20 +751,20 @@ class RunService:
         except Exception: trace_id = None  # tracing must never fail a run
         if trace_id is None and trace_parent: trace_id = trace_parent.get("trace_id")
         root = {"trace_root": trace_root} if trace_root else {}  # later segments keep the first one's
-        test = source == "test"  # a workflow test answers its own Human nodes and sends nothing (DEC-0044)
+        test = source == "test"  # a workflow test answers its own Human nodes and sends nothing
         wave_waits = (checkpoint or {}).get("waits") if isinstance((checkpoint or {}).get("waits"), list) else []
-        if status == "waiting" and checkpoint and checkpoint.get("wait"): test = True  # waiting for a child run: nobody to ask (TASK-0134)
+        if status == "waiting" and checkpoint and checkpoint.get("wait"): test = True  # waiting for a child run: nobody to ask
         elif status == "waiting" and wave_waits and all(w.get("kind") == "child" for w in wave_waits): test = True
-        if source == "tool" and not test and (row := self.runs.get(rid)) is not None and self.under_test(row): test = True  # TASK-0137
+        if source == "tool" and not test and (row := self.runs.get(rid)) is not None and self.under_test(row): test = True
         if self.notifier is not None and uid and status in ("waiting", "expired") and not test:
             ev = next((e for e in reversed(events) if e.get("type") == "run_waiting"), None)
-            try:  # a step AI review may answer is announced by the review instead (TASK-0187)
+            try:  # a step AI review may answer is announced by the review instead
                 reviewed = status == "waiting" and self.approvals is not None and self.approvals.answers_itself(wid, (checkpoint or {}).get("workflow") or {}, ev)
                 if not reviewed: self.notifier.run_event("run_waiting" if status == "waiting" else "run_expired", uid, rid, wid, ev)
             except Exception: log.exception("notification for run %s failed", rid)  # never fails a run
-        jobs: list = []  # AI review / channel requests, started once the run row is stored (TASK-0187)
+        jobs: list = []  # AI review / channel requests, started once the run row is stored
         if self.approvals is not None and uid and not test:
-            try:  # the waiting steps are written before the row, so a crash in between never loses them (TASK-0127)
+            try:  # the waiting steps are written before the row, so a crash in between never loses them
                 if status == "waiting":
                     asked = [{"type": "run_waiting", "node": w.get("node"), "prompt": w.get("prompt"), "label": w.get("label"),
                               "tool": w.get("tool"), "arguments": w.get("arguments"), "browser_intent": w.get("browser_intent")}
@@ -782,7 +782,7 @@ class RunService:
         self.runs.add(Run(id=rid, workflow_id=wid or "adhoc", input=_dumps(inp), events=_dumps(events), code_runtime=code_runtime_of(events),
                           final_state=_dumps(final), status=status, started=t0, ended=t1, trace_id=trace_id, owner=uid or None, source=source, workflow_version=version,
                           checkpoint=_dumps(checkpoint) if checkpoint else None, resume_job=None, **root, **metrics),
-                      **({"fence": fence} if fence is not None else {}))  # resume_job: a kept answer is used up (TASK-0127)
+                      **({"fence": fence} if fence is not None else {}))  # resume_job: a kept answer is used up
         self.history_changed(wid, rid)
         for job in jobs:
             try: self.approvals.start(job)
@@ -793,7 +793,7 @@ class RunService:
         return {"metrics": {**metrics, "tokens": metrics["tokens_in"] + metrics["tokens_out"]}, "trace_id": trace_id, "trace_url": trace_url(trace_id, trace_root)}
 
     async def _save_progress(self, rid, events, ev, plan, span) -> None:
-        """Persist events so far + where to continue from if this worker dies (TASK-0020/0021): the next node(s),
+        """Persist events so far + where to continue from if this worker dies (/0021): the next node(s),
         state and iteration counts (or the imported graph's serialized LangGraph checkpoint), plus the trace segment.
         Raises StaleLease when another worker claimed the run (this one must stop)."""
         cp = {"kind": "progress", **{k: ev[k] for k in RESUME_KEYS if k in ev}, "workflow": plan.workflow, "ts": time.time(),
@@ -862,10 +862,10 @@ class RunService:
     async def settled(self, rid: str, source: Optional[str] = None) -> None:
         """Every run segment ends here (first run, studio/Slack/Telegram resume, recovery): an API run's callback_url
         gets the result or the next pause, once (DeliveryService.for_run is idempotent). A test run (`source`) goes to its
-        suite instead, which records it or answers its Human node (TASK-0067). A chat run answers its thread (TASK-0075).
+        suite instead, which records it or answers its Human node. A chat run answers its thread.
         The work is one thread job submitted at once and never cancelled (_write_in_thread): the handler is often cancelled
         right after the run ends (the client closes the socket on run_summary), and a cancelled plain to_thread would drop
-        the queued job, so the chat reply or callback would silently never happen (TASK-0083)."""
+        the queued job, so the chat reply or callback would silently never happen."""
         await _write_in_thread(self._settle, rid, source)
 
     def _note_chat(self, rid: str) -> None:
@@ -874,7 +874,7 @@ class RunService:
         except Exception: log.exception("noting the next question of chat run %s failed", rid)
 
     def _settle(self, rid: str, source: Optional[str]) -> None:
-        if source == "tool":  # a workflow tool's child run: its parent goes on (TASK-0134)
+        if source == "tool":  # a workflow tool's child run: its parent goes on
             try:
                 r = self.runs.get(rid)
                 if r is not None and r.status == "waiting" and self.under_test(r):  # nobody answers a person's question in a test run
@@ -908,7 +908,7 @@ class RunService:
             try: loop.call_soon_threadsafe(q.put_nowait, x)
             except RuntimeError: pass  # loop closed after client went away
 
-        if plan.ports is not None:  # a Code node's sandbox is killed when the run is cancelled or times out (TASK-0053)
+        if plan.ports is not None:  # a Code node's sandbox is killed when the run is cancelled or times out
             plan.ports.cancelled = lambda: cancel.is_set() or bus.is_cancelled(rid)
             if self.browser and config.browser_runtime_enabled():
                 def bind_browser():
@@ -932,7 +932,7 @@ class RunService:
                         forked_from=(plan.forked or {}).get('run_id'),
                         conversation_id=chat.id if chat is not None else None)
                 plan.ports.browser=await asyncio.to_thread(bind_browser)
-            plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools (TASK-0134)
+            plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools
         plan.effects = Effects(rid, plan.attempt, ledger=_RunLedger(self.ledger, rid, plan.fence) if self.ledger is not None else None,
                           guard=self._guard(rid, plan.fence))
 
@@ -962,7 +962,7 @@ class RunService:
             nonlocal connected
             if ev.get("type") != "node_token": events.append(ev)  # live LLM text is not part of the stored event log
             if span is not None and ev.get("type") in ("node_finished", "error"):
-                try: self.telemetry.node(span, ev)  # live span (TASK-0020)
+                try: self.telemetry.node(span, ev)  # live span
                 except Exception: pass
             if plan.source == "chat" and not plan.checkpointing and ev.get("type") in ("run_started", "run_resumed", "run_recovered", "node_started", "node_finished"):
                 await _write_in_thread(self._save_live_history, rid, plan, events, started, uid)
@@ -980,7 +980,7 @@ class RunService:
             await emit(first)
             if plan.checkpointing: await self._save_progress(rid, events, plan.resume or {}, plan, span)  # this segment's trace, before any node
             # the time limit counts the engine's work from here: the setup above (the first progress write, which may wait for
-            # the database) is not part of the run's time, or a slow write could time a run out before its first node (TASK-0212)
+            # the database) is not part of the run's time, or a slow write could time a run out before its first node
             deadline = time.time() + config.run_timeout()
             threading.Thread(target=worker, daemon=True).start()
             listener = asyncio.create_task(listen()); ended = None
@@ -1042,7 +1042,7 @@ class RunService:
         return status
 
     def _guard(self, rid: str, fence: Optional[int]):
-        """Fencing check before every side-effect node of a queue job (TASK-0021)."""
+        """Fencing check before every side-effect node of a queue job."""
         if fence is None: return None
         def check():
             if self.runs.lease_gen(rid) != fence: raise StaleLease(rid)

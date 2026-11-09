@@ -21,7 +21,7 @@ class SlackChannel(ApprovalChannel):
     chat = True
 
     place_pattern = r"[CG][A-Z0-9]{2,20}"  # public / private channel id
-    chat_scopes = ("app_mentions:read", "im:history")  # chat triggers (TASK-0074): mentions in channels, direct messages
+    chat_scopes = ("app_mentions:read", "im:history")  # chat triggers: mentions in channels, direct messages
     events_path = "/api/channels/events/slack"  # Event Subscriptions Request URL, one for every workspace (routed by team_id)
 
     def _post(self, secrets: dict, method: str, payload: dict):
@@ -33,7 +33,7 @@ class SlackChannel(ApprovalChannel):
     def _api(self, secrets: dict, method: str, payload: dict) -> dict: return self._post(secrets, method, payload)[1]
 
     def oauth_access(self, code: str, redirect_uri: str) -> dict:
-        """Add to Slack (TASK-0014): exchange the OAuth code for the workspace's bot token (oauth.v2.access)."""
+        """Add to Slack: exchange the OAuth code for the workspace's bot token (oauth.v2.access)."""
         _, data = self.call("POST", f"{config.slack_api_url()}/oauth.v2.access", data={"code": code, "redirect_uri": redirect_uri},
                             auth=(config.slack_client_id(), config.slack_client_secret()))
         if not data.get("ok"): raise AppError("SLACK_OAUTH_FAILED", reason=str(data.get("error") or "not ok"))
@@ -66,7 +66,7 @@ class SlackChannel(ApprovalChannel):
         return p if isinstance(p, dict) else {}
 
     def route_key(self, body):
-        """Interactivity posts a form with the payload's team.id; the Events API posts JSON with team_id (TASK-0075)."""
+        """Interactivity posts a form with the payload's team.id; the Events API posts JSON with team_id."""
         team = self._payload(body).get("team") or {}
         if isinstance(team, dict) and team.get("id"): return str(team["id"])
         return str(self._event(body).get("team_id") or "") or None
@@ -98,7 +98,7 @@ class SlackChannel(ApprovalChannel):
         self._api(secrets, "chat.update", {"channel": ref["channel"], "ts": ref["ts"], "text": text,
                                            "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": text[:2900]}}]})
 
-    # ---- chat triggers (TASK-0075): app_mention in channels, message.im in direct messages ----
+    # ---- chat triggers: app_mention in channels, message.im in direct messages ----
     def handle_message(self, body) -> Optional[IncomingMessage]:
         p = self._event(body); e = p.get("event") if p.get("type") == "event_callback" else None
         if not isinstance(e, dict): return None

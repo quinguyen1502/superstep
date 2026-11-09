@@ -1,4 +1,4 @@
-"""Persist revision action independently of source retention (TASK-0230)."""
+"""Persist revision action independently of source retention."""
 from alembic import op
 import sqlalchemy as sa
 

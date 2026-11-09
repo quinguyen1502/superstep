@@ -1,4 +1,4 @@
-"""LLM provider registry (TASK-0030, DEC-0032): one small strategy class per provider.
+"""LLM provider registry: one small strategy class per provider.
 
 A provider knows its defaults (base URL, whether a key is required, extra headers it accepts), how to list
 models and how to build a LangChain chat model (streaming + `bind_tools` come with it). `call_llm`
@@ -64,9 +64,9 @@ class Provider:
     header_fields: ClassVar[Tuple[str, ...]] = ()   # optional extra HTTP headers stored on the credential
     supports_tools: ClassVar[bool] = True
     local: ClassVar[bool] = False                    # runs on the user's machine (Docker: host.docker.internal)
-    kind: ClassVar[str] = "chat"                     # "chat" (LLM nodes), "decision" (Decision nodes, TASK-0050), "email" (TASK-0051)
+    kind: ClassVar[str] = "chat"                     # "chat" (LLM nodes), "decision" (Decision nodes, ), "email"
     settings_fields: ClassVar[Tuple[str, ...]] = ()  # non-secret settings stored on the credential (SMTP host, port, ...)
-    vision: ClassVar[bool] = True                    # can send image parts; the model must also be in VISION_MODELS (DEC-0072)
+    vision: ClassVar[bool] = True                    # can send image parts; the model must also be in VISION_MODELS
 
     def info(self) -> Dict[str, Any]:
         return {"id": self.id, "label": self.label, "default_base_url": self.default_base_url, "default_model": self.default_model,
@@ -112,7 +112,7 @@ class Provider:
                images: Optional[List[Dict[str, str]]] = None) -> Tuple[str, Dict[str, Any]]:
         """Final text + usage. With `on_token` the LangChain model streams and every text delta is passed on as it arrives
         (the returned text is the same concatenation). `images` [{name, mime, data (base64)}] go with the prompt as image
-        parts (TASK-0176)."""
+        parts."""
         model = model or self.default_model
         ask = _lc_messages([{"role": "user", "content": prompt, "images": images}]) if images else prompt
         try:
@@ -133,13 +133,13 @@ class Provider:
             make_usage(self.id, model, estimate_tokens(prompt), estimate_tokens(out), estimated=True)
         return out.strip(), usage
 
-    parallel_tool_calls_flag: ClassVar[bool] = False  # OpenAI-compatible servers accept parallel_tool_calls=false (DEC-0069)
+    parallel_tool_calls_flag: ClassVar[bool] = False  # OpenAI-compatible servers accept parallel_tool_calls=false
 
     def invoke_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], model: str, cred: Dict[str, Any],
                      on_token: Optional[Callable[[str], None]] = None, parallel: Optional[bool] = None) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
-        """One Agent node model call (TASK-0116): (text, tool calls [{id, name, args}], usage). `messages` are plain dicts
+        """One Agent node model call: (text, tool calls [{id, name, args}], usage). `messages` are plain dicts
         {role: system|user|assistant|tool, content, tool_calls?, tool_call_id?}; `tools` [{name, description, parameters}].
-        `parallel` False asks a server that supports it for one call at a time (DEC-0069)."""
+        `parallel` False asks a server that supports it for one call at a time."""
         model = model or self.default_model
         try:
             m = self.chat_model(cred, model, **(self.stream_kwargs if on_token else {}))
@@ -219,7 +219,7 @@ def user_content(text: str, images: Optional[List[Dict[str, str]]], part: Callab
     return [{"type": "text", "text": text}] + [part(i) for i in images] if images else text
 
 
-# Models that can see images (DEC-0072 decision 5), matched on the start of the name after any "vendor/" prefix.
+# Models that can see images ( decision 5), matched on the start of the name after any "vendor/" prefix.
 # Unknown models count as text only: they get a note in place of the image.
 VISION_MODELS = ("gpt-4o", "gpt-4.1", "gpt-4-turbo", "gpt-5", "chatgpt-4o", "o1", "o3", "o4", "claude-3", "claude-sonnet-4",
                  "claude-opus-4", "claude-haiku-4", "claude-4", "gemini", "llava", "bakllava", "llama3.2-vision", "llama-3.2-11b-vision",
@@ -304,7 +304,7 @@ class PlainHTTP(Provider):
 
 
 class OpenAI(PlainHTTP):
-    """Hosted OpenAI (kept on plain HTTP like before TASK-0030; `ChatOpenAI` handles the same base URL for tools)."""
+    """Hosted OpenAI (kept on plain HTTP like ; `ChatOpenAI` handles the same base URL for tools)."""
     id, label, default_base_url, default_model, key_required = "openai", "OpenAI / OpenAI-compatible", "https://api.openai.com/v1", "gpt-4o-mini", True
     stream_kwargs = {"stream_usage": True}  # Agent node calls go through ChatOpenAI (invoke_tools)
     parallel_tool_calls_flag = True
@@ -372,7 +372,7 @@ class Anthropic(PlainHTTP):
 
 
 class TypeSafe(Provider):
-    """TypeSafe System One (TASK-0050, DEC-0039). Jev returns typed decisions (choice, score, noul) with probabilities,
+    """TypeSafe System One. Jev returns typed decisions (choice, score, noul) with probabilities,
     not text, so it serves Decision nodes only. The key check sends one tiny question (there is no model list endpoint)."""
     id, label, default_base_url, default_model, key_required = "typesafe", "TypeSafe (Jev)", "https://api.typesafe.ai", "jev-latest", True
     kind, supports_tools, supports_embeddings, vision = "decision", False, False, False
@@ -391,7 +391,7 @@ class TypeSafe(Provider):
 
 
 class Smtp(Provider):
-    """An SMTP server for Send email nodes (TASK-0051, DEC-0040). The password is the credential's secret; host, port,
+    """An SMTP server for Send email nodes. The password is the credential's secret; host, port,
     security, username and sender are its settings. The check connects, upgrades to TLS and signs in, then quits."""
     id, label, default_base_url = "smtp", "SMTP (e-mail)", ""
     kind, supports_tools, supports_embeddings, vision = "email", False, False, False

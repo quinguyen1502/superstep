@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { api } from '@/lib/api'
 import { pct, type AiOpinion, type AutoStatus, type ReviewedWorkflow } from '@/lib/auto-approval'
 
-/** The AI's opinion on a waiting step (suggest mode, TASK-0188): advice for the person, never an answer. */
+/** The AI's opinion on a waiting step (suggest mode, ): advice for the person, never an answer. */
 export function AiOpinionNote({ ai }: { ai: AiOpinion }) {
   const { t } = useTranslation()
   return <div className="space-y-1 rounded-md border bg-muted/50 px-3 py-2 text-sm" data-testid="inbox-ai">
@@ -20,7 +20,7 @@ export function AiOpinionNote({ ai }: { ai: AiOpinion }) {
   </div>
 }
 
-/** AI review on the Approvals page (TASK-0188, REQ-0081): per workflow the last 30 days' counts, the AI/human agreement
+/** AI review on the Approvals page: per workflow the last 30 days' counts, the AI/human agreement
  * rate and the pause switch (owner or admin); the organisation switch for admins. Pausing sends requests to people. */
 export function AiReviewPanel({ onError }: { onError: (m: string) => void }) {
   const { t } = useTranslation()

@@ -1,4 +1,4 @@
-/** MCP servers (TASK-0013): register stdio / Streamable HTTP servers, secrets (write-only), discover their tools.
+/** MCP servers: register stdio / Streamable HTTP servers, secrets (write-only), discover their tools.
  *  Org servers are managed by admins and usable by everyone; stdio needs STUDIO_MCP_STDIO=1 and an admin. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

@@ -1,4 +1,4 @@
-// TASK-0177: the composer's attach button follows the chat's settings; chips show the file; the settings section keeps
+// the composer's attach button follows the chat's settings; chips show the file; the settings section keeps
 // the operator's ceiling.
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'

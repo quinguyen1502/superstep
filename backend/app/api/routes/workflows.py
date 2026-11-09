@@ -29,7 +29,7 @@ def runs(wid: str, tests: bool = Query(False), user=Depends(current_user), svc=D
 @router.post("/validate", dependencies=[Depends(limit_body)])
 def validate_wf(body: WorkflowIn, user=Depends(current_user), svc=Depends(workflow_service)): return svc.checked(body.as_dict(), user["id"])
 
-# ---- versions (TASK-0008) ----
+# ---- versions ----
 @router.get("/workflows/{wid}/versions")
 def list_versions(wid: str, limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0), user=Depends(current_user), svc=Depends(workflow_service)):
     return svc.list_versions(wid, user["id"], limit, offset)
@@ -43,7 +43,7 @@ def get_version(wid: str, n: int, user=Depends(current_user), svc=Depends(workfl
 @router.post("/workflows/{wid}/versions/{n}/restore")
 def restore_version(wid: str, n: int, user=Depends(current_user), svc=Depends(workflow_service)): return svc.restore_version(wid, n, user["id"])
 
-# ---- export to code: Python (TASK-0070) and TypeScript / LangGraph.js (TASK-0082) ----
+# ---- export to code: Python and TypeScript / LangGraph.js ----
 @router.get("/workflows/{wid}/python")
 def python_code(wid: str, version: int | None = Query(None, ge=1), language: str = Query("python", max_length=40),
                 user=Depends(current_user), svc=Depends(workflow_service)):

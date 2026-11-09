@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildTrace } from '@/lib/trace'
 
-/** A run waiting for a workflow tool's child run (TASK-0135): the trace knows which child, and a person's question is not shown. */
+/** A run waiting for a workflow tool's child run: the trace knows which child, and a person's question is not shown. */
 describe('child run waits', () => {
   const started = { type: 'run_started', run_id: 'p1', ts: 1 }
   it('carries the child run, tool and workflow', () => {

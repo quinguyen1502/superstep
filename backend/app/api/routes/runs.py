@@ -1,4 +1,4 @@
-"""REST run controls (TASK-0009, TASK-0006). Execution itself streams over /ws/run."""
+"""REST run controls. Execution itself streams over /ws/run."""
 from fastapi import APIRouter, Depends
 from ..deps import current_user, run_service
 

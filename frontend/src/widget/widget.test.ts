@@ -1,4 +1,4 @@
-// The chat widget (TASK-0143): its options, the host side of the token handshake, and the bubble.
+// The chat widget: its options, the host side of the token handshake, and the bubble.
 import { describe, expect, it } from 'vitest'
 import { answer, frameUrl, mount, MSG, optionsOf, storageKey, type WidgetOptions } from './widget'
 import { iframeSnippet, widgetSnippet } from '@/lib/chat'

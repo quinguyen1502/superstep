@@ -13,7 +13,7 @@ const KEY = 'studio.demoBannerHidden'
 export function DemoBanner() {
   const { t } = useTranslation(); const demo = useDemoMode()
   const [hidden, setHidden] = useState(() => sessionStorage.getItem(KEY) === '1')
-  // the phone editor has a 56px tab bar at the bottom (TASK-0121): sit above it so the tabs stay tappable
+  // the phone editor has a 56px tab bar at the bottom: sit above it so the tabs stay tappable
   const editor = /^\/workflows\/[^/]+/.test(useLocation().pathname)
   if (!demo || hidden) return null
   return <div className={cn('pointer-events-none fixed inset-x-0 bottom-3 z-50 flex justify-center px-3', editor && 'max-md:bottom-17')}>

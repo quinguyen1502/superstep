@@ -1,4 +1,4 @@
-/** Channel and managed-adapter logos (TASK-0063, TASK-0237). The one component file allowed to use brand colours (DEC-0042): marks are the
+/** Channel and managed-adapter logos. The one component file allowed to use brand colours: marks are the
  *  platforms' own, unmodified, and only identify the integration. E-mail has no brand and uses a theme-coloured icon.
  *  Sources:
  *  - Slack: the 2019 mark, File:Slack_icon_2019.svg on Wikimedia Commons (a copy of the Slack Media Kit mark).

@@ -1,4 +1,4 @@
-"""Human-in-the-loop approval through external channels (TASK-0022, DEC-0019).
+"""Human-in-the-loop approval through external channels.
 
 Flow: a run pauses at a Human node whose `data.approval` names a channel -> `on_waiting` posts a message with
 Approve/Reject buttons (signed, single-use, expiring tokens) -> the platform calls back -> `handle_callback` verifies
@@ -33,11 +33,11 @@ class ApprovalService:
                  enqueue: Optional[Callable[[dict], None]] = None, background: Optional[bool] = None, limiter=None, notifier=None,
                  chat: Optional[Callable[[], object]] = None, reviewer=None, browser=None):
         self.repo, self.users, self.workflows, self.runs, self.channels, self.enqueue = repo, users, workflows, runs, channels, enqueue
-        self.notifier = notifier  # NotificationService (optional): deadline reminders and escalations (TASK-0066)
+        self.notifier = notifier  # NotificationService (optional): deadline reminders and escalations
         self.limiter = limiter  # RateLimiter for the public callbacks (None = no limit)
-        self.chat = chat  # -> ChatRunService (optional): messages on the same webhook start chat-trigger runs (TASK-0075)
+        self.chat = chat  # -> ChatRunService (optional): messages on the same webhook start chat-trigger runs
         self.browser = browser
-        self.reviewer = reviewer  # AutoReviewService (optional): AI review before people are asked (TASK-0187, REQ-0081)
+        self.reviewer = reviewer  # AutoReviewService (optional): AI review before people are asked
         self.adapters = channels.adapters
         self.background = BACKGROUND if background is None else background
 
@@ -46,7 +46,7 @@ class ApprovalService:
 
     def workflow_name(self, rid: str, wid: Optional[str]) -> Optional[str]:
         """The workflow's name, or for a workflow tool's child run the chain from the top run ("Support team › Refund
-        desk", TASK-0135): an approval inside a child is passed up and must say who asked."""
+        desk", ): an approval inside a child is passed up and must say who asked."""
         names, r, seen = [], self.runs.get(rid), 0
         w = self.workflows.get(wid) if wid else None
         names.append(w.name if w else None)
@@ -76,7 +76,7 @@ class ApprovalService:
     # ---- audit ----
     def _audit(self, owner, kind, action, r: Optional[ApprovalRequest] = None, code=None, actor=None, external=None, run_id=None, wid=None,
                auto: Optional[dict] = None, agreed: Optional[bool] = None):
-        """auto: an AI review (TASK-0187): its outcome, confidence, model, reason, matched rules and policy hash."""
+        """auto: an AI review: its outcome, confidence, model, reason, matched rules and policy hash."""
         a = auto or {}
         try: self.repo.audit(ApprovalAudit(id=uuid.uuid4().hex[:12], owner=owner, request_id=r.id if r else None, run_id=r.run_id if r else run_id,
                                            workflow_id=r.workflow_id if r else wid, kind=kind, action=action, code=code, actor_id=actor,
@@ -103,7 +103,7 @@ class ApprovalService:
 
     # ---- producer: a run paused at a Human node ----
     def _policy(self, wid: Optional[str], node: Optional[dict]) -> Optional[dict]:
-        """The node's AI review policy when it applies now (TASK-0187): set, valid, and not paused."""
+        """The node's AI review policy when it applies now: set, valid, and not paused."""
         if self.reviewer is None or node is None: return None
         p = approval_policy.parse((node.get("data") or {}))
         return p if p is not None and not self.reviewer.paused(wid) else None
@@ -121,7 +121,7 @@ class ApprovalService:
     def on_waiting(self, rid: str, owner: str, wid: Optional[str], workflow: dict, ev: dict, state: Optional[dict] = None, start: bool = True):
         """Writes the waiting step now; the request (AI review, channel message) is a job. start=False returns the job
         for the caller to start() once the run row is stored, so an answer AI review gives at once finds the run
-        waiting, while a crash before that still leaves the waiting step (TASK-0187)."""
+        waiting, while a crash before that still leaves the waiting step."""
         node = self._node(workflow, ev)
         cfg = ((node or {}).get("data") or {}).get("approval") or {}
         target = str(cfg.get("target") or "").strip()
@@ -129,7 +129,7 @@ class ApprovalService:
         external = bool(cfg.get("channel_id") or kind) and not (needs_target and not target)
         policy = None if ev.get("browser_intent") else self._policy(wid, node)
         w = self._wait(rid, owner, wid, ev, cfg, external, (node or {}).get("data") or {}, review=policy["mode"] if policy else None)
-        if policy is not None:  # AI review first; people are asked only when it does not answer (DEC-0075 decision 1)
+        if policy is not None:  # AI review first; people are asked only when it does not answer ( decision 1)
             job = lambda: self._reviewed(rid, owner, wid, node, cfg, target, ev, w, policy, external, state)  # noqa: E731
         elif external: job = lambda: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)  # noqa: E731
         else: return None  # this node does not use an external channel
@@ -145,7 +145,7 @@ class ApprovalService:
         try: r = self.reviewer.review(owner, wid, policy, request)
         except Exception: log.exception("AI review of run %s failed", rid); r = {"mode": policy["mode"], "outcome": "escalated", "cause": "error"}
         if r is not None: self._count_usage(rid, w, r)  # the tokens were spent either way
-        if not self.repo.finish_review(w.id):  # the restart recovery has sent the step to people meanwhile (TASK-0204)
+        if not self.repo.finish_review(w.id):  # the restart recovery has sent the step to people meanwhile
             log.info("AI review of run %s finished after the step was sent to people", rid); return
         if r is None:  # paused meanwhile: as if AI review were off
             if external: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at)
@@ -163,7 +163,7 @@ class ApprovalService:
         if external: self._request(rid, owner, wid, node, cfg, target, ev, w.due_at, opinion=r)
 
     def _count_usage(self, rid: str, w: ApprovalWait, r: dict) -> None:
-        """The judge's tokens and cost count in the run's usage, like a model call of a node (TASK-0198): an
+        """The judge's tokens and cost count in the run's usage, like a model call of a node: an
         `approval_review` event on the waiting step, summed into the run's metrics before the run resumes."""
         u = r.get("usage")
         if not u or self.runs is None: return
@@ -183,8 +183,8 @@ class ApprovalService:
         return [u.id for e in cfg.get("approvers") or [] if isinstance(e, str) and (u := self.users.get_by_email(e.strip().lower()))]
 
     def _wait(self, rid, owner, wid, ev, cfg, external: bool, data: dict, review: Optional[str] = None) -> ApprovalWait:
-        """The waiting step the Approvals inbox lists (TASK-0065), written for every Human node, channel or not, with the
-        node's deadline from the run's own workflow snapshot (TASK-0066)."""
+        """The waiting step the Approvals inbox lists, written for every Human node, channel or not, with the
+        node's deadline from the run's own workflow snapshot."""
         kind = (cfg.get("channel") or ((ch := self.repo.channel(str(cfg["channel_id"]))) and ch.kind) or None) if external else None
         now = time.time(); dl = deadlines.parse(data)
         if ev.get('browser_intent'):
@@ -206,9 +206,9 @@ class ApprovalService:
         return uid == w.owner or uid in self.repo.wait_approvers(w.id)
 
     def claim(self, rid: str, node: Optional[str] = None) -> bool:
-        """First answer wins (DEC-0043): close the run's open waiting step. True when this caller closed it, or when the run
+        """First answer wins: close the run's open waiting step. True when this caller closed it, or when the run
         paused before waiting steps existed (no row at all). `node` closes only that step, so a sibling wait of the same
-        wave stays open (TASK-0158)."""
+        wave stays open."""
         if node:
             w = self.repo.open_wait(rid, node)
             if w is None: return self.repo.latest_wait(rid) is None
@@ -224,7 +224,7 @@ class ApprovalService:
 
     def _request(self, rid, owner, wid, node, cfg, target, ev, due: Optional[float] = None, opinion: Optional[dict] = None) -> Optional[ApprovalRequest]:
         """Send one approval message. Its buttons expire after STUDIO_APPROVAL_TTL, or at the step's deadline if sooner."""
-        if self.channels.org_denied(owner, cfg):  # admin policy (TASK-0029)
+        if self.channels.org_denied(owner, cfg):  # admin policy
             self._audit(owner, cfg.get("channel") or "channel", "not_configured", code="ORG_RESOURCE_NOT_ALLOWED", run_id=rid, wid=wid); return None
         c = self.channels.for_node(owner, cfg)
         if c is None:
@@ -340,7 +340,7 @@ class ApprovalService:
                                        "node": r.node_id, "workflow_id": r.workflow_id, "approval_id": r.id, "by": {"channel": kind, "user_id": uid}})
         return None, self.repo.request(r.id), decision
 
-    # ---- link channels: the studio's /approve page (TASK-0047) ----
+    # ---- link channels: the studio's /approve page ----
     def _link(self, token: str) -> tuple[ApprovalRequest, str]:
         r, decision = self._parse(token)
         if r is None or r.kind not in self.adapters or not self.adapters[r.kind].link_based: raise AppError("APPROVAL_TOKEN_INVALID")
@@ -382,7 +382,7 @@ class ApprovalService:
         try: a.update(sec, json.loads(r.message_ref), text)
         except AppError as e: log.warning("updating the approval message of run %s failed: %s", r.run_id, e.message)
 
-    # ---- the Approvals inbox (TASK-0065) ----
+    # ---- the Approvals inbox ----
     def answered_in_studio(self, w: ApprovalWait, uid: str, response: str) -> None:
         """An inbox answer whose waiting step the caller already closed: close that step's channel requests, audit it and
         resume the run like a channel decision (the run stays its owner's). Other open steps of the run stay open."""
@@ -427,12 +427,12 @@ class ApprovalService:
             threading.Thread(target=edit, daemon=True).start() if self.background else edit()
         return len(closed)
 
-    # ---- deadlines (TASK-0066): fired by the worker's maintenance loop ----
+    # ---- deadlines: fired by the worker's maintenance loop ----
     def recover_reviews(self, now: Optional[float] = None) -> int:
         """Steps whose AI review was lost (the process stopped while the judge was asked) go to people, as a failed
-        review does (fail-safe, DEC-0075): the run owner is told in auto mode and the channel request is sent. A review
+        review does (fail-safe, ): the run owner is told in auto mode and the channel request is sent. A review
         is lost once it started longer ago than the judge may take plus a margin. Claimed with a compare-and-set, so a
-        late review and several workers act once (TASK-0204)."""
+        late review and several workers act once."""
         now = time.time() if now is None else now; n = 0
         for w in self.repo.lost_reviews(now - REVIEW_LOST_AFTER):
             mode = w.review
@@ -452,7 +452,7 @@ class ApprovalService:
     def fire_deadlines(self, now: Optional[float] = None) -> int:
         """Send due reminders and act on due deadlines. Each one is claimed with a compare-and-set, so it fires once with
         several workers and after a restart (a deadline missed during downtime fires on the first sweep). Returns how many fired.
-        AI reviews lost to a restart are sent to people first (TASK-0204)."""
+        AI reviews lost to a restart are sent to people first."""
         now = time.time() if now is None else now; fired = self.recover_reviews(now)
         for w in self.repo.due_waits(now):
             try:

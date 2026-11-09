@@ -1,4 +1,4 @@
-/** Delete a workflow through the shared type-the-name dialog (DEC-0025), listing subgraph dependents first (then `force`).
+/** Delete a workflow through the shared type-the-name dialog, listing subgraph dependents first (then `force`).
  *  Used by the workflow list and the editor's ⋯ menu. */
 import { useTranslation } from 'react-i18next'
 import { AlertCircle } from 'lucide-react'

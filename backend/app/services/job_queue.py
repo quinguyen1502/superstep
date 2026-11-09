@@ -1,10 +1,10 @@
-"""Job queue (TASK-0007, DEC-0014; reliable in TASK-0019; leases + delayed jobs in TASK-0020, DEC-0017).
+"""Job queue (; reliable in ; leases + delayed jobs in ).
 
 Jobs are small JSON dicts. Kinds: run jobs {"run_id", "workflow_id", "owner", "input", "callback_url"?, "token_id"?}
 and webhook deliveries {"kind": "delivery", "delivery_id"}.
 
 - InMemoryJobQueue (REDIS_URL unset): **dev/single-process only**. Jobs are lost on restart; start-up recovery queues
-  unfinished runs again, and the answers to waiting runs that `enqueue_resume` kept on the run (TASK-0115, TASK-0127).
+  unfinished runs again, and the answers to waiting runs that `enqueue_resume` kept on the run.
 - RedisJobQueue (REDIS_URL set): at-least-once.
   - `dequeue`: BLMOVE `studio:run-jobs` → `studio:run-jobs:processing:<worker>`, then take a **lease**
     `studio:job-lease:<id>` with TTL = visibility timeout.
@@ -42,7 +42,7 @@ class JobQueue(Protocol):
 
 
 def enqueue_resume(runs, enqueue: Callable[[dict], None], job: dict) -> None:
-    """Queue the answer to a waiting run (a resume job), kept on the run first (TASK-0127): an in-memory queue loses it
+    """Queue the answer to a waiting run (a resume job), kept on the run first: an in-memory queue loses it
     on a restart, and RunWorker.recover_unfinished queues the kept one again. `runs` is the RunRepository."""
     runs.keep_resume(job); enqueue(job)
 

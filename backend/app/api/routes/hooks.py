@@ -1,4 +1,4 @@
-"""Public workflow-trigger API (TASK-0007, TASK-0278): the routes external callers use, authenticated by a workflow token.
+"""Public workflow-trigger API: the routes external callers use, authenticated by a workflow token.
 
   POST   /api/hooks/workflows/{wid}/runs                      start a run (202 + poll_url / Location, or 200 in sync mode)
   GET    /api/hooks/workflows/{wid}/runs/{run_id}             status and result
@@ -10,7 +10,7 @@
 
 Tokens (`wft_…`) are managed by the workflow owner under /api/workflows/{wid}/tokens (`triggers.py`). These routes carry the
 `public` tag: `api/openapi_public.py` builds the public spec (GET /openapi.public.json, docs/api/openapi.public.json) from them.
-Schedules reuse `ScheduleService` (DEC-0036). The token's owner is the schedule owner.
+Schedules reuse `ScheduleService`. The token's owner is the schedule owner.
 """
 import asyncio
 from typing import Optional

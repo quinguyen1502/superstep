@@ -1,16 +1,16 @@
-"""Export a workflow as one readable, runnable LangGraph Python file (TASK-0070, REQ-0043, DEC-0045).
+"""Export a workflow as one readable, runnable LangGraph Python file.
 
 `to_python` writes the plain LangGraph equivalent of the canvas, for people learning how a graph is written in code:
 the state as a `TypedDict`, one function per node, `build_graph()` with `add_node` / `add_edge` /
 `add_conditional_edges`, and a `main()` that runs an example. The file imports nothing from Superstep; it runs with
-`pip install langgraph`, offline with a mock model unless `LLM_PROVIDER` is set (owner, REQ-0043 Q1).
+`pip install langgraph`, offline with a mock model unless `LLM_PROVIDER` is set (owner, Q1).
 
 The graph is read through `templates.sanitize`, so no credential, knowledge base, server, channel, approver or
 secret-like value reaches the file. Retriever, MCP and Send email nodes call the studio's services through environment
 variables. A node credential is an LLM_CRED_<n> slot. Approval channels, deadlines and AI review are included when a
 node has them. Managed connections read MANAGED_<n> JSON from the environment.
 A Subgraph node becomes its child workflow's own compiled graph, added as a node (Q3). An Agent node becomes the
-studio's own expansion (TASK-0119, DEC-0063): an entry node, a model node and a tool node in a loop with two routers,
+studio's own expansion: an entry node, a model node and a tool node in a loop with two routers,
 and an end node; approval is `interrupt()`, and its knowledge base and MCP tools use the same stubs. Comments are
 English (Q2).
 The output is a pure function of its input: the same graph gives the same bytes.
@@ -807,7 +807,7 @@ class _Writer(GraphWriter):
             for n in g.get("nodes") or []:
                 d = (n.get("data") or {}) if isinstance(n, dict) else {}
                 if n.get("type") == "tool" and d.get("mode", "function") == "function": self.tool_source(d.get("function") or "")
-                if n.get("type") == "agent":  # an Agent node's built-in tools (TASK-0119); its steps are timed
+                if n.get("type") == "agent":  # an Agent node's built-in tools; its steps are timed
                     self.imports.add("time")
                     for t in d.get("tools") or []:
                         if isinstance(t, dict) and t.get("source") == "builtin": self.tool_source(t.get("function") or "")
@@ -945,7 +945,7 @@ class _Writer(GraphWriter):
             self.add("# in, and the fields the subgraph changed come back when it ends.")
         chats = [a["chat"] for a in g.agents.values()]
         rows = [(f["name"], self.ann(f)) for f in fields] + [(c, "int") for c in g.cursors.values()] + [(c, "Optional[dict]") for c in chats]
-        if self.has_handoffs(g):  # the pending hand-off, the run's count, and the agent a chat continues with (TASK-0183)
+        if self.has_handoffs(g):  # the pending hand-off, the run's count, and the agent a chat continues with
             rows += [(self.HANDOFF_FIELD, "Optional[dict]"), (self.COUNT_FIELD, "int"), (self.START_FIELD, "str")]
         if rows and all(n.isidentifier() and not keyword.iskeyword(n) for n, _ in rows):
             self.add(f"class {cls}(TypedDict, total=False):")
@@ -1195,7 +1195,7 @@ class _Writer(GraphWriter):
             self.add(f"    result = http_request({lit(nid)}, {lit(d.get('method') or 'GET')}, render({const}_URL, state), render({const}_BODY, state))")
             self.add(ret("result"))
         elif mode == "code" and (d.get("language") or "python") != "python":
-            lang = str(d.get("language"))  # TASK-0079: another language cannot be pasted into a Python file
+            lang = str(d.get("language")) # : another language cannot be pasted into a Python file
             self.add(f"def {name}(state: {cls}) -> dict:")
             self.add(f'    """{head}: written in {lang} on the canvas, which this Python file cannot run."""')
             self.add(f"    raise NotImplementedError({lit(f'{head} is {lang} code; port it to Python to run it here')})")
@@ -1239,7 +1239,7 @@ class _Writer(GraphWriter):
             self.add("    return {}")
 
     def agent(self, g: _Graph, nid: str, cls: str, head: str) -> None:
-        """An Agent node as the studio runs it (DEC-0063): an entry node, the model node and the tool node in a loop, and
+        """An Agent node as the studio runs it: an entry node, the model node and the tool node in a loop, and
         an end node, with the conversation in its own state field."""
         d = g.nodes[nid].get("data") or {}; name, const, a = g.names[nid], g.names[nid].upper(), g.agents[nid]
         chat, model, tool, end = lit(a["chat"]), a["model"], a["tool"], a["exit"]

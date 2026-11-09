@@ -1,4 +1,4 @@
-"""Executes queued jobs (TASK-0007; leases, recovery from checkpoints and webhook deliveries in TASK-0020, DEC-0017).
+"""Executes queued jobs (; leases, recovery from checkpoints and webhook deliveries in ).
 
 Runs inside the API process (STUDIO_WORKER=1, default) and/or as a dedicated process (`python -m app.worker`).
 - Run jobs use the same RunService.execute as the WebSocket, with progress checkpoints after every node, so a
@@ -26,9 +26,9 @@ class RunWorker:
                  schedules: Optional[Callable[[], object]] = None, approvals: Optional[Callable[[], object]] = None,
                  chat: Optional[Callable[[], object]] = None, langsmith: Optional[Callable[[], object]] = None, browser=None):
         self.jobs, self.services, self.deliveries = jobs, services, deliveries  # deliveries: -> DeliveryService
-        self.schedules = schedules  # -> ScheduleService (TASK-0046): due cron schedules start runs from maintain()
-        self.approvals = approvals  # -> ApprovalService (TASK-0066): Human node reminders and deadlines from maintain()
-        self.chat = chat  # -> ChatRunService (TASK-0075): chat_message jobs check a message and start its run
+        self.schedules = schedules  # -> ScheduleService: due cron schedules start runs from maintain()
+        self.approvals = approvals  # -> ApprovalService: Human node reminders and deadlines from maintain()
+        self.chat = chat  # -> ChatRunService: chat_message jobs check a message and start its run
         self.browser = browser
         self.langsmith = langsmith  # -> LangSmithService: langsmith_suite jobs send a finished test suite as an experiment
         self._tasks: list[asyncio.Task] = []; self._stop = False
@@ -51,14 +51,14 @@ class RunWorker:
         svc = self.services(); rid = job["run_id"]; row = svc.runs.get(rid); attempt = int(job.get("attempt") or 1)
         if job.get("kind") == "resume" and (not job.get("recovered") or (row is not None and row.status == "waiting")):
             return await self.resume_job(svc, job)  # a recovered resume job of a run that already started continues below
-        # Claim = compare-and-set to `running` + a new fencing token (TASK-0021). Cancelled/finished jobs are skipped;
+        # Claim = compare-and-set to `running` + a new fencing token. Cancelled/finished jobs are skipped;
         # a recovered job (its worker died or lost the lease) may take over a `running` run, which fences the old worker out.
         gen = svc.runs.claim(rid, ("queued", "running") if job.get("recovered") else ("queued",)) if row is not None else None
         if gen is None: return None
         try:
             if row.status == "running":  # recovered: continue from the last checkpoint (or restart without one)
                 plan = svc.plan_recover(row, gen, attempt)
-            elif row.parent_run_id:  # a workflow tool's child run (TASK-0134): the snapshot its parent's plan took
+            elif row.parent_run_id:  # a workflow tool's child run: the snapshot its parent's plan took
                 plan = svc.plan_child(row)
                 plan.checkpointing, plan.fence, plan.attempt = True, gen, attempt
             elif json.loads(row.checkpoint or '{}').get('kind')=='browser_recipe':
@@ -68,7 +68,7 @@ class RunWorker:
                 plan = svc.plan(job["owner"], {"workflow_id": job["workflow_id"], "input": job.get("input") or {},
                                                **({"version": job["version"]} if job.get("version") else {})})  # a test suite on a stored version
                 plan.run_id, plan.source, plan.checkpointing, plan.fence, plan.attempt = rid, job.get("source", "api"), True, gen, attempt
-            svc.apply_test(plan, job.get("test"))  # a workflow test run (TASK-0067)
+            svc.apply_test(plan, job.get("test"))  # a workflow test run
             async def send(ev): return True                       # nobody streams; history + webhook carry the result
             async def listen(): await asyncio.Event().wait()      # cancel arrives through the RunBus
             status = await svc.execute(plan, send, listen, job["owner"])
@@ -81,7 +81,7 @@ class RunWorker:
         return status  # execute() queued the callback_url webhook (RunService.settled); a fenced worker leaves it to the new owner
 
     async def resume_job(self, svc: RunService, job: dict) -> Optional[str]:
-        """Continue a waiting run with a decision from an approval channel (TASK-0022). The claim (waiting -> running,
+        """Continue a waiting run with a decision from an approval channel. The claim (waiting -> running,
         compare-and-set) makes sure only one resume happens, however many jobs or clicks there were."""
         rid, owner = job["run_id"], job["owner"]
         try: plan = svc.plan_resume(owner, rid, job.get("response"), via_channel=True, child=job.get("child"),
@@ -143,7 +143,7 @@ class RunWorker:
             if self.approvals is not None:
                 try: await asyncio.to_thread(self.approvals().fire_deadlines)
                 except Exception: log.exception("firing approval deadlines failed")
-            if self.chat is not None and time.time() - last_cleanup >= CHAT_CLEANUP_EVERY:  # chat history retention (TASK-0084)
+            if self.chat is not None and time.time() - last_cleanup >= CHAT_CLEANUP_EVERY:  # chat history retention
                 last_cleanup = time.time()
                 try:
                     if (web := self.chat().web) is not None: await asyncio.to_thread(web.cleanup)
@@ -153,13 +153,13 @@ class RunWorker:
             await asyncio.sleep(min(1.0, config.job_reap_every()))
 
     async def recover_unfinished(self) -> int:
-        """Start-up recovery for the in-memory queue (TASK-0115, DEC-0062): jobs held in memory are gone after a restart,
+        """Start-up recovery for the in-memory queue: jobs held in memory are gone after a restart,
         so every queued or running queue-job run is queued again as a recovered job. The worker continues it from its
         last progress checkpoint (or from the start when no node had finished), exactly as for a lost Redis lease. A
         run cut off STUDIO_RECOVER_MAX_ATTEMPTS times (it keeps stopping the server, or keeps being interrupted) ends
         as `error` RUN_INTERRUPTED instead; resumes after a Human node or an Agent tool approval do not count
         (RunService.interruptions). A waiting run needs nothing (its checkpoint is in the database), unless it was
-        answered and the answer's resume job was lost (TASK-0127): the answer kept on the run is queued again, also
+        answered and the answer's resume job was lost: the answer kept on the run is queued again, also
         for a run claimed by that resume and cut off before it recorded anything, which goes back to waiting first.
         Returns the number of runs requeued."""
         global _recovered

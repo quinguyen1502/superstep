@@ -1,4 +1,4 @@
-"""Knowledge bases (TASK-0012): CRUD, document ingestion (extract → chunk → embed → store), search, and the
+"""Knowledge bases: CRUD, document ingestion (extract → chunk → embed → store), search, and the
 run-time `retriever(uid)` port used by Retriever nodes. Owner-only, like workflows and credentials."""
 from __future__ import annotations
 import os, time, uuid

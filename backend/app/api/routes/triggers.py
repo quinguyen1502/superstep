@@ -1,8 +1,8 @@
-"""API / webhook triggers (TASK-0007).
+"""API / webhook triggers.
 
-Owner (JWT): manage per-workflow tokens under /api/workflows/{wid}/tokens and cron schedules (TASK-0046) under
+Owner (JWT): manage per-workflow tokens under /api/workflows/{wid}/tokens and cron schedules under
 /api/workflows/{wid}/schedules; POST /api/schedules/preview lists the next times of an expression; chat triggers
-(TASK-0074) under /api/workflows/{wid}/chat-triggers.
+ under /api/workflows/{wid}/chat-triggers.
 The public routes that external callers use with those tokens live in `hooks.py`.
 """
 from fastapi import APIRouter, Depends
@@ -32,7 +32,7 @@ def revoke_token(wid: str, tid: str, user=Depends(current_user), svc=Depends(tri
 
 
 
-# ---- MCP server (TASK-0114): the workflow as a tool at /mcp ----
+# ---- MCP server: the workflow as a tool at /mcp ----
 @router.get("/workflows/{wid}/mcp")
 def mcp_settings(wid: str, user=Depends(current_user), svc=Depends(workflow_mcp_service)): return svc.settings(wid, user["id"])
 
@@ -41,7 +41,7 @@ def set_mcp(wid: str, body: McpSettingsIn, user=Depends(current_user), svc=Depen
     return svc.set_enabled(wid, user["id"], body.enabled)
 
 
-# ---- cron schedules (TASK-0046) ----
+# ---- cron schedules ----
 @router.get("/workflows/{wid}/schedules")
 def list_schedules(wid: str, user=Depends(current_user), svc=Depends(schedule_service)): return svc.list(wid, user["id"])
 
@@ -60,7 +60,7 @@ def delete_schedule(wid: str, sid: str, user=Depends(current_user), svc=Depends(
 def preview_schedule(body: SchedulePreview, user=Depends(current_user), svc=Depends(schedule_service)): return svc.preview(body.cron, body.timezone)
 
 
-# ---- chat triggers (TASK-0074) ----
+# ---- chat triggers ----
 @router.get("/workflows/{wid}/chat-triggers")
 def list_chat_triggers(wid: str, user=Depends(current_user), svc=Depends(chat_trigger_service)): return svc.list(wid, user["id"])
 

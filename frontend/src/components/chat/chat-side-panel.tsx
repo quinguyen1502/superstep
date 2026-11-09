@@ -6,7 +6,7 @@ import { Tip } from '@/components/tip'
 import { cn } from '@/lib/utils'
 import { ChatPanel } from './chat-panel'
 
-/** Chat as its own panel beside the editor (TASK-0085), opened from the header or Shift+C. Fullscreen turns the same
+/** Chat as its own panel beside the editor, opened from the header or Shift+C. Fullscreen turns the same
  * element into a full-viewport overlay, so the conversation, the draft and the scroll position stay; Esc leaves
  * fullscreen; × closes the panel. The narrow panel picks sessions from a Select, fullscreen shows the session list. */
 

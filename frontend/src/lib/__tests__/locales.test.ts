@@ -1,4 +1,4 @@
-/** Locale checks (TASK-0078): en and vi have the same keys and placeholders, vi uses the glossary in
+/** Locale checks: en and vi have the same keys and placeholders, vi uses the glossary in
  * docs/ui-conventions.md, and any vi string left identical to en is on the reviewed allowlist below. */
 import { describe, expect, it } from 'vitest'
 import en from '../../locales/en.json'
@@ -129,7 +129,7 @@ const SAME_OK = new Set([
   'trace.output',
   'trace.tokensShort',
   'transfer.kinds.credential',
-  'aiReview.badge',  // "AI" in both languages (TASK-0188)
+  'aiReview.badge',  // "AI" in both languages
   'transfer.kinds.subgraph',
   'users.email',
   'validation.NODE_PROBLEM',

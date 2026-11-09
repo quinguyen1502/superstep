@@ -1,4 +1,4 @@
-"""Moving chat attachment bytes between backends (TASK-0194, REQ-0080, DEC-0074).
+"""Moving chat attachment bytes between backends.
 
 Each file is copied, read back and checked (size and SHA-256), then its row is switched in one update, then the old copy
 is deleted. A stop at any point leaves every file readable: before the switch the row still points at the old copy (a

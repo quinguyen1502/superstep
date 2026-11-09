@@ -1,5 +1,5 @@
 """Smoke test for a running stack (docker compose or dev): health, demo login, seeded example run over /ws/run, the API
-trigger, and the frame headers of the studio and a published chat page (TASK-0143).
+trigger, and the frame headers of the studio and a published chat page.
 Usage: python scripts/compose_smoke.py [http://localhost:8080]   (needs `httpx` and `websockets`)
 SMOKE_EMAIL / SMOKE_PASSWORD sign in as another account (production has no demo user: the all-in-one image smoke test)."""
 import asyncio, json, os, sys
@@ -37,7 +37,7 @@ asyncio.run(main())
 
 
 def api_trigger_check():
-    """TASK-0007: token + sync trigger through nginx (executed by the worker service via the Redis queue)."""
+    """token + sync trigger through nginx (executed by the worker service via the Redis queue)."""
     with httpx.Client(base_url=BASE, timeout=60) as c:
         tok = c.post("/api/auth/login", json=LOGIN).json()["data"]["token"]
         wid = c.get("/api/workflows", headers={"Authorization": f"Bearer {tok}"}).json()["data"][0]["id"]
@@ -53,7 +53,7 @@ api_trigger_check()
 
 
 def frame_check():
-    """TASK-0143: no studio page may be framed; a published chat page names its embed sites in frame-ancestors (nginx
+    """no studio page may be framed; a published chat page names its embed sites in frame-ancestors (nginx
     auth_request in Compose, a middleware in the all-in-one image); the widget script is served at /c/widget.js."""
     with httpx.Client(base_url=BASE, timeout=10) as c:
         tok = c.post("/api/auth/login", json=LOGIN).json()["data"]["token"]

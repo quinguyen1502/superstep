@@ -5,7 +5,7 @@ from ..models.database import Database
 
 
 class AuthSecurityRepository:
-    """Sign-in throttling and password reset links (TASK-0045)."""
+    """Sign-in throttling and password reset links."""
     def __init__(self, db: Database): self.db = db
 
     def throttle(self, email: str) -> Optional[LoginThrottle]:
@@ -45,7 +45,7 @@ class AuthSecurityRepository:
             s.commit(); return True
 
     def set_password(self, uid: str, password_hash: str, now: float) -> None:
-        """A self-service change (TASK-0052): older sessions stop working and open reset links die."""
+        """A self-service change: older sessions stop working and open reset links die."""
         with self.db.session() as s:
             s.execute(update(User).where(User.id == uid).values(password=password_hash, password_changed=now))
             s.execute(delete(PasswordReset).where(PasswordReset.user_id == uid, PasswordReset.used.is_(None)))

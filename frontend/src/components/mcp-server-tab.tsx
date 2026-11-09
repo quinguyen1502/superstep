@@ -14,7 +14,7 @@ type Settings = { enabled: boolean; tool: string; path: string }
 export const MCP_CLIENTS = ['cursor', 'claude-desktop', 'claude-code'] as const
 type Client = typeof MCP_CLIENTS[number]
 
-/** Client config for the MCP server at /mcp (TASK-0114); `token` is the plaintext token when just created. */
+/** Client config for the MCP server at /mcp; `token` is the plaintext token when just created. */
 export function mcpSnippet(client: Client, url: string, name: string, token = '<token>'): { lang: string; text: string } {
   const key = `superstep-${name.replace(/^run_/, '').replace(/_/g, '-')}`.slice(0, 60)
   if (client === 'claude-code') return { lang: 'bash', text: `claude mcp add --transport http ${key} ${url} \\\n  --header "Authorization: Bearer ${token}"` }

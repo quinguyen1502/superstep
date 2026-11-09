@@ -1,4 +1,4 @@
-// TASK-0188: AI review settings (owner-only auto, rules, defaults) and the AI's opinion in the Approvals inbox, en and vi.
+// AI review settings (owner-only auto, rules, defaults) and the AI's opinion in the Approvals inbox, en and vi.
 import { afterEach, describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import i18n from '@/lib/i18n'

@@ -1,4 +1,4 @@
-/** Settings → Teams (TASK-0029, admins): create teams, add or remove members by e-mail. Workflows are shared with a team from the editor. */
+/** Settings → Teams: create teams, add or remove members by e-mail. Workflows are shared with a team from the editor. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Loader2, Plus, Trash2, UserPlus, Users } from 'lucide-react'

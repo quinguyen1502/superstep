@@ -1,4 +1,4 @@
-"""Chat app keys and external-user session identity (TASK-0217)."""
+"""Chat app keys and external-user session identity."""
 from alembic import op
 import sqlalchemy as sa
 

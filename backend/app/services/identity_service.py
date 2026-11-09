@@ -1,4 +1,4 @@
-"""Linking a chat account to a studio user, proven by a one-time code (TASK-0022 follow-up, DEC-0019).
+"""Linking a chat account to a studio user, proven by a one-time code ( follow-up, ).
 
 link -> the account is stored unverified; send_code -> the bot DMs a 6-digit code to that account; verify -> the
 user types it back. Only verified links map button presses to studio users. Codes are stored as an HMAC, expire

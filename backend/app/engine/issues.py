@@ -1,4 +1,4 @@
-"""Validation messages with a code (TASK-0132, DEC-0065).
+"""Validation messages with a code.
 
 Every static check of a workflow reports an `Issue`: a `str` holding the English message, as before, plus a `code` and
 its `params`. Lists of issues stay lists of strings for every caller (tests, SDKs, MCP, exports). The API sends
@@ -110,7 +110,7 @@ MESSAGES: Dict[str, str] = {
     "DEADLINE_ESCALATE_MISSING": _HUMAN + "add who to escalate to",
     "DEADLINE_ESCALATE_EMAILS": _HUMAN + "escalate to needs e-mail addresses",
     "DEADLINE_TOO_LONG": _HUMAN + "the deadline is longer than the wait limit (STUDIO_WAIT_TTL, {hours} h)",
-    # AI review of approvals (TASK-0186)
+    # AI review of approvals
     "AUTO_APPROVAL_MODE": "Node {node}: AI review mode must be one of {modes}",
     "AUTO_APPROVAL_RULE_INVALID": "Node {node}: AI review rule {index} is not valid (field, operator, value and effect)",
     "AUTO_APPROVAL_JUDGE_REQUIRED": "Node {node}: AI review needs a model credential",

@@ -1,6 +1,6 @@
-/** Browser approval for `superstep login` (TASK-0167). Nothing is sent until Approve or Deny is pressed. The person
+/** Browser approval for `superstep login`. Nothing is sent until Approve or Deny is pressed. The person
  * types the code their own terminal shows; a code in the link is ignored, so a link someone else sent cannot be
- * approved with one click (TASK-0205, DEC-0076). */
+ * approved with one click. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, CircleCheck, Loader2, ShieldAlert } from 'lucide-react'

@@ -1,4 +1,4 @@
-/** RBAC (TASK-0014): the signed-in user's role and permissions (GET /api/me), shared by every page. */
+/** RBAC: the signed-in user's role and permissions (GET /api/me), shared by every page. */
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 
@@ -23,7 +23,7 @@ export function useMe(): Me | null {
 export const can = (me: Me | null, permission: string) => !!me?.permissions.includes(permission)
 export const canEdit = (a?: Access | null) => a === 'owner' || a === 'editor'
 
-// ---- TASK-0029 ----
+// ---- ----
 export type TeamMember = { user_id: string; email: string; role: Role; active: boolean }
 export type Team = { id: string; name: string; description: string | null; members: number; mine: boolean; member_list?: TeamMember[] }
 export type Teams = { can_manage: boolean; teams: Team[] }

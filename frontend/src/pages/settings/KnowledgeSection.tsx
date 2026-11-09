@@ -1,4 +1,4 @@
-/** Knowledge bases (TASK-0012): create, upload txt/md/pdf, list documents, test a search, re-index, delete.
+/** Knowledge bases: create, upload txt/md/pdf, list documents, test a search, re-index, delete.
  *  Retriever nodes pick one of these by id. */
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
