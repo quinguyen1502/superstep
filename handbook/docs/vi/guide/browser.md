@@ -70,9 +70,10 @@ có thể chạy các bước trình duyệt; xem mục xuất bên dưới.
    - Yêu cầu duyệt thao tác thay đổi — **tắt** (navigate / snapshot /
      extract / screenshot không bao giờ chờ).
    - Cho phép evaluate / upload / download — **tắt** cho đến khi bạn cần.
-10. Lưu rồi **Khám phá công cụ**. Với công tắc an toàn để mặc định, thẻ liệt kê
-    sáu công cụ: navigate, snapshot, click, fill, extract và screenshot.
-    Evaluate, upload và download xuất hiện khi bật các công tắc đó.
+10. Lưu rồi **Khám phá công cụ**. Với công tắc an toàn để mặc định, dùng được
+    sáu công cụ: navigate, snapshot, click, fill, extract và screenshot. Thẻ
+    cũng liệt kê upload, download và evaluate, mỗi công cụ ghi rõ đang tắt trên
+    kết nối này cho đến khi bật công tắc tương ứng.
 
 ![Cài đặt kết nối trình duyệt](../images/browser-connection-settings.png)
 

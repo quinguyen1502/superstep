@@ -47,9 +47,10 @@ và có thể được dịch vụ khác gọi qua HTTP.
 State là bản ghi có kiểu mà mọi node đọc và ghi. Workflow mới có một trường
 `message`, chứa input của run.
 
-1. Chọn node **LLM**. Cấu hình của nó mở ở panel **Cấu hình**.
+1. Chọn node **LLM**. Cấu hình của nó mở ở panel **Cấu hình**, tại tab
+   **Chung**.
 2. Đặt **Nhãn** là `Soạn trả lời`.
-3. Thay **Prompt template** bằng:
+3. Mở tab **Cài đặt** và thay **Prompt template** bằng:
 
     ```text
     Viết một câu trả lời ngắn, lịch sự cho tin nhắn của khách: {{state.message}}
@@ -67,8 +68,8 @@ State là bản ghi có kiểu mà mọi node đọc và ghi. Workflow mới có
 
 ## 4. Cấu hình node Human
 
-1. Chọn node **Human** và đặt **Nhãn** là `Duyệt trả lời`.
-2. Đặt **Câu hỏi cho người duyệt** là:
+1. Chọn node **Human** và, ở tab **Chung**, đặt **Nhãn** là `Duyệt trả lời`.
+2. Ở tab **Cài đặt**, đặt **Câu hỏi cho người duyệt** là:
 
     ```text
     Gửi câu trả lời này cho khách?
