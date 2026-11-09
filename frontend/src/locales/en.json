@@ -354,7 +354,8 @@
     "requiredEnvHint": "set them in the server env to run.",
     "create": "Create workflow",
     "start": "Import",
-    "disabled": "Repo import is off on this server (STUDIO_ENABLE_IMPORT=0)."
+    "disabled": "Repo import is off on this server (STUDIO_ENABLE_IMPORT=0).",
+    "disabledHelp": "Turn on STUDIO_ENABLE_IMPORT=1 on the Studio API to import a GitHub repo or zip. Import stays off by default."
   },
   "creds": {
     "button": "Credentials",

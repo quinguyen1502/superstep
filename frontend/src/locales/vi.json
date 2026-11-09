@@ -354,7 +354,8 @@
     "requiredEnvHint": "đặt chúng trong biến môi trường của máy chủ để chạy.",
     "create": "Tạo workflow",
     "start": "Import",
-    "disabled": "Nhập repo đang tắt trên máy chủ này (STUDIO_ENABLE_IMPORT=0)."
+    "disabled": "Nhập repo đang tắt trên máy chủ này (STUDIO_ENABLE_IMPORT=0).",
+    "disabledHelp": "Bật STUDIO_ENABLE_IMPORT=1 trên API Studio để nhập repo GitHub hoặc file zip. Import mặc định tắt."
   },
   "creds": {
     "button": "Credentials",

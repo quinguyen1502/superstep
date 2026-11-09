@@ -12,11 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { HandbookLink } from '@/components/handbook-link'
 
 type Job = { id: string; status: string; log: string[]; error: string | null; graphs: { id: string; ref: string; via: string; name: string; nodes: number; edges: number }[]; required_env: string[] }
 const STEPS = ['fetching', 'installing', 'inspecting', 'ready']
 
-export function ImportDialog() {
+export function ImportDialog({ enabled = true }: { enabled?: boolean }) {
   const { t } = useTranslation(); const nav = useNavigate()
   const [open, setOpen] = useState(false); const [tab, setTab] = useState('url')
   const [url, setUrl] = useState('https://github.com/langchain-ai/react-agent'); const [branch, setBranch] = useState(''); const [subdir, setSubdir] = useState('')
@@ -50,10 +51,14 @@ export function ImportDialog() {
     <DialogTrigger asChild><Button variant="outline" id="import-btn"><GitFork />{t('import.button')}</Button></DialogTrigger>
     <DialogContent className="flex max-h-[85dvh] flex-col overflow-hidden sm:max-w-2xl">
       <DialogHeader><DialogTitle>{t('import.title')}</DialogTitle>
-        <DialogDescription>{t('import.desc')}</DialogDescription></DialogHeader>
+        <DialogDescription>{enabled ? t('import.desc') : t('import.disabled')}</DialogDescription></DialogHeader>
       <DialogBody className="space-y-4">
-      <Alert variant="warning"><ShieldAlert /><AlertDescription className="text-xs">{t('import.warning')}</AlertDescription></Alert>
-      <Tabs value={tab} onValueChange={setTab}>
+      {!enabled && <Alert variant="warning" id="import-disabled"><ShieldAlert /><AlertDescription className="space-y-1 text-xs">
+        <p>{t('import.disabledHelp')}</p>
+        <p><HandbookLink id="import-guide" page="operate/import" label={t('docs.setupGuide')} ariaLabel={t('docs.importGuideAria')} /></p>
+      </AlertDescription></Alert>}
+      {enabled && <Alert variant="warning"><ShieldAlert /><AlertDescription className="text-xs">{t('import.warning')}</AlertDescription></Alert>}
+      {enabled && <><Tabs value={tab} onValueChange={setTab}>
         <TabsList><TabsTrigger value="url"><GitFork />{t('import.url')}</TabsTrigger><TabsTrigger value="zip"><Upload />{t('import.zip')}</TabsTrigger></TabsList>
         <TabsContent value="url" className="space-y-3 pt-2">
           <div className="space-y-1.5"><Label>{t('import.repoUrl')}</Label><Input id="import-url" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://github.com/owner/repo" /></div>
@@ -83,11 +88,12 @@ export function ImportDialog() {
           <div className="text-xs text-muted-foreground font-mono">{g.ref} · {g.nodes} nodes · {g.edges} edges · via {g.via}</div></button>)}
         {job.required_env.length > 0 && <p className="text-xs text-muted-foreground">{t('import.requiredEnv')} {job.required_env.map(k => <Badge key={k} variant="outline" className="mr-1">{k}</Badge>)} — {t('import.requiredEnvHint')}</p>}
       </div>}
+      </>}
       </DialogBody>
       <DialogFooter>
         <Button variant="outline" onClick={() => setOpen(false)}>{t('common.close')}</Button>
-        {job?.status === 'ready' ? <Button onClick={finalize} disabled={!pick} id="import-create">{t('import.create')}</Button>
-          : <Button onClick={start} disabled={busy} id="import-start">{busy && <Loader2 className="animate-spin" />}{t('import.start')}</Button>}
+        {enabled && (job?.status === 'ready' ? <Button onClick={finalize} disabled={!pick} id="import-create">{t('import.create')}</Button>
+          : <Button onClick={start} disabled={busy} id="import-start">{busy && <Loader2 className="animate-spin" />}{t('import.start')}</Button>)}
       </DialogFooter>
     </DialogContent>
   </Dialog>

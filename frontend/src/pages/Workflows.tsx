@@ -28,7 +28,6 @@ import { Label } from '@/components/ui/label'
 import { can, canEdit, useMe, type Access } from '@/lib/rbac'
 import { useLoadWhen } from '@/lib/use-when'
 import { Tip } from '@/components/tip'
-import { HandbookLink } from '@/components/handbook-link'
 import { Logo } from '@/components/logo'
 import { AppMeta } from '@/components/app-meta'
 
@@ -90,8 +89,7 @@ export function WorkflowsPage() {
           <div className="relative max-sm:order-last max-sm:w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="wf-search" aria-label={t('list.searchLabel')} className="pl-8 pr-8 w-full sm:w-64" placeholder={t('list.search')} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
             {q && <Button variant="ghost" size="icon-sm" aria-label={t('list.clearSearch')} className="absolute right-0.5 top-0.5 text-muted-foreground" onClick={() => setQ('')}><X /></Button>}</div>
           {can(me, 'resources.manage') && <CredentialsDialog />}
-          {creates && importsOn && <ImportDialog />}
-          {creates && !importsOn && <p className="text-xs text-muted-foreground max-w-xs" id="wf-import-off">{t('import.disabled')}{' '}<HandbookLink id="wf-import-guide" page="operate/import" label={t('docs.learnMore')} ariaLabel={t('docs.importGuideAria')} /></p>}
+          {creates && <ImportDialog enabled={importsOn} />}
           {creates && <Button onClick={() => setGallery(true)} id="new-wf"><Plus />{t('common.newWorkflow')}</Button>}
         </div>
       </div>

@@ -112,7 +112,7 @@ export function EditorConfig() {
       <F label={t('field.mode')}><Select value={modeValue(d)} onValueChange={v => { const r = applyMode(d, v as ToolModeValue, codeRt); setKept(r.kept ? selNode.id : null); if (Object.keys(r.patch).length) mark(selNode.id, r.patch) }}>
         <SelectTrigger className="w-full min-w-0" id="tool-mode"><SelectValue className="min-w-0 truncate" /></SelectTrigger>
         <SelectContent><SelectItem value="function">{t('editor.pyFunction')}</SelectItem><SelectItem value="http">{t('editor.httpRequest')}</SelectItem>
-          {codeChoices(codeRt, d).map(l => <SelectItem key={l} value={`code:${l}`} id={`tool-mode-code-${l}`} disabled={d.mode !== 'code' && (!canCode || codeRt?.code_runtime === 'off')}>
+          {codeChoices(codeRt, d).map(l => <SelectItem key={l} value={`code:${l}`} id={`tool-mode-code-${l}`} disabled={d.mode !== 'code' && !canCode}>
             {t('editor.codeMode', { language: t(`code.languages.${l}`) })}
             {codeRt?.code_runtime === 'subprocess' && <Tip tip={t('code.notIsolatedTip')}><Badge variant="warning" size="sm" className="ml-1 min-w-0 shrink truncate" data-testid="mode-unisolated">{t('code.notIsolatedShort')}</Badge></Tip>}</SelectItem>)}</SelectContent></Select>
         {d.mode !== 'code' && !canCode && <p className="text-[11px] text-muted-foreground" id="tool-code-locked">{t('code.locked')}</p>}
