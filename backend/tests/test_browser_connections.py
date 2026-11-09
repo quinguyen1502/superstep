@@ -35,7 +35,7 @@ def test_metadata_discovery_no_network_and_owner_scope(c):
     found = c.post(f"/api/mcp/servers/{server['id']}/discover", headers=H(owner["token"]))
     assert found.status_code == 200
     names = {tool["name"] for tool in found.json()["data"]["tools"]}
-    assert names == {"navigate", "snapshot", "click", "fill", "extract", "screenshot"}
+    assert names == {"navigate", "snapshot", "click", "fill", "extract", "screenshot", "upload", "download", "evaluate"}
     assert server["id"] not in str(c.get("/api/mcp/servers", headers=H(stranger["token"])).json())
     for method, path in [("post", "/discover"), ("put", ""), ("delete", "")]:
         kwargs = {"json": {"name": "stolen"}} if method == "put" else {}
