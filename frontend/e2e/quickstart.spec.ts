@@ -60,12 +60,13 @@ for (const lang of ['en', 'vi'] as Lang[]) {
         await page.mouse.move(a.x, a.y); await page.mouse.down(); await page.mouse.move(b.x, b.y, { steps: 12 }); await page.mouse.up()
       }
       const addField = async (name: string) => {
+        await page.locator('#palette-state-tab').click()  // the State schema tab of the left panel
         await page.locator('#panel-left').getByRole('button', { name: s.addField }).click()
         await page.getByRole('dialog').locator('input').first().fill(name)
         await page.getByRole('dialog').getByRole('button', { name: s.addField, exact: true }).click()
       }
       // the output field is in the Config panel's Data tab; back to Settings afterwards
-      const configTab = (k: 'settings' | 'data') => page.locator(`#config-tab-${k}`).click()
+      const configTab = (k: 'general' | 'settings' | 'data') => page.locator(`#config-tab-${k}`).click()
       const pickOutput = async (name: string) => { await configTab('data'); await field(s.output).getByRole('combobox').click(); await page.getByRole('option', { name, exact: true }).click() }
 
       await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
@@ -121,15 +122,15 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await snap('wired', { llm: page.locator(llm) })
 
       // 3. Configure: prompt and output field of the LLM node, question of the Human node
-      await page.locator(llm).click()
-      await snap('llm-selected', { label: field(s.label).locator('input'), prompt: page.locator('#llm-prompt'), addField: page.locator('#panel-left').getByRole('button', { name: s.addField }) })
-      await field(s.label).locator('input').fill(s.draft)
+      await page.locator(llm).click(); await configTab('general')
+      await snap('llm-selected', { label: field(s.label).locator('input'), tabs: page.locator('#config-tabs'), addField: page.locator('#palette-state-tab') })
+      await field(s.label).locator('input').fill(s.draft); await configTab('settings')
       await page.locator('#llm-prompt').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.insertText(s.prompt)
       await snap('llm-prompt', { prompt: page.locator('#llm-prompt'), tabs: page.locator('#config-tabs') })
       await addField('reply'); await pickOutput('reply')
       await snap('llm-config', { tabs: page.locator('#config-tabs'), output: field(s.output), state: page.locator('#panel-left input').last(), human: page.locator(human) })
-      await page.locator(human).click(); await configTab('settings')
-      await field(s.label).locator('input').fill(s.approve)
+      await page.locator(human).click(); await configTab('general')
+      await field(s.label).locator('input').fill(s.approve); await configTab('settings')
       await page.locator('#human-prompt').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.insertText(s.question)
       await addField('decision'); await pickOutput('decision'); await configTab('settings')
       // Send the request to Slack as well; the studio still shows it to the run's owner

@@ -194,7 +194,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       if (rt.available) {
         await page.goto(`/workflows/${ids.normalize}`); await expect(page.locator('.react-flow__node')).toHaveCount(3); await fit(page)
         await setInput(page, PAYLOAD)
-        await page.locator('.react-flow__node[data-id="clean"]').click()
+        await page.locator('.react-flow__node[data-id="clean"]').click(); await page.locator('#config-tab-settings').click()
         await page.locator('#code-test').click()
         await expect(page.locator('#code-test-result')).toContainText('order.paid', { timeout: 60_000 })
         await page.locator('#code-test-result').scrollIntoViewIfNeeded()
@@ -355,18 +355,59 @@ for (const lang of ['en', 'vi'] as Lang[]) {
         edges: [{ id: '1', source: 'start', target: 'bot' }, { id: '2', source: 'bot', target: 'end' }] }
       const wid = (await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).data.id
       const slug = `${vi ? 'ho-tro' : 'order-help'}-${Date.now() % 10000}`
+      // Chat settings before publishing: builders only, so the message, reply and conversation fields are in view
+      await page.request.put(`/api/workflows/${wid}/chat`, { headers: H, data: { enabled: true, input_field: 'message', reply_field: 'reply', messages_field: 'messages' } })
+      await page.goto(`/workflows/${wid}`)
+      if (!(await page.locator('#chat-input').isVisible())) await page.locator('#chat-open').click()
+      await page.locator('#chat-view').click(); await page.locator('#chat-settings-btn').click(); await expect(page.locator('#chat-settings')).toBeVisible()
+      await shot(page, lang, 'chat-settings'); await page.keyboard.press('Escape')
       await page.request.put(`/api/workflows/${wid}/chat`, { headers: H, data: { enabled: true, access: 'anonymous', slug, title: vi ? vin('handbook.chat.title') : 'Order help',
         intro: vi ? vin('handbook.chat.intro') : 'Ask about **your order**: where it is, returns, refunds.',
         suggestions: vi ? [vin('handbook.messages.orderWhereA100'), vin('handbook.messages.returnItem')] : ['Where is my order A100?', 'I want to return an item'], embed_origins: ['https://shop.example.com'] } })
-      await page.goto(`/workflows/${wid}`)
-      if (!(await page.locator('#chat-input').isVisible())) await page.locator('#chat-open').click()
+      await page.reload(); await page.waitForLoadState('networkidle')  // the Chat panel stays open across the reload
+      if (!(await page.locator('#chat-view').isVisible())) await page.locator('#chat-open').click()
       await page.locator('#chat-view').click(); await page.locator('#chat-settings-btn').click(); await expect(page.locator('#chat-publish')).toBeVisible()
+      await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())  // no focus ring on the close button
       await page.locator('#chat-slug').scrollIntoViewIfNeeded(); await shot(page, lang, 'chat-publish')
       await page.locator('#chat-snippet-iframe').scrollIntoViewIfNeeded(); await shot(page, lang, 'chat-embed')
       const ctx = await browser.newContext({ locale: vi ? 'vi-VN' : 'en-US', viewport: { width: 1440, height: 900 }, colorScheme: 'light' })
       const v = await ctx.newPage(); await v.addInitScript(([l]) => localStorage.setItem('lang', l), [lang])
       await v.goto(`/c/${slug}`); await expect(v.getByTestId('chat-suggestion')).toHaveCount(2)
       await shot(v, lang, 'public-chat'); await ctx.close()   // what a visitor sees first: the intro and the suggestions
+    })
+
+    // Browser tools, English UI for both guides: a discovered isolated browser connection on Settings -> MCP servers
+    // (runtime off, so no page is opened) and an Agent's URL source on the Data tab. Run alone with `-g "browser en"`.
+    if (lang === 'en') test('browser en', async ({ page }) => {
+      await page.addInitScript(() => { localStorage.setItem('lang', 'en'); localStorage.setItem('theme', 'light') })
+      await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
+      const H = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+      const created = (await (await page.request.post('/api/mcp/servers', { headers: H, data: { name: 'Demo isolated browser', scope: 'user', transport: 'managed', adapter: 'browser',
+        settings: { provider: 'local', allowed_origins: ['https://example.org'] }, secrets: {} } })).json()).data
+      const server = (await (await page.request.post(`/api/mcp/servers/${created.id}/discover`, { headers: H })).json()).data
+      expect(server.tools.filter((x: { available?: boolean }) => x.available !== false)).toHaveLength(6)  // evaluate, upload and download stay listed but off
+      const save = async (path: string, card: ReturnType<Page['locator']>) => {
+        await page.mouse.move(2, 898); await page.waitForTimeout(450)
+        for (const l of ['en', 'vi']) await card.screenshot({ path: `../handbook/docs/${l}/images/${path}.png` })
+      }
+      await page.goto('/settings/mcp'); const card = page.getByTestId(`mcp-card-${server.id}`)
+      await expect(card.getByTestId('mcp-tools')).toContainText('navigate')
+      await save('browser-connection-settings', card)
+      const tool = (name: string) => ({ source: 'mcp', server_id: server.id, tool: name, name, description: name,
+        parameters: server.tools.find((x: { name: string }) => x.name === name).input_schema })
+      const wf = { name: 'Web research', state: [{ name: 'message', type: 'string' }, { name: 'url', type: 'string' }, { name: 'answer', type: 'string' }],
+        nodes: [N('start', 'start', 40, { label: 'Start' }, 160),
+          N('agent', 'agent', 320, { label: 'Web researcher', model: 'gpt-4o-mini', prompt: 'Answer from the page the user names: {{state.message}}', output_field: 'answer', max_rounds: 5,
+            tools: [tool('navigate'), tool('snapshot'), tool('extract')] }, 160),
+          N('end', 'end', 600, { label: 'End' }, 160)],
+        edges: [{ id: 'a', source: 'start', target: 'agent' }, { id: 'b', source: 'agent', target: 'end' }] }
+      const wid = (await (await page.request.post('/api/workflows', { headers: H, data: wf })).json()).data.id
+      await page.evaluate(() => localStorage.setItem('lgs.editorPanels', JSON.stringify({ right: 420, bottom: 220 })))  // room for the whole Data tab
+      await page.goto(`/workflows/${wid}`); await expect(page.locator('.react-flow__node')).toHaveCount(3); await fit(page)
+      await setInput(page, JSON.stringify({ message: 'What does https://example.org say about itself?' }, null, 2))
+      await page.locator('.react-flow__node[data-id="agent"]').click(); await page.locator('#config-tab-data').click()
+      await expect(page.locator('#agent-tool-0-url-source')).toBeVisible()
+      await save('browser-agent-url-binding', page.locator('body'))
     })
   })
 }
