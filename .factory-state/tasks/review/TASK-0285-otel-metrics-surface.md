@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0285
 - Title: OTel metrics surface with queue, worker and process gauges
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
 - Updated: 2026-11-09
@@ -52,3 +52,13 @@ Make `services/telemetry.py` the single metrics surface per DEC-0094: bounded la
 ## Activity Log
 
 - 2026-11-09: Created by planning on branch factory/plan-observability. No implementation.
+- 2026-11-09: Branch `factory/task-0285-otel-metrics` stacked on `factory/task-0284-readiness-tzdata`; one PR with TASK-0286 and TASK-0287.
+- 2026-11-09: `services/telemetry.py` gained `labels` (allowed set `LABELS`; anything else, such as a user or run id, is dropped), `watch(probes, worker)` with observable gauges `studio.ready.db`, `studio.ready.db.latency`, `studio.ready.redis`, `studio.ready.redis.latency`, `studio.queue.depth` (`state`), `studio.queue.oldest_age`, `studio.worker.heartbeat_age`, `studio.worker.busy`, `studio.worker.capacity` (only where a worker runs), `studio.run_bus.in_memory`, `studio.process.rss` and the observable counter `studio.process.cpu_time`; counters `studio.jobs.reaped` and `studio.jobs.recovered`. One probe snapshot (5 s cache) feeds all gauges of a collection; callbacks run on the exporter thread. The resource gets a random `service.instance.id` so API and worker series stay apart. Run metrics gained `workflow_id`. Gauges are registered in the API lifespan and in `python -m app.worker`. `STUDIO_OTEL_METRICS` stays opt-in; with it off the metrics SDK is not imported (subprocess test).
+- 2026-11-09: Deviation: `studio.run_bus.in_memory` is 1 whenever the bus is in-memory; production is not a label. `/api/ready` reports `in_memory_in_production` for the production case, and the alert rule is documented as a production alert.
+- 2026-11-09: Full backend suite: 1604 passed, 30 skipped. Frontend locale tests passed. `factory validate --only hygiene` passed.
+- 2026-11-09: Review REV-0271 and QA-0271. Moved to review.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0271-TASK-0285-otel-metrics-surface.md`
+- QA: `.factory-state/artifacts/QA-0271-TASK-0285-otel-metrics-surface.md`

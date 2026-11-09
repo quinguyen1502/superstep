@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0287
 - Title: Model metrics, distinct 429 and unpriced usage
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
 - Updated: 2026-11-09
@@ -53,3 +53,11 @@ Give Grafana per-model visibility and make provider failures and unknown prices 
 ## Activity Log
 
 - 2026-11-09: Created by planning on branch factory/plan-observability. No implementation.
+- 2026-11-09: `PROVIDER_RATE_LIMITED` (502) for HTTP 429 on the httpx path and in the SDK exception mapping (`status_code` 429 or `RateLimitError`); catalog, `docs/api-errors.md`, en/vi locales; added to `FAILOVER_CODES`. Run error events of a failed model call carry `provider` and `model`. `Telemetry.model_event` records `studio.llm.tokens` (`direction`), `studio.llm.cost` and `studio.llm.unpriced` with `model`, `provider` (`workflow_id` on tokens and cost), `studio.llm.errors` (`code`, `provider`, `model`) from failed attempts and model error events, and `studio.llm.fallbacks` (`primary_provider`, `fallback_provider`, `code`). Called for live node events in `RunService` and for AI review usage in `ApprovalService`.
+- 2026-11-09: Deviation: `studio.llm.unpriced` counts calls (unit `{call}`), not tokens, with `model` and `provider` only.
+- 2026-11-09: Review REV-0273 and QA-0273. Moved to review.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0273-TASK-0287-model-metrics.md`
+- QA: `.factory-state/artifacts/QA-0273-TASK-0287-model-metrics.md`

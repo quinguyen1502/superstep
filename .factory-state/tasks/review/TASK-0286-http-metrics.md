@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0286
 - Title: HTTP request metrics by route template
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
 - Updated: 2026-11-09
@@ -50,3 +50,10 @@ Count HTTP requests and record latency and 5xx by route template, method and sta
 ## Activity Log
 
 - 2026-11-09: Created by planning on branch factory/plan-observability. No implementation.
+- 2026-11-09: Plain ASGI middleware `api/http_metrics.py`, outermost in the app: `studio.http.server.requests` and `studio.http.server.duration` (ms) by `route` (matched template, else `unmatched`), `method`, `status_class`; `studio.ws.connections` up-down counter. `/api/health` and `/api/ready` are counted but kept out of the duration histogram. No `opentelemetry-instrumentation-fastapi` dependency. With metrics off the middleware only checks a flag.
+- 2026-11-09: Review REV-0272 and QA-0272. Moved to review.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0272-TASK-0286-http-metrics.md`
+- QA: `.factory-state/artifacts/QA-0272-TASK-0286-http-metrics.md`

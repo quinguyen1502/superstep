@@ -964,6 +964,9 @@ class RunService:
             if span is not None and ev.get("type") in ("node_finished", "error"):
                 try: self.telemetry.node(span, ev)  # live span
                 except Exception: pass
+            if ev.get("type") in ("node_finished", "error"):
+                try: self.telemetry.model_event(ev, plan.workflow_id)  # per-model metrics
+                except Exception: pass
             if plan.source == "chat" and not plan.checkpointing and ev.get("type") in ("run_started", "run_resumed", "run_recovered", "node_started", "node_finished"):
                 await _write_in_thread(self._save_live_history, rid, plan, events, started, uid)
             try: await bus.apublish(rid, ev)

@@ -238,7 +238,7 @@ def test_node_spans_are_exported_live_and_metrics_recorded():
     assert sum(1 for s in exp.get_finished_spans() if s.parent is None) == 1
     data = {m.name: m for rm in reader.get_metrics_data().resource_metrics for sm in rm.scope_metrics for m in sm.metrics}
     assert {"studio.runs", "studio.run.duration", "studio.tokens"} <= set(data)
-    pt = data["studio.runs"].data.data_points[0]; assert pt.value == 1 and dict(pt.attributes) == {"status": "ok", "source": "ui"}
+    pt = data["studio.runs"].data.data_points[0]; assert pt.value == 1 and dict(pt.attributes) == {"status": "ok", "source": "ui", "workflow_id": "w1"}
 
 
 def test_paused_run_keeps_one_trace_across_segments(c):

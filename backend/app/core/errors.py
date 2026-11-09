@@ -257,6 +257,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "PROVIDER_UNREACHABLE": (502, "Could not reach {provider} at {base_url}: is the server running and reachable from the API?"),
     "PROVIDER_AUTH_FAILED": (400, "{provider} rejected the API key: {reason}"),
     "PROVIDER_BAD_RESPONSE": (502, "{provider} returned an unexpected response: {reason}"),
+    "PROVIDER_RATE_LIMITED": (502, "{provider} is rate limiting requests: {reason}"),
     "MODEL_NOT_FOUND": (400, "{provider} has no model named {model}"),
     "PROVIDER_EMBEDDINGS_UNSUPPORTED": (400, "{provider} does not provide embeddings; choose another credential for this knowledge base"),
     "AGENT_TOOLS_UNSUPPORTED": (400, "{provider} cannot call tools; choose a credential with tool calling for this Agent node"),

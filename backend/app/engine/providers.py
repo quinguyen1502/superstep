@@ -41,6 +41,7 @@ def _raise_for_status(provider: str, r: httpx.Response, model: str = "") -> None
     msg = (msg.get("message") if isinstance(msg, dict) else str(msg))[:200]
     if r.status_code in (401, 403): raise ProviderError("PROVIDER_AUTH_FAILED", provider, msg)
     if r.status_code == 404 and model: raise ProviderError("MODEL_NOT_FOUND", provider, msg, model=model)
+    if r.status_code == 429: raise ProviderError("PROVIDER_RATE_LIMITED", provider, msg, model=model)
     raise ProviderError("PROVIDER_BAD_RESPONSE", provider, f"HTTP {r.status_code}: {msg}")
 
 
@@ -244,6 +245,7 @@ def _map_http_error(e: Exception, provider: str, model: str, base_url: str = "")
         return ProviderError("PROVIDER_UNREACHABLE", provider, name, base_url=base_url)
     if status in (401, 403): return ProviderError("PROVIDER_AUTH_FAILED", provider, str(e)[:200])
     if status == 404: return ProviderError("MODEL_NOT_FOUND", provider, str(e)[:200], model=model)
+    if status == 429 or name == "RateLimitError": return ProviderError("PROVIDER_RATE_LIMITED", provider, str(e)[:200], model=model)
     return ProviderError("PROVIDER_BAD_RESPONSE", provider, f"{name}: {str(e)[:200]}")
 
 
