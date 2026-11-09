@@ -1,4 +1,5 @@
 """Readiness (`/api/ready`) versus liveness (`/api/health`), the shared probes, queue depth and worker heartbeats."""
+import os
 import asyncio, time, uuid
 from types import SimpleNamespace as NS
 
@@ -44,7 +45,10 @@ def test_ready_is_ok_with_the_test_database():
     r = c.get("/api/ready"); body = r.json()["data"]
     assert r.status_code == 200 and body["ok"] is True
     assert body["database"]["ok"] is True and body["database"]["latency_ms"] >= 0
-    assert body["redis"] == {"configured": False, "ok": None, "latency_ms": None} and body["run_bus"] == "memory"
+    if os.environ.get("REDIS_URL"):  # the CI job with Postgres and Redis
+        assert body["redis"]["configured"] is True and body["redis"]["ok"] is True and body["run_bus"] == "redis"
+    else:
+        assert body["redis"] == {"configured": False, "ok": None, "latency_ms": None} and body["run_bus"] == "memory"
     assert set(body["queue"]) >= {"ready", "delayed", "processing", "oldest_queued_age_s"} and "heartbeat_age_s" in body["worker"]
 
 
@@ -128,5 +132,6 @@ def test_worker_counts_busy_slots_while_a_job_runs():
 def test_responses_carry_no_url_host_or_secret(monkeypatch):
     monkeypatch.setattr(deps.get_probes(), "db", DeadDb())
     texts = c.get("/api/ready").text + c.get("/api/health").text
-    for leak in ("sqlite:///", "postgresql", "redis://", "localhost", "JWT", "password"):
+    # /api/health names the dialect ("postgresql"), never a connection URL
+    for leak in ("sqlite:///", "postgresql://", "postgresql+", "redis://", "localhost", "JWT", "password"):
         assert leak not in texts
