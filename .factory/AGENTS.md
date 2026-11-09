@@ -42,6 +42,8 @@ A newly initialized project is not ready for implementation until `factory ready
 - Create task and blocker artifacts for project delivery state, not for routine assistant execution mechanics.
 - Do not create standalone project tasks or blocker artifacts for command trials, missing local tool authentication, sandbox or network retries, or other transient execution issues unless they materially block an active project delivery task after reasonable retry or approval handling.
 - Preserve existing conventions unless an approved artifact requires change.
+- In project repositories, keep product files free of factory artifacts: no artifact IDs and no `.factory-state/` paths in source, tests, scripts, comments, docstrings, identifiers, imports, or product docs. Artifact IDs belong in `.factory-state/` and in PR titles and bodies.
+- Write code, docs, artifacts, commit messages, and PR titles and bodies in English. Vietnamese is allowed only in i18n surfaces (locale catalogs and Vietnamese editions of docs). See `docs/conventions.md` (Repository Hygiene).
 - Request human approval before destructive, irreversible, security-sensitive, production-impacting, or broad-scope changes.
 - Require review and QA before work is marked complete.
 

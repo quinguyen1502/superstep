@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from .clarification import clarification_problems
 from .constants import (
@@ -15,6 +15,7 @@ from .constants import (
 )
 from .models import FactoryConfig
 from .dependencies import dependency_problems
+from .hygiene import hygiene_problems
 from .tooling import tooling_problems
 from .verification import verification_problems
 
@@ -95,6 +96,9 @@ def inspect_project(project_dir: Path) -> ValidationReport:
     dependency_errors, dependency_warnings = dependency_problems(project_dir)
     report.errors.extend(dependency_errors)
     report.warnings.extend(dependency_warnings)
+    hygiene_errors, hygiene_warnings = hygiene_problems(project_dir)
+    report.errors.extend(hygiene_errors)
+    report.warnings.extend(hygiene_warnings)
     verification_errors, verification_warnings = verification_problems(project_dir)
     report.errors.extend(verification_errors)
     report.warnings.extend(verification_warnings)
@@ -106,8 +110,19 @@ def inspect_project(project_dir: Path) -> ValidationReport:
     return report
 
 
-def validate_project(project_dir: Path) -> int:
-    report = inspect_project(project_dir)
+def inspect_hygiene(project_dir: Path) -> ValidationReport:
+    report = ValidationReport(project_dir)
+    errors, warnings = hygiene_problems(project_dir)
+    report.errors.extend(errors)
+    report.warnings.extend(warnings)
+    return report
+
+
+def validate_project(project_dir: Path, only: Optional[str] = None) -> int:
+    if only == "hygiene":
+        report = inspect_hygiene(project_dir)
+    else:
+        report = inspect_project(project_dir)
     if report.errors:
         print("Project validation failed:")
         for problem in report.errors:

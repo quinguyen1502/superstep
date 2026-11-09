@@ -59,8 +59,10 @@ is noise that ages badly.
   guarantees.
 - **Do not stamp provenance.** A task id means nothing to someone reading the
   code, and the history is already in version control and in the workflow
-  state. Reference a standing decision when a reader may have to go and check
-  it; do not reference the task that added the line.
+  state. When a reader must know a standing decision, state the rule itself
+  in the comment; do not cite the decision or task artifact by ID or path.
+  `factory validate` rejects artifact IDs and `.factory-state/` paths in
+  product files (see Repository Hygiene).
 - **Date a figure only when it must be re-measured.** A measurement a
   standard forbids estimating is worth its date. Nothing else is.
 - **Comments in tests are exempt from the incident rule** where the incident
@@ -81,6 +83,103 @@ the author's list of what mattered.** That list is written by the same memory
 that did the cutting and will omit exactly what was forgotten. Extract every
 figure and identifier from the deleted lines, subtract what the added lines
 contain, and check the remainder against the tree.
+
+## Repository Hygiene
+
+Enforced by `factory validate` (errors, not warnings). Run only these
+checks with `factory validate --only hygiene`.
+
+### Artifact isolation
+
+The factory store stays in the project repository so agents and CI can read
+it, but product files do not point at it. Product files are every scanned
+file except the factory store and the factory-managed instruction surfaces
+listed below: source, tests, scripts, examples, SDKs, packages, CI workflows,
+README, changelog, and product docs. They must not contain:
+
+- artifact IDs of the official types `REQ`, `DISC`, `PLAN`, `DES`, `ARCH`,
+  `TASK`, `REV`, `QA`, `DEC`, `SUM`, and `CLAR` (three or more digits, such
+  as `TASK-0123`);
+- the store path `.factory-state` (ignore and attribute files such as
+  `.gitignore` and `.dockerignore` may name the path, but not IDs).
+
+Artifact IDs belong in `.factory-state/` and in PR titles and bodies, which
+is how work is tracked. Factory-managed surfaces may reference artifacts:
+`.factory-state/`, `AGENTS.md`, `CLAUDE.md`, `.cursorrules`, `project.md`,
+`project-specs.md`, `vision.md`, `roadmap.md`, `.gitmodules`, tool kit
+directories (`.agents/`, `.claude/`, `.codex/`, `.cursor/`, `.grok/`), and
+pull request templates under `.github/`.
+
+### English only, except i18n
+
+Code, comments, docs, factory artifacts, templates, skills, commit messages,
+and PR titles and bodies are written in English. Vietnamese is detected by
+letters only Vietnamese uses among Latin scripts, after NFC normalization:
+a with breve, o and u with horn, d with stroke (U+0103, U+01A1, U+01B0,
+U+0111 and their capitals), and the tone-marked vowels of U+1EA0..U+1EF9.
+Circumflex a, e, and o count only with a tone-marked vowel on the same line
+and no letter Vietnamese never uses (cedilla, diaeresis, ring, n-tilde), so
+French or Portuguese words are not reported. Detection is by letter, not by
+word list.
+
+Vietnamese is allowed in i18n surfaces:
+
+- files under a directory named `locales`, `locale`, `i18n`, `l10n`,
+  `translations`, `translation`, `lang`, or `langs`;
+- files under a Vietnamese locale directory (`vi`, `vi-VN`, `vi_VN`, Android
+  `values-vi`), for example `handbook/docs/vi/`;
+- files with a Vietnamese locale or i18n token in the name: `vi.json`,
+  `README.vi.md`, `mkdocs.vi.yml`, `messages_vi.properties`,
+  `i18n.spec.ts`;
+- translation catalog formats: `.po`, `.pot`, `.xliff`, `.xlf`, `.arb`,
+  `.strings`, `.stringsdict`.
+
+Legal and attribution files (`LICENSE*`, `COPYING*`, `NOTICE*`, `AUTHORS*`,
+`CONTRIBUTORS*`) keep people's names verbatim and are not checked for
+language. The language's own name, used by language switchers, is always
+allowed.
+
+### Scanned files
+
+Inside a Git work tree whose root is the project, the scan covers tracked
+and untracked files that `.gitignore` does not exclude; otherwise it walks
+the directory. It always skips `.factory/` (the framework copy or
+submodule), VCS metadata, dependency, build, and cache directories
+(`node_modules`, `vendor`, `third_party`, `dist`, `build`, `out`, `target`,
+`coverage`, `.venv`, `venv`, `__pycache__`, `.next`, `.nuxt`, `.svelte-kit`,
+`.gradle`, `.dart_tool`, `Pods`, and similar), lockfiles, minified files,
+source maps, snapshots, binary files, and files over 1 MiB.
+
+### Project overrides
+
+A project may extend the defaults in `.factory-state/hygiene.yaml`. Every key
+is optional; patterns use `fnmatch` against the path relative to the project
+root, and `*` also crosses `/`. A pattern without wildcards matches that file
+or everything under that directory.
+
+```yaml
+i18n_paths:                 # Vietnamese allowed (inline catalogs, i18n tests)
+  - "packages/mobile/src/labels.ts"
+  - "frontend/e2e/*"
+artifact_reference_paths:   # artifact IDs and store paths allowed
+  - "docs/factory-notes.md"
+skip_paths:                 # not scanned at all
+  - "fixtures/third-party/*"
+allowed_terms:              # proper names that keep their diacritics
+  - "Owner Full Name"
+```
+
+Prefer moving text into a catalog over adding an override; an override is for
+files that are i18n by nature, such as tests that assert translated output.
+
+### Pull request text
+
+A working tree cannot see GitHub PR text. `factory pr check` checks a PR
+title and body for Vietnamese: from `--title` and `--body`/`--body-file`, or
+from the GitHub event payload in `--event` or `$GITHUB_EVENT_PATH`.
+`factory validate` also checks the PR in `$GITHUB_EVENT_PATH` when it holds a
+pull request event. Copy `templates/ci/factory-pr-text.yml` so edits to a PR
+title or body are rechecked.
 
 ## Agent Handoffs
 

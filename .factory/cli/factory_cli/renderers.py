@@ -569,6 +569,8 @@ Init creates a valid factory skeleton. It is not ready for implementation until 
 - Read `.factory-state/artifacts/` selectively by following task and artifact references.
 - Store generated workflow state under `.factory-state/`, never `.factory/`.
 - Record assumptions, blockers, open questions, review results, and QA evidence in artifacts.
+- Keep product files free of factory artifacts: no artifact IDs (`TASK-0001`, `REQ-0001`, ...) and no `.factory-state/` paths in source, tests, scripts, comments, docstrings, identifiers, imports, or product docs. Artifact IDs belong in `.factory-state/` and in PR titles and bodies. `factory validate` reports violations as errors.
+- Write code, docs, artifacts, commit messages, and PR titles and bodies in English. Vietnamese is allowed only in i18n surfaces such as locale catalogs and Vietnamese editions of docs. `factory validate` and `factory pr check` report violations as errors.
 - Do not create standalone tasks or blocker artifacts for command trials, missing local authentication, sandbox or network retries, or other transient assistant execution mechanics unless they materially block an active delivery task.
 - Allocate new artifact IDs after `git fetch --all --prune` with `factory ids next <TYPE> --all-refs`. Do not guess the next number.
 - Use task branches named `factory/task-<id>-<short-name>` unless project standards define another convention.
