@@ -52,7 +52,8 @@ test('chat triggers: add, refuse a duplicate command, switch, edit, delete; a me
   const ts = String(Math.floor(Date.now() / 1000)), sig = 'v0=' + createHmac('sha256', SIGNING).update(`v0:${ts}:${body}`).digest('hex')
   const res = await page.request.post('/api/channels/events/slack', { data: body, headers: { 'Content-Type': 'application/json', 'X-Slack-Request-Timestamp': ts, 'X-Slack-Signature': sig } })
   expect((await res.json()).data).toEqual({ outcome: 'queued' })
-  expect((await sent(page, 'chat.postMessage', b => b.thread_ts === '1700.5' && (b.text.includes(st('channels.chat_finished').split('{value}')[0].replace('{workflow} ', '').trim()) || /finished/.test(b.text)))).text).toContain('Chat ')
+  const finishedMark = (st('channels.chat_finished').split('{workflow}')[1] || st('channels.chat_finished')).split('{value}')[0].trim()
+  expect((await sent(page, 'chat.postMessage', b => b.thread_ts === '1700.5' && (b.text.includes(finishedMark) || /finished/.test(b.text)))).text).toContain('Chat ')
 
   // switch off and on, edit the command, delete by typed name
   await row.getByRole('switch').click(); await expect(row.getByRole('switch')).not.toBeChecked()
