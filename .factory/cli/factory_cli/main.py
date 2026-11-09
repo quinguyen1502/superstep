@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from hashlib import sha256
 from pathlib import Path
@@ -86,9 +87,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.command == "specs":
             return handle_specs(args)
         if args.command == "validate":
-            return validate_project(Path(args.project_dir).resolve())
+            return validate_project(Path(args.project_dir).resolve(), only=args.only)
         if args.command == "ready":
             return handle_ready(args)
+        if args.command == "pr":
+            return handle_pr(args)
         if args.command == "tools":
             return handle_tools(args)
         if args.command == "deps":
@@ -223,6 +226,28 @@ def build_parser() -> argparse.ArgumentParser:
 
     validate = subcommands.add_parser("validate", help="Validate a project repository structure.")
     validate.add_argument("project_dir", nargs="?", default=".")
+    validate.add_argument(
+        "--only",
+        choices=("hygiene",),
+        help="Run one check group: hygiene = artifact isolation and English-only text.",
+    )
+
+    pr = subcommands.add_parser(
+        "pr", help="Check pull request text against factory language rules."
+    )
+    pr_subcommands = pr.add_subparsers(dest="pr_command")
+    pr_check = pr_subcommands.add_parser(
+        "check",
+        help="Fail when a pull request title or body contains Vietnamese text.",
+    )
+    pr_check.add_argument(
+        "--event",
+        help="GitHub event payload (default: $GITHUB_EVENT_PATH).",
+    )
+    pr_check.add_argument("--title", help="Pull request title to check.")
+    pr_body = pr_check.add_mutually_exclusive_group()
+    pr_body.add_argument("--body", help="Pull request body to check.")
+    pr_body.add_argument("--body-file", help="File holding the pull request body.")
 
     ready = subcommands.add_parser(
         "ready",
@@ -537,6 +562,39 @@ def handle_import(args: argparse.Namespace) -> int:
         if apply_result is not None:
             print(apply_result)
     return result
+
+
+def handle_pr(args: argparse.Namespace) -> int:
+    from .hygiene import load_pr_event, pr_text_problems
+
+    if args.pr_command != "check":
+        raise FactoryError("Choose a pr command: check.")
+    title = args.title
+    body = args.body
+    if args.body_file:
+        try:
+            body = Path(args.body_file).read_text(encoding="utf-8")
+        except OSError as exc:
+            raise FactoryError(f"Cannot read PR body file: {exc}") from exc
+    if title is None and body is None:
+        event_path = args.event or os.environ.get("GITHUB_EVENT_PATH")
+        if not event_path:
+            raise FactoryError(
+                "Pass --title/--body, --event FILE, or run where GITHUB_EVENT_PATH is set."
+            )
+        event = load_pr_event(Path(event_path))
+        if event is None:
+            print("No pull request in the event payload; nothing to check.")
+            return 0
+        title, body = event
+    problems = pr_text_problems(title or "", body or "")
+    if problems:
+        print("Pull request text check failed:")
+        for problem in problems:
+            print(f"  - {problem}")
+        return 1
+    print("Pull request text check passed.")
+    return 0
 
 
 def handle_ready(args: argparse.Namespace) -> int:

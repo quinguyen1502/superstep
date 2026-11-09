@@ -13,7 +13,8 @@ factory init <project-name> [--tool codex|cursor|claude-code|grok] [--refiner TO
 factory import [project-dir] [--apply] [--tool-kit LEVEL] [--with-skills|--no-skills] [--no-interactive]
 factory ready -C <project-dir>
 factory specs -C <project-dir> [--refiner TOOL] [--no-ai] [--no-interactive]
-factory validate [project-dir]
+factory validate [project-dir] [--only hygiene]
+factory pr check [--event FILE] [--title TEXT] [--body TEXT | --body-file FILE]
 factory tools status|configure|plan|apply|validate -C <project-dir>
 factory tools configure [--no-interactive] [--level LEVEL] [--status proposed|approved] [--tool TOOL] [--command NAME=COMMAND] -C <project-dir>
 factory gc [-C <project-dir>] [--keep N] [--apply] [--no-artifacts] [--no-tasks] [--no-runs]
@@ -289,7 +290,15 @@ replacing the configured submodule with a copy.
 `factory validate` checks the required structure, config schema,
 enabled tool bridges, tooling policy and hashes, dependency and
 verification state, standards, task lifecycle folders, import
-completion, done-task review/QA references, and clarification schemas.
+completion, done-task review/QA references, clarification schemas, and
+repository hygiene. Hygiene errors are reported when a product file names a
+factory artifact ID or the `.factory-state` path, when Vietnamese text
+appears outside i18n surfaces, and, in GitHub Actions, when the pull request
+in `$GITHUB_EVENT_PATH` has Vietnamese in its title or body.
+`factory validate --only hygiene` runs just those checks, which is what CI
+templates use. `factory pr check` checks PR text on its own. Rules, default
+path lists, and `.factory-state/hygiene.yaml` overrides are in
+[`conventions.md`](conventions.md#repository-hygiene).
 Retired `factory.yaml` keys
 (`storage_backend`, `storage_dsn`, `budget_enforcement`, `budgets`)
 still load and are reported as warnings. Unanswered clarification
