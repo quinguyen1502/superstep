@@ -1,10 +1,10 @@
-# Full stack: postgres + redis + api + web (TASK-0009). Usage: cp .env.example .env && docker compose up --build
+# Full stack: postgres + redis + api + web. Usage: cp .env.example .env && docker compose up --build
 # UI: http://localhost:${WEB_PORT:-8080}  (demo login admin@example.com / admin123)
 name: superstep
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17  # Postgres 17 + pgvector (TASK-0012, DEC-0021): same major version, existing volumes keep working
+    image: pgvector/pgvector:pg17  # Postgres 17 + pgvector: same major version, existing volumes keep working
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-studio}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -38,11 +38,11 @@ services:
       STUDIO_ENV: ${STUDIO_ENV:-dev}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      STUDIO_MCP_STDIO: ${STUDIO_MCP_STDIO:-0}                  # TASK-0013: 1 = admins may register stdio MCP servers (processes in this container)
+      STUDIO_MCP_STDIO: ${STUDIO_MCP_STDIO:-0}                  # 1 = admins may register stdio MCP servers (processes in this container)
       STUDIO_MCP_ALLOW_PRIVATE: ${STUDIO_MCP_ALLOW_PRIVATE:-0}  # 1 = HTTP MCP servers on private addresses (e.g. a sidecar)
       STUDIO_MCP_TIMEOUT: ${STUDIO_MCP_TIMEOUT:-30}
       STUDIO_RUN_TIMEOUT: ${STUDIO_RUN_TIMEOUT:-120}
-      # approval channels (TASK-0022): public https URL for Slack/Telegram callbacks, org-channel admins, callback limits.
+      # approval channels: public https URL for Slack/Telegram callbacks, org-channel admins, callback limits.
       # STUDIO_TRUSTED_PROXIES: CIDRs of proxies whose X-Forwarded-For hops are skipped (right to left). The default covers
       # the Compose network (the `web` nginx); add your load balancer's range. STUDIO_TRUST_PROXY=1 is the old one-hop alias.
       STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-}
@@ -51,7 +51,7 @@ services:
       STUDIO_APPROVAL_TTL: ${STUDIO_APPROVAL_TTL:-86400}
       STUDIO_ADMIN_EMAILS: ${STUDIO_ADMIN_EMAILS:-}
       STUDIO_ADMIN_PASSWORD: ${STUDIO_ADMIN_PASSWORD:-}  # first admin in production; empty = generated, printed once in the log
-      # RBAC (TASK-0014): role of new accounts; "Add to Slack" app credentials (empty = paste bot tokens only)
+      # RBAC: role of new accounts; "Add to Slack" app credentials (empty = paste bot tokens only)
       STUDIO_DEFAULT_ROLE: ${STUDIO_DEFAULT_ROLE:-editor}
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
@@ -59,7 +59,7 @@ services:
       STUDIO_TRUSTED_PROXIES: ${STUDIO_TRUSTED_PROXIES:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
       STUDIO_CALLBACK_RATE_LIMIT_IP: ${STUDIO_CALLBACK_RATE_LIMIT_IP:-60}
       STUDIO_CALLBACK_RATE_LIMIT_CHANNEL: ${STUDIO_CALLBACK_RATE_LIMIT_CHANNEL:-300}
-      # tracing (TASK-0010): empty = no-op. With `--profile tracing` set
+      # tracing: empty = no-op. With `--profile tracing` set
       # OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 and STUDIO_TRACE_URL=http://localhost:16686/trace/{trace_id}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
@@ -69,9 +69,9 @@ services:
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-}
       LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-}
-      # API-triggered runs (TASK-0007) are executed by the `worker` service through the Redis queue
+      # API-triggered runs are executed by the `worker` service through the Redis queue
       STUDIO_WORKER: "0"
-      # Repo import (TASK-0015) is experimental and off by default. Do not set STUDIO_IMPORT_RUNTIME here:
+      # Repo import is experimental and off by default. Do not set STUDIO_IMPORT_RUNTIME here:
       # the code picks Docker only while the flag is on. The socket mount below is root-equivalent.
       STUDIO_ENABLE_IMPORT: ${STUDIO_ENABLE_IMPORT:-0}
       STUDIO_IMPORT_DIR: /imports
@@ -81,14 +81,14 @@ services:
       STUDIO_IMPORT_CPUS: ${STUDIO_IMPORT_CPUS:-1}
       STUDIO_IMPORT_MAX_AGE_HOURS: ${STUDIO_IMPORT_MAX_AGE_HOURS:-72}
       STUDIO_IMPORT_NETWORK: ${STUDIO_IMPORT_NETWORK:-bridge}
-      # Tool nodes in Code mode (TASK-0053): off by default. Build the image first:
+      # Tool nodes in Code mode: off by default. Build the image first:
       # docker build -t studio-code:1 docker/studio-code. The code runs with no network and no mounts.
       STUDIO_ENABLE_CODE_NODES: ${STUDIO_ENABLE_CODE_NODES:-0}
       STUDIO_CODE_IMAGE: ${STUDIO_CODE_IMAGE:-studio-code:1}
       STUDIO_CODE_MEMORY: ${STUDIO_CODE_MEMORY:-256m}
       STUDIO_CODE_CPUS: ${STUDIO_CODE_CPUS:-0.5}
       STUDIO_CODE_MAX_SECONDS: ${STUDIO_CODE_MAX_SECONDS:-30}
-      # TypeScript Code nodes (TASK-0080) run on Deno in their own image: docker build -t studio-code-ts:1 docker/studio-code-ts
+      # TypeScript Code nodes run on Deno in their own image: docker build -t studio-code-ts:1 docker/studio-code-ts
       STUDIO_CODE_LANGUAGES: ${STUDIO_CODE_LANGUAGES:-python,typescript}
       STUDIO_CODE_TS_IMAGE: ${STUDIO_CODE_TS_IMAGE:-studio-code-ts:1}
       STUDIO_CODE_TS_PACKAGES: ${STUDIO_CODE_TS_PACKAGES:-npm:zod@3,npm:date-fns@4}
@@ -97,11 +97,11 @@ services:
       STUDIO_CODE_RUNTIME: ${STUDIO_CODE_RUNTIME:-}
       STUDIO_SANDBOX_URL: ${STUDIO_SANDBOX_URL:-http://sandbox:8080}
       STUDIO_SANDBOX_TOKEN: ${STUDIO_SANDBOX_TOKEN:-}
-      # Chat attachment storage (TASK-0192, REQ-0080): db (default), fs (a folder on the apidata volume, which api and
+      # Chat attachment storage: db (default), fs (a folder on the apidata volume, which api and
       # worker share at /data) or s3. See the handbook, Configuration.
       STUDIO_ATTACHMENT_STORAGE: ${STUDIO_ATTACHMENT_STORAGE:-db}
       STUDIO_ATTACHMENT_FS_PATH: ${STUDIO_ATTACHMENT_FS_PATH:-/data/attachments}
-      # s3 (TASK-0193): any S3-compatible service. Empty keys use the default AWS credential chain.
+      # s3: any S3-compatible service. Empty keys use the default AWS credential chain.
       STUDIO_ATTACHMENT_S3_BUCKET: ${STUDIO_ATTACHMENT_S3_BUCKET:-}
       STUDIO_ATTACHMENT_S3_PREFIX: ${STUDIO_ATTACHMENT_S3_PREFIX:-}
       STUDIO_ATTACHMENT_S3_ENDPOINT: ${STUDIO_ATTACHMENT_S3_ENDPOINT:-}
@@ -109,7 +109,7 @@ services:
       STUDIO_ATTACHMENT_S3_PATH_STYLE: ${STUDIO_ATTACHMENT_S3_PATH_STYLE:-}
       STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID: ${STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID:-}
       STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY: ${STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY:-}
-    # Local LLM servers on the host (TASK-0030): use http://host.docker.internal:11434 (Ollama) or
+    # Local LLM servers on the host: use http://host.docker.internal:11434 (Ollama) or
     # http://host.docker.internal:1234/v1 (LM Studio) as the credential base URL; `localhost` would be the container.
     extra_hosts: &host-gw ["host.docker.internal:host-gateway"]
     networks: &api-nets [default, sandbox]
@@ -126,7 +126,7 @@ services:
       redis: { condition: service_healthy }
     restart: unless-stopped
 
-  # Executes queued API/webhook runs (TASK-0007). Scale with `docker compose up --scale worker=3`.
+  # Executes queued API/webhook runs. Scale with `docker compose up --scale worker=3`.
   worker:
     build: ./backend
     command: ["python", "-m", "app.worker"]
@@ -186,7 +186,7 @@ services:
       retries: 10
     restart: unless-stopped
 
-# Named as in v0.1.0 (project "langgraph-studio"), so a stack started before the rename keeps its data (TASK-0058).
+# Named as in v0.1.0 (project "langgraph-studio"), so a stack started before the rename keeps its data.
 volumes:
   pgdata: {name: langgraph-studio_pgdata}
   redisdata: {name: langgraph-studio_redisdata}

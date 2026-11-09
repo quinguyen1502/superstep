@@ -40,10 +40,10 @@ def run_ws(tok, wf, inp):
 
 @respx.mock
 def test_openai_compatible_streams_deltas_with_usage():
-    respx.post("http://localhost:1234/v1/chat/completions").respond(text=sse(["Xin ", "chào ", "bạn"]), headers={"content-type": "text/event-stream"})
+    respx.post("http://localhost:1234/v1/chat/completions").respond(text=sse(["Hello ", "there ", "friend"]), headers={"content-type": "text/event-stream"})
     got, usage = [], []
     out = llm.call_llm("hi", "m", {"provider": "lmstudio"}, usage.append, got.append)
-    assert got == ["Xin ", "chào ", "bạn"] and out == "Xin chào bạn"
+    assert got == ["Hello ", "there ", "friend"] and out == "Hello there friend"
     assert usage[0]["tokens_in"] == 4 and usage[0]["tokens_out"] == 3 and not usage[0].get("estimated")
 
 
@@ -70,7 +70,7 @@ def test_token_buffer_coalesces():
 def test_run_streams_tokens_live_but_does_not_store_them(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     tok = user(); wf = json.loads(json.dumps(EXAMPLE))
-    evs = run_ws(tok, wf, {"message": "Xin chào, hôm nay thế nào?"})
+    evs = run_ws(tok, wf, {"message": "Hello, how is it going today?"})
     toks = [e for e in evs if e["type"] == "node_token"]
     fin = {e["node"]: e for e in evs if e["type"] == "node_finished"}
     assert toks and {e["node"] for e in toks} <= {n["id"] for n in wf["nodes"] if n["type"] == "llm"}

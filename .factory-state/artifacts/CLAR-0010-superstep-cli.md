@@ -161,6 +161,5 @@ answers:
 ---
 # Clarification
 
-Owner questions for REQ-0079, the `superstep` command-line tool. The owner answered in chat on 2026-10-27 ("Làm theo
-đề xuất") and picked the recommended option for every question. The answers are written into REQ-0079 under Owner
+Owner questions for REQ-0079, the `superstep` command-line tool. The owner answered in chat on 2026-10-27 ("Do it as proposed") and picked the recommended option for every question. The answers are written into REQ-0079 under Owner
 Decisions.

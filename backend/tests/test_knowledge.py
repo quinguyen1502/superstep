@@ -44,7 +44,7 @@ def test_chunking_and_extraction():
     assert len(parts) > 1 and all(len(p) <= documents.CHUNK_CHARS for p in parts)
     assert documents.chunk("one\n\ntwo") == ["one\n\ntwo"]
     assert "Hello PDF" in documents.extract("x.pdf", pdf_bytes("Hello PDF"))
-    assert documents.extract("x.md", "# Tiêu đề".encode()) == "# Tiêu đề"
+    assert documents.extract("x.md", "# Überschrift café".encode()) == "# Überschrift café"
 
 
 def test_openai_embeddings_request(monkeypatch):

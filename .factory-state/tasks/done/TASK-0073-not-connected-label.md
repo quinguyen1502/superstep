@@ -26,21 +26,21 @@ the key was in neither `locales/en.json` nor `locales/vi.json`, so i18next print
 
 ## Fix
 
-- Add `approvals.notConnected` to both locale files with identical keys: en "not connected", vi "chưa kết nối".
+- Add `approvals.notConnected` to both locale files with identical keys: en "not connected" (and its vi label).
 - No component change.
 
 ## Acceptance Criteria
 
-- The select shows "<Channel> · not connected" in English and "<Channel> · chưa kết nối" in Vietnamese, never the raw
+- The select shows "<Channel> · not connected" in English and "<Channel> · not connected" in Vietnamese, never the raw
   key.
 
 ## Validation
 
 - `frontend/e2e/templates.spec.ts` "process templates": after opening the Social post template's Human node, the
-  `#approval-channel` select contains "chưa kết nối" and no `approvals.` key. Without the locale fix it fails with
+  `#approval-channel` select contains "not connected" and no `approvals.` key. Without the locale fix it fails with
   `Received string: "Telegram · approvals.notConnected"`; with it, it passes.
 - `npx tsc -b`, `npm run lint` (exit 0) and `npx vitest run` (62 passed).
 - `npx playwright test e2e/templates.spec.ts e2e/approval-channels.spec.ts`: 4 passed.
 - QA in the browser, "Leave request" template, `manager` node: `Microsoft Teams · not connected` (en),
-  `Microsoft Teams · chưa kết nối` (vi) (QA-0066).
+  `Microsoft Teams · not connected` (vi) (QA-0066).
 - CI on PR #95: all six checks passed.

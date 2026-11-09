@@ -70,4 +70,4 @@ A For each node that runs a branch once per item of a list field.
 
 ## Activity Log
 
-- 2026-10-19: The owner asked whether LangGraph supports a loop node, then "Ok triển khai thêm". Built on LangGraph cycles with sequential items (DEC-0038). Found in review: the parallel-writes check treated `each` and `done` as parallel branches; For each now counts as one route at a time, with a test. Found by the full e2e run: `template-filters.spec.ts` still read the token from localStorage; fixed.
+- 2026-10-19: The owner asked whether LangGraph supports a loop node, then "OK, build that too". Built on LangGraph cycles with sequential items (DEC-0038). Found in review: the parallel-writes check treated `each` and `done` as parallel branches; For each now counts as one route at a time, with a test. Found by the full e2e run: `template-filters.spec.ts` still read the token from localStorage; fixed.

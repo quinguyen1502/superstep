@@ -7,6 +7,7 @@ from app.engine.effects import Effects
 from app.engine.ports import Ports
 from app.engine.runtime import run_stream
 from app.engine.validator import validate
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 STATE = [{"name": "message", "type": "string"}, {"name": "answer", "type": "string"},
          {"name": "steps", "type": "list"}, {"name": "messages", "type": "list"}]
@@ -250,7 +251,7 @@ def test_mock_agent_picks_the_closest_tool():
     out, calls = llm.mock_agent([{"role": "user", "content": "hello"}], tools, "m")
     assert calls[0]["name"] == "add" and calls[0]["args"] == {"a": 0, "b": 0}  # no shared word: the first tool
     out, calls = llm.mock_agent([{"role": "user", "content": "x"}, {"role": "tool", "content": "42"}], tools, "m", "vi")
-    assert calls == [] and out == "[mock:m] Trả lời: 42"
+    assert calls == [] and out == f"[mock:m] {vi_text('vi', 'mock.answer')}: 42"
 
 
 def test_model_arguments_are_never_rendered_as_templates(monkeypatch):

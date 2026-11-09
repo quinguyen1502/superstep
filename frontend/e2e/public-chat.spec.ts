@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import path from 'node:path'
 import { apiToken, newWorkflow, N } from './helpers'
+import { vt } from './catalog'
 const LOGO = path.resolve(import.meta.dirname, '../public/apple-touch-icon.png')
 // the published chat page /c/{slug}. The builder publishes it in Chat settings; an anonymous browser
 // chats there and comes back to its chat; another browser sees none of it; the builder reads it under Visitors.
@@ -12,7 +13,7 @@ const ECHO = (name: string) => ({ name, state: STATE,
   nodes: [N('s', 'start', 40), N('bot', 'llm', 300, { label: 'Bot', model: 'gpt-4o-mini', prompt: 'History:\n{{state.messages}}', output_field: 'reply' }), N('e', 'end', 560)],
   edges: [{ id: '1', source: 's', target: 'bot' }, { id: '2', source: 'bot', target: 'e' }] })
 const T = {
-  vi: { gone: 'Chat không mở', visitors: 'Khách', daily: 'Chat này đã hết lượt tin nhắn hôm nay' },
+  vi: { gone: vt('chat.page.goneTitle'), visitors: vt('chat.visitors.tab'), daily: vt('errors.CHAT_DAILY_LIMIT') },
   en: { gone: 'Chat not available', visitors: 'Visitors', daily: 'This chat has used its messages for today' },
 }
 

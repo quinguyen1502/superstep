@@ -16,7 +16,7 @@
 ## Objective
 
 Clear the factory records debt left after 0.8.0 and the framework update in #162 (owner request in chat on
-2026-10-26: "Mục 1").
+2026-10-26: "Item 1").
 
 ## Scope
 

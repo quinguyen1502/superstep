@@ -18,6 +18,6 @@ describe('CLI sign-in page', () => {
   })
   it('warns in Vietnamese too', async () => {
     await i18n.changeLanguage('vi')
-    expect(render('/cli/authorize')).toContain('Không bao giờ nhập mã do người khác gửi cho bạn.')
+    expect(render('/cli/authorize')).toContain(i18n.t('cliAuth.warning').split('. ').pop())
   })
 })

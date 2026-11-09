@@ -7,6 +7,7 @@ from __future__ import annotations
 import hashlib, math, os, re
 from typing import Any, Dict, List, Optional
 from . import providers
+from .locale import LOCALES, text as locale_text
 from .providers import LLMError, ProviderError  # noqa: F401 (re-exported)
 
 DEFAULT_MODEL = "text-embedding-3-small"
@@ -14,8 +15,8 @@ MOCK_DIMS = 512
 _TOKEN = re.compile(r"\w+", re.UNICODE)
 
 
-STOP = frozenset("a an and are as at be by do does for from how i in is it my of on or our the to was we what when where which who why will with you your "
-                 "là và của có cho không được các những một này đó thì với tôi bạn".split())
+# Stop words of every supported language (app/locales).
+STOP = frozenset(w for lang in LOCALES for w in locale_text(lang, "embeddings.stop_words").split())
 
 
 def _stem(w: str) -> str:

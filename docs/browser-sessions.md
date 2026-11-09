@@ -1,14 +1,14 @@
 # Conversation and run-bound browser sessions
 
-TASK-0245 connects the existing Agent/MCP runtime to isolated browser workers.
-TASK-0246 extends the approval/resume behavior described here; see
+Run sessions connect the existing Agent/MCP runtime to isolated browser workers.
+Browser approvals extend the approval/resume behavior described here; see
 [browser-approvals.md](browser-approvals.md) for the current receipt, handoff,
 confirmed-sibling acknowledgment and crash-window contract.
 Browser discovery defaults on (`STUDIO_ENABLE_BROWSER`, unset or `1`; set `0` to hide adapters).
 Trusted run ports still need the separate opt-in `STUDIO_ENABLE_BROWSER_RUNTIME=1` (default off). A standalone
 MCP connection test/call still cannot launch a browser without a run context.
-Durable browser-specific Human approval, filtered trace/recovery UX and release
-acceptance remain TASK-0246 onward; this task does not enable those implicitly.
+Durable browser-specific Human approval and filtered trace/recovery UX are
+separate layers; run sessions do not enable those implicitly.
 
 ## Authority and identity
 
@@ -21,7 +21,7 @@ hard max lifetime, cancel, conversation end or connection revoke. Configuration 
 changes do not mutate a live page. Tool arguments cannot replace identity,
 profile/proxy/provider, generation, ticket or approval authority.
 
-The resource owner continues to select credentials (existing DEC-0023), while
+The resource owner continues to select credentials (existing credential policy), while
 the principal identifies the actual actor. Studio/authenticated sessions use
 `user:<actor>`; anonymous visitors and app users use opaque hashes of their
 verified chat scope. A child run inherits its top parent's actor, with a distinct
@@ -52,7 +52,7 @@ sessions atomic across SQLite/PostgreSQL processes. Remote controller capacity
 Wire sequence increments only for consumed worker commands. Rejected Agent
 approvals can skip a pending ticket without consuming a browser action. An
 `approval_required` result holds the head; later calls cannot overtake it or
-automatically approve it. TASK-0246 supplies durable verified Human decisions.
+automatically approve it. Browser approvals supply durable verified Human decisions.
 The test harness alone grants an exact private approval to demonstrate ordering
 of a real website effect; that is not a public approval path.
 
@@ -77,7 +77,7 @@ runs, a 100 ms watcher rechecks authority and closes on failure. Connection
 update/delete revokes sessions; user deactivation/role change/deletion closes
 owned and actor sessions. A deleted workflow is checked by the run guard. A new
 worker fence invalidates prior browser sessions rather than replaying them;
-resumption needing a new observation/approval is TASK-0246's explicit UX.
+resumption needing a new observation/approval is the explicit UX of browser approvals.
 
 A website effect already dispatched before cancellation/fence loss may have
 happened. The result is unknown, the worker closes and there is no retry or

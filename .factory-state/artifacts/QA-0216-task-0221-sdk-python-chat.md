@@ -32,6 +32,6 @@ Task remains in review, stacked on unmerged TASK-0220/#285. Human approval is ne
 
 ## Owner Approval And Finalisation
 
-Owner accepted the reviewed phase-2 stack on 2026-11-02 ("Duyệt"). TASK-0221 moves to done on existing #286, rebased onto finalised #285 and squashed for Ready delivery. No Python source changes are introduced by finalisation; the inherited reviewed fetch fix is now in #285. Shared version remains 0.10.2. Earlier pending/review entries are historical. Merge and publication are not authorised; exact-head CI must pass before delivery.
+Owner accepted the reviewed phase-2 stack on 2026-11-02 ("Approve"). TASK-0221 moves to done on existing #286, rebased onto finalised #285 and squashed for Ready delivery. No Python source changes are introduced by finalisation; the inherited reviewed fetch fix is now in #285. Shared version remains 0.10.2. Earlier pending/review entries are historical. Merge and publication are not authorised; exact-head CI must pass before delivery.
 
 Finalisation rerun after restacking: complete Python SDK suite 217 passed, 8 live cases skipped (14.79 s); the isolated live cases are also required in exact-head CI. Factory validation, all-ref ID collision gate and whitespace check passed. No Python source difference from the owner-reviewed tree.

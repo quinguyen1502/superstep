@@ -1,6 +1,7 @@
 import { fireEvent, render } from '@testing-library/react-native'
 import type { ChatQuestion } from '@superstep/sdk/chat'
 import { QuestionCard } from '../src/question-card'
+import { text } from '../src/labels'
 
 function question(extra: Partial<ChatQuestion>): ChatQuestion {
   return { type: 'question', v: 1, seq: 1, ...extra }
@@ -48,6 +49,6 @@ describe('QuestionCard', () => {
 
   test('shows the reviewer wait in Vietnamese', () => {
     const view = render(<QuestionCard locale="vi" chat={{ question: question({ prompt: 'Wait' }), waiting: true, busy: false, answeredBy: 'reviewer', answer: jest.fn() }} />)
-    expect(view.getByText('Đang chờ người duyệt')).toBeTruthy()
+    expect(view.getByText(text('vi', 'waitingReviewer'))).toBeTruthy()
   })
 })

@@ -61,7 +61,7 @@ Routers call RunService for visibility; services contain no FastAPI or raw SQL a
 
 ## Design Alignment
 
-Owner approved 27 screenshot previews and explained runtime behaviour with “Ok duyệt”, authorising validation and PR preparation, not merge/release. Geometry previews match the requested direction. Findings above prevent full acceptance despite preview approval.
+Owner approved 27 screenshot previews and explained runtime behaviour with “OK, approved”, authorising validation and PR preparation, not merge/release. Geometry previews match the requested direction. Findings above prevent full acceptance despite preview approval.
 
 ## Validation Review
 

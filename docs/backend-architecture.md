@@ -1,4 +1,4 @@
-# Backend architecture (TASK-0017, DEC-0009)
+# Backend architecture
 
 ```
             HTTP / WebSocket
@@ -35,7 +35,7 @@
 - Repositories hold no rules; each method opens its own short session (safe from the run worker thread).
 - Service unit tests use in-memory fake repositories (`tests/test_services.py`).
 
-## Responses and errors (DEC-0010)
+## Responses and errors
 
 - Every REST response is the envelope `{success, data, error}`. Routes return plain data; `EnvelopeResponse` (the FastAPI default response class) wraps it.
   One exception: the LangGraph Agent Server API subset under `/api/lg` (`api/routes/agent_server.py`, see `docs/agent-server-api.md`) returns the Agent Server bodies, so the official LangGraph clients work; its errors still use the error envelope.
@@ -45,7 +45,7 @@
 ## Database
 
 - `DATABASE_URL` (SQLAlchemy URL) overrides `STUDIO_DB`; default `sqlite:///<STUDIO_DB or backend/studio.db>`. SQLite keeps WAL + 15 s busy timeout.
-- Postgres: `DATABASE_URL=postgresql://…` (normalised to `postgresql+psycopg://`; `psycopg[binary]` is a dependency). Models use portable types (Text, Float). CI runs the whole suite on Postgres 17 + Redis 7, and `tests/test_db_postgres.py` migrates a throwaway database (TASK-0009, DEC-0011).
+- Postgres: `DATABASE_URL=postgresql://…` (normalised to `postgresql+psycopg://`; `psycopg[binary]` is a dependency). Models use portable types (Text, Float). CI runs the whole suite on Postgres 17 + Redis 7, and `tests/test_db_postgres.py` migrates a throwaway database.
 - Startup runs `alembic upgrade head` programmatically (`services/seed.bootstrap`), then seeds the demo user and example workflow.
 - Revision `0001_initial` is idempotent: on a pre-Alembic SQLite file it creates only missing tables and adds `workflows.owner` if absent, then stamps the version. Existing data is untouched.
 - CLI: `cd backend && .venv/bin/alembic upgrade head`; new migration: `.venv/bin/alembic revision -m "…"` (add `--autogenerate` after editing models).
@@ -61,11 +61,11 @@
 | `importer.py`, `sandbox/runner.py` | `engine/repo_import.py`, `engine/sandbox/runner.py`, `engine/sandbox/container.py` |
 | `example.py` | `engine/examples.py` |
 
-## Import sandbox (TASK-0015)
+## Import sandbox
 
 `STUDIO_ENABLE_IMPORT` defaults off. `ImportService` then raises `IMPORT_DISABLED` (404) from `start`, `status` and `finalize`; `start_job` itself stays callable so tests can drive the engine directly. When the flag is `1`, `engine/sandbox/container.py` builds `docker run` for install, inspect and run (read-only root, the job directory only, a fresh env, memory/cpu/pid limits). `STUDIO_IMPORT_RUNTIME=subprocess` keeps the host subprocess. Git clone and zip extract stay on the host. Each job writes `job.json`; `finalize` calls `mark_kept` so cleanup does not delete a workspace a workflow still points at. The engine does not query the database.
 
-## Credentials (TASK-0005, ported from PR #2: done)
+## Credentials (ported from PR #2: done)
 
 | PR #2 piece | Goes to |
 |---|---|
@@ -78,7 +78,7 @@
 
 Secrets are encrypted in the service before they reach the repository; only `resolve()` decrypts, at run time.
 
-## Run bus (TASK-0009, DEC-0011)
+## Run bus
 
 `services/run_bus.py` defines `RunBus` (start / finish / owner / request_cancel / is_cancelled / publish / ping):
 
@@ -87,7 +87,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
 
 `RunService.execute` registers each run, publishes every event (best effort) and checks the cancel flag between steps. `POST /api/runs/{id}/cancel` → `RunService.cancel` (owner only, else `RUN_NOT_FOUND`). The bus is built once in `api/deps.get_run_bus`.
 
-## Telemetry (TASK-0010, DEC-0012)
+## Telemetry
 
 - `engine/usage.py`: price table and the usage record `{provider, model, tokens_in, tokens_out, tokens, cost_usd, estimated}`. `call_llm(..., on_usage)` reports it; `runtime.run_stream` attaches it to `node_finished.usage`. Mock runs are estimated and cost 0.
 - `services/telemetry.py`:
@@ -98,7 +98,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - `RunService.record` computes the metrics, records the trace (errors swallowed), stores both, and the socket gets a final `run_summary` event (not stored in `events`). History items carry `metrics`, `trace_id` and `trace_url`.
 - Built once in `api/deps.get_telemetry`; tests inject `InMemorySpanExporter`.
 
-## Human-in-the-loop (TASK-0006, DEC-0013)
+## Human-in-the-loop
 
 - Engine:
   - `engine/nodes.py` `human` node raises `engine.errors.Interrupt` when it has no response.
@@ -109,7 +109,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
   - `record()` stores the checkpoint while waiting and clears it when the run ends; the trace is emitted only at the end.
 - `runs.owner` (backfilled from workflows) and `runs.checkpoint` come from migration `0004_hitl`.
 
-## API triggers and the job queue (TASK-0007, DEC-0014)
+## API triggers and the job queue
 
 - `services/job_queue.py`: `JobQueue` with `enqueue` / `dequeue`. `InMemoryJobQueue` is the default; `RedisJobQueue` is a Redis list `studio:run-jobs` when `REDIS_URL` is set.
 - `services/trigger_service.py`:
@@ -123,7 +123,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
   - Started by the app lifespan when `STUDIO_WORKER` is not `0`; `app/worker.py` runs it standalone.
 - Routes: `api/routes/triggers.py` (owner, JWT) and `api/routes/hooks.py` (public, workflow token; tag `public`). The public routes also list, create, update, delete and preview that workflow's schedules; the token owner is the schedule owner. `api/openapi_public.py` builds the public-only spec from `hooks.py` (`/openapi.public.json`, `/docs/public`, `docs/api/openapi.public.json`).
 
-## Workflow versions (TASK-0008, DEC-0015)
+## Workflow versions
 
 - `models/workflow_version.py` + `repositories/workflow_versions.py`: one immutable row per version, unique `(workflow_id, version)`. Migration `0006_workflow_versions` backfills v1 for existing workflows and adds `runs.workflow_version`.
 - `WorkflowService._write` is the single write path (save, rename, duplicate, import, seed, restore). It writes the workflow and then a new version only when the stored JSON changed.
@@ -133,16 +133,16 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - `RunService.plan` tags a run with the latest version when the workflow it runs has the same content as that version, otherwise `NULL` (unsaved edits). A resume or cancel keeps the original tag.
 - Routes live in `api/routes/workflows.py`: `/versions`, `/versions/diff`, `/versions/{n}`, `/versions/{n}/restore`.
 
-## Phase-2 hardening (TASK-0019, DEC-0016)
+## Phase-2 hardening
 
 - `services/webhooks.py` handles result webhooks:
   - `resolve` (SSRF check + single DNS resolution), `pinned_request` (connect to the IP, keep Host/SNI);
   - `sign` / `verify_signature` (HMAC-SHA256 over `"<ts>.<body>"`) and `deliver`.
 - `services/rate_limit.py`: fixed-window `RateLimiter`. It uses Redis (async client) when `REDIS_URL` is set and memory otherwise. Called by `TriggerService.check_rate`.
-- `services/redis_async.py`: one `redis.asyncio` client per event loop. Used by `RedisRunBus.astart/apublish` and the Redis rate limiter. `finish` runs on a worker thread (TASK-0060).
+- `services/redis_async.py`: one `redis.asyncio` client per event loop. Used by `RedisRunBus.astart/apublish` and the Redis rate limiter. `finish` runs on a worker thread.
 - `services/job_queue.py`, `RedisJobQueue`:
   - `dequeue` = BLMOVE into `studio:run-jobs:processing:<worker>`; `ack` = LREM;
-  - `heartbeat` = `studio:worker:<id>` with a TTL; `recover_stale` requeues dead workers' jobs as `recovered`. *(Replaced by leases + reaper in TASK-0020.)*
+  - `heartbeat` = `studio:worker:<id>` with a TTL; `recover_stale` requeues dead workers' jobs as `recovered`. *(Replaced by leases + reaper in the deferred hardening below.)*
   - `RunWorker` acks after `run_job` and re-executes `running` jobs only when they are `recovered`.
 - `RunService`:
   - `expire_waiting` (sweep in the app lifespan every 60 s, plus lazy checks in `waiting_run` and `pending`), status `expired`;
@@ -153,7 +153,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - `telemetry.disable_langchain_tracer()` is called when our LangSmith exporter is configured.
 - Migration `0007_hardening`: `workflow_tokens.signing_secret` (Fernet-encrypted).
 
-## Deferred hardening (TASK-0020, DEC-0017)
+## Deferred hardening
 
 - `NotificationService` (+ `NotificationRepository`, route `api/routes/notifications.py`): `run_event` stores a row, then sends SMTP e-mail and the notify webhook in a background thread. Called from `RunService.record` on waiting/expired.
 - `DeliveryService` (+ `WebhookDeliveryRepository`): `create` stores and enqueues a `delivery` job; `attempt` uses `webhooks.post` -> `Attempt(ok, code, latency_ms, error, retryable)` and re-enqueues with `backoff(n)` via `JobQueue.enqueue_at`; `redeliver` resets attempts.
@@ -163,7 +163,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - `Telemetry`: `start_run` / `node` / `end_run` export spans live (`RunSpan`); segments parented through the checkpoint's `trace`; optional `MeterProvider` metrics.
 - Migration `0008_notifications_deliveries`: `notifications`, `webhook_deliveries`, `workflow_tokens.signing_secret_prev` / `secret_rotated`.
 
-## Effectively-once execution (TASK-0021, DEC-0018)
+## Effectively-once execution
 
 - `engine/effects.py`: `Effects(run_id, attempt, ledger, guard)` wraps LLM/Tool nodes: ledger hit -> reuse; else guard (fencing) -> run -> record. `idempotency_key(run, node, iteration)`; HTTP Tool nodes send `Idempotency-Key`, `X-Studio-Run-Id`, `X-Studio-Attempt`; `call_tool` passes `idempotency_key` to tools that declare it.
 - `engine/runtime.run_stream`: compiled with an in-memory LangGraph saver; `stream_mode=["updates", "checkpoints"]` gives superstep boundaries -> `node_started` events and `_checkpoint {node, nodes, state, counts}`. `compile_workflow(entry=[...])` resumes at several nodes.
@@ -174,7 +174,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - `NotificationHub` (`services/notification_hub.py`) + WebSocket `/ws/notifications`; `NotificationService.preferences/set_preferences`, `email_text/email_html`.
 - Migration `0009_effectively_once`: `node_results`, `runs.lease_gen`, `users.notify_in_app/notify_email`.
 
-### Live workflow run history (TASK-0256)
+### Live workflow run history
 
 - `RunService.history_changed` publishes a lightweight invalidation after existing progress/terminal writes through the same NotificationHub (Redis across processes; memory in single-process development). It does not create bell notifications or carry run content.
 - Socket chat runs also persist capped display snapshots at run start/resume and node boundaries, excluding token deltas. Their `live_history` marker is not a recovery checkpoint: memory startup cancels orphan socket snapshots rather than replaying side effects. Ordinary editor/ad-hoc runs retain their existing persistence behaviour; queued jobs retain their existing fenced progress/checkpoint path. Waiting/terminal persistence replaces the display marker with the normal checkpoint/result.
@@ -182,7 +182,7 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - Observer receive/push/heartbeat tasks share an AnyIO task group tied to the ASGI lifetime; PubSub connection cleanup is shielded from cancellation and does not leave detached subscriptions.
 - Studio reads snapshots through the existing `/api/workflows/{wid}/runs` envelope API after an invalidation, reconnect or focus, with a disconnected polling fallback. The current chat socket additionally updates its own run immediately. Selected runs remain selected and update their persisted traces; workflow switches and stale responses are guarded. No migration or expanded history permission.
 
-## LLM providers (TASK-0030, DEC-0032)
+## LLM providers
 
 `engine/providers.py` is the provider registry (one strategy class per provider: defaults, model listing, LangChain chat model). `engine/llm.py` dispatches LLM nodes to it; `services/credential_service.py` uses it for validation, model lists and connection tests. Engine failures are `ProviderError(code)` and become `AppError` in the service.
 

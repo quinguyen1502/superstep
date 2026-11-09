@@ -14,8 +14,7 @@
 
 ## Objective
 
-The canvas shows the run that is open in the Run panel. From the owner's screenshot on 2026-10-27 ("Tại sao node
-"End" ko thấy mark done"): a Supervisor that called a workflow tool finished, the trace listed End, but the End node
+The canvas shows the run that is open in the Run panel. From the owner's screenshot on 2026-10-27 ("Why doesn't the "End" node show as done"): a Supervisor that called a workflow tool finished, the trace listed End, but the End node
 on the canvas had no "done" badge.
 
 Cause: the canvas marks came only from the live socket. A parent run waits for its workflow tool's child (TASK-0134),
@@ -90,8 +89,7 @@ steps after the wait never marked the canvas. Opening an older run also left the
 
 ## Activity Log
 
-- 2026-10-27: asked for by the owner ("Sửa đi: canvas tô trạng thái từ events của run khi mở run, dùng chung với
-  luồng live") and fixed on `factory/task-0147-canvas-run-status`.
+- 2026-10-27: asked for by the owner ("Fix it: the canvas colours the status from the run's events when a run is opened, shared with the live stream") and fixed on `factory/task-0147-canvas-run-status`.
 - 2026-10-27: merged into develop (PR #198) with the owner's approval; moved to done in TASK-0148's PR, which
   makes this move part of the task PR from now on.
 

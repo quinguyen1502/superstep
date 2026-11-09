@@ -1,8 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vt } from './catalog'
 
 async function loginAdmin(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
 }
 const LOOP = {

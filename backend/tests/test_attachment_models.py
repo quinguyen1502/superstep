@@ -11,6 +11,7 @@ from app.engine.runtime import run_stream
 from app.engine.validator import validate
 from tests.chat_files import PNG
 from tests.test_python_export import E, F, N, same_run
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 PDF_REC = {"id": "a1", "name": "invoice.pdf", "type": "application/pdf", "size": 900, "text": "Invoice 42 total 99 USD", "text_cut": False}
 IMG_REC = {"id": "a2", "name": "shot.png", "type": "image/png", "size": len(PNG)}
@@ -79,7 +80,7 @@ def test_the_mock_names_both_files_and_a_node_without_the_setting_gets_none():
     assert "Attachments" not in mock_run(wf("llm", include=False), inp)
     assert mock_run(wf("agent"), {"message": "hello", "files": FILES}).endswith("Attachments: document invoice.pdf, image shot.png")
     assert "Attachments" not in mock_run(wf("agent", include=False), {"message": "hello", "files": FILES})
-    assert llm.call_llm("Hi", "m", None, mock=True, locale="vi", files=FILES).endswith("Tệp đính kèm: tài liệu invoice.pdf, ảnh shot.png")
+    assert llm.call_llm("Hi", "m", None, mock=True, locale="vi", files=FILES).endswith("{heading}: {document} invoice.pdf, {image} shot.png".format(**vi_text("vi", "attachments")))
 
 
 def test_the_validator_checks_the_attachments_field():

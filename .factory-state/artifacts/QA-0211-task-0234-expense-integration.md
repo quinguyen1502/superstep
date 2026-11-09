@@ -43,7 +43,7 @@ Reviewed the graph layout, input, successful node states and confirmed output on
 - Providers are synthetic: backend transport doubles and browser Google/model fixture plus local Telegram HTTP API. No live bot, spreadsheet, paid model, real service key or cutover was used.
 - Local Code subprocess executes the reviewed template; production uses the documented Docker/remote isolation. Google initially uses service-account auth.
 - Keep the operation-id column, remain below the 100,000-row lookup bound and reconcile uncertain sends manually. New runs create new keys and must not bypass uncertainty.
-- n8n deduplication history is not migrated. Pause/drain/reconcile before switching the single Telegram webhook. “Chờ duyệt” is a row status, not an approval process.
+- n8n deduplication history is not migrated. Pause/drain/reconcile before switching the single Telegram webhook. “Pending approval” is a row status, not an approval process.
 - Optional PostgreSQL/Redis/S3/Docker landing checks depend on integration CI after stack retargeting; local verification uses repository defaults.
 
 ## QA Decision

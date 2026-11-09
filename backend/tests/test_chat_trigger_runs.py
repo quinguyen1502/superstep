@@ -9,6 +9,7 @@ from app.models import ChannelIdentity, Run
 from app.repositories import UserRepository, WorkflowRepository
 from app.services.approval_channels import ADAPTERS
 from tests.test_hitl import APPROVAL
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 SIGNING = "0123456789abcdef0123456789abcdef"
 TG = {"bot_token": "123456:AAbbCCddEEffGGhhIIjjKKll", "webhook_secret": "tg-secret-0123456789abcdef"}
@@ -148,7 +149,7 @@ def test_refusals_are_private_in_the_senders_language_and_audited(c, api, monkey
         assert (p["user"], p["channel"], p["thread_ts"]) == (user, "C0HR", "1700.1") and want in p["text"], p["text"]
     refused("echo hi", "U9", "Link your Slack account")
     refused("echo hi", "U3", "Verify your Slack account")
-    refused("echo hi", "U2", "Bạn không có quyền chạy workflow này")  # not shared with them; their language
+    refused("echo hi", "U2", vi_text("vi", "channels.CHAT_FORBIDDEN"))  # not shared with them; their language
     monkeypatch.setenv("STUDIO_INPUT_MAX_BYTES", "50")
     refused("echo " + "x" * 80, "U1", "too long")
     monkeypatch.delenv("STUDIO_INPUT_MAX_BYTES")

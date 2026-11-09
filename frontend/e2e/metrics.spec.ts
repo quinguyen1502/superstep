@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test'
+import { vt } from './catalog'
 // per-run metrics in the live timeline and in history (mock mode: estimated tokens, $0, no trace link).
 test('run metrics: tokens, cost and history', async ({ page }) => {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   await page.goto('/workflows/example'); await page.locator('#run-btn').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })

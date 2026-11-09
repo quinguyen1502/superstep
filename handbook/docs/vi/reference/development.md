@@ -13,7 +13,7 @@
 | `scripts/` | Smoke test cho Compose, công cụ render video bắt đầu nhanh |
 | `docs/` | Danh mục lỗi, kiến trúc backend và quy ước UI |
 | `.env.example` | Mọi biến cho Compose và lúc chạy |
-| `.factory/`, `.factory-state/` | Quy trình giao việc: requirement, decision, task, review và QA |
+| `.factory/` | Quy trình giao việc và kho của nó: requirement, decision, task, review và QA |
 
 ## Test
 
@@ -101,7 +101,7 @@ cùng một đoạn nhạc tự tổng hợp. Xem `scripts/promo/README.md`.
 ## Quy trình đóng góp
 
 Công việc theo AI Software Factory trong `.factory/` (xem `AGENTS.md`):
-requirement, decision và task nằm trong `.factory-state/`, mỗi task có một
+requirement, decision và task nằm trong kho của factory, mỗi task có một
 branch `factory/task-<id>-<name>`, và merge cần người duyệt. Thay đổi backend
 giữ đúng các lớp; thay đổi schema đi qua Alembic; mã lỗi mới thêm vào danh mục,
 `docs/api-errors.md` và cả hai file ngôn ngữ; chuỗi giao diện thêm vào cả hai

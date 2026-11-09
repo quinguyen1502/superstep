@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
-- Source: owner request in chat, 2026-10-25 ("Tạo tài liệu so sánh với n8n, dify, crewai, pydanticai").
+- Source: owner request in chat, 2026-10-25 ("Write a comparison document with n8n, dify, crewai, pydanticai").
 
 ## Summary
 

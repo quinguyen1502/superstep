@@ -15,8 +15,8 @@
 
 ## Objective
 
-Show the workflow check messages in the UI language (owner request in chat on 2026-10-26: "Cả 2 lần lượt", the first
-of two). REV-0114 found that a Vietnamese editor listed them in English, for example "1 lỗi cần sửa" over "Retriever
+Show the workflow check messages in the UI language (owner request in chat on 2026-10-26: "Both, one after the other", the first
+of two). REV-0114 found that a Vietnamese editor listed them in English, for example "1 error to fix" over "Retriever
 node retrieve: choose a knowledge base".
 
 ## Scope
@@ -33,7 +33,7 @@ node retrieve: choose a knowledge base".
 
 ## Acceptance Criteria
 
-- In Vietnamese, a workflow made from the RAG template lists "Node Retriever retrieve: hãy chọn kho tri thức".
+- In Vietnamese, a workflow made from the RAG template lists "Retriever node retrieve: choose a knowledge base" (in vi).
 - A run of an invalid workflow lists its problems in Vietnamese.
 - `errors` is unchanged for API clients; `issues` has one entry per message, in the same order.
 - `en.json` equals the backend's English messages, and `vi.json` has the same keys and follows the glossary.

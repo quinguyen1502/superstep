@@ -29,7 +29,7 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: backend/pyproject.toml
-      - name: Install Deno (TypeScript Code nodes, TASK-0080)
+      - name: Install Deno (TypeScript Code nodes)
         uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
@@ -73,7 +73,7 @@ jobs:
     name: Attachment storage on MinIO (s3 backend)
     runs-on: ubuntu-latest
     services:
-      minio:  # S3-compatible storage for the s3 attachment backend's contract tests (TASK-0193, REQ-0080)
+      minio:  # S3-compatible storage for the s3 attachment backend's contract tests
         image: bitnamilegacy/minio:2025.7.23-debian-12-r5
         env: { MINIO_ROOT_USER: minio-ci, MINIO_ROOT_PASSWORD: minio-ci-password, MINIO_DEFAULT_BUCKETS: superstep-ci }
         ports: ["9000:9000"]
@@ -154,7 +154,7 @@ jobs:
         run: npm ci && npm test
 
   e2e:
-    # The Playwright suite (en and vi) on every pull request and push (TASK-0199). Three shards keep each job near
+    # The Playwright suite (en and vi) on every pull request and push. Three shards keep each job near
     # five minutes; a shard starts its own backend, Vite, mock chat API and SMTP sink (playwright.config.ts).
     name: E2E (Playwright, shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
@@ -233,7 +233,7 @@ jobs:
           cache-dependency-path: backend/pyproject.toml
       - run: docker build -t studio-code:1 ../docker/studio-code && docker build -t studio-code-ts:1 ../docker/studio-code-ts
       - run: python -m pip install -e ".[dev]"
-      - name: Docker-runtime Code tests (TASK-0053, TASK-0080)
+      - name: Docker-runtime Code tests
         run: python -m pytest -q tests/test_code_node.py tests/test_code_typescript.py -rs
 
   sdk-python:

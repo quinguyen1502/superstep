@@ -18,9 +18,8 @@
 
 ## Problem Or Opportunity
 
-- The review (2026-10-23) found three words for "run" ("run", "lượt chạy", "lần chạy"), "nút" for nodes (which also
-  means button), "field"/"trường", "key"/"khoá", "credential"/"thông tin xác thực", "e-mail"/"email", old and new
-  tone marks mixed, about 25 untranslated labels, a hint that names a button that does not exist ("Nhấn Run"), an
+- The review (2026-10-23) found three different Vietnamese words for "run", the Vietnamese word for button used for nodes, mixed English and Vietnamese words for "field", "key" and "credential", both "e-mail" and "email", old and new
+  tone marks mixed, about 25 untranslated labels, a hint that names a button that does not exist ("Press Run"), an
   English trace summary, three hard-coded English strings, and README feature lists missing templates, tests, Python
   export and the approvals inbox and deadlines.
 

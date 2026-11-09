@@ -1,6 +1,6 @@
 # Browser and web connection settings
 
-TASK-0249 / REQ-0086. Use Settings → MCP servers → Add server → Managed
+Use Settings → MCP servers → Add server → Managed
 connection. `STUDIO_ENABLE_BROWSER` defaults on; set it to `0` to hide the
 browser/web adapters. The independent browser runtime gate remains off by
 default; discovering tools does not launch a browser or attest a remote service.
@@ -43,4 +43,4 @@ returns an empty list. Search/fetch network policy still applies to actual reque
 The existing Settings inline cards remain the only management surface. Controls,
 linked errors and help are available in English/Vietnamese with keyboard access,
 light/dark themes and stacked narrow layout. Screenshot and node/recipe/trace
-configuration are covered by TASK-0250; exports by TASK-0251/0252.
+configuration are covered by the [editor](browser-editor.md); exports are documented separately.

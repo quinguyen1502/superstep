@@ -25,8 +25,12 @@ class Export:
     filename: str = "workflow.py"
 
 
+# NFKD does not decompose the stroked d (U+0111, U+0110), so map it to a plain d before dropping combining marks.
+_STROKED_D = str.maketrans({0x0111: "d", 0x0110: "D"})
+
+
 def slug(text: str, fallback: str = "node") -> str:
-    s = unicodedata.normalize("NFKD", str(text or "").replace("đ", "d").replace("Đ", "D"))
+    s = unicodedata.normalize("NFKD", str(text or "").translate(_STROKED_D))
     s = re.sub(r"[^a-z0-9]+", "_", "".join(c for c in s if not unicodedata.combining(c)).lower()).strip("_")
     if not s: s = fallback
     return f"{fallback}_{s}" if s[0].isdigit() else s

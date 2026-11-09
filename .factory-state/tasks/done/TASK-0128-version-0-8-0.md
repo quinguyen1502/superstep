@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0128
 - Status: done
-- 2026-10-26: released with the owner's approval ("Merge và bump version đi"):
+- 2026-10-26: released with the owner's approval ("Merge and bump the version"):
   - #164 (TASK-0127 to done) merged into develop (aee59a2);
   - #165 (version bump) merged into develop (05ea1c2);
   - #166 (release, develop -> main) merged (f3834ce), with CI 31 passed and 2 skipped;
@@ -19,7 +19,7 @@
 
 ## Objective
 
-Version 0.8.0 (owner request in chat, 2026-10-26: "Merge và bump version đi"), the same way as 0.7.0 (TASK-0124):
+Version 0.8.0 (owner request in chat, 2026-10-26: "Merge and bump the version"), the same way as 0.7.0 (TASK-0124):
 - bump `backend/pyproject.toml`, `frontend/package.json` and `frontend/package-lock.json` to 0.8.0;
 - turn `## Unreleased` in CHANGELOG.md into `## 0.8.0 (2026-10-26)`;
 - then a release PR develop -> main, the tag v0.8.0 and a GitHub Release.
@@ -27,7 +27,7 @@ Version 0.8.0 (owner request in chat, 2026-10-26: "Merge và bump version đi"),
 ## Contents Of 0.8.0
 
 - Agent nodes in the TypeScript export (#158).
-- Templates say what they still need, "Hàm" label, "1 error to fix" (#160).
+- Templates say what they still need, vi "Function" label, "1 error to fix" (#160).
 - An answer accepted just before a restart is not lost (#163, migration 0039).
 - SDKs and the public API contract are unchanged: no SDK release.
 
@@ -46,6 +46,6 @@ Version 0.8.0 (owner request in chat, 2026-10-26: "Merge và bump version đi"),
 
 ## Review And QA
 
-- Review: the owner approved the release in chat ("Merge và bump version đi"). No separate REV artifact.
+- Review: the owner approved the release in chat ("Merge and bump the version"). No separate REV artifact.
 - QA: the CI results above, and the Image workflow on the tag. No separate QA artifact.
 - Added by TASK-0129 on 2026-10-26: `factory validate` reported the task without these references.

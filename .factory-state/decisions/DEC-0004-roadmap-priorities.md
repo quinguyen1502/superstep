@@ -12,7 +12,7 @@
 - Related Architecture: ARCH-0001
 - Related Tasks: TASK-0002, TASK-0005 (old TASK-0003), TASK-0015 (old TASK-0004)
 
-> Superseded by DEC-0007: phased re-plan and task renumbering. Task IDs below are the **old** IDs; see `docs/factory-task-renumbering.md`.
+> Superseded by DEC-0007: phased re-plan and task renumbering. Task IDs below are the **old** IDs; see the Renumbering Map in DEC-0007.
 
 ## Context
 

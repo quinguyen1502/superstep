@@ -32,7 +32,7 @@ Make factory metadata honest: record the missing TASK-0253 review, give the late
 
 ## Activity Log
 
-- 2026-11-07: Planned on PLAN-0009 after the owner said "Làm đi".
+- 2026-11-07: Planned on PLAN-0009 after the owner said "Do it".
 - 2026-11-07: PR #333 merged (`bbbd23b2`). Review REV-0258. QA QA-0258. Status done. Not merged.
 - 2026-11-07: `factory validate` passed on this worktree after linking the gitignored virtualenv and `node_modules`. Warnings only: lockfile drift, and no non-discovery task in todo with acceptance criteria. The TASK-0253 missing-review error is gone. `factory verify` is left to CI because the local virtualenv is x86_64.
 

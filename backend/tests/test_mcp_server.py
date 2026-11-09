@@ -98,5 +98,5 @@ def test_opt_in_and_auth(base):
 
 
 def test_tool_name():
-    assert tool_name("Refund approval (v2)") == "run_refund_approval_v2" and tool_name("") == "run_workflow" and tool_name("Đơn") == "run_n"
+    assert tool_name("Refund approval (v2)") == "run_refund_approval_v2" and tool_name("") == "run_workflow" and tool_name("Café") == "run_caf"
     assert len(tool_name("x" * 200)) == 64

@@ -22,6 +22,7 @@ from .browser_export import export_binding
 from .browser_export_ts import TS_RUNTIME
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .export_runtime import TS_APPROVAL, TS_MANAGED
+from .llm import CLASSIFY
 from .templating import VAR_RE, _ONE_FILTER, refs
 
 LANGGRAPH = "npm:@langchain/langgraph@^1.5"
@@ -215,10 +216,10 @@ const LLM_PROVIDER = env("LLM_PROVIDER");
 /** Offline answers: a category for classification prompts, else the last line of the prompt echoed back. */
 function mockLlm(prompt: string, model: string): string {
   const p = prompt.toLowerCase();
-  if (p.includes("classify") || p.includes("phân loại")) {
+  if (%(markers)s.some((k) => p.includes(k))) {
     const msg = p.includes("message:") ? p.split("message:").at(-1)! : p;
-    if (["order", "đơn", "giao hàng", "ship", "a100", "b200", "c300"].some((k) => msg.includes(k))) return "order_status";
-    if (["refund", "hoàn tiền", "return"].some((k) => msg.includes(k))) return "refund";
+    if (%(order)s.some((k) => msg.includes(k))) return "order_status";
+    if (%(refund)s.some((k) => msg.includes(k))) return "refund";
     return "general";
   }
   const tail = prompt.trim() ? prompt.trim().split(/\r?\n/).at(-1)! : "";
@@ -251,7 +252,7 @@ async function callLlm(prompt: string, model: string, provider?: string, slot?: 
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
-''' % {"langchain": LANGCHAIN}
+''' % {"langchain": LANGCHAIN, **{part: json.dumps(words, ensure_ascii=False) for part, words in CLASSIFY.items()}}  # mock words: app/locales
 
 
 FALLBACK = r'''

@@ -88,7 +88,7 @@ Ship `@superstep/react-native` with `useChat` and basic native components, and a
 
 - 2026-11-03: Owner temporarily deferred this task and prioritised TASK-0229/0230 for 0.11.0. Remain in backlog, outside that release; resume only on owner request. This is deferral, not cancellation or completion. See PLAN-0002 and proposed DEC-0084.
 
-- 2026-11-08: Owner resumed this task ("triển khai 227"). REQ-0082 and DEC-0077 to DEC-0080 were already Accepted on 2026-10-31, so the move-to-todo assumption holds. Moved from backlog to todo on `factory/task-0227-react-native-package` from `origin/develop` `5624aa7c`. Historical deferral notes stay as written.
+- 2026-11-08: Owner resumed this task ("build 227"). REQ-0082 and DEC-0077 to DEC-0080 were already Accepted on 2026-10-31, so the move-to-todo assumption holds. Moved from backlog to todo on `factory/task-0227-react-native-package` from `origin/develop` `5624aa7c`. Historical deferral notes stay as written.
 
 - 2026-10-31: proposed in PLAN-0002 from REQ-0082. Status backlog until the owner approves the plan.
 

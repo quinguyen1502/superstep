@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: owner request 2026-10-18, “add note block trên flowchart.”
+- Source: owner request 2026-10-18, “add a note block on the flowchart.”
 
 ## Summary
 

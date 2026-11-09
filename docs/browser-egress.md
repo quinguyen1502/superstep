@@ -1,6 +1,6 @@
 # Browser egress boundary
 
-TASK-0242 / REQ-0086 / ARCH-0002 / DEC-0085. This task supplies the guarded
+This layer supplies the guarded
 gateway and disposable proof harness. Product browser execution remains
 unavailable until the runtime/session/approval tasks integrate these controls.
 
@@ -72,7 +72,7 @@ Arbitrary third-party proxies/CDP services are not verified by these fixtures.
 Only operator-controlled/proven numeric-CONNECT paths are eligible. A proxy that
 cannot enforce the destination boundary is unsupported; an operator approval
 entry alone is not proof of provider behavior. Remote provider attestation and
-rejection of unprovable combinations belong to TASK-0244.
+rejection of unprovable combinations belong to the [remote layer](browser-remote.md).
 
 ## Reproduce the isolated fixture
 
@@ -112,7 +112,7 @@ to image digest `sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff
 The Python fixture gateway uses stdlib only and the project's existing Python 3.12
 baseline. These are fixture dependencies, not an approved production browser image.
 Playwright explicitly describes its published image as intended for testing and
-development. TASK-0243 must review/pin the production worker separately.
+development. The production worker is reviewed and pinned separately ([runtime](browser-runtime.md)).
 
 The included seccomp profile derives from Microsoft Playwright v1.64.1's Docker
 profile (Apache-2.0; license beside the profile). Original SHA-256:
@@ -127,11 +127,11 @@ Primary references: [Docker network isolation](https://docs.docker.com/reference
 [Playwright Docker guidance](https://playwright.dev/docs/docker),
 [upstream seccomp profile](https://github.com/microsoft/playwright/blob/v1.64.1/utils/docker/seccomp_profile.json).
 
-## Origin whitelist (Accepted DEC-0085)
+## Origin whitelist
 
 Page destinations require a **non-empty** connection origin whitelist. An empty
 allowlist is rejected when constructing `DestinationPolicy` (and earlier at the
-connection settings layer in TASK-0241). Off-whitelist hosts, including redirects
+connection settings layer). Off-whitelist hosts, including redirects
 and subresources that surface through the gateway, are denied. Infrastructure
 dials (operator-approved proxies) use `infrastructure=True` and do not expand the
 page whitelist.

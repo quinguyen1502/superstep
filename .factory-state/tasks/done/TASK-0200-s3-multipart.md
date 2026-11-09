@@ -14,7 +14,7 @@
 
 ## Objective
 
-Stream S3 attachment uploads in parts. Uploads are read in pieces with the size check kept, and the s3 backend uploads large files as multipart, aborting on failure. The owner asked for this before v0.10.1 ("Làm cả 4 việc rồi mới release").
+Stream S3 attachment uploads in parts. Uploads are read in pieces with the size check kept, and the s3 backend uploads large files as multipart, aborting on failure. The owner asked for this before v0.10.1 ("Do all 4 items, then release").
 
 ## Scope
 
@@ -50,5 +50,5 @@ Stream S3 attachment uploads in parts. Uploads are read in pieces with the size 
 ## Activity Log
 
 - 2026-10-31: created from the owner's v0.10.1 follow-up list.
-- 2026-10-31: implemented on `factory/task-0200-s3-multipart` from `develop`. S3 uploads above STUDIO_ATTACHMENT_S3_MULTIPART_MB (default 8) use explicit multipart with abort on failure; uploads are read in 1 MB pieces into a spooled file with the ceiling enforced while reading. `factory verify run --profile full` passed. The owner asked for these follow-ups before v0.10.1 ('Làm cả 4 việc rồi mới release'). Moved to done on this PR before the merge (TASK-0148).
+- 2026-10-31: implemented on `factory/task-0200-s3-multipart` from `develop`. S3 uploads above STUDIO_ATTACHMENT_S3_MULTIPART_MB (default 8) use explicit multipart with abort on failure; uploads are read in 1 MB pieces into a spooled file with the ceiling enforced while reading. `factory verify run --profile full` passed. The owner asked for these follow-ups before v0.10.1 ('Do all 4 items, then release'). Moved to done on this PR before the merge (TASK-0148).
 - Review: `.factory-state/artifacts/REV-0188-task-0200.md`. QA: `.factory-state/artifacts/QA-0188-task-0200.md`.

@@ -1,9 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
 import { confirmDelete } from './confirm'
+import { vt } from './catalog'
 // teams + team share, ownership transfer, activity log, delete user with reassignment, org-resource policy, dependents on delete.
 async function login(page: Page, email = 'admin@example.com', password = 'admin123') {
-  await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
+  await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel(vt('auth.password'), { exact: true }).fill(password)
   await page.locator('#auth-submit').click(); await expect(page).toHaveURL(/\/workflows$/)
   return { Authorization: `Bearer ${await apiToken(page, email, password)}` }
 }
@@ -23,7 +24,7 @@ test('team share, transfer, activity log and delete user with reassignment', asy
   // team with a member
   await page.goto('/settings/teams'); await page.locator('#team-new-name').fill(`Ops ${stamp}`); await page.locator('#team-create').click()
   const card = page.locator('[data-testid^="team-card-"]', { hasText: `Ops ${stamp}` })
-  await card.getByLabel('Email thành viên').fill(member); await card.getByRole('button', { name: 'Thêm' }).click()
+  await card.getByLabel(vt('teams.memberEmail')).fill(member); await card.getByRole('button', { name: 'Thêm' }).click()
   await expect(card).toContainText(member)
   // share a workflow with the team from the editor
   const name = `Team wf ${stamp}`
@@ -41,20 +42,20 @@ test('team share, transfer, activity log and delete user with reassignment', asy
   await expect.poll(async () => (await (await page.request.get(`/api/workflows/${wid}/shares`, { headers: auth })).json()).data.owner?.email ?? '').toBe(heir)
   // activity log shows team, share and transfer entries; filter by category
   await page.goto('/settings/activity'); await expect(page.locator('#activity-table')).toContainText(`Ops ${stamp}`)
-  await expect(page.locator('#activity-table')).toContainText('Chuyển quyền sở hữu')
+  await expect(page.locator('#activity-table')).toContainText(vt('activity.actions.workflow_transfer'))
   // delete heir: owns a workflow, must reassign back to admin
   await page.goto('/settings/users'); const row = page.locator(`.user-row[data-email="${heir}"]`)
-  await row.getByRole('button', { name: `Xoá ${heir}` }).click()
+  await row.getByRole('button', { name: vt('users.deleteFor', { email: heir }) }).click()
   await page.locator('#delete-reassign').fill('admin@example.com'); await confirmDelete(page, heir)
   await expect(page.locator('#users-notice')).toContainText(heir); await expect(row).toHaveCount(0)
   const w = await (await page.request.get(`/api/workflows/${wid}`, { headers: auth })).json(); expect(w.data.id).toBe(wid)
   // remove the member, stop the team share, then delete the team — each asks for the name
-  await page.goto('/settings/teams'); await card.getByRole('button', { name: `Gỡ ${member}` }).click(); await confirmDelete(page, member)
+  await page.goto('/settings/teams'); await card.getByRole('button', { name: vt('teams.removeMember', { email: member }) }).click(); await confirmDelete(page, member)
   await expect(card).not.toContainText(member)
   await page.goto(`/workflows/${wid}`); await page.locator('#more-btn').click(); await page.locator('#share-btn').click()
-  await page.locator('#share-list').getByRole('button', { name: `Ngừng chia sẻ với Ops ${stamp}` }).click(); await confirmDelete(page, `Ops ${stamp}`)
+  await page.locator('#share-list').getByRole('button', { name: vt('share.remove', { email: `Ops ${stamp}` }) }).click(); await confirmDelete(page, `Ops ${stamp}`)
   await expect(page.locator('#share-list')).not.toContainText(`Ops ${stamp}`); await page.keyboard.press('Escape')
-  await page.goto('/settings/teams'); await card.getByRole('button', { name: `Xoá nhóm Ops ${stamp}` }).click(); await confirmDelete(page, `Ops ${stamp}`)
+  await page.goto('/settings/teams'); await card.getByRole('button', { name: vt('teams.delete', { name: `Ops ${stamp}` }) }).click(); await confirmDelete(page, `Ops ${stamp}`)
   await expect(card).toHaveCount(0)
 })
 
@@ -84,7 +85,7 @@ test('org-resource policy and delete warning with dependents', async ({ page }) 
   await page.request.post('/api/workflows', { headers: auth, data: WF(`Parent ${stamp}`, [N('sub', 'subgraph', 300, { workflow_id: child })]) })
   await page.goto('/workflows'); await page.locator('#wf-search').fill(`Child ${stamp}`)
   const row = page.getByRole('row', { name: new RegExp(`Child ${stamp}`) })
-  await row.getByRole('button').last().click(); await page.getByRole('menuitem', { name: 'Xoá' }).click()
+  await row.getByRole('button').last().click(); await page.getByRole('menuitem', { name: vt('common.delete') }).click()
   await expect(page.locator('#delete-dependents')).toContainText(`Parent ${stamp}`)
   await confirmDelete(page, `Child ${stamp}`); await expect(page.locator('#wf-no-results')).toBeVisible()
 })

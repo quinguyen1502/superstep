@@ -28,7 +28,7 @@ PaaS deploy phase 3: remote sandbox service for Code nodes.
 - **No network by default:**
 - **Image:** `docker/studio-sandbox/Dockerfile` contains only the Code runtime modules, httpx, pydantic/dateutil, and Deno with the cached allowlist. It is published as `ghcr.io/quinguyen1502/superstep-sandbox` through the same workflow (publish matrix) and scanned by Trivy.
 - **Wiring:**
-- **UI:** a "Sandbox service (remote)" / "Dịch vụ sandbox (remote)" runtime label, and a success badge when the service is available. These are small hunks, away from the #117 changes.
+- **UI:** a "Sandbox service (remote)" (and its vi label) runtime label, and a success badge when the service is available. These are small hunks, away from the #117 changes.
 - **Docs:** `docs/deploy/sandbox(.vi).md` gives an honest security model: process isolation, not container or VM isolation; the Python block is an in-interpreter guard; Render and Fly private services still have egress; Docker on your own server remains stronger. Fly Machines and Northflank sandboxes are mentioned only as possible future backends. The env var reference and `.env.example` are updated.
 - **Tests:**
 

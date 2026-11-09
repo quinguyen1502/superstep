@@ -44,7 +44,7 @@
 ## Design Alignment
 
 - Signed-in and signed-out pages in scope show one line. The editor canvas and `/c/:slug` do not.
-- The line matches the handbook order: Superstep, Qui Nguyen, then the year. Vietnamese prefixes `Bản quyền`.
+- The line matches the handbook order: Superstep, Qui Nguyen, then the year. Vietnamese prefixes `Copyright`.
 
 ## Validation Review
 

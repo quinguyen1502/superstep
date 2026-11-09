@@ -51,8 +51,8 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
       name: 'Expense intake', channel_id: channel.id, place: chatId, event: { senders: ['42'], type: 'message.text', mapping: { message: 'data.text', context: '$' } },
     } })
     expect(binding.ok()).toBeTruthy()
-    const event = { update_id: Date.now(), message: { message_id: 101, date: 1793557800, from: { id: 42, first_name: 'Nhân viên mẫu' },
-      chat: { id: Number(chatId), type: 'supergroup' }, text: 'Ăn trưa 50000 ngày 2026-10-31' } }
+    const event = { update_id: Date.now(), message: { message_id: 101, date: 1793557800, from: { id: 42, first_name: 'Sample employee' },
+      chat: { id: Number(chatId), type: 'supergroup' }, text: 'Lunch 50000 on 2026-10-31' } }
     const send = () => page.request.post(channel.callback_path, { data: event, headers: { 'X-Telegram-Bot-Api-Secret-Token': 'fixture-expense-webhook-secret' } })
     expect((await (await send()).json()).data.outcome).toBe('queued')
     let run: any
@@ -63,7 +63,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     expect((await (await send()).json()).data.outcome).toBe('duplicate')
     const rows = (await (await page.request.get('/api/_expense-fixture')).json()).data.rows[spreadsheet]
     expect(rows).toHaveLength(1)
-    expect(rows[0].values.slice(0, 6)).toEqual(['2026-10-31', 'Nhân viên mẫu', 'Ăn trưa', 'Ăn uống', 50000, 'Chờ duyệt'])
+    expect(rows[0].values.slice(0, 6)).toEqual(['2026-10-31', 'Sample employee', 'Lunch', 'Food', 50000, 'Pending approval'])
     expect(rows[0].values).toHaveLength(8)
     await page.goto(`/workflows/${wid}?run=${run.id}`)
     await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 15_000 })

@@ -173,9 +173,8 @@ Owner questions for REQ-0074, the public chat page (phase 2 of REQ-0048, to ship
 recommended option. The answers go into REQ-0074 and DEC-0067, which replaces the "reserved" part of DEC-0053.
 
 The owner answered in chat on 2026-10-27:
-- "Ok với đề xuất" takes the recommended option for questions 1 to 4 and 6 to 8.
-- For question 5 the owner first asked about the effort of an iframe and of a widget, then chose "tôi chọn widget và
-  chỉ iframe". This is recorded as `widget-and-iframe`:
+- "OK with the proposal" takes the recommended option for questions 1 to 4 and 6 to 8.
+- For question 5 the owner first asked about the effort of an iframe and of a widget, then chose "I choose the widget and only an iframe". This is recorded as `widget-and-iframe`:
   - a plain `<iframe>` snippet, where Safari keeps no history inside the frame;
   - the script widget (a bubble that opens the same iframe and passes the visitor id from the host page);
   - not a widget that draws its own chat UI on the host page.
@@ -186,4 +185,4 @@ The owner may answer it with:
 factory clarify CLAR-0005 -C <project-dir>
 ```
 
-or in chat, for example "theo đề xuất" to pick every recommended option.
+or in chat, for example "as proposed" to pick every recommended option.

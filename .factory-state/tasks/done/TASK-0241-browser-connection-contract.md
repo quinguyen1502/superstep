@@ -118,6 +118,6 @@ Reconciled with Accepted REQ-0086 / DEC-0085 after plan PR #299 merged into deve
 
 ## Delivery (2026-11-06)
 
-Owner authorised implementation ("Ok triển khai"). PR #303 reconciled with Accepted
+Owner authorised implementation ("OK, go ahead and build it"). PR #303 reconciled with Accepted
 DEC-0085, local `factory verify run --profile full` passed, and required GitHub checks
 on the final head were green before merge.

@@ -114,10 +114,10 @@ def test_runner_not_json_invalid_and_clipped_stdout():
 # ---- run_code and the node, with the sandbox command run locally ----
 
 def test_run_stream_writes_the_value_and_traces_stdout(local):
-    events = list(run_stream(wf(UPPER), {"message": "xin chào"}))
+    events = list(run_stream(wf(UPPER), {"message": "héllo wörld"}))
     done = next(e for e in events if e["type"] == "node_finished" and e["node"] == "c")
-    assert done["delta"] == {"out": "XIN CHÀO"} and done["code_output"]["stdout"] == "got xin chào\n"
-    assert done["code_output"]["runtime"] == "docker" and events[-1]["state"]["out"] == "XIN CHÀO"
+    assert done["delta"] == {"out": "HÉLLO WÖRLD"} and done["code_output"]["stdout"] == "got héllo wörld\n"
+    assert done["code_output"]["runtime"] == "docker" and events[-1]["state"]["out"] == "HÉLLO WÖRLD"
 
 
 def test_failures_carry_the_traceback(local):

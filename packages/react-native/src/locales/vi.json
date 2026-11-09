@@ -1,0 +1,19 @@
+{
+  "send": "Gửi",
+  "message": "Tin nhắn",
+  "answer": "Trả lời",
+  "answerLabel": "Câu trả lời của bạn",
+  "approve": "Chấp nhận",
+  "reject": "Từ chối",
+  "attach": "Đính kèm tệp",
+  "remove": "Gỡ",
+  "helpful": "Hữu ích",
+  "notHelpful": "Không hữu ích",
+  "waitingReviewer": "Đang chờ người duyệt",
+  "needsAnswer": "Bước này cần câu trả lời",
+  "you": "Bạn",
+  "assistant": "Trợ lý",
+  "choose": "Chọn",
+  "stop": "Dừng",
+  "required": "Bắt buộc"
+}

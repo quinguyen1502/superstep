@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { Chat, ChatProvider, ChatThread, Composer, MessageList, QuestionCard, Rating, useChat } from '../src/index'
 import type { ChatController } from '../src/index'
+import { messages } from '../src/public/messages.generated.js'
 import { Wire, SID, holding, ok, recorded } from '../../../sdk/typescript/test/chat-harness'
 
 beforeAll(() => {
@@ -140,7 +141,7 @@ describe('public components', () => {
       <Chat {...options(wire)} locale="vi" /></>)
     await waitFor(() => expect(screen.getAllByRole('textbox')).toHaveLength(2))
     expect(screen.getByPlaceholderText('Ask our team')).toBeTruthy()
-    expect(screen.getByRole('textbox', { name: 'Tin nhắn' })).toBeTruthy()
+    expect(screen.getByRole('textbox', { name: messages.vi.chat.message })).toBeTruthy()
     const roots = view.container.querySelectorAll('.superstep-chat')
     expect((roots[0] as HTMLElement).style.getPropertyValue('--ss-primary')).toBe('var(--brand)')
     expect(roots[0].getAttribute('data-color-scheme')).toBe('dark')

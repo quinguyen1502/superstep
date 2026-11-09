@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { inflateRawSync } from 'node:zlib'
 import { login, newWorkflow, SIMPLE } from './helpers'
+import { vt } from './catalog'
 
 /** The entries of a zip (stored or deflated), read from its central directory: name -> text. */
 function unzip(buf: Buffer): Record<string, string> {
@@ -35,7 +36,7 @@ test('Code tab: Python of the saved version, the selected node highlighted, copy
   await expect(page.locator('#code-file')).toHaveText(/^python_e2e_\d+\.py$/)
   await expect(page.locator('#code-export-language')).toHaveText('Python')
   await expect(page.locator('#code-version')).toHaveText('v1')
-  await expect(page.locator('#code-hint')).toContainText('Chọn một node')
+  await expect(page.locator('#code-hint')).toContainText(vt('codeView.selectHint'))
 
   // selecting a node marks its function
   await page.locator('.react-flow__node[data-id="reply"]').click()
@@ -97,7 +98,7 @@ test('Code tab: TypeScript (LangGraph.js) export, remembered, highlighted and do
   await expect(code).toContainText('a LangGraph.js graph exported from Superstep')
   await expect(page.locator('#code-file')).toHaveText(/^ts_export_e2e_\d+\.ts$/)
   await expect(page.locator('#code-view')).toHaveAttribute('data-language', 'typescript')
-  await expect(page.locator('#code-download')).toHaveText('Tải .ts')
+  await expect(page.locator('#code-download')).toHaveText(vt('codeView.download', { ext: 'ts' }))
 
   await page.locator('.react-flow__node[data-id="reply"]').click()
   await expect(page.locator('.cm-node-mark').filter({ hasText: 'async function reply(state: State): Promise<Update> {' })).toHaveCount(1)

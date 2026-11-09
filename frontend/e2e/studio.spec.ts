@@ -1,30 +1,31 @@
 import { test, expect, type Page } from '@playwright/test'
 import { confirmDelete } from './confirm'
 import { signIn } from './helpers'
+import { vt } from './catalog'
 
 const uid = () => Math.random().toString(36).slice(2, 8)
 async function register(page: Page, email: string, pw = 'goodpass1') {
   await page.goto('/register')
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Mật khẩu', { exact: true }).fill(pw)
-  await page.getByLabel('Xác nhận mật khẩu').fill(pw)
+  await page.getByLabel(vt('auth.password'), { exact: true }).fill(pw)
+  await page.getByLabel(vt('auth.confirm')).fill(pw)
   await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
 }
 async function login(page: Page, email: string, pw: string) {
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Mật khẩu', { exact: true }).fill(pw)
-  await page.getByLabel('Mật khẩu', { exact: true }).press('Enter')
+  await page.getByLabel(vt('auth.password'), { exact: true }).fill(pw)
+  await page.getByLabel(vt('auth.password'), { exact: true }).press('Enter')
 }
 
 test('register → logout → login → list → open example → run → done', async ({ page }) => {
   const email = `e2e-${uid()}@example.com`
   await page.goto('/register')
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('weak')
-  await expect(page.locator('#pw-rules')).toContainText('Ít nhất 8 ký tự')
+  await page.getByLabel(vt('auth.password'), { exact: true }).fill('weak')
+  await expect(page.locator('#pw-rules')).toContainText(vt('auth.ruleLength'))
   await expect(page.locator('#auth-submit')).toBeDisabled()
   await register(page, email)
-  await page.locator('#user-menu').click(); await page.getByText('Đăng xuất').click()
+  await page.locator('#user-menu').click(); await page.getByText(vt('common.logout')).click()
   await expect(page).toHaveURL(/\/login/)
   await login(page, email, 'goodpass1')
   await expect(page).toHaveURL(/\/workflows$/)
@@ -47,9 +48,9 @@ test('wrong password shows a generic error', async ({ page }) => {
   // the app may itself redirect to /login once the token is gone (a header poll gets 401), racing this goto
   await page.goto('/login').catch(() => {}); await expect(page).toHaveURL(/\/login/); await page.waitForLoadState()
   await login(page, email, 'wrongpass1')
-  await expect(page.locator('#auth-error')).toHaveText('Sai email hoặc mật khẩu')
+  await expect(page.locator('#auth-error')).toHaveText(vt('errors.AUTH_INVALID_CREDENTIALS'))
   await login(page, `nobody-${email}`, 'wrongpass1')
-  await expect(page.locator('#auth-error')).toHaveText('Sai email hoặc mật khẩu')
+  await expect(page.locator('#auth-error')).toHaveText(vt('errors.AUTH_INVALID_CREDENTIALS'))
   await login(page, email, 'goodpass1')
   await expect(page).toHaveURL(/\/workflows$/)
 })
@@ -80,40 +81,40 @@ test('list: rename / duplicate / delete with confirm, edge cases, not-found', as
     await page.getByRole('menuitem', { name: item, exact: true }).click()
   }
   // rename: empty rejected, long name truncated in list
-  await openMenu(0, 'Đổi tên')
+  await openMenu(0, vt('list.rename'))
   await page.locator('#rename-input').fill('   ')
   await expect(page.locator('#rename-save')).toBeDisabled()
-  await expect(page.locator('#rename-error')).toHaveText('Tên không được để trống')
+  await expect(page.locator('#rename-error')).toHaveText(vt('list.nameRequired'))
   const long = 'Very long workflow name '.repeat(5).trim().slice(0, 100)
   await page.locator('#rename-input').fill(long); await page.locator('#rename-save').click()
   await expect(page.getByText(long, { exact: true })).toBeVisible()  // the full name is the text (tooltip on hover)
   // duplicate naming
-  await openMenu(0, 'Nhân bản')
+  await openMenu(0, vt('clipboard.duplicate'))
   await expect(page.locator('#wf-notice')).toContainText('(copy)')
   await expect(rows).toHaveCount(2)
   // rename to duplicate name rejected
   const orig = rows.filter({ has: page.getByText(long, { exact: true }) }).locator('.wf-actions')
-  await expect(page.locator('[role=menu]')).toHaveCount(0); await orig.click(); await page.getByRole('menuitem', { name: 'Đổi tên', exact: true }).click()
+  await expect(page.locator('[role=menu]')).toHaveCount(0); await orig.click(); await page.getByRole('menuitem', { name: vt('list.rename'), exact: true }).click()
   await page.locator('#rename-input').fill(`${long} (copy)`); await page.locator('#rename-save').click()
-  await expect(page.locator('#rename-error')).toHaveText('Đã có workflow trùng tên')
+  await expect(page.locator('#rename-error')).toHaveText(vt('errors.WORKFLOW_NAME_TAKEN'))
   await page.keyboard.press('Escape')
   // search no results
   await page.locator('#wf-search').fill('zzz-nothing')
   await expect(page.locator('#wf-no-results')).toBeVisible()
-  await page.getByRole('button', { name: 'Xoá tìm kiếm' }).first().click()
+  await page.getByRole('button', { name: vt('list.clearSearch') }).first().click()
   await expect(rows).toHaveCount(2)
   // remember an id, delete both (cancel once), then empty state
   const firstId = (await rows.first().locator('.font-mono').textContent())!
-  await openMenu(0, 'Xoá')
-  await page.getByRole('button', { name: 'Huỷ' }).click(); await expect(rows).toHaveCount(2)
+  await openMenu(0, vt('common.delete'))
+  await page.getByRole('button', { name: vt('common.cancel') }).click(); await expect(rows).toHaveCount(2)
   for (let i = 0; i < 2; i++) {
-    await openMenu(0, 'Xoá'); await confirmDelete(page)
+    await openMenu(0, vt('common.delete')); await confirmDelete(page)
     await expect(page.locator('[role=dialog], [role=alertdialog]')).toHaveCount(0)
   }
   await expect(page.locator('#wf-empty')).toBeVisible()
   // deleted and foreign workflow URLs show not-found
   await page.goto(`/workflows/${firstId}`)
-  await expect(page.locator('#editor-not-found')).toContainText('Không tìm thấy workflow')
+  await expect(page.locator('#editor-not-found')).toContainText(vt('editor.notFoundTitle'))
   await page.goto('/workflows/example')
   await expect(page.locator('#editor-not-found')).toBeVisible()
   await page.locator('#back-to-list').click(); await expect(page).toHaveURL(/\/workflows$/)

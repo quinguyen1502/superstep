@@ -1,6 +1,7 @@
 // Captures docs/screenshots for states. Run: SHOTS=1 npm run e2e -- screenshots
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, signIn } from './helpers'
+import { vt } from './catalog'
 test.skip(!process.env.SHOTS, 'set SHOTS=1 to capture screenshots')
 const out = (n: string) => `../docs/screenshots/${n}.png`
 test.use({ viewport: { width: 1280, height: 800 } })
@@ -9,11 +10,11 @@ test('capture auth and list states', async ({ page, request }) => {
   const email = `shots-${Date.now()}@example.com`
   await page.goto('/login?expired=1&next=%2Fworkflows'); await expect(page.locator('#expired-notice')).toBeVisible()
   await page.screenshot({ path: out('auth-expired-notice') })
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('wrongpass1'); await page.locator('#auth-submit').click()
+  await page.getByLabel(vt('auth.password'), { exact: true }).fill('wrongpass1'); await page.locator('#auth-submit').click()
   await expect(page.locator('#auth-error')).toBeVisible(); await expect(page.locator('#auth-submit')).toBeEnabled(); await page.mouse.move(0, 0); await page.waitForTimeout(400)
   await page.screenshot({ path: out('auth-login-error') })
   await page.goto('/register'); await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Mật khẩu', { exact: true }).fill('abcdefg'); await page.getByLabel('Xác nhận mật khẩu').fill('abcdefx')
+  await page.getByLabel(vt('auth.password'), { exact: true }).fill('abcdefg'); await page.getByLabel(vt('auth.confirm')).fill('abcdefx')
   await page.screenshot({ path: out('auth-register-password-rules') })
   const r = await request.post('/api/auth/register', { data: { email, password: 'goodpass1' } }); const { token } = (await r.json()).data
   const H = { Authorization: `Bearer ${token}` }
@@ -23,7 +24,7 @@ test('capture auth and list states', async ({ page, request }) => {
   await request.post('/api/workflows', { headers: H, data: { name: 'A very long workflow name that keeps going to show truncation in the list view without breaking the table layout at all', nodes: [], edges: [] } })
   await request.post('/api/workflows', { headers: H, data: { name: 'Support triage', nodes: [], edges: [] } })
   await page.reload(); await page.screenshot({ path: out('list-long-names') })
-  await page.locator('.wf-actions').first().click(); await page.getByRole('menuitem', { name: 'Đổi tên', exact: true }).click()
+  await page.locator('.wf-actions').first().click(); await page.getByRole('menuitem', { name: vt('list.rename'), exact: true }).click()
   await page.locator('#rename-input').fill('   '); await page.screenshot({ path: out('list-rename-empty-error') }); await page.keyboard.press('Escape')
   await page.locator('#wf-search').fill('nothing matches'); await expect(page.locator('#wf-no-results')).toBeVisible()
   await page.screenshot({ path: out('list-search-no-results') })
@@ -37,7 +38,7 @@ test('capture auth and list states', async ({ page, request }) => {
 test.describe('trace', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   test('capture run trace timeline states', async ({ page }) => {
-    await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+    await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
     await expect(page).toHaveURL(/\/workflows$/)
     await page.goto('/workflows/example'); await page.locator('#run-btn').click()
     await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
@@ -70,7 +71,7 @@ test.describe('trace', () => {
 test.describe('node colors', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
   test('capture node-type colours light/dark', async ({ page }) => {
-    await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+    await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
     await expect(page).toHaveURL(/\/workflows$/)
     const token = await apiToken(page)
     const n = (id: string, type: string, x: number, y: number, data: object) => ({ id, type, position: { x, y }, data })
@@ -91,7 +92,7 @@ test.describe('node colors', () => {
 })
 
 async function admin(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return apiToken(page)
 }

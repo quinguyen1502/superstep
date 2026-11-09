@@ -15,13 +15,13 @@
       "issuedAt": 1800000000,
       "options": {
         "keyId": "ck_sdk_vector_unicode",
-        "secret": "synthetic-secret-tiếng-Việt-🔑",
+        "secret": "synthetic-secret-ünïcødé-🔑",
         "slug": "sdk-vector",
-        "userId": "khách-👩🏽",
+        "userId": "kundé-👩🏽",
         "name": "Thái Quí Nguyễn",
         "meta": {
           "locale": "vi",
-          "note": "Xin chào 🌏",
+          "note": "Grüße 🌏",
           "nested": {
             "allowed": true,
             "amount": 12.5
@@ -29,7 +29,7 @@
         },
         "ttl": 3600
       },
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImNrX3Nka192ZWN0b3JfdW5pY29kZSJ9.eyJpc3MiOiJja19zZGtfdmVjdG9yX3VuaWNvZGUiLCJhdWQiOiJzdXBlcnN0ZXAtY2hhdDpzZGstdmVjdG9yIiwic3ViIjoia2jDoWNoLfCfkanwn4-9IiwibmFtZSI6IlRow6FpIFF1w60gTmd1eeG7hW4iLCJpYXQiOjE4MDAwMDAwMDAsImV4cCI6MTgwMDAwMzYwMCwibWV0YSI6eyJsb2NhbGUiOiJ2aSIsIm5vdGUiOiJYaW4gY2jDoG8g8J-MjyIsIm5lc3RlZCI6eyJhbGxvd2VkIjp0cnVlLCJhbW91bnQiOjEyLjV9fX0._LSts6rbmOOxmWcr-8zIFHTmcThoWOHE_4zwPEAmM9M"
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImNrX3Nka192ZWN0b3JfdW5pY29kZSJ9.eyJpc3MiOiJja19zZGtfdmVjdG9yX3VuaWNvZGUiLCJhdWQiOiJzdXBlcnN0ZXAtY2hhdDpzZGstdmVjdG9yIiwic3ViIjoia3VuZMOpLfCfkanwn4-9IiwibmFtZSI6IlRow6FpIFF1w60gTmd1eeG7hW4iLCJpYXQiOjE4MDAwMDAwMDAsImV4cCI6MTgwMDAwMzYwMCwibWV0YSI6eyJsb2NhbGUiOiJ2aSIsIm5vdGUiOiJHcsO8w59lIPCfjI8iLCJuZXN0ZWQiOnsiYWxsb3dlZCI6dHJ1ZSwiYW1vdW50IjoxMi41fX19.V1tVb4eSYcxZ0ap4ZHkQ3j-_9GS5n8i1_XsmM0y6_Q0"
     }
   ]
 }

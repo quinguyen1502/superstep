@@ -178,12 +178,12 @@ npm run test:e2e
 | `handbook/` | The documentation site (Zensical) |
 | `sdk/` | Python (`superstep`) and TypeScript (`@superstep/sdk`) clients for the public API ([SDKs](sdk/README.md)); spec in `docs/api/openapi.public.json` |
 | `scripts/promo/` | The quickstart video renderer |
-| `.factory-state/` | Requirements, decisions, tasks, reviews and QA |
+| `.factory/` | The delivery workflow (AI Software Factory); its store keeps requirements, decisions, tasks, reviews and QA |
 
 ## Contributing
 
 Changes follow the delivery workflow in [`AGENTS.md`](AGENTS.md): a
-requirement and a task in `.factory-state/`, a branch
+requirement and a task in the factory store, a branch
 `factory/task-<id>-<name>`, checks, a review, and a merge after human
 approval. See [Development](https://quinguyen1502.github.io/superstep/reference/development/)
 for the test setup and the conventions each layer follows.

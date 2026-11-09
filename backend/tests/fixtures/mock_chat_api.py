@@ -48,7 +48,7 @@ class Handler(BaseHTTPRequestHandler):
             judge = "<request>" in json.dumps(body)  # the AI review judge of an approval: a fixed, confident verdict
             if judge: classify = True
             parts = [json.dumps({"decision": "approve", "confidence": 0.92, "reason": "A small refund for an existing order.", "flags": []})] if judge \
-                else ["order_status"] if classify else [f"[ollama:{body['model']}] ", "xin ", "chào, ", "đây ", "là ", "câu ", "trả ", "lời ", "từng ", "phần."]
+                else ["order_status"] if classify else [f"[ollama:{body['model']}] ", "hello, ", "this ", "is ", "an ", "answer ", "sent ", "in ", "small ", "parts."]
             self.send_response(200); self.send_header("Content-Type", "application/x-ndjson"); self.end_headers()  # HTTP/1.0: body ends at close
             for p in parts + [""]:
                 last = p == ""

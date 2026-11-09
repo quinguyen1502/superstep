@@ -6,7 +6,7 @@ existing MCP, LLM, Code and Condition nodes.
 
 The flow replies “processing”, extracts and validates a single expense, appends
 one row and replies “recorded” only after a confirmed write. Missing/invalid
-amounts and unrelated messages take the feedback branch. “Chờ duyệt” is a row
+amounts and unrelated messages take the feedback branch. “Pending approval” is a row
 status; this example does not implement an approval process.
 
 ![Expense graph and successful trace with synthetic input](../images/telegram-expense-workflow.png)
@@ -46,7 +46,7 @@ The screenshot is an acceptance run with fake providers and synthetic input.
 | C | description | Validated model text |
 | D | category | Validated model text |
 | E | amount_vnd | Positive whole VND amount |
-| F | status | Chờ duyệt |
+| F | status | Pending approval |
 | G | submitted_at | Submission timestamp at UTC+07:00 |
 | H | operation_id | Stable operation key added by the adapter |
 

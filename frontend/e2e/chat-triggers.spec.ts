@@ -2,6 +2,7 @@ import { createHmac } from 'crypto'
 import { test, expect, type Page } from '@playwright/test'
 import { confirmDelete } from './confirm'
 import { login, newWorkflow, SIMPLE } from './helpers'
+import { vt, vtHead, st } from './catalog'
 // the editor's Chat triggers dialog (add, duplicate command refused, on/off, edit, delete by name), a signed
 // Slack mention that starts a run (Chat badge in History), and the Channels page's events URL and scope warning.
 // Slack is the fake API of backend/tests/fixtures/mock_chat_api.py; checks and replies are covered by test_chat_trigger_runs.py.
@@ -26,13 +27,13 @@ test('chat triggers: add, refuse a duplicate command, switch, edit, delete; a me
   await page.goto(`/workflows/${wid}`)
   await page.locator('#more-btn').click(); await page.locator('#chat-triggers-btn').click()
   const dlg = page.locator('#chat-triggers-dialog'); await expect(dlg).toBeVisible()
-  await expect(dlg.getByText('Chưa có chat trigger nào.')).toBeVisible()
+  await expect(dlg.getByText(vt('chatTriggers.empty'))).toBeVisible()
   await page.locator('#chat-trigger-channel').click(); await page.getByRole('option', { name: new RegExp(`Acme ${team}`) }).click()
-  await page.locator('#chat-trigger-where').click(); await page.getByRole('option', { name: 'Một kênh Slack' }).click()
+  await page.locator('#chat-trigger-where').click(); await page.getByRole('option', { name: vt('chatTriggers.aChannel') }).click()
   await page.locator('#chat-trigger-place').fill('C0E2EHR')
   await page.locator('#chat-trigger-command').fill('two words'); await expect(page.locator('#chat-trigger-command-hint')).toBeVisible()
   await expect(page.locator('#chat-trigger-save')).toBeDisabled()
-  await page.locator('#chat-trigger-command').fill('Ask'); await expect(page.locator('#chat-trigger-sample')).toContainText('@bot ask <nội dung>')
+  await page.locator('#chat-trigger-command').fill('Ask'); await expect(page.locator('#chat-trigger-sample')).toContainText(`@bot ask ${vt('chatTriggers.sampleText')}`)
   await expect(page.locator('#chat-trigger-input')).toContainText('message'); await expect(page.locator('#chat-trigger-reply')).toContainText('answer')
   await page.locator('#chat-trigger-name').fill('Support'); await page.locator('#chat-trigger-save').click()
   const row = dlg.locator('[data-testid=chat-trigger-row][data-name="Support"]')
@@ -41,9 +42,9 @@ test('chat triggers: add, refuse a duplicate command, switch, edit, delete; a me
   expect(saved).toHaveLength(1); expect(saved[0]).toMatchObject({ name: 'Support', place: 'C0E2EHR', command: 'ask', input_field: 'message', reply_field: 'answer', enabled: true })
 
   // the same command in the same place is refused, with the translated error
-  await page.locator('#chat-trigger-where').click(); await page.getByRole('option', { name: 'Một kênh Slack' }).click()
+  await page.locator('#chat-trigger-where').click(); await page.getByRole('option', { name: vt('chatTriggers.aChannel') }).click()
   await page.locator('#chat-trigger-place').fill('C0E2EHR'); await page.locator('#chat-trigger-command').fill('ask'); await page.locator('#chat-trigger-save').click()
-  await expect(dlg.getByRole('alert')).toContainText("Một chat trigger khác đã dùng lệnh 'ask' ở đó")
+  await expect(dlg.getByRole('alert')).toContainText(vt('errors.CHAT_TRIGGER_COMMAND_TAKEN', { command: 'ask' }))
 
   // a mention in that channel starts a run as the linked user; the bot answers in the thread
   const body = JSON.stringify({ type: 'event_callback', team_id: team, event_id: `Ev${Date.now()}`, authorizations: [{ user_id: 'UBOT' }],
@@ -51,17 +52,18 @@ test('chat triggers: add, refuse a duplicate command, switch, edit, delete; a me
   const ts = String(Math.floor(Date.now() / 1000)), sig = 'v0=' + createHmac('sha256', SIGNING).update(`v0:${ts}:${body}`).digest('hex')
   const res = await page.request.post('/api/channels/events/slack', { data: body, headers: { 'Content-Type': 'application/json', 'X-Slack-Request-Timestamp': ts, 'X-Slack-Signature': sig } })
   expect((await res.json()).data).toEqual({ outcome: 'queued' })
-  expect((await sent(page, 'chat.postMessage', b => b.thread_ts === '1700.5' && /đã xong|finished/.test(b.text))).text).toContain('Chat ')
+  const finishedMark = (st('channels.chat_finished').split('{workflow}')[1] || st('channels.chat_finished')).split('{value}')[0].trim()
+  expect((await sent(page, 'chat.postMessage', b => b.thread_ts === '1700.5' && (b.text.includes(finishedMark) || /finished/.test(b.text)))).text).toContain('Chat ')
 
   // switch off and on, edit the command, delete by typed name
   await row.getByRole('switch').click(); await expect(row.getByRole('switch')).not.toBeChecked()
   await expect.poll(async () => (await (await page.request.get(`/api/workflows/${wid}/chat-triggers`, { headers: H })).json()).data[0].enabled).toBe(false)
   await row.getByRole('switch').click(); await expect(row.getByRole('switch')).toBeChecked()
-  await row.getByRole('button', { name: 'Sửa chat trigger Support' }).click()
+  await row.getByRole('button', { name: vt('chatTriggers.editFor', { name: 'Support' }) }).click()
   await expect(page.locator('#chat-trigger-command')).toHaveValue('ask'); await page.locator('#chat-trigger-command').fill('hoi'); await page.locator('#chat-trigger-save').click()
-  await expect(row).toContainText('hoi'); await expect(row).toContainText('tin nhắn gần nhất')
-  await row.getByRole('button', { name: 'Xoá chat trigger Support' }).click(); await confirmDelete(page, 'Support')
-  await expect(dlg.getByText('Chưa có chat trigger nào.')).toBeVisible()
+  await expect(row).toContainText('hoi'); await expect(row).toContainText(vtHead('chatTriggers.last'))
+  await row.getByRole('button', { name: vt('chatTriggers.deleteFor', { name: 'Support' }) }).click(); await confirmDelete(page, 'Support')
+  await expect(dlg.getByText(vt('chatTriggers.empty'))).toBeVisible()
   await page.keyboard.press('Escape')
 
   // History (loaded when the editor opens, so reload): the run from the chat carries the Chat badge

@@ -99,7 +99,7 @@ export function buildGraph(checkpointer?: MemorySaver) {
 // Run it
 // ==================================================================================================================
 
-const EXAMPLE_INPUT = {"message": "xin chào", "count": 1} as Update;
+const EXAMPLE_INPUT = {"message": "héllo wörld", "count": 1} as Update;
 
 async function main(): Promise<void> {
   const graph = buildGraph(new MemorySaver());

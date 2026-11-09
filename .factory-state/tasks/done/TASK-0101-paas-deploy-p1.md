@@ -27,7 +27,7 @@ PaaS deploy phase 1: all-in-one image and one-click deploys.
 - **Platforms**
 - **CI** (`.github/workflows/image.yml`, a new file so it doesn't conflict with `ci.yml` in #117):
 - **Docs**: `docs/deploy/` in en and vi (vi follows the glossary), the env var reference, `.env.example`, and Deploy buttons in the README.
-- **README / #117:** the buttons are in a new section just above "Documentation" / "Tài liệu". #117 only edits the top of both READMEs, so this should merge cleanly. `ci.yml` is untouched.
+- **README / #117:** the buttons are in a new section just above "Documentation" (and its vi heading). #117 only edits the top of both READMEs, so this should merge cleanly. `ci.yml` is untouched.
 - **Default branch:** the Render and Heroku buttons deploy the default branch (`main`). They will work once this ships in a release.
 - **Trusted proxies:** the image defaults `STUDIO_TRUSTED_PROXIES` to the private ranges plus 100.64.0.0/10. The PaaS router's peer is then trusted, and the client IP is the right-most untrusted XFF hop.
 - **Railway volumes** need `RAILWAY_RUN_UID=0` (the volume is owned by root). This is in the docs.

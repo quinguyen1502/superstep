@@ -58,6 +58,6 @@ Advisory local QA passes for Draft owner review. Keep TASK-0225 in review. Ready
 
 ## Owner Acceptance And Ready Finalisation (2026-11-03)
 
-The owner accepted PR #290 ("Duyệt") after head e6b2f7c85b22eaae3d2428abb4f665ee5b0e4260 completed 21 successful CI checks and one expected GHCR publication skip. This includes all three Playwright shards, both backend databases, Factory full verification, React 18/19 host acceptance, SDK/CLI and image/security checks. This supersedes the earlier pending-owner-acceptance/Draft-only statements.
+The owner accepted PR #290 ("Approve") after head e6b2f7c85b22eaae3d2428abb4f665ee5b0e4260 completed 21 successful CI checks and one expected GHCR publication skip. This includes all three Playwright shards, both backend databases, Factory full verification, React 18/19 host acceptance, SDK/CLI and image/security checks. This supersedes the earlier pending-owner-acceptance/Draft-only statements.
 
 TASK-0225 moves to done on the same PR for a rebased, single-commit Ready delivery. Current develop remains 6218d840; production source, tests, API contract and dependency versions are preserved. Required validation is repeated on the rewritten head; its actual CI outcome is reported on #290 before delivery. Merge/tag/publication remains outside this acceptance.

@@ -14,7 +14,7 @@
 
 ## Objective
 
-Version 0.9.0. The owner said "Làm tiếp đi" in chat on 2026-10-27, after the next-task recommendation to release 0.9.0.
+Version 0.9.0. The owner said "Carry on" in chat on 2026-10-27, after the next-task recommendation to release 0.9.0.
 It follows the 0.8.0 release (TASK-0128):
 - bump `backend/pyproject.toml`, `frontend/package.json` and `frontend/package-lock.json` to 0.9.0;
 - rename `## Unreleased` in CHANGELOG.md to `## 0.9.0 (2026-10-27)`;
@@ -23,7 +23,7 @@ It follows the 0.8.0 release (TASK-0128):
 
 Also fixes a record: REQ-0048 phase 1 (TASK-0084, TASK-0085) was merged in #116 and #117, but its status still said
 "in stacked draft PRs". Phase 2, the public chat page, became REQ-0074. The owner asked on 2026-10-27 to ship it in
-this release ("Tôi muốn đưa vào chung release luôn"), so this PR waited for it.
+this release ("I want it in the same release"), so this PR waited for it.
 
 ## Contents Of 0.9.0
 
@@ -71,7 +71,7 @@ this release ("Tôi muốn đưa vào chung release luôn"), so this PR waited f
 ## Activity Log
 
 - 2026-10-27: version bump and CHANGELOG heading; held as a draft while REQ-0074 was built.
-- 2026-10-27: the owner approved merging #186 to #191 ("Merge chuỗi và chuẩn bị release 0.9.0"); develop merged into
+- 2026-10-27: the owner approved merging #186 to #191 ("Merge the chain and prepare release 0.9.0"); develop merged into
   this branch, so 0.9.0 lists the public chat page, the logo and the trace fix. TASK-0140 to TASK-0146 moved to done.
 - 2026-10-27: released with the owner's approval: #184 into develop, release PR #196 into main (585ed72), tag
   `v0.9.0` and the GitHub Release.

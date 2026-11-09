@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0084
-- Status: Accepted on 2026-11-03; owner approved PR #292 ("Duyệt")
+- Status: Accepted on 2026-11-03; owner approved PR #292 ("Approve")
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-03
 - Related Requirements: REQ-0082
@@ -73,7 +73,7 @@ Target 0.11.0: integrated generic adapters/events and chat phases 1–3 plus app
 
 ## Approval
 
-- Approved By: Thái Quí Nguyễn (PR #292, "Duyệt")
+- Approved By: Thái Quí Nguyễn (PR #292, "Approve")
 - Approved On: 2026-11-03
 - Scope already authorised: prioritise TASK-0229/0230 for 0.11.0 and defer TASK-0227/0228.
 - Accepted scope: branch, rerun, file lifecycle and UI/API semantics above. TASK-0229 implementation is authorised on the existing PR; TASK-0230 follows the shared foundation on a separate PR. No merge or release is authorised by this design acceptance.

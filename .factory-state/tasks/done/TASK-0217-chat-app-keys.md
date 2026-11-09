@@ -84,7 +84,7 @@ Add per-chat app keys (server credentials) with create, rotate and revoke, and t
 
 - 2026-11-01: Final CI found Python 3.12 eager annotation evaluation treating the service's `list` method as the annotation name in `create(... origins: list[str])`; Python 3.14 local checks defer annotations and did not expose it. Added future annotations to both new service/repository modules. Focused checks: 14 passed, 1 skipped; full local verification and final CI rerun. No merge while checks fail.
 
-- 2026-11-01: Owner explicitly approved merge in the local task conversation ("Duyệt"). Moved to done on PR #275 as required by AGENTS.md; local full verification and UI QA passed. Merge remains gated on the final PR checks, including PostgreSQL. No separate lifecycle-only PR.
+- 2026-11-01: Owner explicitly approved merge in the local task conversation ("Approve"). Moved to done on PR #275 as required by AGENTS.md; local full verification and UI QA passed. Merge remains gated on the final PR checks, including PostgreSQL. No separate lifecycle-only PR.
 
 - 2026-11-01: Restarted locally at the owner's request; no recoverable implementation found in local branches, worktrees or stash. Branch from origin/develop at 1b99559; factory ready passes. Implement app key management and backwards-compatible access sets, then run the task's declared checks and capture UI evidence. TASK-0218/0219 remain dependency-gated by PLAN-0002 until this task is merged.
 

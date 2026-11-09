@@ -2,7 +2,7 @@
 
 - Plan ID: PLAN-0009
 - Project: superstep
-- Status: owner-authorised implementation (REQ-0089, "Làm đi" 2026-11-07)
+- Status: owner-authorised implementation (REQ-0089, "Do it" 2026-11-07)
 - Created/Updated: 2026-11-07
 - Related: REQ-0089, DEC-0088, REQ-0088 / PLAN-0008
 

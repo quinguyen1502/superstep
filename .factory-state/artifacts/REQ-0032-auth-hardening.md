@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: remaining-work report of 2026-10-18 (item 5: "chưa có khoá tài khoản khi đăng nhập sai nhiều lần, chưa có đặt lại mật khẩu, và token phiên vẫn lưu trong localStorage"; and the demo account found in production) and the owner's reply, "Ngoại trừ 2, 3, 4. Làm các phần còn lại"
+- Source: remaining-work report of 2026-10-18 (item 5: "no account lock after many failed sign-ins, no password reset yet, and the session token is still kept in localStorage"; and the demo account found in production) and the owner's reply, "Except 2, 3, 4. Do the rest"
 
 ## Summary
 

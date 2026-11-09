@@ -12,6 +12,7 @@ from app.models.database import Database
 from app.repositories import ChatSessionRepository, RunRepository, UserRepository, WorkflowShareRepository
 from app.services import demo_service, seed
 from app.services.auth_service import AuthService
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 
 @pytest.fixture
@@ -90,17 +91,17 @@ def test_locale_pick():
 
 def test_mock_answers_follow_the_locale():
     assert mock_llm("Hello", "m") == "[mock:m] Answer: Hello"
-    assert mock_llm("Hello", "m", "vi") == "[mock:m] Trả lời: Hello"
+    assert mock_llm("Hello", "m", "vi") == f"[mock:m] {vi_text('vi', 'mock.answer')}: Hello"
     assert mock_llm("Classify: where is my order A100", "m", "vi") == "order_status"  # labels are not translated
     assert lookup_order({"message": "Where is A100?"}) == "Order A100: Delivered on 2026-10-10"
-    assert lookup_order({"message": "Đơn A100?"}, "vi").startswith("Đơn A100: Đã giao hàng")
-    assert lookup_order({"message": "hi"}, "vi") == "Không tìm thấy mã đơn hàng trong tin nhắn."
+    assert lookup_order({"message": "A100?"}, "vi") == f"{vi_text('vi', 'tools.order_label')} A100: {vi_text('vi', 'tools.orders.A100')}"
+    assert lookup_order({"message": "hi"}, "vi") == vi_text("vi", "tools.no_order") != vi_text("en", "tools.no_order")
     assert lookup_order({"message": "Z999"}) == "Order Z999: not in our system"
 
 
 def test_nodes_pass_the_run_locale(demo):
     llm = nodes.node_fn({"id": "l", "type": "llm", "data": {"prompt": "hi", "output_field": "a", "model": "m"}}, ports=Ports(locale="vi"))
-    assert llm({})["a"] == "[mock:m] Trả lời: hi"
+    assert llm({})["a"] == f"[mock:m] {vi_text('vi', 'mock.answer')}: hi"
     tool = nodes.node_fn({"id": "t", "type": "tool", "data": {"mode": "function", "function": "lookup_order", "output_field": "o"}}, ports=Ports(locale="vi"))
-    assert tool({"message": "B200"})["o"].startswith("Đơn B200")
+    assert tool({"message": "B200"})["o"].startswith(vi_text("vi", "tools.order_label") + " B200")
     assert nodes.node_fn({"id": "l", "type": "llm", "data": {"prompt": "hi", "output_field": "a", "model": "m"}})({})["a"] == "[mock:m] Answer: hi"

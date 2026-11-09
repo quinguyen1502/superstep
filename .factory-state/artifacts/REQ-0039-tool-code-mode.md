@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
 - Updated: 2026-10-19
-- Source: owner question "Vậy có thể thêm 1 mode cho việc tự write và execute code trên node ko?" (2026-10-19), after the explanation of the Tool node's Python function mode
+- Source: owner question "Then can we add a mode for writing and executing code in a node?" (2026-10-19), after the explanation of the Tool node's Python function mode
 
 ## Summary
 

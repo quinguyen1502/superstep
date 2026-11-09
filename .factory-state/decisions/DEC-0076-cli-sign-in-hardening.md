@@ -52,7 +52,7 @@
 
 ## Owner Decisions
 
-- 2026-10-31: the owner asked for these fixes ("đánh giá lại coi đúng không, nếu có thì hãy fix").
+- 2026-10-31: the owner asked for these fixes ("re-check whether that is right, and if so fix it").
 
 ## Approval
 

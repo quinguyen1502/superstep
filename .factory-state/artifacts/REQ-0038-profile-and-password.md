@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
 - Updated: 2026-10-19
-- Source: owner feedback "Thiếu phần xem và update profile hay password (tạo task)" (2026-10-19), with a screenshot of the user menu (e-mail, Settings, Sign out)
+- Source: owner feedback "Viewing and updating the profile or password is missing (create a task)" (2026-10-19), with a screenshot of the user menu (e-mail, Settings, Sign out)
 
 ## Summary
 

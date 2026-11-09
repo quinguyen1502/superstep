@@ -7,6 +7,9 @@ import httpx
 import pytest
 
 from superstep.cli import run
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 TOKEN = "pat_secret-token"
 REASON = "because & <tag>"
@@ -226,7 +229,7 @@ def test_help_includes_an_example():
     assert "Example: superstep test Support --junit out.xml" in err
     code, out, err = invoke(["--lang", "vi", "test", "--help"])
     assert code == 0 and out == ""
-    assert "Ví dụ: superstep test Support --junit out.xml" in err
+    assert VI.messages["example.test"] in err
 
 
 def test_json_stdout_is_one_object_and_file_is_written(isolated):
@@ -258,8 +261,8 @@ def test_summary_lines_follow_the_selected_language(isolated):
     assert "Skipping Empty: no tests." in err
     code, _out, err = invoke(["--lang", "vi", "test", "--all"], client=script().client)
     assert code == 0
-    assert "Ca greets của Support là passed." in err
-    assert "Bỏ qua Empty: không có bài kiểm tra." in err
+    assert VI.format("test.summary", name="greets", workflow="Support", status="passed") in err
+    assert VI.format("test.skip", name="Empty") in err
     assert "Case greets on Support is passed." not in err
     assert "Skipping Empty: no tests." not in err
 

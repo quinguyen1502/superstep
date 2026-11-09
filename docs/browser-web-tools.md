@@ -1,8 +1,8 @@
 # Runtime URLs and separate web tools
 
-TASK-0247 adds backend contracts through existing Agent/MCP surfaces. There is
+Web tools add backend contracts through existing Agent/MCP surfaces. There is
 no mandatory connection start URL and no second browser Agent loop. Settings and
-trace UI remain TASK-0249/0250; executable export support remains TASK-0251/0252.
+trace UI are described in [settings](browser-settings.md) and [editor](browser-editor.md).
 `STUDIO_ENABLE_BROWSER` controls browser/web discovery (default on; set `0` to disable).
 Browser execution also needs its separate runtime flag; fetch/search launch no
 browser and do not need that flag.

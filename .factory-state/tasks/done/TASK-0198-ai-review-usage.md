@@ -14,7 +14,7 @@
 
 ## Objective
 
-Count AI auto-approval judge calls in usage. Every AI review judge call adds its tokens and cost to the run usage and telemetry, visible in the run trace. The owner asked for this before v0.10.1 ("Làm cả 4 việc rồi mới release").
+Count AI auto-approval judge calls in usage. Every AI review judge call adds its tokens and cost to the run usage and telemetry, visible in the run trace. The owner asked for this before v0.10.1 ("Do all 4 items, then release").
 
 ## Scope
 
@@ -49,5 +49,5 @@ Count AI auto-approval judge calls in usage. Every AI review judge call adds its
 ## Activity Log
 
 - 2026-10-31: created from the owner's v0.10.1 follow-up list.
-- 2026-10-31: implemented on `factory/task-0198-ai-review-usage` from `develop`. AI review judge usage is recorded as an approval_review event and added to the run tokens/cost; telemetry and the trace show it. `factory verify run --profile full` passed. The owner asked for these follow-ups before v0.10.1 ('Làm cả 4 việc rồi mới release'). Moved to done on this PR before the merge (TASK-0148).
+- 2026-10-31: implemented on `factory/task-0198-ai-review-usage` from `develop`. AI review judge usage is recorded as an approval_review event and added to the run tokens/cost; telemetry and the trace show it. `factory verify run --profile full` passed. The owner asked for these follow-ups before v0.10.1 ('Do all 4 items, then release'). Moved to done on this PR before the merge (TASK-0148).
 - Review: `.factory-state/artifacts/REV-0186-task-0198.md`. QA: `.factory-state/artifacts/QA-0186-task-0198.md`.

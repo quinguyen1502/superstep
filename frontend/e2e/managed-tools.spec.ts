@@ -2,6 +2,7 @@ import { generateKeyPairSync } from 'crypto'
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
 import { confirmDelete } from './confirm'
+import { vt } from './catalog'
 
 const fixtureKey = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString()
 const serviceAccount = JSON.stringify({ type: 'service_account', client_email: 'fixture@example-project.iam.gserviceaccount.com', private_key: fixtureKey })
@@ -17,7 +18,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
       await page.goto('/settings/mcp'); await page.locator('#mcp-add').click()
       await page.locator('#mcp-new-name').fill(name)
       await page.locator('#mcp-new-transport').click()
-      await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : 'Kết nối được quản lý', exact: true }).click()
+      await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : vt('managedTools.transport'), exact: true }).click()
       await page.locator('#mcp-new-adapter').click()
       await page.getByRole('option', { name: adapter, exact: true }).click()
     }
@@ -73,9 +74,9 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await page.route(`**/api/mcp/servers/${server.id}/operations`, route => route.fulfill({ json: { success: true, data: [unknown], error: null } }))
     await page.route(`**/api/mcp/servers/${server.id}/operations/fixture-unknown/reconcile`, route => route.fulfill({ status: 409,
       json: { success: false, data: null, error: { code: 'MANAGED_OUTCOME_UNKNOWN', details: { operation: 'fixture-unknown' } } } }))
-    await operations.getByRole('button', { name: lang === 'en' ? 'Refresh' : 'Tải lại', exact: true }).click()
+    await operations.getByRole('button', { name: lang === 'en' ? 'Refresh' : vt('managedTools.refresh'), exact: true }).click()
     await expect(operations.locator('[data-outcome="unknown"]')).toBeVisible()
-    await operations.getByRole('button', { name: lang === 'en' ? 'Check external result' : 'Kiểm tra kết quả bên ngoài', exact: true }).click()
+    await operations.getByRole('button', { name: lang === 'en' ? 'Check external result' : vt('managedTools.reconcile'), exact: true }).click()
     await expect(operations.getByRole('alert')).toContainText('fixture-unknown')
     if (process.env.REVIEW_SHOTS) await operations.screenshot({ path: `${process.env.REVIEW_SHOTS}/managed-unknown-${suffix}.png` })
     const card = page.locator(`[data-testid="mcp-card-${server.id}"]`)

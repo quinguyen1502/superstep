@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import fs from 'node:fs/promises'
 import { expectRowAligned } from '../e2e/helpers/alignment'
+import hostVi from '../../examples/chat-host/src/locales/vi.json' with { type: 'json' }
+import { vt, vin, startsWith } from '../e2e/catalog'
 const file = process.env.CHAT_HOST_FIXTURE
 if (!file) throw new Error('Run scripts/chat_host_e2e.sh for an isolated server-side token fixture')
 const config = JSON.parse(await fs.readFile(file, 'utf8'))
@@ -45,19 +47,19 @@ test('built widget sample: anonymous, identified users, Human answer, events and
   await page.getByTestId('signin-lan').click()
   await expect(chat.getByTestId('chat-mine').filter({ hasText: 'Lan widget request' })).toHaveCount(1)
   await page.getByRole('button', { name: 'Tiếng Việt', exact: true }).click()
-  await expect(page.locator('#superstep-chat-button')).toHaveAttribute('aria-label', 'Đóng chat')
-  await expect(chat.locator('#chat-input')).toHaveAttribute('placeholder', /^Nhập tin nhắn/)
+  await expect(page.locator('#superstep-chat-button')).toHaveAttribute('aria-label', vt('chat.widget.close'))
+  await expect(chat.locator('#chat-input')).toHaveAttribute('placeholder', startsWith(vt('chat.placeholder').split(' (')[0]))
   await page.emulateMedia({ colorScheme: 'dark' })
-  await page.getByRole('button', { name: 'Đổi giao diện sáng tối', exact: true }).click()
+  await page.getByRole('button', { name: hostVi.theme, exact: true }).click()
   await expect(chat.locator('.superstep-chat').first()).toHaveAttribute('data-color-scheme', 'dark')
   await expect.poll(() => chat.locator('#public-chat').evaluate(el => [...el.querySelectorAll('#chat-input, #public-chat-new, #public-chat-sessions')]
     .every(control => getComputedStyle(control).color === getComputedStyle(el).color))).toBe(true)
   await expectRowAligned(await page.locator('header button, header a').all(), { label: 'sample host navigation (vi/dark)' })
   await capture('widget-host-vi-dark')
-  await chat.getByTestId('chat-mine').filter({ hasText: 'Lan widget request' }).getByRole('button', { name: 'Sửa tin nhắn', exact: true }).click()
-  await chat.getByRole('alertdialog').getByRole('textbox').fill('Bản nháp chưa gửi')
+  await chat.getByTestId('chat-mine').filter({ hasText: 'Lan widget request' }).getByRole('button', { name: vt('chat.edit.title'), exact: true }).click()
+  await chat.getByRole('alertdialog').getByRole('textbox').fill(vin('widget.draft'))
   await capture('widget-edit-confirm-vi-dark')
-  await chat.getByRole('alertdialog').getByRole('button', { name: 'Huỷ', exact: true }).click()
+  await chat.getByRole('alertdialog').getByRole('button', { name: vt('common.cancel'), exact: true }).click()
   const storage = await page.evaluate(() => ({ ...localStorage }))
   expect(JSON.stringify(storage).includes(config.human.secret)).toBe(false)
   expect(Object.values(storage).some(value => typeof value === 'string' && /^[\w-]+\.[\w-]+\.[\w-]+$/.test(value))).toBe(false)
@@ -65,7 +67,7 @@ test('built widget sample: anonymous, identified users, Human answer, events and
   expect(page.frames().some(frame => frame.url().startsWith(`${studio}/c/`))).toBe(true)
   expect(failures).toEqual([])
   // All three pages share the same opaque host session and the same protected token endpoint.
-  await page.getByRole('link', { name: 'Ví dụ bộ giao diện React', exact: true }).click()
+  await page.getByRole('link', { name: vt('chat.toolkit.reactExample'), exact: true }).click()
   await expect(page).toHaveURL(/\/react\/$/)
   await page.getByRole('link', { name: 'Widget example', exact: true }).click()
   await expect(page.getByTestId('widget-demo')).toHaveAttribute('data-ready', 'true')
@@ -85,13 +87,13 @@ test('built widget sample: anonymous, identified users, Human answer, events and
   await chat.getByRole('button', { name: 'Original conversation' }).click()
   await expect(chat.getByTestId('chat-mine').filter({ hasText: 'Lan widget request' })).toHaveCount(1)
   await page.getByRole('button', { name: 'Tiếng Việt', exact: true }).click()
-  await chat.getByRole('button', { name: 'Tạo lại câu trả lời', exact: true }).click()
+  await chat.getByRole('button', { name: vt('chat.regenerate.title'), exact: true }).click()
   await capture('widget-regenerate-confirm-vi-dark')
-  await chat.getByRole('alertdialog').getByRole('button', { name: 'Chạy lại trong nhánh mới' }).click()
+  await chat.getByRole('alertdialog').getByRole('button', { name: vt('chat.regenerate.run') }).click()
   await expect(chat.getByTestId('question-card')).toBeVisible()
-  await chat.getByRole('button', { name: 'Duyệt', exact: true }).click()
+  await chat.getByRole('button', { name: vt('approve.approve'), exact: true }).click()
   await expect(chat.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok')
-  await expect(page.getByTestId('widget-events')).toHaveText('Tin nhắn: 4 · Câu trả lời: 4')
-  await chat.getByRole('button', { name: 'Cuộc trò chuyện gốc' }).click()
+  await expect(page.getByTestId('widget-events')).toHaveText(vt('chat.toolkit.widgetEvents', { messages: '4', answers: '4' }))
+  await chat.getByRole('button', { name: vt('chat.edit.source') }).click()
   await expect(chat.getByTestId('chat-mine').filter({ hasText: 'Lan widget request' })).toHaveCount(1)
 })

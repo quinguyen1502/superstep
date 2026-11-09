@@ -5,6 +5,7 @@
 import fs from 'node:fs'
 import { test, expect, type Locator } from '@playwright/test'
 import { signIn } from './helpers'
+import { vt, vin } from './catalog'
 
 test.skip(!process.env.HANDBOOK_SHOTS, 'set HANDBOOK_SHOTS=1 to capture the quickstart')
 test.use({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.5 })
@@ -21,12 +22,12 @@ const T = {
     refund: 'Order A100 arrived broken, please refund it', kb: 'Refund policy',
   },
   vi: {
-    name: 'Trả lời hoàn tiền', draft: 'Soạn trả lời', approve: 'Duyệt trả lời', label: 'Nhãn', output: 'Trường output', addField: 'Thêm trường',
-    prompt: 'Viết một câu trả lời ngắn, lịch sự cho tin nhắn của khách: {{state.message}}',
-    question: 'Gửi câu trả lời này cho khách?\n\n{{state.reply}}',
-    message: 'Đơn A100 của tôi bị vỡ khi nhận. Tôi được hoàn tiền không?', token: 'billing-service', schedule: 'Kiểm tra ngày thường', history: 'Lịch sử', wfName: 'Tên workflow',
+    name: vin('quickstart.name'), draft: vin('quickstart.draft'), approve: vin('quickstart.approve'), label: vt('field.label'), output: vt('field.outputField'), addField: vt('editor.addField'),
+    prompt: vin('quickstart.prompt'),
+    question: vin('quickstart.question'),
+    message: vin('quickstart.message'), token: 'billing-service', schedule: vin('quickstart.schedule'), history: vt('editor.tabHistory'), wfName: vt('editor.nameLabel'),
     refund: 'Order A100 arrived broken, please refund it',  // the template's tools are in English: the mock agent picks one by shared words
-    kb: 'Chính sách hoàn tiền',
+    kb: vin('quickstart.kb'),
   },
 }
 // Frames that also illustrate the quickstart page

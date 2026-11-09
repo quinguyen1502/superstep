@@ -1,0 +1,12 @@
+{
+  "title": "Superstep chat",
+  "demo": "Sample host only. Sign in as one of the two demo people.",
+  "loading": "Loading the sample host",
+  "signIn": "Sign in as",
+  "signOut": "Sign out",
+  "english": "English",
+  "vietnamese": "Vietnamese",
+  "language": "Language",
+  "missing": "The sample host did not return a studio URL. Start it with CHAT_HOST_DEMO=1.",
+  "cookie": "The sample host session cookie was not readable. Stay on http://localhost:5188."
+}

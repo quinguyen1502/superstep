@@ -1,4 +1,4 @@
-/** The one delete confirmation (UI rule, docs/ui-conventions.md, ): the destructive button stays disabled until the
+/** The one delete confirmation (UI rule in docs/ui-conventions.md): the destructive button stays disabled until the
  * user types the item's exact name. Confirmation is UI-only — the API stays a plain DELETE. `children` is the
  * reasons/warnings slot; errors thrown by `onConfirm` are shown inside the dialog. */
 import { useState, type ReactNode } from 'react'

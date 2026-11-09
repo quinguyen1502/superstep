@@ -1,0 +1,98 @@
+{
+  "widget": {
+    "draft": "Bản nháp chưa gửi",
+    "help": "Bạn có thể giúp tôi?"
+  },
+  "agentHandoff": {
+    "techLabel": "Kỹ thuật"
+  },
+  "agentTests": {
+    "caseName": "Tra đơn hàng A100"
+  },
+  "attachments": {
+    "totalQuestion": "Tổng là bao nhiêu?",
+    "invoiceQuestion": "Tổng hoá đơn là bao nhiêu?"
+  },
+  "handbook": {
+    "names": {
+      "digest": "Tổng hợp release notes",
+      "normalize": "Chuẩn hoá payload webhook",
+      "each": "Từng release",
+      "summarize": "Tóm tắt release",
+      "compose": "Soạn bản tổng hợp",
+      "send": "Gửi email cho team",
+      "draft": "Soạn trả lời",
+      "approve": "Quản lý duyệt",
+      "approved": "Đã duyệt?",
+      "notify": "Gửi email hoàn tiền",
+      "clean": "Làm sạch payload",
+      "approvePrompt": "Duyệt hoàn {{state.amount}} cho đơn {{state.order_id}}?",
+      "morning": "Bản tổng hợp buổi sáng",
+      "broken": "Graph lỗi",
+      "refine": "Chỉnh lại",
+      "lonely": "Tool không tới được",
+      "kb": "FAQ hỗ trợ",
+      "kbDesc": "Câu trả lời về giao hàng và hoàn tiền",
+      "faq": "Giao hàng\n\nĐơn hàng được giao trong hai ngày làm việc.\n\nHoàn tiền\n\nTiền được hoàn về thẻ trong 7 ngày sau khi nhận hàng trả lại."
+    },
+    "messages": {
+      "orderWhereA100": "Đơn A100 của tôi đang ở đâu?",
+      "orderB7": "Còn đơn B7 thì sao?",
+      "orderWhereC3": "Đơn C3 của tôi đang ở đâu?",
+      "brokenRefund": "Đơn A100 của tôi bị vỡ, cho tôi hoàn tiền",
+      "orderWhereB200": "Đơn hàng B200 của tôi đang ở đâu?",
+      "returnItem": "Tôi muốn trả hàng"
+    },
+    "shop": {
+      "shopName": "Trợ lý đơn hàng",
+      "classify": "Phân loại ý định",
+      "route": "Rẽ nhánh theo ý định",
+      "lookup": "Tra cứu đơn",
+      "refund": "Đọc yêu cầu hoàn",
+      "confirm": "Xác nhận với khách",
+      "confirmPrompt": "Đây có phải đơn của bạn? {{state.order}}"
+    },
+    "reply": "Trả lời",
+    "agent": {
+      "label": "Agent hỗ trợ",
+      "prompt": "Giúp khách hàng này. Tin nhắn: {{state.message}}",
+      "system": "Bạn là nhân viên hỗ trợ của một cửa hàng online. Dùng các công cụ để tra cứu đơn hàng. Chỉ yêu cầu hoàn tiền khi đơn bị vỡ hoặc giao trễ.",
+      "lookupTool": "Tra cứu trạng thái giao hàng của một đơn",
+      "refundTool": "Yêu cầu hoàn tiền cho đơn hàng bị vỡ hoặc giao trễ",
+      "router": "Điều phối",
+      "ordersTool": "Câu hỏi về đơn hàng đang ở đâu"
+    },
+    "chat": {
+      "title": "Hỗ trợ đơn hàng",
+      "intro": "Hỏi về **đơn hàng** của bạn: đơn đang ở đâu, đổi trả, hoàn tiền."
+    }
+  },
+  "helpDesk": {
+    "moneyBack": "Khi nào tôi nhận lại tiền?"
+  },
+  "knowledge": {
+    "faq": "Giao hàng\n\nĐơn hàng được giao trong hai ngày làm việc từ kho Hà Nội.\n\nHoàn tiền\n\nTiền được hoàn về thẻ trong 7 ngày sau khi nhận hàng trả lại.",
+    "query": "hoàn tiền về thẻ",
+    "prompt": "Dựa vào {{state.context}} trả lời {{state.message}}"
+  },
+  "embeddings": {
+    "faq": "Hoàn tiền trong bảy ngày.\n\nGiao hàng hai ngày.",
+    "query": "hoàn tiền"
+  },
+  "drive": {
+    "expense": "Khoản chi mẫu"
+  },
+  "quickstart": {
+    "name": "Trả lời hoàn tiền",
+    "draft": "Soạn trả lời",
+    "approve": "Duyệt trả lời",
+    "prompt": "Viết một câu trả lời ngắn, lịch sự cho tin nhắn của khách: {{state.message}}",
+    "question": "Gửi câu trả lời này cho khách?\n\n{{state.reply}}",
+    "message": "Đơn A100 của tôi bị vỡ khi nhận. Tôi được hoàn tiền không?",
+    "schedule": "Kiểm tra ngày thường",
+    "kb": "Chính sách hoàn tiền"
+  },
+  "workflowTests": {
+    "fromRun": "Từ run thật"
+  }
+}

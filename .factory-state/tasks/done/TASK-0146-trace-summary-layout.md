@@ -14,15 +14,14 @@
 
 ## Objective
 
-Fix three layout faults in the run trace, from the owner's screenshots on 2026-10-27 ("Sửa nhanh UI. 1. Bị break
-2. Thụt vào cân đối hơn"; "Xem lại cái divider này luôn").
+Fix three layout faults in the run trace, from the owner's screenshots on 2026-10-27 ("Quick UI fix. 1. It breaks 2. Indent it more evenly"; "Look at this divider too").
 
 ## Scope
 
 ### In Scope
 
 - `frontend/src/components/run-trace.tsx`:
-  - the summary bar: items such as "66 ms", "36 token" and "Hoàn thành" no longer break inside; the bar wraps between
+  - the summary bar: items such as "66 ms", "36 token" and "Completed" (in vi) no longer break inside; the bar wraps between
     items when it is narrow;
   - its vertical divider stays 16 px and centred (the shadcn vertical Separator stretches to the tallest item);
   - a workflow tool's child steps: their line sits under the tool call's icon, and the block ends at the duration

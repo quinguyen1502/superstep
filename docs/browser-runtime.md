@@ -1,9 +1,9 @@
 # Isolated local browser worker
 
-TASK-0243 / REQ-0086 / ARCH-0002 / DEC-0085. This delivery adds a local worker,
+The local runtime adds a worker,
 private control transport and protected screenshot storage. Agent/run bindings,
-durable approvals, remote profiles, recipes, UI and exports remain their named
-PLAN-0006 tasks. Managed browser calls still refuse execution until those seams
+durable approvals, remote profiles, recipes, UI and exports are separate layers
+with their own pages. Managed browser calls still refuse execution until those seams
 are integrated; metadata feature enablement alone does not launch a browser.
 
 ## Build and prove
@@ -46,8 +46,8 @@ The worker validates generated Draft 2020-12 schemas with coercion/default
 mutation disabled; services validate the same Pydantic contracts. Schema parity
 is tested. Every command checks full principal/run/group/connection/configuration,
 session generation and expected sequence against its bound session. Out-of-order
-calls fail rather than racing for a lock. The run scheduler still needs the
-TASK-0245 integration that allocates these sequences in model order.
+calls fail rather than racing for a lock. The run session integration allocates
+these sequences in model order.
 
 Open has no start URL. Navigations take bounded runtime HTTP(S) arguments.
 The worker checks request origins, blocks service workers, guards websocket
@@ -69,7 +69,7 @@ keyboard/evaluate surface.
 Click/fill initially return approval_required. Only the trusted control port can
 grant a one-use approval for the exact command fingerprint and current observed
 target. A changed value/context/target cannot reuse it. This is a worker primitive,
-not the completed Human-node approval product: TASK-0246 binds it to verified
+not the completed Human-node approval product: browser approvals bind it to verified
 durable approvals, rejection, expiry and run recovery. No page/model argument
 can approve itself.
 
@@ -81,7 +81,7 @@ remove worker, gateway and socket volume on idle/lifetime expiry even if no
 further tool call occurs. Browser-side expiry is checked on every control request
 and periodically as defence in depth. A hard kill is used for unresponsive
 processes. If Docker cleanup cannot be verified, cleanup_pending is explicit and
-close can be retried; TASK-0245 must retain/reap that state rather than report a
+close can be retried; run sessions retain/reap that state rather than report a
 successful cleanup. No closed session accepts new commands.
 
 ## Protected screenshots
@@ -104,7 +104,7 @@ bytes. Account purge and workflow/run deletion also remove captures.
 expired and other-owner IDs have the same 404. Responses use image/png, no-store,
 nosniff, restricted CSP and no signed/public URL. Public visitor/app-user tokens
 do not grant this Studio endpoint. Publication/trace filtering and screenshot
-presentation are TASK-0250; images are never general workflow state or inline
+presentation belong to the editor; images are never general workflow state or inline
 WorkerResult bytes. Masking input controls cannot sanitise all private content
 rendered by a website; captures remain owner-protected data.
 

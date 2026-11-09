@@ -34,6 +34,7 @@ from .effects import Effects, call_tool
 from .errors import AwaitChild, Interrupt, ValidationError
 from .issues import Issue
 from .limits import safe_error
+from .locale import by_locale
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
@@ -60,8 +61,7 @@ METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 QUERY = {"type": "object", "properties": {"query": {"type": "string", "description": "What to search for"}}, "required": ["query"]}
 APPROVED, REJECTED = "approved", "rejected"
 FAILED = "The tool failed"  # the result of a call that ran and raised (checks.py tells it from calls that never ran)
-ASK = {"en": "{agent} wants to call {tool} with these arguments:\n{args}\nApprove to run it, or reject it. A text reply rejects it and tells the model why.",
-       "vi": "{agent} muốn gọi công cụ {tool} với các tham số:\n{args}\nDuyệt để chạy, hoặc từ chối. Trả lời bằng chữ là từ chối và cho model biết lý do."}
+ASK = by_locale("agent.ask")  # the approval question, per language (app/locales)
 JSON_TYPES = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
 
 

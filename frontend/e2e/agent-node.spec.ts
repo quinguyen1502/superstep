@@ -1,11 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, N } from './helpers'
 import { expectRowAligned } from './helpers/alignment'
+import { vt, literally } from './catalog'
 // configure an Agent node (tools from two sources, approval settings), see the validator's errors, run it with
 // the offline mock and read its rounds in the trace. Approving a tool call during the run comes with.
 const shot = async (page: Page, name: string, sel = '#config-panel') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const T = {
-  vi: { password: 'Mật khẩu', urlMissing: /chưa có URL/, round: 'Vòng 1', calls: 'gọi lookup_order', up: 'Đưa http_request lên', down: 'Đưa http_request xuống' },
+  vi: { password: vt('auth.password'), urlMissing: literally(vt('validation.URL_MISSING').split(': ').pop()!), round: vt('trace.agent.round', { n: 1 }), calls: vt('trace.agent.calls', { tools: 'lookup_order' }), up: vt('agent.moveUp', { name: 'http_request' }), down: vt('agent.moveDown', { name: 'http_request' }) },
   en: { password: 'Password', urlMissing: /URL is missing/, round: 'Round 1', calls: 'calls lookup_order', up: 'Move http_request up', down: 'Move http_request down' },
 }
 const AGENT = (name: string) => ({ name, state: [{ name: 'message', type: 'string' }, { name: 'answer', type: 'string' }, { name: 'steps', type: 'list' }],

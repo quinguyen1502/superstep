@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0068
-- Status: Accepted. The owner answered CLAR-0010 on 2026-10-27 ("Làm theo đề xuất"). This record is the install layout the phase 1 tasks implement.
+- Status: Accepted. The owner answered CLAR-0010 on 2026-10-27 ("Do it as proposed"). This record is the install layout the phase 1 tasks implement.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30

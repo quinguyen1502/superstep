@@ -8,6 +8,9 @@ import pytest
 
 from test_install import FakeDocker, env_values, install_args, invoke
 from test_status import OpsDocker, layout
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 SECRET = "s3-secret-never-printed"
 BASE = "JWT_SECRET=abc\nSTUDIO_SECRET_KEY=key\nSTUDIO_ENV=production\n"
@@ -67,7 +70,7 @@ def test_s3_secret_from_stdin_and_errors(tmp_path, monkeypatch):
     assert not (tmp_path / "nobucket" / ".env").exists()
 
 
-@pytest.mark.parametrize("lang,question", [("en", "Where should chat attachments be stored?"), ("vi", "Lưu tệp đính kèm chat ở đâu?")])
+@pytest.mark.parametrize("lang,question", [("en", "Where should chat attachments be stored?"), ("vi", VI.messages["prompt.attachment_storage_single"].split("?")[0] + "?")])
 def test_the_prompt_offers_what_fits_the_topology(tmp_path, monkeypatch, lang, question):
     asked = []
     answers = iter(["single", "fs"])

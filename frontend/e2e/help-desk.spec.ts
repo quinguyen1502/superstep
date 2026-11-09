@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vin } from './catalog'
 // the Help desk template. In the studio Chat tab Triage hands a duplicate charge to Billing; on the
 // public page the second message of the session stays with Billing, and a new session starts at Triage again.
 const BILLING = 'Billing: duplicate charges on my invoices'
@@ -36,7 +37,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await v.goto(`/c/${slug}`)
     await ask(v, BILLING, 1)
     await expect(steps(v)).toContainText('Triage')
-    await ask(v, lang === 'vi' ? 'Khi nào tôi nhận lại tiền?' : 'When do I get the money back?', 2)
+    await ask(v, lang === 'vi' ? vin('helpDesk.moneyBack') : 'When do I get the money back?', 2)
     await expect(steps(v)).toContainText('Billing'); await expect(steps(v)).not.toContainText('Triage')
     // a new session starts at Triage
     const fresh = await browser.newContext(); const f = await fresh.newPage(); await f.goto(`/c/${slug}`)

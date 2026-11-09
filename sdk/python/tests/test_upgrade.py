@@ -7,6 +7,9 @@ import pytest
 import superstep
 from superstep.cli import run
 from superstep.cli.upgrade import _changelog_text as read_changelog
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 SECRET = "superstep-secret-value"
 APP = "ghcr.io/quinguyen1502/superstep"
@@ -260,7 +263,7 @@ def test_help_and_matching_catalog_keys():
     assert "--json" in err and "--check" in err
     assert "Example: superstep upgrade --to 0.9.0" in err
     code, out, err = invoke(["--lang", "vi", "upgrade", "--help"], UpgradeDocker())
-    assert code == 0 and "Ví dụ: superstep upgrade --to 0.9.0" in err
+    assert code == 0 and VI.messages["example.upgrade"] in err
     root = Path(__file__).resolve().parents[1] / "src" / "superstep" / "cli" / "locales"
     en = json.loads((root / "en.json").read_text(encoding="utf-8"))
     vi = json.loads((root / "vi.json").read_text(encoding="utf-8"))

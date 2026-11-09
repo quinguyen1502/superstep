@@ -24,5 +24,5 @@ Cross-language code nodes (TS export cannot run Python code/server functions; Py
 ## Activity Log
 
 - 2026-11-07: Created.
-- 2026-11-07: Owner "Làm đi" (REQ-0089): adapters split into TASK-0269 (MCP), TASK-0270 (Retriever), TASK-0271 (Send email). Cross-language code, advanced approvals, per-node providers and managed connections remain proposals here.
-- 2026-11-07: Owner declined cross-language code nodes ("ko cần làm phần này"). The other three are authorised as REQ-0090 (TASK-0273 slots, TASK-0274 approval, TASK-0275 managed connections). This proposal stays in backlog for the declined item only.
+- 2026-11-07: Owner "Do it" (REQ-0089): adapters split into TASK-0269 (MCP), TASK-0270 (Retriever), TASK-0271 (Send email). Cross-language code, advanced approvals, per-node providers and managed connections remain proposals here.
+- 2026-11-07: Owner declined cross-language code nodes ("no need to do this part"). The other three are authorised as REQ-0090 (TASK-0273 slots, TASK-0274 approval, TASK-0275 managed connections). This proposal stays in backlog for the declined item only.

@@ -59,5 +59,5 @@ Profile page and self-service password change.
 ## Activity Log
 
 - 2026-10-19: Created from owner feedback; not started.
-- 2026-10-19: Started on `factory/task-0052-profile-and-password` (owner: "Làm task 0052 đi"). Profile is the first Settings section (`/settings/profile`).
+- 2026-10-19: Started on `factory/task-0052-profile-and-password` (owner: "Do task 0052"). Profile is the first Settings section (`/settings/profile`).
 - 2026-10-19: Implemented; review REV-0049, QA QA-0049 (pass). Merged in PR #58 (owner: "Merge PR #58").

@@ -116,9 +116,9 @@ Run a Tool node's Python code (`mode: "code"`) in a Docker container with no net
 
 ## Activity Log
 
-- 2026-10-19: Created from REQ-0039 (owner: "Chia REQ-0039 thành task (plan-tasks) trên cùng PR #60"); not started.
-- 2026-10-19: Task set and DEC-0041 approved by the owner ("Duyệt bộ task và DEC-0041").
-- 2026-10-19: Started on `factory/task-0053-code-runtime-docker` (owner: "Làm task 0053 đi, CI hết quota rồi").
+- 2026-10-19: Created from REQ-0039 (owner: "Split REQ-0039 into tasks (plan-tasks) on the same PR #60"); not started.
+- 2026-10-19: Task set and DEC-0041 approved by the owner ("Approve the task set and DEC-0041").
+- 2026-10-19: Started on `factory/task-0053-code-runtime-docker` (owner: "Do task 0053, CI is out of quota").
 - 2026-10-19: Implemented. The runner goes in as `python -I -c`, so nothing is mounted. Cancel uses `Ports.cancelled`. Review REV-0050, QA QA-0050 (pass). PR open; not merged.
 - 2026-10-19: Merged in PR #61 (owner: "Merge PR #61").
 

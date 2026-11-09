@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: owner request on 2026-10-18, “Bạn có thể thêm các editor hỗ trợ tag replacer cho các state field cho các node message config k?”, and two additions sent while it was in progress: “Sẵn xử lý phần breaking layout này luôn” (a screenshot of the editor header, where the product name ran under the workflow name field) and “Ngoài ra xem các button Save, Run,... text cứ lệch so với icon.”
+- Source: owner request on 2026-10-18, “Can you add editors that support a tag replacer for state fields in the node message config?”, and two additions sent while it was in progress: “Fix this breaking layout while you are at it” (a screenshot of the editor header, where the product name ran under the workflow name field) and “Also look at the Save, Run, ... buttons: the text keeps sitting off the icon.”
 
 ## Summary
 

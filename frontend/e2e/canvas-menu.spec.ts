@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
+import { vt } from './catalog'
 // Editor polish: right-click on the canvas adds a node or a note where you clicked; the node palette and the state
 // schema scroll on their own, so a long node list never hides the schema.
 
@@ -14,7 +15,7 @@ test('right-click the canvas to add a node; the state schema stays in view', asy
   // Each tab uses the whole panel; the schema action remains in view.
   await expect(page.locator('#palette-nodes')).toBeInViewport()
   await page.locator('#palette-state-tab').click()
-  await expect(page.locator('#palette-state').getByRole('button', { name: 'Thêm trường' })).toBeInViewport()
+  await expect(page.locator('#palette-state').getByRole('button', { name: vt('editor.addField') })).toBeInViewport()
 
   await page.locator('#palette-nodes-tab').click()
   const pane = page.locator('.react-flow__pane'); const box = (await pane.boundingBox())!

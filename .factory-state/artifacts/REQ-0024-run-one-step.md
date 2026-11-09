@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: owner request 2026-10-18, “Có thể cho phép run tới 1 step để test.”
+- Source: owner request 2026-10-18, “Can we allow running up to one step, to test?”
 
 ## Summary
 

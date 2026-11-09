@@ -85,7 +85,7 @@ All 11 were approved as recommended by the owner on 2026-10-31 (PR #271); see RE
 
 ## Deferred / later
 
-Work the owner asked to keep on record (2026-10-31, "Nhớ note các thứ sẽ làm sau lại nhé"). Each item has a reason and a trigger that brings it back.
+Work the owner asked to keep on record (2026-10-31, "Remember to note down the things to do later"). Each item has a reason and a trigger that brings it back.
 
 | Item | Reason deferred | Trigger to pick it up |
 |---|---|---|
@@ -115,7 +115,7 @@ Public React toolkit is in review on its own branch/PR. Hook/shared components, 
 
 ## TASK-0224 Owner Acceptance (2026-11-03)
 
-Owner accepted the implementation on existing PR #289 ("Duyệt") after reviewed head b0c21ab6 passed 21 CI checks and one expected GHCR skip. TASK-0224 moves to done for rebased single-commit Ready delivery on that same PR. REV-0219 / QA-0219 retain source review, resolved bootstrap/quota/timing failures and acceptance evidence. Final rewritten-head checks are required. This approval does not authorise merge, release tags, npm publication or deployment; TASK-0225–0228 remain later work.
+Owner accepted the implementation on existing PR #289 ("Approve") after reviewed head b0c21ab6 passed 21 CI checks and one expected GHCR skip. TASK-0224 moves to done for rebased single-commit Ready delivery on that same PR. REV-0219 / QA-0219 retain source review, resolved bootstrap/quota/timing failures and acceptance evidence. Final rewritten-head checks are required. This approval does not authorise merge, release tags, npm publication or deployment; TASK-0225–0228 remain later work.
 
 
 ## Web toolkit documentation progress (2026-11-03)
@@ -125,7 +125,7 @@ Owner approved and merged TASK-0224 #289 and TASK-0225 #290; #290 integrated as 
 
 ## TASK-0226 Owner Acceptance (2026-11-03)
 
-Owner accepted PR #291 ("Duyệt") after head 5d2d8471 passed 22 checks with the expected handbook-deployment and GHCR skips. TASK-0226 moves to done for a rebased, one-commit Ready delivery on the same PR. REV-0221 / QA-0221 preserve the source review, validation/retry history and screenshots outside Git. Final-head checks are required. Phase 3 is not yet claimed integrated until this PR merges; native TASK-0227/0228 and the overall REQ-0082 remain incomplete. No merge or release approval is inferred.
+Owner accepted PR #291 ("Approve") after head 5d2d8471 passed 22 checks with the expected handbook-deployment and GHCR skips. TASK-0226 moves to done for a rebased, one-commit Ready delivery on the same PR. REV-0221 / QA-0221 preserve the source review, validation/retry history and screenshots outside Git. Final-head checks are required. Phase 3 is not yet claimed integrated until this PR merges; native TASK-0227/0228 and the overall REQ-0082 remain incomplete. No merge or release approval is inferred.
 
 - Final-head CI follow-up: a pre-existing public-chat rate-limit test used a temporary service instead of the route dependency. TASK-0226 carries a minimal dependency-override test correction and repeated validation on #291; product scope and native backlog remain unchanged. See REV/QA-0221.
 
@@ -141,7 +141,7 @@ Release preparation follows integration of both features: reconcile changelog/do
 
 ## DEC-0084 Accepted (2026-11-03)
 
-The owner accepted PR #292 ("Duyệt") and authorised implementing the proposed edit/regenerate semantics. DEC-0084 is Accepted; this supersedes its earlier pending-architecture statements. Start TASK-0229 on its existing branch/PR from develop 02361fbd; TASK-0230 follows its shared foundation separately. Native tasks remain deferred. No merge/release instruction is inferred.
+The owner accepted PR #292 ("Approve") and authorised implementing the proposed edit/regenerate semantics. DEC-0084 is Accepted; this supersedes its earlier pending-architecture statements. Start TASK-0229 on its existing branch/PR from develop 02361fbd; TASK-0230 follows its shared foundation separately. Native tasks remain deferred. No merge/release instruction is inferred.
 
 ## Revision Delivery Progress (2026-11-03)
 
@@ -155,10 +155,10 @@ Both revision tasks are integrated: #292 at 42333ffc and #293 at d2119965, each 
 
 ## Owner 0.11.0 Release Instruction
 
-After reviewing candidate #294 and its feature summary, the owner explicitly instructed “Phát hành đi”. This accepts TASK-0238 and authorises #294 integration, develop-to-main release merge, v0.11.0 and independent SDK tags, GitHub Release and configured registry publication. Reviewed e8b21129 has 22 successful checks/two expected skips; local full 8/8, artifact/migration/handbook checks pass. Final lifecycle-only head must pass exact-head CI before merging; publication outcomes are checked separately. This supersedes pending-owner/release statements for this candidate, while native TASK-0227/0228 and overall REQ-0082 remain incomplete.
+After reviewing candidate #294 and its feature summary, the owner explicitly instructed “Release it”. This accepts TASK-0238 and authorises #294 integration, develop-to-main release merge, v0.11.0 and independent SDK tags, GitHub Release and configured registry publication. Reviewed e8b21129 has 22 successful checks/two expected skips; local full 8/8, artifact/migration/handbook checks pass. Final lifecycle-only head must pass exact-head CI before merging; publication outcomes are checked separately. This supersedes pending-owner/release statements for this candidate, while native TASK-0227/0228 and overall REQ-0082 remain incomplete.
 
 ## TASK-0227 resumed (2026-11-08)
 
-The owner asked to implement TASK-0227 ("triển khai 227"). Earlier sentences that say native work remains deferred stay as history. TASK-0228 stays done. REQ-0082 stays Accepted and incomplete until the owner says otherwise. No `sdk-rn-v*` tag and no npm publish are authorised by this resume.
+The owner asked to implement TASK-0227 ("build 227"). Earlier sentences that say native work remains deferred stay as history. TASK-0228 stays done. REQ-0082 stays Accepted and incomplete until the owner says otherwise. No `sdk-rn-v*` tag and no npm publish are authorised by this resume.
 
 2026-11-08 finish-pr: the task is done on this branch with REV-0264 and QA-0264. The simulator and emulator screenshots stay open. No tag and no npm publish.

@@ -1,6 +1,6 @@
 # Roadmap
 
-Phases accepted by the owner on 2026-10-16 (DEC-0007, supersedes the P0/P1/P2 bands of DEC-0004). Task IDs follow phase order; old IDs are mapped in `docs/factory-task-renumbering.md`.
+Phases accepted by the owner on 2026-10-16 (DEC-0007, supersedes the P0/P1/P2 bands of DEC-0004). Task IDs follow phase order; old IDs are mapped in the Renumbering Map in DEC-0007.
 
 ## MVP baseline (done)
 
@@ -374,7 +374,7 @@ Each call keeps its own ledger entry. The owner confirmed this set on 2026-10-27
 
 ## Accepted, not planned yet
 
-Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("3 hướng có thể làm thì bạn viết REQ trước đi"). The
+Written on 2026-10-27 from what REQ-0073 and REQ-0074 left out ("write the REQs for the 3 possible directions first"). The
 owner answered every CLAR with the recommended options the same day. REQ-0079 phase 1, REQ-0079 phase 2, REQ-0075, and REQ-0076 are planned in the
 sections above. The rest are not planned into tasks yet.
 
@@ -443,7 +443,7 @@ REQ-0085, DES-0003, DEC-0083, PLAN-0005: owner additionally requested Google Dri
 
 ## Browser tools, recipes and proxies
 
-REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner "Ok triển khai" after amendments). Studio first milestone landed: TASK-0241–0250 + TASK-0253 merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323 (REV-0244, QA-0244). On 2026-11-07 the owner recorded two export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Implementation PRs #303–#316 reconciled with the Accepted package and merged into develop. No release/version bump authorised by acceptance alone.
+REQ-0086, DES-0004, ARCH-0002, DEC-0085 and PLAN-0006: **Accepted 2026-11-06** (owner: "OK, go ahead and build it" after amendments). Studio first milestone landed: TASK-0241–0250 + TASK-0253 merged. TASK-0251 merged in PR #321. TASK-0252 merged in PR #323 (REV-0244, QA-0244). On 2026-11-07 the owner recorded two export drivers and asked for TASK-0261 and TASK-0262. TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done. Existing Agent tools, dynamic chat/workflow/search URLs, shared browser connections with required origin whitelist, proxy/profile policy, flexible-but-safe safety toggles, reusable recipes, local Playwright **and** Browserless sessions that persist across chat turns, nine tools including upload/download/evaluate JS, and studio UI/handbook. Implementation PRs #303–#316 reconciled with the Accepted package and merged into develop. No release/version bump authorised by acceptance alone.
 
 - TASK-0241 — browser contracts, whitelist, toggles and scoped connection metadata. **done** (merged #303).
 - TASK-0242 — effective browser egress, whitelist and connection-level proxy policy. **done** (merged #304).
@@ -481,7 +481,7 @@ REQ-0088, DEC-0087, PLAN-0008 (owner-authorised 2026-11-07).
 
 ## Code export parity and adapters
 
-REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Làm đi").
+REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Do it").
 
 - TASK-0267 — HTTP Tool connects to the checked address (DNS rebinding), SNI/certificate on the name. **done**.
 - TASK-0268 — LLM fallback for messages with attachments. **done**.
@@ -520,7 +520,7 @@ These three share `factory/req-0090-export-remaining` because the exporters are 
 
 ## 0.11.0 Release Authorisation
 
-Owner explicitly instructed “Phát hành đi” after reviewing PR #294 and the release summary. Integrate the accepted candidate and release through main, version tags, GitHub Release and configured PyPI/npm/GHCR workflows. Publication is in progress, not yet claimed successful. Native TASK-0227/0228 stays deferred; no live bot/provider cutover is included.
+Owner explicitly instructed “Release it” after reviewing PR #294 and the release summary. Integrate the accepted candidate and release through main, version tags, GitHub Release and configured PyPI/npm/GHCR workflows. Publication is in progress, not yet claimed successful. Native TASK-0227/0228 stays deferred; no live bot/provider cutover is included.
 
 ## 0.11.0 Image Release Recovery
 

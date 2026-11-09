@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createWidget, installWidget } from './widget'
 import { createFrameBridge } from './frame-bridge'
 import { MSG, storageKey, type WidgetAPI } from './protocol'
+import viCatalog from '@/locales/vi.json'
 const STUDIO = 'https://studio.example', HOST = 'https://shop.example'
 const JWT = 'header.payload.signature', VISITOR = '0123456789abcdef.0123456789abcdef0123456789abcdef'
 const cleanups: (() => void)[] = []
@@ -57,7 +58,7 @@ describe('widget host API boundary', () => {
     window.Superstep = { q: [['init', { slug: 'help', language: 'vi', color: 'red', position: 'left' }], ['on', 'open', event], ['open']] }
     const api = installWidget(window, script), frame = document.querySelector('iframe')!, before = frame.contentWindow
     expect(event).toHaveBeenCalledTimes(1); api.off('open', event); api.close(); api.open(); expect(event).toHaveBeenCalledTimes(1)
-    expect(document.querySelector('button')?.getAttribute('aria-label')).toBe('Đóng chat')
+    expect(document.querySelector('button')?.getAttribute('aria-label')).toBe(viCatalog.chat.widget.close)
     expect(document.querySelector('#superstep-chat-widget')?.getAttribute('data-position')).toBe('left')
     api.init({ slug: 'help', color: '', logo: '' }); expect(frame.contentWindow).toBe(before)
     expect(installWidget(window, script)).toBe(api)

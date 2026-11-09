@@ -2,6 +2,7 @@ import type { ClientFrame } from '@superstep/sdk/chat'
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
 import { Chat } from '../src/chat'
 import { MessageList } from '../src/message-list'
+import { text } from '../src/labels'
 import { Harness, type FakeSocket } from './harness'
 
 function frame(socket: FakeSocket | undefined, type: ClientFrame['type']) {
@@ -73,7 +74,7 @@ describe('Chat with a fake socket', () => {
       turns: [{ id: 't1', role: 'assistant', text: 'Xin chao', created: 1, inherited: false, editable: false, regeneratable: false }],
       text: '', status: 'idle', pending: null, rate,
     }} />)
-    fireEvent.press(view.getByRole('button', { name: 'Hữu ích' }))
+    fireEvent.press(view.getByRole('button', { name: text('vi', 'helpful') }))
     expect(rate).toHaveBeenCalledWith('t1', 'up')
   })
 })

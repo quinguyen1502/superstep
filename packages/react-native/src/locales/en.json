@@ -1,0 +1,19 @@
+{
+  "send": "Send",
+  "message": "Message",
+  "answer": "Answer",
+  "answerLabel": "Your answer",
+  "approve": "Approve",
+  "reject": "Reject",
+  "attach": "Attach a file",
+  "remove": "Remove",
+  "helpful": "Helpful",
+  "notHelpful": "Not helpful",
+  "waitingReviewer": "Waiting for a reviewer",
+  "needsAnswer": "This step needs an answer",
+  "you": "You",
+  "assistant": "Assistant",
+  "choose": "Choose",
+  "stop": "Stop",
+  "required": "Required"
+}

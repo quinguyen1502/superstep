@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
 - Updated: 2026-10-19
-- Source: remaining-work report of 2026-10-18 (item 6: "Chạy workflow theo lịch (cron)"; REQ-0004 open question) and the owner's reply, "Ngoại trừ 2, 3, 4. Làm các phần còn lại"
+- Source: remaining-work report of 2026-10-18 (item 6: "Run workflows on a schedule (cron)"; REQ-0004 open question) and the owner's reply, "Except 2, 3, 4. Do the rest"
 
 ## Summary
 
