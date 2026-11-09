@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test'
 import type { Page, TestInfo } from '@playwright/test'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import hostVi from '../../examples/chat-host/src/locales/vi.json' with { type: 'json' }
+import { startsWith } from '../e2e/catalog'
 
 const configFile = process.env.CHAT_HOST_FIXTURE
 if (!configFile) throw new Error('Run scripts/chat_host_e2e.sh to seed an isolated backend')
@@ -76,9 +78,9 @@ test('cross-origin customer flow: form, file, rating, two-user isolation, origin
   await screenshot(page, 'host-en-dark', testInfo)
   await page.getByRole('button', { name: 'Tiếng Việt', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Tiếng Việt', exact: true })).toHaveAttribute('data-variant', 'secondary')
-  await expect(page.getByText('Đã lưu đánh giá', { exact: true })).toBeVisible()
+  await expect(page.getByText(hostVi.rated, { exact: true })).toBeVisible()
   await screenshot(page, 'host-vi-dark', testInfo)
-  await page.getByRole('button', { name: 'Đổi giao diện sáng tối', exact: true }).click()
+  await page.getByRole('button', { name: hostVi.theme, exact: true }).click()
   await screenshot(page, 'host-vi-light', testInfo)
   await page.setViewportSize({ width: 390, height: 844 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)

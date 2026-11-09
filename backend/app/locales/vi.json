@@ -1,0 +1,90 @@
+{
+  "agent": {
+    "ask": "{agent} muốn gọi công cụ {tool} với các tham số:\n{args}\nDuyệt để chạy, hoặc từ chối. Trả lời bằng chữ là từ chối và cho model biết lý do."
+  },
+  "attachments": {
+    "heading": "Tệp đính kèm",
+    "image": "ảnh",
+    "document": "tài liệu"
+  },
+  "browser": {
+    "ask": "Duyệt thao tác {operation} tại {origin} trên {role} {target}? Nội dung trang không đáng tin cậy. Từ chối nếu thao tác ngoài dự kiến."
+  },
+  "channels": {
+    "title": "Cần phê duyệt",
+    "workflow": "Workflow: {v}",
+    "step": "Bước: {v}",
+    "question": "Câu hỏi: {v}",
+    "run": "Lượt chạy: {v}",
+    "expires": "Hết hạn: {v}",
+    "open": "Mở trong Superstep",
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "approved_by": "✅ {who} đã duyệt",
+    "rejected_by": "❌ {who} đã từ chối",
+    "at": "{text} lúc {when}",
+    "answered": "Đã trả lời trong Superstep",
+    "cancelled": "Lượt chạy đã bị huỷ",
+    "expired": "Yêu cầu đã hết hạn",
+    "finished": "Lượt chạy đã tiếp tục mà không cần yêu cầu này",
+    "reminded": "⏰ Đã nhắc lại trong một tin nhắn mới",
+    "escalated": "⏰ Hết hạn chờ: đã chuyển cho người duyệt khác",
+    "deadline_approved": "⏰ Hết hạn chờ: tự động duyệt theo hạn",
+    "deadline_rejected": "⏰ Hết hạn chờ: tự động từ chối theo hạn",
+    "auto_approved": "🤖 AI đã tự duyệt",
+    "auto_rejected": "🤖 Bị từ chối theo quy tắc AI duyệt",
+    "ai_opinion": "AI duyệt: {decision} ({confidence}). {reason}",
+    "ai_approve": "duyệt",
+    "ai_reject": "từ chối",
+    "ai_escalate": "cần người duyệt",
+    "code": "Mã xác minh Superstep: {code}\nMã hết hạn sau {minutes} phút. Nếu bạn không yêu cầu, hãy bỏ qua tin nhắn này.",
+    "APPROVAL_TOKEN_INVALID": "Nút phê duyệt không hợp lệ",
+    "APPROVAL_TOKEN_EXPIRED": "Yêu cầu phê duyệt này đã hết hạn",
+    "APPROVAL_ALREADY_DECIDED": "Yêu cầu này đã được trả lời",
+    "APPROVAL_IDENTITY_UNKNOWN": "Hãy liên kết và xác minh tài khoản {kind} trong Superstep (Cài đặt → Tài khoản của tôi) để phê duyệt",
+    "APPROVAL_FORBIDDEN": "Bạn không có quyền phê duyệt lượt chạy này",
+    "chat_started": "▶️ Đã chạy {workflow} (lượt chạy {run})",
+    "chat_finished": "✅ {workflow} đã xong: {value}",
+    "chat_waiting": "⏸ {workflow} đang chờ phê duyệt ở {node}",
+    "chat_failed": "❌ {workflow} bị lỗi: {error}",
+    "chat_ended": "⏹ {workflow} đã dừng ({status})",
+    "chat_empty": "(không có giá trị)",
+    "chat_open": "Mở lượt chạy: {link}",
+    "CHAT_IDENTITY_UNKNOWN": "Hãy liên kết tài khoản {kind} trong Superstep (Cài đặt → Tài khoản của tôi) để chạy workflow từ chat",
+    "CHAT_IDENTITY_UNVERIFIED": "Hãy xác minh tài khoản {kind} trong Superstep (Cài đặt → Tài khoản của tôi) bằng mã bot đã gửi cho bạn",
+    "CHAT_FORBIDDEN": "Bạn không có quyền chạy workflow này",
+    "CHAT_TRIGGER_OFF": "Chat trigger này đang tắt",
+    "RATE_LIMITED": "Bạn đã chạy lệnh này quá nhiều lần. Hãy thử lại sau một phút",
+    "RUN_INPUT_TOO_LARGE": "Tin nhắn quá dài",
+    "WORKFLOW_NOT_FOUND": "Workflow này không còn tồn tại"
+  },
+  "embeddings": {
+    "stop_words": "là và của có cho không được các những một này đó thì với tôi bạn"
+  },
+  "mock": {
+    "answer": "Trả lời",
+    "classify": {
+      "markers": [
+        "phân loại"
+      ],
+      "order": [
+        "đơn",
+        "giao hàng"
+      ],
+      "refund": [
+        "hoàn tiền"
+      ]
+    }
+  },
+  "tools": {
+    "orders": {
+      "A100": "Đã giao hàng (delivered) ngày 2026-10-10",
+      "B200": "Đang vận chuyển (in transit), dự kiến 2026-10-18",
+      "C300": "Đang xử lý (processing)",
+      "unknown": "không tồn tại trong hệ thống"
+    },
+    "no_order": "Không tìm thấy mã đơn hàng trong tin nhắn.",
+    "order_label": "Đơn",
+    "refund_requested": "Đã gửi yêu cầu hoàn tiền cho đơn {oid} (ví dụ: chưa trả tiền thật)."
+  }
+}

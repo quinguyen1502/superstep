@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
 import { expectRowAligned, expectBaselineAligned } from './helpers/alignment'
+import { vt } from './catalog'
 // the bottom panel (Run · Test · Code; Run = input | logs, a run picker and "View all") and the Chat side
 // panel (header button or Shift+C, 340–760px, width and open state remembered, fullscreen with Esc, Config beside it).
 const STATE = [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }]
@@ -69,7 +70,7 @@ test('Chat side panel: toggle, width and open state remembered, fullscreen keeps
   await page.locator('#chat-fullscreen').click(); await expect(page.locator('#chat-side')).toHaveAttribute('data-fullscreen', 'true')
   await expect(page.locator('#chat-input')).toHaveValue('draft kept')
   // fullscreen: the icon-only New chat sits in the sidebar header, level with the chat toolbar
-  await expect(page.locator('#chat-new')).toHaveAttribute('aria-label', 'Chat mới'); await expect(page.locator('#chat-new')).toHaveText('')
+  await expect(page.locator('#chat-new')).toHaveAttribute('aria-label', vt('chat.new')); await expect(page.locator('#chat-new')).toHaveText('')
   await expectRowAligned([page.locator('#chat-new'), page.locator('#chat-fullscreen'), page.locator('#chat-close')], { label: 'fullscreen chat header' })
   await expectRowAligned([page.locator('#chat-sidebar-header > span'), page.locator('#chat-new')], { sameHeight: false, label: 'chat sidebar header' })
   await page.keyboard.press('Escape'); await expect(page.locator('#chat-side')).not.toHaveAttribute('data-fullscreen', 'true')
@@ -141,9 +142,9 @@ for (const lang of ['en', 'vi'] as const) {
     const row = await page.locator('#chat-toolbar > button:visible, #chat-toolbar > [data-slot=select-trigger]:visible').all()
     await expectRowAligned(row, { label: 'compact chat toolbar' })
     for (const r of row) { const b = (await r.boundingBox())!; expect(b.x + b.width, 'toolbar control past the panel edge').toBeLessThanOrEqual(tb.x + tb.width + 0.5) }
-    await page.locator('#chat-view').click(); await expect(page.getByRole('menu')).toContainText(lang === 'vi' ? 'Xem dưới góc nhìn' : 'View as')
+    await page.locator('#chat-view').click(); await expect(page.getByRole('menu')).toContainText(lang === 'vi' ? vt('chat.viewAs') : 'View as')
     await expect(page.locator('#chat-view-visitor')).toContainText(lang === 'vi' ? 'Khách chat' : 'Chat visitor')
-    await expect(page.locator('#chat-view')).toHaveText(lang === 'vi' ? 'Người dựng' : 'Builder')
+    await expect(page.locator('#chat-view')).toHaveText(lang === 'vi' ? vt('chat.views.builder.short') : 'Builder')
     // the View as label and the session title share the font size and the text baseline
     const fs = async (sel: string) => page.locator(sel).evaluate(e => getComputedStyle(e).fontSize)
     expect(await fs('#chat-view')).toBe(await fs('#chat-session-picker [data-slot=select-value]'))
@@ -162,15 +163,15 @@ for (const lang of ['en', 'vi'] as const) {
       const sw = await page.locator('#chat-toolbar').evaluate(e => e.scrollWidth - e.clientWidth); expect(sw, 'toolbar overflow').toBeLessThanOrEqual(0)
       if (v === 'visitor') { await page.keyboard.press('Escape'); await page.locator('#chat-visitor-exit').click(); await page.locator('#chat-view').click() }
     }
-    await page.locator('#chat-view-visitor').click(); await expect(page.locator('#chat-view')).toHaveAttribute('aria-label', lang === 'vi' ? 'Xem dưới góc nhìn: Khách chat' : 'View as: Chat visitor')
+    await page.locator('#chat-view-visitor').click(); await expect(page.locator('#chat-view')).toHaveAttribute('aria-label', lang === 'vi' ? `${vt('chat.viewAs')}: ${vt('chat.views.visitor.title')}` : 'View as: Chat visitor')
     await expect(page.locator('#chat-view')).toHaveText(lang === 'vi' ? 'Khách' : 'Visitor')
     // the session picker's chevron hugs its title
     const val = (await page.locator('#chat-session-picker [data-slot=select-value]').boundingBox())!
     const chev = (await page.locator('#chat-session-picker > svg').boundingBox())!
     expect(chev.x - (val.x + val.width), 'chevron right after the title').toBeLessThanOrEqual(10)
     // visitor view: a banner on top of the thread, one click back to the builder view
-    await expect(page.locator('#chat-visitor-banner')).toContainText(lang === 'vi' ? 'Bạn đang xem trước như khách chat' : "You're previewing what chat visitors see")
+    await expect(page.locator('#chat-visitor-banner')).toContainText(lang === 'vi' ? vt('chat.visitorBanner') : "You're previewing what chat visitors see")
     await page.locator('#chat-visitor-exit').click()
-    await expect(page.locator('#chat-visitor-banner')).toHaveCount(0); await expect(page.locator('#chat-view')).toHaveText(lang === 'vi' ? 'Người dựng' : 'Builder')
+    await expect(page.locator('#chat-visitor-banner')).toHaveCount(0); await expect(page.locator('#chat-view')).toHaveText(lang === 'vi' ? vt('chat.views.builder.short') : 'Builder')
   })
 }

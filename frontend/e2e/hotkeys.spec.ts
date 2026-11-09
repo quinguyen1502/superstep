@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, SIMPLE } from './helpers'
+import { vt } from './catalog'
 // keyboard shortcuts in the editor and the cheat sheet.
 
 test('save, run, delete with the keyboard; typing is safe; cheat sheet lists every shortcut', async ({ page }) => {
@@ -27,6 +28,6 @@ test('save, run, delete with the keyboard; typing is safe; cheat sheet lists eve
   await page.locator('.react-flow__pane').click(); await page.keyboard.press('Shift+?')
   const sheet = page.locator('#shortcut-cheatsheet'); await expect(sheet).toBeVisible()
   await expect(sheet.getByTestId('shortcut-row')).toHaveCount(19)
-  await expect(sheet).toContainText(/Ctrl|⌘/); await expect(sheet).toContainText('Lưu workflow')
+  await expect(sheet).toContainText(/Ctrl|⌘/); await expect(sheet).toContainText(vt('editor.saveTip'))
   await page.keyboard.press('Escape'); await expect(sheet).toHaveCount(0)
 })

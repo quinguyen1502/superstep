@@ -1,8 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vt } from './catalog'
 // parallel branches + Join with an append reducer, and a Subgraph node running another saved workflow.
 async function login(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return { Authorization: `Bearer ${await apiToken(page)}` }
 }
@@ -24,9 +25,9 @@ test('parallel branches, Join and a Subgraph node', async ({ page }) => {
   expect(saved.errors).toEqual([])
   await page.goto(`/workflows/${saved.id}`)
   // palette has the new node types; the state schema shows the reducer
-  await expect(page.getByText('Chờ mọi nhánh song song')).toBeVisible(); await expect(page.getByText('Chạy một workflow đã lưu')).toBeVisible()
+  await expect(page.getByText(vt('nodes.join'))).toBeVisible(); await expect(page.getByText(vt('nodes.subgraph'))).toBeVisible()
   await page.locator('#palette-state-tab').click()
-  await expect(page.locator('#reducer-notes')).toContainText('Nối (gom tất cả)')
+  await expect(page.locator('#reducer-notes')).toContainText(vt('editor.reducers.append'))
   // subgraph settings: the chosen workflow, open link
   await page.locator('.react-flow__node[data-id="sub"]').click()
   await page.locator('#config-tab-settings').click()
@@ -42,7 +43,7 @@ test('parallel branches, Join and a Subgraph node', async ({ page }) => {
   const run = (await (await page.request.get(`/api/workflows/${saved.id}/runs`, { headers: auth })).json()).data[0]
   expect(run.final_state.notes).toHaveLength(2); expect(run.final_state.summary).toBeTruthy()
   // a parallel write without a reducer is reported on save
-  await page.locator('#reducer-notes').click(); await page.getByRole('option', { name: 'Thay thế (giữ giá trị ghi sau cùng)' }).click()
-  await page.getByRole('button', { name: 'Lưu', exact: true }).click()
+  await page.locator('#reducer-notes').click(); await page.getByRole('option', { name: vt('editor.reducers.replace') }).click()
+  await page.getByRole('button', { name: vt('approvals.save'), exact: true }).click()
   await expect(page.locator('#validation-errors')).toContainText('state.notes')
 })

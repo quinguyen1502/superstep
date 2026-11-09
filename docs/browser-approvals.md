@@ -1,9 +1,9 @@
 # Browser approval and recovery
 
-TASK-0246 builds on [run sessions](browser-sessions.md). Both browser flags remain
-experimental and default off. This describes the implemented backend contract;
-connection/recipe UI, filtered trace presentation and executable exports remain
-TASK-0247–0253. It does not promise exactly-once website submissions.
+Approval and recovery build on [run sessions](browser-sessions.md). The browser runtime
+flag remains experimental and default off. This describes the backend contract;
+connection/recipe UI, filtered trace presentation and executable exports are
+described in their own pages. It does not promise exactly-once website submissions.
 
 ## Human decisions
 

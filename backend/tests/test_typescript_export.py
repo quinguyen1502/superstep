@@ -23,7 +23,7 @@ DEMO = {"name": "TypeScript demo", "state": [F("message"), F("count", "integer")
 
 
 def demo():
-    return T.to_typescript(DEMO, DEMO["name"], 3, {}, {"input": {"message": "xin chào", "count": 1}})
+    return T.to_typescript(DEMO, DEMO["name"], 3, {}, {"input": {"message": "héllo wörld", "count": 1}})
 
 
 def test_snapshot():
@@ -192,7 +192,7 @@ def same_run(tmp_path, env, wf, inp, answers=None, children=None, ordered=True, 
 
 def test_demo_type_checks_and_runs_the_typescript_code_node(tmp_path, deno_env):
     _, final, stdout = ts_run(tmp_path, deno_env, demo().code)
-    assert "got xin chào" in stdout and final["out"] == {"shout": "XIN CHÀO", "count": 2} and final["tags"] == []
+    assert "got héllo wörld" in stdout and final["out"] == {"shout": "HÉLLO WÖRLD", "count": 2} and final["tags"] == []
 
 
 def test_parallel_loop_and_subgraph_take_the_studio_path(tmp_path, deno_env):

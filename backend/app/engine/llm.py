@@ -7,20 +7,23 @@ import os, re, time
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from . import attachments, providers
 from .providers import LLMError, ProviderError  # noqa: F401 (re-exported)
+from .locale import LOCALES, by_locale, text as locale_text
 from .usage import estimate_tokens, make_usage
 
 
-MOCK_ANSWER = {"en": "Answer", "vi": "Trả lời"}  # the echo's prefix per language (engine/locale)
+MOCK_ANSWER = by_locale("mock.answer")  # the echo's prefix per language (app/locales)
+# Words the mock looks for in a classification prompt, in every language (app/locales).
+CLASSIFY = {part: [w for lang in LOCALES for w in locale_text(lang, f"mock.classify.{part}")] for part in ("markers", "order", "refund")}
 
 
 def mock_llm(prompt: str, model: str, locale: str = "en") -> str:
     """Deterministic offline mock. Recognises classification prompts; the echo is in `locale` (en, vi)."""
     p = prompt.lower()
-    if "classify" in p or "phân loại" in p:
+    if any(k in p for k in CLASSIFY["markers"]):
         msg = p.split("message:")[-1] if "message:" in p else p
-        if any(k in msg for k in ["order", "đơn", "giao hàng", "ship", "a100", "b200", "c300"]):
+        if any(k in msg for k in CLASSIFY["order"]):
             return "order_status"
-        if any(k in msg for k in ["refund", "hoàn tiền", "return"]):
+        if any(k in msg for k in CLASSIFY["refund"]):
             return "refund"
         return "general"
     tail = prompt.strip().splitlines()[-1] if prompt.strip() else ""

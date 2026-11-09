@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
 - Updated: 2026-10-19
-- Source: owner question "langgraph có support Loop node không?" and the reply "Ok triển khai thêm" (2026-10-19)
+- Source: owner question "does langgraph support a Loop node?" and the reply "OK, build that too" (2026-10-19)
 
 ## Summary
 

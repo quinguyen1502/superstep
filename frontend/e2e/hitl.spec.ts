@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, signIn } from './helpers'
+import { vt } from './catalog'
 // a run pauses at a Human node, shows up as pending, and resumes from the panel.
 const APPROVAL = {
   name: `Approval e2e ${Date.now()}`, state: [{ name: 'message', type: 'string' }, { name: 'decision', type: 'string' }],
@@ -11,7 +12,7 @@ const APPROVAL = {
     { id: '3', source: 'route', target: 'e', label: 'approved' }, { id: '4', source: 'route', target: 'e', label: 'rejected' }],
 }
 async function login(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return apiToken(page)
 }
@@ -77,9 +78,9 @@ test('human node deadline: settings, due time in the inbox, rejected on time', a
   await page.locator('.react-flow__node[data-id="ask"]').click()
   await page.locator('#config-tab-settings').click()
   await page.locator('#deadline-on').click(); await expect(page.locator('#deadline-after')).toHaveValue('1')
-  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: 'Chuyển cho người duyệt khác' }).click()
+  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: vt('deadline.actions.escalate') }).click()
   await expect(page.locator('#deadline-escalate')).toBeVisible()
-  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: 'Từ chối' }).click()
+  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: vt('aiReview.effects.reject') }).click()
   await page.locator('#deadline-after-unit').click(); await page.getByRole('option', { name: 'phút' }).click()
   await page.locator('#save-btn').click(); await expect(page.locator('#unsaved-badge')).toHaveCount(0)
   const saved = (await (await page.request.get(`/api/workflows/${wid}`, { headers: { Authorization: `Bearer ${token}` } })).json()).data

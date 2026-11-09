@@ -81,7 +81,7 @@ Give each exported model credential a stable `LLM_CRED_<n>` slot. The credential
 - 2026-11-07: Slots are in the Python and TypeScript exporters. Python fallback tests and `test_export_remaining.py` passed. Deno is not installed here, so the TypeScript run was not executed.
 - 2026-11-07: PR #336 CI is green at `b6c9e52b`, including Backend pytest, Postgres/Redis, Playwright, and factory verify (Deno runs there). Status stays doing until review and QA. Not merged.
 - 2026-11-07: Review REV-0259 approved for QA. QA QA-0259 conditionally passed. Advisory only. Status stays doing. Not merged.
-- 2026-11-07: Owner approved (duyệt). Moved to done with Review REV-0259 and QA QA-0259. Not merged.
+- 2026-11-07: Owner approved. Moved to done with Review REV-0259 and QA QA-0259. Not merged.
 
 ## Handoff Notes
 

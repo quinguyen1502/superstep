@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { vt } from './catalog'
 // notification bell for waiting runs; webhook delivery log with backoff, redelivery; signing-secret rotation.
 const APPROVAL = {
   name: `Notify e2e ${Date.now()}`, state: [{ name: 'message', type: 'string' }, { name: 'decision', type: 'string' }],
@@ -11,7 +12,7 @@ const APPROVAL = {
   edges: [{ id: '1', source: 's', target: 'ask' }, { id: '2', source: 'ask', target: 'e' }],
 }
 async function login(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return { Authorization: `Bearer ${await apiToken(page)}` }
 }
@@ -55,10 +56,10 @@ test('webhook deliveries: retried with backoff, logged, redelivered; secret rota
     // read without waiting: textContent() on a row that is not listed yet waits for it, so the poll would never click
     // Refresh again and the list would stay as it was before the delivery was logged
     const now = async (l: typeof row) => { await page.locator('#deliveries-refresh').click(); return (await l.allTextContents())[0] ?? '' }
-    await expect.poll(() => now(row.locator('[data-testid=delivery-status]')), { timeout: 20_000 }).toBe('đã gửi')
-    await expect(row).toContainText('2 lần thử'); await expect(row.locator('[data-testid=delivery-code]')).toHaveText('HTTP 200')
+    await expect.poll(() => now(row.locator('[data-testid=delivery-status]')), { timeout: 20_000 }).toBe(vt('deliveries.status.ok'))
+    await expect(row).toContainText(vt('deliveries.attempts_other', { count: 2 })); await expect(row.locator('[data-testid=delivery-code]')).toHaveText('HTTP 200')
     await row.locator('[data-testid=delivery-redeliver]').click()
-    await expect.poll(() => now(row), { timeout: 20_000 }).toContain('1 lần thử')
+    await expect.poll(() => now(row), { timeout: 20_000 }).toContain(vt('deliveries.attempts_one', { count: '1' }))
     expect(hits.length).toBe(3)
     // rotate the signing secret: shown once, the old one stays valid during the grace period
     await page.getByRole('tab', { name: 'Token' }).click()

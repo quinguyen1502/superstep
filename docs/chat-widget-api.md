@@ -1,6 +1,6 @@
 # Chat widget JavaScript API
 
-TASK-0225 adds the API to the existing classic script. No npm installation is required. Publish the chat and add your website's exact origin to **embed origins** first.
+The API is part of the existing classic script. No npm installation is required. Publish the chat and add your website's exact origin to **embed origins** first.
 
 ```html
 <script>
@@ -60,6 +60,6 @@ Handlers receive only these fields. There are no JWTs, provider callbacks, app s
 
 ## Iframe API and trust boundary
 
-`/c/<slug>?embed=1` exposes the same `window.Superstep` methods **inside** the frame for TASK-0228's future native bridge. In that context the page is already displayed; open/close/toggle signal visibility events to the integrating wrapper. `init` may update appearance for the current slug. Native code may call `identify` with a token/provider and await the history acknowledgement.
+`/c/<slug>?embed=1` exposes the same `window.Superstep` methods **inside** the frame for a future native bridge. In that context the page is already displayed; open/close/toggle signal visibility events to the integrating wrapper. `init` may update appearance for the current slug. Native code may call `identify` with a token/provider and await the history acknowledgement.
 
-A website parent must use `widget.js` for the checked bridge. The private protocol validates the exact parent/frame WindowProxy, the configured parent origin, a fresh document channel and an identity epoch. Sensitive replies always target an exact origin. The initial public ready handshake contains a document nonce only. Foreign windows/origins and stale channels/epochs are ignored. Do not implement an unvalidated wildcard token bridge or put tokens in URL parameters. Platform wrapper guides remain TASK-0228; the broader handbook refresh remains TASK-0226.
+A website parent must use `widget.js` for the checked bridge. The private protocol validates the exact parent/frame WindowProxy, the configured parent origin, a fresh document channel and an identity epoch. Sensitive replies always target an exact origin. The initial public ready handshake contains a document nonce only. Foreign windows/origins and stale channels/epochs are ignored. Do not implement an unvalidated wildcard token bridge or put tokens in URL parameters. Platform wrapper guides and a broader handbook refresh are not part of this page.

@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: owner request 2026-10-18, “thêm 1 task cho kéo resize các panels.”
+- Source: owner request 2026-10-18, “add a task for drag-resizing the panels.”
 
 ## Summary
 

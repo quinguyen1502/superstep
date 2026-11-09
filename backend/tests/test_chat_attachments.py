@@ -35,7 +35,7 @@ def test_types_are_read_from_the_bytes():
     assert sniff("a.pdf", pdf()) == ("document", "application/pdf")
     assert sniff("shot.PNG", PNG) == ("image", "image/png")
     assert sniff("a.webp", b"RIFF\x00\x00\x00\x00WEBPVP8 ") == ("image", "image/webp")
-    assert sniff("notes.md", "# Hi đây".encode()) == ("document", "text/markdown")
+    assert sniff("notes.md", "# Hi café ☕".encode()) == ("document", "text/markdown")
     assert sniff("a.pdf", b"just text") is None  # renamed
     assert sniff("a.png", pdf()) is None  # the name must agree with the bytes
     assert sniff("a.txt", b"\x00\x01binary") is None

@@ -10,6 +10,9 @@ import httpx
 import pytest
 
 from superstep.cli import run
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 TOKEN = "pat_should-not-leak"
 URL = "http://studio.example"
@@ -132,12 +135,12 @@ def test_help_examples():
     assert code == 0 and out == ""
     assert "Example: superstep run inbox --input sample.json --follow" in err
     code, out, err = invoke(["--lang", "vi", "run", "--help"])
-    assert "Ví dụ: superstep run inbox --input sample.json --follow" in err
+    assert VI.messages["example.run"] in err
     code, out, err = invoke(["runs", "--help"])
     assert code == 0 and out == ""
     assert "Example: superstep runs list" in err
     code, out, err = invoke(["--lang", "vi", "runs", "--help"])
-    assert "Ví dụ: superstep runs list" in err
+    assert VI.messages["example.runs"] in err
 
 
 def test_run_follow_sends_the_file_and_hides_the_token(tmp_path, monkeypatch, caplog):

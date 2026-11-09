@@ -36,10 +36,10 @@ def test_ollama_models_and_chat():
     respx.get("http://localhost:11434/api/tags").respond(json={"models": [{"name": "qwen2.5:7b", "model": "qwen2.5:7b"}, {"name": "llama3.2:latest", "model": "llama3.2:latest"}]})
     assert providers.get("ollama").list_models({"provider": "ollama"}) == ["llama3.2:latest", "qwen2.5:7b"]
     route = respx.post("http://localhost:11434/api/chat").respond(
-        json={"model": "llama3.2", "created_at": "2026-01-01T00:00:00Z", "message": {"role": "assistant", "content": "xin chào"},
+        json={"model": "llama3.2", "created_at": "2026-01-01T00:00:00Z", "message": {"role": "assistant", "content": "héllo wörld"},
               "done": True, "done_reason": "stop", "prompt_eval_count": 4, "eval_count": 2})
     usage = []
-    assert llm.call_llm("hi", "llama3.2", {"provider": "ollama", "base_url": None}, usage.append) == "xin chào"
+    assert llm.call_llm("hi", "llama3.2", {"provider": "ollama", "base_url": None}, usage.append) == "héllo wörld"
     assert json.loads(route.calls[0].request.content)["model"] == "llama3.2"
     assert usage[0]["provider"] == "ollama" and usage[0]["tokens_in"] == 4 and not usage[0].get("estimated")
 
@@ -72,9 +72,9 @@ def test_lmstudio_chat_streaming_and_tools():
     assert msg.tool_calls[0]["name"] == "lookup" and msg.tool_calls[0]["args"] == {"q": "A100"}
     assert json.loads(route.calls[-1].request.content)["tools"][0]["function"]["name"] == "lookup"
     # streaming (SSE)
-    sse = "".join(f"data: {json.dumps({'id': 'x', 'object': 'chat.completion.chunk', 'created': 1, 'model': 'm', 'choices': [{'index': 0, 'delta': {'content': p}, 'finish_reason': None}]})}\n\n" for p in ("Xin ", "chào")) + "data: [DONE]\n\n"
+    sse = "".join(f"data: {json.dumps({'id': 'x', 'object': 'chat.completion.chunk', 'created': 1, 'model': 'm', 'choices': [{'index': 0, 'delta': {'content': p}, 'finish_reason': None}]})}\n\n" for p in ("Héllo ", "wörld")) + "data: [DONE]\n\n"
     route.respond(text=sse, headers={"content-type": "text/event-stream"})
-    assert "".join(ch.content for ch in llm.chat_model(cred, "m").stream("hi")) == "Xin chào"
+    assert "".join(ch.content for ch in llm.chat_model(cred, "m").stream("hi")) == "Héllo wörld"
 
 
 @respx.mock

@@ -57,7 +57,7 @@ The fold gutter tooltip is English in both languages. Insert-on-edge behaviour h
 
 ## Acceptance Criteria
 
-- The fold marker title is "Fold line" / "Unfold line" in English and "Gấp dòng" / "Mở dòng" in Vietnamese.
+- The fold marker title is "Fold line" / "Unfold line" in English and "Fold lines" / "Unfold lines" in Vietnamese.
 - `npm test` covers insert on an edge, insert before, insert after, an anchor with no neighbour, a missing edge or anchor, and clearing the previous selection.
 - The conventions example no longer calls `bg-node-llm` an accent stripe.
 

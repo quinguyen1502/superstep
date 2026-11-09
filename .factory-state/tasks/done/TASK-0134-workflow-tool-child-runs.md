@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0134
 - Status: done
-- 2026-10-27: PR #178 merged into develop (9fafaaa) with the owner's approval ("Ok làm đi") after CI passed; moved to done.
+- 2026-10-27: PR #178 merged into develop (9fafaaa) with the owner's approval ("OK, do it") after CI passed; moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-27
@@ -104,7 +104,7 @@ and retried jobs, and give its result back to the model (DEC-0066 decisions 3 to
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
 - 2026-10-26: started on `factory/task-0134-workflow-tool-child-runs`, stacked on TASK-0133's branch (PR #177, not merged;
-  owner in chat: "Làm tiếp dãy task").
+  owner in chat: "Carry on with the task chain").
 - 2026-10-26: implemented.
   - Engine: `AwaitChild` (an `Interrupt` with `wait = {kind: child, run_id}`), `Ports.start_child`, and in the tool
     step `child_result()` / `child_outcome()`. A finished child skips the tool's approval (it ran after it), and its

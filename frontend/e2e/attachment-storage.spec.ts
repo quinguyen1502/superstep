@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 import { apiToken, newWorkflow, N } from './helpers'
+import { vin, st } from './catalog'
 // a visitor's file is stored on the configured backend and downloads unchanged with the
 // headers. Run once per backend: E2E_ATTACHMENT_STORAGE=db (default) and E2E_ATTACHMENT_STORAGE=fs.
 const shot = async (page: Page, name: string) => { if (process.env.REVIEW_SHOTS) await page.screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
@@ -12,7 +13,7 @@ const BOT = (name: string) => ({ name, state: STATE,
   nodes: [N('s', 'start', 40), N('bot', 'llm', 300, { label: 'Bot', model: 'gpt-4o-mini', prompt: '{{state.message}}', output_field: 'reply', include_attachments: true }), N('e', 'end', 560)],
   edges: [{ id: '1', source: 's', target: 'bot' }, { id: '2', source: 'bot', target: 'e' }] })
 const BODY = Buffer.from('id,total\n42,99\n'.repeat(2000))
-const T = { vi: 'Tệp đính kèm: tài liệu totals.csv', en: 'Attachments: document totals.csv' }
+const T = { vi: `${st('attachments.heading')}: ${st('attachments.document')} totals.csv`, en: 'Attachments: document totals.csv' }
 
 for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
   test.use({ locale: lang === 'vi' ? 'vi-VN' : 'en-US' })
@@ -34,7 +35,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     v.on('response', async r => { if (r.request().method() === 'POST' && r.url().includes('/attachments')) ids.push((await r.json()).data.id) })
     await v.locator('#chat-file-input').setInputFiles({ name: 'totals.csv', mimeType: 'text/csv', buffer: BODY })
     await expect(v.locator('[data-testid="chat-file"][data-state="done"]')).toHaveCount(1)
-    await v.locator('#chat-input').fill(lang === 'vi' ? 'Tổng là bao nhiêu?' : 'What is the total?'); await v.keyboard.press('Enter')
+    await v.locator('#chat-input').fill(lang === 'vi' ? vin('attachments.totalQuestion') : 'What is the total?'); await v.keyboard.press('Enter')
     await expect(v.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok', { timeout: 20_000 })
     await expect(v.getByTestId('chat-answer').last()).toContainText(T[lang])
 

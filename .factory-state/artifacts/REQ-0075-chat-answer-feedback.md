@@ -8,9 +8,8 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
-- Source: owner request in chat on 2026-10-27. Asked "Công việc tiếp theo là gì?", the agent listed what REQ-0074
-  and REQ-0073 left out. The owner asked for a requirement for each direction ("3 hướng có thể làm thì bạn viết REQ
-  trước đi").
+- Source: owner request in chat on 2026-10-27. Asked "What is the next piece of work?", the agent listed what REQ-0074
+  and REQ-0073 left out. The owner asked for a requirement for each direction ("write the REQs for the 3 possible directions first").
 
 ## Summary
 
@@ -22,8 +21,7 @@
 
 ## Owner Decisions
 
-The owner answered CLAR-0006 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
-CLAR-0009 theo đề xuất, rồi merge #200").
+The owner answered CLAR-0006 on 2026-10-27 with the recommended option for every question ("Answer CLAR-0006 to CLAR-0009 as proposed, then merge #200").
 
 1. **Where**: the public page, the embed and the studio Chat tab.
 2. **Comment**: optional, with a thumbs down only.

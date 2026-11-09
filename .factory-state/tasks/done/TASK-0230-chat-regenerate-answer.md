@@ -83,9 +83,9 @@ Deliver regeneration of the latest terminal answer through the shared branch fou
 
 - Branch `factory/task-0230-chat-regenerate-answer` from `develop`.
 
-- 2026-11-03: Owner accepted DEC-0084 on PR #292 ("Duyệt") and authorised implementation. Preserve versions until release preparation and screenshots outside Git. No merge authority is implied.
+- 2026-11-03: Owner accepted DEC-0084 on PR #292 ("Approve") and authorised implementation. Preserve versions until release preparation and screenshots outside Git. No merge authority is implied.
 
-- 2026-11-03: Owner approved merging #292 and continuing TASK-0230, then reiterated "Tiếp tục". TASK-0229 is merged at develop 42333ffc after 22 successful final-head checks and two expected skips. Start this separate branch from that integrated foundation; no extra architecture approval is needed. Verify factory ready before source work. Implementation uses the shared durable revision pipeline for latest terminal answers, independent files, current workflow execution and fresh Human/reviewer approvals. Shared versions remain unchanged until release preparation.
+- 2026-11-03: Owner approved merging #292 and continuing TASK-0230, then reiterated "Continue". TASK-0229 is merged at develop 42333ffc after 22 successful final-head checks and two expected skips. Start this separate branch from that integrated foundation; no extra architecture approval is needed. Verify factory ready before source work. Implementation uses the shared durable revision pipeline for latest terminal answers, independent files, current workflow execution and fresh Human/reviewer approvals. Shared versions remain unchanged until release preparation.
 
 - factory ready exits 0 before implementation; source branch factory/task-0230-chat-regenerate-answer starts at merged develop 42333ffc. Additive regeneration contracts and one optional source_action lineage column reuse the existing branch/admission/attachment/stream pipeline. No caller-selected checkpoint/state or replacement of source history.
 

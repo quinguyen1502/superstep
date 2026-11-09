@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { expectRowAligned } from '../e2e/helpers/alignment'
+import { vt } from '../e2e/catalog'
 
 test('built toolkit: theme/locale isolation, Human answer, files, feedback and identity', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message))
@@ -12,7 +13,7 @@ test('built toolkit: theme/locale isolation, Human answer, files, feedback and i
   await page.getByTestId('signin-lan').click()
   const chat = page.getByTestId('main-chat'), composed = page.getByTestId('composed-chat')
   await expect(chat.getByRole('textbox')).toBeEnabled()
-  await expect(composed.getByRole('textbox', { name: 'Tin nhắn' })).toBeEnabled()
+  await expect(composed.getByRole('textbox', { name: vt('chat.message') })).toBeEnabled()
   const capture = async (name: string) => {
     await expect.poll(() => chat.locator('.superstep-chat').evaluate(el => [...el.querySelectorAll('header button, textarea')]
       .every(control => getComputedStyle(control).color === getComputedStyle(el).color))).toBe(true)
@@ -85,11 +86,11 @@ test('built toolkit: theme/locale isolation, Human answer, files, feedback and i
   await expect(chat.getByRole('listbox')).toBeVisible()
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Vietnamese', exact: true }).click()
-  await expect(chat.getByRole('textbox', { name: 'Tin nhắn', exact: true })).toBeEnabled()
+  await expect(chat.getByRole('textbox', { name: vt('chat.message'), exact: true })).toBeEnabled()
   await expect(composed.getByRole('textbox', { name: 'Message', exact: true })).toBeEnabled()
   await expectRowAligned(await chat.locator('header button').all())
   await page.getByTestId('signin-minh').click()
-  await expect(chat.getByRole('textbox', { name: 'Tin nhắn', exact: true })).toBeEnabled()
+  await expect(chat.getByRole('textbox', { name: vt('chat.message'), exact: true })).toBeEnabled()
   await expect(chat).not.toContainText('Please review this toolkit request')
   const after = await host.evaluate(element => { const s = getComputedStyle(element); return [s.fontFamily, s.fontSize, s.padding, s.borderWidth, s.borderRadius] })
   expect(after).toEqual(before)

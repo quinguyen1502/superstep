@@ -108,6 +108,5 @@ answers:
 ---
 # Clarification
 
-Owner questions for REQ-0078, which lets an Agent node hand the conversation off to another Agent node. The owner answered in chat on 2026-10-27 ("Trả lời CLAR-0006 đến
-CLAR-0009 theo đề xuất, rồi merge #200") and picked the recommended option for every question. The answers are written
+Owner questions for REQ-0078, which lets an Agent node hand the conversation off to another Agent node. The owner answered in chat on 2026-10-27 ("Answer CLAR-0006 to CLAR-0009 as proposed, then merge #200") and picked the recommended option for every question. The answers are written
 into REQ-0078 under Owner Decisions.

@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-30
-- Source: owner idea in chat on 2026-10-30 ("cho phép dùng 1 llm/agent để auto approve và chỉ thông báo về cho owner, vẫn có chấm điểm confident và các rule như chỉ duyệt theo khung giờ, ko quá max số lượng, có chứa 1 số thông tin gì đó"). The owner said the rule ideas are examples only. Research: Copilot Studio AI approval stages, UiPath tool guardrails, OpenAI Agents SDK `needs_approval`, LangChain `HumanInTheLoopMiddleware` (links in DEC-0075).
+- Source: owner idea in chat on 2026-10-30 ("allow an llm/agent to auto approve and only notify the owner, still with a confidence score and rules such as approving only within a time window, not above a max count, containing some given information"). The owner said the rule ideas are examples only. Research: Copilot Studio AI approval stages, UiPath tool guardrails, OpenAI Agents SDK `needs_approval`, LangChain `HumanInTheLoopMiddleware` (links in DEC-0075).
 - Related Decision: DEC-0075 (Accepted)
 
 ## Summary

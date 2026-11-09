@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login } from './helpers'
+import { vt } from './catalog'
 // a Teams channel (the fake Workflows webhook of backend/tests/fixtures/mock_chat_api.py) gets a card whose
 // buttons open /approve; the signed-in owner confirms there and the run goes on. E-mail uses the same page.
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`
@@ -14,7 +15,7 @@ test('Teams card → /approve → run resumes; the link works once', async ({ pa
   const H = await login(page)
   const ch = (await (await page.request.post('/api/approvals/channels', { headers: H, data: { kind: 'teams', webhook_url: hook } })).json()).data
   await page.goto('/settings/channels')
-  await expect(page.locator(`[data-channel-id="${ch.id}"]`)).toContainText('trang duyệt của studio')  // no callback URL for a link channel
+  await expect(page.locator(`[data-channel-id="${ch.id}"]`)).toContainText(vt('approvals.linkNote'))  // no callback URL for a link channel
 
   const wid = (await (await page.request.post('/api/workflows', { headers: H, data: WF(`Teams ${Date.now()}`, { channel_id: ch.id, channel: 'teams', target: '' }) })).json()).data.id
   await page.goto(`/workflows/${wid}`)
@@ -30,7 +31,7 @@ test('Teams card → /approve → run resumes; the link works once', async ({ pa
   const approve = content.actions[0].url as string; expect(approve).toContain('/approve?token=a.')
 
   await page.goto(approve)
-  await expect(page.locator('#approve-card')).toContainText('Duyệt yêu cầu này?'); await expect(page.locator('#approve-card')).toContainText('Approve refund for order A100?')
+  await expect(page.locator('#approve-card')).toContainText(vt('approve.approveQ')); await expect(page.locator('#approve-card')).toContainText('Approve refund for order A100?')
   await page.locator('#approve-confirm').click(); await expect(page.locator('#approve-done')).toBeVisible()
   await expect.poll(async () => (await (await page.request.get(`/api/workflows/${wid}/runs`, { headers: H })).json()).data[0].status, { timeout: 30_000 }).toBe('ok')
 

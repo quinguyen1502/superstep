@@ -146,7 +146,7 @@ answers:
 ---
 # Clarification
 
-Owner questions for REQ-0072 (Agent node). The owner answered in chat on 2026-10-25 ("Theo đề xuất hết") and picked
+Owner questions for REQ-0072 (Agent node). The owner answered in chat on 2026-10-25 ("All as proposed") and picked
 the recommended option for all eight; the answers are written into REQ-0072 and DEC-0063.
 
 The owner may answer it with:

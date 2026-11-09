@@ -1,8 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vt, vtHead } from './catalog'
 
 async function admin(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return apiToken(page)
 }
@@ -29,14 +30,14 @@ test('cancel a running workflow', async ({ page }) => {
   await expect(page.locator('#trace-cancelled')).toBeVisible()
   await expect(page.locator('#cancel-btn')).toHaveCount(0)
   await page.locator('#history-all').click()
-  await expect(page.locator('#history-dialog').getByText('đã huỷ').first()).toBeVisible()
+  await expect(page.locator('#history-dialog').getByText(vt('status.cancelled')).first()).toBeVisible()
 })
 
 test('run timeout shows timeout status', async ({ page }) => {
   const t = await admin(page); await open(page, t, slow(6, 'Slow demo (timeout)'))
   await page.locator('#run-btn').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'timeout', { timeout: 15000 })
-  await expect(page.locator('#trace-run-error')).toContainText('Run vượt quá thời gian cho phép (5s)') // RUN_TIMEOUT translated; seconds from error.details
+  await expect(page.locator('#trace-run-error')).toContainText(vt('errors.RUN_TIMEOUT', { seconds: '5' })) // RUN_TIMEOUT translated; seconds from error.details
 })
 
 test('validation errors are listed clearly', async ({ page }) => {
@@ -51,6 +52,6 @@ test('validation errors are listed clearly', async ({ page }) => {
   await page.locator('#run-btn').click()
   await page.locator('#run-tab').click()
   const box = page.locator('#validation-errors')
-  await expect(box).toContainText('Vòng lặp không đi qua Condition hay For each') // validator messages by their code
-  await expect(box).toContainText('Node lonely không đi tới được từ Start')
+  await expect(box).toContainText(vtHead('validation.LOOP_WITHOUT_EXIT')) // validator messages by their code
+  await expect(box).toContainText(vt('validation.NODE_UNREACHABLE', { node: 'lonely' }))
 })

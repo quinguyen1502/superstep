@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
+import { vt, vtHead } from './catalog'
 // an SMTP credential (form, preset, connection check) and a Send email node: a dry run without a credential,
 // then a real send to the local SMTP sink started by playwright.config.ts.
 const PORT = process.env.E2E_SMTP_PORT || '8125'
@@ -17,12 +18,12 @@ test('send email: SMTP credential, dry run, then a real send', async ({ page }) 
   await expect(page.locator('#cred-base')).toHaveCount(0)
   await page.locator('#smtp-preset').click(); await page.getByRole('option', { name: 'Gmail' }).click()
   await expect(page.locator('#smtp-host')).toHaveValue('smtp.gmail.com'); await expect(page.locator('#smtp-preset-hint')).toBeVisible()
-  await page.locator('#smtp-host').fill('127.0.0.1'); await expect(page.locator('#smtp-preset')).toContainText('Máy chủ khác')
+  await page.locator('#smtp-host').fill('127.0.0.1'); await expect(page.locator('#smtp-preset')).toContainText(vt('creds.smtp.presets.custom'))
   await page.locator('#smtp-port').fill(PORT)
-  await page.locator('#smtp-security').click(); await page.getByRole('option', { name: 'Không mã hoá' }).click()
+  await page.locator('#smtp-security').click(); await page.getByRole('option', { name: vt('creds.smtp.securityOpts.none') }).click()
   await page.locator('#smtp-from').fill('studio@acme.test'); await page.locator('#smtp-from-name').fill('Acme')
   await page.locator('#cred-test').click()
-  await expect(page.locator('#cred-test-result')).toContainText('Đăng nhập thành công')
+  await expect(page.locator('#cred-test-result')).toContainText(vtHead('creds.smtp.testOk'))
   await page.locator('#cred-add').click()
   await expect(page.locator(`[data-cred="${credName}"] [data-smtp]`)).toHaveText(`studio@acme.test · 127.0.0.1:${PORT}`)
   await page.keyboard.press('Escape')

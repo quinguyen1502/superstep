@@ -1,8 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vt } from './catalog'
 // `{{state.field}}` templates show as tags, `{{` suggests fields, the braces button inserts one, and the saved text is unchanged.
 async function login(page: Page, email = 'admin@example.com', password = 'admin123') {
-  await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
+  await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel(vt('auth.password'), { exact: true }).fill(password)
   await page.locator('#auth-submit').click(); await expect(page).toHaveURL(/\/workflows$/)
   return { Authorization: `Bearer ${await apiToken(page, email, password)}` }
 }

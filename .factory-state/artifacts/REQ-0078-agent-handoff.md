@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
-- Source: owner request in chat on 2026-10-27 ("3 hướng có thể làm thì bạn viết REQ trước đi"). REQ-0073 left
+- Source: owner request in chat on 2026-10-27 ("write the REQs for the 3 possible directions first"). REQ-0073 left
   "Hand-off between agents" out of scope (CLAR-0004 question 1 chose workflow tools first).
 
 ## Summary
@@ -22,8 +22,7 @@
 
 ## Owner Decisions
 
-The owner answered CLAR-0009 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
-CLAR-0009 theo đề xuất, rồi merge #200").
+The owner answered CLAR-0009 on 2026-10-27 with the recommended option for every question ("Answer CLAR-0006 to CLAR-0009 as proposed, then merge #200").
 
 1. **Targets**: other Agent nodes of the same workflow.
 2. **What the target sees**: the person's messages and the agents' replies, without tool calls and results, plus the

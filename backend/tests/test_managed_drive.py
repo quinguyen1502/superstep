@@ -33,7 +33,7 @@ def test_personal_oauth_create_read_metadata_and_known_replay(c, remote):
     assert OAUTH["client_secret"] not in McpServerRepository(get_db()).get(sid).secrets
     assert {tool["name"] for tool in svc.discover(sid, owner["id"])["tools"]} == {"list_files", "get_file", "read_text_file", "create_text_file"}
     assert not remote.calls
-    args = {"name": "receipt.txt", "content": "Chi phí 50.000đ\r\n"}
+    args = {"name": "receipt.txt", "content": "Kosten 50.000 €\r\n"}
     result = svc.call(owner["id"], sid, "create_text_file", args, operation_key="create")
     assert result["outcome"] == "confirmed" and remote.uploads == 1
     fid = result["file"]["id"]; assert remote.files[fid]["content"] == args["content"].encode()
@@ -64,7 +64,7 @@ def test_service_account_shared_drive_scope_and_personal_storage_refusal(c, remo
 
 
 def test_list_escaped_query_pagination_and_native_doc_export(c, remote):
-    remote.add(); remote.add("fixture-google-doc-123", mime=drive.DOC, content="Nội dung Google Doc".encode())
+    remote.add(); remote.add("fixture-google-doc-123", mime=drive.DOC, content="Google Doc Inhalt ✓".encode())
     owner = user(c); server = create(c, owner); svc = mcp_service(); sid = server["id"]
     remote.lookup_mode = "next_page"
     result = svc.call(owner["id"], sid, "list_files", {"name_contains": "O'Reilly\\Reports", "page_size": "10", "page_token": "opaque-page-token"}, operation_key="list")
@@ -73,7 +73,7 @@ def test_list_escaped_query_pagination_and_native_doc_export(c, remote):
     assert query["q"] == "'fixture-folder-123' in parents and trashed = false and name contains 'O\\'Reilly\\\\Reports'"
     assert query["pageToken"] == "opaque-page-token" and query["pageSize"] == 10
     result = svc.call(owner["id"], sid, "read_text_file", {"file_id": "fixture-google-doc-123"}, operation_key="export")
-    assert result["content"] == "Nội dung Google Doc"
+    assert result["content"] == "Google Doc Inhalt ✓"
     assert remote.calls[-1][1].endswith("/export")
 
 
@@ -144,7 +144,7 @@ def test_permissions_dry_run_argument_validation_and_changed_folder(c, remote):
     args = {"name": "receipt.txt", "content": "data"}
     with error("MCP_SERVER_NOT_FOUND"): svc.call(stranger["id"], sid, "create_text_file", args, operation_key="forbidden")
     assert svc.call(owner["id"], sid, "create_text_file", args, dry_run=True)["outcome"] == "dry_run" and not remote.calls
-    for bad in [{**args, "folder_id": "another-folder-123"}, {**args, "content": chr(0xD800)}, {**args, "content": "đ" * 40000}]:
+    for bad in [{**args, "folder_id": "another-folder-123"}, {**args, "content": chr(0xD800)}, {**args, "content": "é" * 40000}]:
         with error("MCP_ARGUMENT_INVALID"): svc.call(owner["id"], sid, "create_text_file", bad, operation_key="invalid")
     assert remote.uploads == 0
     svc.call(owner["id"], sid, "create_text_file", args, operation_key="fixed")

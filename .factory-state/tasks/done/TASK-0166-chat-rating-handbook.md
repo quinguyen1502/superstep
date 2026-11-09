@@ -81,7 +81,7 @@ Document thumbs on chat answers in the handbook (en and vi) and name the change 
 - 2026-10-27: planned from REQ-0075 and DEC-0070.
 - 2026-10-27: implemented and moved to review. Renumbered before push: DEC-0069 and TASK-0157 to TASK-0161 are held on factory/task-0157-parallel-tool-waves (REQ-0076). Draft PR #204.
 - 2026-10-27: REV-0135, no blocking findings, approved for QA. QA-0135 pass with follow-up. Task stays in review.
-- 2026-10-27: owner approved ("duyệt"). REV-0135 has no blocking findings. QA-0135 passed with the documented follow-ups. Moved to done. Not merged.
+- 2026-10-27: owner approved ("approve"). REV-0135 has no blocking findings. QA-0135 passed with the documented follow-ups. Moved to done. Not merged.
 
 ## Handoff Notes
 

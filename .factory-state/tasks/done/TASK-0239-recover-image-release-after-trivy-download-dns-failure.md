@@ -49,7 +49,7 @@ Actionlint, YAML/workflow/permission review, direct checksum verification and sc
 
 ## Assumptions And Approval
 
-Owner explicitly requested “Phát hành đi”, then “Tiếp tục”. The 0.11.0 release/main merge and package/image publication are authorised. This necessary pipeline repair introduces no new product scope. The explicit release and continuation instructions authorise the required integration/main merges and bounded operational pipeline repair needed to finish that same release. No additional product scope, credential, registry or release target is introduced; do not move already published tags. This is release authorisation, not a claim that the owner separately reviewed this new diff.
+Owner explicitly requested “Release it”, then “Continue”. The 0.11.0 release/main merge and package/image publication are authorised. This necessary pipeline repair introduces no new product scope. The explicit release and continuation instructions authorise the required integration/main merges and bounded operational pipeline repair needed to finish that same release. No additional product scope, credential, registry or release target is introduced; do not move already published tags. This is release authorisation, not a claim that the owner separately reviewed this new diff.
 
 ## Activity Log
 
@@ -63,7 +63,7 @@ Owner explicitly requested “Phát hành đi”, then “Tiếp tục”. The 0
 
 ## Release Authorisation And Finalisation
 
-The owner explicitly ordered “Phát hành đi” on the validated 0.11.0 candidate and then “Tiếp tục”. That ongoing delivery authorisation covers the necessary mechanical CI recovery and release merges for the same unchanged 0.11.0 source; it does not authorise unrelated product work or future releases. Earlier pending-separate-acceptance language was an assistant assumption, not a new owner approval requirement. Advisory REV/QA-0225 find no blocking issue.
+The owner explicitly ordered “Release it” on the validated 0.11.0 candidate and then “Continue”. That ongoing delivery authorisation covers the necessary mechanical CI recovery and release merges for the same unchanged 0.11.0 source; it does not authorise unrelated product work or future releases. Earlier pending-separate-acceptance language was an assistant assumption, not a new owner approval requirement. Advisory REV/QA-0225 find no blocking issue.
 
 PR #296 head 12c0ee08be2d776ebebe0fbf9e6f5e88e389929b passed all 22 checks and one expected GHCR skip. Image run 41739423491 verifies the archive checksum, executes Trivy 0.69.3 and passes both scans and all existing smoke/CLI gates. CI 41739423358, Factory 41739423354 and CLI 41739423356 pass; Factory runs the full canonical profile. Task moves to done on this same one-commit PR. Final lifecycle-only amendment preserves the validated workflow bytes; fresh final-head CI must pass before merge, followed by the checked main integration and manual recovery for immutable v0.11.0. No Docker/GitHub Release completion is inferred before actual publication.
 

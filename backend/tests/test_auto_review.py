@@ -9,6 +9,7 @@ from app.api.deps import approval_service
 from app.engine import approval_judge as J, approval_policy as AP
 from app.services.auto_review_service import AutoReviewService, day_start
 from tests.test_hitl import APPROVAL
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 H = lambda t: {"Authorization": f"Bearer {t}"}  # noqa: E731
 
@@ -248,5 +249,5 @@ def test_channel_message_line_with_the_opinion():
     from app.services.approval_channels.messages import opinion_text
     r = {"decision": "approve", "confidence": 0.734, "reason": "small refund"}
     assert opinion_text("en", r) == "AI review: approve (0.73). small refund"
-    assert opinion_text("vi", {**r, "decision": "escalate"}).startswith("AI duyệt: cần người duyệt (0.73)")
+    assert opinion_text("vi", {**r, "decision": "escalate"}).startswith(vi_text("vi", "channels.ai_opinion").format(decision=vi_text("vi", "channels.ai_escalate"), confidence="0.73", reason="").strip())
     assert opinion_text("en", None) is None and opinion_text("en", {"outcome": "escalated", "cause": "timeout"}) is None

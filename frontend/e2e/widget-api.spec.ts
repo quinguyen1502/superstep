@@ -3,6 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
+import { vt, vin, startsWith } from './catalog'
 const STUDIO = `http://127.0.0.1:${process.env.E2E_UI_PORT || 5190}`, HOST = 'http://localhost:5999', OTHER = 'http://localhost:5998'
 const LOGO = 'data:image/png;base64,' + fs.readFileSync(path.resolve(import.meta.dirname, '../public/icon-192.png')).toString('base64')
 test.use({ trace: 'off', screenshot: 'off', launchOptions: {
@@ -74,9 +75,9 @@ test('queued widget API isolates users, refreshes tokens, restores anonymous his
   await host.locator('#foreign').evaluate(node => node.remove())
   await api(host, 'logout'); await expect(chat.getByTestId('chat-mine')).toHaveText(['Anonymous order'])
   await host.evaluate(({ slug, logo }) => { const widget = window.Superstep as import('../src/widget/protocol').WidgetAPI; widget.init({ slug, language: 'vi', position: 'left', color: '#0f766e', logo }); widget.close(); widget.open() }, { slug, logo: LOGO })
-  await expect(host.locator('#superstep-chat-button')).toHaveAttribute('aria-label', 'Đóng chat')
-  await expect(chat.locator('#chat-input')).toHaveAttribute('placeholder', /^Nhập tin nhắn…/)
-  await chat.locator('#chat-input').fill('Bạn có thể giúp tôi?')
+  await expect(host.locator('#superstep-chat-button')).toHaveAttribute('aria-label', vt('chat.widget.close'))
+  await expect(chat.locator('#chat-input')).toHaveAttribute('placeholder', startsWith(vt('chat.placeholder').split(' (')[0]))
+  await chat.locator('#chat-input').fill(vin('widget.help'))
   if (process.env.REVIEW_SHOTS) await host.screenshot({ animations: 'disabled', path: `${process.env.REVIEW_SHOTS}/widget-vi-custom.png` })
   await host.emulateMedia({ colorScheme: 'dark' })
   await expect(chat.locator('.superstep-chat').first()).toHaveAttribute('data-color-scheme', 'dark')

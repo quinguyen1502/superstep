@@ -27,7 +27,7 @@ TASK-0227 `@superstep/react-native` 0.1.0, the Expo example, the CI Jest job, an
 
 - Criterion: Controls expose a role and a label, in English and Vietnamese.
   - Result: pass for the automated checks
-  - Evidence: Composer, question, rating, and markdown tests query by role and name, including Vietnamese `Hữu ích` and `Đang chờ người duyệt`. Errors use `accessibilityRole="alert"`. No VoiceOver or TalkBack pass was run.
+  - Evidence: Composer, question, rating, and markdown tests query by role and name, including Vietnamese `Helpful` and `Waiting for a reviewer`. Errors use `accessibilityRole="alert"`. No VoiceOver or TalkBack pass was run.
 - Criterion: The example sign-in path on a device.
   - Result: gap
   - Evidence: `examples/react-native` was not installed or booted. The sample host was not started.

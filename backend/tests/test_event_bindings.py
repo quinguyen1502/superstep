@@ -28,7 +28,7 @@ def setup(c, kind="telegram", **policy):
 def payload(**overrides):
     return {"update_id": int(uuid.uuid4().hex[:12], 16), "message": {"message_id": 101, "date": 1700000000,
         "from": {"id": 42, "first_name": "Example", "last_name": "Sender"}, "chat": {"id": -100123, "type": "supergroup"},
-        "text": "Ăn trưa 50000", **overrides}}
+        "text": "Lunch 50000", **overrides}}
 
 
 def post(c, channel, data, secret=None):
@@ -46,10 +46,10 @@ def test_telegram_plain_text_metadata_owner_run_and_no_automatic_reply(c, api):
     until(lambda: runs_of(wid) and runs_of(wid)[0].status == "ok")
     [run] = runs_of(wid); data = json.loads(run.input)
     assert run.owner == owner["id"] and data["message_id"] == 101
-    assert data["message"] == "Ăn trưa 50000"
+    assert data["message"] == "Lunch 50000"
     assert data["context"] == {"id": str(message["update_id"]), "source": "telegram", "type": "message.text",
         "time": "2023-11-14T22:13:20+00:00", "actor": {"id": "42", "name": "Example Sender"},
-        "conversation": {"id": "-100123"}, "data": {"text": "Ăn trưa 50000", "message_id": 101}}
+        "conversation": {"id": "-100123"}, "data": {"text": "Lunch 50000", "message_id": 101}}
     assert not api.sent("sendMessage")
     assert c.patch(f"{url}/{binding['id']}", headers=H(owner["token"]), json={"enabled": False}).json()["data"]["event"] == binding["event"]
     assert post(c, ch, payload()).json()["data"]["outcome"] == "ignored"
@@ -122,7 +122,7 @@ def test_queue_failure_retry_reuses_original_persisted_input(c, monkeypatch):
     message["message"]["text"] = "changed redelivery"
     assert post(c, ch, message).json()["data"]["outcome"] == "duplicate"
     until(lambda: runs_of(wid)[0].status == "ok")
-    assert len(runs_of(wid)) == 1 and json.loads(runs_of(wid)[0].input)["message"] == "Ăn trưa 50000"
+    assert len(runs_of(wid)) == 1 and json.loads(runs_of(wid)[0].input)["message"] == "Lunch 50000"
 
 
 def test_other_owner_cannot_bind_personal_source_or_edit_binding(c):

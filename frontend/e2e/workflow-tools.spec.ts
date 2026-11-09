@@ -1,11 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, N } from './helpers'
+import { vt, vtHead } from './catalog'
 // An Agent node calls another workflow as a tool. The parent waits for its child run, the child's
 // approval is in the Approvals inbox with both workflow names, and answering it finishes both runs.: the tool
 // card in the editor, and the child's steps nested under the tool call in the trace.: the Support team template.
 const shot = async (page: Page, name: string, sel = 'body') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const T = {
-  vi: { password: 'Mật khẩu', waiting: 'Đang chờ một workflow khác', calledBy: 'Được gọi bởi' },
+  vi: { password: vt('auth.password'), waiting: vt('childRuns.waitingTitle'), calledBy: vtHead('childRuns.calledBy') },
   en: { password: 'Password', waiting: 'Waiting for another workflow', calledBy: 'Called by' },
 }
 /** A canvas node's run mark. */

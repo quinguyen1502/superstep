@@ -104,6 +104,5 @@ answers:
 ---
 # Clarification
 
-Owner questions for REQ-0075, which adds a thumbs up or down to the answers in a chat. The owner answered in chat on 2026-10-27 ("Trả lời CLAR-0006 đến
-CLAR-0009 theo đề xuất, rồi merge #200") and picked the recommended option for every question. The answers are written
+Owner questions for REQ-0075, which adds a thumbs up or down to the answers in a chat. The owner answered in chat on 2026-10-27 ("Answer CLAR-0006 to CLAR-0009 as proposed, then merge #200") and picked the recommended option for every question. The answers are written
 into REQ-0075 under Owner Decisions.

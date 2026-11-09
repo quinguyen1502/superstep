@@ -26,6 +26,7 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } })
 const flowFile = path.join(framesDir(lang), 'flow.json')
 if (!fs.existsSync(flowFile)) throw new Error(`${flowFile} is missing: run HANDBOOK_SHOTS=1 npm run e2e -- quickstart in frontend/`)
 await page.addInitScript(flow => { window.FLOW = flow }, JSON.parse(fs.readFileSync(flowFile, 'utf8')))
+await page.addInitScript(strings => { window.STRINGS = strings }, JSON.parse(fs.readFileSync(path.join(promoDir, 'locales', `${lang}.json`), 'utf8')))
 await page.goto(`file://${path.join(promoDir, 'video.html')}?lang=${lang}`, { waitUntil: 'load', timeout: 120000 })
 await page.evaluate(async () => {
   await document.fonts.ready

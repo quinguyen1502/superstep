@@ -8,6 +8,9 @@ import superstep
 from superstep.cli import run
 from superstep.cli.docker import Docker
 from superstep.cli.ssh import SshError, SshResult
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 APP = "ghcr.io/quinguyen1502/superstep"
 URL = "ssh://user@host"
@@ -268,7 +271,7 @@ def test_help_and_matching_catalog_keys():
     assert code == 0 and out == "" and "--json" in err and "--upgrade" in err and "--images" in err and "--answers" in err
     assert "Example: superstep deploy ssh://user@host --yes --url http://localhost:8000 --admin-email you@example.com" in err
     code, out, err = invoke(["--lang", "vi", "deploy", "--help"])
-    assert code == 0 and "Ví dụ: superstep deploy ssh://user@host --yes --url http://localhost:8000 --admin-email you@example.com" in err
+    assert code == 0 and VI.messages["example.deploy"] in err
     root = Path(__file__).resolve().parents[1] / "src" / "superstep" / "cli" / "locales"
     en = json.loads((root / "en.json").read_text(encoding="utf-8"))
     vi = json.loads((root / "vi.json").read_text(encoding="utf-8"))

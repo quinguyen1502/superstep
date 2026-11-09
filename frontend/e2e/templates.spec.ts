@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { login, newWorkflow, N, signIn, SIMPLE } from './helpers'
 import { confirmDelete } from './confirm'
+import { vt } from './catalog'
 // template gallery, save-as-template (sanitised), export → import → use → delete.
 
 test('blank and built-in templates from the New workflow gallery', async ({ page }) => {
@@ -15,10 +16,10 @@ test('blank and built-in templates from the New workflow gallery', async ({ page
   await expect(page.locator('#validation-errors')).toHaveCount(0)  // nothing to pick: no list
   //: a template that needs a knowledge base says so when it opens, and on the node
   await page.goto('/workflows'); await page.locator('#new-wf').click(); await g.locator('[data-id=builtin-rag] button').first().click()
-  await expect(page.locator('#validation-errors')).toContainText('1 lỗi cần sửa')
-  await expect(page.locator('#validation-errors')).toContainText('Node Retriever retrieve: hãy chọn kho tri thức')  // by its code
+  await expect(page.locator('#validation-errors')).toContainText(vt('editor.errorsTitle_one', { count: '1' }))
+  await expect(page.locator('#validation-errors')).toContainText(vt('validation.RETRIEVER_KB_MISSING', { node: 'retrieve' }))  // by its code
   await page.locator('.react-flow__node[data-id="retrieve"]').click(); await page.locator('#config-tab-settings').click()
-  await expect(page.locator('#retriever-required')).toContainText('Hãy chọn kho tri thức')
+  await expect(page.locator('#retriever-required')).toContainText(vt('editor.retrieverRequired'))
   await page.reload(); await expect(page.locator('.react-flow__node')).toHaveCount(4)
   await expect(page.locator('#validation-errors')).toHaveCount(0)  // shown once, not on every visit
   await page.goto('/workflows'); await page.locator('#new-wf').click(); await page.locator('#tpl-blank').click()
@@ -30,14 +31,14 @@ test('process templates: 13 built-ins, names in the UI language', async ({ page 
   await page.locator('#new-wf').click(); const g = page.locator('#template-gallery'); await expect(g).toBeVisible()
   await expect(g.locator('[data-testid=tpl-card][data-id^=builtin-]')).toHaveCount(15)  // includes Support agent, Support team, and Help desk templates
   await expect(g.locator('[data-id=builtin-support-agent]')).toBeVisible()
-  await expect(g.locator('[data-id=builtin-refund-approval]')).toContainText('Duyệt hoàn tiền')  // the e2e browser runs in Vietnamese
+  await expect(g.locator('[data-id=builtin-refund-approval]')).toContainText(vt('templates.builtin.builtin-refund-approval.name'))  // the e2e browser runs in Vietnamese
   await expect(g.locator('[data-channel-logo]')).toHaveCount(0)  // the owner chose names without channel logos on cards
   // a channel template opens with the Human node on that channel, not yet connected
   await g.locator('[data-id=builtin-social-post] button').first().click()
   await expect(page).toHaveURL(/\/workflows\/[^/]+$/); await expect(page.locator('.react-flow__node')).toHaveCount(7)
   await page.locator('.react-flow__node[data-id="editor"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#approval-not-connected')).toBeVisible()
-  await expect(page.locator('#approval-channel')).toContainText('chưa kết nối')  // translated, not the raw i18n key
+  await expect(page.locator('#approval-channel')).toContainText(vt('approvals.notConnected'))  // translated, not the raw i18n key
   await expect(page.locator('#approval-channel')).not.toContainText('approvals.')
   // English UI (a new account, so the admin's language stays Vietnamese for parallel specs)
   const email = `tpl${Date.now()}@example.com`; await page.request.post('/api/auth/register', { data: { email, password: 'secret12' } })

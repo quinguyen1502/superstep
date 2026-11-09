@@ -17,7 +17,7 @@ ROWS = {}
 def model(prompt, name, credential, on_usage=None, on_token=None, **kwargs):
     if credential and credential.get("provider") == "openrouter":
         raise ProviderError("PROVIDER_UNREACHABLE", "openrouter")
-    return json.dumps({"is_expense": True, "amount": 50000, "description": "Ăn trưa", "category": "Ăn uống", "expense_date": "2026-10-31"}, ensure_ascii=False)
+    return json.dumps({"is_expense": True, "amount": 50000, "description": "Lunch", "category": "Food", "expense_date": "2026-10-31"}, ensure_ascii=False)
 
 
 def google_request(method, url, **kwargs):

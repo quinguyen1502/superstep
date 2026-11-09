@@ -1,6 +1,6 @@
 # Browser connection and worker contract v1
 
-TASK-0241 / REQ-0086 / ARCH-0002 / DEC-0085 (Accepted 2026-11-06). This delivery
+This contract (accepted 2026-11-06)
 implements metadata, discovery and typed contracts. It does not launch a browser.
 `STUDIO_ENABLE_BROWSER` defaults on (unset or `1`; set `0` to disable). With it on you can configure/discover the `browser` managed adapter
 through the existing `/api/mcp/servers` API. The default is disabled. Existing rows
@@ -22,7 +22,7 @@ required.
 | proxy.mode | `direct`, `operator_default`, or `custom` |
 | proxy.server | HTTP origin, only for custom; no credentials/path/query/fragment |
 | proxy.auth | `none` or `basic`, only custom may choose basic |
-| profile | optional name and 1–20 exact HTTP(S) origins; operator-provisioned encrypted login state (TASK-0244) |
+| profile | optional name and 1–20 exact HTTP(S) origins; operator-provisioned encrypted login state |
 | allowed_origins | **required**, 1–50 exact HTTP(S) origins; empty is invalid |
 | action_timeout_ms | 30,000; 1,000–60,000 |
 | idle_timeout_s | 1,800 (30 minutes); 60–7,200 and no greater than lifetime |
@@ -39,7 +39,7 @@ required.
 
 Profile origins must be a subset of the connection origin allowlist. They do not
 grant network access or load cookies. Origin checks here are syntax validation;
-they do not claim DNS, IP or browser-egress enforcement (TASK-0242–0244).
+they do not claim DNS, IP or browser-egress enforcement.
 
 Only `browserless_token`, `proxy_username` and `proxy_password` are accepted secret
 keys. Browserless requires a secret API token. A local connection rejects that key.
@@ -47,8 +47,8 @@ Basic proxy authentication requires both proxy secrets; other modes reject them.
 Secrets are encrypted before persistence and all hints are exactly `••••`. Updates
 preserve existing MCP semantics: omit the secrets object to keep all; null values
 keep named keys; unlisted keys are removed. Removal that leaves a required pair
-incomplete fails atomically. Profile state provisioning is intentionally not
-accepted until TASK-0244 enforces owner and origin scope.
+incomplete fails atomically. Profile state provisioning is accepted only with
+the owner and origin scope enforced by [remote profiles](browser-remote.md).
 
 ## Capability eligibility and proof gates
 
@@ -62,8 +62,8 @@ accepted until TASK-0244 enforces owner and origin scope.
 
 `CAPABILITY_CONTRACT.runtime_verified` is false for every provider. Settings do not
 contain a user-asserted "verified" capability. CDP reachability alone is
-insufficient. No combination is advertised as executable by TASK-0241.
-TASK-0242–0244 must prove the selected paths or return an explicit refusal. Shipping
+insufficient. No combination is advertised as executable by this contract alone.
+The egress, runtime and remote layers must prove the selected paths or return an explicit refusal. Shipping
 local-only does not close the Browserless requirement.
 
 ## Tools and trusted context

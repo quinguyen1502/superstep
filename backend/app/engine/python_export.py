@@ -24,6 +24,7 @@ from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWri
                             one_line as _one_line, slug)
 from .export_runtime import PY_APPROVAL, PY_MANAGED
 from .templating import VAR_RE, _ONE_FILTER, refs
+from .llm import CLASSIFY
 from .tools import TOOLS
 
 PY_TYPES = {"string": "str", "number": "float", "integer": "int", "boolean": "bool", "object": "dict", "list": "list"}
@@ -173,11 +174,11 @@ LLM_PROVIDER = os.environ.get("LLM_PROVIDER")
 def mock_llm(prompt: str, model: str) -> str:
     """Offline answers: a category for classification prompts, else the last line of the prompt echoed back."""
     p = prompt.lower()
-    if "classify" in p or "phân loại" in p:
+    if any(k in p for k in __CLASSIFY_MARKERS__):
         msg = p.split("message:")[-1] if "message:" in p else p
-        if any(k in msg for k in ["order", "đơn", "giao hàng", "ship", "a100", "b200", "c300"]):
+        if any(k in msg for k in __CLASSIFY_ORDER__):
             return "order_status"
-        if any(k in msg for k in ["refund", "hoàn tiền", "return"]):
+        if any(k in msg for k in __CLASSIFY_REFUND__):
             return "refund"
         return "general"
     tail = prompt.strip().splitlines()[-1] if prompt.strip() else ""
@@ -214,6 +215,8 @@ def call_llm(prompt: str, model: str, provider: Optional[str] = None, slot: Opti
         return reply.content
     return "".join(b.get("text", "") for b in reply.content if isinstance(b, dict))
 '''
+for _part, _words in CLASSIFY.items():  # the studio mock's classification words (app/locales)
+    MODEL = MODEL.replace(f"__CLASSIFY_{_part.upper()}__", json.dumps(_words, ensure_ascii=False))
 
 
 FALLBACK = '''

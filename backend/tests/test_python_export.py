@@ -71,14 +71,14 @@ HTTP = {"name": "Http", "state": [F("message"), F("out", "object")],
                                          body='{"q": "{{state.message}}"}', output_field="out"), N("end", "end")],
         "edges": [E("start", "call"), E("call", "end")]}
 
-ODD = {"name": "Đơn hàng: \"odd\" labels", "state": [F("message"), F("decision"), F("x")],
+ODD = {"name": "Crème brûlée: \"odd\" labels", "state": [F("message"), F("decision"), F("x")],
        "nodes": [N("start", "start"),
                  L("k", "class", prompt='Quote """ and \\ and {braces} {{state.message}}', output_field="x"),
                  L("d", "decision", prompt="x", output_field="decision"),
-                 L("v", "Đơn hàng mới", prompt="Line one\nLine two", output_field="x"),
+                 L("v", "Commande reçue", prompt="Line one\nLine two", output_field="x"),
                  L("one", "1st step", prompt="1", output_field="x"),
                  L("p", "print", prompt="p", output_field="x"),
-                 L("dup", "Đơn hàng mới", prompt="2", output_field="x"),
+                 L("dup", "Commande reçue", prompt="2", output_field="x"),
                  N("end", "end")],
        "edges": [E("start", "k"), E("k", "d"), E("d", "v"), E("v", "one"), E("one", "p"), E("p", "dup"), E("dup", "end")]}
 
@@ -276,9 +276,9 @@ def test_http_tool_compiles_without_running():
 def test_odd_labels_give_valid_unique_names(tmp_path):
     out = same_run(tmp_path, ODD, {"message": "m"})
     names = [out.names[i] for i in ("k", "d", "v", "one", "p", "dup")]
-    assert names == ["class_node", "decision_node", "don_hang_moi", "llm_1st_step", "print_node", "don_hang_moi_node"]
+    assert names == ["class_node", "decision_node", "commande_recue", "llm_1st_step", "print_node", "commande_recue_node"]
     assert all(n.isidentifier() for n in names) and len(set(names)) == len(names)
-    assert out.filename == "don_hang_odd_labels.py" and '\'Quote """ and \\\\ and {braces}' not in out.code
+    assert out.filename == "creme_brulee_odd_labels.py" and '\'Quote """ and \\\\ and {braces}' not in out.code
     assert '"Quote \\"\\"\\" and \\\\ and {braces} {{state.message}}"' in out.code
     assert 'D_PROMPT' not in out.code and '"""Line one\nLine two"""' in out.code
 
@@ -473,3 +473,9 @@ def test_exported_calls_overlap_in_model_order_and_a_failure_leaves_the_others(t
     assert all(ordered[i][1] >= ordered[i - 1][2] for i in range(1, len(ordered)))
     rows, final = _run_wave(tmp_path, fail=True)
     assert [s["status"] for s in final["steps"]] == ["ok", "error", "ok"] and "down" in final["steps"][1]["result"]
+
+
+def test_slug_folds_the_stroked_d():
+    from app.engine.export_common import slug
+    # U+0110 / U+0111 (D and d with stroke) have no NFKD decomposition, so slug maps them to D / d itself.
+    assert slug(chr(0x0110) + "en " + chr(0x0111) + "a") == "den_da"

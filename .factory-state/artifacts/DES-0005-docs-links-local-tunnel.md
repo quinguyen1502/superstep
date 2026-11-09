@@ -8,7 +8,7 @@
 
 ## User Flows
 
-1. Admin opens Settings → Channels on a local Studio without `STUDIO_PUBLIC_URL`. The existing muted notice under each connection keeps its text and adds an inline link "Learn more" (vi "Hướng dẫn") with an external-link icon, opening Operate → Expose a local studio in a new tab.
+1. Admin opens Settings → Channels on a local Studio without `STUDIO_PUBLIC_URL`. The existing muted notice under each connection keeps its text and adds an inline link "Learn more" (with its vi label) with an external-link icon, opening Operate → Expose a local studio in a new tab.
 2. While adding a Slack/Telegram/WhatsApp connection, the existing helper text ends with a link to the matching `operate/channels.md` section.
 3. In the handbook, the reader picks a provider tab/section, runs the command, copies the HTTPS origin into `STUDIO_PUBLIC_URL`, restarts, then follows the verification checklist.
 

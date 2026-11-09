@@ -97,10 +97,10 @@ Only users with the new `code.write` permission (admins by default) can add a Co
 ## Activity Log
 
 - 2026-10-19: Created from REQ-0039; not started.
-- 2026-10-19: Task set and DEC-0041 approved by the owner ("Duyệt bộ task và DEC-0041").
-- 2026-10-19: Started on `factory/task-0054-code-write-permission` (owner: "Làm task 1 chuỗi 54, 55, 56").
+- 2026-10-19: Task set and DEC-0041 approved by the owner ("Approve the task set and DEC-0041").
+- 2026-10-19: Started on `factory/task-0054-code-write-permission` (owner: "Do the tasks as one chain: 54, 55, 56").
 - 2026-10-19: Implemented: one check in `WorkflowService._write` plus template import. Review REV-0051, QA QA-0051 (pass). PR open; not merged.
-- 2026-10-19: Merged in PR #62 (owner: "Merge lần lượt PR #62, #63, #64").
+- 2026-10-19: Merged in PR #62 (owner: "Merge PR #62, #63, #64 in turn").
 
 ## Handoff Notes
 

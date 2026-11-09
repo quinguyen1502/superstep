@@ -14,8 +14,7 @@
 
 ## Objective
 
-Version 0.10.0. The owner asked in chat to finish the remaining tasks and then release ("Code luôn các task còn lại
-xong rồi mới lên 0.10.0"), and later added AI review of approvals (REQ-0081) to this release. It follows the 0.9.0
+Version 0.10.0. The owner asked in chat to finish the remaining tasks and then release ("Code the remaining tasks first, then go to 0.10.0"), and later added AI review of approvals (REQ-0081) to this release. It follows the 0.9.0
 release (TASK-0139):
 - bump `backend/pyproject.toml`, `frontend/package.json`, `frontend/package-lock.json`,
   `sdk/python/src/superstep/_version.py` and the `scripts/install.sh` pin (`superstep[cli]==0.10.0`) to 0.10.0;

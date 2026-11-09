@@ -36,7 +36,7 @@ backend/.venv
 # factory CLI install artifacts
 .factory/build/
 
-# e2e fs attachment storage (TASK-0195)
+# e2e fs attachment storage
 backend/.e2e-attachments/
 
 # Owner-requested: keep screenshot evidence out of Git; handbook images stay versioned.

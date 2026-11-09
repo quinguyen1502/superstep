@@ -18,10 +18,10 @@ TASK-0277 footer on the Studio pages listed in the task. Review is REV-0263. The
 
 - Criterion: Signed-out and signed-in Studio pages in scope show the copyright line in English and Vietnamese.
   - Result: pass
-  - Evidence: Chrome on `http://127.0.0.1:5197`, desktop and a 390px viewport. Login showed `Superstep · Qui Nguyen · 2026`, then Vietnamese `Bản quyền Superstep · Qui Nguyen · 2026`. The workflow list, Settings, the approval inbox, and forgot-password showed the English line. Register uses `AuthPage`. Reset password uses the same `Frame` as forgot-password.
+  - Evidence: Chrome on `http://127.0.0.1:5197`, desktop and a 390px viewport. Login showed `Superstep · Qui Nguyen · 2026`, then Vietnamese `Copyright Superstep · Qui Nguyen · 2026`. The workflow list, Settings, the approval inbox, and forgot-password showed the English line. Register uses `AuthPage`. Reset password uses the same `Frame` as forgot-password.
 - Criterion: When `/api/health` returns a version, the line includes it. A failed call leaves the copyright and hides the version.
   - Result: pass
-  - Evidence: With health data `version: 0.12.0`, the line included `Version 0.12.0` and `Phiên bản 0.12.0`. A page whose `/api/health` request was aborted showed `Superstep · Qui Nguyen · 2026` and no version.
+  - Evidence: With health data `version: 0.12.0`, the line included `Version 0.12.0` and `Version 0.12.0`. A page whose `/api/health` request was aborted showed `Superstep · Qui Nguyen · 2026` and no version.
 - Criterion: The editor canvas and public chat do not gain a footer.
   - Result: pass
   - Evidence: `/workflows/abc` and `/c/demo` had `[data-testid=app-meta]` count 0. Those routes error without a full API, which still mounts the page tree that would contain the footer.
@@ -33,7 +33,7 @@ TASK-0277 footer on the Studio pages listed in the task. Review is REV-0263. The
 
 - Criterion: The footer does not cover the sign-in card or the workflow list, including a phone-width viewport.
   - Result: pass
-  - Evidence: Screenshots of login and the workflow list at 390×844. The line sits under the card. The sign-in button text stayed `Sign in` / `Đăng nhập`.
+  - Evidence: Screenshots of login and the workflow list at 390×844. The line sits under the card. The sign-in button text stayed `Sign in` (and its vi label).
 - Criterion: The line is text in a `footer`, and the language switch updates it.
   - Result: pass
   - Evidence: `#lang-switch` then `[data-lang=vi]` changed the same footer.

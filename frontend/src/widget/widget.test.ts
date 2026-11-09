@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { answer, frameUrl, mount, MSG, optionsOf, storageKey, type WidgetOptions } from './widget'
 import { iframeSnippet, widgetSnippet } from '@/lib/chat'
+import viCatalog from '@/locales/vi.json'
 
 const O: WidgetOptions = { slug: 'help', origin: 'https://studio.example.com', position: 'right', open: false, vi: false }
 const V1 = '0123456789abcdef.0123456789abcdef0123456789abcdef', V2 = 'abcdef0123456789.abcdef0123456789abcdef0123456789'
@@ -32,8 +33,8 @@ describe('chat widget', () => {
     const b = mount({ ...O, vi: true }, document, store())
     const panel = document.getElementById('superstep-chat-panel')!
     expect(panel.querySelector('iframe')!.src).toBe(frameUrl(O))
-    expect([panel.style.display, b.getAttribute('aria-expanded'), b.getAttribute('aria-label')]).toEqual(['none', 'false', 'Mở chat'])
-    b.click(); expect([panel.style.display, b.getAttribute('aria-label')]).toEqual(['block', 'Đóng chat'])
+    expect([panel.style.display, b.getAttribute('aria-expanded'), b.getAttribute('aria-label')]).toEqual(['none', 'false', viCatalog.chat.widget.open])
+    b.click(); expect([panel.style.display, b.getAttribute('aria-label')]).toEqual(['block', viCatalog.chat.widget.close])
     b.click(); expect(panel.style.display).toBe('none')
   })
 

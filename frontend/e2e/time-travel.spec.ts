@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vt } from './catalog'
 // Time travel: list a finished run's checkpoints, inspect and edit a state, fork a new run from there.
 const APPROVAL = {
   name: `Time travel e2e ${Date.now()}`, state: [{ name: 'message', type: 'string' }, { name: 'decision', type: 'string' }],
@@ -11,7 +12,7 @@ const APPROVAL = {
     { id: '3', source: 'route', target: 'e', label: 'approved' }, { id: '4', source: 'route', target: 'e', label: 'rejected' }],
 }
 async function login(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return { Authorization: `Bearer ${await apiToken(page)}` }
 }
@@ -27,7 +28,7 @@ test('time travel: inspect checkpoints, edit the state and fork', async ({ page 
   await page.locator('#trace-time-travel').click()
   const cps = page.locator('#time-travel-dialog [data-testid=checkpoint]')
   await expect(cps).toHaveCount(3)
-  await expect(cps.nth(0)).toContainText('Manager approval'); await expect(cps.nth(2)).toContainText('State cuối')
+  await expect(cps.nth(0)).toContainText('Manager approval'); await expect(cps.nth(2)).toContainText(vt('timeTravel.final'))
   await cps.nth(2).click(); await expect(page.locator('#time-travel-fork')).toBeDisabled()  // the final state: inspect only
   await cps.nth(1).click(); await expect(page.locator('#checkpoint-state')).toContainText('"decision": "approved"')
   await page.locator('#checkpoint-state').fill(JSON.stringify({ message: 'order A100', decision: 'rejected' }))

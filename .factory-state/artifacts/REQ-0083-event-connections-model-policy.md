@@ -31,7 +31,7 @@ Command chat triggers discard useful event metadata, managed Google/Telegram act
 ### Out Of Scope
 
 - A general n8n importer, new canvas node types for Telegram/Sheets, arbitrary user plugins executed in-process, a marketplace, all-provider OAuth implementation, changes to SDK roadmap phases, production webhook cutover, real financial writes or deployment without separate owner authorisation.
-- Real approval of expenses; the initial example preserves the existing "Chờ duyệt" sheet status.
+- Real approval of expenses; the initial example preserves the existing "Pending approval" sheet status.
 
 ## Stakeholders Or Users
 

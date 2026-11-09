@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vt, vin, vtHead } from './catalog'
 // workflow tests. Add a test case with a Human answer and a check, Run all, see it pass; change the check,
 // see it fail with the expected and actual values; the test runs show under History > Test runs only.
 const APPROVAL = {
@@ -13,7 +14,7 @@ const APPROVAL = {
 }
 
 async function login(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return apiToken(page)
 }
@@ -27,11 +28,11 @@ test('workflow tests: add a case, run all, see pass and fail with expected and a
   const wid = (await (await page.request.post('/api/workflows', { headers: { Authorization: `Bearer ${token}` }, data: APPROVAL })).json()).data.id
   await page.goto(`/workflows/${wid}`)
   await page.locator('#tests-tab').click()
-  await expect(page.locator('#tests-panel')).toContainText('Chưa có test case')
+  await expect(page.locator('#tests-panel')).toContainText(vt('tests.empty'))
 
   await page.locator('#tests-add').click()
   const dlg = page.locator('#test-dialog')
-  await dlg.locator('#test-name').fill('Duyệt hoàn tiền')
+  await dlg.locator('#test-name').fill(vt('templates.builtin.builtin-refund-approval.name'))
   await dlg.locator('#test-input').fill('{"message": "order A100"}')
   await dlg.getByTestId('answer-add').click()  // Approve by default
   await dlg.getByTestId('check-add').click()
@@ -42,9 +43,9 @@ test('workflow tests: add a case, run all, see pass and fail with expected and a
   await expect(dlg).toHaveCount(0)
 
   await page.locator('#tests-run-all').click()
-  const row = page.getByTestId('test-row').filter({ hasText: 'Duyệt hoàn tiền' })
-  await expect(row.getByTestId('test-status')).toHaveText('Đạt', { timeout: 30_000 })
-  await expect(page.locator('#tests-summary')).toContainText('1 đạt, 0 không đạt trên v1')
+  const row = page.getByTestId('test-row').filter({ hasText: vt('templates.builtin.builtin-refund-approval.name') })
+  await expect(row.getByTestId('test-status')).toHaveText(vt('tests.status.passed'), { timeout: 30_000 })
+  await expect(page.locator('#tests-summary')).toContainText(vt('tests.summary', { passed: '1', failed: '0', version: '1' }))
   await expect(page.getByTestId('check-row')).toHaveCount(2)
 
   // the same case expecting "rejected" fails, and shows what it got
@@ -52,7 +53,7 @@ test('workflow tests: add a case, run all, see pass and fail with expected and a
   await page.locator('#test-dialog').getByTestId('check-value').fill('rejected')
   await page.locator('#test-save').click()
   await page.locator('#tests-run-all').click()
-  await expect(page.getByTestId('result-status')).toHaveText('Không đạt', { timeout: 30_000 })
+  await expect(page.getByTestId('result-status')).toHaveText(vt('tests.status.failed'), { timeout: 30_000 })
   const failed = page.getByTestId('check-row').nth(1)
   await expect(failed).toContainText('rejected'); await expect(failed).toContainText('approved')
 
@@ -80,12 +81,12 @@ test('workflow tests: save as test case from a run, regression against the previ
 
   await page.locator('#trace-save-test').click()
   const dlg = page.locator('#test-dialog'); await expect(dlg.locator('#test-name')).toHaveValue(/^Run /)
-  await expect(dlg.getByTestId('answer-kind')).toHaveText('Duyệt')  // the answer the run was given
-  await dlg.locator('#test-name').fill('Từ run thật'); await dlg.locator('#test-save').click(); await expect(dlg).toHaveCount(0)
+  await expect(dlg.getByTestId('answer-kind')).toHaveText(vt('approve.approve'))  // the answer the run was given
+  await dlg.locator('#test-name').fill(vin('workflowTests.fromRun')); await dlg.locator('#test-save').click(); await expect(dlg).toHaveCount(0)
   await expect(page.locator('#tests-panel')).toBeVisible()
-  await expect(page.getByTestId('test-row').filter({ hasText: 'Từ run thật' })).toHaveClass(/bg-accent/)  // the new case is selected
+  await expect(page.getByTestId('test-row').filter({ hasText: vin('workflowTests.fromRun') })).toHaveClass(/bg-accent/)  // the new case is selected
   await page.locator('#tests-run-all').click()
-  await expect(page.getByTestId('result-status')).toHaveText('Đạt', { timeout: 30_000 })
+  await expect(page.getByTestId('result-status')).toHaveText(vt('tests.status.passed'), { timeout: 30_000 })
   await expect(page.locator('#tests-no-baseline')).toBeVisible()
 
   // version 2 writes the answer to another field: the case now fails, marked as a regression against v1
@@ -93,13 +94,13 @@ test('workflow tests: save as test case from a run, regression against the previ
   saved.nodes.find((n: { id: string }) => n.id === 'ask').data.output_field = 'message'
   await page.request.post('/api/workflows', { headers: H, data: saved })
   await page.reload(); await page.locator('#tests-tab').click(); await page.locator('#tests-run-all').click()
-  await expect(page.getByTestId('result-status')).toHaveText('Không đạt', { timeout: 30_000 })
-  await expect(page.getByTestId('result-change')).toHaveText('Mới lỗi')
-  await expect(page.locator('#tests-compare')).toContainText('So với v1'); await expect(page.getByTestId('compare-regression')).toContainText('1')
+  await expect(page.getByTestId('result-status')).toHaveText(vt('tests.status.failed'), { timeout: 30_000 })
+  await expect(page.getByTestId('result-change')).toHaveText(vt('tests.change.regression'))
+  await expect(page.locator('#tests-compare')).toContainText(vt('tests.comparedWith', { version: 1 }).replace(/:$/, '')); await expect(page.getByTestId('compare-regression')).toContainText('1')
 
   // run against v1 again: it passes there, and the history lists the three suite runs
   await page.locator('#tests-run-version').click(); await page.getByTestId('run-version').filter({ hasText: 'v1' }).click()
-  await expect(page.getByTestId('result-status')).toHaveText('Đạt', { timeout: 30_000 })
+  await expect(page.getByTestId('result-status')).toHaveText(vt('tests.status.passed'), { timeout: 30_000 })
   await expect(page.locator('#tests-summary')).toContainText('trên v1')
   await page.locator('#tests-history').click(); await expect(page.getByTestId('suite-row')).toHaveCount(3)
 })
@@ -111,5 +112,5 @@ test('workflow tests: a built-in template brings test cases that pass offline', 
   await page.goto(`/workflows/${wid}`); await page.locator('#tests-tab').click()
   await expect(page.getByTestId('test-row')).toHaveCount(3)
   await page.locator('#tests-mock').click(); await page.locator('#tests-run-all').click()
-  await expect(page.locator('#tests-summary')).toContainText('3 đạt, 0 không đạt', { timeout: 60_000 })
+  await expect(page.locator('#tests-summary')).toContainText(vtHead('tests.summary', { passed: 3, failed: 0 }), { timeout: 60_000 })
 })

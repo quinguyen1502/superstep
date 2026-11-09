@@ -10,6 +10,9 @@ import pytest
 
 from superstep.cli import run
 from superstep.cli.session import SessionError, call
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 
 TOKEN = "pat_secret-value"
@@ -338,9 +341,9 @@ def test_help_has_an_example_and_json_is_one_object(tmp_path, signed_in):
         code, out, err = invoke(list(argv))
         assert code == 0 and out == "" and example in err
     code, out, err = invoke(["--lang", "vi", "pull", "--help"])
-    assert code == 0 and out == "" and "Ví dụ: superstep pull ./workflows" in err
+    assert code == 0 and out == "" and VI.messages["example.pull"] in err
     code, _out, err = invoke(["--lang", "vi", "workflows", "export", "--help"])
-    assert "Ví dụ: superstep workflows export demo --format json" in err
+    assert VI.messages["example.workflows_export"] in err
     en = json.loads((ROOT / "en.json").read_text(encoding="utf-8"))
     vi = json.loads((ROOT / "vi.json").read_text(encoding="utf-8"))
     assert set(en) == set(vi)

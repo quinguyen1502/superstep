@@ -6,7 +6,7 @@ LLM, Code và Condition hiện có.
 
 Luồng trả lời đang xử lý, trích xuất và kiểm tra một khoản chi, ghi một dòng,
 rồi chỉ báo đã ghi sau khi xác nhận thành công. Thiếu/sai số tiền và tin không
-phải khoản chi đi vào nhánh phản hồi. “Chờ duyệt” chỉ là trạng thái trên sheet;
+phải khoản chi đi vào nhánh phản hồi. “Pending approval” chỉ là trạng thái trên sheet;
 mẫu chưa có quy trình phê duyệt.
 
 ![Graph khoản chi và trace thành công với dữ liệu mẫu](../images/telegram-expense-workflow.png)
@@ -45,7 +45,7 @@ mẫu chưa có quy trình phê duyệt.
 | C | description | Nội dung model đã qua kiểm tra |
 | D | category | Loại khoản chi đã qua kiểm tra |
 | E | amount_vnd | Số tiền VND nguyên dương |
-| F | status | Chờ duyệt |
+| F | status | Pending approval |
 | G | submitted_at | Thời gian gửi tin tại UTC+07:00 |
 | H | operation_id | ID thao tác cố định do adapter thêm |
 

@@ -129,8 +129,7 @@ answers:
 ---
 # Clarification
 
-Owner questions for REQ-0073 (the next Agent feature). The owner answered in chat on 2026-10-26 ("Merge 174 và trả lời
-clar-0004 theo đề xuất") and picked the recommended option for all six; the answers are written into REQ-0073 and
+Owner questions for REQ-0073 (the next Agent feature). The owner answered in chat on 2026-10-26 ("Merge 174 and answer clar-0004 as proposed") and picked the recommended option for all six; the answers are written into REQ-0073 and
 DEC-0066.
 
 The owner may answer it with:

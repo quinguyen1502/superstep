@@ -15,10 +15,10 @@ EXAMPLE = {
     {"id": "lookup", "type": "tool", "position": {"x": 700, "y": 90}, "data": {"label": "Lookup order", "mode": "function", "function": "lookup_order", "output_field": "tool_result"}},
     {"id": "reply_order", "type": "llm", "position": {"x": 930, "y": 90}, "data": {
       "label": "Reply with order info", "model": "gpt-4o-mini", "output_field": "answer",
-      "prompt": "Bạn là nhân viên CSKH. Dựa trên thông tin đơn hàng, trả lời khách ngắn gọn.\n{{state.tool_result}}"}},
+      "prompt": "You are a customer support agent. Using the order information, answer the customer briefly.\n{{state.tool_result}}"}},
     {"id": "answer", "type": "llm", "position": {"x": 700, "y": 320}, "data": {
       "label": "General answer", "model": "gpt-4o-mini", "output_field": "answer",
-      "prompt": "Bạn là nhân viên CSKH thân thiện. Trả lời câu hỏi sau:\n{{state.message}}"}},
+      "prompt": "You are a friendly customer support agent. Answer this question:\n{{state.message}}"}},
     {"id": "end", "type": "end", "position": {"x": 1160, "y": 200}, "data": {"label": "End"}},
   ],
   "edges": [

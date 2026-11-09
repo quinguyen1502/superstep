@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, newWorkflow, N } from './helpers'
+import { vt, vin, st } from './catalog'
 // a visitor attaches a PDF and an image on the published chat page. A file over the limit is
 // refused in the page before upload. The mock answer names both files, the sent message lists them with downloads,
 // and another visitor cannot download them. The builder sets the limits in Chat settings and reads the files under Visitors.
@@ -23,7 +24,7 @@ function pdf(text = 'Invoice 42 total 99 USD') {
   return Buffer.from(out, 'latin1')
 }
 const T = {
-  vi: { answer: 'Tệp đính kèm: tài liệu invoice.pdf, ảnh photo.png', large: 'tối đa 10 MB', off: 'Cho phép đính kèm tệp' },
+  vi: { answer: `${st('attachments.heading')}: ${st('attachments.document')} invoice.pdf, ${st('attachments.image')} photo.png`, large: vt('errors.CHAT_ATTACHMENT_TOO_LARGE', { max_mb: 10 }), off: vt('chat.files.settings.enabled') },
   en: { answer: 'Attachments: document invoice.pdf, image photo.png', large: '10 MB', off: 'Allow attachments' },
 }
 
@@ -69,7 +70,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await expect(v.locator('#public-chat-error')).toHaveCount(0)   // a good file clears the refusal
     await expect(v.getByTestId('chat-file')).toHaveCount(2); await expect(v.locator('[data-testid="chat-file"][data-state="done"]')).toHaveCount(2)
     await expect(v.getByTestId('chat-file').nth(1).locator('img')).toBeVisible()   // the image's thumbnail
-    await v.locator('#chat-input').fill(lang === 'vi' ? 'Tổng hoá đơn là bao nhiêu?' : 'What is the invoice total?')
+    await v.locator('#chat-input').fill(lang === 'vi' ? vin('attachments.invoiceQuestion') : 'What is the invoice total?')
     await shot(v, `r010-attachment-composer-${lang}`, '#chat-form')
     await v.keyboard.press('Enter')
     await expect(v.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok', { timeout: 20_000 })

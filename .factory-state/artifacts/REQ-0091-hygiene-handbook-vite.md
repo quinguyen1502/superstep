@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0091
-- Status: Owner-authorised 2026-11-09 ("Tiến hành xử lý…" — browser defaults report; remove task IDs from code comments; Vite `__dirname` warning; no Vietnamese in source except translations; sync Vietnamese handbook)
+- Status: Owner-authorised 2026-11-09 ("Processing…" — browser defaults report; remove task IDs from code comments; Vite `__dirname` warning; no Vietnamese in source except translations; sync Vietnamese handbook)
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-09
 - Related: PLAN-0011, DEC-0090; browser defaults are a report only (REQ-0086 / DEC-0085 unchanged)

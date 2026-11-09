@@ -27,21 +27,21 @@ test('code mode: write, test with sample state, run, traceback, read-only for ed
   await expect(page.locator('#code-packages')).toContainText('pydantic')
   await setCode(page, UPPER)
 
-  await runInput(page, '{"message": "xin chào", "out": ""}')
+  await runInput(page, '{"message": "héllo wörld", "out": ""}')
   await page.locator('.react-flow__node[data-id="c"]').click()
   await page.locator('#code-test').click()
-  await expect(page.locator('#code-test-result')).toContainText('XIN CHÀO', { timeout: 30_000 })
-  await expect(page.locator('#code-test-result [data-testid="code-stdout"]')).toHaveText('got xin chào')
+  await expect(page.locator('#code-test-result')).toContainText('HÉLLO WÖRLD', { timeout: 30_000 })
+  await expect(page.locator('#code-test-result [data-testid="code-stdout"]')).toHaveText('got héllo wörld')
 
   await page.locator('#save-btn').click(); await expect(page.locator('#unsaved-badge')).toHaveCount(0)
   await page.locator('#run-btn').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
   const runs = async () => (await (await page.request.get(`/api/workflows/${wid}/runs`, { headers: H })).json()).data
     .sort((a: { started: number }, b: { started: number }) => b.started - a.started)
-  expect((await runs())[0].final_state.out).toBe('XIN CHÀO')
+  expect((await runs())[0].final_state.out).toBe('HÉLLO WÖRLD')
   await page.locator('.trace-row[data-span="c#1"]').click()
   await page.locator('#trace-detail').getByRole('tab').nth(1).click()
-  await expect(page.locator('#trace-code-output')).toContainText('got xin chào')
+  await expect(page.locator('#trace-code-output')).toContainText('got héllo wörld')
 
   await page.locator('.react-flow__node[data-id="c"]').click()
   await setCode(page, 'def main(state):\n    raise ValueError("bad input")\n')

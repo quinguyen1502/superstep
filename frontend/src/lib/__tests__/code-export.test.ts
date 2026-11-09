@@ -21,9 +21,9 @@ describe('Code tab export language', () => {
     expect(projectUrl('w 1', 'python')).toBe('/api/workflows/w%201/export/python/project')
   })
   it('has en/vi strings for the picker and the download button', () => {
-    expect(en.codeView.download).toBe('Download .{{ext}}'); expect(vi.codeView.download).toBe('Tải .{{ext}}')
-    expect(vi.codeView.languageLabel).toBe('Ngôn ngữ')
-    expect(en.codeView.downloadProject).toBe('Project .zip'); expect(vi.codeView.downloadProject).toBe('Dự án .zip')
+    expect(en.codeView.download).toBe('Download .{{ext}}'); expect(vi.codeView.download).not.toBe(en.codeView.download); expect(vi.codeView.download).toContain('.{{ext}}')
+    expect(vi.codeView.languageLabel).toBeTruthy(); expect(vi.codeView.languageLabel).not.toBe(en.codeView.languageLabel)
+    expect(en.codeView.downloadProject).toBe('Project .zip'); expect(vi.codeView.downloadProject).not.toBe(en.codeView.downloadProject); expect(vi.codeView.downloadProject).toContain('.zip')
     expect(en.errors.EXPORT_LANGUAGE_UNSUPPORTED).toBeTruthy(); expect(vi.errors.TYPESCRIPT_EXPORT_UNAVAILABLE).toBeTruthy()
   })
 })

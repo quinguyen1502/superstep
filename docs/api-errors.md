@@ -1,4 +1,4 @@
-# API response envelope and error codes (DEC-0010)
+# API response envelope and error codes
 
 ## Envelope (every REST endpoint)
 
@@ -23,7 +23,7 @@
 | Raising | `raise AppError("CODE", details=..., **template_params)`; no per-route try/except |
 | Success wrapping | `schemas/envelope.py` `EnvelopeResponse` (FastAPI `default_response_class`) |
 | Error wrapping | `api/error_handlers.py`: one handler each for AppError, 422, HTTP 404/405, unhandled Exception |
-| Body ceilings | `api/body_limit.py` `BodyLimit`: a body past the route's ceiling answers 413 `PAYLOAD_TOO_LARGE`, whether it declares a length or not and whatever the route parses (JSON, form, file) (TASK-0207, TASK-0208) |
+| Body ceilings | `api/body_limit.py` `BodyLimit`: a body past the route's ceiling answers 413 `PAYLOAD_TOO_LARGE`, whether it declares a length or not and whatever the route parses (JSON, form, file) |
 | Frontend unwrap | `frontend/src/lib/api.ts` `api()` |
 | Frontend translation | `frontend/src/locales/{en,vi}.json` → `errors.<CODE>`; `lib/i18n.ts` `errorText()` |
 
@@ -300,24 +300,24 @@
 Codes used only in WebSocket events (`RUN_*`, `NODE_FAILED`) list their nominal status for reference.
 
 
-### LLM providers (TASK-0030)
+### LLM providers
 
 `PROVIDER_*` and `MODEL_NOT_FOUND` come from `POST /api/providers/{id}/test`, `GET /api/credentials/{id}/models` and, as the `code` of a run `error` event, from LLM nodes. `PROVIDER_AUTH_FAILED` is deliberately 400 (not 401) so the UI does not treat a rejected provider key as an expired studio session. `PROVIDER_UNREACHABLE` in Docker usually means the base URL says `localhost`: use `http://host.docker.internal:<port>` (see the handbook, *LLM providers*).
 
 `PROVIDER_EMBEDDINGS_UNSUPPORTED` and `KB_EMBEDDING_DIMENSION_MISMATCH` come from knowledge-base uploads, re-index, search and `POST /api/credentials/{id}/embeddings/test`. A knowledge base stores the dimension of its vectors (`dims`); a model that suddenly returns another size (same name, e.g. a re-pulled local model) is refused instead of mixing vectors. Changing the model or credential still re-indexes automatically.
 
-### Send email nodes (TASK-0051)
+### Send email nodes
 
 `CREDENTIAL_SETTINGS_INVALID` comes from creating, editing or testing an SMTP credential (`details.field` names the setting). `EMAIL_HOST_BLOCKED`, `EMAIL_AUTH_FAILED` and `EMAIL_SEND_FAILED` come from its *Test connection* and, as the `code` of a run `error` event, from Send email nodes, together with the other `EMAIL_*` codes. `EMAIL_AUTH_FAILED` is 400 (not 401) for the same reason as `PROVIDER_AUTH_FAILED`. `EMAIL_RATE_LIMITED` counts recipients per workflow owner in a fixed one-hour window (`STUDIO_EMAIL_NODE_HOURLY_LIMIT`, default 100).
 
-### Code mode of Tool nodes (TASK-0053)
+### Code mode of Tool nodes
 
-The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Code mode. `CODE_FAILED`, `CODE_INVALID` (raised by the code itself), `CODE_RESULT_NOT_JSON`, `CODE_TIMEOUT` and `CODE_MEMORY` events also carry `code_output` with `stdout`, `traceback` and `runtime`. The `DEMO_*` codes appear only with `STUDIO_DEMO_MODE=true` (the public demo, `docs/deploy/demo.md`). `CODE_RUNTIME_OFF` and `CODE_RUNTIME_UNAVAILABLE` mean the server cannot run code at all: the mode is off (`STUDIO_ENABLE_CODE_NODES`), Docker is not reachable, or the image (`STUDIO_CODE_IMAGE`, default `studio-code:1`) is missing. TypeScript nodes (TASK-0080) use their own image (`STUDIO_CODE_TS_IMAGE`, default `studio-code-ts:1`) or, on the subprocess runtime, the `deno` binary (`STUDIO_DENO`); a TypeScript import outside `STUDIO_CODE_TS_PACKAGES`, or one that is not in Deno's cache, is `CODE_INVALID`. The allowed entries are pinned `name@major` (default `npm:zod@3,npm:date-fns@4`) and an import must name the same major (`npm:zod@3`, `npm:zod@3.25.1` or `npm:zod@3/mini`); an unversioned `npm:zod` or another major is refused at save time with a reason that names the allowed spec (`import "npm:zod" needs a version: use "npm:zod@3"`), and an action Deno has no permission for (files, network, environment, processes) is `CODE_FAILED`.
+The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Code mode. `CODE_FAILED`, `CODE_INVALID` (raised by the code itself), `CODE_RESULT_NOT_JSON`, `CODE_TIMEOUT` and `CODE_MEMORY` events also carry `code_output` with `stdout`, `traceback` and `runtime`. The `DEMO_*` codes appear only with `STUDIO_DEMO_MODE=true` (the public demo, `docs/deploy/demo.md`). `CODE_RUNTIME_OFF` and `CODE_RUNTIME_UNAVAILABLE` mean the server cannot run code at all: the mode is off (`STUDIO_ENABLE_CODE_NODES`), Docker is not reachable, or the image (`STUDIO_CODE_IMAGE`, default `studio-code:1`) is missing. TypeScript nodes use their own image (`STUDIO_CODE_TS_IMAGE`, default `studio-code-ts:1`) or, on the subprocess runtime, the `deno` binary (`STUDIO_DENO`); a TypeScript import outside `STUDIO_CODE_TS_PACKAGES`, or one that is not in Deno's cache, is `CODE_INVALID`. The allowed entries are pinned `name@major` (default `npm:zod@3,npm:date-fns@4`) and an import must name the same major (`npm:zod@3`, `npm:zod@3.25.1` or `npm:zod@3/mini`); an unversioned `npm:zod` or another major is refused at save time with a reason that names the allowed spec (`import "npm:zod" needs a version: use "npm:zod@3"`), and an action Deno has no permission for (files, network, environment, processes) is `CODE_FAILED`.
 
-`CODE_LANGUAGE_UNSUPPORTED` (TASK-0079) means the node's `data.language` is unknown or not in `STUDIO_CODE_LANGUAGES` on this server (`python` by default). Nodes without a `language` are Python. It is raised before anything runs, by a run and by *Test with sample state*; saving such a graph reports the same problem as a validation error.
+`CODE_LANGUAGE_UNSUPPORTED` means the node's `data.language` is unknown or not in `STUDIO_CODE_LANGUAGES` on this server (`python` by default). Nodes without a `language` are Python. It is raised before anything runs, by a run and by *Test with sample state*; saving such a graph reports the same problem as a validation error.
 
-`CODE_WRITE_FORBIDDEN` (TASK-0054) comes from saving a workflow, restoring a version, using or importing a template, and any other write that adds a Code node or changes its `code`, when the user's role lacks `code.write` (admins only by default). Running, moving, renaming or deleting a Code node, and duplicating a workflow, stay allowed. Nothing is stored when it is refused.
-`AUTO_APPROVAL_FORBIDDEN` (TASK-0186, REQ-0081) comes from saving a workflow, restoring a version or any other write that turns a node's AI review to `auto` or changes an `auto` policy, when the caller is neither the workflow owner nor an admin. Editors may save `suggest`. Nothing is stored when it is refused. `AUTO_APPROVAL_DISABLED` comes from the AI review endpoints when the operator turned the feature off (`STUDIO_AUTO_APPROVAL=off`).
+`CODE_WRITE_FORBIDDEN` comes from saving a workflow, restoring a version, using or importing a template, and any other write that adds a Code node or changes its `code`, when the user's role lacks `code.write` (admins only by default). Running, moving, renaming or deleting a Code node, and duplicating a workflow, stay allowed. Nothing is stored when it is refused.
+`AUTO_APPROVAL_FORBIDDEN` comes from saving a workflow, restoring a version or any other write that turns a node's AI review to `auto` or changes an `auto` policy, when the caller is neither the workflow owner nor an admin. Editors may save `suggest`. Nothing is stored when it is refused. `AUTO_APPROVAL_DISABLED` comes from the AI review endpoints when the operator turned the feature off (`STUDIO_AUTO_APPROVAL=off`).
 <!-- --8<-- [end:catalog] -->
 
 ## Browser connections

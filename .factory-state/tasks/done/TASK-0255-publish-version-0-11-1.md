@@ -51,7 +51,7 @@ Reuse approved TASK-0254 full local 8/8 and 23 green final-head checks for uncha
 
 ## Owner Approval
 
-After explicitly approving and merging PR #300, the owner instructed “Gắn task và release đi” in direct response to the untagged/unpublished status. In context this authorises tagging and publishing the v0.11.1 patch, including necessary release metadata/integration/main merges and configured registry workflows. No extra confirmation is required for that sequence. Prior preparation-only restrictions are superseded for this release only.
+After explicitly approving and merging PR #300, the owner instructed “Attach the task and release” in direct response to the untagged/unpublished status. In context this authorises tagging and publishing the v0.11.1 patch, including necessary release metadata/integration/main merges and configured registry workflows. No extra confirmation is required for that sequence. Prior preparation-only restrictions are superseded for this release only.
 
 ## Activity Log
 

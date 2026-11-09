@@ -27,10 +27,10 @@ added since it was made (Agent node, time travel, workflows as MCP tools, phone 
   - new chapter 6 frames: `gallery-agent`, `agent`, `agent-waiting`, `agent-trace`, `time-travel`, `mcp`, and two
     390x844 screenshots, `phone-canvas` and `phone-config`, taken in a second browser context with the same session;
   - the Support agent template's policy search tool needs a knowledge base before the workflow runs: the spec creates
-    one (`Refund policy` / `Chính sách hoàn tiền`) and picks it for that tool through the API.
+    one (`Refund policy` (and its vi label)) and picks it for that tool through the API.
 - `scripts/promo/video.html`:
   - a click on the Data tab in chapter 3, and the Data tab in the output caption;
-  - chapter 6, New / Mới, with seven captions;
+  - chapter 6, New (translated in vi), with seven captions;
   - a phone frame over a dimmed window;
   - the outro moved; 127.2 s at 1x, so 90.9 s at SPEED 1.4.
 - `scripts/promo/music.mjs`: section times and length follow the new timeline.

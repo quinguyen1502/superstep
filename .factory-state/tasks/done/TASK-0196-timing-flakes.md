@@ -15,7 +15,7 @@
 ## Objective
 
 Fix two timing-sensitive tests at their root cause, the way TASK-0109 (#136) did. The owner approved the follow-up after
-the 0.10.0 release ("Làm đi"):
+the 0.10.0 release ("Do it"):
 - `backend/tests/test_parallel_agent_tools.py::test_three_calls_overlap_and_keep_the_model_order` (TASK-0157);
 - `frontend/e2e/studio.spec.ts` "register → logout → login → list → open example → run → done".
 

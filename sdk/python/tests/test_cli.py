@@ -9,6 +9,8 @@ import superstep
 from superstep.cli import run
 from superstep.cli.i18n import Catalog
 
+VI = Catalog.load("vi")
+
 ROOT = Path(__file__).resolve().parents[1] / "src" / "superstep" / "cli" / "locales"
 SECRET = "jwt-secret-should-not-appear"
 
@@ -58,7 +60,7 @@ def test_help_shows_an_example_on_stderr():
 
 def test_help_follows_lang():
     _code, _out, err = invoke(["--lang", "vi", "--help"])
-    assert "Ví dụ: superstep version" in err
+    assert VI.messages["example.main"] in err
 
 
 @pytest.mark.parametrize("shell", ["bash", "zsh", "fish"])
@@ -110,7 +112,7 @@ def test_minor_mismatch_warns_in_the_selected_language(monkeypatch):
     code, out, err = invoke(["--lang", "vi", "--json", "version", "--url", "http://studio.test"], client=client)
     body = json.loads(out)
     assert code == 0 and err == "" and body["ok"] is True
-    assert body["warning"] == "CLI là 0.1.0 và máy chủ là 0.9.0."
+    assert body["warning"] == VI.format("version.warning_mismatch", cli="0.1.0", server="0.9.0")
     assert SECRET not in out
     code, out, err = invoke(["version", "--url", "http://studio.test"], client=client)
     assert code == 0 and out == "" and "CLI 0.1.0" in err and "Server 0.9.0" in err and SECRET not in err
@@ -135,7 +137,7 @@ def test_file_lang_beats_the_environment(monkeypatch, tmp_path):
     (folder / "cli.json").write_text(json.dumps({"lang": "vi"}), encoding="utf-8")
     monkeypatch.setattr(superstep, "__version__", "0.9.0")
     code, out, _err = invoke(["version", "--url", "http://studio.test", "--json"], client=health({"ok": True}))
-    assert code == 0 and json.loads(out)["warning"] == "Máy chủ không trả phiên bản."
+    assert code == 0 and json.loads(out)["warning"] == VI.messages["version.warning_missing"]
 
 
 def test_lang_environment_selects_vietnamese(monkeypatch, tmp_path):
@@ -143,7 +145,7 @@ def test_lang_environment_selects_vietnamese(monkeypatch, tmp_path):
     monkeypatch.setenv("LANG", "vi_VN.UTF-8")
     monkeypatch.setattr(superstep, "__version__", "0.9.0")
     code, out, _err = invoke(["version", "--url", "http://studio.test", "--json"], client=health({"ok": True}))
-    assert code == 0 and json.loads(out)["warning"] == "Máy chủ không trả phiên bản."
+    assert code == 0 and json.loads(out)["warning"] == VI.messages["version.warning_missing"]
 
 
 def test_connection_failure_is_json_in_the_selected_language():
@@ -152,7 +154,7 @@ def test_connection_failure_is_json_in_the_selected_language():
     code, out, err = invoke(["--lang", "vi", "--json", "version", "--url", "http://studio.test"], client=transport(boom))
     body = json.loads(out)
     assert code == 1 and err == ""
-    assert body == {"ok": False, "error": {"code": "CONNECTION_FAILED", "message": "Không kết nối được tới máy chủ tại http://studio.test."}}
+    assert body == {"ok": False, "error": {"code": "CONNECTION_FAILED", "message": VI.format("error.connection", url="http://studio.test")}}
 
 
 def test_bad_health_is_an_error():
@@ -164,9 +166,9 @@ def test_usage_json_is_one_object():
     code, out, err = invoke(["--json", "nope"])
     body = json.loads(out)
     assert code == 2 and err == "" and body["ok"] is False and body["error"]["code"] == "USAGE"
-    assert "Đối số" not in body["error"]["message"] and body["error"]["message"]
+    assert VI.messages["error.usage"].split(":")[0] not in body["error"]["message"] and body["error"]["message"]
 
 
 def test_messages_round_trip():
     assert Catalog.load("en").format("version.cli", version="1") == "CLI 1"
-    assert Catalog.load("vi").format("version.server", version="1") == "Máy chủ 1"
+    assert VI.format("version.server", version="1") == VI.messages["version.server"].replace("{version}", "1")

@@ -7,6 +7,7 @@ from app.main import app
 from app.api.deps import approval_service
 from app.services.approval_channels import ADAPTERS
 from tests.test_hitl import APPROVAL
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 SIGNING = "8f742231b10e8888abcd99yyyzzz85a5".replace("y", "1").replace("z", "2")
 SLACK = {"bot_token": "xoxb-1111-2222-abcdefgh", "signing_secret": SIGNING}
@@ -203,20 +204,21 @@ def test_chat_texts_follow_the_owner_and_presser_language(c, api):
     assert r.status_code == 422 and r.json()["error"]["code"] == "NOTIFICATION_PREFS_INVALID"
     c.put("/api/notifications/preferences", json={"lang": "vi"}, headers=H(approver["token"]))
     uo, ua, us = (f"U{uuid.uuid4().hex[:8].upper()}" for _ in range(3))
-    link(c, api, owner, "slack", uo); assert "Mã xác minh Superstep" in [b for b in api.named("chat.postMessage") if b["channel"] == uo][-1]["text"]
+    link(c, api, owner, "slack", uo); assert vi_text("vi", "channels.code").split(":")[0] in [b for b in api.named("chat.postMessage") if b["channel"] == uo][-1]["text"]
     link(c, api, approver, "slack", ua); link(c, api, stranger, "slack", us)
     assert "verification code" in [b for b in api.named("chat.postMessage") if b["channel"] == us][-1]["text"]
     ch = c.get("/api/approvals/channels", headers=H(owner["token"])).json()["data"]["channels"][0]
     wid = workflow(c, owner, {"channel_id": ch["id"], "channel": "slack", "target": "C0VI", "approvers": [approver["email"]]}); rid = start_waiting(c, owner, wid)
     post = until(lambda: [p for p in api.requests() if p["channel"] == "C0VI"])[-1]
     body = post["blocks"][0]["text"]["text"]
-    assert body.startswith("*Cần phê duyệt*") and "Bước: " in body and "Lượt chạy: " + rid in body
-    assert [e["text"]["text"] for e in post["blocks"][1]["elements"]] == ["Duyệt", "Từ chối"]
+    say = lambda key, **kw: vi_text("vi", f"channels.{key}").format(**kw)  # noqa: E731
+    assert body.startswith(f"*{say('title')}*") and say("step", v="") in body and say("run", v=rid) in body
+    assert [e["text"]["text"] for e in post["blocks"][1]["elements"]] == [say("approve"), say("reject")]
     approve = post["blocks"][1]["elements"][0]["value"]
     slack_post(c, ch["id"], press(approve, us))  # the stranger reads the refusal in English
     assert [b for u, b in api.calls if u.startswith("https://hooks.slack.com/")][-1]["text"] == "You are not allowed to approve this run"
     assert slack_post(c, ch["id"], press(approve, ua)).json()["data"] == {"outcome": "approved"}
-    assert api.named("chat.update")[-1]["text"].startswith(f"✅ {approver['email']} đã duyệt lúc ")
+    assert api.named("chat.update")[-1]["text"].startswith(say("at", text=say("approved_by", who=approver["email"]), when=""))
 
 
 def test_identity_is_verified_with_a_one_time_code(c, api, monkeypatch):

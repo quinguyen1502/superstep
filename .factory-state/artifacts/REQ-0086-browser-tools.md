@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Requirement ID: REQ-0086
-- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved the export-driver clarification below. That approval records the wording. It does not create implementation tasks.
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "OK, go ahead and build it" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved the export-driver clarification below. That approval records the wording. It does not create implementation tasks.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-07 (owner closed AC11 after PR #334 merged; REQ-0086 not marked done)
-- Source: Owner discussion on browser tools, autonomous browsing, dynamic URLs, portable exports and connection-level proxies; followed by “Tiến hành ghi nhận yêu cầu và break task đi”. Owner amendments on 2026-11-06 (Asia/Saigon) after reviewing the proposed package without accepting it as-is; additional flexible-but-safe config and risk guidance the same day.
+- Source: Owner discussion on browser tools, autonomous browsing, dynamic URLs, portable exports and connection-level proxies; followed by “Go ahead, record the requirement and break it into tasks”. Owner amendments on 2026-11-06 (Asia/Saigon) after reviewing the proposed package without accepting it as-is; additional flexible-but-safe config and risk guidance the same day.
 
 ## Summary
 
@@ -30,7 +30,7 @@ Unchanged product intent: no new Browser canvas node; no second Agent loop; no h
 
 ## Owner clarification (2026-11-07) — export drivers
 
-The owner approved this wording on 2026-11-07 ("ok ghi vào"). It records the portable-browser contract after the fixture exports. It does not reopen TASK-0251 or TASK-0252 and does not weaken refusals for other managed adapters. On 2026-11-07 the owner asked for the task split: TASK-0261 (Python) then TASK-0262 (TypeScript). Creating those tasks does not authorise task-start.
+The owner approved this wording on 2026-11-07 ("ok, write it in"). It records the portable-browser contract after the fixture exports. It does not reopen TASK-0251 or TASK-0252 and does not weaken refusals for other managed adapters. On 2026-11-07 the owner asked for the task split: TASK-0261 (Python) then TASK-0262 (TypeScript). Creating those tasks does not authorise task-start.
 
 1. **Fixture driver `memory`.** The default export driver stays a static HTTP GET. It does not follow redirects. Click follows an `href` only. Fill stores the value in session memory. Evaluate accepts only `document.title` and `document.body.innerText` from the stored HTML. A whitelisted private origin is reachable on this driver only. TASK-0251 and TASK-0252 implement this contract.
 2. **Live drivers `playwright` and `browserless`.** A later implementation keeps one browser and one page per alias for the life of the process. The page closes on idle, on lifetime expiry, or when the process exits. This is not a Studio conversation lease. Navigate, and a click that has an `href`, pass the whitelist and then open the URL. A click without an `href` acts on the live element. Fill types into the live element. After each change the runtime stores the page HTML for snapshot and extract.

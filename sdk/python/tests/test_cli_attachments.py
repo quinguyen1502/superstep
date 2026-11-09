@@ -5,6 +5,9 @@ import pytest
 
 import superstep
 from test_backup import BackupDocker, archive_members, invoke, layout, setting
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 TAR = b"attachments-tar-bytes"
 
@@ -117,7 +120,7 @@ def test_migrate_prints_the_outcome(tmp_path, lang):
     docker = Docker(migrate={"to": "fs", "dry_run": False, "moved": 3, "bytes": 2_000_000, "failed": [], "pending": 0})
     code, _out, err = invoke(["--lang", lang, "attachments", "migrate", "--to", "fs", "--dir", str(directory)], docker)
     assert code == 0
-    assert ("Moved 3 files (2.0 MB) to fs." if lang == "en" else "Đã chuyển 3 tệp (2.0 MB) sang fs.") in err
+    assert ("Moved 3 files (2.0 MB) to fs." if lang == "en" else VI.format("attachments.moved", moved="3", mb="2.0", to="fs")) in err
     call = [c for c in docker.calls if c[0] == "exec"][0]
     assert call[1] == "superstep" and call[2][3:] == ("attachments-migrate", "--to", "fs", "--batch", "100")
 

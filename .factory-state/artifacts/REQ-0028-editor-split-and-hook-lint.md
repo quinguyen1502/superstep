@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: project review on 2026-10-18 (follow-up of REQ-0027) and the owner's request to resolve the remaining review items, “Giải quyết các vấn đề còn lại.”
+- Source: project review on 2026-10-18 (follow-up of REQ-0027) and the owner's request to resolve the remaining review items, “Resolve the remaining issues.”
 
 ## Summary
 

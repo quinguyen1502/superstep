@@ -77,7 +77,7 @@ Document the web toolkit and widget API (en, vi), and add the React toolkit to t
 
 ## Activity Log
 
-- 2026-11-03: Owner accepted PR #291 ("Duyệt") after head 5d2d847131051ce951a3bcaf9267160036dcd07a passed 22 CI checks with two expected deployment/publication skips. Move TASK-0226 to done on this same PR, record acceptance in REV/QA-0221, rebase on latest develop 2ea51b0a and squash into one commit for Ready. All implementation/docs/tests are preserved; only lifecycle artifacts change. Required checks apply to the rewritten head. This acceptance does not authorise merge or release.
+- 2026-11-03: Owner accepted PR #291 ("Approve") after head 5d2d847131051ce951a3bcaf9267160036dcd07a passed 22 CI checks with two expected deployment/publication skips. Move TASK-0226 to done on this same PR, record acceptance in REV/QA-0221, rebase on latest develop 2ea51b0a and squash into one commit for Ready. All implementation/docs/tests are preserved; only lifecycle artifacts change. Required checks apply to the rewritten head. This acceptance does not authorise merge or release.
 
 - 2026-11-03: Source review REV-0221 and local QA-0221 pass. Full Factory rerun 8/8, final root tests (157 frontend / 18 React / 94 TypeScript SDK), strict en/vi handbook/media checks and both React 18/19 sample matrices pass. Node security/static and React/widget/headless browser scenarios pass. Initial backend environment failures and Human-turn/screenshot fixture corrections are documented in QA; no production assertion was weakened. Move to review for one Draft PR; owner acceptance remains pending. Screenshots stay outside Git.
 

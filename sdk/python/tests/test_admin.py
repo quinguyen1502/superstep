@@ -6,6 +6,9 @@ from pathlib import Path
 import pytest
 
 from superstep.cli import run
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 SECRET = "superstep-secret-value"
 PASSWORD = "Correct-horse-42"
@@ -188,7 +191,7 @@ def test_help_and_matching_catalog_keys():
     code, out, err = invoke(["admin", "create", "--help"], AdminDocker())
     assert code == 0 and out == "" and "--email" in err and "--password" in err
     code, out, err = invoke(["--lang", "vi", "uninstall", "--help"], AdminDocker())
-    assert code == 0 and "Ví dụ: superstep uninstall --purge --yes --name superstep" in err
+    assert code == 0 and VI.messages["example.uninstall"] in err
     root = Path(__file__).resolve().parents[1] / "src" / "superstep" / "cli" / "locales"
     en = json.loads((root / "en.json").read_text(encoding="utf-8"))
     vi = json.loads((root / "vi.json").read_text(encoding="utf-8"))

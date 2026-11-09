@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
+import { vt, vin, vtHead } from './catalog'
 // the Support agent template's test cases pass with the mock model (one approves the refund, one rejects
 // it), and the Tests panel adds a "tool called" check for an Agent node and its tool.
 
@@ -8,13 +9,13 @@ async function pick(page: Page, trigger: ReturnType<Page['locator']>, option: st
 }
 
 test('agent tests: template cases pass, and a "tool called" check is added', async ({ page }) => {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   const H = { Authorization: `Bearer ${await apiToken(page)}` }
   const wid = (await (await page.request.post('/api/templates/builtin-support-agent/use', { headers: H, data: {} })).json()).data.id
   //: the policy search tool says it needs a knowledge base; the built-in tool's label is translated
   await page.goto(`/workflows/${wid}`); await page.locator('.react-flow__node[data-id="agent"]').click(); await page.locator('#config-tab-settings').click()
-  await expect(page.locator('#agent-tool-1-kb-required')).toContainText('Hãy chọn kho tri thức')
+  await expect(page.locator('#agent-tool-1-kb-required')).toContainText(vt('editor.retrieverRequired'))
   await expect(page.locator('label[for="agent-tool-0-function"]')).toHaveText('Hàm')
   // without a knowledge base to pick here, the policy search tool goes; the cases never call it
   const wf = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data
@@ -26,29 +27,29 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await expect(page.getByTestId('test-row')).toHaveCount(3)
   await page.locator('#tests-mock').click()
   await page.locator('#tests-run-all').click()
-  await expect(page.locator('#tests-summary')).toContainText('3 đạt, 0 không đạt', { timeout: 60_000 })
+  await expect(page.locator('#tests-summary')).toContainText(vtHead('tests.summary', { passed: 3, failed: 0 }), { timeout: 60_000 })
 
   // a new case: the Agent node is answered like a Human node, and its tool is checked by name
   await page.locator('#tests-add').click()
   const dlg = page.locator('#test-dialog')
-  await dlg.locator('#test-name').fill('Tra đơn hàng A100')
+  await dlg.locator('#test-name').fill(vin('agentTests.caseName'))
   await dlg.locator('#test-input').fill('{"message": "Where is my order A100?"}')
   await expect(dlg.getByTestId('answers-node')).toContainText('Support agent')
   await dlg.getByTestId('check-add').click()
   const check = dlg.getByTestId('check-edit').nth(1)
-  await pick(page, check.getByTestId('check-kind'), 'Gọi công cụ')
+  await pick(page, check.getByTestId('check-kind'), vt('childRuns.badge'))
   await pick(page, check.getByTestId('check-agent'), 'Support agent')
   await pick(page, check.getByTestId('check-tool'), 'lookup_order')
-  await expect(check.getByTestId('check-called')).toContainText('đã gọi')
+  await expect(check.getByTestId('check-called')).toContainText(vt('tests.called.called'))
   await dlg.locator('#test-save').click()
   await expect(dlg).toHaveCount(0)
   const cases = (await (await page.request.get(`/api/workflows/${wid}/tests`, { headers: H })).json()).data.items
-  expect(cases.find((c: { name: string }) => c.name === 'Tra đơn hàng A100').checks[1]).toEqual({ kind: 'tool', node: 'agent', tool: 'lookup_order', called: true })
+  expect(cases.find((c: { name: string }) => c.name === vin('agentTests.caseName')).checks[1]).toEqual({ kind: 'tool', node: 'agent', tool: 'lookup_order', called: true })
 
   await page.locator('#tests-run-all').click()
-  await expect(page.locator('#tests-summary')).toContainText('4 đạt, 0 không đạt', { timeout: 60_000 })
-  await page.getByTestId('test-row').filter({ hasText: 'Tra đơn hàng A100' }).click()
-  await expect(page.getByTestId('check-row').nth(1)).toContainText('“Support agent” đã gọi lookup_order')
+  await expect(page.locator('#tests-summary')).toContainText(vtHead('tests.summary', { passed: 4, failed: 0 }), { timeout: 60_000 })
+  await page.getByTestId('test-row').filter({ hasText: vin('agentTests.caseName') }).click()
+  await expect(page.getByTestId('check-row').nth(1)).toContainText(vt('tests.desc.called', { node: 'Support agent', tool: 'lookup_order' }))
 
   // the Code tab: both languages have the Agent node's steps (TypeScript since)
   await page.locator('#code-tab').click()

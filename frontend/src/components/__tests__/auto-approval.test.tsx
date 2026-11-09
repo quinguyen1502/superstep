@@ -29,7 +29,7 @@ describe('AI review settings', () => {
   })
   it('has no notify switch in suggest mode', () => { expect(render({ mode: 'suggest' }, true)).not.toContain('id="human-auto-notify"') })
   it('renders in vi', async () => {
-    await i18n.changeLanguage('vi'); expect(render({ mode: 'suggest' }, false)).toContain('Chỉ chủ workflow hoặc quản trị viên')
+    await i18n.changeLanguage('vi'); expect(render({ mode: 'suggest' }, false)).toContain(i18n.t('aiReview.autoOwnerOnly'))
   })
 })
 

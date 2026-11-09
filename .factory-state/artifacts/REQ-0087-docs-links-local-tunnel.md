@@ -7,7 +7,7 @@
 - Status: Accepted — owner approved REQ-0087 and PR #319 with DEC-0086 option A on 2026-11-07; Teams/e-mail links and tour deferred
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-06
-- Source: Owner chat 2026-11-06 ("triển khai phần link documentation và tunnel"), following the earlier documentation-links/tunnel proposal
+- Source: Owner chat 2026-11-06 ("build the documentation link and tunnel part"), following the earlier documentation-links/tunnel proposal
 - Related: DES-0005, DEC-0086, PLAN-0007, TASK-0259, TASK-0260
 
 ## Summary And Scope
@@ -31,7 +31,7 @@ Out of scope: guided tours/onboarding walkthroughs, a docs search or embedded do
 
 - `operate/expose-local.md` exists in en and vi, is in both navs, cross-links from `operate/channels.md` (replacing the one-line tunnel note), and the strict en/vi handbook build passes.
 - The page covers the three providers, temporary vs stable URLs, set/restart/verify steps, per-channel callback URLs, and the security warning, with official-doc links.
-- Channels "public URL missing" notice and the Slack/Telegram/WhatsApp connection helpers show a "Learn more"/"Hướng dẫn" link to the correct locale and anchor; unit and e2e tests assert href, target and rel.
+- Channels "public URL missing" notice and the Slack/Telegram/WhatsApp connection helpers show a "Learn more" (with its vi label) link to the correct locale and anchor; unit and e2e tests assert href, target and rel.
 - One helper builds handbook URLs; the base follows DEC-0086. en/vi locale parity tests pass; shadcn default sizes and existing toolbar/alert patterns are kept.
 - Full Factory verify/validate, review and QA artifacts per task; all required CI green before any merge.
 

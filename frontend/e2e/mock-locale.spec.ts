@@ -1,6 +1,7 @@
 // The offline mock model and the example tools answer in the UI language: the studio sends it with every run.
 import { test, expect } from '@playwright/test'
 import { apiToken, login, newWorkflow, N } from './helpers'
+import { st } from './catalog'
 
 const WF = {
   name: 'Mock locale', state: [{ name: 'message', type: 'string' }, { name: 'order', type: 'string' }, { name: 'answer', type: 'string' }],
@@ -15,7 +16,7 @@ test('mock answers follow the UI language (en, vi)', async ({ page }) => {
   await login(page)
   const last = async () => (await (await page.request.get(`/api/workflows/${id}/runs`, { headers: H })).json()).data[0].final_state
   for (const [lang, answer] of [['en', '[mock:gpt-4o-mini] Answer: Order: Order A100: Delivered on 2026-10-10'],
-                                ['vi', '[mock:gpt-4o-mini] Trả lời: Order: Đơn A100: Đã giao hàng (delivered) ngày 2026-10-10']] as const) {
+                                ['vi', `[mock:gpt-4o-mini] ${st('mock.answer')}: Order: ${st('tools.order_label')} A100: ${st('tools.orders.A100')}`]] as const) {
     await page.evaluate(l => localStorage.setItem('lang', l), lang)
     await page.goto(`/workflows/${id}`); await expect(page.locator('.react-flow__node')).toHaveCount(4)
     await page.locator('#run-tab').click()

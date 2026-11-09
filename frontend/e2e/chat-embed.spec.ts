@@ -68,7 +68,7 @@ test('a plain iframe works; a site that is not allowed cannot frame the page', a
   await site(host, HOST, `<iframe id="chat" src="${STUDIO}/c/${slug}?embed=1" style="width:420px;height:560px;border:0"></iframe>`)
   await host.goto(`${HOST}/help.html`)
   const chat = host.frameLocator('#chat')
-  await chat.locator('#chat-input').fill('xin chào'); await chat.locator('#chat-input').press('Enter')
+  await chat.locator('#chat-input').fill('héllo wörld'); await chat.locator('#chat-input').press('Enter')
   await expect(chat.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok', { timeout: 20_000 })
   await expect(chat.locator('#public-chat')).toHaveAttribute('data-embed', 'iframe')
 

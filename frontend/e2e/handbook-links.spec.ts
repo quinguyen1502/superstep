@@ -1,9 +1,10 @@
 import { test, expect, type Page } from '@playwright/test'
+import { vt, literally } from './catalog'
 // Contextual handbook links in Settings → Channels (fixed published handbook).
 const BASE = 'https://quinguyen1502.github.io/superstep/'
 
 async function login(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
 }
 
@@ -20,12 +21,12 @@ test('channels: public URL missing and setup helpers link to the handbook in the
   })
   await page.goto('/settings/channels')
   const tg = page.locator('[data-testid=channel-card-telegram]')
-  await expect(tg.locator('#ch-hb-tg-public-url-missing')).toContainText('Chưa đặt STUDIO_PUBLIC_URL')
+  await expect(tg.locator('#ch-hb-tg-public-url-missing')).toContainText(vt('approvals.publicUrlMissing'))
   const help = tg.locator('#ch-hb-tg-public-url-help')
-  await expect(help).toHaveText('Hướng dẫn')
+  await expect(help).toHaveText(vt('decision.instructions'))
   await expect(help).toHaveAttribute('href', `${BASE}vi/operate/expose-local/`)
   await expect(help).toHaveAttribute('target', '_blank'); await expect(help).toHaveAttribute('rel', 'noopener noreferrer')
-  await expect(help).toHaveAccessibleName(/mở studio cục bộ ra internet/)
+  await expect(help).toHaveAccessibleName(literally(vt('docs.exposeLocalAria')))
 
   // add-connection helpers point at each platform's section
   for (const [kind, anchor] of [['slack', 'slack'], ['whatsapp', 'whatsapp-cloud-api']] as const) {

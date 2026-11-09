@@ -61,6 +61,6 @@ The first cold-start 16-case run was 14/16: a shared-IP read budget returned HTT
 
 ## Owner Acceptance And Ready Finalisation (2026-11-03)
 
-The owner accepted the implementation ("Duyệt") after PR #289 head b0c21ab65da49d28e120c57fb13b2d28b19614c7 completed 21 successful CI checks and one expected GHCR publication skip. This includes the full Factory profile, both backend databases, all three general Playwright shards, React 18/19 host acceptance, SDKs and image/security smoke checks. Earlier setup/timing failures remain documented above and are resolved by the recorded corrections/reruns.
+The owner accepted the implementation ("Approve") after PR #289 head b0c21ab65da49d28e120c57fb13b2d28b19614c7 completed 21 successful CI checks and one expected GHCR publication skip. This includes the full Factory profile, both backend databases, all three general Playwright shards, React 18/19 host acceptance, SDKs and image/security smoke checks. Earlier setup/timing failures remain documented above and are resolved by the recorded corrections/reruns.
 
 TASK-0224 moves to done on the same PR for a rebased, single-commit Ready delivery. This supersedes the earlier pending-human-acceptance/Draft-only statements; the implementation tree is preserved. Required validation and CI remain gates on the rewritten head and their actual final results are reported on #289. No merge, release tag, npm publication or deployment is approved.

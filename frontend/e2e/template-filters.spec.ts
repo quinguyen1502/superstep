@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login } from './helpers'
+import { vt } from './catalog'
 // template paths and filters: `|` suggests filters, tags show the chain, a bad filter is marked and refused on save,
 // double-click turns a tag back into text, and a run renders the result.
 const WF = (name: string) => ({ name, state: [{ name: 'order', type: 'object' }, { name: 'decision', type: 'string' }],
@@ -27,7 +28,7 @@ test('template filters: suggestions, tags, bad filter, edit as text, rendered ru
   await page.keyboard.type(' {{state.order.id | shout}}')
   await expect(prompt.locator('.template-tag').nth(2)).toHaveAttribute('data-known', 'false')
   await page.locator('#save-btn').click()
-  await expect(page.getByText("không có filter 'shout'").first()).toBeVisible()
+  await expect(page.getByText(vt('validation.NODE_REF_FILTER_UNKNOWN').split(': ')[1].split("'{{filter}}'")[0] + "'shout'").first()).toBeVisible()
 
   // double-click turns the tag back into text; fix it, leave, and it is a tag again
   await prompt.locator('.template-tag').nth(2).dblclick()

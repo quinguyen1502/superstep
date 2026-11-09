@@ -49,7 +49,7 @@ Real pinned metadata-action fixture regression, actual Git commit/tree/symbolic-
 
 ## Assumptions And Approval
 
-Owner explicitly instructed “Phát hành đi” and “Tiếp tục”. This necessary mechanical correction is within the same ongoing 0.11.0 release/integration authorisation, with no extra product scope or release target. Review is advisory; no separate human review of this diff is claimed. No publication is marked complete before verified image availability.
+Owner explicitly instructed “Release it” and “Continue”. This necessary mechanical correction is within the same ongoing 0.11.0 release/integration authorisation, with no extra product scope or release target. Review is advisory; no separate human review of this diff is claimed. No publication is marked complete before verified image availability.
 
 ## Activity Log
 

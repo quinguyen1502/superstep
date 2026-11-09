@@ -15,8 +15,8 @@
 ## Objective
 
 A task PR carries its own move to `done`, so no separate PR is needed only to change lifecycle state. Owner request
-on 2026-10-27: "Có cách nào khi merge thì tự chuyển luôn k? Tốn thêm 1 PR", then "Có thể quy định vào workflow của
-factory k?".
+on 2026-10-27: "Is there a way to move it automatically on merge? It costs one more PR", then "Can we make that a rule in the
+factory workflow?".
 
 The lifecycle already said done means "approved, validated, and ready to merge", with no post-merge commit needed,
 but no step covered the common case: the owner approves the merge while the task is still in review or QA. Tasks were
@@ -94,8 +94,7 @@ then left in review and moved later in a chore PR (TASK-0139's release PR moved 
 ## Activity Log
 
 - 2026-10-27: asked for by the owner and written on `factory/task-0148-done-on-merge`.
-- 2026-10-27: the owner asked to send the change upstream, sync it back and merge ("Thay đổi ngược về repo gốc và
-  sync về rồi merge đi"): upstream 338d7a8 (144 unittest tests pass), vendored here; moved to done on PR #199 before
+- 2026-10-27: the owner asked to send the change upstream, sync it back and merge ("Send the change back to the original repo, sync it back, then merge"): upstream 338d7a8 (144 unittest tests pass), vendored here; moved to done on PR #199 before
   the merge, under the rule this task adds.
 
 ## Handoff Notes

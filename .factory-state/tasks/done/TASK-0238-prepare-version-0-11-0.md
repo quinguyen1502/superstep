@@ -95,6 +95,6 @@ One task/PR; native work remains deferred. Preserve server/Python shared 0.11.0 
 
 ## Owner Acceptance And Release Authorisation
 
-The owner explicitly instructed “Phát hành đi” after reviewing the 0.11.0 summary and candidate PR #294. This accepts the concrete implementation, authorises merging #294 into develop, the develop-to-main release PR, version tags, GitHub Release and configured PyPI/npm/GHCR publication. This supersedes the earlier preparation-only scope and pending-owner statements; no native delivery or live provider/bot cutover is added.
+The owner explicitly instructed “Release it” after reviewing the 0.11.0 summary and candidate PR #294. This accepts the concrete implementation, authorises merging #294 into develop, the develop-to-main release PR, version tags, GitHub Release and configured PyPI/npm/GHCR publication. This supersedes the earlier preparation-only scope and pending-owner statements; no native delivery or live provider/bot cutover is added.
 
 Reviewed head e8b2112990b8869b83f029e04be2a8440d16fadc passed 22 CI checks with two expected PR-only deployment/publication skips. CI: https://github.com/quinguyen1502/superstep/actions/runs/41665808750; Factory: 41665808411; handbook: 41665808446; image: 41665808202; CLI: 41665808230. Local full 8/8 and package/migration receipts remain valid because finalisation only changes lifecycle records. The task moves to done on the same one-commit PR, with fresh exact-head CI required before merge. Release/tag publication outcomes must be verified separately and reported accurately.

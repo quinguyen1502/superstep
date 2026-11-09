@@ -13,6 +13,8 @@ from superstep.cli.i18n import Catalog
 from superstep.cli.mcp_bridge import cmd_mcp, read_message
 from superstep.cli.session import SessionError, call
 
+VI = Catalog.load("vi")
+
 
 def gate(imported: bool, required: bool) -> str:
     """What the SDK test should do. SUPERSTEP_MCP_TEST=1 fails a missing import; otherwise it skips."""
@@ -55,7 +57,7 @@ def test_help_says_stdio_and_json_is_usage(isolated):
     assert "speaks MCP on stdio" in err
     code, out, err = invoke(["--lang", "vi", "mcp", "--help"])
     assert code == 0 and out == ""
-    assert "Ví dụ: superstep mcp invoices" in err and "stdio" in err
+    assert VI.messages["example.mcp"] in err and "stdio" in err
     code, out, err = invoke(["mcp", "--json"])
     assert code == 2 and out == ""
     code, out, err = invoke(["mcp", "invoices", "--json"])

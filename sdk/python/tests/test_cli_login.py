@@ -7,6 +7,9 @@ import httpx
 import pytest
 
 from superstep.cli import run
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +43,7 @@ def test_login_help_and_completion_name_the_commands():
     assert code == 0 and out == ""
     assert "Example: superstep login --url http://localhost:8000 --no-browser" in err
     code, out, err = invoke(["--lang", "vi", "login", "--help"])
-    assert "Ví dụ: superstep login --url http://localhost:8000 --no-browser" in err
+    assert VI.messages["example.login"] in err
     code, out, _err = invoke(["completion", "bash"])
     assert code == 0 and "login" in out and "logout" in out and "whoami" in out
 

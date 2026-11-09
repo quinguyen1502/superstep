@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0077
-- Status: Accepted on 2026-10-31. The owner approved PR #271 with all 11 recommendations of PLAN-0002 ("Duyệt plan #271 theo đề xuất cả 11 câu, merge và bắt đầu code giai đoạn 1").
+- Status: Accepted on 2026-10-31. The owner approved PR #271 with all 11 recommendations of PLAN-0002 ("Approve plan #271 as proposed on all 11 questions, merge it and start coding phase 1").
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-31
 - Updated: 2026-10-31

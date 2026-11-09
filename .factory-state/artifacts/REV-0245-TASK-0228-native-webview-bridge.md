@@ -5,7 +5,7 @@
 - Project: superstep
 - Review ID: REV-0245
 - Task ID: TASK-0228
-- Reviewer: Grok (advisory; owner authorised implementation and green merge: "Làm 0228 song song đi")
+- Reviewer: Grok (advisory; owner authorised implementation and green merge: "Do 0228 in parallel")
 - Created: 2026-11-07
 - Updated: 2026-11-07
 - Outcome: approved for QA

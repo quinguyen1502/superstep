@@ -86,7 +86,7 @@ Fix the defects and leftovers from the 2026-10-18 project review (REQ-0027).
 - 2026-10-18: Owner asked to fix the review items after TASK-0038. REQ-0027 approved by that reply. Branch `factory/task-0039-review-hardening` from `develop` (`00d9a8e`). Task filed in `doing`.
 - 2026-10-18: Implemented: `core/net.py` guard for HTTP Tool nodes, `pick_branch` for Conditions, configurable CORS, token redaction, editor header grid, lazy Editor/Settings routes, `ControlOrMeta` in Playwright, stale run-input selectors, records, `dev.sh`, `.gitignore`. The editor header at 1280px was a new finding from the Playwright run.
 - 2026-10-18: Owner asked to resolve the remaining items. `backend/.venv` repaired. On Python 3.14 `test_cancel_queued_run_is_skipped` errored at teardown (nested TestClient); fixed. REV-0038 has no blocking findings. QA-0038 passed. Task set to done. PR into `develop`. Not merged.
-- 2026-10-18: Owner asked to merge ("Merge đi"). Rebased onto `develop` after PR #41; the editor header and roadmap conflicts were resolved (the header keeps #41's `EditorLayout` and this task's `minmax(min-content,1fr)` column). PR [#42](https://github.com/quinguyen1502/langgraph-studio/pull/42) merged into `develop`.
+- 2026-10-18: Owner asked to merge ("Merge it"). Rebased onto `develop` after PR #41; the editor header and roadmap conflicts were resolved (the header keeps #41's `EditorLayout` and this task's `minmax(min-content,1fr)` column). PR [#42](https://github.com/quinguyen1502/langgraph-studio/pull/42) merged into `develop`.
 
 ## Handoff Notes
 

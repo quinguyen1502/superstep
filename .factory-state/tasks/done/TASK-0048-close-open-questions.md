@@ -31,7 +31,7 @@ Close the open questions that the early requirements still listed, with the deci
 
 ## Inputs
 
-- Remaining-work report of 2026-10-18, item 10; the owner's reply, "Ngoại trừ 2, 3, 4. Làm các phần còn lại"
+- Remaining-work report of 2026-10-18, item 10; the owner's reply, "Except 2, 3, 4. Do the rest"
 
 ## Related Artifacts
 
