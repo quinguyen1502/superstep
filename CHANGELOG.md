@@ -7,6 +7,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 ### Added
 
 - **Public schedule API.** A workflow token can list, create, update, delete and preview cron schedules of its own workflow (`/api/hooks/workflows/{wid}/schedules`). The Python and TypeScript clients gain the matching methods. Package versions are unchanged. A schedule still runs as the token's owner, and it fires only while a worker is running.
+- **Readiness endpoint.** `GET /api/ready` checks the database and, when `REDIS_URL` is set, Redis, and answers 503 `SERVICE_NOT_READY` when either fails. It also reports queue depth, the oldest queued run and worker heartbeats. `GET /api/health` stays a liveness check and is unchanged; deploy templates keep using it.
+
+### Fixed
+
+- Schedules accept every IANA time zone a browser reports, such as `Asia/Saigon`, on images without system zone data: the backend now depends on `tzdata`.
 
 ## 0.12.0 (2026-11-07)
 

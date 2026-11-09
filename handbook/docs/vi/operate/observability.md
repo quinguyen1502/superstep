@@ -52,11 +52,31 @@ rồi trỏ backend tới `http://localhost:4318`.
 | `studio.cost` | counter, USD | Chi phí LLM ước tính |
 | `studio.errors` | counter | Số sự kiện lỗi |
 
-## Health
+## Health và readiness
 
-`GET /api/health` cho biết `llm_mode`, `database`, `run_bus` và bus có phản
-hồi không (`run_bus_ok`), `tracing` và `import_enabled`. Container `web` trả lời
-`/healthz`.
+`GET /api/health` là **liveness**: trả 200 khi tiến trình còn phục vụ HTTP.
+Endpoint này không truy vấn cơ sở dữ liệu. Nó cho biết `llm_mode`, `database`
+(tên dialect), `run_bus` và bus có phản hồi không (`run_bus_ok`), `tracing` và
+`import_enabled`. Container `web` trả lời `/healthz`.
+
+`GET /api/ready` là **readiness**. Endpoint này không cần đăng nhập và:
+
+- chạy `SELECT 1` trên cơ sở dữ liệu và ping Redis khi có `REDIS_URL`, mỗi
+  lệnh có timeout 2 giây, và báo độ trễ;
+- báo hàng đợi (số job `ready`, `delayed`, `processing` và tuổi của run
+  queued lâu nhất), các worker còn sống (slot đang bận, sức chứa và tuổi của
+  heartbeat mới nhất), loại run bus, và `in_memory_in_production` khi
+  production chạy không có Redis.
+
+Endpoint trả 503 `SERVICE_NOT_READY` khi cơ sở dữ liệu lỗi, hoặc khi Redis
+được cấu hình mà lỗi, kèm cùng báo cáo trong `error.details`. Hàng đợi tồn
+đọng hay thiếu worker không làm readiness thất bại; hãy đặt cảnh báo cho
+chúng. Cả hai endpoint đều không trả URL, tên máy chủ hay secret.
+
+`HEALTHCHECK` của Docker và template Render, DigitalOcean vẫn dùng
+`/api/health`: khởi động lại container không sửa được cơ sở dữ liệu chết. Hãy
+trỏ load balancer hoặc rolling deploy tới `/api/ready` khi muốn ngừng gửi
+traffic tới instance không kết nối được cơ sở dữ liệu.
 
 ## Log
 

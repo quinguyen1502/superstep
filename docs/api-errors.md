@@ -184,6 +184,7 @@
 | `DEMO_READ_ONLY` | 403 | The public demo is read-only: you can open, edit and run workflows, but not save changes |
 | `CODE_RUNTIME_OFF` | 400 | Code nodes are turned off on this server (STUDIO_ENABLE_CODE_NODES) |
 | `CODE_RUNTIME_UNAVAILABLE` | 503 | Code nodes cannot run on this server: {reason} |
+| `SERVICE_NOT_READY` | 503 | The service is not ready: the database or Redis does not answer |
 | `CODE_INVALID` | 400 | Code node {node}: {reason} |
 | `CODE_FAILED` | 400 | Code node {node} raised {error} |
 | `CODE_TIMEOUT` | 400 | Code node {node} was stopped after {seconds} s |

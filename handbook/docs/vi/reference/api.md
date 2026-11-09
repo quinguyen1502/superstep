@@ -309,6 +309,6 @@ không phải endpoint phiên hay stream.
     POST   /api/import                          GET    /api/import/{jid}
     POST   /api/import/{jid}/finalize
     POST   /api/code/test
-    GET    /api/health                          GET    /api/meta/runtime
-    GET    /api/tools
+    GET    /api/health                          GET    /api/ready
+    GET    /api/meta/runtime                    GET    /api/tools
     ```

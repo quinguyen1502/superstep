@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0284
 - Title: Readiness endpoint and honest health
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
 - Updated: 2026-11-09
@@ -53,3 +53,13 @@ Add `GET /api/ready` beside `/api/health` that really checks the database, Redis
 ## Activity Log
 
 - 2026-11-09: Created by planning on branch factory/plan-observability. No implementation.
+- 2026-11-09: Owner accepted REQ-0094, DEC-0094 and DEC-0095 (pt275u). Branch `factory/task-0284-readiness-tzdata` from the plan commit `dfb3177b`, shipped together with TASK-0293.
+- 2026-11-09: Shared probes in a new services module (database `SELECT 1`, Redis ping when configured, queue depth, oldest queued run, worker heartbeats), each on a small thread pool with a 2 s timeout. Job queues gained `depth`, `heartbeat` and `heartbeats`; the worker writes a heartbeat every 5 s with busy slots and capacity (Redis key with a TTL of three reap intervals, at least 60 s; in-process for the in-memory queue). `GET /api/ready` returns the report, or 503 `SERVICE_NOT_READY` with the report in `details` (new catalog code, docs and en/vi locale entries). `/api/health` unchanged apart from a liveness docstring. Handbook en/vi health section, API route list and `.env.example` note. Deploy templates untouched.
+- 2026-11-09: Deviation: the 503 body is the standard error envelope (`SERVICE_NOT_READY`, report in `details`) rather than a success envelope with a 503 status, so the envelope contract stays intact. No new environment variable: the probe timeout is a constant (2 s).
+- 2026-11-09: Full backend suite: 1590 passed, 30 skipped. `factory validate --only hygiene` passed. Unreleased changelog entries for readiness and `tzdata`.
+- 2026-11-09: Review REV-0269 and QA-0269. Moved to review.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0269-TASK-0284-readiness-endpoint.md`
+- QA: `.factory-state/artifacts/QA-0269-TASK-0284-readiness-endpoint.md`

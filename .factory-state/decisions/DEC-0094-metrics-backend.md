@@ -2,7 +2,7 @@
 
 - Decision ID: DEC-0094
 - Project: superstep
-- Status: Proposed 2026-11-09, recommendation A, awaiting owner acceptance with REQ-0094
+- Status: Accepted 2026-11-09 (Asia/Saigon) by the owner (pt275u, accepting the plan), option A, with REQ-0094
 - Created/Updated: 2026-11-09
 - Related: REQ-0094, PLAN-0013, TASK-0285, TASK-0291
 

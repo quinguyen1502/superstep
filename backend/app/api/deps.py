@@ -59,6 +59,7 @@ from ..services.browser_approval_service import BrowserApprovalService
 from ..repositories.browser_intents import BrowserIntentRepository
 from ..services.browser_runtime_service import BrowserRuntimeService
 from .. import storage
+from ..services.health_probes import Probes
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -196,6 +197,11 @@ def workflow_mcp_service() -> WorkflowMcpService:
 def agent_server_service() -> AgentServerService:
     db = get_db(); return AgentServerService(WorkflowRepository(db), RunRepository(db), AgentThreadRepository(db), trigger_service(),
                                              AuthService(UserRepository(db)).current, access=access_service(), runner=run_service)
+
+
+@lru_cache
+def get_probes() -> Probes:
+    db = get_db(); return Probes(db, RunRepository(db), get_job_queue(), get_run_bus(), bool(config.REDIS_URL), config.IS_PROD)
 
 
 @lru_cache

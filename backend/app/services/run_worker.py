@@ -6,6 +6,7 @@ Runs inside the API process (STUDIO_WORKER=1, default) and/or as a dedicated pro
 - Delivery jobs make one webhook attempt (DeliveryService) and reschedule themselves with backoff on failure.
 - `maintain` (every worker): promotes due delayed jobs every second and reaps expired leases every
   STUDIO_JOB_REAP_EVERY seconds. The lease of a running job is renewed every visibility/3 seconds.
+  It also writes the worker heartbeat (busy slots and capacity) that readiness and the metrics report.
 """
 import asyncio, json, time
 from typing import Callable, Optional
@@ -18,6 +19,7 @@ from .run_service import RunService, error_event
 
 log = get_logger("worker")
 CHAT_CLEANUP_EVERY = 3600  # seconds between chat retention sweeps
+HEARTBEAT_EVERY = 5  # seconds between two worker heartbeats
 _recovered = False  # start-up recovery runs once per process: later lifespans (tests) share the same in-memory queue
 
 
@@ -32,6 +34,7 @@ class RunWorker:
         self.browser = browser
         self.langsmith = langsmith  # -> LangSmithService: langsmith_suite jobs send a finished test suite as an experiment
         self._tasks: list[asyncio.Task] = []; self._stop = False
+        self.busy = 0; self.capacity = 0  # job slots in use and started (heartbeat)
 
     async def run_job(self, job: dict) -> Optional[str]:
         if job.get("kind") == "delivery":
@@ -104,10 +107,10 @@ class RunWorker:
                 await asyncio.sleep(max(1.0, config.job_visibility() / 3))
                 try: await asyncio.to_thread(self.jobs.touch, job)
                 except Exception: log.warning("renewing job lease failed")
-        keeper = asyncio.create_task(renew())
+        keeper = asyncio.create_task(renew()); self.busy += 1
         try: await self.run_job(job)
         finally:
-            keeper.cancel()
+            keeper.cancel(); self.busy -= 1
             await asyncio.to_thread(self.jobs.ack, job)  # recorded (or skipped): drop from processing list
 
     async def loop(self) -> None:
@@ -128,9 +131,15 @@ class RunWorker:
         except Exception:
             log.exception("reaping expired jobs failed"); return 0
 
+    async def beat(self) -> None:
+        try: await asyncio.to_thread(self.jobs.heartbeat, self.busy, self.capacity)
+        except Exception: log.warning("writing the worker heartbeat failed")
+
     async def maintain(self) -> None:
-        last_reap = last_cleanup = last_browser = 0.0
+        last_reap = last_cleanup = last_browser = last_beat = 0.0
         while not self._stop:
+            if time.time() - last_beat >= HEARTBEAT_EVERY:
+                last_beat = time.time(); await self.beat()
             try: await asyncio.to_thread(self.jobs.promote_due)
             except Exception: log.warning("promoting delayed jobs failed")
             if self.browser is not None and time.time()-last_browser>=5:
@@ -196,7 +205,7 @@ class RunWorker:
         return n
 
     def start(self, n: int) -> None:
-        self._stop = False
+        self._stop = False; self.capacity = n
         self._tasks = [asyncio.create_task(self.maintain())] + [asyncio.create_task(self.loop()) for _ in range(n)]
 
     async def stop(self) -> None:

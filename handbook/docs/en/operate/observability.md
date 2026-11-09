@@ -52,11 +52,31 @@ and point the backend at `http://localhost:4318`.
 | `studio.cost` | counter, USD | Estimated LLM cost |
 | `studio.errors` | counter | Error events |
 
-## Health
+## Health and readiness
 
-`GET /api/health` reports `llm_mode`, `database`, `run_bus` and whether the
-bus answers (`run_bus_ok`), `tracing` and `import_enabled`. The `web`
-container answers `/healthz`.
+`GET /api/health` is **liveness**: it answers 200 while the process serves
+HTTP. It does not query the database. It reports `llm_mode`, `database` (the
+dialect name), `run_bus` and whether the bus answers (`run_bus_ok`),
+`tracing` and `import_enabled`. The `web` container answers `/healthz`.
+
+`GET /api/ready` is **readiness**. It needs no sign-in and:
+
+- runs `SELECT 1` on the database and pings Redis when `REDIS_URL` is set,
+  each with a 2 second timeout, and reports the latency;
+- reports the queue (`ready`, `delayed` and `processing` jobs, and the age
+  of the oldest queued run), the live workers (busy slots, capacity and the
+  age of the newest heartbeat), the run bus kind, and
+  `in_memory_in_production` when production runs without Redis.
+
+It answers 503 `SERVICE_NOT_READY` when the database fails, or when Redis is
+configured and fails, with the same report in `error.details`. A queue
+backlog or a missing worker never fails readiness; alert on them instead.
+Neither endpoint returns a URL, host name or secret.
+
+The Docker `HEALTHCHECK` and the Render and DigitalOcean templates keep
+`/api/health`: restarting a container does not fix a dead database. Point a
+load balancer or a rolling deploy at `/api/ready` when you want traffic held
+back from an instance that cannot reach its database.
 
 ## Logs
 
