@@ -60,11 +60,15 @@ services:
       STUDIO_CALLBACK_RATE_LIMIT_IP: ${STUDIO_CALLBACK_RATE_LIMIT_IP:-60}
       STUDIO_CALLBACK_RATE_LIMIT_CHANNEL: ${STUDIO_CALLBACK_RATE_LIMIT_CHANNEL:-300}
       # tracing: empty = no-op. With `--profile tracing` set
-      # OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 and STUDIO_TRACE_URL=http://localhost:16686/trace/{trace_id}
+      # OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 and STUDIO_TRACE_URL=http://localhost:16686/trace/{trace_id}.
+      # With `--profile observability`, add `--env-file deploy/observability/observability.env` (collector, metrics, Grafana link).
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-superstep}
       STUDIO_TRACE_URL: ${STUDIO_TRACE_URL:-}
+      STUDIO_OTEL_METRICS: ${STUDIO_OTEL_METRICS:-0}
+      OTEL_METRIC_EXPORT_INTERVAL: ${OTEL_METRIC_EXPORT_INTERVAL:-60000}
+      STUDIO_GRAFANA_URL: ${STUDIO_GRAFANA_URL:-}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-}
@@ -173,9 +177,10 @@ services:
     restart: unless-stopped
 
   # Optional trace viewer: `docker compose --profile tracing up`. Jaeger receives OTLP directly (4317 gRPC / 4318 HTTP).
+  # It also joins the observability profile, where the collector forwards traces to it.
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
-    profiles: [tracing]
+    profiles: [tracing, observability]
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
     ports: ["${JAEGER_UI_PORT:-16686}:16686"]
@@ -186,11 +191,51 @@ services:
       retries: 10
     restart: unless-stopped
 
+  # Optional metrics stack: `docker compose --env-file .env --env-file deploy/observability/observability.env
+  # --profile observability up --build`. The backend pushes OTLP to the collector; Prometheus scrapes the collector;
+  # Grafana (http://localhost:3000) has the starter dashboard and alert rules. Config: deploy/observability/.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    profiles: [observability]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes: ["./deploy/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro"]
+    depends_on: [jaeger]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: [observability]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"]
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    depends_on: [otel-collector]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      # Local-only default; set GRAFANA_ADMIN_PASSWORD in .env before exposing Grafana anywhere.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    ports: ["127.0.0.1:${GRAFANA_PORT:-3000}:3000"]
+    volumes:
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    depends_on: [prometheus]
+    restart: unless-stopped
+
 # Named as in v0.1.0 (project "langgraph-studio"), so a stack started before the rename keeps its data.
 volumes:
   pgdata: {name: langgraph-studio_pgdata}
   redisdata: {name: langgraph-studio_redisdata}
   apidata: {name: langgraph-studio_apidata}
+  promdata:
+  grafanadata:
 
 networks:
   sandbox:

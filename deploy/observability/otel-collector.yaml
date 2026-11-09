@@ -1,0 +1,33 @@
+# OpenTelemetry Collector for `docker compose --profile observability`.
+# The backend pushes OTLP (traces and, with STUDIO_OTEL_METRICS=1, metrics) here. Metrics are exposed for Prometheus
+# on :8889 and traces are forwarded to Jaeger.
+receivers:
+  otlp:
+    protocols:
+      grpc: { endpoint: 0.0.0.0:4317 }
+      http: { endpoint: 0.0.0.0:4318 }
+
+processors:
+  batch: {}
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    # Keep the OTel names (dots become underscores) without unit or _total suffixes; the dashboard and alert rules rely on it.
+    add_metric_suffixes: false
+    # Series of a stopped process disappear after this long.
+    metric_expiration: 5m
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls: { insecure: true }
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [prometheus]

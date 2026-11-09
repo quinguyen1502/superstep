@@ -1,0 +1,304 @@
+# Grafana alert rules for `docker compose --profile observability`.
+# Thresholds: change the values under x-thresholds and restart Grafana. Grafana does not expand environment variables
+# inside query models, so the thresholds live here as YAML anchors.
+x-thresholds:
+  http_5xx_share: &http_5xx_share 0.05       # share of HTTP requests answering 5xx over 5 minutes
+  queue_depth: &queue_depth 100              # ready jobs in the queue
+  queue_oldest_age_s: &queue_oldest_age_s 300  # seconds the oldest queued run has waited
+  worker_heartbeat_age_s: &worker_heartbeat_age_s 60  # about 3 reap intervals at the default STUDIO_JOB_REAP_EVERY=15
+  run_error_rate: &run_error_rate 0.2        # share of runs ending in error or timeout over 15 minutes
+  daily_cost_usd: &daily_cost_usd 50         # estimated USD over the last 24 hours
+  approval_wait_s: &approval_wait_s 86400    # seconds a human step may wait
+
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: superstep
+    folder: Superstep
+    interval: 1m
+    rules:
+      - uid: superstep-instance-down
+        title: Instance down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'count(studio_process_rss)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: lt, params: [1] } }] }
+        for: 5m
+        noDataState: Alerting
+        execErrState: Error
+        labels: { severity: critical }
+        annotations: { summary: "No Superstep process has sent metrics for 5 minutes." }
+      - uid: superstep-database-down
+        title: Database down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'min(studio_ready_db)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: lt, params: [1] } }] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical }
+        annotations: { summary: "The database readiness probe is failing." }
+      - uid: superstep-redis-down
+        title: Redis down
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'min(studio_ready_redis)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: lt, params: [1] } }] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical }
+        annotations: { summary: "Redis is configured but its readiness probe is failing." }
+      - uid: superstep-http-5xx
+        title: HTTP 5xx share
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: '(sum(rate(studio_http_server_requests{status_class="5xx"}[5m])) or vector(0)) / clamp_min(sum(rate(studio_http_server_requests[5m])), 1e-9)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*http_5xx_share] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "More than the allowed share of HTTP requests answer 5xx." }
+      - uid: superstep-queue-depth
+        title: Queue backlog (depth)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(studio_queue_depth{state="ready"})', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*queue_depth] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "Too many runs are waiting in the queue." }
+      - uid: superstep-queue-age
+        title: Queue backlog (oldest run)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(studio_queue_oldest_age)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*queue_oldest_age_s] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "The oldest queued run has waited too long." }
+      - uid: superstep-worker-missing
+        title: Worker missing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(studio_worker_heartbeat_age)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*worker_heartbeat_age_s] } }] }
+        for: 2m
+        noDataState: Alerting
+        execErrState: Error
+        labels: { severity: critical }
+        annotations: { summary: "No worker heartbeat is fresh; queued runs are not being picked up." }
+      - uid: superstep-run-errors
+        title: Run error rate
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: '(sum(rate(studio_runs{status=~"error|timeout"}[15m])) or vector(0)) / clamp_min(sum(rate(studio_runs[15m])), 1e-9)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*run_error_rate] } }] }
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "Too many runs end in error or timeout." }
+      - uid: superstep-provider-down
+        title: Provider auth or unreachable
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'sum(increase(studio_llm_errors{code=~"PROVIDER_AUTH_FAILED|PROVIDER_UNREACHABLE"}[5m]))', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical }
+        annotations: { summary: "A model provider rejects the credential or cannot be reached." }
+      - uid: superstep-provider-rate-limited
+        title: Provider rate limited
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'sum(increase(studio_llm_errors{code="PROVIDER_RATE_LIMITED"}[5m]))', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "A model provider answers HTTP 429." }
+      - uid: superstep-daily-cost
+        title: Daily cost
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'sum(increase(studio_cost[24h]))', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*daily_cost_usd] } }] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "Estimated model cost over the last 24 hours is above the budget (priced runs only)." }
+      - uid: superstep-schedules-overdue
+        title: Overdue schedules
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(studio_schedules_overdue)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0] } }] }
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "Enabled schedules are more than 5 minutes late." }
+      - uid: superstep-webhook-failures
+        title: Webhook failures
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(studio_webhooks_failed)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0] } }] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "Webhook deliveries failed in the last hour." }
+      - uid: superstep-approvals-waiting
+        title: Approvals waiting too long
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(studio_approvals_oldest_age)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*approval_wait_s] } }] }
+        for: 0s
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "A human step has waited longer than the allowed time." }
+      - uid: superstep-in-memory-bus
+        title: In-memory run bus
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(studio_run_bus_in_memory)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "A process runs without REDIS_URL; live updates and queued runs do not reach other processes." }
