@@ -13,7 +13,7 @@ function loadVersion(): Promise<string | null> {
   return cached
 }
 
-/** MIT copyright plus the running server version from GET /api/health (TASK-0277). */
+/** MIT copyright plus the running server version from GET /api/health. */
 export function AppMeta({ className }: { className?: string }) {
   const { t } = useTranslation()
   const [version, setVersion] = useState<string | null>(null)

@@ -10,7 +10,7 @@ import { useMe } from '@/lib/rbac'
 
 type Prefs = { in_app: boolean; email: boolean; email_configured: boolean }
 
-/** Per-user notification preferences (TASK-0021): in-app bell and e-mail channels. */
+/** Per-user notification preferences: in-app bell and e-mail channels. */
 export function NotificationSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { t } = useTranslation()
   const [prefs, setPrefs] = useState<Prefs | null>(null); const [err, setErr] = useState(''); const readOnly = !!useMe()?.read_only  // the demo visitor

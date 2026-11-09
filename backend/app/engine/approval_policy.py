@@ -1,4 +1,4 @@
-"""AI review of approvals (TASK-0186, REQ-0081, DEC-0075): the `approval.auto` policy of a Human node or of an Agent
+"""AI review of approvals: the `approval.auto` policy of a Human node or of an Agent
 node's tool approval. Pure: parsing, validation, rule matching and the policy hash. The review itself runs in
 services/auto_review_service.py before people are asked.
 

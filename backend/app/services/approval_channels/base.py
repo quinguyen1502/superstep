@@ -1,10 +1,10 @@
-"""ApprovalChannel adapter interface (TASK-0022, DEC-0019).
+"""ApprovalChannel adapter interface.
 
 An adapter knows one messaging platform: how to post an approval request with two buttons, how to authenticate and
 parse the platform's callback, and how to edit the original message afterwards. Business rules (tokens, identity
 mapping, authorization, audit, resuming the run) live in ApprovalService, so a new channel (WhatsApp, Teams, e-mail)
 is one more subclass registered in `ADAPTERS`. WhatsApp has buttons like Slack and Telegram; e-mail and Teams are link
-channels (`link_based`, TASK-0047).
+channels (`link_based`, ).
 """
 from __future__ import annotations
 import re
@@ -37,7 +37,7 @@ class Callback:
 
 @dataclass
 class IncomingMessage:
-    """A message to the bot, parsed from the platform's callback (TASK-0075): chat triggers match its first word."""
+    """A message to the bot, parsed from the platform's callback: chat triggers match its first word."""
     team: str      # workspace (Slack team id); "" on platforms without workspaces
     place: str     # "dm" (a direct message to the bot) or the channel / chat id
     sender: str    # platform user id
@@ -58,11 +58,11 @@ class ApprovalChannel:
     per_team: bool = False                  # identities are per workspace (Slack user ids belong to one workspace)
     shared_callback: bool = False           # one callback URL for every connection, routed by route_key() (Slack)
     transport: Optional[httpx.BaseTransport] = None  # tests plug in httpx.MockTransport
-    # TASK-0047: a link channel (e-mail, Teams) has no buttons that call us back. Its message links to the studio's
+    # a link channel (e-mail, Teams) has no buttons that call us back. Its message links to the studio's
     # /approve page, where the signed-in studio user decides, so there is no chat identity to verify.
     link_based: bool = False
     target_required: bool = True            # False: the connection itself is the destination (a Teams webhook)
-    # TASK-0074 (DEC-0046): chat triggers start runs from messages to the bot.
+    # : chat triggers start runs from messages to the bot.
     chat: bool = False                      # the platform can start runs from messages (Slack, Telegram)
     events_only: bool = False               # inbound source, unavailable for approval delivery/identity linking
     chat_scopes: tuple[str, ...] = ()       # OAuth scopes messages need (Slack); describe() reports the granted ones
@@ -125,7 +125,7 @@ class ApprovalChannel:
         """Send a private message to one platform user (the identity verification code)."""
         raise NotImplementedError
 
-    # ---- chat triggers (TASK-0075): only platforms with `chat` ----
+    # ---- chat triggers: only platforms with `chat` ----
     def handle_message(self, body: bytes) -> Optional[IncomingMessage]:
         """Parse a message to the bot; None for anything else (bots, edits, joins, files, button presses)."""
         return None

@@ -37,7 +37,7 @@ function SelectTrigger({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
-  /** ghost: no border or fill until hover, for a picker that sits in a toolbar (TASK-0085) */
+  /** ghost: no border or fill until hover, for a picker that sits in a toolbar */
   variant?: "default" | "ghost"
 }) {
   return (

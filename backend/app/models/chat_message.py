@@ -5,7 +5,7 @@ from .base import Base
 
 
 class ChatMessage(Base):
-    """A chat message that matched a chat trigger (TASK-0075, DEC-0046): the dedupe record, the run it started and
+    """A chat message that matched a chat trigger: the dedupe record, the run it started and
     where to reply. Messages that match no trigger are not stored."""
     __tablename__ = "chat_messages"
     __table_args__ = (Index("uq_chat_messages_key", "channel_id", "key", unique=True),)  # a platform retry starts nothing new

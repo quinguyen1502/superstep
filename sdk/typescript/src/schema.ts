@@ -503,7 +503,7 @@ export interface components {
         };
         /**
          * ChatRatingIn
-         * @description A thumbs up or down on one finished answer (DEC-0070). `comment` is only kept with a thumbs down.
+         * @description A thumbs up or down on one finished answer. `comment` is only kept with a thumbs down.
          */
         ChatRatingIn: {
             /** Value */

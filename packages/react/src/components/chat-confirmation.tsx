@@ -1,4 +1,4 @@
-/** A Human node in a chat (TASK-0085, DEC-0054), built as the shadcn Confirmation pattern: an outline Item with the
+/** A Human node in a chat, built as the shadcn Confirmation pattern: an outline Item with the
  *  question and Reject / Approve. A typed answer goes through the message box. A reviewer step is a Marker that
  *  points to the Approvals page instead. */
 import { useTranslation } from 'react-i18next'

@@ -46,10 +46,10 @@ def call_llm(prompt: str, model: str, cred: Optional[Dict[str, Any]] = None, on_
              files: Optional[List[Dict[str, Any]]] = None, load: Optional[attachments.Load] = None) -> str:
     """cred: decrypted credential {provider, base_url, api_key, headers}. Without cred falls back to env OPENAI_API_KEY, then mock.
     on_usage(usage): optional callback with the token usage record (engine/usage.make_usage).
-    on_token(delta): optional callback with text deltas as the model streams them (TASK-0030); the return value is unchanged.
-    mock: always the offline mock, whatever the credential (test runs with the mock option, TASK-0067).
+    on_token(delta): optional callback with text deltas as the model streams them; the return value is unchanged.
+    mock: always the offline mock, whatever the credential (test runs with the mock option, ).
     locale: the language of the mock's answers (engine/locale).
-    files: chat attachment records sent with the prompt (TASK-0176); `load` reads an image's bytes by id."""
+    files: chat attachment records sent with the prompt; `load` reads an image's bytes by id."""
     report = on_usage or (lambda u: None)
     if cred is None or mock:
         key = None if mock else os.environ.get("OPENAI_API_KEY")
@@ -99,9 +99,9 @@ def _named_tools(tools: List[Dict[str, Any]], task: str) -> List[Dict[str, Any]]
 
 
 def mock_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]], model: str, locale: str = "en") -> Tuple[str, List[Dict[str, Any]]]:
-    """Deterministic offline agent (TASK-0116, DEC-0063). With no tool result yet it calls the tool whose name and
+    """Deterministic offline agent. With no tool result yet it calls the tool whose name and
     description share the most words with the task (the first tool on a tie). When the task names two or more tools,
-    it calls each of them (DEC-0069). String parameters are the task text. Then it answers with the last tool result."""
+    it calls each of them. String parameters are the task text. Then it answers with the last tool result."""
     task, results = _task(messages)
     if tools and not results:
         named = _named_tools(tools, task)
@@ -114,7 +114,7 @@ def mock_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, An
 
 
 def with_files(messages: List[Dict[str, Any]], vision: bool, load: Optional[attachments.Load]) -> List[Dict[str, Any]]:
-    """Messages whose `files` (chat attachments, TASK-0176) become text blocks, notes and `images` for the provider."""
+    """Messages whose `files` (chat attachments, ) become text blocks, notes and `images` for the provider."""
     out = []
     for m in messages:
         if not m.get("files"): out.append({k: v for k, v in m.items() if k != "files"}); continue
@@ -126,9 +126,9 @@ def with_files(messages: List[Dict[str, Any]], vision: bool, load: Optional[atta
 def call_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, Any]]], model: str, cred: Optional[Dict[str, Any]] = None,
                on_usage=None, on_token: Optional[Callable[[str], None]] = None, mock: bool = False,
                locale: str = "en", parallel: Optional[bool] = None, load: Optional[attachments.Load] = None) -> Tuple[str, List[Dict[str, Any]]]:
-    """One Agent node model call (TASK-0116): (text, tool calls [{id, name, args}]). `tools` [{name, description, parameters}];
+    """One Agent node model call: (text, tool calls [{id, name, args}]). `tools` [{name, description, parameters}];
     None or [] asks for an answer without tools. Credentials, the env key and the mock as for `call_llm`.
-    `parallel` False asks the provider for one call at a time when it supports that flag (DEC-0069)."""
+    `parallel` False asks the provider for one call at a time when it supports that flag."""
     report = on_usage or (lambda u: None)
     if cred is None or mock:
         key = None if mock else os.environ.get("OPENAI_API_KEY")

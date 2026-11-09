@@ -23,7 +23,7 @@ const when = (s: number | null) => s ? new Date(s * 1000).toLocaleString(i18n.re
 
 const Tip = ({ tip, children }: { tip: string; children: React.ReactElement }) => <Tooltip><TooltipTrigger asChild>{children}</TooltipTrigger><TooltipContent>{tip}</TooltipContent></Tooltip>
 
-/** Per-workflow API tokens + how to call the trigger endpoint (TASK-0007). */
+/** Per-workflow API tokens + how to call the trigger endpoint. */
 export function ApiTriggerDialog(props: { wid?: string; open?: boolean; onOpenChange?: (v: boolean) => void }) {
   const { wid } = props
   const { t } = useTranslation(); const [open, setOpen, controlled] = useOpenState(props.open, props.onOpenChange)

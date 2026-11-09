@@ -1,4 +1,4 @@
-/** Retriever node settings (TASK-0012): which knowledge base to search and how many chunks to return. */
+/** Retriever node settings: which knowledge base to search and how many chunks to return. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'

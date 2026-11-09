@@ -1,4 +1,4 @@
-/** LLM provider registry as served by GET /api/providers (TASK-0030); one source of truth for the UI. */
+/** LLM provider registry as served by GET /api/providers; one source of truth for the UI. */
 import { useEffect, useState } from 'react'
 import { api } from '@/lib/api'
 

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 
 /** Approve, Reject or a text reply to a waiting Human node: the editor's Human panel and each Approvals inbox row
- * (TASK-0065). `ids` gives the controls the editor's element ids; inbox rows use data-testid only. */
+ * . `ids` gives the controls the editor's element ids; inbox rows use data-testid only. */
 export function HumanAnswer({ onRespond, busy = false, ids = false }: { onRespond: (response: string) => void; busy?: boolean; ids?: boolean }) {
   const { t } = useTranslation(); const [text, setText] = useState('')
   const id = (k: string) => ids ? `human-${k}` : undefined

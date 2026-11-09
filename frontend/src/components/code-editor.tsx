@@ -20,7 +20,7 @@ const highlight = HighlightStyle.define([
   { tag: [tags.function(tags.definition(tags.variableName)), tags.definition(tags.className)], fontWeight: '600' },
 ])
 
-/** Marked line ranges (1-based, inclusive), e.g. the code of the node selected on the canvas (TASK-0071). */
+/** Marked line ranges (1-based, inclusive), e.g. the code of the node selected on the canvas. */
 export type LineRange = [number, number]
 const setMarks = StateEffect.define<LineRange[]>()
 const mark = Decoration.line({ class: 'cm-node-mark' })
@@ -39,7 +39,7 @@ const markTheme = EditorView.theme({ '.cm-node-mark': { backgroundColor: 'color-
 export type CodeLanguageId = 'python' | 'typescript'
 const LABEL: Record<CodeLanguageId, string> = { python: 'Python', typescript: 'TypeScript' }
 
-/** Source code with highlighting (Tool node Code mode, TASK-0055; TypeScript since TASK-0081); same look as the JSON
+/** Source code with highlighting (Tool node Code mode, ; TypeScript ); same look as the JSON
  * editor. `fields` adds `state.` completions. */
 export function CodeEditor({ value, onChange, readOnly, id, className, marks, language = 'python', fields }: {
   language?: CodeLanguageId
@@ -77,7 +77,7 @@ export function CodeEditor({ value, onChange, readOnly, id, className, marks, la
   </div>
 }
 
-/** The Python view of `CodeEditor` (the Code tab's export, TASK-0071). */
+/** The Python view of `CodeEditor` (the Code tab's export, ). */
 export function PythonEditor(props: Omit<Parameters<typeof CodeEditor>[0], 'language'>) {
   return <CodeEditor {...props} language="python" />
 }

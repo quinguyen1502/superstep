@@ -12,7 +12,7 @@
   "$defs": {
     "auth": {
       "type": "object",
-      "description": "Who is chatting, before the message: an anonymous visitor token, or a user token signed by the app's backend (TASK-0218).",
+      "description": "Who is chatting, before the message: an anonymous visitor token, or a user token signed by the app's backend.",
       "required": ["type"],
       "properties": {
         "type": {"const": "auth"},

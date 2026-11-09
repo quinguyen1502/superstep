@@ -78,7 +78,7 @@ def _iso(ts: Optional[float]) -> Optional[datetime]:
 class LangSmithService:
     def __init__(self, settings, access, tests, workflows, runs, audit=None, sessions=None):
         self.settings, self.access, self.tests, self.workflows, self.runs, self.audit = settings, access, tests, workflows, runs, audit
-        self.sessions = sessions  # chat ratings sent as feedback on the run's trace (TASK-0165)
+        self.sessions = sessions  # chat ratings sent as feedback on the run's trace
 
     # ---- the studio setting (admins) ----
     def evals_on(self) -> bool:
@@ -155,7 +155,7 @@ class LangSmithService:
         except AppError as e: log.warning("suite %s not sent to LangSmith: %s", sid, e.code)
 
     def on_rating(self, turn_id: str) -> Optional[str]:
-        """Send one chat rating to the run's LangSmith trace (DEC-0070).
+        """Send one chat rating to the run's LangSmith trace.
 
         Returns "busy" when another worker is creating the feedback, so the caller can try again.
         A missing key, no trace, or a down LangSmith leaves the rating in the studio and does not raise.

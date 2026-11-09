@@ -1,4 +1,4 @@
-"""TASK-0025: workflow templates (personal and org-wide; built-ins are defined in code)."""
+"""workflow templates (personal and org-wide; built-ins are defined in code)."""
 from alembic import op
 import sqlalchemy as sa
 

@@ -1,4 +1,4 @@
-"""Exact-target browser approvals and explicit waiting-resume handoff (TASK-0246)."""
+"""Exact-target browser approvals and explicit waiting-resume handoff."""
 from alembic import op
 import sqlalchemy as sa
 

@@ -1,4 +1,4 @@
-"""Workflows exposed as MCP tools at /mcp (TASK-0114): an opt-in flag per workflow."""
+"""Workflows exposed as MCP tools at /mcp: an opt-in flag per workflow."""
 from alembic import op
 import sqlalchemy as sa
 

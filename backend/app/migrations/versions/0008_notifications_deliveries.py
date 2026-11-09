@@ -1,4 +1,4 @@
-"""Notifications, webhook deliveries, signing-secret rotation (TASK-0020). Idempotent.
+"""Notifications, webhook deliveries, signing-secret rotation. Idempotent.
 
 Revision ID: 0008_notifications_deliveries
 Revises: 0007_hardening

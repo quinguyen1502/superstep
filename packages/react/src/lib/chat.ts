@@ -8,13 +8,13 @@ export const MAX_MESSAGE = 4000
 export type StepsMode = typeof STEPS[number]
 export type AnsweredBy = typeof ANSWERED_BY[number]
 
-/** Chat attachments (REQ-0077, DEC-0072): what a chat accepts, and a stored file as the API shows it. */
+/** Chat attachments: what a chat accepts, and a stored file as the API shows it. */
 export const ATTACHMENT_KINDS = ['document', 'image'] as const
 export type AttachmentKind = typeof ATTACHMENT_KINDS[number]
 export type AttachmentLimits = { enabled: boolean; kinds: AttachmentKind[]; max_files: number; max_mb: number }
 export type ChatAttachment = { id: string; name: string; kind: AttachmentKind; mime: string; size: number }
 export type ChatStep = { node: string; label: string; type?: string; status: 'running' | 'ok' | 'error' | 'waiting'
-  browser?: BrowserFacts; duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string; handoff_to?: string }  // child_run_id: a workflow tool's run (TASK-0136); handoff_to: the agent a hand-off went to (TASK-0182)
+ browser?: BrowserFacts; duration_ms?: number; input?: any; delta?: any; errors?: string[]; child_run_id?: string; handoff_to?: string } // child_run_id: a workflow tool's run; handoff_to: the agent a hand-off went to
 export type ChatRating = { value: 'up' | 'down'; comment: string; updated: number }
 export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; status?: string | null; run_id?: string | null
   node?: string | null; answered_by?: AnsweredBy | null; code?: string | null; created: number; steps?: ChatStep[]
@@ -23,10 +23,10 @@ export type ChatTurn = { id: string; role: 'user' | 'assistant'; text: string; s
 export const initialOf = (title: string) => (Array.from(title.trim())[0] ?? '?').toLocaleUpperCase()
 
 /** The reply streamed so far: the `node_token` deltas of the nodes that write the reply field. A node that streams
- *  again (an Agent's next model call, a loop) replaces its earlier text, as its field is replaced (TASK-0118). */
+ * again (an Agent's next model call, a loop) replaces its earlier text, as its field is replaced.
 export function liveReply(events: RunEvent[], replyField?: string): string {
   const parts = new Map<string, { it: number; text: string }>()
-  for (const e of events) {   // no field: the public socket sends the reply's tokens only (TASK-0141)
+  for (const e of events) { // no field: the public socket sends the reply's tokens only
     if (e.type !== 'node_token' || (replyField !== undefined && (e as any).field !== replyField) || typeof e.delta !== 'string' || !e.node) continue
     const it = e.iteration ?? 1; const p = parts.get(e.node)
     parts.set(e.node, p && p.it === it ? { it, text: p.text + e.delta } : p && p.it > it ? p : { it, text: e.delta })
@@ -37,7 +37,7 @@ export function liveReply(events: RunEvent[], replyField?: string): string {
 const HIDDEN = new Set(['start', 'end', 'agent', 'agent_exit', 'agent_join'])  // an Agent node shows its tool calls (and model calls in full); the join only orders them
 /** A step's label in a chat: an Agent's tool step names the tool ("Support › lookup_order"). */
 const stepLabel = (s: Span) => s.agent?.kind === 'tool' && s.agent.tool ? `${s.label.replace(/ › [^›]*$/, '')} › ${s.agent.tool}` : s.label
-/** A live run's steps as a chat shows them (DEC-0053), from the trace spans: none, labels or full. Same rules as the server. */
+/** A live run's steps as a chat shows them, from the trace spans: none, labels or full. Same rules as the server. */
 export function liveSteps(spans: Span[], mode: StepsMode): ChatStep[] {
   if (mode === 'none') return []
   return spans.filter(s => !HIDDEN.has(s.type) && (mode === 'full' || s.type !== 'agent_model')).map(s => {
@@ -58,7 +58,7 @@ const SAFE_URL = /^(https?:|mailto:|#|\/)/i
 /** Links in a chat answer: http(s), mailto, in-page and same-site paths only (no javascript:, data:, …). */
 export const safeUrl = (url: string) => SAFE_URL.test(url.trim()) ? defaultUrlTransform(url) : ''
 
-/** The file name endings each kind accepts. The server reads the type from the bytes again (TASK-0174). */
+/** The file name endings each kind accepts. The server reads the type from the bytes again. */
 export const ATTACHMENT_ENDINGS: Record<AttachmentKind, string[]> = { document: ['.pdf', '.txt', '.md', '.csv'], image: ['.png', '.jpg', '.jpeg', '.webp'] }
 export const attachmentKind = (name: string): AttachmentKind | null => {
   const n = name.toLowerCase()

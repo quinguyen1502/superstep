@@ -1,4 +1,4 @@
-/** Settings → Users (TASK-0014, admins): every account with its role and status, and the roles matrix. */
+/** Settings → Users: every account with its role and status, and the roles matrix. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Check, KeyRound, Minus, Trash2 } from 'lucide-react'
@@ -24,7 +24,7 @@ import { CodeRuntimeCard } from '@/components/code-runtime-card'
 
 type Data = RoleMatrix & { users: AdminUser[] }
 
-/** Delete or anonymise an account (TASK-0029): owned workflows must go to another editor/admin first. */
+/** Delete or anonymise an account: owned workflows must go to another editor/admin first. */
 function DeleteUserDialog({ user, onClose, onDone }: { user: AdminUser | null; onClose: () => void; onDone: (msg: string) => void }) {
   const { t } = useTranslation(); const [mode, setMode] = useState('anonymize'); const [to, setTo] = useState('')
   useOnChange(user, () => { setMode('anonymize'); setTo('') })
@@ -47,7 +47,7 @@ function DeleteUserDialog({ user, onClose, onDone }: { user: AdminUser | null; o
   </ConfirmDeleteDialog>
 }
 
-/** A one-time password reset link for another account (TASK-0045). The admin sends it to the user. */
+/** A one-time password reset link for another account. The admin sends it to the user. */
 function ResetLinkDialog({ user, onClose }: { user: AdminUser | null; onClose: () => void }) {
   const { t } = useTranslation(); const [link, setLink] = useState<{ path: string; url: string | null; expires_in: number } | null>(null); const [err, setErr] = useState('')
   useOnChange(user, u => { setLink(null); setErr(''); if (u) api<{ path: string; url: string | null; expires_in: number }>(`/api/admin/users/${u.id}/password-reset`, { method: 'POST' }).then(setLink).catch(e => setErr(e.message)) })
@@ -59,7 +59,7 @@ function ResetLinkDialog({ user, onClose }: { user: AdminUser | null; onClose: (
   </DialogContent></Dialog>
 }
 
-/** Which roles may use org-wide approval channels and MCP servers at run time (TASK-0029). */
+/** Which roles may use org-wide approval channels and MCP servers at run time. */
 function PolicyCard() {
   const { t } = useTranslation(); const [p, setP] = useState<Policy | null>(null); const [err, setErr] = useState('')
   useEffect(() => { api<Policy>('/api/admin/policy').then(setP).catch(e => setErr(e.message)) }, [])

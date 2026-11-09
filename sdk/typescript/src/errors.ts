@@ -75,7 +75,7 @@ export const BY_CODE: Record<string, ErrorClass> = {
   SCHEDULE_NOT_FOUND: NotFoundError,
   SCHEDULE_CRON_INVALID: InvalidRequestError,
   SCHEDULE_LIMIT: InvalidRequestError,
-  // the Chat API v1 (TASK-0215)
+  // the Chat API v1
   CHAT_NOT_PUBLISHED: NotFoundError,
   CHAT_SESSION_NOT_FOUND: NotFoundError,
   CHAT_TURN_NOT_FOUND: NotFoundError,

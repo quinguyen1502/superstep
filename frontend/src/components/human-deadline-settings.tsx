@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 
-/** A Human node's deadline (TASK-0066): durations are "<n>m|h|d"; the server validates and fires them. */
+/** A Human node's deadline: durations are "<n>m|h|d"; the server validates and fires them. */
 export type Deadline = { after?: string; remind_every?: string; on_timeout?: 'reject' | 'approve' | 'escalate'; escalate_to?: string[] }
 const UNITS = ['m', 'h', 'd'] as const
 const ACTIONS = ['reject', 'approve', 'escalate'] as const

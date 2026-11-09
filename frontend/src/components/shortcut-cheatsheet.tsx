@@ -1,4 +1,4 @@
-/** Keyboard shortcut cheat sheet (TASK-0023): every registry entry, grouped, with platform-specific key caps. */
+/** Keyboard shortcut cheat sheet: every registry entry, grouped, with platform-specific key caps. */
 import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'

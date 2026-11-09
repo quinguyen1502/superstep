@@ -5,7 +5,7 @@ from .base import Base
 
 
 class AuditEvent(Base):
-    """Administrative audit log (TASK-0029): roles, shares, teams, ownership, deactivation, deletion, policy.
+    """Administrative audit log: roles, shares, teams, ownership, deactivation, deletion, policy.
     Actor and target e-mails are copied at write time so the log survives user deletion."""
     __tablename__ = "audit_events"
     id: Mapped[str] = mapped_column(Text, primary_key=True)

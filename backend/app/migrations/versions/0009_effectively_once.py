@@ -1,4 +1,4 @@
-"""Effectively-once execution + notification preferences (TASK-0021). Idempotent.
+"""Effectively-once execution + notification preferences. Idempotent.
 
 - runs.lease_gen: fencing token, bumped each time a worker claims the run; writes carry it.
 - node_results: ledger of finished side-effect nodes (run, node, iteration) reused on recovery.

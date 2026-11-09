@@ -75,7 +75,7 @@ SECRET_ENV = "SUPERSTEP_S3_SECRET_ACCESS_KEY"  # the S3 secret for --yes; never 
 
 
 def add_storage_flags(parser, catalog: Catalog) -> None:
-    """Chat attachment storage flags of install and deploy (TASK-0195, REQ-0080)."""
+    """Chat attachment storage flags of install and deploy."""
     parser.add_argument("--attachment-storage", choices=STORAGES, help=catalog.format("help.attachment_storage"))
     for flag, _env in _S3_FLAGS:
         parser.add_argument("--s3-" + flag.replace("_", "-"), help=catalog.format("help.s3_" + flag))
@@ -355,7 +355,7 @@ ATTACHMENT_ENV = (
     "      STUDIO_ATTACHMENT_STORAGE: ${STUDIO_ATTACHMENT_STORAGE:-db}\n"
     + "".join(f"      STUDIO_ATTACHMENT_S3_{k}: ${{STUDIO_ATTACHMENT_S3_{k}:-}}\n"
               for k in ("BUCKET", "PREFIX", "ENDPOINT", "REGION", "PATH_STYLE", "ACCESS_KEY_ID", "SECRET_ACCESS_KEY"))
-)  # chat attachment storage (TASK-0195); fs uses the default folder on the /data volume
+)  # chat attachment storage; fs uses the default folder on the /data volume
 
 
 def _compose(name: str, topology: str, sandbox: bool, version: str, port: int, volumes: dict, external_names: Optional[set] = None) -> str:

@@ -11,7 +11,7 @@ export function useTheme() {
   return { dark, setDark }
 }
 
-/** Pages for people outside the studio (the public chat, TASK-0142) follow the browser's light or dark setting unless a
+/** Pages for people outside the studio (the public chat, ) follow the browser's light or dark setting unless a
  *  theme was chosen here or passed as ?theme=. Nothing is stored. */
 export function useSystemTheme() {
   useEffect(() => {

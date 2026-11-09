@@ -1,4 +1,4 @@
-"""Agent hand-offs (REQ-0078, DEC-0073): the model of the targets and the run limit (TASK-0179).
+"""Agent hand-offs: the model of the targets and the run limit.
 
 An Agent node lists the agents it may hand the conversation to in `handoffs`: [{target: <node id>, description}]. A
 target is another Agent node of the same graph (the workflow, or the subgraph the node sits in); never the node
@@ -19,7 +19,7 @@ def targets(d: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def receivers(wf: Dict[str, Any]) -> set:
-    """Agent node ids some Agent hands off to: where a chat may start (DEC-0073 decision 4)."""
+    """Agent node ids some Agent hands off to: where a chat may start ( decision 4)."""
     agents = {n["id"]: n for n in wf.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"}
     return {h["target"] for n in agents.values() for h in targets(n.get("data") or {}) if h["target"] in agents}
 
@@ -27,7 +27,7 @@ def receivers(wf: Dict[str, Any]) -> set:
 def straight_to_agents(wf: Dict[str, Any]) -> bool:
     """True when every edge leaving the Start node goes straight into an Agent node. Only then may a chat start at the
     agent that answered last: nodes between Start and the first agent (a filter, PII masking, a lookup) must run on
-    every message, so with them the chat starts from Start each time (TASK-0206, review finding 5, DEC-0073)."""
+    every message, so with them the chat starts from Start each time."""
     nodes = {n["id"]: n for n in wf.get("nodes") or [] if isinstance(n, dict) and "id" in n}
     starts = [i for i, n in nodes.items() if n.get("type") == "start"]
     out = [e.get("target") for e in wf.get("edges") or [] if isinstance(e, dict) and e.get("source") in starts]

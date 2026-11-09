@@ -1,4 +1,4 @@
-/** Inline link to a handbook page in the user's language, opened in a new tab (TASK-0260). */
+/** Inline link to a handbook page in the user's language, opened in a new tab. */
 import { useTranslation } from 'react-i18next'
 import { ExternalLink } from 'lucide-react'
 import { handbookUrl } from '@/lib/handbook'

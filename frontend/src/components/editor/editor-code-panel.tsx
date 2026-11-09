@@ -13,8 +13,8 @@ import { useStudioCtx } from './studio-context'
 
 type CodeExport = { language: ExportLanguage; media_type: string; filename: string; version: number | null; code: string; nodes: Record<string, LineRange[]>; managed_placeholders?: boolean }
 
-/** Code tab (TASK-0071, REQ-0043): the saved workflow as LangGraph code, in Python or as LangGraph.js TypeScript
- * (TASK-0082, REQ-0047; the choice is remembered), or as a LangGraph project zip for `langgraph dev`; the node selected on the canvas shows where it is in the code. */
+/** Code tab: the saved workflow as LangGraph code, in Python or as LangGraph.js TypeScript
+ * , or as a LangGraph project zip for `langgraph dev`; the node selected on the canvas shows where it is in the code. */
 export function EditorCodePanel() {
   const { t } = useTranslation()
   const { wid, saves, selNode, isDirty } = useStudioCtx()

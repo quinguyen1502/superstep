@@ -18,16 +18,16 @@ import { useStudio } from '@/components/editor/use-studio'
 import { useIsMobile, useViewportWidth } from '@/lib/use-viewport-width'
 import { CONFIG_COLLAPSE_BELOW, chatStore } from '@/lib/panel-sizes'
 
-/** Workflow editor page. State and actions live in `useStudio`; the header and panels are in components/editor (TASK-0040). */
+/** Workflow editor page. State and actions live in `useStudio`; the header and panels are in components/editor. */
 export function EditorPage() { return <ReactFlowProvider><Studio /></ReactFlowProvider> }
 
 function Studio() {
   const { t } = useTranslation()
   const studio = useStudio(); const { id, wid, loadErr } = studio
-  // narrow screens (TASK-0085): Config folds away while nothing is selected, so the canvas keeps its room beside the chat
+  // narrow screens: Config folds away while nothing is selected, so the canvas keeps its room beside the chat
   const vw = useViewportWidth()
   const narrow = vw - (studio.chatOpen ? chatStore.read().width : 0) < CONFIG_COLLAPSE_BELOW
-  // phones (TASK-0121): one pane at a time; a run shows the Run pane, opening the chat shows the chat
+  // phones: one pane at a time; a run shows the Run pane, opening the chat shows the chat
   const mobile = useIsMobile(); const [view, setView] = useState<MobileView>('canvas')
   const { running, chatOpen, addCentered } = studio
   const [seen, setSeen] = useState({ running, chatOpen })

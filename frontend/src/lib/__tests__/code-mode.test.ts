@@ -9,7 +9,7 @@ const lang = (id: 'python' | 'typescript', available = true, starter = id === 'p
 const rt = (langs = [lang('python'), lang('typescript')]) =>
   ({ code_runtime: 'subprocess', available: true, problem: null, image: '', packages: [], starter: PY, limits: {} as CodeRuntime['limits'], languages: langs }) as CodeRuntime
 
-describe('Tool Mode select: one option per Code language (TASK-0081)', () => {
+describe('Tool Mode select: one option per Code language',  => {
   it('maps the stored mode + language to one select value', () => {
     expect(modeValue({ mode: 'function' })).toBe('function'); expect(modeValue({ mode: 'http' })).toBe('http')
     expect(modeValue({ mode: 'code' })).toBe('code:python'); expect(modeValue({ mode: 'code', language: 'typescript' })).toBe('code:typescript')

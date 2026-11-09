@@ -1,4 +1,4 @@
-"""Text embeddings for knowledge bases (TASK-0012): any embedding-capable provider of the registry (TASK-0030:
+"""Text embeddings for knowledge bases: any embedding-capable provider of the registry (:
 OpenAI, Ollama `/api/embed`, LM Studio / OpenAI-compatible / OpenRouter `/embeddings`), deterministic mock offline.
 
 Selection mirrors engine/llm: a decrypted credential, else OPENAI_API_KEY from the environment, else the mock.
@@ -46,7 +46,7 @@ def effective(model: str | None, cred: Optional[Dict[str, Any]]) -> Optional[Dic
 
 
 def default_model(cred: Optional[Dict[str, Any]]) -> str:
-    """Embedding model used when a knowledge base names none: the provider's default (TASK-0030)."""
+    """Embedding model used when a knowledge base names none: the provider's default."""
     p = providers.get((cred or {}).get("provider") or "openai")
     return (p.default_embedding_model if p else "") or DEFAULT_MODEL
 

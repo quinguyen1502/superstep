@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { needsApproval, toolNames } from '@/lib/agent'
 
-describe('Agent nodes in the Tests panel (TASK-0119)', () => {
+describe('Agent nodes in the Tests panel',  => {
   const data = { tools: [{ name: 'lookup_order', source: 'builtin' }, { name: 'request_refund', source: 'builtin', approval: true }, { name: '', source: 'http' }] }
   it('lists the tools a "tool called" check can name', () => {
     expect(toolNames(data)).toEqual(['lookup_order', 'request_refund'])

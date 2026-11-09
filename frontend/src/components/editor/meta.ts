@@ -29,14 +29,14 @@ META.agent_model = { ...META.agent, icon: NODE_ICONS.agent_model }
 META.agent_tool = { ...META.agent, icon: NODE_ICONS.agent_tool }
 META.agent_exit = META.agent
 META.agent_join = { ...META.agent, icon: NODE_ICONS.agent_join }
-META.agent_handoff = { ...META.agent, icon: NODE_ICONS.agent_handoff }  // TASK-0180
+META.agent_handoff = { ...META.agent, icon: NODE_ICONS.agent_handoff }
 export const TYPES = ['start', 'llm', 'agent', 'decision', 'retriever', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
 export const INSERTABLE = TYPES.filter(t => t !== 'start' && t !== 'end')
 export const RUNTIME = new Set(['llm', 'agent', 'retriever', 'tool', 'mcp', 'human', 'decision'])
-/** Reducers per field type (TASK-0011): how parallel writes combine. */
+/** Reducers per field type: how parallel writes combine. */
 export const REDUCERS: Record<string, string[]> = { list: ['replace', 'append'], object: ['replace', 'merge'], number: ['replace', 'add'], integer: ['replace', 'add'] }
 
-/** For each edges (TASK-0049): `each` enters the loop body, `done` leaves after the last item. */
+/** For each edges: `each` enters the loop body, `done` leaves after the last item. */
 export const LOOP_LABELS = ['each', 'done']
 
 export const styleEdges = (es: any[]): Edge[] => es.map(e => e.conditional ? { ...e, animated: true, style: { strokeDasharray: '6 4' }, labelBgPadding: [6, 3], labelBgBorderRadius: 4 } : e)

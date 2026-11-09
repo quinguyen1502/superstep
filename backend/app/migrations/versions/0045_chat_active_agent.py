@@ -1,4 +1,4 @@
-"""The agent that answered a chat session last (TASK-0181, REQ-0078, DEC-0073 decision 4)."""
+"""The agent that answered a chat session last."""
 from alembic import op
 import sqlalchemy as sa
 

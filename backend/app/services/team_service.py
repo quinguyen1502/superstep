@@ -1,4 +1,4 @@
-"""Teams (TASK-0029): admins create teams and manage members; anyone who may share a workflow can share it with a team."""
+"""Teams: admins create teams and manage members; anyone who may share a workflow can share it with a team."""
 from __future__ import annotations
 import time, uuid
 from ..core import permissions as P

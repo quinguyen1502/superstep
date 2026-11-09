@@ -1,4 +1,4 @@
-"""The one response envelope for every REST endpoint (DEC-0010).
+"""The one response envelope for every REST endpoint.
 
 success: {"success": true,  "data": <payload>, "error": null}
 error:   {"success": false, "data": null, "error": {"code", "message", "details"?}}

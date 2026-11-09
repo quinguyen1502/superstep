@@ -5,7 +5,7 @@ from .base import Base
 
 
 class CliDevice(Base):
-    """One `superstep login` attempt (TASK-0167). Codes are stored as hashes. The token secret is kept only until the CLI polls once."""
+    """One `superstep login` attempt. Codes are stored as hashes. The token secret is kept only until the CLI polls once."""
     __tablename__ = "cli_devices"
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     device_hash: Mapped[str] = mapped_column(Text, unique=True)
@@ -13,7 +13,7 @@ class CliDevice(Base):
     name: Mapped[Optional[str]] = mapped_column(Text)
     user_id: Mapped[Optional[str]] = mapped_column(Text)
     token_id: Mapped[Optional[str]] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(Text)  # pending, approved, delivered (the CLI has its token, TASK-0207), denied
+    status: Mapped[str] = mapped_column(Text)  # pending, approved, delivered (the CLI has its token, ), denied
     secret: Mapped[Optional[str]] = mapped_column(Text)
     expires: Mapped[float] = mapped_column(Float)
     created: Mapped[float] = mapped_column(Float)

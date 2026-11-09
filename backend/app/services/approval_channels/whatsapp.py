@@ -1,4 +1,4 @@
-"""WhatsApp Cloud API (TASK-0047): reply buttons; the webhook is signed with the Meta app secret (X-Hub-Signature-256).
+"""WhatsApp Cloud API: reply buttons; the webhook is signed with the Meta app secret (X-Hub-Signature-256).
 
 WhatsApp only delivers free-form and button messages within 24 hours of the person's last message to the business
 number. Outside that window, set `template_name` to an approved template with two quick-reply buttons (Approve, Reject):

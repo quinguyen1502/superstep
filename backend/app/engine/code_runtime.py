@@ -1,9 +1,9 @@
-"""Tool node Code mode (TASK-0053, REQ-0039, DEC-0041): user Python runs in a separate process, never in this one.
+"""Tool node Code mode: user Python runs in a separate process, never in this one.
 
-`run_code` sends {source, state} to the language's runner (`code_languages`, TASK-0079) on stdin and reads one JSON result line. The server only
+`run_code` sends {source, state} to the language's runner (`code_languages`, ) on stdin and reads one JSON result line. The server only
 parses the source (`problems`); it never executes it. A call is killed at its time limit or when the run is cancelled.
 - docker (default): a fresh container with no network, no mounts, an empty environment, memory/CPU/process limits.
-- subprocess (TASK-0056, STUDIO_CODE_RUNTIME=subprocess): a child of this server with an empty environment, a temporary
+- subprocess: a child of this server with an empty environment, a temporary
   working directory and (on Linux) rlimits. It is NOT isolation: the code can use the network and read what the server
   user can read. It exists only for servers without Docker, and every surface labels it.
 - remote (STUDIO_CODE_RUNTIME=remote): the same subprocess runtime, but inside a separate sandbox service
@@ -25,7 +25,7 @@ STATE_MAX = 1024 * 1024
 RESULT_MAX = 1024 * 1024
 STDOUT_MAX = 64 * 1024
 RUNNER = os.path.join(langs.SANDBOX, "code_runner.py")  # the Python runner
-STARTER = langs.LANGUAGES["python"].starter  # kept for callers from before TASK-0079
+STARTER = langs.LANGUAGES["python"].starter  # kept for callers from
 _slots: Dict[int, threading.BoundedSemaphore] = {}
 _checked: Dict[str, tuple[float, Optional[str]]] = {}  # image -> (when, problem or None)
 CHECK_TTL = 30.0
@@ -70,7 +70,7 @@ def claim_first_unisolated_call() -> bool:
 
 
 def warn_if_unisolated() -> None:
-    """One start-up WARNING when Code nodes run on the host without isolation (TASK-0056)."""
+    """One start-up WARNING when Code nodes run on the host without isolation."""
     if config.code_runtime() == "subprocess":
         get_logger("code").warning("Code nodes run directly on this host, WITHOUT Docker limiting their access "
                                    "(STUDIO_CODE_RUNTIME=subprocess): user code can use the network and read files the server user can read. Use Docker for anything but trusted local use.")

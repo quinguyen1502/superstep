@@ -153,7 +153,7 @@ def cmd_doctor(args, catalog, json_mode, _client, _parser, docker: Docker) -> in
 
 
 def _attachment_storage(catalog: Catalog, docker: Docker, env: dict, url: str, findings: list, notes: list) -> dict:
-    """The attachment backend and whether its probe passes (TASK-0195). Only /api/health's short reason is shown,
+    """The attachment backend and whether its probe passes. Only /api/health's short reason is shown,
     never a bucket key or endpoint secret."""
     backend = (env.get("STUDIO_ATTACHMENT_STORAGE") or "db").strip() or "db"
     out = {"backend": backend, "ok": None}

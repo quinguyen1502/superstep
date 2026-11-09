@@ -1,4 +1,4 @@
-"""Document text extraction and chunking for knowledge bases (TASK-0012). Pure functions, no I/O besides parsing bytes."""
+"""Document text extraction and chunking for knowledge bases. Pure functions, no I/O besides parsing bytes."""
 from __future__ import annotations
 import io, os, re
 from typing import List

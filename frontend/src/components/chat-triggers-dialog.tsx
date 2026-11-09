@@ -1,4 +1,4 @@
-/** Chat triggers of a workflow (TASK-0076, DEC-0046): a command word that starts it from a Slack or Telegram message.
+/** Chat triggers of a workflow: a command word that starts it from a Slack or Telegram message.
  *  List, turn on/off, edit, delete by typed name, and add one; the fields come from the saved graph, the connections from Channels. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

@@ -18,7 +18,7 @@ syncHtmlLang(i18n.resolvedLanguage || 'en'); i18n.on('languageChanged', syncHtml
 
 export { errorText, type ApiErrorBody } from '@superstep/react/errors'
 
-/** The code of one validation message, sent next to the English `errors` (TASK-0132); null when it has none. */
+/** The code of one validation message, sent next to the English `errors`; null when it has none. */
 export type Issue = { code: string; params?: Record<string, unknown> } | null
 
 /** Validation messages in the UI language: `validation.<code>` when the API sent a code we know, else the English text. */

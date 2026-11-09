@@ -1,4 +1,4 @@
-/** Chat attachments (TASK-0177, REQ-0077): a file as a chip (shadcn Item, size xs) with its thumbnail or icon, name and
+/** Chat attachments: a file as a chip (shadcn Item, size xs) with its thumbnail or icon, name and
  *  size, and one icon action (remove before sending, download after). A download is fetched with the chat's headers
  *  (the widget's visitor token) and saved from a blob: files are never opened in the page. */
 import { useTranslation } from 'react-i18next'

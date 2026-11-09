@@ -1,4 +1,4 @@
-"""Chat-trigger runs (TASK-0075, REQ-0044, DEC-0046): a message to the Slack app or Telegram bot starts a workflow.
+"""Chat-trigger runs: a message to the Slack app or Telegram bot starts a workflow.
 
 receive() runs on the platform's request (Slack wants an answer within 3 s): the message's first word must match a
 chat trigger of a connection that verified the request; the message is stored once (the platform's delivery id is
@@ -46,7 +46,7 @@ class ChatRunService:
         self.messages, self.triggers, self.channels, self.users = messages, triggers, channels, users
         self.workflows, self.runs, self.jobs, self.access, self.limiter = workflows, runs, jobs, access, limiter
         self.approvals = channels.repo  # identities and the approval audit log
-        self.web = web  # ChatSessionService (TASK-0084): answers of the studio / web chat
+        self.web = web  # ChatSessionService: answers of the studio / web chat
 
     # ---- on the platform's request ----
     def events(self, kind: str, headers: dict, body: bytes):
@@ -152,7 +152,7 @@ class ChatRunService:
 
     @staticmethod
     def _input(w, t: WorkflowChatTrigger, msg: str) -> dict:
-        """{input_field: text}; a list field gets a one-item list (DEC-0046)."""
+        """{input_field: text}; a list field gets a one-item list."""
         try: state = json.loads(w.data or "{}").get("state") or []
         except ValueError: state = []
         typ = next((f.get("type") for f in state if isinstance(f, dict) and f.get("name") == t.input_field), None)
@@ -186,7 +186,7 @@ class ChatRunService:
         res = run_result(r); waiting = res["waiting"] or {}
         key = f"waiting:{waiting.get('node')}" if r.status == "waiting" else r.status
         if m.replied == key or not self.messages.mark_replied(m.id, m.replied, key): return  # this state was answered already
-        if m.kind == WEB:  # the web chat writes a turn instead of posting to a platform (TASK-0084)
+        if m.kind == WEB:  # the web chat writes a turn instead of posting to a platform
             if self.web is not None: self.web.answer(m, r, res)
             return
         c = self.channels.repo.channel(m.channel_id)

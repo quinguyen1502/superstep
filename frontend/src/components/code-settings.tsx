@@ -1,4 +1,4 @@
-/** Tool node Code mode (TASK-0055, REQ-0039): the source (Python or TypeScript since TASK-0081), what the server
+/** Tool node Code mode: the source (Python or TypeScript ), what the server
  * provides for that language, and Test with sample state. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

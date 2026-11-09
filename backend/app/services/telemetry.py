@@ -1,9 +1,9 @@
-"""Run telemetry (TASK-0010, DEC-0012): per-run summary metrics + OpenTelemetry traces.
+"""Run telemetry: per-run summary metrics + OpenTelemetry traces.
 
 - `summarize(events, ...)` -> the metrics persisted on each run (duration, tokens, cost, error count).
 - `Telemetry` turns a run's events into one trace: a root `run` span and one span per node
   (duration, status, error, gen_ai token usage, cost). Node spans are exported live as each node finishes
-  (TASK-0020); the engine stays unaware of tracing.
+  ; the engine stays unaware of tracing.
 - Exporters come from standard env: OTLP via OTEL_EXPORTER_OTLP_(TRACES_)ENDPOINT / OTEL_* and,
   optionally, LangSmith (its OTLP endpoint) when LANGSMITH_API_KEY is set and LANGSMITH_TRACING is true.
   With none configured (or OTEL_SDK_DISABLED=true) tracing is a no-op and the SDK is never imported.
@@ -23,7 +23,7 @@ def summarize(events: list[dict], started: float, ended: float) -> dict:
     for ev in events:
         if ev.get("type") == "error": errors += 1
         u = ev.get("usage")
-        if ev.get("type") in ("node_finished", "approval_review") and u:  # approval_review: the AI judge of a step (TASK-0198)
+        if ev.get("type") in ("node_finished", "approval_review") and u:  # approval_review: the AI judge of a step
             llm = True; tin += u.get("tokens_in", 0); tout += u.get("tokens_out", 0)
             cost = None if cost is None or u.get("cost_usd") is None else cost + u["cost_usd"]
     return {"duration_ms": round(max(0.0, ended - started - waited) * 1000, 2), "tokens_in": tin, "tokens_out": tout,
@@ -37,7 +37,7 @@ def waited_s(events: list[dict], ended: float) -> float:
     for ev in events:
         if since is not None and ev.get("ts"):
             total += max(0.0, ev["ts"] - since); since = None
-        elif ev.get("type") == "run_recovered" and ev.get("ts") and last:  # a dead worker's gap is not active time (TASK-0020)
+        elif ev.get("type") == "run_recovered" and ev.get("ts") and last:  # a dead worker's gap is not active time
             total += max(0.0, ev["ts"] - last)
         if ev.get("type") == "run_waiting" and ev.get("ts"): since = ev["ts"]
         if ev.get("ts"): last = ev["ts"]
@@ -89,7 +89,7 @@ def _ns(seconds: float) -> int: return int(seconds * 1e9)
 
 
 class RunSpan:
-    """Live root span of one run segment (TASK-0020): node spans are exported as each node finishes."""
+    """Live root span of one run segment: node spans are exported as each node finishes."""
     def __init__(self, span, ctx, run: dict, name: str = "run", parent: Optional[dict] = None):
         self.span, self.ctx, self.run, self.name, self.parent = span, ctx, run, name, parent
 
@@ -101,14 +101,14 @@ class RunSpan:
     @property
     def ref(self) -> dict:
         """What a checkpoint stores about this segment: enough to parent the next one AND to export this root span
-        later if the worker dies before ending it (TASK-0021)."""
+        later if the worker dies before ending it."""
         p = {k: self.parent[k] for k in ("trace_id", "span_id")} if self.parent and self.parent.get("span_id") else None
         return {**self.ids, "name": self.name, "started": self.run["started"], "parent": p}
 
 
 class _IdGenerator:
     """Random ids, except when `forced` (per thread) asks for given ones: used to export the root span of a segment
-    whose worker died, with the very span id its already-exported node spans point to (TASK-0021)."""
+    whose worker died, with the very span id its already-exported node spans point to."""
     def __init__(self):
         from opentelemetry.sdk.trace.id_generator import RandomIdGenerator
         self._rand = RandomIdGenerator(); self._forced = threading.local()
@@ -130,7 +130,7 @@ class _IdGenerator:
 class Telemetry:
     """Built once per process (api.deps.get_telemetry). `exporters` / `metric_readers` let tests inject in-memory ones.
 
-    Spans are **live** (TASK-0020): `start_run` opens the root span, `node` exports one span per finished/failed node
+    Spans are **live**: `start_run` opens the root span, `node` exports one span per finished/failed node
     right away (BatchSpanProcessor), and `end_run` closes the root with the run's totals. A paused (HITL) or
     recovered run continues the same trace: its new segment is a child of the previous root (`parent`).
     `record_run` does all three at once for runs that never executed live (e.g. cancelled while waiting).
@@ -205,7 +205,7 @@ class Telemetry:
 
     def start_run(self, run: dict, parent: Optional[dict] = None, links: Optional[list] = None) -> Optional[RunSpan]:
         """Open the root span of a run segment. parent = {trace_id, span_id} of the previous segment (resume/recovery);
-        links: span refs to link to (a recovered segment links the lost one, TASK-0021)."""
+        links: span refs to link to (a recovered segment links the lost one, )."""
         if not self.enabled: return None
         from opentelemetry import trace
         from opentelemetry.trace import Link
@@ -217,7 +217,7 @@ class Telemetry:
         return RunSpan(root, trace.set_span_in_context(root), run, name, parent if pctx else None)
 
     def close_lost(self, ref: dict, ended: float) -> None:
-        """Export the root span of a segment whose worker died before ending it (TASK-0021): same trace and span id as
+        """Export the root span of a segment whose worker died before ending it: same trace and span id as
         stored in its checkpoint, so its node spans (exported live) get their parent; status ERROR "worker lost"."""
         if not self.enabled or not (ref and ref.get("span_id") and ref.get("started")): return
         from opentelemetry.trace import Status, StatusCode

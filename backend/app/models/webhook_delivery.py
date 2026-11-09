@@ -5,7 +5,7 @@ from .base import Base
 
 
 class WebhookDelivery(Base):
-    """One result-webhook delivery and its attempts (TASK-0020)."""
+    """One result-webhook delivery and its attempts."""
     __tablename__ = "webhook_deliveries"
     __table_args__ = (UniqueConstraint("dedupe_key", name="uq_webhook_deliveries_dedupe_key"),)
     id: Mapped[str] = mapped_column(Text, primary_key=True)
@@ -23,4 +23,4 @@ class WebhookDelivery(Base):
     next_attempt: Mapped[Optional[float]] = mapped_column(Float)
     created: Mapped[float] = mapped_column(Float)
     updated: Mapped[Optional[float]] = mapped_column(Float)
-    dedupe_key: Mapped[Optional[str]] = mapped_column(Text)  # run callback of one run segment: sent once (TASK-0022)
+    dedupe_key: Mapped[Optional[str]] = mapped_column(Text)  # run callback of one run segment: sent once

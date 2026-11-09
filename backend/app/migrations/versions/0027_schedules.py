@@ -1,4 +1,4 @@
-"""TASK-0046: cron schedules that start workflow runs."""
+"""cron schedules that start workflow runs."""
 from alembic import op
 import sqlalchemy as sa
 

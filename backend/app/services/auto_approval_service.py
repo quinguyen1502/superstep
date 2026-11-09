@@ -1,4 +1,4 @@
-"""AI review of approvals: the kill switches (TASK-0186, REQ-0081, DEC-0075 decision 7).
+"""AI review of approvals: the kill switches.
 
 - Operator: `STUDIO_AUTO_APPROVAL=off` turns automatic answers off everywhere.
 - Organisation: an admin pauses AI review for every workflow (setting `auto_approval_paused`).
@@ -22,8 +22,8 @@ def _wkey(wid: str) -> str: return f"{ORG_KEY}:{wid}"
 
 class AutoApprovalService:
     def __init__(self, settings: SettingsRepository, access=None, audit=None, reviews=None, workflows=None):
-        """reviews: -> AutoReviewService, for the per-workflow counts (TASK-0187); workflows: WorkflowRepository, for
-        the Approvals page list (TASK-0188)."""
+        """reviews: -> AutoReviewService, for the per-workflow counts; workflows: WorkflowRepository, for
+        the Approvals page list."""
         self.settings, self.access, self.audit, self.reviews, self.workflows = settings, access, audit, reviews, workflows
 
     def org_paused(self) -> bool: return bool(self.settings.get(ORG_KEY, False))
@@ -65,7 +65,7 @@ class AutoApprovalService:
         return self.workflow_status(uid, wid)
 
     def reviewed_workflows(self, uid: str) -> list:
-        """The Approvals page (TASK-0188): workflows the user may manage (their own; every one for an admin) with AI
+        """The Approvals page: workflows the user may manage (their own; every one for an admin) with AI
         review in suggest or auto mode on some node, with the pause switch and the last 30 days' counts."""
         if self.workflows is None: return []
         admin = self.access is not None and self.access.role(uid) == "admin"

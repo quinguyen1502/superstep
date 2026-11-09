@@ -1,4 +1,4 @@
-"""One rating per chat answer (TASK-0162, REQ-0075, DEC-0070)."""
+"""One rating per chat answer."""
 from alembic import op
 import sqlalchemy as sa
 

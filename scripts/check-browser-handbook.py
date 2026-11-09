@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""TASK-0253: structural checks for the English browser handbook and example recipe."""
+"""structural checks for the English browser handbook and example recipe."""
 from __future__ import annotations
 import json
 import sys

@@ -22,7 +22,7 @@ PY_ENV = re.compile(r"""os\.(?:environ\.get|getenv)\(\s*["'](\w+)["']|os\.enviro
 TS_ENV = re.compile(r"""\benv\(\s*["'](\w+)["']\s*\)|process\.env\.(\w+)""")
 BROWSER_ENV = re.compile(r"SUPERSTEP_BROWSER_[A-Z0-9_]+")
 # Numbered slots are built by concatenation, so the literal scanner cannot see them. The export lists the
-# assigned names in a comment; this picks those names up for .env.example (REQ-0090).
+# assigned names in a comment; this picks those names up for .env.example.
 EXPORT_ENV = re.compile(
     r"\b((?:LLM_CRED|MANAGED)_\d+|APPROVAL_[A-Z0-9]+)_(?:PROVIDER|API_KEY|BASE_URL|SETTINGS|SECRETS|WEBHOOK_URL|BOT_TOKEN|CHAT_ID)\b")
 # Keys a real model needs when LLM_PROVIDER is set, and LangSmith tracing (read by LangGraph itself).

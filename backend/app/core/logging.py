@@ -1,4 +1,4 @@
-"""Logger helper so modules share the `studio.*` namespace, and token redaction for uvicorn's logs (TASK-0039)."""
+"""Logger helper so modules share the `studio.*` namespace, and token redaction for uvicorn's logs."""
 import logging
 import re
 

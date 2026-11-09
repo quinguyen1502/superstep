@@ -54,7 +54,7 @@ export function DirectPublicChatPage({ embed, onReady }: { embed?: 'iframe' | 'w
   const send = (text: string, files: ChatAttachment[] = []) => { setErr(''); if (sid) { say(text, files); return } first.current = text
     create().then(s => list(s.id)).catch(e => { first.current = ''; fail(e) }) }
   useEffect(() => { if (first.current && sid && session?.id === sid) { const x = first.current; first.current = ''; say(x) } }, [sid, session, say])
-  // files (TASK-0177): the first file of a new chat creates it; the visitor token goes with every request
+  // files: the first file of a new chat creates it; the visitor token goes with every request
   const made = useRef<Promise<string> | null>(null)
   const ensure = () => sid ? Promise.resolve(sid) : made.current ??= create().then(async s => { await list(s.id); return s.id }).finally(() => { made.current = null })
   const lim = page?.attachments

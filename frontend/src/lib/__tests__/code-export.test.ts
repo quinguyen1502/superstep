@@ -5,7 +5,7 @@ import vi from '@/locales/vi.json'
 
 const store = (v: string | null) => ({ getItem: () => v })
 
-describe('Code tab export language (TASK-0082)', () => {
+describe('Code tab export language',  => {
   it('defaults to Python and remembers a valid choice only', () => {
     expect(savedExportLanguage(store(null))).toBe('python')
     expect(savedExportLanguage(store('typescript'))).toBe('typescript')

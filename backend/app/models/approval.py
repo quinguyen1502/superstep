@@ -1,4 +1,4 @@
-"""Human-in-the-loop approval through external channels (TASK-0022, DEC-0019)."""
+"""Human-in-the-loop approval through external channels."""
 from typing import Optional
 from sqlalchemy import text, Boolean, Float, Index, Integer, Text
 from sqlalchemy.orm import Mapped, mapped_column
@@ -18,7 +18,7 @@ class ApprovalChannel(Base):
     team_id: Mapped[Optional[str]] = mapped_column(Text)  # platform account: Slack team id (routes the shared URL) / Telegram bot id
     secrets: Mapped[str] = mapped_column(Text)           # Fernet token of {field: value}; never returned by the API
     hint: Mapped[Optional[str]] = mapped_column(Text)    # masked last 4 chars of the main token
-    scopes: Mapped[Optional[str]] = mapped_column(Text)  # Slack: granted OAuth scopes, comma-separated, as last read (TASK-0074); NULL = unknown
+    scopes: Mapped[Optional[str]] = mapped_column(Text)  # Slack: granted OAuth scopes, comma-separated, as last read; NULL = unknown
     created: Mapped[float] = mapped_column(Float)
 
 
@@ -79,7 +79,7 @@ class ApprovalAudit(Base):
     actor_id: Mapped[Optional[str]] = mapped_column(Text)     # studio user id (when mapped)
     external_id: Mapped[Optional[str]] = mapped_column(Text)  # channel user id
     created: Mapped[float] = mapped_column(Float, index=True)
-    # AI review (TASK-0186, DEC-0075 decision 7): set on the entry of an AI review and on a human answer after a suggestion
+    # AI review: set on the entry of an AI review and on a human answer after a suggestion
     auto_outcome: Mapped[Optional[str]] = mapped_column(Text)       # approved | rejected | escalated | suggested
     auto_confidence: Mapped[Optional[float]] = mapped_column(Float)
     auto_model: Mapped[Optional[str]] = mapped_column(Text)
@@ -90,7 +90,7 @@ class ApprovalAudit(Base):
 
 
 class ApprovalWait(Base):
-    """One pause of a run at a Human node, with or without a channel (TASK-0065, DEC-0043). The Approvals inbox reads
+    """One pause of a run at a Human node, with or without a channel. The Approvals inbox reads
     it, and closing it (compare-and-set waiting -> closed) is the gate for "first answer wins"."""
     __tablename__ = "approval_waits"
     __table_args__ = (Index("ix_approval_waits_owner_status", "owner", "status"),)
@@ -107,22 +107,22 @@ class ApprovalWait(Base):
     created: Mapped[float] = mapped_column(Float)
     closed_at: Mapped[Optional[float]] = mapped_column(Float)
     browser_intent_id: Mapped[Optional[str]] = mapped_column(Text)  # exact browser decision; no raw arguments
-    # deadlines (TASK-0066): read from the run's own workflow snapshot when the step starts waiting
+    # deadlines: read from the run's own workflow snapshot when the step starts waiting
     approval: Mapped[Optional[str]] = mapped_column(Text)    # JSON: the node's data.approval (channel, target), for reminders
     deadline: Mapped[Optional[str]] = mapped_column(Text)    # JSON: engine.deadlines.parse() (seconds)
     due_at: Mapped[Optional[float]] = mapped_column(Float, index=True)
     next_remind_at: Mapped[Optional[float]] = mapped_column(Float, index=True)
     reminders: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     escalated_at: Mapped[Optional[float]] = mapped_column(Float)
-    # AI review (TASK-0186): the opinion shown to people (suggest mode, or auto mode that escalated)
+    # AI review: the opinion shown to people (suggest mode, or auto mode that escalated)
     ai_decision: Mapped[Optional[str]] = mapped_column(Text)     # approve | reject | escalate
     ai_confidence: Mapped[Optional[float]] = mapped_column(Float)
     ai_reason: Mapped[Optional[str]] = mapped_column(Text)
-    review: Mapped[Optional[str]] = mapped_column(Text)  # AI review of this step: auto | suggest while running, then done (None: no AI review; TASK-0204)
+    review: Mapped[Optional[str]] = mapped_column(Text)  # AI review of this step: auto | suggest while running, then done (None: no AI review; )
 
 
 class ApprovalAutoQuota(Base):
-    """Automatic answers reserved per workflow per UTC day: the daily cap of AI review, reserved atomically (TASK-0204)."""
+    """Automatic answers reserved per workflow per UTC day: the daily cap of AI review, reserved atomically."""
     __tablename__ = "approval_auto_quota"
     workflow_id: Mapped[str] = mapped_column(Text, primary_key=True)
     day: Mapped[float] = mapped_column(Float, primary_key=True)

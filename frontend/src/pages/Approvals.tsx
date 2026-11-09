@@ -1,4 +1,4 @@
-/** /approvals (TASK-0065, DEC-0043): every step waiting for the signed-in user, as run owner or listed approver,
+/** /approvals: every step waiting for the signed-in user, as run owner or listed approver,
  * across workflows, answered in place. Approvers see the request only; "Open run" is for those who may read the run. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

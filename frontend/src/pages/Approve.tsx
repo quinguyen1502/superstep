@@ -1,4 +1,4 @@
-/** /approve?token=… (TASK-0047): the page e-mail and Teams approval links open. The signed-in studio user sees the
+/** /approve?token=…: the page e-mail and Teams approval links open. The signed-in studio user sees the
  * request and confirms; a link alone never decides, so mail scanners that open links cannot approve anything. */
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'

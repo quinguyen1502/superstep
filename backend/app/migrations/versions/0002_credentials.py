@@ -1,4 +1,4 @@
-"""Credentials table for encrypted LLM provider keys (TASK-0005).
+"""Credentials table for encrypted LLM provider keys.
 
 Idempotent: a SQLite file created by the raw-SQL PR #2 build already has this table and is adopted as-is.
 

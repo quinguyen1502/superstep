@@ -29,7 +29,7 @@ def health():
 
 
 def _storage() -> dict:
-    """Where chat attachments go and whether a write, read and delete there works (TASK-0191); never a secret or URL."""
+    """Where chat attachments go and whether a write, read and delete there works; never a secret or URL."""
     files = attachment_files(); st = files.stores.status(max_age=60)
     return {"attachment_storage": st["backend"], "attachment_storage_ok": st["ok"], "attachment_storage_reason": st.get("reason"),
             "attachment_storage_worker_seen": files.worker_seen()}  # seconds since the worker wrote there (fs, s3), else null

@@ -104,7 +104,7 @@ class BrowserSessionService:
     def close_run(self, rid, lease=None):
         for row in self.repo.list_active(run_id=rid):
             if lease is not None and row.lease_generation!=lease: continue
-            # Conversation-scoped pages survive chat-turn run ends until idle/max/revoke (DEC-0085).
+            # Conversation-scoped pages survive chat-turn run ends until idle/max/revoke.
             if row.conversation_id: continue
             self.close(row)
 

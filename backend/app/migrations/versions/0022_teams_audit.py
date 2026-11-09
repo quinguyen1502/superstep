@@ -1,4 +1,4 @@
-"""TASK-0029: teams (+ members, workflow team shares), the administrative audit log and studio settings (org policy)."""
+"""teams (+ members, workflow team shares), the administrative audit log and studio settings (org policy)."""
 from alembic import op
 import sqlalchemy as sa
 

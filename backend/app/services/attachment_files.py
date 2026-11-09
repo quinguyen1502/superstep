@@ -1,9 +1,9 @@
-"""The bytes of chat attachments (TASK-0191, REQ-0080, DEC-0074): writing, reading and deleting them on the configured
+"""The bytes of chat attachments: writing, reading and deleting them on the configured
 backend, and the orphan sweep. Used by the attachment service (uploads, downloads) and the chat session service (the
 run's file port, session delete, retention).
 
 - Write order: the object first, then the row; a failed row write deletes the object, so a file is either fully stored
-  and linked or not visible (REQ-0080 business rules). A `db` backend writes the bytes with the row.
+  and linked or not visible ( business rules). A `db` backend writes the bytes with the row.
 - Delete order: the row first, then the object. A crash in between leaves an orphan, which the sweep removes once it is
   older than an hour.
 """
@@ -17,13 +17,13 @@ from ..storage import Stores, StoreError
 from ..storage.base import PROBE_PREFIX, Data, as_bytes, is_service_key
 
 log = logging.getLogger(__name__)
-WORKER_KEY = f"{PROBE_PREFIX}worker"  # the worker's heartbeat: the api sees it only when they share the backend (TASK-0192)
+WORKER_KEY = f"{PROBE_PREFIX}worker"  # the worker's heartbeat: the api sees it only when they share the backend
 ORPHAN_AGE = 3600  # an object without a row is removed once it is this old (seconds)
 BATCH = 500
 
 
 def key_for(workflow_id: Optional[str], session_id: str, aid: str) -> str:
-    """Random, never the file name (REQ-0080)."""
+    """Random, never the file name."""
     return f"{workflow_id or 'adhoc'}/{session_id}/{aid}"
 
 
@@ -91,7 +91,7 @@ class AttachmentFiles:
 
     def backfill_locations(self) -> int:
         """Rows written before locations were recorded (0.10.1) get the folder or bucket/prefix configured now, which is
-        the one they were written to as long as the setting has not changed since (TASK-0203). Run at start-up."""
+        the one they were written to as long as the setting has not changed since. Run at start-up."""
         n = 0
         for name in {x for x in self.repo.storages() if x != "db"}:
             try: n += self.repo.backfill_locations(name, self.stores.get(name).location)
@@ -100,7 +100,7 @@ class AttachmentFiles:
 
     def sweep_orphans(self, now: Optional[float] = None, age: float = ORPHAN_AGE) -> int:
         """Removes objects that no row points at and that are older than `age`, on every external backend in use, at
-        its configured folder or bucket/prefix only. Only keys of the service's own form are considered (TASK-0203):
+        its configured folder or bucket/prefix only. Only keys of the service's own form are considered:
         never a file of another system, of a nested install, or the studio's own data."""
         now = time.time() if now is None else now
         names = {n for n in self.repo.storages() if n != "db"}

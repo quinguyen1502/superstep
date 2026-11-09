@@ -1,4 +1,4 @@
-/** Building blocks of the approval-channel settings (TASK-0022): secret fields, copyable URLs,
+/** Building blocks of the approval-channel settings: secret fields, copyable URLs,
  *  one connection (config, Test connection, replace secrets, register, remove) and the add-connection form. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -76,7 +76,7 @@ export function ConnectionItem({ c, k, publicUrl, onChange }: { c: Channel; k: C
   </div>
 }
 
-/** Chat triggers (TASK-0076): what this connection needs before a message can start a run. Slack: the Event Subscriptions
+/** Chat triggers: what this connection needs before a message can start a run. Slack: the Event Subscriptions
  *  URL and the two read scopes (unknown until the next Test); Telegram: Register webhook again, so messages arrive too. */
 function ChatSetup({ c, idp }: { c: Channel; idp: string }) {
   const { t } = useTranslation()

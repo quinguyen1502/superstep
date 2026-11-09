@@ -39,7 +39,7 @@ def verify_password(pw: str, stored: str) -> bool:
     except Exception:
         return False
 
-SESSION_COOKIE = "studio_session"  # HttpOnly cookie that carries the JWT for the browser UI (TASK-0045)
+SESSION_COOKIE = "studio_session"  # HttpOnly cookie that carries the JWT for the browser UI
 CSRF_HEADER, CSRF_VALUE = "x-requested-with", "studio"  # cookie-authenticated writes must send it
 
 

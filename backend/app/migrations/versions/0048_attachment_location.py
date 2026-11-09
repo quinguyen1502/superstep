@@ -1,4 +1,4 @@
-"""Where an external attachment's object is (TASK-0203): the fs folder or the s3 bucket/prefix at write time, so files
+"""Where an external attachment's object is: the fs folder or the s3 bucket/prefix at write time, so files
 stay readable after STUDIO_ATTACHMENT_FS_PATH or the bucket or prefix changes. Existing rows get it at start-up
 (AttachmentFiles.backfill_locations), from the settings they were written with."""
 from alembic import op

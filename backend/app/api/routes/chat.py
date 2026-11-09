@@ -1,4 +1,4 @@
-"""Chat triggers (TASK-0075, DEC-0046): the platform's events URL (no JWT; verified by the connection's signing secret).
+"""Chat triggers: the platform's events URL (no JWT; verified by the connection's signing secret).
 
 POST /api/channels/events/slack  Slack Events API (url_verification, app_mention, message.im), one URL for every
                                  workspace, routed by team_id. Telegram messages arrive on the approval webhook.

@@ -118,7 +118,7 @@
     --popover-foreground: oklch(0.145 0 0);
     --primary: oklch(0.21 0.03 285);
     --primary-foreground: oklch(0.985 0 0);
-    /* Brand (DEC-0047): cyan accent of the Step-up mark; decorative only, never a status colour */
+    /* Brand: cyan accent of the Step-up mark; decorative only, never a status colour */
     --brand-accent: oklch(0.82 0.15 200);
     --brand-accent-foreground: oklch(0.21 0.03 285);
     --secondary: oklch(0.97 0 0);
@@ -128,7 +128,7 @@
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
-    /* Node-type tokens (DEC-0008 addendum): accent, text on accent, subtle background */
+    /* Node-type tokens ( addendum): accent, text on accent, subtle background */
     --node-start: oklch(0.6 0.13 240);
     --node-start-foreground: oklch(0.985 0 0);
     --node-start-muted: oklch(0.6 0.13 240 / 0.12);
@@ -319,7 +319,7 @@
 }
 .react-flow__handle { width: 10px; height: 10px; }
 
-/* Typeset preset for chat answers (TASK-0085): the tighter rhythm from the Typeset docs. */
+/* Typeset preset for chat answers: the tighter rhythm from the Typeset docs. */
 .typeset-chat {
   --typeset-flow: 1em;
   --typeset-leading: 1.6;

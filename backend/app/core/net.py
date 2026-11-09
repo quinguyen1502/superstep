@@ -1,4 +1,4 @@
-"""Outbound-address guard shared by webhooks, MCP servers and HTTP Tool nodes (TASK-0019, TASK-0039 / REQ-0027).
+"""Outbound-address guard shared by webhooks, MCP servers and HTTP Tool nodes.
 
 - SSRF guard: http(s) only; private / loopback / link-local / reserved / multicast / unspecified targets are refused
   unless the caller allows private addresses.

@@ -15,7 +15,7 @@ TYPE_MAP = {"string": str, "number": float, "integer": int, "boolean": bool, "ob
 
 
 def pick_branch(value: str, labels: List[str]) -> Optional[str]:
-    """Condition label for `value` (TASK-0039, REQ-0027), independent of label order: exact match, then case-insensitive
+    """Condition label for `value`, independent of label order: exact match, then case-insensitive
     after trimming spaces and punctuation, then the longest label found as a whole word. A tie between two longest
     whole-word labels is ambiguous: None, so the default edge (or an error) applies."""
     if value in labels: return value
@@ -31,27 +31,27 @@ def pick_branch(value: str, labels: List[str]) -> Optional[str]:
 
 def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, resume=None, effects=None, checkpointer=None, ports=None):
     """entry: start the graph at this node (or these nodes, run in parallel) instead of Start (resuming a paused or
-    recovered run, TASK-0006/0021). effects: idempotency keys + node-result ledger (TASK-0021).
+    recovered run, /0021). effects: idempotency keys + node-result ledger.
     checkpointer: LangGraph saver, used by the runtime to observe superstep checkpoints."""
     entries = set([entry] if isinstance(entry, str) else (entry or []))
     errs = validate(wf)
     if errs:
-        from .subgraphs import readable  # expanded subgraph nodes by label (TASK-0029)
+        from .subgraphs import readable  # expanded subgraph nodes by label
         raise ValidationError(readable(errs, wf))
     wf=browser_recipes.prepare(wf)
     def annotation(f):
         typ = TYPE_MAP.get(f.get("type", "string"), str); fn = fn_of(f)
-        return Annotated[typ, fn] if fn else Optional[typ]  # reducer fields: LangGraph combines parallel writes (TASK-0011)
+        return Annotated[typ, fn] if fn else Optional[typ]  # reducer fields: LangGraph combines parallel writes
     ann = {f["name"]: annotation(f) for f in wf.get("state", [])}
-    ann.update({foreach.cursor(n["id"]): Optional[int] for n in wf["nodes"] if n.get("type") == "foreach"})  # loop positions (TASK-0049)
-    ann.update({agents.private(n["id"]): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent"})  # agent conversations (TASK-0116)
-    ann.update({agents.slot_channel(n): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent_tool"})  # one wave's tool results (DEC-0069)
-    if any(n.get("type") == "agent_handoff" for n in wf["nodes"]):  # the pending hand-off and the run's count (TASK-0180)
+    ann.update({foreach.cursor(n["id"]): Optional[int] for n in wf["nodes"] if n.get("type") == "foreach"})  # loop positions
+    ann.update({agents.private(n["id"]): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent"})  # agent conversations
+    ann.update({agents.slot_channel(n): Optional[dict] for n in wf["nodes"] if n.get("type") == "agent_tool"})  # one wave's tool results
+    if any(n.get("type") == "agent_handoff" for n in wf["nodes"]):  # the pending hand-off and the run's count
         ann.update({agents.HANDOFF_KEY: Optional[dict], agents.COUNT_KEY: Optional[int], agents.START_KEY: Optional[str]})
-    receivers = handoffs.continues(wf) if agents.HANDOFF_KEY in ann else set()  # where a chat may start (DEC-0073)
+    receivers = handoffs.continues(wf) if agents.HANDOFF_KEY in ann else set()  # where a chat may start
     State = TypedDict("State", ann, total=False)  # type: ignore
     g = StateGraph(State)
-    nodes = {n["id"]: n for n in wf["nodes"] if n.get("type") != "note"}  # notes are canvas comments (REQ-0025)
+    nodes = {n["id"]: n for n in wf["nodes"] if n.get("type") != "note"}  # notes are canvas comments
     joins = {nid for nid, n in nodes.items() if n["type"] == "join"}
     for nid, n in nodes.items():
         fn = node_fn(n, resolve, usage, resume, effects, ports)
@@ -68,7 +68,7 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
         out = [e for e in wf["edges"] if e["source"] == nid and e["target"] in nodes]
         if nid in entries or (not entries and n["type"] == "start"):
             g.add_edge(START, nid)
-        if n["type"] == "start" and receivers and not entries:  # start router: a chat goes back to its agent (TASK-0181)
+        if n["type"] == "start" and receivers and not entries:  # start router: a chat goes back to its agent
             plain = [e["target"] for e in out]
             def start(state, plain=plain, receivers=receivers):
                 to = state.get(agents.START_KEY)
@@ -95,7 +95,7 @@ def compile_workflow(wf: Dict[str, Any], resolve=None, usage=None, entry=None, r
             g.add_conditional_edges(nid, router, mapping)
         else:
             for e in out:
-                if e["target"] not in joins: g.add_edge(nid, e["target"])  # several edges = parallel branches (TASK-0011)
+                if e["target"] not in joins: g.add_edge(nid, e["target"])  # several edges = parallel branches
     for j in joins:  # fan-in: the Join runs once, after every incoming branch finished
         if j in entries: continue
         g.add_edge([e["source"] for e in wf["edges"] if e["target"] == j and e["source"] in nodes], j)

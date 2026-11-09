@@ -1,4 +1,4 @@
-"""In-app notifications (TASK-0020): the header bell. Live push + preferences (TASK-0021)."""
+"""In-app notifications: the header bell. Live push + preferences."""
 import asyncio
 from fastapi import APIRouter, Body, Depends, WebSocket, WebSocketDisconnect
 from ...core.errors import AppError

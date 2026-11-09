@@ -1,4 +1,4 @@
-"""User administration and workflow sharing (TASK-0014)."""
+"""User administration and workflow sharing."""
 from fastapi import APIRouter, Depends, Query
 from ...core import permissions as P
 from ...schemas.rbac import MemberIn, LangSmithIn, PolicyIn, ShareIn, TeamIn, TeamShareIn, TransferIn, UserDelete, UserUpdate
@@ -26,7 +26,7 @@ def put_share(wid: str, body: ShareIn, user=Depends(current_user), svc=Depends(s
 def delete_share(wid: str, target: str, user=Depends(current_user), svc=Depends(share_service)): return svc.remove(wid, user["id"], target)
 
 
-# ---- TASK-0029: teams, team shares, ownership transfer, account deletion, audit, policy ----
+# ---- : teams, team shares, ownership transfer, account deletion, audit, policy ----
 
 
 @router.delete("/admin/users/{target}")

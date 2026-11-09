@@ -1,4 +1,4 @@
-"""Chat attachments in model calls (TASK-0176, REQ-0077, DEC-0072 decisions 2 and 5).
+"""Chat attachments in model calls.
 
 An LLM or Agent node with `include_attachments` reads the file records in `attachments_field` (default "files"):
 {id, name, type, size, text?, text_cut?, data_url?}. Documents reach the model as labelled text blocks after the

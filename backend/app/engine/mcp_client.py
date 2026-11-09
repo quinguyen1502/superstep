@@ -1,4 +1,4 @@
-"""Minimal MCP client (TASK-0013): `initialize`, `tools/list`, `tools/call` over stdio or Streamable HTTP (JSON-RPC 2.0).
+"""Minimal MCP client: `initialize`, `tools/list`, `tools/call` over stdio or Streamable HTTP (JSON-RPC 2.0).
 
 Written against the MCP specification instead of the SDK so the process sandbox (environment, working directory,
 timeouts, kill) and the outbound HTTP policy stay under our control. One short session per call.

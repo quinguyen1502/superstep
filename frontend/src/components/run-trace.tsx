@@ -61,7 +61,7 @@ function AgentSummary({ a }: { a: AgentStep }) {
     : a.kind === 'tool' ? `${a.tool} → ${a.result ?? ''}`
     : a.tool_calls?.length ? t('trace.agent.calls', { tools: a.tool_calls.map(c => c.name).join(', ') }) : t('trace.agent.answer', { text: a.text || '—' })
   return <>
-    {/* what happened first: a narrow row clips the badges at its end (TASK-0117 statuses) */}
+    {/* what happened first: a narrow row clips the badges at its end ( statuses) */}
     {status && <Badge variant={status === 'confirmed' ? 'success' : status === 'unknown' ? 'destructive' : 'warning'} size="sm" data-testid="span-browser-status">{t(`chat.browser.status.${status}`)}</Badge>}
     {a.approval === 'approved' && <Badge variant="success" size="sm" data-testid="span-approved">{t('trace.agent.approved')}</Badge>}
     {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' || a.status === 'not_run' ? 'secondary' : a.status === 'rejected' ? 'warning' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
@@ -72,7 +72,7 @@ function AgentSummary({ a }: { a: AgentStep }) {
   </>
 }
 
-/** The steps of a workflow tool's child run under the tool call (TASK-0136, DEC-0066): fetched once, read-only, with a
+/** The steps of a workflow tool's child run under the tool call: fetched once, read-only, with a
  *  link to the child run. Shown in the studio trace and in a chat's full view. */
 export function ChildSteps({ runId, name, className }: { runId: string; name?: string; className?: string }) {
   const { t } = useTranslation()
@@ -170,7 +170,7 @@ function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void
 
 export function RunTrace({ trace, events, meta, selected, onSelect, replay, onExitReplay, actions }: {
   trace: Trace; events: RunEvent[]; meta: Meta; selected: string | null; onSelect: (s: Span | null) => void; replay?: string; onExitReplay?: () => void
-  actions?: ReactNode  // extra buttons in the summary bar (Save as test case, TASK-0068)
+  actions?: ReactNode  // extra buttons in the summary bar (Save as test case, )
 }) {
   const { t } = useTranslation(); const [raw, setRaw] = useState(false)
   const sel = trace.spans.find(s => s.key === selected) || null

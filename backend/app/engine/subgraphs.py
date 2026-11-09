@@ -1,4 +1,4 @@
-"""Subgraph nodes (TASK-0011): a node that runs another saved workflow.
+"""Subgraph nodes: a node that runs another saved workflow.
 
 The child workflow is expanded inline before validation and compilation, so its nodes are ordinary nodes of the run:
 they emit their own trace events, pause at Human nodes, checkpoint, recover and use the side-effect ledger exactly like
@@ -9,7 +9,7 @@ becomes one pass-through exit node `sub/__exit` that carries the subgraph node's
 State: shared by field name. Child fields missing in the parent are added; the same name must have the same type.
 References are resolved by `load(workflow_id) -> dict | None` (the service binds it to workflows the user may read).
 
-Agent nodes may call other workflows as tools (REQ-0073, DEC-0066). Those are not expanded here (a call is a child run),
+Agent nodes may call other workflows as tools. Those are not expanded here (a call is a child run),
 but `check` follows them too, so cycles and depth count subgraphs and workflow tools together.
 """
 from __future__ import annotations
@@ -139,7 +139,7 @@ def _expand_once(wf: Dict[str, Any], load: Loader, errs: List[str]) -> Dict[str,
         for i, n in cn.items():
             if i == start or i in ends: continue
             d = dict(n.get("data") or {}); d["label"] = f"{label} › {d.get('label') or i}"
-            if isinstance(d.get("handoffs"), list):  # hand-off targets stay inside the subgraph (TASK-0180)
+            if isinstance(d.get("handoffs"), list):  # hand-off targets stay inside the subgraph
                 d["handoffs"] = [{**h, "target": pid(h["target"])} if isinstance(h, dict) and h.get("target") in cn else h for h in d["handoffs"]]
             nodes.append({**n, "id": pid(i), "data": d})
         nodes.append({"id": exit_id, "type": "subgraph_exit", "position": sub.get("position"), "data": {"label": f"{label} › end"}})

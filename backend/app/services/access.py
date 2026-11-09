@@ -1,4 +1,4 @@
-"""Authorisation (TASK-0014, DEC-0023): global permissions and per-workflow access, one place for every service.
+"""Authorisation: global permissions and per-workflow access, one place for every service.
 
 `workflow(wid, uid, action)` returns the row when the user may perform `action`, else raises WORKFLOW_NOT_FOUND
 (no access at all, so ids are not disclosed) or WORKFLOW_FORBIDDEN (can see it, not do that)."""
@@ -13,7 +13,7 @@ from ..repositories import UserRepository, WorkflowRepository, WorkflowShareRepo
 
 class AccessService:
     def __init__(self, users: UserRepository, workflows: WorkflowRepository, shares: WorkflowShareRepository, teams=None):
-        self.users, self.workflows, self.shares, self.teams = users, workflows, shares, teams  # teams: TeamRepository (TASK-0029)
+        self.users, self.workflows, self.shares, self.teams = users, workflows, shares, teams  # teams: TeamRepository
 
     def share_role(self, wid: str, uid: str) -> Optional[str]:
         """Best share role of the user on a workflow: direct share or through any of their teams."""
@@ -37,12 +37,12 @@ class AccessService:
         if not self.can(uid, permission): raise AppError("PERMISSION_DENIED", permission=permission)
 
     def require_code(self, uid: str, before: Optional[dict], after: Optional[dict]) -> None:
-        """Adding a Code node or changing its source needs `code.write` (TASK-0054); anything else about it does not."""
+        """Adding a Code node or changing its source needs `code.write`; anything else about it does not."""
         if P.code_written(before, after) and not self.can(uid, P.CODE_WRITE): raise AppError("CODE_WRITE_FORBIDDEN")
 
     def require_auto(self, uid: str, owner: Optional[str], before: Optional[dict], after: Optional[dict]) -> None:
         """Turning a node's AI review to `auto`, or changing an `auto` policy, needs the workflow owner or an admin
-        (TASK-0186, REQ-0081 owner decision 3). Editors may save `suggest`; turning auto off is always allowed."""
+        . Editors may save `suggest`; turning auto off is always allowed."""
         old, new = approval_policy.auto_policies(before), approval_policy.auto_policies(after)
         if any(old.get(n) != h for n, h in new.items()) and uid != owner and self.role(uid) != "admin":
             raise AppError("AUTO_APPROVAL_FORBIDDEN")

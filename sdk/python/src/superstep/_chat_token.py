@@ -1,4 +1,4 @@
-"""Server-side HS256 signing with the standard library (DEC-0077)."""
+"""Server-side HS256 signing with the standard library."""
 from __future__ import annotations
 
 import base64

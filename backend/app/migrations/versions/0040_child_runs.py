@@ -1,4 +1,4 @@
-"""Child runs of workflow tools (TASK-0134, DEC-0066): the parent run and the Agent tool call that started each one.
+"""Child runs of workflow tools: the parent run and the Agent tool call that started each one.
 One child per call: (parent_run_id, parent_step) is unique."""
 from alembic import op
 import sqlalchemy as sa

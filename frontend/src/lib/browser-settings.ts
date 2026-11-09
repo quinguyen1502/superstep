@@ -20,7 +20,7 @@ const cleanLines = (value: unknown) => lines(value).map(item => item.trim()).fil
 const normalizedLines = (value: unknown) => value === undefined ? [] : Array.isArray(value) && value.every(item => typeof item === 'string') ? cleanLines(value).map(entry => validUrl(entry, { origin: true }) ? new URL(entry).origin : entry) : value
 const hasControl = (value: string, spaces = false) => Array.from(value).some(char => char.charCodeAt(0) < (spaces ? 33 : 32) || char.charCodeAt(0) === 127)
 export const isBrowserAdapter = (adapter: string) => adapter === 'browser' || adapter === 'web'
-/** Accepted DEC-0085 defaults: required whitelist, mutating approval OFF, Browserless = self-hosted controller. */
+/** Accepted defaults: required whitelist, mutating approval OFF, Browserless = self-hosted controller. */
 export const browserDefaults = (): ManagedSettings => ({
   provider: 'local', proxy: { mode: 'direct', auth: 'none' }, allowed_origins: [],
   action_timeout_ms: 30000, idle_timeout_s: 1800, lifetime_s: 3600, max_actions: 40, max_pages: 4,
@@ -70,7 +70,7 @@ export function connectionErrors(adapter: string, draft: ManagedSettings, secret
     const entries = cleanLines(value)
     if (!Array.isArray(value) || value.some(item => typeof item !== 'string') || (required && !entries.length) || entries.length > max || new Set(entries).size !== entries.length || entries.some(entry => !validUrl(entry, { origin: true, https }))) add(field, https ? 'httpsOrigins' : 'origins')
   }
-  // Browser connections require a non-empty origin whitelist (DEC-0085). Web discovery may leave it empty.
+  // Browser connections require a non-empty origin whitelist. Web discovery may leave it empty.
   checkOrigins(settings.allowed_origins, 'allowed_origins', 50, false, adapter === 'browser')
   if (settings.version !== undefined && settings.version !== 1) add('provider', 'unsupported')
   if (adapter === 'web') {

@@ -1,4 +1,4 @@
-/** Forgot password and reset password pages (TASK-0045). */
+/** Forgot password and reset password pages. */
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { AlertCircle, CircleCheck, KeyRound, Loader2 } from 'lucide-react'

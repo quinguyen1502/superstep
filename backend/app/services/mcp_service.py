@@ -1,4 +1,4 @@
-"""MCP server registry (TASK-0013): CRUD with encrypted secrets, tool discovery, and the run-time `caller(uid)` port.
+"""MCP server registry: CRUD with encrypted secrets, tool discovery, and the run-time `caller(uid)` port.
 
 Scopes follow approval channels: `user` servers belong to their owner; `org` servers are managed by admins and usable by
 everyone. stdio servers start a process on the API host, so they need STUDIO_MCP_STDIO=1 and an admin. HTTP servers must
@@ -180,7 +180,7 @@ class McpService:
 
     def call(self, uid: str, sid: str, tool: str, args: dict, org_allowed: bool = True, operation_key=None, dry_run=False) -> Any:
         r = self._visible(sid, uid)
-        if r.scope == "org" and not org_allowed: raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")  # policy, TASK-0029
+        if r.scope == "org" and not org_allowed: raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")  # policy,
         if r.transport == "managed":
             if r.scope == "org" and not self.org_allowed(uid): raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")
             definitions = {item["name"]: item for item in self.managed.tools(r)}
@@ -202,7 +202,7 @@ class McpService:
         return lambda sid, tool, args, key, dry: self.call(uid, sid, tool, args, org_allowed, key, dry)
 
     def check_export(self, graphs):
-        """Mark managed references on the temporary export graphs (TASK-0254, TASK-0251).
+        """Mark managed references on the temporary export graphs.
 
         Browser connections receive a public policy and an alias. Other managed adapters are
         named so the export can call them from MANAGED_<n> environment JSON. An invalid browser
@@ -225,7 +225,7 @@ class McpService:
                         reference["_browser_export"] = policy
                     else:
                         # A real adapter id is callable from MANAGED_<n> env JSON. An invalid browser stays the
-                        # placeholder (True), and the string "browser" is never stored as an adapter (REQ-0090).
+                        # placeholder (True), and the string "browser" is never stored as an adapter.
                         adapter = row.adapter if isinstance(row.adapter, str) and row.adapter and row.adapter != "browser" else True
                         reference["_managed_export"] = adapter
                         managed = True

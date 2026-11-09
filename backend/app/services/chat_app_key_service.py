@@ -1,4 +1,4 @@
-"""Owner/admin chat server credentials (TASK-0217, DEC-0077). Rotation creates a second key, then revokes the old one."""
+"""Owner/admin chat server credentials. Rotation creates a second key, then revokes the old one."""
 from __future__ import annotations
 import json, secrets, time, uuid
 from ..core import crypto

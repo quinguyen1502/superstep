@@ -5,7 +5,7 @@ from .base import Base
 
 
 class Team(Base):
-    """A named group of users (TASK-0029); workflows can be shared with a team."""
+    """A named group of users; workflows can be shared with a team."""
     __tablename__ = "teams"
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     name: Mapped[str] = mapped_column(Text, unique=True)

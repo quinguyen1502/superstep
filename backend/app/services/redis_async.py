@@ -1,4 +1,4 @@
-"""Async Redis clients for code that runs on the event loop (TASK-0019): no blocking socket calls on the loop.
+"""Async Redis clients for code that runs on the event loop: no blocking socket calls on the loop.
 
 redis.asyncio connections belong to the loop that created them, so one client is kept per running loop
 (one per process in production; tests start several loops)."""

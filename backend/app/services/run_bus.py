@@ -1,4 +1,4 @@
-"""Run bus: cross-process run registry, cancel signalling and event fan-out (TASK-0009).
+"""Run bus: cross-process run registry, cancel signalling and event fan-out.
 
 One small interface, two implementations (KISS):
 - InMemoryRunBus: default when REDIS_URL is unset (single API process, dev/tests).
@@ -20,8 +20,8 @@ class RunBus(Protocol):
     def is_cancelled(self, rid: str) -> bool: ...
     def publish(self, rid: str, event: dict) -> None: ...
     def ping(self) -> bool: ...
-    # event-loop variants (TASK-0019): never block the loop on Redis I/O. finish has none: RunService runs it on a
-    # worker thread so a closing loop cannot drop it (TASK-0060)
+    # event-loop variants: never block the loop on Redis I/O. finish has none: RunService runs it on a
+    # worker thread so a closing loop cannot drop it
     async def astart(self, rid: str, owner: str) -> None: ...
     async def apublish(self, rid: str, event: dict) -> None: ...
 

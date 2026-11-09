@@ -1,4 +1,4 @@
-/** Small state hooks shared by dialogs and settings panels (TASK-0040). */
+/** Small state hooks shared by dialogs and settings panels. */
 import { useEffect, useEffectEvent, useState } from 'react'
 
 /** Run `fn` when `active` becomes true, and again when `key` changes while active. Dialogs and settings panels reset

@@ -13,10 +13,10 @@ import { removable } from '@/lib/graph-ops'
 import { isHandoffEdge } from '@/lib/handoffs'
 import { useIsMobile } from '@/lib/use-viewport-width'
 
-/** Canvas with its context menu (TASK-0040). */
+/** Canvas with its context menu. */
 export function EditorCanvas() {
   const { t } = useTranslation()
-  const mobile = useIsMobile()  // phones (TASK-0121): zoom out further so a whole workflow fits the narrow screen
+  const mobile = useIsMobile()  // phones: zoom out further so a whole workflow fits the narrow screen
   const { nodes, setNodes, onNodesChange, edges, setEdges, setSel, source, edit, dark, rf, removeIds, clipNote, copyIds, insert, editable, insertAround, addNode, addNote, ctx, setCtx, nodesView, edgesView, onEdgesView, onNodeClick, onConnect, onDrop, canvasLock, setCanvasLock } = useStudioCtx()
   return <ContextMenu>
     <ContextMenuTrigger asChild>

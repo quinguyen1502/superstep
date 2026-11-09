@@ -31,17 +31,17 @@ const RUN_BADGES = { ok: 'success', running: 'warning', queued: 'warning', timeo
   waiting: 'outline', cancelled: 'secondary', expired: 'secondary', paused: 'secondary' } as const
 const badgeFor = (status: string) => RUN_BADGES[status as keyof typeof RUN_BADGES] ?? 'destructive'
 
-/** Bottom panel (TASK-0085): Run (input | logs side by side, a picker for the last runs and a dialog with all of them),
- * Test (TASK-0067) and Code (TASK-0071). Chat lives in its own side panel (components/chat/chat-side-panel.tsx). */
+/** Bottom panel: Run (input | logs side by side, a picker for the last runs and a dialog with all of them),
+ * Test and Code. Chat lives in its own side panel (components/chat/chat-side-panel.tsx).
 export function EditorRunPanel() {
   const { t } = useTranslation()
   const { input, setInput, log, setLog, errors, history, tab, setTab, running, traceSel, setTraceSel, replay, setReplay, openRun, respond, fork, trace, traceMeta, wid, source, edit } = useStudioCtx()
-  // the "Test runs" switch lists the workflow's test runs instead of its other runs (TASK-0067)
+  // the "Test runs" switch lists the workflow's test runs instead of its other runs
   const [testRuns, setTestRuns] = useState<any[] | null>(null)
-  const mobile = useIsMobile()  // phones (TASK-0121): input above the logs instead of beside them
+  const mobile = useIsMobile()  // phones: input above the logs instead of beside them
   const showTests = (on: boolean) => { if (!on || !wid) { setTestRuns(null); return } api<any[]>(`/api/workflows/${wid}/runs?tests=true`).then(setTestRuns).catch(() => setTestRuns([])) }
   const rows = testRuns ?? history
-  // Save as test case (TASK-0068): a draft from the run opens in the test case editor; once saved, the Tests tab shows it
+  // Save as test case: a draft from the run opens in the test case editor; once saved, the Tests tab shows it
   const [draft, setDraft] = useState<TestCase | null>(null); const [picked, setPicked] = useState<string | null>(null); const [draftErr, setDraftErr] = useState('')
   const canSave = !!wid && edit && !source
   const saveCase = (rid: string) => api<Omit<TestCase, 'id' | 'last'>>(`/api/workflows/${wid}/tests/from-run/${rid}`, { method: 'POST' })
@@ -54,7 +54,7 @@ export function EditorRunPanel() {
   const canTravel = !!wid && !source && !running && !!trace.runId && finished(trace.status) && trace.status !== 'waiting'
   const pick = rows.find(h => h.id === trace.runId)
   const forkedFrom = (log as any[]).find(e => e.type === 'run_started')?.forked_from as { run_id: string; checkpoint: number } | undefined
-  // a run waiting for a workflow tool's child (TASK-0135) goes on by itself in the worker: look again until it moves on
+  // a run waiting for a workflow tool's child goes on by itself in the worker: look again until it moves on
   const child = !running ? trace.waiting?.child : undefined
   useEffect(() => {
     if (!child || !wid) return

@@ -1,4 +1,4 @@
-// Runs one TypeScript Tool node Code call (TASK-0080, DEC-0049). Executed INSIDE the sandbox by Deno with no
+// Runs one TypeScript Tool node Code call. Executed INSIDE the sandbox by Deno with no
 // permission at all: `deno run --no-prompt --no-remote --cached-only data:application/typescript;base64,<this file>`.
 // Never imported by the server. It uses no import, so any Deno 2 can run it.
 //

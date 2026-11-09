@@ -1,4 +1,4 @@
-"""Client IP behind reverse proxies (TASK-0022 follow-up).
+"""Client IP behind reverse proxies ( follow-up).
 
 STUDIO_TRUSTED_PROXIES is a comma-separated CIDR list (e.g. "10.0.0.0/8,172.16.0.0/12"). X-Forwarded-For is only
 honoured when the direct peer is trusted; the chain (XFF hops + peer) is then walked right to left, skipping trusted

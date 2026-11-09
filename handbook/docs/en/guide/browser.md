@@ -6,8 +6,8 @@ upload, download, evaluate). Connections live under **Settings → MCP servers**
 No start URL belongs on the connection — URLs come from chat, workflow state, or
 a configured search tool at run time.
 
-This page is the English first-delivery setup guide. Executable Python/TypeScript
-exports are deferred.
+This page is the English first-delivery setup guide. Python/TypeScript exports
+can run the browser steps; see the export section below.
 
 ## Before you start
 

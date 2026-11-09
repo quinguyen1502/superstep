@@ -1,4 +1,4 @@
-"""A published chat's logo (TASK-0145, REQ-0074): one image per web chat trigger."""
+"""A published chat's logo: one image per web chat trigger."""
 from alembic import op
 import sqlalchemy as sa
 

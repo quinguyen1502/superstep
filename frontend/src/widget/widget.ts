@@ -1,4 +1,4 @@
-/** Plain-JS host API (DEC-0079). The iframe owns React; the bubble uses the canonical shadcn tokens. */
+/** Plain-JS host API. The iframe owns React; the bubble uses the canonical shadcn tokens. */
 import css from './styles.css?inline'
 import { labels, tokens } from './assets.generated'
 import { MSG, EVENTS, appearance, bridgeError, channelId, epochId, errorCode, failureCode, resolveToken, eventHub, payload, storageKey, userToken, visitorToken,

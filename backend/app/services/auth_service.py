@@ -1,6 +1,6 @@
-"""Registration, login and token → user resolution (with the user's role, TASK-0014).
+"""Registration, login and token → user resolution (with the user's role, ).
 
-TASK-0045: failed sign-ins lock an e-mail for a while, password reset links (admin-made, or e-mailed when SMTP is set),
+: failed sign-ins lock an e-mail for a while, password reset links (admin-made, or e-mailed when SMTP is set),
 and tokens issued before the last password change stop working."""
 import hashlib, html, math, re, secrets, threading, time, uuid
 from typing import Callable, Optional
@@ -61,7 +61,7 @@ class AuthService:
 
     def _check_password(self, email: str, password: str, wrong: str):
         """The user if `password` is right. A lock refuses even the right password; a wrong one counts toward it
-        (sign-in and password change share the counter, TASK-0045/0052) and raises `wrong`."""
+        (sign-in and password change share the counter, /0052) and raises `wrong`."""
         now = time.time()
         if self.sec and (t := self.sec.throttle(email)) and t.locked_until and t.locked_until > now:
             raise AppError("AUTH_LOCKED", minutes=math.ceil((t.locked_until - now) / 60))
@@ -82,7 +82,7 @@ class AuthService:
         return self._session(u.id)
 
     def change_password(self, uid: str, current: str, new: str) -> dict:
-        """TASK-0052: needs the current password. Other sessions stop working; the caller gets a fresh one."""
+        """needs the current password. Other sessions stop working; the caller gets a fresh one."""
         me = self.users.get_by_id(uid)
         if me is None: raise AppError("AUTH_TOKEN_INVALID")
         u = self._check_password(me.email, current, "AUTH_PASSWORD_WRONG")
@@ -93,7 +93,7 @@ class AuthService:
         if self.audit: self.audit.record(uid, "user.password_changed", "user", uid, u.email)
         return self._session(uid)
 
-    # ---- password reset (TASK-0045) ----
+    # ---- password reset ----
     def options(self) -> dict:
         """What the sign-in page offers: the demo hint, and whether "forgot password" sends e-mail or says to ask an admin."""
         return {"demo": config.demo_user(), "reset": "email" if config.smtp() and config.public_url() else "admin",
@@ -165,5 +165,5 @@ class AuthService:
         if user is None: raise AppError("AUTH_TOKEN_INVALID")
         if not user.active: raise AppError("AUTH_ACCOUNT_DISABLED")
         now = time.time()
-        if row.last_used is None or now - row.last_used >= LAST_USED_EVERY: self.pats.set_fields(row.id, last_used=now)  # not every request (TASK-0205)
+        if row.last_used is None or now - row.last_used >= LAST_USED_EVERY: self.pats.set_fields(row.id, last_used=now)  # not every request
         return public_user(user)

@@ -1,7 +1,7 @@
-/** Agent node settings (TASK-0118, REQ-0072): model, prompts, the tools the model may call (MCP, HTTP, built-in,
- *  knowledge base, another workflow: TASK-0136, REQ-0073) and the approval settings for tools that need approval; its fields (`AgentData`) and round limit
- *  (`AgentExecution`) sit in the Config panel's Data and Execution tabs (TASK-0121). The engine is
- *  `backend/app/engine/agents.py` (DEC-0063). */
+/** Agent node settings: model, prompts, the tools the model may call (MCP, HTTP, built-in,
+ * knowledge base, another workflow: ) and the approval settings for tools that need approval; its fields (`AgentData`) and round limit
+ * (`AgentExecution`) sit in the Config panel's Data and Execution tabs. The engine is
+ * `backend/app/engine/agents.py`. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowDown, ArrowUp, Database, ExternalLink, Globe, Plug, Plus, TriangleAlert, Workflow, Wrench, X, type LucideIcon } from 'lucide-react'
@@ -74,7 +74,7 @@ type ToolProps = { tool: AgentTool; index: number; count: number; taken: string[
 type Wf = { id: string; name: string; description?: string }
 type Field = { name: string; type?: string }
 
-/** A workflow tool (TASK-0136, DEC-0066): which saved workflow runs, the state fields the model fills (parameters) and
+/** A workflow tool: which saved workflow runs, the state fields the model fills (parameters) and
  *  the fields of its final state the model gets back (result). The fields come from the workflow's latest version. */
 function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: AgentTool; others: string[]; workflows: Wf[] | null; set: (p: Partial<AgentTool>) => void }) {
   const { t } = useTranslation(); const [fields, setFields] = useState<Field[] | null>(null)
@@ -203,7 +203,7 @@ type Patch = (patch: Record<string, any>) => void
 type Props = { data: Record<string, any>; fields: TemplateField[]; creds: Credential[]
   providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch; wid?: string; canAuto?: boolean }
 
-/** Data tab (TASK-0121): the fields the agent writes its answer and steps to, and the history it reads. */
+/** Data tab: the fields the agent writes its answer and steps to, and the history it reads. */
 export function AgentData({ data: d, fieldNames, listFields, fields, readOnly, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; fields: TemplateField[]; readOnly?: boolean; onChange: Patch }) {
   const { t } = useTranslation()
   const optional = (key: string, id: string) => <StateFieldPicker id={id} value={d[key]} onChange={v => onChange({ [key]: v })}
@@ -216,7 +216,7 @@ export function AgentData({ data: d, fieldNames, listFields, fields, readOnly, o
   </div>
 }
 
-/** Execution tab (TASK-0121): the round limit, above the shared retry / timeout / cache settings. */
+/** Execution tab: the round limit, above the shared retry / timeout / cache settings. */
 export function AgentExecution({ data: d, onChange }: { data: Record<string, any>; onChange: Patch }) {
   const { t } = useTranslation()
   return <F label={t('agent.maxRounds')} htmlFor="agent-max-rounds"><Input id="agent-max-rounds" type="number" min={1} max={25} value={d.max_rounds ?? 5}

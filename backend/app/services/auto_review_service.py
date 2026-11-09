@@ -1,6 +1,6 @@
-"""AI review of a waiting approval (TASK-0187, REQ-0081, DEC-0075 decision 1).
+"""AI review of a waiting approval.
 
-`review()` runs before anyone is asked and returns what to do. The order (REQ-0081 business rules):
+`review` runs before anyone is asked and returns what to do. The order ( business rules):
 kill switches -> rules -> demo -> daily cap -> judge -> threshold.
 - Rules: a matching `reject` rule rejects without the judge; a matching `human` rule sends the request to people.
 - Auto mode answers only when the judge approves with at least `min_confidence`. The judge's reject, its escalate, a low
@@ -8,7 +8,7 @@ kill switches -> rules -> demo -> daily cap -> judge -> threshold.
   cap all send the request to people (fail-safe). The AI never rejects on its own (owner decision 2).
 - Suggest mode never answers: the opinion is shown to people.
 Outcomes: approved | rejected | escalated | suggested (None: AI review is paused, people are asked as usual).
-`usage` is the judge call's token usage when the model was called (TASK-0198); the caller adds it to the run.
+`usage` is the judge call's token usage when the model was called; the caller adds it to the run.
 """
 from __future__ import annotations
 import time
@@ -48,7 +48,7 @@ class AutoReviewService:
         if effect == "human": return done(decision="escalate", cause="rule", reason=f"rule {hit[0]}")
         if config.demo_mode(): return done(cause="demo")  # the demo's models are the offline mock: never answer
         reserved = bool(auto and wid)
-        if reserved and not self.repo.reserve_auto(wid, day, policy["max_per_day"]): return done(cause="cap")  # atomic (TASK-0204)
+        if reserved and not self.repo.reserve_auto(wid, day, policy["max_per_day"]): return done(cause="cap")  # atomic
         try: r = self._judged(out, done, owner, policy, request, auto)
         except BaseException:
             if reserved: self.repo.release_auto(wid, day)

@@ -1,4 +1,4 @@
-"""Scheduled runs (TASK-0046, DEC-0036): cron schedules per workflow, fired by the run worker.
+"""Scheduled runs: cron schedules per workflow, fired by the run worker.
 
 Managing schedules needs the workflow's "share" right (owner or admin), like API tokens: a schedule spends the owner's
 credentials with nobody watching. A run starts as the schedule's creator with `source="schedule"` and goes through the same

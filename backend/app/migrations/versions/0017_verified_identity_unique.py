@@ -1,4 +1,4 @@
-"""TASK-0022 follow-up: one verified owner per chat account (kind, workspace, external id).
+"""follow-up: one verified owner per chat account (kind, workspace, external id).
 
 A partial unique index (WHERE verified_at IS NOT NULL) closes the verify race; works on SQLite and Postgres.
 Existing duplicates (possible before this index) keep the earliest verification; the others go back to unverified."""

@@ -6,11 +6,11 @@ from ..models import Run, BrowserArtifact
 from ..models.browser_session import BrowserSession, BrowserCommand, BrowserIntent
 from ..models.database import Database
 
-NOT_TEST = or_(Run.source.is_(None), Run.source != "test")  # every run but workflow test runs (TASK-0067)
+NOT_TEST = or_(Run.source.is_(None), Run.source != "test")  # every run but workflow test runs
 
 
 class StaleLease(Exception):
-    """A write carried an outdated fencing token: another worker claimed the run since (TASK-0021)."""
+    """A write carried an outdated fencing token: another worker claimed the run since."""
     fenced = True  # the engine re-raises it instead of reporting a node error
 
 
@@ -51,8 +51,8 @@ class RunRepository:
             s.execute(update(Run).where(Run.id == rid).values(status=status)); s.commit()
 
     def save_progress(self, rid: str, events: str, checkpoint: str, fence: Optional[int] = None) -> None:
-        """Progress checkpoint of a running queue job (TASK-0020); only while it is still running. A kept answer is
-        used up from here on (TASK-0127). Fenced (TASK-0021): raises StaleLease when another worker holds a newer generation."""
+        """Progress checkpoint of a running queue job; only while it is still running. A kept answer is
+        used up from here on. Fenced: raises StaleLease when another worker holds a newer generation."""
         with self.db.session() as s:
             q = update(Run).where(Run.id == rid, Run.status == "running")
             if fence is not None: q = q.where(Run.lease_gen == fence)
@@ -85,7 +85,7 @@ class RunRepository:
                     values["events"] = json.dumps(evs, ensure_ascii=False, default=str)
                 s.expunge(row)  # the compare-and-set below is the only write; a flush of this object would race it
                 same = [Run.id == rid, Run.status == "waiting", Run.checkpoint == seen]
-                if event is not None:  # the events text too: an event appended meanwhile (AI review usage) is kept (TASK-0204)
+                if event is not None:  # the events text too: an event appended meanwhile (AI review usage) is kept
                     same.append(Run.events.is_(None) if events is None else Run.events == events)
                 n = s.execute(update(Run).where(*same).values(**values)).rowcount
                 if n == 1: s.commit(); return result
@@ -94,7 +94,7 @@ class RunRepository:
 
     def add_waiting_event(self, rid: str, event: dict) -> bool:
         """Append one event to a waiting run and add its `usage` to the run's tokens and cost (an AI review of the
-        step, TASK-0198). Compare-and-set on the events text, like update_waiting. False when the run is not waiting."""
+        step, ). Compare-and-set on the events text, like update_waiting. False when the run is not waiting."""
         u = event.get("usage") or {}
         for _ in range(8):
             with self.db.session() as s:
@@ -114,7 +114,7 @@ class RunRepository:
         return False
 
     def keep_resume(self, job: dict) -> None:
-        """Keep the answer to a waiting run until the resumed segment records progress or a result (TASK-0127)."""
+        """Keep the answer to a waiting run until the resumed segment records progress or a result."""
         with self.db.session() as s:
             s.execute(update(Run).where(Run.id == job["run_id"], Run.status == "waiting").values(resume_job=json.dumps(job, ensure_ascii=False)))
             s.commit()
@@ -126,7 +126,7 @@ class RunRepository:
                                   .order_by(Run.started).limit(limit)))
 
     def child_of(self, parent: str, step: str) -> Optional[Run]:
-        """The child run a workflow tool call started (TASK-0134)."""
+        """The child run a workflow tool call started."""
         with self.db.session() as s:
             return s.scalars(select(Run).where(Run.parent_run_id == parent, Run.parent_step == step)).first()
 
@@ -144,7 +144,7 @@ class RunRepository:
         return found
 
     def list_waiting(self, owner: str, limit: int = 100) -> list[Run]:
-        """Runs waiting for this user's answer; a workflow test answers its own (TASK-0067)."""
+        """Runs waiting for this user's answer; a workflow test answers its own."""
         with self.db.session() as s:
             return list(s.scalars(select(Run).where(Run.owner == owner, Run.status == "waiting", NOT_TEST).order_by(Run.started.desc()).limit(limit)))
 
@@ -164,7 +164,7 @@ class RunRepository:
             return s.scalars(select(Run).where(Run.workflow_id == wid, NOT_TEST).order_by(Run.started.desc()).limit(1)).first()
 
     def list_for_workflow(self, wid: str, limit: int = 50, tests: bool = False) -> list[Run]:
-        """tests: workflow test runs (TASK-0067) only; otherwise every other run."""
+        """tests: workflow test runs only; otherwise every other run."""
         with self.db.session() as s:
             q = select(Run).where(Run.workflow_id == wid, Run.source == "test" if tests else NOT_TEST)
             return list(s.scalars(q.order_by(Run.started.desc()).limit(limit)))

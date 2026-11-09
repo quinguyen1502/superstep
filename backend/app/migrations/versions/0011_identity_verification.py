@@ -1,4 +1,4 @@
-"""Verified channel identities (TASK-0022 follow-up, DEC-0019). Idempotent; works on SQLite (batch) and Postgres.
+"""Verified channel identities ( follow-up, ). Idempotent; works on SQLite (batch) and Postgres.
 
 - channel_identities: verified_at + one-time code state (hash, expiry, last send, failed attempts).
 - The (kind, external_id) unique constraint goes away: an unverified link must not block the real owner of the

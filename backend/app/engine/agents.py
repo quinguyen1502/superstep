@@ -1,10 +1,10 @@
-"""Agent nodes (TASK-0116, REQ-0072, DEC-0063): the model picks and calls the tools the node allows, round after round,
+"""Agent nodes: the model picks and calls the tools the node allows, round after round,
 until it answers.
 
 An Agent node `A` is expanded before compilation, as subgraph nodes are, into ordinary LangGraph steps:
     A (entry: builds the conversation) → A/__model ⇄ a wave of A/__tool/1 .. A/__tool/8 → A/__join → A/__exit
 A wave is one superstep (LangGraph Send): the calls run together, up to the cap, and the join puts their results back
-in the model's order (DEC-0069). Each slot has its own ledger entry. The conversation lives in the hidden state field
+in the model's order. Each slot has its own ledger entry. The conversation lives in the hidden state field
 `agent:A` (plain JSON): {messages, pending, rounds, limit_hit, steps, answer, last}. A slot writes `agent:A#<n>`, not
 that object.
 
@@ -13,12 +13,12 @@ Node data: credential_id, model, system_prompt, prompt, output_field, steps_fiel
   mcp: server_id, tool, parameters (the server's input schema)    builtin: function (engine/tools.py)
   knowledge: knowledge_base_id, top_k                               http: method, url, body, parameters
   workflow: workflow_id, inputs (the state fields the model fills), outputs (the final state fields it gets back)
-A workflow tool (REQ-0073, DEC-0066) gets `snapshot` and `version` when a run is planned (`snapshot()`): the child's latest
+A workflow tool gets `snapshot` and `version` when a run is planned (`snapshot`): the child's latest
 saved workflow, so a paused or recovered run calls the same version.
 HTTP templates read the model's arguments as `{{state.args.<name>}}`; without a body, POST/PUT/PATCH send the
 arguments as JSON, and a GET whose URL does not use them gets them as query parameters.
 
-Approval (TASK-0117, DEC-0063 decision 7): before a call to a tool with `approval: true`, `A/__tool` pauses the run like a
+Approval: before a call to a tool with `approval: true`, `A/__tool` pauses the run like a
 Human node (`Interrupt`), with the Agent node's `approval` and `deadline` settings (copied onto the step by `expand`), so
 the Approvals inbox, the channels and the deadlines work unchanged. The answer `approved` runs the call; `rejected` or
 any other text rejects it, and the model gets "Rejected by a reviewer" plus that text as the tool result.
@@ -43,9 +43,9 @@ from .tools import PARAMETERS, TOOLS
 
 PREFIX, SEP = "agent:", "/"
 MODEL, TOOL, JOIN, EXIT, HANDOFF = "__model", "__tool", "__join", "__exit", "__handoff"
-# hand-offs (REQ-0078, DEC-0073): the pending hand-off {from, to, reason, messages, last} and the run's count
+# hand-offs: the pending hand-off {from, to, reason, messages, last} and the run's count
 HANDOFF_KEY, COUNT_KEY = PREFIX + "__handoff", PREFIX + "__handoffs"
-START_INPUT, START_KEY = "__start_agent", PREFIX + "__start"  # a chat continues with the agent that answered last (TASK-0181)
+START_INPUT, START_KEY = "__start_agent", PREFIX + "__start"  # a chat continues with the agent that answered last
 NOT_RUN = "Not run: the conversation was handed off"
 HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Continue it and answer the person yourself."
 NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
@@ -79,7 +79,7 @@ def owner(node: Dict[str, Any]) -> str:
 
 
 def agent_of_step(nid: str) -> Optional[str]:
-    """`A` for `A/__tool`, `A/__tool/2` or `A/__join`. Approvals and test answers use the Agent node's id (TASK-0117)."""
+    """`A` for `A/__tool`, `A/__tool/2` or `A/__join`. Approvals and test answers use the Agent node's id."""
     if not isinstance(nid, str): return None
     if nid.endswith(SEP + JOIN): return nid[:-(len(SEP) + len(JOIN))] or None
     head, _, rest = nid.rpartition(SEP + TOOL)
@@ -141,7 +141,7 @@ REASON = {"type": "object", "properties": {"reason": {"type": "string", "descrip
 
 
 def handoff_specs(d: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """The hand-off tools as the model sees them: `transfer_to_<target>` with an optional reason (TASK-0180)."""
+    """The hand-off tools as the model sees them: `transfer_to_<target>` with an optional reason."""
     return [{"name": h["name"], "description": h.get("description") or f"Hand the conversation to {h['label']}", "parameters": REASON}
             for h in d.get("handoff_tools") or []]
 
@@ -318,7 +318,7 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         edges += [{"id": f"{a}{SEP}e-model", "source": a, "target": m},
                   {"id": f"{a}{SEP}e-done", "source": m, "target": x, "label": "done"},
                   {"id": f"{a}{SEP}e-back", "source": j, "target": m, "label": "model"}]
-        if hand:  # a hand-off is its own step, then a jump to the target's entry (DEC-0073 decision 2)
+        if hand:  # a hand-off is its own step, then a jump to the target's entry ( decision 2)
             h = f"{a}{SEP}{HANDOFF}"
             nodes.append(step(HANDOFF, "agent_handoff", "hand-off", lean))
             edges += [{"id": f"{a}{SEP}e-handoff", "source": m, "target": h, "label": "handoff"}]
@@ -333,7 +333,7 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
 
 def snapshot(wf: Dict[str, Any], load: subgraphs.Loader, self_id: Optional[str] = None,
              version: Optional[Callable[[str, Dict[str, Any]], Optional[int]]] = None) -> Dict[str, Any]:
-    """The workflow with each workflow tool's child copied in as `snapshot` (DEC-0066 decision 2): the child's latest saved
+    """The workflow with each workflow tool's child copied in as `snapshot` ( decision 2): the child's latest saved
     workflow with its subgraphs expanded and its own workflow tools snapshotted, and `version(id, child)` as `version`.
     Run after `subgraphs.expand`, so Agent nodes inside subgraphs are covered. Raises ValidationError (references).
     Snapshots that came with the workflow are dropped first: only the ones made here are run."""
@@ -369,7 +369,7 @@ def step_budget(wf: Dict[str, Any]) -> int:
             cost = r * (1 + 2 * MAX_CALLS_PER_ROUND) + 3
             total += cost; most = max(most, cost)
             any_hand = any_hand or bool(handoffs.targets(n.get("data") or {}))
-    if any_hand: total += handoffs.limit(wf) * (most + 2)  # each hand-off may run an agent again (TASK-0180)
+    if any_hand: total += handoffs.limit(wf) * (most + 2)  # each hand-off may run an agent again
     return total
 
 
@@ -394,7 +394,7 @@ def router(node: Dict[str, Any]):
 
 def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
     """The approver's answer for this step, consumed once (as for a Human node) so a later call to the tool asks again.
-    A wave keeps one answer per slot in `answers` (TASK-0158)."""
+    A wave keeps one answer per slot in `answers`."""
     if resume is None: return None
     bag = resume.get("answers")
     if isinstance(bag, dict) and nid in bag: return str(bag.pop(nid))
@@ -404,8 +404,8 @@ def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
 
 def child_result(resume: Optional[Dict[str, Any]], nid: str) -> Optional[Dict[str, Any]]:
     """The finished child run of a workflow tool call, consumed once: {child_run_id, status, output, error, usage}. The
-    run service sends it as a dict; a person's answer is always text, so it can never pass for one (TASK-0134).
-    A wave keeps one result per slot in `children` until every wait has settled (TASK-0158)."""
+    run service sends it as a dict; a person's answer is always text, so it can never pass for one.
+    A wave keeps one result per slot in `children` until every wait has settled."""
     if resume is None: return None
     bag = resume.get("children")
     if isinstance(bag, dict) and isinstance(bag.get(nid), dict) and "child_run_id" in bag[nid]: return bag.pop(nid)
@@ -415,7 +415,7 @@ def child_result(resume: Optional[Dict[str, Any]], nid: str) -> Optional[Dict[st
 
 
 def _pause(effects: Optional[Effects], item: dict, exc: Exception) -> None:
-    """Record the pause, then raise it. Parallel slots all record before the superstep stops (TASK-0158)."""
+    """Record the pause, then raise it. Parallel slots all record before the superstep stops."""
     if effects is not None: effects.hold(item)
     raise exc
 
@@ -436,8 +436,8 @@ def rejection(response: str) -> str:
 
 def history(items, prompt: str) -> list:
     """The {role, content} messages of a history field, before the task prompt. A chat's conversation field ends with
-    the current message (DEC-0052); when the prompt already carries it (e.g. `{{state.message}}`), that last item is
-    left out so the model gets the message once, as the prompt (TASK-0214)."""
+    the current message; when the prompt already carries it (e.g. `{{state.message}}`), that last item is
+    left out so the model gets the message once, as the prompt."""
     msgs = [{"role": m["role"], "content": m["content"]} for m in items or []
             if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)]
     if msgs and msgs[-1]["role"] == "user" and msgs[-1]["content"].strip() in prompt: msgs.pop()
@@ -455,18 +455,18 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
     if t == "agent":
         def fn(state):
             got = state.get(HANDOFF_KEY) if isinstance(state.get(HANDOFF_KEY), dict) else None
-            got = got if got and got.get("to") == nid else None  # a hand-off to this agent (TASK-0180)
+            got = got if got and got.get("to") == nid else None  # a hand-off to this agent
             system = render(d["system_prompt"], state) if d.get("system_prompt") else ""
             if got:
                 why = f" Reason: {got['reason']}." if got.get("reason") else ""
                 system = "\n\n".join(x for x in (system, HANDOFF_NOTE.format(source=got.get("from_label") or got.get("from"), reason=why)) if x)
             msgs = [{"role": "system", "content": system}] if system else []
-            if got:  # the person's messages and the agents' replies, without tool traffic (DEC-0073 decision 3)
+            if got:  # the person's messages and the agents' replies, without tool traffic ( decision 3)
                 msgs += [{"role": m["role"], "content": m["content"]} for m in got.get("messages") or []]
             prompt = render(d.get("prompt") or "", state)
             if not got:
                 msgs += history(state.get(d["history_field"]) if d.get("history_field") else None, prompt)
-            files = attachments.records(state, d)  # chat attachments (TASK-0176): records only, image bytes are read per call
+            files = attachments.records(state, d)  # chat attachments: records only, image bytes are read per call
             msgs.append({"role": "user", "content": prompt, **({"files": files} if files else {})})
             out = {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
             if got: out[HANDOFF_KEY] = None
@@ -506,7 +506,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             p.setdefault("messages", []).append({"role": "assistant", "content": out, **({"tool_calls": calls} if calls else {})})
             configured={item.get('name'):item for item in d.get('tools') or []}
             first = next((c for c in calls if c["name"] in hand), None) if can else None
-            if first is not None:  # the hand-off wins: the other calls of the round are answered, not run (TASK-0180)
+            if first is not None:  # the hand-off wins: the other calls of the round are answered, not run
                 h = hand[first["name"]]; args = first.get("args") if isinstance(first.get("args"), dict) else {}
                 reason = str(args.get("reason") or "")[:500]
                 for c in calls:
@@ -577,7 +577,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             elif got is not None:
                 status, result = child_outcome(tool, got)
                 if usage and got.get("usage"): usage(nid, got["usage"])  # the child's tokens and cost count on the Agent node
-            elif tool.get("source") == "workflow":  # start the child run (once per call) and wait for it (DEC-0066)
+            elif tool.get("source") == "workflow":  # start the child run (once per call) and wait for it
                 try:
                     if ports.start_child is None: raise RuntimeError("workflow tools need the run service")
                     browser_recipes.validate_input(tool.get('snapshot') or {},args)

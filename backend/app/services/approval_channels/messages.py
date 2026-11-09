@@ -1,4 +1,4 @@
-"""Chat texts of approval requests, outcomes and identity codes in English and Vietnamese (TASK-0022 follow-up).
+"""Chat texts of approval requests, outcomes and identity codes in English and Vietnamese ( follow-up).
 
 The request and the edited message follow the run owner's language (users.lang, set by the studio's language
 switcher); a private answer to the person who pressed a button follows theirs. Unknown / unset: English.
@@ -22,7 +22,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "APPROVAL_ALREADY_DECIDED": "This request was already answered",
         "APPROVAL_IDENTITY_UNKNOWN": "Link and verify your {kind} account in Superstep (Settings → My accounts) to approve",
         "APPROVAL_FORBIDDEN": "You are not allowed to approve this run",
-        # chat triggers (TASK-0075)
+        # chat triggers
         "chat_started": "▶️ Started {workflow} (run {run})", "chat_finished": "✅ {workflow} finished: {value}",
         "chat_waiting": "⏸ {workflow} is waiting for approval at {node}", "chat_failed": "❌ {workflow} failed: {error}",
         "chat_ended": "⏹ {workflow} stopped ({status})", "chat_empty": "(no value)", "chat_open": "Open the run: {link}",
@@ -71,7 +71,7 @@ def text(lang: Optional[str], key: str, **kw) -> str:
 
 
 def opinion_text(lang: Optional[str], r: Optional[dict]) -> Optional[str]:
-    """The AI review's opinion as one line of an approval message (TASK-0187), or None without one."""
+    """The AI review's opinion as one line of an approval message, or None without one."""
     if not r or r.get("decision") not in ("approve", "reject", "escalate"): return None
     c = r.get("confidence")
     return text(lang, "ai_opinion", decision=text(lang, f"ai_{r['decision']}"), confidence="-" if c is None else f"{c:.2f}", reason=r.get("reason") or "").strip()

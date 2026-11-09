@@ -3,7 +3,7 @@
 Tool arguments are untrusted data. ExecutionContext is bound by the run service and
 sent only over the authenticated worker control channel, never exposed as a tool schema.
 
-Accepted product rules (REQ-0086 / DEC-0085, 2026-11-06): mandatory non-empty origin
+Accepted product rules: mandatory non-empty origin
 whitelist; providers local and browserless; nine tools including upload/download/evaluate
 JS; mutating-approval default OFF; session idle default 30 minutes; layered connection
 toggles; page content always untrusted.
@@ -394,7 +394,7 @@ class WorkerResult(WorkerEnvelope):
     acknowledgement: Literal["already_completed"] | None = None
 
 
-# Contract eligibility, not verified runtime support. TASK-0242–0244 must prove
+# Contract eligibility, not verified runtime support. must prove
 # these paths before enabling execution; user settings cannot assert capability.
 CAPABILITY_CONTRACT = {
     provider: {

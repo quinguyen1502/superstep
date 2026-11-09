@@ -4,7 +4,7 @@ import { ChannelLogo } from '@/components/approvals/channel-logo'
 
 const html = (el: React.ReactElement) => renderToStaticMarkup(el)
 
-describe('ChannelLogo (TASK-0063)', () => {
+describe('ChannelLogo',  => {
   it('renders a brand mark for each chat channel and a theme icon for e-mail', () => {
     for (const k of ['slack', 'telegram', 'whatsapp', 'teams']) expect(html(<ChannelLogo kind={k} />)).toMatch(/fill="#/)
     expect(html(<ChannelLogo kind="email" />)).not.toMatch(/fill="#/)

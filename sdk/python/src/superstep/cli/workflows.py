@@ -1,4 +1,4 @@
-"""`workflows`, `pull` and `push` (TASK-0168, DEC-0071 decision 4)."""
+"""`workflows`, `pull` and `push`."""
 from __future__ import annotations
 
 import json

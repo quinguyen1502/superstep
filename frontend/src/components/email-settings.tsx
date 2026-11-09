@@ -1,4 +1,4 @@
-/** Send email node settings (TASK-0051): an SMTP credential (none = dry run), recipients, subject and body templates. */
+/** Send email node settings: an SMTP credential (none = dry run), recipients, subject and body templates. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { StateFieldPicker } from '@/components/state-field-action'
@@ -52,7 +52,7 @@ export function EmailSettings({ data, fields, creds, providers, readOnly, onChan
   </div>
 }
 
-/** Data tab (TASK-0121): the optional object field that receives the send result. */
+/** Data tab: the optional object field that receives the send result. */
 export function EmailData({ data, fields, onChange }: Pick<Props, 'data' | 'fields' | 'onChange'>) {
   const { t } = useTranslation()
   return <Row label={t('email.outputField')} htmlFor="email-output">

@@ -6,7 +6,7 @@ from ..models.database import Database
 
 
 class WorkflowTestRepository:
-    """Test cases, suite runs and results of workflow tests (TASK-0067). Status changes are compare-and-set."""
+    """Test cases, suite runs and results of workflow tests. Status changes are compare-and-set."""
     def __init__(self, db: Database): self.db = db
 
     # ---- test cases ----
@@ -54,7 +54,7 @@ class WorkflowTestRepository:
             return [(t, e) for t, e in s.execute(q)]
 
     def baseline(self, wid: str, version: int) -> Optional[WorkflowTestSuite]:
-        """The latest finished suite run on a version older than `version` (TASK-0068)."""
+        """The latest finished suite run on a version older than `version`."""
         with self.db.session() as s:
             return s.scalars(select(WorkflowTestSuite).where(WorkflowTestSuite.workflow_id == wid, WorkflowTestSuite.status == "done",
                                                              WorkflowTestSuite.version < version).order_by(WorkflowTestSuite.started.desc()).limit(1)).first()

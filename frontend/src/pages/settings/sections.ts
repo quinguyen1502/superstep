@@ -1,5 +1,5 @@
 /** Settings navigation (ids, icons, permissions) without the section components, so the command palette can list
- *  the pages without loading them (TASK-0039: Settings is a lazy route). Components are mapped in SettingsPage. */
+ * the pages without loading them. Components are mapped in SettingsPage. */
 import { CircleUser, Database, History, KeyRound, MessageSquareShare, Plug, ScrollText, UserCheck, Users, UsersRound, type LucideIcon } from 'lucide-react'
 
 export const SECTION_IDS = ['profile', 'tokens', 'channels', 'accounts', 'audit', 'knowledge', 'mcp', 'users', 'teams', 'activity'] as const

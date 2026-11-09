@@ -1,4 +1,4 @@
-"""Effectively-once side effects (TASK-0021, DEC-0018).
+"""Effectively-once side effects.
 
 Execution is at-least-once (a crashed worker's job runs again). To make side effects effectively-once:
 - every LLM/Tool node execution gets a stable **idempotency key** derived from (run id, node id, iteration), sent as the
@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional, Protocol
 
 SIDE_EFFECT_TYPES = ("llm", "tool", "mcp", "decision", "email", "agent_model", "agent_tool")  # MCP uses the same stable call key and result ledger.
-# an Agent node's model and tool steps (TASK-0116): one ledger entry and idempotency key per model call and per tool call
+# an Agent node's model and tool steps: one ledger entry and idempotency key per model call and per tool call
 
 
 class Ledger(Protocol):
@@ -36,7 +36,7 @@ class Effects:
     guard: Optional[Callable[[], None]] = None  # raises when this worker may no longer act for the run (fencing)
     counts: Dict[str, int] = field(default_factory=dict)  # node id -> iteration, kept by the runtime
     reused: set = field(default_factory=set)              # node ids whose last result came from the ledger
-    holds: list = field(default_factory=list)            # pauses raised in this superstep (TASK-0158); siblings are not cancelled
+    holds: list = field(default_factory=list)            # pauses raised in this superstep; siblings are not cancelled
     _hold_lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def hold(self, item: dict) -> None:

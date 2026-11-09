@@ -1,4 +1,4 @@
-"""runs.callback_url / runs.callback_token_id (TASK-0022 follow-up). Idempotent.
+"""runs.callback_url / runs.callback_token_id ( follow-up). Idempotent.
 
 An API-triggered run keeps its result callback, so a run resumed later (from Slack / Telegram, by a worker job that
 no longer has the original start job) still sends its callback_url webhook through the delivery pipeline.

@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _attachments(args) -> int:
-    """TASK-0194: the files per backend, or a move to another backend, as one JSON object on stdout."""
+    """the files per backend, or a move to another backend, as one JSON object on stdout."""
     from .api.deps import attachment_archive, attachment_migration
     from .storage import StoreError
     if args.command in ("attachments-export", "attachments-import"):

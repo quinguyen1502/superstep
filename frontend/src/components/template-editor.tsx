@@ -1,4 +1,4 @@
-/** Input for `{{state.field}}` templates (TASK-0041): references show as tags, `{{` suggests state fields, the braces button inserts one. The value stays plain text. */
+/** Input for `{{state.field}}` templates: references show as tags, `{{` suggests state fields, the braces button inserts one. The value stays plain text. */
 import { useContext, useMemo, useRef } from 'react'
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror'
 import { autocompletion, type Completion, type CompletionContext } from '@codemirror/autocomplete'

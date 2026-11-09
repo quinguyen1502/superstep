@@ -1,4 +1,4 @@
-"""Notifications for runs that need a human (TASK-0020, DEC-0017).
+"""Notifications for runs that need a human.
 
 Always: an in-app row (bell in the header, mark read).
 Optional channels, each a no-op unless configured:
@@ -6,7 +6,7 @@ Optional channels, each a no-op unless configured:
 - A generic notify webhook (STUDIO_NOTIFY_WEBHOOK_URL, signed with STUDIO_NOTIFY_WEBHOOK_SECRET when set; same
   SSRF guard, DNS pinning and signature format as result webhooks).
 External channels run in a background thread so recording a run never waits on SMTP/HTTP.
-TASK-0021: new in-app notifications are pushed live (NotificationHub -> WebSocket /ws/notifications); e-mail is
+: new in-app notifications are pushed live (NotificationHub -> WebSocket /ws/notifications); e-mail is
 multipart (plain text + HTML template); per-user preferences switch the in-app and e-mail channels off/on.
 """
 import html, json, threading, time, uuid
@@ -21,8 +21,8 @@ from .approval_channels.messages import LANGS, lang_of
 
 log = get_logger("notify")
 KINDS = {"run_waiting": "A run is waiting for your response", "run_expired": "A waiting run expired",
-         "run_reminder": "A run is still waiting for your response", "run_escalated": "A run was handed to you for approval",  # TASK-0066
-         "run_auto_answered": "AI review answered an approval for you"}  # TASK-0187
+         "run_reminder": "A run is still waiting for your response", "run_escalated": "A run was handed to you for approval",
+         "run_auto_answered": "AI review answered an approval for you"}
 
 
 class NotificationService:
@@ -86,7 +86,7 @@ class NotificationService:
     def mark_all_read(self, uid: str) -> dict:
         self.repo.mark_read(uid); return {"ok": True, "unread": 0}
 
-    # ---- preferences (TASK-0021) ----
+    # ---- preferences ----
     def preferences(self, uid: str) -> dict:
         u = self.users.get_by_id(uid) if self.users else None
         return {"in_app": True if u is None or u.notify_in_app is None else bool(u.notify_in_app),

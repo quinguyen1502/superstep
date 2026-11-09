@@ -111,7 +111,7 @@ def get_rate_limiter() -> RateLimiter:
 
 @lru_cache
 def get_counter() -> Counter:
-    return make_counter(config.REDIS_URL)  # blocking twin of the rate limiter for quotas inside runs (TASK-0051)
+    return make_counter(config.REDIS_URL)  # blocking twin of the rate limiter for quotas inside runs
 
 
 def delivery_service() -> DeliveryService:
@@ -121,7 +121,7 @@ def delivery_service() -> DeliveryService:
 
 @lru_cache
 def get_notification_hub() -> NotificationHub:
-    return make_notification_hub(config.REDIS_URL)  # Redis pub/sub when REDIS_URL is set, else in-process (TASK-0021)
+    return make_notification_hub(config.REDIS_URL)  # Redis pub/sub when REDIS_URL is set, else in-process
 
 
 def notification_service() -> NotificationService:
@@ -157,12 +157,12 @@ def attachment_files() -> AttachmentFiles:
     db = get_db(); return AttachmentFiles(ChatAttachmentRepository(db), _attachment_stores(db))
 
 def attachment_migration():
-    """Moving files between backends (TASK-0194); used by the admin route and `app.admin_cmd`."""
+    """Moving files between backends; used by the admin route and `app.admin_cmd`."""
     from ..services.attachment_migration import AttachmentMigration
     db = get_db(); return AttachmentMigration(ChatAttachmentRepository(db), _attachment_stores(db), access_service())
 
 def attachment_archive():
-    """Attachment bytes in and out of a backup archive (TASK-0194); used by `app.admin_cmd`."""
+    """Attachment bytes in and out of a backup archive; used by `app.admin_cmd`."""
     from ..services.attachment_archive import AttachmentArchive
     db = get_db(); return AttachmentArchive(ChatAttachmentRepository(db), _attachment_stores(db))
 
@@ -309,8 +309,8 @@ UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 def current_user(request: Request, cred: HTTPAuthorizationCredentials | None = Depends(bearer)) -> dict:
-    """The signed-in, active user with role and permissions (database-checked per request, TASK-0014).
-    A Bearer token wins; otherwise the session cookie (TASK-0045), whose writes must carry X-Requested-With (CSRF)."""
+    """The signed-in, active user with role and permissions (database-checked per request, ).
+    A Bearer token wins; otherwise the session cookie, whose writes must carry X-Requested-With (CSRF)."""
     token = cred.credentials if cred else None
     if token is None and (token := request.cookies.get(security.SESSION_COOKIE)):
         if request.method in UNSAFE and request.headers.get(security.CSRF_HEADER) != security.CSRF_VALUE: raise AppError("AUTH_CSRF")

@@ -6,12 +6,12 @@ from ..models.database import Database
 META = (ChatAttachment.id, ChatAttachment.session_id, ChatAttachment.turn_id, ChatAttachment.name, ChatAttachment.kind,
         ChatAttachment.mime, ChatAttachment.size, ChatAttachment.text, ChatAttachment.text_cut, ChatAttachment.created,
         ChatAttachment.storage, ChatAttachment.key, ChatAttachment.location)
-Ref = tuple  # (storage, key, location) of a file's bytes outside the database (TASK-0191, TASK-0203)
+Ref = tuple  # (storage, key, location) of a file's bytes outside the database
 REF = (ChatAttachment.storage, ChatAttachment.key, ChatAttachment.location)
 
 
 class ChatAttachmentRepository:
-    """The files of chat messages (TASK-0174, DEC-0072). Reads without `data` unless the bytes are asked for."""
+    """The files of chat messages. Reads without `data` unless the bytes are asked for."""
     def __init__(self, db: Database): self.db = db
 
     def add(self, row: ChatAttachment) -> ChatAttachment:
@@ -21,7 +21,7 @@ class ChatAttachmentRepository:
         """One file's metadata and where its bytes are (not the bytes)."""
         with self.db.session() as s: return s.execute(select(*META).where(ChatAttachment.id == aid)).first()
 
-    # ---- the `db` backend's bytes (storage/db.py, TASK-0191) ----
+    # ---- the `db` backend's bytes (storage/db.py, ) ----
     def data_of(self, aid: str) -> Optional[bytes]:
         with self.db.session() as s: return s.scalar(select(ChatAttachment.data).where(ChatAttachment.id == aid, ChatAttachment.storage == "db"))
 
@@ -37,7 +37,7 @@ class ChatAttachmentRepository:
             return [(k, c) for k, c in s.execute(select(col, ChatAttachment.created).where(ChatAttachment.storage == storage))]
 
     def located(self, storage: str) -> list[tuple[str, Optional[str]]]:
-        """(key, location) of the files kept in `storage` (archive export, TASK-0203)."""
+        """(key, location) of the files kept in `storage` (archive export, )."""
         with self.db.session() as s:
             return [tuple(r) for r in s.execute(select(ChatAttachment.key, ChatAttachment.location).where(ChatAttachment.storage == storage))]
 
@@ -51,7 +51,7 @@ class ChatAttachmentRepository:
             return set(s.scalars(select(ChatAttachment.key).where(*where)))
 
     def backfill_locations(self, storage: str, location: str) -> int:
-        """Rows of `storage` written before locations were recorded get `location` (TASK-0203)."""
+        """Rows of `storage` written before locations were recorded get `location`."""
         with self.db.session() as s:
             n = s.execute(update(ChatAttachment).where(ChatAttachment.storage == storage, ChatAttachment.location.is_(None))
                           .values(location=location)).rowcount
@@ -111,10 +111,10 @@ class ChatAttachmentRepository:
             refs = [tuple(r) for r in s.execute(select(*REF).where(*where))]
             s.execute(delete(ChatAttachment).where(*where)); s.commit(); return refs
 
-    # ---- moving files between backends (TASK-0194) ----
+    # ---- moving files between backends ----
     def not_on(self, storage: str, limit: int, skip: tuple = (), location: str = "") -> list:
         """Up to `limit` files kept elsewhere than `storage` at `location` (another backend, or the same backend at an
-        older folder or bucket/prefix, TASK-0203), oldest first, with their session's workflow (for the key)."""
+        older folder or bucket/prefix, ), oldest first, with their session's workflow (for the key)."""
         elsewhere = ChatAttachment.storage != storage
         if location: elsewhere = or_(elsewhere, ChatAttachment.location != location)
         q = (select(ChatAttachment.id, ChatAttachment.session_id, ChatAttachment.mime, ChatAttachment.size, ChatAttachment.storage,

@@ -1,4 +1,4 @@
-"""Models of the public Chat API v1 (TASK-0215, REQ-0082, DEC-0078): the published chat page's HTTP routes.
+"""Models of the public Chat API v1: the published chat page's HTTP routes.
 
 They document `/api/public/v1/chat/{slug}/...` in OpenAPI and in the public spec (docs/api/openapi.public.json). The
 payloads are built by `services.public_chat_service` and `services.chat_attachment_service`; tests check that real

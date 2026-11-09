@@ -1,4 +1,4 @@
-"""Human node deadlines (TASK-0066, REQ-0041): how long a Human node waits, reminders while it waits, and what happens
+"""Human node deadlines: how long a Human node waits, reminders while it waits, and what happens
 when time runs out. The worker's maintenance loop fires them (ApprovalService.fire_deadlines).
 
 Node data `deadline` (optional): `after` ("30m", "4h", "2d"), `remind_every` (same format, optional, shorter than

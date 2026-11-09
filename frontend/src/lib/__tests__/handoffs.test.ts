@@ -1,4 +1,4 @@
-// TASK-0179: a deleted Agent node leaves no hand-off pointing at it.
+// a deleted Agent node leaves no hand-off pointing at it.
 import { describe, expect, it } from 'vitest'
 import { addHandoff, handoffEdges, handoffsOf, HANDOFF_HANDLE, isHandoffEdge, pruneHandoffs, removeHandoffs } from '@/lib/handoffs'
 
@@ -15,7 +15,7 @@ describe('hand-offs', () => {
   })
 })
 
-describe('hand-off links on the canvas (TASK-0182)', () => {
+describe('hand-off links on the canvas',  => {
   const ag = (id: string, handoffs?: any[]) => ({ id, type: 'agent', data: { label: id.toUpperCase(), ...(handoffs ? { handoffs } : {}) } })
   const nodes = () => [ag('tri', [{ target: 'bill', description: 'money' }]), ag('bill'), ag('tech'), { id: 'e', type: 'end', data: {} }]
 

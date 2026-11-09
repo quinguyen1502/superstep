@@ -1,4 +1,4 @@
-"""The AsyncAPI 3.0 document of the chat socket protocol v1 (TASK-0216, DEC-0078), built from the JSON Schema files in
+"""The AsyncAPI 3.0 document of the chat socket protocol v1, built from the JSON Schema files in
 `api/schemas/chat_ws_v1/` (the contract tests validate frames against the same files).
 
 Served at GET /asyncapi.public.yaml and committed as docs/asyncapi/chat-v1.yaml by scripts/gen_public_openapi.py.

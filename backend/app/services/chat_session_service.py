@@ -1,4 +1,4 @@
-"""Web chat (TASK-0084, REQ-0048, DEC-0052..0054): a workflow answers a conversation, one run per message.
+"""Web chat: a workflow answers a conversation, one run per message.
 
 A workflow's chat is a chat trigger of kind "web" (channel_id = place = "web"); its settings live in the trigger's
 `settings` JSON. Each message starts a `source="chat"` run (over the studio's run socket, so it streams) with
@@ -6,9 +6,9 @@ A workflow's chat is a chat trigger of kind "web" (channel_id = place = "web"); 
 ChatRunService.on_settled (reply-once per settled state, as for Slack/Telegram) hands it to answer(), which writes the
 assistant turn: the reply field, the Human node's question, or the error.
 
-Phase 1 is the studio: signed-in users with the run right. Phase 2 (REQ-0074, DEC-0067) publishes the chat at
+Phase 1 is the studio: signed-in users with the run right. Phase 2 publishes the chat at
 /c/{slug} with `access` "anonymous" or "signed_in" (services/public_chat_service.py); its sessions have `channel`
-"web" or "embed". A message may carry files uploaded before it (REQ-0077, DEC-0072): the run gets them in the chat's
+"web" or "embed". A message may carry files uploaded before it: the run gets them in the chat's
 `attachments.field` as [{id, name, type, size, text?, text_cut?}], never their bytes.
 """
 from __future__ import annotations
@@ -39,7 +39,7 @@ def access_modes(value) -> set[str]:
 
 STEPS = ("none", "labels", "full")
 ANSWERED_BY = ("visitor", "reviewer")
-FILE_FIELDS = ("files", "attachments")  # state list fields that hold chat files, not the history (TASK-0177)
+FILE_FIELDS = ("files", "attachments")  # state list fields that hold chat files, not the history
 DEFAULTS = {"access": "studio", "messages_field": "", "max_turns": 10, "steps": "labels", "retention_days": 30,
             "title": "", "intro": "", "suggestions": [], "daily_limit": 500, "embed_origins": [], "logo": "",
             "attachments": ATTACH_DEFAULTS}
@@ -52,7 +52,7 @@ def enqueue_feedback_deletes(jobs, ids) -> None:
     for fid in ids:
         if fid and not feedback_is_pending(fid): jobs.enqueue({"kind": "chat_rating_delete", "feedback_id": fid})
 COMMENT_MAX = 1000
-RATEABLE = ("ok", "error")  # a waiting question, and a cancelled run, are not an answer to rate (DEC-0070)
+RATEABLE = ("ok", "error")  # a waiting question, and a cancelled run, are not an answer to rate
 INTRO_MAX, SUGGESTIONS_MAX, SUGGESTION_MAX, DAILY_MAX, ORIGINS_MAX = 1000, 4, 120, 100_000, 10
 LOGO_MAX = 256 * 1024
 LOGO_TYPES = ((b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"))  # WebP: RIFF....WEBP (logo_of)
@@ -72,7 +72,7 @@ def origin_of(value) -> Optional[str]:
 
 
 def logo_of(value: str) -> tuple[str, bytes]:
-    """A logo sent as a data: URL (TASK-0145): its type, read from the bytes and not from the URL, and its bytes. No SVG:
+    """A logo sent as a data: URL: its type, read from the bytes and not from the URL, and its bytes. No SVG:
     an SVG can carry script. CHAT_LOGO_INVALID otherwise."""
     bad = AppError("CHAT_LOGO_INVALID", max_kb=LOGO_MAX // 1024)
     head, _, body = value.partition(",")
@@ -90,14 +90,14 @@ STEP_EVENTS = ("node_started", "node_finished", "error", "run_waiting")
 
 
 def state_record(a) -> dict:
-    """A file as the workflow sees it (DEC-0072 decision 2): no bytes; a document's text, and whether it was cut."""
+    """A file as the workflow sees it ( decision 2): no bytes; a document's text, and whether it was cut."""
     out = {"id": a.id, "name": a.name, "type": a.mime, "size": a.size}
     if a.kind == "document": out.update(text=a.text or "", text_cut=bool(a.text_cut))
     return out
 
 
 def answered_by(node_data: Optional[dict]) -> str:
-    """Who answers a Human node in a chat (DEC-0054): the person chatting (default) or a reviewer in the Approvals inbox.
+    """Who answers a Human node in a chat: the person chatting (default) or a reviewer in the Approvals inbox.
     An Agent node's tool approval is always a reviewer's: the person chatting does not approve the agent's own actions."""
     if (node_data or {}).get("agent_of"): return "reviewer"
     v = (node_data or {}).get("answered_by")
@@ -105,13 +105,13 @@ def answered_by(node_data: Optional[dict]) -> str:
 
 
 def last_handoff(events: list) -> Optional[str]:
-    """The Agent the run's last hand-off went to, if any (TASK-0181)."""
+    """The Agent the run's last hand-off went to, if any."""
     return next((a["to"] for e in reversed(events) if e.get("type") == "node_finished" and isinstance(a := e.get("agent"), dict)
                  and a.get("kind") == "handoff" and isinstance(a.get("to"), str)), None)
 
 
 def steps_of(events: list, mode: str, *, allow_browser=False) -> list[dict]:
-    """The node steps of a run as a chat shows them (DEC-0053): none, labels (node, label, type, status) or full
+    """The node steps of a run as a chat shows them: none, labels (node, label, type, status) or full
     (plus duration, input, output and errors)."""
     if mode == "none": return []
     from ..engine.browser_presentation import visitor_event, private_event
@@ -128,20 +128,20 @@ def steps_of(events: list, mode: str, *, allow_browser=False) -> list[dict]:
         if t == "node_finished": s["status"] = "ok"
         if t == "error": s["status"] = "error"
         if t == "run_waiting": s["status"] = "waiting"  # a Human node that waits for its answer
-        step = e.get("agent") if isinstance(e.get("agent"), dict) else None  # what an Agent step did (TASK-0116)
+        step = e.get("agent") if isinstance(e.get("agent"), dict) else None  # what an Agent step did
         if step and step.get("kind") == "tool" and step.get("tool"): s["label"] = f"{s['label'].rsplit(' › ', 1)[0]} › {step['tool']}"
-        if step and step.get("kind") == "handoff": s["handoff_to"] = step.get("to_label") or step.get("to")  # TASK-0182
+        if step and step.get("kind") == "handoff": s["handoff_to"] = step.get("to_label") or step.get("to")
         if mode == "full":
             for k in ("duration_ms", "input", "delta", "errors", "code", "browser"):
                 if k in e: s[k] = e[k]
             if step: s["delta"] = step
-            if step and step.get("child_run_id"): s["child_run_id"] = step["child_run_id"]  # a workflow tool's child run (TASK-0136)
+            if step and step.get("child_run_id"): s["child_run_id"] = step["child_run_id"]  # a workflow tool's child run
             if isinstance(s.get("input"), dict): s["input"] = agents.visible(s["input"])
     return list(out.values())
 
 
 def answer_text(v) -> str:
-    """A Human-node answer as the person's turn (TASK-0210): a string as typed, a form as `field: value` lines."""
+    """A Human-node answer as the person's turn: a string as typed, a form as `field: value` lines."""
     if isinstance(v, str): return v.strip() and v
     if isinstance(v, dict): return "\n".join(f"{k}: {x if isinstance(x, str) else json.dumps(x, ensure_ascii=False)}" for k, x in v.items() if x not in (None, ""))
     return "" if v is None else json.dumps(v, ensure_ascii=False)
@@ -152,9 +152,9 @@ class ChatSessionService:
                  workflows: WorkflowRepository, runs: RunRepository, access=None, jobs=None, attachments: Optional[ChatAttachmentRepository] = None,
                  files: Optional[AttachmentFiles] = None):
         self.sessions, self.triggers, self.messages, self.workflows, self.runs, self.access = sessions, triggers, messages, workflows, runs, access
-        self.attachments = attachments  # chat files (TASK-0174); None in tests that build the service by hand
-        self.files = files or (AttachmentFiles(attachments, storage.default(attachments)) if attachments is not None else None)  # their bytes (TASK-0191)
-        self.jobs = jobs  # enqueues chat_rating; None in tests that build the service by hand (TASK-0165)
+        self.attachments = attachments  # chat files; None in tests that build the service by hand
+        self.files = files or (AttachmentFiles(attachments, storage.default(attachments)) if attachments is not None else None)  # their bytes
+        self.jobs = jobs  # enqueues chat_rating; None in tests that build the service by hand
 
     # ---- settings (the workflow's Chat section) ----
     def settings(self, wid: str, uid: str) -> dict:
@@ -194,7 +194,7 @@ class ChatSessionService:
         fields = self._fields(w)
         guess = lambda names, typ: next((f["name"] for f in fields if f["name"] in names), next((f["name"] for f in fields if f.get("type") == typ), ""))  # noqa: E731
         s = {**DEFAULTS, **(json.loads(t.settings or "{}") if t else {})}
-        if t is None:  # the history: a messages-like list, never the list named for files (TASK-0177)
+        if t is None:  # the history: a messages-like list, never the list named for files
             s["messages_field"] = next((f["name"] for f in fields if f["name"] in ("messages", "history")),
                                        next((f["name"] for f in fields if f.get("type") == "list" and f["name"] not in FILE_FIELDS), ""))
         s["attachments"] = {**ATTACH_DEFAULTS, **(s.get("attachments") or {})}
@@ -243,7 +243,7 @@ class ChatSessionService:
 
     @staticmethod
     def _check_attachments(a, fields: dict, taken: set) -> dict:
-        """The attachment settings (TASK-0175): kinds, limits under the operator's ceilings, and a list field for the files."""
+        """The attachment settings: kinds, limits under the operator's ceilings, and a list field for the files."""
         def bad(field): return AppError("CHAT_SETTINGS_INVALID", field=f"attachments.{field}")
         if not isinstance(a, dict): raise bad("enabled")
         a = {**ATTACH_DEFAULTS, **{k: a[k] for k in ATTACH_DEFAULTS if k in a}}
@@ -253,7 +253,7 @@ class ChatSessionService:
         for k in ("max_files", "max_mb"):
             n = a[k]
             if isinstance(n, bool) or not isinstance(n, int) or n < 1: raise bad(k)
-            if n > hi[k]: raise AppError("CHAT_ATTACHMENT_LIMIT", field=f"attachments.{k}", **hi)  # the field marks the input (TASK-0177)
+            if n > hi[k]: raise AppError("CHAT_ATTACHMENT_LIMIT", field=f"attachments.{k}", **hi)  # the field marks the input
         enabled, field = bool(a["enabled"]), a["field"]
         if not isinstance(field, str) or (enabled and (field not in fields or fields[field].get("type") != "list" or field in taken)): raise bad("field")
         return {"enabled": enabled, "kinds": [k for k in KINDS if k in kinds], "max_files": a["max_files"], "max_mb": a["max_mb"], "field": field}
@@ -335,8 +335,8 @@ class ChatSessionService:
         return ChatEditService(self).prepare(s, t, body, lambda prep: plan(uid, {"workflow_id": s.workflow_id, "input": prep["input"]}), "full", action=action)
 
     def visitors(self, wid: str, uid: str, thumbs_down: bool = False) -> list[dict]:
-        """The published page's chats, for builders with the run right (DEC-0067 decision 8): no visitor ids or names.
-        `thumbs_down` keeps chats with a thumbs down (DEC-0070)."""
+        """The published page's chats, for builders with the run right ( decision 8): no visitor ids or names.
+        `thumbs_down` keeps chats with a thumbs down."""
         self._workflow(wid, uid, P.RUN); t = self.triggers.web(wid)
         if t is None: return []
         rows = self.sessions.list_public(t.id, thumbs_down=thumbs_down)
@@ -344,7 +344,7 @@ class ChatSessionService:
         return [{**self._session(s), "thumbs_down": s.id in down} for s in rows]
 
     def rating_totals(self, wid: str, uid: str) -> dict:
-        """Up and down counts whose rating changed in the last 7 and 30 days (DEC-0070)."""
+        """Up and down counts whose rating changed in the last 7 and 30 days."""
         self._workflow(wid, uid, P.RUN); now = time.time()
         return {"d7": self.sessions.rating_counts(wid, now - 7 * 86400), "d30": self.sessions.rating_counts(wid, now - 30 * 86400)}
 
@@ -397,7 +397,7 @@ class ChatSessionService:
         fids = self.sessions.feedback_ids_for_session(sid)
         refs = self.files.refs_of_sessions([sid]) if self.files is not None else []
         self.sessions.delete(sid)
-        if self.files is not None: self.files.drop(refs)  # after the row (TASK-0191)
+        if self.files is not None: self.files.drop(refs)  # after the row
         enqueue_feedback_deletes(self.jobs, fids)
         return {"ok": True}
 
@@ -409,7 +409,7 @@ class ChatSessionService:
 
     def prepare(self, s: ChatSession, t: WorkflowChatTrigger, message, attachment_ids=None, *, turns=None, edit_operation_id=None) -> dict:
         """The run input of a message in session `s`, checked: the input field, the history in the messages field, and
-        the files sent with it in the attachments field (TASK-0175)."""
+        the files sent with it in the attachments field."""
         sid = s.id
         if not t.enabled: raise AppError("CHAT_NOT_ENABLED")
         edit = self.sessions.branch_edit(sid) if getattr(s, "source_session_id", None) else None
@@ -436,7 +436,7 @@ class ChatSessionService:
         if (mf := st.get("messages_field")): inp[mf] = self.history(sid, int(st.get("max_turns") or DEFAULTS["max_turns"]), turns=last) + [{"role": "user", "content": text}]
         a = settings_of(st)
         if a["enabled"] and a["field"] in fields: inp[a["field"]] = [state_record(x) for x in files]
-        if s.active_agent:  # the agent a hand-off left the conversation with (TASK-0181); gone or no longer a target: the entry
+        if s.active_agent:  # the agent a hand-off left the conversation with; gone or no longer a target: the entry
             if s.active_agent in handoffs.continues(self._graph(w)): inp[agents.START_INPUT] = s.active_agent
             else: self.sessions.set_fields(sid, active_agent=None); s.active_agent = None
         if size({k: v for k, v in inp.items() if k != a["field"]}) > config.input_max(): raise AppError("RUN_INPUT_TOO_LARGE", max_kb=config.input_max() // 1024)
@@ -457,8 +457,8 @@ class ChatSessionService:
         return rows
 
     def history(self, sid: str, max_turns: int, *, turns=None) -> list[dict]:
-        """The last `max_turns` exchanges as [{role, content}] (DEC-0052): the person's messages and the finished answers.
-        A Human-node question answered in the chat stays before its answer (TASK-0210), so the roles alternate; an
+        """The last `max_turns` exchanges as [{role, content}]: the person's messages and the finished answers.
+        A Human-node question answered in the chat stays before its answer, so the roles alternate; an
         exchange starts at each of the person's messages and is cut whole."""
         ts = self._turns(sid) if turns is None else turns
         answered = {x.run_id for a, x in zip(ts, ts[1:]) if a.status == "waiting" and x.role == "user"}  # the answer follows its question
@@ -484,7 +484,7 @@ class ChatSessionService:
         self.triggers.set_fields(t.id, last_message=now, last_run_id=rid)
 
     def record_answer(self, sid: str, rid: str, text) -> None:
-        """The person's answer to a Human node, once the resume is planned (TASK-0209): saved as their turn, so it stays in
+        """The person's answer to a Human node, once the resume is planned: saved as their turn, so it stays in
         the thread after the reply arrives and the question above it is no longer the last (waiting) turn."""
         text = answer_text(text)
         if not text: return  # a resume without a response (steps, until) says nothing
@@ -508,7 +508,7 @@ class ChatSessionService:
             from ..engine.browser_presentation import reply
             v = reply((res.get("final_state") or {}).get(t.reply_field))
             turn.text = v if isinstance(v, str) else ("" if v is None else json.dumps(v, ensure_ascii=False))
-            if (to := last_handoff(json.loads(r.events or "[]"))): self.sessions.set_fields(sid, active_agent=to)  # TASK-0181
+            if (to := last_handoff(json.loads(r.events or "[]"))): self.sessions.set_fields(sid, active_agent=to)
         elif r.status == "waiting":
             ev = next((e for e in reversed(json.loads(r.events or "[]")) if e.get("type") == "run_waiting"), {})
             node = (res.get("waiting") or {}).get("node") or ev.get("node")
@@ -521,8 +521,8 @@ class ChatSessionService:
         self.sessions.add_turn(turn)
 
     def file_loader(self, owner: str):
-        """The run port that reads a chat file's bytes (TASK-0176): only files of chats of workflows that `owner` owns,
-        the resource owner of the run (DEC-0023)."""
+        """The run port that reads a chat file's bytes: only files of chats of workflows that `owner` owns,
+        the resource owner of the run."""
         def load(aid: str):
             a = self.attachments.get(aid) if self.attachments is not None and isinstance(aid, str) else None
             s = self.sessions.get(a.session_id) if a is not None else None
@@ -532,8 +532,8 @@ class ChatSessionService:
 
     # ---- retention (the worker's maintenance loop) ----
     def cleanup(self) -> int:
-        """Deletes sessions idle for longer than their chat's retention_days (DEC-0052), with their files, and files
-        uploaded but never sent within an hour (TASK-0174)."""
+        """Deletes sessions idle for longer than their chat's retention_days, with their files, and files
+        uploaded but never sent within an hour."""
         n, now = 0, time.time()
         if self.files is not None: self.files.sweep_stale(now - UNSENT_TTL); self.files.heartbeat(now)
         for t in self.triggers.webs():

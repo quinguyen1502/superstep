@@ -1,4 +1,4 @@
-"""Decision nodes (TASK-0050, DEC-0039): ask TypeSafe's Jev typed questions about the state.
+"""Decision nodes: ask TypeSafe's Jev typed questions about the state.
 
 Node data: `credential_id` (a TypeSafe credential), `model` (default `jev-latest`), `text` (a template; exactly one
 `{{state.x}}` sends the value with its type, e.g. an object), `questions`, and optional `output_field` (an object field
@@ -68,7 +68,7 @@ def mock(body: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def ask(body: Dict[str, Any], cred: Optional[Dict[str, Any]], report: Callable[[Dict[str, Any]], None], offline: bool = False) -> Dict[str, Any]:
-    if offline: cred = None  # test run with the offline mock (TASK-0067)
+    if offline: cred = None  # test run with the offline mock
     elif cred is None and (key := os.environ.get("TYPESAFE_API_KEY")):
         cred = {"provider": "typesafe", "api_key": key, "base_url": os.environ.get("TYPESAFE_BASE_URL")}
     if cred is None:
