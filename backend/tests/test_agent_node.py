@@ -1,4 +1,4 @@
-"""Agent node (TASK-0116, REQ-0072, DEC-0063): expansion into model and tool steps, the four tool sources, the round
+"""Agent node: expansion into model and tool steps, the four tool sources, the round
 limit, the offline mock, the side-effect ledger per tool call, and tool calling through the providers."""
 import http.server, json, threading
 import pytest, respx
@@ -63,7 +63,7 @@ def test_validation():
 
 def test_steps_are_never_cached():
     """The node's cache applies to the entry step only: a cached tool step would skip the call on a run with the same
-    state (TASK-0116 review fix)."""
+    state."""
     x = agents.expand(wf(cache_ttl=60, timeout=30, retry={"max_attempts": 2, "initial_interval": 1}))
     data = {n["id"]: n["data"] for n in x["nodes"]}
     slots = [k for k in data if k.startswith("ag/__tool/")]
@@ -296,7 +296,7 @@ def test_saved_workflow_run_and_fork_inside_the_loop(monkeypatch):
 
 
 def test_chat_steps_show_tool_calls_by_name(monkeypatch):
-    """TASK-0118: a chat lists an Agent's tool calls ("Helper › lookup_order"); model calls only in the full mode; the
+    """a chat lists an Agent's tool calls ("Helper › lookup_order"); model calls only in the full mode; the
     entry and exit never; the full mode shows what the step did and leaves the conversation out."""
     from app.services.chat_session_service import steps_of
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)

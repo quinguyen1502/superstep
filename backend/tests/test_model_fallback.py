@@ -115,7 +115,7 @@ def test_non_chat_credential_is_rejected_and_templates_clear_alternate_reference
         model_policy.run(DATA, CREDS["primary"], resolve, lambda *_: "must not call", None, lambda _: None)
     clean = sanitize(graph())
     assert clean["nodes"][1]["data"]["fallback"] == {"credential_id": "", "model": "second"}
-    for export in (to_python, to_typescript):  # TASK-0264: exported with the fallback model name, never a credential id
+    for export in (to_python, to_typescript):  #: exported with the fallback model name, never a credential id
         code = export(graph(), "example").code
         assert '"second"' in code and "backup" not in code and "primary" not in code.replace("primary model", "").replace("primary mock", "")
 

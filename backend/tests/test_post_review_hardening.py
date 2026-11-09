@@ -1,4 +1,4 @@
-"""TASK-0207: the three points of the re-review after #258..#261. Request bodies are bounded outside the upload routes
+"""the three points of the re-review after #258..#261. Request bodies are bounded outside the upload routes
 (nginx and the app), an approved CLI sign-in that is never collected leaves no usable token, and a row's recorded S3
 location is enough to read it after the s3 settings are removed."""
 import asyncio, os, re, time

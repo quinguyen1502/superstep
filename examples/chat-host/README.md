@@ -100,6 +100,6 @@ versions. See the [0.12.0 release notes](../../CHANGELOG.md) for the integrated
 scope. The WebView token bridge is documented. The React Native package remains
 deferred. Release tags and package publication follow the owner-approved release process.
 
-TASK-0227 was resumed by the owner on 2026-11-08. `examples/react-native` calls
+`examples/react-native` calls
 this host's `POST /api/auth/chat-token`. That example is not part of the 0.12.0
 publication, and starting it does not publish `@superstep/react-native`.

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-// TASK-0260: contextual handbook links in Settings → Channels (fixed published handbook, DEC-0086 option A).
+// Contextual handbook links in Settings → Channels (fixed published handbook).
 const BASE = 'https://quinguyen1502.github.io/superstep/'
 
 async function login(page: Page) {

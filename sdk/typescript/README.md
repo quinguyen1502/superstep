@@ -167,7 +167,7 @@ getToken, WebSocket: YourSocketAdapter })`). The adapter needs `readyState`,
 `send`, `close`, `addEventListener` and `removeEventListener`; message events
 must carry JSON text in `data`. `fetch`, `Blob` and `FormData` are injectable.
 The SDK does not install a socket adapter or DOM polyfills. Actual device
-testing and native UI belong to TASK-0227; the current contract suite simulates
+testing and native UI live in the React Native example; the current contract suite simulates
 a native runtime without DOM/Buffer globals.
 
 ## Configure

@@ -1,4 +1,4 @@
-"""Tiny MCP server for tests and the e2e/demo stack (TASK-0013): stdio (default) or Streamable HTTP (`http PORT`).
+"""Tiny MCP server for tests and the e2e/demo stack: stdio (default) or Streamable HTTP (`http PORT`).
 
 Tools: add(a, b) -> structured {"sum"}, echo(text), env(name) -> value of an environment variable (sandbox checks),
 fail() -> isError, slow(seconds). HTTP mode answers tools/call as an SSE stream to exercise that path."""
@@ -45,7 +45,7 @@ class H(BaseHTTPRequestHandler):
 
     def do_POST(self):
         # read the body first, also for a 401: closing with it unread resets the connection, and the client may then
-        # see a ReadError instead of the 401 (TASK-0130)
+        # see a ReadError instead of the 401
         raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
         if os.environ.get("MCP_REQUIRE_TOKEN") and self.headers.get("Authorization") != f"Bearer {os.environ['MCP_REQUIRE_TOKEN']}":
             self.send_response(401); self.end_headers(); return

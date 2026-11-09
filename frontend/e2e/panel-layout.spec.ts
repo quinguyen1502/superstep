@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
 import { expectRowAligned, expectBaselineAligned } from './helpers/alignment'
-// TASK-0085: the bottom panel (Run · Test · Code; Run = input | logs, a run picker and "View all") and the Chat side
+// the bottom panel (Run · Test · Code; Run = input | logs, a run picker and "View all") and the Chat side
 // panel (header button or Shift+C, 340–760px, width and open state remembered, fullscreen with Esc, Config beside it).
 const STATE = [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }]
 const WF = (name: string) => ({ name, state: STATE,

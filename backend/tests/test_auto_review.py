@@ -1,4 +1,4 @@
-"""TASK-0187 (REQ-0081, DEC-0075): AI review before people are asked. Rules, the daily cap, the judge and its
+"""AI review before people are asked. Rules, the daily cap, the judge and its
 fail-safe paths, suggest mode, the audit, the owner-only notification and the kill switches."""
 import json, time, uuid
 import pytest

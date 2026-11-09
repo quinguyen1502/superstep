@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, FlaskConical, Info, Loader2, Lock, ShieldAlert } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { HandbookLink } from '@/components/handbook-link'
 import { Button } from '@/components/ui/button'
 import { JsonView } from '@/components/json-view'
 import { CodeEditor, type CodeLanguageId } from '@/components/code-editor'
@@ -49,9 +50,11 @@ export function CodeSettings({ value, onChange, runtime, canWrite, editable, inp
     {runtime?.code_runtime === 'subprocess' && <Alert variant="warning" id="code-not-isolated"><ShieldAlert />
       <AlertDescription className="text-xs">{t('code.notIsolated')}</AlertDescription></Alert>}
     {runtime && !ready && <Alert variant="warning" id="code-runtime-off"><AlertTriangle />
-      <AlertDescription className="text-xs">{runtime.code_runtime === 'off' ? t(codeOffKey(runtime))
+      <AlertDescription className="space-y-1 text-xs"><p>{runtime.code_runtime === 'off' ? t(codeOffKey(runtime))
         : !info ? t('code.languageOff', { language: t(`code.languages.${language}`) })
-        : t('code.unavailable', { problem: info.problem || runtime.problem || '' })}</AlertDescription></Alert>}
+        : t('code.unavailable', { problem: info.problem || runtime.problem || '' })}</p>
+        <p>{t('code.runtimeHelp')}{' '}<HandbookLink id="code-runtime-guide" page="operate/code-runtime" label={t('docs.setupGuide')} ariaLabel={t('docs.codeRuntimeAria')} /></p>
+      </AlertDescription></Alert>}
     {kept && <p className="text-[11px] text-muted-foreground" id="code-language-kept">{t('code.languageKept', { language: t(`code.languages.${language}`) })}</p>}
     {language === 'typescript' && <div className="space-y-1" id="code-state-type-box">
       <div className="text-[11px] font-medium text-muted-foreground">{t('code.stateType')}</div>

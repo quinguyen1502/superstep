@@ -18,7 +18,7 @@ from tests.test_browser_run_sessions import scoped_service
 
 
 def enable_mutating_approval(service, connection_id='browser'):
-    """Accepted DEC-0085: mutating approval default OFF; tests that expect waits opt in."""
+    """Mutating approval defaults OFF; tests that expect waits opt in."""
     row=service.mcp.repo.get(connection_id)
     settings=json.loads(row.settings or '{}')
     settings.setdefault('allowed_origins',['https://example.com'])

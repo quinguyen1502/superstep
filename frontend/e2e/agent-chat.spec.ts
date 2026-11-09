@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
-// TASK-0085 (REQ-0048 phase 1): the editor's Chat side panel. Multi-turn memory through the conversation field, a Human node
+// the editor's Chat side panel. Multi-turn memory through the conversation field, a Human node
 // answered by the person chatting (and one left to a reviewer), and the step visibility modes.
 const STATE = [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }, { name: 'ok', type: 'string' }]
 const ECHO = (name: string) => ({ name, state: STATE,
@@ -19,7 +19,7 @@ async function openChat(page: Page, wid: string) {
 }
 async function say(page: Page, text: string) {
   // the composer takes a message once the last one has settled (its saved answer read back): until then it shows Stop
-  // and Enter does nothing, so a message typed while the reply is still being read would be lost (TASK-0209)
+  // and Enter does nothing, so a message typed while the reply is still being read would be lost
   await expect(page.locator('#chat-stop')).toHaveCount(0)
   await page.locator('#chat-input').fill(text); await page.keyboard.press('Enter')
   await expect(page.getByTestId('chat-mine').last()).toHaveText(text)
@@ -68,7 +68,7 @@ test('the person chatting answers a Human node in the chat; a reviewer step wait
   await expect(page.getByTestId('chat-mine').last()).toHaveText('approved')
   await expect(page.getByTestId('chat-answer').last()).toContainText('Answer approved', { timeout: 20_000 })
   await expect(page.locator('#chat-confirmation')).toHaveCount(0)
-  await expect(page.locator('#chat-stop')).toHaveCount(0)   // settled: the saved thread keeps the answer (TASK-0209)
+  await expect(page.locator('#chat-stop')).toHaveCount(0)   // settled: the saved thread keeps the answer
   await expect(page.getByTestId('chat-mine')).toHaveText(['refund A1', 'approved'])
 
   // a typed answer goes through the message box (Confirmation pattern + Prompt Input)

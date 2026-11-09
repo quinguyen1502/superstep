@@ -1,4 +1,4 @@
-"""TASK-0269 (REQ-0089, DEC-0088): the exported MCP adapter, executed in Python and TypeScript (Deno) against a local
+"""the exported MCP adapter, executed in Python and TypeScript (Deno) against a local
 Streamable HTTP MCP server (no external call). Configured by <PREFIX>_URL / <PREFIX>_HEADERS only; unconfigured it
 is an announced offline mock, or an error in a live run."""
 import json, os, subprocess, sys, threading, uuid

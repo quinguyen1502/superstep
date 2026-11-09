@@ -1,4 +1,4 @@
-"""TASK-0193 (REQ-0080, DEC-0074): the `s3` backend. Against MinIO (CI job "Attachment storage on MinIO", or any
+"""the `s3` backend. Against MinIO (CI job "Attachment storage on MinIO", or any
 S3-compatible endpoint in STUDIO_TEST_S3_*) it passes the shared contract and serves chat files end to end; offline, its
 errors never carry the endpoint, bucket, key or credentials."""
 import os, uuid

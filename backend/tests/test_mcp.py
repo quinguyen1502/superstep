@@ -1,4 +1,4 @@
-"""TASK-0013: MCP client (stdio + Streamable HTTP), server registry with encrypted secrets, discovery, MCP tool node."""
+"""MCP client (stdio + Streamable HTTP), server registry with encrypted secrets, discovery, MCP tool node."""
 import os, socket, subprocess, sys, time, uuid
 os.environ.pop("OPENAI_API_KEY", None)
 import pytest

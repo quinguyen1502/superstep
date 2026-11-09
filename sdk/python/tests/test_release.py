@@ -1,4 +1,4 @@
-"""install.sh and the shared server/CLI version (TASK-0156)."""
+"""install.sh and the shared server/CLI version."""
 import os
 import re
 import stat
@@ -140,7 +140,7 @@ def test_handbook_cli_pages_share_heading_levels():
 
     en = ROOT / "handbook" / "docs" / "en" / "operate" / "cli.md"
     vi = ROOT / "handbook" / "docs" / "vi" / "operate" / "cli.md"
-    # The rule (TASK-0156) is that the en and vi pages share one heading structure: a single
+    # The rule is that the en and vi pages share one heading structure: a single
     # page title, then sections without skipped levels. The section count grows with the CLI.
     en_levels, vi_levels = levels(en), levels(vi)
     assert en_levels == vi_levels
@@ -154,6 +154,6 @@ def test_handbook_cli_pages_share_heading_levels():
 
 
 def test_sstep_is_an_alias_of_superstep():
-    """TASK-0185: the short command runs the same entry point."""
+    """the short command runs the same entry point."""
     text = (ROOT / "sdk" / "python" / "pyproject.toml").read_text()  # no tomllib on Python 3.9
     assert 'superstep = "superstep.cli:main"' in text and 'sstep = "superstep.cli:main"' in text

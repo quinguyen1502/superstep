@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0008: save creates versions, diff two versions, restore an old one, history shows the version that ran.
+// save creates versions, diff two versions, restore an old one, history shows the version that ran.
 test('versions: save, diff, restore, run tagged with version', async ({ page }) => {
   await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
@@ -17,7 +17,7 @@ test('versions: save, diff, restore, run tagged with version', async ({ page }) 
     const gone = wf.nodes[wf.nodes.length - 1].id
     await page.request.post('/api/workflows', { headers: H, data: { ...wf, nodes: wf.nodes.slice(0, -1), edges: wf.edges.filter((e: any) => e.source !== gone && e.target !== gone) } })
     await page.reload()
-    await nameInput.fill(`Unsaved ${Date.now()}`)  // unsaved edit: the restore confirm must warn (TASK-0019)
+    await nameInput.fill(`Unsaved ${Date.now()}`)  // unsaved edit: the restore confirm must warn
     await page.locator('#more-btn').click(); await page.locator('#versions-btn').click()
     await expect(page.locator('[data-testid=version-row]')).toHaveCount(3)
     await expect(page.locator('#version-diff')).toContainText(gone)  // default compare: v2 → v3

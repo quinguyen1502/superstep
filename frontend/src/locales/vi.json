@@ -353,7 +353,9 @@
     "requiredEnv": "Repo khai báo biến môi trường:",
     "requiredEnvHint": "đặt chúng trong biến môi trường của máy chủ để chạy.",
     "create": "Tạo workflow",
-    "start": "Import"
+    "start": "Import",
+    "disabled": "Nhập repo đang tắt trên máy chủ này (STUDIO_ENABLE_IMPORT=0).",
+    "disabledHelp": "Bật STUDIO_ENABLE_IMPORT=1 trên API Studio để nhập repo GitHub hoặc file zip. Import mặc định tắt."
   },
   "creds": {
     "button": "Credentials",
@@ -1903,7 +1905,8 @@
     "languageNotReady": "Chưa sẵn sàng",
     "adminPackages": "Package: {{packages}}",
     "adminNoPackages": "Không có package thêm",
-    "demoOff": "Node Code đang tắt trong bản demo công khai này. Hãy tự triển khai Superstep để dùng."
+    "demoOff": "Node Code đang tắt trong bản demo công khai này. Hãy tự triển khai Superstep để dùng.",
+    "runtimeHelp": "Cách bật chế độ Code và chọn runtime:"
   },
   "inbox": {
     "title": "Duyệt",
@@ -2709,9 +2712,9 @@
     }
   },
   "browserSettings": {
-    "connectionHelp": "Không cần URL khởi đầu. URL đến từ lần gọi công cụ hoặc input của workflow. Khám phá chỉ liệt kê công cụ; runtime kiểm tra nhà cung cấp cách ly khi run bắt đầu.",
+    "connectionHelp": "Không gắn URL khởi đầu trên kết nối — URL đến từ chat, state workflow hoặc công cụ tìm kiếm. Discovery liệt kê mọi công cụ trình duyệt; upload, download và evaluate vẫn tắt cho đến khi bạn bật bên dưới. Run cần cổng runtime.",
     "webHelp": "Kết nối tìm kiếm/đọc web riêng. Không dùng trạng thái đăng nhập, cookie hay proxy của trình duyệt.",
-    "disabled": "Quản trị đã tắt kết nối trình duyệt và web. Khoá đã lưu vẫn bị ẩn; hãy bật tính năng trên máy chủ trước khi chỉnh sửa hoặc khám phá.",
+    "disabled": "Kết nối browser/web đang tắt trên máy chủ này (STUDIO_ENABLE_BROWSER=0). Cài đặt vẫn hiện để bạn chuẩn bị kết nối; hãy bật tính năng trước khi lưu hoặc khám phá công cụ.",
     "providers": {
       "local": "Trình duyệt cách ly trên máy chủ (Docker)",
       "browserless": "Browserless (bộ điều khiển Superstep tự lưu trữ)"
@@ -2728,7 +2731,7 @@
       "basic": "Xác thực HTTP Basic"
     },
     "proxyHelp": "Áp dụng cho toàn bộ lưu lượng trình duyệt trong phiên. Quản trị phải cho phép tuyến tuỳ chỉnh/mặc định. Lỗi proxy không chuyển sang kết nối trực tiếp. Tìm kiếm/đọc web dùng kết nối riêng.",
-    "originHelp": "Ít nhất một địa chỉ gốc http(s) chính xác mỗi dòng, không có đường dẫn hay ký tự đại diện. Kết nối trình duyệt bắt buộc whitelist không rỗng; địa chỉ nội bộ vẫn bị chặn theo chính sách mạng.",
+    "originHelp": "Bắt buộc: ít nhất một origin http(s) đúng trên mỗi dòng, không path hay wildcard. Danh sách trống không lưu được. Địa chỉ nội bộ vẫn bị chặn bởi chính sách mạng.",
     "profile": "Hồ sơ đăng nhập cá nhân",
     "profileHelp": "Trạng thái đăng nhập là riêng tư và chỉ dùng cho các địa chỉ HTTPS đã khai báo. Mỗi run có ngữ cảnh mới; trang web không thể đổi hồ sơ đã chọn.",
     "orgProfileHelp": "Hồ sơ đăng nhập chỉ dùng với kết nối cá nhân, không dùng với kết nối tổ chức.",
@@ -2800,11 +2803,15 @@
     "range": "Khoảng cho phép: {{min}}–{{max}}",
     "help": {
       "require_mutating_approval": "Khi tắt (mặc định), click/fill/upload/download/evaluate chạy ngay. Navigate, snapshot, extract và screenshot không bao giờ chờ.",
-      "allow_evaluate_js": "Ẩn evaluate cho đến khi bật. Kết quả vẫn không đáng tin cậy.",
-      "allow_upload": "Ẩn upload cho đến khi bật.",
-      "allow_download": "Ẩn download cho đến khi bật. Tải xuống vẫn giới hạn kích thước và loại."
+      "allow_evaluate_js": "Mặc định tắt. Bật để Agent dùng evaluate trên kết nối này (chỉ ngữ cảnh trang; kết quả không đáng tin). Công cụ vẫn hiện trong cấp quyền Agent.",
+      "allow_upload": "Mặc định tắt. Bật để Agent dùng upload trên kết nối này (chỉ tệp đính kèm/workspace được phép).",
+      "allow_download": "Mặc định tắt. Bật để Agent dùng download trên kết nối này (giới hạn dung lượng và loại)."
     },
-    "safety": "Công tắc an toàn"
+    "safety": "Công tắc an toàn",
+    "disabledHelp": "Cách bật kết nối trình duyệt:",
+    "runtimeOff": "Chưa bật chạy trình duyệt (STUDIO_ENABLE_BROWSER_RUNTIME đang tắt). Bạn vẫn tạo được kết nối và cấp công cụ; run sẽ không mở Chromium cho đến khi bật cổng runtime.",
+    "runtimeOffHelp": "Cách bật runtime và provider trình duyệt:",
+    "localHelp": "Nhà cung cấp cục bộ cần image Docker worker và gateway trên máy này. Các bước build nằm trong handbook."
   },
   "browserTools": {
     "urlSource": "Nguồn URL",
@@ -2820,8 +2827,8 @@
     },
     "urlRequired": "Nhập URL hoặc tham chiếu state bắt buộc.",
     "bindings": "Nguồn URL cho trình duyệt và đọc web",
-    "effectApproval": "Click và fill luôn cần người duyệt đã xác minh. Tin nhắn model, nội dung trang và duyệt tự động không thể cấp quyền.",
-    "grantHelp": "Dòng này chỉ cấp công cụ đã chọn. Chính sách trình duyệt và giới hạn phiên đến từ kết nối đã lưu; nguồn URL nằm ở Dữ liệu.",
+    "effectApproval": "Click và fill luôn cần duyệt trên kết nối trình duyệt khi các công cụ này buộc duyệt thao tác.",
+    "grantHelp": "Cấp từng công cụ trình duyệt cho Agent này. Upload, download và evaluate còn cần bật toggle tương ứng trên kết nối. Máy chủ phải bật runtime trước khi run mở trình duyệt — xem handbook.",
     "executionHelp": "Các thao tác trên cùng kết nối trong Agent này dùng chung phiên có thứ tự. Áp dụng giới hạn kết nối. Phiên bị mất, hết hạn hoặc kết quả chưa xác định sẽ dừng; retry và cache của node không gửi lại thao tác. Quan sát lại và xin quyết định mới của người duyệt khi phù hợp.",
     "limits": "{{actions}} thao tác · {{timeout}} ms/thao tác · {{idle}} giây chờ rảnh · Thời hạn tối đa {{lifetime}} giây",
     "recipe": "Recipe trình duyệt dùng lại",
@@ -2852,13 +2859,17 @@
     "loadCapture": "Tải ảnh riêng tư",
     "sequence": "Thao tác {{sequence}} · Thế hệ phiên {{generation}}",
     "pageGeneration": "Thế hệ trang {{generation}}",
-    "untrustedObservation": "Nội dung trang có giới hạn và không đáng tin cậy. Chỉ hiển thị văn bản, không thực thi."
+    "untrustedObservation": "Nội dung trang có giới hạn và không đáng tin cậy. Chỉ hiển thị văn bản, không thực thi.",
+    "gatedToolHelp": "Công cụ vẫn được liệt kê để bạn lên kế hoạch Agent. Hãy bật toggle tương ứng trên kết nối (và runtime máy chủ) trước khi run dùng được."
   },
   "docs": {
     "learnMore": "Hướng dẫn",
     "exposeLocalAria": "Hướng dẫn mở studio cục bộ ra internet",
     "setupGuide": "Hướng dẫn thiết lập",
     "setupGuideAria": "Hướng dẫn thiết lập {{platform}}",
-    "newTab": "mở trong tab mới"
+    "newTab": "mở trong tab mới",
+    "browserGuideAria": "Mở handbook công cụ trình duyệt",
+    "importGuideAria": "Mở handbook nhập repo",
+    "codeRuntimeAria": "Mở handbook runtime code"
   }
 }

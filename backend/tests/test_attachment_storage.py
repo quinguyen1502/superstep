@@ -1,5 +1,5 @@
-"""TASK-0191 (REQ-0080, DEC-0074): the attachment storage port. Every backend passes one contract; the service writes
-the object before the row and deletes it after, streams downloads with the DEC-0072 headers, and sweeps orphans."""
+"""the attachment storage port. Every backend passes one contract; the service writes
+the object before the row and deletes it after, streams downloads with the chat-attachment download headers, and sweeps orphans."""
 import time, uuid
 import pytest
 from app.api import deps

@@ -1,4 +1,4 @@
-"""TASK-0256: persisted-history invalidations keep the existing workflow/run visibility boundary."""
+"""persisted-history invalidations keep the existing workflow/run visibility boundary."""
 import asyncio
 import json
 import os

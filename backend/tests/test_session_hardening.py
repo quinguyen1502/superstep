@@ -1,4 +1,4 @@
-"""TASK-0045: sign-in lockout, the HttpOnly session cookie (CSRF), password reset links, and no demo user in production."""
+"""sign-in lockout, the HttpOnly session cookie (CSRF), password reset links, and no demo user in production."""
 import time, uuid
 import pytest
 from fastapi.testclient import TestClient

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, N, newWorkflow } from './helpers'
-// TASK-0056: with STUDIO_CODE_RUNTIME=subprocess every place says the code is not isolated: the canvas node, the Code
+// with STUDIO_CODE_RUNTIME=subprocess every place says the code is not isolated: the canvas node, the Code
 // config, the mode picker, the trace row, a run warning, run history, the admin card and the audit log.
 // Run with E2E_CODE_RUNTIME=subprocess (playwright.config.ts passes it to the API); skips in the default Docker mode.
 const WF = (name: string) => ({ name, state: [{ name: 'message', type: 'string' }, { name: 'out', type: 'string' }],

@@ -1,4 +1,4 @@
-"""TASK-0030 follow-up: live LLM tokens in the run stream, registry embeddings for knowledge bases, credential edit (respx)."""
+"""follow-up: live LLM tokens in the run stream, registry embeddings for knowledge bases, credential edit (respx)."""
 import json, uuid
 import httpx, pytest, respx
 from fastapi.testclient import TestClient

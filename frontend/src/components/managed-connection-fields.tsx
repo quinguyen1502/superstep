@@ -11,8 +11,8 @@ import type { ManagedAdapter, ManagedSettings, McpSecretInput } from '@/lib/mcp'
 import { browserDefaults, webDefaults, isBrowserAdapter, type ConnectionErrors } from '@/lib/browser-settings'
 import { BrowserConnectionFields } from './browser-connection-fields'
 
-export function ManagedConnectionFields({ adapters, adapter, settings, secrets, fixed, idp, onChange, scope, errors = {} }: {
-  adapters: ManagedAdapter[]; adapter: string; settings: ManagedSettings; secrets: McpSecretInput[]; fixed: boolean; idp: string; scope: 'user' | 'org'; errors?: ConnectionErrors
+export function ManagedConnectionFields({ adapters, adapter, settings, secrets, fixed, idp, onChange, scope, errors = {}, runtimeEnabled = false }: {
+  adapters: ManagedAdapter[]; adapter: string; settings: ManagedSettings; secrets: McpSecretInput[]; fixed: boolean; idp: string; scope: 'user' | 'org'; errors?: ConnectionErrors; runtimeEnabled?: boolean
   onChange: (patch: { adapter?: string; settings?: ManagedSettings; secrets?: McpSecretInput[] }) => void
 }) {
   const { t } = useTranslation(); const [channels, setChannels] = useState<Channel[]>([])
@@ -27,7 +27,7 @@ export function ManagedConnectionFields({ adapters, adapter, settings, secrets, 
         onChange({ adapter: value, settings: value === 'browser' ? browserDefaults() : value === 'web' ? webDefaults() : Object.fromEntries(Object.entries(spec?.settings_schema.properties || {}).map(([key, property]) => [key, property.default ?? ''])), secrets: [] })
       }}><SelectTrigger id={`${idp}-adapter`} className="w-full"><SelectValue placeholder={t('common.choose')} /></SelectTrigger>
         <SelectContent>{adapters.map(value => <SelectItem key={value.id} value={value.id}><ChannelLogo kind={value.id} />{t(`managedTools.adapters.${value.id}`)}</SelectItem>)}</SelectContent></Select></div>
-    {isBrowserAdapter(adapter) ? <BrowserConnectionFields adapter={adapter as 'browser' | 'web'} settings={settings} secrets={secrets} scope={scope} idp={idp} errors={errors} available={!!definition} onChange={onChange} /> : <>
+    {isBrowserAdapter(adapter) ? <BrowserConnectionFields adapter={adapter as 'browser' | 'web'} settings={settings} secrets={secrets} scope={scope} idp={idp} errors={errors} available={!!definition} runtimeEnabled={runtimeEnabled} onChange={onChange} /> : <>
     <div className="grid gap-3 sm:grid-cols-2">{Object.entries(definition?.settings_schema.properties || {}).map(([field, property]) => <div key={field} className={property.format === 'json' ? 'space-y-1.5 sm:col-span-2' : 'space-y-1.5'}>
       <Label htmlFor={`${idp}-${field}`}>{t(`managedTools.fields.${field}`)}</Label>
       {property.resource_kind ? <Select value={String(settings[field] ?? '')} onValueChange={value => set(field, value)}>

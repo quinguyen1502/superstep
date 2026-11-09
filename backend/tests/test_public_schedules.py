@@ -1,4 +1,4 @@
-"""Public schedule routes (TASK-0278): a workflow token manages schedules of its own workflow."""
+"""Public schedule routes: a workflow token manages schedules of its own workflow."""
 import uuid
 from fastapi.testclient import TestClient
 from app.main import app

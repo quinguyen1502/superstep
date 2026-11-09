@@ -1,4 +1,4 @@
-"""TASK-0046: cron expressions, schedule API, and the scheduler in the run worker."""
+"""cron expressions, schedule API, and the scheduler in the run worker."""
 import time, uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo

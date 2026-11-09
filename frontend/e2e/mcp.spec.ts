@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
 import path from 'path'
-// TASK-0013: register a stdio MCP server (the demo fixture), discover its tools, use one in an MCP tool node.
+// register a stdio MCP server (the demo fixture), discover its tools, use one in an MCP tool node.
 async function login(page: Page) {
   await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)

@@ -1,4 +1,4 @@
-"""DEC-0084: isolated branches, durable intent admission and owned file lifecycle."""
+"""isolated branches, durable intent admission and owned file lifecycle."""
 import json, os, uuid
 from concurrent.futures import ThreadPoolExecutor
 import pytest

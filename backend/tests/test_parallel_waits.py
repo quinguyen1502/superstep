@@ -1,4 +1,4 @@
-"""Waits inside one parallel tool wave (TASK-0158, REQ-0076). The other calls finish, and the run resumes once."""
+"""Waits inside one parallel tool wave. The other calls finish, and the run resumes once."""
 import pytest
 from app.engine.effects import Effects
 from app.engine.ports import Ports

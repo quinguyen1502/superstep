@@ -1,4 +1,4 @@
-"""TASK-0067: workflow test cases and suite runs. Checks, scripted Human answers, no side effects (e-mail, channel,
+"""workflow test cases and suite runs. Checks, scripted Human answers, no side effects (e-mail, channel,
 notification), the mock model option, one suite at a time, cancel, permissions, limits and the run history filter."""
 import copy, time, uuid
 import pytest
@@ -71,7 +71,7 @@ def test_checks_evaluate_every_kind():
 
 
 def test_tool_called_check():
-    """TASK-0119: whether an Agent node's model called a tool and the call ran, read from the step summaries of the run."""
+    """whether an Agent node's model called a tool and the call ran, read from the step summaries of the run."""
     def step(tool, status="ok", result="done", node="ag/__tool"):
         return {"type": "node_finished", "node": node, "agent": {"kind": "tool", "tool": tool, "status": status, "result": result}}
     run = {"status": "ok", "final_state": {}, "events": [

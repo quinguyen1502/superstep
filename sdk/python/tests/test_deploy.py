@@ -1,4 +1,4 @@
-"""deploy over SSH (TASK-0155)."""
+"""deploy over SSH."""
 import json
 from pathlib import Path
 

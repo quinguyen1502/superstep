@@ -1,4 +1,4 @@
-"""upgrade with a backup and automatic rollback (TASK-0153)."""
+"""upgrade with a backup and automatic rollback."""
 import json
 from pathlib import Path
 

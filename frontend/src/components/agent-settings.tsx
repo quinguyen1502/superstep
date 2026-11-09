@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { HandbookLink } from '@/components/handbook-link'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -191,7 +192,10 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
       <Switch id={`${id}-approval`} size="sm" checked={mandatoryApproval || !!tool.approval} disabled={mandatoryApproval || readOnly} onCheckedChange={c => set({ approval: c || undefined })} />
       <Label htmlFor={`${id}-approval`} className="text-xs font-normal">{t('agent.needsApproval')}</Label>
     </div>
-    {browserServer(server) && <p className="text-xs text-muted-foreground">{t(mandatoryApproval ? 'browserTools.effectApproval' : 'browserTools.grantHelp')}</p>}
+    {browserServer(server) && <div className="space-y-1">
+      <p className="text-xs text-muted-foreground">{t(mandatoryApproval ? 'browserTools.effectApproval' : 'browserTools.grantHelp')}</p>
+      {['upload', 'download', 'evaluate'].includes(tool.tool || '') && <p className="text-xs text-muted-foreground">{t('browserTools.gatedToolHelp')}{' '}<HandbookLink id={`${id}-browser-guide`} page="guide/browser" label={t('docs.setupGuide')} ariaLabel={t('docs.browserGuideAria')} /></p>}
+    </div>}
     {confirm.dialog}
   </Card>
 }

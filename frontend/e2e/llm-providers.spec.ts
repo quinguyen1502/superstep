@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { confirmDelete } from './confirm'
 
-// Fake provider servers live in backend/tests/fixtures/mock_chat_api.py (TASK-0030).
+// Fake provider servers live in backend/tests/fixtures/mock_chat_api.py.
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`
 
 async function loginAdmin(page: Page) {

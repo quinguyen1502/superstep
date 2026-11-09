@@ -1,4 +1,4 @@
-"""GET and list report the latest version. version and updated are not stored in the graph (TASK-0168)."""
+"""GET and list report the latest version. version and updated are not stored in the graph."""
 import json
 import uuid
 

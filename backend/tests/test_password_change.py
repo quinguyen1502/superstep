@@ -1,4 +1,4 @@
-"""TASK-0052: the profile (GET /api/me) and a self-service password change (POST /api/me/password)."""
+"""the profile (GET /api/me) and a self-service password change (POST /api/me/password)."""
 import time, uuid
 from fastapi.testclient import TestClient
 from app.core import security

@@ -1,4 +1,4 @@
-"""The "Support team" template (TASK-0137, REQ-0073): using it creates the supervisor and its two specialist workflows,
+"""The "Support team" template: using it creates the supervisor and its two specialist workflows,
 and its test cases pass with the offline mock, child runs included (test rules, the "tool called" check)."""
 import pytest
 from fastapi.testclient import TestClient

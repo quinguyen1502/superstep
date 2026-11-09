@@ -12,6 +12,7 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
+import { HandbookLink } from '@/components/handbook-link'
 import { connectionFieldId, lines, object, text, type ConnectionErrors } from '@/lib/browser-settings'
 import type { ManagedSettings, McpSecretInput } from '@/lib/mcp'
 
@@ -40,9 +41,9 @@ function SecretField({ name, idp, secrets, errors, onChange, multiline = false }
 }
 
 type Props = { adapter: 'browser' | 'web'; settings: ManagedSettings; secrets: McpSecretInput[]; scope: 'user' | 'org'; idp: string;
-  errors: ConnectionErrors; available: boolean; onChange: (patch: { settings?: ManagedSettings; secrets?: McpSecretInput[] }) => void }
+  errors: ConnectionErrors; available: boolean; runtimeEnabled?: boolean; onChange: (patch: { settings?: ManagedSettings; secrets?: McpSecretInput[] }) => void }
 
-export function BrowserConnectionFields({ adapter, settings, secrets, scope, idp, errors, available, onChange }: Props) {
+export function BrowserConnectionFields({ adapter, settings, secrets, scope, idp, errors, available, runtimeEnabled = false, onChange }: Props) {
   const { t } = useTranslation(), confirm = useConfirmDelete(), [limitsOpen, setLimitsOpen] = useState(false)
   const update = (patch: ManagedSettings) => onChange({ settings: { ...settings, ...patch } })
   const proxy = object(settings.proxy), profile = object(settings.profile), search = object(settings.search)
@@ -57,17 +58,26 @@ export function BrowserConnectionFields({ adapter, settings, secrets, scope, idp
     confirm.ask({ title: t('browserSettings.removeProfileTitle', { name }), name, description: t('browserSettings.removeProfileBody'), onConfirm: apply })
   }
   const limits = [['action_timeout_ms', 1000, 60000, 30000], ['idle_timeout_s', 60, 7200, 1800], ['lifetime_s', 120, 14400, 3600], ['max_actions', 1, 200, 40], ['max_pages', 1, 20, 4]] as const
+  const docs = <HandbookLink id={`${idp}-browser-guide`} page="guide/browser" label={t('docs.setupGuide')} ariaLabel={t('docs.browserGuideAria')} />
   return <div className="space-y-3" id={`${idp}-browser-settings`}>
-    {!available && <Alert variant="warning"><ShieldAlert /><AlertDescription>{t('browserSettings.disabled')}</AlertDescription></Alert>}
+    {!available && <Alert variant="warning"><ShieldAlert /><AlertDescription className="space-y-1">
+      <p>{t('browserSettings.disabled')}</p>
+      <p className="text-xs">{t('browserSettings.disabledHelp')} {docs}</p>
+    </AlertDescription></Alert>}
+    {available && adapter === 'browser' && !runtimeEnabled && <Alert variant="warning"><ShieldAlert /><AlertDescription className="space-y-1">
+      <p>{t('browserSettings.runtimeOff')}</p>
+      <p className="text-xs">{t('browserSettings.runtimeOffHelp')} {docs}</p>
+    </AlertDescription></Alert>}
     <fieldset disabled={!available} className="space-y-4">
-      <p className="text-xs text-muted-foreground">{t(adapter === 'browser' ? 'browserSettings.connectionHelp' : 'browserSettings.webHelp')}</p>
+      <p className="text-xs text-muted-foreground">{t(adapter === 'browser' ? 'browserSettings.connectionHelp' : 'browserSettings.webHelp')}{' '}{docs}</p>
       {adapter === 'browser' ? <>
         <Field idp={idp} name="provider" errors={errors}>{props => <Select value={provider} onValueChange={value => update({ provider: value })}>
           <SelectTrigger {...props} className="w-full"><SelectValue /></SelectTrigger><SelectContent>
             <SelectItem value="local">{t('browserSettings.providers.local')}</SelectItem><SelectItem value="browserless">{t('browserSettings.providers.browserless')}</SelectItem>
           </SelectContent></Select>}</Field>
+        {provider === 'local' && <p className="text-xs text-muted-foreground">{t('browserSettings.localHelp')}{' '}{docs}</p>}
         {provider === 'browserless' && <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t('browserSettings.remoteHelp')}</p>
+          <p className="text-xs text-muted-foreground">{t('browserSettings.remoteHelp')}{' '}{docs}</p>
           <SecretField name="browserless_token" idp={idp} secrets={secrets} errors={errors} onChange={setSecret} />
         </div>}
         <Separator /><h3 className="text-sm font-medium">{t('browserSettings.network')}</h3>

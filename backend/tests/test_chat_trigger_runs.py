@@ -1,4 +1,4 @@
-"""TASK-0075: chat messages start runs (REQ-0044, DEC-0046): Slack events, Telegram messages, checks, replies."""
+"""chat messages start runs: Slack events, Telegram messages, checks, replies."""
 import asyncio, hashlib, hmac, json, time, uuid
 import httpx, pytest
 from fastapi.testclient import TestClient
@@ -242,7 +242,7 @@ def test_telegram_messages_and_buttons_share_the_webhook(c, api):
 
 
 def test_settled_survives_a_cancelled_handler(c, monkeypatch):
-    """TASK-0083: the studio socket closes on run_summary, which cancels the handler while settled() waits for a
+    """the studio socket closes on run_summary, which cancels the handler while settled() waits for a
     thread. With every executor thread busy, a plain to_thread job was dropped and the chat reply never went out."""
     import threading
     from concurrent.futures import ThreadPoolExecutor

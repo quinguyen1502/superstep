@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0030 follow-up: live LLM text in the trace, Ollama embeddings for a knowledge base, credential edit in place.
+// follow-up: live LLM text in the trace, Ollama embeddings for a knowledge base, credential edit in place.
 // Fake Ollama / OpenRouter live in backend/tests/fixtures/mock_chat_api.py (streamed chat with a delay per chunk).
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`
 async function login(page: Page) {

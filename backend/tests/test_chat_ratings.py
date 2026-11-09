@@ -1,4 +1,4 @@
-"""Thumbs on a chat answer (TASK-0162, TASK-0165, REQ-0075, DEC-0070): one row per turn, the session owner only,
+"""Thumbs on a chat answer: one row per turn, the session owner only,
 finished answers only, builder totals and the thumbs-down filter, retention, and one LangSmith feedback."""
 import asyncio, time, types, uuid
 import pytest

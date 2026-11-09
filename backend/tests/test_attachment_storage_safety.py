@@ -1,4 +1,4 @@
-"""TASK-0203: the orphan sweep only touches keys the service makes, under the configured folder or prefix; a folder
+"""the orphan sweep only touches keys the service makes, under the configured folder or prefix; a folder
 that is or holds the data folder is refused; files stay readable after the folder, bucket or prefix changes, and can be
 moved between two locations of the same backend."""
 import os, time, uuid

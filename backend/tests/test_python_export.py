@@ -1,4 +1,4 @@
-"""TASK-0070 (REQ-0043, DEC-0045): export a workflow as a readable, runnable LangGraph Python file.
+"""export a workflow as a readable, runnable LangGraph Python file.
 
 The exported file runs in a separate Python process (it must not import Superstep) with the offline mock, and must
 take the same path through the graph as the studio's mock run, with the same final state."""
@@ -109,7 +109,7 @@ def studio(wf, inp, answers=None, children=None):
     """The studio's mock run: node ids in finish order and the final state. Human nodes get `answers` in order, and an
     Agent node's approvals the answers under the Agent node's id."""
     wf = subgraphs.expand(wf, (children or {}).get) if children else wf
-    wf = agents.snapshot(wf, (children or {}).get)  # workflow tools carry their child, as a planned run does (TASK-0137)
+    wf = agents.snapshot(wf, (children or {}).get)  # workflow tools carry their child, as a planned run does
     wf = {**wf, "nodes": [picked(n) for n in wf["nodes"]]}
     ports = Ports(retrieve=lambda *a: [], mcp_call=lambda *a: None, test=True, mock_models=True)
     calls = {}  # a workflow tool's child runs here, as the run service would run it; only the parent's path is compared
@@ -142,7 +142,7 @@ def exported(tmp_path, code):
 
 
 def export_steps(path, kinds, names):
-    """Studio slot ids (`ag/__tool/1`) and the join, compared with the export's single sequential tool node (TASK-0160)."""
+    """Studio slot ids (`ag/__tool/1`) and the join, compared with the export's single sequential tool node."""
     skip = ("start", "end", "subgraph", "subgraph_exit", "agent_join")
     out = []
     for i in path:
@@ -414,7 +414,7 @@ def test_graph_values_never_become_code():
     assert "initial_interval=0.5" in code and "cache_policy" not in code and "top_k=4" in code
 
 
-MCP_STUB = '''def call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:'''  # TASK-0269: the adapter's head
+MCP_STUB = '''def call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:'''  #: the adapter's head
 
 MCP_SLOW = '''def call_mcp_tool(prefix: str, tool: str, arguments: dict) -> Any:
     t0 = time.perf_counter()

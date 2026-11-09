@@ -251,19 +251,29 @@ READ_OPERATIONS = frozenset({"navigate", "snapshot", "extract", "screenshot"})
 
 
 def tool_definitions(*, settings: BrowserSettings | None = None):
-    """Advertise tools. Connection allow_* gates hide upload/download/evaluate until enabled."""
-    allowed = set(ARGUMENT_MODELS)
+    """Advertise all first-delivery tools. Connection allow_* still enforce at run time;
+    gated tools stay visible with an explicit disabled note so builders can enable them."""
+    disabled = set()
     if settings is not None:
         if not settings.allow_upload:
-            allowed.discard("upload")
+            disabled.add("upload")
         if not settings.allow_download:
-            allowed.discard("download")
+            disabled.add("download")
         if not settings.allow_evaluate_js:
-            allowed.discard("evaluate")
+            disabled.add("evaluate")
+    note = {
+        "upload": " Disabled on this connection until allow_upload is enabled in Settings (see handbook guide/browser).",
+        "download": " Disabled on this connection until allow_download is enabled in Settings (see handbook guide/browser).",
+        "evaluate": " Disabled on this connection until allow_evaluate_js is enabled in Settings (see handbook guide/browser).",
+    }
     return [
-        {"name": name, "description": DESCRIPTIONS[name], "input_schema": ARGUMENT_MODELS[name].model_json_schema()}
+        {
+            "name": name,
+            "description": DESCRIPTIONS[name] + (note[name] if name in disabled else ""),
+            "input_schema": ARGUMENT_MODELS[name].model_json_schema(),
+            **({"available": False, "requires": f"allow_{'evaluate_js' if name == 'evaluate' else name}"} if name in disabled else {}),
+        }
         for name in ARGUMENT_MODELS
-        if name in allowed
     ]
 
 

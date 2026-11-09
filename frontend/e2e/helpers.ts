@@ -5,7 +5,7 @@ export async function login(page: Page, email = 'admin@example.com', password = 
   await page.locator('#auth-submit').click(); await expect(page).toHaveURL(/\/workflows$/)
   return { Authorization: `Bearer ${await apiToken(page, email, password)}` }
 }
-/** A Bearer token for API calls from a spec. The browser holds the session in an HttpOnly cookie (TASK-0045), so scripts cannot read it. */
+/** A Bearer token for API calls from a spec. The browser holds the session in an HttpOnly cookie, so scripts cannot read it. */
 export async function apiToken(page: Page, email = 'admin@example.com', password = 'admin123'): Promise<string> {
   return (await (await page.request.post('/api/auth/login', { data: { email, password } })).json()).data.token
 }

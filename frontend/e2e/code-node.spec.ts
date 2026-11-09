@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, N, newWorkflow, signIn } from './helpers'
-// TASK-0055: Tool node Code mode in the editor. An admin writes main(state), tests it with the run panel input, saves
+// Tool node Code mode in the editor. An admin writes main(state), tests it with the run panel input, saves
 // and runs; the trace shows the printed output and a traceback. An editor sees the code read-only.
 // Needs Docker and the studio-code:1 image (docker build -t studio-code:1 docker/studio-code); skips otherwise.
 const UPPER = 'def main(state):\n    print("got", state["message"])\n    return state["message"].upper()\n'

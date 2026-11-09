@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, newWorkflow, N } from './helpers'
-// REQ-0077 (TASK-0178): a visitor attaches a PDF and an image on the published chat page. A file over the limit is
+// a visitor attaches a PDF and an image on the published chat page. A file over the limit is
 // refused in the page before upload. The mock answer names both files, the sent message lists them with downloads,
 // and another visitor cannot download them. The builder sets the limits in Chat settings and reads the files under Visitors.
 const shot = async (page: Page, name: string, sel = 'body') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }

@@ -1,14 +1,14 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, N } from './helpers'
-// REQ-0073: an Agent node calls another workflow as a tool. TASK-0135: the parent waits for its child run, the child's
-// approval is in the Approvals inbox with both workflow names, and answering it finishes both runs. TASK-0136: the tool
-// card in the editor, and the child's steps nested under the tool call in the trace. TASK-0137: the Support team template.
+// An Agent node calls another workflow as a tool. The parent waits for its child run, the child's
+// approval is in the Approvals inbox with both workflow names, and answering it finishes both runs.: the tool
+// card in the editor, and the child's steps nested under the tool call in the trace.: the Support team template.
 const shot = async (page: Page, name: string, sel = 'body') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const T = {
   vi: { password: 'Mật khẩu', waiting: 'Đang chờ một workflow khác', calledBy: 'Được gọi bởi' },
   en: { password: 'Password', waiting: 'Waiting for another workflow', calledBy: 'Called by' },
 }
-/** A canvas node's run mark (TASK-0147). */
+/** A canvas node's run mark. */
 const nodeStatus = (page: Page, id: string) => page.locator(`.react-flow__node[data-id="${id}"] [data-status]`)
 const STATE = [{ name: 'message', type: 'string' }, { name: 'answer', type: 'string' }, { name: 'steps', type: 'list' }]
 const DESK = (name: string) => ({ name, state: STATE,
@@ -132,7 +132,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await page.reload(); await page.locator('#run-tab').click()  // the history now knows the child is waiting for an approval
     await page.locator('#history-all').click(); await page.getByTestId('history-row').first().click()
     await expect(page.locator('#child-wait-approval')).toBeVisible({ timeout: 15_000 })
-    // the canvas shows the opened run (TASK-0147): the supervisor waits, the End node has not run
+    // the canvas shows the opened run: the supervisor waits, the End node has not run
     await expect(nodeStatus(page, 'ag')).toHaveAttribute('data-status', 'waiting'); await expect(nodeStatus(page, 'end')).toHaveCount(0)
     await shot(page, `workflow-tool-parent-waiting-${lang}`, '#run-logs-panel')
 

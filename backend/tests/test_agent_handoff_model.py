@@ -1,4 +1,4 @@
-"""Agent hand-off targets and the run limit (TASK-0179, REQ-0078, DEC-0073 decision 1)."""
+"""Agent hand-off targets and the run limit."""
 import uuid
 from fastapi.testclient import TestClient
 from app.engine.validator import validate

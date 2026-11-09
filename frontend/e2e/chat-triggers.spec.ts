@@ -2,7 +2,7 @@ import { createHmac } from 'crypto'
 import { test, expect, type Page } from '@playwright/test'
 import { confirmDelete } from './confirm'
 import { login, newWorkflow, SIMPLE } from './helpers'
-// TASK-0076: the editor's Chat triggers dialog (add, duplicate command refused, on/off, edit, delete by name), a signed
+// the editor's Chat triggers dialog (add, duplicate command refused, on/off, edit, delete by name), a signed
 // Slack mention that starts a run (Chat badge in History), and the Channels page's events URL and scope warning.
 // Slack is the fake API of backend/tests/fixtures/mock_chat_api.py; checks and replies are covered by test_chat_trigger_runs.py.
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`

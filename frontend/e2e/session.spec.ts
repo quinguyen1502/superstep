@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0045: the session is an HttpOnly cookie, failed sign-ins lock an e-mail, an admin reset link sets a new password
+// the session is an HttpOnly cookie, failed sign-ins lock an e-mail, an admin reset link sets a new password
 // and signs out the old session, and logout ends the session on the server too.
 const uid = () => Math.random().toString(36).slice(2, 10)
 async function signInForm(page: Page, email: string, password: string) {

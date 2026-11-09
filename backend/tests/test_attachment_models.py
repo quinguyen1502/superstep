@@ -1,4 +1,4 @@
-"""TASK-0176 (REQ-0077, DEC-0072 decisions 2, 4, 5): "Include attachments" on LLM and Agent nodes. Documents reach the
+""""Include attachments" on LLM and Agent nodes. Documents reach the
 model as text, images as image parts per provider, a model without vision gets a note, the mock names the files, and
 the exports take the same field."""
 import base64, json

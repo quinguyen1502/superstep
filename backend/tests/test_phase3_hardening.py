@@ -1,4 +1,4 @@
-"""TASK-0029: teams, ownership transfer, audit log, account deletion, org-resource policy, subgraph dependents and names."""
+"""teams, ownership transfer, audit log, account deletion, org-resource policy, subgraph dependents and names."""
 import json, time, uuid
 import pytest
 from app.api.deps import channel_service, get_db, run_service

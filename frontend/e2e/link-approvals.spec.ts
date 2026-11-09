@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login } from './helpers'
-// TASK-0047: a Teams channel (the fake Workflows webhook of backend/tests/fixtures/mock_chat_api.py) gets a card whose
+// a Teams channel (the fake Workflows webhook of backend/tests/fixtures/mock_chat_api.py) gets a card whose
 // buttons open /approve; the signed-in owner confirms there and the run goes on. E-mail uses the same page.
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`
 const hook = `${CHAT}/teams/hook-${Date.now()}`

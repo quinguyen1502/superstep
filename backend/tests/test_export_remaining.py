@@ -1,4 +1,4 @@
-"""REQ-0090: per-node model slots, approval extras and managed connections in the exported file.
+"""per-node model slots, approval extras and managed connections in the exported file.
 
 The generated file is executed. Model calls are the local resolve_model. Telegram is a local HTTP server.
 No paid call, and no Studio id or secret value is written into the file."""

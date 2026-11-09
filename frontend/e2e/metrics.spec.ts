@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-// TASK-0010: per-run metrics in the live timeline and in history (mock mode: estimated tokens, $0, no trace link).
+// per-run metrics in the live timeline and in history (mock mode: estimated tokens, $0, no trace link).
 test('run metrics: tokens, cost and history', async ({ page }) => {
   await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)

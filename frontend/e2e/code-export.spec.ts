@@ -19,7 +19,7 @@ function unzip(buf: Buffer): Record<string, string> {
   }
   return out
 }
-// TASK-0071 (REQ-0043): the Code tab shows the saved workflow as LangGraph code, follows the node selected on the
+// the Code tab shows the saved workflow as LangGraph code, follows the node selected on the
 // canvas, copies and downloads the file, reloads after a save; imported repositories have no Code tab.
 
 test('Code tab: Python of the saved version, the selected node highlighted, copy and download', async ({ page, context }) => {
@@ -87,7 +87,7 @@ test('Code tab: none for an imported repository', async ({ page }) => {
 })
 
 test('Code tab: TypeScript (LangGraph.js) export, remembered, highlighted and downloaded as .ts', async ({ page }) => {
-  // TASK-0082 (REQ-0047): the language picker asks the same exporter API for LangGraph.js TypeScript
+  //: the language picker asks the same exporter API for LangGraph.js TypeScript
   const H = await login(page)
   const wid = await newWorkflow(page, H, SIMPLE(`TS export e2e ${Date.now()}`))
   await page.goto(`/workflows/${wid}`)

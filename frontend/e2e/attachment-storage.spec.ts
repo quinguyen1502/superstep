@@ -2,8 +2,8 @@ import { test, expect, type Page } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 import { apiToken, newWorkflow, N } from './helpers'
-// REQ-0080 (TASK-0195): a visitor's file is stored on the configured backend and downloads unchanged with the
-// DEC-0072 headers. Run once per backend: E2E_ATTACHMENT_STORAGE=db (default) and E2E_ATTACHMENT_STORAGE=fs.
+// a visitor's file is stored on the configured backend and downloads unchanged with the
+// headers. Run once per backend: E2E_ATTACHMENT_STORAGE=db (default) and E2E_ATTACHMENT_STORAGE=fs.
 const shot = async (page: Page, name: string) => { if (process.env.REVIEW_SHOTS) await page.screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const BACKEND = process.env.E2E_ATTACHMENT_STORAGE || 'db'
 const ROOT = path.resolve('../backend/.e2e-attachments')  // playwright runs from frontend/

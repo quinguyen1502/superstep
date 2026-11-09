@@ -63,6 +63,8 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | --- | --- | --- |
 | `STUDIO_WORKER` | `1` | Chạy worker trong process API |
 | `STUDIO_WORKER_CONCURRENCY` | `2` | Số job mỗi worker |
+| `STUDIO_ENABLE_BROWSER` | `1` | Mở adapter managed browser/web (`0` để ẩn) |
+| `STUDIO_ENABLE_BROWSER_RUNTIME` | unset/`0` | Cho phép run tin cậy điều khiển worker trình duyệt |
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | `30` | Thời hạn giữ job (giây) |
 | `STUDIO_JOB_REAP_EVERY` | `15` | Chu kỳ đưa job hết hạn về hàng đợi (giây) |
 | `STUDIO_RECOVER_ON_START` | `1` | Hàng đợi trong bộ nhớ: đưa lại run chưa xong vào hàng đợi khi khởi động ([run qua các lần khởi động lại](../operate/deploy.md#run-qua-cac-lan-khoi-ong-lai)) |

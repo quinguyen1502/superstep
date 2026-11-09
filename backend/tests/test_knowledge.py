@@ -1,4 +1,4 @@
-"""TASK-0012: knowledge bases (upload txt/md/pdf, chunk, embed, search) and the Retriever node."""
+"""knowledge bases (upload txt/md/pdf, chunk, embed, search) and the Retriever node."""
 import os, uuid
 os.environ.pop("OPENAI_API_KEY", None)
 import httpx

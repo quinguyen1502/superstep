@@ -11,15 +11,18 @@ có thể chạy các bước trình duyệt; xem mục xuất bên dưới.
 
 ## Trước khi bắt đầu
 
-1. Bật cả hai cổng trên API/worker Studio (mặc định **tắt**):
+1. Discovery trình duyệt **bật mặc định**. Đặt `STUDIO_ENABLE_BROWSER=0` để ẩn
+   adapter được quản lý `browser` / `web`. Các run tin cậy vẫn cần cổng runtime riêng
+   (mặc định **tắt**) trước khi mở trình duyệt:
 
    ```bash
+   # Tuỳ chọn: đây đã là mặc định
    STUDIO_ENABLE_BROWSER=1
+   # Bắt buộc trước khi một run mở Chromium / controller từ xa
    STUDIO_ENABLE_BROWSER_RUNTIME=1
    ```
 
-   Cổng thứ nhất mở adapter được quản lý `browser` / `web`. Cổng thứ hai cho phép
-   các run tin cậy mở worker. Chỉ khám phá công cụ thì không khởi động Chromium.
+   Chỉ khám phá công cụ thì không khởi động Chromium.
 
 2. Với provider **cục bộ**, build image worker và gateway (một lần trên mỗi máy chủ):
 

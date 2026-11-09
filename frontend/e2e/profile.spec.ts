@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0052: the Profile section shows the account; changing the password needs the current one, keeps this
+// the Profile section shows the account; changing the password needs the current one, keeps this
 // browser signed in and signs out every other session of the account.
 const uid = () => Math.random().toString(36).slice(2, 10)
 async function register(page: Page, email: string) {
@@ -42,7 +42,7 @@ test('profile: account details, then a password change that signs out the other 
 test('profile of a read-only account (the public demo visitor): language local, password and notifications locked', async ({ page }) => {
   // what GET /api/me says for the demo visitor (STUDIO_DEMO_MODE is off in these tests), from the first page on: set up
   // after sign-up, the account was still a normal one when the app sent its language after sign-in, and that write
-  // could land after the listener started (TASK-0209)
+  // could land after the listener started
   await page.route(u => u.pathname === '/api/me', async r => { const res = await r.fetch(); const body = await res.json(); body.data.read_only = true; await r.fulfill({ response: res, json: body }) })
   const prefWrites: string[] = []; page.on('request', r => { if (r.method() !== 'GET' && r.url().includes('/api/notifications/preferences')) prefWrites.push(`${r.method()} ${r.postData()}`) })
   await register(page, `readonly-${uid()}@example.com`)

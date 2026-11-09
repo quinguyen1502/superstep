@@ -1,4 +1,4 @@
-"""run and runs (TASK-0169). The socket is a fake; nothing here needs a server."""
+"""run and runs. The socket is a fake; nothing here needs a server."""
 import asyncio
 import io
 import json

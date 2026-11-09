@@ -6,4 +6,4 @@ export type McpServer = { id: string; name: string; scope: 'user' | 'org'; trans
   adapter?: string | null; settings?: ManagedSettings
   secrets: Record<string, string>; tools: McpTool[]; tools_at: number | null; created: number; can_edit: boolean }
 export type ManagedAdapter = { id: string; settings_schema: { properties: Record<string, { type?: string; format?: string; default?: unknown; resource_kind?: string }> }; secret_fields: string[] }
-export type McpList = { servers: McpServer[]; is_admin: boolean; stdio_enabled: boolean; org_usable?: boolean; managed_adapters?: ManagedAdapter[] }
+export type McpList = { servers: McpServer[]; is_admin: boolean; stdio_enabled: boolean; org_usable?: boolean; browser_enabled?: boolean; browser_runtime_enabled?: boolean; managed_adapters?: ManagedAdapter[] }

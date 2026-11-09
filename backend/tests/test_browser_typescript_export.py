@@ -1,4 +1,4 @@
-"""Executable TypeScript browser export (TASK-0252).
+"""Executable TypeScript browser export.
 
 The generated file is executed with Node's type stripper after the LangGraph
 import is pointed at a local stub. The driver calls the embedded helper and the

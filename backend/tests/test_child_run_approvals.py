@@ -1,4 +1,4 @@
-"""Approvals inside a workflow tool's child run are passed up (TASK-0135, REQ-0073, DEC-0066 decision 6), and the runs
+"""Approvals inside a workflow tool's child run are passed up, and the runs
 API links parents and children."""
 import json, uuid
 import pytest

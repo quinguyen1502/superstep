@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
-// TASK-0050: Decision (Jev) node: the question builder edits typed questions, and a run without a TypeSafe key uses the
+// Decision (Jev) node: the question builder edits typed questions, and a run without a TypeSafe key uses the
 // offline answers, so a Condition can branch on the choice.
 const WF = (name: string) => ({ name,
   state: [{ name: 'message', type: 'string' }, { name: 'intent', type: 'string' }, { name: 'angry', type: 'number' }, { name: 'reply', type: 'string' }],
@@ -27,7 +27,7 @@ test('decision node: build questions, run offline, branch on the choice', async 
   await page.locator('#dq-1-type').click(); await page.getByRole('option', { name: 'Có / không' }).click()
   await expect(page.locator('#dq-1-add-option')).toHaveCount(0)
   await page.locator('#dq-1-instructions').click(); await page.keyboard.type('The customer is angry.')
-  // the answer fields sit in the Data tab, with every other state field picker (TASK-0121)
+  // the answer fields sit in the Data tab, with every other state field picker
   await page.locator('#config-tab-data').click()
   await page.locator('#dq-1-field').click(); await page.getByRole('option', { name: 'angry' }).click()
   await page.locator('#save-btn').click(); await expect(page.locator('#unsaved-badge')).toHaveCount(0)

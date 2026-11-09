@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, N, newWorkflow } from './helpers'
-// TASK-0081: TypeScript in Tool node Code mode. An admin picks "Code (TypeScript)" in the Mode select (the untouched Python
+// TypeScript in Tool node Code mode. An admin picks "Code (TypeScript)" in the Mode select (the untouched Python
 // starter becomes the TypeScript one), sees the generated State type, tests and runs the code; the canvas shows "TS";
 // the admin card lists both languages. Needs a server that can run TypeScript (Deno on the host with
 // E2E_CODE_RUNTIME=subprocess, or Docker with studio-code-ts:1); skips otherwise.

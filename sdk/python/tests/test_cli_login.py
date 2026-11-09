@@ -1,4 +1,4 @@
-"""login, logout and whoami (TASK-0167). The browser is never opened."""
+"""login, logout and whoami. The browser is never opened."""
 import json
 import stat
 from pathlib import Path
@@ -107,7 +107,7 @@ def test_env_wins_logout_keeps_lang_and_a_missing_route_names_the_server(monkeyp
 
 
 def test_the_saved_token_goes_only_to_the_server_that_issued_it(monkeypatch, isolated_home):
-    """Review finding 4 (TASK-0205): `--url` or SUPERSTEP_URL naming another server sent it the saved token."""
+    """Review finding 4: `--url` or SUPERSTEP_URL naming another server sent it the saved token."""
     from superstep.cli.session import resolve_target, same_server
     path = Path.home() / ".superstep"
     path.mkdir()

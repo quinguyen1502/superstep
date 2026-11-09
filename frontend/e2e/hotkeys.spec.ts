@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, SIMPLE } from './helpers'
-// TASK-0023: keyboard shortcuts in the editor and the cheat sheet.
+// keyboard shortcuts in the editor and the cheat sheet.
 
 test('save, run, delete with the keyboard; typing is safe; cheat sheet lists every shortcut', async ({ page }) => {
   const H = await login(page)

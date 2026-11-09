@@ -1,4 +1,4 @@
-"""status, config, and doctor (TASK-0151)."""
+"""status, config, and doctor."""
 import json
 import os
 import stat

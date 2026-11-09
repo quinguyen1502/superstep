@@ -1,4 +1,4 @@
-"""TASK-0174 (REQ-0077, DEC-0072): chat attachments are stored in the database, typed by their bytes, limited, kept
+"""chat attachments are stored in the database, typed by their bytes, limited, kept
 to their session, served only as downloads, and removed with their session or when never sent."""
 import json, time
 import pytest
@@ -15,7 +15,7 @@ def no_read_limit(monkeypatch): monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_READ
 
 
 def allow(wid, **a):
-    """Turns attachments on in the chat's settings (TASK-0175 adds them to the Chat settings form)."""
+    """Turns attachments on in the chat's settings."""
     triggers = ChatTriggerRepository(get_db()); t = triggers.web(wid)
     st = json.loads(t.settings or "{}"); st["attachments"] = {"enabled": True, **a}
     triggers.set_fields(t.id, settings=json.dumps(st))

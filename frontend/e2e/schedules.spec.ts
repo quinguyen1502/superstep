@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { confirmDelete } from './confirm'
 import { login, newWorkflow, SIMPLE } from './helpers'
-// TASK-0046: cron schedules in the editor's ⋯ menu: preset, live preview, bad expression, on/off, delete by name.
+// cron schedules in the editor's ⋯ menu: preset, live preview, bad expression, on/off, delete by name.
 // The scheduler firing a run is covered by backend/tests/test_schedules.py with the real worker.
 test('schedules: add from a preset, preview, refuse a bad expression, turn off, delete', async ({ page }) => {
   const H = await login(page); const wid = await newWorkflow(page, H, SIMPLE(`Sched ${Date.now()}`))

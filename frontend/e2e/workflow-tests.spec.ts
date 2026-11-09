@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0067: workflow tests. Add a test case with a Human answer and a check, Run all, see it pass; change the check,
+// workflow tests. Add a test case with a Human answer and a check, Run all, see it pass; change the check,
 // see it fail with the expected and actual values; the test runs show under History > Test runs only.
 const APPROVAL = {
   name: `Tests e2e ${Date.now()}`, state: [{ name: 'message', type: 'string' }, { name: 'decision', type: 'string' }],
@@ -68,7 +68,7 @@ test('workflow tests: add a case, run all, see pass and fail with expected and a
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok')
 })
 
-// TASK-0068: save a case from a run, change the graph so it fails, see Regression against v1, run against v1.
+// save a case from a run, change the graph so it fails, see Regression against v1, run against v1.
 test('workflow tests: save as test case from a run, regression against the previous version, run against a version', async ({ page }) => {
   const token = await login(page); const H = { Authorization: `Bearer ${token}` }
   const wf = { ...APPROVAL, name: `Regression e2e ${Date.now()}` }
@@ -104,7 +104,7 @@ test('workflow tests: save as test case from a run, regression against the previ
   await page.locator('#tests-history').click(); await expect(page.getByTestId('suite-row')).toHaveCount(3)
 })
 
-// TASK-0069: a workflow made from a built-in template comes with its test cases, and they pass with the mock model.
+// a workflow made from a built-in template comes with its test cases, and they pass with the mock model.
 test('workflow tests: a built-in template brings test cases that pass offline', async ({ page }) => {
   const token = await login(page)
   const wid = (await (await page.request.post('/api/templates/builtin-purchase-request/use', { headers: { Authorization: `Bearer ${token}` }, data: { name: `Purchase e2e ${Date.now()}` } })).json()).data.id

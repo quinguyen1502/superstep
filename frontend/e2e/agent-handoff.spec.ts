@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, newWorkflow, N } from './helpers'
-// REQ-0078 (TASK-0182): Triage hands off to Billing or Technical. The canvas shows the targets as dashed links, the
+// Triage hands off to Billing or Technical. The canvas shows the targets as dashed links, the
 // Agent's Config lists them, a link deleted on the canvas removes the target and the menu adds it back. In the studio
 // chat the offline model hands a refund question to Billing, and the steps show the hand-off.
 const shot = async (page: Page, name: string, sel = 'body') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
