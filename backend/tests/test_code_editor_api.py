@@ -1,4 +1,4 @@
-"""TASK-0055: GET /api/meta/runtime and POST /api/code/test (Test with sample state) for the Code mode editor."""
+"""GET /api/meta/runtime and POST /api/code/test (Test with sample state) for the Code mode editor."""
 import sys, uuid
 import pytest
 from fastapi.testclient import TestClient

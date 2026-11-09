@@ -1,4 +1,4 @@
-"""install, adopt, and the compose wrappers (TASK-0150)."""
+"""install, adopt, and the compose wrappers."""
 import json
 import stat
 from pathlib import Path

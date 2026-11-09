@@ -1,4 +1,4 @@
-"""Frame headers of the all-in-one image (TASK-0143, DEC-0067 decision 6): no studio page may be framed by another
+"""Frame headers of the all-in-one image: no studio page may be framed by another
 site; a published chat page /c/{slug} may be framed by the sites in its embed_origins."""
 from fastapi import FastAPI
 from fastapi.testclient import TestClient

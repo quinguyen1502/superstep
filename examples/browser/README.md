@@ -1,6 +1,6 @@
 # Browser first-delivery examples
 
-Studio-only fixtures for REQ-0086. Executable exports wait for TASK-0251/0252.
+Studio-only fixtures for the browser tools milestone. Executable exports for the live drivers are available separately.
 
 ## `lookup_shipment.json`
 

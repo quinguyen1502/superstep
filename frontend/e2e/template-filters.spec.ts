@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login } from './helpers'
-// TASK-0044: template paths and filters: `|` suggests filters, tags show the chain, a bad filter is marked and refused on save,
+// template paths and filters: `|` suggests filters, tags show the chain, a bad filter is marked and refused on save,
 // double-click turns a tag back into text, and a run renders the result.
 const WF = (name: string) => ({ name, state: [{ name: 'order', type: 'object' }, { name: 'decision', type: 'string' }],
   nodes: [{ id: 's', type: 'start', position: { x: 40, y: 120 }, data: { label: 'Start' } },

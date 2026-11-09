@@ -1,4 +1,4 @@
-"""Workflow tools (TASK-0133, REQ-0073, DEC-0066): an Agent node lists another saved workflow as a tool. Settings and
+"""Workflow tools: an Agent node lists another saved workflow as a tool. Settings and
 their validation, the parameter schema from the child's state fields, the child snapshot taken when a run is planned,
 cycle and depth checks across subgraphs and workflow tools, and dependents. Child runs: test_workflow_tool_runs.py."""
 import uuid
@@ -102,7 +102,7 @@ def test_snapshot_copies_children_recursively():
 
 
 def test_without_the_run_service_a_call_fails_clearly(monkeypatch):
-    """The engine alone has no child runs (TASK-0134 binds them per run): the call is a failed tool call, and the run
+    """The engine alone has no child runs: the call is a failed tool call, and the run
     still answers."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     evs = list(run_stream(supervisor(tool()), {"message": "Where is B200?"}))

@@ -1,4 +1,4 @@
-"""admin and uninstall (TASK-0154)."""
+"""admin and uninstall."""
 import io
 import json
 from pathlib import Path

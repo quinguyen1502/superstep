@@ -1,4 +1,4 @@
-"""backup, restore, and scheduled backups (TASK-0152)."""
+"""backup, restore, and scheduled backups."""
 import json
 import os
 import stat
@@ -269,7 +269,7 @@ exit 0
     ("db", "", None),
 ])
 def test_scheduled_backup_manifest_names_the_s3_bucket(tmp_path, storage, extra, expected):
-    """The scheduled script writes the same `attachment_s3` record as a manual backup (TASK-0197)."""
+    """The scheduled script writes the same `attachment_s3` record as a manual backup."""
     directory = layout(tmp_path)
     with (directory / ".env").open("a", encoding="utf-8") as env:
         env.write(f"STUDIO_ATTACHMENT_STORAGE={storage}\n{extra}")

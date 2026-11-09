@@ -52,6 +52,21 @@ def test_empty_whitelist_rejected(c):
     assert response.json()["error"]["code"] == "MCP_CONFIG_INVALID"
 
 
+
+def test_nine_tools_visible_when_gated_off(c):
+    """Upload/download/evaluate stay discoverable with a disabled note when connection toggles are off."""
+    owner = user(c)
+    response = create(c, owner, settings={"allowed_origins": ["https://example.com"]})
+    assert response.status_code == 200, response.text
+    found = c.post(f"/api/mcp/servers/{response.json()['data']['id']}/discover", headers=H(owner["token"]))
+    tools = {tool["name"]: tool for tool in found.json()["data"]["tools"]}
+    assert set(tools) == {
+        "navigate", "snapshot", "click", "fill", "extract", "screenshot", "upload", "download", "evaluate",
+    }
+    for name in ("upload", "download", "evaluate"):
+        assert "Disabled on this connection" in tools[name]["description"]
+
+
 def test_nine_tools_when_connection_allows_file_and_js(c):
     owner = user(c)
     response = create(

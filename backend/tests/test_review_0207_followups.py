@@ -1,4 +1,4 @@
-"""TASK-0208: the two minor points of the review of #262. A body without a length that passes the ceiling on a route
+"""the two minor points of the review of #262. A body without a length that passes the ceiling on a route
 that parses JSON or a file answers 413 like a declared one, and a CLI sign-in whose token name was taken between
 approval and collection still delivers a token instead of being left consumed."""
 from fastapi.testclient import TestClient

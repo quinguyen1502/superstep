@@ -42,6 +42,8 @@ class McpService:
         admin = self.is_admin(uid)
         return {"servers": [self.public(r, uid, admin) for r in self.repo.visible(uid)], "is_admin": admin,
                 "stdio_enabled": config.mcp_stdio_enabled(), "org_usable": self.org_allowed(uid),
+                "browser_enabled": config.browser_enabled(),
+                "browser_runtime_enabled": config.browser_runtime_enabled(),
                 "managed_adapters": [{"id": adapter.id, "settings_schema": adapter.settings_schema, "secret_fields": list(adapter.secret_fields)}
                                      for adapter in self.managed.adapters.values()
                                      if adapter.id not in {"browser","web"} or config.browser_enabled()]}

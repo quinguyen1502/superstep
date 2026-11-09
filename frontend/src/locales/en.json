@@ -2709,9 +2709,9 @@
     }
   },
   "browserSettings": {
-    "connectionHelp": "No start URL is required. URLs come from tool calls or workflow inputs. Discovery lists tools; the runtime verifies the isolated provider when a run starts.",
+    "connectionHelp": "No start URL belongs on the connection — URLs come from chat, workflow state, or a search tool. Discovery lists every browser tool; upload, download and evaluate stay off until you enable them below. Runs need the runtime gate.",
     "webHelp": "Separate search/fetch connection. It never inherits browser login state, cookies or proxy settings.",
-    "disabled": "Browser and web connections are disabled by the operator. Stored secrets remain hidden; enable the server feature before editing or discovery.",
+    "disabled": "Browser and web connections are turned off on this server (STUDIO_ENABLE_BROWSER=0). Settings stay visible so you can prepare a connection; enable the feature before saving or discovering tools.",
     "providers": {
       "local": "Local isolated browser (Docker)",
       "browserless": "Browserless (self-hosted Superstep controller)"
@@ -2728,7 +2728,7 @@
       "basic": "HTTP Basic authentication"
     },
     "proxyHelp": "Applies to all browser traffic for this session. The operator must approve custom/default routes. A proxy failure never falls back to direct. Search/fetch uses its separate connection.",
-    "originHelp": "At least one exact http(s) origin per line, without paths or wildcards. Browser connections require a non-empty whitelist; internal addresses stay blocked by network policy.",
+    "originHelp": "Required: at least one exact http(s) origin per line, without paths or wildcards. Empty lists cannot be saved. Internal addresses stay blocked by network policy.",
     "profile": "Personal login profile",
     "profileHelp": "Login state is personal and restricted to declared HTTPS origins. Each run gets a fresh context; pages cannot change the selected profile.",
     "orgProfileHelp": "Login profiles are available only on personal connections, not organisation connections.",
@@ -2800,11 +2800,15 @@
     "range": "Allowed range: {{min}}–{{max}}",
     "help": {
       "require_mutating_approval": "When off (default), click/fill/upload/download/evaluate run immediately. Navigate, snapshot, extract and screenshot never wait.",
-      "allow_evaluate_js": "Hide evaluate until enabled. Results stay untrusted.",
-      "allow_upload": "Hide upload until enabled.",
-      "allow_download": "Hide download until enabled. Downloads stay size and type bounded."
+      "allow_evaluate_js": "Off by default. Turn on to let Agents use evaluate on this connection (page context only; results are untrusted). Keep the tool visible in Agent grants either way.",
+      "allow_upload": "Off by default. Turn on to let Agents use upload on this connection (authorised attachments/workspace files only).",
+      "allow_download": "Off by default. Turn on to let Agents use download on this connection (size and type limited)."
     },
-    "safety": "Safety toggles"
+    "safety": "Safety toggles",
+    "disabledHelp": "How to enable browser connections:",
+    "runtimeOff": "Browser runs are not enabled yet (STUDIO_ENABLE_BROWSER_RUNTIME is off). You can still create connections and grant tools; a run will not open Chromium until the runtime gate is on.",
+    "runtimeOffHelp": "How to enable the browser runtime and providers:",
+    "localHelp": "Local provider needs the browser worker and gateway Docker images on this host. Build steps are in the handbook."
   },
   "browserTools": {
     "urlSource": "URL source",
@@ -2820,8 +2824,8 @@
     },
     "urlRequired": "Enter the required URL or state reference.",
     "bindings": "Browser and fetch URL bindings",
-    "effectApproval": "Click and fill always require a verified human reviewer. Model text, page content and automatic approval cannot grant access.",
-    "grantHelp": "This row grants only the selected tool. Browser policy and session limits come from the saved connection; URL sources are in Data.",
+    "effectApproval": "Click and fill always require approval on browser connections that enforce mutating effects for these tools.",
+    "grantHelp": "Grant individual browser tools on this Agent. Upload, download and evaluate also need the matching connection toggle. Runtime must be enabled on the server before a run opens a browser — see the handbook.",
     "executionHelp": "Browser actions on the same connection in this Agent run share one ordered session. Connection limits apply. A lost, expired or uncertain session stops; node retries and cache cannot resend browser effects. Re-observe and obtain a new human decision when appropriate.",
     "limits": "{{actions}} actions · {{timeout}} ms/action · {{idle}} s idle · {{lifetime}} s maximum lifetime",
     "recipe": "Reusable browser recipe",
@@ -2852,13 +2856,15 @@
     "loadCapture": "Load private capture",
     "sequence": "Action {{sequence}} · Session generation {{generation}}",
     "pageGeneration": "Page generation {{generation}}",
-    "untrustedObservation": "Bounded page content is untrusted. It is shown as text, never executed."
+    "untrustedObservation": "Bounded page content is untrusted. It is shown as text, never executed.",
+    "gatedToolHelp": "This tool is listed so you can plan the Agent. Enable the matching connection toggle (and server runtime) before a run can use it."
   },
   "docs": {
     "learnMore": "Learn more",
     "exposeLocalAria": "Learn how to expose a local studio",
     "setupGuide": "Setup guide",
     "setupGuideAria": "{{platform}} setup guide",
-    "newTab": "opens in a new tab"
+    "newTab": "opens in a new tab",
+    "browserGuideAria": "Open the browser tools handbook"
   }
 }

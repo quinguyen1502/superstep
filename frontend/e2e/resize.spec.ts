@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
-// TASK-0038 (REQ-0026): drag the palette, config and run-panel borders; sizes stay after a reload and in another
+// drag the palette, config and run-panel borders; sizes stay after a reload and in another
 // workflow; minimums hold; the header stays 56px; a node drag on the canvas moves the node, not a panel.
 
 const box = async (page: Page, sel: string) => (await page.locator(sel).first().boundingBox())!

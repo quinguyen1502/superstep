@@ -1,4 +1,4 @@
-"""TASK-0010: token usage, per-run metrics, OpenTelemetry spans (in-memory exporter), clean no-op, history API."""
+"""token usage, per-run metrics, OpenTelemetry spans (in-memory exporter), clean no-op, history API."""
 import asyncio, copy, json, uuid
 import httpx, pytest
 from fastapi.testclient import TestClient

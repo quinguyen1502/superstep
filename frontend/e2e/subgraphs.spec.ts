@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0011: parallel branches + Join with an append reducer, and a Subgraph node running another saved workflow.
+// parallel branches + Join with an append reducer, and a Subgraph node running another saved workflow.
 async function login(page: Page) {
   await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)

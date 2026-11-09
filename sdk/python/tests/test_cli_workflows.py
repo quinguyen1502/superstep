@@ -1,4 +1,4 @@
-"""workflows list, export, import, pull and push (TASK-0168)."""
+"""workflows list, export, import, pull and push."""
 import io
 import json
 import zipfile

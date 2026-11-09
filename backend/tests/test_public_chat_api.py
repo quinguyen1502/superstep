@@ -1,4 +1,4 @@
-"""The published chat page's API (TASK-0140, REQ-0074, DEC-0067): publish settings, the page by slug, visitor identity
+"""The published chat page's API: publish settings, the page by slug, visitor identity
 and isolation, signed_in, frame-ancestors and the per-IP limit."""
 import base64, uuid
 import pytest
@@ -141,7 +141,7 @@ def data_url(raw: bytes, mime="image/png"): return f"data:{mime};base64," + base
 
 
 def test_a_logo_is_checked_kept_served_and_removed():
-    """TASK-0145: the logo comes as a data: URL in the settings; its type is read from the bytes; no SVG."""
+    """the logo comes as a data: URL in the settings; its type is read from the bytes; no SVG."""
     tok = user(); wid, slug = publish(tok)
     put = lambda body: c.put(f"/api/workflows/{wid}/chat", json=body, headers=H(tok))  # noqa: E731
     for bad in (data_url(b"<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>", "image/svg+xml"),

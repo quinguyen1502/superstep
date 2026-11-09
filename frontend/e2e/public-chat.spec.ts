@@ -2,10 +2,10 @@ import { test, expect, type Page } from '@playwright/test'
 import path from 'node:path'
 import { apiToken, newWorkflow, N } from './helpers'
 const LOGO = path.resolve(import.meta.dirname, '../public/apple-touch-icon.png')
-// REQ-0074 (TASK-0142): the published chat page /c/{slug}. The builder publishes it in Chat settings; an anonymous browser
+// the published chat page /c/{slug}. The builder publishes it in Chat settings; an anonymous browser
 // chats there and comes back to its chat; another browser sees none of it; the builder reads it under Visitors.
 // signed_in sends a visitor to the login page; a chat that is turned off, and the daily cap, say so on the page.
-// The logo (TASK-0145) shows in the header, over the welcome and in the tab; a chat without one shows its initial and a picture.
+// The logo shows in the header, over the welcome and in the tab; a chat without one shows its initial and a picture.
 const shot = async (page: Page, name: string, sel = 'body') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const STATE = [{ name: 'message', type: 'string' }, { name: 'messages', type: 'list' }, { name: 'reply', type: 'string' }]
 const ECHO = (name: string) => ({ name, state: STATE,
@@ -66,7 +66,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await shot(v, `public-chat-answer-${lang}`)
     await v.reload(); await expect(v.getByTestId('chat-mine')).toHaveCount(2)
     await expect(v.locator('#public-chat-sessions')).toBeVisible()
-    // a thumbs down with a comment stays after a reload (TASK-0163)
+    // a thumbs down with a comment stays after a reload
     await v.getByTestId('chat-rate-down').last().click()
     await v.getByTestId('chat-rating-input').fill('The order status was wrong')
     await v.getByTestId('chat-rating-send').click()

@@ -1,4 +1,4 @@
-"""Chat attachments in backups and `attachments migrate` (TASK-0194, REQ-0080, DEC-0074)."""
+"""Chat attachments in backups and `attachments migrate`."""
 import json
 
 import pytest

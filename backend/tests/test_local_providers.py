@@ -1,4 +1,4 @@
-"""TASK-0030: provider registry (Ollama, LM Studio, OpenAI-compatible, OpenRouter) with mocked HTTP (respx)."""
+"""provider registry (Ollama, LM Studio, OpenAI-compatible, OpenRouter) with mocked HTTP (respx)."""
 import json, uuid
 import httpx, pytest, respx
 from fastapi.testclient import TestClient

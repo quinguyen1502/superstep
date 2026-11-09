@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0119: the Support agent template's test cases pass with the mock model (one approves the refund, one rejects
+// the Support agent template's test cases pass with the mock model (one approves the refund, one rejects
 // it), and the Tests panel adds a "tool called" check for an Agent node and its tool.
 
 async function pick(page: Page, trigger: ReturnType<Page['locator']>, option: string) {
@@ -12,7 +12,7 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await expect(page).toHaveURL(/\/workflows$/)
   const H = { Authorization: `Bearer ${await apiToken(page)}` }
   const wid = (await (await page.request.post('/api/templates/builtin-support-agent/use', { headers: H, data: {} })).json()).data.id
-  // TASK-0126: the policy search tool says it needs a knowledge base; the built-in tool's label is translated
+  //: the policy search tool says it needs a knowledge base; the built-in tool's label is translated
   await page.goto(`/workflows/${wid}`); await page.locator('.react-flow__node[data-id="agent"]').click(); await page.locator('#config-tab-settings').click()
   await expect(page.locator('#agent-tool-1-kb-required')).toContainText('Hãy chọn kho tri thức')
   await expect(page.locator('label[for="agent-tool-0-function"]')).toHaveText('Hàm')
@@ -50,7 +50,7 @@ test('agent tests: template cases pass, and a "tool called" check is added', asy
   await page.getByTestId('test-row').filter({ hasText: 'Tra đơn hàng A100' }).click()
   await expect(page.getByTestId('check-row').nth(1)).toContainText('“Support agent” đã gọi lookup_order')
 
-  // the Code tab: both languages have the Agent node's steps (TypeScript since TASK-0125)
+  // the Code tab: both languages have the Agent node's steps (TypeScript since)
   await page.locator('#code-tab').click()
   await page.locator('#code-export-language').click(); await page.locator('#code-export-language-python').click()
   await expect(page.locator('#code-file')).toHaveText(/^support_agent.*\.py$/, { timeout: 30_000 })

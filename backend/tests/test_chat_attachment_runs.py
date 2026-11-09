@@ -1,4 +1,4 @@
-"""TASK-0175 (REQ-0077, DEC-0072 decision 2): Chat settings turn attachments on, and a message's files reach the run
+"""Chat settings turn attachments on, and a message's files reach the run
 as a list field of records without bytes."""
 import json
 import pytest

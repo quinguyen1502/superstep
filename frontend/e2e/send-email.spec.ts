@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
-// TASK-0051: an SMTP credential (form, preset, connection check) and a Send email node: a dry run without a credential,
+// an SMTP credential (form, preset, connection check) and a Send email node: a dry run without a credential,
 // then a real send to the local SMTP sink started by playwright.config.ts.
 const PORT = process.env.E2E_SMTP_PORT || '8125'
 const WF = (name: string) => ({ name,

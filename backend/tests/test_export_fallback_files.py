@@ -1,4 +1,4 @@
-"""TASK-0268 (REQ-0089, DEC-0088): an LLM node with a fallback model AND attachments, executed in Python and TypeScript
+"""an LLM node with a fallback model AND attachments, executed in Python and TypeScript
 (Deno). As in the studio (nodes.py passes the same files to model_policy.run), the fallback model gets the same prompt
 and files, once, under the same failover rules; offline mock mode calls only the primary mock. The provider call is a
 local fake: no network, no paid call."""

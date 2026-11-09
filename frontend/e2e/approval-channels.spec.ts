@@ -1,7 +1,7 @@
 import { createHmac } from 'crypto'
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0022: connect Slack, link my Slack account, pick the channel on a Human node, see the request in the audit log.
+// connect Slack, link my Slack account, pick the channel on a Human node, see the request in the audit log.
 // Slack/Telegram are the fake APIs of backend/tests/fixtures/mock_chat_api.py (CHAT port), which record every message,
 // so the test reads the verification code the "bot" sent and the approval request it posted.
 const WF = {
@@ -36,7 +36,7 @@ test('approval channels: org connection, verified account, Human node, request, 
   await expect(page).toHaveURL(/\/settings\/channels$/)
   const slack = page.locator('[data-testid=channel-card-slack]'), tg = page.locator('[data-testid=channel-card-telegram]')
   await expect(slack.getByTestId('status')).toHaveText('Chưa thiết lập'); await expect(tg.getByTestId('status')).toHaveText('Chưa thiết lập')
-  // each platform card title carries its logo (TASK-0063)
+  // each platform card title carries its logo
   for (const k of ['slack', 'telegram', 'whatsapp', 'email', 'teams'])
     await expect(page.locator(`[data-testid=channel-card-${k}] [data-channel-logo=${k}]`).first()).toBeVisible()
   // connect Slack for the whole organization (the demo user is an admin): Org tab inside the Slack card

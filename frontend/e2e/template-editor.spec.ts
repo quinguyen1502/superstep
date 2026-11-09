@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0041: `{{state.field}}` templates show as tags, `{{` suggests fields, the braces button inserts one, and the saved text is unchanged.
+// `{{state.field}}` templates show as tags, `{{` suggests fields, the braces button inserts one, and the saved text is unchanged.
 async function login(page: Page, email = 'admin@example.com', password = 'admin123') {
   await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
   await page.locator('#auth-submit').click(); await expect(page).toHaveURL(/\/workflows$/)
@@ -33,7 +33,7 @@ test('template editor: tags, suggestions, insert menu, one-line URL, saved text,
   await expect(prompt.locator('.template-tag[data-field="answer"]')).toBeVisible()
 
   // the braces button inserts at the cursor; Backspace removes the whole tag
-  // focus is back in the editor as soon as an item is picked: keys typed straight after go into the field, not to the canvas (TASK-0043)
+  // focus is back in the editor as soon as an item is picked: keys typed straight after go into the field, not to the canvas
   await page.locator('#llm-prompt-insert').click(); await page.getByRole('menuitem', { name: 'reply' }).click(); await page.keyboard.type('Z')
   await expect(prompt.locator('.template-tag[data-field="reply"]')).toBeVisible(); await expect(prompt).toContainText('replyZ')
   await page.keyboard.press('Backspace'); await page.keyboard.press('Backspace')

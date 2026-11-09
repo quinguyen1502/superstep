@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N, SIMPLE } from './helpers'
-// TASK-0026: copy / cut / paste / duplicate nodes, one undo step per paste, cross-workflow paste.
+// copy / cut / paste / duplicate nodes, one undo step per paste, cross-workflow paste.
 
 test('copy, paste, duplicate, cut and paste into another workflow', async ({ page }) => {
   const H = await login(page)

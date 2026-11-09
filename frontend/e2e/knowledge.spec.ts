@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// TASK-0012: knowledge base management (create, upload, test search) and a Retriever node in a run.
+// knowledge base management (create, upload, test search) and a Retriever node in a run.
 async function login(page: Page) {
   await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)

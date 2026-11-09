@@ -1,8 +1,8 @@
-"""Fake Slack + Telegram Web APIs and a Teams webhook (/teams/…, TASK-0047) for the e2e suite (TASK-0022). Records every call; GET /_messages lists them.
+"""Fake Slack + Telegram Web APIs and a Teams webhook (/teams/…) for the e2e suite. Records every call; GET /_messages lists them.
 
 Run: python mock_chat_api.py [port]  (default 8111). Point SLACK_API_URL=http://127.0.0.1:8111/slack and
 TELEGRAM_API_URL=http://127.0.0.1:8111/telegram at it. A bot token xoxb-<n>-<TEAM>-... answers auth.test with team <TEAM>.
-Also fakes LLM providers (TASK-0030): /ollama (Ollama API: tags, streamed chat, embed), /lmstudio/v1 (OpenAI-compatible), /openrouter/api/v1 (key sk-or-good).
+Also fakes LLM providers: /ollama (Ollama API: tags, streamed chat, embed), /lmstudio/v1 (OpenAI-compatible), /openrouter/api/v1 (key sk-or-good).
 """
 import json, sys, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -45,7 +45,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/ollama/api/chat":
             if body.get("model") not in OLLAMA_MODELS: return self._send({"error": f"model '{body.get('model')}' not found"}, 404)
             classify = "classify" in json.dumps(body).lower()
-            judge = "<request>" in json.dumps(body)  # the AI review judge of an approval (TASK-0189): a fixed, confident verdict
+            judge = "<request>" in json.dumps(body)  # the AI review judge of an approval: a fixed, confident verdict
             if judge: classify = True
             parts = [json.dumps({"decision": "approve", "confidence": 0.92, "reason": "A small refund for an existing order.", "flags": []})] if judge \
                 else ["order_status"] if classify else [f"[ollama:{body['model']}] ", "xin ", "chào, ", "đây ", "là ", "câu ", "trả ", "lời ", "từng ", "phần."]
@@ -68,7 +68,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send({"ok": True, "team": f"Workspace {team}", "team_id": team, "user_id": "UBOT", "bot_id": "BBOT"})
             if method == "chat.postMessage": return self._send({"ok": True, "channel": body.get("channel"), "ts": f"{time.time():.6f}"})
             return self._send({"ok": True})
-        if self.path.startswith("/teams/"): return self._send({"ok": True}, 202)  # a Teams Workflows webhook (TASK-0047)
+        if self.path.startswith("/teams/"): return self._send({"ok": True}, 202)  # a Teams Workflows webhook
         if self.path.startswith("/whatsapp/"):
             return self._send({"messages": [{"id": f"wamid.fixture.{len(CALLS)}"}]})
         if self.path.startswith("/telegram/"):

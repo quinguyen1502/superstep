@@ -1,4 +1,4 @@
-"""TASK-0082 (REQ-0047, DEC-0051): export a workflow as a runnable LangGraph.js TypeScript file; Agent nodes since TASK-0125.
+"""export a workflow as a runnable LangGraph.js TypeScript file; Agent nodes included.
 
 Unit and snapshot tests always run. With Deno on the host (CI installs it for the Code-node tests), the exported files
 are type-checked (`deno check`, npm: specifiers) and run, and must take the studio's mock path to the same final state.
@@ -104,7 +104,7 @@ AGENT_PARENT = {"name": "Agent in a subgraph", "state": [F("message"), F("answer
 
 
 def test_agent_nodes_are_exported(c):
-    """TASK-0125: the Agent node's steps, as in the Python file, with no credential or id of the studio's."""
+    """the Agent node's steps, as in the Python file, with no credential or id of the studio's."""
     out = T.to_typescript(AGENT, "Agent")
     code = out.code
     assert "SECRET" not in code and "--allow-net" in code and "callAgent" in code
@@ -250,7 +250,7 @@ TEAM = {"name": "Order team", "state": [F("message"), F("answer"), F("steps", "l
 
 
 def test_workflow_tools_take_the_studio_path(tmp_path, deno_env):
-    """TASK-0137: a workflow tool calls the child's own graph in the same file; the parent takes the studio's path and the
+    """a workflow tool calls the child's own graph in the same file; the parent takes the studio's path and the
     model gets the same result."""
     out = same_run(tmp_path, deno_env, TEAM, {"message": "order B200"}, children={"desk1": DESK})
     assert "const graph = build_order_desk();" in out.code and out.code.count("function build_order_desk(") == 1
@@ -271,7 +271,7 @@ def test_builtin_templates_take_the_studio_path(tmp_path, deno_env, tid, i):
 
 
 def test_attachments_take_the_studio_path(tmp_path, deno_env):
-    """TASK-0176: "Include attachments" on LLM and Agent nodes; the mock names the files, as in the studio."""
+    """"Include attachments" on LLM and Agent nodes; the mock names the files, as in the studio."""
     from tests.test_attachment_models import B64, IMG_REC, PDF_REC, wf
     files = [PDF_REC, {**IMG_REC, "data_url": f"data:image/png;base64,{B64}"}]
     same_run(tmp_path, deno_env, wf("llm"), {"message": "Summarise this", "files": files})

@@ -1,4 +1,4 @@
-"""Small real files for the chat attachment tests (TASK-0174..0176): a one-page PDF with a text layer and a PNG."""
+"""Small real files for the chat attachment tests: a one-page PDF with a text layer and a PNG."""
 import base64
 
 PNG = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")

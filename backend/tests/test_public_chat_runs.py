@@ -1,4 +1,4 @@
-"""Chatting on the published page (TASK-0141, REQ-0074, DEC-0067): the public socket runs a message as the workflow's
+"""Chatting on the published page: the public socket runs a message as the workflow's
 owner, streams only what the steps mode allows, takes the visitor's Human answers, and keeps the limits; builders read
 visitor chats."""
 import json, time
@@ -79,7 +79,7 @@ def test_a_visitor_answers_a_human_node_but_not_a_reviewers():
     turns(v, slug, vt, sid, 2)
     assert code(say(v, slug, vt, {"chat_session_id": sid, "message": "more"})) == "CHAT_RUN_WAITING"
     assert say(v, slug, vt, {"chat_session_id": sid, "response": "yes"})[-1]["status"] == "ok"
-    d = turns(v, slug, vt, sid, 4)["turns"]  # the visitor's answer is their turn (TASK-0209), then the final answer
+    d = turns(v, slug, vt, sid, 4)["turns"]  # the visitor's answer is their turn, then the final answer
     assert [(x["role"], x["status"]) for x in d] == [("user", "ok"), ("assistant", "waiting"), ("user", "ok"), ("assistant", "ok")] and d[2]["text"] == "yes"
     assert code(say(v, slug, vt, {"chat_session_id": sid, "response": "again"})) == "RUN_NOT_WAITING"  # answered already
     # a reviewer's question cannot be answered from the page

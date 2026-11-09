@@ -22,3 +22,7 @@ Connection-level product defaults from DEC-0085 stay unchanged (required non-emp
 
 - Also defaulting the runtime gate on: rejected by the owner (runs must not drive a browser until runtime is set).
 - Flipping connection `allow_*` toggles: rejected; owner asked for feature gate only.
+
+## Amendment 2026-11-09 (UX visibility)
+
+Advertise all first-delivery browser tools in discovery even when `allow_*` is false; append an explicit disabled note. Enforce allow_* and runtime at execution time. Expose `browser_runtime_enabled` on the MCP list payload so Settings can show a runtime-off banner with a handbook link (`guide/browser`). Connection toggles stay default false; whitelist still required.

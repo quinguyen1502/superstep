@@ -63,7 +63,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
         await page.getByRole('dialog').locator('input').first().fill(name)
         await page.getByRole('dialog').getByRole('button', { name: s.addField, exact: true }).click()
       }
-      // the output field is in the Config panel's Data tab (TASK-0121); back to Settings afterwards
+      // the output field is in the Config panel's Data tab; back to Settings afterwards
       const configTab = (k: 'settings' | 'data') => page.locator(`#config-tab-${k}`).click()
       const pickOutput = async (name: string) => { await configTab('data'); await field(s.output).getByRole('combobox').click(); await page.getByRole('option', { name, exact: true }).click() }
 

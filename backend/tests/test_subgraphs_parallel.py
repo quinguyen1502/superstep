@@ -1,4 +1,4 @@
-"""TASK-0011: parallel branches with reducers, Join (fan-in), subgraph nodes (inline expansion)."""
+"""parallel branches with reducers, Join (fan-in), subgraph nodes (inline expansion)."""
 import copy, os, uuid
 os.environ.pop("OPENAI_API_KEY", None)
 import pytest

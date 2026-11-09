@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
 import { confirmDelete } from './confirm'
-// TASK-0029: teams + team share, ownership transfer, activity log, delete user with reassignment, org-resource policy, dependents on delete.
+// teams + team share, ownership transfer, activity log, delete user with reassignment, org-resource policy, dependents on delete.
 async function login(page: Page, email = 'admin@example.com', password = 'admin123') {
   await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
   await page.locator('#auth-submit').click(); await expect(page).toHaveURL(/\/workflows$/)

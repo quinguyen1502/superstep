@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
-// TASK-0121: every node's Config has the same tabs in the same order (Settings · Data · Execution). A tab the node does
+// every node's Config has the same tabs in the same order (Settings · Data · Execution). A tab the node does
 // not use is disabled in place, the chosen tab is kept across nodes, and a tab that needs attention shows a dot.
 const WF = (name: string) => ({ name,
   state: [{ name: 'message', type: 'string' }, { name: 'answer', type: 'string' }, { name: 'steps', type: 'list' }],

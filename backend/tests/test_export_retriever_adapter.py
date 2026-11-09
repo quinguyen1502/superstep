@@ -1,4 +1,4 @@
-"""TASK-0270 (REQ-0089, DEC-0088): the exported Retriever adapter, executed in Python and TypeScript (Deno) against a
+"""the exported Retriever adapter, executed in Python and TypeScript (Deno) against a
 local stand-in for the Superstep knowledge base search API (same path and envelope). Configured only by SUPERSTEP_URL,
 SUPERSTEP_TOKEN and <PREFIX>_ID; unconfigured it is an announced offline mock, or an error in a live run."""
 import json, os, subprocess, sys, threading, uuid

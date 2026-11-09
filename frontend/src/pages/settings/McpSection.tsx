@@ -63,7 +63,7 @@ function ServerFields({ form, set, idp, fixed, data, errors }: { form: Form; set
           <SelectContent><SelectItem value="user">{t('approvals.scope.user')}</SelectItem><SelectItem value="org">{t('approvals.scope.org')}</SelectItem></SelectContent></Select></div>
     </div>
     {form.transport === 'managed' ? <ManagedConnectionFields adapters={data.managed_adapters || []} adapter={form.adapter} settings={form.settings}
-      secrets={form.secrets} fixed={fixed} idp={idp} scope={form.scope} errors={errors} onChange={patch => set({ ...form, ...patch })} /> : form.transport === 'http'
+      secrets={form.secrets} fixed={fixed} idp={idp} scope={form.scope} errors={errors} runtimeEnabled={!!data.browser_runtime_enabled} onChange={patch => set({ ...form, ...patch })} /> : form.transport === 'http'
       ? <div className="space-y-1.5"><Label htmlFor={`${idp}-url`}>{t('mcp.url')}</Label><Input id={`${idp}-url`} className="font-mono text-xs" placeholder="https://mcp.example.com/mcp" value={form.url} onChange={e => set({ ...form, url: e.target.value })} /></div>
       : <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5"><Label htmlFor={`${idp}-command`}>{t('mcp.command')}</Label><Input id={`${idp}-command`} className="font-mono text-xs" placeholder="npx" value={form.command} onChange={e => set({ ...form, command: e.target.value })} /></div>

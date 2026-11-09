@@ -1,4 +1,4 @@
-"""Hand-offs in the exports (TASK-0183, REQ-0078, DEC-0073 decision 5): the Python file and the LangGraph project run
+"""Hand-offs in the exports: the Python file and the LangGraph project run
 the same steps as the studio with the offline model, and the TypeScript file has the same nodes and routes."""
 from app.engine import python_export as X, typescript_export as TS
 from tests.test_agent_handoff_model import TOOL, desk
@@ -73,7 +73,7 @@ def test_typescript_type_checks_and_hands_off_like_the_studio(tmp_path, deno_env
 
 
 def test_exports_do_not_skip_the_nodes_before_the_first_agent():
-    """Review finding 5 (TASK-0206): the exports mirror the engine; with a node between Start and the first agent there
+    """Review finding 5: the exports mirror the engine; with a node between Start and the first agent there
     is no start router."""
     from tests.test_agent_handoff_engine import masked_desk
     wf = masked_desk()

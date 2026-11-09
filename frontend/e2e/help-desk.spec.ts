@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
-// REQ-0078 (TASK-0184): the Help desk template. In the studio Chat tab Triage hands a duplicate charge to Billing; on the
+// the Help desk template. In the studio Chat tab Triage hands a duplicate charge to Billing; on the
 // public page the second message of the session stays with Billing, and a new session starts at Triage again.
 const BILLING = 'Billing: duplicate charges on my invoices'
 const steps = (p: Page) => p.getByTestId('chat-steps').last()

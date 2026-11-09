@@ -1,4 +1,4 @@
-"""Alembic migrations on a fresh Postgres database (TASK-0009).
+"""Alembic migrations on a fresh Postgres database.
 
 Runs when TEST_DATABASE_URL (or DATABASE_URL) points at Postgres; the role needs CREATEDB.
 A throwaway database is created and dropped, so the configured one is never touched."""
@@ -42,7 +42,7 @@ def test_migrations_and_seed_on_fresh_postgres(fresh_pg):
 
 
 def test_pat_name_index_on_postgres(fresh_pg):
-    """TASK-0213: active duplicates are renamed before the partial unique index, which then refuses a second active name."""
+    """active duplicates are renamed before the partial unique index, which then refuses a second active name."""
     import sqlalchemy as sa
     from alembic import command
     from alembic.config import Config

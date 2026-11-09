@@ -1,4 +1,4 @@
-"""TASK-0271 (REQ-0089, DEC-0088): the exported Send email adapter, executed in Python (smtplib) and TypeScript (Deno,
+"""the exported Send email adapter, executed in Python (smtplib) and TypeScript (Deno,
 nodemailer) against a local SMTP server (no external call). A node with an SMTP credential in the studio sends with
 SMTP_* settings from the environment; one without makes a dry run, as in the studio."""
 import base64, os, re, socketserver, subprocess, sys, threading, uuid

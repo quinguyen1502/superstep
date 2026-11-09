@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, N } from './helpers'
 import { expectRowAligned } from './helpers/alignment'
-// TASK-0118: configure an Agent node (tools from two sources, approval settings), see the validator's errors, run it with
-// the offline mock and read its rounds in the trace. Approving a tool call during the run comes with TASK-0117.
+// configure an Agent node (tools from two sources, approval settings), see the validator's errors, run it with
+// the offline mock and read its rounds in the trace. Approving a tool call during the run comes with.
 const shot = async (page: Page, name: string, sel = '#config-panel') => { if (process.env.REVIEW_SHOTS) await page.locator(sel).screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const T = {
   vi: { password: 'Mật khẩu', urlMissing: /chưa có URL/, round: 'Vòng 1', calls: 'gọi lookup_order', up: 'Đưa http_request lên', down: 'Đưa http_request xuống' },
@@ -39,7 +39,7 @@ for (const lang of ['vi', 'en'] as const) test.describe(lang, () => {
     await expectRowAligned([param.getByRole('textbox').first(), param.getByRole('combobox'), param.getByRole('button').first()], { label: 'parameter row' })
     await shot(page, `agent-settings-${lang}`)
     await page.locator('#save-btn').click()
-    await expect(page.getByText(T[lang].urlMissing)).toBeVisible()  // in the UI language since TASK-0132
+    await expect(page.getByText(T[lang].urlMissing)).toBeVisible()  // in the UI language since
     await page.locator('#agent-tool-1-url').click(); await page.keyboard.type('https://example.com/refund')
     await page.locator('#save-btn').click(); await expect(page.locator('#unsaved-badge')).toHaveCount(0)
     const saved = (await (await page.request.get(`/api/workflows/${wid}`, { headers: H })).json()).data

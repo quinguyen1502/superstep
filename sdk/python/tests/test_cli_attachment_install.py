@@ -1,4 +1,4 @@
-"""Chat attachment storage in `install`, `deploy` and `doctor` (TASK-0195, REQ-0080, DEC-0074)."""
+"""Chat attachment storage in `install`, `deploy` and `doctor`."""
 import io
 import json
 import os

@@ -150,7 +150,7 @@ race completion: reload history if the outcome is unknown. A stream closed
 before completion has no final result. A bare `break` alone does not guarantee
 immediate iterator cleanup in Python.
 
-The sync/async contract tests replay the backend recording from TASK-0220 and
+The sync/async contract tests replay the backend recording fixture and
 share its HS256 token vectors. `scripts/sdk_integration.sh` tests both SDKs
 against a temporary backend (including live Python text/form answers, files,
 ratings and user isolation). Unit CI covers Python 3.9 and 3.12.

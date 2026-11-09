@@ -1,4 +1,4 @@
-"""TASK-0054: only `code.write` (admins by default) may add a Code node or change its source, on every graph write."""
+"""only `code.write` (admins by default) may add a Code node or change its source, on every graph write."""
 import copy, uuid
 from types import SimpleNamespace as NS
 from fastapi.testclient import TestClient

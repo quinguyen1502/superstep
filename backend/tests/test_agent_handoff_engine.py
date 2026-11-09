@@ -1,4 +1,4 @@
-"""Agent hand-offs in the engine (TASK-0180, REQ-0078, DEC-0073 decisions 2 and 3): routing through `A/__handoff`, the
+"""Agent hand-offs in the engine: routing through `A/__handoff`, the
 target's context, the run limit, a mixed round, a restart right after the hand-off, time travel and subgraphs."""
 import json
 from app.engine import agents
@@ -110,7 +110,7 @@ def masked_desk():
 
 
 def test_a_chat_never_skips_the_nodes_before_the_first_agent(monkeypatch):
-    """Review finding 5 (TASK-0206): the start router jumped from Start to the agent that answered last, so a step
+    """Review finding 5: the start router jumped from Start to the agent that answered last, so a step
     between Start and the first agent (masking, a filter, a lookup) did not run from the second message on."""
     from app.engine import handoffs
     monkeypatch.setenv("STUDIO_ENABLE_CODE_NODES", "1"); monkeypatch.setenv("STUDIO_CODE_RUNTIME", "subprocess")

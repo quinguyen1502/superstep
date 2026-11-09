@@ -1,4 +1,4 @@
-"""Layering rules (see DEC-0009): lower layers must not import upper ones."""
+"""Layering rules (see docs/backend-architecture.md): lower layers must not import upper ones."""
 import pathlib, re
 APP = pathlib.Path(__file__).resolve().parents[1] / "app"
 FORBIDDEN = {
@@ -8,7 +8,7 @@ FORBIDDEN = {
     "schemas": ["models", "repositories", "services", "api"],
     "repositories": ["services", "api", "fastapi"],
     "services": ["api", "fastapi"],
-    "storage": ["models", "repositories", "services", "api", "engine", "fastapi"],  # adapters for attachment bytes (TASK-0191)
+    "storage": ["models", "repositories", "services", "api", "engine", "fastapi"],  # adapters for attachment bytes
 }
 
 def test_import_directions():

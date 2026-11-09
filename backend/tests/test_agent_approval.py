@@ -1,4 +1,4 @@
-"""Agent node tool approval (TASK-0117, REQ-0072, DEC-0063 decision 7): the run waits before a call to a tool that needs
+"""Agent node tool approval: the run waits before a call to a tool that needs
 approval, through the Human node's path (the inbox, the channels, the deadlines, workflow test answers); approve runs the
 call once, reject tells the model. The restart cases are in test_durable_restart.py."""
 import http.server, json, threading, uuid

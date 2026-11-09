@@ -1,4 +1,4 @@
-"""TASK-0020: notifications (in-app, SMTP, notify webhook), webhook delivery log + backoff + redelivery, signing-secret
+"""notifications (in-app, SMTP, notify webhook), webhook delivery log + backoff + redelivery, signing-secret
 rotation, recovery from progress checkpoints, periodic lease reaper, live spans and OTel metrics."""
 import asyncio, json, socket, time, uuid
 from types import SimpleNamespace as NS

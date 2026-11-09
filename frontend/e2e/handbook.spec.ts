@@ -133,7 +133,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await page.locator('.react-flow__node[data-id="ask"]').click(); await page.locator('#config-tab-settings').click(); await page.locator('#human-deadline').scrollIntoViewIfNeeded()
       await shot(page, lang, 'human-deadline')
 
-      // Approvals inbox with the waiting refund, then the workflow list with its link (TASK-0065)
+      // Approvals inbox with the waiting refund, then the workflow list with its link
       await page.goto('/approvals'); await expect(page.locator('[data-testid=inbox-row]').first()).toBeVisible()
       await shot(page, lang, 'approvals')
       await page.goto('/workflows'); await expect(page.locator('#pending-runs')).toBeVisible()
@@ -141,7 +141,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await page.locator('#new-wf').click(); await expect(page.locator('#template-gallery')).toBeVisible()
       await shot(page, lang, 'templates'); await page.keyboard.press('Escape')
 
-      // Workflow tests (TASK-0069): the Leave request template comes with its test cases; Run all with the mock model,
+      // Workflow tests: the Leave request template comes with its test cases; Run all with the mock model,
       // the case editor, then a mistake in version 2 shows as a regression against version 1
       const leave = (await (await page.request.post('/api/templates/builtin-leave-request/use', { headers: H, data: { name: lang === 'en' ? 'Leave request' : 'Đơn nghỉ phép' } })).json()).data.id
       const runTests = async () => {
@@ -153,7 +153,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await shot(page, lang, 'tests')
       await page.getByTestId('test-edit').click(); await expect(page.locator('#test-dialog')).toBeVisible()
       await shot(page, lang, 'test-case'); await page.keyboard.press('Escape')
-      // Export to Python (TASK-0072): version 1 in the Code tab, with the Human node's code marked
+      // Export to Python: version 1 in the Code tab, with the Human node's code marked
       await page.locator('#code-tab').click(); await page.locator('.react-flow__node[data-id="manager"]').click()
       await expect(page.locator('.cm-node-mark').first()).toBeVisible()
       await shot(page, lang, 'code-tab')
@@ -222,7 +222,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
         await shot(page, lang, `settings-${sec}`)
       }
 
-      // Chat triggers (TASK-0077): a Slack connection (the fake API) and one trigger on the Leave request, opened for editing.
+      // Chat triggers: a Slack connection (the fake API) and one trigger on the Leave request, opened for editing.
       // Made after the Channels shot so that one stays empty.
       const team = `T${lang.toUpperCase()}${Date.now().toString(36).toUpperCase()}`
       const ch = (await (await page.request.post('/api/approvals/channels', { headers: H, data: { kind: 'slack', name: 'Acme Slack', bot_token: `xoxb-1-${team}-abcdefgh`, signing_secret: '0123456789abcdef0123456789abcdef' } })).json()).data
@@ -234,7 +234,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await expect(page.locator('#chat-trigger-sample')).toBeVisible()
       await shot(page, lang, 'chat-triggers'); await page.keyboard.press('Escape')
 
-      // Chat panel (TASK-0085) and the overview shot for the README: tool call, a visitor confirmation, a TypeScript Code node
+      // Chat panel and the overview shot for the README: tool call, a visitor confirmation, a TypeScript Code node
       // on the refund branch (not run, so no Docker needed), the run trace below and the Code node's settings on the right
       const tsCode = 'export function main(state: { message: string }) {\n  const order = state.message.match(/[A-Z]\\d+/)?.[0] ?? ""\n  return { order_id: order, reason: "refund" }\n}\n'
       const shop = { name: lang === 'en' ? 'Order assistant' : 'Trợ lý đơn hàng',
@@ -281,7 +281,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await shot(page, lang, 'editor-dark')
     })
 
-    // The Agent node (TASK-0120): its settings, a run waiting before request_refund, then the trace after Approve.
+    // The Agent node: its settings, a run waiting before request_refund, then the trace after Approve.
     // Run alone with `-g agent`. The policy search tool needs a knowledge base, so it is left out here.
     test(`agent ${lang}`, async ({ page }) => {
       await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
@@ -312,7 +312,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await shot(page, lang, 'agent-trace')
     })
 
-    // Workflows as Agent tools (TASK-0138, REQ-0073): the Support team template's tool card, a run whose trace shows the
+    // Workflows as Agent tools: the Support team template's tool card, a run whose trace shows the
     // order desk's steps under the call, and a run waiting for the refund desk's approval. Run alone with `-g "workflow tools"`.
     test(`workflow tools ${lang}`, async ({ page }) => {
       await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])
@@ -342,7 +342,7 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await shot(page, lang, 'workflow-tool-approval')
     })
 
-    // The public chat page (TASK-0144, REQ-0074): the publish settings, the embed snippets, and the page a visitor sees.
+    // The public chat page: the publish settings, the embed snippets, and the page a visitor sees.
     // Run alone with `-g "public chat"`.
     test(`public chat ${lang}`, async ({ page, browser }) => {
       await page.addInitScript(([l]) => { localStorage.setItem('lang', l); localStorage.setItem('theme', 'light') }, [lang])

@@ -31,7 +31,7 @@ test('credentials: add (masked), invalid base URL error, pick on LLM node, delet
 
   await page.goto('/workflows'); await page.locator('#creds-btn').click()
   // wait until the list has loaded and the dialog has settled: a click during the open animation or the first
-  // render could land on a button that is replaced right after, so the confirm dialog never opened (TASK-0109)
+  // render could land on a button that is replaced right after, so the confirm dialog never opened
   const creds = page.getByRole('dialog'); await expect(creds.locator('div.rounded-md', { hasText: name })).toBeVisible()
   const del = creds.getByRole('button', { name: `Xoá ${name}` })
   await expect(async () => { await del.click(); await expect(page.locator('#confirm-delete')).toBeVisible({ timeout: 2000 }) }).toPass()

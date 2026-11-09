@@ -1,4 +1,4 @@
-"""`test` writes JUnit and exits non-zero when a suite fails (TASK-0170)."""
+"""`test` writes JUnit and exits non-zero when a suite fails."""
 import json
 from pathlib import Path
 from xml.etree import ElementTree as ET

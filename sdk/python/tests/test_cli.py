@@ -1,4 +1,4 @@
-"""CLI parser, catalogs, JSON output, and the server version comparison (TASK-0149)."""
+"""CLI parser, catalogs, JSON output, and the server version comparison."""
 import json
 from pathlib import Path
 

@@ -1,4 +1,4 @@
-"""TASK-0213: active token names are unique per user in the database, not only by a check before the insert (REV-0196).
+"""active token names are unique per user in the database, not only by a check before the insert.
 A create that loses the race answers PAT_NAME_TAKEN; the token minted at CLI collection takes the next free name."""
 import threading
 import pytest

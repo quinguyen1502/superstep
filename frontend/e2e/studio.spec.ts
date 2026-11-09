@@ -35,7 +35,7 @@ test('register → logout → login → list → open example → run → done',
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
   await page.locator('#back-btn').click()
   // this workflow's row shows the run as its last run. Each row has the status twice: a phone line (sm:hidden) before the
-  // Last run column, so "the first ok on the page" was the hidden copy (TASK-0196).
+  // Last run column, so "the first ok on the page" was the hidden copy.
   const row = page.getByRole('row').filter({ hasText: wid })
   await expect(row.getByText('ok', { exact: true }).filter({ visible: true })).toHaveCount(1)
 })
@@ -43,7 +43,7 @@ test('register → logout → login → list → open example → run → done',
 test('wrong password shows a generic error', async ({ page }) => {
   const email = `e2e-${uid()}@example.com`
   await register(page, email)
-  await page.evaluate(() => localStorage.clear()); await page.context().clearCookies()  // sign out: the session is a cookie (TASK-0045)
+  await page.evaluate(() => localStorage.clear()); await page.context().clearCookies()  // sign out: the session is a cookie
   // the app may itself redirect to /login once the token is gone (a header poll gets 401), racing this goto
   await page.goto('/login').catch(() => {}); await expect(page).toHaveURL(/\/login/); await page.waitForLoadState()
   await login(page, email, 'wrongpass1')

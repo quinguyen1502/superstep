@@ -1,4 +1,4 @@
-"""TASK-0014: roles, per-workflow sharing, admin user management, STUDIO_ADMIN_EMAILS bootstrap, Add to Slack."""
+"""roles, per-workflow sharing, admin user management, STUDIO_ADMIN_EMAILS bootstrap, Add to Slack."""
 import json, time, uuid
 from types import SimpleNamespace as NS
 from urllib.parse import parse_qs, urlparse

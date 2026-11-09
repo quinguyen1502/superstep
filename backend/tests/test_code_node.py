@@ -1,4 +1,4 @@
-"""TASK-0053: Tool node Code mode — main(state) runs in a sandbox (Docker), never in the server process."""
+"""Tool node Code mode — main(state) runs in a sandbox (Docker), never in the server process."""
 import json, os, subprocess, sys, time
 import pytest
 from app.core.errors import AppError
@@ -141,7 +141,7 @@ def test_time_limit_and_cancel_stop_the_call(local, monkeypatch):
     monkeypatch.setenv("STUDIO_CODE_MAX_SECONDS", "1")
     t = time.monotonic()
     with pytest.raises(AppError) as e: cr.run_code("def main(s):\n    while True: pass", {})
-    # the loop never ends on its own, so any bound proves the kill; 15 s leaves room for a loaded CI runner (TASK-0109)
+    # the loop never ends on its own, so any bound proves the kill; 15 s leaves room for a loaded CI runner
     assert e.value.code == "CODE_TIMEOUT" and time.monotonic() - t < 15
     t = time.monotonic()
     with pytest.raises(AppError) as e: cr.run_code("import time\ndef main(s):\n    time.sleep(20)", {}, timeout=10, cancelled=lambda: time.monotonic() - t > 0.3)

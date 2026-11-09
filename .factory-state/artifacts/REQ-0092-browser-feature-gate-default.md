@@ -23,3 +23,8 @@
 - `.env.example`, handbook configuration/browser pages, and operator docs describe the new default.
 - `dev.sh` comments are English; no Vietnamese diacritics remain in `*.sh`.
 - factory deps apply / verify full / validate; REV/QA; CI green including E2E before merge.
+
+## Amendment 2026-11-09 (pt254u)
+
+6. Broader hygiene: strip factory IDs from comments/docstrings/test titles/scripts across the repo (not only backend/app + frontend/src). Replace Vietnamese in source with English except app translation catalogs and handbook `docs/vi`.
+7. Browser UX: keep gated capabilities **visible** with inline guidance and handbook links when runtime or connection toggles block use. Do not hide upload/download/evaluate from discovery; annotate when connection toggles are off. Show runtime-off banner when `STUDIO_ENABLE_BROWSER_RUNTIME` is unset. Connection-level defaults remain unchanged.

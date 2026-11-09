@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, N } from './helpers'
-// TASK-0189 (REQ-0081): AI review of approvals in en and vi. The judge is an Ollama credential on the fake API of
+// AI review of approvals in en and vi. The judge is an Ollama credential on the fake API of
 // backend/tests/fixtures/mock_chat_api.py, which answers approve with 0.92. Suggest mode: the opinion shows in the
 // Approvals inbox, a person answers, the agreement rate counts it, and the workflow can be paused there.
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`

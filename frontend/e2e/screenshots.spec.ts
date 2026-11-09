@@ -1,4 +1,4 @@
-// Captures docs/screenshots for TASK-0003 states. Run: SHOTS=1 npm run e2e -- screenshots
+// Captures docs/screenshots for states. Run: SHOTS=1 npm run e2e -- screenshots
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, signIn } from './helpers'
 test.skip(!process.env.SHOTS, 'set SHOTS=1 to capture screenshots')

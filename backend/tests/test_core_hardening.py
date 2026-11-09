@@ -183,7 +183,7 @@ def test_readable_422_and_413():
 
 def _cancel_run_and_close_loop(listen_disconnects: bool, busy_executor: bool):
     """Drive RunService.execute on its own loop, cancel the handler task and close the loop the way asyncio.Runner and
-    Starlette's TestClient portal do. Returns the runs of the workflow afterwards and the service (TASK-0059)."""
+    Starlette's TestClient portal do. Returns the runs of the workflow afterwards and the service."""
     import asyncio, concurrent.futures
     from app.api.deps import get_db
     from app.repositories.runs import RunRepository
@@ -238,7 +238,7 @@ def test_disconnected_run_is_recorded_when_the_write_waits_for_a_thread():
 
 @pytest.mark.parametrize("listen_disconnects,busy_executor", [(False, False), (True, True)])
 def test_cancelled_run_leaves_the_run_bus_when_the_loop_shuts_down(listen_disconnects, busy_executor):
-    """The run bus entry is cleared too (TASK-0060): a pending afinish coroutine was cancelled by the closing loop, so
+    """The run bus entry is cleared too: a pending afinish coroutine was cancelled by the closing loop, so
     the owner key outlived the run and a REST cancel took the recorded run for one still running elsewhere."""
     runs, svc = _cancel_run_and_close_loop(listen_disconnects, busy_executor)
     assert runs and svc.bus.owner(runs[0]["id"]) is None

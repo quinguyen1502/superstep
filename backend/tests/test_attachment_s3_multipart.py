@@ -1,4 +1,4 @@
-"""TASK-0200: the `s3` backend uploads a file larger than one part as a multipart upload, read a part at a time, and
+"""the `s3` backend uploads a file larger than one part as a multipart upload, read a part at a time, and
 aborts it on any failure so the bucket keeps no incomplete parts; uploads reach the backend as a spooled file read in
 pieces, with the size check before and while reading. Live tests run against MinIO (CI job "Attachment storage on
 MinIO", STUDIO_TEST_S3_*); the rest use a recording client."""

@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import { apiToken } from './helpers'
 import http from 'node:http'
 import type { AddressInfo } from 'node:net'
-// TASK-0020: notification bell for waiting runs; webhook delivery log with backoff, redelivery; signing-secret rotation.
+// notification bell for waiting runs; webhook delivery log with backoff, redelivery; signing-secret rotation.
 const APPROVAL = {
   name: `Notify e2e ${Date.now()}`, state: [{ name: 'message', type: 'string' }, { name: 'decision', type: 'string' }],
   nodes: [{ id: 's', type: 'start', position: { x: 40, y: 150 }, data: { label: 'Start' } },
@@ -53,7 +53,7 @@ test('webhook deliveries: retried with backoff, logged, redelivered; secret rota
     await page.locator('#api-deliveries-tab').click()
     const row = page.locator('[data-testid=delivery-row]', { hasText: `127.0.0.1:${port}` }).first()
     // read without waiting: textContent() on a row that is not listed yet waits for it, so the poll would never click
-    // Refresh again and the list would stay as it was before the delivery was logged (TASK-0209)
+    // Refresh again and the list would stay as it was before the delivery was logged
     const now = async (l: typeof row) => { await page.locator('#deliveries-refresh').click(); return (await l.allTextContents())[0] ?? '' }
     await expect.poll(() => now(row.locator('[data-testid=delivery-status]')), { timeout: 20_000 }).toBe('đã gửi')
     await expect(row).toContainText('2 lần thử'); await expect(row.locator('[data-testid=delivery-code]')).toHaveText('HTTP 200')

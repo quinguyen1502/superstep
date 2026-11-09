@@ -1,4 +1,4 @@
-"""superstep mcp (TASK-0171). The stdio unit test does not install mcp. The SDK test skips unless mcp imports."""
+"""superstep mcp. The stdio unit test does not install mcp. The SDK test skips unless mcp imports."""
 import io
 import json
 import os
