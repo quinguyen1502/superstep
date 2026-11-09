@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tip } from '@/components/tip'
+import { HandbookLink } from '@/components/handbook-link'
 import { NodeInput } from '@/components/node-input'
 import { NodeRuntime } from '@/components/node-runtime'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -115,7 +116,7 @@ export function EditorConfig() {
             {t('editor.codeMode', { language: t(`code.languages.${l}`) })}
             {codeRt?.code_runtime === 'subprocess' && <Tip tip={t('code.notIsolatedTip')}><Badge variant="warning" size="sm" className="ml-1 min-w-0 shrink truncate" data-testid="mode-unisolated">{t('code.notIsolatedShort')}</Badge></Tip>}</SelectItem>)}</SelectContent></Select>
         {d.mode !== 'code' && !canCode && <p className="text-[11px] text-muted-foreground" id="tool-code-locked">{t('code.locked')}</p>}
-        {d.mode !== 'code' && canCode && codeRt?.code_runtime === 'off' && <p className="text-[11px] text-muted-foreground" id="tool-code-off">{t(codeOffKey(codeRt))}</p>}</F>
+        {d.mode !== 'code' && canCode && codeRt?.code_runtime === 'off' && <p className="text-[11px] text-muted-foreground" id="tool-code-off">{t(codeOffKey(codeRt))}{' '}<HandbookLink id="tool-code-guide" page="operate/code-runtime" label={t('docs.learnMore')} ariaLabel={t('docs.codeRuntimeAria')} /></p>}</F>
       {d.mode === 'code' ? <F label={t('field.code')}><CodeSettings key={`${selNode.id}-${nodeLanguage(d)}`} value={d.code || ''} onChange={v => upd('code', v)} runtime={codeRt} canWrite={canCode}
           editable={edit} input={input} nodeId={selNode.id} timeout={typeof d.timeout === 'number' ? d.timeout : undefined}
           language={nodeLanguage(d)} fields={state} kept={kept === selNode.id} /></F>

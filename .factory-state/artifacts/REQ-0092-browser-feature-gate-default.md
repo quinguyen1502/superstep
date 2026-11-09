@@ -28,3 +28,5 @@
 
 6. Broader hygiene: strip factory IDs from comments/docstrings/test titles/scripts across the repo (not only backend/app + frontend/src). Replace Vietnamese in source with English except app translation catalogs and handbook `docs/vi`.
 7. Browser UX: keep gated capabilities **visible** with inline guidance and handbook links when runtime or connection toggles block use. Do not hide upload/download/evaluate from discovery; annotate when connection toggles are off. Show runtime-off banner when `STUDIO_ENABLE_BROWSER_RUNTIME` is unset. Connection-level defaults remain unchanged.
+
+8. Same show+guide pattern for Import (visible tip when `STUDIO_ENABLE_IMPORT` off → `operate/import`) and Code mode off/unavailable (handbook `operate/code-runtime`). Survey other analogues; no SMTP/storage redesign.

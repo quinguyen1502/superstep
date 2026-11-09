@@ -353,7 +353,8 @@
     "requiredEnv": "Repo khai báo biến môi trường:",
     "requiredEnvHint": "đặt chúng trong biến môi trường của máy chủ để chạy.",
     "create": "Tạo workflow",
-    "start": "Import"
+    "start": "Import",
+    "disabled": "Nhập repo đang tắt trên máy chủ này (STUDIO_ENABLE_IMPORT=0)."
   },
   "creds": {
     "button": "Credentials",
@@ -1903,7 +1904,8 @@
     "languageNotReady": "Chưa sẵn sàng",
     "adminPackages": "Package: {{packages}}",
     "adminNoPackages": "Không có package thêm",
-    "demoOff": "Node Code đang tắt trong bản demo công khai này. Hãy tự triển khai Superstep để dùng."
+    "demoOff": "Node Code đang tắt trong bản demo công khai này. Hãy tự triển khai Superstep để dùng.",
+    "runtimeHelp": "Cách bật chế độ Code và chọn runtime:"
   },
   "inbox": {
     "title": "Duyệt",
@@ -2865,6 +2867,8 @@
     "setupGuide": "Hướng dẫn thiết lập",
     "setupGuideAria": "Hướng dẫn thiết lập {{platform}}",
     "newTab": "mở trong tab mới",
-    "browserGuideAria": "Mở handbook công cụ trình duyệt"
+    "browserGuideAria": "Mở handbook công cụ trình duyệt",
+    "importGuideAria": "Mở handbook nhập repo",
+    "codeRuntimeAria": "Mở handbook runtime code"
   }
 }

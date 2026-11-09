@@ -353,7 +353,8 @@
     "requiredEnv": "The repo declares environment variables:",
     "requiredEnvHint": "set them in the server env to run.",
     "create": "Create workflow",
-    "start": "Import"
+    "start": "Import",
+    "disabled": "Repo import is off on this server (STUDIO_ENABLE_IMPORT=0)."
   },
   "creds": {
     "button": "Credentials",
@@ -1903,7 +1904,8 @@
     "languageNotReady": "Not ready",
     "adminPackages": "Packages: {{packages}}",
     "adminNoPackages": "No extra packages",
-    "demoOff": "Code nodes are turned off in this public demo. Deploy your own Superstep to use them."
+    "demoOff": "Code nodes are turned off in this public demo. Deploy your own Superstep to use them.",
+    "runtimeHelp": "How to enable Code mode and choose a runtime:"
   },
   "inbox": {
     "title": "Approvals",
@@ -2865,6 +2867,8 @@
     "setupGuide": "Setup guide",
     "setupGuideAria": "{{platform}} setup guide",
     "newTab": "opens in a new tab",
-    "browserGuideAria": "Open the browser tools handbook"
+    "browserGuideAria": "Open the browser tools handbook",
+    "importGuideAria": "Open the import handbook",
+    "codeRuntimeAria": "Open the code runtime handbook"
   }
 }
