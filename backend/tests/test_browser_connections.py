@@ -160,10 +160,27 @@ def test_invalid_configuration_uses_shared_envelope(c, settings, secrets):
     assert response.json()["error"]["code"] in {"MCP_CONFIG_INVALID", "BROWSER_PROFILE_DENIED"}
 
 
+
+def test_browser_feature_gate_defaults_on(monkeypatch):
+    from app.core import config
+    monkeypatch.delenv("STUDIO_ENABLE_BROWSER", raising=False)
+    assert config.browser_enabled() is True
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "0")
+    assert config.browser_enabled() is False
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "1")
+    assert config.browser_enabled() is True
+    monkeypatch.delenv("STUDIO_ENABLE_BROWSER_RUNTIME", raising=False)
+    assert config.browser_runtime_enabled() is False
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER_RUNTIME", "1")
+    assert config.browser_runtime_enabled() is True
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "0")
+    assert config.browser_runtime_enabled() is False
+
+
 def test_disabled_gate_hides_adapter_and_denies_saved_connection(c, monkeypatch):
     owner = user(c)
     server = create(c, owner).json()["data"]
-    monkeypatch.delenv("STUDIO_ENABLE_BROWSER", raising=False)
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "0")
     assert "browser" not in [
         item["id"] for item in c.get("/api/mcp/servers", headers=H(owner["token"])).json()["data"]["managed_adapters"]
     ]

@@ -2,7 +2,7 @@
 
 TASK-0241 / REQ-0086 / ARCH-0002 / DEC-0085 (Accepted 2026-11-06). This delivery
 implements metadata, discovery and typed contracts. It does not launch a browser.
-Set `STUDIO_ENABLE_BROWSER=1` to configure/discover the `browser` managed adapter
+`STUDIO_ENABLE_BROWSER` defaults on (unset or `1`; set `0` to disable). With it on you can configure/discover the `browser` managed adapter
 through the existing `/api/mcp/servers` API. The default is disabled. Existing rows
 remain visible/editable only under existing owner/admin policy; discovery and use are
 denied when disabled. Deletion remains available to the authorised owner/admin.

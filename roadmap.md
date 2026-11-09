@@ -555,3 +555,10 @@ The owner resumed TASK-0227 on 2026-11-08. `@superstep/react-native` 0.1.0, the 
 REQ-0091, DEC-0090, PLAN-0011 (owner-authorised 2026-11-09).
 
 - TASK-0279 — comment hygiene, Vite `import.meta.dirname`, Vietnamese handbook sync. **done**.
+
+## Browser feature gate default-on
+
+REQ-0092, DEC-0091, PLAN-0012 (owner-authorised 2026-11-09: enable discovery gate only).
+
+- TASK-0280 — `STUDIO_ENABLE_BROWSER` defaults on (`unset`/`1`; `0` off); runtime gate stays opt-in; `dev.sh` English comments. **done**
+

@@ -1,7 +1,7 @@
 # Browser and web connection settings
 
 TASK-0249 / REQ-0086. Use Settings → MCP servers → Add server → Managed
-connection. The operator must enable `STUDIO_ENABLE_BROWSER` to expose the
+connection. `STUDIO_ENABLE_BROWSER` defaults on; set it to `0` to hide the
 browser/web adapters. The independent browser runtime gate remains off by
 default; discovering tools does not launch a browser or attest a remote service.
 

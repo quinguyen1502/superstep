@@ -259,8 +259,9 @@ def code_packages() -> list[str]:
     if raw is not None: return [p.strip() for p in raw.split(",") if p.strip()]
     return list(CODE_DEFAULT_PACKAGES) if code_image() == "studio-code:1" else []
 
-# Browser metadata is opt-in; worker execution has separate implementation/proof gates.
-def browser_enabled() -> bool: return os.environ.get("STUDIO_ENABLE_BROWSER") == "1"
+# Browser metadata/discovery is on by default (same convention as STUDIO_WORKER: unset/"1" on, "0" off).
+# Trusted run execution stays behind a separate opt-in runtime gate.
+def browser_enabled() -> bool: return os.environ.get("STUDIO_ENABLE_BROWSER", "1") != "0"
 
-# Separate runtime gate while run/approval integration is being delivered.
+# Separate runtime gate: runs do not drive a browser until explicitly enabled.
 def browser_runtime_enabled() -> bool: return browser_enabled() and os.environ.get("STUDIO_ENABLE_BROWSER_RUNTIME") == "1"
