@@ -6,7 +6,8 @@ from .base import Base
 
 class Run(Base):
     __tablename__ = "runs"
-    __table_args__ = (Index("ux_runs_parent_call", "parent_run_id", "parent_step", unique=True),)  # one child per call
+    __table_args__ = (Index("ux_runs_parent_call", "parent_run_id", "parent_step", unique=True),  # one child per call
+                      Index("ix_runs_started", "started"), Index("ix_runs_status_started", "status", "started"))
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     workflow_id: Mapped[Optional[str]] = mapped_column(Text)
     input: Mapped[Optional[str]] = mapped_column(Text)        # JSON

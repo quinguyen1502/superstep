@@ -1058,6 +1058,7 @@
       "mcp": "MCP servers",
       "users": "Users",
       "teams": "Teams",
+      "usage": "Usage",
       "activity": "Activity",
       "tokens": "Access tokens"
     },
@@ -1070,6 +1071,7 @@
       "mcp": "Tools from Model Context Protocol servers, used by MCP tool nodes. Secrets are encrypted and never shown again.",
       "users": "Who can sign in and what their role allows. Workflows are shared from the editor.",
       "teams": "Groups of people to share workflows with. Members get the access the team was given.",
+      "usage": "Runs, tokens and estimated cost across the studio, plus things that may need attention.",
       "activity": "Changes to roles, shares, teams, ownership, accounts and policy, newest first.",
       "tokens": "Personal access tokens for the superstep command and CI. A token is shown once, and it has the same access as you."
     },
@@ -1106,7 +1108,69 @@
       "anyPlatform": "All platforms"
     },
     "noMatch": "Nothing matches these filters.",
-    "auditCount": "{{shown}} of {{total}} entries"
+    "auditCount": "{{shown}} of {{total}} entries",
+    "usage": {
+      "window": "Time window",
+      "windows": {
+        "24h": "Last 24 hours",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days"
+      },
+      "estimate": "Costs are estimates from the configured model prices.",
+      "runs": "Runs",
+      "successRate": "Success rate",
+      "tokens": "Tokens in / out",
+      "tokensHint": "Prompt tokens / completion tokens",
+      "cost": "Estimated cost",
+      "atLeast": "at least {{value}}",
+      "unpriced": "Unpriced runs",
+      "unpricedHelp": "Add model prices",
+      "overTime": "Runs over time",
+      "empty": "No runs in this window.",
+      "status": {
+        "ok": "Succeeded",
+        "error": "Error",
+        "timeout": "Timed out",
+        "cancelled": "Cancelled",
+        "other": "Other"
+      },
+      "topWorkflows": "Top workflows",
+      "sortBy": "Sort workflows by",
+      "sort": {
+        "runs": "Most runs",
+        "cost": "Highest cost"
+      },
+      "col": {
+        "workflow": "Workflow",
+        "runs": "Runs",
+        "errorRate": "Error rate",
+        "tokens": "Tokens",
+        "cost": "Est. cost",
+        "unpriced": "Unpriced"
+      },
+      "health": {
+        "title": "Product health",
+        "intro": "Things that may need someone to act. Approvals and webhooks count the selected window.",
+        "approvals": "Approvals",
+        "waitingNone": "{{n}} waiting",
+        "waiting": "{{n}} waiting, oldest {{age}}",
+        "expired": "{{n}} expired",
+        "webhooks": "Webhooks",
+        "failed": "{{n}} failed deliveries",
+        "retrying": "{{n}} retrying",
+        "schedules": "Schedules",
+        "overdue": "{{n}} overdue",
+        "disabled": "{{n}} stopped after repeated failures"
+      },
+      "age": {
+        "s": "{{n}} s",
+        "min": "{{n}} min",
+        "h": "{{n}} h",
+        "d": "{{n}} d"
+      },
+      "handbook": "About usage and monitoring",
+      "grafana": "Open Grafana for server, database and queue health"
+    }
   },
   "kb": {
     "new": "New knowledge base",

@@ -19,6 +19,7 @@ import { McpSection } from './McpSection'
 import { UsersSection } from './UsersSection'
 import { TeamsSection } from './TeamsSection'
 import { ActivitySection } from './ActivitySection'
+import { UsageSection } from './UsageSection'
 import { can, useMe } from '@/lib/rbac'
 import { SECTIONS, type SectionId } from './sections'
 import { Logo } from '@/components/logo'
@@ -26,7 +27,7 @@ import { AppMeta } from '@/components/app-meta'
 
 const COMPONENTS: Record<SectionId, ComponentType> = {
   profile: ProfileSection, tokens: TokensSection, channels: ChannelsSection, accounts: AccountsSection, audit: AuditSection, knowledge: KnowledgeSection,
-  mcp: McpSection, users: UsersSection, teams: TeamsSection, activity: ActivitySection,
+  mcp: McpSection, users: UsersSection, teams: TeamsSection, usage: UsageSection, activity: ActivitySection,
 }
 
 export function SettingsPage() {

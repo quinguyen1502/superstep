@@ -176,5 +176,6 @@ root lists every variable Compose passes; this page groups them.
 | `OTEL_SERVICE_NAME` | `superstep` | Service name |
 | `STUDIO_TRACE_URL` | empty | **Open trace** link template with `{trace_id}` |
 | `STUDIO_OTEL_METRICS` | `0` | Also export metrics |
+| `STUDIO_GRAFANA_URL` | empty | Grafana address that **Settings → Usage** links to |
 | `LANGSMITH_API_KEY`, `LANGSMITH_TRACING` | empty | Export to LangSmith |
 | `LANGSMITH_PROJECT`, `LANGSMITH_ENDPOINT` | empty | LangSmith project and endpoint |

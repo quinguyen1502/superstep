@@ -22,6 +22,7 @@ LABELS = frozenset({"status", "source", "workflow_id", "model", "provider", "cod
                     "status_class", "state", "primary_provider", "fallback_provider"})
 LLM_CODES = frozenset({"MODEL_NOT_FOUND"})  # with every PROVIDER_* code
 SNAPSHOT_TTL = 5.0  # seconds one probe snapshot serves every gauge callback
+PRODUCT_TTL = 30.0  # seconds between two product health queries (approvals, webhooks, schedules)
 PROBE_ROUTES = frozenset({"/api/health", "/api/ready"})  # counted, kept out of the latency histogram
 
 
@@ -375,9 +376,10 @@ class Telemetry:
         """`kind`: reaped (lease expired) or recovered (requeued at start-up)."""
         if self._m and n: self._m[f"jobs_{kind}"].add(n)
 
-    def watch(self, probes, worker=None) -> None:
+    def watch(self, probes, worker=None, product: Optional[Callable[[], Optional[dict]]] = None) -> None:
         """Observable gauges, read at each export: readiness probes, queue and heartbeat (every process), busy slots and
-        capacity of this process's worker, and process CPU and memory. Once per process; a no-op without metrics."""
+        capacity of this process's worker, process CPU and memory, and, where a worker runs, the product health counts
+        from `product()` (UsageService.gauges). Once per process; a no-op without metrics."""
         if not self._m or self._watching: return
         from opentelemetry.metrics import Observation
         self._watching = True; m = self._meter; snap = _Snapshot(probes.ready)
@@ -405,3 +407,12 @@ class Telemetry:
         gauge("studio.process.rss", "By", "Resident memory of this process", lambda: [(process_rss_bytes(), {})])
         m.create_observable_counter("studio.process.cpu_time", unit="s", description="CPU time of this process",
                                     callbacks=[lambda _o: [Observation(process_cpu_seconds())]])
+        if worker is None or product is None: return
+        health = _Snapshot(product, PRODUCT_TTL)
+        def count(group: str, key: str) -> list: return [(((health.get() or {}).get(group) or {}).get(key), {})]
+        gauge("studio.approvals.waiting", "{approval}", "Human steps waiting for an answer", lambda: count("approvals", "waiting"))
+        gauge("studio.approvals.oldest_age", "s", "Age of the oldest waiting human step", lambda: count("approvals", "oldest_age_s"))
+        gauge("studio.webhooks.failed", "{delivery}", "Webhook deliveries that failed in the last hour", lambda: count("webhooks", "failed"))
+        gauge("studio.webhooks.retrying", "{delivery}", "Webhook deliveries waiting for a retry", lambda: count("webhooks", "retrying"))
+        gauge("studio.schedules.overdue", "{schedule}", "Enabled schedules more than 5 minutes late", lambda: count("schedules", "overdue"))
+        gauge("studio.schedules.disabled", "{schedule}", "Schedules the scheduler turned off", lambda: count("schedules", "disabled"))

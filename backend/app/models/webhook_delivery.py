@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import Float, Integer, Text, UniqueConstraint
+from sqlalchemy import Float, Index, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from .base import Base
 
@@ -7,7 +7,8 @@ from .base import Base
 class WebhookDelivery(Base):
     """One result-webhook delivery and its attempts."""
     __tablename__ = "webhook_deliveries"
-    __table_args__ = (UniqueConstraint("dedupe_key", name="uq_webhook_deliveries_dedupe_key"),)
+    __table_args__ = (UniqueConstraint("dedupe_key", name="uq_webhook_deliveries_dedupe_key"),
+                      Index("ix_webhook_deliveries_status_updated", "status", "updated"))
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     workflow_id: Mapped[str] = mapped_column(Text, index=True)
     run_id: Mapped[Optional[str]] = mapped_column(Text)

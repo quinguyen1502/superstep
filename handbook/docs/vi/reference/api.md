@@ -298,6 +298,7 @@ không phải endpoint phiên hay stream.
     GET    /api/admin/policy                    PUT    /api/admin/policy
     GET    /api/admin/langsmith                 PUT    /api/admin/langsmith
     GET    /api/admin/audit
+    GET    /api/admin/usage                     GET    /api/admin/usage/health   (users.manage)
     GET    /api/teams                           POST   /api/teams
     PATCH  /api/teams/{tid}                     DELETE /api/teams/{tid}
     POST   /api/teams/{tid}/members             DELETE /api/teams/{tid}/members/{member}

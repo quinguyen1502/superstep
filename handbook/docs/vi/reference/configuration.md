@@ -176,5 +176,6 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `OTEL_SERVICE_NAME` | `superstep` | Tên dịch vụ |
 | `STUDIO_TRACE_URL` | trống | Mẫu link **Mở trace** có `{trace_id}` |
 | `STUDIO_OTEL_METRICS` | `0` | Xuất thêm metric |
+| `STUDIO_GRAFANA_URL` | trống | Địa chỉ Grafana mà **Cài đặt → Mức sử dụng** liên kết tới |
 | `LANGSMITH_API_KEY`, `LANGSMITH_TRACING` | trống | Xuất sang LangSmith |
 | `LANGSMITH_PROJECT`, `LANGSMITH_ENDPOINT` | trống | Project và endpoint của LangSmith |
