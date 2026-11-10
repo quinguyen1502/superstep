@@ -4,6 +4,7 @@ from sqlalchemy import delete, select, update
 from ..models import (ApprovalChannel, ChannelIdentity, Credential, KbChunk, KbDocument, KnowledgeBase, McpServer, Notification, Run, WorkflowTemplate,
                       TeamMember, User, WorkflowShare, WorkflowToken, BrowserArtifact)
 from ..models.database import Database
+from ..models.run_usage import RunUsage
 
 
 class UserDataRepository:
@@ -31,7 +32,9 @@ class UserDataRepository:
             s.execute(delete(WorkflowShare).where(WorkflowShare.user_id == uid))
             s.execute(delete(TeamMember).where(TeamMember.user_id == uid))
             s.execute(delete(WorkflowTemplate).where(WorkflowTemplate.owner == uid, WorkflowTemplate.scope == "user"))
-            if runs: s.execute(delete(Run).where(Run.owner == uid))
+            if runs:
+                s.execute(delete(RunUsage).where(RunUsage.run_id.in_(select(Run.id).where(Run.owner == uid))))
+                s.execute(delete(Run).where(Run.owner == uid))
             s.commit()
 
     def anonymise(self, uid: str) -> None:

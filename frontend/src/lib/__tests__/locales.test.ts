@@ -17,6 +17,7 @@ const SAME_OK = new Set([
   'browserSettings.proxyPlaceholder', 'browserSettings.searchPlaceholder', // literal example URLs
   'activity.types.workflow',
   'settings.usage.col.workflow',  // glossary term kept in English
+  'settings.usage.models.col.model', 'settings.usage.models.ms',  // glossary term kept in English, a unit
   'agent.workflow',
   'chat.page.title',
   'chat.embed.iframe',

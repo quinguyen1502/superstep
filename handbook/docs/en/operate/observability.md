@@ -118,7 +118,7 @@ seconds per process.
 | `studio.mcp.duration` | histogram, ms | `transport`, `status`, `code` | Time of one MCP tool call |
 | `studio.browser.sessions` | counter | `status` (`opened`, `closed`, `lost`, `revoked`, `expired`) | Browser sessions started and ended |
 | `studio.browser.actions` | counter | `status`, `code` | Browser actions by result |
-| `studio.browser.active` | gauge | none | Browser sessions open now, across all processes |
+| `studio.browser.active` | gauge | none | Browser sessions open now, across all processes (reported where a worker runs) |
 | `studio.sandbox.executions` | counter | `runtime`, `language`, `status` | Code node executions; `status` is `ok` or the error code |
 | `studio.sandbox.duration` | histogram, ms | `runtime`, `language`, `status` | Time of one Code node execution |
 | `studio.rate_limit.hits` | counter | `scope` | Requests refused by a product limit |
@@ -145,6 +145,7 @@ seconds.
 | `studio.webhooks.retrying` | gauge | Webhook deliveries waiting for a retry |
 | `studio.schedules.overdue` | gauge | Enabled schedules more than 5 minutes late |
 | `studio.schedules.disabled` | gauge | Schedules the scheduler turned off after failures |
+| `studio.chat.refused` | gauge, `code`, `kind` | Chat trigger messages refused in the last hour, by reason and platform |
 
 ### Labels and cardinality
 
@@ -245,6 +246,7 @@ to get notified.
 | Approvals waiting too long | `studio.approvals.oldest_age` | above 1 day |
 | Integration errors | Failed MCP calls, channel sends and browser actions over 15 minutes | above 10 for 15 minutes |
 | Throttling spike | `studio.rate_limit.hits` over 5 minutes | above 50 for 5 minutes |
+| Channel refusals | `studio.chat.refused` (last hour, all codes) | above 20 for 10 minutes |
 | In-memory run bus | `studio.run_bus.in_memory` | 1 for 5 minutes |
 | Postgres connections near limit | Postgres connections over `max_connections` | above 80% for 5 minutes |
 | Redis memory pressure | Redis used memory over `maxmemory`, only when `maxmemory` is set | above 90% for 5 minutes |
@@ -265,9 +267,17 @@ people with the `users.manage` permission (admins) see it.
   runs.
 - Runs over time, stacked by status, and the top 10 workflows by runs or by
   cost. A deleted workflow shows its id.
+- **Models**: calls, errors, tokens, average call time and estimated cost per
+  model and provider, split into nodes, embeddings and AI review. Sort by
+  cost, tokens or calls.
+- **Users** and **Teams**: the top 20 by runs or by cost (the same choice as
+  the workflows), with a total row. A deleted user shows as "Deleted user". A
+  member of several teams counts toward each team, and the page says how many
+  such users there are.
 - **Product health**: waiting and expired approvals, failed and retrying
   webhook deliveries, overdue schedules and schedules the scheduler stopped,
-  with the reason.
+  with the reason, and chat trigger messages refused by reason and platform
+  with their share of all decided messages.
 
 Only top-level runs are counted; a subworkflow's tokens and cost are part of
 the run that called it. Cost is an estimate from the model price list. A run
@@ -275,6 +285,20 @@ that used a model with no price counts as unpriced and adds nothing to the
 cost, and the cost card then reads "at least". Add the missing prices with
 `STUDIO_PRICES` or `STUDIO_PRICES_FILE` (see
 [Configuration](../reference/configuration.md)).
+
+The Models table reads a per-run usage table that is written when a run
+ends. Each run writes only its own calls, so subworkflow runs appear there
+too and its totals can be higher than the cards. Per-model data starts when
+the table was created; the page shows that date. To fill it for runs that
+finished before, run once:
+
+```bash
+docker compose exec api python -m app.admin_cmd usage-backfill --days 30
+```
+
+The command prints how many runs and rows it wrote; running it again does
+not duplicate rows. Per-user and per-team figures come from the database
+only; no metric carries a user or team id.
 
 When `STUDIO_GRAFANA_URL` is set, the page links to Grafana for server,
 database and queue health. The same data is available from

@@ -2518,6 +2518,48 @@
         "graphMode": "none"
       },
       "description": "Turned off by the scheduler after failures; see Settings → Usage for the reason."
+    },
+    {
+      "id": 60,
+      "type": "timeseries",
+      "title": "Refused chat trigger messages (1 h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 111
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (code, kind) (max by (code, kind) (studio_chat_refused))",
+          "legendFormat": "{{kind}} {{code}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "Messages to a chat trigger that started no run, by reason and platform; see Settings → Usage for the share."
     }
   ]
 }

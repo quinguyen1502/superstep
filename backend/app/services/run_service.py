@@ -21,7 +21,8 @@ from ..repositories import RunRepository, StaleLease, WorkflowRepository
 from .notification_hub import workflow_runs_channel
 from .job_queue import enqueue_resume
 from .run_bus import InMemoryRunBus, RunBus
-from . import time_travel
+from . import run_usage, time_travel
+from ..repositories.run_usage import TERMINAL
 from .telemetry import Telemetry, summarize, trace_url
 from ..core.logging import bind_trace, get_logger, run_context
 from .workflow_diff import same_content
@@ -188,10 +189,11 @@ class RunService:
                  telemetry: Telemetry | None = None, versions=None, notifier=None, ledger=None, approvals=None,
                  deliveries: Optional[Callable[[], object]] = None, knowledge=None, mcp=None, access=None, policy=None, quota=None, audit=None,
                  tests: Optional[Callable[[], object]] = None, chat: Optional[Callable[[], object]] = None,
-                 jobs: Optional[Callable[[], object]] = None, browser=None):
+                 jobs: Optional[Callable[[], object]] = None, browser=None, usage=None):
         """credentials: CredentialService (optional; without it, nodes with credential_id fail clearly).
         bus: RunBus for cross-process cancel + event fan-out (in-memory when not given)."""
         self.workflows, self.runs, self.credentials = workflows, runs, credentials
+        self.usage = usage  # RunUsageRepository (optional): per-node model usage rows, written when a run ends
         self.bus = bus or InMemoryRunBus()
         self.versions = versions  # WorkflowVersionRepository (optional): tags runs with the version they ran
         self.telemetry = telemetry or Telemetry(exporters=[], metric_readers=[])  # no-op unless an exporter is configured
@@ -778,12 +780,14 @@ class RunService:
                     jobs = [j for ev in asked if (j := self.approvals.on_waiting(rid, uid, wid, wf, ev, state, start=False))]
                 elif status in ("cancelled", "expired", "error", "timeout"): self.approvals.close_run(rid, status)
             except Exception: log.exception("approval request for run %s failed", rid)  # never fails a run
+        events_full = events  # usage rows come from the same events as the run's totals, before capping
         events = cap_run([cap_event(e) for e in events])
         final = cap_event({"state": final})["state"] if final is not None else None
         self.runs.add(Run(id=rid, workflow_id=wid or "adhoc", input=_dumps(inp), events=_dumps(events), code_runtime=code_runtime_of(events),
                           final_state=_dumps(final), status=status, started=t0, ended=t1, trace_id=trace_id, owner=uid or None, source=source, workflow_version=version,
                           checkpoint=_dumps(checkpoint) if checkpoint else None, resume_job=None, **root, **metrics),
                       **({"fence": fence} if fence is not None else {}))  # resume_job: a kept answer is used up
+        if self.usage is not None and status in TERMINAL: run_usage.write(self.usage, rid, wid, uid, events_full, t1)
         self.history_changed(wid, rid)
         for job in jobs:
             try: self.approvals.start(job)

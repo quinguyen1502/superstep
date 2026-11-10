@@ -1160,7 +1160,12 @@
         "retrying": "{{n}} retrying",
         "schedules": "Schedules",
         "overdue": "{{n}} overdue",
-        "disabled": "{{n}} stopped after repeated failures"
+        "disabled": "{{n}} stopped after repeated failures",
+        "channels": "Chat triggers",
+        "refused": "{{n}} messages refused ({{share}} of decided messages)",
+        "reason": "Reason",
+        "platform": "Platform",
+        "count": "Messages"
       },
       "age": {
         "s": "{{n}} s",
@@ -1169,7 +1174,47 @@
         "d": "{{n}} d"
       },
       "handbook": "About usage and monitoring",
-      "grafana": "Open Grafana for server, database and queue health"
+      "grafana": "Open Grafana for server, database and queue health",
+      "models": {
+        "title": "Models",
+        "since": "Per-model data starts on {{date}} (runs that ended since then).",
+        "notYet": "Per-model data starts with the next finished run.",
+        "sortBy": "Sort models by",
+        "sort": {
+          "cost": "Highest cost",
+          "tokens": "Most tokens",
+          "calls": "Most calls"
+        },
+        "col": {
+          "model": "Model",
+          "kind": "Used for",
+          "calls": "Calls",
+          "errors": "Errors",
+          "latency": "Avg. time"
+        },
+        "kind": {
+          "llm": "Nodes",
+          "embedding": "Embeddings",
+          "review": "AI review"
+        },
+        "ms": "{{n}} ms",
+        "unpriced": "No price",
+        "empty": "No model usage in this window."
+      },
+      "people": {
+        "users": "Users",
+        "teams": "Teams",
+        "user": "User",
+        "team": "Team",
+        "members": "Members",
+        "total": "All users",
+        "deleted": "Deleted user",
+        "sortedBy": "Top 20, sorted like the workflows ({{by}}).",
+        "teamsNote": "Runs of each team's members; a member of several teams counts toward each.",
+        "shared_one": "{{count}} user is in more than one team and counts toward each.",
+        "shared_other": "{{count}} users are in more than one team and count toward each.",
+        "noTeams": "No team members ran workflows in this window."
+      }
     }
   },
   "kb": {

@@ -117,7 +117,7 @@ một lần cho mỗi tiến trình.
 | `studio.mcp.duration` | histogram, ms | `transport`, `status`, `code` | Thời gian của một lời gọi công cụ MCP |
 | `studio.browser.sessions` | counter | `status` (`opened`, `closed`, `lost`, `revoked`, `expired`) | Phiên trình duyệt được mở và kết thúc |
 | `studio.browser.actions` | counter | `status`, `code` | Thao tác trình duyệt theo kết quả |
-| `studio.browser.active` | gauge | không có | Số phiên trình duyệt đang mở, trên mọi tiến trình |
+| `studio.browser.active` | gauge | không có | Số phiên trình duyệt đang mở, trên mọi tiến trình (báo ở nơi có worker) |
 | `studio.sandbox.executions` | counter | `runtime`, `language`, `status` | Số lần chạy node Code; `status` là `ok` hoặc mã lỗi |
 | `studio.sandbox.duration` | histogram, ms | `runtime`, `language`, `status` | Thời gian của một lần chạy node Code |
 | `studio.rate_limit.hits` | counter | `scope` | Request bị một giới hạn của sản phẩm từ chối |
@@ -143,6 +143,7 @@ API khi tự chạy worker). Chúng được làm mới tối đa mỗi 30 giây
 | `studio.webhooks.retrying` | gauge | Lần gửi webhook đang chờ thử lại |
 | `studio.schedules.overdue` | gauge | Lịch chạy đang bật mà trễ quá 5 phút |
 | `studio.schedules.disabled` | gauge | Lịch chạy bị scheduler tắt sau nhiều lần lỗi |
+| `studio.chat.refused` | gauge, `code`, `kind` | Tin nhắn chat trigger bị từ chối trong giờ vừa qua, theo lý do và nền tảng |
 
 ### Nhãn và số lượng series
 
@@ -243,6 +244,7 @@ Grafana để nhận thông báo.
 | Approvals waiting too long | `studio.approvals.oldest_age` | trên 1 ngày |
 | Integration errors | Lời gọi MCP, lượt gửi qua kênh và thao tác trình duyệt thất bại trong 15 phút | trên 10 trong 15 phút |
 | Throttling spike | `studio.rate_limit.hits` trong 5 phút | trên 50 trong 5 phút |
+| Channel refusals | `studio.chat.refused` (giờ vừa qua, mọi mã) | trên 20 trong 10 phút |
 | In-memory run bus | `studio.run_bus.in_memory` | bằng 1 trong 5 phút |
 | Postgres connections near limit | Số kết nối Postgres so với `max_connections` | trên 80% trong 5 phút |
 | Redis memory pressure | Bộ nhớ Redis đã dùng so với `maxmemory`, chỉ khi có đặt `maxmemory` | trên 90% trong 5 phút |
@@ -263,15 +265,37 @@ Grafana. Chỉ người có quyền `users.manage` (admin) thấy trang này.
   run chưa có giá.
 - Run theo thời gian, xếp chồng theo trạng thái, và 10 workflow nhiều run hoặc
   chi phí cao nhất. Workflow đã xoá hiện bằng id.
+- **Model**: số lời gọi, lỗi, token, thời gian gọi trung bình và chi phí ước
+  tính theo model và provider, tách thành node, embedding và AI duyệt. Sắp xếp
+  theo chi phí, token hoặc số lời gọi.
+- **Người dùng** và **Nhóm**: 20 mục đầu theo số run hoặc chi phí (cùng lựa
+  chọn với workflow), kèm dòng tổng. Người dùng đã xoá hiện là "Người dùng đã
+  xoá". Thành viên của nhiều nhóm được tính cho từng nhóm, và trang cho biết có
+  bao nhiêu người như vậy.
 - **Tình trạng sản phẩm**: yêu cầu duyệt đang chờ và đã hết hạn, lần gửi
   webhook thất bại và đang thử lại, lịch chạy quá hạn và lịch chạy bị
-  scheduler dừng, kèm lý do.
+  scheduler dừng, kèm lý do, cùng tin nhắn chat trigger bị từ chối theo lý do
+  và nền tảng, với tỉ lệ trên tổng số tin đã xử lý.
 
 Chỉ run cấp cao nhất được tính; token và chi phí của workflow con thuộc về run
 đã gọi nó. Chi phí là ước tính từ bảng giá model. Run dùng model chưa có giá
 được tính là chưa có giá và không cộng vào chi phí, khi đó thẻ chi phí ghi
 "ít nhất". Thêm giá còn thiếu bằng `STUDIO_PRICES` hoặc `STUDIO_PRICES_FILE`
 (xem [Cấu hình](../reference/configuration.md)).
+
+Bảng Model đọc một bảng mức sử dụng theo run, được ghi khi run kết thúc. Mỗi
+run chỉ ghi lời gọi của chính nó, nên run của workflow con cũng có mặt và tổng
+của bảng có thể cao hơn các thẻ số liệu. Dữ liệu theo model bắt đầu từ lúc bảng
+được tạo; trang hiện ngày đó. Để điền cho các run đã xong trước đó, chạy một
+lần:
+
+```bash
+docker compose exec api python -m app.admin_cmd usage-backfill --days 30
+```
+
+Lệnh in ra số run và số dòng đã ghi; chạy lại không tạo dòng trùng. Số liệu
+theo người dùng và theo nhóm chỉ lấy từ cơ sở dữ liệu; không metric nào mang id
+người dùng hay id nhóm.
 
 Khi đặt `STUDIO_GRAFANA_URL`, trang có link sang Grafana để xem tình trạng
 server, cơ sở dữ liệu và hàng đợi. Cùng dữ liệu có ở `GET /api/admin/usage` và
