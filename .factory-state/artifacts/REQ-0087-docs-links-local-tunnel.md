@@ -38,4 +38,4 @@ Out of scope: guided tours/onboarding walkthroughs, a docs search or embedded do
 ## Resolved Questions
 
 - Link base: DEC-0086 option A, fixed published handbook URLs (owner, 2026-11-07).
-- Teams/e-mail links and any tour are deferred to future requirements (owner, 2026-11-07).
+- Teams/e-mail links and any tour are deferred to future requirements (owner, 2026-11-07). Teams/e-mail links filed on 2026-11-10 as REQ-0096 / TASK-0309 (proposed); no tour exists to link.

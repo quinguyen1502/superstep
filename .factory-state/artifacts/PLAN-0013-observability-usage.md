@@ -81,6 +81,8 @@ Each task: own branch `factory/task-NNNN-<slug>` from `develop`, own PR, REV and
 
 ## Later Phases (not in this plan's MVP)
 
+Filed on 2026-11-10 as REQ-0095 and PLAN-0014 (TASK-0294 to TASK-0308), proposed and awaiting owner acceptance.
+
 - Phase 2, correlation: JSON logs carrying `run_id`, `request_id`, `trace_id`; HTTP, SQL and Redis spans on the same traces (OTel FastAPI/SQLAlchemy/Redis instrumentation, opt-in).
 - Phase 2, depth: Postgres and Redis exporters in the Compose profile; SQLAlchemy pool metrics; per-call LLM latency and time to first token; embedding and retrieval usage; channel, MCP, browser and sandbox counters; rate-limit hit counters; channel refusal codes on the Usage page.
 - Phase 3, usage data: a usage table written at run end (per node: model, provider, tokens, cost, priced flag); per-model, per-user and per-team views on the Usage page; retention for `runs.events`.
