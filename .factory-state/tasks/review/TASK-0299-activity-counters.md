@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0299
 - Title: Channel, MCP, browser and sandbox activity counters
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -63,7 +63,15 @@ Grafana shows channel messages in and out with failures by platform, MCP tool ca
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: `engine.activity` observer hook (`emit`, `timed`, `error_code`). Counters `studio.channel.messages`, `studio.mcp.calls`, `studio.browser.sessions`, `studio.browser.actions`, `studio.sandbox.executions`; histograms `studio.mcp.duration`, `studio.sandbox.duration`; gauge `studio.browser.active`. Dashboard Integrations row, Integration errors alert, handbook en and vi.
+- 2026-11-10: Deviation: sandbox runtime values follow the product (`docker`, `subprocess`, `remote`); active browsers come from the database.
+- 2026-11-10: Review REV-0284 and QA-0284. Moved to review.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0299-activity-counters` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0284-TASK-0299-activity-counters.md`
+- QA: `.factory-state/artifacts/QA-0284-TASK-0299-activity-counters.md`

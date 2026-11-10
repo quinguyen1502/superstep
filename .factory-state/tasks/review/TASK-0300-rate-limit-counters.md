@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0300
 - Title: Rate-limit hit counters
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -59,7 +59,15 @@ Grafana shows how often sign-in, public chat, chat triggers, API triggers, appro
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: Counter `studio.rate_limit.hits` (scope) from both limiters when a request is refused; scopes from the key prefix. Throttling spike alert (above 50 in 5 minutes). Handbook en and vi.
+- 2026-11-10: Deviation: extra `login` and `identity_code` scopes.
+- 2026-11-10: Review REV-0285 and QA-0285. Moved to review.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0300-rate-limit-counters` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0285-TASK-0300-rate-limit-counters.md`
+- QA: `.factory-state/artifacts/QA-0285-TASK-0300-rate-limit-counters.md`
