@@ -337,7 +337,7 @@ each HTTP request (`GET /api/workflows/{workflow_id}`, by route template, with
 the status code) and the SQL queries and Redis calls made while it is served.
 SQL spans carry the statement shape without parameter values. A request that
 starts a run links the run's trace to the request span, and SQL and Redis
-calls made while a node runs appear under that node. An incoming
+calls made by a run appear in the run's trace. An incoming
 `traceparent` header is honoured. Health and readiness checks are not traced.
 Instrumentation adds a little overhead per request, so it stays off by
 default.

@@ -332,8 +332,8 @@ Khi có endpoint OTLP và `STUDIO_OTEL_INSTRUMENT=1`, API trace thêm từng req
 HTTP (`GET /api/workflows/{workflow_id}`, theo mẫu route, kèm mã trạng thái)
 cùng các truy vấn SQL và lệnh Redis chạy trong lúc xử lý request. Span SQL ghi
 dạng câu lệnh, không có giá trị tham số. Request khởi động một run sẽ liên kết
-trace của run với span của request, và truy vấn SQL hay lệnh Redis chạy trong
-lúc một node chạy nằm dưới node đó. Header `traceparent` gửi vào được tôn
+trace của run với span của request, và truy vấn SQL hay lệnh Redis của một run
+nằm trong trace của run đó. Header `traceparent` gửi vào được tôn
 trọng. Các kiểm tra health và readiness không được trace. Instrumentation tốn
 thêm một ít chi phí cho mỗi request nên mặc định tắt.
 
