@@ -282,6 +282,21 @@ for (const lang of ['en', 'vi'] as Lang[]) {
       await shot(page, lang, 'editor-dark')
     })
 
+    // Settings → Usage after a few API runs of the seeded workflow, in English for both image folders. Run alone with `-g "usage en"`.
+    if (lang === 'en') test('usage en', async ({ page }) => {
+      await page.addInitScript(() => { localStorage.setItem('lang', 'en'); localStorage.setItem('theme', 'light') })
+      await page.goto('/login'); await expect(page.locator('#auth-submit')).toBeVisible()
+      const H = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+      const token = (await (await page.request.post('/api/workflows/example/tokens', { headers: H, data: { name: 'usage en' } })).json()).data.token
+      for (const message of ['Where is order A100?', 'Refund for order A200', 'Change my address']) {
+        const r = await page.request.post('/api/hooks/workflows/example/runs', { headers: { Authorization: `Bearer ${token}` }, data: { input: { message }, mode: 'sync' } })
+        expect(r.ok()).toBeTruthy()
+      }
+      await page.goto('/settings/usage'); await expect(page.locator('#usage-workflows-table')).toContainText('Customer Support')
+      await page.mouse.move(2, 898); await page.waitForTimeout(450)
+      for (const l of ['en', 'vi']) await page.screenshot({ path: `../handbook/docs/${l}/images/settings-usage.png` })
+    })
+
     // The Agent node: its settings, a run waiting before request_refund, then the trace after Approve.
     // Run alone with `-g agent`. The policy search tool needs a knowledge base, so it is left out here.
     test(`agent ${lang}`, async ({ page }) => {
