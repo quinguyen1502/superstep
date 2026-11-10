@@ -102,7 +102,8 @@ def get_job_queue() -> JobQueue:
 
 @lru_cache
 def run_worker() -> RunWorker:
-    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service,browser=browser_session_service)
+    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service,browser=browser_session_service,
+                     telemetry=get_telemetry())
 
 
 @lru_cache
@@ -286,7 +287,7 @@ def channel_service() -> ChannelService:
 def approval_service() -> ApprovalService:
     db = get_db(); return ApprovalService(ApprovalRepository(db), UserRepository(db), WorkflowRepository(db), RunRepository(db), channel_service(), get_job_queue().enqueue,
                                          limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service,
-                                         reviewer=auto_review_service(),browser=lambda:browser_session_service().approvals)
+                                         reviewer=auto_review_service(),browser=lambda:browser_session_service().approvals, telemetry=get_telemetry())
 
 def inbox_service() -> InboxService:
     return InboxService(approval_service(), run_service(), access_service())

@@ -54,7 +54,7 @@ def test_fallback_publishes_only_successful_answer_and_records_attempts(monkeypa
     assert [a["status"] for a in attempts] == ["error", "ok"] and attempts[0]["code"] == "PROVIDER_UNREACHABLE"
 
 
-@pytest.mark.parametrize("code,expected", [("PROVIDER_AUTH_FAILED", 1), ("PROVIDER_BAD_RESPONSE", 2), ("MODEL_NOT_FOUND", 2)])
+@pytest.mark.parametrize("code,expected", [("PROVIDER_AUTH_FAILED", 1), ("PROVIDER_BAD_RESPONSE", 2), ("PROVIDER_RATE_LIMITED", 2), ("MODEL_NOT_FOUND", 2)])
 def test_failure_policy_is_bounded_and_auth_is_not_hidden(monkeypatch, code, expected):
     calls = []
     def invoke(prompt, model, cred, report, on_token, **kwargs):

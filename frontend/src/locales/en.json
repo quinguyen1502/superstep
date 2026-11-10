@@ -654,6 +654,7 @@
     "PROVIDER_UNREACHABLE": "Could not reach {{provider}} at {{base_url}}: is the server running and reachable from the API?",
     "PROVIDER_AUTH_FAILED": "{{provider}} rejected the API key: {{reason}}",
     "PROVIDER_BAD_RESPONSE": "{{provider}} returned an unexpected response: {{reason}}",
+    "PROVIDER_RATE_LIMITED": "{{provider}} is rate limiting requests: {{reason}}",
     "MODEL_NOT_FOUND": "{{provider}} has no model named {{model}}",
     "CREDENTIAL_HEADER_UNSUPPORTED": "{{provider}} does not accept the header {{header}}",
     "PROVIDER_EMBEDDINGS_UNSUPPORTED": "{{provider}} does not provide embeddings; choose another credential for this knowledge base",

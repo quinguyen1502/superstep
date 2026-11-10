@@ -165,6 +165,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", **(meta(nid) if nid in nodes else {}), "iteration": counts.get(nid, 1) if nid else None,
                "duration_ms": round((time.perf_counter() - t0) * 1000, 2), "input": cap_payload(dict(state)),
                "code": getattr(e, "code", "NODE_FAILED"), "errors": [safe_error(e)],
+               **_provider_of(e, nodes[nid]["data"] if nid in nodes else {}),
                **({"browser": e.browser} if isinstance(getattr(e, "browser", None), dict) else {}),
                **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                **({"code_output": cap_payload(e.output)} if getattr(e, "output", None) else {})}
@@ -202,3 +203,10 @@ def _holds(effects, i: Interrupt) -> List[dict]:
 def resume_nodes(resume: Dict[str, Any]) -> List[str]:
     """Entry nodes of a resume/recovery checkpoint (older checkpoints only have "node")."""
     return list(resume.get("nodes") or [resume["node"]])
+
+
+def _provider_of(e: Exception, data: dict) -> dict:
+    """Provider and model of a failed model call (a ProviderError), for the run's metrics; nothing for other errors."""
+    params = getattr(e, "params", None)
+    if not isinstance(params, dict) or not isinstance(params.get("provider"), str): return {}
+    return {"provider": params["provider"], "model": params.get("model") or data.get("model") or ""}

@@ -31,13 +31,14 @@ REVIEW_LOST_AFTER = approval_judge.TIMEOUT * 2 + 60  # seconds: longer than any 
 class ApprovalService:
     def __init__(self, repo: ApprovalRepository, users: UserRepository, workflows: WorkflowRepository, runs: RunRepository, channels: ChannelService,
                  enqueue: Optional[Callable[[dict], None]] = None, background: Optional[bool] = None, limiter=None, notifier=None,
-                 chat: Optional[Callable[[], object]] = None, reviewer=None, browser=None):
+                 chat: Optional[Callable[[], object]] = None, reviewer=None, browser=None, telemetry=None):
         self.repo, self.users, self.workflows, self.runs, self.channels, self.enqueue = repo, users, workflows, runs, channels, enqueue
         self.notifier = notifier  # NotificationService (optional): deadline reminders and escalations
         self.limiter = limiter  # RateLimiter for the public callbacks (None = no limit)
         self.chat = chat  # -> ChatRunService (optional): messages on the same webhook start chat-trigger runs
         self.browser = browser
         self.reviewer = reviewer  # AutoReviewService (optional): AI review before people are asked
+        self.telemetry = telemetry  # Telemetry (optional): the judge's usage in the per-model metrics
         self.adapters = channels.adapters
         self.background = BACKGROUND if background is None else background
 
@@ -168,6 +169,9 @@ class ApprovalService:
         u = r.get("usage")
         if not u or self.runs is None: return
         ev = {"type": "approval_review", "node": w.node_id, "ts": time.time(), "outcome": r.get("outcome"), "model": r.get("model"), "usage": u}
+        if self.telemetry is not None:
+            try: self.telemetry.model_event(ev, getattr(w, "workflow_id", None))
+            except Exception: log.warning("AI review usage metrics of run %s failed", rid)
         try:
             if not self.runs.add_waiting_event(rid, ev): log.info("AI review usage of run %s not recorded: the run is no longer waiting", rid)
         except Exception: log.exception("recording AI review usage of run %s failed", rid)

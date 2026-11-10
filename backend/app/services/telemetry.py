@@ -7,13 +7,61 @@
 - Exporters come from standard env: OTLP via OTEL_EXPORTER_OTLP_(TRACES_)ENDPOINT / OTEL_* and,
   optionally, LangSmith (its OTLP endpoint) when LANGSMITH_API_KEY is set and LANGSMITH_TRACING is true.
   With none configured (or OTEL_SDK_DISABLED=true) tracing is a no-op and the SDK is never imported.
+- Metrics (STUDIO_OTEL_METRICS=1 + an OTLP endpoint) are pushed to a collector: runs, model usage and errors, HTTP
+  requests, jobs, and observable gauges for the readiness probes, the queue, the worker and the process. Every label
+  goes through `labels`, which keeps only the bounded set in LABELS: never a user id, run id, raw path or prompt.
 """
 from __future__ import annotations
-import os, threading
-from typing import Any, Optional
+import os, threading, time, uuid
+from typing import Any, Callable, Optional
 
 TRUE = ("1", "true", "yes", "on")
 LANGSMITH_DEFAULT = "https://api.smith.langchain.com"
+# Metric labels: bounded values only. Per-user or per-team usage is SQL on the Usage page, never a label.
+LABELS = frozenset({"status", "source", "workflow_id", "model", "provider", "code", "direction", "route", "method",
+                    "status_class", "state", "primary_provider", "fallback_provider"})
+LLM_CODES = frozenset({"MODEL_NOT_FOUND"})  # with every PROVIDER_* code
+SNAPSHOT_TTL = 5.0  # seconds one probe snapshot serves every gauge callback
+PROBE_ROUTES = frozenset({"/api/health", "/api/ready"})  # counted, kept out of the latency histogram
+
+
+def labels(**values: Any) -> dict:
+    """Metric attributes restricted to LABELS; values become strings (None becomes "")."""
+    return {k: "" if v is None else str(v) for k, v in values.items() if k in LABELS}
+
+
+def is_llm_code(code: Optional[str]) -> bool: return bool(code) and (code.startswith("PROVIDER_") or code in LLM_CODES)
+
+
+def process_cpu_seconds() -> float:
+    import resource
+    u = resource.getrusage(resource.RUSAGE_SELF); return u.ru_utime + u.ru_stime
+
+
+def process_rss_bytes() -> Optional[int]:
+    """Resident set size from /proc (Linux); the peak from `resource` elsewhere."""
+    try:
+        with open("/proc/self/statm") as f: return int(f.read().split()[1]) * os.sysconf("SC_PAGE_SIZE")
+    except (OSError, ValueError, IndexError, AttributeError):
+        try:
+            import resource, sys
+            peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            return peak if sys.platform == "darwin" else peak * 1024
+        except Exception: return None
+
+
+class _Snapshot:
+    """Caches one call of `fn` for `ttl` seconds, so the gauges of one collection share a single probe round."""
+    def __init__(self, fn: Callable[[], Optional[dict]], ttl: float = SNAPSHOT_TTL):
+        self.fn, self.ttl, self.at, self.value, self._lock = fn, ttl, 0.0, None, threading.Lock()
+
+    def get(self) -> Optional[dict]:
+        with self._lock:
+            if time.monotonic() - self.at >= self.ttl:
+                try: self.value = self.fn()
+                except Exception: self.value = None
+                self.at = time.monotonic()
+            return self.value
 
 
 def summarize(events: list[dict], started: float, ended: float) -> dict:
@@ -23,7 +71,7 @@ def summarize(events: list[dict], started: float, ended: float) -> dict:
     for ev in events:
         if ev.get("type") == "error": errors += 1
         u = ev.get("usage")
-        if ev.get("type") in ("node_finished", "approval_review") and u:  # approval_review: the AI judge of a step
+        if ev.get("type") in ("node_finished", "approval_review") and u and u.get("provider") != "workflow":  # a child run reports its own  # approval_review: the AI judge of a step
             llm = True; tin += u.get("tokens_in", 0); tout += u.get("tokens_out", 0)
             cost = None if cost is None or u.get("cost_usd") is None else cost + u["cost_usd"]
     return {"duration_ms": round(max(0.0, ended - started - waited) * 1000, 2), "tokens_in": tin, "tokens_out": tout,
@@ -143,7 +191,8 @@ class Telemetry:
         if metric_readers is None: metric_readers = self._metric_readers_from_env()
         if exporters or metric_readers:
             from opentelemetry.sdk.resources import Resource
-            res = Resource.create({"service.name": _env("OTEL_SERVICE_NAME") or "superstep"})
+            res = Resource.create({"service.name": _env("OTEL_SERVICE_NAME") or "superstep",
+                                   "service.instance.id": uuid.uuid4().hex[:12]})  # API and worker processes stay apart
         if exporters:
             from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
@@ -160,7 +209,19 @@ class Telemetry:
                        "duration": m.create_histogram("studio.run.duration", unit="ms", description="Active run time"),
                        "tokens": m.create_counter("studio.tokens", unit="{token}", description="LLM tokens"),
                        "cost": m.create_counter("studio.cost", unit="USD", description="Estimated LLM cost"),
-                       "errors": m.create_counter("studio.errors", unit="{error}", description="Error events")}
+                       "errors": m.create_counter("studio.errors", unit="{error}", description="Error events"),
+                       "llm_tokens": m.create_counter("studio.llm.tokens", unit="{token}", description="LLM tokens by model"),
+                       "llm_cost": m.create_counter("studio.llm.cost", unit="USD", description="Estimated LLM cost by model (priced calls only)"),
+                       "llm_unpriced": m.create_counter("studio.llm.unpriced", unit="{call}", description="LLM calls with no known price"),
+                       "llm_errors": m.create_counter("studio.llm.errors", unit="{error}", description="Failed LLM calls by code"),
+                       "llm_fallbacks": m.create_counter("studio.llm.fallbacks", unit="{call}", description="Calls answered by the fallback model"),
+                       "http_requests": m.create_counter("studio.http.server.requests", unit="{request}", description="HTTP requests"),
+                       "http_duration": m.create_histogram("studio.http.server.duration", unit="ms", description="HTTP request duration"),
+                       "ws": m.create_up_down_counter("studio.ws.connections", unit="{connection}", description="Open WebSocket connections"),
+                       "jobs_reaped": m.create_counter("studio.jobs.reaped", unit="{job}", description="Jobs requeued after their lease expired"),
+                       "jobs_recovered": m.create_counter("studio.jobs.recovered", unit="{job}", description="Unfinished runs requeued at start-up")}
+            self._meter = m
+        self._watching = False
 
     @staticmethod
     def _from_env() -> list:
@@ -274,8 +335,73 @@ class Telemetry:
     def observe(self, run: dict, metrics: dict) -> None:
         """OTel metrics for a run that reached a final status (a pause is not counted)."""
         if not self._m or run["status"] == "waiting": return
-        a = {"status": run["status"], "source": run.get("source") or "ui"}
+        a = labels(status=run["status"], source=run.get("source") or "ui", workflow_id=run.get("workflow_id") or "adhoc")
         self._m["runs"].add(1, a); self._m["duration"].record(metrics["duration_ms"], a)
         self._m["tokens"].add(metrics["tokens_in"], {**a, "direction": "input"}); self._m["tokens"].add(metrics["tokens_out"], {**a, "direction": "output"})
-        if metrics.get("cost_usd"): self._m["cost"].add(metrics["cost_usd"], a)
+        if metrics.get("cost_usd"): self._m["cost"].add(metrics["cost_usd"], a)  # an unpriced run (cost None) is skipped
         if metrics["error_count"]: self._m["errors"].add(metrics["error_count"], a)
+
+    # ---- model, HTTP and job metrics ----
+    def model_event(self, ev: dict, workflow_id: Optional[str]) -> None:
+        """Per-model metrics from one run event: usage of a node or an AI review, failed attempts, fallbacks, LLM errors."""
+        if not self._m: return
+        wf = workflow_id or "adhoc"; u = ev.get("usage")
+        if ev.get("type") in ("node_finished", "approval_review") and u and u.get("provider") != "workflow":  # a child run reports its own
+            a = labels(model=u.get("model"), provider=u.get("provider"), workflow_id=wf)
+            self._m["llm_tokens"].add(int(u.get("tokens_in") or 0), {**a, "direction": "input"})
+            self._m["llm_tokens"].add(int(u.get("tokens_out") or 0), {**a, "direction": "output"})
+            if u.get("cost_usd") is None: self._m["llm_unpriced"].add(1, labels(model=u.get("model"), provider=u.get("provider")))
+            elif u["cost_usd"]: self._m["llm_cost"].add(u["cost_usd"], a)
+        attempts = [x for x in ev.get("model_attempts") or [] if isinstance(x, dict)]
+        failed = [x for x in attempts if x.get("status") == "error"]
+        for x in failed: self._m["llm_errors"].add(1, labels(code=x.get("code"), provider=x.get("provider"), model=x.get("model")))
+        answered = next((x for x in attempts if x.get("status") == "ok" and x.get("attempt") == 2), None)
+        if answered and failed:
+            self._m["llm_fallbacks"].add(1, labels(primary_provider=failed[0].get("provider"), fallback_provider=answered.get("provider"),
+                                                   code=failed[0].get("code")))
+        if ev.get("type") == "error" and not attempts and is_llm_code(ev.get("code")):
+            self._m["llm_errors"].add(1, labels(code=ev["code"], provider=ev.get("provider") or "unknown", model=ev.get("model") or "unknown"))
+
+    def http_request(self, route: str, method: str, status: int, ms: float) -> None:
+        if not self._m: return
+        a = labels(route=route, method=method, status_class=f"{status // 100}xx")
+        self._m["http_requests"].add(1, a)
+        if route not in PROBE_ROUTES: self._m["http_duration"].record(ms, a)
+
+    def websocket(self, delta: int) -> None:
+        if self._m: self._m["ws"].add(delta)
+
+    def jobs(self, kind: str, n: int) -> None:
+        """`kind`: reaped (lease expired) or recovered (requeued at start-up)."""
+        if self._m and n: self._m[f"jobs_{kind}"].add(n)
+
+    def watch(self, probes, worker=None) -> None:
+        """Observable gauges, read at each export: readiness probes, queue and heartbeat (every process), busy slots and
+        capacity of this process's worker, and process CPU and memory. Once per process; a no-op without metrics."""
+        if not self._m or self._watching: return
+        from opentelemetry.metrics import Observation
+        self._watching = True; m = self._meter; snap = _Snapshot(probes.ready)
+
+        def gauge(name: str, unit: str, desc: str, read: Callable[[], list]) -> None:
+            def cb(_options):  # runs on the exporter thread, never on the event loop
+                try: return [Observation(v, a) for v, a in read() if v is not None]
+                except Exception: return []
+            m.create_observable_gauge(name, callbacks=[cb], unit=unit, description=desc)
+
+        def part(key: str) -> dict: return (snap.get() or {}).get(key) or {}
+        def ok(key: str) -> list:
+            v = part(key).get("ok"); return [] if v is None else [(1 if v else 0, {})]
+        gauge("studio.ready.db", "1", "Database probe (1 ok, 0 failing)", lambda: ok("database"))
+        gauge("studio.ready.db.latency", "ms", "Database probe latency", lambda: [(part("database").get("latency_ms"), {})])
+        gauge("studio.ready.redis", "1", "Redis probe when REDIS_URL is set (1 ok, 0 failing)", lambda: ok("redis"))
+        gauge("studio.ready.redis.latency", "ms", "Redis probe latency", lambda: [(part("redis").get("latency_ms"), {})])
+        gauge("studio.queue.depth", "{job}", "Jobs by state", lambda: [(part("queue").get(s), labels(state=s)) for s in ("ready", "delayed", "processing")])
+        gauge("studio.queue.oldest_age", "s", "Age of the oldest queued run", lambda: [(part("queue").get("oldest_queued_age_s"), {})])
+        gauge("studio.worker.heartbeat_age", "s", "Age of the newest worker heartbeat", lambda: [(part("worker").get("heartbeat_age_s"), {})])
+        gauge("studio.run_bus.in_memory", "1", "1 when the run bus is in-memory (no REDIS_URL)", lambda: [(1 if (snap.get() or {}).get("run_bus") == "memory" else 0, {})])
+        if worker is not None:
+            gauge("studio.worker.busy", "{slot}", "Busy job slots of this worker", lambda: [(worker.busy, {})])
+            gauge("studio.worker.capacity", "{slot}", "Job slots of this worker", lambda: [(worker.capacity, {})])
+        gauge("studio.process.rss", "By", "Resident memory of this process", lambda: [(process_rss_bytes(), {})])
+        m.create_observable_counter("studio.process.cpu_time", unit="s", description="CPU time of this process",
+                                    callbacks=[lambda _o: [Observation(process_cpu_seconds())]])

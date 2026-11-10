@@ -8,6 +8,11 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 - **Public schedule API.** A workflow token can list, create, update, delete and preview cron schedules of its own workflow (`/api/hooks/workflows/{wid}/schedules`). The Python and TypeScript clients gain the matching methods. Package versions are unchanged. A schedule still runs as the token's owner, and it fires only while a worker is running.
 - **Readiness endpoint.** `GET /api/ready` checks the database and, when `REDIS_URL` is set, Redis, and answers 503 `SERVICE_NOT_READY` when either fails. It also reports queue depth, the oldest queued run and worker heartbeats. `GET /api/health` stays a liveness check and is unchanged; deploy templates keep using it.
+- **More OpenTelemetry metrics.** With `STUDIO_OTEL_METRICS=1`, the backend also exports HTTP requests and latency by route template, open WebSockets, model tokens, cost, unpriced calls, errors and fallbacks by model and provider, reaped and recovered jobs, and gauges for the database and Redis probes, queue depth, worker slots and heartbeat, the in-memory bus and process CPU and memory. Labels never carry a user id, run id or raw path. Run metrics gain `workflow_id`.
+
+### Changed
+
+- A provider HTTP 429 now fails with `PROVIDER_RATE_LIMITED` instead of `PROVIDER_BAD_RESPONSE`. It still answers 502 to API clients and still switches to a configured fallback model.
 
 ### Fixed
 
