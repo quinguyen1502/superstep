@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0294
 - Title: Structured JSON logs with request, run and trace ids
-- Status: doing
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -66,7 +66,17 @@ With `STUDIO_LOG_FORMAT=json`, API and worker logs (including uvicorn access lin
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
 - 2026-11-10: Started on branch factory/task-0294-json-logs (stacked on the planning branch so the acceptance and the tasks land together).
+- 2026-11-10: `STUDIO_LOG_FORMAT` (`text` default, `json`) and `STUDIO_LOG_LEVEL` in `core/config.py`; `core/logging.configure` is called by the API (`create_app`) and the worker (`app.worker`). JSON: one handler on the root logger with `ContextFilter`, `RedactTokens` and `JsonFormatter` (`ts`, `level`, `logger`, `message`, `request_id`, `run_id`, `workflow_id`, `trace_id`, `span_id` when known, `exception`); uvicorn's loggers propagate to it, so access lines are JSON too.
+- 2026-11-10: `api/request_context.RequestContext` (outermost middleware) keeps `X-Request-ID` when it matches `[A-Za-z0-9._:-]{1,64}`, otherwise makes a new id, and echoes it in the response. `RunService.execute` sets the run context; the trace id is bound once the root span is open; the engine thread starts with a copy of the context.
+- 2026-11-10: Compose passes `STUDIO_LOG_FORMAT` and `STUDIO_LOG_LEVEL`; `deploy/observability/observability.env` sets `STUDIO_LOG_FORMAT=json`. `.env.example` and the configuration reference (en and vi) list both variables.
+- 2026-11-10: Deviation: `STUDIO_LOG_LEVEL` did not exist and was added; in text mode it only adds a plain handler on `studio` when set, so default output stays byte-identical. `trace_id` falls back to the run's trace id when no OTel span is current (run spans are not made current unless TASK-0295 instrumentation is on).
+- 2026-11-10: Review REV-0279 and QA-0279. Moved to review.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0294-json-logs` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0279-TASK-0294-json-logs.md`
+- QA: `.factory-state/artifacts/QA-0279-TASK-0294-json-logs.md`
