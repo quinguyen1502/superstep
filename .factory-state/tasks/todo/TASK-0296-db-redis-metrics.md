@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0296
 - Title: Database and Redis server metrics in the observability profile
-- Status: backlog
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -62,6 +62,7 @@ The Grafana dashboard gains Postgres (connections by state, transactions, deadlo
 ## Activity Log
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
+- 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
 
 ## Handoff Notes
 

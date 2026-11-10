@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0014
-- Status: Proposed 2026-11-10 (Asia/Saigon); awaiting owner acceptance. No task moves out of backlog before that.
+- Status: Accepted 2026-11-10 (Asia/Saigon) by the owner (pt280u, "go ahead with phase 2"); REQ-0095 accepted. Phase 2 (TASK-0294 to TASK-0305) moved to todo and in progress; phase 3 (TASK-0306 to TASK-0308) stays in backlog.
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-10
 - Related Requirements: REQ-0095 (continues REQ-0094)

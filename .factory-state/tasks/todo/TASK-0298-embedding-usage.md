@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0298
 - Title: Embedding usage: tokens and cost
-- Status: backlog
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -60,6 +60,7 @@ Operators see embedding tokens and cost per model in Grafana, and the run totals
 ## Activity Log
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
+- 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
 
 ## Handoff Notes
 

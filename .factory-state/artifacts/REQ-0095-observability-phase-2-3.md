@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0095
-- Status: Proposed 2026-11-10 (Asia/Saigon); awaiting owner acceptance of this requirement and PLAN-0014
+- Status: Accepted 2026-11-10 (Asia/Saigon) by the owner (pt280u, "go ahead with phase 2"), together with PLAN-0014. Phase 2 (TASK-0294 to TASK-0305) in progress; phase 3 (TASK-0306 to TASK-0308) stays in backlog until the owner starts it.
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-10
 - Source: Owner chat 2026-11-10 (pt279u, asking to file tasks for the remaining work after the observability MVP)
