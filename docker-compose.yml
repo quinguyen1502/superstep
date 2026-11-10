@@ -197,11 +197,37 @@ services:
   # Optional metrics stack: `docker compose --env-file .env --env-file deploy/observability/observability.env
   # --profile observability up --build`. The backend pushes OTLP to the collector; Prometheus scrapes the collector;
   # Grafana (http://localhost:3000) has the starter dashboard and alert rules. Config: deploy/observability/.
+  # Read-only Postgres role (pg_monitor) for the collector's server metrics; runs once per `up` and exits.
+  # Without POSTGRES_MONITOR_PASSWORD it creates nothing and the Postgres panels stay empty.
+  postgres-monitor:
+    image: pgvector/pgvector:pg17
+    profiles: [observability]
+    command: ["sh", "/postgres-monitor.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-studio}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-}
+      PGDATABASE: ${POSTGRES_DB:-studio}
+      MONITOR_USER: ${POSTGRES_MONITOR_USER:-superstep_monitor}
+      MONITOR_PASSWORD: ${POSTGRES_MONITOR_PASSWORD:-}
+    volumes: ["./deploy/observability/postgres-monitor.sh:/postgres-monitor.sh:ro"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.114.0
     profiles: [observability]
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes: ["./deploy/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro"]
+    environment:  # Postgres and Redis server metrics (postgresql, sqlquery and redis receivers)
+      POSTGRES_MONITOR_ENDPOINT: postgres:5432
+      POSTGRES_MONITOR_HOST: postgres
+      POSTGRES_MONITOR_PORT: "5432"
+      POSTGRES_MONITOR_USER: ${POSTGRES_MONITOR_USER:-superstep_monitor}
+      POSTGRES_MONITOR_PASSWORD: ${POSTGRES_MONITOR_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-studio}
+      REDIS_MONITOR_ENDPOINT: redis:6379
     depends_on: [jaeger]
     restart: unless-stopped
 

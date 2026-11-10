@@ -9,6 +9,8 @@ x-thresholds:
   run_error_rate: &run_error_rate 0.2        # share of runs ending in error or timeout over 15 minutes
   daily_cost_usd: &daily_cost_usd 50         # estimated USD over the last 24 hours
   approval_wait_s: &approval_wait_s 86400    # seconds a human step may wait
+  postgres_connection_share: &postgres_connection_share 0.8  # Postgres connections over max_connections
+  redis_memory_share: &redis_memory_share 0.9  # Redis used memory over maxmemory (when set)
 
 apiVersion: 1
 groups:
@@ -283,6 +285,44 @@ groups:
         execErrState: Error
         labels: { severity: warning }
         annotations: { summary: "A human step has waited longer than the allowed time." }
+      - uid: superstep-postgres-connections
+        title: Postgres connections near limit
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'sum(postgresql_backends) / clamp_min(max(postgresql_connection_max), 1)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*postgres_connection_share] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "Postgres connections are close to max_connections." }
+      - uid: superstep-redis-memory
+        title: Redis memory pressure
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(redis_memory_used) / max(redis_maxmemory > 0)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*redis_memory_share] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "Redis memory is close to maxmemory (only when maxmemory is set)." }
       - uid: superstep-in-memory-bus
         title: In-memory run bus
         condition: C

@@ -85,6 +85,9 @@ thô. Request không khớp route nào có nhãn `unmatched`.
 | `studio.jobs.reaped` | counter | không có | Job được đưa lại hàng đợi khi hết hạn lease |
 | `studio.jobs.recovered` | counter | không có | Run chưa xong được đưa lại hàng đợi lúc khởi động |
 | `studio.run_bus.in_memory` | gauge | không có | 1 khi tiến trình chạy không có `REDIS_URL` |
+| `studio.db.pool.in_use` | gauge | không có | Kết nối cơ sở dữ liệu đang được lấy ra từ pool của tiến trình này |
+| `studio.db.pool.idle` | gauge | không có | Kết nối rảnh trong pool của tiến trình này |
+| `studio.db.pool.overflow` | gauge | không có | Kết nối vượt quá kích thước pool |
 
 Các gauge kiểm tra dùng lại phép kiểm tra của `/api/ready`, tối đa mỗi 5 giây
 một lần cho mỗi tiến trình.
@@ -149,9 +152,29 @@ gọi chưa có giá, lỗi model, model dự phòng) và tình trạng sản ph
 
 Trong Prometheus, tên dùng dấu gạch dưới và không có hậu tố đơn vị:
 `studio.http.server.requests` thành `studio_http_server_requests`, và
-collector gắn nhãn `job` (tên service) và `instance` (id instance). Bản thân
-server Postgres và Redis không được thu thập; hãy thêm exporter của chúng nếu
-cần số liệu bên trong.
+collector gắn nhãn `job` (tên service) và `instance` (id instance).
+
+### Server Postgres và Redis
+
+Collector cũng tự đọc server Postgres và Redis của stack Compose bằng các
+receiver `postgresql`, `sqlquery` và `redis`, nên Prometheus vẫn chỉ thu
+thập từ collector. Dashboard hiện số kết nối Postgres theo trạng thái so với
+`max_connections`, commit, rollback và deadlock, tỉ lệ trúng cache và dung
+lượng cơ sở dữ liệu, cùng bộ nhớ Redis so với `maxmemory`, số client, số thao
+tác mỗi giây, số key bị loại và số key. Khi không có Redis, các panel đó để
+trống.
+
+Collector đăng nhập Postgres bằng một role chỉ đọc thuộc `pg_monitor` (các
+view thống kê, không có dữ liệu bảng). Đặt `POSTGRES_MONITOR_PASSWORD` (và
+tuỳ chọn `POSTGRES_MONITOR_USER`, mặc định `superstep_monitor`) trong `.env`;
+service chạy một lần `postgres-monitor` tạo hoặc cập nhật role mỗi lần `up`.
+Khi mật khẩu trống, không role nào được tạo và các panel Postgres để trống.
+Với cơ sở dữ liệu được quản lý, hãy tự tạo role:
+
+```sql
+CREATE ROLE superstep_monitor LOGIN PASSWORD 'choose-a-password';
+GRANT pg_monitor TO superstep_monitor;
+```
 
 ## Cảnh báo
 
@@ -178,6 +201,8 @@ Grafana để nhận thông báo.
 | Webhook failures | `studio.webhooks.failed` (giờ vừa qua) | trên 0 |
 | Approvals waiting too long | `studio.approvals.oldest_age` | trên 1 ngày |
 | In-memory run bus | `studio.run_bus.in_memory` | bằng 1 trong 5 phút |
+| Postgres connections near limit | Số kết nối Postgres so với `max_connections` | trên 80% trong 5 phút |
+| Redis memory pressure | Bộ nhớ Redis đã dùng so với `maxmemory`, chỉ khi có đặt `maxmemory` | trên 90% trong 5 phút |
 
 Chi phí theo ngày chỉ tính run có giá; dashboard hiện số lời gọi chưa có giá
 bên cạnh. Khi không có Redis, cảnh báo bus in-memory bật là có chủ ý: hãy dùng

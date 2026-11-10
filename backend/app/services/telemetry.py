@@ -515,10 +515,12 @@ class Telemetry:
         """`kind`: reaped (lease expired) or recovered (requeued at start-up)."""
         if self._m and n: self._m[f"jobs_{kind}"].add(n)
 
-    def watch(self, probes, worker=None, product: Optional[Callable[[], Optional[dict]]] = None) -> None:
+    def watch(self, probes, worker=None, product: Optional[Callable[[], Optional[dict]]] = None,
+              pool: Optional[Callable[[], dict]] = None) -> None:
         """Observable gauges, read at each export: readiness probes, queue and heartbeat (every process), busy slots and
-        capacity of this process's worker, process CPU and memory, and, where a worker runs, the product health counts
-        from `product()` (UsageService.gauges). Once per process; a no-op without metrics."""
+        capacity of this process's worker, process CPU and memory, this process's SQLAlchemy pool (`pool()`:
+        Database.pool_status) and, where a worker runs, the product health counts from `product()` (UsageService.gauges).
+        Once per process; a no-op without metrics."""
         if not self._m or self._watching: return
         from opentelemetry.metrics import Observation
         self._watching = True; m = self._meter; snap = _Snapshot(probes.ready)
@@ -544,6 +546,10 @@ class Telemetry:
             gauge("studio.worker.busy", "{slot}", "Busy job slots of this worker", lambda: [(worker.busy, {})])
             gauge("studio.worker.capacity", "{slot}", "Job slots of this worker", lambda: [(worker.capacity, {})])
         gauge("studio.process.rss", "By", "Resident memory of this process", lambda: [(process_rss_bytes(), {})])
+        if pool is not None:  # no probe here: the pool's own counters, read without a database round trip
+            gauge("studio.db.pool.in_use", "{connection}", "Database connections checked out of this process's pool", lambda: [(pool().get("in_use"), {})])
+            gauge("studio.db.pool.idle", "{connection}", "Idle database connections in this process's pool", lambda: [(pool().get("idle"), {})])
+            gauge("studio.db.pool.overflow", "{connection}", "Connections beyond the pool size in this process", lambda: [(pool().get("overflow"), {})])
         m.create_observable_counter("studio.process.cpu_time", unit="s", description="CPU time of this process",
                                     callbacks=[lambda _o: [Observation(process_cpu_seconds())]])
         if worker is None or product is None: return

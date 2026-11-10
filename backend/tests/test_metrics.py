@@ -211,3 +211,18 @@ def test_studio_app_labels_routes_through_its_middleware(monkeypatch):
     assert c.get(f"/api/workflows/{wid}", headers={"Authorization": f"Bearer {tok}"}).status_code == 200
     routes = {a["route"] for _, a in points(reader)["studio.http.server.requests"]}
     assert {"/api/auth/register", "/api/workflows", "/api/workflows/{wid}"} <= routes and not any(wid in r for r in routes)
+
+
+def test_pool_gauges_from_the_pool_counters(tmp_path):
+    from app.models.database import Database
+    db = Database(f"sqlite:///{tmp_path / 'pool.db'}")
+    t, reader = meter()
+    class Probes:
+        def ready(self): return {}
+    t.watch(Probes(), pool=db.pool_status)
+    with db.engine.connect():
+        pts = points(reader); assert_bounded(pts)
+        assert pts["studio.db.pool.in_use"] == [(1, {})] and pts["studio.db.pool.overflow"] == [(0, {})]
+    assert points(reader)["studio.db.pool.idle"] == [(1, {})] and points(reader)["studio.db.pool.in_use"] == [(0, {})]
+    db.engine.dispose()
+    off = Telemetry(exporters=[], metric_readers=[]); off.watch(Probes(), pool=lambda: (_ for _ in ()).throw(AssertionError("read")))
