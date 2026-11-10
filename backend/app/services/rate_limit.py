@@ -3,8 +3,23 @@ never blocks) when REDIS_URL is set, otherwise in-memory (single process)."""
 import asyncio, math, threading, time
 from .redis_async import async_redis
 from typing import Optional, Protocol
+from ..engine import activity
 
 PREFIX = "studio:rl:"
+
+# The first part of a limiter key names the product limit; the rest (a user id, an IP, a token id) never leaves here.
+SCOPES = {"demo-run": "demo", "approval-cb": "approval_callback", "chat": "chat_trigger", "pubchat-ip": "public_chat",
+          "pubchat-read": "public_chat", "pubchat-user": "public_chat", "pubchat-v": "public_chat", "token": "api_trigger",
+          "pat": "api_trigger", "code-test": "code", "cli-device": "pat", "email": "email_node"}
+
+
+def scope_of(key: str) -> str:
+    return SCOPES.get(key.split(":", 1)[0], "other")
+
+
+def throttled(scope: str) -> None:
+    """One request refused by a product limit (metric `studio.rate_limit.hits`, label `scope` only)."""
+    activity.emit("rate_limit", scope=scope)
 
 
 class RateLimiter(Protocol):
@@ -26,6 +41,7 @@ class InMemoryRateLimiter:
             w, n = self._counts.get(key, (start, 0))
             n = n + 1 if w == start else 1
             self._counts[key] = (start, n)
+        if n > limit: throttled(scope_of(key))
         return (n <= limit, 0 if n <= limit else retry)
 
 
@@ -40,6 +56,7 @@ class RedisRateLimiter:
         k = f"{PREFIX}{key}:{start}"; r = self._r()
         async with r.pipeline(transaction=True) as p:
             n, _ = await p.incr(k).expire(k, window + 1).execute()
+        if n > limit: throttled(scope_of(key))
         return (n <= limit, 0 if n <= limit else retry)
 
 

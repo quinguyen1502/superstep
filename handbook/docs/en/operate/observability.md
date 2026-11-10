@@ -109,6 +109,28 @@ path. A request that matches no route is labelled `unmatched`.
 The probe gauges reuse the checks of `/api/ready`, at most once every 5
 seconds per process.
 
+### Integrations and limits
+
+| Metric | Type | Labels | Meaning |
+| --- | --- | --- | --- |
+| `studio.channel.messages` | counter | `kind`, `direction`, `status` | Approval requests and chat replies sent (`out`), button presses and chat trigger messages received (`in`) |
+| `studio.mcp.calls` | counter | `transport`, `status`, `code` | MCP tool calls; `code` is the error code of a failed call |
+| `studio.mcp.duration` | histogram, ms | `transport`, `status`, `code` | Time of one MCP tool call |
+| `studio.browser.sessions` | counter | `status` (`opened`, `closed`, `lost`, `revoked`, `expired`) | Browser sessions started and ended |
+| `studio.browser.actions` | counter | `status`, `code` | Browser actions by result |
+| `studio.browser.active` | gauge | none | Browser sessions open now, across all processes |
+| `studio.sandbox.executions` | counter | `runtime`, `language`, `status` | Code node executions; `status` is `ok` or the error code |
+| `studio.sandbox.duration` | histogram, ms | `runtime`, `language`, `status` | Time of one Code node execution |
+| `studio.rate_limit.hits` | counter | `scope` | Requests refused by a product limit |
+
+`kind` is the channel platform, `transport` is `stdio`, `http` or `managed`,
+`runtime` is `docker`, `subprocess` or `remote`. `scope` names the limit:
+`login`, `demo`, `public_chat`, `chat_trigger`, `api_trigger`,
+`approval_callback`, `code`, `pat`, `email_node`, `identity_code` or `other`.
+No label carries a server or connection name, a URL, a user id or the
+limiter key. Provider rate limits stay in `studio.llm.errors` with
+`PROVIDER_RATE_LIMITED`; the Throttling panel shows both.
+
 ### Product health
 
 Only processes that run a worker report these (the `worker` service, or the
@@ -128,8 +150,10 @@ seconds.
 
 Labels are limited to a fixed list: `status`, `source`, `workflow_id`,
 `model`, `provider`, `code`, `direction`, `route`, `method`, `status_class`,
-`state`, `primary_provider` and `fallback_provider`. Any other attribute is
-dropped before export. No metric carries a user id, run id, email, raw path
+`state`, `primary_provider`, `fallback_provider`, `kind`, `transport`,
+`runtime`, `language` and `scope`. Any other attribute is dropped before
+export, and `kind`, `transport`, `runtime`, `language` and `scope` outside
+their fixed values are exported as `other`. No metric carries a user id, run id, email, raw path
 or prompt text. `workflow_id` grows with the number of workflows; drop it in
 the collector if that is too many series for your backend.
 
@@ -219,6 +243,8 @@ to get notified.
 | Overdue schedules | `studio.schedules.overdue` | above 0 for 10 minutes |
 | Webhook failures | `studio.webhooks.failed` (last hour) | above 0 |
 | Approvals waiting too long | `studio.approvals.oldest_age` | above 1 day |
+| Integration errors | Failed MCP calls, channel sends and browser actions over 15 minutes | above 10 for 15 minutes |
+| Throttling spike | `studio.rate_limit.hits` over 5 minutes | above 50 for 5 minutes |
 | In-memory run bus | `studio.run_bus.in_memory` | 1 for 5 minutes |
 | Postgres connections near limit | Postgres connections over `max_connections` | above 80% for 5 minutes |
 | Redis memory pressure | Redis used memory over `maxmemory`, only when `maxmemory` is set | above 90% for 5 minutes |

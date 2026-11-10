@@ -23,7 +23,15 @@ TRUE = ("1", "true", "yes", "on")
 LANGSMITH_DEFAULT = "https://api.smith.langchain.com"
 # Metric labels: bounded values only. Per-user or per-team usage is SQL on the Usage page, never a label.
 LABELS = frozenset({"status", "source", "workflow_id", "model", "provider", "code", "direction", "route", "method",
-                    "status_class", "state", "primary_provider", "fallback_provider"})
+                    "status_class", "state", "primary_provider", "fallback_provider", "kind", "transport", "runtime",
+                    "language", "scope"})
+# Integration labels are fixed enums; any other value is exported as "other" (tests keep these lists in sync).
+ENUMS = {"kind": frozenset({"email", "slack", "teams", "telegram", "webhook", "whatsapp"}),
+         "transport": frozenset({"stdio", "http", "managed"}),
+         "runtime": frozenset({"docker", "remote", "subprocess"}),
+         "language": frozenset({"python", "typescript"}),
+         "scope": frozenset({"demo", "approval_callback", "chat_trigger", "public_chat", "api_trigger", "code", "pat",
+                             "email_node", "login", "identity_code", "other"})}
 LLM_CODES = frozenset({"MODEL_NOT_FOUND"})  # with every PROVIDER_* code
 SNAPSHOT_TTL = 5.0  # seconds one probe snapshot serves every gauge callback
 PRODUCT_TTL = 30.0  # seconds between two product health queries (approvals, webhooks, schedules)
@@ -35,7 +43,10 @@ REDIS_KEY_PART = re.compile(r"^[a-z_]{1,24}$")  # key segments kept as the prefi
 
 def labels(**values: Any) -> dict:
     """Metric attributes restricted to LABELS; values become strings (None becomes "")."""
-    return {k: "" if v is None else str(v) for k, v in values.items() if k in LABELS}
+    out = {k: "" if v is None else str(v) for k, v in values.items() if k in LABELS}
+    for k, allowed in ENUMS.items():
+        if k in out and out[k] not in allowed: out[k] = "other"
+    return out
 
 
 def is_llm_code(code: Optional[str]) -> bool: return bool(code) and (code.startswith("PROVIDER_") or code in LLM_CODES)
@@ -307,6 +318,14 @@ class Telemetry:
                        "embedding_tokens": m.create_counter("studio.embedding.tokens", unit="{token}", description="Input tokens sent to embedding models"),
                        "embedding_cost": m.create_counter("studio.embedding.cost", unit="USD", description="Estimated embedding cost (priced models)"),
                        "embedding_unpriced": m.create_counter("studio.embedding.unpriced", unit="{call}", description="Embedding calls to models with no price"),
+                       "channel_messages": m.create_counter("studio.channel.messages", unit="{message}", description="Channel messages sent and received (approvals, chat triggers)"),
+                       "mcp_calls": m.create_counter("studio.mcp.calls", unit="{call}", description="MCP tool calls"),
+                       "mcp_duration": m.create_histogram("studio.mcp.duration", unit="ms", description="Time of one MCP tool call"),
+                       "browser_sessions": m.create_counter("studio.browser.sessions", unit="{session}", description="Browser sessions opened and ended"),
+                       "browser_actions": m.create_counter("studio.browser.actions", unit="{action}", description="Browser actions by result"),
+                       "sandbox_executions": m.create_counter("studio.sandbox.executions", unit="{execution}", description="Code node executions"),
+                       "sandbox_duration": m.create_histogram("studio.sandbox.duration", unit="ms", description="Time of one Code node execution"),
+                       "rate_limit_hits": m.create_counter("studio.rate_limit.hits", unit="{request}", description="Requests refused by a product limit"),
                        "http_requests": m.create_counter("studio.http.server.requests", unit="{request}", description="HTTP requests"),
                        "http_duration": m.create_histogram("studio.http.server.duration", unit="ms", description="HTTP request duration"),
                        "ws": m.create_up_down_counter("studio.ws.connections", unit="{connection}", description="Open WebSocket connections"),
@@ -519,6 +538,21 @@ class Telemetry:
         if u.get("cost_usd") is None: self._m["embedding_unpriced"].add(1, a)
         elif u["cost_usd"]: self._m["embedding_cost"].add(u["cost_usd"], a)
 
+    def activity_event(self, event: str, f: dict) -> None:
+        """One integration event (engine.activity.emit) as counters and histograms; fields are bounded by `labels`."""
+        if not self._m: return
+        m = self._m
+        if event == "channel": m["channel_messages"].add(1, labels(kind=f.get("kind"), direction=f.get("direction"), status=f.get("status")))
+        elif event == "mcp":
+            a = labels(transport=f.get("transport"), status=f.get("status"), code=f.get("code"))
+            m["mcp_calls"].add(1, a); m["mcp_duration"].record(f.get("duration_ms") or 0.0, a)
+        elif event == "browser_session": m["browser_sessions"].add(1, labels(status=f.get("status")))
+        elif event == "browser_action": m["browser_actions"].add(1, labels(status=f.get("status"), code=f.get("code")))
+        elif event == "sandbox":
+            a = labels(runtime=f.get("runtime"), language=f.get("language"), status=f.get("status"))
+            m["sandbox_executions"].add(1, a); m["sandbox_duration"].record(f.get("duration_ms") or 0.0, a)
+        elif event == "rate_limit": m["rate_limit_hits"].add(1, labels(scope=f.get("scope")))
+
     def model_call(self, rec: dict) -> None:
         """One measured provider call (engine.llm.observe): duration, and time to first token for streamed calls."""
         if not self._m or rec.get("kind") != "llm": return
@@ -585,3 +619,4 @@ class Telemetry:
         gauge("studio.webhooks.retrying", "{delivery}", "Webhook deliveries waiting for a retry", lambda: count("webhooks", "retrying"))
         gauge("studio.schedules.overdue", "{schedule}", "Enabled schedules more than 5 minutes late", lambda: count("schedules", "overdue"))
         gauge("studio.schedules.disabled", "{schedule}", "Schedules the scheduler turned off", lambda: count("schedules", "disabled"))
+        gauge("studio.browser.active", "{session}", "Browser sessions open now (all processes)", lambda: count("browsers", "active"))

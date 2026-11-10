@@ -108,6 +108,28 @@ thô. Request không khớp route nào có nhãn `unmatched`.
 Các gauge kiểm tra dùng lại phép kiểm tra của `/api/ready`, tối đa mỗi 5 giây
 một lần cho mỗi tiến trình.
 
+### Tích hợp và giới hạn
+
+| Metric | Loại | Nhãn | Nghĩa |
+| --- | --- | --- | --- |
+| `studio.channel.messages` | counter | `kind`, `direction`, `status` | Yêu cầu phê duyệt và trả lời chat đã gửi (`out`), lượt bấm nút và tin nhắn chat trigger đã nhận (`in`) |
+| `studio.mcp.calls` | counter | `transport`, `status`, `code` | Lời gọi công cụ MCP; `code` là mã lỗi của lời gọi thất bại |
+| `studio.mcp.duration` | histogram, ms | `transport`, `status`, `code` | Thời gian của một lời gọi công cụ MCP |
+| `studio.browser.sessions` | counter | `status` (`opened`, `closed`, `lost`, `revoked`, `expired`) | Phiên trình duyệt được mở và kết thúc |
+| `studio.browser.actions` | counter | `status`, `code` | Thao tác trình duyệt theo kết quả |
+| `studio.browser.active` | gauge | không có | Số phiên trình duyệt đang mở, trên mọi tiến trình |
+| `studio.sandbox.executions` | counter | `runtime`, `language`, `status` | Số lần chạy node Code; `status` là `ok` hoặc mã lỗi |
+| `studio.sandbox.duration` | histogram, ms | `runtime`, `language`, `status` | Thời gian của một lần chạy node Code |
+| `studio.rate_limit.hits` | counter | `scope` | Request bị một giới hạn của sản phẩm từ chối |
+
+`kind` là nền tảng kênh, `transport` là `stdio`, `http` hoặc `managed`,
+`runtime` là `docker`, `subprocess` hoặc `remote`. `scope` là tên giới hạn:
+`login`, `demo`, `public_chat`, `chat_trigger`, `api_trigger`,
+`approval_callback`, `code`, `pat`, `email_node`, `identity_code` hoặc `other`.
+Không nhãn nào mang tên server hay kết nối, URL, id người dùng hay khoá của
+bộ giới hạn. Giới hạn của provider vẫn nằm trong `studio.llm.errors` với
+`PROVIDER_RATE_LIMITED`; panel Throttling hiện cả hai.
+
 ### Tình trạng sản phẩm
 
 Chỉ tiến trình có chạy worker mới báo các metric này (service `worker`, hoặc
@@ -126,8 +148,10 @@ API khi tự chạy worker). Chúng được làm mới tối đa mỗi 30 giây
 
 Nhãn chỉ nằm trong một danh sách cố định: `status`, `source`, `workflow_id`,
 `model`, `provider`, `code`, `direction`, `route`, `method`, `status_class`,
-`state`, `primary_provider` và `fallback_provider`. Thuộc tính khác bị bỏ trước
-khi xuất. Không metric nào mang id người dùng, id run, email, đường dẫn thô
+`state`, `primary_provider`, `fallback_provider`, `kind`, `transport`,
+`runtime`, `language` và `scope`. Thuộc tính khác bị bỏ trước khi xuất, và giá
+trị của `kind`, `transport`, `runtime`, `language` và `scope` nằm ngoài danh
+sách cố định được xuất là `other`. Không metric nào mang id người dùng, id run, email, đường dẫn thô
 hay nội dung prompt. `workflow_id` tăng theo số workflow; hãy bỏ nhãn này ở
 collector nếu hệ thống của bạn không chịu được số series đó.
 
@@ -217,6 +241,8 @@ Grafana để nhận thông báo.
 | Overdue schedules | `studio.schedules.overdue` | trên 0 trong 10 phút |
 | Webhook failures | `studio.webhooks.failed` (giờ vừa qua) | trên 0 |
 | Approvals waiting too long | `studio.approvals.oldest_age` | trên 1 ngày |
+| Integration errors | Lời gọi MCP, lượt gửi qua kênh và thao tác trình duyệt thất bại trong 15 phút | trên 10 trong 15 phút |
+| Throttling spike | `studio.rate_limit.hits` trong 5 phút | trên 50 trong 5 phút |
 | In-memory run bus | `studio.run_bus.in_memory` | bằng 1 trong 5 phút |
 | Postgres connections near limit | Số kết nối Postgres so với `max_connections` | trên 80% trong 5 phút |
 | Redis memory pressure | Bộ nhớ Redis đã dùng so với `maxmemory`, chỉ khi có đặt `maxmemory` | trên 90% trong 5 phút |

@@ -64,4 +64,4 @@ class UsageService:
 
     def gauges(self) -> dict:
         """Counts the worker exports as gauges (failed deliveries and expired approvals of the last hour)."""
-        now = time.time(); return self.counts(now - HEALTH_WINDOW, now)
+        now = time.time(); return {**self.counts(now - HEALTH_WINDOW, now), "browsers": {"active": self.repo.active_browsers(now)}}

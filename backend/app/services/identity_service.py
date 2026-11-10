@@ -12,6 +12,7 @@ from ..core.errors import AppError
 from ..repositories import ApprovalRepository, UserRepository
 from .approval_channels import ApprovalChannel
 from .channel_service import ChannelService
+from .rate_limit import throttled
 from .approval_channels.messages import lang_of, text
 
 
@@ -70,7 +71,8 @@ class IdentityService:
         if i is None: raise AppError("IDENTITY_NOT_LINKED", kind=a.label)
         if i.verified_at: return self.get(uid)
         now = time.time(); wait = int((i.code_sent_at or 0) + config.identity_code_resend() - now + 0.999)
-        if wait > 0: raise AppError("RATE_LIMITED", headers={"Retry-After": str(wait)}, retry_after=wait)
+        if wait > 0:
+            throttled("identity_code"); raise AppError("RATE_LIMITED", headers={"Retry-After": str(wait)}, retry_after=wait)
         via = self.channels.dm_channel(uid, kind, team)
         if via is None: raise AppError("CHANNEL_NOT_FOUND")
         code = f"{pysecrets.randbelow(10**6):06d}"

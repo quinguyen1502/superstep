@@ -8,7 +8,7 @@ import json, re, time, uuid
 from typing import Any, Callable, Optional
 from ..core import config, crypto
 from ..core.errors import AppError
-from ..engine import mcp_client
+from ..engine import activity, mcp_client
 from ..engine.browser_export import public_policy, with_env
 from ..models import McpServer
 from ..repositories import McpServerRepository
@@ -182,6 +182,10 @@ class McpService:
 
     def call(self, uid: str, sid: str, tool: str, args: dict, org_allowed: bool = True, operation_key=None, dry_run=False) -> Any:
         r = self._visible(sid, uid)
+        with activity.timed("mcp", "MCP_TOOL_FAILED", transport=r.transport):  # by transport only, never the server
+            return self._call(r, uid, sid, tool, args, org_allowed, operation_key, dry_run)
+
+    def _call(self, r: McpServer, uid: str, sid: str, tool: str, args: dict, org_allowed: bool, operation_key, dry_run) -> Any:
         if r.scope == "org" and not org_allowed: raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")  # policy,
         if r.transport == "managed":
             if r.scope == "org" and not self.org_allowed(uid): raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")
