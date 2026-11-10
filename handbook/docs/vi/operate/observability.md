@@ -183,11 +183,16 @@ Grafana đăng nhập bằng `admin` với `GRAFANA_ADMIN_PASSWORD`, mặc đị
 `admin`. Hãy đặt mật khẩu riêng trong `.env` trước khi mở Grafana ra ngoài.
 `PROMETHEUS_RETENTION` (mặc định `15d`) đặt thời gian Prometheus giữ dữ liệu.
 
-Dashboard **Superstep overview** trong thư mục **Superstep** có các hàng cho
-server (request, độ trễ, tỉ lệ 5xx, route chậm nhất, WebSocket, CPU và bộ
-nhớ), cơ sở dữ liệu và Redis, hàng đợi và worker, run và model (run theo
-trạng thái, tỉ lệ lỗi, thời gian, token và chi phí theo model và workflow, lời
-gọi chưa có giá, lỗi model, model dự phòng) và tình trạng sản phẩm.
+Dashboard **Superstep overview** trong thư mục **Superstep** có các hàng sau:
+
+| Hàng | Panel |
+| --- | --- |
+| Server | Request, độ trễ, tỉ lệ 5xx, route chậm nhất, WebSocket, CPU và bộ nhớ |
+| Database and Redis | Trạng thái sẵn sàng, pool kết nối của app, kết nối Postgres, giao dịch, tỉ lệ cache hit và dung lượng, bộ nhớ Redis, client, thao tác và key |
+| Queue and workers | Độ sâu hàng đợi và run chờ lâu nhất, worker, heartbeat, run bus |
+| Runs and models | Run theo trạng thái, tỉ lệ lỗi, thời gian, token và chi phí theo model và workflow, lời gọi chưa có giá, lỗi model, model dự phòng, độ trễ model và thời gian đến token đầu tiên, token và chi phí embedding |
+| Integrations and limits | Tin nhắn kênh, lời gọi MCP, phiên và thao tác trình duyệt, lần chạy sandbox, lần chạm giới hạn theo phạm vi |
+| Product health | Yêu cầu duyệt, webhook, lịch chạy và tin nhắn chat trigger bị từ chối |
 
 ![Dashboard Superstep overview trong Grafana](../images/grafana-overview.png)
 
@@ -236,7 +241,7 @@ Grafana để nhận thông báo.
 | Worker missing | `studio.worker.heartbeat_age`, hoặc không có heartbeat nào | trên 60 giây trong 2 phút |
 | Run error rate | Run kết thúc lỗi hoặc quá thời gian trong 15 phút | trên 20% trong 15 phút |
 | Provider auth or unreachable | `studio.llm.errors` với `PROVIDER_AUTH_FAILED` hoặc `PROVIDER_UNREACHABLE` | có lỗi trong 5 phút |
-| Provider rate limited (cảnh báo nhẹ) | `studio.llm.errors` với `PROVIDER_RATE_LIMITED` | có lỗi trong 5 phút |
+| Provider rate limited | `studio.llm.errors` với `PROVIDER_RATE_LIMITED` (cảnh báo nhẹ) | có lỗi trong 5 phút |
 | Slow provider | p95 của `studio.llm.duration` cho bất kỳ provider nào trong 10 phút | trên 30 giây trong 10 phút |
 | Daily cost | Mức tăng của `studio.cost` trong 24 giờ | trên 50 USD |
 | Overdue schedules | `studio.schedules.overdue` | trên 0 trong 10 phút |
@@ -321,6 +326,17 @@ mở run đó trong LangSmith. Kết quả test cũng có thể gửi sang LangS
 Khi exporter LangSmith của Studio bật, tracer LangSmith riêng của LangChain bị
 tắt, để mỗi lời gọi LLM chỉ được xuất một lần.
 
+### Request, SQL và Redis
+
+Khi có endpoint OTLP và `STUDIO_OTEL_INSTRUMENT=1`, API trace thêm từng request
+HTTP (`GET /api/workflows/{workflow_id}`, theo mẫu route, kèm mã trạng thái)
+cùng các truy vấn SQL và lệnh Redis chạy trong lúc xử lý request. Span SQL ghi
+dạng câu lệnh, không có giá trị tham số. Request khởi động một run sẽ liên kết
+trace của run với span của request, và truy vấn SQL hay lệnh Redis chạy trong
+lúc một node chạy nằm dưới node đó. Header `traceparent` gửi vào được tôn
+trọng. Các kiểm tra health và readiness không được trace. Instrumentation tốn
+thêm một ít chi phí cho mỗi request nên mặc định tắt.
+
 ## Jaeger với Compose
 
 ```bash
@@ -346,6 +362,19 @@ rồi trỏ backend tới `http://localhost:4318`.
 API ghi log ra stdout. Lỗi trong sự kiện gói trong một dòng, `sk-…`,
 `Bearer …` và `api_key=…` được che, và `?token=` hiện thành `token=***` trong
 access log của uvicorn.
+
+Mỗi response có header `X-Request-ID`; header hợp lệ gửi vào được giữ nguyên.
+Với `STUDIO_LOG_FORMAT=json`, API và worker ghi mỗi dòng một đối tượng JSON, kể
+cả access log của uvicorn:
+
+```json
+{"ts": "2026-11-10T08:15:02.120Z", "level": "INFO", "logger": "studio.runs", "message": "run finished", "request_id": "5f0c…", "run_id": "a1b2c3d4e5", "workflow_id": "support-triage", "trace_id": "4bf9…", "span_id": "00f0…"}
+```
+
+Chỉ những id đã biết mới được ghi. Tìm `run_id` trong log để xem mọi thứ về
+một run, hoặc tìm `trace_id` để chuyển qua lại giữa log và Jaeger hay Tempo.
+`STUDIO_LOG_LEVEL` (ví dụ `DEBUG`) đặt mức log cho các logger riêng của
+Superstep. Định dạng mặc định `text` không đổi.
 
 ## Múi giờ của lịch chạy
 

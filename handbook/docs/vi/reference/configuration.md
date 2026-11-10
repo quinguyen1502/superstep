@@ -180,5 +180,6 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_GRAFANA_URL` | trống | Địa chỉ Grafana mà **Cài đặt → Mức sử dụng** liên kết tới |
 | `STUDIO_LOG_FORMAT` | `text` | `json`: mỗi dòng log là một đối tượng JSON có `request_id`, `run_id`, `trace_id` |
 | `STUDIO_LOG_LEVEL` | trống | Mức log của các logger riêng của Superstep, ví dụ `INFO` hoặc `DEBUG` |
+| `POSTGRES_MONITOR_USER`, `POSTGRES_MONITOR_PASSWORD` | `superstep_monitor`, trống | Profile `observability` của Compose: role Postgres chỉ đọc cho metric server; mật khẩu trống thì tắt |
 | `LANGSMITH_API_KEY`, `LANGSMITH_TRACING` | trống | Xuất sang LangSmith |
 | `LANGSMITH_PROJECT`, `LANGSMITH_ENDPOINT` | trống | Project và endpoint của LangSmith |

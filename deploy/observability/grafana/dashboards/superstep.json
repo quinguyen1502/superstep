@@ -1814,7 +1814,7 @@
     {
       "id": 42,
       "type": "row",
-      "title": "Integrations",
+      "title": "Integrations and limits",
       "collapsed": false,
       "gridPos": {
         "h": 1,
@@ -2250,7 +2250,7 @@
     {
       "id": 53,
       "type": "row",
-      "title": "Product",
+      "title": "Product health",
       "collapsed": false,
       "gridPos": {
         "h": 1,

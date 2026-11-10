@@ -180,5 +180,6 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_GRAFANA_URL` | empty | Grafana address that **Settings → Usage** links to |
 | `STUDIO_LOG_FORMAT` | `text` | `json`: one JSON object per log line with `request_id`, `run_id`, `trace_id` |
 | `STUDIO_LOG_LEVEL` | empty | Log level of Superstep's own loggers, for example `INFO` or `DEBUG` |
+| `POSTGRES_MONITOR_USER`, `POSTGRES_MONITOR_PASSWORD` | `superstep_monitor`, empty | Compose `observability` profile: read-only Postgres role for server metrics; empty password turns them off |
 | `LANGSMITH_API_KEY`, `LANGSMITH_TRACING` | empty | Export to LangSmith |
 | `LANGSMITH_PROJECT`, `LANGSMITH_ENDPOINT` | empty | LangSmith project and endpoint |
