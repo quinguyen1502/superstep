@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0303
 - Title: Per-user and per-team usage on the Usage page
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -61,7 +61,14 @@ Settings, Usage shows People and Teams tables for the window: runs, success rate
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: Usage API `users`, `teams` and `teams_shared_members`; Users and Teams cards with total rows and the shared-member note; en and vi strings. SQL only, no metric labels.
+- 2026-11-10: Review REV-0288 and QA-0288. Moved to review.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0303-usage-per-user-team` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0288-TASK-0303-usage-per-user-team.md`
+- QA: `.factory-state/artifacts/QA-0288-TASK-0303-usage-per-user-team.md`

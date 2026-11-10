@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0304
 - Title: Channel refusal codes on the Usage page
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -60,7 +60,15 @@ The Product health block on Settings, Usage lists chat trigger messages refused 
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: Chat trigger refusals by code and platform on the Usage page health block and gauge `studio.chat.refused`; Channel refusals alert (above 20 in the last hour for 10 minutes); index `ix_chat_messages_status_created`.
+- 2026-11-10: Deviation: a separate migration for the index.
+- 2026-11-10: Review REV-0289 and QA-0289. Moved to review.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0304-channel-refusal-codes` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0289-TASK-0304-channel-refusal-codes.md`
+- QA: `.factory-state/artifacts/QA-0289-TASK-0304-channel-refusal-codes.md`

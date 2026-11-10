@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0302
 - Title: Per-model breakdown on the Usage page
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -60,7 +60,15 @@ Settings, Usage shows a Models table for the chosen window: model, provider, cal
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: Usage API `models` block (model, provider, kind, calls, errors, tokens, cost, average duration) and `models_since`; Models card with sort and empty state; en and vi strings.
+- 2026-11-10: Deviation: client-side sort.
+- 2026-11-10: Review REV-0287 and QA-0287. Moved to review.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0302-usage-per-model` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0287-TASK-0302-usage-per-model.md`
+- QA: `.factory-state/artifacts/QA-0287-TASK-0302-usage-per-model.md`

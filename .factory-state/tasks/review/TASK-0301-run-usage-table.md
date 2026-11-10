@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0301
 - Title: Usage rows written at run end
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -62,7 +62,15 @@ Every finished run leaves one row per model or embedding call group (model, prov
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: `run_usage` table (run, workflow, owner, node, kind, model, provider, tokens, cost, calls, errors, duration) with unique key on run, node, kind, model, provider; written once when a run reaches a terminal status; deleted with its workflow or owner data. `python -m app.admin_cmd usage-backfill --days N` fills it from stored run events.
+- 2026-11-10: Deviation: child runs write their own rows; SQLite-only migration test locally.
+- 2026-11-10: Review REV-0286 and QA-0286. Moved to review.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0301-run-usage-table` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0286-TASK-0301-run-usage-table.md`
+- QA: `.factory-state/artifacts/QA-0286-TASK-0301-run-usage-table.md`
