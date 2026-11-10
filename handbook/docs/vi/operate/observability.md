@@ -52,9 +52,25 @@ và `service.instance.id` riêng.
 | `studio.llm.unpriced` | counter | `model`, `provider` | Lời gọi tới model chưa có giá |
 | `studio.llm.errors` | counter | `code`, `provider`, `model` | Lời gọi model thất bại, theo mã lỗi |
 | `studio.llm.fallbacks` | counter | `primary_provider`, `fallback_provider`, `code` | Lời gọi do model dự phòng trả lời |
+| `studio.llm.duration` | histogram, ms | `model`, `provider`, `status` | Thời gian của một lời gọi provider; model chính lỗi và model dự phòng là hai mẫu |
+| `studio.llm.ttft` | histogram, ms | `model`, `provider`, `status` | Thời gian đến token stream đầu tiên; chỉ lời gọi có stream |
+| `studio.embedding.tokens` | counter | `model`, `provider`, `source` | Token đầu vào gửi tới model embedding |
+| `studio.embedding.cost` | counter, USD | `model`, `provider`, `source` | Chi phí ước tính của lời gọi embedding có giá |
+| `studio.embedding.unpriced` | counter | `model`, `provider`, `source` | Lời gọi embedding tới model chưa có giá |
 
 HTTP 429 từ provider được tính là `PROVIDER_RATE_LIMITED`, tách riêng khỏi các
-lỗi provider khác. Run tạm (ad hoc) dùng `workflow_id="adhoc"`.
+lỗi provider khác. Run tạm (ad hoc) dùng `workflow_id="adhoc"`. `status` trên
+các histogram độ trễ là `ok` hoặc mã lỗi của provider. Lời gọi mock (offline)
+không được đo.
+
+`source` của embedding là `ingest` (thêm tài liệu hoặc index lại) hoặc `query`
+(tìm kiếm, node Retriever và công cụ knowledge base của agent). Token của
+embedding truy vấn trong một run được cộng vào token đầu vào và chi phí của run
+đó, và hiện trên node dưới dạng `embedding_usage`; ingest chỉ được tính trong
+metric. Giá của `text-embedding-3-small`, `text-embedding-3-large` và
+`text-embedding-ada-002` có sẵn; thêm model khác bằng `STUDIO_PRICES` như model
+chat. Embedding chưa có giá vẫn cộng token vào run nhưng giữ nguyên chi phí của
+run.
 
 ### Server
 
@@ -196,6 +212,7 @@ Grafana để nhận thông báo.
 | Run error rate | Run kết thúc lỗi hoặc quá thời gian trong 15 phút | trên 20% trong 15 phút |
 | Provider auth or unreachable | `studio.llm.errors` với `PROVIDER_AUTH_FAILED` hoặc `PROVIDER_UNREACHABLE` | có lỗi trong 5 phút |
 | Provider rate limited (cảnh báo nhẹ) | `studio.llm.errors` với `PROVIDER_RATE_LIMITED` | có lỗi trong 5 phút |
+| Slow provider | p95 của `studio.llm.duration` cho bất kỳ provider nào trong 10 phút | trên 30 giây trong 10 phút |
 | Daily cost | Mức tăng của `studio.cost` trong 24 giờ | trên 50 USD |
 | Overdue schedules | `studio.schedules.overdue` | trên 0 trong 10 phút |
 | Webhook failures | `studio.webhooks.failed` (giờ vừa qua) | trên 0 |

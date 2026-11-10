@@ -62,6 +62,11 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     wf = agents.expand(wf)  # usually expanded already by the run service (idempotent, )
     if until and any(n["id"] == until and n.get("type") == "agent" for n in wf["nodes"]): until = f"{until}{agents.SEP}{agents.EXIT}"  # the whole agent
     usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished
+    embedding: Dict[str, Dict[str, Any]] = {}  # node id -> embedding usage (Retriever, knowledge tools) since then
+
+    def add_usage(nid: str, u: Dict[str, Any]) -> None:
+        into = embedding if u.get("kind") == "embedding" else usage
+        into[nid] = merge_usage(into.get(nid), u)
     code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished
     model_attempts: Dict[str, List[dict]] = {}
     held = None
@@ -71,7 +76,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         if isinstance(held.get("children"), dict): held["children"] = dict(held["children"])
     counts: Dict[str, int] = {k: int(v) for k, v in ((resume or {}).get("counts") or {}).items()}
     if effects is not None: effects.counts = counts  # node iterations feed the idempotency keys
-    app = compile_workflow(wf, resolve, lambda nid, u: usage.__setitem__(nid, merge_usage(usage.get(nid), u)),
+    app = compile_workflow(wf, resolve, add_usage,
                            entry=resume_nodes(resume) if resume else None, resume=held, effects=effects, checkpointer=InMemorySaver(), ports=ports)
     nodes = {n["id"]: n for n in wf["nodes"]}
     if until is not None and until not in nodes:
@@ -140,7 +145,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                        **({'browser': browser_presentation.detail(nodes[nid]['data'].get('tool'), delta.get(nodes[nid]['data'].get('output_field')) or {})}
                           if nodes[nid]['type'] == 'mcp' and browser_private and ports is not None and ports.browser is not None and ports.browser.is_browser(nodes[nid]['data'].get('server_id')) else {}),  # input: time travel forks from it
                        **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did
-                       **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
+                       **({"usage": usage.pop(nid)} if nid in usage else {}), **({"embedding_usage": embedding.pop(nid)} if nid in embedding else {}), **({"reused": True} if reused else {}),
                        **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                        **({"code_output": cap_payload(code_out.pop(nid))} if nid in code_out else {})}
     except Interrupt as i:  # a Human node or an Agent tool approval is waiting: hand back a checkpoint instead of an error

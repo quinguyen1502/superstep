@@ -4,7 +4,8 @@ Credentials arrive already decrypted from the run's resolver (services.credentia
 without one, OPENAI_API_KEY from the environment is used, then the mock."""
 from __future__ import annotations
 import os, re, time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from contextlib import contextmanager
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 from . import attachments, providers
 from .providers import LLMError, ProviderError  # noqa: F401 (re-exported)
 from .locale import LOCALES, by_locale, text as locale_text
@@ -28,6 +29,64 @@ def mock_llm(prompt: str, model: str, locale: str = "en") -> str:
         return "general"
     tail = prompt.strip().splitlines()[-1] if prompt.strip() else ""
     return f"[mock:{model}] {MOCK_ANSWER.get(locale, MOCK_ANSWER['en'])}: {tail[:200]}"
+
+
+# ---- per-call timing: one record per provider call (mock calls are not measured) ----
+CallObserver = Callable[[Dict[str, Any]], None]
+_observers: List[CallObserver] = []
+
+
+def observe(fn: CallObserver) -> None:
+    """Register a callback for every measured call: {kind, provider, model, status, duration_ms, ttft_ms}. The service
+    layer turns these into metrics; the engine itself knows nothing about them."""
+    if fn not in _observers: _observers.append(fn)
+
+
+def unobserve(fn: CallObserver) -> None:
+    if fn in _observers: _observers.remove(fn)
+
+
+def emit_call(record: Dict[str, Any]) -> None:
+    for fn in list(_observers):
+        try: fn(record)
+        except Exception: pass  # metrics never fail a call
+
+
+def call_status(e: BaseException) -> str:
+    """`ok`, a provider error code (PROVIDER_*, MODEL_NOT_FOUND) or `error`: a bounded value for a metric label."""
+    code = getattr(e, "code", None)
+    return code if isinstance(code, str) and (code.startswith("PROVIDER_") or code == "MODEL_NOT_FOUND") else "error"
+
+
+class Measure:
+    """Times one provider call; `on_token` wraps the caller's token callback to note the first non-empty delta."""
+    def __init__(self, provider: str, model: str, on_token: Optional[Callable[[str], None]], kind: str = "llm"):
+        self.provider, self.model, self.kind, self._user = provider, model, kind, on_token
+        self.t0 = time.perf_counter(); self.first: Optional[float] = None; self.done = False
+        self.on_token = self._token if on_token else None
+
+    def _token(self, delta: str) -> None:
+        if self.first is None and delta: self.first = time.perf_counter()
+        self._user(delta)
+
+    def finish(self, usage: Optional[Dict[str, Any]] = None, status: str = "ok") -> Optional[Dict[str, Any]]:
+        """Report the call once; returns the usage record with `duration_ms` (and `ttft_ms` when streamed) added."""
+        if self.done: return usage
+        self.done = True
+        ms = round((time.perf_counter() - self.t0) * 1000, 2)
+        ttft = round((self.first - self.t0) * 1000, 2) if self.first is not None else None
+        emit_call({"kind": self.kind, "provider": self.provider, "model": self.model, "status": status, "duration_ms": ms, "ttft_ms": ttft})
+        if usage is None: return None
+        return {**usage, "duration_ms": ms, **({"ttft_ms": ttft} if ttft is not None else {})}
+
+
+@contextmanager
+def measure(provider: str, model: str, on_token: Optional[Callable[[str], None]] = None, kind: str = "llm") -> Iterator[Measure]:
+    m = Measure(provider, model, on_token, kind)
+    try: yield m
+    except BaseException as e:
+        m.finish(status=call_status(e)); raise
+    m.finish()
 
 
 class TokenBuffer:
@@ -68,7 +127,9 @@ def call_llm(prompt: str, model: str, cred: Optional[Dict[str, Any]] = None, on_
     if p is None: raise LLMError(f"Unsupported provider: {cred['provider']}")
     images = None
     if files: prompt, images = attachments.build(prompt, files, providers.vision(cred["provider"], model), load)
-    out, usage = p.invoke(prompt, model, cred, on_token, images=images) if images else p.invoke(prompt, model, cred, on_token)
+    with measure(cred["provider"], model, on_token) as m:
+        out, usage = p.invoke(prompt, model, cred, m.on_token, images=images) if images else p.invoke(prompt, model, cred, m.on_token)
+        usage = m.finish(usage)
     report(usage)
     return out
 
@@ -148,7 +209,9 @@ def call_agent(messages: List[Dict[str, Any]], tools: Optional[List[Dict[str, An
     if p is None: raise LLMError(f"Unsupported provider: {cred['provider']}")
     if not p.supports_tools: raise ProviderError("AGENT_TOOLS_UNSUPPORTED", p.label)
     if any(m.get("files") for m in messages): messages = with_files(messages, providers.vision(cred["provider"], model), load)
-    out, calls, usage = p.invoke_tools(messages, tools or [], model, cred, on_token, parallel=parallel)
+    with measure(cred["provider"], model, on_token) as m:
+        out, calls, usage = p.invoke_tools(messages, tools or [], model, cred, m.on_token, parallel=parallel)
+        usage = m.finish(usage)
     report(usage)
     return out, calls
 

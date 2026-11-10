@@ -7,6 +7,7 @@ x-thresholds:
   queue_oldest_age_s: &queue_oldest_age_s 300  # seconds the oldest queued run has waited
   worker_heartbeat_age_s: &worker_heartbeat_age_s 60  # about 3 reap intervals at the default STUDIO_JOB_REAP_EVERY=15
   run_error_rate: &run_error_rate 0.2        # share of runs ending in error or timeout over 15 minutes
+  llm_p95_ms: &llm_p95_ms 30000              # p95 milliseconds of one model call, per provider, over 10 minutes
   daily_cost_usd: &daily_cost_usd 50         # estimated USD over the last 24 hours
   approval_wait_s: &approval_wait_s 86400    # seconds a human step may wait
   postgres_connection_share: &postgres_connection_share 0.8  # Postgres connections over max_connections
@@ -209,6 +210,25 @@ groups:
         execErrState: Error
         labels: { severity: warning }
         annotations: { summary: "A model provider answers HTTP 429." }
+      - uid: superstep-slow-provider
+        title: Slow provider
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: 'max(histogram_quantile(0.95, sum by (le, provider) (rate(studio_llm_duration_bucket[10m]))))', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [*llm_p95_ms] } }] }
+        for: 10m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "The p95 time of model calls to a provider is above the limit." }
       - uid: superstep-daily-cost
         title: Daily cost
         condition: C
