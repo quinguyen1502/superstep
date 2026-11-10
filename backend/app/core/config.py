@@ -148,6 +148,7 @@ def notify_webhook() -> tuple[str, str | None] | None:
     return (url, os.environ.get("STUDIO_NOTIFY_WEBHOOK_SECRET") or None) if url else None
 def otel_metrics() -> bool: return os.environ.get("STUDIO_OTEL_METRICS", "").lower() in ("1", "true", "yes", "on")
 def grafana_url() -> str: return (os.environ.get("STUDIO_GRAFANA_URL") or "").strip().rstrip("/")  # Usage page link for admins; empty = none
+def otel_instrument() -> bool: return os.environ.get("STUDIO_OTEL_INSTRUMENT", "").lower() in ("1", "true", "yes", "on")  # HTTP, SQL and Redis spans
 def log_format() -> str:  # STUDIO_LOG_FORMAT: text (default) or json (one object per line with request, run and trace ids)
     v = (os.environ.get("STUDIO_LOG_FORMAT") or "text").strip().lower(); return v if v in ("text", "json") else "text"
 def log_level() -> str: return (os.environ.get("STUDIO_LOG_LEVEL") or "").strip().upper()  # empty: library defaults

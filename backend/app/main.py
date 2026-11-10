@@ -9,6 +9,7 @@ from starlette.routing import Route
 from .api.deps import get_db, get_job_queue, get_probes, get_telemetry, usage_service, public_chat_service, run_service, run_worker
 from .api import deps
 from .api.http_metrics import HttpMetrics
+from .api.http_spans import HttpSpans
 from .api.request_context import RequestContext
 from .core.logging import configure as configure_logging, get_logger, redact_tokens
 from .core import config, crypto
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     configure_logging(config.log_format(), config.log_level())  # STUDIO_LOG_FORMAT / STUDIO_LOG_LEVEL
     check_secret(); crypto.check_key()
     code_runtime.warn_if_unisolated()  # once at start-up
+    get_telemetry().instrument(get_db().engine)  # SQL and Redis spans (no-op unless STUDIO_OTEL_INSTRUMENT is on)
     bootstrap(get_db(), jobs=get_job_queue())  # alembic upgrade head + demo user + example workflow
     try:  # rows from 0.10.1 learn the folder or bucket/prefix they were written to
         from .api.deps import attachment_files
@@ -73,6 +75,7 @@ def create_app() -> FastAPI:
     app.add_middleware(ChatCors, public=public_chat_service)
     if config.demo_mode(): install_demo_guard(app)  # STUDIO_DEMO_MODE: the shared visitor account is read-only
     app.add_middleware(HttpMetrics, telemetry=lambda: deps.get_telemetry())  # every response, by route template
+    app.add_middleware(HttpSpans, telemetry=lambda: deps.get_telemetry())  # opt-in server spans (STUDIO_OTEL_INSTRUMENT)
     app.add_middleware(RequestContext)  # outermost: X-Request-ID for every log line of the request
     for r in ROUTERS: app.include_router(r)
     app.router.routes.append(Route(MCP_PATH, endpoint=mcp_app))  # Streamable HTTP, all methods

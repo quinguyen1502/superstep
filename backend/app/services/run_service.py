@@ -41,6 +41,7 @@ class RunPlan:
     source: str = "ui"  # ui | api | schedule | test
     version: Optional[int] = None  # stored workflow version that runs; None = unsaved edits
     trace_parent: Optional[dict] = None  # {trace_id, span_id} of the previous trace segment
+    request_span: Optional[dict] = None  # {trace_id, span_id} of the HTTP request that queued the run (span link)
     recovered: bool = False       # continuing a queue job whose worker died
     checkpointing: bool = False   # save a progress checkpoint after each node (queue jobs, )
     fence: Optional[int] = None   # lease generation of the queue job: every write carries it
@@ -850,12 +851,14 @@ class RunService:
             return "waiting"
         rid = plan.run_id or uuid.uuid4().hex[:10]; await self.bus.astart(rid, uid)  # registered so REST/other workers can cancel it
         status = None
+        otel = self.telemetry.scope()  # SQL and Redis spans of this run join its trace (STUDIO_OTEL_INSTRUMENT)
         with run_context(rid, plan.workflow_id):  # log lines of this run carry its run id (and trace id once known)
             try:
-                status = await self._execute(rid, plan, send, listen, uid)
+                status = await self._execute(rid, plan, send, listen, uid, otel)
                 if status != "fenced": await self.settled(rid, plan.source)
                 return status
             finally:
+                otel.close()
                 if self.browser and status not in {"waiting","paused"}:
                     await _write_in_thread(self.browser.close_run,rid,plan.browser_lease if plan.browser_lease is not None else (plan.fence+1 if plan.fence is not None else None))
                 if status != "fenced": await _write_in_thread(self.bus.finish, rid)  # a fenced worker leaves the new owner's entry alone
@@ -895,12 +898,15 @@ class RunService:
         try: self.deliveries().for_run(self.runs.get(rid))
         except Exception: log.exception("queueing the callback of run %s failed", rid)
 
-    async def _execute(self, rid, plan, send, listen, uid) -> str:
+    async def _execute(self, rid, plan, send, listen, uid, otel=None) -> str:
         t0 = time.time(); events: list = []; final = None; status = "ok"; connected = True; bus = self.bus; checkpoint = None
         prev = plan.previous; started = prev.started if prev else t0
-        try: span = self.telemetry.start_run({"id": rid, "workflow_id": plan.workflow_id, "owner": uid, "started": t0,
-                                              "segment": "recovered" if plan.recovered or plan.fence and plan.attempt > 1 else "resumed"}, plan.trace_parent,
-                                             links=[plan.trace_parent] if plan.trace_parent and (plan.recovered or plan.attempt > 1) else None)
+        try:
+            span = self.telemetry.start_run({"id": rid, "workflow_id": plan.workflow_id, "owner": uid, "started": t0,
+                                            "segment": "recovered" if plan.recovered or plan.fence and plan.attempt > 1 else "resumed"}, plan.trace_parent,
+                                           links=[plan.trace_parent] if plan.trace_parent and (plan.recovered or plan.attempt > 1) else None,
+                                           request=plan.request_span)
+            if otel is not None: otel.enter(span)
         except Exception: span = None  # tracing must never fail a run
         bind_trace(span.ids["trace_id"] if span is not None else (plan.trace_parent or {}).get("trace_id"))
         if prev: events.extend(json.loads(prev.events or "[]"))  # resumed: one run, one event log

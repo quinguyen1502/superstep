@@ -9,6 +9,7 @@ from .engine import code_runtime
 
 async def main() -> None:
     configure_logging(config.log_format(), config.log_level())  # STUDIO_LOG_FORMAT / STUDIO_LOG_LEVEL
+    get_telemetry().instrument(get_db().engine)  # SQL and Redis spans (no-op unless STUDIO_OTEL_INSTRUMENT is on)
     bootstrap(get_db(), jobs=get_job_queue()); code_runtime.warn_if_unisolated()
     w = run_worker(); w.start(config.worker_concurrency())
     get_telemetry().watch(get_probes(), w, product=lambda: usage_service().gauges())  # metric gauges (no-op unless STUDIO_OTEL_METRICS is on)

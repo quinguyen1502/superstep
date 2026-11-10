@@ -73,6 +73,7 @@ class RunWorker:
                 plan = svc.plan(job["owner"], {"workflow_id": job["workflow_id"], "input": job.get("input") or {},
                                                **({"version": job["version"]} if job.get("version") else {})})  # a test suite on a stored version
                 plan.run_id, plan.source, plan.checkpointing, plan.fence, plan.attempt = rid, job.get("source", "api"), True, gen, attempt
+            plan.request_span = job.get("request_span")  # the request that queued it (span link)
             svc.apply_test(plan, job.get("test"))  # a workflow test run
             async def send(ev): return True                       # nobody streams; history + webhook carry the result
             async def listen(): await asyncio.Event().wait()      # cancel arrives through the RunBus
@@ -97,6 +98,7 @@ class RunWorker:
         gen = svc.runs.claim(rid, ("waiting",))
         if gen is None: return None
         plan.fence, plan.checkpointing, plan.resumed_by = gen, True, job.get("by")
+        plan.request_span = job.get("request_span")
         svc.apply_test(plan, job.get("test"))
         async def send(ev): return True
         async def listen(): await asyncio.Event().wait()
