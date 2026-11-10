@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.routing import Route
-from .api.deps import get_db, get_job_queue, get_probes, get_telemetry, public_chat_service, run_service, run_worker
+from .api.deps import get_db, get_job_queue, get_probes, get_telemetry, usage_service, public_chat_service, run_service, run_worker
 from .api import deps
 from .api.http_metrics import HttpMetrics
 from .core.logging import get_logger, redact_tokens
@@ -56,7 +56,7 @@ def create_app() -> FastAPI:
         if w:
             w.start(config.worker_concurrency())
             await w.recover_unfinished()  # in-memory queue: runs that were going when the server stopped
-        get_telemetry().watch(get_probes(), w)  # metric gauges (no-op unless STUDIO_OTEL_METRICS is on)
+        get_telemetry().watch(get_probes(), w, product=lambda: usage_service().gauges())  # metric gauges (no-op unless STUDIO_OTEL_METRICS is on)
         sweeper = asyncio.create_task(expire_waiting_loop())  # waiting runs past STUDIO_WAIT_TTL -> expired
         async with mcp_app.running(): yield
         sweeper.cancel()

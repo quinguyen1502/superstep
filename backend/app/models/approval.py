@@ -93,7 +93,7 @@ class ApprovalWait(Base):
     """One pause of a run at a Human node, with or without a channel. The Approvals inbox reads
     it, and closing it (compare-and-set waiting -> closed) is the gate for "first answer wins"."""
     __tablename__ = "approval_waits"
-    __table_args__ = (Index("ix_approval_waits_owner_status", "owner", "status"),)
+    __table_args__ = (Index("ix_approval_waits_owner_status", "owner", "status"), Index("ix_approval_waits_status_created", "status", "created"))
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     run_id: Mapped[str] = mapped_column(Text, index=True)
     node_id: Mapped[str] = mapped_column(Text)

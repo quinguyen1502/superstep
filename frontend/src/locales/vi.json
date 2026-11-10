@@ -1058,6 +1058,7 @@
       "mcp": "Máy chủ MCP",
       "users": "Người dùng",
       "teams": "Nhóm",
+      "usage": "Mức sử dụng",
       "activity": "Hoạt động",
       "tokens": "Token truy cập"
     },
@@ -1070,6 +1071,7 @@
       "mcp": "Công cụ từ máy chủ Model Context Protocol, dùng trong node MCP. Secret được mã hoá và không hiển thị lại.",
       "users": "Ai được đăng nhập và mỗi vai trò được làm gì. Chia sẻ workflow trong trình soạn thảo.",
       "teams": "Nhóm người để chia sẻ workflow. Thành viên nhận quyền đã cấp cho nhóm.",
+      "usage": "Run, token và chi phí ước tính của cả studio, cùng những việc có thể cần chú ý.",
       "activity": "Thay đổi về vai trò, chia sẻ, nhóm, quyền sở hữu, tài khoản và chính sách, mới nhất ở trên.",
       "tokens": "Token cá nhân cho lệnh superstep và CI. Token chỉ hiện một lần và có cùng quyền với bạn."
     },
@@ -1106,7 +1108,69 @@
       "anyPlatform": "Mọi nền tảng"
     },
     "noMatch": "Không có mục nào khớp bộ lọc.",
-    "auditCount": "{{shown}} / {{total}} mục"
+    "auditCount": "{{shown}} / {{total}} mục",
+    "usage": {
+      "window": "Khoảng thời gian",
+      "windows": {
+        "24h": "24 giờ qua",
+        "7d": "7 ngày qua",
+        "30d": "30 ngày qua"
+      },
+      "estimate": "Chi phí là ước tính theo giá model đã cấu hình.",
+      "runs": "Số run",
+      "successRate": "Tỉ lệ thành công",
+      "tokens": "Token vào / ra",
+      "tokensHint": "Token prompt / token trả lời",
+      "cost": "Chi phí ước tính",
+      "atLeast": "ít nhất {{value}}",
+      "unpriced": "Run chưa có giá",
+      "unpricedHelp": "Thêm giá model",
+      "overTime": "Run theo thời gian",
+      "empty": "Không có run nào trong khoảng này.",
+      "status": {
+        "ok": "Thành công",
+        "error": "Lỗi",
+        "timeout": "Quá thời gian",
+        "cancelled": "Đã huỷ",
+        "other": "Khác"
+      },
+      "topWorkflows": "Workflow nhiều nhất",
+      "sortBy": "Sắp xếp workflow theo",
+      "sort": {
+        "runs": "Nhiều run nhất",
+        "cost": "Chi phí cao nhất"
+      },
+      "col": {
+        "workflow": "Workflow",
+        "runs": "Run",
+        "errorRate": "Tỉ lệ lỗi",
+        "tokens": "Token",
+        "cost": "Chi phí ước tính",
+        "unpriced": "Chưa có giá"
+      },
+      "health": {
+        "title": "Tình trạng sản phẩm",
+        "intro": "Những việc có thể cần người xử lý. Yêu cầu duyệt và webhook tính trong khoảng đã chọn.",
+        "approvals": "Yêu cầu duyệt",
+        "waitingNone": "{{n}} đang chờ",
+        "waiting": "{{n}} đang chờ, lâu nhất {{age}}",
+        "expired": "{{n}} đã hết hạn",
+        "webhooks": "Webhook",
+        "failed": "{{n}} lần gửi thất bại",
+        "retrying": "{{n}} đang thử lại",
+        "schedules": "Lịch chạy",
+        "overdue": "{{n}} quá hạn",
+        "disabled": "{{n}} đã dừng sau nhiều lần lỗi"
+      },
+      "age": {
+        "s": "{{n}} giây",
+        "min": "{{n}} phút",
+        "h": "{{n}} giờ",
+        "d": "{{n}} ngày"
+      },
+      "handbook": "Về mức sử dụng và giám sát",
+      "grafana": "Mở Grafana để xem tình trạng server, cơ sở dữ liệu và hàng đợi"
+    }
   },
   "kb": {
     "new": "Kho tri thức mới",

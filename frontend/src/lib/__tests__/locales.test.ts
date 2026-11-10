@@ -16,6 +16,7 @@ const vars = (s: string) => [...s.matchAll(/{{\s*([\w.]+)\s*}}/g)].map((m) => m[
 const SAME_OK = new Set([
   'browserSettings.proxyPlaceholder', 'browserSettings.searchPlaceholder', // literal example URLs
   'activity.types.workflow',
+  'settings.usage.col.workflow',  // glossary term kept in English
   'agent.workflow',
   'chat.page.title',
   'chat.embed.iframe',

@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0288
 - Title: Admin usage API from run columns
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
 - Updated: 2026-11-09
@@ -51,3 +51,13 @@ Add `GET /api/admin/usage` that aggregates existing `runs` columns for a time wi
 ## Activity Log
 
 - 2026-11-09: Created by planning on branch factory/plan-observability. No implementation.
+- 2026-11-09: `GET /api/admin/usage` (`users.manage`; `window` 24h, 7d or 30d, optional `bucket` hour or day, `sort` runs or cost) in `api/routes/usage.py`, `UsageService` and `UsageRepository`. Totals (runs by status, success rate, tokens in and out, cost of priced runs, unpriced runs and share), buckets by status, and the top 10 workflows with names joined from `workflows` (a deleted workflow keeps its id and no name). SQL aggregation on run columns only; `runs.events` is never read.
+- 2026-11-09: Rule for child runs: only top-level runs (`parent_run_id IS NULL`) are counted; a subgraph or workflow-tool child run is part of its parent's run. Tokens and cost come from the top-level run's own columns.
+- 2026-11-09: Migration `0059_usage_indexes`: `ix_runs_started`, `ix_runs_status_started`, `ix_approval_waits_status_created`, `ix_webhook_deliveries_status_updated`; models declare the same indexes. Response schemas in `schemas/usage.py`; TypeScript types in `frontend/src/lib/usage.ts`.
+- 2026-11-09: Tests: `tests/test_usage_api.py` (exact totals, buckets and top workflows; unpriced runs excluded from cost; 403 for a member, 401 without a session; migration up and down). The Postgres case runs when `TEST_DATABASE_URL` is set (CI); it was skipped locally because no Postgres server could be installed on the box.
+- 2026-11-09: Review REV-0274 and QA-0274. Moved to review.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0274-TASK-0288-admin-usage-api.md`
+- QA: `.factory-state/artifacts/QA-0274-TASK-0288-admin-usage-api.md`

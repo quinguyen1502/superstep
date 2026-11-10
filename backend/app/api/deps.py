@@ -60,6 +60,8 @@ from ..repositories.browser_intents import BrowserIntentRepository
 from ..services.browser_runtime_service import BrowserRuntimeService
 from .. import storage
 from ..services.health_probes import Probes
+from ..services.usage_service import UsageService
+from ..repositories.usage import UsageRepository
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -198,6 +200,10 @@ def workflow_mcp_service() -> WorkflowMcpService:
 def agent_server_service() -> AgentServerService:
     db = get_db(); return AgentServerService(WorkflowRepository(db), RunRepository(db), AgentThreadRepository(db), trigger_service(),
                                              AuthService(UserRepository(db)).current, access=access_service(), runner=run_service)
+
+
+def usage_service() -> UsageService:
+    return UsageService(UsageRepository(get_db()), access_service())
 
 
 @lru_cache
