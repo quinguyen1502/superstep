@@ -9,7 +9,8 @@ from starlette.routing import Route
 from .api.deps import get_db, get_job_queue, get_probes, get_telemetry, usage_service, public_chat_service, run_service, run_worker
 from .api import deps
 from .api.http_metrics import HttpMetrics
-from .core.logging import get_logger, redact_tokens
+from .api.request_context import RequestContext
+from .core.logging import configure as configure_logging, get_logger, redact_tokens
 from .core import config, crypto
 from .api.error_handlers import register_error_handlers
 from .api.routes import ROUTERS
@@ -42,6 +43,7 @@ async def expire_waiting_loop() -> None:
 
 
 def create_app() -> FastAPI:
+    configure_logging(config.log_format(), config.log_level())  # STUDIO_LOG_FORMAT / STUDIO_LOG_LEVEL
     check_secret(); crypto.check_key()
     code_runtime.warn_if_unisolated()  # once at start-up
     bootstrap(get_db(), jobs=get_job_queue())  # alembic upgrade head + demo user + example workflow
@@ -70,7 +72,8 @@ def create_app() -> FastAPI:
     app.add_middleware(BodyLimit)  # request body ceilings without a proxy too
     app.add_middleware(ChatCors, public=public_chat_service)
     if config.demo_mode(): install_demo_guard(app)  # STUDIO_DEMO_MODE: the shared visitor account is read-only
-    app.add_middleware(HttpMetrics, telemetry=lambda: deps.get_telemetry())  # outermost: every response, by route template
+    app.add_middleware(HttpMetrics, telemetry=lambda: deps.get_telemetry())  # every response, by route template
+    app.add_middleware(RequestContext)  # outermost: X-Request-ID for every log line of the request
     for r in ROUTERS: app.include_router(r)
     app.router.routes.append(Route(MCP_PATH, endpoint=mcp_app))  # Streamable HTTP, all methods
     install_asyncapi(app)  # GET /asyncapi.public.yaml: the chat socket protocol v1

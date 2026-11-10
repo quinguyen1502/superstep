@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0294
 - Title: Structured JSON logs with request, run and trace ids
-- Status: todo
+- Status: doing
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-10
@@ -65,6 +65,7 @@ With `STUDIO_LOG_FORMAT=json`, API and worker logs (including uvicorn access lin
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: Started on branch factory/task-0294-json-logs (stacked on the planning branch so the acceptance and the tasks land together).
 
 ## Handoff Notes
 
