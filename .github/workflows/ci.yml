@@ -158,57 +158,47 @@ jobs:
     # five minutes; a shard starts its own backend, Vite, mock chat API and SMTP sink (playwright.config.ts).
     name: E2E (Playwright, shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
+    container:
+      # Keep the image version aligned with @playwright/test in package-lock.json.
+      image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:2f05f8a734509a7b3f26a912639488ee08f58a7b292d14d62271bcff9038768f
+      options: --user 1001 --ipc=host
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
     env:
-      E2E_PYTHON: ${{ github.workspace }}/backend/.venv/bin/python
       E2E_CODE_RUNTIME: subprocess  # Code-mode specs run without the sandbox images (uv + deno below)
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: backend/pyproject.toml
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
       - uses: astral-sh/setup-uv@v6
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
       - name: Install backend (backend/.venv, the path playwright.config.ts starts)
         working-directory: backend
-        run: python -m venv .venv && .venv/bin/python -m pip install -e ".[dev]"
+        run: |
+          uv venv --managed-python --python 3.12 .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Install Deno
+        run: |
+          deno_dir="$RUNNER_TEMP/deno"
+          deno_zip="$deno_dir/deno.zip"
+          mkdir -p "$deno_dir"
+          curl --fail --silent --show-error --location https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-unknown-linux-gnu.zip --output "$deno_zip"
+          echo "e890975bc2549807bbcc0b584ffafda72cc7c93349dd99c80483dd784f6c4609  $deno_zip" | sha256sum --check
+          python3 -m zipfile -e "$deno_zip" "$deno_dir"
+          chmod +x "$deno_dir/deno"
+          echo "$deno_dir" >> "$GITHUB_PATH"
       - name: Install frontend
         working-directory: .
         run: npm ci
-      - name: Playwright version (browser cache key)
-        id: pw
-        working-directory: frontend
-        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: pw-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}-chromium
-      - name: Install Chromium
-        if: steps.pw-cache.outputs.cache-hit != 'true'
-        working-directory: frontend
-        run: npx playwright install --with-deps chromium
-      - name: Install Chromium system libraries
-        if: steps.pw-cache.outputs.cache-hit == 'true'
-        working-directory: frontend
-        run: npx playwright install-deps chromium
       - name: Run the suite
         working-directory: frontend
-        run: npx playwright test --shard=${{ matrix.shard }}/3
+        run: E2E_PYTHON="$GITHUB_WORKSPACE/backend/.venv/bin/python" npx playwright test --shard=${{ matrix.shard }}/3
       - name: Upload traces and screenshots
         if: failure()
         uses: actions/upload-artifact@v4
