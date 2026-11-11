@@ -63,6 +63,7 @@ from .. import storage
 from ..services.health_probes import Probes
 from ..services.usage_service import UsageService
 from ..repositories.usage import UsageRepository
+from ..repositories.run_usage import RunUsageRepository
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -283,7 +284,8 @@ def run_service() -> RunService:
     db = get_db(); return RunService(WorkflowRepository(db), RunRepository(db), credential_service(), get_run_bus(), get_telemetry(), WorkflowVersionRepository(db), notification_service(), NodeResultRepository(db), approval_service(), delivery_service,
                       knowledge=knowledge_service(), mcp=mcp_service(), access=access_service(),
                       policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service,
-                      jobs=get_job_queue,browser=browser_session_service() if config.browser_runtime_enabled() else None)
+                      jobs=get_job_queue,browser=browser_session_service() if config.browser_runtime_enabled() else None,
+                      usage=RunUsageRepository(db))
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),

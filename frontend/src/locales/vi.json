@@ -1160,7 +1160,12 @@
         "retrying": "{{n}} đang thử lại",
         "schedules": "Lịch chạy",
         "overdue": "{{n}} quá hạn",
-        "disabled": "{{n}} đã dừng sau nhiều lần lỗi"
+        "disabled": "{{n}} đã dừng sau nhiều lần lỗi",
+        "channels": "Chat trigger",
+        "refused": "{{n}} tin nhắn bị từ chối ({{share}} số tin đã xử lý)",
+        "reason": "Lý do",
+        "platform": "Nền tảng",
+        "count": "Tin nhắn"
       },
       "age": {
         "s": "{{n}} giây",
@@ -1169,7 +1174,47 @@
         "d": "{{n}} ngày"
       },
       "handbook": "Về mức sử dụng và giám sát",
-      "grafana": "Mở Grafana để xem tình trạng server, cơ sở dữ liệu và hàng đợi"
+      "grafana": "Mở Grafana để xem tình trạng server, cơ sở dữ liệu và hàng đợi",
+      "models": {
+        "title": "Model",
+        "since": "Dữ liệu theo model bắt đầu từ {{date}} (các run kết thúc từ đó).",
+        "notYet": "Dữ liệu theo model bắt đầu từ run kết thúc tiếp theo.",
+        "sortBy": "Sắp xếp model theo",
+        "sort": {
+          "cost": "Chi phí cao nhất",
+          "tokens": "Nhiều token nhất",
+          "calls": "Nhiều lời gọi nhất"
+        },
+        "col": {
+          "model": "Model",
+          "kind": "Dùng cho",
+          "calls": "Lời gọi",
+          "errors": "Lỗi",
+          "latency": "Thời gian TB"
+        },
+        "kind": {
+          "llm": "Node",
+          "embedding": "Embedding",
+          "review": "AI duyệt"
+        },
+        "ms": "{{n}} ms",
+        "unpriced": "Chưa có giá",
+        "empty": "Không có lượt dùng model trong khoảng này."
+      },
+      "people": {
+        "users": "Người dùng",
+        "teams": "Nhóm",
+        "user": "Người dùng",
+        "team": "Nhóm",
+        "members": "Thành viên",
+        "total": "Tất cả người dùng",
+        "deleted": "Người dùng đã xoá",
+        "sortedBy": "Top 20, sắp xếp như workflow ({{by}}).",
+        "teamsNote": "Run của thành viên mỗi nhóm; thành viên của nhiều nhóm được tính cho từng nhóm.",
+        "shared_one": "{{count}} người dùng thuộc nhiều hơn một nhóm và được tính cho từng nhóm.",
+        "shared_other": "{{count}} người dùng thuộc nhiều hơn một nhóm và được tính cho từng nhóm.",
+        "noTeams": "Không thành viên nhóm nào chạy workflow trong khoảng này."
+      }
     }
   },
   "kb": {

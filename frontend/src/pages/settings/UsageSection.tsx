@@ -12,8 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { HandbookLink } from '@/components/handbook-link'
 import { api } from '@/lib/api'
 import { can, useMe } from '@/lib/rbac'
-import { bucketTotal, fmtAge, fmtCount, fmtShare, fmtUsd, SERIES_STATUSES, USAGE_WINDOWS, type SeriesStatus, type UsageHealth,
-  type UsageSort, type UsageSummary, type UsageWindow } from '@/lib/usage'
+import { bucketTotal, fmtAge, fmtCount, fmtShare, fmtUsd, MODEL_SORTS, SERIES_STATUSES, sortModels, USAGE_WINDOWS, type ModelSort,
+  type SeriesStatus, type UsageHealth, type UsageSort, type UsageSummary, type UsageWindow } from '@/lib/usage'
 
 const BAR: Record<SeriesStatus, string> = { ok: 'bg-success', error: 'bg-destructive', timeout: 'bg-warning', cancelled: 'bg-muted-foreground/50', other: 'bg-info' }
 
@@ -29,7 +29,7 @@ export function UsageSection() {
   const { t, i18n } = useTranslation(); const me = useMe(); const lang = i18n.resolvedLanguage
   const [win, setWin] = useState<UsageWindow>('7d'); const [sort, setSort] = useState<UsageSort>('runs')
   const [data, setData] = useState<UsageSummary | null>(null); const [health, setHealth] = useState<UsageHealth | null>(null)
-  const [err, setErr] = useState(''); const [tick, setTick] = useState(0)
+  const [err, setErr] = useState(''); const [tick, setTick] = useState(0); const [modelSort, setModelSort] = useState<ModelSort>('cost')
   const allowed = can(me, 'users.manage')
   const load = useCallback(() => setTick(n => n + 1), [])
   useEffect(() => {
@@ -44,6 +44,10 @@ export function UsageSection() {
   const peak = Math.max(1, ...(data?.series ?? []).map(bucketTotal))
   const when = (ts: number) => new Date(ts * 1000).toLocaleString(lang, data?.bucket === 'hour' ? { hour: '2-digit', minute: '2-digit' } : { month: 'short', day: 'numeric' })
   const age = (s: number | null) => { const a = fmtAge(s); return a ? t(`settings.usage.age.${a.unit}`, { n: a.n }) : '—' }
+  const day = (ts: number) => new Date(ts * 1000).toLocaleDateString(lang, { year: 'numeric', month: 'short', day: 'numeric' })
+  const models = sortModels(data?.models ?? [], modelSort)
+  const people = [...(data?.users ?? []), ...(data?.teams ?? [])]; const peopleUnpriced = people.some(r => r.unpriced_runs > 0)
+  const usd = (v: number, unpriced: boolean) => unpriced ? t('settings.usage.atLeast', { value: fmtUsd(v, lang) }) : fmtUsd(v, lang)
   return <div className="space-y-4" id="usage-page">
     <div className="flex h-11 items-center gap-2">
       <Select value={win} onValueChange={v => setWin(v as UsageWindow)}>
@@ -102,6 +106,67 @@ export function UsageSection() {
             </TableRow>)}
             {!data.top_workflows.length && <TableRow><TableCell /* ui-class-ok: empty table row spacing, layout not control sizing */ colSpan={6} className="py-8 text-center text-muted-foreground">{t('settings.usage.empty')}</TableCell></TableRow>}
           </TableBody></Table></Card>
+      <Card id="usage-models" className="gap-0 overflow-hidden pb-0"><CardHeader className="flex items-center gap-2 pb-4">
+        <div className="space-y-1.5"><CardTitle>{t('settings.usage.models.title')}</CardTitle>
+          <CardDescription id="usage-models-since">{data.models_since ? t('settings.usage.models.since', { date: day(data.models_since) }) : t('settings.usage.models.notYet')}</CardDescription></div>
+        <Select value={modelSort} onValueChange={v => setModelSort(v as ModelSort)}>
+          <SelectTrigger id="usage-models-sort" className="ml-auto" aria-label={t('settings.usage.models.sortBy')}><SelectValue /></SelectTrigger>
+          <SelectContent>{MODEL_SORTS.map(s => <SelectItem key={s} value={s}>{t(`settings.usage.models.sort.${s}`)}</SelectItem>)}</SelectContent>
+        </Select></CardHeader>
+        <Table id="usage-models-table"><TableHeader><TableRow>
+          <TableHead className="pl-6">{t('settings.usage.models.col.model')}</TableHead><TableHead>{t('settings.usage.models.col.kind')}</TableHead>
+          <TableHead className="text-right">{t('settings.usage.models.col.calls')}</TableHead><TableHead className="text-right">{t('settings.usage.models.col.errors')}</TableHead>
+          <TableHead className="text-right">{t('settings.usage.col.tokens')}</TableHead><TableHead className="text-right">{t('settings.usage.models.col.latency')}</TableHead>
+          <TableHead className="pr-6 text-right">{t('settings.usage.col.cost')}</TableHead>
+        </TableRow></TableHeader>
+          <TableBody>
+            {models.map(m => <TableRow key={`${m.kind}:${m.provider}:${m.model}`} data-testid="usage-model-row">
+              <TableCell className="max-w-64 truncate pl-6"><span className="font-medium">{m.model}</span> <span className="text-muted-foreground">{m.provider}</span></TableCell>
+              <TableCell>{t(`settings.usage.models.kind.${m.kind}`)}</TableCell>
+              <TableCell className="text-right tabular-nums">{fmtCount(m.calls, lang)}</TableCell>
+              <TableCell className="text-right tabular-nums">{fmtCount(m.errors, lang)}</TableCell>
+              <TableCell className="text-right tabular-nums">{fmtCount(m.tokens_in + m.tokens_out, lang)}</TableCell>
+              <TableCell className="text-right tabular-nums">{m.avg_duration_ms === null ? '—' : t('settings.usage.models.ms', { n: fmtCount(Math.round(m.avg_duration_ms), lang) })}</TableCell>
+              <TableCell className="pr-6 text-right tabular-nums">{m.unpriced_rows > 0 && m.cost_usd === 0 ? t('settings.usage.models.unpriced') : usd(m.cost_usd, m.unpriced_rows > 0)}</TableCell>
+            </TableRow>)}
+            {!models.length && <TableRow><TableCell /* ui-class-ok: empty table row spacing, layout not control sizing */ colSpan={7} className="py-8 text-center text-muted-foreground" id="usage-models-empty">{t('settings.usage.models.empty')}</TableCell></TableRow>}
+          </TableBody></Table></Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card id="usage-users" className="gap-0 overflow-hidden pb-0"><CardHeader className="pb-4"><CardTitle>{t('settings.usage.people.users')}</CardTitle>
+          <CardDescription>{t('settings.usage.people.sortedBy', { by: t(`settings.usage.sort.${sort}`) })}</CardDescription></CardHeader>
+          <Table id="usage-users-table"><TableHeader><TableRow>
+            <TableHead className="pl-6">{t('settings.usage.people.user')}</TableHead><TableHead className="text-right">{t('settings.usage.col.runs')}</TableHead>
+            <TableHead className="text-right">{t('settings.usage.col.tokens')}</TableHead><TableHead className="pr-6 text-right">{t('settings.usage.col.cost')}</TableHead>
+          </TableRow></TableHeader>
+            <TableBody>
+              {data.users.map(u => <TableRow key={u.user_id ?? 'none'} data-testid="usage-user-row">
+                <TableCell className="max-w-56 truncate pl-6 font-medium">{u.deleted || !u.email ? <span className="text-muted-foreground">{t('settings.usage.people.deleted')}</span> : u.email}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtCount(u.runs, lang)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtCount(u.tokens_in + u.tokens_out, lang)}</TableCell>
+                <TableCell className="pr-6 text-right tabular-nums">{usd(u.cost_usd, u.unpriced_runs > 0)}</TableCell>
+              </TableRow>)}
+              {data.users.length > 0 && <TableRow className="font-medium" data-testid="usage-users-total">
+                <TableCell className="pl-6">{t('settings.usage.people.total')}</TableCell><TableCell className="text-right tabular-nums">{fmtCount(tot.runs, lang)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtCount(tot.tokens_in + tot.tokens_out, lang)}</TableCell>
+                <TableCell className="pr-6 text-right tabular-nums">{usd(tot.cost_usd, unpriced || peopleUnpriced)}</TableCell></TableRow>}
+              {!data.users.length && <TableRow><TableCell /* ui-class-ok: empty table row spacing, layout not control sizing */ colSpan={4} className="py-8 text-center text-muted-foreground">{t('settings.usage.empty')}</TableCell></TableRow>}
+            </TableBody></Table></Card>
+        <Card id="usage-teams" className="gap-0 overflow-hidden pb-0"><CardHeader className="pb-4"><CardTitle>{t('settings.usage.people.teams')}</CardTitle>
+          <CardDescription id="usage-teams-note">{data.teams_shared_members > 0 ? t('settings.usage.people.shared', { count: data.teams_shared_members }) : t('settings.usage.people.teamsNote')}</CardDescription></CardHeader>
+          <Table id="usage-teams-table"><TableHeader><TableRow>
+            <TableHead className="pl-6">{t('settings.usage.people.team')}</TableHead><TableHead className="text-right">{t('settings.usage.people.members')}</TableHead>
+            <TableHead className="text-right">{t('settings.usage.col.runs')}</TableHead><TableHead className="pr-6 text-right">{t('settings.usage.col.cost')}</TableHead>
+          </TableRow></TableHeader>
+            <TableBody>
+              {data.teams.map(tm => <TableRow key={tm.team_id} data-testid="usage-team-row">
+                <TableCell className="max-w-56 truncate pl-6 font-medium">{tm.name ?? <span className="font-mono text-muted-foreground">{tm.team_id}</span>}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtCount(tm.members, lang)}</TableCell>
+                <TableCell className="text-right tabular-nums">{fmtCount(tm.runs, lang)}</TableCell>
+                <TableCell className="pr-6 text-right tabular-nums">{usd(tm.cost_usd, tm.unpriced_runs > 0)}</TableCell>
+              </TableRow>)}
+              {!data.teams.length && <TableRow><TableCell /* ui-class-ok: empty table row spacing, layout not control sizing */ colSpan={4} className="py-8 text-center text-muted-foreground">{t('settings.usage.people.noTeams')}</TableCell></TableRow>}
+            </TableBody></Table></Card>
+      </div>
       {health && <Card id="usage-health"><CardHeader><CardTitle>{t('settings.usage.health.title')}</CardTitle>
         <CardDescription>{t('settings.usage.health.intro')}</CardDescription></CardHeader>
         <CardContent className="space-y-4">
@@ -116,6 +181,17 @@ export function UsageSection() {
             <div id="usage-health-schedules"><div className="font-medium">{t('settings.usage.health.schedules')}</div>
               <div className="text-muted-foreground">{t('settings.usage.health.overdue', { n: health.schedules.overdue })}</div>
               <div className="text-muted-foreground">{t('settings.usage.health.disabled', { n: health.schedules.disabled })}</div></div>
+          </div>
+          <div id="usage-health-channels" className="space-y-2 text-sm">
+            <div className="font-medium">{t('settings.usage.health.channels')}</div>
+            <div className="text-muted-foreground">{t('settings.usage.health.refused', { n: health.channels.refused_total, share: fmtShare(health.channels.refusal_share, lang) })}</div>
+            {health.channels.refused.length > 0 && <Table id="usage-refusals-table"><TableHeader><TableRow>
+              <TableHead>{t('settings.usage.health.reason')}</TableHead><TableHead>{t('settings.usage.health.platform')}</TableHead>
+              <TableHead className="text-right">{t('settings.usage.health.count')}</TableHead></TableRow></TableHeader>
+              <TableBody>{health.channels.refused.map(r => <TableRow key={`${r.code}:${r.kind}`} data-testid="usage-refusal-row">
+                <TableCell><span className="font-mono text-xs text-muted-foreground">{r.code}</span> {t(`errors.${r.code}`, { kind: r.kind, defaultValue: '' })}</TableCell>
+                <TableCell>{r.kind}</TableCell><TableCell className="text-right tabular-nums">{fmtCount(r.count, lang)}</TableCell>
+              </TableRow>)}</TableBody></Table>}
           </div>
           {health.schedules.disabled_list.length > 0 && <Alert variant="warning" id="usage-health-stopped"><AlertCircle /><AlertDescription>
             <ul className="space-y-1">{health.schedules.disabled_list.map(s => <li key={s.id}><span className="font-medium">{s.name}</span>{s.note ? `: ${s.note}` : ''}</li>)}</ul>

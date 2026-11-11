@@ -620,3 +620,7 @@ class Telemetry:
         gauge("studio.schedules.overdue", "{schedule}", "Enabled schedules more than 5 minutes late", lambda: count("schedules", "overdue"))
         gauge("studio.schedules.disabled", "{schedule}", "Schedules the scheduler turned off", lambda: count("schedules", "disabled"))
         gauge("studio.browser.active", "{session}", "Browser sessions open now (all processes)", lambda: count("browsers", "active"))
+        def refused() -> list:
+            rows = ((health.get() or {}).get("channels") or {}).get("refused") or []
+            return [(r.get("count"), labels(code=r.get("code"), kind=r.get("kind"))) for r in rows]
+        gauge("studio.chat.refused", "{message}", "Chat trigger messages refused in the last hour, by code and platform", refused)
