@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0301
 - Title: Usage rows written at run end
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -65,6 +65,7 @@ Every finished run leaves one row per model or embedding call group (model, prov
 - 2026-11-10: `run_usage` table (run, workflow, owner, node, kind, model, provider, tokens, cost, calls, errors, duration) with unique key on run, node, kind, model, provider; written once when a run reaches a terminal status; deleted with its workflow or owner data. `python -m app.admin_cmd usage-backfill --days N` fills it from stored run events.
 - 2026-11-10: Deviation: child runs write their own rows; SQLite-only migration test locally.
 - 2026-11-10: Review REV-0286 and QA-0286. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #359.
 
 ## Handoff Notes
 

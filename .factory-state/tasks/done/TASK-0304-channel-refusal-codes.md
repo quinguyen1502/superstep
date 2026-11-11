@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0304
 - Title: Channel refusal codes on the Usage page
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: DES-0006
 - Architecture IDs: DEC-0094, DEC-0095
@@ -63,6 +63,7 @@ The Product health block on Settings, Usage lists chat trigger messages refused 
 - 2026-11-10: Chat trigger refusals by code and platform on the Usage page health block and gauge `studio.chat.refused`; Channel refusals alert (above 20 in the last hour for 10 minutes); index `ix_chat_messages_status_created`.
 - 2026-11-10: Deviation: a separate migration for the index.
 - 2026-11-10: Review REV-0289 and QA-0289. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #359.
 
 ## Handoff Notes
 
