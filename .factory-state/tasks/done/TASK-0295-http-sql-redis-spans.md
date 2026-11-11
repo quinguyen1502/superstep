@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0295
 - Title: HTTP, SQL and Redis spans
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -68,6 +68,7 @@ In Jaeger (Compose `tracing` or `observability` profile), a slow request or run 
 - 2026-11-10: Pins `opentelemetry-instrumentation-sqlalchemy>=0.66b0` and `opentelemetry-instrumentation-redis>=0.66b0` (Apache-2.0) in `requirements.txt` and `pyproject.toml`, imported lazily. Compose passes `STUDIO_OTEL_INSTRUMENT`; `observability.env` turns it on. `.env.example` and the configuration reference (en and vi) list it.
 - 2026-11-10: Deviations: HTTP spans are a small ASGI middleware instead of the FastAPI/ASGI instrumentation package (route-template names, probe exclusion, no extra dependency); SQL and Redis spans parent to the run segment span, not a node span; sampling answers the open question as parent-based, always on, with orphan client spans dropped.
 - 2026-11-10: Review REV-0280 and QA-0280. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #355.
 
 ## Handoff Notes
 
