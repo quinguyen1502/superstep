@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0300
 - Title: Rate-limit hit counters
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -62,6 +62,7 @@ Grafana shows how often sign-in, public chat, chat triggers, API triggers, appro
 - 2026-11-10: Counter `studio.rate_limit.hits` (scope) from both limiters when a request is refused; scopes from the key prefix. Throttling spike alert (above 50 in 5 minutes). Handbook en and vi.
 - 2026-11-10: Deviation: extra `login` and `identity_code` scopes.
 - 2026-11-10: Review REV-0285 and QA-0285. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #358.
 
 ## Handoff Notes
 
