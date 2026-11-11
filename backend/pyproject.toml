@@ -27,6 +27,8 @@ dependencies = [
   "aiosmtpd>=1.4",         # local SMTP debug server for notification e-mail tests
   "opentelemetry-sdk>=1.27",                      # run traces; no-op without an exporter
   "opentelemetry-exporter-otlp-proto-http>=1.27", # OTLP/HTTP exporter (also used for LangSmith)
+  "opentelemetry-instrumentation-sqlalchemy>=0.66b0", # Apache-2.0; opt-in SQL spans (STUDIO_OTEL_INSTRUMENT), imported lazily
+  "opentelemetry-instrumentation-redis>=0.66b0",      # Apache-2.0; opt-in Redis spans (STUDIO_OTEL_INSTRUMENT), imported lazily
   "tzdata",                # IANA zones for schedules on images without system zone data
   "langchain-openai>=1.0", # LM Studio / OpenRouter / OpenAI-compatible chat models
   "openai>=2.45,<3",       # 3.x switched to httpx2 (respx cannot mock it),

@@ -13,6 +13,8 @@ redis>=5
 fakeredis>=2.20
 opentelemetry-sdk>=1.27
 opentelemetry-exporter-otlp-proto-http>=1.27
+opentelemetry-instrumentation-sqlalchemy>=0.66b0  # Apache-2.0; opt-in SQL spans (STUDIO_OTEL_INSTRUMENT)
+opentelemetry-instrumentation-redis>=0.66b0  # Apache-2.0; opt-in Redis spans (STUDIO_OTEL_INSTRUMENT)
 tzdata  # IANA zones for schedules on images without system zone data
 pypdf
 pyyaml>=6  # the AsyncAPI document of the chat socket

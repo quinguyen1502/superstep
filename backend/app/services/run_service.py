@@ -23,7 +23,7 @@ from .job_queue import enqueue_resume
 from .run_bus import InMemoryRunBus, RunBus
 from . import time_travel
 from .telemetry import Telemetry, summarize, trace_url
-from ..core.logging import get_logger
+from ..core.logging import bind_trace, get_logger, run_context
 from .workflow_diff import same_content
 from .email_quota import take_email_quota
 
@@ -41,6 +41,7 @@ class RunPlan:
     source: str = "ui"  # ui | api | schedule | test
     version: Optional[int] = None  # stored workflow version that runs; None = unsaved edits
     trace_parent: Optional[dict] = None  # {trace_id, span_id} of the previous trace segment
+    request_span: Optional[dict] = None  # {trace_id, span_id} of the HTTP request that queued the run (span link)
     recovered: bool = False       # continuing a queue job whose worker died
     checkpointing: bool = False   # save a progress checkpoint after each node (queue jobs, )
     fence: Optional[int] = None   # lease generation of the queue job: every write carries it
@@ -850,14 +851,17 @@ class RunService:
             return "waiting"
         rid = plan.run_id or uuid.uuid4().hex[:10]; await self.bus.astart(rid, uid)  # registered so REST/other workers can cancel it
         status = None
-        try:
-            status = await self._execute(rid, plan, send, listen, uid)
-            if status != "fenced": await self.settled(rid, plan.source)
-            return status
-        finally:
-            if self.browser and status not in {"waiting","paused"}:
-                await _write_in_thread(self.browser.close_run,rid,plan.browser_lease if plan.browser_lease is not None else (plan.fence+1 if plan.fence is not None else None))
-            if status != "fenced": await _write_in_thread(self.bus.finish, rid)  # a fenced worker leaves the new owner's entry alone
+        otel = self.telemetry.scope()  # SQL and Redis spans of this run join its trace (STUDIO_OTEL_INSTRUMENT)
+        with run_context(rid, plan.workflow_id):  # log lines of this run carry its run id (and trace id once known)
+            try:
+                status = await self._execute(rid, plan, send, listen, uid, otel)
+                if status != "fenced": await self.settled(rid, plan.source)
+                return status
+            finally:
+                otel.close()
+                if self.browser and status not in {"waiting","paused"}:
+                    await _write_in_thread(self.browser.close_run,rid,plan.browser_lease if plan.browser_lease is not None else (plan.fence+1 if plan.fence is not None else None))
+                if status != "fenced": await _write_in_thread(self.bus.finish, rid)  # a fenced worker leaves the new owner's entry alone
 
     async def settled(self, rid: str, source: Optional[str] = None) -> None:
         """Every run segment ends here (first run, studio/Slack/Telegram resume, recovery): an API run's callback_url
@@ -894,13 +898,17 @@ class RunService:
         try: self.deliveries().for_run(self.runs.get(rid))
         except Exception: log.exception("queueing the callback of run %s failed", rid)
 
-    async def _execute(self, rid, plan, send, listen, uid) -> str:
+    async def _execute(self, rid, plan, send, listen, uid, otel=None) -> str:
         t0 = time.time(); events: list = []; final = None; status = "ok"; connected = True; bus = self.bus; checkpoint = None
         prev = plan.previous; started = prev.started if prev else t0
-        try: span = self.telemetry.start_run({"id": rid, "workflow_id": plan.workflow_id, "owner": uid, "started": t0,
-                                              "segment": "recovered" if plan.recovered or plan.fence and plan.attempt > 1 else "resumed"}, plan.trace_parent,
-                                             links=[plan.trace_parent] if plan.trace_parent and (plan.recovered or plan.attempt > 1) else None)
+        try:
+            span = self.telemetry.start_run({"id": rid, "workflow_id": plan.workflow_id, "owner": uid, "started": t0,
+                                            "segment": "recovered" if plan.recovered or plan.fence and plan.attempt > 1 else "resumed"}, plan.trace_parent,
+                                           links=[plan.trace_parent] if plan.trace_parent and (plan.recovered or plan.attempt > 1) else None,
+                                           request=plan.request_span)
+            if otel is not None: otel.enter(span)
         except Exception: span = None  # tracing must never fail a run
+        bind_trace(span.ids["trace_id"] if span is not None else (plan.trace_parent or {}).get("trace_id"))
         if prev: events.extend(json.loads(prev.events or "[]"))  # resumed: one run, one event log
         q: asyncio.Queue = asyncio.Queue(); loop = asyncio.get_running_loop(); cancel = threading.Event()
 
@@ -985,7 +993,7 @@ class RunService:
             # the time limit counts the engine's work from here: the setup above (the first progress write, which may wait for
             # the database) is not part of the run's time, or a slow write could time a run out before its first node
             deadline = time.time() + config.run_timeout()
-            threading.Thread(target=worker, daemon=True).start()
+            threading.Thread(target=contextvars.copy_context().run, args=(worker,), daemon=True).start()  # keeps the log context
             listener = asyncio.create_task(listen()); ended = None
             while True:
                 get = asyncio.ensure_future(q.get())

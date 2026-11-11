@@ -21,6 +21,7 @@ heartbeat (`heartbeat`) with its busy slots and capacity, and `heartbeats()` lis
 """
 import hashlib, heapq, json, queue, threading, time, uuid
 from typing import Callable, Optional, Protocol
+from .telemetry import current_request
 
 QUEUE_KEY = "studio:run-jobs"
 PROCESSING_PREFIX = "studio:run-jobs:processing:"
@@ -54,6 +55,12 @@ class JobQueue(Protocol):
     def heartbeats(self) -> list[dict]: ...  # [{"worker", "ts", "busy", "capacity"}] of live workers
 
 
+def stamp(job: dict) -> dict:
+    """A run job queued inside a traced request remembers that request's span, so the run's trace links to it."""
+    req = current_request() if job.get("run_id") and "request_span" not in job else None
+    return {**job, "request_span": req} if req else dict(job)
+
+
 def enqueue_resume(runs, enqueue: Callable[[dict], None], job: dict) -> None:
     """Queue the answer to a waiting run (a resume job), kept on the run first: an in-memory queue loses it
     on a restart, and RunWorker.recover_unfinished queues the kept one again. `runs` is the RunRepository."""
@@ -66,7 +73,7 @@ class InMemoryJobQueue:
         self._q: "queue.Queue[dict]" = queue.Queue(); self.worker_id = "local"
         self._delayed: list[tuple[float, int, dict]] = []; self._seq = 0; self._lock = threading.Lock()
         self._taken = 0; self._beat: Optional[dict] = None
-    def enqueue(self, job): self._q.put(dict(job))
+    def enqueue(self, job): self._q.put(stamp(job))
     def enqueue_at(self, job, due):
         with self._lock: self._seq += 1; heapq.heappush(self._delayed, (due, self._seq, dict(job)))
     def promote_due(self, now=None):
@@ -107,7 +114,7 @@ class RedisJobQueue:
         from ..core import config
         return self._visibility or config.job_visibility()
 
-    def enqueue(self, job): self.r.lpush(QUEUE_KEY, _dump(job))
+    def enqueue(self, job): self.r.lpush(QUEUE_KEY, _dump(stamp(job)))
     def enqueue_at(self, job, due): self.r.zadd(DELAYED_KEY, {_dump(job) + f"|{uuid.uuid4().hex[:6]}": due})  # suffix: identical jobs stay distinct
 
     def promote_due(self, now=None):
