@@ -136,3 +136,40 @@ def test_collector_reads_postgres_and_redis_without_committed_credentials():
     assert "GRANT pg_monitor" in script and "exit 0" in script  # read-only role; skipped without a password
     for line in (ROOT / ".env.example").read_text().splitlines():
         if line.startswith("POSTGRES_MONITOR_PASSWORD="): assert line == "POSTGRES_MONITOR_PASSWORD="
+
+
+HANDBOOK = ROOT / "handbook" / "docs"
+LANGS = ("en", "vi")
+
+
+def page(lang: str) -> str:
+    return (HANDBOOK / lang / "operate" / "observability.md").read_text()
+
+
+def handbook_alerts(lang: str) -> list[str]:
+    """First column of the alert table: the table that holds the "Instance down" row (rule titles are English in both)."""
+    lines = page(lang).splitlines()
+    at = next(i for i, line in enumerate(lines) if line.startswith("| Instance down |"))
+    start = at
+    while lines[start - 1].startswith("|"): start -= 1
+    end = at
+    while end < len(lines) and lines[end].startswith("|"): end += 1
+    return [line.split("|")[1].strip() for line in lines[start + 2:end]]
+
+
+def test_handbook_alert_list_matches_the_provisioned_rules():
+    titles = [r["title"] for r in yaml.safe_load(RULES.read_text())["groups"][0]["rules"]]
+    for lang in LANGS:
+        assert sorted(handbook_alerts(lang)) == sorted(titles), lang
+
+
+def test_handbook_names_only_emitted_metrics():
+    names = {n.replace("_", ".") for n in emitted()}
+    for lang in LANGS:
+        named = set(re.findall(r"`(studio\.[a-z0-9_.]+)`", page(lang)))
+        missing = {n for n in named if n not in names and n.replace(".", "_") not in emitted()}
+        assert missing == set(), lang
+    titles = [p["title"] for p in json.loads(DASHBOARD.read_text())["panels"] if p["type"] == "row"]
+    assert titles == ["Server", "Database and Redis", "Queue and workers", "Runs and models", "Integrations and limits", "Product health"]
+    for lang in LANGS:
+        assert all(f"| {t} |" in page(lang) for t in titles), lang

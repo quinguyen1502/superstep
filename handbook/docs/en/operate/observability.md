@@ -185,11 +185,17 @@ Grafana signs in as `admin` with `GRAFANA_ADMIN_PASSWORD`, which defaults to
 `admin`. Set your own password in `.env` before you expose Grafana anywhere.
 `PROMETHEUS_RETENTION` (default `15d`) sets how long Prometheus keeps data.
 
-The **Superstep overview** dashboard in the **Superstep** folder has rows for
-the server (requests, latency, 5xx share, slowest routes, WebSockets, CPU and
-memory), the database and Redis, the queue and workers, runs and models (runs
-by status, error rate, duration, tokens and cost by model and workflow,
-unpriced calls, model errors, fallbacks) and product health.
+The **Superstep overview** dashboard in the **Superstep** folder has these
+rows:
+
+| Row | Panels |
+| --- | --- |
+| Server | Requests, latency, 5xx share, slowest routes, WebSockets, CPU and memory |
+| Database and Redis | Readiness, the app's connection pool, Postgres connections, transactions, cache hit ratio and size, Redis memory, clients, operations and keys |
+| Queue and workers | Queue depth and oldest run, workers, heartbeats, the run bus |
+| Runs and models | Runs by status, error rate, duration, tokens and cost by model and workflow, unpriced calls, model errors, fallbacks, model latency and time to first token, embedding tokens and cost |
+| Integrations and limits | Channel messages, MCP calls, browser sessions and actions, sandbox executions, limit hits by scope |
+| Product health | Approvals, webhooks, schedules and refused chat trigger messages |
 
 ![Superstep overview dashboard in Grafana](../images/grafana-overview.png)
 
@@ -238,7 +244,7 @@ to get notified.
 | Worker missing | `studio.worker.heartbeat_age`, or no heartbeat at all | above 60 s for 2 minutes |
 | Run error rate | Runs ending in error or timeout over 15 minutes | above 20% for 15 minutes |
 | Provider auth or unreachable | `studio.llm.errors` with `PROVIDER_AUTH_FAILED` or `PROVIDER_UNREACHABLE` | any for 5 minutes |
-| Provider rate limited (warning) | `studio.llm.errors` with `PROVIDER_RATE_LIMITED` | any for 5 minutes |
+| Provider rate limited | `studio.llm.errors` with `PROVIDER_RATE_LIMITED` (warning) | any for 5 minutes |
 | Slow provider | p95 of `studio.llm.duration` for any provider over 10 minutes | above 30 seconds for 10 minutes |
 | Daily cost | Increase of `studio.cost` over 24 hours | above 50 USD |
 | Overdue schedules | `studio.schedules.overdue` | above 0 for 10 minutes |
@@ -324,6 +330,18 @@ trace** opens the run in LangSmith. Test results can go to LangSmith too: see
 When Studio's LangSmith exporter is on, LangChain's own LangSmith tracer is
 turned off, so each LLM call is exported once.
 
+### Requests, SQL and Redis
+
+With an OTLP endpoint and `STUDIO_OTEL_INSTRUMENT=1`, the API also traces
+each HTTP request (`GET /api/workflows/{workflow_id}`, by route template, with
+the status code) and the SQL queries and Redis calls made while it is served.
+SQL spans carry the statement shape without parameter values. A request that
+starts a run links the run's trace to the request span, and SQL and Redis
+calls made by a run appear in the run's trace. An incoming
+`traceparent` header is honoured. Health and readiness checks are not traced.
+Instrumentation adds a little overhead per request, so it stays off by
+default.
+
 ## Jaeger with Compose
 
 ```bash
@@ -349,6 +367,19 @@ and point the backend at `http://localhost:4318`.
 The API logs to stdout. Errors in events are one line, with `sk-…`,
 `Bearer …` and `api_key=…` redacted, and `?token=` shows as `token=***` in
 uvicorn's access log.
+
+Every response carries an `X-Request-ID` header; a valid incoming one is
+kept. With `STUDIO_LOG_FORMAT=json` the API and the worker write one JSON
+object per line, including uvicorn's access log:
+
+```json
+{"ts": "2026-11-10T08:15:02.120Z", "level": "INFO", "logger": "studio.runs", "message": "run finished", "request_id": "5f0c…", "run_id": "a1b2c3d4e5", "workflow_id": "support-triage", "trace_id": "4bf9…", "span_id": "00f0…"}
+```
+
+Only the ids that are known are written. Search the logs for a `run_id` to
+see everything about one run, or for a `trace_id` to jump between the logs
+and Jaeger or Tempo. `STUDIO_LOG_LEVEL` (for example `DEBUG`) sets the level
+of Superstep's own loggers. The default `text` format is unchanged.
 
 ## Time zones for schedules
 
