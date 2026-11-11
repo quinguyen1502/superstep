@@ -85,8 +85,8 @@ class KnowledgeService:
     def _embedder_id(self, kb: KnowledgeBase) -> str:
         return self._call(lambda: embeddings.embedder_id(kb.model, self._cred(kb)))
 
-    def _embed(self, kb: KnowledgeBase, texts: list[str]) -> list[list[float]]:
-        return self._call(lambda: embeddings.embed(texts, kb.model, self._cred(kb)))
+    def _embed(self, kb: KnowledgeBase, texts: list[str], source: str = "ingest") -> list[list[float]]:
+        return self._call(lambda: embeddings.embed(texts, kb.model, self._cred(kb), source))
 
     def _dims(self, kb: KnowledgeBase) -> Optional[int]:
         """Dimension of the stored vectors: the column, else read from a chunk once and saved (legacy knowledge bases)."""
@@ -141,7 +141,7 @@ class KnowledgeService:
         k = max(1, min(int(top_k or 4), TOP_K_MAX))
         if not kb.embedder: return []  # empty knowledge base
         if kb.embedder != self._embedder_id(kb): raise AppError("KB_EMBEDDER_CHANGED")
-        vec = self._embed(kb, [q]); self._check_dims(kb, vec)
+        vec = self._embed(kb, [q], "query"); self._check_dims(kb, vec)
         return self.repo.search(kid, vec[0], k)
 
     def retriever(self, uid: str) -> Callable[[str, str, int], list[dict]]:

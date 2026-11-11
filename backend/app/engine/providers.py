@@ -177,11 +177,22 @@ class Provider:
     def parse_embeddings(self, data: Dict[str, Any]) -> List[List[float]]:
         return [d["embedding"] for d in sorted(data["data"], key=lambda d: d.get("index", 0))]
 
+    def embedding_tokens(self, data: Dict[str, Any]) -> Optional[int]:
+        """Input tokens the provider reports for one embeddings response (OpenAI-style `usage`), None when absent."""
+        u = data.get("usage") if isinstance(data, dict) else None
+        n = (u or {}).get("prompt_tokens") or (u or {}).get("total_tokens") if isinstance(u, dict) else None
+        return int(n) if isinstance(n, (int, float)) and n >= 0 else None
+
     def embed(self, texts: List[str], model: str, cred: Dict[str, Any]) -> List[List[float]]:
         """One vector per text (OpenAI-style `/embeddings` by default). All vectors must share one dimension."""
+        return self.embed_with_usage(texts, model, cred)[0]
+
+    def embed_with_usage(self, texts: List[str], model: str, cred: Dict[str, Any]) -> Tuple[List[List[float]], Dict[str, Any]]:
+        """`embed` plus a usage record (input tokens only): the provider's count when every batch reports one, else estimated."""
         if not self.supports_embeddings: raise ProviderError("PROVIDER_EMBEDDINGS_UNSUPPORTED", self.id)
         model = model or self.default_embedding_model
         url, out = self.base(cred, self.default_base_url) + self.embeddings_path, []
+        tokens, estimated = 0, False
         for i in range(0, len(texts), self.embed_batch):
             batch = texts[i:i + self.embed_batch]
             data = request(self.id, "POST", url, self.auth_headers(cred), self.embed_request(model, batch), model=model)
@@ -189,8 +200,11 @@ class Provider:
             except (TypeError, KeyError, AttributeError): raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "invalid embeddings response") from None
             if len(vecs) != len(batch): raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "embedding count mismatch")
             out += vecs
+            n = self.embedding_tokens(data)
+            if n is None: n, estimated = sum(estimate_tokens(x) for x in batch), True
+            tokens += n
         if len({len(v) for v in out}) > 1: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "embeddings of different dimensions")
-        return out
+        return out, {**make_usage(self.id, model, tokens, 0, estimated=estimated), "kind": "embedding"}
 
 
 def _lc_messages(messages: List[Dict[str, Any]]) -> list:
@@ -280,6 +294,10 @@ class Ollama(Provider):
     default_embedding_model, embeddings_path = "nomic-embed-text", "/api/embed"
 
     def parse_embeddings(self, data): return data["embeddings"]
+
+    def embedding_tokens(self, data):
+        n = data.get("prompt_eval_count") if isinstance(data, dict) else None
+        return int(n) if isinstance(n, (int, float)) and n >= 0 else None
 
     def parse_models(self, data):
         return sorted(m.get("model") or m["name"] for m in data.get("models", []))

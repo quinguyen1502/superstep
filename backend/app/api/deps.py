@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, Request, WebSocket
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ..core import config, security
+from ..engine import embeddings, llm
 from ..core.errors import AppError
 from ..services.notification_hub import NotificationHub, make_notification_hub
 from ..models.database import Database
@@ -213,7 +214,11 @@ def get_probes() -> Probes:
 
 @lru_cache
 def get_telemetry() -> Telemetry:
-    return Telemetry()  # exporters from OTEL_* / LANGSMITH_* env; no-op when none
+    t = Telemetry()  # exporters from OTEL_* / LANGSMITH_* env; no-op when none
+    if t.metrics_enabled:
+        llm.observe(t.model_call)  # per-call model latency and time to first token
+        embeddings.observe(t.embedding_call)  # embedding tokens and cost, including ingestion outside a run
+    return t
 
 
 def workflow_service() -> WorkflowService:

@@ -50,7 +50,10 @@ def parse(text: str) -> Dict[str, Any]:
 
 
 def _invoke(text: str, model: str, cred: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
-    return providers.get(cred.get("provider") or "").invoke(text, model, cred)
+    from .llm import measure
+    with measure(cred.get("provider") or "unknown", model) as m:
+        out, usage = providers.get(cred.get("provider") or "").invoke(text, model, cred)
+        return out, m.finish(usage)
 
 
 def ask(instructions: str, request: Dict[str, Any], model: str, cred: Dict[str, Any], timeout: float = TIMEOUT,

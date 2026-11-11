@@ -30,6 +30,7 @@ from urllib.parse import urlencode
 from ..core import config
 from ..core.errors import AppError
 from langgraph.types import Send
+from . import embeddings
 from .effects import Effects, call_tool
 from .errors import AwaitChild, Interrupt, ValidationError
 from .issues import Issue
@@ -595,7 +596,8 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                     _pause(effects, {"node": nid, "kind": "child", "run_id": cid, **extra}, AwaitChild(nid, cid, extra))
             else:
                 try:
-                    value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'))
+                    with embeddings.collect((lambda u: usage(nid, u)) if usage else None):  # a knowledge tool's query embedding
+                        value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'))
                     status,result='ok',text(value)
                     if browser and isinstance(value,dict):
                         browser_details=value

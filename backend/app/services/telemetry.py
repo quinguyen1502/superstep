@@ -82,6 +82,10 @@ def summarize(events: list[dict], started: float, ended: float) -> dict:
         if ev.get("type") in ("node_finished", "approval_review") and u and u.get("provider") != "workflow":  # a child run reports its own  # approval_review: the AI judge of a step
             llm = True; tin += u.get("tokens_in", 0); tout += u.get("tokens_out", 0)
             cost = None if cost is None or u.get("cost_usd") is None else cost + u["cost_usd"]
+        e = ev.get("embedding_usage")
+        if ev.get("type") == "node_finished" and e:  # query embeddings of Retriever nodes and knowledge tools: input tokens
+            tin += int(e.get("tokens_in") or 0)
+            if e.get("cost_usd"): llm = True; cost = None if cost is None else cost + e["cost_usd"]  # an unpriced embedding adds nothing
     return {"duration_ms": round(max(0.0, ended - started - waited) * 1000, 2), "tokens_in": tin, "tokens_out": tout,
             "cost_usd": (round(cost, 8) if cost is not None else None) if llm else 0.0, "error_count": errors}
 
@@ -298,6 +302,11 @@ class Telemetry:
                        "llm_unpriced": m.create_counter("studio.llm.unpriced", unit="{call}", description="LLM calls with no known price"),
                        "llm_errors": m.create_counter("studio.llm.errors", unit="{error}", description="Failed LLM calls by code"),
                        "llm_fallbacks": m.create_counter("studio.llm.fallbacks", unit="{call}", description="Calls answered by the fallback model"),
+                       "llm_duration": m.create_histogram("studio.llm.duration", unit="ms", description="Time of one model call (each fallback attempt on its own)"),
+                       "llm_ttft": m.create_histogram("studio.llm.ttft", unit="ms", description="Time to the first streamed token of one model call"),
+                       "embedding_tokens": m.create_counter("studio.embedding.tokens", unit="{token}", description="Input tokens sent to embedding models"),
+                       "embedding_cost": m.create_counter("studio.embedding.cost", unit="USD", description="Estimated embedding cost (priced models)"),
+                       "embedding_unpriced": m.create_counter("studio.embedding.unpriced", unit="{call}", description="Embedding calls to models with no price"),
                        "http_requests": m.create_counter("studio.http.server.requests", unit="{request}", description="HTTP requests"),
                        "http_duration": m.create_histogram("studio.http.server.duration", unit="ms", description="HTTP request duration"),
                        "ws": m.create_up_down_counter("studio.ws.connections", unit="{connection}", description="Open WebSocket connections"),
@@ -501,6 +510,21 @@ class Telemetry:
                                                    code=failed[0].get("code")))
         if ev.get("type") == "error" and not attempts and is_llm_code(ev.get("code")):
             self._m["llm_errors"].add(1, labels(code=ev["code"], provider=ev.get("provider") or "unknown", model=ev.get("model") or "unknown"))
+
+    def embedding_call(self, u: dict) -> None:
+        """One provider embedding call (engine.embeddings.observe), in a run or not: tokens and cost by model and source."""
+        if not self._m: return
+        a = labels(model=u.get("model"), provider=u.get("provider"), source=u.get("source") or "ingest")
+        self._m["embedding_tokens"].add(int(u.get("tokens_in") or 0), a)
+        if u.get("cost_usd") is None: self._m["embedding_unpriced"].add(1, a)
+        elif u["cost_usd"]: self._m["embedding_cost"].add(u["cost_usd"], a)
+
+    def model_call(self, rec: dict) -> None:
+        """One measured provider call (engine.llm.observe): duration, and time to first token for streamed calls."""
+        if not self._m or rec.get("kind") != "llm": return
+        a = labels(model=rec.get("model"), provider=rec.get("provider"), status=rec.get("status") or "ok")
+        if rec.get("duration_ms") is not None: self._m["llm_duration"].record(rec["duration_ms"], a)
+        if rec.get("ttft_ms") is not None: self._m["llm_ttft"].record(rec["ttft_ms"], a)
 
     def http_request(self, route: str, method: str, status: int, ms: float) -> None:
         if not self._m: return

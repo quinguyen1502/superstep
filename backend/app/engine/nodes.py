@@ -119,7 +119,9 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
         def fn(state):
             if ports.retrieve is None: raise RuntimeError("Retriever nodes need a knowledge base service")
             query = render(d.get("query", ""), state)
-            return {d["output_field"]: ports.retrieve(d["knowledge_base_id"], query, int(d.get("top_k") or 4))}
+            from . import embeddings
+            with embeddings.collect((lambda u: usage(node["id"], u)) if usage else None):  # query embedding counts on this node
+                return {d["output_field"]: ports.retrieve(d["knowledge_base_id"], query, int(d.get("top_k") or 4))}
     elif t == "mcp":
         def fn(state):
             from . import browser_approval

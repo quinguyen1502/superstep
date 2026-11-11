@@ -53,9 +53,25 @@ Each process reports `service.name` (`OTEL_SERVICE_NAME`, default
 | `studio.llm.unpriced` | counter | `model`, `provider` | Calls to a model with no known price |
 | `studio.llm.errors` | counter | `code`, `provider`, `model` | Failed model calls, by error code |
 | `studio.llm.fallbacks` | counter | `primary_provider`, `fallback_provider`, `code` | Calls answered by the fallback model |
+| `studio.llm.duration` | histogram, ms | `model`, `provider`, `status` | Time of one provider call; a failed primary and its fallback are two samples |
+| `studio.llm.ttft` | histogram, ms | `model`, `provider`, `status` | Time to the first streamed token; streamed calls only |
+| `studio.embedding.tokens` | counter | `model`, `provider`, `source` | Input tokens sent to an embedding model |
+| `studio.embedding.cost` | counter, USD | `model`, `provider`, `source` | Estimated cost of priced embedding calls |
+| `studio.embedding.unpriced` | counter | `model`, `provider`, `source` | Embedding calls to a model with no known price |
 
 A provider HTTP 429 is counted as `PROVIDER_RATE_LIMITED`, apart from other
-provider errors. Ad hoc runs use `workflow_id="adhoc"`.
+provider errors. Ad hoc runs use `workflow_id="adhoc"`. `status` on the
+latency histograms is `ok` or the provider error code. Mock (offline) calls
+are not measured.
+
+Embedding `source` is `ingest` (documents added or re-indexed) or `query`
+(searches, Retriever nodes and knowledge base tools of agents). The tokens of
+a query embedding inside a run count in that run's input tokens and cost, and
+appear on the node as `embedding_usage`; ingestion is counted in metrics only.
+Prices for `text-embedding-3-small`, `text-embedding-3-large` and
+`text-embedding-ada-002` are built in; add others with `STUDIO_PRICES` like
+chat models. An unpriced embedding adds its tokens to the run but leaves the
+run's cost as it is.
 
 ### Server
 
@@ -198,6 +214,7 @@ to get notified.
 | Run error rate | Runs ending in error or timeout over 15 minutes | above 20% for 15 minutes |
 | Provider auth or unreachable | `studio.llm.errors` with `PROVIDER_AUTH_FAILED` or `PROVIDER_UNREACHABLE` | any for 5 minutes |
 | Provider rate limited (warning) | `studio.llm.errors` with `PROVIDER_RATE_LIMITED` | any for 5 minutes |
+| Slow provider | p95 of `studio.llm.duration` for any provider over 10 minutes | above 30 seconds for 10 minutes |
 | Daily cost | Increase of `studio.cost` over 24 hours | above 50 USD |
 | Overdue schedules | `studio.schedules.overdue` | above 0 for 10 minutes |
 | Webhook failures | `studio.webhooks.failed` (last hour) | above 0 |

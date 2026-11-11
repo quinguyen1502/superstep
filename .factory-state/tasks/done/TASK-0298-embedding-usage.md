@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0298
 - Title: Embedding usage: tokens and cost
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -61,7 +61,16 @@ Operators see embedding tokens and cost per model in Grafana, and the run totals
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
+- 2026-11-10: Embedding token counts from provider responses (OpenAI usage, Ollama `prompt_eval_count`, estimate otherwise); prices for the OpenAI embedding models. Counters `studio.embedding.tokens`, `studio.embedding.cost`, `studio.embedding.unpriced` (model, provider, source). Runs add query embedding tokens to their totals.
+- 2026-11-10: Deviation: embedding usage is a separate `embedding_usage` field on node events; ingestion is metrics only.
+- 2026-11-10: Review REV-0283 and QA-0283. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #357.
 
 ## Handoff Notes
 
 - Use branch `factory/task-0298-embedding-usage` from `develop` when implementation begins.
+
+## Related Artifacts
+
+- Review: `.factory-state/artifacts/REV-0283-TASK-0298-embedding-usage.md`
+- QA: `.factory-state/artifacts/QA-0283-TASK-0298-embedding-usage.md`
