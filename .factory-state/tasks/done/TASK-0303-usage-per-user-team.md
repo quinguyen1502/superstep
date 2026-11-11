@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0303
 - Title: Per-user and per-team usage on the Usage page
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: DES-0006
 - Architecture IDs: DEC-0094, DEC-0095
@@ -63,6 +63,7 @@ Settings, Usage shows People and Teams tables for the window: runs, success rate
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
 - 2026-11-10: Usage API `users`, `teams` and `teams_shared_members`; Users and Teams cards with total rows and the shared-member note; en and vi strings. SQL only, no metric labels.
 - 2026-11-10: Review REV-0288 and QA-0288. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #359.
 
 ## Handoff Notes
 

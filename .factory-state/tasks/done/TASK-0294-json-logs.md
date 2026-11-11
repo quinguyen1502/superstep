@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0294
 - Title: Structured JSON logs with request, run and trace ids
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -71,6 +71,7 @@ With `STUDIO_LOG_FORMAT=json`, API and worker logs (including uvicorn access lin
 - 2026-11-10: Compose passes `STUDIO_LOG_FORMAT` and `STUDIO_LOG_LEVEL`; `deploy/observability/observability.env` sets `STUDIO_LOG_FORMAT=json`. `.env.example` and the configuration reference (en and vi) list both variables.
 - 2026-11-10: Deviation: `STUDIO_LOG_LEVEL` did not exist and was added; in text mode it only adds a plain handler on `studio` when set, so default output stays byte-identical. `trace_id` falls back to the run's trace id when no OTel span is current (run spans are not made current unless TASK-0295 instrumentation is on).
 - 2026-11-10: Review REV-0279 and QA-0279. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #355.
 
 ## Handoff Notes
 

@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0296
 - Title: Database and Redis server metrics in the observability profile
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -67,6 +67,7 @@ The Grafana dashboard gains Postgres (connections by state, transactions, deadlo
 - 2026-11-10: App pool gauges `studio.db.pool.in_use`, `studio.db.pool.idle`, `studio.db.pool.overflow`. Dashboard panels in the Database and Redis row; alerts Postgres connections near limit (80%) and Redis memory pressure (90%, only with `maxmemory`). Handbook en and vi, including the monitor role SQL for a managed database.
 - 2026-11-10: Deviation: per-state connections and cache ratio use the `sqlquery` receiver; the receivers were not run against live services in this environment.
 - 2026-11-10: Review REV-0281 and QA-0281. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #356.
 
 ## Handoff Notes
 

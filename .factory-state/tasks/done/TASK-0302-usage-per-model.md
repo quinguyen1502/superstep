@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0302
 - Title: Per-model breakdown on the Usage page
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: DES-0006
 - Architecture IDs: DEC-0094, DEC-0095
@@ -63,6 +63,7 @@ Settings, Usage shows a Models table for the chosen window: model, provider, cal
 - 2026-11-10: Usage API `models` block (model, provider, kind, calls, errors, tokens, cost, average duration) and `models_since`; Models card with sort and empty state; en and vi strings.
 - 2026-11-10: Deviation: client-side sort.
 - 2026-11-10: Review REV-0287 and QA-0287. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #359.
 
 ## Handoff Notes
 

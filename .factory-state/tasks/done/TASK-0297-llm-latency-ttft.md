@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0297
 - Title: Per-call LLM latency and time to first token
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -63,6 +63,7 @@ Grafana shows p50/p95 latency and time to first token per model and provider, an
 - 2026-11-10: `engine.llm.measure` wraps provider invokes in `call_llm`, `call_agent` and the approval judge; usage records gain `duration_ms` and, when streamed, `ttft_ms`. Histograms `studio.llm.duration` and `studio.llm.ttft` (model, provider, status). Dashboard latency and TTFT panels; Slow provider alert (p95 above 30 s for 10 minutes). Handbook en and vi.
 - 2026-11-10: Deviation: timing uses an engine observer hook instead of OTel calls inside the engine, to keep the layer rules.
 - 2026-11-10: Review REV-0282 and QA-0282. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #357.
 
 ## Handoff Notes
 
