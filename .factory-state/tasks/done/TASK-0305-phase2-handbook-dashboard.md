@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0305
 - Title: Observability handbook and dashboard pass for phase 2
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Requirement IDs: REQ-0095
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -61,6 +61,7 @@ The handbook observability page (en and vi) explains JSON logs and correlation, 
 - 2026-11-10: Owner accepted REQ-0095 and PLAN-0014 (pt280u, "go ahead with phase 2"). Moved from backlog to todo.
 - 2026-11-10: Handbook en and vi: JSON logs and `X-Request-ID`, request, SQL and Redis spans, dashboard rows table, configuration rows for the Postgres monitor role. Dashboard rows renamed Integrations and limits, Product health. Scripted check that the handbook alert list equals `rules.yaml`.
 - 2026-11-10: Review REV-0290 and QA-0290. Moved to review.
+- 2026-11-11: Owner approved merging the Phase 2 stack. Moved to done on PR #360.
 
 ## Handoff Notes
 
