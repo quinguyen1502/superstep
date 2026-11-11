@@ -177,15 +177,22 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - uses: astral-sh/setup-uv@v6
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
       - name: Install backend (backend/.venv, the path playwright.config.ts starts)
         working-directory: backend
         run: |
           uv venv --managed-python --python 3.12 .venv
           uv pip install --python .venv/bin/python -e ".[dev]"
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Install Deno
+        run: |
+          deno_dir="$RUNNER_TEMP/deno"
+          deno_zip="$deno_dir/deno.zip"
+          mkdir -p "$deno_dir"
+          curl --fail --silent --show-error --location https://github.com/denoland/deno/releases/download/v2.9.8/deno-x86_64-unknown-linux-gnu.zip --output "$deno_zip"
+          echo "e890975bc2549807bbcc0b584ffafda72cc7c93349dd99c80483dd784f6c4609  $deno_zip" | sha256sum --check
+          python3 -m zipfile -e "$deno_zip" "$deno_dir"
+          chmod +x "$deno_dir/deno"
+          echo "$deno_dir" >> "$GITHUB_PATH"
       - name: Install frontend
         working-directory: .
         run: npm ci
