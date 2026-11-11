@@ -7,7 +7,7 @@
 - Task ID: TASK-0299
 - QA Owner: Grok (advisory)
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-11
 - Outcome: pass
 
 ## Acceptance Criteria Coverage
@@ -20,6 +20,7 @@
 
 - `backend/.venv/bin/python -m pytest tests/test_activity_metrics.py tests/test_metrics.py tests/test_layers.py`.
 - Full backend suite and `factory verify run --profile full`, `factory validate` (see the PR).
+- The required Image check on PR #358 failed while building the standalone sandbox service because its Dockerfile omitted `app.engine.activity`. A local import using only the Dockerfile's application files reproduced the failure and passed after adding the module to the image.
 
 ## QA Decision
 
