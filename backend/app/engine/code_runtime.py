@@ -17,7 +17,7 @@ from .issues import Issue
 from ..core import config
 from ..core.errors import AppError
 from ..core.logging import get_logger
-from . import code_languages as langs
+from . import activity, code_languages as langs
 from .sandbox import container, remote
 
 SOURCE_MAX = 64 * 1024
@@ -250,26 +250,33 @@ def run_code(source: str, state: Dict[str, Any], *, node: str = "code", timeout:
     limit = min(float(timeout), config.code_max_seconds()) if timeout else float(config.code_max_seconds())
     payload = json.dumps({"source": source, "stdout_max": STDOUT_MAX, "state": json.loads(data)}, ensure_ascii=False)
     runtime = config.code_runtime(); runner = RUNNERS[runtime]
-    slot = _slot(); t0 = time.perf_counter()
-    if not slot.acquire(timeout=limit): raise AppError("CODE_TIMEOUT", node=node, seconds=f"{limit:g}")
-    try: out, err, code, stopped = runner.exchange(lang, payload, limit, cancelled)
-    finally: slot.release()
-    ms = round((time.perf_counter() - t0) * 1000, 2)
-    if stopped == "timeout": raise CodeFailure("CODE_TIMEOUT", {"runtime": runtime}, node=node, seconds=f"{limit:g}")
-    if stopped == "cancelled": raise AppError("CODE_FAILED", node=node, error="the run was cancelled")
-    line = next((x for x in reversed(out.splitlines()) if x.strip()), "")
-    if code in lang.memory_exit_codes and not line: raise CodeFailure("CODE_MEMORY", {"runtime": runtime}, node=node, limit=config.code_memory())
-    if len(line.encode()) > RESULT_MAX + STDOUT_MAX: raise AppError("CODE_TOO_LARGE", node=node, what="result", max_kb=RESULT_MAX // 1024)
-    try: res = json.loads(line)
-    except ValueError:
-        reason = (err or out).strip().splitlines()[-1:] or [f"exit code {code}"]
-        if "Unable to find image" in err or "No such image" in err: _checked.pop(lang.image(), None)
-        raise AppError("CODE_RUNTIME_UNAVAILABLE", reason=reason[0][:300]) from None
-    output = {"stdout": res.get("stdout") or "", "runtime": runtime, "duration_ms": ms}
-    if res.get("ok"): return CodeResult(res.get("value"), output["stdout"], runtime, ms)
-    output["traceback"] = res.get("traceback") or ""
-    kind = res.get("kind")
-    if kind == "not_json": raise CodeFailure("CODE_RESULT_NOT_JSON", output, node=node, type=res.get("type") or "?")
-    if kind == "invalid": raise CodeFailure("CODE_INVALID", output, node=node, reason=res.get("error") or "invalid code")
-    raise CodeFailure("CODE_FAILED", output, node=node, error=(res.get("error") or "an error")[:300])
+    ran = {"status": "CODE_FAILED"}; started = time.perf_counter()
+    try:
+        slot = _slot(); t0 = time.perf_counter()
+        if not slot.acquire(timeout=limit): raise AppError("CODE_TIMEOUT", node=node, seconds=f"{limit:g}")
+        try: out, err, code, stopped = runner.exchange(lang, payload, limit, cancelled)
+        finally: slot.release()
+        ms = round((time.perf_counter() - t0) * 1000, 2)
+        if stopped == "timeout": raise CodeFailure("CODE_TIMEOUT", {"runtime": runtime}, node=node, seconds=f"{limit:g}")
+        if stopped == "cancelled": raise AppError("CODE_FAILED", node=node, error="the run was cancelled")
+        line = next((x for x in reversed(out.splitlines()) if x.strip()), "")
+        if code in lang.memory_exit_codes and not line: raise CodeFailure("CODE_MEMORY", {"runtime": runtime}, node=node, limit=config.code_memory())
+        if len(line.encode()) > RESULT_MAX + STDOUT_MAX: raise AppError("CODE_TOO_LARGE", node=node, what="result", max_kb=RESULT_MAX // 1024)
+        try: res = json.loads(line)
+        except ValueError:
+            reason = (err or out).strip().splitlines()[-1:] or [f"exit code {code}"]
+            if "Unable to find image" in err or "No such image" in err: _checked.pop(lang.image(), None)
+            raise AppError("CODE_RUNTIME_UNAVAILABLE", reason=reason[0][:300]) from None
+        output = {"stdout": res.get("stdout") or "", "runtime": runtime, "duration_ms": ms}
+        if res.get("ok"): ran["status"] = "ok"; return CodeResult(res.get("value"), output["stdout"], runtime, ms)
+        output["traceback"] = res.get("traceback") or ""
+        kind = res.get("kind")
+        if kind == "not_json": raise CodeFailure("CODE_RESULT_NOT_JSON", output, node=node, type=res.get("type") or "?")
+        if kind == "invalid": raise CodeFailure("CODE_INVALID", output, node=node, reason=res.get("error") or "invalid code")
+        raise CodeFailure("CODE_FAILED", output, node=node, error=(res.get("error") or "an error")[:300])
+    except AppError as e:
+        ran["status"] = e.code; raise
+    finally:
+        activity.emit("sandbox", runtime=runtime, language=lang.id, status=ran["status"],
+                      duration_ms=round((time.perf_counter() - started) * 1000, 2))
 

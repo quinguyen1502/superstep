@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, Request, WebSocket
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ..core import config, security
-from ..engine import embeddings, llm
+from ..engine import activity, embeddings, llm
 from ..core.errors import AppError
 from ..services.notification_hub import NotificationHub, make_notification_hub
 from ..models.database import Database
@@ -218,6 +218,7 @@ def get_telemetry() -> Telemetry:
     if t.metrics_enabled:
         llm.observe(t.model_call)  # per-call model latency and time to first token
         embeddings.observe(t.embedding_call)  # embedding tokens and cost, including ingestion outside a run
+        activity.observe(t.activity_event)  # channels, MCP, browser, sandbox and product limits
     return t
 
 

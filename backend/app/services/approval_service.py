@@ -11,7 +11,7 @@ from typing import Callable, Optional
 from ..core import config, crypto
 from ..core.errors import AppError
 from ..core.logging import get_logger
-from ..engine import approval_judge, approval_policy, deadlines
+from ..engine import activity, approval_judge, approval_policy, deadlines
 from ..models import ApprovalAudit, ApprovalRequest, ApprovalWait
 from ..repositories import ApprovalRepository, RunRepository, UserRepository, WorkflowRepository
 from .approval_channels import ApprovalChannel, ApprovalMessage
@@ -249,8 +249,10 @@ class ApprovalService:
         try:
             ref = self.adapter(kind).send_request(self._secrets(c), target, msg)
             self.repo.set_ref(r.id, ref); self._audit(owner, kind, "requested", r)
+            activity.emit("channel", kind=kind, direction="out", status="ok")
         except AppError as e:
             self.repo.set_ref(r.id, None, "failed"); self._audit(owner, kind, "send_failed", r, code=e.code)
+            activity.emit("channel", kind=kind, direction="out", status=e.code)
             log.warning("approval request for run %s via %s failed: %s", rid, kind, e.message)
         return r
 
@@ -302,6 +304,7 @@ class ApprovalService:
         code, r, decision = self.decide(kind, c.id, cb.token, cb.external_user, team)
         presser = self.repo.user_for(kind, cb.external_user, team) if cb.external_user else None
         mine = self._lang(presser or (r.owner if r else None))  # private answers: the presser's language, else the owner's
+        activity.emit("channel", kind=kind, direction="in", status=code or "ok")  # an approval button press
         if code:
             a.acknowledge(sec, cb, text(mine, code, kind=a.label), accepted=False)
             return {"outcome": "refused", "code": code}

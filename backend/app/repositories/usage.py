@@ -4,6 +4,7 @@ parent, whose node usage already includes the child's tokens and cost."""
 from sqlalchemy import BigInteger, and_, case, cast, func, select
 from ..models import Run
 from ..models.approval import ApprovalWait
+from ..models.browser_session import BrowserSession
 from ..models.database import Database
 from ..models.webhook_delivery import WebhookDelivery
 from ..models.workflow import Workflow
@@ -61,6 +62,11 @@ class UsageRepository:
             expired = s.scalar(select(func.count()).where(ApprovalWait.status == "closed", ApprovalWait.outcome == "expired",
                                                           ApprovalWait.closed_at >= since))
         return {"waiting": int(waiting or 0), "oldest_created": oldest, "expired": int(expired or 0)}
+
+    def active_browsers(self, now: float) -> int:
+        with self.db.session() as s:
+            return int(s.scalar(select(func.count()).where(BrowserSession.status.in_(("new", "starting", "ready", "renewing")),
+                                                           BrowserSession.expires > now)) or 0)
 
     def webhooks(self, since: float) -> dict:
         with self.db.session() as s:

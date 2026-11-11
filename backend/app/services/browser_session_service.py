@@ -8,10 +8,14 @@ from pydantic import ValidationError
 from ..core import config, crypto
 from ..core.errors import AppError
 from ..engine.browser_contract import ARGUMENT_MODELS, MUTATING_OPERATIONS, BrowserSettings, ExecutionContext, WorkerResult
+from ..engine import activity
 from ..engine.browser_worker import LocalBrowserWorker, BrowserWorkerError
 from ..engine.browser_remote import RemoteBrowserWorker, approved_transport
 from ..models.browser_session import BrowserSession
 from .browser_profile_service import BrowserProfileService, browser_configuration
+
+
+SESSION_ENDS = frozenset({'closed', 'lost', 'revoked', 'expired'})  # bounded `status` of studio.browser.sessions
 
 
 def digest(value): return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=False,allow_nan=False).encode()).hexdigest()
@@ -97,7 +101,8 @@ class BrowserSessionService:
     def close(self, row, status='closed'):
         if row is None:return True
         if row.status not in {'new','starting','ready','renewing'} and not row.cleanup_pending:return True
-        self.repo.transition(row.id,['new','starting','ready','renewing'],status,cleanup_pending=bool(row.worker_id))
+        if self.repo.transition(row.id,['new','starting','ready','renewing'],status,cleanup_pending=bool(row.worker_id)):
+            activity.emit('browser_session',status=status if status in SESSION_ENDS else 'closed')
         if self.approvals:self.approvals.intents.close_session(row.id)
         return self._cleanup(self.repo.get(row.id))
 
@@ -218,6 +223,7 @@ class BrowserRunScope:
                 self._current(self.service.repo.get(row.id))
                 worker.start(secrets=secrets,profile_seed=seed,**({} if remote else {'approved_proxies':self.service.approved_proxies,'operator_default':self.service.operator_default}))
                 if not self.service.repo.transition(row.id,['starting'],'ready',cleanup_pending=False):worker.close();raise BrowserWorkerError()
+                activity.emit('browser_session',status='opened')
                 return worker
             except BaseException:
                 self.service.close(self.service.repo.get(row.id),'lost');raise
@@ -249,6 +255,13 @@ class BrowserRunScope:
         return self.service.approvals.prepare(self,node,group,ticket_id,operation,arguments,force)
 
     def call(self,group,ticket_id,operation,arguments):
+        try:out=self._call(group,ticket_id,operation,arguments)
+        except Exception as error:
+            activity.emit('browser_action',status='error',code=activity.error_code(error,'BROWSER_ACTION_FAILED'));raise
+        activity.emit('browser_action',status=str(out.get('status') or 'unknown'),code='')
+        return out
+
+    def _call(self,group,ticket_id,operation,arguments):
         row,ticket=self.ticket(group,ticket_id,operation,arguments)
         worker=None;claimed=None;dispatched=False
         try:

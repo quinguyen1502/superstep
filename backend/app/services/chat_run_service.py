@@ -13,6 +13,7 @@ from typing import Optional
 from ..core import config, permissions as P
 from ..core.errors import AppError
 from ..core.logging import get_logger
+from ..engine import activity
 from ..engine.limits import size
 from ..models import ApprovalAudit, ChatMessage, Run, WorkflowChatTrigger
 from ..repositories import ChatMessageRepository, ChatTriggerRepository, RunRepository, UserRepository, WorkflowRepository
@@ -63,6 +64,11 @@ class ChatRunService:
 
     def receive(self, rows: list, m: IncomingMessage) -> dict:
         """rows: the (connection, secrets) the request verified against. Stores and queues a message that matches a trigger."""
+        out = self._receive(rows, m)
+        if rows: activity.emit("channel", kind=rows[0][0].kind, direction="in", status=out.get("outcome") or "ok")
+        return out
+
+    def _receive(self, rows: list, m: IncomingMessage) -> dict:
         hit = COMMAND.match(m.text); found = None
         for c, _ in rows if hit else []:
             if (t := self.triggers.find(c.id, m.place, hit.group(1).lower())) is not None: found = (c, t); break
@@ -227,8 +233,11 @@ class ChatRunService:
         return f"{msg}\n{text(lang, 'chat_open', link=f'{base}/workflows/{wid}?run={rid}')}" if base else msg
 
     def _say(self, a: ApprovalChannel, secrets: dict, m: ChatMessage, msg: str) -> None:
-        try: a.reply(secrets, json.loads(m.ref), msg)
-        except AppError as e: log.warning("chat reply via %s failed: %s", m.kind, e.message)
+        try:
+            a.reply(secrets, json.loads(m.ref), msg); activity.emit("channel", kind=m.kind, direction="out", status="ok")
+        except AppError as e:
+            activity.emit("channel", kind=m.kind, direction="out", status=e.code)
+            log.warning("chat reply via %s failed: %s", m.kind, e.message)
 
     def _audit(self, owner: str, m: ChatMessage, action: str, code=None, actor=None, run_id=None) -> None:
         try: self.approvals.audit(ApprovalAudit(id=uuid.uuid4().hex[:12], owner=owner, request_id=None, run_id=run_id, workflow_id=m.workflow_id,
