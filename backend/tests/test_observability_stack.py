@@ -14,6 +14,14 @@ SERIES = re.compile(r"\bstudio_[a-z0-9_]+")
 GROUPING = re.compile(r"\b(?:by|without)\s*\(([^)]*)\)")
 MATCHER = re.compile(r"\{([^}]*)\}")
 EXTRA_LABELS = {"le", "instance", "job"}
+COLLECTOR = OBS / "otel-collector.yaml"
+# Postgres and Redis server metrics come from collector receivers, not the backend: the receivers' own names (OTel
+# contrib 0.114, default or enabled in the collector config) plus the sqlquery metrics defined there.
+RECEIVER_SERIES = re.compile(r"\b(?:postgresql|redis)_[a-z0-9_]+")
+RECEIVER_METRICS = {"postgresql_backends", "postgresql_connection_max", "postgresql_commits", "postgresql_rollbacks", "postgresql_deadlocks",
+                    "postgresql_db_size", "redis_memory_used", "redis_maxmemory", "redis_clients_connected", "redis_commands",
+                    "redis_keys_evicted", "redis_db_keys"}
+RECEIVER_LABELS = {"state", "db"}
 
 
 def emitted() -> set[str]:
@@ -23,14 +31,22 @@ def emitted() -> set[str]:
     return {n.replace(".", "_") for n in names}
 
 
+def receiver_metrics() -> set[str]:
+    col = yaml.safe_load(COLLECTOR.read_text())
+    sql = {m["metric_name"].replace(".", "_") for q in col["receivers"]["sqlquery/postgres"]["queries"] for m in q["metrics"]}
+    return RECEIVER_METRICS | sql
+
+
 def check(expr: str, known: set[str]) -> list[str]:
     bad = []
     for s in SERIES.findall(expr):
         base = re.sub(r"_(bucket|sum|count)$", "", s)
         if s not in known and base not in known: bad.append(s)
+    servers = RECEIVER_SERIES.findall(expr)
+    bad += [s for s in servers if s not in receiver_metrics()]
     used = {x.strip() for g in GROUPING.findall(expr) for x in g.split(",") if x.strip()}
     used |= {m.split("=")[0].strip(" !~") for g in MATCHER.findall(expr) for m in g.split(",") if "=" in m}
-    bad += sorted(f"label {x}" for x in used - telemetry.LABELS - EXTRA_LABELS)
+    bad += sorted(f"label {x}" for x in used - telemetry.LABELS - EXTRA_LABELS - (RECEIVER_LABELS if servers else set()))
     return bad
 
 
@@ -58,7 +74,10 @@ def test_dashboard_uses_emitted_metrics_only():
     used = {re.sub(r"_(bucket|sum|count)$", "", s) for e in exprs for s in SERIES.findall(e)}
     # every gauge and counter that matters for operators has a panel
     assert {"studio_ready_db", "studio_ready_redis", "studio_worker_heartbeat_age", "studio_llm_unpriced", "studio_llm_fallbacks",
-            "studio_approvals_waiting", "studio_webhooks_failed", "studio_schedules_disabled"} <= used
+            "studio_approvals_waiting", "studio_webhooks_failed", "studio_schedules_disabled", "studio_db_pool_in_use"} <= used
+    servers = {s for e in exprs for s in RECEIVER_SERIES.findall(e)}
+    assert {"postgresql_activity_connections", "postgresql_commits", "postgresql_deadlocks", "postgresql_cache_hits", "postgresql_db_size",
+            "redis_memory_used", "redis_clients_connected", "redis_commands", "redis_keys_evicted", "redis_db_keys"} <= servers
     assert all(p.get("datasource", {}).get("uid") in (None, "prometheus") for p in d["panels"])
 
 
@@ -68,7 +87,7 @@ def test_alert_rules_cover_the_minimum_list():
     titles = {r["title"] for r in rules}
     assert {"Instance down", "Database down", "Redis down", "HTTP 5xx share", "Queue backlog (depth)", "Queue backlog (oldest run)",
             "Worker missing", "Run error rate", "Provider auth or unreachable", "Daily cost", "Overdue schedules", "Webhook failures",
-            "In-memory run bus"} <= titles
+            "In-memory run bus", "Postgres connections near limit", "Redis memory pressure"} <= titles
     known = emitted()
     for r in rules:
         assert len(r["uid"]) <= 40 and re.fullmatch(r"[A-Za-z0-9_-]+", r["uid"])
@@ -99,3 +118,21 @@ def test_compose_profile_is_wired():
     port = col["exporters"]["prometheus"]["endpoint"].rsplit(":", 1)[1]
     prom = yaml.safe_load((OBS / "prometheus.yml").read_text())
     assert prom["scrape_configs"][0]["static_configs"][0]["targets"] == [f"otel-collector:{port}"]
+
+
+def test_collector_reads_postgres_and_redis_without_committed_credentials():
+    col = yaml.safe_load(COLLECTOR.read_text())
+    rec = col["receivers"]
+    assert col["service"]["pipelines"]["metrics"]["receivers"] == ["otlp", "postgresql", "sqlquery/postgres", "redis"]
+    assert rec["postgresql"]["username"] == "${env:POSTGRES_MONITOR_USER}" and rec["postgresql"]["password"] == "${env:POSTGRES_MONITOR_PASSWORD}"
+    assert "password=${env:POSTGRES_MONITOR_PASSWORD}" in rec["sqlquery/postgres"]["datasource"]
+    assert rec["postgresql"]["metrics"]["postgresql.deadlocks"]["enabled"] and rec["redis"]["metrics"]["redis.maxmemory"]["enabled"]
+    compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text())["services"]
+    env = compose["otel-collector"]["environment"]
+    assert env["POSTGRES_MONITOR_PASSWORD"] == "${POSTGRES_MONITOR_PASSWORD:-}" and env["REDIS_MONITOR_ENDPOINT"] == "redis:6379"
+    mon = compose["postgres-monitor"]
+    assert mon["profiles"] == ["observability"] and mon["environment"]["MONITOR_PASSWORD"] == "${POSTGRES_MONITOR_PASSWORD:-}"
+    script = (OBS / "postgres-monitor.sh").read_text()
+    assert "GRANT pg_monitor" in script and "exit 0" in script  # read-only role; skipped without a password
+    for line in (ROOT / ".env.example").read_text().splitlines():
+        if line.startswith("POSTGRES_MONITOR_PASSWORD="): assert line == "POSTGRES_MONITOR_PASSWORD="

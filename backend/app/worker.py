@@ -12,7 +12,7 @@ async def main() -> None:
     get_telemetry().instrument(get_db().engine)  # SQL and Redis spans (no-op unless STUDIO_OTEL_INSTRUMENT is on)
     bootstrap(get_db(), jobs=get_job_queue()); code_runtime.warn_if_unisolated()
     w = run_worker(); w.start(config.worker_concurrency())
-    get_telemetry().watch(get_probes(), w, product=lambda: usage_service().gauges())  # metric gauges (no-op unless STUDIO_OTEL_METRICS is on)
+    get_telemetry().watch(get_probes(), w, product=lambda: usage_service().gauges(), pool=get_db().pool_status)  # metric gauges (no-op unless STUDIO_OTEL_METRICS is on)
     get_logger("worker").info("worker started (%s queue, concurrency %s)", w.jobs.kind, config.worker_concurrency())
     await asyncio.gather(*w._tasks)
 

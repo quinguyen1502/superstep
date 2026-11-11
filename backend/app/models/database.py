@@ -41,6 +41,13 @@ class Database:
         with self.engine.connect() as conn:
             return conn.execute(select(literal(1))).scalar() == 1
 
+    def pool_status(self) -> dict:
+        """Connections of this process's pool: checked out (in use), idle in the pool, and overflow beyond pool_size.
+        Empty for pools that do not count (e.g. a static pool)."""
+        pool = self.engine.pool
+        try: return {"in_use": pool.checkedout(), "idle": pool.checkedin(), "overflow": max(0, pool.overflow())}
+        except AttributeError: return {}
+
     def migrate(self) -> None:
         """Upgrade to the latest Alembic revision (idempotent; adopts pre-Alembic SQLite files).
         Serialised across processes: a Postgres advisory lock held for the migration transaction,

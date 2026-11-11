@@ -60,7 +60,7 @@ def create_app() -> FastAPI:
         if w:
             w.start(config.worker_concurrency())
             await w.recover_unfinished()  # in-memory queue: runs that were going when the server stopped
-        get_telemetry().watch(get_probes(), w, product=lambda: usage_service().gauges())  # metric gauges (no-op unless STUDIO_OTEL_METRICS is on)
+        get_telemetry().watch(get_probes(), w, product=lambda: usage_service().gauges(), pool=get_db().pool_status)  # metric gauges (no-op unless STUDIO_OTEL_METRICS is on)
         sweeper = asyncio.create_task(expire_waiting_loop())  # waiting runs past STUDIO_WAIT_TTL -> expired
         async with mcp_app.running(): yield
         sweeper.cancel()

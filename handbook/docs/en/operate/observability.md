@@ -86,6 +86,9 @@ path. A request that matches no route is labelled `unmatched`.
 | `studio.jobs.reaped` | counter | none | Jobs requeued after their lease expired |
 | `studio.jobs.recovered` | counter | none | Unfinished runs requeued at start-up |
 | `studio.run_bus.in_memory` | gauge | none | 1 when the process runs without `REDIS_URL` |
+| `studio.db.pool.in_use` | gauge | none | Database connections checked out of this process's pool |
+| `studio.db.pool.idle` | gauge | none | Idle connections in this process's pool |
+| `studio.db.pool.overflow` | gauge | none | Connections beyond the pool size |
 
 The probe gauges reuse the checks of `/api/ready`, at most once every 5
 seconds per process.
@@ -152,8 +155,28 @@ unpriced calls, model errors, fallbacks) and product health.
 In Prometheus the names have underscores and no unit suffix:
 `studio.http.server.requests` becomes `studio_http_server_requests`, and the
 collector sets the `job` (service name) and `instance` (instance id) labels.
-The Postgres and Redis servers themselves are not scraped; add their
-exporters if you need their internals.
+
+### Postgres and Redis servers
+
+The collector also reads the Postgres and Redis servers of the Compose stack
+itself, with its `postgresql`, `sqlquery` and `redis` receivers, so
+Prometheus still scrapes only the collector. The dashboard shows Postgres
+connections by state against `max_connections`, commits, rollbacks and
+deadlocks, the cache hit ratio and the database size, and Redis memory
+against `maxmemory`, clients, operations per second, evictions and keys.
+Without Redis those panels stay empty.
+
+The collector signs in to Postgres with a read-only role in `pg_monitor`
+(statistics views, no table data). Set `POSTGRES_MONITOR_PASSWORD` (and
+optionally `POSTGRES_MONITOR_USER`, default `superstep_monitor`) in `.env`;
+the one-shot `postgres-monitor` service creates or updates the role on each
+`up`. With an empty password no role is created and the Postgres panels
+stay empty. For a managed database, create the role yourself:
+
+```sql
+CREATE ROLE superstep_monitor LOGIN PASSWORD 'choose-a-password';
+GRANT pg_monitor TO superstep_monitor;
+```
 
 ## Alerts
 
@@ -180,6 +203,8 @@ to get notified.
 | Webhook failures | `studio.webhooks.failed` (last hour) | above 0 |
 | Approvals waiting too long | `studio.approvals.oldest_age` | above 1 day |
 | In-memory run bus | `studio.run_bus.in_memory` | 1 for 5 minutes |
+| Postgres connections near limit | Postgres connections over `max_connections` | above 80% for 5 minutes |
+| Redis memory pressure | Redis used memory over `maxmemory`, only when `maxmemory` is set | above 90% for 5 minutes |
 
 The daily cost covers priced runs only; the dashboard shows unpriced calls
 next to it. Without Redis, the in-memory bus alert fires on purpose: use
