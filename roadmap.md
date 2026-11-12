@@ -477,7 +477,7 @@ REQ-0088, DEC-0087, PLAN-0008 (owner-authorised 2026-11-07).
 - TASK-0263 — service stubs fail fast in live runs; missing targets fail. **done**.
 - TASK-0264 — export model fallback. **done**.
 - TASK-0265 — HTTP safeguards in exports. **done**.
-- TASK-0266 — remaining gaps. Adapters moved to REQ-0089. On 2026-11-07 the owner declined cross-language code nodes and authorised the other three as REQ-0090.
+- The former TASK-0266 proposal was removed from the backlog. Adapters moved to REQ-0089. On 2026-11-07 the owner declined cross-language code nodes and authorised the other three as REQ-0090.
 
 ## Code export parity and adapters
 
@@ -492,7 +492,7 @@ REQ-0089, DEC-0088, PLAN-0009 (owner-authorised 2026-11-07, "Do it").
 
 ## Export slots, approvals and managed connections
 
-REQ-0090, DEC-0090, PLAN-0010 (owner-authorised 2026-11-07). Cross-language code nodes stay declined on TASK-0266.
+REQ-0090, DEC-0090, PLAN-0010 (owner-authorised 2026-11-07). The owner declined cross-language code nodes on 2026-11-07.
 
 - TASK-0273 — per-node LLM credential slots. **done** (REV-0259, QA-0259) on PR #336.
 - TASK-0274 — approval channel, deadline, reminders and AI review. **done** (REV-0260, QA-0260) on PR #336.
