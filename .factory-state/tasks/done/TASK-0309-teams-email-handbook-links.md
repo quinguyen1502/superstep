@@ -5,16 +5,18 @@
 - Project: superstep
 - Task ID: TASK-0309
 - Title: Teams and e-mail handbook links in Channels settings
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-12
 - Requirement IDs: REQ-0096
 - Design IDs: DES-0005
 - Architecture IDs: DEC-0086
 - Plan: PLAN-0015
 - Phase: docs
 - Size: S
+- Review: `.factory-state/artifacts/REV-0294-TASK-0309-teams-email-handbook-links.md`
+- QA: `.factory-state/artifacts/QA-0294-TASK-0309-teams-email-handbook-links.md`
 
 ## Objective
 
@@ -58,6 +60,12 @@ When adding a Teams or e-mail approval channel in Settings, Channels, the help t
 ## Activity Log
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0096 and PLAN-0015.
+
+- 2026-11-12: Owner approved implementation. Added stable locale anchors, connection help links and link assertions.
+
+- 2026-11-12: The handbook unit test, Playwright channel setup flow and strict builds for both handbook languages passed.
+
+- 2026-11-12: Owner approved merge. Moved to done on PR #364.
 
 ## Handoff Notes
 

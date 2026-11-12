@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0096
-- Status: Proposed 2026-11-10 (Asia/Saigon); awaiting owner acceptance
+- Status: Accepted 2026-11-12 by the owner, who approved all four remaining tasks
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-10
 - Source: Owner chat 2026-11-10 (pt279u, asking to file tasks for the remaining work); REQ-0087 deferred Teams and e-mail links to a future requirement on 2026-11-07

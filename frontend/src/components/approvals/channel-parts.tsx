@@ -16,7 +16,7 @@ import { CopyField } from '@/components/copy-field'
 import { ChannelLogo } from '@/components/approvals/channel-logo'
 import { HandbookLink } from '@/components/handbook-link'
 
-const GUIDE: Record<string, string> = { slack: 'slack', telegram: 'telegram', whatsapp: 'whatsapp-cloud-api' }
+const GUIDE: Record<string, string> = { slack: 'slack', telegram: 'telegram', whatsapp: 'whatsapp-cloud-api', email: 'email', teams: 'teams' }
 
 export { ErrorAlert } from './error-alert'
 

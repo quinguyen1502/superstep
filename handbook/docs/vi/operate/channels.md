@@ -81,9 +81,13 @@ lời yêu cầu.
 liên kết tài khoản chat, và việc mở link (ví dụ do trình quét thư) không quyết
 định gì.
 
-- **Email** dùng cấu hình SMTP của studio (`SMTP_HOST`, …). Đích của node là
+### Email {#email}
+
+Email dùng cấu hình SMTP của studio (`SMTP_HOST`, …). Đích của node là
   một hoặc nhiều địa chỉ, cách nhau bằng dấu phẩy.
-- **Teams:** trong kênh, thêm template của Workflows "Post to a channel when a
+### Microsoft Teams {#teams}
+
+Trong kênh, thêm template của Workflows "Post to a channel when a
   webhook request is received", rồi dán URL HTTPS của nó. Node không cần đích.
   Yêu cầu là một Adaptive Card, kết quả được đăng thành card thứ hai.
 

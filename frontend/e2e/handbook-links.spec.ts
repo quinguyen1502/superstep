@@ -29,10 +29,13 @@ test('channels: public URL missing and setup helpers link to the handbook in the
   await expect(help).toHaveAccessibleName(literally(vt('docs.exposeLocalAria')))
 
   // add-connection helpers point at each platform's section
-  for (const [kind, anchor] of [['slack', 'slack'], ['whatsapp', 'whatsapp-cloud-api']] as const) {
+  for (const [kind, anchor] of [['slack', 'slack'], ['whatsapp', 'whatsapp-cloud-api'], ['email', 'email'], ['teams', 'teams']] as const) {
     const card = page.locator(`[data-testid=channel-card-${kind}]`)
     await card.locator(`#channel-card-${kind}-toggle`).click(); await card.locator(`#channel-card-${kind}-tab-user`).click()
-    await expect(card.locator(`#add-${kind}-user-guide`)).toHaveAttribute('href', `${BASE}vi/operate/channels/#${anchor}`)
+    const guide = card.locator(`#add-${kind}-user-guide`)
+    await expect(guide).toHaveAttribute('href', `${BASE}vi/operate/channels/#${anchor}`)
+    await expect(guide).toHaveAttribute('target', '_blank')
+    await expect(guide).toHaveAttribute('rel', 'noopener noreferrer')
   }
   await tg.locator('#channel-card-telegram-tab-user').click()
   const open = tg.locator('#add-telegram-user-open'); if (await open.isVisible()) await open.click()
