@@ -81,9 +81,13 @@ These are link channels: the message has Approve and Reject links to
 there is no chat account to link, and opening a link (for example by a mail
 scanner) decides nothing.
 
-- **E-mail** uses the studio's SMTP settings (`SMTP_HOST`, …). The node's
+### E-mail {#email}
+
+E-mail uses the studio's SMTP settings (`SMTP_HOST`, …). The node's
   target is one or more comma-separated addresses.
-- **Teams:** in the channel, add the Workflows template "Post to a channel when
+### Microsoft Teams {#teams}
+
+In the channel, add the Workflows template "Post to a channel when
   a webhook request is received", then paste its HTTPS URL. The node needs no
   target. The request is an Adaptive Card, and the outcome is posted as a
   second card.
