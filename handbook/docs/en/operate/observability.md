@@ -183,7 +183,7 @@ docker compose --env-file .env --env-file deploy/observability/observability.env
 
 Grafana signs in as `admin` with `GRAFANA_ADMIN_PASSWORD`, which defaults to
 `admin`. Set your own password in `.env` before you expose Grafana anywhere.
-`PROMETHEUS_RETENTION` (default `15d`) sets how long Prometheus keeps data.
+`PROMETHEUS_RETENTION` (default `31d`) sets how long Prometheus keeps data. Keep at least 30 days of samples for the 30-day SLO.
 
 The **Superstep overview** dashboard in the **Superstep** folder has these
 rows:
@@ -256,6 +256,8 @@ to get notified.
 | In-memory run bus | `studio.run_bus.in_memory` | 1 for 5 minutes |
 | Postgres connections near limit | Postgres connections over `max_connections` | above 80% for 5 minutes |
 | Redis memory pressure | Redis used memory over `maxmemory`, only when `maxmemory` is set | above 90% for 5 minutes |
+| Fast SLO burn | Both the 5-minute and 1-hour burn rates exceed 14.4×. |
+| Slow SLO burn | Both the 30-minute and 6-hour burn rates exceed 6×. |
 
 The daily cost covers priced runs only; the dashboard shows unpriced calls
 next to it. Without Redis, the in-memory bus alert fires on purpose: use
@@ -393,3 +395,11 @@ a note; it shows under **Product health** and in `studio.schedules.disabled`.
 In **Settings → Usage**, administrators can set a monthly USD budget for a user or team. Spend comes from priced model-usage rows for runs completed this calendar month. An unpriced-row count shows when known spend is a lower bound. Team spend follows current membership. Set `STUDIO_TIMEZONE` to an IANA zone to choose the calendar boundaries. The default is UTC.
 
 New recorded usage triggers a warning at 80% and 100%, once per threshold per budget each month. A user budget notifies the user. A team budget notifies its active members. The existing notification preferences apply and workflows continue at every spend level.
+
+## Service level objectives
+
+The rolling 30-day defaults are 99% run success and 99.5% API availability. Run success counts runs that complete successfully, fail, time out or expire. API availability counts responses below HTTP 500 and excludes health and readiness probes. The error budget is the allowed error fraction, and the remaining budget is its unused share.
+
+Set `STUDIO_SLO_RUN_SUCCESS` and `STUDIO_SLO_API_AVAILABILITY` as fractions greater than zero and less than one. Restart the API and Prometheus together so the Usage card and Grafana use the same targets. Usage reads run success from the database. Grafana shows both objectives and their burn rates.
+
+To exercise the fast alert on a local stack, sustain 20% failed runs for over an hour using an isolated workload. At the 99% target, both the short and long windows reach about 20× burn. Inspect the rule in Grafana and allow one evaluation interval for it to fire.

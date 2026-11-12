@@ -71,6 +71,32 @@ export function UsageSection() {
         <Stat id="usage-unpriced" label={t('settings.usage.unpriced')} value={`${fmtCount(tot.unpriced_runs, lang)} (${fmtShare(tot.unpriced_share ?? 0, lang)})`}
           hint={unpriced ? <HandbookLink id="usage-prices-help" page="reference/configuration" label={t('settings.usage.unpricedHelp')} /> : undefined} />
       </div>
+      {data.slo && <Card id="usage-slo">
+        <CardHeader>
+          <CardTitle>{t('settings.usage.slo.title')}</CardTitle>
+          <CardDescription>{t('settings.usage.slo.window')}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
+            <div className="font-medium">{t('settings.usage.slo.runs')}</div>
+            <div className="text-sm text-muted-foreground">{t('settings.usage.slo.target', { value: fmtShare(data.slo.run_target, lang) })}</div>
+            {data.slo.run_observed === null
+              ? <div className="text-sm text-muted-foreground">{t('settings.usage.slo.empty')}</div>
+              : <>
+                <div className="text-sm">{t('settings.usage.slo.observed', { value: fmtShare(data.slo.run_observed, lang), count: data.slo.run_samples })}</div>
+                <div className="text-sm">{t('settings.usage.slo.budget', { value: fmtShare(data.slo.run_budget_remaining, lang) })}</div>
+              </>}
+          </div>
+          <div className="space-y-1">
+            <div className="font-medium">{t('settings.usage.slo.api')}</div>
+            <div className="text-sm text-muted-foreground">{t('settings.usage.slo.target', { value: fmtShare(data.slo.api_target, lang) })}</div>
+            {data.grafana_url && <a href={data.grafana_url} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-sm underline underline-offset-4">
+              {t('settings.usage.slo.viewGrafana')}<ExternalLink className="size-3" aria-hidden="true" />
+            </a>}
+          </div>
+        </CardContent>
+      </Card>}
       <Card id="usage-series"><CardHeader><CardTitle>{t('settings.usage.overTime')}</CardTitle>
         <CardDescription className="flex flex-wrap gap-3">{SERIES_STATUSES.map(s => <span key={s} className="inline-flex items-center gap-1.5">
           <span className={`inline-block size-2.5 rounded-sm ${BAR[s]}`} aria-hidden="true" />{t(`settings.usage.status.${s}`)}</span>)}</CardDescription></CardHeader>

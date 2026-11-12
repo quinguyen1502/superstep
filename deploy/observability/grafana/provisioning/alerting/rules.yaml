@@ -422,3 +422,41 @@ groups:
         execErrState: Error
         labels: { severity: warning }
         annotations: { summary: "A process runs without REDIS_URL; live updates and queued runs do not reach other processes." }
+      - uid: superstep-slo-fast-burn
+        title: Fast SLO burn
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: '(superstep:slo_error_ratio{window="5m"} / on(objective) (1 - superstep:slo_target)) > 14.4 and on(objective) (superstep:slo_error_ratio{window="1h"} / on(objective) (1 - superstep:slo_target)) > 14.4', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0] } }] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: critical }
+        annotations: { summary: "An objective is spending its 30-day error budget at more than 14.4 times its steady rate." }
+      - uid: superstep-slo-slow-burn
+        title: Slow SLO burn
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: '(superstep:slo_error_ratio{window="30m"} / on(objective) (1 - superstep:slo_target)) > 6 and on(objective) (superstep:slo_error_ratio{window="6h"} / on(objective) (1 - superstep:slo_target)) > 6', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0] } }] }
+        for: 1m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "An objective is spending its 30-day error budget at more than 6 times its steady rate." }

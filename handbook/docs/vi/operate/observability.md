@@ -181,7 +181,7 @@ docker compose --env-file .env --env-file deploy/observability/observability.env
 
 Grafana đăng nhập bằng `admin` với `GRAFANA_ADMIN_PASSWORD`, mặc định là
 `admin`. Hãy đặt mật khẩu riêng trong `.env` trước khi mở Grafana ra ngoài.
-`PROMETHEUS_RETENTION` (mặc định `15d`) đặt thời gian Prometheus giữ dữ liệu.
+`PROMETHEUS_RETENTION` (mặc định `31d`) đặt thời gian Prometheus giữ dữ liệu. Giữ ít nhất 30 ngày dữ liệu để tính SLO đủ cửa sổ.
 
 Dashboard **Superstep overview** trong thư mục **Superstep** có các hàng sau:
 
@@ -253,6 +253,8 @@ Grafana để nhận thông báo.
 | In-memory run bus | `studio.run_bus.in_memory` | bằng 1 trong 5 phút |
 | Postgres connections near limit | Số kết nối Postgres so với `max_connections` | trên 80% trong 5 phút |
 | Redis memory pressure | Bộ nhớ Redis đã dùng so với `maxmemory`, chỉ khi có đặt `maxmemory` | trên 90% trong 5 phút |
+| Fast SLO burn | Cả cửa sổ 5 phút và 1 giờ đều tiêu ngân sách nhanh hơn 14,4 lần. |
+| Slow SLO burn | Cả cửa sổ 30 phút và 6 giờ đều tiêu ngân sách nhanh hơn 6 lần. |
 
 Chi phí theo ngày chỉ tính run có giá; dashboard hiện số lời gọi chưa có giá
 bên cạnh. Khi không có Redis, cảnh báo bus in-memory bật là có chủ ý: hãy dùng
@@ -388,3 +390,11 @@ hiện trong **Tình trạng sản phẩm** và trong `studio.schedules.disabled
 Trong **Cài đặt → Mức sử dụng**, quản trị viên có thể đặt ngân sách tháng bằng USD cho người dùng hoặc nhóm. Chi phí tính từ các dòng usage có giá của run hoàn tất trong tháng. Số dòng chưa có giá cho biết chi phí đã tính mới là mức tối thiểu. Chi phí nhóm tính theo thành viên hiện tại. Đặt `STUDIO_TIMEZONE` theo tên múi giờ IANA để xác định ranh giới tháng. Mặc định là UTC.
 
 Usage mới ghi nhận sẽ kích hoạt cảnh báo khi đạt 80% và 100%, mỗi ngưỡng một lần cho mỗi ngân sách trong tháng. Ngân sách người dùng gửi thông báo cho người đó. Ngân sách nhóm gửi cho các thành viên đang hoạt động. Thông báo tuân theo tuỳ chọn hiện có và workflow tiếp tục chạy ở mọi mức chi phí.
+
+## Mục tiêu mức dịch vụ
+
+Mục tiêu mặc định trong 30 ngày gần nhất là 99% run thành công và 99,5% API sẵn sàng. Tỷ lệ run tính các run đã kết thúc với trạng thái thành công, lỗi, quá thời gian hoặc hết hạn. Độ sẵn sàng API tính phản hồi dưới HTTP 500 và bỏ qua probe health và readiness. Ngân sách lỗi là tỷ lệ lỗi được phép, phần còn lại là tỷ lệ ngân sách chưa dùng.
+
+Đặt `STUDIO_SLO_RUN_SUCCESS` và `STUDIO_SLO_API_AVAILABILITY` bằng số lớn hơn 0 và nhỏ hơn 1. Khởi động lại API và Prometheus để trang Mức sử dụng và Grafana cùng dùng mục tiêu mới. Trang Mức sử dụng đọc tỷ lệ run từ cơ sở dữ liệu. Grafana hiển thị cả hai mục tiêu và tốc độ tiêu ngân sách.
+
+Để kiểm tra cảnh báo nhanh trên stack local, tạo tải cô lập với 20% run lỗi trong hơn một giờ. Với mục tiêu 99%, cả hai cửa sổ sẽ tiêu ngân sách nhanh khoảng 20 lần. Xem quy tắc trong Grafana và đợi một chu kỳ đánh giá.

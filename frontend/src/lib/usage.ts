@@ -28,6 +28,7 @@ export type UsageTeam = {
   cost_usd: number; unpriced_runs: number
 }
 export type UsageSummary = {
+  slo?: { run_target: number; run_observed: number | null; run_samples: number; run_budget_remaining: number | null; api_target: number }
   window: UsageWindow; bucket: 'hour' | 'day'; bucket_seconds: number; since: number; until: number
   totals: UsageTotals; series: UsageBucket[]; top_workflows: UsageWorkflow[]; grafana_url: string | null
   models: UsageModel[]; models_since: number | null; users: UsageUser[]; teams: UsageTeam[]; teams_shared_members: number

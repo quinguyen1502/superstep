@@ -179,6 +179,8 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_OTEL_INSTRUMENT` | `0` | Khi có endpoint trace: trace thêm request HTTP, truy vấn SQL và lệnh Redis (không ghi giá trị tham số) |
 | `STUDIO_GRAFANA_URL` | trống | Địa chỉ Grafana mà **Cài đặt → Mức sử dụng** liên kết tới |
 | `STUDIO_TIMEZONE` | `UTC` | Múi giờ IANA để xác định ranh giới ngân sách tháng (mặc định UTC). |
+| `STUDIO_SLO_RUN_SUCCESS` | `0.99` | Mục tiêu tỷ lệ run thành công trong 30 ngày, là số giữa 0 và 1. |
+| `STUDIO_SLO_API_AVAILABILITY` | `0.995` | Mục tiêu độ sẵn sàng API trong 30 ngày, là số giữa 0 và 1. |
 | `STUDIO_LOG_FORMAT` | `text` | `json`: mỗi dòng log là một đối tượng JSON có `request_id`, `run_id`, `trace_id` |
 | `STUDIO_LOG_LEVEL` | trống | Mức log của các logger riêng của Superstep, ví dụ `INFO` hoặc `DEBUG` |
 | `POSTGRES_MONITOR_USER`, `POSTGRES_MONITOR_PASSWORD` | `superstep_monitor`, trống | Profile `observability` của Compose: role Postgres chỉ đọc cho metric server; mật khẩu trống thì tắt |

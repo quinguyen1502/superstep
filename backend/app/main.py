@@ -45,6 +45,7 @@ async def expire_waiting_loop() -> None:
 
 def create_app() -> FastAPI:
     configure_logging(config.log_format(), config.log_level())  # STUDIO_LOG_FORMAT / STUDIO_LOG_LEVEL
+    config.slo_targets()  # Fail startup on invalid objectives.
     check_secret(); crypto.check_key()
     config.studio_timezone()
     code_runtime.warn_if_unisolated()  # once at start-up

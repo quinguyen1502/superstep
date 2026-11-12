@@ -73,6 +73,8 @@ services:
       STUDIO_LOG_LEVEL: ${STUDIO_LOG_LEVEL:-}
       OTEL_METRIC_EXPORT_INTERVAL: ${OTEL_METRIC_EXPORT_INTERVAL:-60000}
       STUDIO_GRAFANA_URL: ${STUDIO_GRAFANA_URL:-}
+      STUDIO_SLO_RUN_SUCCESS: ${STUDIO_SLO_RUN_SUCCESS:-0.99}
+      STUDIO_SLO_API_AVAILABILITY: ${STUDIO_SLO_API_AVAILABILITY:-0.995}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-}
@@ -235,9 +237,15 @@ services:
   prometheus:
     image: prom/prometheus:v2.55.1
     profiles: [observability]
-    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"]
+    entrypoint: ["/bin/sh", "/etc/prometheus/start-prometheus.sh"]
+    environment:
+      STUDIO_SLO_RUN_SUCCESS: ${STUDIO_SLO_RUN_SUCCESS:-0.99}
+      STUDIO_SLO_API_AVAILABILITY: ${STUDIO_SLO_API_AVAILABILITY:-0.995}
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-31d}"]
     volumes:
       - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/observability/start-prometheus.sh:/etc/prometheus/start-prometheus.sh:ro
+      - ./deploy/observability/slo-rules.yaml.in:/etc/prometheus/slo-rules.yaml.in:ro
       - promdata:/prometheus
     depends_on: [otel-collector]
     restart: unless-stopped

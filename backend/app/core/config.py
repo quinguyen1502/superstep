@@ -3,6 +3,7 @@
 Values that tests or operators may change at runtime are functions; the rest are read once.
 """
 import os
+import re
 
 BACKEND_DIR = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -147,6 +148,18 @@ def notify_webhook() -> tuple[str, str | None] | None:
     url = os.environ.get("STUDIO_NOTIFY_WEBHOOK_URL", "").strip()
     return (url, os.environ.get("STUDIO_NOTIFY_WEBHOOK_SECRET") or None) if url else None
 def otel_metrics() -> bool: return os.environ.get("STUDIO_OTEL_METRICS", "").lower() in ("1", "true", "yes", "on")
+def slo_target(name: str, default: str) -> float:
+    raw = os.environ.get(name) or default
+    if re.fullmatch(r"[0-9]*[.]?[0-9]+", raw) and 0 < (value := float(raw)) < 1:
+        return value
+    raise ValueError(f"{name} must be a number greater than 0 and less than 1")
+
+
+def slo_targets() -> tuple[float, float]:
+    return (slo_target("STUDIO_SLO_RUN_SUCCESS", "0.99"),
+            slo_target("STUDIO_SLO_API_AVAILABILITY", "0.995"))
+
+
 def grafana_url() -> str: return (os.environ.get("STUDIO_GRAFANA_URL") or "").strip().rstrip("/")  # Usage page link for admins; empty = none
 def otel_instrument() -> bool: return os.environ.get("STUDIO_OTEL_INSTRUMENT", "").lower() in ("1", "true", "yes", "on")  # HTTP, SQL and Redis spans
 def log_format() -> str:  # STUDIO_LOG_FORMAT: text (default) or json (one object per line with request, run and trace ids)
