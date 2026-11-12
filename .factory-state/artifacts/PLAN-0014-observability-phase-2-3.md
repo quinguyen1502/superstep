@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0014
-- Status: Accepted 2026-11-10 (Asia/Saigon) by the owner (pt280u, "go ahead with phase 2"); REQ-0095 accepted. Phase 2 (TASK-0294 to TASK-0305) moved to todo and in progress; phase 3 (TASK-0306 to TASK-0308) stays in backlog.
+- Status: Accepted 2026-11-10 (Asia/Saigon) by the owner (pt280u, "go ahead with phase 2"); REQ-0095 accepted. Phase 2 (TASK-0294 to TASK-0305) merged through PRs #354 to #360. The owner approved starting Phase 3 (TASK-0306 to TASK-0308) on 2026-11-11.
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-10
 - Related Requirements: REQ-0095 (continues REQ-0094)
@@ -42,27 +42,27 @@ PLAN-0013 "Later Phases" listed phase 2 (correlation, depth), phase 3 (usage dat
 - **Provider rate limits are already counted** (`studio.llm.errors{code="PROVIDER_RATE_LIMITED"}`); TASK-0300 adds only Superstep's own limits and a combined panel.
 - **Usage table first, then UI**: per-model (TASK-0302) needs TASK-0301; per-user and per-team (TASK-0303) works from `runs.owner` and uses the table when present.
 - **No deploy health-check switch task** (DEC-0095; the owner kept templates on `/api/health`) and **no handbook republish task** (happens with the next `main` release).
-- **Budget enforcement and SLO targets** need owner choices; they are open questions in TASK-0306 and TASK-0307.
+- **Budget warnings** at 80 and 100 percent were accepted in [DEC-0096](../decisions/DEC-0096-usage-budget-warnings.md). TASK-0307 proposes default SLO targets for owner review.
 
 ## Work Breakdown
 
 | Order | Task | Phase | Purpose | Size | Depends |
 | --- | --- | --- | --- | --- | --- |
-| 1 | [TASK-0294](../tasks/backlog/TASK-0294-json-logs.md) | 2 | JSON logs with `request_id`, `run_id`, `trace_id` | M | acceptance |
-| 2 | [TASK-0295](../tasks/backlog/TASK-0295-http-sql-redis-spans.md) | 2 | Opt-in HTTP, SQL, Redis spans | M | acceptance |
-| 3 | [TASK-0296](../tasks/backlog/TASK-0296-db-redis-metrics.md) | 2 | Postgres and Redis server metrics, SQLAlchemy pool gauges | M | acceptance |
-| 4 | [TASK-0297](../tasks/backlog/TASK-0297-llm-latency-ttft.md) | 2 | Per-call LLM latency and time to first token | S | acceptance |
-| 5 | [TASK-0298](../tasks/backlog/TASK-0298-embedding-usage.md) | 2 | Embedding tokens and cost | M | acceptance |
-| 6 | [TASK-0299](../tasks/backlog/TASK-0299-activity-counters.md) | 2 | Channel, MCP, browser, sandbox counters | M | acceptance |
-| 7 | [TASK-0300](../tasks/backlog/TASK-0300-rate-limit-counters.md) | 2 | Product rate-limit hit counters | S | acceptance |
-| 8 | [TASK-0301](../tasks/backlog/TASK-0301-run-usage-table.md) | 2 | Usage rows written at run end | M | TASK-0298 |
-| 9 | [TASK-0302](../tasks/backlog/TASK-0302-usage-per-model.md) | 2 | Per-model table on the Usage page | S | TASK-0301 |
-| 10 | [TASK-0303](../tasks/backlog/TASK-0303-usage-per-user-team.md) | 2 | Per-user and per-team tables on the Usage page | M | acceptance (uses TASK-0301 if merged) |
-| 11 | [TASK-0304](../tasks/backlog/TASK-0304-channel-refusal-codes.md) | 2 | Channel refusal codes, `chat_messages` index | S | acceptance |
-| 12 | [TASK-0305](../tasks/backlog/TASK-0305-phase2-handbook-dashboard.md) | 2 | Handbook and dashboard pass for phase 2 | S | TASK-0294 to TASK-0304 |
-| 13 | [TASK-0306](../tasks/backlog/TASK-0306-usage-budgets.md) | 3 | Per-user and per-team budgets | L | TASK-0301, TASK-0303, enforcement DEC |
-| 14 | [TASK-0307](../tasks/backlog/TASK-0307-slo-burn.md) | 3 | SLO targets, burn-rate alerts, error-budget card | M | TASK-0305 |
-| 15 | [TASK-0308](../tasks/backlog/TASK-0308-quality-signals.md) | 3 | Thumbs-down rate and workflow test results | M | TASK-0305 (scheduling) |
+| 1 | [TASK-0294](../tasks/done/TASK-0294-json-logs.md) | 2 | JSON logs with `request_id`, `run_id`, `trace_id` | M | acceptance |
+| 2 | [TASK-0295](../tasks/done/TASK-0295-http-sql-redis-spans.md) | 2 | Opt-in HTTP, SQL, Redis spans | M | acceptance |
+| 3 | [TASK-0296](../tasks/done/TASK-0296-db-redis-metrics.md) | 2 | Postgres and Redis server metrics, SQLAlchemy pool gauges | M | acceptance |
+| 4 | [TASK-0297](../tasks/done/TASK-0297-llm-latency-ttft.md) | 2 | Per-call LLM latency and time to first token | S | acceptance |
+| 5 | [TASK-0298](../tasks/done/TASK-0298-embedding-usage.md) | 2 | Embedding tokens and cost | M | acceptance |
+| 6 | [TASK-0299](../tasks/done/TASK-0299-activity-counters.md) | 2 | Channel, MCP, browser, sandbox counters | M | acceptance |
+| 7 | [TASK-0300](../tasks/done/TASK-0300-rate-limit-counters.md) | 2 | Product rate-limit hit counters | S | acceptance |
+| 8 | [TASK-0301](../tasks/done/TASK-0301-run-usage-table.md) | 2 | Usage rows written at run end | M | TASK-0298 |
+| 9 | [TASK-0302](../tasks/done/TASK-0302-usage-per-model.md) | 2 | Per-model table on the Usage page | S | TASK-0301 |
+| 10 | [TASK-0303](../tasks/done/TASK-0303-usage-per-user-team.md) | 2 | Per-user and per-team tables on the Usage page | M | acceptance (uses TASK-0301 if merged) |
+| 11 | [TASK-0304](../tasks/done/TASK-0304-channel-refusal-codes.md) | 2 | Channel refusal codes, `chat_messages` index | S | acceptance |
+| 12 | [TASK-0305](../tasks/done/TASK-0305-phase2-handbook-dashboard.md) | 2 | Handbook and dashboard pass for phase 2 | S | TASK-0294 to TASK-0304 |
+| 13 | [TASK-0306](../tasks/done/TASK-0306-usage-budgets.md) | 3 | Per-user and per-team budgets | L | TASK-0301, TASK-0303, DEC-0096 |
+| 14 | [TASK-0307](../tasks/todo/TASK-0307-slo-burn.md) | 3 | SLO targets, burn-rate alerts, error-budget card | M | TASK-0305 |
+| 15 | [TASK-0308](../tasks/todo/TASK-0308-quality-signals.md) | 3 | Thumbs-down rate and workflow test results | M | TASK-0305 (scheduling) |
 
 Each task: own branch `factory/task-NNNN-<slug>` from `develop`, own PR, REV and QA artifacts, full Factory verify and validate, all required CI including the three E2E shards green before merge. Tasks that add metrics add their dashboard panels and a short handbook entry in the same PR; tasks that add environment variables update `.env.example` and the configuration reference (en and vi).
 
@@ -72,7 +72,7 @@ Each task: own branch `factory/task-NNNN-<slug>` from `develop`, own PR, REV and
 2. TASK-0294 to TASK-0300 and TASK-0304 are independent and can run in any order or in parallel.
 3. TASK-0301 after TASK-0298; TASK-0302 after TASK-0301; TASK-0303 any time, preferably after TASK-0301.
 4. TASK-0305 closes phase 2.
-5. Phase 3: TASK-0306 after TASK-0301, TASK-0303 and its enforcement DEC; TASK-0307 and TASK-0308 after TASK-0305.
+5. Phase 3: TASK-0306 after TASK-0301, TASK-0303 and DEC-0096; TASK-0307 and TASK-0308 after TASK-0305.
 
 ## New Alerts (added by the tasks that own the signal)
 
@@ -93,7 +93,7 @@ Each task: own branch `factory/task-NNNN-<slug>` from `develop`, own PR, REV and
 - Span volume and overhead: instrumentation is opt-in and probe routes are excluded; SQL parameters are never recorded.
 - Usage table write at run end must not fail a run: write errors are logged and counted, never raised into the run result; backfill is optional.
 - Embedding prices drift: shown with the unpriced share like chat models; overrides via `STUDIO_PRICES`.
-- Budget blocking would change run behaviour: only with an accepted DEC; warn only is the recommended default.
+- Monthly spend can exceed advisory budgets. Notifications fire once at each threshold per budget per calendar month.
 
 ## Out Of Scope
 

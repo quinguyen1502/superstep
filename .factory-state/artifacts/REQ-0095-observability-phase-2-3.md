@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0095
-- Status: Accepted 2026-11-10 (Asia/Saigon) by the owner (pt280u, "go ahead with phase 2"), together with PLAN-0014. Phase 2 (TASK-0294 to TASK-0305) in progress; phase 3 (TASK-0306 to TASK-0308) stays in backlog until the owner starts it.
+- Status: Accepted 2026-11-10 (Asia/Saigon) by the owner (pt280u, "go ahead with phase 2"), together with PLAN-0014. Phase 2 (TASK-0294 to TASK-0305) merged through PRs #354 to #360. The owner approved starting Phase 3 (TASK-0306 to TASK-0308) on 2026-11-11.
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-10
 - Source: Owner chat 2026-11-10 (pt279u, asking to file tasks for the remaining work after the observability MVP)
@@ -31,7 +31,7 @@ Phase 2, correlation and depth:
 
 Phase 3, governance:
 
-11. Per-user and per-team monthly budgets.
+11. Per-user and per-team monthly budgets with warnings at 80 and 100 percent (DEC-0096).
 12. SLO targets with burn-rate alerts and an error-budget view.
 13. Quality signals: thumbs-down rate and workflow test results.
 
@@ -54,6 +54,5 @@ Phase 3, governance:
 
 ## Open Questions
 
-- Budget enforcement: warn only or block new runs (TASK-0306; recommended warn only first, decided in a DEC before coding).
 - Default SLO targets (TASK-0307; recommended 99 percent run success and 99.5 percent API availability over 30 days).
 - Collector receivers versus standalone Postgres and Redis exporters (TASK-0296; recommended receivers).

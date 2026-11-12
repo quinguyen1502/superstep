@@ -36,6 +36,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       STUDIO_SECRET_KEY: ${STUDIO_SECRET_KEY:-}
       STUDIO_ENV: ${STUDIO_ENV:-dev}
+      STUDIO_TIMEZONE: ${STUDIO_TIMEZONE:-UTC}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
       STUDIO_MCP_STDIO: ${STUDIO_MCP_STDIO:-0}                  # 1 = admins may register stdio MCP servers (processes in this container)

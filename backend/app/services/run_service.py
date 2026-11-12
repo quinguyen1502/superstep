@@ -189,10 +189,11 @@ class RunService:
                  telemetry: Telemetry | None = None, versions=None, notifier=None, ledger=None, approvals=None,
                  deliveries: Optional[Callable[[], object]] = None, knowledge=None, mcp=None, access=None, policy=None, quota=None, audit=None,
                  tests: Optional[Callable[[], object]] = None, chat: Optional[Callable[[], object]] = None,
-                 jobs: Optional[Callable[[], object]] = None, browser=None, usage=None):
+                 jobs: Optional[Callable[[], object]] = None, browser=None, usage=None, budgets=None):
         """credentials: CredentialService (optional; without it, nodes with credential_id fail clearly).
         bus: RunBus for cross-process cancel + event fan-out (in-memory when not given)."""
         self.workflows, self.runs, self.credentials = workflows, runs, credentials
+        self.budgets = budgets
         self.usage = usage  # RunUsageRepository (optional): per-node model usage rows, written when a run ends
         self.bus = bus or InMemoryRunBus()
         self.versions = versions  # WorkflowVersionRepository (optional): tags runs with the version they ran
@@ -787,7 +788,10 @@ class RunService:
                           final_state=_dumps(final), status=status, started=t0, ended=t1, trace_id=trace_id, owner=uid or None, source=source, workflow_version=version,
                           checkpoint=_dumps(checkpoint) if checkpoint else None, resume_job=None, **root, **metrics),
                       **({"fence": fence} if fence is not None else {}))  # resume_job: a kept answer is used up
-        if self.usage is not None and status in TERMINAL: run_usage.write(self.usage, rid, wid, uid, events_full, t1)
+        if self.usage is not None and status in TERMINAL:
+            rows = run_usage.write(self.usage, rid, wid, uid, events_full, t1)
+            if rows and uid and self.budgets is not None:
+                self.budgets.check_owner(uid, t1)
         self.history_changed(wid, rid)
         for job in jobs:
             try: self.approvals.start(job)

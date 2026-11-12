@@ -62,6 +62,8 @@ from ..services.browser_runtime_service import BrowserRuntimeService
 from .. import storage
 from ..services.health_probes import Probes
 from ..services.usage_service import UsageService
+from ..services.usage_budgets import UsageBudgetService
+from ..repositories.usage_budgets import UsageBudgetRepository
 from ..repositories.usage import UsageRepository
 from ..repositories.run_usage import RunUsageRepository
 from ..services.telemetry import Telemetry
@@ -204,6 +206,10 @@ def agent_server_service() -> AgentServerService:
                                              AuthService(UserRepository(db)).current, access=access_service(), runner=run_service)
 
 
+def usage_budget_service() -> UsageBudgetService:
+    return UsageBudgetService(UsageBudgetRepository(get_db()), access_service(), audit_service(), notification_service())
+
+
 def usage_service() -> UsageService:
     return UsageService(UsageRepository(get_db()), access_service())
 
@@ -285,7 +291,7 @@ def run_service() -> RunService:
                       knowledge=knowledge_service(), mcp=mcp_service(), access=access_service(),
                       policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service,
                       jobs=get_job_queue,browser=browser_session_service() if config.browser_runtime_enabled() else None,
-                      usage=RunUsageRepository(db))
+                      usage=RunUsageRepository(db), budgets=usage_budget_service())
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),

@@ -10,8 +10,8 @@ import { NotificationSettingsDialog } from '@/components/notification-settings-d
 import i18n from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-type Note = { id: string; kind: 'run_waiting' | 'run_expired' | 'run_reminder' | 'run_escalated' | 'run_auto_answered'; title: string; link: string | null; created: number; read: boolean
-  params: { workflow_name?: string | null; label?: string | null; prompt?: string | null } }
+type Note = { id: string; kind: 'run_waiting' | 'run_expired' | 'run_reminder' | 'run_escalated' | 'run_auto_answered' | 'usage_budget_warning'; title: string; link: string | null; created: number; read: boolean
+  params: { workflow_name?: string | null; label?: string | null; prompt?: string | null; budget_name?: string; threshold?: number; month?: string } }
 const POLL_MS = 30_000
 
 /** Live push: WebSocket /ws/notifications; reconnects with backoff. Returns whether it is connected. */
@@ -50,7 +50,10 @@ export function NotificationBell() {
     if (n.link) nav(n.link)
   }
   const readAll = async () => { try { await api('/api/notifications/read-all', { method: 'POST' }); setUnread(0); setItems(xs => xs.map(x => ({ ...x, read: true }))) } catch { /* ignore */ } }
-  const text = (n: Note) => t(`notify.${n.kind}`, { workflow: n.params.workflow_name || t('notify.unknownWorkflow'), label: n.params.label || '' })
+  const text = (n: Note) => t(`notify.${n.kind}`, {
+    workflow: n.params.workflow_name || t('notify.unknownWorkflow'), label: n.params.label || '',
+    name: n.params.budget_name, threshold: n.params.threshold, month: n.params.month,
+  })
   return <><DropdownMenu onOpenChange={o => o && load()}>
     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" id="notify-bell" className="relative" data-live={live} aria-label={t('notify.unread', { count: unread })}>
       <Bell />{unread > 0 && <Badge size="sm" className="absolute -top-1 -right-1 min-w-4" data-testid="notify-count">{unread}</Badge>}</Button></DropdownMenuTrigger>

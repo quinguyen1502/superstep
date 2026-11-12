@@ -19,6 +19,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     # generic / transport
     "VALIDATION_ERROR": (422, "Request validation failed"),
     "BAD_REQUEST": (400, "Bad request"),
+    "USAGE_BUDGET_EXISTS": (409, "A monthly budget already exists for this user or team"),
     "NOT_FOUND": (404, "Resource not found"),
     "METHOD_NOT_ALLOWED": (405, "Method not allowed"),
     "PAYLOAD_TOO_LARGE": (413, "Payload too large"),

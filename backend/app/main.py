@@ -46,6 +46,7 @@ async def expire_waiting_loop() -> None:
 def create_app() -> FastAPI:
     configure_logging(config.log_format(), config.log_level())  # STUDIO_LOG_FORMAT / STUDIO_LOG_LEVEL
     check_secret(); crypto.check_key()
+    config.studio_timezone()
     code_runtime.warn_if_unisolated()  # once at start-up
     get_telemetry().instrument(get_db().engine)  # SQL and Redis spans (no-op unless STUDIO_OTEL_INSTRUMENT is on)
     bootstrap(get_db(), jobs=get_job_queue())  # alembic upgrade head + demo user + example workflow

@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0308
 - Title: Quality signals: thumbs-down and eval results
-- Status: backlog
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
-- Updated: 2026-11-10
+- Updated: 2026-11-12
 - Requirement IDs: REQ-0095
 - Design IDs: DES-0006
 - Architecture IDs: DEC-0094, DEC-0095
@@ -60,6 +60,7 @@ Settings, Usage shows thumbs-down rate per workflow (from chat answer ratings) a
 ## Activity Log
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
+- 2026-11-12: Moved from backlog to todo after the Phase 2 stack merged. Owner approved starting Phase 3 on 2026-11-11.
 
 ## Handoff Notes
 

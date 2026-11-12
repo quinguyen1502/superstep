@@ -48,13 +48,27 @@ class NotificationService:
                          title=KINDS[kind], params=json.dumps(params, ensure_ascii=False), link=link, created=time.time())
         if prefs["in_app"]:
             n = self.repo.add(n)
-            if self.hub is not None:
-                try: self.hub.publish(uid, {"type": "notification", "notification": self.public(n), "unread": self.repo.unread_count(uid)})
-                except Exception: log.warning("live push of notification %s failed (the bell polls as a fallback)", n.id)
+        self.deliver(n, prefs)
+        return n
+
+    def budget_notice(self, uid: str, name: str, threshold: int, month: str) -> tuple[Notification, dict]:
+        params = {"budget_name": name, "threshold": threshold, "month": month}
+        notice = Notification(id=uuid.uuid4().hex, user_id=uid, kind="usage_budget_warning",
+                              title=f"Monthly usage budget reached {threshold}%", params=json.dumps(params),
+                              created=time.time())
+        return notice, self.preferences(uid)
+
+    def deliver(self, n: Notification, prefs: dict) -> None:
+        """Publish a committed in-app notification and dispatch its external channels."""
+        if prefs["in_app"] and self.hub is not None:
+            try:
+                self.hub.publish(n.user_id, {"type": "notification", "notification": self.public(n),
+                                             "unread": self.repo.unread_count(n.user_id)})
+            except Exception:
+                log.warning("live push of notification %s failed (the bell polls as a fallback)", n.id)
         if (config.smtp() and prefs["email"]) or config.notify_webhook():
             job = lambda: self.dispatch(n, email=prefs["email"])  # noqa: E731
             threading.Thread(target=job, daemon=True).start() if self.background else job()
-        return n
 
     def dispatch(self, n: Notification, email: bool = True) -> dict:
         """Send to the configured external channels. Never raises. Returns {channel: ok} (for tests/logs)."""
@@ -101,7 +115,7 @@ class NotificationService:
         return self.preferences(uid)
 
 
-LABELS = {"workflow_name": "Workflow", "label": "Step", "prompt": "Question", "ai_decision": "AI review", "ai_confidence": "Confidence", "ai_reason": "Reason"}
+LABELS = {"budget_name": "Budget", "month": "Month", "workflow_name": "Workflow", "label": "Step", "prompt": "Question", "ai_decision": "AI review", "ai_confidence": "Confidence", "ai_reason": "Reason"}
 
 
 def email_text(n: Notification, p: dict) -> str:

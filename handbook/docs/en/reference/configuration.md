@@ -178,6 +178,7 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_OTEL_METRICS` | `0` | Also export metrics |
 | `STUDIO_OTEL_INSTRUMENT` | `0` | With a traces endpoint: also trace HTTP requests, SQL queries and Redis calls (no parameter values) |
 | `STUDIO_GRAFANA_URL` | empty | Grafana address that **Settings → Usage** links to |
+| `STUDIO_TIMEZONE` | `UTC` | IANA time zone for monthly budget boundaries (UTC by default). |
 | `STUDIO_LOG_FORMAT` | `text` | `json`: one JSON object per log line with `request_id`, `run_id`, `trace_id` |
 | `STUDIO_LOG_LEVEL` | empty | Log level of Superstep's own loggers, for example `INFO` or `DEBUG` |
 | `POSTGRES_MONITOR_USER`, `POSTGRES_MONITOR_PASSWORD` | `superstep_monitor`, empty | Compose `observability` profile: read-only Postgres role for server metrics; empty password turns them off |

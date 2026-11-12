@@ -2,6 +2,7 @@
  *  Server, database and queue health live in Grafana; this page links to it when the server reports a URL. */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { UsageBudgetsCard } from './UsageBudgetsCard'
 import { AlertCircle, ExternalLink, RotateCw } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -167,6 +168,7 @@ export function UsageSection() {
               {!data.teams.length && <TableRow><TableCell /* ui-class-ok: empty table row spacing, layout not control sizing */ colSpan={4} className="py-8 text-center text-muted-foreground">{t('settings.usage.people.noTeams')}</TableCell></TableRow>}
             </TableBody></Table></Card>
       </div>
+      <UsageBudgetsCard />
       {health && <Card id="usage-health"><CardHeader><CardTitle>{t('settings.usage.health.title')}</CardTitle>
         <CardDescription>{t('settings.usage.health.intro')}</CardDescription></CardHeader>
         <CardContent className="space-y-4">
