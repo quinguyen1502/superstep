@@ -45,6 +45,7 @@
 | `VALIDATION_ERROR` | 422 | Request validation failed |
 | `BAD_REQUEST` | 400 | Bad request |
 | `NOT_FOUND` | 404 | Resource not found |
+| `USAGE_BUDGET_EXISTS` | 409 | A monthly budget already exists for this user or team |
 | `METHOD_NOT_ALLOWED` | 405 | Method not allowed |
 | `PAYLOAD_TOO_LARGE` | 413 | Payload too large |
 | `INTERNAL_ERROR` | 500 | Internal server error |

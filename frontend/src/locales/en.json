@@ -451,6 +451,7 @@
     "VALIDATION_ERROR": "Some fields are invalid",
     "BAD_REQUEST": "Bad request",
     "NOT_FOUND": "Not found",
+    "USAGE_BUDGET_EXISTS": "A monthly budget already exists for this user or team",
     "METHOD_NOT_ALLOWED": "Method not allowed",
     "PAYLOAD_TOO_LARGE": "Payload too large",
     "INTERNAL_ERROR": "Server error, please try again later",
@@ -855,7 +856,8 @@
     "unknownWorkflow": "A workflow",
     "run_reminder": "{{workflow}} is still waiting for you: {{label}}",
     "run_escalated": "{{workflow}} was handed to you: {{label}}",
-    "run_auto_answered": "{{workflow}}: AI review answered {{label}}"
+    "run_auto_answered": "{{workflow}}: AI review answered {{label}}",
+    "usage_budget_warning": "{{name}} reached {{threshold}}% of its monthly usage budget ({{month}})."
   },
   "notifyPrefs": {
     "open": "Notification settings",
@@ -1115,6 +1117,27 @@
         "24h": "Last 24 hours",
         "7d": "Last 7 days",
         "30d": "Last 30 days"
+      },
+      "budgets": {
+        "title": "Monthly budgets",
+        "description": "Warnings at 80% and 100% of monthly budget.",
+        "period": "{{month}} · {{zone}} · Warnings at 80% and 100%",
+        "add": "Add budget",
+        "scope": "Budget scope",
+        "user": "User",
+        "team": "Team",
+        "target": "User or team",
+        "chooseTarget": "Choose a user or team",
+        "noTargets": "No available targets",
+        "amount": "Monthly budget (USD)",
+        "spent": "Estimated spend",
+        "used": "Budget used",
+        "actions": "Budget actions",
+        "unpriced": "Unpriced usage rows: {{count}}",
+        "editLabel": "Edit budget for {{name}}",
+        "deleteTitle": "Delete budget for {{name}}",
+        "deleteBody": "Future warnings for this budget will stop.",
+        "empty": "No monthly budgets configured."
       },
       "estimate": "Costs are estimates from the configured model prices.",
       "runs": "Runs",
@@ -1516,6 +1539,9 @@
       "team_member_remove": "Member removed",
       "workflow_transfer": "Ownership transferred",
       "workflow_delete": "Workflow deleted",
+      "policy_usage_budget_create": "Monthly budget created",
+      "policy_usage_budget_update": "Monthly budget updated",
+      "policy_usage_budget_delete": "Monthly budget deleted",
       "policy_org_resources": "Org resource policy changed",
       "system_code_runtime_subprocess": "Code nodes ran directly on the server (runs on host)"
     },
@@ -1523,6 +1549,7 @@
       "user": "User",
       "workflow": "Workflow",
       "team": "Team",
+      "usage_budget": "Monthly budget",
       "policy": "Policy"
     }
   },

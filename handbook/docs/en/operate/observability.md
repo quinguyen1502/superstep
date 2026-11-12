@@ -387,3 +387,9 @@ The backend ships the `tzdata` package, so schedules accept every IANA time
 zone a browser reports, such as `Asia/Saigon`, even on images without system
 zone data. A schedule whose zone still cannot be resolved is turned off with
 a note; it shows under **Product health** and in `studio.schedules.disabled`.
+
+## Monthly budgets
+
+In **Settings → Usage**, administrators can set a monthly USD budget for a user or team. Spend comes from priced model-usage rows for runs completed this calendar month. An unpriced-row count shows when known spend is a lower bound. Team spend follows current membership. Set `STUDIO_TIMEZONE` to an IANA zone to choose the calendar boundaries. The default is UTC.
+
+New recorded usage triggers a warning at 80% and 100%, once per threshold per budget each month. A user budget notifies the user. A team budget notifies its active members. The existing notification preferences apply and workflows continue at every spend level.

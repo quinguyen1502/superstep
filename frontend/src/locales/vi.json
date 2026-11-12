@@ -451,6 +451,7 @@
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
     "BAD_REQUEST": "Yêu cầu không hợp lệ",
     "NOT_FOUND": "Không tìm thấy",
+    "USAGE_BUDGET_EXISTS": "Đã có ngân sách tháng cho người dùng hoặc nhóm này",
     "METHOD_NOT_ALLOWED": "Phương thức không được hỗ trợ",
     "PAYLOAD_TOO_LARGE": "Dữ liệu quá lớn",
     "INTERNAL_ERROR": "Lỗi máy chủ, thử lại sau",
@@ -855,7 +856,8 @@
     "unknownWorkflow": "Một workflow",
     "run_reminder": "{{workflow}} vẫn đang chờ bạn: {{label}}",
     "run_escalated": "{{workflow}} được chuyển cho bạn duyệt: {{label}}",
-    "run_auto_answered": "{{workflow}}: AI đã tự trả lời bước {{label}}"
+    "run_auto_answered": "{{workflow}}: AI đã tự trả lời bước {{label}}",
+    "usage_budget_warning": "{{name}} đã dùng {{threshold}}% ngân sách tháng ({{month}})."
   },
   "notifyPrefs": {
     "open": "Cài đặt thông báo",
@@ -1115,6 +1117,27 @@
         "24h": "24 giờ qua",
         "7d": "7 ngày qua",
         "30d": "30 ngày qua"
+      },
+      "budgets": {
+        "title": "Ngân sách tháng",
+        "description": "Cảnh báo khi đạt 80% và 100% ngân sách tháng.",
+        "period": "{{month}} · {{zone}} · Cảnh báo ở 80% và 100%",
+        "add": "Thêm ngân sách",
+        "scope": "Phạm vi ngân sách",
+        "user": "Người dùng",
+        "team": "Nhóm",
+        "target": "Người dùng hoặc nhóm",
+        "chooseTarget": "Chọn người dùng hoặc nhóm",
+        "noTargets": "Không có đối tượng để chọn",
+        "amount": "Ngân sách tháng (USD)",
+        "spent": "Chi phí ước tính",
+        "used": "Ngân sách đã dùng",
+        "actions": "Thao tác ngân sách",
+        "unpriced": "Số dòng usage chưa có giá: {{count}}",
+        "editLabel": "Sửa ngân sách của {{name}}",
+        "deleteTitle": "Xoá ngân sách của {{name}}",
+        "deleteBody": "Ngân sách này sẽ ngừng gửi cảnh báo.",
+        "empty": "Chưa có ngân sách tháng."
       },
       "estimate": "Chi phí là ước tính theo giá model đã cấu hình.",
       "runs": "Số run",
@@ -1516,6 +1539,9 @@
       "team_member_remove": "Gỡ thành viên",
       "workflow_transfer": "Chuyển quyền sở hữu",
       "workflow_delete": "Xoá workflow",
+      "policy_usage_budget_create": "Tạo ngân sách tháng",
+      "policy_usage_budget_update": "Cập nhật ngân sách tháng",
+      "policy_usage_budget_delete": "Xoá ngân sách tháng",
       "policy_org_resources": "Đổi chính sách tài nguyên tổ chức",
       "system_code_runtime_subprocess": "Node Code chạy trực tiếp trên server"
     },
@@ -1523,6 +1549,7 @@
       "user": "Người dùng",
       "workflow": "Workflow",
       "team": "Nhóm",
+      "usage_budget": "Ngân sách tháng",
       "policy": "Chính sách"
     }
   },

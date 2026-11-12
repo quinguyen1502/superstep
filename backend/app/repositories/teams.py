@@ -2,6 +2,8 @@ from typing import Optional
 from sqlalchemy import delete, func, select
 from ..models import Team, TeamMember, User, WorkflowTeamShare
 from ..models.database import Database
+from ..models.usage_budget import UsageBudget
+from .usage_budgets import delete_budget_rows
 
 
 class TeamRepository:
@@ -24,6 +26,7 @@ class TeamRepository:
 
     def delete(self, tid: str) -> None:
         with self.db.session() as s:
+            delete_budget_rows(s, UsageBudget.team_id == tid)
             for m in (TeamMember, WorkflowTeamShare): s.execute(delete(m).where(m.team_id == tid))
             s.execute(delete(Team).where(Team.id == tid)); s.commit()
 

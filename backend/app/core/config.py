@@ -220,6 +220,16 @@ def code_languages() -> list[str]:
     default (TypeScript reports itself unavailable until its image or the deno binary is there)."""
     raw = os.environ.get("STUDIO_CODE_LANGUAGES") or "python,typescript"
     return [x.strip().lower() for x in raw.split(",") if x.strip()]
+def studio_timezone():
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    name = os.environ.get("STUDIO_TIMEZONE") or "UTC"
+    try:
+        return ZoneInfo(name)
+    except (ValueError, ZoneInfoNotFoundError) as exc:
+        raise ValueError("STUDIO_TIMEZONE must name an IANA time zone") from exc
+
+
 def sandbox_url() -> str:
     """STUDIO_SANDBOX_URL: the sandbox service for STUDIO_CODE_RUNTIME=remote; a bare host:port gets http://."""
     url = (os.environ.get("STUDIO_SANDBOX_URL") or "").strip().rstrip("/")

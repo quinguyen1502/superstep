@@ -382,3 +382,9 @@ Backend đi kèm gói `tzdata`, nên lịch chạy nhận mọi múi giờ IANA 
 duyệt báo, ví dụ `Asia/Saigon`, kể cả trên image không có dữ liệu múi giờ của
 hệ thống. Lịch chạy có múi giờ vẫn không đọc được sẽ bị tắt kèm ghi chú; nó
 hiện trong **Tình trạng sản phẩm** và trong `studio.schedules.disabled`.
+
+## Ngân sách tháng
+
+Trong **Cài đặt → Mức sử dụng**, quản trị viên có thể đặt ngân sách tháng bằng USD cho người dùng hoặc nhóm. Chi phí tính từ các dòng usage có giá của run hoàn tất trong tháng. Số dòng chưa có giá cho biết chi phí đã tính mới là mức tối thiểu. Chi phí nhóm tính theo thành viên hiện tại. Đặt `STUDIO_TIMEZONE` theo tên múi giờ IANA để xác định ranh giới tháng. Mặc định là UTC.
+
+Usage mới ghi nhận sẽ kích hoạt cảnh báo khi đạt 80% và 100%, mỗi ngưỡng một lần cho mỗi ngân sách trong tháng. Ngân sách người dùng gửi thông báo cho người đó. Ngân sách nhóm gửi cho các thành viên đang hoạt động. Thông báo tuân theo tuỳ chọn hiện có và workflow tiếp tục chạy ở mọi mức chi phí.
