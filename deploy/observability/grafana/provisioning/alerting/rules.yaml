@@ -80,6 +80,25 @@ groups:
         execErrState: Error
         labels: { severity: critical }
         annotations: { summary: "Redis is configured but its readiness probe is failing." }
+      - uid: superstep-chat-thumbs-down
+        title: Thumbs-down spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 1800, to: 0 }
+            datasourceUid: prometheus
+            model: { refId: A, expr: '((sum(increase(studio_chat_ratings{rating="down"}[30m])) or vector(0)) / sum(increase(studio_chat_ratings[30m]))) and (sum(increase(studio_chat_ratings[30m])) >= 10)', instant: true }
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model: { refId: C, type: threshold, expression: B, conditions: [{ evaluator: { type: gt, params: [0.3] } }] }
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels: { severity: warning }
+        annotations: { summary: "More than 30% of at least 10 chat rating submissions in 30 minutes are thumbs down." }
       - uid: superstep-http-5xx
         title: HTTP 5xx share
         condition: C

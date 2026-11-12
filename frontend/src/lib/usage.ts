@@ -34,7 +34,14 @@ export type UsageSummary = {
   models: UsageModel[]; models_since: number | null; users: UsageUser[]; teams: UsageTeam[]; teams_shared_members: number
 }
 export type ChannelRefusal = { code: string; kind: string; count: number }
+export type UsageQuality = {
+  minimum_ratings: number
+  ratings: { workflow_id: string; name: string | null; ratings: number; thumbs_down_share: number | null }[]
+  suites: { workflow_id: string; name: string | null; ended: number; total: number; passed: number }[]
+  langsmith_configured: boolean
+}
 export type UsageHealth = {
+  quality?: UsageQuality
   approvals: { waiting: number; oldest_age_s: number | null; expired: number }
   webhooks: { failed: number; retrying: number }
   schedules: { overdue: number; disabled: number; disabled_list: { id: string; workflow_id: string; name: string; note: string | null }[] }

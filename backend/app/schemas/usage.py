@@ -138,7 +138,30 @@ class ChannelHealth(BaseModel):
     refusal_share: Optional[float] = Field(None, description="Refused over refused plus started; null without either.")
 
 
+class QualityRating(BaseModel):
+    workflow_id: str
+    name: Optional[str]
+    ratings: int
+    thumbs_down_share: Optional[float]
+
+
+class QualitySuite(BaseModel):
+    workflow_id: str
+    name: Optional[str]
+    ended: float
+    total: int
+    passed: int
+
+
+class UsageQuality(BaseModel):
+    minimum_ratings: int
+    ratings: list[QualityRating]
+    suites: list[QualitySuite]
+    langsmith_configured: bool
+
+
 class UsageHealth(BaseModel):
+    quality: Optional[UsageQuality] = None
     approvals: ApprovalHealth
     webhooks: WebhookHealth
     schedules: ScheduleHealth

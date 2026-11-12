@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0308
 - Title: Quality signals: thumbs-down and eval results
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-12
@@ -15,6 +15,8 @@
 - Plan: PLAN-0014
 - Phase: 3
 - Size: M
+- Review: `.factory-state/artifacts/REV-0293-TASK-0308-quality-signals.md`
+- QA: `.factory-state/artifacts/QA-0293-TASK-0308-quality-signals.md`
 
 ## Objective
 
@@ -61,6 +63,16 @@ Settings, Usage shows thumbs-down rate per workflow (from chat answer ratings) a
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-12: Moved from backlog to todo after the Phase 2 stack merged. Owner approved starting Phase 3 on 2026-11-11.
+
+- 2026-11-12: Owner approved implementation. Added the quality card, scoped rating aggregation, latest test suite rows, rating submission telemetry and the alert. Ratings use the existing workflow and update timestamp index.
+
+- 2026-11-12: Seeded data matched the expected thumbs-down share, minimum sample and latest completed suite. This branch is stacked on factory/task-0307-slo-burn.
+
+- 2026-11-12: The thumbs-down alert expression matched synthetic submissions above its threshold.
+
+- 2026-11-12: Grafana preview with synthetic ratings verified that the submissions panel scales above one rating.
+
+- 2026-11-12: Owner approved merge. Moved to done on PR #363.
 
 ## Handoff Notes
 

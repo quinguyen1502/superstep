@@ -1209,6 +1209,21 @@
       },
       "handbook": "About usage and monitoring",
       "grafana": "Open Grafana for server, database and queue health",
+      "quality": {
+        "title": "Quality signals",
+        "minimum": "A thumbs-down rate needs at least {{count}} ratings in the selected window.",
+        "ratings": "Chat ratings by workflow",
+        "samples": "Ratings",
+        "thumbsDown": "Thumbs-down rate",
+        "insufficient": "Not enough ratings",
+        "noRatings": "No chat ratings in this window.",
+        "suites": "Latest completed test suites",
+        "completed": "Completed",
+        "passRate": "Pass rate",
+        "result": "{{rate}} ({{passed}} of {{total}})",
+        "noSuites": "No completed test suites.",
+        "langsmith": "LangSmith settings"
+      },
       "models": {
         "title": "Models",
         "since": "Per-model data starts on {{date}} (runs that ended since then).",

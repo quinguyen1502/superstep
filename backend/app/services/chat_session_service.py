@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 from typing import Optional
 from ..core import permissions as P
 from ..core.errors import AppError
-from ..engine import agents, handoffs
+from ..engine import activity, agents, handoffs
 from ..engine.limits import size
 from ..core import config
 from ..models import ChatMessage, ChatRating, ChatSession, ChatTurn, Run, WorkflowChatTrigger
@@ -366,6 +366,7 @@ class ChatSessionService:
         now = time.time()
         row = self.sessions.upsert_rating(ChatRating(turn_id=tid, session_id=s.id, workflow_id=s.workflow_id, value=value,
                                                      comment=text, created=now, updated=now))
+        activity.emit("chat_rating", rating=value, workflow_id=s.workflow_id)
         if self.jobs is not None: self.jobs.enqueue({"kind": "chat_rating", "turn_id": tid})
         return self._rating(row)
 

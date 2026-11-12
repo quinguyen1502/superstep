@@ -10,6 +10,7 @@ from typing import Optional
 from ..core import config
 from ..core import permissions as P
 from ..core.errors import AppError
+from .langsmith import configured as langsmith_configured
 
 WINDOWS = {"24h": 24 * 3600, "7d": 7 * 86400, "30d": 30 * 86400}
 BUCKETS = {"hour": 3600, "day": 86400}
@@ -17,6 +18,7 @@ DEFAULT_BUCKET = {"24h": "hour", "7d": "day", "30d": "day"}
 SERIES_STATUSES = ("ok", "error", "timeout", "cancelled")
 SCHEDULE_GRACE = 300  # seconds an enabled schedule may be late before it counts as overdue
 HEALTH_WINDOW = 3600  # seconds of failed deliveries and expired approvals the gauges count
+MIN_QUALITY_RATINGS = 5
 PEOPLE_LIMIT = 20  # rows of the per-user and per-team tables
 DELETED_DOMAIN = "@deleted.invalid"  # address of an anonymised account (UserDataRepository.anonymise)
 
@@ -70,7 +72,11 @@ class UsageService:
 
     def health(self, uid: str, window: str = "7d") -> dict:
         since, until = self._window(uid, window)
-        return self.counts(since, until)
+        return {**self.counts(since, until),
+                "quality": {"minimum_ratings": MIN_QUALITY_RATINGS,
+                            "ratings": self.repo.rating_quality(since, until, MIN_QUALITY_RATINGS),
+                            "suites": self.repo.latest_test_suites(),
+                            "langsmith_configured": langsmith_configured()}}
 
     def channels(self, since: float, until: float) -> dict:
         """Chat trigger refusals by code and platform, and the refusal share of messages that were decided."""

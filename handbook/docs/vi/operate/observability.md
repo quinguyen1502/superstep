@@ -233,6 +233,7 @@ Grafana để nhận thông báo.
 | Cảnh báo | Bật khi | Mặc định |
 | --- | --- | --- |
 | Instance down | Không tiến trình nào báo metric: collector bỏ tiến trình im lặng sau 5 phút, rồi quy tắc chờ thêm 5 phút | |
+| Thumbs-down spike | Trên 30% lượt không thích trong ít nhất 10 lượt gửi đánh giá chat trong 30 phút. |
 | Database down | `studio.ready.db` bằng 0 trong 1 phút | |
 | Redis down | `studio.ready.redis` bằng 0 trong 1 phút | |
 | HTTP 5xx share | Tỉ lệ phản hồi 5xx trong 5 phút | trên 5% trong 5 phút |
@@ -398,3 +399,9 @@ Mục tiêu mặc định trong 30 ngày gần nhất là 99% run thành công v
 Đặt `STUDIO_SLO_RUN_SUCCESS` và `STUDIO_SLO_API_AVAILABILITY` bằng số lớn hơn 0 và nhỏ hơn 1. Khởi động lại API và Prometheus để trang Mức sử dụng và Grafana cùng dùng mục tiêu mới. Trang Mức sử dụng đọc tỷ lệ run từ cơ sở dữ liệu. Grafana hiển thị cả hai mục tiêu và tốc độ tiêu ngân sách.
 
 Để kiểm tra cảnh báo nhanh trên stack local, tạo tải cô lập với 20% run lỗi trong hơn một giờ. Với mục tiêu 99%, cả hai cửa sổ sẽ tiêu ngân sách nhanh khoảng 20 lần. Xem quy tắc trong Grafana và đợi một chu kỳ đánh giá.
+
+## Tín hiệu chất lượng
+
+Trang Mức sử dụng đọc đánh giá mới nhất của mỗi câu trả lời và xếp hạng workflow theo tỷ lệ không thích trong khoảng đã chọn. Tỷ lệ xuất hiện khi workflow có ít nhất năm lượt đánh giá. Bảng kiểm thử hiển thị bộ kiểm thử đã hoàn tất gần nhất của từng workflow, kể cả khi hoàn tất trước khoảng đã chọn. Khi đã cấu hình LangSmith, đường dẫn mở phần cài đặt trong Studio.
+
+Grafana đếm lượt gửi đánh giá, kể cả lần sửa, qua `studio.chat.ratings`. Cảnh báo bật khi trên 30% trong ít nhất 10 lượt gửi trong 30 phút là không thích và tình trạng kéo dài năm phút.

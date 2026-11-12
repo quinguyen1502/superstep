@@ -1209,6 +1209,21 @@
       },
       "handbook": "Về mức sử dụng và giám sát",
       "grafana": "Mở Grafana để xem tình trạng server, cơ sở dữ liệu và hàng đợi",
+      "quality": {
+        "title": "Tín hiệu chất lượng",
+        "minimum": "Cần ít nhất {{count}} lượt đánh giá trong khoảng đã chọn để tính tỷ lệ không thích.",
+        "ratings": "Đánh giá chat theo workflow",
+        "samples": "Lượt đánh giá",
+        "thumbsDown": "Tỷ lệ không thích",
+        "insufficient": "Chưa đủ lượt đánh giá",
+        "noRatings": "Không có lượt đánh giá chat trong khoảng này.",
+        "suites": "Bộ kiểm thử hoàn tất gần nhất",
+        "completed": "Hoàn tất",
+        "passRate": "Tỷ lệ đạt",
+        "result": "{{rate}} ({{passed}} trên {{total}})",
+        "noSuites": "Chưa có bộ kiểm thử nào hoàn tất.",
+        "langsmith": "Cài đặt LangSmith"
+      },
       "models": {
         "title": "Model",
         "since": "Dữ liệu theo model bắt đầu từ {{date}} (các run kết thúc từ đó).",
