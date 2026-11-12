@@ -1,0 +1,62 @@
+groups:
+  - name: superstep-slo
+    rules:
+      - record: superstep:slo_target
+        labels: { objective: run_success }
+        expr: vector(@RUN_TARGET@)
+      - record: superstep:slo_error_ratio
+        labels: { objective: run_success, window: "5m" }
+        expr: >-
+          ((sum(increase(studio_runs{status=~"error|timeout|expired"}[5m])) or vector(0)) / sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[5m])))
+          and (sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[5m])) > 0)
+      - record: superstep:slo_error_ratio
+        labels: { objective: run_success, window: "30m" }
+        expr: >-
+          ((sum(increase(studio_runs{status=~"error|timeout|expired"}[30m])) or vector(0)) / sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[30m])))
+          and (sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[30m])) > 0)
+      - record: superstep:slo_error_ratio
+        labels: { objective: run_success, window: "1h" }
+        expr: >-
+          ((sum(increase(studio_runs{status=~"error|timeout|expired"}[1h])) or vector(0)) / sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[1h])))
+          and (sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[1h])) > 0)
+      - record: superstep:slo_error_ratio
+        labels: { objective: run_success, window: "6h" }
+        expr: >-
+          ((sum(increase(studio_runs{status=~"error|timeout|expired"}[6h])) or vector(0)) / sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[6h])))
+          and (sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[6h])) > 0)
+      - record: superstep:slo_target
+        labels: { objective: api_availability }
+        expr: vector(@API_TARGET@)
+      - record: superstep:slo_error_ratio
+        labels: { objective: api_availability, window: "5m" }
+        expr: >-
+          ((sum(increase(studio_http_server_requests{status_class="5xx",route=~"/api/.*",route!~"/api/(health|ready)"}[5m])) or vector(0)) / sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[5m])))
+          and (sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[5m])) > 0)
+      - record: superstep:slo_error_ratio
+        labels: { objective: api_availability, window: "30m" }
+        expr: >-
+          ((sum(increase(studio_http_server_requests{status_class="5xx",route=~"/api/.*",route!~"/api/(health|ready)"}[30m])) or vector(0)) / sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[30m])))
+          and (sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[30m])) > 0)
+      - record: superstep:slo_error_ratio
+        labels: { objective: api_availability, window: "1h" }
+        expr: >-
+          ((sum(increase(studio_http_server_requests{status_class="5xx",route=~"/api/.*",route!~"/api/(health|ready)"}[1h])) or vector(0)) / sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[1h])))
+          and (sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[1h])) > 0)
+      - record: superstep:slo_error_ratio
+        labels: { objective: api_availability, window: "6h" }
+        expr: >-
+          ((sum(increase(studio_http_server_requests{status_class="5xx",route=~"/api/.*",route!~"/api/(health|ready)"}[6h])) or vector(0)) / sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[6h])))
+          and (sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[6h])) > 0)
+  - name: superstep-slo-30d
+    interval: 5m
+    rules:
+      - record: superstep:slo_error_ratio
+        labels: { objective: run_success, window: "30d" }
+        expr: >-
+          ((sum(increase(studio_runs{status=~"error|timeout|expired"}[30d])) or vector(0)) / sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[30d])))
+          and (sum(increase(studio_runs{status=~"ok|error|timeout|expired"}[30d])) > 0)
+      - record: superstep:slo_error_ratio
+        labels: { objective: api_availability, window: "30d" }
+        expr: >-
+          ((sum(increase(studio_http_server_requests{status_class="5xx",route=~"/api/.*",route!~"/api/(health|ready)"}[30d])) or vector(0)) / sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[30d])))
+          and (sum(increase(studio_http_server_requests{route=~"/api/.*",route!~"/api/(health|ready)"}[30d])) > 0)

@@ -1171,6 +1171,17 @@
         "cost": "Est. cost",
         "unpriced": "Unpriced"
       },
+      "slo": {
+        "title": "Service level objectives",
+        "window": "Rolling 30 days",
+        "runs": "Run success",
+        "api": "API availability",
+        "target": "Target {{value}}",
+        "observed": "Observed {{value}} ({{count}} completed runs)",
+        "budget": "Error budget remaining {{value}}",
+        "empty": "No completed runs in this window.",
+        "viewGrafana": "View availability and error budget in Grafana"
+      },
       "health": {
         "title": "Product health",
         "intro": "Things that may need someone to act. Approvals and webhooks count the selected window.",

@@ -46,7 +46,8 @@ def check(expr: str, known: set[str]) -> list[str]:
     bad += [s for s in servers if s not in receiver_metrics()]
     used = {x.strip() for g in GROUPING.findall(expr) for x in g.split(",") if x.strip()}
     used |= {m.split("=")[0].strip(" !~") for g in MATCHER.findall(expr) for m in g.split(",") if "=" in m}
-    bad += sorted(f"label {x}" for x in used - telemetry.LABELS - EXTRA_LABELS - (RECEIVER_LABELS if servers else set()))
+    recording_labels = {"window", "objective"} if "superstep:slo_" in expr else set()
+    bad += sorted(f"label {x}" for x in used - telemetry.LABELS - EXTRA_LABELS - recording_labels - (RECEIVER_LABELS if servers else set()))
     return bad
 
 

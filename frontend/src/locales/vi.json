@@ -1171,6 +1171,17 @@
         "cost": "Chi phí ước tính",
         "unpriced": "Chưa có giá"
       },
+      "slo": {
+        "title": "Mục tiêu mức dịch vụ",
+        "window": "30 ngày gần nhất",
+        "runs": "Tỷ lệ run thành công",
+        "api": "Tính sẵn sàng của API",
+        "target": "Mục tiêu {{value}}",
+        "observed": "Đo được {{value}} ({{count}} run đã kết thúc)",
+        "budget": "Ngân sách lỗi còn lại {{value}}",
+        "empty": "Không có run đã kết thúc trong khoảng này.",
+        "viewGrafana": "Xem độ sẵn sàng và ngân sách lỗi trong Grafana"
+      },
       "health": {
         "title": "Tình trạng sản phẩm",
         "intro": "Những việc có thể cần người xử lý. Yêu cầu duyệt và webhook tính trong khoảng đã chọn.",

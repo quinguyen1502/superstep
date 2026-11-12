@@ -38,6 +38,16 @@ class UsageRepository:
             out["cost_usd"] += float(cost); out["unpriced_runs"] += int(unp)
         return out
 
+    def run_slo(self, since: float, until: float) -> tuple[int, int]:
+        completed = func.coalesce(Run.ended, Run.started)
+        successes = func.sum(case((Run.status == "ok", 1), else_=0))
+        with self.db.session() as s:
+            total, ok = s.execute(select(func.count(), successes).where(
+                completed >= since, completed < until,
+                Run.status.in_(("ok", "error", "timeout", "expired")),
+            )).one()
+        return int(total), int(ok or 0)
+
     def series(self, since: float, until: float, size: int) -> list[tuple[int, str, int]]:
         """(bucket index, status, runs): bucket i covers [since + i*size, since + (i+1)*size). Integer division of
         non-negative integers floors on both SQLite and Postgres."""

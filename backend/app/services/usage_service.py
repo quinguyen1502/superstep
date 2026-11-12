@@ -58,7 +58,15 @@ class UsageService:
                 "series": series, "top_workflows": top, "grafana_url": config.grafana_url() or None,
                 "models": self.repo.models(since, until), "models_since": self.repo.usage_since(),
                 "users": users, "teams": self.repo.teams(since, until, sort, PEOPLE_LIMIT),
-                "teams_shared_members": self.repo.shared_members(since, until)}
+                "teams_shared_members": self.repo.shared_members(since, until), "slo": self.slo(until)}
+
+    def slo(self, until: float) -> dict:
+        run_target, api_target = config.slo_targets()
+        total, ok = self.repo.run_slo(until - WINDOWS["30d"], until)
+        observed = ok / total if total else None
+        remaining = max(0.0, 1 - (1 - observed) / (1 - run_target)) if observed is not None else None
+        return {"run_target": run_target, "run_observed": observed, "run_samples": total,
+                "run_budget_remaining": remaining, "api_target": api_target}
 
     def health(self, uid: str, window: str = "7d") -> dict:
         since, until = self._window(uid, window)

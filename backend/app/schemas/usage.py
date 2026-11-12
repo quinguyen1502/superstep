@@ -75,9 +75,18 @@ class UsageTeam(BaseModel):
     unpriced_runs: int
 
 
+class UsageSlo(BaseModel):
+    run_target: float
+    run_observed: Optional[float]
+    run_samples: int
+    run_budget_remaining: Optional[float]
+    api_target: float
+
+
 class UsageSummary(BaseModel):
     window: Window
     bucket: Bucket
+    slo: UsageSlo
     bucket_seconds: int
     since: float
     until: float

@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0307
 - Title: SLO targets and burn-rate alerts
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-10
 - Updated: 2026-11-12
@@ -15,6 +15,8 @@
 - Plan: PLAN-0014
 - Phase: 3
 - Size: M
+- Review: `.factory-state/artifacts/REV-0292-TASK-0307-slo-burn.md`
+- QA: `.factory-state/artifacts/QA-0292-TASK-0307-slo-burn.md`
 
 ## Objective
 
@@ -61,6 +63,14 @@ Operators get fast and slow burn-rate alerts in Grafana for run success and API 
 
 - 2026-11-10: Created by planning on branch factory/plan-observability-next. No implementation. Stays in backlog until the owner accepts REQ-0095 and PLAN-0014.
 - 2026-11-12: Moved from backlog to todo after the Phase 2 stack merged. Owner approved starting Phase 3 on 2026-11-11.
+
+- 2026-11-12: Owner approved implementation. Used the proposed 30-day targets, added Usage calculations, Prometheus rules and Grafana alerts.
+
+- 2026-11-12: Seeded run data matched the Usage SLO. Prometheus accepted all 12 recording rules. This branch is stacked on factory/task-0306-usage-budgets.
+
+- 2026-11-12: A synthetic 20 percent run error rate matched the fast alert expression. Health and readiness errors did not count toward API burn.
+
+- 2026-11-12: Owner approved merge. Moved to done on PR #361.
 
 ## Handoff Notes
 
