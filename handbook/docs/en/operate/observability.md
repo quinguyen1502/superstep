@@ -236,6 +236,7 @@ to get notified.
 | Alert | Fires when | Default |
 | --- | --- | --- |
 | Instance down | No process reports metrics: the collector drops a silent process after 5 minutes, then the rule waits 5 more | |
+| Thumbs-down spike | More than 30% thumbs down among at least 10 chat rating submissions in 30 minutes. |
 | Database down | `studio.ready.db` is 0 for 1 minute | |
 | Redis down | `studio.ready.redis` is 0 for 1 minute | |
 | HTTP 5xx share | Share of 5xx responses over 5 minutes | above 5% for 5 minutes |
@@ -403,3 +404,9 @@ The rolling 30-day defaults are 99% run success and 99.5% API availability. Run 
 Set `STUDIO_SLO_RUN_SUCCESS` and `STUDIO_SLO_API_AVAILABILITY` as fractions greater than zero and less than one. Restart the API and Prometheus together so the Usage card and Grafana use the same targets. Usage reads run success from the database. Grafana shows both objectives and their burn rates.
 
 To exercise the fast alert on a local stack, sustain 20% failed runs for over an hour using an isolated workload. At the 99% target, both the short and long windows reach about 20× burn. Inspect the rule in Grafana and allow one evaluation interval for it to fire.
+
+## Quality signals
+
+Usage reads each answer's latest rating and ranks workflows by thumbs-down share for the selected window. A rate is shown once a workflow has at least five ratings. The latest completed test suites are shown across workflows, including suites completed before the selected window. When configured, the LangSmith link opens its Studio settings.
+
+Grafana counts rating submissions, including edits, with `studio.chat.ratings`. It alerts when over 30% of at least 10 submissions in 30 minutes are thumbs down for five minutes.

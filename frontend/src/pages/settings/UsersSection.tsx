@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom'
 /** Settings → Users: every account with its role and status, and the roles matrix. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -82,6 +83,8 @@ type LangSmith = { configured: boolean; tracing: boolean; evals: boolean; projec
 
 /** Send finished workflow test suites to LangSmith as experiments (needs LANGSMITH_API_KEY on the server). */
 function LangSmithCard() {
+  const { hash } = useLocation()
+  useEffect(() => { if (hash === '#langsmith-settings') document.getElementById('langsmith-settings')?.scrollIntoView() }, [hash])
   const { t } = useTranslation(); const [s, setS] = useState<LangSmith | null>(null); const [err, setErr] = useState('')
   useEffect(() => { api<LangSmith>('/api/admin/langsmith').then(setS).catch(e => setErr(e.message)) }, [])
   const toggle = async (on: boolean) => {

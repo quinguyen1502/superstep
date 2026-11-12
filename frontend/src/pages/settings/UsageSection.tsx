@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { UsageBudgetsCard } from './UsageBudgetsCard'
+import { UsageQualityCard } from './UsageQualityCard'
 import { AlertCircle, ExternalLink, RotateCw } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -225,6 +226,7 @@ export function UsageSection() {
             <ul className="space-y-1">{health.schedules.disabled_list.map(s => <li key={s.id}><span className="font-medium">{s.name}</span>{s.note ? `: ${s.note}` : ''}</li>)}</ul>
           </AlertDescription></Alert>}
         </CardContent></Card>}
+      {health?.quality && <UsageQualityCard quality={health.quality} />}
       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         <HandbookLink id="usage-handbook" page="operate/observability" label={t('settings.usage.handbook')} />
         {data.grafana_url && <a id="usage-grafana" href={data.grafana_url} target="_blank" rel="noopener noreferrer"

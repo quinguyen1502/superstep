@@ -6,6 +6,8 @@ from sqlalchemy import BigInteger, and_, case, cast, func, select
 from ..models import Run
 from ..models.approval import ApprovalWait
 from ..models.chat_message import ChatMessage
+from ..models.chat_session import ChatRating
+from ..models.workflow_test import WorkflowTestSuite
 from ..models.run_usage import RunUsage
 from ..models.team import Team, TeamMember
 from ..models.user import User
@@ -131,6 +133,34 @@ class UsageRepository:
                              .group_by(ChatMessage.code, ChatMessage.kind).order_by(func.count().desc(), ChatMessage.code)).all()
             started = s.scalar(select(func.count()).where(ChatMessage.status == "started", *window))
         return {"refused": [{"code": c or "unknown", "kind": k, "count": int(n)} for c, k, n in rows], "started": int(started or 0)}
+
+    def rating_quality(self, since: float, until: float, minimum: int, limit: int = 10) -> list[dict]:
+        count = func.count(ChatRating.turn_id)
+        down = func.sum(case((ChatRating.value == "down", 1), else_=0))
+        share = case((count >= minimum, down / count), else_=None)
+        q = (select(Workflow.id, Workflow.name, count, share)
+             .join(ChatRating, and_(ChatRating.workflow_id == Workflow.id,
+                                    ChatRating.updated >= since, ChatRating.updated < until))
+             .group_by(Workflow.id, Workflow.name)
+             .order_by(case((count >= minimum, 0), else_=1), share.desc(), count.desc(), Workflow.id)
+             .limit(limit))
+        with self.db.session() as s:
+            return [{"workflow_id": wid, "name": name, "ratings": int(n),
+                     "thumbs_down_share": float(rate) if rate is not None else None}
+                    for wid, name, n, rate in s.execute(q)]
+
+    def latest_test_suites(self, limit: int = 10) -> list[dict]:
+        suite = WorkflowTestSuite
+        rank = func.row_number().over(partition_by=suite.workflow_id,
+                                       order_by=(suite.ended.desc(), suite.started.desc(), suite.id.desc()))
+        latest = (select(suite.workflow_id, suite.ended, suite.total, suite.passed, rank.label("rank"))
+                  .where(suite.status == "done", suite.ended.is_not(None)).subquery())
+        q = (select(latest.c.workflow_id, Workflow.name, latest.c.ended, latest.c.total, latest.c.passed)
+             .join(Workflow, Workflow.id == latest.c.workflow_id)
+             .where(latest.c.rank == 1).order_by(latest.c.ended.desc(), Workflow.id).limit(limit))
+        with self.db.session() as s:
+            return [{"workflow_id": wid, "name": name, "ended": ended, "total": total, "passed": passed}
+                    for wid, name, ended, total, passed in s.execute(q)]
 
     # ---- product health ----
     def approvals(self, since: float) -> dict:

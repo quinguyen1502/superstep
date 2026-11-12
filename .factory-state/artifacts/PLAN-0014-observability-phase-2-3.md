@@ -62,7 +62,7 @@ PLAN-0013 "Later Phases" listed phase 2 (correlation, depth), phase 3 (usage dat
 | 12 | [TASK-0305](../tasks/done/TASK-0305-phase2-handbook-dashboard.md) | 2 | Handbook and dashboard pass for phase 2 | S | TASK-0294 to TASK-0304 |
 | 13 | [TASK-0306](../tasks/done/TASK-0306-usage-budgets.md) | 3 | Per-user and per-team budgets | L | TASK-0301, TASK-0303, DEC-0096 |
 | 14 | [TASK-0307](../tasks/done/TASK-0307-slo-burn.md) | 3 | SLO targets, burn-rate alerts, error-budget card | M | TASK-0305 |
-| 15 | [TASK-0308](../tasks/todo/TASK-0308-quality-signals.md) | 3 | Thumbs-down rate and workflow test results | M | TASK-0305 (scheduling) |
+| 15 | [TASK-0308](../tasks/done/TASK-0308-quality-signals.md) | 3 | Thumbs-down rate and workflow test results | M | TASK-0305 (scheduling) |
 
 Each task: own branch `factory/task-NNNN-<slug>` from `develop`, own PR, REV and QA artifacts, full Factory verify and validate, all required CI including the three E2E shards green before merge. Tasks that add metrics add their dashboard panels and a short handbook entry in the same PR; tasks that add environment variables update `.env.example` and the configuration reference (en and vi).
 

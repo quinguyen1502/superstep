@@ -24,9 +24,10 @@ LANGSMITH_DEFAULT = "https://api.smith.langchain.com"
 # Metric labels: bounded values only. Per-user or per-team usage is SQL on the Usage page, never a label.
 LABELS = frozenset({"status", "source", "workflow_id", "model", "provider", "code", "direction", "route", "method",
                     "status_class", "state", "primary_provider", "fallback_provider", "kind", "transport", "runtime",
-                    "language", "scope"})
+                    "language", "scope", "rating"})
 # Integration labels are fixed enums; any other value is exported as "other" (tests keep these lists in sync).
-ENUMS = {"kind": frozenset({"email", "slack", "teams", "telegram", "webhook", "whatsapp"}),
+ENUMS = {"rating": frozenset({"up", "down"}),
+         "kind": frozenset({"email", "slack", "teams", "telegram", "webhook", "whatsapp"}),
          "transport": frozenset({"stdio", "http", "managed"}),
          "runtime": frozenset({"docker", "remote", "subprocess"}),
          "language": frozenset({"python", "typescript"}),
@@ -325,6 +326,7 @@ class Telemetry:
                        "browser_actions": m.create_counter("studio.browser.actions", unit="{action}", description="Browser actions by result"),
                        "sandbox_executions": m.create_counter("studio.sandbox.executions", unit="{execution}", description="Code node executions"),
                        "sandbox_duration": m.create_histogram("studio.sandbox.duration", unit="ms", description="Time of one Code node execution"),
+                       "chat_ratings": m.create_counter("studio.chat.ratings", unit="{rating}", description="Saved chat ratings by value"),
                        "rate_limit_hits": m.create_counter("studio.rate_limit.hits", unit="{request}", description="Requests refused by a product limit"),
                        "http_requests": m.create_counter("studio.http.server.requests", unit="{request}", description="HTTP requests"),
                        "http_duration": m.create_histogram("studio.http.server.duration", unit="ms", description="HTTP request duration"),
@@ -551,6 +553,8 @@ class Telemetry:
         elif event == "sandbox":
             a = labels(runtime=f.get("runtime"), language=f.get("language"), status=f.get("status"))
             m["sandbox_executions"].add(1, a); m["sandbox_duration"].record(f.get("duration_ms") or 0.0, a)
+        elif event == "chat_rating":
+            m["chat_ratings"].add(1, labels(rating=f.get("rating"), workflow_id=f.get("workflow_id")))
         elif event == "rate_limit": m["rate_limit_hits"].add(1, labels(scope=f.get("scope")))
 
     def model_call(self, rec: dict) -> None:
