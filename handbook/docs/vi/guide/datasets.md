@@ -28,11 +28,26 @@ thấy tập dữ liệu thì đọc được dòng.
 
 ## Quyền truy cập
 
-Menu **Truy cập** cấp cho một workflow đã lưu quyền đọc hoặc ghi. Workflow không
-có quyền đó không chạy được node Tập dữ liệu hoặc công cụ Tập dữ liệu trên bảng
-này. Phát hành token Tập dữ liệu cho dự án xuất ra gọi API Superstep. Token chỉ
-hiện một lần. Thu hồi token thì các lần gọi sau dừng. Người không nhìn thấy tập
-dữ liệu nhận kết quả không tìm thấy, kể cả khi tải CSV.
+Menu **Quyền truy cập** cấp cho một workflow đã lưu quyền đọc hoặc ghi. Workflow
+không có quyền đó không chạy được node Tập dữ liệu hoặc công cụ Tập dữ liệu trên
+bảng này. Xoá dòng là một quyền riêng: chọn **Cho phép xoá dòng** trên quyền đã
+cấp. Chỉ quyền đọc và ghi thì không được Xoá dòng.
+
+Phát hành token Tập dữ liệu cho dự án xuất ra gọi API Superstep. Token chỉ
+hiện một lần. Thu hồi token thì các lần gọi sau dừng. Token cũng cần **Cho phép
+xoá dòng** thì dự án mới xoá được dòng. Người không nhìn thấy tập dữ liệu nhận
+kết quả không tìm thấy, kể cả khi tải CSV.
+
+Nơi bắt đầu lần chạy quyết định quyền đã cấp cho phép gì:
+
+| Lần chạy bắt đầu từ | Tìm, Lấy, Thêm, Thêm hoặc cập nhật | Xoá dòng |
+| --- | --- | --- |
+| Chạy trong Studio, lịch chạy, hoặc kiểm thử workflow | Khi có quyền | Khi có quyền và **Cho phép xoá dòng** |
+| Chat trong Studio, chat công khai, hoặc trigger API | Khi có quyền | Không bao giờ |
+| Chế độ demo | Không bao giờ | Không bao giờ |
+
+Công cụ workflow theo lần chạy đã gọi nó. Workflow chưa lưu không dùng được tập
+dữ liệu. Gỡ quyền cũng chặn lần chạy đang chờ tiếp tục.
 
 ## CSV
 
@@ -50,9 +65,19 @@ dữ liệu nhận kết quả không tìm thấy, kể cả khi tải CSV.
 
 ## Workflow và xuất dự án
 
-Node Tập dữ liệu có thể tìm dòng, lấy một dòng, chèn dòng, hoặc upsert dòng.
-Công cụ của Agent chỉ được đọc. Nhiều node dùng cùng một tập dữ liệu thì chung
-một binding khi xuất.
+Node Tập dữ liệu có thể tìm dòng, lấy một dòng, chèn dòng, upsert dòng, hoặc
+xoá dòng. **Xoá dòng** chọn dòng theo id dòng lấy từ state, hoặc theo một trường
+duy nhất và giá trị của nó, rồi trả về id dòng đã xoá. Nếu dòng đã không còn thì
+bước đó lỗi.
+
+Công cụ của Agent mặc định chỉ đọc. Trong **Thao tác Agent được dùng**, bạn có
+thể cho phép thêm **Thêm dòng** và **Thêm hoặc cập nhật dòng**, rồi chọn các
+trường Agent được ghi. Thêm hoặc cập nhật cần một trường khoá duy nhất. Công cụ
+của Agent không xoá được dòng. Agent ghi bằng quyền ghi của workflow. Gọi lại
+cùng một lệnh của mô hình thì không ghi hai lần. Vết chạy chỉ hiện thao tác và
+số dòng, không hiện giá trị.
+
+Nhiều node và công cụ dùng cùng một tập dữ liệu thì chung một binding khi xuất.
 
 Ở tab **Mã**, **Dự án .zip** liệt kê từng binding. Chọn API Superstep, SQLite,
 hoặc PostgreSQL. Đồ thị sinh ra đọc lựa chọn đó từ biến môi trường, nên lúc
@@ -65,7 +90,8 @@ triển khai có thể đổi backend mà không cần xuất lại. Đặt:
 
 Chạy `python agent.py --setup-datasets` hoặc lệnh TypeScript tương ứng trước
 lần chạy đầu. Setup lặp lại vẫn an toàn. Lệnh tạo các bảng của dự án và giữ
-những dòng đã có. Ảnh chụp tắt trừ khi bạn chọn **Kèm các dòng hiện tại** cho
+những dòng đã có. Xoá dòng và thao tác ghi của Agent cũng chạy trên cơ sở dữ
+liệu độc lập, và mỗi lần ghi được lưu lại để lần thử lại trả về kết quả đầu. Ảnh chụp tắt trừ khi bạn chọn **Kèm các dòng hiện tại** cho
 binding độc lập. Khi đó gói chứa tối đa 1.000 dòng trong
 `dataset-snapshots.json`. Setup chỉ nhập dòng ảnh chụp khi id đó chưa được lưu,
 và từ chối ảnh chụp có lược đồ không khớp binding.

@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0331
 - Title: Accept Dataset writes and document the public boundary
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -44,6 +44,8 @@ Prove one support-ticket path across the new operations and document the boundar
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Decisions: [DEC-0098](../../decisions/DEC-0098-dataset-delete-and-public.md)
+- Review: [REV-0315](../../artifacts/REV-0315-TASK-0331-dataset-writes-acceptance.md)
+- QA: [QA-0315](../../artifacts/QA-0315-TASK-0331-dataset-writes-acceptance.md)
 - Discovery:
 - Clarifications:
 
@@ -91,7 +93,10 @@ Prove one support-ticket path across the new operations and document the boundar
 ## Activity Log
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
+- 2026-11-13: Branched `factory/task-0331-dataset-writes-acceptance` on TASK-0330 instead of waiting for the earlier PRs to merge. Added the support-ticket acceptance test and the English and Vietnamese handbook sections. Both handbook builds pass. Review REV-0315. QA QA-0315. Moved to done.
 
 ## Handoff Notes
 
-- Start from `develop` after TASK-0326, TASK-0328, TASK-0329, and TASK-0330 merge, on `factory/task-0331-dataset-writes-acceptance`.
+- `backend/tests/test_dataset_writes_acceptance.py` is the cross-entry proof for PLAN-0017.
+- The handbook Datasets page documents Allow row deletion, the entry matrix, Delete row, and Agent insert and upsert in both languages.
+- PLAN-0017 is complete once the stacked PRs merge in order: TASK-0326, TASK-0327, TASK-0328, TASK-0329, TASK-0330, TASK-0331.
