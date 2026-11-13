@@ -42,10 +42,11 @@ function inDatasetCalendar(target: EventTarget | null) {
 }
 
 
-export function DatasetGrid({ dataset, editable, reloadDataset }: {
+export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters }: {
   dataset: Dataset
   editable: boolean
   reloadDataset: () => void
+  initialFilters?: DatasetFilters
 }) {
   const { t } = useTranslation()
   const editId = useId()
@@ -60,7 +61,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset }: {
   const [notice, setNotice] = useState('')
   const [search, setSearch] = useState('')
   const [searchText, setSearchText] = useState('')
-  const [filters, setFilters] = useState<DatasetFilters>({ mode: 'and', rules: [] })
+  const [filters, setFilters] = useState<DatasetFilters>(initialFilters ?? { mode: 'and', rules: [] })
   const [sorting, setSorting] = useState<SortingState>([])
   const [offsets, setOffsets] = useState([0])
   const [refresh, setRefresh] = useState(0)

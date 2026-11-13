@@ -1,7 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, Upload, X } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertTriangle, ExternalLink, Plus, Upload, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError } from '@/lib/api'
-import { datasetUrl, fromDraft, newDatasetColumn, toDraft, type CellValue, type Dataset, type DatasetColumn, type DatasetRow, type DatasetTeam } from '@/lib/datasets'
+import { datasetUrl, displayValue, fromDraft, newDatasetColumn, toDraft, type CellValue, type Dataset, type DatasetColumn, type DatasetRow, type DatasetTeam } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetColumnFields, DatasetValueField } from './dataset-fields'
 
@@ -102,38 +103,80 @@ export function DatasetFormDialog({ dataset, teams, onClose, onSave, onImportCsv
   </Dialog>
 }
 
-export function DatasetColumnDialog({ dataset, column, onClose, onSave }: {
+export type DatasetDuplicateFilter = { field: string; value: CellValue }
+type ColumnFailure = {
+  message: string
+  duplicates?: { field: string; value: CellValue; rows: string[]; count: number }
+  workflow?: { id: string; name: string } | null
+}
+
+function columnFailure(failure: unknown, fallback: string): ColumnFailure {
+  const result: ColumnFailure = { message: message(failure, fallback) }
+  if (!(failure instanceof ApiError)) return result
+  const details = failure.details ?? {}
+  if (failure.code === 'DATASET_UNIQUE_DUPLICATES') {
+    result.duplicates = { field: details.field, value: details.value ?? null, rows: details.rows ?? [], count: details.count ?? 0 }
+  }
+  if (failure.code === 'DATASET_SCHEMA_INCOMPATIBLE' && 'workflow' in details) {
+    result.workflow = details.workflow_id ? { id: details.workflow_id, name: details.workflow } : null
+  }
+  return result
+}
+
+export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDuplicates }: {
   dataset: Dataset
   column?: DatasetColumn
   onClose: () => void
   onSave: (dataset: Dataset) => void
+  onShowDuplicates?: (filter: DatasetDuplicateFilter) => void
 }) {
   const { t } = useTranslation()
   const formId = useId()
   const [draft, setDraft] = useState(() => toDraft(column ?? newDatasetColumn()))
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<ColumnFailure | null>(null)
 
   async function save(event: FormEvent) {
     event.preventDefault()
     setBusy(true)
-    setError('')
+    setError(null)
     try {
       const url = `${datasetUrl(dataset.id)}/columns${column ? `/${encodeURIComponent(column.key)}` : ''}`
       onSave(await api<Dataset>(url, { method: column ? 'PUT' : 'POST', json: { revision: dataset.revision, column: fromDraft(draft) } }))
     } catch (failure) {
-      setError(message(failure, t('errors.INTERNAL_ERROR')))
+      setError(columnFailure(failure, t('errors.INTERNAL_ERROR')))
     } finally {
       setBusy(false)
     }
   }
 
+  const duplicates = error?.duplicates
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
     <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden">
       <DialogHeader><DialogTitle>{t(column ? 'dataset.editColumn' : 'dataset.addColumn')}</DialogTitle></DialogHeader>
       <DialogBody><form id={formId} className="space-y-4" onSubmit={save}>
         <DatasetColumnFields column={draft} existing={!!column} onChange={setDraft} />
-        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+        {duplicates ? <Alert variant="destructive" data-testid="dataset-unique-duplicates"><AlertTriangle />
+          <AlertTitle>{t('dataset.uniqueDuplicatesTitle')}</AlertTitle>
+          <AlertDescription>
+            <p>{error.message}</p>
+            <p>{t('dataset.uniqueDuplicatesHelp')}</p>
+            {duplicates.rows.length > 0 && <p className="wrap-anywhere">
+              {t('dataset.uniqueDuplicatesSample', { rows: duplicates.rows.join(', ') })}
+            </p>}
+            {onShowDuplicates && <Button type="button" variant="outline" size="sm" className="mt-1"
+              onClick={() => onShowDuplicates({ field: duplicates.field, value: duplicates.value })}>
+              {t('dataset.uniqueDuplicatesShow', { value: displayValue(duplicates.value, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
+            </Button>}
+          </AlertDescription>
+        </Alert> : error && <Alert variant="destructive"><AlertTriangle /><AlertDescription>
+          <p>{error.message}</p>
+          {error.workflow !== undefined && <p>{error.workflow
+            ? <>{t('dataset.uniqueKeyInUse', { workflow: error.workflow.name })}{' '}
+              <Link className="inline-flex items-center gap-1 underline" to={`/workflows/${encodeURIComponent(error.workflow.id)}`}>
+                {t('dataset.openWorkflow')}<ExternalLink className="size-3" /></Link></>
+            : t('dataset.uniqueKeyInUseHidden')}</p>}
+        </AlertDescription></Alert>}
       </form></DialogBody>
       <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={onClose}>{t('common.cancel')}</Button>
         <Button type="submit" form={formId} disabled={busy}>{t('common.save')}</Button>

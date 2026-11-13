@@ -131,7 +131,8 @@ def test_agent_dataset_writes_only_configured_operations_and_fields(client, monk
         {"operation": "find_rows", "values": {"ticket": "A"}},
     ]
     calls = [tool_call(tool["name"], args, f"write-{i}") for i, args in enumerate([*accepted, *rejected])]
-    seen = script(monkeypatch, [("", calls[:2]), ("", calls[2:]), ("Finished", [])])
+    # Insert and upsert of the same key go in separate rounds: calls in one round may run in parallel.
+    seen = script(monkeypatch, [("", calls[:1]), ("", calls[1:2]), ("", calls[2:]), ("Finished", [])])
     events = run(client, {"workflow_id": wid})
     steps = final(events)["steps"]
     assert [step["status"] for step in steps] == ["ok", "ok", *(["error"] * len(rejected))]
@@ -139,7 +140,7 @@ def test_agent_dataset_writes_only_configured_operations_and_fields(client, monk
     assert steps[1]["dataset"] == {"count": 1, "operation": "upsert_row"}
     assert all(step["args"] == {} for step in steps)
     assert "424242" not in json.dumps(events)
-    messages = [json.loads(msg["content"]) for msg in seen[1][0] if msg["role"] == "tool"]
+    messages = [json.loads(msg["content"]) for msg in seen[2][0] if msg["role"] == "tool"]
     assert messages[0]["inserted"] is True and messages[0]["values"] == {"ticket": "A", "score": 424242}
     assert messages[1]["inserted"] is False and messages[1]["row_id"] == messages[0]["row_id"]
     assert rows_of(client, did) == [{"ticket": "A", "score": 7, "done": None}]
@@ -266,3 +267,20 @@ def test_agent_dataset_write_authoring_checks_write_access_and_keys(client):
     for bad in ({"operations": ["delete_row"]}, {"operations": []}, {"write_fields": []}, {"key": "done"}):
         result = call(client, "POST", "/api/workflows", body=wf(tools=[write_tool(did, **bad)]))
         assert [issue["code"] for issue in result["issues"]] == ["AGENT_TOOL_DATASET"], bad
+
+
+def test_agent_dataset_filters_ignore_case_and_ne_matches_empty_cells(client, monkeypatch):
+    did = dataset_fixture(client)
+    rows = f"/api/datasets/{did}/rows"
+    for values in ({"ticket": "Webhook-1", "score": 5}, {"ticket": "WEBHOOK-2"}, {"ticket": "Other", "score": 1}):
+        call(client, "POST", rows, body={"values": values}, status=201)
+    tool = dataset_tool(did, filter_ops={"ticket": ["contains"], "score": ["ne"]}, limit=10)
+    wid = save(client, wf(tools=[tool], steps_field="steps"))
+    grant(client, did, wid, "read")
+    lookup = {"filters": [{"field": "ticket", "op": "contains", "value": "webhook"}, {"field": "score", "op": "ne", "value": 5}]}
+    seen = script(monkeypatch, [("", [tool_call(tool["name"], lookup)]), ("Finished", [])])
+    run(client, {"workflow_id": wid, "input": {"message": "Find"}})
+    response = next(message["content"] for message in seen[1][0] if message["role"] == "tool")
+    assert json.loads(response) == {"rows": [{"ticket": "WEBHOOK-2"}], "truncated": False}
+    op = seen[0][1][0]["parameters"]["properties"]["filters"]["items"]["properties"]["op"]
+    assert "ignores letter case" in op["description"] and "empty cells" in op["description"]
