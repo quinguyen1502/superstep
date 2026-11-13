@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Plus, X } from 'lucide-react'
+import { Plus, Upload, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -15,11 +15,12 @@ import { DatasetColumnFields, DatasetValueField } from './dataset-fields'
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback
 
-export function DatasetFormDialog({ dataset, teams, onClose, onSave }: {
+export function DatasetFormDialog({ dataset, teams, onClose, onSave, onImportCsv }: {
   dataset?: Dataset
   teams: DatasetTeam[] | null
   onClose: () => void
   onSave: (dataset: Dataset) => void
+  onImportCsv?: (initial: { name: string; teamId: string | null }) => void
 }) {
   const { t } = useTranslation()
   const id = useId()
@@ -82,10 +83,15 @@ export function DatasetFormDialog({ dataset, teams, onClose, onSave }: {
             </div>
             <DatasetColumnFields column={draft} onChange={next => setColumns(current => current.map(column => column.id === columnId ? { id: columnId, draft: next } : column))} />
           </fieldset>)}
-          <Button type="button" variant="outline" disabled={columns.length >= 100} onClick={() => {
-            setColumns(current => [...current, { id: nextColumn, draft: toDraft(newDatasetColumn()) }])
-            setNextColumn(current => current + 1)
-          }}><Plus />{t('dataset.addColumn')}</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" disabled={columns.length >= 100} onClick={() => {
+              setColumns(current => [...current, { id: nextColumn, draft: toDraft(newDatasetColumn()) }])
+              setNextColumn(current => current + 1)
+            }}><Plus />{t('dataset.addColumn')}</Button>
+            {onImportCsv && <Button type="button" variant="outline" onClick={() => onImportCsv({ name, teamId: scope === 'personal' ? null : scope })}>
+              <Upload />{t('dataset.createFromCsv')}
+            </Button>}
+          </div>
         </>}
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
       </form></DialogBody>

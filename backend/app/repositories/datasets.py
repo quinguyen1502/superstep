@@ -48,17 +48,20 @@ class DatasetRepository:
             return session.scalars(query).unique().one_or_none()
 
     @staticmethod
-    def _commit(session: Session) -> None:
+    def raise_integrity_error(exc: IntegrityError) -> None:
+        detail = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+        if detail in {"uq_datasets_owner_name", "uq_datasets_team_name"} or any(
+            f"UNIQUE constraint failed: datasets.{scope}, datasets.name_key" in str(exc.orig)
+            for scope in ("owner_id", "team_id")
+        ):
+            raise AppError("DATASET_NAME_TAKEN") from exc
+        raise exc
+
+    def _commit(self, session: Session) -> None:
         try:
             session.commit()
         except IntegrityError as exc:
-            detail = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
-            if detail in {"uq_datasets_owner_name", "uq_datasets_team_name"} or any(
-                f"UNIQUE constraint failed: datasets.{scope}, datasets.name_key" in str(exc.orig)
-                for scope in ("owner_id", "team_id")
-            ):
-                raise AppError("DATASET_NAME_TAKEN") from exc
-            raise
+            self.raise_integrity_error(exc)
 
     def add(self, dataset: Dataset) -> Dataset:
         with self.db.session() as session:
