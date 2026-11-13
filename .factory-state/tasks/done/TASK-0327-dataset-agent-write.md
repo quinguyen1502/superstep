@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0327
 - Title: Let an Agent insert and upsert dataset rows
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -46,6 +46,8 @@ Allow an Agent tool to insert and upsert only the fields and operations configur
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Decisions: [DEC-0098](../../decisions/DEC-0098-dataset-delete-and-public.md)
+- Review: [REV-0311](../../artifacts/REV-0311-TASK-0327-dataset-agent-write.md)
+- QA: [QA-0311](../../artifacts/QA-0311-TASK-0327-dataset-agent-write.md)
 - Discovery:
 - Clarifications:
 
@@ -92,7 +94,9 @@ Allow an Agent tool to insert and upsert only the fields and operations configur
 ## Activity Log
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
+- 2026-11-13: Owner asked to continue the Dataset phase 2 chain. Branched `factory/task-0327-dataset-agent-write` on `factory/task-0326-dataset-delete-editor` at `25fafad3` so the shared Dataset settings and locale catalogs do not conflict. Added Agent insert and upsert. Review REV-0311. QA QA-0311. Moved to done.
 
 ## Handoff Notes
 
-- This task may start beside TASK-0324. Use `factory/task-0327-dataset-agent-write` from `develop`. Do not mix the two branches.
+- Branch `factory/task-0327-dataset-agent-write` stacked on `factory/task-0326-dataset-delete-editor` at `25fafad3`. One commit, Ready PR into `factory/task-0326-dataset-delete-editor`. Retarget to `develop` after TASK-0326 merges. Do not merge until the owner asks and required CI is green.
+- The tool keeps `fields` as the returned fields and adds `operations`, `write_fields`, and `key`. Tools saved before this change stay lookup-only.
