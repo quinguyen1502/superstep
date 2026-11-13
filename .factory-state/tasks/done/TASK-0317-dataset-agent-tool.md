@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0317
 - Title: Read-only Dataset tool for Agents
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-12
-- Updated: 2026-11-12
+- Updated: 2026-11-13
 - Requirement IDs: REQ-0097
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -56,13 +56,21 @@ Run the applicable full Factory profile and repository gates. Capture review and
 - [Decision](../../decisions/DEC-0097-dataset-grid-and-export.md)
 - [Plan](../../artifacts/PLAN-0016-datasets.md)
 
+- [Review](../../artifacts/REV-0302-TASK-0317-dataset-agent-tool.md)
+- [QA](../../artifacts/QA-0302-TASK-0317-dataset-agent-tool.md)
+
 ## Open Questions
 
 None blocking. Use the plan and architecture boundaries for implementation choices.
 
 ## Activity Log
 
+- 2026-11-13: Owner approved finish and merge. Moved to done. Review REV-0302. QA QA-0302.
 - 2026-11-12: Created during owner-approved requirements planning.
+
+- 2026-11-13: Started on the Dataset editor stack at PR #372.
+
+- 2026-11-13: Implemented the read-only tool, checked the permission boundaries in live workflow runs, and moved to review.
 
 ## Handoff Notes
 

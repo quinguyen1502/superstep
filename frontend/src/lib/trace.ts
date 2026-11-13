@@ -10,7 +10,7 @@ export type RunEvent = { type: string; node?: string; label?: string; node_type?
 /** What one step of an Agent node did: a model call (`model`) or one tool call (`tool`). */
 export type AgentStep = { kind: 'model' | 'tool' | 'handoff'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
   tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected' | 'not_run'; to?: string; to_label?: string; reason?: string  // a hand-off
-  ms?: number; browser?: BrowserDetail
+  ms?: number; browser?: BrowserDetail; dataset?: { count: number | null }
   approval?: 'approved' | 'rejected'  // a tool that needed approval
   child_run_id?: string; child_workflow_id?: string }  // a workflow tool's child run
 /** An Agent node `ag` runs as `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join`, `ag/__exit` and `ag/__handoff`. */

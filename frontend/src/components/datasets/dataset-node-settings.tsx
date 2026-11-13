@@ -1,7 +1,6 @@
-import { useEffect, useId, useState } from 'react'
-import { AlertTriangle, ExternalLink, Plus, X } from 'lucide-react'
+import { useId, useState } from 'react'
+import { AlertTriangle, Plus, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -11,14 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { StateFieldPicker } from '@/components/state-field-action'
 import { TemplateEditor } from '@/components/template-editor'
 import type { Field } from '@/components/editor/meta'
-import { api } from '@/lib/api'
 import {
-  DATASET_QUERY_LIMIT, datasetOperations, datasetUrl, datasetWriteOperation, type CellValue,
-  type DatasetColumn, type DatasetNodeConfig, type DatasetOperation, type DatasetPage,
-  type DatasetSummary,
+  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetOperations, datasetWriteOperation, type CellValue,
+  type DatasetColumn, type DatasetNodeConfig, type DatasetOperation,
 } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
+import { DatasetBindingNotice, DatasetPicker } from './dataset-picker'
 
 import type { BindingLookup } from './use-dataset-node-binding'
 
@@ -31,40 +29,9 @@ export function DatasetNodeSettings({ data, binding, disabled, onChange }: {
 }) {
   const { t } = useTranslation()
   const id = useId()
-  const [catalog, setCatalog] = useState<DatasetPage<DatasetSummary> | null>(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  useEffect(() => {
-    let active = true
-    api<DatasetPage<DatasetSummary>>(datasetUrl()).then(page => { if (active) setCatalog(page) })
-      .catch(failure => { if (active) setError(failure.message) })
-    return () => { active = false }
-  }, [])
-  async function more() {
-    if (catalog?.next_offset == null || loading) return
-    setLoading(true)
-    setError('')
-    try {
-      const next = await api<DatasetPage<DatasetSummary>>(`${datasetUrl()}?offset=${catalog.next_offset}`)
-      setCatalog({ ...next, items: [...catalog.items, ...next.items] })
-    } catch (failure) { setError((failure as Error).message) }
-    finally { setLoading(false) }
-  }
   const permission = datasetWriteOperation(data.operation) ? 'write' : 'read'
-  const missingGrant = binding?.permission !== undefined && binding.permission !== 'read_write' && binding.permission !== permission
-  const orphaned = data.dataset_id && !catalog?.items.some(item => item.id === data.dataset_id)
   return <div className="space-y-3">
-    <div className="space-y-1.5">
-      <Label htmlFor={`${id}-dataset`}>{t('datasetNode.dataset')}</Label>
-      <Select value={data.dataset_id || ''} onValueChange={dataset_id => onChange({ dataset_id })} disabled={disabled}>
-        <SelectTrigger id={`${id}-dataset`} className="w-full"><SelectValue placeholder={t('datasetNode.chooseDataset')} /></SelectTrigger>
-        <SelectContent emptyMessage={error || (catalog === null ? t('common.loading') : t('dataset.noDatasets'))}>
-          {orphaned && <SelectItem value={data.dataset_id!} disabled={!binding?.dataset}>{binding?.dataset?.name ?? t('datasetNode.unavailable')}</SelectItem>}
-          {catalog?.items.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      {catalog?.next_offset != null && <Button variant="ghost" size="sm" disabled={loading} onClick={() => void more()}>{t('dataset.moreDatasets')}</Button>}
-    </div>
+    <DatasetPicker id={`${id}-dataset`} value={data.dataset_id} binding={binding} disabled={disabled} onChange={dataset_id => onChange({ dataset_id })} />
     <div className="space-y-1.5">
       <Label htmlFor={`${id}-operation`}>{t('datasetNode.operation')}</Label>
       <Select value={data.operation || 'find_rows'} disabled={disabled} onValueChange={value => {
@@ -76,15 +43,7 @@ export function DatasetNodeSettings({ data, binding, disabled, onChange }: {
           <SelectItem key={operation} value={operation}>{t(`datasetNode.operations.${operation}`)}</SelectItem>)}</SelectContent>
       </Select>
     </div>
-    {!data.dataset_id && <Alert variant="warning"><AlertTriangle /><AlertDescription>{t('datasetNode.rebind')}</AlertDescription></Alert>}
-    {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-    {binding?.error && <Alert variant="destructive"><AlertDescription>{binding.error} {t('datasetNode.rebind')}</AlertDescription></Alert>}
-    {binding?.dataset && !binding.workflowId && <p className="text-xs text-muted-foreground">{t('datasetNode.saveForGrant')}</p>}
-    {binding?.grantError && <Alert variant="warning"><AlertTriangle /><AlertDescription>{binding.grantError}</AlertDescription></Alert>}
-    {missingGrant && <Alert variant="warning"><AlertTriangle /><AlertDescription>{t(`datasetNode.grantMissing.${permission}`)}</AlertDescription></Alert>}
-    {binding?.dataset && <Button variant="outline" size="sm" asChild>
-      <Link to={`/datasets/${encodeURIComponent(binding.dataset.id)}`} target="_blank" rel="noopener"><ExternalLink />{t('datasetNode.openDataset')}</Link>
-    </Button>}
+    <DatasetBindingNotice value={data.dataset_id} binding={binding} permission={permission} />
   </div>
 }
 
@@ -179,8 +138,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
         {filters.map((rule, index) => {
           const column = columns.find(item => item.key === rule.field)
           const replace = (patch: Partial<typeof rule>) => patchArgs({ filters: filters.map((item, position) => position === index ? { ...item, ...patch } : item) })
-          const ops = column?.kind === 'boolean' ? ['eq', 'ne', 'is_null', 'not_null'] : ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is_null', 'not_null']
-          if (column && ['text', 'email', 'select'].includes(column.kind)) ops.push('contains')
+          const ops = column ? datasetFilterOperators(column.kind) : []
           return <fieldset className="space-y-2 rounded-md border p-2" key={index}>
             <legend className="px-1 text-xs">{t('dataset.filterCondition', { number: index + 1 })}</legend>
             <div className="flex items-center gap-1">

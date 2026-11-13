@@ -9,7 +9,7 @@ in the model's order. Each slot has its own ledger entry. The conversation lives
 that object.
 
 Node data: credential_id, model, system_prompt, prompt, output_field, steps_field?, history_field?, max_rounds and
-`tools`, each {name, description, source: mcp | http | builtin | knowledge | workflow, approval?} plus its source's settings:
+`tools`, each {name, description, source: mcp | http | builtin | knowledge | workflow | dataset, approval?} plus its source's settings:
   mcp: server_id, tool, parameters (the server's input schema)    builtin: function (engine/tools.py)
   knowledge: knowledge_base_id, top_k                               http: method, url, body, parameters
   workflow: workflow_id, inputs (the state fields the model fills), outputs (the final state fields it gets back)
@@ -39,7 +39,7 @@ from .locale import by_locale
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
-from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes, browser_presentation
+from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes, browser_presentation, dataset_nodes
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
@@ -53,7 +53,7 @@ HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Cont
 NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
 TYPES = ("agent", "agent_model", "agent_tool", "agent_exit", "agent_join", "agent_handoff")
 ROUTERS = ("agent_model", "agent_join", "agent_handoff")  # steps that pick the next step (they may loop)
-SOURCES = ("mcp", "http", "builtin", "knowledge", "workflow")
+SOURCES = ("mcp", "http", "builtin", "knowledge", "workflow", "dataset")
 DEFAULT_ROUNDS, MAX_ROUNDS, MAX_CALLS_PER_ROUND = 5, 25, 8
 RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
 STEP_CHARS = 2000    # ... and into the steps field / trace shortened to this
@@ -119,6 +119,7 @@ def step_of(delta: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 def parameters(t: Dict[str, Any]) -> Dict[str, Any]:
     src = t.get("source")
     if src == "knowledge": return QUERY
+    if src == "dataset": return dataset_nodes.agent_parameters(t)
     if src == "builtin": return PARAMETERS.get(t.get("function") or "") or {"type": "object", "properties": {}}
     if src == "workflow":  # the child's state fields the model fills, typed from the snapshot once a run is planned
         if browser_recipes.parsed(t.get('snapshot') or {}) is not None:return browser_recipes.input_schema(t['snapshot'])
@@ -201,10 +202,34 @@ def http_request(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[
     return http_send(nid, method, url, body, headers)
 
 
-def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None) -> Any:
+def trace_arguments(ports: Ports, tool: dict | None, value: Any) -> Any:
+    if tool and tool.get("source") == "dataset":
+        return {}
+    return browser_approval.trace_arguments(ports, tool, value)
+
+
+def dataset_result(page: dict) -> tuple[str, int]:
+    """Keep complete rows in the model message, within the shared result budget."""
+    rows, size = [], 0
+    for item in page["items"]:
+        row = json.dumps(item["values"], ensure_ascii=False)
+        size += len(row) + 1
+        if size > RESULT_CHARS - 50:
+            break
+        rows.append(row)
+    truncated = len(rows) < len(page["items"]) or page["next_offset"] is not None
+    return f'{{"rows":[{",".join(rows)}],"truncated":{str(truncated).lower()}}}', len(rows)
+
+
+def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None, dataset_scope=None) -> Any:
     src = t.get("source")
     if src == "mcp":
         return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None, group=group, ticket=ticket)
+    if src == "dataset":
+        if ports.dataset_call is None:
+            raise AppError("DATASET_GRANT_DENIED")
+        binding, query = dataset_nodes.agent_query(t, args, dataset_scope)
+        return ports.dataset_call(binding, query, None)
     if src == "knowledge":
         if ports.retrieve is None: raise RuntimeError("Agent knowledge base tools need a knowledge base service")
         return ports.retrieve(t.get("knowledge_base_id") or "", str(args.get("query") or ""), int(t.get("top_k") or 4))
@@ -250,6 +275,8 @@ def errors(nid: str, d: Dict[str, Any], schema: List[Dict[str, Any]]) -> List[st
             if not t.get("knowledge_base_id"): errs.append(Issue("AGENT_TOOL_KB", **who))
             k = t.get("top_k", 4)
             if not isinstance(k, int) or isinstance(k, bool) or not 1 <= k <= 20: errs.append(Issue("AGENT_TOOL_TOP_K", **who))
+        if src == "dataset" and not dataset_nodes.valid_agent(dataset_nodes.agent_binding(t)):
+            errs.append(Issue("AGENT_TOOL_DATASET", **who))
         if src == "workflow":
             if not t.get("workflow_id"): errs.append(Issue("AGENT_TOOL_WORKFLOW", **who))
             for key, code in (("inputs", "AGENT_TOOL_INPUTS"), ("outputs", "AGENT_TOOL_OUTPUTS")):
@@ -514,10 +541,10 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                     done = c is first
                     msg = f"Handed off to {h['label']}" if done else NOT_RUN
                     p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": msg})
-                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"]), "result": NOT_RUN, "status": "not_run", "ms": 0})
+                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"]), "result": NOT_RUN, "status": "not_run", "ms": 0})
                 p["pending"], p["handoff"] = [], {"to": h["target"], "label": h["label"], "reason": reason, "tool": first["name"]}
                 p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": False,
-                             "tool_calls": [{"name": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"])} for c in calls]}
+                             "tool_calls": [{"name": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"])} for c in calls]}
                 return {key: p}
             p["pending"] = copy.deepcopy(calls[:MAX_CALLS_PER_ROUND])
             batch=[]
@@ -533,10 +560,10 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run
                 why = f"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round"
                 p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": why})
-                p.setdefault("steps", []).append({"tool": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"]), "result": why, "status": "refused", "ms": 0})
+                p.setdefault("steps", []).append({"tool": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"]), "result": why, "status": "refused", "ms": 0})
             if not calls: p["answer"] = out
             p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": hit,
-                         "tool_calls": [{"name": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"])} for c in calls]}
+                         "tool_calls": [{"name": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"])} for c in calls]}
             return {key: p}
         return fn
 
@@ -550,6 +577,9 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             tool, args = by_name.get(call["name"]), call.get('_resolved_args',call.get("args"))
             bad = None if tool is None else call.get('_binding_error') or arg_error(parameters(tool),call.get('args'))
             decided = None
+            dataset = bool(tool and tool.get("source") == "dataset")
+            dataset_count = None
+            dataset_failed = False
             browser_result=None;browser_details=None
             browser=bool(tool is not None and tool.get('source')=='mcp' and ports.browser is not None and not (ports.test or ports.mock_models) and ports.browser.is_browser(tool.get('server_id')))
             missing_browser_url=bool(browser and not call.get('_binding_error') and tool.get('tool')=='navigate' and web_contract.missing_url(args))
@@ -597,19 +627,27 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             else:
                 try:
                     with embeddings.collect((lambda u: usage(nid, u)) if usage else None):  # a knowledge tool's query embedding
-                        value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'))
-                    status,result='ok',text(value)
+                        value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'),
+                                       dataset_scope=d.get(dataset_nodes.SCOPE))
+                    if dataset:
+                        result, dataset_count = dataset_result(value)
+                    else:
+                        result = text(value)
+                    status = "ok"
                     if browser and isinstance(value,dict):
                         browser_details=value
                         if value.get('status')!='confirmed':status='waiting' if value.get('deferred') else 'error'
                 except Exception as e:
                     if getattr(e, "fenced", False): raise  # this worker lost the run
+                    dataset_failed = dataset
                     status, result = "error", f"{FAILED}: {safe_error(e)}"
             if call.get('_browser_ticket') and status in {'rejected','error'} and ports.browser is not None:
                 ports.browser.skip(owner(node),call['_browser_ticket'])
             ms = round((time.perf_counter() - t0) * 1000, 2)
-            trace_args=browser_approval.trace_arguments(ports,tool,args)
-            step = {"tool": call["name"], "args": trace_args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
+            trace_args = trace_arguments(ports, tool, args)
+            step = {"tool": call["name"], "args": trace_args, "status": status, "ms": ms,
+                    **({"dataset": {"count": dataset_count}} if dataset else {"result": shorten(result, STEP_CHARS)}),
+                    **({"result": FAILED} if dataset_failed else {}),
                     **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),
                     **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {}),
                     **({'browser':browser_presentation.detail(tool.get('tool'),browser_details)} if browser_details is not None else {})}

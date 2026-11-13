@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import re
 
+from ..core.dataset_types import FILTER_OPERATORS
+from ..core.errors import AppError
 from .issues import Issue
 
 SCOPE = "_dataset_workflow"
@@ -14,6 +16,8 @@ INPUTS = {
     "insert_row": {"values"},
     "upsert_row": {"values", "key"},
 }
+AGENT_MAX_ROWS = 20
+AGENT_MAX_FILTERS = 12
 KEY = re.compile(r"[a-z][a-z0-9_]{0,62}")
 
 
@@ -55,16 +59,76 @@ def errors(node_id: str, data: dict) -> list:
     return [] if valid(data) else [Issue("DATASET_NODE_BINDING", node=node_id)]
 
 
+def agent_binding(tool: dict) -> dict:
+    return {
+        "dataset_id": tool.get("dataset_id"), "operation": "find_rows", "fields": tool.get("fields"),
+        "arguments": {"limit": tool.get("limit", 10)}, "filter_ops": tool.get("filter_ops", {}),
+    }
+
+
+def valid_agent(binding: dict) -> bool:
+    if not valid(binding):
+        return False
+    limit, allowed = binding["arguments"]["limit"], binding["filter_ops"]
+    return (
+        type(limit) is int and 1 <= limit <= AGENT_MAX_ROWS
+        and isinstance(allowed, dict) and len(allowed) <= 100
+        and all(_key(field) and isinstance(ops, list) and 0 < len(ops) <= len(FILTER_OPERATORS)
+                and all(op in FILTER_OPERATORS for op in ops) and len(set(ops)) == len(ops)
+                for field, ops in allowed.items())
+    )
+
+
+def agent_parameters(tool: dict) -> dict:
+    binding = agent_binding(tool)
+    allowed = binding["filter_ops"] if valid_agent(binding) else {}
+    properties = {}
+    if allowed:
+        policies = ", ".join(f"{field}: {'/'.join(ops)}" for field, ops in allowed.items())
+        properties["filters"] = {
+            "type": "array", "maxItems": AGENT_MAX_FILTERS, "description": f"Match every filter. Allowed operators by field: {policies}.",
+            "items": {"type": "object", "additionalProperties": False, "required": ["field", "op"], "properties": {
+                "field": {"type": "string", "enum": list(allowed)},
+                "op": {"type": "string", "enum": sorted({op for ops in allowed.values() for op in ops})},
+                "value": {"description": "A string, number or boolean matching the field type. Omit for is_null and not_null.",
+                          "type": ["string", "number", "boolean", "null"]},
+            }},
+        }
+    return {"type": "object", "properties": properties, "additionalProperties": False}
+
+
+def agent_query(tool: dict, args: dict, scope: str | None) -> tuple[dict, dict]:
+    binding = agent_binding(tool)
+    if not valid_agent(binding) or not isinstance(args, dict) or set(args) - {"filters"}:
+        raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+    filters = args.get("filters", [])
+    if not isinstance(filters, list) or len(filters) > AGENT_MAX_FILTERS:
+        raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+    allowed = binding["filter_ops"]
+    for rule in filters:
+        if not isinstance(rule, dict) or not _key(rule.get("field")):
+            raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+        if rule.get("op") not in allowed.get(rule["field"], []):
+            raise AppError("DATASET_FILTER_INVALID", field=rule["field"])
+    return {**binding, SCOPE: scope}, {**binding["arguments"], "filters": filters}
+
+
 def bindings(workflow: dict | None) -> dict:
     nodes = (workflow or {}).get("nodes")
     if not isinstance(nodes, list):
         return {}
-    return {
-        node["id"]: {key: data.get(key) for key in ("dataset_id", "operation", "fields", "arguments", "output_field") if key in data}
-        for node in nodes
-        if isinstance(node, dict) and node.get("type") == "dataset" and isinstance(node.get("id"), str)
-        for data in [node.get("data") or {}] if isinstance(data, dict)
-    }
+    result = {}
+    for node in nodes:
+        if not isinstance(node, dict) or not isinstance(node.get("id"), str) or not isinstance(node.get("data"), dict):
+            continue
+        node_id, data = node["id"], node["data"]
+        if node.get("type") == "dataset":
+            result[node_id] = {key: data[key] for key in ("dataset_id", "operation", "fields", "arguments", "output_field") if key in data}
+        if node.get("type") in {"agent", "agent_tool"} and isinstance(data.get("tools"), list):
+            for index, tool in enumerate(data["tools"]):
+                if isinstance(tool, dict) and tool.get("source") == "dataset":
+                    result[node_id, index] = agent_binding(tool)
+    return result
 
 
 def strip_runtime_scope(workflow: dict) -> dict:

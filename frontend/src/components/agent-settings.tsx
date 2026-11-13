@@ -4,7 +4,7 @@
  * `backend/app/engine/agents.py`. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, ArrowUp, Database, ExternalLink, Globe, Plug, Plus, TriangleAlert, Workflow, Wrench, X, type LucideIcon } from 'lucide-react'
+import { ArrowDown, ArrowUp, Database, ExternalLink, Globe, Plug, Plus, Table2, TriangleAlert, Workflow, Wrench, X, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -30,13 +30,14 @@ import type { Channels } from '@/lib/approvals'
 import type { KnowledgeBase } from '@/lib/knowledge'
 import { browserServer, type BrowserRecipe } from '@/lib/browser-tools'
 import { AgentBrowserData } from './agent-browser-data'
+import { DatasetAgentSettings } from './datasets/dataset-agent-settings'
 import { useConfirmDelete } from './use-confirm-delete'
 import { useMcpServers } from '@/lib/use-mcp-servers'
 import type { McpServer } from '@/lib/mcp'
 import type { ProviderInfo } from '@/lib/providers'
 import { METHODS, PARAM_TYPES, SOURCES, defaultFields, newTool, toolName, type AgentTool, type BuiltinTool, type Schema, type ToolSource } from '@/lib/agent'
 
-const ICONS: Record<ToolSource, LucideIcon> = { mcp: Plug, http: Globe, builtin: Wrench, knowledge: Database, workflow: Workflow }
+const ICONS: Record<ToolSource, LucideIcon> = { mcp: Plug, http: Globe, builtin: Wrench, knowledge: Database, workflow: Workflow, dataset: Table2 }
 type Row = { name: string; type: string; description: string; required: boolean }
 const rowsOf = (s?: Schema): Row[] => Object.entries(s?.properties || {}).map(([name, p]) =>
   ({ name, type: p?.type || 'string', description: p?.description || '', required: (s?.required || []).includes(name) }))
@@ -68,7 +69,7 @@ function ParamsEditor({ id, value, onChange }: { id: string; value?: Schema; onC
   </div>
 }
 
-type ToolProps = { tool: AgentTool; index: number; count: number; taken: string[]; fields: TemplateField[]; readOnly?: boolean
+type ToolProps = { tool: AgentTool; index: number; count: number; taken: string[]; fields: TemplateField[]; readOnly?: boolean; wid?: string
   servers: McpServer[] | null; kbs: KnowledgeBase[] | null; builtins: BuiltinTool[]; workflows: Wf[] | null
   onChange: (t: AgentTool) => void; onMove: (by: number) => void; onRemove: () => void }
 
@@ -126,7 +127,7 @@ function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: 
   </>
 }
 
-function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, builtins, workflows, onChange, onMove, onRemove }: ToolProps) {
+function ToolCard({ tool, index, count, taken, fields, readOnly, wid, servers, kbs, builtins, workflows, onChange, onMove, onRemove }: ToolProps) {
   const { t } = useTranslation(); const confirm = useConfirmDelete(); const I = ICONS[tool.source] ?? Wrench; const id = `agent-tool-${index}`
   const set = (patch: Partial<AgentTool>) => onChange({ ...tool, ...patch })
   const others = taken.filter(n => n !== tool.name)
@@ -170,6 +171,7 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
         <Input id={`${id}-topk`} type="number" min={1} max={20} value={tool.top_k ?? 4} onChange={e => set({ top_k: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />
         <p className="text-[11px] text-muted-foreground">{t('agent.kbHint')}</p></div>
     </>}
+    {tool.source === 'dataset' && <DatasetAgentSettings id={id} tool={tool} wid={wid} disabled={readOnly} onChange={set} />}
     {tool.source === 'workflow' && <WorkflowTool id={id} tool={tool} others={others} workflows={workflows} set={set} />}
     {tool.source === 'http' && <>
       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">{t('field.method')}</Label>
@@ -275,7 +277,7 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
     </div>
     <p className="text-[11px] text-muted-foreground">{t('agent.toolsHint')}</p>
     {!tools.length && <p className="text-[11px] text-destructive" id="agent-no-tools">{t('agent.noToolsYet')}</p>}
-    {tools.map((x, i) => <ToolCard key={keys[i]} tool={x} index={i} count={tools.length} taken={names} fields={fields} readOnly={readOnly}
+    {tools.map((x, i) => <ToolCard key={keys[i]} tool={x} index={i} count={tools.length} taken={names} fields={fields} readOnly={readOnly} wid={wid}
       servers={servers} kbs={kbs} builtins={builtins} workflows={workflows}
       onChange={nx => setTools(tools.map((y, j) => j === i ? nx : y), keys)}
       onMove={by => { const move = <T,>(xs: T[]) => { const next = [...xs]; const [it] = next.splice(i, 1); next.splice(i + by, 0, it); return next }

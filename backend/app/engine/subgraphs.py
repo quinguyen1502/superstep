@@ -140,7 +140,7 @@ def _expand_once(wf: Dict[str, Any], load: Loader, errs: List[str]) -> Dict[str,
         for i, n in cn.items():
             if i == start or i in ends: continue
             d = dict(n.get("data") or {}); d["label"] = f"{label} › {d.get('label') or i}"
-            if n.get("type") == "dataset": d[DATASET_SCOPE] = ref
+            if n.get("type") in {"dataset", "agent", "agent_tool"}: d[DATASET_SCOPE] = ref
             if isinstance(d.get("handoffs"), list):  # hand-off targets stay inside the subgraph
                 d["handoffs"] = [{**h, "target": pid(h["target"])} if isinstance(h, dict) and h.get("target") in cn else h for h in d["handoffs"]]
             nodes.append({**n, "id": pid(i), "data": d})

@@ -1,12 +1,13 @@
 /** Agent node tools: the shapes the settings edit and the engine reads (`engine/agents.py`). */
-export const SOURCES = ['mcp', 'http', 'builtin', 'knowledge', 'workflow'] as const
+export const SOURCES = ['mcp', 'http', 'builtin', 'knowledge', 'workflow', 'dataset'] as const
 export type ToolSource = typeof SOURCES[number]
 export type Schema = { type?: string; properties?: Record<string, { type?: string; description?: string }>; required?: string[] }
 import type { UrlBinding } from './browser-tools'
 export type AgentTool = { name: string; description?: string; source: ToolSource; approval?: boolean
   server_id?: string; tool?: string; url_binding?: UrlBinding; parameters?: Schema; function?: string; knowledge_base_id?: string; top_k?: number
   method?: string; url?: string; body?: string
-  workflow_id?: string; inputs?: string[]; outputs?: string[] }  // another saved workflow as a tool
+  workflow_id?: string; inputs?: string[]; outputs?: string[]
+  dataset_id?: string; fields?: string[]; filter_ops?: Record<string, string[]>; limit?: number }
 export type BuiltinTool = { name: string; doc?: string; parameters?: Schema | null }
 
 export const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -22,9 +23,10 @@ export function toolName(raw: string, taken: string[]): string {
 
 /** A new tool of `source`, named so it does not clash with the node's other tools. */
 export function newTool(source: ToolSource, taken: string[]): AgentTool {
-  const name = toolName({ mcp: 'mcp_tool', http: 'http_request', builtin: 'function', knowledge: 'search_knowledge', workflow: 'workflow' }[source], taken)
+  const name = toolName({ mcp: 'mcp_tool', http: 'http_request', builtin: 'function', knowledge: 'search_knowledge', workflow: 'workflow', dataset: 'find_dataset_rows' }[source], taken)
   if (source === 'http') return { name, source, description: '', method: 'GET', url: '', body: '', parameters: { type: 'object', properties: {} } }
   if (source === 'knowledge') return { name, source, description: '', knowledge_base_id: '', top_k: 4 }
+  if (source === 'dataset') return { name, source, description: '', dataset_id: '', fields: [], filter_ops: {}, limit: 10 }
   if (source === 'workflow') return { name, source, description: '', workflow_id: '', inputs: [], outputs: [] }
   return { name, source, description: '' }
 }

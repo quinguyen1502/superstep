@@ -1,6 +1,7 @@
 """Bind Dataset execution to the authenticated actor and effective saved workflow."""
 from pydantic import ValidationError
 
+from ..core.dataset_types import filter_operators
 from ..core.errors import AppError
 from ..engine import dataset_nodes
 from ..repositories.dataset_rows import WorkflowWrite
@@ -25,7 +26,9 @@ class DatasetRuntimeService:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
         write = operation in ("insert_row", "upsert_row")
         definition = self.access.datasets.editable_definition(actor, did, None) if write else self.access.datasets.definition(actor, did)
-        if not dataset_nodes.valid(binding):
+        is_agent = "filter_ops" in binding
+        valid = dataset_nodes.valid_agent(binding) if is_agent else dataset_nodes.valid(binding)
+        if not valid:
             return  # the normal graph validator reports incomplete draft configuration
         columns = _active_columns(definition)
         args = binding.get("arguments") or {}
@@ -35,6 +38,10 @@ class DatasetRuntimeService:
         ]
         for field in references:
             _column(columns, field)
+        if is_agent:
+            for field, operators in binding["filter_ops"].items():
+                if set(operators) - set(filter_operators(_column(columns, field).kind)):
+                    raise AppError("DATASET_FILTER_INVALID", field=field)
         if operation == "upsert_row" and not _column(columns, args["key"]).unique:
             raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
 

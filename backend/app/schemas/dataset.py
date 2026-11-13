@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..core.dataset_types import CellValue, ColumnKind
+from ..core.dataset_types import CellValue, ColumnKind, FilterOperator
 
 ColumnKey = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,62}$")]
 Label = Annotated[str, Field(min_length=1, max_length=120)]
@@ -67,7 +67,7 @@ class DatasetFilter(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     field: ColumnKey
-    op: Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null"]
+    op: FilterOperator
     value: CellValue = None
 
 

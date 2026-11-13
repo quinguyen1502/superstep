@@ -33,7 +33,7 @@ Deliver native operational datasets in Studio, deterministic workflow and Agent 
 | [TASK-0314](../tasks/done/TASK-0314-dataset-access.md) | Runtime | Workflow grants and scoped Dataset API tokens | TASK-0310, TASK-0311, TASK-0312 |
 | [TASK-0315](../tasks/done/TASK-0315-dataset-node-runtime.md) | Runtime | Dataset node runtime and atomic write receipts | TASK-0311, TASK-0314 |
 | [TASK-0316](../tasks/done/TASK-0316-dataset-node-editor.md) | Runtime | Dataset node palette and mapping editor | TASK-0312, TASK-0314, TASK-0315 |
-| [TASK-0317](../tasks/todo/TASK-0317-dataset-agent-tool.md) | Runtime | Read-only Dataset tool for Agents | TASK-0315, TASK-0316 |
+| [TASK-0317](../tasks/done/TASK-0317-dataset-agent-tool.md) | Runtime | Read-only Dataset tool for Agents | TASK-0315, TASK-0316 |
 | [TASK-0318](../tasks/todo/TASK-0318-dataset-export-api.md) | Export | Export binding contract and connected adapters | TASK-0315, TASK-0317 |
 | [TASK-0319](../tasks/todo/TASK-0319-dataset-export-python-standalone.md) | Export | Standalone SQLite and PostgreSQL for Python export | TASK-0318 |
 | [TASK-0320](../tasks/todo/TASK-0320-dataset-export-typescript-standalone.md) | Export | Standalone SQLite and PostgreSQL for TypeScript export | TASK-0318 |

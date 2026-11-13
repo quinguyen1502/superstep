@@ -1,6 +1,6 @@
 import json
 
-from ..core.dataset_types import INVALID_TEXT, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, TEXT_KINDS, filter_operators, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import DatasetRowRepository, RowFilter, WorkflowWrite
@@ -8,7 +8,6 @@ from .dataset_service import DatasetService
 
 MAX_ROW_BYTES = 65_536
 MAX_PAGE_BYTES = 1_048_576
-TEXT_KINDS = frozenset({"text", "email", "select"})
 
 
 def _active_columns(dataset: Dataset) -> dict[str, DatasetColumn]:
@@ -43,15 +42,15 @@ def _projection(columns: dict[str, DatasetColumn], fields: list[str] | None):
 
 def _filter(columns: dict[str, DatasetColumn], field: str, op: str, value) -> RowFilter:
     column = _column(columns, field)
+    if op not in filter_operators(column.kind):
+        raise AppError("DATASET_FILTER_INVALID", field=field)
     if op in {"is_null", "not_null"}:
         if value is not None:
             raise AppError("DATASET_FILTER_INVALID", field=field)
     elif op == "contains":
-        if column.kind not in TEXT_KINDS or not isinstance(value, str) or not 0 < len(value) <= 120 or INVALID_TEXT.search(value):
+        if not isinstance(value, str) or not 0 < len(value) <= 120 or INVALID_TEXT.search(value):
             raise AppError("DATASET_FILTER_INVALID", field=field)
     else:
-        if column.kind == "boolean" and op not in {"eq", "ne"}:
-            raise AppError("DATASET_FILTER_INVALID", field=field)
         value = _normalize(column, value, required=True)
     return RowFilter(column, op, value)
 

@@ -33,7 +33,7 @@ Generated connected adapters for Dataset nodes and Agent read tools, with shared
 
 ## Dependencies
 
-[TASK-0315](../done/TASK-0315-dataset-node-runtime.md), [TASK-0317](TASK-0317-dataset-agent-tool.md)
+[TASK-0315](../done/TASK-0315-dataset-node-runtime.md), [TASK-0317](../done/TASK-0317-dataset-agent-tool.md)
 
 ## Acceptance Criteria
 

@@ -48,6 +48,15 @@ export const datasetOperations = ['find_rows', 'get_row', 'insert_row', 'upsert_
 export type DatasetOperation = (typeof datasetOperations)[number]
 export type DatasetGrantPermission = 'read' | 'write' | 'read_write'
 
+export const DATASET_AGENT_MAX_ROWS = 20
+
+export function datasetFilterOperators(kind: DatasetColumn['kind']) {
+  if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null']
+  const operators = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is_null', 'not_null']
+  if (kind === 'text' || kind === 'email' || kind === 'select') operators.push('contains')
+  return operators
+}
+
 export const datasetWriteOperation = (operation?: DatasetOperation) => operation === 'insert_row' || operation === 'upsert_row'
 
 export type DatasetNodeConfig = {
