@@ -268,3 +268,16 @@ def test_debug_run_keeps_dry_run_after_human_resume(client):
     assert paused[-1]["status"] == "waiting"
     assert final(run(client, {"resume_run_id": paused[0]["run_id"], "response": "yes"}))["dry_run"] is True
     assert call(client, "POST", f"/api/datasets/{did}/rows/query", body={})["items"] == []
+
+
+def test_dataset_node_filters_ignore_case_and_ne_matches_empty_cells(client):
+    did = dataset_fixture(client)
+    for values in ({"ticket": "\u0110\u01a1n-A", "score": 5}, {"ticket": "\u0111\u01a1n-b", "score": 1}, {"ticket": "\u0110\u01a0N-C"}, {"ticket": "Other"}):
+        call(client, "POST", f"/api/datasets/{did}/rows", body={"values": values}, status=201)
+    reader = save(client, graph("Read", dataset_node(did, "find_rows", {
+        "filters": [{"field": "ticket", "op": "contains", "value": "{{state.ticket}}"},
+                    {"field": "score", "op": "ne", "value": 5}], "limit": 10,
+    })))
+    grant(client, did, reader, "read")
+    output = final(run(client, {"workflow_id": reader, "input": {"ticket": "\u0110\u01a0N"}}))
+    assert [item["values"]["ticket"] for item in output["items"]] == ["\u0111\u01a1n-b", "\u0110\u01a0N-C"]

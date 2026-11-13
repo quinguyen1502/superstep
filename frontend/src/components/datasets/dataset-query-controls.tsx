@@ -132,6 +132,7 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
               </div>
             })}
           </div>
+          <p className="text-xs text-muted-foreground">{t('dataset.filterHelp')}</p>
           <Separator />
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button type="button" variant="ghost" onClick={addFilter} disabled={!columns.length || filterDraft.length >= DATASET_QUERY_LIMIT}>

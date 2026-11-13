@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from time import time
 from uuid import uuid4
 
 from ..core import permissions as P
 from ..core.dataset_types import INVALID_TEXT, normalize_cell
 from ..core.errors import AppError
+from ..engine import dataset_nodes
 from ..models.dataset import Dataset, DatasetColumn
 from ..repositories.datasets import DatasetRepository
 from .access import AccessService
@@ -37,6 +39,15 @@ def _column(data: dict, position: int) -> DatasetColumn:
         required=data["required"], unique=data["unique"], archived=False, options=options,
         default_value=normalize_cell(key, kind, data["default"], options, required=False),
     )
+
+
+def _matches_by(binding: dict, key: str) -> bool:
+    """Whether a Dataset node or Agent tool binding finds its row by this unique field."""
+    arguments = binding.get("arguments")
+    if binding.get("operation") in {"upsert_row", "delete_row"} and isinstance(arguments, dict) and arguments.get("key") == key:
+        return True
+    operations = binding.get("operations")
+    return isinstance(operations, list) and "upsert_row" in operations and binding.get("key") == key
 
 
 def _summary(dataset: Dataset) -> dict:
@@ -75,9 +86,10 @@ class DatasetService:
             raise AppError("DATASET_SCHEMA_CONFLICT")
         return dataset
 
-    def _save(self, uid: str, dataset: Dataset, action: str, *, require_empty: bool = False, **details) -> dict:
+    def _save(self, uid: str, dataset: Dataset, action: str, *, require_empty: bool = False,
+              unique_change: tuple[str, bool] | None = None, **details) -> dict:
         dataset.updated = time()
-        saved = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty)
+        saved = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty, unique=unique_change)
         self.audit.record(uid, action, "dataset", dataset.id, **details)
         return _detail(saved)
 
@@ -145,15 +157,36 @@ class DatasetService:
         field = self._find_column(dataset, key)
         proposed = _column(column, field.position)
         if (
-            proposed.key != field.key or proposed.kind != field.kind
-            or proposed.required != field.required or proposed.unique != field.unique
+            proposed.key != field.key or proposed.kind != field.kind or proposed.required != field.required
             or not set(field.options).issubset(proposed.options)
         ):
             raise AppError("DATASET_SCHEMA_INCOMPATIBLE", field=key)
+        unique_change = None
+        if proposed.unique != field.unique:
+            if not proposed.unique:
+                self._require_unbound_key(uid, dataset.id, key)
+            unique_change = (key, proposed.unique)
         field.label = proposed.label
         field.options = proposed.options
         field.default_value = proposed.default_value
-        return self._save(uid, dataset, "dataset.column_update", field=key)
+        field.unique = proposed.unique
+        changes = {"unique": proposed.unique} if unique_change else {}
+        return self._save(uid, dataset, "dataset.column_update", unique_change=unique_change, field=key, **changes)
+
+    def _require_unbound_key(self, uid: str, dataset_id: str, key: str) -> None:
+        """A field that a saved workflow uses to match rows (upsert or delete) must stay unique."""
+        for workflow_id, name, data in self.repo.workflows_mentioning(dataset_id):
+            try:
+                graph = json.loads(data or "{}")
+            except ValueError:
+                continue
+            for binding in dataset_nodes.bindings(graph if isinstance(graph, dict) else {}).values():
+                if binding.get("dataset_id") == dataset_id and _matches_by(binding, key):
+                    visible = self.access.may(workflow_id, uid)
+                    raise AppError("DATASET_SCHEMA_INCOMPATIBLE", details={
+                        "field": key, "workflow_id": workflow_id if visible else None,
+                        "workflow": (name or workflow_id) if visible else None,
+                    }, field=key)
 
     def remove_column(self, uid: str, dataset_id: str, key: str, revision: int | None) -> dict:
         dataset = self.editable_definition(uid, dataset_id, revision)
