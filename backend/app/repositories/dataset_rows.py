@@ -176,7 +176,13 @@ class DatasetRowRepository:
     def save(self, uid: str, dataset: Dataset, build_values: Callable[[dict | None], dict], *,
              row_id: str | None = None, revision: int | None = None,
              match: tuple[str, CellValue] | None = None, workflow: WorkflowWrite | None = None,
-             connected: ConnectedWrite | None = None) -> tuple[DatasetRow, bool, bool]:
+             connected: ConnectedWrite | None = None, reveal: bool = False) -> tuple[DatasetRow, bool, bool, bool]:
+        """Insert or update one row under the writer lock.
+
+        Returns the row, whether it was inserted, whether a receipt was replayed, and whether stored values
+        changed. `reveal` means the caller will see cell values; it is re-checked against the locked grant or
+        token so a concurrent downgrade to write-only fails closed.
+        """
         receipt = workflow or connected
         with self.datasets.db.session() as session:
             if workflow and workflow.fence is not None:
@@ -191,12 +197,16 @@ class DatasetRowRepository:
                 grant = session.get(DatasetWorkflowGrant, (dataset.id, workflow.workflow_id))
                 if grant is None or grant.permission not in {"write", "read_write"}:
                     raise AppError("DATASET_GRANT_DENIED")
+                if reveal and grant.permission != "read_write":
+                    raise AppError("DATASET_GRANT_DENIED")
             if connected:
                 token = session.get(DatasetApiToken, connected.token_id)
                 if (token is None or token.dataset_id != dataset.id or token.issuer_id != uid
                         or token.token_hash != connected.token_hash or token.revoked is not None
                         or token.permission not in {"write", "read_write"}):
                     raise AppError("AUTH_TOKEN_INVALID")
+                if reveal and token.permission != "read_write":
+                    raise AppError("DATASET_GRANT_DENIED")
             if receipt:
                 fingerprint = receipt.fingerprint
                 scope = receipt.scope
@@ -207,7 +217,7 @@ class DatasetRowRepository:
                     if previous.dataset_id != dataset.id or previous.fingerprint != fingerprint:
                         raise AppError("DATASET_RECEIPT_CONFLICT")
                     snapshot = previous.result
-                    return DatasetRow(dataset_id=dataset.id, **snapshot["row"]), snapshot["inserted"], True
+                    return DatasetRow(dataset_id=dataset.id, **snapshot["row"]), snapshot["inserted"], True, False
             if match is not None:
                 field, value = match
                 key = session.get(DatasetRowKey, (dataset.id, field, key_digest(value)))
@@ -218,6 +228,7 @@ class DatasetRowRepository:
             values = build_values(row.values if row is not None else None)
             now = time()
             inserted = row is None
+            changed = inserted or values != row.values
             if row is None:
                 count = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
                 if count >= MAX_DATASET_ROWS:
@@ -227,16 +238,18 @@ class DatasetRowRepository:
                 session.flush()
             else:
                 self._check_revision(row, revision)
+            if changed and not inserted:
                 row.values, row.updated, row.revision = values, now, row.revision + 1
                 self._clear_keys(session, dataset.id, row.id)
-            session.add_all(self._keys(dataset, row))
+            if changed:
+                session.add_all(self._keys(dataset, row))
             if receipt:
                 result = {"row": {"id": row.id, "values": row.values, "revision": row.revision,
                                   "created": row.created, "updated": row.updated}, "inserted": inserted}
                 session.add(DatasetWriteReceipt(dataset_id=dataset.id, scope=scope, operation_id=receipt.operation_id,
                                                 fingerprint=fingerprint, result=result, created=now))
             self._commit(session)
-            return row, inserted, False
+            return row, inserted, False, changed
 
     @staticmethod
     def _keys(dataset: Dataset, row: DatasetRow) -> Iterator[DatasetRowKey]:

@@ -48,6 +48,16 @@ The token is shown once. Rotating it keeps the person who issued it, so the
 new secret acts with the same authority. Revoking it stops later calls. A person who cannot see
 the dataset gets "not found", including for CSV download.
 
+Write without read can insert and upsert rows but never returns cell values.
+The result has only the row ID, its revision, and whether the row was inserted,
+from a real run, a test or debug run, and a retried write. A Dataset node with
+a write-only grant cannot choose fields to return; a saved node that still asks
+for fields fails with `DATASET_GRANT_DENIED` before it writes. An Agent tool
+without **Find rows** gives the model the same identifiers, even with read and
+write access. Upsert still reveals whether a row with that key exists. If that
+must stay hidden, use **Insert row**. An upsert that changes no value keeps the
+row's revision and update time.
+
 ## CSV
 
 **Import CSV** previews the file before it writes anything.

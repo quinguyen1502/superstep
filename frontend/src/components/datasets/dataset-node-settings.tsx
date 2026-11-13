@@ -51,6 +51,8 @@ export function DatasetNodeSettings({ data, binding, disabled, onChange }: {
         onChange({
           operation, arguments: defaultArguments(operation),
           ...(operation === 'delete_row' ? { fields: deleteFields(data.fields, binding?.dataset?.columns ?? []) } : {}),
+          // A write-only grant gets identifiers back, so a new write starts without returned fields.
+          ...(datasetWriteOperation(operation) && binding?.permission === 'write' ? { fields: [] } : {}),
         })
       }}>
         <SelectTrigger id={`${id}-operation`} className="w-full"><SelectValue /></SelectTrigger>
@@ -114,6 +116,8 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
   const referenced = [...new Set([...fields, ...Object.keys(values), ...filters.map(rule => rule.field), ...sorts.map(rule => rule.field), args.key ?? ''])]
   const missing = referenced.filter(key => key && !keyPresent(columns, key))
   const deleting = operation === 'delete_row'
+  const writing = datasetWriteOperation(operation)
+  const writeOnly = writing && binding?.permission === 'write'
   const invalidKey = (operation === 'upsert_row' || deleting) && !!args.key && !columns.some(column => column.key === args.key && column.unique)
   const uniqueColumns = columns.filter(column => column.unique)
   const deleteMode = deleting && 'key' in args ? 'key' : 'row_id'
@@ -243,13 +247,20 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
           </div>
         })}
       </fieldset>}
-      {!deleting && <fieldset className="space-y-2">
+      {writeOnly ? <div className="space-y-2" data-testid="dataset-write-only-result">
+        <p className="text-xs text-muted-foreground">{t('datasetNode.writeOnlyResult')}</p>
+        {fields.length > 0 && <Alert variant="warning"><AlertTriangle /><AlertDescription>
+          {t('datasetNode.writeOnlyFields')}
+          {!disabled && <Button size="sm" variant="outline" onClick={() => onChange({ fields: [] })}>{t('datasetNode.returnIdentifiersOnly')}</Button>}
+        </AlertDescription></Alert>}
+      </div> : !deleting && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetNode.returnFields')}</legend>
         {columns.map(column => <Label key={column.key} className="gap-1.5">
           <Checkbox checked={fields.includes(column.key)} disabled={disabled} onCheckedChange={checked =>
             onChange({ fields: checked ? [...fields, column.key] : fields.filter(field => field !== column.key) })} />
           <DatasetFieldIcon kind={column.kind} />{column.label}
         </Label>)}
+        {writing && !fields.length && <p className="text-xs text-muted-foreground">{t('datasetNode.identifiersOnly')}</p>}
       </fieldset>}
     </>}
     <div className="space-y-1.5">
