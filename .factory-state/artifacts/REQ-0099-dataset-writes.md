@@ -7,12 +7,27 @@
 - Status: Accepted for planning 2026-11-13
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-13 (note on temporary selection codes added)
 - Source: Owner selection on 2026-11-13 of the next Dataset slice: DS2-01 Agent write, DS2-02 workflow row delete, and DS2-03 Dataset use from public entry points. DS2-04, DS2-05, DS2-06, DS2-07, DS2-10, and DS2-17 stay deferred. DS2-08, DS2-09, DS2-11, DS2-12, DS2-13, DS2-14, DS2-15, and DS2-16 stay selected for later requirements.
 
 ## Summary
 
 A saved workflow can delete a dataset row, an Agent can insert and upsert rows it is allowed to change, and a granted workflow can look up and write rows from public chat and the workflow API. Delete stays off those public entries.
+
+## Note On Temporary Selection Codes
+
+The `DS2-*` codes in the Source line were temporary codes used while the owner chose the direction for this slice (owner note, 2026-11-13). They are not task or artifact IDs. DS2-01 to DS2-03 are the selected scope above. The codes below are selected for a later requirement; this note defines them only and does not change this requirement's scope or create tasks. The Out Of Scope section names them by product name.
+
+| Code | Name | Meaning |
+| --- | --- | --- |
+| DS2-08 | Formula columns | A column computed from other columns when the row changes. |
+| DS2-09 | Cross-table relations | Foreign keys and lookups from one dataset to another. |
+| DS2-11 | Change triggers | Insert, Upsert, or Delete automatically runs a workflow. |
+| DS2-12 | Saved views | Save filters, column order, and sorting to reopen. |
+| DS2-13 | Calendar view | Plot rows with a date column on a month or week calendar. |
+| DS2-14 | Map view | A location column and plotting rows on a map. |
+| DS2-15 | MCP exposure | MCP clients read or write datasets within the grant. |
+| DS2-16 | Embeddings | Embed dataset rows for semantic search, not just per-cell matching. |
 
 ## Problem Or Opportunity
 
