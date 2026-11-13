@@ -27,9 +27,11 @@ def test_grants_require_saved_workflow_and_explicit_team_scope(client, db):
     error(client.put(f"{base}/grants/other-flow", headers=auth("owner"), json={"permission": "read"}), 404, "WORKFLOW_NOT_FOUND")
     call(client, "PUT", f"{base}/grants/support-flow", body={"permission": "read"})
     assert svc.for_workflow("member", "support-flow", dataset["id"], "read").subject_id == "support-flow"
-    for wid, op, public in [(None, "read", False), ("support-flow", "write", False), ("support-flow", "read", True)]:
+    assert svc.for_workflow("owner", "support-flow", dataset["id"], "read", public=True).subject_id == "support-flow"
+    for wid, op, public, demo in [(None, "read", False, False), ("support-flow", "write", False, False),
+                                  ("support-flow", "write", True, False), ("support-flow", "read", False, True)]:
         with pytest.raises(AppError, match="required dataset grant"):
-            svc.for_workflow("owner", wid, dataset["id"], op, public=public)
+            svc.for_workflow("owner", wid, dataset["id"], op, public=public, demo=demo)
     call(client, "DELETE", f"{base}/grants/support-flow")
     with pytest.raises(AppError, match="required dataset grant"):
         svc.for_workflow("owner", "support-flow", dataset["id"], "read")
