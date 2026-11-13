@@ -53,8 +53,8 @@ def _matches_by(binding: dict, key: str) -> bool:
 def _summary(dataset: Dataset) -> dict:
     return {
         "id": dataset.id, "name": dataset.name, "description": dataset.description,
-        "owner_id": dataset.owner_id, "team_id": dataset.team_id, "revision": dataset.revision,
-        "created": dataset.created, "updated": dataset.updated,
+        "owner_id": dataset.owner_id, "team_id": dataset.team_id, "team_owner_id": dataset.team_owner_id,
+        "revision": dataset.revision, "created": dataset.created, "updated": dataset.updated,
     }
 
 
@@ -80,8 +80,25 @@ class DatasetService:
         return dataset
 
     def editable_definition(self, uid: str, dataset_id: str, revision: int | None) -> Dataset:
+        """A dataset whose rows the caller may add, edit, import, and delete."""
         dataset = self.definition(uid, dataset_id)
         self.access.require(uid, P.RESOURCES_MANAGE)
+        if revision is not None and revision != dataset.revision:
+            raise AppError("DATASET_SCHEMA_CONFLICT")
+        return dataset
+
+    def can_manage(self, uid: str, dataset: Dataset) -> bool:
+        """Schema, dataset deletion, grants, and tokens: the personal owner, a team dataset's owner, or an admin."""
+        if not self.access.can(uid, P.RESOURCES_MANAGE):
+            return False
+        if dataset.team_id is None:
+            return dataset.owner_id == uid
+        return dataset.team_owner_id == uid or self.access.can(uid, P.ORG_MANAGE)
+
+    def managed_definition(self, uid: str, dataset_id: str, revision: int | None) -> Dataset:
+        dataset = self.editable_definition(uid, dataset_id, None)
+        if not self.can_manage(uid, dataset):
+            raise AppError("DATASET_MANAGE_DENIED")
         if revision is not None and revision != dataset.revision:
             raise AppError("DATASET_SCHEMA_CONFLICT")
         return dataset
@@ -101,6 +118,18 @@ class DatasetService:
     def get(self, uid: str, dataset_id: str) -> dict:
         return _detail(self.definition(uid, dataset_id))
 
+    def transfer(self, uid: str, dataset_id: str, *, user_id: str, revision: int) -> dict:
+        """Admins hand a team dataset to another member of its team who can manage resources."""
+        dataset = self.definition(uid, dataset_id)
+        self.access.require(uid, P.ORG_MANAGE)
+        if revision != dataset.revision:
+            raise AppError("DATASET_SCHEMA_CONFLICT")
+        if dataset.team_id is None or dataset.team_id not in self.access.teams.teams_of(user_id) \
+                or not self.access.can(user_id, P.RESOURCES_MANAGE):
+            raise AppError("DATASET_OWNER_INVALID")
+        previous, dataset.team_owner_id = dataset.team_owner_id, user_id
+        return self._save(uid, dataset, "dataset.transfer", from_user=previous, to_user=user_id)
+
     def prepare_create(self, uid: str, *, name: str, description: str | None, team_id: str | None, columns: list[dict]) -> Dataset:
         self.access.require(uid, P.RESOURCES_MANAGE)
         if team_id is not None and team_id not in self.access.teams.teams_of(uid):
@@ -113,6 +142,7 @@ class DatasetService:
         now = time()
         return Dataset(
             id=uuid4().hex, owner_id=uid if team_id is None else None, team_id=team_id,
+            team_owner_id=uid if team_id is not None else None,
             name=label, name_key=label.casefold(), description=_description(description),
             revision=1, created=now, updated=now, columns=fields,
         )
@@ -123,14 +153,14 @@ class DatasetService:
         return _detail(dataset)
 
     def update(self, uid: str, dataset_id: str, *, name: str, description: str | None, revision: int) -> dict:
-        dataset = self.editable_definition(uid, dataset_id, revision)
+        dataset = self.managed_definition(uid, dataset_id, revision)
         dataset.name = _label(name, "name")
         dataset.name_key = dataset.name.casefold()
         dataset.description = _description(description)
         return self._save(uid, dataset, "dataset.update")
 
     def delete(self, uid: str, dataset_id: str, revision: int) -> dict:
-        dataset = self.editable_definition(uid, dataset_id, revision)
+        dataset = self.managed_definition(uid, dataset_id, revision)
         self.repo.delete(uid, dataset.id, dataset.revision)
         self.audit.record(uid, "dataset.delete", "dataset", dataset.id)
         return {"ok": True}
@@ -143,7 +173,7 @@ class DatasetService:
         raise AppError("DATASET_COLUMN_NOT_FOUND")
 
     def add_column(self, uid: str, dataset_id: str, *, column: dict, revision: int) -> dict:
-        dataset = self.editable_definition(uid, dataset_id, revision)
+        dataset = self.managed_definition(uid, dataset_id, revision)
         if any(field.key == column["key"] for field in dataset.columns):
             raise AppError("DATASET_COLUMN_KEY_TAKEN")
         if len(dataset.columns) >= MAX_COLUMNS:
@@ -153,7 +183,7 @@ class DatasetService:
         return self._save(uid, dataset, "dataset.column_add", require_empty=field.required, field=field.key)
 
     def update_column(self, uid: str, dataset_id: str, key: str, *, column: dict, revision: int) -> dict:
-        dataset = self.editable_definition(uid, dataset_id, revision)
+        dataset = self.managed_definition(uid, dataset_id, revision)
         field = self._find_column(dataset, key)
         proposed = _column(column, field.position)
         if (
@@ -189,7 +219,7 @@ class DatasetService:
                     }, field=key)
 
     def remove_column(self, uid: str, dataset_id: str, key: str, revision: int) -> dict:
-        dataset = self.editable_definition(uid, dataset_id, revision)
+        dataset = self.managed_definition(uid, dataset_id, revision)
         field = self._find_column(dataset, key)
         field.archived = True
         return self._save(uid, dataset, "dataset.column_remove", field=key)

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, Download, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Table2, Trash2, Upload, X } from 'lucide-react'
+import { ChevronRight, Download, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Table2, Trash2, Upload, UserRoundCog, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ import { DatasetAccessDialog } from '@/components/datasets/dataset-access-dialog
 import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
 import { DatasetFieldIcon } from '@/components/datasets/dataset-field-icon'
 import { DatasetGrid } from '@/components/datasets/dataset-grid'
+import { DatasetOwnerDialog } from '@/components/datasets/dataset-owner-dialog'
 import type { DatasetFilters } from '@/components/datasets/dataset-query-controls'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { Logo } from '@/components/logo'
@@ -24,7 +25,7 @@ import { Tip } from '@/components/tip'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { UserMenu } from '@/components/user-menu'
 import { api } from '@/lib/api'
-import { datasetUrl, displayValue, type Dataset, type DatasetColumn, type DatasetPage, type DatasetSummary, type DatasetTeam } from '@/lib/datasets'
+import { canManageDataset, datasetUrl, displayValue, type Dataset, type DatasetColumn, type DatasetPage, type DatasetSummary, type DatasetTeam } from '@/lib/datasets'
 import { can, useMe } from '@/lib/rbac'
 import { useLoadWhen } from '@/lib/use-when'
 import { cn } from '@/lib/utils'
@@ -35,7 +36,8 @@ export function DatasetsPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
-  const editable = can(useMe(), 'resources.manage')
+  const me = useMe()
+  const editable = can(me, 'resources.manage')
   const confirm = useConfirmDelete()
   const datasetMenu = useRef<HTMLButtonElement>(null)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
@@ -46,6 +48,7 @@ export function DatasetsPage() {
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [datasetDialog, setDatasetDialog] = useState<'create' | 'edit' | null>(null)
   const [accessId, setAccessId] = useState<string | null>(null)
+  const [ownerId, setOwnerId] = useState<string | null>(null)
   const [csv, setCsv] = useState<{ dataset?: Dataset; initial?: { name: string; teamId: string | null } } | null>(null)
   const [csvNotice, setCsvNotice] = useState<{ id: string; count: number } | null>(null)
   const [csvError, setCsvError] = useState('')
@@ -53,6 +56,8 @@ export function DatasetsPage() {
   const [columnDialog, setColumnDialog] = useState<DatasetColumn | 'new' | null>(null)
   const [gridFilter, setGridFilter] = useState<{ id: string; seq: number; filters: DatasetFilters } | null>(null)
   const current = dataset?.id === id ? dataset : null
+  const manageable = !!current && canManageDataset(me, current)
+  const manageNote = editable && !manageable ? t('dataset.manageOnly') : undefined
   const detailError = detailFailure?.id === id ? detailFailure?.message : undefined
 
   const loadCatalog = useCallback(async (offset = 0) => {
@@ -206,13 +211,15 @@ export function DatasetsPage() {
             </div>
             <DatasetActionsMenu size="icon" label={t('dataset.datasetActions')} triggerRef={datasetMenu}
               schema={{ label: t('dataset.viewSchema'), onSelect: () => setSchemaId(current.id) }}
-              edit={editable ? { label: t('dataset.editDataset'), onSelect: () => setDatasetDialog('edit') } : undefined}
-              access={editable ? { label: t('dataset.access'), onSelect: () => setAccessId(current.id) } : undefined}
+              edit={editable ? { label: t('dataset.editDataset'), disabled: !manageable, onSelect: () => setDatasetDialog('edit') } : undefined}
+              access={editable ? { label: t('dataset.access'), disabled: !manageable, onSelect: () => setAccessId(current.id) } : undefined}
               actions={[
                 ...(editable ? [{ icon: Upload, label: t('dataset.importCsv'), onSelect: () => setCsv({ dataset: current }) }] : []),
                 { icon: Download, label: t('dataset.exportCsv'), onSelect: () => { void exportCsv(current) } },
+                ...(current.team_id && can(me, 'org.manage') ? [{ icon: UserRoundCog, label: t('dataset.transferOwner'), onSelect: () => setOwnerId(current.id) }] : []),
               ]}
-              remove={editable ? { label: t('dataset.deleteDataset'), onSelect: () => askDeleteDataset(current) } : undefined} />
+              note={manageNote}
+              remove={editable ? { label: t('dataset.deleteDataset'), disabled: !manageable, onSelect: () => askDeleteDataset(current) } : undefined} />
           </div>
           {csvError && <Alert variant="destructive" className="mx-4"><AlertDescription>{csvError}</AlertDescription></Alert>}
           {csvNotice?.id === current.id && <p role="status" className="px-4 text-sm text-muted-foreground">{t('dataset.csvImported', { count: csvNotice.count })}</p>}
@@ -229,11 +236,12 @@ export function DatasetsPage() {
                   <DialogDescription className="wrap-anywhere">{current.name}</DialogDescription>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  {editable && <Button onClick={() => setColumnDialog('new')}><Plus />{t('dataset.addColumn')}</Button>}
+                  {editable && <Button disabled={!manageable} onClick={() => setColumnDialog('new')}><Plus />{t('dataset.addColumn')}</Button>}
                   <DialogClose asChild><Button variant="ghost" size="icon" aria-label={t('common.close')}><X /></Button></DialogClose>
                 </div>
               </DialogHeader>
               <DialogBody>
+                {manageNote && <p className="mb-3 text-sm text-muted-foreground">{manageNote}</p>}
                 <div className="rounded-md border">
                   <Table aria-label={t('dataset.schema')}>
                     <TableHeader><TableRow>
@@ -256,8 +264,8 @@ export function DatasetsPage() {
                         </div></TableCell>
                         <TableCell>{displayValue(column.default, t('dataset.valueTrue'), t('dataset.valueFalse'))}</TableCell>
                         {editable && <TableCell><div className="flex gap-1">
-                          <Button variant="ghost" size="icon-sm" aria-label={t('dataset.editColumnNamed', { name: column.label })} onClick={() => setColumnDialog(column)}><Pencil /></Button>
-                          <Button variant="ghost" size="icon-sm" className="text-destructive"
+                          <Button variant="ghost" size="icon-sm" disabled={!manageable} aria-label={t('dataset.editColumnNamed', { name: column.label })} onClick={() => setColumnDialog(column)}><Pencil /></Button>
+                          <Button variant="ghost" size="icon-sm" className="text-destructive" disabled={!manageable}
                             aria-label={t('dataset.deleteColumn')} onClick={() => askDeleteColumn(current, column)}><Trash2 /></Button>
                         </div></TableCell>}
                       </TableRow>)}
@@ -286,6 +294,8 @@ export function DatasetsPage() {
         setSchemaId(null)
         setGridFilter(previous => ({ id: current.id, seq: (previous?.seq ?? 0) + 1, filters: { mode: 'and', rules: [{ field, op: 'eq', value }] } }))
       }} />}
+    {current && ownerId === current.id && <DatasetOwnerDialog dataset={current} onClose={() => setOwnerId(null)}
+      onSave={data => { saveDataset(data); setOwnerId(null) }} />}
     {current && accessId === current.id && <DatasetAccessDialog dataset={current} scope={scopeName(current)} onClose={() => setAccessId(null)} />}
     {confirm.dialog}
   </div>

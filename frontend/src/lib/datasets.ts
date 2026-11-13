@@ -1,3 +1,5 @@
+import { can, type Me } from '@/lib/rbac'
+
 export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select'] as const
 export type DatasetKind = (typeof datasetKinds)[number]
 export type CellValue = string | number | boolean | null
@@ -16,6 +18,7 @@ export type DatasetSummary = {
   description: string | null
   owner_id: string | null
   team_id: string | null
+  team_owner_id?: string | null
   revision: number
 }
 export type Dataset = DatasetSummary & { columns: DatasetColumn[] }
@@ -25,6 +28,12 @@ export type DatasetRowPage = DatasetPage<DatasetRow> & { schema_revision: number
 export type DatasetRowResult = { row: DatasetRow; inserted: boolean }
 export const DATASET_QUERY_LIMIT = 12
 export type DatasetTeam = { id: string; name: string; mine: boolean }
+
+/** Schema, access, tokens and deletion: the personal owner, a team dataset's owner, or an admin. Rows need only resources.manage. */
+export function canManageDataset(me: Me | null, dataset: DatasetSummary) {
+  if (!me || !can(me, 'resources.manage')) return false
+  return dataset.team_id ? dataset.team_owner_id === me.id || can(me, 'org.manage') : dataset.owner_id === me.id
+}
 
 export const datasetUrl = (id?: string) => id ? `/api/datasets/${encodeURIComponent(id)}` : '/api/datasets'
 

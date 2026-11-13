@@ -16,6 +16,7 @@ class Dataset(Base):
     id: Mapped[str] = mapped_column(primary_key=True)
     owner_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     team_id: Mapped[str | None] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    team_owner_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL", name="fk_datasets_team_owner"))  # manages a team dataset
     name: Mapped[str]
     name_key: Mapped[str]
     description: Mapped[str | None]
