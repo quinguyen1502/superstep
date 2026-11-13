@@ -26,7 +26,7 @@ Datasets support multi-select values and server-assigned auto-numbers.
 
 ### In Scope
 
-- `multi_select`: array of declared options stored in the JSON row; operators `contains_any`, `contains_all`, `is_null`; CSV as a delimited cell; not unique.
+- `multi_select`: array of declared options stored in the JSON row; operators `contains_any`, `contains_all`, `is_null`; CSV cells use `;` as the delimiter (owner-confirmed); not unique.
 - `auto_number`: assigned under the writer lock from a per-dataset counter, unique, read-only, never reused; added to an existing dataset it backfills by created order.
 - Node mapping, Agent tool schema, summaries, and filters per kind.
 - Python and TypeScript export parity lands in TASK-0356 and TASK-0357; this task documents the contract in `docs/dataset-export.md`.
@@ -65,11 +65,12 @@ Datasets support multi-select values and server-assigned auto-numbers.
 
 ## Open Questions
 
-- Multi-select CSV delimiter: `;` (recommended) or JSON array text.
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): `;` delimiter confirmed.
 
 ## Handoff Notes
 

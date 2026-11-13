@@ -12,7 +12,7 @@
 - Requirement IDs: REQ-0100
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
-- Decision IDs: —
+- Decision IDs: DEC-0101
 - Plan: PLAN-0018
 - Phase: Fix UI
 - Priority: P2
@@ -26,7 +26,7 @@ The grid keeps its layout, shows totals and page choices, sizes columns by type,
 
 ### In Scope
 
-- Persist column order, width, and visibility per dataset in browser storage.
+- Persist the existing TanStack Table column order, sizing, and visibility state per dataset in browser storage (owner-confirmed: browser, not server). Pagination uses TanStack manual pagination state.
 - Page size choice (25, 50, 100); row total and page numbers; the Dataset rows API returns `total` (counted with the active filter and search, capped at the query budget, `total_capped` when exceeded).
 - Default widths by column kind; the sticky actions column no longer covers the last header's sort control.
 - Long text edits in a multi-line editor.
@@ -74,6 +74,7 @@ The grid keeps its layout, shows totals and page choices, sizes columns by type,
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): layout stays in the browser and uses TanStack Table state (DEC-0101).
 
 ## Handoff Notes
 

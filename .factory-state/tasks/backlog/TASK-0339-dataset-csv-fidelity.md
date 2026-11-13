@@ -66,11 +66,12 @@ CSV import keeps leading zeros and round-trips the formula guard, and Studio del
 
 ## Open Questions
 
-- Confirm that requiring a revision on Studio DELETE is acceptable for PAT clients (recommended).
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): required revision on Studio DELETE confirmed.
 
 ## Handoff Notes
 

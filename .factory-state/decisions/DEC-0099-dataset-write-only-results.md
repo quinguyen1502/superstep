@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0099
-- Status: Proposed 2026-11-13; awaiting the owner's choice
+- Status: Accepted 2026-11-13 (Asia/Saigon) by the owner (pt287u, "as recommended"): Option A
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -23,7 +23,7 @@ REQ-0097 defines `read`, `write`, and `read_write` grants and tokens, and REQ-00
 
 ## Decision
 
-Proposed: Option A.
+Accepted: Option A. Keep `write`. A caller without read permission receives `{row: {id, revision}, inserted}` from insert, upsert, dry-run, and replay, never cell values; a requested field projection from such a caller is refused with `DATASET_GRANT_DENIED`; an Agent tool without Find gets the same identifier-only result; a no-op write keeps the revision. The `inserted: false` key-existence signal is accepted as a documented residual risk.
 
 ## Rationale
 

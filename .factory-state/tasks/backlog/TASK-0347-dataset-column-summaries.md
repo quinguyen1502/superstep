@@ -12,7 +12,7 @@
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
-- Decision IDs: —
+- Decision IDs: DEC-0101
 - Plan: PLAN-0019
 - Phase: 3 Grid
 - Priority: P1
@@ -28,7 +28,7 @@ A summary row under the grid shows per-column statistics computed on the server 
 
 - Summary API `POST /api/datasets/{id}/rows/summary` with the filter tree and per-column functions: count, empty count and percent, unique count, and for numbers sum, avg, min, max; for dates min and max.
 - SQL aggregation on SQLite and PostgreSQL within the query budget; requires read.
-- Summary row with a per-column function picker; the choice persists with the grid layout.
+- Summary row rendered through TanStack Table column footers with server values and a shadcn per-column function picker; the choice persists with the browser grid layout. TanStack row aggregation is not used because it only sees the loaded page.
 
 ### Out Of Scope
 

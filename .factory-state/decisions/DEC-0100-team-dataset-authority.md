@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0100
-- Status: Proposed 2026-11-13; awaiting the owner's choice
+- Status: Accepted 2026-11-13 (Asia/Saigon) by the owner (pt287u, "as recommended"): Option A with ownership transfer by admins
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -24,7 +24,7 @@
 
 ## Decision
 
-Proposed: Option A, with ownership transfer by admins.
+Accepted: Option A. A team dataset is managed by its owner and by global admins. Other team editors add, edit, import, and delete rows only. Only managers change schema, delete the dataset, manage workflow grants, and issue, rotate, or revoke tokens. Rotation keeps the original issuer. Admins may transfer dataset ownership to another team member.
 
 ## Rationale
 

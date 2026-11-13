@@ -49,7 +49,7 @@ Only the people DEC-0100 names can change schema, delete a team dataset, manage 
 
 ## Dependencies
 
-- Owner accepts DEC-0100. Branch from `develop`.
+- DEC-0100 accepted by the owner on 2026-11-13. Branch from `develop`.
 
 ## Acceptance Criteria
 
@@ -70,11 +70,12 @@ Only the people DEC-0100 names can change schema, delete a team dataset, manage 
 
 ## Open Questions
 
-- Confirm DEC-0100 Option A, and whether a team member other than the owner should be able to issue tokens.
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): DEC-0100 Option A accepted; only managers issue, rotate, and revoke tokens.
 
 ## Handoff Notes
 

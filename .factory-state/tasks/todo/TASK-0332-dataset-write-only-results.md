@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0332
 - Title: Stop write-only Dataset callers from reading row values
-- Status: backlog
+- Status: todo
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -26,7 +26,7 @@ A caller with write but not read permission gets identifiers only from insert, u
 
 ### In Scope
 
-- One shared result function in `services/dataset_rows.py` that strips `values` when the principal lacks read (DEC-0099 Option A, or the Option B migration if the owner chooses it). It is used by the Dataset node, the Agent tool, public entries, connected tokens, and the dry-run branch.
+- One shared result function in `services/dataset_rows.py` that strips `values` when the principal lacks read (DEC-0099 Option A, accepted). It is used by the Dataset node, the Agent tool, public entries, connected tokens, and the dry-run branch.
 - A requested field projection from a write-only caller returns `DATASET_GRANT_DENIED` before any write.
 - Agent tools configured without Find receive `{row: {id, revision}, inserted}` even when the grant is `read_write`, so the model only sees values through Find.
 - No-op detection: when the built values equal the stored values, skip the revision bump, `updated`, key rewrite, and `dataset.row_update` audit; still store and replay the receipt.
@@ -53,7 +53,7 @@ A caller with write but not read permission gets identifiers only from insert, u
 
 ## Dependencies
 
-- Owner accepts DEC-0099.
+- DEC-0099 Option A accepted by the owner on 2026-11-13.
 - Branch from `develop` after PR #383 (TASK-0327) merges, so the Agent write path is covered in the same change. Must merge before the TASK-0328 PR; TASK-0328 then rebases onto it.
 
 ## Acceptance Criteria
@@ -78,11 +78,13 @@ A caller with write but not read permission gets identifiers only from insert, u
 
 ## Open Questions
 
-- If the owner picks DEC-0099 Option B, this task instead ships the migration chosen there; the Agent-without-Find rule stays.
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): DEC-0099 Option A accepted.
+- 2026-11-13: Owner accepted REQ-0100 and PLAN-0018 (22:34 Asia/Saigon); moved to todo as the first task of the plan. Not started.
 
 ## Handoff Notes
 

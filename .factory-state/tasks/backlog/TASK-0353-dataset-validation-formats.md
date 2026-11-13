@@ -33,7 +33,7 @@ Managers set validation rules and display formats per column, and every writer e
 
 ### Out Of Scope
 
-- Regular expression rules (open question); conditional formatting.
+- Regular expression rules (owner-confirmed: not offered, to avoid slow patterns); conditional formatting.
 
 ## Inputs
 
@@ -65,11 +65,12 @@ Managers set validation rules and display formats per column, and every writer e
 
 ## Open Questions
 
-- Allow regular expression rules (not recommended; risk of slow patterns).
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): no regular expression rules.
 
 ## Handoff Notes
 

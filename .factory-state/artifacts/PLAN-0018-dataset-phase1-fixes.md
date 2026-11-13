@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0018
-- Status: Proposed 2026-11-13; awaiting owner acceptance with REQ-0100, DEC-0099, and DEC-0100
+- Status: Accepted 2026-11-13 (Asia/Saigon) by the owner (owner chat, "accept"), with REQ-0100. DEC-0099 and DEC-0100 accepted (pt287u). TASK-0332 is in todo; the other tasks stay in backlog until their dependencies merge.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -31,10 +31,10 @@ Close the Datasets phase 1 review findings, starting with the P0 write-only read
 
 | Task | Priority | Outcome | Dependencies |
 | --- | --- | --- | --- |
-| [TASK-0332](../tasks/backlog/TASK-0332-dataset-write-only-results.md) | P0 | Write-only callers get identifiers only; no-op writes keep the revision | DEC-0099; after #383 (TASK-0327), before TASK-0328 |
+| [TASK-0332](../tasks/todo/TASK-0332-dataset-write-only-results.md) | P0 | Write-only callers get identifiers only; no-op writes keep the revision | DEC-0099 (accepted); after #383 (TASK-0327), before TASK-0328 |
 | [TASK-0333](../tasks/backlog/TASK-0333-dataset-receipt-minimization.md) | P1 | Identifier-only receipts, migration, retention | TASK-0332 |
 | [TASK-0334](../tasks/backlog/TASK-0334-dataset-filter-semantics.md) | P1 | Null-safe `ne`; case-insensitive contains, search, sort | — |
-| [TASK-0335](../tasks/backlog/TASK-0335-dataset-team-authority.md) | P1 | Team dataset management authority; rotate keeps issuer | DEC-0100 |
+| [TASK-0335](../tasks/backlog/TASK-0335-dataset-team-authority.md) | P1 | Team dataset management authority; rotate keeps issuer | DEC-0100 (accepted) |
 | [TASK-0336](../tasks/backlog/TASK-0336-dataset-unique-later.md) | P1 | Make an existing column unique after a duplicate check | — |
 | [TASK-0337](../tasks/backlog/TASK-0337-dataset-error-clarity.md) | P1 (token scope P2) | Specific codes for team, sharing, filter, token scope | — |
 | [TASK-0338](../tasks/backlog/TASK-0338-dataset-schema-limits.md) | P2 | Active-column limit, removed values cleared, required default backfill | — |
@@ -77,7 +77,7 @@ No PLAN-0017 task file is edited by this plan.
 
 ## Approval Needs
 
-- The owner accepts REQ-0100 and this plan, and chooses DEC-0099 and DEC-0100.
+- Done: the owner accepted REQ-0100 and this plan, DEC-0099 Option A, DEC-0100 Option A, 30-day receipt retention, `403 DATASET_TOKEN_SCOPE`, and required Studio DELETE revisions on 2026-11-13.
 - Each task uses its own branch and Draft PR into `develop`. Merge only after the owner asks and required CI is green.
 
 ## Completion Criteria

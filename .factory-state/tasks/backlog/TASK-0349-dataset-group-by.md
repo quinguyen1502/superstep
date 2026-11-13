@@ -12,7 +12,7 @@
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
-- Decision IDs: —
+- Decision IDs: DEC-0101
 - Plan: PLAN-0019
 - Phase: 3 Grid
 - Priority: P2
@@ -26,7 +26,7 @@ The grid can group rows by one select, boolean, text, or date column, with colla
 
 ### In Scope
 
-- Group headers with count and the selected summaries from the aggregate engine; rows per group paged from the API; group choice persisted with the layout.
+- Group headers and collapse through TanStack Table grouping and expanding state in manual (server-driven) mode; counts and summaries from the aggregate engine; rows per group paged from the API; group choice persisted with the browser layout. No custom grouping model.
 
 ### Out Of Scope
 

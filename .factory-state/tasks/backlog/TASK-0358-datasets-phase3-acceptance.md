@@ -26,7 +26,7 @@ One end-to-end path and the handbook cover phase 3.
 
 ### In Scope
 
-- Support-ticket scenario: nested filter, summary row, group by team, Agent aggregate answer, URL and auto-number fields, a validation rule, and a paste (if TASK-0355 shipped).
+- Support-ticket scenario: nested filter, summary row, group by team, Agent aggregate answer, URL and auto-number fields, a validation rule, a paste, and a fill down.
 - English and Vietnamese handbook with matching anchors; screenshots in both themes.
 
 ### Out Of Scope

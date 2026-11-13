@@ -28,6 +28,8 @@ Studio can apply a rectangular paste or fill as one checked change.
 
 - `PATCH /api/datasets/{id}/rows/batch` with up to 500 cells across up to 100 rows, each row with its revision; all or nothing; per-cell issues returned on failure; one audit event with counts.
 - Uses the writer lock, type and validation rules, unique checks.
+- Returns the previous values of changed cells to the Studio caller (who has read) so TASK-0355 can offer one-step undo as another batch.
+- Server-side by nature: no grid library replaces it, and it keeps the server the single place for checks (DEC-0101).
 
 ### Out Of Scope
 
@@ -46,7 +48,7 @@ Studio can apply a rectangular paste or fill as one checked change.
 
 ## Dependencies
 
-- Owner accepts DEC-0101; TASK-0353 merged.
+- DEC-0101 accepted (2026-11-13); TASK-0353 merged.
 
 ## Acceptance Criteria
 

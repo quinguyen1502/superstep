@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0100
-- Status: Proposed 2026-11-13 (Asia/Saigon); awaiting owner acceptance of this requirement, PLAN-0018, DEC-0099 and DEC-0100
+- Status: Accepted 2026-11-13 (Asia/Saigon) by the owner (owner chat, "accept"), together with PLAN-0018. DEC-0099 and DEC-0100 accepted the same day (pt287u).
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -40,7 +40,7 @@ Close the phase 1 review findings: no row values reach a caller without read acc
 
 - A caller without read permission on a dataset never receives cell values from that dataset, from any entry: Dataset node, Agent tool, public chat or API trigger, connected token, dry-run, or receipt replay. The permission model is set by DEC-0099.
 - An insert or upsert that would leave every stored value unchanged does not change the revision, does not update `updated`, and records no row-update audit event. It still returns a normal result and still stores its receipt.
-- Receipts store the operation identity, fingerprint, row id, inserted flag, and resulting revision only. They expire after a retention window (default 30 days after creation; configurable). Deleting a row does not delete its receipts, because a retried insert must still replay instead of inserting again.
+- Receipts store the operation identity, fingerprint, row id, inserted flag, and resulting revision only. They expire 30 days after creation (owner-confirmed default; configurable). Deleting a row does not delete its receipts, because a retried insert must still replay instead of inserting again.
 - `ne` and "is not" match empty cells. `contains`, free-text search, and text sort ignore letter case and treat Vietnamese letters consistently on SQLite and PostgreSQL. `eq` and unique keys stay exact.
 - Team dataset management (schema, delete, grants, tokens) follows DEC-0100. Rotating a token keeps its issuer.
 - A token valid for the dataset but lacking the operation returns `403` with a dedicated scope code. A wrong, revoked, or other-dataset token keeps `401 AUTH_TOKEN_INVALID`. This supersedes the REQ-0099 rule "an insufficient or revoked token receives `AUTH_TOKEN_INVALID`" for the insufficient case only.
@@ -67,9 +67,16 @@ Close the phase 1 review findings: no row values reach a caller without read acc
 - shadcn/ui and theme tokens; identical en/vi locale keys; `ConfirmDeleteDialog` for deletions (dataset row deletion keeps the confirmation click of DEC-0025).
 - Preserve the row, column, byte, and query limits of REQ-0097 except where TASK-0338 changes how removed columns count.
 
+## Resolved Questions
+
+Answered by the owner on 2026-11-13 (Asia/Saigon, pt287u: "as recommended").
+
+- DEC-0099: keep `write`; write-only callers receive identifiers only. Accepted.
+- DEC-0100: the dataset owner and global admins manage team datasets. Accepted.
+- Receipt retention: 30 days by default.
+- Insufficient token: `403 DATASET_TOKEN_SCOPE` instead of `401 AUTH_TOKEN_INVALID`.
+- Studio DELETE requires the revision; documented in the changelog for PAT clients.
+
 ## Open Questions
 
-- DEC-0099: keep write-only and return identifiers only (recommended), or remove standalone write.
-- DEC-0100: who manages a team dataset (recommended: its owner and global admins).
-- Receipt retention: 30 days by default (recommended), or tie it to run retention.
-- Requiring a revision on Studio DELETE changes the Dataset REST contract for PAT clients. Recommended: require it, documented in the changelog.
+- None.

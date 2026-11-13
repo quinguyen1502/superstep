@@ -68,11 +68,12 @@ Team membership, workflow sharing, filter mapping, and token scope failures each
 
 ## Open Questions
 
-- Confirm that the insufficient-token case may move from 401 to 403 (supersedes one REQ-0099 rule).
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): the insufficient-token case moves from 401 to 403 `DATASET_TOKEN_SCOPE` (confirmed).
 
 ## Handoff Notes
 

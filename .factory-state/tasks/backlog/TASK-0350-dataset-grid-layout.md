@@ -12,7 +12,7 @@
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
-- Decision IDs: —
+- Decision IDs: DEC-0101
 - Plan: PLAN-0019
 - Phase: 3 Grid
 - Priority: P2
@@ -26,12 +26,13 @@ Wide and long datasets stay usable: users freeze leading columns, choose a row h
 
 ### In Scope
 
-- Freeze up to 3 leading columns; row height short, medium, tall; both persisted with the TASK-0341 layout.
-- Virtual scrolling with `@tanstack/react-virtual` inside the existing TanStack Table and shadcn rendering (DEC-0097), loading further pages on scroll within `MAX_PAGE_BYTES`.
+- Upgrade the grid from TanStack Table 8.21 to the current stable 9.x line (9.3.1 at planning time) following the official migration guide; this also brings the cell selection feature that TASK-0355 uses.
+- Frozen columns with the TanStack column pinning feature (up to 3 leading columns); row height short, medium, tall through the virtualizer's size estimate; both persisted with the TASK-0341 browser layout.
+- Row virtualization with `@tanstack/react-virtual` (3.x), loading further pages on scroll within `MAX_PAGE_BYTES`. No custom virtualization or pinning code; only styling with theme tokens.
 
 ### Out Of Scope
 
-- Server-side saved layouts per user (open question).
+- Server-side saved layouts per user (the owner chose browser storage).
 
 ## Inputs
 
@@ -54,7 +55,7 @@ Wide and long datasets stay usable: users freeze leading columns, choose a row h
 
 ## Tests
 
-- Playwright scroll and keyboard tests; performance check recorded in QA.
+- Playwright scroll and keyboard tests; regression run of the existing grid specs after the v9 upgrade; performance check recorded in QA.
 
 ## Validation Plan
 
@@ -63,11 +64,12 @@ Wide and long datasets stay usable: users freeze leading columns, choose a row h
 
 ## Open Questions
 
-- Keep the layout in the browser (recommended until saved views) or store it per user on the server.
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): library-first per DEC-0101; TanStack Table v9 upgrade added; layout stays in the browser.
 
 ## Handoff Notes
 

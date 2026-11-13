@@ -28,7 +28,7 @@ Write receipts hold identifiers and outcome only, existing receipts lose their r
 
 - Receipt `result` shape `{row_id, inserted, revision}` (and `deleted` for `delete_row`); replay rebuilds the response by reading the current row and applying the caller's current permission and projection. When the row is gone, replay returns the identifiers without `values`.
 - Alembic data migration that rewrites existing receipts to the new shape on SQLite and PostgreSQL, in batches.
-- Retention: `STUDIO_DATASET_RECEIPT_DAYS` (default 30) removed by the existing worker retention loop; index on `created` if needed.
+- Retention: `STUDIO_DATASET_RECEIPT_DAYS` (default 30, owner-confirmed) removed by the existing worker retention loop; index on `created` if needed.
 - Receipts are not removed when a row is deleted, so a retried insert still replays instead of inserting again; the handbook states the retry window.
 
 ### Out Of Scope
@@ -71,11 +71,12 @@ Write receipts hold identifiers and outcome only, existing receipts lose their r
 
 ## Open Questions
 
-- Retention default: 30 days (recommended) or tie to run history retention.
+- None.
 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): 30-day receipt retention confirmed.
 
 ## Handoff Notes
 
