@@ -55,7 +55,7 @@ class DatasetAccessService:
         )
 
     def list(self, uid: str, dataset_id: str) -> dict:
-        dataset = self.datasets.editable_definition(uid, dataset_id, None)
+        dataset = self.datasets.managed_definition(uid, dataset_id, None)
         return {
             "grants": [{"workflow_id": grant.workflow_id, "workflow_name": name, "permission": grant.permission,
                         "allow_delete": grant.allow_delete} for grant, name in self.repo.grants(dataset.id)],
@@ -72,7 +72,7 @@ class DatasetAccessService:
         return {"permission": grant.permission if grant else None, "allow_delete": bool(grant and grant.allow_delete)}
 
     def grant(self, uid: str, dataset_id: str, workflow_id: str, permission: str, allow_delete: bool = False) -> dict:
-        dataset = self.datasets.editable_definition(uid, dataset_id, None)
+        dataset = self.datasets.managed_definition(uid, dataset_id, None)
         workflow = self.access.workflow(workflow_id, uid, P.SHARE)
         if not self._in_scope(dataset, workflow):
             raise AppError("DATASET_GRANT_DENIED")
@@ -86,13 +86,13 @@ class DatasetAccessService:
                 "permission": permission, "allow_delete": allow_delete}
 
     def revoke_grant(self, uid: str, dataset_id: str, workflow_id: str) -> dict:
-        dataset = self.datasets.editable_definition(uid, dataset_id, None)
+        dataset = self.datasets.managed_definition(uid, dataset_id, None)
         self.repo.revoke_grant(uid, dataset, workflow_id)
         self.datasets.audit.record(uid, "dataset.grant_revoke", "dataset", dataset.id, workflow_id=workflow_id)
         return {"ok": True}
 
     def issue(self, uid: str, dataset_id: str, name: str, permission: str, allow_delete: bool = False) -> dict:
-        dataset = self.datasets.editable_definition(uid, dataset_id, None)
+        dataset = self.datasets.managed_definition(uid, dataset_id, None)
         name = name.strip()
         if not name or INVALID_TEXT.search(name):
             raise AppError("BAD_REQUEST")
@@ -106,15 +106,15 @@ class DatasetAccessService:
         return {**_token_payload(token), "token": secret}
 
     def rotate(self, uid: str, dataset_id: str, token_id: str) -> dict:
-        dataset = self.datasets.editable_definition(uid, dataset_id, None)
+        dataset = self.datasets.managed_definition(uid, dataset_id, None)
         secret = TOKEN_PREFIX + token_urlsafe(32)
-        token = self.repo.change_token(uid, dataset, token_id, issuer_id=uid, token_hash=digest(secret),
+        token = self.repo.change_token(uid, dataset, token_id, token_hash=digest(secret),
                                        prefix=secret[:10], created=time())
         self.datasets.audit.record(uid, "dataset.token_rotate", "dataset", dataset.id, token_id=token_id)
         return {**_token_payload(token), "token": secret}
 
     def revoke_token(self, uid: str, dataset_id: str, token_id: str) -> dict:
-        dataset = self.datasets.editable_definition(uid, dataset_id, None)
+        dataset = self.datasets.managed_definition(uid, dataset_id, None)
         self.repo.change_token(uid, dataset, token_id, revoked=time())
         self.datasets.audit.record(uid, "dataset.token_revoke", "dataset", dataset.id, token_id=token_id)
         return {"ok": True}
