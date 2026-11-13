@@ -38,7 +38,7 @@ Close the Datasets phase 1 review findings, starting with the P0 write-only read
 | [TASK-0336](../tasks/backlog/TASK-0336-dataset-unique-later.md) | P1 | Make an existing column unique after a duplicate check | — |
 | [TASK-0337](../tasks/backlog/TASK-0337-dataset-error-clarity.md) | P1 (token scope P2) | Specific codes for team, sharing, filter, token scope | — |
 | [TASK-0338](../tasks/backlog/TASK-0338-dataset-schema-limits.md) | P2 | Active-column limit, removed values cleared, required default backfill | — |
-| [TASK-0339](../tasks/backlog/TASK-0339-dataset-csv-fidelity.md) | P2 | Leading zeros, formula guard round trip, DELETE revision | — |
+| [TASK-0339](../tasks/done/TASK-0339-dataset-csv-fidelity.md) | P2 | Leading zeros, formula guard round trip, DELETE revision | — |
 | [TASK-0340](../tasks/backlog/TASK-0340-dataset-studio-states.md) | P1 | Viewer, empty, not-found states; delete names the row; CSV issue list | — |
 | [TASK-0341](../tasks/backlog/TASK-0341-dataset-grid-usability.md) | P2 | Layout persistence, page size, totals, widths, dates, tabs | TASK-0340 |
 | [TASK-0342](../tasks/backlog/TASK-0342-dataset-run-feedback.md) | P2 | Trace summary, real-write notice, Grant shortcut | TASK-0341 |
