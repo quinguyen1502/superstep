@@ -126,6 +126,7 @@
     "accessChooseWorkflow": "Choose a workflow",
     "accessPermission": "Permission",
     "accessLevel": {"read": "Read", "write": "Write", "read_write": "Read and write"},
+    "accessAllowDelete": "Allow row deletion",
     "accessSaveGrant": "Save grant",
     "accessNoEligibleWorkflow": "No eligible workflows in this scope.",
     "accessTokens": "Dataset API tokens",

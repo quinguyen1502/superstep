@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, String, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
@@ -14,6 +14,7 @@ class DatasetWorkflowGrant(Base):
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id", ondelete="CASCADE"), primary_key=True)
     workflow_id: Mapped[str] = mapped_column(ForeignKey("workflows.id", ondelete="CASCADE"), primary_key=True)
     permission: Mapped[str]
+    allow_delete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created: Mapped[float]
 
 
@@ -29,6 +30,7 @@ class DatasetApiToken(Base):
     issuer_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     name: Mapped[str]
     permission: Mapped[str]
+    allow_delete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     prefix: Mapped[str]
     created: Mapped[float]

@@ -126,6 +126,7 @@
     "accessChooseWorkflow": "Chọn quy trình",
     "accessPermission": "Quyền",
     "accessLevel": {"read": "Đọc", "write": "Ghi", "read_write": "Đọc và ghi"},
+    "accessAllowDelete": "Cho phép xoá dòng",
     "accessSaveGrant": "Lưu quyền",
     "accessNoEligibleWorkflow": "Phạm vi này chưa có quy trình đủ điều kiện.",
     "accessTokens": "Token API của tập dữ liệu",

@@ -3,6 +3,7 @@ import { Check, Copy, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,8 +14,8 @@ import { datasetUrl, type Dataset } from '@/lib/datasets'
 
 const permissions = ['read', 'write', 'read_write'] as const
 type Permission = (typeof permissions)[number]
-type Grant = { workflow_id: string; workflow_name: string | null; permission: Permission }
-type Token = { id: string; name: string; prefix: string; permission: Permission }
+type Grant = { workflow_id: string; workflow_name: string | null; permission: Permission; allow_delete: boolean }
+type Token = { id: string; name: string; prefix: string; permission: Permission; allow_delete: boolean }
 type Access = { grants: Grant[]; tokens: Token[]; workflows: { id: string; name: string | null }[] }
 
 function PermissionPicker({ id, value, onChange, disabled }: {
@@ -40,7 +41,9 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
   const [access, setAccess] = useState<Access | null>(null)
   const [workflowId, setWorkflowId] = useState('')
   const [grantPermission, setGrantPermission] = useState<Permission>('read')
+  const [grantAllowDelete, setGrantAllowDelete] = useState(false)
   const [tokenPermission, setTokenPermission] = useState<Permission>('read')
+  const [tokenAllowDelete, setTokenAllowDelete] = useState(false)
   const [tokenName, setTokenName] = useState('')
   const [secret, setSecret] = useState('')
   const [copied, setCopied] = useState(false)
@@ -72,7 +75,9 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
     event.preventDefault()
     if (!workflowId || busy) return
     void mutate(async () => {
-      await api(`${path}/grants/${encodeURIComponent(workflowId)}`, { method: 'PUT', json: { permission: grantPermission } })
+      await api(`${path}/grants/${encodeURIComponent(workflowId)}`, {
+        method: 'PUT', json: { permission: grantPermission, allow_delete: grantAllowDelete },
+      })
       setWorkflowId('')
     })
   }
@@ -86,7 +91,9 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
     event.preventDefault()
     if (!tokenName.trim() || busy) return
     void mutate(async () => {
-      const data = await api<{ token: string }>(`${path}/tokens`, { method: 'POST', json: { name: tokenName, permission: tokenPermission } })
+      const data = await api<{ token: string }>(`${path}/tokens`, {
+        method: 'POST', json: { name: tokenName, permission: tokenPermission, allow_delete: tokenAllowDelete },
+      })
       reveal(data.token)
       setTokenName('')
     })
@@ -112,7 +119,7 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
             {access.grants.map(item => <div key={item.workflow_id} className="flex items-center justify-between gap-2 rounded-md border p-2">
               <div className="min-w-0">
                 <p className="wrap-anywhere font-medium">{item.workflow_name ?? item.workflow_id}</p>
-                <p className="text-xs text-muted-foreground">{t(`dataset.accessLevel.${item.permission}`)}</p>
+                <p className="text-xs text-muted-foreground">{t(`dataset.accessLevel.${item.permission}`)}{item.allow_delete ? ` · ${t('dataset.accessAllowDelete')}` : ''}</p>
               </div>
               <Button variant="ghost" size="icon-sm" className="text-destructive" aria-label={t('dataset.accessRevoke')} disabled={busy}
                 onClick={() => revoke(item.workflow_name ?? item.workflow_id, `grants/${encodeURIComponent(item.workflow_id)}`)}><Trash2 /></Button>
@@ -121,7 +128,9 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
               <div className="min-w-0 space-y-1"><Label htmlFor={`${id}-workflow`}>{t('dataset.accessWorkflow')}</Label>
                 <Select disabled={busy || !access.workflows.length} value={workflowId} onValueChange={value => {
                   setWorkflowId(value)
-                  setGrantPermission(access.grants.find(item => item.workflow_id === value)?.permission ?? 'read')
+                  const current = access.grants.find(item => item.workflow_id === value)
+                  setGrantPermission(current?.permission ?? 'read')
+                  setGrantAllowDelete(current?.allow_delete ?? false)
                 }}>
                   <SelectTrigger id={`${id}-workflow`} className="w-full"><SelectValue placeholder={t('dataset.accessChooseWorkflow')} /></SelectTrigger>
                   <SelectContent>{access.workflows.map(item =>
@@ -130,6 +139,8 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
               </div>
               <PermissionPicker id={`${id}-grant-permission`} value={grantPermission} onChange={setGrantPermission} disabled={busy || !workflowId} />
               <Button type="submit" disabled={busy || !workflowId}>{t('dataset.accessSaveGrant')}</Button>
+              <Label className="flex items-center gap-2 sm:col-span-3"><Checkbox id={`${id}-grant-delete`} checked={grantAllowDelete}
+                disabled={busy || !workflowId} onCheckedChange={value => setGrantAllowDelete(value === true)} />{t('dataset.accessAllowDelete')}</Label>
             </form>
             {!access.workflows.length && <p className="text-xs text-muted-foreground">{t('dataset.accessNoEligibleWorkflow')}</p>}
           </section>
@@ -139,7 +150,7 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
             {access.tokens.map(item => <div key={item.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
               <div className="min-w-0">
                 <p className="wrap-anywhere font-medium">{item.name}</p>
-                <p className="text-xs text-muted-foreground">{item.prefix}… · {t(`dataset.accessLevel.${item.permission}`)}</p>
+                <p className="text-xs text-muted-foreground">{item.prefix}… · {t(`dataset.accessLevel.${item.permission}`)}{item.allow_delete ? ` · ${t('dataset.accessAllowDelete')}` : ''}</p>
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 <Button variant="ghost" size="icon-sm" aria-label={t('dataset.rotateAccessToken')} disabled={busy}
@@ -158,6 +169,8 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
               </div>
               <PermissionPicker id={`${id}-token-permission`} value={tokenPermission} onChange={setTokenPermission} disabled={busy} />
               <Button type="submit" disabled={busy || !tokenName.trim()}><Plus />{t('dataset.createAccessToken')}</Button>
+              <Label className="flex items-center gap-2 sm:col-span-3"><Checkbox id={`${id}-token-delete`} checked={tokenAllowDelete}
+                disabled={busy} onCheckedChange={value => setTokenAllowDelete(value === true)} />{t('dataset.accessAllowDelete')}</Label>
             </form>
             {secret && <div className="space-y-2 rounded-md border p-3">
               <Label htmlFor={`${id}-secret`}>{t('dataset.accessTokenSecret')}</Label>
