@@ -38,7 +38,7 @@ Deliver native operational datasets in Studio, deterministic workflow and Agent 
 | [TASK-0319](../tasks/done/TASK-0319-dataset-export-python-standalone.md) | Export | Standalone SQLite and PostgreSQL for Python export | TASK-0318 |
 | [TASK-0320](../tasks/done/TASK-0320-dataset-export-typescript-standalone.md) | Export | Standalone SQLite and PostgreSQL for TypeScript export | TASK-0318 |
 | [TASK-0321](../tasks/done/TASK-0321-dataset-export-bindings-ui.md) | Export | Project export binding UI and optional snapshots | TASK-0316, TASK-0319, TASK-0320 |
-| [TASK-0322](../tasks/todo/TASK-0322-dataset-end-to-end.md) | Acceptance | Dataset end-to-end acceptance and handbook | TASK-0313, TASK-0321 |
+| [TASK-0322](../tasks/done/TASK-0322-dataset-end-to-end.md) | Acceptance | Dataset end-to-end acceptance and handbook | TASK-0313, TASK-0321 |
 
 ## Sequence And Checkpoints
 
