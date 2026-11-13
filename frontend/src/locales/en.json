@@ -1,12 +1,20 @@
 {
   "datasetTool": {
     "readOnly": "Find rows with read-only access. The Agent can use only the selected fields and operators.",
+    "writeAccess": "Insert and upsert use the workflow’s write grant and only the fields selected below. An Agent cannot delete rows.",
+    "operations": "Operations the Agent can use",
+    "writeFields": "Fields the Agent can write",
+    "writeFieldsRequired": "Choose at least one field the Agent can write.",
     "fieldsRequired": "Choose at least one field to return.",
     "filterPermissions": "Allowed filter operators",
     "operatorsFor": "Allowed operators for {{field}}",
     "outdated": "Some configured fields or operators are unavailable in this schema.",
     "traceRows_one": "{{tool}} returned {{count}} row",
-    "traceRows_other": "{{tool}} returned {{count}} rows"
+    "traceRows_other": "{{tool}} returned {{count}} rows",
+    "traceInserted_one": "{{tool}} inserted {{count}} row",
+    "traceInserted_other": "{{tool}} inserted {{count}} rows",
+    "traceUpserted_one": "{{tool}} upserted {{count}} row",
+    "traceUpserted_other": "{{tool}} upserted {{count}} rows"
   },
   "datasetNode": {
     "dataset": "Dataset",
@@ -18,7 +26,8 @@
     "grantMissing": {
       "read": "Grant this workflow read access from the dataset’s Access menu.",
       "write": "Grant this workflow write access from the dataset’s Access menu.",
-      "delete": "Turn on Allow row deletion for this workflow in the dataset’s Access menu."
+      "delete": "Turn on Allow row deletion for this workflow in the dataset’s Access menu.",
+      "read_write": "Grant this workflow read and write access from the dataset’s Access menu."
     },
     "openDataset": "Open dataset",
     "chooseFirst": "Choose a dataset in Settings to configure the mapping.",

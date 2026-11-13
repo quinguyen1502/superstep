@@ -1,12 +1,20 @@
 {
   "datasetTool": {
     "readOnly": "Tìm dòng với quyền chỉ đọc. Agent chỉ dùng được các trường và toán tử đã chọn.",
+    "writeAccess": "Thêm dòng và Thêm hoặc cập nhật dòng dùng quyền ghi của quy trình, và chỉ ghi các trường chọn bên dưới. Agent không thể xoá dòng.",
+    "operations": "Thao tác Agent được dùng",
+    "writeFields": "Trường Agent được ghi",
+    "writeFieldsRequired": "Chọn ít nhất một trường Agent được ghi.",
     "fieldsRequired": "Chọn ít nhất một trường trả về.",
     "filterPermissions": "Toán tử lọc được phép",
     "operatorsFor": "Toán tử được phép cho {{field}}",
     "outdated": "Một số trường hoặc toán tử đã chọn không còn khả dụng trong lược đồ này.",
     "traceRows_one": "{{tool}} trả về {{count}} dòng",
-    "traceRows_other": "{{tool}} trả về {{count}} dòng"
+    "traceRows_other": "{{tool}} trả về {{count}} dòng",
+    "traceInserted_one": "{{tool}} đã thêm {{count}} dòng",
+    "traceInserted_other": "{{tool}} đã thêm {{count}} dòng",
+    "traceUpserted_one": "{{tool}} đã thêm hoặc cập nhật {{count}} dòng",
+    "traceUpserted_other": "{{tool}} đã thêm hoặc cập nhật {{count}} dòng"
   },
   "datasetNode": {
     "dataset": "Tập dữ liệu",
@@ -18,7 +26,8 @@
     "grantMissing": {
       "read": "Cấp quyền đọc cho quy trình trong menu Quyền truy cập của tập dữ liệu.",
       "write": "Cấp quyền ghi cho quy trình trong menu Quyền truy cập của tập dữ liệu.",
-      "delete": "Bật Cho phép xoá dòng cho quy trình trong menu Quyền truy cập của tập dữ liệu."
+      "delete": "Bật Cho phép xoá dòng cho quy trình trong menu Quyền truy cập của tập dữ liệu.",
+      "read_write": "Cấp quyền đọc và ghi cho quy trình trong menu Quyền truy cập của tập dữ liệu."
     },
     "openDataset": "Mở tập dữ liệu",
     "chooseFirst": "Chọn tập dữ liệu trong phần Cài đặt để cấu hình ánh xạ.",

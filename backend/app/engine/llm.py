@@ -141,12 +141,26 @@ def _task(messages: List[Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
 
 
 def _mock_call(tool: Dict[str, Any], task: str, n: int) -> Dict[str, Any]:
-    """One mock tool call: string arguments are the task text, other JSON types are empty."""
+    """One mock tool call: string arguments are the task text, or the first allowed value of an enum.
+    Required objects with declared properties fill their text properties the same way. Other JSON types are empty."""
     params = tool.get("parameters") or {}
     props, required = params.get("properties") or {}, set(params.get("required") or [])
     empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
-    args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
-            for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+
+    def text(v: Dict[str, Any]) -> bool:
+        kind = v.get("type", "string")
+        return kind == "string" or isinstance(kind, list) and "string" in kind
+
+    def value(v: Dict[str, Any]) -> Any:
+        if v.get("enum"): return v["enum"][0]
+        if text(v): return task
+        if v.get("type") == "object" and v.get("properties"):
+            return {k: value(p or {}) for k, p in v["properties"].items() if text(p or {})}
+        return empty.get(v.get("type"))
+
+    args = {k: value(v or {}) for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+    if args.get("operation") in ("insert_row", "upsert_row") and isinstance(props.get("values"), dict):
+        args["values"] = value(props["values"])  # a Dataset write tool: the mock writes the task text
     return {"id": f"mock_call_{n}", "name": tool["name"], "args": args}
 
 

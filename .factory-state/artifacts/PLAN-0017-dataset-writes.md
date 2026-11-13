@@ -36,7 +36,7 @@ Deliver workflow row delete, Agent insert and upsert, and granted Dataset lookup
 | [TASK-0324](../tasks/done/TASK-0324-dataset-delete-capability.md) | Access | `allow_delete` on grants and tokens, and the Access control | — |
 | [TASK-0325](../tasks/done/TASK-0325-dataset-delete-runtime.md) | Runtime | `delete_row` receipts, locks, and connected token execution | TASK-0324 |
 | [TASK-0326](../tasks/done/TASK-0326-dataset-delete-editor.md) | Studio | Dataset node Delete row mapping | TASK-0325 |
-| [TASK-0327](../tasks/todo/TASK-0327-dataset-agent-write.md) | Runtime | Agent insert and upsert, including its settings | — |
+| [TASK-0327](../tasks/done/TASK-0327-dataset-agent-write.md) | Runtime | Agent insert and upsert, including its settings | — |
 | [TASK-0328](../tasks/todo/TASK-0328-dataset-public-entry.md) | Runtime | Public lookup and writes; public delete and demo mode stay denied | TASK-0325, TASK-0327 |
 | [TASK-0329](../tasks/todo/TASK-0329-dataset-export-python-delete.md) | Export | Python standalone delete and Agent writes | TASK-0325, TASK-0327 |
 | [TASK-0330](../tasks/todo/TASK-0330-dataset-export-typescript-delete.md) | Export | TypeScript standalone delete and Agent writes | TASK-0325, TASK-0327 |

@@ -210,6 +210,12 @@ def trace_arguments(ports: Ports, tool: dict | None, value: Any) -> Any:
 
 def dataset_result(page: dict) -> tuple[str, int]:
     """Keep complete rows in the model message, within the shared result budget."""
+    if "row" in page:  # an insert or upsert outcome
+        row = page["row"]
+        outcome = {"row_id": row.get("id"), "inserted": page.get("inserted"), "values": row.get("values") or {}}
+        if page.get("dry_run"):
+            outcome["simulated"] = True
+        return shorten(json.dumps(outcome, ensure_ascii=False), RESULT_CHARS), 1
     rows, size = [], 0
     for item in page["items"]:
         row = json.dumps(item["values"], ensure_ascii=False)
@@ -221,7 +227,13 @@ def dataset_result(page: dict) -> tuple[str, int]:
     return f'{{"rows":[{",".join(rows)}],"truncated":{str(truncated).lower()}}}', len(rows)
 
 
-def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None, dataset_scope=None) -> Any:
+def dataset_step(args: Any) -> Dict[str, Any]:
+    """The operation name for the trace. Values stay in the model message only."""
+    operation = args.get("operation") if isinstance(args, dict) else None
+    return {"operation": operation} if operation in dataset_nodes.AGENT_WRITES else {}
+
+
+def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None, dataset_scope=None, call_id=None) -> Any:
     src = t.get("source")
     if src == "mcp":
         return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None, group=group, ticket=ticket)
@@ -229,7 +241,9 @@ def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str,
         if ports.dataset_call is None:
             raise AppError("DATASET_GRANT_DENIED")
         binding, query = dataset_nodes.agent_query(t, args, dataset_scope)
-        return ports.dataset_call(binding, query, None)
+        # One receipt per logical tool call: a retry of this call replays, another call writes again.
+        key = f"{effects.key(nid)}#{call_id}" if effects is not None and call_id and binding["operation"] != "find_rows" else None
+        return ports.dataset_call(binding, query, key)
     if src == "knowledge":
         if ports.retrieve is None: raise RuntimeError("Agent knowledge base tools need a knowledge base service")
         return ports.retrieve(t.get("knowledge_base_id") or "", str(args.get("query") or ""), int(t.get("top_k") or 4))
@@ -628,7 +642,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                 try:
                     with embeddings.collect((lambda u: usage(nid, u)) if usage else None):  # a knowledge tool's query embedding
                         value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'),
-                                       dataset_scope=d.get(dataset_nodes.SCOPE))
+                                       dataset_scope=d.get(dataset_nodes.SCOPE), call_id=call.get("id"))
                     if dataset:
                         result, dataset_count = dataset_result(value)
                     else:
@@ -646,7 +660,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             ms = round((time.perf_counter() - t0) * 1000, 2)
             trace_args = trace_arguments(ports, tool, args)
             step = {"tool": call["name"], "args": trace_args, "status": status, "ms": ms,
-                    **({"dataset": {"count": dataset_count}} if dataset else {"result": shorten(result, STEP_CHARS)}),
+                    **({"dataset": {"count": dataset_count, **dataset_step(args)}} if dataset else {"result": shorten(result, STEP_CHARS)}),
                     **({"result": FAILED} if dataset_failed else {}),
                     **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),
                     **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {}),
