@@ -354,6 +354,52 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
     return result
 
 
+def dataset_delete(connection, query, dataset_id: str, columns: dict, fields: list[str], arguments: dict,
+                   operation_id: str) -> dict:
+    if not isinstance(operation_id, str) or not re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", operation_id):
+        raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+    by_id = set(arguments) == {"row_id"}
+    if not by_id and set(arguments) != {"key", "value"}:
+        raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+    keys = DATASET_KEYS
+    if by_id:
+        row_id = arguments["row_id"]
+        if not isinstance(row_id, str) or not 0 < len(row_id) <= 100:
+            raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+        target = {"row_id": row_id, "key": None, "value": None}
+    else:
+        key, value = arguments["key"], arguments["value"]
+        if not isinstance(key, str):
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=key)
+        column = dataset_column(columns, key)
+        if not column["unique"] or isinstance(value, (dict, list)):
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=key)
+        value = dataset_normalize(column, value, required=False)
+        if value is None:
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=key)
+        target = {"row_id": None, "key": key, "value": value}
+    fingerprint = write_fingerprint({"operation": "delete_row", "fields": fields, "arguments": target})
+    receipts = DATASET_RECEIPTS
+    previous = connection.execute(sa.select(receipts).where(receipts.c.dataset_id == dataset_id,
+                                                             receipts.c.operation_id == operation_id)).mappings().one_or_none()
+    if previous is not None:
+        if previous.fingerprint != fingerprint:
+            raise AppError("DATASET_RECEIPT_CONFLICT")
+        return previous.result
+    if not by_id:
+        row_id = connection.scalar(sa.select(keys.c.row_id).where(keys.c.dataset_id == dataset_id,
+                                   keys.c.field == target["key"], keys.c.digest == key_digest(target["value"])))
+    row = connection.execute(query.where(DATASET_ROWS.c.id == row_id)).mappings().one_or_none() if row_id else None
+    if row is None:
+        raise AppError("DATASET_ROW_NOT_FOUND")  # a missed delete stores no receipt
+    connection.execute(keys.delete().where(keys.c.dataset_id == dataset_id, keys.c.row_id == row.id))
+    connection.execute(DATASET_ROWS.delete().where(DATASET_ROWS.c.dataset_id == dataset_id, DATASET_ROWS.c.id == row.id))
+    result = {"row_id": row.id, "deleted": True}
+    connection.execute(receipts.insert().values(dataset_id=dataset_id, operation_id=operation_id,
+                                                fingerprint=fingerprint, result=result))
+    return result
+
+
 def dataset_standalone(binding: str, backend: str, operation: str, fields: list[str], arguments: dict,
                        operation_id: str | None) -> dict:
     columns = dataset_contract(binding)["columns"]
@@ -366,14 +412,16 @@ def dataset_standalone(binding: str, backend: str, operation: str, fields: list[
     engine, dataset_id = dataset_database(binding, backend)
     try:
         with engine.begin() as connection:
-            write = operation in {"insert_row", "upsert_row"}
+            write = operation in {"insert_row", "upsert_row", "delete_row"}
             dataset_check_storage(connection, binding)
             if write:
-                # Acquire a writer lock before reading the receipt or the upsert key.
+                # Insert, upsert and delete take the writer lock before reading the receipt or the key.
                 connection.execute(DATASET_DEFINITIONS.update().where(DATASET_DEFINITIONS.c.dataset_id == dataset_id)
                                    .values(dataset_id=DATASET_DEFINITIONS.c.dataset_id))
             dataset_check_schema(connection, dataset_id, binding)
             query = sa.select(DATASET_ROWS).where(DATASET_ROWS.c.dataset_id == dataset_id)
+            if operation == "delete_row":
+                return dataset_delete(connection, query, dataset_id, columns, fields, arguments, operation_id)
             if write:
                 return dataset_write(connection, query, dataset_id, columns, operation, fields, arguments, operation_id)
             if operation == "find_rows":

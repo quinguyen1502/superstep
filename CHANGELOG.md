@@ -20,6 +20,7 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Changed
 
+- **Team dataset management.** A team dataset is managed by the member who created it and by admins. Other team members with `resources.manage` still add, edit, import and delete rows, but get `403 DATASET_MANAGE_DENIED` when they rename the dataset, change its columns, manage grants or tokens, or delete it. Studio shows those actions disabled with an explanation. Rotating a Dataset token keeps its original issuer. Admins can transfer a team dataset to another team member (`PUT /api/datasets/{id}/owner`, audited as `dataset.transfer`). Existing team datasets take the creator recorded in the audit log as owner; without one, only admins manage them until an admin transfers them.
 - **Dataset filters.** `ne` (Does not equal) now also matches empty cells. Search, the `contains` filter and text sorting ignore letter case, Vietnamese letters included, on SQLite and PostgreSQL; text sorts break ties by the exact value. `eq`, unique keys and upsert matching stay exact. Saved workflows, Agent tools and API calls that use `ne` or `contains` can return more rows than before.
 - A provider HTTP 429 now fails with `PROVIDER_RATE_LIMITED` instead of `PROVIDER_BAD_RESPONSE`. It still answers 502 to API clients and still switches to a configured fallback model.
 

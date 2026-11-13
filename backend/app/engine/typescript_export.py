@@ -17,7 +17,7 @@ The output is a pure function of its input: the same graph gives the same bytes.
 from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
-from . import agents, approval_policy, attachments, foreach
+from . import agents, approval_policy, attachments, dataset_nodes, foreach
 from .browser_export import export_binding
 from .browser_export_ts import TS_RUNTIME
 from .dataset_export import DatasetExport
@@ -492,11 +492,25 @@ function mockAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: str
     const calls: ToolCall[] = picked.map((best, i) => {
       const required = best.parameters?.required ?? [];
       const empty: Record<string, unknown> = { number: 0, integer: 0, boolean: false, array: [], object: {} };
+      type Schema = { type?: unknown; enum?: unknown[]; properties?: Record<string, Schema> };
+      const text = (v: Schema) => (v.type ?? "string") === "string" || (Array.isArray(v.type) && v.type.includes("string"));
+      // the task text, the first enum value, or an object of text properties
+      const value = (v: Schema): unknown => {
+        if (v.enum?.length) return v.enum[0];
+        if (text(v)) return task;
+        if (v.type === "object" && v.properties) {
+          return Object.fromEntries(Object.entries(v.properties).filter(([, p]) => text(p ?? {})).map(([k, p]) => [k, value(p ?? {})]));
+        }
+        return empty[String(v.type)] ?? null;
+      };
+      const props = (best.parameters?.properties ?? {}) as Record<string, Schema>;
       const args: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(best.parameters?.properties ?? {})) {
-        const type = v !== null && typeof v === "object" && "type" in v ? v.type : "string";
-        if (type === "string") args[k] = task;
-        else if (required.includes(k)) args[k] = empty[String(type)] ?? null;
+      for (const [k, v] of Object.entries(props)) {
+        const schema = v !== null && typeof v === "object" ? v : {};
+        if (required.includes(k) || (schema.type ?? "string") === "string") args[k] = value(schema);
+      }
+      if ((args.operation === "insert_row" || args.operation === "upsert_row") && props.values) {
+        args.values = value(props.values);  // a Dataset write tool: the mock writes the task text
       }
       return { id: `mock_call_${i + 1}`, name: best.name, args };
     });
@@ -1148,7 +1162,7 @@ class _Writer(GraphWriter):
             self.tool(g, nid, cls, head, ret, sig)
         elif t == "dataset":
             operation = d.get("operation")
-            write = operation in {"insert_row", "upsert_row"}
+            write = operation in {"insert_row", "upsert_row", "delete_row"}
             config = ", config: unknown" if write else ""
             key = ", await datasetOperationId(config)" if write else ""
             self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
@@ -1476,7 +1490,7 @@ class _Writer(GraphWriter):
         if approval_policy.mode(d) != "off":
             self.add(" * In Superstep a model can review the request first (AI review); suggest mode still asks, and auto mode may answer.")
         self.add(" */")
-        self.add(f"async function {tool}(state: {cls}): Promise<Update> {{")
+        self.add(f"async function {tool}(state: {cls}{', config: unknown' if self.dataset_writes(d) else ''}): Promise<Update> {{")
         self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
         self.add("  const pending = [...chat.pending];")
         self.add(f"  let n = Math.min(waveCap({const}_PARALLEL), pending.length);")
@@ -1487,6 +1501,9 @@ class _Writer(GraphWriter):
         self.add("  const batch = pending.slice(0, n);")
         self.add("  chat.pending = pending.slice(n);")
         dataset_tools = [tool["name"] for tool in d.get("tools") or [] if isinstance(tool, dict) and tool.get("source") == "dataset"]
+        writes = self.dataset_writes(d)
+        if writes:
+            self.add("  const stepId = await datasetOperationId(config);  // one receipt per model call: this step plus the call id")
         self.add("  async function one(call: ToolCall): Promise<[ChatMessage, AgentStep]> {")
         if dataset_tools:
             self.add(f"    const dataset = {lit(dataset_tools)}.includes(call.name);")
@@ -1517,8 +1534,12 @@ class _Writer(GraphWriter):
         self.add("    } else {")
         self.add("      try {")
         if dataset_tools:
-            self.add(f"        const value = await call_{name}_tool(call.name, call.args as Record<string, unknown>, state);")
-            self.add("        if (dataset) count = (value as { rows: unknown[] }).rows.length;")
+            if writes:
+                self.add("        const operationId = await datasetOperationId({ metadata: { langgraph_checkpoint_ns: stepId + \"#\" + call.id } });")
+                self.add(f"        const value = await call_{name}_tool(call.name, call.args as Record<string, unknown>, state, operationId);")
+            else:
+                self.add(f"        const value = await call_{name}_tool(call.name, call.args as Record<string, unknown>, state);")
+            self.add("        if (dataset) count = Array.isArray((value as { rows?: unknown[] }).rows) ? (value as { rows: unknown[] }).rows.length : 1;")
             self.add("        [status, result] = [\"ok\", toolText(value)];")
         else:
             self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
@@ -1531,7 +1552,11 @@ class _Writer(GraphWriter):
         self.add("    const step: AgentStep = { tool: call.name, args: call.args, result: shorten(result, STEP_CHARS), status,")
         self.add("      ms: Math.round((performance.now() - started) * 100) / 100 };")
         if dataset_tools:
-            self.add("    if (dataset) Object.assign(step, { args: {}, result: \"\", dataset: { count } });")
+            if writes:
+                self.add("    const operation = (call.args as Record<string, unknown> | null)?.operation;")
+                self.add("    if (dataset) Object.assign(step, { args: {}, result: \"\", dataset: { count, ...(operation === \"insert_row\" || operation === \"upsert_row\" ? { operation } : {}) } });")
+            else:
+                self.add("    if (dataset) Object.assign(step, { args: {}, result: \"\", dataset: { count } });")
         if approval: self.add("    if (answer !== null) step.approval = status === \"rejected\" ? \"rejected\" : \"approved\";")
         self.add("    const message: ChatMessage = { role: \"tool\", tool_call_id: call.id, name: call.name, content: shorten(result, RESULT_CHARS) };")
         self.add("    return [message, step];")
@@ -1566,11 +1591,17 @@ class _Writer(GraphWriter):
         bound = f"bindBrowserUrl({lit(binding)}, {prepared}, state)"
         return f"await browserCall({lit(info.get('alias') or '')}, {lit(tool)}, {bound}, state)"
 
+    @staticmethod
+    def dataset_writes(d: dict) -> bool:
+        """Whether an Agent node has a Dataset tool that may insert or upsert rows."""
+        return any(isinstance(t, dict) and t.get("source") == "dataset"
+                   and dataset_nodes.agent_writes(dataset_nodes.agent_binding(t)) for t in d.get("tools") or [])
+
     def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
         """call_<agent>_tool(): what each of the Agent node's tools does."""
         self.add("")
         self.add("/** Runs the tool the model asked for with the model's arguments. */")
-        self.add(f"async function call_{name}_tool(name: string, args: Record<string, unknown>, state: {cls}): Promise<unknown> {{")
+        self.add(f"async function call_{name}_tool(name: string, args: Record<string, unknown>, state: {cls}{', operationId?: string' if self.dataset_writes(d) else ''}): Promise<unknown> {{")
         for t in d.get("tools") or []:
             if not isinstance(t, dict): continue
             src, tname = t.get("source"), t.get("name") or ""
@@ -1581,7 +1612,13 @@ class _Writer(GraphWriter):
                 self.add(f"    // TODO: port the server's Python function {_doc(fn)} to TypeScript (the Python export has its source).")
                 self.add(f"    throw new Error({lit(f'{fn} is a Python function of the Superstep server: not implemented in TS export')});")
             elif src == "dataset":
-                self.add(f"    return await datasetAgent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args);")
+                binding = dataset_nodes.agent_binding(t)
+                head = f"await datasetAgent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args"
+                if dataset_nodes.agent_writes(binding):
+                    writes = {key: binding[key] for key in ("operations", "write_fields", "key") if key in binding}
+                    self.add(f"    return {head}, {lit(writes)}, operationId);")
+                else:
+                    self.add(f"    return {head});")
             elif src == "knowledge":
                 self.add(f"    return await retrieve({lit(self.kb_prefix(t))}, String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":

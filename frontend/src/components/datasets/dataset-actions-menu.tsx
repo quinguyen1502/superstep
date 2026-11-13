@@ -1,11 +1,11 @@
 import type { Ref } from 'react'
 import { Columns3, Eye, KeyRound, MoreHorizontal, Pencil, Settings, Trash2, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 type MenuAction = { label: string; onSelect: () => void; disabled?: boolean }
 
-export function DatasetActionsMenu({ label, remove, edit, schema, view, access, actions, triggerRef, triggerId, size = 'icon-sm', disabled, note }: {
+export function DatasetActionsMenu({ label, remove, edit, schema, view, access, actions, note, triggerRef, triggerId, size = 'icon-sm', disabled }: {
   label: string
   remove?: MenuAction
   edit?: MenuAction
@@ -13,6 +13,7 @@ export function DatasetActionsMenu({ label, remove, edit, schema, view, access, 
   view?: MenuAction
   access?: MenuAction
   actions?: (MenuAction & { icon: LucideIcon })[]
+  note?: string
   triggerId?: string
   triggerRef?: Ref<HTMLButtonElement>
   size?: 'icon' | 'icon-sm'
@@ -29,8 +30,8 @@ export function DatasetActionsMenu({ label, remove, edit, schema, view, access, 
       {edit && <DropdownMenuItem disabled={edit.disabled} onSelect={edit.onSelect}><Pencil />{edit.label}</DropdownMenuItem>}
       {access && <DropdownMenuItem disabled={access.disabled} onSelect={access.onSelect}><KeyRound />{access.label}</DropdownMenuItem>}
       {actions?.map(({ icon: Icon, label: actionLabel, onSelect, disabled: off }) => <DropdownMenuItem key={actionLabel} disabled={off} onSelect={onSelect}><Icon />{actionLabel}</DropdownMenuItem>)}
-      {note && <p className="max-w-64 px-2 py-1.5 text-xs text-muted-foreground">{note}</p>}
       {remove && <DropdownMenuItem variant="destructive" disabled={remove.disabled} onSelect={remove.onSelect}><Trash2 /><span className="wrap-anywhere">{remove.label}</span></DropdownMenuItem>}
+      {note && <><DropdownMenuSeparator /><DropdownMenuLabel className="max-w-72 text-xs font-normal text-muted-foreground">{note}</DropdownMenuLabel></>}
     </DropdownMenuContent>
   </DropdownMenu>
 }

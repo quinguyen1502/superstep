@@ -40,6 +40,13 @@ class DatasetUpdate(BaseModel):
     revision: int = Field(ge=1)
 
 
+class DatasetOwnerUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    user_id: str = Field(min_length=1, max_length=100)
+    revision: int = Field(ge=1)
+
+
 class DatasetColumnUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 

@@ -7,11 +7,12 @@ import sys
 import pytest
 
 from test_dataset_connected import dataset, token
+from test_dataset_rows import call as rows_call
 from test_dataset_project_export import project, target, workflow  # noqa: F401
 from test_dataset_runtime import save
 from test_datasets import auth, client  # noqa: F401
 from test_identity_migration import db  # noqa: F401
-from test_python_export import E, N
+from test_python_export import E, F, N
 
 
 def run_cli(path, *args):
@@ -131,3 +132,138 @@ def test_generated_python_mixes_connected_and_standalone_bindings(client, db, mo
     assert result.returncode == 0, result.stderr
     assert "FromExport" in result.stdout and '"remote"' in result.stdout
     assert [request["operation"] for request in requests] == ["find_rows"]
+
+
+def test_python_standalone_delete_row_locks_replays_and_skips_missing_rows(client, db, monkeypatch, target, tmp_path):
+    source = dataset(client, name="Delete source")
+    graph = workflow(source["id"])
+    graph["nodes"].insert(-1, N("removed", "dataset", label="Removed", dataset_id=source["id"], operation="delete_row",
+                                fields=["ticket"], arguments={"key": "ticket", "value": "{{state.updated.row.values.ticket}}"},
+                                output_field="removed"))
+    destination = dataset(client, name="API read destination")  # one run reads through the API and deletes locally
+    graph["nodes"].insert(-1, N("remote", "dataset", label="Remote", dataset_id=destination["id"],
+                                operation="find_rows", fields=["ticket"], arguments={}, output_field="remote"))
+    graph["edges"][-1:] = [E("agent", "removed"), E("removed", "remote"), E("remote", "end")]
+    graph["state"] += [{"name": "removed", "type": "object"}, {"name": "remote", "type": "object"}]
+    wid = save(client, graph)
+    configure(monkeypatch, db, tmp_path)
+    url, requests = target
+    secret = token(client, f"/api/datasets/{destination['id']}", "read")["token"]
+    for name, value in {"BACKEND": "superstep", "API_URL": url, "ID": destination["id"], "API_TOKEN": secret}.items():
+        monkeypatch.setenv(f"DATASET_2_{name}", value)
+    response = client.get(f"/api/workflows/{wid}/export/python", headers=auth("owner"))
+    assert response.status_code == 200, response.text
+    script = tmp_path / "delete.py"
+    script.write_text(response.text)
+    assert run_cli(script, "--setup-datasets").returncode == 0
+    for _ in range(2):  # a deleted row lets the next run insert it again
+        run = run_cli(script)
+        assert run.returncode == 0, run.stderr
+        assert '"deleted": true' in run.stdout
+    assert [request["operation"] for request in requests] == ["find_rows", "find_rows"]
+    assert run_cli(script, "--setup-datasets").returncode == 0
+    exported = runpy.run_path(str(script))
+    call = exported["dataset_call"]
+
+    def insert(ticket, identity=None):
+        return call("DATASET_1", "insert_row", ["ticket"], {"values": {"ticket": ticket}}, identity or f"insert-{ticket}")["row"]["id"]
+
+    def delete(identity, **arguments):
+        return call("DATASET_1", "delete_row", ["ticket"], arguments, identity)
+
+    assert call("DATASET_1", "find_rows", ["ticket"], {})["items"] == []
+    with pytest.raises(RuntimeError, match="DATASET_ROW_NOT_FOUND"):
+        delete("late", key="ticket", value="Later")
+    first = insert("Later")
+    assert delete("late", key="ticket", value="Later") == {"row_id": first, "deleted": True}  # the miss stored no receipt
+    assert delete("late", key="ticket", value="Later") == {"row_id": first, "deleted": True}
+    with pytest.raises(RuntimeError, match="DATASET_RECEIPT_CONFLICT"):
+        delete("late", row_id=first)
+    with pytest.raises(RuntimeError, match="DATASET_UPSERT_KEY_INVALID"):
+        delete("bad-key", key="score", value=1)
+    with pytest.raises(RuntimeError, match="DATASET_NODE_ARGUMENTS_INVALID"):
+        delete("both", row_id=first, key="ticket", value="Later")
+
+    kept, gone = insert("Kept"), insert("Gone")
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        outcomes = list(workers.map(lambda n: _attempt(delete, f"race-{n}", row_id=gone), (1, 2)))
+    assert sorted(map(str, outcomes)) == ["DATASET_ROW_NOT_FOUND", str({"row_id": gone, "deleted": True})]
+    rows = call("DATASET_1", "find_rows", ["ticket"], {})["items"]
+    assert [row["id"] for row in rows] == [kept]
+    assert insert("Gone", "insert-again") != gone  # the unique key was released with the row
+
+
+def _attempt(function, *args, **kwargs):
+    try:
+        return function(*args, **kwargs)
+    except RuntimeError as error:
+        return str(error).split(":")[0]
+
+
+def test_generated_python_agent_writes_and_connected_delete(client, db, monkeypatch, target, tmp_path):
+    source = dataset(client, name="Agent source")
+    destination = dataset(client, name="API delete destination")
+    url, requests = target
+    base = f"/api/datasets/{destination['id']}"
+    graph = {
+        "name": "Agent writes", "state": [F("answer"), F("steps", "list"), F("removed", "object")],
+        "nodes": [
+            N("start", "start"),
+            N("agent", "agent", prompt="TK-9", output_field="answer", steps_field="steps", tools=[
+                {"name": "save_ticket", "source": "dataset", "dataset_id": source["id"], "fields": ["ticket", "score"],
+                 "filter_ops": {}, "limit": 1, "operations": ["upsert_row"], "write_fields": ["ticket"], "key": "ticket"},
+            ]),
+            N("removed", "dataset", label="Removed", dataset_id=destination["id"], operation="delete_row",
+              fields=["ticket"], arguments={"key": "ticket", "value": "Remote"}, output_field="removed"),
+            N("end", "end"),
+        ],
+    }
+    graph["edges"] = [E(a["id"], b["id"]) for a, b in zip(graph["nodes"], graph["nodes"][1:])]
+    wid = save(client, graph)
+    response = client.get(f"/api/workflows/{wid}/export/python", headers=auth("owner"))
+    assert response.status_code == 200, response.text
+    assert "step_id = dataset_operation_id(config)" in response.text
+    script = tmp_path / "agent_writes.py"
+    script.write_text(response.text)
+    configure(monkeypatch, db, tmp_path)
+    reader = token(client, base, "read_write")["token"]
+    for name, value in {"BACKEND": "superstep", "API_URL": url, "ID": destination["id"], "API_TOKEN": reader}.items():
+        monkeypatch.setenv(f"DATASET_2_{name}", value)
+    assert run_cli(script, "--setup-datasets").returncode == 0
+    remote = call_api(client, base, "Remote")
+    denied = run_cli(script)
+    assert denied.returncode and "AUTH_TOKEN_INVALID" in denied.stderr
+    monkeypatch.setenv("DATASET_2_API_TOKEN", token(client, base, "read_write", allow_delete=True)["token"])
+    result = run_cli(script)
+    assert result.returncode == 0, result.stderr
+    assert '"deleted": true' in result.stdout and remote in result.stdout
+    assert '"operation": "upsert_row"' in result.stdout and '"count": 1' in result.stdout
+    assert [request["operation"] for request in requests] == ["delete_row", "delete_row"]
+
+    exported = runpy.run_path(str(script))
+    assert [exported["DATASET_BINDINGS"][name]["operations"] for name in ("DATASET_1", "DATASET_2")] == [["upsert_row"], ["delete_row"]]
+    rows = exported["dataset_call"]("DATASET_1", "find_rows", ["ticket", "score"], {})["items"]
+    assert [row["values"] for row in rows] == [{"ticket": "TK-9", "score": None}]  # two runs, one upserted row
+    agent = exported["dataset_agent"]
+    writes = {"operations": ["upsert_row"], "write_fields": ["ticket"], "key": "ticket"}
+    for args in ({"operation": "upsert_row", "values": {"score": 3}}, {"operation": "insert_row", "values": {"ticket": "X"}},
+                 {"operation": "delete_row"}, {"filters": []}):
+        with pytest.raises(ValueError):
+            agent("DATASET_1", ["ticket"], {}, 1, args, writes, "call-1")
+    first = agent("DATASET_1", ["ticket"], {}, 1, {"operation": "upsert_row", "values": {"ticket": "TK-10"}}, writes, "call-2")
+    assert set(first) == {"row_id", "inserted"}  # a tool that cannot Find gets identifiers only
+    assert first["inserted"] and agent("DATASET_1", ["ticket"], {}, 1, {"operation": "upsert_row", "values": {"ticket": "TK-10"}},
+                                       writes, "call-2") == first
+    with pytest.raises(ValueError):
+        agent("DATASET_1", ["ticket"], {}, 1, {"operation": "upsert_row", "values": {"ticket": "TK-10"}}, None, "call-3")
+    both = {"operations": ["find_rows", "insert_row"], "write_fields": ["ticket"]}
+    inserted = agent("DATASET_1", ["ticket"], {"ticket": ["eq"]}, 5, {"operation": "insert_row", "values": {"ticket": "TK-11"}}, both, "call-4")
+    assert inserted["inserted"] and inserted["values"] == {"ticket": "TK-11"}
+    with pytest.raises(RuntimeError, match="DATASET_RECEIPT_CONFLICT"):
+        agent("DATASET_1", ["ticket"], {}, 5, {"operation": "insert_row", "values": {"ticket": "TK-12"}}, both, "call-4")
+    found = agent("DATASET_1", ["ticket"], {"ticket": ["eq"]}, 5, {"filters": [{"field": "ticket", "op": "eq", "value": "TK-11"}]}, both)
+    assert found == {"rows": [{"ticket": "TK-11"}], "truncated": False}
+
+
+def call_api(client, base, ticket):
+    return rows_call(client, "POST", f"{base}/rows", body={"values": {"ticket": ticket}}, status=201)["row"]["id"]
