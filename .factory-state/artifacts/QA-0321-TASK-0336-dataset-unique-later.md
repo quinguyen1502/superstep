@@ -24,7 +24,7 @@ TASK-0336 on `factory/task-0336-dataset-unique-later`. Backend tests used `backe
   - Evidence: `test_duplicates_block_unique_with_count_and_samples` returns `DATASET_UNIQUE_DUPLICATES` with `count: 5`, `values: 2`, five sample row ids in row order, and no keys or revision change. The Playwright spec shows the count, the sample row ids, and "Show rows with T-1", which opens the grid filtered to the two rows.
 - Criterion: A bound upsert key cannot lose unique.
   - Result: pass
-  - Evidence: `test_bound_key_keeps_unique_and_unique_off_drops_keys` blocks Unique off while an Upsert workflow or a Delete-by-key workflow uses the field and names the workflow. With only a Find workflow, Unique off succeeds, removes the keys, and allows a repeated value.
+  - Evidence: `test_bound_key_keeps_unique_and_unique_off_drops_keys` blocks Unique off while an Upsert workflow, a Delete-by-key workflow, or an Agent tool with an upsert key uses the field, and names the workflow. With only a Find workflow, Unique off succeeds, removes the keys, and allows a repeated value.
 
 ## UX And Accessibility Coverage
 

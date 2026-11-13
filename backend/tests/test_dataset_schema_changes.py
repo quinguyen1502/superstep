@@ -4,6 +4,8 @@ from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import func, select
 
 from app.models import DatasetRowKey
+from test_agent_node import wf
+from test_dataset_agent_tool import write_tool
 from test_dataset_rows import call, insert, query
 from test_dataset_runtime import dataset_node, graph, save
 from test_datasets import auth, client, create, error  # noqa: F401
@@ -86,6 +88,9 @@ def test_bound_key_keeps_unique_and_unique_off_drops_keys(client, db):
     remover = save(client, graph("Delete tickets", dataset_node(dataset["id"], "delete_row", {"key": "ticket", "value": "{{ticket}}"})))
     assert set_unique(client, url, dataset, "ticket", False, status=409)["error"]["details"]["workflow_id"] == remover
     call(client, "DELETE", f"/api/workflows/{remover}")
+    agent = save(client, wf(tools=[write_tool(dataset["id"], operations=["upsert_row"], fields=["ticket"], write_fields=["ticket"])]))
+    assert set_unique(client, url, dataset, "ticket", False, status=409)["error"]["details"]["workflow_id"] == agent
+    call(client, "DELETE", f"/api/workflows/{agent}")
     save(client, graph("Find tickets", dataset_node(dataset["id"], "find_rows", {"filters": [{"field": "ticket", "op": "eq", "value": "A"}]})))
     updated = set_unique(client, url, dataset, "ticket", False)["data"]
     assert column(updated, "ticket")["unique"] is False and key_count(db, dataset["id"], "ticket") == 0
