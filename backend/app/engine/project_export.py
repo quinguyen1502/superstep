@@ -111,6 +111,11 @@ def _python(code: str, title: str, graph_id: str) -> Dict[str, str]:
     body = code.rstrip("\n") + "\n\n\n# The graph the LangGraph Agent Server (langgraph dev, LangSmith Studio) loads, see langgraph.json.\n" \
         "# The server adds its own checkpointer, so none is given here.\ngraph = build_graph()\n"
     reqs = _py_requirements(code)
+    if "def setup_datasets(" in code:
+        versions = {"pydantic": "pydantic>=2", "sqlalchemy": "sqlalchemy>=2"}
+        reqs = [versions.get(req, req) for req in reqs] + ["psycopg[binary]>=3.2"]
+        body = body.replace("\ngraph = build_graph()\n",
+                            '\nif __name__ != "__main__":\n    setup_datasets(create=False)\ngraph = build_graph()\n', 1)
     deps = ",\n".join(f'    "{r}"' for r in reqs)
     pyproject = (f'[project]\nname = "{graph_id.replace("_", "-")}"\nversion = "0.1.0"\n'
                  f'description = "{title} (exported from Superstep)"\nrequires-python = ">=3.10"\n'
@@ -163,17 +168,28 @@ def to_project(language: str, code: str, title: str, datasets: dict | None = Non
     files = project_files(language, code, title)
     if datasets:
         files["datasets.json"] = json.dumps(datasets, ensure_ascii=False, indent=2) + "\n"
+        settings = ["BACKEND", "API_URL", "API_TOKEN", "ID"]
+        if language == "python":
+            settings.extend(["SQLITE_PATH", "POSTGRES_DSN"])
         files[".env.example"] += "\n# Dataset bindings (see datasets.json)\n" + "".join(
             f"{binding['name']}_{setting}=\n" for binding in datasets["bindings"]
-            for setting in ("BACKEND", "API_URL", "API_TOKEN", "ID")
+            for setting in settings
         )
         files["README.md"] += (
             "\n## Dataset bindings\n\n"
-            "See `datasets.json` for the columns and operations required by each binding. Set its `BACKEND` to "
+            "See `datasets.json` for the columns and operations required by each binding. For a connected binding, set `BACKEND` to "
             "`superstep`, `API_URL` to the server base URL, `ID` to the destination dataset, and `API_TOKEN` "
             "to a scoped Dataset token with the required permissions. Keep all deployment values in the environment. "
             "Dataset writes affect the configured destination. Use a separate dataset when running examples.\n"
         )
+        if language == "python":
+            files["README.md"] += (
+                "\nFor local SQLite, choose `BACKEND=sqlite` and set `SQLITE_PATH` to the database file. "
+                "For PostgreSQL, choose `BACKEND=postgresql` and set `POSTGRES_DSN` to the database URL. "
+                "Set `ID` to a stable dataset name within that database. Run `python agent.py --setup-datasets` "
+                "with those variables exported before running the workflow. Repeating setup keeps existing rows. "
+                "Each binding can use a different backend.\n"
+            )
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for path, text in sorted(files.items()):
             info = zipfile.ZipInfo(f"{root}/{path}", date_time=(1980, 1, 1, 0, 0, 0))

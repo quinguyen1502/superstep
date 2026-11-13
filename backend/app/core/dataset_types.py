@@ -1,7 +1,9 @@
 """Portable validation and normalization for Dataset column values."""
+import json
 import math
 import re
 from datetime import date, datetime, timezone
+from hashlib import sha256
 from typing import Literal, TypeAlias, get_args
 
 from .errors import AppError
@@ -18,6 +20,9 @@ def filter_operators(kind: ColumnKind) -> tuple[str, ...]:
         return ("eq", "ne", "is_null", "not_null")
     return tuple(op for op in FILTER_OPERATORS if op != "contains" or kind in TEXT_KINDS)
 
+COLUMN_KEY_PATTERN = r"^[a-z][a-z0-9_]{0,62}$"
+MAX_ROW_BYTES = 65_536
+MAX_PAGE_BYTES = 1_048_576
 MAX_TEXT = 16_384
 MAX_SAFE_INTEGER = (1 << 53) - 1
 DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
@@ -54,3 +59,21 @@ def normalize_cell(key: str, kind: ColumnKind, value: CellValue, options: list[s
             except (ValueError, OverflowError):
                 pass
     raise AppError("DATASET_VALUE_INVALID", field=key, kind=kind)
+
+
+MAX_DATASET_ROWS = 25_000
+
+
+def key_digest(value: CellValue) -> str:
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return sha256(json.dumps(value, ensure_ascii=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def write_fingerprint(data: object) -> str:
+    encoded = json.dumps(data, ensure_ascii=True, separators=(",", ":"), sort_keys=True, allow_nan=False)
+    return sha256(encoded.encode()).hexdigest()
+
+
+def dataset_size(payload: dict) -> int:
+    return len(json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode())

@@ -22,6 +22,7 @@ from . import agents, approval_policy, attachments, foreach
 from .browser_export import PY_RUNTIME, export_binding
 from .dataset_export import DatasetExport
 from .dataset_export_runtime import PY_DATASET
+from .dataset_python_standalone import python_standalone
 from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWriter, camel as _camel, number as _number,
                             one_line as _one_line, slug)
 from .export_runtime import PY_APPROVAL, PY_MANAGED
@@ -36,7 +37,12 @@ REDUCERS = {"append": "append_items", "merge": "merge_objects", "add": "add_numb
 RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | {
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
-    "dataset_call", "dataset_agent", "dataset_operation_id", "uuid", "RunnableConfig",
+    "dataset_call", "dataset_agent", "dataset_operation_id", "dataset_backend", "dataset_database", "dataset_contract",
+    "dataset_check_schema", "dataset_check_storage", "dataset_column", "dataset_normalize", "dataset_row_payload",
+    "dataset_expression", "dataset_contains", "dataset_filter", "dataset_find", "dataset_write", "dataset_standalone",
+    "setup_datasets", "normalize_cell", "filter_operators", "key_digest", "write_fingerprint", "dataset_size",
+    "sa", "math", "date", "datetime", "timezone", "sha256", "dataset_now", "postgres_insert", "sqlite_insert",
+    "uuid", "RunnableConfig", "AppError",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
     "call_llm", "call_llm_fallback", "fails_over", "resolve_model", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "MCP_PROTOCOL", "managed_operation", "send_email", "addresses", "EMAIL_RE", "EMAIL_RUN_ID", "PinnedSMTP", "PinnedSMTPSSL", "build_graph",
     "select", "review_approval", "wait_approval", "notify_approval", "approval_post", "approval_judge", "EmailMessage", "ManagedUnknown", "managed_http", "managed_dispatch",
@@ -846,6 +852,8 @@ class _Writer(GraphWriter):
         names = {n.id for n in ast.walk(ast.parse("\n".join(self.lines))) if isinstance(n, ast.Name)}
         uses = lambda n: n in names  # noqa: E731
         pip = "pip install langgraph" + (" httpx" if uses("httpx") else "")
+        if "dataset" in self.uses:
+            pip += " sqlalchemy pydantic 'psycopg[binary]'"
         doc = [f'"""{_doc(self.title)}{v}: a LangGraph graph exported from Superstep.', "",
                "The graph on the canvas, written as code: the state, one function per node, and build_graph(), which",
                "connects them. Run it:", "", f"    {pip}", f"    python {slug(self.title, 'workflow')}.py", ""]
@@ -880,6 +888,7 @@ class _Writer(GraphWriter):
         if "dataset" in self.uses:
             self.add("\nDATASET_BINDINGS = " + lit(self.datasets.bindings))
             self.add(PY_DATASET.rstrip())
+            self.add(python_standalone().rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
         if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
         if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -1657,6 +1666,12 @@ class _Writer(GraphWriter):
         self.add("")
         self.add("")
         self.add("def main() -> None:")
+        if "dataset" in self.uses:
+            self.add('    if sys.argv[1:] == ["--setup-datasets"]:')
+            self.add("        setup_datasets(create=True)")
+            self.add('        print("Dataset storage is ready.")')
+            self.add("        return")
+            self.add("    setup_datasets(create=False)")
         self.add("    graph = build_graph(MemorySaver())")
         cfg = '{"configurable": {"thread_id": "example"}' + (f', "recursion_limit": {RECURSION + budget}' if budget else "") + "}"
         self.add("    # thread_id names this run in the checkpointer" + ("; For each loops need more steps than the default 25." if budget else "."))

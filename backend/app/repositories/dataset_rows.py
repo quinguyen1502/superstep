@@ -1,7 +1,5 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from hashlib import sha256
-import json
 from time import time
 from uuid import uuid4
 
@@ -9,7 +7,7 @@ from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..core.dataset_types import CellValue
+from ..core.dataset_types import MAX_DATASET_ROWS, CellValue, key_digest, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
@@ -17,20 +15,6 @@ from ..models.dataset_receipt import DatasetWriteReceipt
 from ..models.run import Run
 from .datasets import DatasetRepository
 from .runs import StaleLease
-
-MAX_DATASET_ROWS = 25_000
-
-
-def key_digest(value: CellValue) -> str:
-    if isinstance(value, float) and value.is_integer():
-        value = int(value)
-    return sha256(json.dumps(value, ensure_ascii=True, separators=(",", ":")).encode()).hexdigest()
-
-
-def _fingerprint(data: object) -> str:
-    encoded = json.dumps(data, ensure_ascii=True, separators=(",", ":"), sort_keys=True, allow_nan=False)
-    return sha256(encoded.encode()).hexdigest()
-
 
 @dataclass(frozen=True)
 class WorkflowWrite:
@@ -44,7 +28,7 @@ class WorkflowWrite:
 
     @property
     def fingerprint(self) -> str:
-        return _fingerprint([self.workflow_id, self.arguments])
+        return write_fingerprint([self.workflow_id, self.arguments])
 
     @property
     def scope(self) -> str:
@@ -60,7 +44,7 @@ class ConnectedWrite:
 
     @property
     def fingerprint(self) -> str:
-        return _fingerprint(self.arguments)
+        return write_fingerprint(self.arguments)
 
     @property
     def scope(self) -> str:
