@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0332
 - Title: Stop write-only Dataset callers from reading row values
-- Status: todo
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -86,6 +86,15 @@ A caller with write but not read permission gets identifiers only from insert, u
 - 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): DEC-0099 Option A accepted.
 - 2026-11-13: Owner accepted REQ-0100 and PLAN-0018 (22:34 Asia/Saigon); moved to todo as the first task of the plan. Not started.
 
+- 2026-11-13: Implemented on `factory/task-0332-dataset-write-only-results`, stacked on `factory/task-0327-dataset-agent-write` (PR #383) with the planning branch of PR #388 merged in. Review REV-0316. QA QA-0316. Moved to review.
+
+## Related Artifacts (Review)
+
+- Review: [REV-0316](../../artifacts/REV-0316-TASK-0332-dataset-write-only-results.md)
+- QA: [QA-0316](../../artifacts/QA-0316-TASK-0332-dataset-write-only-results.md)
+
 ## Handoff Notes
 
-- Use branch `factory/task-0332-dataset-write-only-results` from `develop` when implementation begins.
+- PR into `factory/task-0327-dataset-agent-write`; retarget to `develop` after #383 merges. Do not merge until the owner asks and required CI is green.
+- Insert row and Upsert row accept `fields: []` (identifiers only) in the node binding, the connected API, and the standalone runtimes.
+- TASK-0328 must merge this change before it merges itself. TASK-0333 removes values from receipts; TASK-0343 ports the Agent-without-Find and no-op rules to standalone exports.
