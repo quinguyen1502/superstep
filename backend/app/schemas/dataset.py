@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,3 +43,41 @@ class DatasetColumnUpdate(BaseModel):
 
     column: DatasetColumnIn
     revision: int = Field(ge=1)
+
+
+RowValues = Annotated[dict[ColumnKey, CellValue], Field(max_length=100)]
+
+
+class DatasetRowIn(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    values: RowValues
+    schema_revision: int | None = Field(default=None, ge=1)
+
+
+class DatasetRowUpdate(DatasetRowIn):
+    revision: int = Field(ge=1)
+
+
+class DatasetRowUpsert(DatasetRowIn):
+    key: ColumnKey
+
+
+class DatasetFilter(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    field: ColumnKey
+    op: Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null"]
+    value: CellValue = None
+
+
+class DatasetRowQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    filters: list[DatasetFilter] = Field(default_factory=list, max_length=12)
+    fields: list[ColumnKey] | None = Field(default=None, max_length=100)
+    search: str | None = Field(default=None, max_length=120)
+    sort: ColumnKey | None = None
+    descending: bool = False
+    limit: int = Field(default=50, ge=1, le=100)
+    offset: int = Field(default=0, ge=0, le=25_000)

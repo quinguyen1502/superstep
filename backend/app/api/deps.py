@@ -13,7 +13,9 @@ from ..services.audit_service import AuditService
 from ..services.code_service import CodeService
 from ..services.inbox_service import InboxService
 from ..services.policy_service import PolicyService
+from ..repositories.dataset_rows import DatasetRowRepository
 from ..repositories.datasets import DatasetRepository
+from ..services.dataset_rows import DatasetRowService
 from ..services.dataset_service import DatasetService
 from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
@@ -262,6 +264,10 @@ def auto_review_service() -> AutoReviewService:
 
 def dataset_service() -> DatasetService:
     return DatasetService(DatasetRepository(get_db()), access_service(), audit_service())
+
+def dataset_row_service() -> DatasetRowService:
+    datasets = dataset_service()
+    return DatasetRowService(datasets, DatasetRowRepository(datasets.repo))
 
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())

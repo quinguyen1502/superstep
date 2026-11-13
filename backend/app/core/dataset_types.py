@@ -16,6 +16,7 @@ DATETIME = re.compile(
     r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
     r"(?:\.[0-9]{1,3})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])"
 )
+INVALID_TEXT = re.compile(r"[\x00\ud800-\udfff]")
 EMAIL = re.compile(r"[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+")
 
 
@@ -27,7 +28,7 @@ def normalize_cell(key: str, kind: ColumnKind, value: CellValue, options: list[s
     if kind == "number" and type(value) in (int, float):
         if -MAX_SAFE_INTEGER <= value <= MAX_SAFE_INTEGER and math.isfinite(value):
             return value
-    if isinstance(value, str) and "\0" not in value:
+    if isinstance(value, str) and not INVALID_TEXT.search(value):
         if kind == "text" and len(value) <= MAX_TEXT:
             return value
         if kind == "select" and value in options:
