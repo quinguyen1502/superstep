@@ -1,10 +1,19 @@
 {
+  "datasetTool": {
+    "readOnly": "Tìm dòng với quyền chỉ đọc. Agent chỉ dùng được các trường và toán tử đã chọn.",
+    "fieldsRequired": "Chọn ít nhất một trường trả về.",
+    "filterPermissions": "Toán tử lọc được phép",
+    "operatorsFor": "Toán tử được phép cho {{field}}",
+    "outdated": "Một số trường hoặc toán tử đã chọn không còn khả dụng trong lược đồ này.",
+    "traceRows_one": "{{tool}} trả về {{count}} dòng",
+    "traceRows_other": "{{tool}} trả về {{count}} dòng"
+  },
   "datasetNode": {
     "dataset": "Tập dữ liệu",
     "chooseDataset": "Chọn tập dữ liệu",
     "operation": "Thao tác",
     "unavailable": "Tập dữ liệu không khả dụng",
-    "rebind": "Chọn tập dữ liệu cho node này. Mẫu đã nhập cần liên kết với tập dữ liệu tại đây.",
+    "rebind": "Chọn tập dữ liệu. Mẫu đã nhập cần liên kết với tập dữ liệu tại đây.",
     "saveForGrant": "Lưu quy trình rồi cấp quyền trong menu Quyền truy cập của tập dữ liệu.",
     "grantMissing": {
       "read": "Cấp quyền đọc cho quy trình trong menu Quyền truy cập của tập dữ liệu.",
@@ -2819,6 +2828,7 @@
     "noToolsYet": "Hãy thêm ít nhất một công cụ.",
     "addTool": "Thêm công cụ",
     "sources": {
+      "dataset": "Tập dữ liệu",
       "mcp": "Công cụ MCP",
       "http": "Yêu cầu HTTP",
       "builtin": "Hàm có sẵn",
@@ -2901,6 +2911,7 @@
     "RETRIEVER_TOP_K": "Node Retriever {{node}}: top_k phải từ 1 đến 20",
     "MCP_SERVER_MISSING": "Node MCP {{node}}: hãy chọn máy chủ",
     "MCP_TOOL_MISSING": "Node MCP {{node}}: hãy chọn công cụ",
+    "AGENT_TOOL_DATASET": "Node Agent {{node}}, công cụ {{tool}}: chọn tập dữ liệu, trường trả về và quyền lọc hợp lệ",
     "DATASET_NODE_BINDING": "Node tập dữ liệu {{node}}: cấu hình tập dữ liệu, thao tác, trường trả về và tham số hợp lệ",
     "MCP_ARGUMENTS": "Node MCP {{node}}: tham số phải là object",
     "HUMAN_ANSWERED_BY": "Node Human {{node}}: người trả lời phải là người chat hoặc người duyệt",

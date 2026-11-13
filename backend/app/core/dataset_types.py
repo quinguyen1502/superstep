@@ -2,12 +2,21 @@
 import math
 import re
 from datetime import date, datetime, timezone
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, get_args
 
 from .errors import AppError
 
 ColumnKind: TypeAlias = Literal["text", "number", "boolean", "date", "datetime", "email", "select"]
 CellValue: TypeAlias = str | int | float | bool | None
+FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null"]
+FILTER_OPERATORS = get_args(FilterOperator)
+TEXT_KINDS = frozenset({"text", "email", "select"})
+
+
+def filter_operators(kind: ColumnKind) -> tuple[str, ...]:
+    if kind == "boolean":
+        return ("eq", "ne", "is_null", "not_null")
+    return tuple(op for op in FILTER_OPERATORS if op != "contains" or kind in TEXT_KINDS)
 
 MAX_TEXT = 16_384
 MAX_SAFE_INTEGER = (1 << 53) - 1

@@ -1,10 +1,19 @@
 {
+  "datasetTool": {
+    "readOnly": "Find rows with read-only access. The Agent can use only the selected fields and operators.",
+    "fieldsRequired": "Choose at least one field to return.",
+    "filterPermissions": "Allowed filter operators",
+    "operatorsFor": "Allowed operators for {{field}}",
+    "outdated": "Some configured fields or operators are unavailable in this schema.",
+    "traceRows_one": "{{tool}} returned {{count}} row",
+    "traceRows_other": "{{tool}} returned {{count}} rows"
+  },
   "datasetNode": {
     "dataset": "Dataset",
     "chooseDataset": "Choose a dataset",
     "operation": "Operation",
     "unavailable": "Dataset unavailable",
-    "rebind": "Choose a dataset for this node. Imported templates need a local binding.",
+    "rebind": "Choose a dataset. Imported templates need a local binding.",
     "saveForGrant": "Save this workflow, then grant it access from the dataset’s Access menu.",
     "grantMissing": {
       "read": "Grant this workflow read access from the dataset’s Access menu.",
@@ -2819,6 +2828,7 @@
     "noToolsYet": "Add at least one tool.",
     "addTool": "Add tool",
     "sources": {
+      "dataset": "Dataset",
       "mcp": "MCP tool",
       "http": "HTTP request",
       "builtin": "Built-in function",
@@ -2901,6 +2911,7 @@
     "RETRIEVER_TOP_K": "Retriever node {{node}}: top_k must be 1-20",
     "MCP_SERVER_MISSING": "MCP node {{node}}: choose a server",
     "MCP_TOOL_MISSING": "MCP node {{node}}: choose a tool",
+    "AGENT_TOOL_DATASET": "Agent node {{node}}, tool {{tool}}: select a dataset, projected fields and valid filter permissions",
     "DATASET_NODE_BINDING": "Dataset node {{node}}: configure a dataset, an operation, projected fields and valid arguments",
     "MCP_ARGUMENTS": "MCP node {{node}}: arguments must be an object",
     "HUMAN_ANSWERED_BY": "Human node {{node}}: answered by must be visitor or reviewer",

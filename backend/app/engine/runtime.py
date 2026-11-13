@@ -4,7 +4,7 @@ import json, time
 from typing import Any, Dict, List, Optional
 from langgraph.checkpoint.memory import InMemorySaver
 from .compiler import compile_workflow
-from . import agents, foreach, browser_recipes, browser_presentation
+from . import agents, foreach, browser_recipes, browser_presentation, dataset_nodes
 from .effects import Effects
 from .errors import Interrupt, ValidationError
 from .issues import Issue
@@ -89,6 +89,8 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     state = dict(inputs); cp_state, cp_counts = dict(state), dict(counts); first = True
 
     browser_private = browser_presentation.private_workflow(wf, ports)
+    # Dataset tool messages are private to the agent and its recovery checkpoint.
+    dataset_agent = any("filter_ops" in binding for binding in dataset_nodes.bindings(wf).values())
     def meta(nid):
         return {"node": nid, "label": nodes[nid]["data"].get("label"), "node_type": nodes[nid]["type"],
                 **({'browser_private': True} if browser_private else {})}
@@ -141,7 +143,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                 finished_ids.add(nid)
                 yield {"type": "node_finished", **meta(nid), "iteration": counts.get(nid, 1), "superstep": superstep,
                        "duration_ms": round((time.perf_counter() - t0) * 1000, 2),
-                       "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),
+                       "input": cap_payload(agents.visible(before) if dataset_agent else before), "delta": cap_payload(agents.visible(delta)),
                        **({'browser': browser_presentation.detail(nodes[nid]['data'].get('tool'), delta.get(nodes[nid]['data'].get('output_field')) or {})}
                           if nodes[nid]['type'] == 'mcp' and browser_private and ports is not None and ports.browser is not None and ports.browser.is_browser(nodes[nid]['data'].get('server_id')) else {}),  # input: time travel forks from it
                        **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did
