@@ -216,6 +216,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
               <SelectTrigger aria-label={t('dataset.filterOperator')} className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>{ops.map(op => <SelectItem key={op} value={op}>{t(`datasetNode.filterOps.${op}`)}</SelectItem>)}</SelectContent>
             </Select>
+            {column && ops.includes(rule.op) && <p className="text-xs text-muted-foreground">{t(`datasetNode.filterOpHelp.${rule.op}`)}</p>}
             {column && !['is_null', 'not_null'].includes(rule.op) && <MappedValue key={rule.field} label={t('dataset.filterValue')}
               column={column} value={rule.value} fields={state} disabled={disabled} substring={rule.op === 'contains'} onChange={value => replace({ value })} />}
           </fieldset>

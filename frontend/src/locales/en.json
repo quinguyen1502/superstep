@@ -72,6 +72,17 @@
       "is_null": "Is empty",
       "not_null": "Is not empty",
       "contains": "Contains"
+    },
+    "filterOpHelp": {
+      "eq": "Matches the exact value, letter case included.",
+      "ne": "Matches every other value, empty cells included.",
+      "lt": "Matches smaller values.",
+      "lte": "Matches the value or smaller ones.",
+      "gt": "Matches larger values.",
+      "gte": "Matches the value or larger ones.",
+      "is_null": "Matches cells with no value.",
+      "not_null": "Matches cells with any value.",
+      "contains": "Matches text that includes this value, ignoring letter case."
     }
   },
   "dataset": {
@@ -210,6 +221,7 @@
     "filterValue": "Filter value",
     "applyFilters": "Apply filters",
     "noFilterConditions": "No filter conditions.",
+    "filterHelp": "Equals matches the exact value, letter case included. Is empty matches cells with no value. Search ignores letter case.",
     "rowsUnavailable": "Rows unavailable.",
     "noRows": "No matching rows.",
     "previousPage": "Previous page",

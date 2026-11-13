@@ -33,6 +33,11 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
   nên không dùng lại được, và cột đã xoá không tính vào giới hạn 100 cột.
 - Cột bắt buộc thêm vào tập dữ liệu đã có dòng cần giá trị mặc định. Mọi dòng
   hiện có nhận giá trị mặc định, miễn là không dòng nào vượt giới hạn 64 KiB.
+- **Tìm trong bảng** và bộ lọc **Chứa** không phân biệt chữ hoa chữ thường, nên
+  "webhook" cũng tìm thấy "Webhook", và "đơn" tìm thấy "ĐƠN". Sắp xếp văn bản
+  cũng không phân biệt chữ hoa chữ thường. **Bằng** và khoá duy nhất khớp đúng
+  giá trị. **Không bằng** khớp cả ô để trống. Mỗi điều kiện lọc có giải thích
+  cho toán tử của nó.
 
 Bạn cần `resources.manage` để tạo tập dữ liệu hoặc đổi lược đồ và dòng. Ai nhìn
 thấy tập dữ liệu thì đọc được dòng. Khi thiếu quyền đó, các nút tạo, sửa, nhập,

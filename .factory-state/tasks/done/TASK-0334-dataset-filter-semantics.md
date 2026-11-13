@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0334
 - Title: Make Dataset filters null-safe and case-insensitive
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -77,7 +77,9 @@
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Owner accepted REQ-0100 and PLAN-0018 and asked to implement the fixes with merge when green. Branched `factory/task-0334-dataset-filter-semantics` from `origin/develop` at `1740e49b` and merged the planning branch so the task files exist. Implemented null-safe `ne` and one case fold for contains, search, and text sort. Review REV-0318. QA QA-0318. Moved to done.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0334-dataset-filter-semantics` from `develop` when implementation begins.
+- Branch `factory/task-0334-dataset-filter-semantics` from `origin/develop` at `1740e49b`, plus a plain merge of `origin/factory/plan-dataset-fixes-phase3`. One PR into `develop`.
+- Standalone Python and TypeScript exports keep their old filter semantics until TASK-0343.
