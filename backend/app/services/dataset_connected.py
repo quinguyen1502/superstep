@@ -6,7 +6,7 @@ from ..core.errors import AppError
 from ..engine.dataset_nodes import ACCESS, delete_target, valid
 from ..repositories.dataset_rows import ConnectedWrite
 from ..schemas.dataset import DatasetConnectedInput, DatasetRowIn, DatasetRowQuery, DatasetRowUpsert
-from .dataset_access import DatasetAccessService
+from .dataset_access import DatasetAccessService, can_read
 from .dataset_rows import DatasetRowService, _active_columns
 
 
@@ -77,7 +77,7 @@ class DatasetConnectedService:
             receipt = ConnectedWrite(token.id, token.token_hash, request.operation_id,
                                      {"operation": operation, "fields": fields, "arguments": payload})
             return self.rows.save(uid, dataset_id, schema_revision=dataset.revision, fields=fields,
-                                  connected=receipt, **payload)
+                                  connected=receipt, readable=can_read(token.permission), **payload)
         if operation == "find_rows":
             result = self.rows.query(uid, dataset_id, schema_revision=dataset.revision, **query.model_dump())
         else:
