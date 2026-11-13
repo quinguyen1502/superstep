@@ -88,7 +88,7 @@ export function UsageBudgetsCard() {
           <div className="space-y-1.5">
             <Label htmlFor="usage-budget-scope">{t('settings.usage.budgets.scope')}</Label>
             <Select value={scope} onValueChange={value => { setScope(value as Scope); setTarget('') }}>
-              <SelectTrigger id="usage-budget-scope"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="usage-budget-scope" className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="user">{t('settings.usage.budgets.user')}</SelectItem>
                 <SelectItem value="team">{t('settings.usage.budgets.team')}</SelectItem>
@@ -98,20 +98,20 @@ export function UsageBudgetsCard() {
           <div className="space-y-1.5">
             <Label htmlFor="usage-budget-target">{t('settings.usage.budgets.target')}</Label>
             <Select value={target} onValueChange={setTarget} disabled={!options.length}>
-              <SelectTrigger id="usage-budget-target"><SelectValue placeholder={t(options.length
+              <SelectTrigger id="usage-budget-target" className="w-full"><SelectValue placeholder={t(options.length
                 ? 'settings.usage.budgets.chooseTarget' : 'settings.usage.budgets.noTargets')} /></SelectTrigger>
               <SelectContent>{options.map(item => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
         </>}
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="usage-budget-amount">{t('settings.usage.budgets.amount')}</Label>
-          <Input id="usage-budget-amount" type="number" min="0.01" max="9999999.99" step="0.01" required
-            value={amount} onChange={event => setAmount(event.target.value)} />
-        </div>
-        <div className="flex gap-2">
-          <Button type="submit" disabled={busy || (!editing && !target)}>{t('common.save')}</Button>
-          <Button type="button" variant="outline" disabled={busy} onClick={() => setFormOpen(false)}>{t('common.cancel')}</Button>
+          <div className="flex items-center gap-2">
+            <Input id="usage-budget-amount" className="min-w-0 flex-1" type="number" min="0.01" max="9999999.99" step="0.01" required
+              value={amount} onChange={event => setAmount(event.target.value)} />
+            <Button type="submit" disabled={busy || (!editing && !target)}>{t('common.save')}</Button>
+            <Button type="button" variant="outline" disabled={busy} onClick={() => setFormOpen(false)}>{t('common.cancel')}</Button>
+          </div>
         </div>
       </form>}
       {data?.budgets.length ? <Table>

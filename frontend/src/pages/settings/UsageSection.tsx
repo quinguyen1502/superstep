@@ -93,7 +93,7 @@ export function UsageSection() {
             <div className="text-sm text-muted-foreground">{t('settings.usage.slo.target', { value: fmtShare(data.slo.api_target, lang) })}</div>
             {data.grafana_url && <a href={data.grafana_url} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm underline underline-offset-4">
-              {t('settings.usage.slo.viewGrafana')}<ExternalLink className="size-3" aria-hidden="true" />
+              <ExternalLink className="size-3" aria-hidden="true" />{t('settings.usage.slo.viewGrafana')}
             </a>}
           </div>
         </CardContent>
@@ -103,11 +103,16 @@ export function UsageSection() {
           <span className={`inline-block size-2.5 rounded-sm ${BAR[s]}`} aria-hidden="true" />{t(`settings.usage.status.${s}`)}</span>)}</CardDescription></CardHeader>
         <CardContent>
           {tot.runs === 0 ? <p className="py-6 text-center text-sm text-muted-foreground" id="usage-empty">{t('settings.usage.empty')}</p> :
-            <div className="flex h-40 items-end gap-0.5" role="img" aria-label={t('settings.usage.overTime')}>
+            <div className="relative h-40" role="img" aria-label={t('settings.usage.overTime')}>
+              <div className="pointer-events-none absolute inset-0 flex flex-col justify-between" aria-hidden="true">
+                {Array.from({ length: 5 }, (_, i) => <div key={i} className="border-t border-border" />)}
+              </div>
+              <div className="relative flex h-full items-end gap-0.5">
               {data.series.map(b => { const n = bucketTotal(b)
                 return <div key={b.start} className="flex h-full min-w-0 flex-1 flex-col justify-end" title={`${when(b.start)}: ${fmtCount(n, lang)}`} data-testid="usage-bar">
                   {SERIES_STATUSES.filter(s => b[s] > 0).map(s => <div key={s} className={BAR[s]} style={{ height: `${(b[s] / peak) * 100}%` }} />)}
                 </div> })}
+              </div>
             </div>}
           {tot.runs > 0 && <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
             <span>{when(data.since)}</span><span>{when(data.until)}</span></div>}
@@ -230,7 +235,7 @@ export function UsageSection() {
       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
         <HandbookLink id="usage-handbook" page="operate/observability" label={t('settings.usage.handbook')} />
         {data.grafana_url && <a id="usage-grafana" href={data.grafana_url} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 underline underline-offset-4 hover:text-foreground">{t('settings.usage.grafana')}<ExternalLink className="size-3" aria-hidden="true" /></a>}
+          className="inline-flex items-center gap-1 underline underline-offset-4 hover:text-foreground"><ExternalLink className="size-3" aria-hidden="true" />{t('settings.usage.grafana')}</a>}
       </div>
     </>}
   </div>

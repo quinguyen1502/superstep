@@ -8,5 +8,5 @@ export function HandbookLink({ page, anchor, label, ariaLabel, id }: { page: str
   return <a id={id} href={handbookUrl(page, i18n.resolvedLanguage, anchor)} target="_blank" rel="noopener noreferrer"
     aria-label={`${ariaLabel || label} (${t('docs.newTab')})`}
     className="inline-flex items-center gap-1 underline underline-offset-4 hover:text-foreground">
-    {label}<ExternalLink className="size-3" aria-hidden="true" /></a>
+    <ExternalLink className="size-3" aria-hidden="true" />{label}</a>
 }

@@ -60,8 +60,9 @@ export function TeamsSection() {
       await api(`/api/teams/${tm.id}`, { method: 'DELETE' })
       setData(d => d && { ...d, teams: d.teams.filter(x => x.id !== tm.id) }) } })
   return <div className="space-y-4">
-    <div className="flex gap-2"><Input id="team-new-name" placeholder={t('teams.namePlaceholder')} aria-label={t('teams.name')} value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name.trim() && create()} className="max-w-sm" />
-      <Button id="team-create" onClick={create} disabled={!name.trim()}><Plus />{t('teams.create')}</Button></div>
+    <div className="grid gap-4 lg:grid-cols-2"><div className="flex gap-2">
+      <Input id="team-new-name" placeholder={t('teams.namePlaceholder')} aria-label={t('teams.name')} value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === 'Enter' && name.trim() && create()} className="min-w-0 flex-1" />
+      <Button id="team-create" className="shrink-0" onClick={create} disabled={!name.trim()}><Plus />{t('teams.create')}</Button></div></div>
     {err && <Alert variant="destructive"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
     {!data ? <div className="grid gap-4 lg:grid-cols-2" aria-busy="true"><span className="sr-only">{t('common.loading')}</span>{Array.from({ length: 2 }, (_, i) => <Skeleton key={i} className="h-36 w-full" />)}</div>
       : !data.teams.length ? <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground" id="teams-empty">{t('teams.empty')}</div>
