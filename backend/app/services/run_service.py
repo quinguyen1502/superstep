@@ -938,7 +938,8 @@ class RunService:
             run = self.runs.get(rid)
             if run is not None:
                 source = self.top_run(run).source or "ui"
-        public = config.demo_mode() or source not in {"ui", "schedule", "test"}
+        demo = config.demo_mode()
+        public = demo or source not in {"ui", "schedule", "test"}  # chat, public chat and the API trigger
         dry_run = bool(plan.ports.test or plan.ports.mock_models or plan.workflow.get(dataset_nodes.DRY_RUN))
 
         def call(binding, arguments, key):
@@ -946,7 +947,7 @@ class RunService:
             return self.dataset_runtime.execute(
                 actor=uid, workflow_id=effective, root_workflow_id=plan.workflow_id, run_id=rid, fence=plan.fence,
                 public=public, unsaved=plan.version is None, dry_run=dry_run, operation_id=key,
-                binding=binding, arguments=arguments,
+                binding=binding, arguments=arguments, demo=demo,
             )
 
         plan.ports.dataset_call = call

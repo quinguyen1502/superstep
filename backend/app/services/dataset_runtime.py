@@ -57,14 +57,16 @@ class DatasetRuntimeService:
 
     def execute(self, *, actor: str, workflow_id: str | None, root_workflow_id: str | None, run_id: str,
                 fence: int | None, public: bool, unsaved: bool, dry_run: bool, operation_id: str | None,
-                binding: dict, arguments: dict) -> dict:
+                binding: dict, arguments: dict, demo: bool = False) -> dict:
         if not dataset_nodes.valid(binding):
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+        if public and unsaved:  # a public entry runs only the saved version under its grant
+            raise AppError("DATASET_GRANT_DENIED")
         did, operation, fields = binding["dataset_id"], binding["operation"], binding["fields"]
         deleting = operation == "delete_row"
         dataset, workflow, _ = self.access.workflow_dataset(
             actor, workflow_id, did, "read" if deleting else dataset_nodes.ACCESS[operation],
-            public=public, deleting=deleting,
+            public=public, deleting=deleting, demo=demo,
         )
         if unsaved:
             self._authoring_access(actor, binding)

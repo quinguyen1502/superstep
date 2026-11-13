@@ -115,8 +115,10 @@ class DatasetAccessService:
         return {"ok": True}
 
     def workflow_dataset(self, caller_id: str, saved_workflow_id: str | None, dataset_id: str, operation: str,
-                         *, public: bool = False, deleting: bool = False) -> tuple[Dataset, Workflow, DatasetWorkflowGrant]:
-        if public or not saved_workflow_id:
+                         *, public: bool = False, deleting: bool = False,
+                         demo: bool = False) -> tuple[Dataset, Workflow, DatasetWorkflowGrant]:
+        """A public entry uses the saved workflow's grant, except for delete. Demo mode denies every operation."""
+        if demo or not saved_workflow_id or (public and deleting):
             raise AppError("DATASET_GRANT_DENIED")
         workflow = self.access.workflow(saved_workflow_id, caller_id, P.RUN)
         grant = self.repo.grant(dataset_id, workflow.id)
@@ -132,8 +134,9 @@ class DatasetAccessService:
         return dataset, workflow, grant
 
     def for_workflow(self, caller_id: str, saved_workflow_id: str | None, dataset_id: str, operation: str,
-                     *, public: bool = False) -> DatasetPrincipal:
-        dataset, workflow, grant = self.workflow_dataset(caller_id, saved_workflow_id, dataset_id, operation, public=public)
+                     *, public: bool = False, demo: bool = False) -> DatasetPrincipal:
+        dataset, workflow, grant = self.workflow_dataset(caller_id, saved_workflow_id, dataset_id, operation,
+                                                         public=public, demo=demo)
         return DatasetPrincipal(dataset.id, workflow.id, grant.permission)
 
     def token_dataset(self, secret: str, dataset_id: str, operation: str, *, deleting: bool = False) -> tuple[Dataset, DatasetApiToken]:

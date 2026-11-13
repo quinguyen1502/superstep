@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0328
 - Title: Open granted Dataset reads and writes on public entries
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -45,6 +45,8 @@ Let a saved workflow use its Dataset grant from chat and the API trigger, while 
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Decisions: [DEC-0098](../../decisions/DEC-0098-dataset-delete-and-public.md)
+- Review: [REV-0312](../../artifacts/REV-0312-TASK-0328-dataset-public-entry.md)
+- QA: [QA-0312](../../artifacts/QA-0312-TASK-0328-dataset-public-entry.md)
 - Discovery:
 - Clarifications:
 
@@ -91,7 +93,10 @@ Let a saved workflow use its Dataset grant from chat and the API trigger, while 
 ## Activity Log
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
+- 2026-11-13: Branched `factory/task-0328-dataset-public-entry` on TASK-0327 so its Agent write tests run against the public rule. Public runs now use the saved workflow grant for Find, Get, Insert, and Upsert, deny Delete row, and deny everything in demo mode. Review REV-0312. QA QA-0312. Moved to done.
 
 ## Handoff Notes
 
-- Start from `develop` after TASK-0325 and TASK-0327 merge, on `factory/task-0328-dataset-public-entry`.
+- Public entries (chat, public chat, API trigger, other non-Studio sources) use the saved workflow grant for read and write operations. Delete row stays limited to Studio Run, schedules, and workflow tests.
+- Demo mode denies every Dataset operation, including Studio Run, through `DatasetAccessService.workflow_dataset(demo=True)`.
+- TASK-0331 documents the entry matrix in the handbook.
