@@ -182,8 +182,39 @@ export async function datasetCall(binding: string, operation: string, fields: st
   throw new Error("DATASET_TRANSPORT_ERROR: could not reach the connected Dataset");
 }
 
-async function datasetAgent(binding: string, fields: string[], allowed: Record<string, string[]>, limit: number, args: Record<string, unknown>) {
-  if (!args || Array.isArray(args) || Object.keys(args).some((key) => key !== "filters")) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
+type DatasetAgentWrites = { operations: string[]; write_fields?: string[]; key?: string };
+
+// One Agent tool call: Find rows, or Insert row / Upsert row limited to the tool's write fields.
+export async function datasetAgent(binding: string, fields: string[], allowed: Record<string, string[]>, limit: number, args: Record<string, unknown>,
+  writes?: DatasetAgentWrites, operationId?: string) {
+  const operations = writes?.operations ?? ["find_rows"];
+  const canWrite = operations.includes("insert_row") || operations.includes("upsert_row");
+  if (!args || typeof args !== "object" || Array.isArray(args) || (!canWrite && Object.hasOwn(args, "operation"))) {
+    throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
+  }
+  const operation = Object.hasOwn(args, "operation") ? args.operation : "find_rows";
+  if (typeof operation !== "string" || !operations.includes(operation)) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
+  if (operation === "insert_row" || operation === "upsert_row") {
+    const values = args.values as Record<string, unknown> | undefined;
+    if (Object.keys(args).some((key) => key !== "operation" && key !== "values") || !values || typeof values !== "object"
+      || Array.isArray(values) || !Object.keys(values).length
+      || Object.keys(values).some((field) => !(writes?.write_fields ?? []).includes(field))
+      || Object.values(values).some((value) => value !== null && typeof value === "object")) {
+      throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
+    }
+    const request: Record<string, unknown> = { values };
+    if (operation === "upsert_row") {
+      const key = writes?.key ?? "";
+      if (values[key] === null || values[key] === undefined) throw new Error("DATASET_UPSERT_KEY_INVALID");
+      request.key = key;
+    }
+    // As in Studio, the model sees row values only through a tool that can also Find rows.
+    const readable = operations.includes("find_rows");
+    const result = await datasetCall(binding, operation, readable ? fields : [], request, operationId ?? crypto.randomUUID().replace(/-/g, ""));
+    const row = result.row as { id: string; values?: Record<string, unknown> };
+    return readable && row.values ? { row_id: row.id, inserted: result.inserted, values: row.values } : { row_id: row.id, inserted: result.inserted };
+  }
+  if (Object.keys(args).some((key) => key !== "filters" && key !== "operation")) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
   const filters = Object.hasOwn(args, "filters") ? args.filters : [];
   if (!Array.isArray(filters) || filters.length > 12) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
   for (const rule of filters) {

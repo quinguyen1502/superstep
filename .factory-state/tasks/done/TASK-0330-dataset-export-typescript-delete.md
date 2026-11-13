@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0330
 - Title: Add TypeScript standalone delete and Agent writes
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -44,6 +44,8 @@ Make an exported TypeScript project delete rows and perform Agent writes with th
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Decisions: [DEC-0098](../../decisions/DEC-0098-dataset-delete-and-public.md)
+- Review: [REV-0314](../../artifacts/REV-0314-TASK-0330-dataset-export-typescript-delete.md)
+- QA: [QA-0314](../../artifacts/QA-0314-TASK-0330-dataset-export-typescript-delete.md)
 - Discovery:
 - Clarifications:
 
@@ -89,7 +91,12 @@ Make an exported TypeScript project delete rows and perform Agent writes with th
 ## Activity Log
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
+- 2026-11-13: Branched `factory/task-0330-dataset-export-typescript-delete` on TASK-0329. Added standalone Delete row and Agent insert and upsert to the exported TypeScript runtime, and the TypeScript export doc. Review REV-0314. QA QA-0314. Moved to done.
+- 2026-11-13: Merged TASK-0329, which brings in TASK-0328 and `develop` with TASK-0332. Exported TypeScript Agent writes now return identifiers only unless the tool can Find rows.
+
 
 ## Handoff Notes
 
-- Start from `develop` after TASK-0325 and TASK-0327 merge, on `factory/task-0330-dataset-export-typescript-delete`.
+- `datasetStandalone` supports `delete_row` with the writer lock and a receipt, matching the Python fingerprint shape. A missed delete stores no receipt.
+- `datasetAgent` is exported from the module and takes the tool's operations, write fields, and key. The tool node derives one operation ID per model call.
+- The exported TypeScript mock model fills enums and Dataset write values like the Studio mock.
