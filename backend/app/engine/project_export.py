@@ -138,16 +138,20 @@ def _typescript(code: str, title: str, graph_id: str) -> Dict[str, str]:
     body = NPM_SPEC.sub(plain, code)
     body = body.replace(TS_MAIN, TS_MAIN_PROJECT).rstrip("\n") + \
         "\n\n// The graph the LangGraph Agent Server (langgraph dev, LangSmith Studio) loads, see langgraph.json.\n" \
-        "// The server adds its own checkpointer, so none is given here.\nexport const graph = buildGraph();\n"
+        "// The server adds its own checkpointer, so none is given here.\n"
+    standalone = "function setupDatasets(" in body
+    if standalone:
+        body += "await setupDatasets(false);\n"
+    body += "export const graph = buildGraph();\n"
     pkg = {"name": graph_id.replace("_", "-"), "version": "0.1.0", "private": True, "type": "module",
            "description": f"{title} (exported from Superstep)",
-           "scripts": {"dev": "langgraphjs dev", "example": f"RUN_EXAMPLE=1 tsx {file}"},
+           "scripts": {"dev": "langgraphjs dev", "example": ("NODE_OPTIONS=--experimental-sqlite " if standalone else "") + f"RUN_EXAMPLE=1 tsx {file}"},
            "dependencies": dict(sorted(deps.items())),
            "devDependencies": {"@langchain/langgraph-cli": "^1.0.0", "tsx": "^4.19.0", "typescript": "^5.6.0"},
-           "engines": {"node": ">=20"}}
+           "engines": {"node": ">=22.13" if standalone else ">=20"}}
     tsconfig = {"compilerOptions": {"target": "ES2022", "module": "NodeNext", "moduleResolution": "NodeNext",
                                     "strict": True, "skipLibCheck": True, "allowImportingTsExtensions": True, "noEmit": True}}
-    config = {"$schema": "https://langgra.ph/schema.json", "node_version": "20", "dependencies": ["."],
+    config = {"$schema": "https://langgra.ph/schema.json", "node_version": "22" if standalone else "20", "dependencies": ["."],
               "graphs": {graph_id: f"./{file}:graph"}, "env": ".env"}
     return {file: body, "langgraph.json": json.dumps(config, indent=2) + "\n", "package.json": json.dumps(pkg, indent=2) + "\n",
             "tsconfig.json": json.dumps(tsconfig, indent=2) + "\n",
@@ -168,9 +172,7 @@ def to_project(language: str, code: str, title: str, datasets: dict | None = Non
     files = project_files(language, code, title)
     if datasets:
         files["datasets.json"] = json.dumps(datasets, ensure_ascii=False, indent=2) + "\n"
-        settings = ["BACKEND", "API_URL", "API_TOKEN", "ID"]
-        if language == "python":
-            settings.extend(["SQLITE_PATH", "POSTGRES_DSN"])
+        settings = ["BACKEND", "API_URL", "API_TOKEN", "ID", "SQLITE_PATH", "POSTGRES_DSN"]
         files[".env.example"] += "\n# Dataset bindings (see datasets.json)\n" + "".join(
             f"{binding['name']}_{setting}=\n" for binding in datasets["bindings"]
             for setting in settings
@@ -189,6 +191,17 @@ def to_project(language: str, code: str, title: str, datasets: dict | None = Non
                 "Set `ID` to a stable dataset name within that database. Run `python agent.py --setup-datasets` "
                 "with those variables exported before running the workflow. Repeating setup keeps existing rows. "
                 "Each binding can use a different backend.\n"
+            )
+        else:
+            files["README.md"] += (
+                "\nFor local SQLite, choose `BACKEND=sqlite` and set `SQLITE_PATH` to the database file. "
+                "For PostgreSQL, choose `BACKEND=postgresql` and set `POSTGRES_DSN` to the database URL. "
+                "Set `ID` to a stable dataset name within that database. SQLite uses the built-in `node:sqlite` module, "
+                "which needs Node.js 22.13 or newer (Node.js 22.5 through 22.12 also need `--experimental-sqlite`). "
+                "PostgreSQL uses the `pg` package. Deno 2.2 or newer can run the same file. "
+                "Run `deno run --allow-env --allow-read --allow-write --allow-net --allow-sys=homedir agent.ts --setup-datasets` "
+                "or `npx tsx agent.ts --setup-datasets` with those variables exported before running the workflow. "
+                "Repeating setup keeps existing rows. Each binding can use a different backend.\n"
             )
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for path, text in sorted(files.items()):

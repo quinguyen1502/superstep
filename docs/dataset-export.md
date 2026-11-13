@@ -27,3 +27,13 @@ Choose the backend for each binding independently. An exported Python project ca
 Set `_BACKEND` to the chosen value. Install the requirements, export the environment variables, and run `python agent.py --setup-datasets`. Setup creates the project tables and initializes each standalone binding with its exported schema. Repeating setup with the same schema preserves rows and write receipts. The PostgreSQL account needs table creation privileges for setup and read/write privileges on the project tables at runtime.
 
 The startup check reports `DATASET_SETUP_REQUIRED` when a database or binding has not been initialized. `DATASET_BINDING_SCHEMA_MISMATCH` identifies a binding whose stored schema differs from the export. Setup rejects incompatible changes and preserves the stored schema and rows. Standalone retries with the same operation ID and arguments return the previously stored result.
+
+## TypeScript standalone
+
+Choose the backend for each binding independently. An exported TypeScript project can read a connected dataset and write to a standalone database in the same run. The settings are the same as for Python: `_SQLITE_PATH` or `_POSTGRES_DSN`, plus `_ID` and `_BACKEND`.
+
+SQLite uses the runtime's built-in `node:sqlite` module. Node.js 22.13 or newer includes it. Node.js 22.5 through 22.12 also need `NODE_OPTIONS=--experimental-sqlite`. Deno 2.2 or newer includes the same module. PostgreSQL uses the `pg` package, which the project `package.json` declares. The single-file export imports it as `npm:pg@^8` so Deno can fetch it.
+
+Install the project dependencies, export the environment variables, and run `npx tsx agent.ts --setup-datasets` or `deno run --allow-env --allow-read --allow-write --allow-net --allow-sys=homedir agent.ts --setup-datasets`. Setup creates the project tables and initializes each standalone binding with its exported schema. Repeating setup with the same schema preserves rows and write receipts. The PostgreSQL account needs table creation privileges for setup and read/write privileges on the project tables at runtime.
+
+The startup check reports `DATASET_SETUP_REQUIRED` when a database or binding has not been initialized. `DATASET_BINDING_SCHEMA_MISMATCH` identifies a binding whose stored schema differs from the export. `DATASET_STORAGE_ERROR` reports that SQLite is unavailable or the database could not be opened. Setup rejects incompatible changes and preserves the stored schema and rows. Standalone retries with the same operation ID and arguments return the previously stored result.
