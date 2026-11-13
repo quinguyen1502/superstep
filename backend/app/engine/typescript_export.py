@@ -22,6 +22,7 @@ from .browser_export import export_binding
 from .browser_export_ts import TS_RUNTIME
 from .dataset_export import DatasetExport
 from .dataset_export_runtime import TS_DATASET
+from .dataset_typescript_standalone import typescript_standalone
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .export_runtime import TS_APPROVAL, TS_MANAGED
 from .llm import CLASSIFY
@@ -51,7 +52,8 @@ GLOBALS = {
     "NaN", "Infinity", "parseInt", "parseFloat", "setTimeout", "Record", "Partial", "Response", "Request", "URL",
     "URLSearchParams", "performance"}
 HELPERS = {
-    "datasetCall", "datasetAgent", "datasetOperationId",
+    "datasetCall", "datasetAgent", "datasetOperationId", "setupDatasets", "datasetStandalone", "datasetBackend",
+    "datasetCliArgs", "DATASET_BINDINGS",
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
     "DECISION_MODEL", "mockLlm", "callLlm", "resolveModel", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
@@ -896,12 +898,20 @@ class _Writer(GraphWriter):
         v = f" (version {self.version})" if self.version is not None else ""
         file = f"{slug(self.title, 'workflow')}.ts"
         net = " --allow-net" if "fetch(" in body else ""
+        standalone = "function setupDatasets(" in body
+        write = " --allow-write" if standalone else ""
+        packages = "@langchain/langgraph @langchain/core" + (" pg" if standalone else "")
         doc = ["/**", f" * {_doc(self.title)}{v}: a LangGraph.js graph exported from Superstep.", " *",
                " * The graph on the canvas, written as TypeScript: the state, one function per node, and buildGraph(),",
                " * which connects them. Run it with Deno (the npm: packages are fetched on the first run):", " *",
-               f" *     deno run --allow-env --allow-read --allow-sys=homedir{net} {file}", " *",
-               " * For Node, drop the \"npm:\" prefixes and versions, `npm i @langchain/langgraph @langchain/core`, then",
+               f" *     deno run --allow-env --allow-read --allow-sys=homedir{write}{net} {file}", " *",
+               " * For Node, drop the \"npm:\" prefixes and versions, `npm i " + packages + "`, then",
                f" * `npx tsx {file}`.", " *"]
+        if standalone:
+            doc += [" * Dataset bindings use the Superstep API, SQLite (`node:sqlite`), or PostgreSQL (`pg`).",
+                    " * Export the binding variables and run this file with `--setup-datasets` before a standalone workflow.",
+                    " * Repeating setup keeps existing rows. SQLite needs Node 22.13 or newer, or `NODE_OPTIONS=--experimental-sqlite`",
+                    " * on Node 22.5 through 22.12. Deno 2.2 or newer includes the same SQLite module.", " *"]
         if "agent" in self.uses:
             doc += [" * LLM and Agent nodes use an offline mock model unless LLM_PROVIDER is set (see callLlm and callAgent",
                     " * below).", " *"]
@@ -919,6 +929,13 @@ class _Writer(GraphWriter):
                     key=lambda n: n.lower())
         out = [f"import {{ {', '.join(lg)} }} from \"{LANGGRAPH}\";"]
         if uses("InMemoryCache"): out.append(f"import {{ InMemoryCache }} from \"{CHECKPOINT}\";")
+        if "function setupDatasets(" in body:
+            out += [
+                'import { createHash } from "node:crypto";',
+                'import { existsSync } from "node:fs";',
+                'import { homedir } from "node:os";',
+                'import { resolve } from "node:path";',
+            ]
         if self.imports:
             out += ["// imports of the TypeScript Code nodes"] + self.imports
         return doc + out + [""]
@@ -931,8 +948,9 @@ class _Writer(GraphWriter):
         if "http" in self.uses or "send_email" in self.uses: self.add(NET.rstrip())
         if "http" in self.uses: self.add(HTTP.rstrip())
         if "dataset" in self.uses:
-            self.add("const DATASET_BINDINGS: Record<string, { columns: unknown[]; name: string; operations: string[] }> = " + lit(self.datasets.bindings) + ";")
+            self.add("export const DATASET_BINDINGS: Record<string, { columns: unknown[]; name: string; operations: string[] }> = " + lit(self.datasets.bindings) + ";")
             self.add(TS_DATASET.rstrip())
+            self.add(typescript_standalone().rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
         if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -1736,6 +1754,13 @@ class _Writer(GraphWriter):
             self.add(f"const EXAMPLE_ANSWERS: Record<string, string[]> = {lit(answers)};")
         self.add("")
         self.add("async function main(): Promise<void> {")
+        if "dataset" in self.uses:
+            self.add('  if (datasetCliArgs().length === 1 && datasetCliArgs()[0] === "--setup-datasets") {')
+            self.add("    await setupDatasets(true);")
+            self.add('    console.log("Dataset storage is ready.");')
+            self.add("    return;")
+            self.add("  }")
+            self.add("  await setupDatasets(false);")
         self.add("  const graph = buildGraph(new MemorySaver());")
         cfg = '{ configurable: { thread_id: "example" }' + (f", recursionLimit: {RECURSION + budget}" if budget else "") + " }"
         self.add("  // thread_id names this run in the checkpointer" + ("; For each loops need more steps than the default 25." if budget else "."))

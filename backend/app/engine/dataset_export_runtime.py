@@ -88,11 +88,18 @@ async function datasetOperationId(config: unknown): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function datasetCall(binding: string, operation: string, fields: string[], args: Record<string, unknown>, operationId?: string) {
+export async function datasetCall(binding: string, operation: string, fields: string[], args: Record<string, unknown>, operationId?: string) {
   const contract = DATASET_BINDINGS[binding];
   if (!contract) throw new Error("DATASET_BINDING_MISSING: configure the Dataset in Studio before exporting");
-  const backend = env(binding + "_BACKEND"), address = env(binding + "_API_URL"), token = env(binding + "_API_TOKEN"), id = env(binding + "_ID");
-  if (backend !== "superstep") throw new Error(`DATASET_BINDING_MISSING: set ${binding}_BACKEND=superstep`);
+  const backend = env(binding + "_BACKEND");
+  if (!backend) throw new Error(`DATASET_BINDING_MISSING: setting=${binding}_BACKEND, choices=superstep, sqlite, postgresql`);
+  if (backend !== "superstep") {
+    if (backend !== "sqlite" && backend !== "postgresql") {
+      throw new Error(`DATASET_BINDING_INVALID: setting=${binding}_BACKEND, choices=superstep, sqlite, postgresql`);
+    }
+    return await datasetStandalone(binding, backend, operation, fields, args, operationId);
+  }
+  const address = env(binding + "_API_URL"), token = env(binding + "_API_TOKEN"), id = env(binding + "_ID");
   if (!address || !token || !id) throw new Error(`DATASET_BINDING_MISSING: set ${binding}_API_URL, ${binding}_API_TOKEN and ${binding}_ID`);
   let base: URL;
   try { base = new URL(address); }
