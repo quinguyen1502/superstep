@@ -33,11 +33,17 @@ def tickets(client, did):
     return sorted(item["values"]["ticket"] for item in call(client, "POST", f"/api/datasets/{did}/rows/query", body={})["items"])
 
 
+def write_only(node):
+    """A write-only grant returns identifiers only, so the node asks for no fields."""
+    node["data"]["fields"] = []
+    return node
+
+
 def workflows(client, did):
     finder = save(client, graph("Find", dataset_node(did, "find_rows", {
         "filters": [{"field": "ticket", "op": "eq", "value": "{{state.ticket}}"}], "limit": 1})))
-    upserter = save(client, graph("Upsert", dataset_node(did, "upsert_row", {
-        "key": "ticket", "values": {"ticket": "{{state.ticket}}", "score": "{{state.score}}"}}, ["ticket", "score"])))
+    upserter = save(client, graph("Upsert", write_only(dataset_node(did, "upsert_row", {
+        "key": "ticket", "values": {"ticket": "{{state.ticket}}", "score": "{{state.score}}"}}))))
     deleter = save(client, graph("Delete", dataset_node(did, "delete_row", {"key": "ticket", "value": "{{state.ticket}}"})))
     grant(client, did, finder, "read")
     grant(client, did, upserter, "write")
@@ -51,7 +57,8 @@ def test_public_entries_find_and_upsert_under_the_grant_but_never_delete(client)
     for source in ("chat", "api"):
         ticket = f"{source}-ticket"
         status, events = execute(source, {"workflow_id": upserter, "input": {"ticket": ticket, "score": 3}})
-        assert status == "ok" and final(events)["inserted"] is True
+        result = final(events)
+        assert status == "ok" and result["inserted"] is True and set(result["row"]) == {"id", "revision"}
         status, events = execute(source, {"workflow_id": finder, "input": {"ticket": ticket}})
         assert status == "ok" and [item["values"] for item in final(events)["items"]] == [{"ticket": ticket}]
         status, events = execute(source, {"workflow_id": deleter, "input": {"ticket": ticket}})
@@ -112,8 +119,8 @@ def test_workflow_tool_child_follows_its_top_run_entry(client, db):
 def test_public_run_resumes_without_a_grant_removed_while_it_waited(client, db):
     did = dataset_fixture(client)
     call(client, "POST", f"/api/datasets/{did}/rows", body={"values": {"ticket": "A"}}, status=201)
-    wid = save(client, graph("Waiting upsert", dataset_node(did, "upsert_row", {
-        "key": "ticket", "values": {"ticket": "{{state.ticket}}"}}), waiting=True))
+    wid = save(client, graph("Waiting upsert", write_only(dataset_node(did, "upsert_row", {
+        "key": "ticket", "values": {"ticket": "{{state.ticket}}"}})), waiting=True))
     grant(client, did, wid, "write")
 
     def paused_chat_run():
@@ -168,9 +175,42 @@ def test_api_trigger_upserts_and_finds_but_cannot_delete(client):
             return response.json()["data"]
 
         upserted = trigger(upserter, {"ticket": "API", "score": 2})
-        assert upserted["status"] == "ok" and upserted["final_state"]["result"]["inserted"] is True
+        result = upserted["final_state"]["result"]
+        assert upserted["status"] == "ok" and result["inserted"] is True and set(result["row"]) == {"id", "revision"}
         found = trigger(finder, {"ticket": "API"})
         assert found["status"] == "ok" and found["final_state"]["result"]["items"][0]["values"] == {"ticket": "API"}
         denied = trigger(deleter, {"ticket": "API"})
         assert denied["status"] == "error" and "DATASET_GRANT_DENIED" in str(denied)
     assert tickets(client, did) == ["API"]
+
+
+def test_write_only_public_upsert_of_an_existing_row_reveals_no_values(client):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from test_datasets import auth
+    did = dataset_fixture(client)
+    existing = call(client, "POST", f"/api/datasets/{did}/rows", body={"values": {"ticket": "LEAK", "score": 987654}}, status=201)
+    upserter = save(client, graph("Ticket only", write_only(dataset_node(did, "upsert_row", {
+        "key": "ticket", "values": {"ticket": "{{state.ticket}}"}}))))
+    grant(client, did, upserter, "write")
+    status, events = execute("chat", {"workflow_id": upserter, "input": {"ticket": "LEAK"}})
+    result = final(events)
+    assert status == "ok" and result == {"row": {"id": existing["row"]["id"], "revision": result["row"]["revision"]}, "inserted": False}
+    assert "987654" not in str(events)
+    with TestClient(app) as live:
+        secret = live.post(f"/api/workflows/{upserter}/tokens", json={"name": "ci"}, headers=auth("owner")).json()["data"]["token"]
+        response = live.post(f"/api/hooks/workflows/{upserter}/runs", json={"input": {"ticket": "LEAK"}, "mode": "sync"},
+                             headers={"Authorization": f"Bearer {secret}"})
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["status"] == "ok" and set(data["final_state"]["result"]["row"]) == {"id", "revision"}
+    assert "987654" not in response.text
+
+    # Asking for values with only write permission is refused before anything is stored.
+    reader = save(client, graph("Ticket and score", dataset_node(did, "upsert_row", {
+        "key": "ticket", "values": {"ticket": "{{state.ticket}}"}}, ["ticket", "score"])))
+    grant(client, did, reader, "write")
+    status, events = execute("api", {"workflow_id": reader, "input": {"ticket": "NEW"}})
+    assert status == "error" and "987654" not in str(events)
+    assert_error(events, "DATASET_GRANT_DENIED")
+    assert tickets(client, did) == ["LEAK"]

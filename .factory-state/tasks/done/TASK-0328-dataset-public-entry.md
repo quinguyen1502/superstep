@@ -94,6 +94,8 @@ Let a saved workflow use its Dataset grant from chat and the API trigger, while 
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
 - 2026-11-13: Branched `factory/task-0328-dataset-public-entry` on TASK-0327 so its Agent write tests run against the public rule. Public runs now use the saved workflow grant for Find, Get, Insert, and Upsert, deny Delete row, and deny everything in demo mode. Review REV-0312. QA QA-0312. Moved to done.
+- 2026-11-13: Merged `develop` with TASK-0332. Write-only public-entry upserts now ask for no fields and return identifiers only. Added a regression test for an upsert that matches an existing row. QA QA-0312 updated.
+
 
 ## Handoff Notes
 
