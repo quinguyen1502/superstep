@@ -9,7 +9,7 @@ from ..core import config
 from ..core import permissions as P
 from ..core.errors import CATALOG, AppError
 from ..engine import repo_import
-from ..engine import agents, subgraphs
+from ..engine import agents, dataset_nodes, subgraphs
 from ..engine.errors import ValidationError
 from ..engine.issues import Issue, issues_of
 from ..engine.limits import cap_event, cap_run, safe_error, size
@@ -189,11 +189,12 @@ class RunService:
                  telemetry: Telemetry | None = None, versions=None, notifier=None, ledger=None, approvals=None,
                  deliveries: Optional[Callable[[], object]] = None, knowledge=None, mcp=None, access=None, policy=None, quota=None, audit=None,
                  tests: Optional[Callable[[], object]] = None, chat: Optional[Callable[[], object]] = None,
-                 jobs: Optional[Callable[[], object]] = None, browser=None, usage=None, budgets=None):
+                 jobs: Optional[Callable[[], object]] = None, browser=None, usage=None, budgets=None, dataset_runtime=None):
         """credentials: CredentialService (optional; without it, nodes with credential_id fail clearly).
         bus: RunBus for cross-process cancel + event fan-out (in-memory when not given)."""
         self.workflows, self.runs, self.credentials = workflows, runs, credentials
         self.budgets = budgets
+        self.dataset_runtime = dataset_runtime
         self.usage = usage  # RunUsageRepository (optional): per-node model usage rows, written when a run ends
         self.bus = bus or InMemoryRunBus()
         self.versions = versions  # WorkflowVersionRepository (optional): tags runs with the version they ran
@@ -256,6 +257,8 @@ class RunService:
         from ..engine import browser_recipes
         browser_recipes.validate_input(wf,inp)
         version = n if n is not None else self._version_of(wid, wf)
+        if version is None and self.dataset_runtime is not None:
+            self.dataset_runtime.authorize_changes(uid, stored, wf)
         res = row.owner if row is not None and row.owner else uid  # a saved workflow uses its owner's resources
         wf, invalid = self._expand(res, wid, wf)
         if (steps is not None or until) and (wf.get("source") or {}).get("kind") == "langgraph_import":
@@ -344,6 +347,8 @@ class RunService:
             depth, r = 1, self.runs.get(rid)
             while r is not None and r.parent_run_id: depth += 1; r = self.runs.get(r.parent_run_id)
             if depth > subgraphs.MAX_DEPTH: raise AppError("WORKFLOW_TOOL_TOO_DEEP", max=subgraphs.MAX_DEPTH)
+            if plan.workflow.get(dataset_nodes.DRY_RUN):
+                wf = {**wf, dataset_nodes.DRY_RUN: True}
             child = self.runs.add_child(Run(id=uuid.uuid4().hex[:10], workflow_id=meta.get("workflow_id") or "adhoc", input=_dumps(inp), events="[]",
                                             status="queued", started=time.time(), owner=uid or None, source="tool", workflow_version=version,
                                             parent_run_id=rid, parent_step=key, checkpoint=_dumps({"kind": "child", "workflow": wf})))
@@ -468,7 +473,11 @@ class RunService:
         , then add Agent nodes' steps. The expanded graph is what runs and what checkpoints
         store, so a resumed or recovered run continues on the same graph even if a child changed."""
         if wf.get("source"): return wf, None
-        load = self.workflow_loader(uid)
+        raw_load = self.workflow_loader(uid)
+        def load(ref):
+            raw = raw_load(ref)
+            return dataset_nodes.strip_runtime_scope(raw) if raw is not None else None
+        wf = dataset_nodes.strip_runtime_scope(wf)
         try: wf = agents.snapshot(subgraphs.expand(wf, load, wid), load, wid, self._version_of)
         except ValidationError as e: return wf, e.errors
         return agents.expand(wf), None
@@ -631,12 +640,20 @@ class RunService:
         recipe_snapshot=cp.get('kind')=='browser_recipe'
         snapshot = cp.get("workflow") if r.parent_run_id or recipe_snapshot else None  # child/accepted recipe snapshots survive before first progress
         if cp.get("kind") != "progress": cp = {}
+        version = cp.get("dataset_version", r.workflow_version)
         lost = cp.get("trace")
         if lost:
             try: self.telemetry.close_lost(lost, cp.get("ts") or time.time())
             except Exception: log.warning("exporting the lost segment of run %s failed", r.id)
         common = dict(run_id=r.id, source=r.source or "api", trace_parent=lost, checkpointing=True, fence=fence, attempt=attempt)
         if not (cp.get("node") or cp.get("nodes")):  # nothing finished yet: restart from the beginning
+            if "dataset_version" in cp:
+                # A Dataset write can have committed before the first node checkpoint. Replay its exact graph.
+                uid = r.owner or ""
+                self._workflow(r.workflow_id, uid, P.RUN)
+                return RunPlan(r.workflow_id, cp["workflow"], json.loads(r.input or "{}"),
+                               self.credentials.resolver(self.run_resources(r, uid)) if self.credentials else None,
+                               version=version, ports=self.run_ports(r, uid), **common)
             if snapshot is not None:
                 plan = self.plan_recipe(r) if recipe_snapshot and not r.parent_run_id else self.plan_child(r)
                 for k, v in common.items(): setattr(plan, k, v)
@@ -647,7 +664,7 @@ class RunService:
             return plan
         return RunPlan(r.workflow_id if r.workflow_id != "adhoc" else None, cp["workflow"], json.loads(r.input or "{}"),
                        self.credentials.resolver(self.run_resources(r, r.owner or "")) if self.credentials else None, previous=r,
-                       resume={k: cp[k] for k in RESUME_KEYS if k in cp}, version=r.workflow_version, recovered=True,
+                       resume={k: cp[k] for k in RESUME_KEYS if k in cp}, version=version, recovered=True,
                        ports=self.run_ports(r, r.owner or ""), **common)
 
     def recovery_job(self, r: Run) -> dict:
@@ -807,6 +824,8 @@ class RunService:
         Raises StaleLease when another worker claimed the run (this one must stop)."""
         cp = {"kind": "progress", **{k: ev[k] for k in RESUME_KEYS if k in ev}, "workflow": plan.workflow, "ts": time.time(),
               **({"trace": span.ref} if span else {})}
+        if dataset_nodes.bindings(plan.workflow):
+            cp["dataset_version"] = plan.version
         try:
             await asyncio.to_thread(self.runs.save_progress, rid, _dumps(cap_run([cap_event(e) for e in events])), _dumps(cp), plan.fence)
             await asyncio.to_thread(self.history_changed, plan.workflow_id, rid)
@@ -906,6 +925,32 @@ class RunService:
         try: self.deliveries().for_run(self.runs.get(rid))
         except Exception: log.exception("queueing the callback of run %s failed", rid)
 
+    def _bind_dataset(self, rid: str, plan: RunPlan, uid: str) -> None:
+        if self.dataset_runtime is None or plan.ports is None:
+            return
+        if plan.steps is not None or plan.until or plan.forked:
+            plan.workflow = {**plan.workflow, dataset_nodes.DRY_RUN: True}
+        if not dataset_nodes.bindings(plan.workflow):
+            return
+
+        source = plan.source
+        if source == "tool":
+            run = self.runs.get(rid)
+            if run is not None:
+                source = self.top_run(run).source or "ui"
+        public = config.demo_mode() or source not in {"ui", "schedule", "test"}
+        dry_run = bool(plan.ports.test or plan.ports.mock_models or plan.workflow.get(dataset_nodes.DRY_RUN))
+
+        def call(binding, arguments, key):
+            effective = binding.get(dataset_nodes.SCOPE) or plan.workflow_id
+            return self.dataset_runtime.execute(
+                actor=uid, workflow_id=effective, root_workflow_id=plan.workflow_id, run_id=rid, fence=plan.fence,
+                public=public, unsaved=plan.version is None, dry_run=dry_run, operation_id=key,
+                binding=binding, arguments=arguments,
+            )
+
+        plan.ports.dataset_call = call
+
     async def _execute(self, rid, plan, send, listen, uid, otel=None) -> str:
         t0 = time.time(); events: list = []; final = None; status = "ok"; connected = True; bus = self.bus; checkpoint = None
         prev = plan.previous; started = prev.started if prev else t0
@@ -949,6 +994,7 @@ class RunService:
                         conversation_id=chat.id if chat is not None else None)
                 plan.ports.browser=await asyncio.to_thread(bind_browser)
             plan.ports.start_child = self._child_starter(rid, plan, uid)  # workflow tools
+            self._bind_dataset(rid, plan, uid)
         plan.effects = Effects(rid, plan.attempt, ledger=_RunLedger(self.ledger, rid, plan.fence) if self.ledger is not None else None,
                           guard=self._guard(rid, plan.fence))
 

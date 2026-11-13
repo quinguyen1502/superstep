@@ -47,6 +47,8 @@
 | `NOT_FOUND` | 404 | Resource not found |
 | `DATASET_GRANT_DENIED` | 403 | The workflow does not have the required dataset grant |
 | `DATASET_TOKEN_NOT_FOUND` | 404 | Dataset token not found |
+| `DATASET_RECEIPT_CONFLICT` | 409 | The dataset write key was already used with different arguments |
+| `DATASET_NODE_ARGUMENTS_INVALID` | 400 | Invalid arguments or binding for the Dataset node |
 | `DATASET_NOT_FOUND` | 404 | Dataset not found |
 | `DATASET_COLUMN_NOT_FOUND` | 404 | Dataset column not found |
 | `DATASET_NAME_TAKEN` | 409 | A dataset with this name already exists in this scope |

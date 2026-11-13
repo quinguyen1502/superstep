@@ -27,6 +27,7 @@ class Ports:
     code_audit: Optional[CodeAudit] = None
     attachment: Optional[Attachment] = None  # image bytes of chat attachments, read at call time ( decision 2)
     start_child: Optional[StartChild] = None  # workflow tools of Agent nodes; bound by the run service per run
+    dataset_call: Optional[Callable[[dict, dict, Optional[str]], dict]] = None  # server-bound Dataset execution
     test: bool = False         # a workflow test run: Send email nodes do a dry run
     mock_models: bool = False  # a test run with the offline mock model: LLM and Decision nodes never call a provider
     locale: str = "en"         # language of offline answers: the mock model and the example tools (engine/locale)

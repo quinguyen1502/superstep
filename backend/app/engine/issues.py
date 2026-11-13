@@ -86,6 +86,7 @@ MESSAGES: Dict[str, str] = {
     "RETRIEVER_TOP_K": "Retriever node {node}: top_k must be 1-20",
     "MCP_SERVER_MISSING": "MCP node {node}: choose a server",
     "MCP_TOOL_MISSING": "MCP node {node}: choose a tool",
+    "DATASET_NODE_BINDING": "Dataset node {node}: configure a dataset, an operation, projected fields and valid arguments",
     "MCP_ARGUMENTS": "MCP node {node}: arguments must be an object",
     "HUMAN_ANSWERED_BY": _HUMAN + "answered by must be visitor or reviewer",
     # Code nodes on this server

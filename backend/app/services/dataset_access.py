@@ -105,8 +105,8 @@ class DatasetAccessService:
         self.datasets.audit.record(uid, "dataset.token_revoke", "dataset", dataset.id, token_id=token_id)
         return {"ok": True}
 
-    def for_workflow(self, caller_id: str, saved_workflow_id: str | None, dataset_id: str, operation: str,
-                     *, public: bool = False) -> DatasetPrincipal:
+    def workflow_dataset(self, caller_id: str, saved_workflow_id: str | None, dataset_id: str, operation: str,
+                         *, public: bool = False) -> tuple[Dataset, Workflow, DatasetWorkflowGrant]:
         if public or not saved_workflow_id:
             raise AppError("DATASET_GRANT_DENIED")
         workflow = self.access.workflow(saved_workflow_id, caller_id, P.RUN)
@@ -119,6 +119,11 @@ class DatasetAccessService:
             raise AppError("DATASET_GRANT_DENIED") from exc
         if not self._in_scope(dataset, workflow):
             raise AppError("DATASET_GRANT_DENIED")
+        return dataset, workflow, grant
+
+    def for_workflow(self, caller_id: str, saved_workflow_id: str | None, dataset_id: str, operation: str,
+                     *, public: bool = False) -> DatasetPrincipal:
+        dataset, workflow, grant = self.workflow_dataset(caller_id, saved_workflow_id, dataset_id, operation, public=public)
         return DatasetPrincipal(dataset.id, workflow.id, grant.permission)
 
     def for_token(self, secret: str, dataset_id: str, operation: str) -> DatasetPrincipal:

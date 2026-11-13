@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from ..core import config
 from ..core import permissions as P
 from ..core.errors import AppError
-from ..engine import exporters, handoffs, project_export, subgraphs
+from ..engine import dataset_nodes, exporters, handoffs, project_export, subgraphs
 from ..engine.export_common import slug
 from ..engine.issues import issues_of
 from ..engine.examples import EXAMPLE
@@ -27,7 +27,7 @@ def new_id() -> str: return uuid.uuid4().hex[:8]
 class WorkflowService:
     def __init__(self, workflows: WorkflowRepository, runs: RunRepository, versions: WorkflowVersionRepository | None = None,
                  access=None, shares=None, users=None, teams=None, audit=None, tests=None, chat_triggers=None, chat_sessions=None,
-                 jobs=None, export_resources=None):
+                 jobs=None, export_resources=None, dataset_runtime=None):
         self.repo, self.runs, self.versions = workflows, runs, versions
         self.access, self.shares, self.users = access, shares, users
         self.teams, self.audit = teams, audit  # TeamRepository, AuditService # AccessService etc.; None = owner-only
@@ -35,6 +35,7 @@ class WorkflowService:
         self.chat_sessions = chat_sessions  # ChatSessionRepository (optional): and its chats
         self.chat_triggers = chat_triggers  # ChatTriggerRepository (optional): so do its chat triggers
         self.jobs = jobs  # deletes LangSmith feedback when the workflow's ratings go (optional)
+        self.dataset_runtime = dataset_runtime
         self.export_resources = export_resources  # mark runtime-only resources for explicit export placeholders
 
     # -- persistence: every write goes through here so versions stay in sync --
@@ -45,6 +46,10 @@ class WorkflowService:
             if before is None and not new: before = json.loads((self.repo.get(wid) or Workflow(data="{}")).data or "{}")
             self.access.require_code(uid, before, wf)
             self.access.require_auto(uid, uid if new else (self.repo.get(wid) or Workflow(owner=uid)).owner, before, wf)
+        if self.dataset_runtime is not None:
+            self.dataset_runtime.authorize_changes(uid, None if new else before, wf)
+        if dataset_nodes.bindings(wf) or dataset_nodes.DRY_RUN in wf:
+            wf = dataset_nodes.strip_runtime_scope(wf)
         data, now = _dumps(wf), time.time()
         if new: self.repo.save(wid, name, data, now, uid)
         else: self.repo.update_name(wid, name, data, now)

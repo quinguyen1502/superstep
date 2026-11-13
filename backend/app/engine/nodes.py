@@ -141,6 +141,13 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
                 error.browser = detail(d['tool'], result if isinstance(result, dict) else {'status': 'failed_before_effect'})
                 raise error
             return {d['output_field']:result}
+    elif t == "dataset":
+        def fn(state):
+            if ports.dataset_call is None:
+                raise AppError("DATASET_GRANT_DENIED")
+            args = render_args(d.get("arguments", {}), state)
+            key = effects.key(node["id"]) if effects is not None else None
+            return {d["output_field"]: ports.dataset_call(d, args, key)}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":
