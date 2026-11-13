@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0326
 - Title: Add Delete row to the Dataset node editor
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -44,6 +44,8 @@ Let a workflow author configure Delete row without writing the binding by hand.
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Decisions: [DEC-0098](../../decisions/DEC-0098-dataset-delete-and-public.md)
+- Review: [REV-0310](../../artifacts/REV-0310-TASK-0326-dataset-delete-editor.md)
+- QA: [QA-0310](../../artifacts/QA-0310-TASK-0326-dataset-delete-editor.md)
 - Discovery:
 - Clarifications:
 
@@ -86,7 +88,9 @@ Let a workflow author configure Delete row without writing the binding by hand.
 ## Activity Log
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
+- 2026-11-13: Owner asked to continue the Dataset phase 2 chain. Branched `factory/task-0326-dataset-delete-editor` from `origin/develop` at `b12fa14f`. Added the Delete row editor. Review REV-0310. QA QA-0310. Moved to done.
 
 ## Handoff Notes
 
-- Start from `develop` after TASK-0325 merges, on `factory/task-0326-dataset-delete-editor`.
+- Branch `factory/task-0326-dataset-delete-editor` from `origin/develop` at `b12fa14f`. One commit, Ready PR into `develop`. Do not merge until the owner asks and required CI is green.
+- Later tasks in PLAN-0017 stack on this branch so the shared locale catalogs do not conflict.

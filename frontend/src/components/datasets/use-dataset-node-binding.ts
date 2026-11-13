@@ -7,6 +7,7 @@ export type BindingLookup = {
   workflowId?: string
   dataset?: Dataset
   permission?: DatasetGrantPermission | null
+  allowDelete?: boolean
   error?: string
   grantError?: string
 }
@@ -22,12 +23,13 @@ export function useDatasetNodeBinding(datasetId?: string, workflowId?: string) {
       const base = { id, workflowId }
       try {
         const dataset = await api<Dataset>(datasetUrl(id))
-        let access: Pick<BindingLookup, 'permission' | 'grantError'> = {}
+        let access: Pick<BindingLookup, 'permission' | 'allowDelete' | 'grantError'> = {}
         if (workflowId) {
           try {
-            access = await api<{ permission: DatasetGrantPermission | null }>(
+            const grant = await api<{ permission: DatasetGrantPermission | null; allow_delete?: boolean }>(
               `${datasetUrl(id)}/access/grants/${encodeURIComponent(workflowId)}`,
             )
+            access = { permission: grant.permission, allowDelete: !!grant.allow_delete }
           } catch (error) {
             access = { grantError: (error as Error).message }
           }

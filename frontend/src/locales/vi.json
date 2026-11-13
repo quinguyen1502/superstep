@@ -17,7 +17,8 @@
     "saveForGrant": "Lưu quy trình rồi cấp quyền trong menu Quyền truy cập của tập dữ liệu.",
     "grantMissing": {
       "read": "Cấp quyền đọc cho quy trình trong menu Quyền truy cập của tập dữ liệu.",
-      "write": "Cấp quyền ghi cho quy trình trong menu Quyền truy cập của tập dữ liệu."
+      "write": "Cấp quyền ghi cho quy trình trong menu Quyền truy cập của tập dữ liệu.",
+      "delete": "Bật Cho phép xoá dòng cho quy trình trong menu Quyền truy cập của tập dữ liệu."
     },
     "openDataset": "Mở tập dữ liệu",
     "chooseFirst": "Chọn tập dữ liệu trong phần Cài đặt để cấu hình ánh xạ.",
@@ -25,7 +26,8 @@
       "find_rows": "Tìm dòng",
       "get_row": "Lấy dòng",
       "insert_row": "Thêm dòng",
-      "upsert_row": "Thêm hoặc cập nhật dòng"
+      "upsert_row": "Thêm hoặc cập nhật dòng",
+      "delete_row": "Xoá dòng"
     },
     "literal": "Giá trị cố định",
     "template": "Mẫu biến trạng thái",
@@ -35,6 +37,13 @@
     "maxRows": "Số dòng tối đa",
     "upsertKey": "Trường duy nhất dùng để đối chiếu",
     "uniqueRequired": "Thao tác thêm hoặc cập nhật cần một cột có ràng buộc duy nhất.",
+    "deleteBy": "Xoá theo",
+    "deleteModes": {"row_id": "Mã dòng", "key": "Trường duy nhất"},
+    "deleteKey": "Trường duy nhất dùng để đối chiếu",
+    "deleteValue": "Giá trị của {{label}}",
+    "deleteUniqueRequired": "Xoá theo trường cần một cột có ràng buộc duy nhất. Hãy dùng Mã dòng, hoặc đánh dấu một cột là Duy nhất trong Định nghĩa cột.",
+    "deleteTargetMissing": "Chọn dòng cần xoá: nhập mã dòng, hoặc chọn một trường duy nhất và giá trị của nó.",
+    "deleteResult": "Node xoá một dòng và ghi mã dòng đã xoá vào trường đầu ra.",
     "mappedFields": "Trường cần ghi",
     "returnFields": "Trường trả về",
     "dryRunBadge": "Chạy thử",

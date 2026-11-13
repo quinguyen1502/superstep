@@ -44,7 +44,7 @@ export function fromDraft({ optionsText, ...column }: ColumnDraft): DatasetColum
     options: column.kind === 'select' ? optionsText.split('\n').map(option => option.trim()).filter(Boolean) : [] }
 }
 
-export const datasetOperations = ['find_rows', 'get_row', 'insert_row', 'upsert_row'] as const
+export const datasetOperations = ['find_rows', 'get_row', 'insert_row', 'upsert_row', 'delete_row'] as const
 export type DatasetOperation = (typeof datasetOperations)[number]
 export type DatasetGrantPermission = 'read' | 'write' | 'read_write'
 
@@ -59,6 +59,11 @@ export function datasetFilterOperators(kind: DatasetColumn['kind']) {
 
 export const datasetWriteOperation = (operation?: DatasetOperation) => operation === 'insert_row' || operation === 'upsert_row'
 
+export type DatasetNodePermission = 'read' | 'write' | 'delete'
+export function datasetNodePermission(operation?: DatasetOperation): DatasetNodePermission {
+  return operation === 'delete_row' ? 'delete' : datasetWriteOperation(operation) ? 'write' : 'read'
+}
+
 export type DatasetNodeConfig = {
   dataset_id?: string
   operation?: DatasetOperation
@@ -67,6 +72,7 @@ export type DatasetNodeConfig = {
   arguments?: {
     values?: Record<string, CellValue>
     key?: string
+    value?: CellValue
     row_id?: string
     limit?: number
     offset?: number

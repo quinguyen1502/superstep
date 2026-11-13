@@ -11,7 +11,7 @@ import { StateFieldPicker } from '@/components/state-field-action'
 import { TemplateEditor } from '@/components/template-editor'
 import type { Field } from '@/components/editor/meta'
 import {
-  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetOperations, datasetWriteOperation, type CellValue,
+  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
   type DatasetColumn, type DatasetNodeConfig, type DatasetOperation,
 } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
@@ -23,20 +23,35 @@ import type { BindingLookup } from './use-dataset-node-binding'
 type Patch = (patch: Partial<DatasetNodeConfig>) => void
 
 const keyPresent = (columns: DatasetColumn[], key: string) => columns.some(column => column.key === key)
+// Delete returns only the row id, but the binding still names one schema field to validate against.
+const deleteFields = (fields: string[] | undefined, columns: DatasetColumn[], preferred?: string) => {
+  if (!columns.length) return fields ?? []
+  const kept = (fields ?? []).filter(field => keyPresent(columns, field))
+  return kept.length ? kept : preferred ? [preferred] : columns.slice(0, 1).map(column => column.key)
+}
+
+function defaultArguments(operation: DatasetOperation): DatasetNodeConfig['arguments'] {
+  if (operation === 'find_rows') return { limit: 10, filters: [] }
+  if (operation === 'get_row' || operation === 'delete_row') return { row_id: '' }
+  return { values: {} }
+}
 
 export function DatasetNodeSettings({ data, binding, disabled, onChange }: {
   data: DatasetNodeConfig; binding: BindingLookup | null; disabled: boolean; onChange: Patch
 }) {
   const { t } = useTranslation()
   const id = useId()
-  const permission = datasetWriteOperation(data.operation) ? 'write' : 'read'
+  const permission = datasetNodePermission(data.operation)
   return <div className="space-y-3">
     <DatasetPicker id={`${id}-dataset`} value={data.dataset_id} binding={binding} disabled={disabled} onChange={dataset_id => onChange({ dataset_id })} />
     <div className="space-y-1.5">
       <Label htmlFor={`${id}-operation`}>{t('datasetNode.operation')}</Label>
       <Select value={data.operation || 'find_rows'} disabled={disabled} onValueChange={value => {
         const operation = value as DatasetOperation
-        onChange({ operation, arguments: operation === 'find_rows' ? { limit: 10, filters: [] } : operation === 'get_row' ? { row_id: '' } : { values: {} } })
+        onChange({
+          operation, arguments: defaultArguments(operation),
+          ...(operation === 'delete_row' ? { fields: deleteFields(data.fields, binding?.dataset?.columns ?? []) } : {}),
+        })
       }}>
         <SelectTrigger id={`${id}-operation`} className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>{datasetOperations.map(operation =>
@@ -98,7 +113,14 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
   const patchArgs = (patch: DatasetNodeConfig['arguments']) => onChange({ arguments: { ...args, ...patch } })
   const referenced = [...new Set([...fields, ...Object.keys(values), ...filters.map(rule => rule.field), ...sorts.map(rule => rule.field), args.key ?? ''])]
   const missing = referenced.filter(key => key && !keyPresent(columns, key))
-  const invalidKey = operation === 'upsert_row' && !!args.key && !columns.some(column => column.key === args.key && column.unique)
+  const deleting = operation === 'delete_row'
+  const invalidKey = (operation === 'upsert_row' || deleting) && !!args.key && !columns.some(column => column.key === args.key && column.unique)
+  const uniqueColumns = columns.filter(column => column.unique)
+  const deleteMode = deleting && 'key' in args ? 'key' : 'row_id'
+  const deleteColumn = deleting ? columns.find(column => column.key === args.key) : undefined
+  const missingTarget = deleting && (deleteMode === 'row_id'
+    ? !(args.row_id ?? '').trim()
+    : !args.key || args.value === null || args.value === undefined || args.value === '')
   const availableOutputFields = state.filter(field => field.type === 'object').map(field => field.name)
 
   return <div className="space-y-3">
@@ -114,12 +136,48 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
             ...(args.sorts ? { sorts: sorts.filter(rule => !missing.includes(rule.field)) } : {}),
             ...(args.key && missing.includes(args.key) ? { key: '' } : {}),
           },
+          ...(deleting ? { fields: deleteFields(fields.filter(field => !missing.includes(field)), columns) } : {}),
         })}>{t('datasetNode.removeMissing')}</Button>}
       </AlertDescription></Alert>}
       {operation === 'get_row' && <div className="space-y-1.5">
         <Label htmlFor={`${id}-row`}>{t('dataset.rowId')}</Label>
         <TemplateEditor id={`${id}-row`} singleLine fields={state} value={args.row_id ?? ''} readOnly={disabled}
           placeholder={t('template.placeholder', { open: '{{' })} onChange={row_id => patchArgs({ row_id })} />
+      </div>}
+      {deleting && <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label htmlFor={`${id}-delete-mode`}>{t('datasetNode.deleteBy')}</Label>
+          <Select value={deleteMode} disabled={disabled} onValueChange={mode => {
+            const key = uniqueColumns[0]?.key ?? ''
+            onChange(mode === 'key'
+              ? { arguments: { key, value: null }, fields: deleteFields(fields, columns, key || undefined) }
+              : { arguments: { row_id: '' }, fields: deleteFields(fields, columns) })
+          }}>
+            <SelectTrigger id={`${id}-delete-mode`} className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="row_id">{t('datasetNode.deleteModes.row_id')}</SelectItem>
+              <SelectItem value="key">{t('datasetNode.deleteModes.key')}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {deleteMode === 'row_id' ? <div className="space-y-1.5">
+          <Label htmlFor={`${id}-delete-row`}>{t('dataset.rowId')}</Label>
+          <TemplateEditor id={`${id}-delete-row`} singleLine fields={state} value={args.row_id ?? ''} readOnly={disabled}
+            placeholder={t('template.placeholder', { open: '{{' })} onChange={row_id => onChange({ arguments: { row_id } })} />
+        </div> : <>
+          <div className="space-y-1.5">
+            <Label htmlFor={`${id}-delete-key`}>{t('datasetNode.deleteKey')}</Label>
+            <ColumnSelect id={`${id}-delete-key`} columns={uniqueColumns} value={args.key} disabled={disabled}
+              onChange={key => onChange({ arguments: { key, value: null }, fields: deleteFields(fields, columns, key) })} />
+          </div>
+          {deleteColumn?.unique && <MappedValue key={deleteColumn.key} label={t('datasetNode.deleteValue', { label: deleteColumn.label })}
+            column={deleteColumn} value={args.value ?? null} fields={state} disabled={disabled}
+            onChange={value => onChange({ arguments: { key: args.key, value } })} />}
+          {(!uniqueColumns.length || invalidKey) && <Alert variant="warning"><AlertTriangle />
+            <AlertDescription>{t('datasetNode.deleteUniqueRequired')}</AlertDescription></Alert>}
+        </>}
+        {missingTarget && <Alert variant="warning"><AlertTriangle /><AlertDescription>{t('datasetNode.deleteTargetMissing')}</AlertDescription></Alert>}
+        <p className="text-xs text-muted-foreground">{t('datasetNode.deleteResult')}</p>
       </div>}
       {operation === 'find_rows' && <div className="space-y-2">
         <Label htmlFor={`${id}-limit`}>{t('datasetNode.maxRows')}</Label>
@@ -184,14 +242,14 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
           </div>
         })}
       </fieldset>}
-      <fieldset className="space-y-2">
+      {!deleting && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetNode.returnFields')}</legend>
         {columns.map(column => <Label key={column.key} className="gap-1.5">
           <Checkbox checked={fields.includes(column.key)} disabled={disabled} onCheckedChange={checked =>
             onChange({ fields: checked ? [...fields, column.key] : fields.filter(field => field !== column.key) })} />
           <DatasetFieldIcon kind={column.kind} />{column.label}
         </Label>)}
-      </fieldset>
+      </fieldset>}
     </>}
     <div className="space-y-1.5">
       <Label htmlFor={`${id}-output`}>{t('field.outputField')}</Label>
