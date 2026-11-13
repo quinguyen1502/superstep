@@ -20,6 +20,8 @@ from typing import Any, List, Optional, Tuple
 from . import agents, approval_policy, attachments, foreach
 from .browser_export import export_binding
 from .browser_export_ts import TS_RUNTIME
+from .dataset_export import DatasetExport
+from .dataset_export_runtime import TS_DATASET
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .export_runtime import TS_APPROVAL, TS_MANAGED
 from .llm import CLASSIFY
@@ -49,6 +51,7 @@ GLOBALS = {
     "NaN", "Infinity", "parseInt", "parseFloat", "setTimeout", "Record", "Partial", "Response", "Request", "URL",
     "URLSearchParams", "performance"}
 HELPERS = {
+    "datasetCall", "datasetAgent", "datasetOperationId",
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
     "DECISION_MODEL", "mockLlm", "callLlm", "resolveModel", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
@@ -458,7 +461,7 @@ function waveCap(enabled: boolean): number {
   return Number.isInteger(n) && n >= 1 && n <= 8 ? n : 4;
 }
 
-type Schema = { type?: string; properties?: Record<string, unknown>; required?: string[] };
+type Schema = { type?: string; properties?: Record<string, unknown>; required?: string[]; additionalProperties?: boolean };
 type ToolSpec = { name: string; description: string; parameters: Schema };
 type ToolCall = { id: string; name: string; args: unknown };
 type ChatMessage = { role: string; content: string; tool_calls?: ToolCall[]; tool_call_id?: string; name?: string; files?: unknown; images?: unknown[] };
@@ -882,7 +885,8 @@ class _Writer(GraphWriter):
         self.lines = head + self.lines
         spans = {nid: [[a + len(head), b + len(head)] for a, b in r] for nid, r in self.spans.items()}
         return Export("\n".join(self.lines).rstrip("\n") + "\n", spans, self.expanded_names(main),
-                      f"{slug(self.title, 'workflow')}.ts")
+                      f"{slug(self.title, 'workflow')}.ts",
+                      self.datasets.manifest() if self.datasets.bindings else None)
 
     def state_name(self, base: str) -> str: return f"{camel(base)}State"
 
@@ -926,6 +930,9 @@ class _Writer(GraphWriter):
         if "fallback" in self.uses: self.add(FALLBACK.rstrip())
         if "http" in self.uses or "send_email" in self.uses: self.add(NET.rstrip())
         if "http" in self.uses: self.add(HTTP.rstrip())
+        if "dataset" in self.uses:
+            self.add("const DATASET_BINDINGS: Record<string, { columns: unknown[]; name: string; operations: string[] }> = " + lit(self.datasets.bindings) + ";")
+            self.add(TS_DATASET.rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
         if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -1120,6 +1127,17 @@ class _Writer(GraphWriter):
             self.decision(g, nid, cls, head, sig)
         elif t == "tool":
             self.tool(g, nid, cls, head, ret, sig)
+        elif t == "dataset":
+            operation = d.get("operation")
+            write = operation in {"insert_row", "upsert_row"}
+            config = ", config: unknown" if write else ""
+            key = ", await datasetOperationId(config)" if write else ""
+            self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
+            self.add("")
+            self.add(f"/** {head}: run a typed operation against the configured dataset. */")
+            self.add(f"async function {name}(state: {cls}{config}): Promise<Update> {{")
+            self.add(ret(f"await datasetCall({lit(d.get('dataset_id'))}, {lit(operation)}, {lit(d.get('fields') or [])}, renderArgs({const}_ARGUMENTS, state) as Record<string, unknown>{key})"))
+            self.add("}")
         elif t == "retriever":
             self.add(f"const {const}_QUERY = {lit(d.get('query') or '')};")
             self.add("")
@@ -1449,7 +1467,11 @@ class _Writer(GraphWriter):
             self.add("  }")
         self.add("  const batch = pending.slice(0, n);")
         self.add("  chat.pending = pending.slice(n);")
+        dataset_tools = [tool["name"] for tool in d.get("tools") or [] if isinstance(tool, dict) and tool.get("source") == "dataset"]
         self.add("  async function one(call: ToolCall): Promise<[ChatMessage, AgentStep]> {")
+        if dataset_tools:
+            self.add(f"    const dataset = {lit(dataset_tools)}.includes(call.name);")
+            self.add("    let count: number | null = null;")
         self.add(f"    const spec = {const}_TOOLS.find((t) => t.name === call.name);")
         self.add("    const problem = spec ? checkArguments(spec.parameters, call.args) : null;")
         if approval:
@@ -1475,7 +1497,12 @@ class _Writer(GraphWriter):
             self.add("      [status, result] = [\"rejected\", \"Rejected by a reviewer\" + (comment ? `: ${comment}` : \"\")];")
         self.add("    } else {")
         self.add("      try {")
-        self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
+        if dataset_tools:
+            self.add(f"        const value = await call_{name}_tool(call.name, call.args as Record<string, unknown>, state);")
+            self.add("        if (dataset) count = (value as { rows: unknown[] }).rows.length;")
+            self.add("        [status, result] = [\"ok\", toolText(value)];")
+        else:
+            self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
         self.add("      } catch (error) {  // the model hears about the failure and can try something else")
         self.add("        const paused = error instanceof Error ? error.name : \"\";")
         self.add("        if (paused === \"GraphInterrupt\" || paused === \"GraphBubbleUp\") throw error;")
@@ -1484,6 +1511,8 @@ class _Writer(GraphWriter):
         self.add("    }")
         self.add("    const step: AgentStep = { tool: call.name, args: call.args, result: shorten(result, STEP_CHARS), status,")
         self.add("      ms: Math.round((performance.now() - started) * 100) / 100 };")
+        if dataset_tools:
+            self.add("    if (dataset) Object.assign(step, { args: {}, result: \"\", dataset: { count } });")
         if approval: self.add("    if (answer !== null) step.approval = status === \"rejected\" ? \"rejected\" : \"approved\";")
         self.add("    const message: ChatMessage = { role: \"tool\", tool_call_id: call.id, name: call.name, content: shorten(result, RESULT_CHARS) };")
         self.add("    return [message, step];")
@@ -1532,6 +1561,8 @@ class _Writer(GraphWriter):
                 self.uses.add("agent_builtin")
                 self.add(f"    // TODO: port the server's Python function {_doc(fn)} to TypeScript (the Python export has its source).")
                 self.add(f"    throw new Error({lit(f'{fn} is a Python function of the Superstep server: not implemented in TS export')});")
+            elif src == "dataset":
+                self.add(f"    return await datasetAgent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args);")
             elif src == "knowledge":
                 self.add(f"    return await retrieve({lit(self.kb_prefix(t))}, String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
@@ -1763,6 +1794,6 @@ class _Writer(GraphWriter):
 
 
 def to_typescript(wf: dict, name: str, version: Optional[int] = None, children: Optional[dict] = None,
-                  example: Optional[dict] = None) -> Export:
+                  example: Optional[dict] = None, *, datasets: DatasetExport | None = None) -> Export:
     """The LangGraph.js TypeScript file for workflow `wf` (same arguments as `python_export.to_python`)."""
-    return _Writer(name, version, children or {}, example).write(wf)
+    return _Writer(name, version, children or {}, example, datasets).write(wf)

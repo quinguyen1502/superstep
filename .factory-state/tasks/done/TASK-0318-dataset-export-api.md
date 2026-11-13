@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0318
 - Title: Export binding contract and connected adapters
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-12
-- Updated: 2026-11-12
+- Updated: 2026-11-13
 - Requirement IDs: REQ-0097
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -56,13 +56,21 @@ Run the applicable full Factory profile and repository gates. Capture review and
 - [Decision](../../decisions/DEC-0097-dataset-grid-and-export.md)
 - [Plan](../../artifacts/PLAN-0016-datasets.md)
 
+- [Review](../../artifacts/REV-0303-TASK-0318-dataset-export-api.md)
+- [QA](../../artifacts/QA-0303-TASK-0318-dataset-export-api.md)
+
 ## Open Questions
 
 None blocking. Use the plan and architecture boundaries for implementation choices.
 
 ## Activity Log
 
+- 2026-11-13: Owner approved finish and merge. Moved to done. Review REV-0303. QA QA-0303.
 - 2026-11-12: Created during owner-approved requirements planning.
+
+- 2026-11-13: Started on the Dataset Agent tool stack at PR #373.
+
+- 2026-11-13: Verified the generated Python and TypeScript projects against a scoped connected API and moved to review.
 
 ## Handoff Notes
 

@@ -660,6 +660,7 @@
     "DATASET_NAME_TAKEN": "Tên tập dữ liệu đã tồn tại trong phạm vi này",
     "DATASET_COLUMN_KEY_TAKEN": "Đã có cột sử dụng khoá trường này",
     "DATASET_COLUMN_LIMIT": "Tập dữ liệu có thể định nghĩa tối đa {{max}} khoá cột",
+    "DATASET_BINDING_SCHEMA_MISMATCH": "Lược đồ tập dữ liệu đã kết nối không khớp trường {{field}}",
     "DATASET_SCHEMA_CONFLICT": "Tập dữ liệu đã thay đổi. Hãy tải lại định nghĩa và thử lại",
     "DATASET_SCHEMA_INCOMPATIBLE": "Thay đổi định nghĩa của trường {{field}} sẽ gây mất tương thích",
     "DATASET_DEFINITION_INVALID": "Định nghĩa tập dữ liệu không hợp lệ tại {{field}}",

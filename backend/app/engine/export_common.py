@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from . import agents, approval_policy, deadlines, foreach
 from .templates import sanitize
+from .dataset_export import DatasetExport
 
 SKIP = ("start", "end", "note")  # canvas nodes that are not LangGraph nodes
 TITLES = {"agent": "Agent", "llm": "LLM", "foreach": "For each", "mcp": "MCP", "email": "Send email", "subgraph_exit": "Subgraph exit"}
@@ -23,6 +24,7 @@ class Export:
     nodes: Dict[str, List[List[int]]] = field(default_factory=dict)  # top-level node id -> 1-based [first, last] line ranges
     names: Dict[str, str] = field(default_factory=dict)  # node id ("sub/inner" inside subgraphs) -> LangGraph node name
     filename: str = "workflow.py"
+    dataset_bindings: dict | None = None
 
 
 # NFKD does not decompose the stroked d (U+0111, U+0110), so map it to a plain d before dropping combining marks.
@@ -67,7 +69,7 @@ class Names:
 class Graph:
     """One workflow (the exported one or a subgraph child), after `sanitize`, with its LangGraph names."""
 
-    def __init__(self, raw: dict, title: str, wid: Optional[str]):
+    def __init__(self, raw: dict, title: str, wid: Optional[str], datasets: DatasetExport):
         self.raw, self.title, self.wid = raw, title, wid
         self.wf = sanitize(raw)
         # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it
@@ -153,6 +155,14 @@ class Graph:
                 if isinstance(t, dict) and t.get("source") == "workflow": t["workflow_id"] = kept.get((n["id"], t.get("name"))) or ""
                 if isinstance(t, dict) and (n["id"], t.get("name")) in managed_tools: t["_managed_export"] = managed_tools[(n["id"], t.get("name"))]
                 if isinstance(t, dict) and (n["id"], t.get("name")) in browser_tools: t["_browser_export"] = browser_tools[(n["id"], t.get("name"))]
+        for original, sanitized in zip(raw.get("nodes") or [], self.wf["nodes"]):
+            data = original.get("data") or {}
+            if original.get("type") == "dataset":
+                sanitized["data"]["dataset_id"] = datasets.aliases.get(data.get("dataset_id"), "")
+            if original.get("type") == "agent":
+                for source, target in zip(data.get("tools") or [], sanitized["data"].get("tools") or []):
+                    if isinstance(source, dict) and source.get("source") == "dataset":
+                        target["dataset_id"] = datasets.aliases.get(source.get("dataset_id"), "")
         self.refs = {n["id"]: (n.get("data") or {}).get("workflow_id") or "" for n in raw.get("nodes") or []
                      if isinstance(n, dict) and n.get("type") == "subgraph"}
         # workflow tools of Agent nodes: their own graphs, with their own state, called by the tool
@@ -183,9 +193,10 @@ class GraphWriter:
     """The language-neutral half of an exporter. Subclasses set RESERVED and write the file."""
     RESERVED: frozenset = frozenset()
 
-    def __init__(self, name: str, version: Optional[int], children: Dict[str, dict], example: Optional[dict]):
+    def __init__(self, name: str, version: Optional[int], children: Dict[str, dict], example: Optional[dict], datasets: DatasetExport | None = None):
         self.title, self.version = one_line(name) or "Workflow", version
         self.children, self.example = children, example or {}
+        self.datasets = datasets or DatasetExport({}, {})
         self.lines: List[str] = []
         self.spans: Dict[str, List[List[int]]] = {}
         self.uses: set = set()
@@ -224,7 +235,7 @@ class GraphWriter:
     def build_child(self, ref: str, names: Names) -> None:
         """Name a subgraph's or workflow tool's workflow and its own nodes, each child once even when used twice."""
         if ref in self.children and ref not in self.built:
-            child = Graph(self.children[ref], one_line(self.children[ref].get("name")) or ref, ref)
+            child = Graph(self.children[ref], one_line(self.children[ref].get("name")) or ref, ref, self.datasets)
             self.built[ref] = (child, "", "")
             self.name_graphs(child, names)
             base = slug(child.title, "subgraph")
@@ -272,7 +283,7 @@ class GraphWriter:
 
     def prepare(self, raw: dict, taken: Iterable[str] = ()) -> Tuple[Graph, List[Graph]]:
         """Name everything and find what the file needs; (main graph, graphs children first then main)."""
-        main = Graph(raw, self.title, None)
+        main = Graph(raw, self.title, None, self.datasets)
         self.name_graphs(main, Names(self.RESERVED, {f.get("name") for f in self.every_field(main)} | set(taken)))
         graphs = self.children_first(main) + [main]
         for g in graphs: self.scan(g)
@@ -297,6 +308,7 @@ class GraphWriter:
             if t == "human": self.uses.add("human")
             if t == "tool" and d.get("mode") == "code": self.uses.add("code")
             if t == "tool" and d.get("mode") == "http": self.uses.add("http")
+            if t == "dataset": self.uses.update({"templates", "dataset"})
             if t == "retriever": self.uses.add("retrieve"); self.kb_prefix(d)
             if t == "mcp": self.note_mcp(d)
             if t == "email": self.uses.add("send_email")
@@ -304,6 +316,7 @@ class GraphWriter:
                 self.uses.update({"templates", "model", "agent"})
                 if self.handoff_raw(g, n["id"]): self.uses.add("handoff")
                 sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
+                if "dataset" in sources: self.uses.add("dataset")
                 if "knowledge" in sources: self.uses.add("retrieve")
                 for tool in d.get("tools") or []:
                     if isinstance(tool, dict) and tool.get("source") == "knowledge": self.kb_prefix(tool)

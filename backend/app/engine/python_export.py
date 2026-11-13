@@ -20,6 +20,8 @@ import ast, builtins, inspect, io, json, keyword, re, tokenize
 from typing import Any, Dict, List, Optional
 from . import agents, approval_policy, attachments, foreach
 from .browser_export import PY_RUNTIME, export_binding
+from .dataset_export import DatasetExport
+from .dataset_export_runtime import PY_DATASET
 from .export_common import (TITLES, RECURSION, Export, Graph as _Graph, GraphWriter, camel as _camel, number as _number,
                             one_line as _one_line, slug)
 from .export_runtime import PY_APPROVAL, PY_MANAGED
@@ -34,6 +36,7 @@ REDUCERS = {"append": "append_items", "merge": "merge_objects", "add": "add_numb
 RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | {
     "annotations", "json", "os", "re", "string", "httpx", "Annotated", "Any", "Optional", "TypedDict", "StateGraph",
     "START", "END", "Command", "interrupt", "MemorySaver", "RetryPolicy", "CachePolicy", "InMemoryCache", "State",
+    "dataset_call", "dataset_agent", "dataset_operation_id", "uuid", "RunnableConfig",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",
     "call_llm", "call_llm_fallback", "fails_over", "resolve_model", "offline_service", "http_request", "HTTP_RUN_ID", "pick_branch", "decide", "retrieve", "call_mcp_tool", "MCP_PROTOCOL", "managed_operation", "send_email", "addresses", "EMAIL_RE", "EMAIL_RUN_ID", "PinnedSMTP", "PinnedSMTPSSL", "build_graph",
     "select", "review_approval", "wait_approval", "notify_approval", "approval_post", "approval_judge", "EmailMessage", "ManagedUnknown", "managed_http", "managed_dispatch",
@@ -799,8 +802,8 @@ def add_numbers(current: Any, new: Any) -> float:
 class _Writer(GraphWriter):
     RESERVED = frozenset(RESERVED)
 
-    def __init__(self, name: str, version: Optional[int], children: Dict[str, dict], example: Optional[dict]):
-        super().__init__(name, version, children, example)
+    def __init__(self, name: str, version: Optional[int], children: Dict[str, dict], example: Optional[dict], datasets: DatasetExport | None = None):
+        super().__init__(name, version, children, example, datasets)
         self.extra: Dict[str, str] = {}  # tool helpers: name -> source
         self.imports: set = set()  # modules the tool functions use
         self.taken: set = set()  # names the tool functions define
@@ -820,7 +823,8 @@ class _Writer(GraphWriter):
         head = self.header()
         self.lines = head + self.lines
         spans = {nid: [[a + len(head), b + len(head)] for a, b in r] for nid, r in self.spans.items()}
-        return Export("\n".join(self.lines).rstrip("\n") + "\n", spans, self.expanded_names(main), f"{slug(self.title, 'workflow')}.py")
+        return Export("\n".join(self.lines).rstrip("\n") + "\n", spans, self.expanded_names(main), f"{slug(self.title, 'workflow')}.py",
+                      self.datasets.manifest() if self.datasets.bindings else None)
 
     def tool_source(self, name: str) -> None:
         fn = TOOLS.get(name)
@@ -853,7 +857,7 @@ class _Writer(GraphWriter):
             doc += ["Code nodes run here as written on the canvas, without the studio's sandbox: read them first.", ""]
         doc += ["Credentials, knowledge bases, MCP servers and approval channels are not exported.", '"""',
                 "from __future__ import annotations", ""]
-        std = sorted(m for m in {"hashlib", "ipaddress", "json", "os", "re", "select", "smtplib", "socket", "ssl", "string", "sys", "time", *self.imports} if uses(m))
+        std = sorted(m for m in {"hashlib", "ipaddress", "json", "os", "re", "select", "smtplib", "socket", "ssl", "string", "sys", "time", "uuid", *self.imports} if uses(m))
         typing = sorted(n for n in ("Annotated", "Any", "Dict", "List", "Optional", "TypedDict") if uses(n))
         out = [f"import {m}" for m in std] + ([f"from typing import {', '.join(typing)}"] if typing else []) + [""]
         mail = [line for n, line in (("EmailMessage", "from email.message import EmailMessage"), ("formataddr", "from email.utils import formataddr")) if uses(n)]
@@ -865,6 +869,7 @@ class _Writer(GraphWriter):
         if graph: lg.append(f"from langgraph.graph import {', '.join(graph)}")
         types = [n for n in ("CachePolicy", "Command", "RetryPolicy", "interrupt") if uses(n)]
         if types: lg.append(f"from langgraph.types import {', '.join(types)}")
+        if "dataset" in self.uses: lg.append("from langchain_core.runnables import RunnableConfig")
         return doc + out + lg + [""]
 
     def body(self, graphs: List[_Graph], main: _Graph) -> None:
@@ -872,6 +877,9 @@ class _Writer(GraphWriter):
         if "model" in self.uses: self.add("\n" + MODEL.rstrip())
         if "fallback" in self.uses: self.add("\n" + FALLBACK.rstrip())
         if "http" in self.uses: self.add(HTTP.rstrip())
+        if "dataset" in self.uses:
+            self.add("\nDATASET_BINDINGS = " + lit(self.datasets.bindings))
+            self.add(PY_DATASET.rstrip())
         if "agent" in self.uses: self.add("\n" + AGENT.rstrip())
         if "handoff" in self.uses: self.add("\n" + HANDOFF.rstrip() + f"\nMAX_HANDOFFS = {self.max_handoffs(main.raw)}")
         if "files" in self.uses: self.add("\n" + FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -1072,6 +1080,16 @@ class _Writer(GraphWriter):
             self.agent(g, nid, cls, head)
         elif t == "tool":
             self.tool(g, nid, cls, head, ret)
+        elif t == "dataset":
+            operation = d.get("operation")
+            write = operation in {"insert_row", "upsert_row"}
+            config = ", config: RunnableConfig" if write else ""
+            key = ", dataset_operation_id(config)" if write else ""
+            self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
+            self.add("")
+            self.add(f"def {name}(state: {cls}{config}) -> dict:")
+            self.add(f'    """{head}: run a typed operation against the configured dataset."""')
+            self.add(ret(f"dataset_call({lit(d.get('dataset_id'))}, {lit(operation)}, {lit(d.get('fields') or [])}, render_args({const}_ARGUMENTS, state){key})"))
         elif t == "retriever":
             self.add(f"{const}_QUERY = {lit(d.get('query') or '')}")
             self.add("")
@@ -1385,7 +1403,11 @@ class _Writer(GraphWriter):
             self.add("            n = 1 if i == 0 else i")
             self.add("            break")
         self.add("    batch, chat[\"pending\"] = pending[:n], pending[n:]")
+        dataset_tools = [tool["name"] for tool in d.get("tools") or [] if isinstance(tool, dict) and tool.get("source") == "dataset"]
         self.add("    def one(call: dict) -> tuple:")
+        if dataset_tools:
+            self.add(f"        dataset = call[\"name\"] in {lit(dataset_tools)}")
+            self.add("        count = None")
         self.add(f"        spec = next((t for t in {const}_TOOLS if t[\"name\"] == call[\"name\"]), None)")
         self.add("        problem = None if spec is None else check_arguments(spec[\"parameters\"], call[\"args\"])")
         if approval:
@@ -1409,13 +1431,21 @@ class _Writer(GraphWriter):
             self.add("            status, result = \"rejected\", \"Rejected by a reviewer\" + (f\": {comment}\" if comment else \"\")")
         self.add("        else:")
         self.add("            try:")
-        self.add(f"                status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
+        if dataset_tools:
+            self.add(f"                value = call_{name}_tool(call[\"name\"], call[\"args\"], state)")
+            self.add("                count = len(value[\"rows\"]) if dataset else None")
+            self.add("                status, result = \"ok\", tool_text(value)")
+        else:
+            self.add(f"                status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
         self.add("            except Exception as error:  # the model hears about the failure and can try something else")
         self.add("                if type(error).__name__ in (\"GraphInterrupt\", \"GraphBubbleUp\"):")
         self.add("                    raise  # browser approval pauses the run; it is not a failed tool call")
         self.add("                status, result = \"error\", f\"The tool failed: {error}\"")
         self.add("        step = {\"tool\": call[\"name\"], \"args\": call[\"args\"], \"result\": shorten(result, STEP_CHARS), \"status\": status,")
         self.add("                \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
+        if dataset_tools:
+            self.add("        if dataset:")
+            self.add("            step.update(args={}, result=\"\", dataset={\"count\": count})")
         if approval:
             self.add("        if answer is not None:")
             self.add("            step[\"approval\"] = \"rejected\" if status == \"rejected\" else \"approved\"")
@@ -1469,6 +1499,8 @@ class _Writer(GraphWriter):
                 else:
                     self.add(f"        # TODO: the function {lit(fn)} is not registered on this server any more.")
                     self.add(f"        raise LookupError({lit(f'tool {tname}: the function {fn} is not registered on the Superstep server any more: add it to this file')})")
+            elif src == "dataset":
+                self.add(f"        return dataset_agent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args)")
             elif src == "knowledge":
                 self.add(f"        return retrieve({lit(self.kb_prefix(t))}, str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":
@@ -1674,7 +1706,7 @@ class _Writer(GraphWriter):
 
 
 def to_python(wf: dict, name: str, version: Optional[int] = None, children: Optional[Dict[str, dict]] = None,
-              example: Optional[dict] = None) -> Export:
+              example: Optional[dict] = None, *, datasets: DatasetExport | None = None) -> Export:
     """The LangGraph Python file for workflow `wf`. `children`: subgraph workflow id -> graph (every level, already
     loaded with the viewer's access). `example`: {"input": {...}, "answers": {node id: [answers]}} for main()."""
-    return _Writer(name, version, children or {}, example).write(wf)
+    return _Writer(name, version, children or {}, example, datasets).write(wf)

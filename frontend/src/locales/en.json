@@ -660,6 +660,7 @@
     "DATASET_NAME_TAKEN": "A dataset with this name already exists in this scope",
     "DATASET_COLUMN_KEY_TAKEN": "A dataset column already uses this field key",
     "DATASET_COLUMN_LIMIT": "A dataset can define at most {{max}} column keys",
+    "DATASET_BINDING_SCHEMA_MISMATCH": "The connected dataset schema does not match field {{field}}",
     "DATASET_SCHEMA_CONFLICT": "The dataset changed. Reload its definition and try again",
     "DATASET_SCHEMA_INCOMPATIBLE": "Changing the definition of field {{field}} would be incompatible",
     "DATASET_DEFINITION_INVALID": "Invalid dataset definition for {{field}}",

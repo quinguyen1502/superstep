@@ -3,7 +3,7 @@ import json
 from ..core.dataset_types import INVALID_TEXT, TEXT_KINDS, filter_operators, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
-from ..repositories.dataset_rows import DatasetRowRepository, RowFilter, WorkflowWrite
+from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, WorkflowWrite
 from .dataset_service import DatasetService
 
 MAX_ROW_BYTES = 65_536
@@ -59,8 +59,14 @@ class DatasetRowService:
     def __init__(self, datasets: DatasetService, rows: DatasetRowRepository):
         self.datasets, self.rows = datasets, rows
 
-    def get(self, uid: str, dataset_id: str, row_id: str, *, fields: list[str] | None = None) -> dict:
+    def _read_definition(self, uid: str, dataset_id: str, schema_revision: int | None):
         dataset = self.datasets.definition(uid, dataset_id)
+        if schema_revision is not None and dataset.revision != schema_revision:
+            raise AppError("DATASET_SCHEMA_CONFLICT")
+        return dataset
+
+    def get(self, uid: str, dataset_id: str, row_id: str, *, fields: list[str] | None = None, schema_revision: int | None = None) -> dict:
+        dataset = self._read_definition(uid, dataset_id, schema_revision)
         row = self.rows.get(dataset.id, row_id)
         if row is None:
             raise AppError("DATASET_ROW_NOT_FOUND")
@@ -69,8 +75,8 @@ class DatasetRowService:
 
     def query(self, uid: str, dataset_id: str, *, filters: list[dict], fields: list[str] | None,
               search: str | None, sort: str | None, descending: bool, limit: int, offset: int,
-              filter_mode: str = "and", sorts: list[dict] | None = None) -> dict:
-        dataset = self.datasets.definition(uid, dataset_id)
+              filter_mode: str = "and", sorts: list[dict] | None = None, schema_revision: int | None = None) -> dict:
+        dataset = self._read_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _projection(columns, fields)
         if search and INVALID_TEXT.search(search):
@@ -95,7 +101,8 @@ class DatasetRowService:
 
     def save(self, uid: str, dataset_id: str, *, values: dict, schema_revision: int | None,
              row_id: str | None = None, revision: int | None = None, key: str | None = None,
-             fields: list[str] | None = None, workflow: WorkflowWrite | None = None, dry_run: bool = False) -> dict:
+             fields: list[str] | None = None, workflow: WorkflowWrite | None = None, dry_run: bool = False,
+             connected: ConnectedWrite | None = None) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _projection(columns, fields)
@@ -127,10 +134,12 @@ class DatasetRowService:
                             "values": {field: values.get(field) for field in projection}},
                     "inserted": current is None, "dry_run": True}
 
-        row, inserted, replayed = self.rows.save(uid, dataset, build, row_id=row_id, revision=revision, match=match, workflow=workflow)
+        row, inserted, replayed = self.rows.save(uid, dataset, build, row_id=row_id, revision=revision, match=match, workflow=workflow, connected=connected)
         if not replayed:
             action = "dataset.row_insert" if inserted else "dataset.row_update"
             context = {"workflow_id": workflow.workflow_id, "run_id": workflow.run_id} if workflow else {}
+            if connected:
+                context.update(credential_id=connected.token_id, operation=connected.arguments["operation"])
             actor = (workflow.actor_id or uid) if workflow else uid
             self.datasets.audit.record(actor, action, "dataset", dataset.id, row_id=row.id, **context)
         return {"row": _response(row, projection), "inserted": inserted}

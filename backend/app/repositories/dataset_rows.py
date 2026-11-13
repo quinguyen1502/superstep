@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..core.dataset_types import CellValue
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
-from ..models.dataset_access import DatasetWorkflowGrant
+from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
 from ..models.dataset_receipt import DatasetWriteReceipt
 from ..models.run import Run
 from .datasets import DatasetRepository
@@ -27,6 +27,11 @@ def key_digest(value: CellValue) -> str:
     return sha256(json.dumps(value, ensure_ascii=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def _fingerprint(data: object) -> str:
+    encoded = json.dumps(data, ensure_ascii=True, separators=(",", ":"), sort_keys=True, allow_nan=False)
+    return sha256(encoded.encode()).hexdigest()
+
+
 @dataclass(frozen=True)
 class WorkflowWrite:
     run_id: str
@@ -39,8 +44,27 @@ class WorkflowWrite:
 
     @property
     def fingerprint(self) -> str:
-        encoded = json.dumps([self.workflow_id, self.arguments], ensure_ascii=True, separators=(",", ":"), sort_keys=True, allow_nan=False)
-        return sha256(encoded.encode()).hexdigest()
+        return _fingerprint([self.workflow_id, self.arguments])
+
+    @property
+    def scope(self) -> str:
+        return f"run:{self.run_id}"
+
+
+@dataclass(frozen=True)
+class ConnectedWrite:
+    token_id: str
+    token_hash: str
+    operation_id: str
+    arguments: dict
+
+    @property
+    def fingerprint(self) -> str:
+        return _fingerprint(self.arguments)
+
+    @property
+    def scope(self) -> str:
+        return f"token:{self.token_id}"
 
 
 @dataclass(frozen=True)
@@ -133,7 +157,9 @@ class DatasetRowRepository:
 
     def save(self, uid: str, dataset: Dataset, build_values: Callable[[dict | None], dict], *,
              row_id: str | None = None, revision: int | None = None,
-             match: tuple[str, CellValue] | None = None, workflow: WorkflowWrite | None = None) -> tuple[DatasetRow, bool, bool]:
+             match: tuple[str, CellValue] | None = None, workflow: WorkflowWrite | None = None,
+             connected: ConnectedWrite | None = None) -> tuple[DatasetRow, bool, bool]:
+        receipt = workflow or connected
         with self.datasets.db.session() as session:
             if workflow and workflow.fence is not None:
                 checked = session.execute(update(Run).where(
@@ -147,10 +173,17 @@ class DatasetRowRepository:
                 grant = session.get(DatasetWorkflowGrant, (dataset.id, workflow.workflow_id))
                 if grant is None or grant.permission not in {"write", "read_write"}:
                     raise AppError("DATASET_GRANT_DENIED")
-                fingerprint = workflow.fingerprint
-                scope = f"run:{workflow.run_id}"
+            if connected:
+                token = session.get(DatasetApiToken, connected.token_id)
+                if (token is None or token.dataset_id != dataset.id or token.issuer_id != uid
+                        or token.token_hash != connected.token_hash or token.revoked is not None
+                        or token.permission not in {"write", "read_write"}):
+                    raise AppError("AUTH_TOKEN_INVALID")
+            if receipt:
+                fingerprint = receipt.fingerprint
+                scope = receipt.scope
                 previous = session.scalar(select(DatasetWriteReceipt).where(
-                    DatasetWriteReceipt.scope == scope, DatasetWriteReceipt.operation_id == workflow.operation_id,
+                    DatasetWriteReceipt.scope == scope, DatasetWriteReceipt.operation_id == receipt.operation_id,
                 ))
                 if previous is not None:
                     if previous.dataset_id != dataset.id or previous.fingerprint != fingerprint:
@@ -184,10 +217,10 @@ class DatasetRowRepository:
                 for column in dataset.columns
                 if column.unique and not column.archived and values.get(column.key) is not None
             )
-            if workflow:
+            if receipt:
                 result = {"row": {"id": row.id, "values": row.values, "revision": row.revision,
                                   "created": row.created, "updated": row.updated}, "inserted": inserted}
-                session.add(DatasetWriteReceipt(dataset_id=dataset.id, scope=scope, operation_id=workflow.operation_id,
+                session.add(DatasetWriteReceipt(dataset_id=dataset.id, scope=scope, operation_id=receipt.operation_id,
                                                 fingerprint=fingerprint, result=result, created=now))
             self._commit(session)
             return row, inserted, False

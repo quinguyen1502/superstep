@@ -132,14 +132,18 @@ class DatasetAccessService:
         dataset, workflow, grant = self.workflow_dataset(caller_id, saved_workflow_id, dataset_id, operation, public=public)
         return DatasetPrincipal(dataset.id, workflow.id, grant.permission)
 
-    def for_token(self, secret: str, dataset_id: str, operation: str) -> DatasetPrincipal:
+    def token_dataset(self, secret: str, dataset_id: str, operation: str) -> tuple[Dataset, DatasetApiToken]:
         if not secret.startswith(TOKEN_PREFIX) or len(secret) > 100:
             raise AppError("AUTH_TOKEN_INVALID")
         token = self.repo.token_for_hash(digest(secret))
         if token is None or token.dataset_id != dataset_id or not _allows(token.permission, operation):
             raise AppError("AUTH_TOKEN_INVALID")
         try:
-            self.datasets.editable_definition(token.issuer_id, dataset_id, None)
+            dataset = self.datasets.editable_definition(token.issuer_id, dataset_id, None)
         except AppError as exc:
             raise AppError("AUTH_TOKEN_INVALID") from exc
-        return DatasetPrincipal(token.dataset_id, token.id, token.permission)
+        return dataset, token
+
+    def for_token(self, secret: str, dataset_id: str, operation: str) -> DatasetPrincipal:
+        dataset, token = self.token_dataset(secret, dataset_id, operation)
+        return DatasetPrincipal(dataset.id, token.id, token.permission)
