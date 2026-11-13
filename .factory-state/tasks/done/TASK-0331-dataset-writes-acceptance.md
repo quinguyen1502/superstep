@@ -94,6 +94,8 @@ Prove one support-ticket path across the new operations and document the boundar
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
 - 2026-11-13: Branched `factory/task-0331-dataset-writes-acceptance` on TASK-0330 instead of waiting for the earlier PRs to merge. Added the support-ticket acceptance test and the English and Vietnamese handbook sections. Both handbook builds pass. Review REV-0315. QA QA-0315. Moved to done.
+- 2026-11-13: Merged TASK-0330, which brings in `develop` with TASK-0332. The acceptance test and both handbook builds pass with identifier-only write-only results.
+
 
 ## Handoff Notes
 

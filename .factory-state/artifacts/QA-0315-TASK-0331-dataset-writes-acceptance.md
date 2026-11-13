@@ -37,6 +37,8 @@ TASK-0331 on `factory/task-0331-dataset-writes-acceptance`, stacked on TASK-0326
 - `factory verify run --profile full` — passed.
 - `factory validate` and `factory validate --only hygiene` — passed.
 
+- After merging TASK-0330 and `develop` (TASK-0332): `pytest -q tests/test_dataset_writes_acceptance.py tests/test_dataset_public_entry.py tests/test_dataset_write_only.py tests/test_dataset_agent_tool.py` — 23 passed. Both handbook builds pass.
+
 ## Defects
 
 - None.
