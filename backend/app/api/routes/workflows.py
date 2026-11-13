@@ -55,9 +55,10 @@ def workflow_code(wid: str, version: int | None = Query(None, ge=1), language: s
     return svc.export(wid, user["id"], version, language)
 
 @router.get("/workflows/{wid}/export/{language}/project")
-def export_project(wid: str, language: str, version: int | None = Query(None, ge=1), user=Depends(current_user),
-                   svc=Depends(workflow_service)):
-    out = svc.export_project(wid, user["id"], version, language)
+def export_project(wid: str, language: str, version: int | None = Query(None, ge=1),
+                   backend: list[str] = Query(default=[]), snapshot: list[str] = Query(default=[]),
+                   user=Depends(current_user), svc=Depends(workflow_service)):
+    out = svc.export_project(wid, user["id"], version, language, backend, snapshot)
     return Response(out["content"], media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="{out["filename"]}"'})
 

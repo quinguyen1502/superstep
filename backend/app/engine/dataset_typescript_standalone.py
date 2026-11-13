@@ -1,13 +1,15 @@
 """Standalone TypeScript Dataset runtime embedded in the exported graph."""
 import json
 
+from ..core.dataset_types import SNAPSHOT_MAX_ROWS
 from .dataset_nodes import INPUTS
 
 
 def typescript_standalone() -> str:
     # The operation names stay aligned with the connected API and the Python standalone runtime.
     inputs = {operation: sorted(names) for operation, names in INPUTS.items()}
-    return STANDALONE.replace("__OPERATION_INPUTS__", json.dumps(inputs, separators=(",", ":")))
+    return (STANDALONE.replace("__OPERATION_INPUTS__", json.dumps(inputs, separators=(",", ":")))
+            .replace("__SNAPSHOT_MAX_ROWS__", str(SNAPSHOT_MAX_ROWS)))
 
 
 STANDALONE = r'''
@@ -25,6 +27,7 @@ const DATASET_MAX_SAFE_INTEGER = (1 << 53) - 1;
 const DATASET_MAX_ROW_BYTES = 65536;
 const DATASET_MAX_PAGE_BYTES = 1048576;
 const DATASET_MAX_ROWS = 25000;
+const DATASET_MAX_SNAPSHOT_ROWS = __SNAPSHOT_MAX_ROWS__;
 
 interface DatasetColumn {
   key: string;
@@ -335,6 +338,65 @@ async function datasetSchemasMatch(connection: SqlConnection, datasetIdValue: st
   }
 }
 
+async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue: string, binding: string): Promise<void> {
+  const path = resolve(dirname(fileURLToPath(import.meta.url)), "dataset-snapshots.json");
+  if (!existsSync(path)) return;
+  let document: { snapshots?: unknown };
+  try { document = JSON.parse(readFileSync(path, "utf8")) as { snapshots?: unknown }; }
+  catch { datasetFail("DATASET_SNAPSHOT_INVALID", { binding }); }
+  if (!Array.isArray(document.snapshots)) datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
+  const chosen = document.snapshots.find((item) => plainObject(item) && item.binding === binding) as { binding?: string; contract?: unknown; rows?: unknown } | undefined;
+  if (!chosen) return;
+  const contract = datasetContract(binding);
+  if (!plainObject(chosen.contract) || datasetJson(chosen.contract, true) !== datasetJson(contract, true)) {
+    datasetFail("DATASET_BINDING_SCHEMA_MISMATCH", { binding });
+  }
+  if (!Array.isArray(chosen.rows)) datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
+  if (chosen.rows.length > DATASET_MAX_SNAPSHOT_ROWS) datasetFail("DATASET_SNAPSHOT_TOO_LARGE", { max: DATASET_MAX_SNAPSHOT_ROWS });
+  const columns = contract.columns;
+  const prepared: { id: string; values: Record<string, unknown> }[] = [];
+  for (const item of chosen.rows) {
+    if (!plainObject(item) || typeof item.id !== "string" || !/^[a-f0-9]{32}$/.test(item.id) || !plainObject(item.values)) {
+      datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
+    }
+    if (Object.keys(item.values).some((key) => !columns[key])) datasetFail("DATASET_BINDING_SCHEMA_MISMATCH", { binding });
+    const stored: Record<string, unknown> = {};
+    try {
+      for (const [field, column] of Object.entries(columns)) {
+        stored[field] = datasetNormalize(column, Object.hasOwn(item.values, field) ? item.values[field] : column.default, column.required);
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("DATASET_")) datasetFail("DATASET_BINDING_SCHEMA_MISMATCH", { binding });
+      throw error;
+    }
+    if (datasetSize(stored) > DATASET_MAX_ROW_BYTES) datasetFail("DATASET_ROW_TOO_LARGE", { max: DATASET_MAX_ROW_BYTES });
+    prepared.push({ id: item.id, values: stored });
+  }
+  for (const row of prepared) {
+    const existing = await connection.get("SELECT id FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?", [datasetIdValue, row.id]);
+    if (existing) continue;
+    const count = Number((await connection.get("SELECT COUNT(*) AS n FROM superstep_dataset_rows WHERE dataset_id = ?", [datasetIdValue]))?.n ?? 0);
+    if (count >= DATASET_MAX_ROWS) datasetFail("DATASET_ROW_LIMIT", { max: DATASET_MAX_ROWS });
+    const now = Date.now() / 1000;
+    await connection.run(
+      'INSERT INTO superstep_dataset_rows (dataset_id, id, "values", revision, created, updated) VALUES (?, ?, ?, ?, ?, ?)',
+      [datasetIdValue, row.id, datasetJson(row.values, false), 1, now, now],
+    );
+    for (const [field, column] of Object.entries(columns)) {
+      if (!column.unique || row.values[field] === null || row.values[field] === undefined) continue;
+      try {
+        await connection.run(
+          "INSERT INTO superstep_dataset_keys (dataset_id, field, digest, row_id) VALUES (?, ?, ?, ?)",
+          [datasetIdValue, field, datasetDigest(row.values[field]), row.id],
+        );
+      } catch (error) {
+        if (isUniqueViolation(error)) datasetFail("DATASET_UNIQUE_CONFLICT");
+        throw error;
+      }
+    }
+  }
+}
+
 export async function setupDatasets(create: boolean): Promise<void> {
   for (const binding of Object.keys(DATASET_BINDINGS)) {
     const backend = datasetBackend(binding);
@@ -353,6 +415,7 @@ export async function setupDatasets(create: boolean): Promise<void> {
           await datasetStorageReady(connection, binding);
         }
         await datasetSchemasMatch(connection, datasetIdValue, binding);
+        if (create) await datasetRestoreSnapshot(connection, datasetIdValue, binding);
       });
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("DATASET_")) throw error;

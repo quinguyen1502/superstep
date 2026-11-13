@@ -69,6 +69,7 @@ const SAME_OK = new Set([
   'code.languages.typescript',
   'code.runtimeLabel',
   'code.traceback',
+  'codeView.exportBackendPostgresql', 'codeView.exportBackendSqlite',  // product names
   'codeView.tab',
   'codeView.version',
   'creds.anthropic',

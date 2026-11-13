@@ -165,7 +165,8 @@ def project_files(language: str, code: str, title: str) -> Dict[str, str]:
     return (_python if language == "python" else _typescript)(code, title, graph_id)
 
 
-def to_project(language: str, code: str, title: str, datasets: dict | None = None) -> bytes:
+def to_project(language: str, code: str, title: str, datasets: dict | None = None,
+               backends: dict[str, str] | None = None, snapshots: dict | None = None) -> bytes:
     """The project as a zip with one top-level folder; fixed timestamps keep the bytes reproducible."""
     root = slug(title, "workflow").replace("_", "-")
     buf = io.BytesIO()
@@ -173,17 +174,26 @@ def to_project(language: str, code: str, title: str, datasets: dict | None = Non
     if datasets:
         files["datasets.json"] = json.dumps(datasets, ensure_ascii=False, indent=2) + "\n"
         settings = ["BACKEND", "API_URL", "API_TOKEN", "ID", "SQLITE_PATH", "POSTGRES_DSN"]
+        chosen = backends or {}
         files[".env.example"] += "\n# Dataset bindings (see datasets.json)\n" + "".join(
-            f"{binding['name']}_{setting}=\n" for binding in datasets["bindings"]
-            for setting in settings
+            f"{binding['name']}_{setting}={chosen.get(binding['name'], '') if setting == 'BACKEND' else ''}\n"
+            for binding in datasets["bindings"] for setting in settings
         )
         files["README.md"] += (
             "\n## Dataset bindings\n\n"
             "See `datasets.json` for the columns and operations required by each binding. For a connected binding, set `BACKEND` to "
             "`superstep`, `API_URL` to the server base URL, `ID` to the destination dataset, and `API_TOKEN` "
             "to a scoped Dataset token with the required permissions. Keep all deployment values in the environment. "
+            "The generated graph reads each backend from the environment, so the same export can switch backends without being regenerated. "
             "Dataset writes affect the configured destination. Use a separate dataset when running examples.\n"
         )
+        if snapshots:
+            files["dataset-snapshots.json"] = json.dumps(snapshots, ensure_ascii=False, indent=2) + "\n"
+            files["README.md"] += (
+                "\n`dataset-snapshots.json` contains row data for the bindings selected at export. "
+                "`--setup-datasets` imports a snapshot row only when its id is not already stored. "
+                "Existing rows are left unchanged, and a snapshot whose schema does not match the binding is rejected.\n"
+            )
         if language == "python":
             files["README.md"] += (
                 "\nFor local SQLite, choose `BACKEND=sqlite` and set `SQLITE_PATH` to the database file. "

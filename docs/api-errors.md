@@ -55,6 +55,7 @@
 | `DATASET_COLUMN_KEY_TAKEN` | 409 | A dataset column already uses this field key |
 | `DATASET_COLUMN_LIMIT` | 400 | A dataset can define at most {max} column keys |
 | `DATASET_BINDING_SCHEMA_MISMATCH` | 409 | The connected dataset schema does not match field {field} |
+| `DATASET_BINDING_INVALID` | 400 | Invalid dataset connection setting {setting} |
 | `DATASET_SCHEMA_CONFLICT` | 409 | The dataset changed. Reload its definition and try again |
 | `DATASET_SCHEMA_INCOMPATIBLE` | 409 | Changing the definition of field {field} would be incompatible |
 | `DATASET_DEFINITION_INVALID` | 400 | Invalid dataset definition for {field} |
@@ -67,6 +68,8 @@
 | `DATASET_UPSERT_KEY_INVALID` | 400 | Upsert requires a value for the unique field {field} |
 | `DATASET_ROW_TOO_LARGE` | 413 | A dataset row must be at most {max} bytes |
 | `DATASET_ROW_LIMIT` | 409 | A dataset can contain at most {max} rows |
+| `DATASET_SNAPSHOT_INVALID` | 400 | The dataset snapshot is not valid for {binding} |
+| `DATASET_SNAPSHOT_TOO_LARGE` | 409 | A dataset snapshot can contain at most {max} rows |
 | `USAGE_BUDGET_EXISTS` | 409 | A monthly budget already exists for this user or team |
 | `METHOD_NOT_ALLOWED` | 405 | Method not allowed |
 | `PAYLOAD_TOO_LARGE` | 413 | Payload too large |

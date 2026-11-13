@@ -62,6 +62,7 @@ def normalize_cell(key: str, kind: ColumnKind, value: CellValue, options: list[s
 
 
 MAX_DATASET_ROWS = 25_000
+SNAPSHOT_MAX_ROWS = 1_000
 
 
 def key_digest(value: CellValue) -> str:

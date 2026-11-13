@@ -4,6 +4,7 @@ import json, time, uuid
 from sqlalchemy.exc import IntegrityError
 from ..core import config
 from ..core import permissions as P
+from ..core.dataset_types import SNAPSHOT_MAX_ROWS
 from ..core.errors import AppError
 from ..engine import dataset_export, dataset_nodes, exporters, handoffs, project_export, subgraphs
 from ..engine.export_common import slug
@@ -18,6 +19,7 @@ from .naming import clean_name, unique_name
 VERSION_RETRIES = 3
 PAGE_MAX = 200
 READ_ONLY = ("id", "access", "mine", "owner_email", "version", "updated")  # response-only fields, never stored
+BINDING_BACKENDS = {"superstep", "sqlite", "postgresql"}
 
 
 def _dumps(d) -> str: return json.dumps(d, ensure_ascii=False)
@@ -131,22 +133,27 @@ class WorkflowService:
     def python(self, wid: str, uid: str, version: int | None = None) -> dict:
         return self.export(wid, uid, version, "python")
 
-    def export(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT) -> dict:
-        """The workflow's latest version (or `version`) as a readable LangGraph file in `language`: Python (,
-        ) or TypeScript / LangGraph.js. Subgraph children come with the viewer's access,
-        as in a run; the first test case is the example input."""
+    def _export_source(self, wid: str, uid: str, version: int | None, language: str):
+        """Saved graph, children and dataset contract for one export. Dataset visibility is the caller's."""
         exporter = exporters.EXPORTERS.get(language)
-        if exporter is None: raise AppError("EXPORT_LANGUAGE_UNSUPPORTED", language=str(language)[:40], supported=", ".join(exporters.EXPORTERS))
+        if exporter is None:
+            raise AppError("EXPORT_LANGUAGE_UNSUPPORTED", language=str(language)[:40], supported=", ".join(exporters.EXPORTERS))
         w = self.owned(wid, uid)
         cur = self.current_version(wid) if version is None else (version, json.loads(self._version(wid, version).data or "{}"))
         n, wf = cur if cur else (None, json.loads(w.data or "{}"))
-        if wf.get("source"): raise AppError("PYTHON_EXPORT_UNAVAILABLE" if language == "python" else "TYPESCRIPT_EXPORT_UNAVAILABLE")
+        if wf.get("source"):
+            raise AppError("PYTHON_EXPORT_UNAVAILABLE" if language == "python" else "TYPESCRIPT_EXPORT_UNAVAILABLE")
         load = self._loader(uid)
-        if (errs := subgraphs.check(wf, load, wid)): raise AppError("WORKFLOW_INVALID", details=errs)
+        if (errs := subgraphs.check(wf, load, wid)):
+            raise AppError("WORKFLOW_INVALID", details=errs)
         children: dict = {}
+
         def collect(g: dict) -> None:  # subgraphs and workflow tools' workflows, every level
             for _, ref in subgraphs.all_refs(g):
-                if ref and ref not in children: children[ref] = load(ref) or {}; collect(children[ref])
+                if ref and ref not in children:
+                    children[ref] = load(ref) or {}
+                    collect(children[ref])
+
         collect(wf)
         managed_placeholders = bool(self.export_resources([wf, *children.values()])) if self.export_resources is not None else False
         case = (self.tests.list_for_workflow(wid) or [None])[0] if self.tests is not None else None
@@ -154,17 +161,59 @@ class WorkflowService:
         datasets = dataset_export.prepare(
             [wf, *children.values()], lambda dataset_id: self.dataset_runtime.access.datasets.get(uid, dataset_id)["columns"],
         ) if self.dataset_runtime is not None else None
+        return exporter, w, n, wf, children, example, managed_placeholders, datasets
+
+    def export(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT) -> dict:
+        """The workflow's latest version (or `version`) as a readable LangGraph file in `language`: Python (,
+        ) or TypeScript / LangGraph.js. Subgraph children come with the viewer's access,
+        as in a run; the first test case is the example input."""
+        exporter, w, n, wf, children, example, managed_placeholders, datasets = self._export_source(wid, uid, version, language)
         out = exporter.write(wf, w.name, n, children, example, datasets=datasets)
         return {"language": exporter.id, "media_type": exporter.media_type, "filename": out.filename, "version": n,
                 "code": out.code, "nodes": out.nodes, "managed_placeholders": managed_placeholders,
-                **({"dataset_bindings": out.dataset_bindings} if out.dataset_bindings else {})}
+                **({"dataset_bindings": out.dataset_bindings, "snapshot_max_rows": SNAPSHOT_MAX_ROWS} if out.dataset_bindings else {})}
 
-    def export_project(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT) -> dict:
+    def _binding_backends(self, datasets, requested: list[str] | None) -> dict[str, str]:
+        if not requested:
+            return {}
+        names = set((datasets.bindings if datasets is not None else {}))
+        choices: dict[str, str] = {}
+        for item in requested:
+            name, sep, backend = item.partition(":")
+            if not sep or name not in names or backend not in BINDING_BACKENDS or name in choices:
+                raise AppError("DATASET_BINDING_INVALID", setting=name or "backend")
+            choices[name] = backend
+        return choices
+
+    def _snapshot_document(self, uid: str, datasets, choices: dict[str, str], requested: list[str]) -> dict:
+        if datasets is None:
+            raise AppError("DATASET_SNAPSHOT_INVALID", binding=requested[0])
+        reverse = {alias: dataset_id for dataset_id, alias in datasets.aliases.items()}
+        selected = []
+        seen: set[str] = set()
+        for name in requested:
+            if name in seen:
+                continue
+            seen.add(name)
+            if name not in reverse or choices.get(name) not in {"sqlite", "postgresql"}:
+                raise AppError("DATASET_SNAPSHOT_INVALID", binding=name)
+            columns = datasets.bindings[name]["columns"]
+            contract = {"version": 1, "columns": {column["key"]: {**column, "options": sorted(column.get("options") or [])} for column in columns}}
+            rows = self.dataset_runtime.rows.export_rows(uid, reverse[name], SNAPSHOT_MAX_ROWS + 1)
+            if len(rows) > SNAPSHOT_MAX_ROWS:
+                raise AppError("DATASET_SNAPSHOT_TOO_LARGE", max=SNAPSHOT_MAX_ROWS)
+            selected.append({"binding": name, "contract": contract, "rows": [{"id": row["id"], "values": {key: row["values"].get(key) for key in contract["columns"]}} for row in rows]})
+        return {"version": 1, "snapshots": selected}
+
+    def export_project(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT,
+                       backends: list[str] | None = None, snapshots: list[str] | None = None) -> dict:
         """The export as a runnable LangGraph project (a zip for `langgraph dev` and LangSmith Studio)."""
-        out = self.export(wid, uid, version, language)
-        name = self.owned(wid, uid).name
-        return {"filename": f"{slug(name, 'workflow').replace('_', '-')}-{out['language']}.zip",
-                "content": project_export.to_project(out["language"], out["code"], name, out.get("dataset_bindings"))}
+        exporter, w, n, wf, children, example, _managed, datasets = self._export_source(wid, uid, version, language)
+        out = exporter.write(wf, w.name, n, children, example, datasets=datasets)
+        choices = self._binding_backends(datasets, backends)
+        payload = self._snapshot_document(uid, datasets, choices, snapshots) if snapshots else None
+        return {"filename": f"{slug(w.name, 'workflow').replace('_', '-')}-{exporter.id}.zip",
+                "content": project_export.to_project(exporter.id, out.code, w.name, out.dataset_bindings, choices, payload)}
 
     def owned(self, wid: str, uid: str, action: str = P.VIEW) -> Workflow:
         """The workflow if `uid` may perform `action` on it (owner, share or admin, )."""
