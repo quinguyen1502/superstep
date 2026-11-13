@@ -141,6 +141,7 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
               <Button type="submit" disabled={busy || !workflowId}>{t('dataset.accessSaveGrant')}</Button>
               <Label className="flex items-center gap-2 sm:col-span-3"><Checkbox id={`${id}-grant-delete`} checked={grantAllowDelete}
                 disabled={busy || !workflowId} onCheckedChange={value => setGrantAllowDelete(value === true)} />{t('dataset.accessAllowDelete')}</Label>
+              {grantPermission === 'write' && <p className="text-xs text-muted-foreground sm:col-span-3">{t('dataset.accessWriteOnly')}</p>}
             </form>
             {!access.workflows.length && <p className="text-xs text-muted-foreground">{t('dataset.accessNoEligibleWorkflow')}</p>}
           </section>
@@ -171,6 +172,7 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
               <Button type="submit" disabled={busy || !tokenName.trim()}><Plus />{t('dataset.createAccessToken')}</Button>
               <Label className="flex items-center gap-2 sm:col-span-3"><Checkbox id={`${id}-token-delete`} checked={tokenAllowDelete}
                 disabled={busy} onCheckedChange={value => setTokenAllowDelete(value === true)} />{t('dataset.accessAllowDelete')}</Label>
+              {tokenPermission === 'write' && <p className="text-xs text-muted-foreground sm:col-span-3">{t('dataset.accessWriteOnly')}</p>}
             </form>
             {secret && <div className="space-y-2 rounded-md border p-3">
               <Label htmlFor={`${id}-secret`}>{t('dataset.accessTokenSecret')}</Label>

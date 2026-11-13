@@ -55,8 +55,10 @@ def valid(data: dict) -> bool:
     if not isinstance(operation, str) or operation not in ACCESS:
         return False
     dataset_id, fields, args = data.get("dataset_id"), data.get("fields"), data.get("arguments", {})
+    # Insert and Upsert may return identifiers only, which is the only shape a write-only grant receives.
+    least = 0 if operation in AGENT_WRITES else 1
     if (not isinstance(dataset_id, str) or not 0 < len(dataset_id) <= 100
-            or not isinstance(fields, list) or not 0 < len(fields) <= 100
+            or not isinstance(fields, list) or not least <= len(fields) <= 100
             or not all(_key(field) for field in fields) or len(set(fields)) != len(fields)
             or not isinstance(args, dict) or set(args) - INPUTS[operation]):
         return False

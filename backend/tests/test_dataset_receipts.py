@@ -28,10 +28,11 @@ def writes(client, db):
 
 def write(repo, dataset, operation, ticket, fence=1):
     values = {"ticket": ticket}
-    return repo.save("owner", dataset, lambda _: values, workflow=WorkflowWrite(
+    row, inserted, replayed, _ = repo.save("owner", dataset, lambda _: values, workflow=WorkflowWrite(
         run_id="receipts-run", workflow_id="receipts-flow", operation_id=operation,
         arguments={"operation": "insert", "values": values}, fence=fence,
     ))
+    return row, inserted, replayed
 
 
 def test_receipt_replays_original_result_after_commit_and_worker_takeover(client, db, writes):

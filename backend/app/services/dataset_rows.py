@@ -26,6 +26,28 @@ def _response(row: DatasetRow, columns) -> dict:
     }
 
 
+def _write_result(row: DatasetRow, inserted: bool, projection) -> dict:
+    """The one insert/upsert outcome shape. `projection` is None for a caller that may not read values."""
+    if projection is None:
+        return {"row": {"id": row.id, "revision": row.revision}, "inserted": inserted}
+    return {"row": _response(row, projection), "inserted": inserted}
+
+
+def _write_projection(columns: dict[str, DatasetColumn], fields: list[str] | None, readable: bool):
+    """Resolve the output projection of a write before anything is stored.
+
+    A caller without read permission never receives cell values, so a requested projection is refused
+    instead of being silently dropped. An empty field list asks for identifiers only.
+    """
+    if not readable:
+        if fields:
+            raise AppError("DATASET_GRANT_DENIED")
+        return None
+    if fields is not None and not fields:
+        return None
+    return _projection(columns, fields)
+
+
 def _projection(columns: dict[str, DatasetColumn], fields: list[str] | None):
     return columns if fields is None else {field: _column(columns, field) for field in fields}
 
@@ -100,10 +122,10 @@ class DatasetRowService:
     def save(self, uid: str, dataset_id: str, *, values: dict, schema_revision: int | None,
              row_id: str | None = None, revision: int | None = None, key: str | None = None,
              fields: list[str] | None = None, workflow: WorkflowWrite | None = None, dry_run: bool = False,
-             connected: ConnectedWrite | None = None) -> dict:
+             connected: ConnectedWrite | None = None, readable: bool = True) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
-        projection = _projection(columns, fields)
+        projection = _write_projection(columns, fields, readable)
         incoming = {field: _normalize(_column(columns, field), value) for field, value in values.items()}
         match = None
         if key is not None:
@@ -128,19 +150,26 @@ class DatasetRowService:
                                     search=None, search_columns=[], sorts=[], limit=1, offset=0) if match else []
             current = found[0] if found else None
             values = build(current.values if current is not None else None)
-            return {"row": {"id": current.id if current is not None else None,
-                            "values": {field: values.get(field) for field in projection}},
-                    "inserted": current is None, "dry_run": True}
+            if projection is None:
+                row = {"id": current.id if current is not None else None,
+                       "revision": current.revision if current is not None else None}
+            else:
+                row = {"id": current.id if current is not None else None,
+                       "values": {field: values.get(field) for field in projection}}
+            return {"row": row, "inserted": current is None, "dry_run": True}
 
-        row, inserted, replayed = self.rows.save(uid, dataset, build, row_id=row_id, revision=revision, match=match, workflow=workflow, connected=connected)
-        if not replayed:
+        row, inserted, replayed, changed = self.rows.save(
+            uid, dataset, build, row_id=row_id, revision=revision, match=match, workflow=workflow, connected=connected,
+            reveal=projection is not None and (workflow is not None or connected is not None),
+        )
+        if not replayed and changed:
             action = "dataset.row_insert" if inserted else "dataset.row_update"
             context = {"workflow_id": workflow.workflow_id, "run_id": workflow.run_id} if workflow else {}
             if connected:
                 context.update(credential_id=connected.token_id, operation=connected.arguments["operation"])
             actor = (workflow.actor_id or uid) if workflow else uid
             self.datasets.audit.record(actor, action, "dataset", dataset.id, row_id=row.id, **context)
-        return {"row": _response(row, projection), "inserted": inserted}
+        return _write_result(row, inserted, projection)
 
     def delete_granted(self, uid: str, dataset_id: str, *, row_id: str | None = None, key: str | None = None,
                        value=None, schema_revision: int | None = None, fields: list[str] | None = None,
