@@ -2,8 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from ...schemas.dataset import DatasetColumnUpdate, DatasetCreate, DatasetUpdate
-from ..deps import current_user, dataset_service
+from ...schemas.dataset import (
+    DatasetColumnUpdate, DatasetCreate, DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
+)
+from ..deps import current_user, dataset_row_service, dataset_service
 
 router = APIRouter(prefix="/api/datasets", tags=["datasets"])
 Revision = Annotated[int | None, Query(ge=1)]
@@ -52,3 +54,34 @@ def update_column(dataset_id: str, key: str, body: DatasetColumnUpdate,
 def remove_column(dataset_id: str, key: str, revision: Revision = None,
                   user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.remove_column(user["id"], dataset_id, key, revision)
+
+
+@router.post("/{dataset_id}/rows/query")
+def query_rows(dataset_id: str, body: DatasetRowQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.query(user["id"], dataset_id, **body.model_dump())
+
+
+@router.post("/{dataset_id}/rows", status_code=201)
+def insert_row(dataset_id: str, body: DatasetRowIn, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.save(user["id"], dataset_id, **body.model_dump())
+
+
+@router.post("/{dataset_id}/rows/upsert")
+def upsert_row(dataset_id: str, body: DatasetRowUpsert, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.save(user["id"], dataset_id, **body.model_dump())
+
+
+@router.get("/{dataset_id}/rows/{row_id}")
+def get_row(dataset_id: str, row_id: str, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.get(user["id"], dataset_id, row_id)
+
+
+@router.patch("/{dataset_id}/rows/{row_id}")
+def update_row(dataset_id: str, row_id: str, body: DatasetRowUpdate, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.save(user["id"], dataset_id, row_id=row_id, **body.model_dump())
+
+
+@router.delete("/{dataset_id}/rows/{row_id}")
+def delete_row(dataset_id: str, row_id: str, revision: Revision = None,
+               user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.delete(user["id"], dataset_id, row_id, revision)

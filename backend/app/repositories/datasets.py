@@ -4,13 +4,15 @@ from sqlalchemy.orm import Session, joinedload
 
 from ..core.errors import AppError
 from ..models.database import Database
-from ..models.dataset import Dataset, DatasetColumn
+from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.team import TeamMember
 
 
 def delete_dataset_definitions(session: Session, condition) -> None:
     """Clean up definitions explicitly on SQLite as well as on PostgreSQL."""
     ids = select(Dataset.id).where(condition)
+    session.execute(delete(DatasetRowKey).where(DatasetRowKey.dataset_id.in_(ids)))
+    session.execute(delete(DatasetRow).where(DatasetRow.dataset_id.in_(ids)))
     session.execute(delete(DatasetColumn).where(DatasetColumn.dataset_id.in_(ids)))
     session.execute(delete(Dataset).where(condition))
 
@@ -59,18 +61,21 @@ class DatasetRepository:
             self._commit(session)
         return dataset
 
-    def _advance(self, session: Session, uid: str, dataset_id: str, revision: int) -> None:
+    def lock(self, session: Session, uid: str, dataset_id: str, revision: int, *, advance: bool = False) -> None:
+        """Serialize writers on both engines and check the schema and membership at the write boundary."""
         result = session.execute(
             update(Dataset).where(
                 Dataset.id == dataset_id, Dataset.revision == revision, self._visible(uid),
-            ).values(revision=revision + 1)
+            ).values(revision=revision + int(advance))
         )
         if result.rowcount != 1:
             raise AppError("DATASET_SCHEMA_CONFLICT")
 
-    def save(self, uid: str, dataset: Dataset, revision: int) -> Dataset:
+    def save(self, uid: str, dataset: Dataset, revision: int, *, require_empty: bool = False) -> Dataset:
         with self.db.session() as session:
-            self._advance(session, uid, dataset.id, revision)
+            self.lock(session, uid, dataset.id, revision, advance=True)
+            if require_empty and session.scalar(select(DatasetRow.id).where(DatasetRow.dataset_id == dataset.id).limit(1)):
+                raise AppError("DATASET_SCHEMA_HAS_ROWS")
             dataset.revision = revision + 1
             result = session.merge(dataset)
             self._commit(session)
@@ -78,6 +83,6 @@ class DatasetRepository:
 
     def delete(self, uid: str, dataset_id: str, revision: int) -> None:
         with self.db.session() as session:
-            self._advance(session, uid, dataset_id, revision)
+            self.lock(session, uid, dataset_id, revision, advance=True)
             delete_dataset_definitions(session, Dataset.id == dataset_id)
             session.commit()

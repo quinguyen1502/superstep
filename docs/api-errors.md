@@ -54,6 +54,14 @@
 | `DATASET_SCHEMA_INCOMPATIBLE` | 409 | Changing the definition of field {field} would be incompatible |
 | `DATASET_DEFINITION_INVALID` | 400 | Invalid dataset definition for {field} |
 | `DATASET_VALUE_INVALID` | 400 | Field {field} requires a valid {kind} value |
+| `DATASET_SCHEMA_HAS_ROWS` | 409 | A required column cannot be added while this dataset has rows |
+| `DATASET_ROW_NOT_FOUND` | 404 | Dataset row not found |
+| `DATASET_ROW_CONFLICT` | 409 | The row changed. Reload it and try again |
+| `DATASET_UNIQUE_CONFLICT` | 409 | A row already has this unique field value |
+| `DATASET_FILTER_INVALID` | 400 | Invalid dataset filter for {field} |
+| `DATASET_UPSERT_KEY_INVALID` | 400 | Upsert requires a value for the unique field {field} |
+| `DATASET_ROW_TOO_LARGE` | 413 | A dataset row must be at most {max} bytes |
+| `DATASET_ROW_LIMIT` | 409 | A dataset can contain at most {max} rows |
 | `USAGE_BUDGET_EXISTS` | 409 | A monthly budget already exists for this user or team |
 | `METHOD_NOT_ALLOWED` | 405 | Method not allowed |
 | `PAYLOAD_TOO_LARGE` | 413 | Payload too large |

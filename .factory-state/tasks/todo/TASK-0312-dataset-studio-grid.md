@@ -33,7 +33,7 @@ Accessible Studio screens for dataset creation, column management and typed row 
 
 ## Dependencies
 
-[TASK-0310](../done/TASK-0310-dataset-schema.md), [TASK-0311](TASK-0311-dataset-rows.md)
+[TASK-0310](../done/TASK-0310-dataset-schema.md), [TASK-0311](../done/TASK-0311-dataset-rows.md)
 
 ## Acceptance Criteria
 
