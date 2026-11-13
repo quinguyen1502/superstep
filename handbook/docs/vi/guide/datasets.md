@@ -27,6 +27,10 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
 - Lưới sửa dòng. Lần lưu gửi revision của dòng. Nếu người khác đã lưu trước,
   Studio bảo bạn tải lại thay vì ghi đè sửa đổi đó.
 - Xoá tập dữ liệu, cột, hoặc quyền yêu cầu bạn gõ đúng tên mục đó.
+- Xoá cột sẽ xoá giá trị của cột đó trong mọi dòng. Khoá của cột vẫn được giữ
+  nên không dùng lại được, và cột đã xoá không tính vào giới hạn 100 cột.
+- Cột bắt buộc thêm vào tập dữ liệu đã có dòng cần giá trị mặc định. Mọi dòng
+  hiện có nhận giá trị mặc định, miễn là không dòng nào vượt giới hạn 64 KiB.
 - **Tìm trong bảng** và bộ lọc **Chứa** không phân biệt chữ hoa chữ thường, nên
   "webhook" cũng tìm thấy "Webhook", và "đơn" tìm thấy "ĐƠN". Sắp xếp văn bản
   cũng không phân biệt chữ hoa chữ thường. **Bằng** và khoá duy nhất khớp đúng
@@ -110,7 +114,7 @@ Giới hạn được hỗ trợ:
 
 | Giới hạn | Giá trị |
 | --- | --- |
-| Số cột | 100 |
+| Số cột | 100 cột đang dùng, 200 khi tính cả cột đã xoá |
 | Số dòng trong một tập dữ liệu | 25.000 |
 | Một dòng | 64 KiB |
 | Nhập CSV | 1 MiB và 1.000 bản ghi |

@@ -234,6 +234,7 @@ export function DatasetsPage() {
                 <div className="min-w-0 space-y-1">
                   <DialogTitle>{t('dataset.schema')}</DialogTitle>
                   <DialogDescription className="wrap-anywhere">{current.name}</DialogDescription>
+                  <p className="text-xs text-muted-foreground">{t('dataset.columnCount', { count: current.columns.length, max: 100 })}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
                   {editable && <Button disabled={!manageable} onClick={() => setColumnDialog('new')}><Plus />{t('dataset.addColumn')}</Button>}
