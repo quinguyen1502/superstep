@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { DatasetColumnDialog, DatasetFormDialog } from '@/components/datasets/dataset-dialogs'
+import { DatasetAccessDialog } from '@/components/datasets/dataset-access-dialog'
 import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
 import { DatasetFieldIcon } from '@/components/datasets/dataset-field-icon'
 import { DatasetGrid } from '@/components/datasets/dataset-grid'
@@ -42,6 +43,7 @@ export function DatasetsPage() {
   const [teams, setTeams] = useState<DatasetTeam[] | null>(null)
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [datasetDialog, setDatasetDialog] = useState<'create' | 'edit' | null>(null)
+  const [accessId, setAccessId] = useState<string | null>(null)
   const [schemaId, setSchemaId] = useState<string | null>(null)
   const [columnDialog, setColumnDialog] = useState<DatasetColumn | 'new' | null>(null)
   const current = dataset?.id === id ? dataset : null
@@ -184,6 +186,7 @@ export function DatasetsPage() {
             <DatasetActionsMenu size="icon" label={t('dataset.datasetActions')} triggerRef={datasetMenu}
               schema={{ label: t('dataset.viewSchema'), onSelect: () => setSchemaId(current.id) }}
               edit={editable ? { label: t('dataset.editDataset'), onSelect: () => setDatasetDialog('edit') } : undefined}
+              access={editable ? { label: t('dataset.access'), onSelect: () => setAccessId(current.id) } : undefined}
               remove={editable ? { label: t('dataset.deleteDataset'), onSelect: () => askDeleteDataset(current) } : undefined} />
           </div>
           <div className="border-t"><DatasetGrid key={current.id} dataset={current} editable={editable} reloadDataset={reloadDataset} /></div>
@@ -243,6 +246,7 @@ export function DatasetsPage() {
       teams={teams} onClose={() => setDatasetDialog(null)} onSave={saveDataset} />}
     {current && columnDialog && <DatasetColumnDialog dataset={current} column={columnDialog === 'new' ? undefined : columnDialog}
       onClose={() => setColumnDialog(null)} onSave={data => { setDataset(data); setColumnDialog(null) }} />}
+    {current && accessId === current.id && <DatasetAccessDialog dataset={current} scope={scopeName(current)} onClose={() => setAccessId(null)} />}
     {confirm.dialog}
   </div>
 }

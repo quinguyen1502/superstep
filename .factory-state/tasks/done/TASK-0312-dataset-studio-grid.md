@@ -8,7 +8,7 @@
 - Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-12
-- Updated: 2026-11-13
+- Updated: 2026-11-12
 - Requirement IDs: REQ-0097
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -73,7 +73,6 @@ None blocking. Use the plan and architecture boundaries for implementation choic
 
 ## Activity Log
 
-- 2026-11-13: Owner approved finish and merge. Moved to done. Review REV-0297. QA QA-0297.
 - 2026-11-12: Created during owner-approved requirements planning.
 - 2026-11-12: Started on an explicit stack over TASK-0311. Implemented the protected Studio area, dataset and schema forms, and server-driven editable grid. Build, lint, locale checks and Playwright passed. Moved to review.
 

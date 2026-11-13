@@ -33,7 +33,7 @@ Dataset runtime execution and a reusable transactional idempotency contract.
 
 ## Dependencies
 
-[TASK-0311](../done/TASK-0311-dataset-rows.md), [TASK-0314](TASK-0314-dataset-access.md)
+[TASK-0311](../done/TASK-0311-dataset-rows.md), [TASK-0314](../done/TASK-0314-dataset-access.md)
 
 ## Acceptance Criteria
 
