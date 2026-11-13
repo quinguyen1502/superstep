@@ -33,7 +33,7 @@ Repeatable acceptance fixtures and documented authoring, authorization, deployme
 
 ## Dependencies
 
-[TASK-0313](TASK-0313-dataset-csv.md), [TASK-0321](TASK-0321-dataset-export-bindings-ui.md)
+[TASK-0313](TASK-0313-dataset-csv.md), [TASK-0321](../done/TASK-0321-dataset-export-bindings-ui.md)
 
 ## Acceptance Criteria
 

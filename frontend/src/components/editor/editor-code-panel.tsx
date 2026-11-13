@@ -9,16 +9,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { CodeEditor, type LineRange } from '@/components/code-editor'
 import { api } from '@/lib/api'
 import { EXPORT_LANGUAGES, exportUrl, fileExtension, projectUrl, saveExportLanguage, savedExportLanguage, type ExportLanguage } from '@/lib/code-export'
+import { DatasetProjectDialog, type DatasetBindingSummary } from './dataset-project-dialog'
 import { useStudioCtx } from './studio-context'
 
-type CodeExport = { language: ExportLanguage; media_type: string; filename: string; version: number | null; code: string; nodes: Record<string, LineRange[]>; managed_placeholders?: boolean }
+type CodeExport = { language: ExportLanguage; media_type: string; filename: string; version: number | null; code: string; nodes: Record<string, LineRange[]>; managed_placeholders?: boolean; dataset_bindings?: { bindings: DatasetBindingSummary[] }; snapshot_max_rows?: number }
 
 /** Code tab: the saved workflow as LangGraph code, in Python or as LangGraph.js TypeScript
  * , or as a LangGraph project zip for `langgraph dev`; the node selected on the canvas shows where it is in the code. */
 export function EditorCodePanel() {
   const { t } = useTranslation()
   const { wid, saves, selNode, isDirty } = useStudioCtx()
-  const [out, setOut] = useState<CodeExport | null>(null); const [err, setErr] = useState(''); const [copied, setCopied] = useState(false)
+  const [out, setOut] = useState<CodeExport | null>(null); const [err, setErr] = useState(''); const [copied, setCopied] = useState(false); const [projectOpen, setProjectOpen] = useState(false)
   const [language, setLanguage] = useState<ExportLanguage>(() => savedExportLanguage())
   const pick = (v: ExportLanguage) => { setLanguage(v); saveExportLanguage(v) }
   useEffect(() => {
@@ -50,12 +51,15 @@ export function EditorCodePanel() {
       <Button size="sm" variant="outline" id="code-copy" disabled={!out} onClick={copy}>{copied ? <Check /> : <Copy />}{t('common.copy')}</Button>
       <Button size="sm" variant="outline" id="code-download" disabled={!out} onClick={download}><Download />{t('codeView.download', { ext: fileExtension(language) })}</Button>
       <Tooltip>
-        <TooltipTrigger asChild>{out
-          ? <Button size="sm" variant="outline" id="code-download-project" asChild><a href={projectUrl(wid, language)} download><FileArchive />{t('codeView.downloadProject')}</a></Button>
-          : <Button size="sm" variant="outline" id="code-download-project" disabled><FileArchive />{t('codeView.downloadProject')}</Button>}</TooltipTrigger>
+        <TooltipTrigger asChild>{out?.dataset_bindings?.bindings.length
+          ? <Button size="sm" variant="outline" id="code-download-project" onClick={() => setProjectOpen(true)}><FileArchive />{t('codeView.downloadProject')}</Button>
+          : out
+            ? <Button size="sm" variant="outline" id="code-download-project" asChild><a href={projectUrl(wid, language)} download><FileArchive />{t('codeView.downloadProject')}</a></Button>
+            : <Button size="sm" variant="outline" id="code-download-project" disabled><FileArchive />{t('codeView.downloadProject')}</Button>}</TooltipTrigger>
         <TooltipContent>{t('codeView.downloadProjectTip')}</TooltipContent>
       </Tooltip>
     </div>
+    {out?.dataset_bindings && <DatasetProjectDialog key={out.dataset_bindings.bindings.map(binding => binding.name).join(',')} open={projectOpen} onOpenChange={setProjectOpen} wid={wid} language={language} bindings={out.dataset_bindings.bindings} snapshotMaxRows={out.snapshot_max_rows ?? 1000} onError={setErr} />}
     {err && <Alert variant="destructive"><AlertDescription>{err}</AlertDescription></Alert>}
     {out?.language === language && out.managed_placeholders && <Alert variant="warning" id="code-managed-placeholders"><TriangleAlert /><AlertDescription>{t('codeView.managedPlaceholders')}</AlertDescription></Alert>}
     <CodeEditor readOnly language={out?.language ?? language} value={out?.language === language ? out.code : ''} marks={out?.language === language ? marks : []}

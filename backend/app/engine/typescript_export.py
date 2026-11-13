@@ -932,9 +932,10 @@ class _Writer(GraphWriter):
         if "function setupDatasets(" in body:
             out += [
                 'import { createHash } from "node:crypto";',
-                'import { existsSync } from "node:fs";',
+                'import { existsSync, readFileSync } from "node:fs";',
                 'import { homedir } from "node:os";',
-                'import { resolve } from "node:path";',
+                'import { dirname, resolve } from "node:path";',
+                'import { fileURLToPath } from "node:url";',
             ]
         if self.imports:
             out += ["// imports of the TypeScript Code nodes"] + self.imports

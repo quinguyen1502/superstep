@@ -63,6 +63,14 @@ class DatasetRowService:
         columns = _active_columns(dataset)
         return _response(row, _projection(columns, fields))
 
+    def export_rows(self, uid: str, dataset_id: str, limit: int) -> list[dict]:
+        """Rows the caller can read, for an explicit project snapshot. `limit` includes one extra probe row."""
+        dataset = self._read_definition(uid, dataset_id, None)
+        rows = self.rows.query(
+            dataset.id, filters=[], filter_mode="and", search=None, search_columns=[], sorts=[], limit=limit, offset=0,
+        )
+        return [_response(row, _active_columns(dataset)) for row in rows]
+
     def query(self, uid: str, dataset_id: str, *, filters: list[dict], fields: list[str] | None,
               search: str | None, sort: str | None, descending: bool, limit: int, offset: int,
               filter_mode: str = "and", sorts: list[dict] | None = None, schema_revision: int | None = None) -> dict:

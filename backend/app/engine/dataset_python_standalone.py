@@ -133,6 +133,60 @@ def dataset_check_storage(connection, binding: str) -> None:
         raise AppError("DATASET_SETUP_REQUIRED", binding=binding)
 
 
+def dataset_restore_snapshot(connection, dataset_id: str, binding: str) -> None:
+    path = Path(__file__).with_name("dataset-snapshots.json")
+    if not path.is_file():
+        return
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise AppError("DATASET_SNAPSHOT_INVALID", binding=binding) from None
+    snapshots = document.get("snapshots") if isinstance(document, dict) else None
+    if not isinstance(snapshots, list):
+        raise AppError("DATASET_SNAPSHOT_INVALID", binding=binding)
+    chosen = next((item for item in snapshots if isinstance(item, dict) and item.get("binding") == binding), None)
+    if chosen is None:
+        return
+    contract = dataset_contract(binding)
+    rows = chosen.get("rows")
+    if chosen.get("contract") != contract:
+        raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", binding=binding)
+    if not isinstance(rows, list):
+        raise AppError("DATASET_SNAPSHOT_INVALID", binding=binding)
+    if len(rows) > SNAPSHOT_MAX_ROWS:
+        raise AppError("DATASET_SNAPSHOT_TOO_LARGE", max=SNAPSHOT_MAX_ROWS)
+    columns = contract["columns"]
+    prepared = []
+    for item in rows:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not re.fullmatch(r"[a-f0-9]{32}", item["id"]):
+            raise AppError("DATASET_SNAPSHOT_INVALID", binding=binding)
+        values = item.get("values")
+        if not isinstance(values, dict) or set(values) - set(columns):
+            raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", binding=binding)
+        try:
+            stored = {field: dataset_normalize(column, values[field] if field in values else column["default"]) for field, column in columns.items()}
+        except AppError:
+            raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", binding=binding) from None
+        if dataset_size(stored) > MAX_ROW_BYTES:
+            raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
+        prepared.append((item["id"], stored))
+    for row_id, stored in prepared:
+        if connection.scalar(sa.select(DATASET_ROWS.c.id).where(DATASET_ROWS.c.dataset_id == dataset_id, DATASET_ROWS.c.id == row_id)) is not None:
+            continue
+        count = connection.scalar(sa.select(sa.func.count()).select_from(DATASET_ROWS).where(DATASET_ROWS.c.dataset_id == dataset_id))
+        if count >= MAX_DATASET_ROWS:
+            raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
+        now = dataset_now()
+        connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=stored, revision=1, created=now, updated=now))
+        entries = [{"dataset_id": dataset_id, "field": field, "digest": key_digest(stored[field]), "row_id": row_id}
+                   for field, column in columns.items() if column["unique"] and stored.get(field) is not None]
+        if entries:
+            try:
+                connection.execute(DATASET_KEYS.insert(), entries)
+            except sa.exc.IntegrityError:
+                raise AppError("DATASET_UNIQUE_CONFLICT") from None
+
+
 def setup_datasets(*, create: bool) -> None:
     for binding in DATASET_BINDINGS:
         backend = dataset_backend(binding)
@@ -149,6 +203,8 @@ def setup_datasets(*, create: bool) -> None:
                 else:
                     dataset_check_storage(connection, binding)
                 dataset_check_schema(connection, dataset_id, binding)
+                if create:
+                    dataset_restore_snapshot(connection, dataset_id, binding)
         except sa.exc.SQLAlchemyError:
             raise AppError("DATASET_STORAGE_ERROR", binding=binding) from None
         finally:
