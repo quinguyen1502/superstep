@@ -62,7 +62,7 @@ export function DatasetNodeSettings({ data, binding, disabled, onChange }: {
   </div>
 }
 
-function ColumnSelect({ id, value, columns, onChange, disabled }: {
+export function ColumnSelect({ id, value, columns, onChange, disabled }: {
   id: string; value?: string; columns: DatasetColumn[]; onChange: (value: string) => void; disabled: boolean
 }) {
   const { t } = useTranslation()

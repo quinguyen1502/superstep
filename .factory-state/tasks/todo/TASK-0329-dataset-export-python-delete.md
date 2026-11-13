@@ -67,7 +67,7 @@ Make an exported Python project delete rows and perform Agent writes with the sa
 ## Dependencies
 
 - [TASK-0325](../done/TASK-0325-dataset-delete-runtime.md)
-- [TASK-0327](TASK-0327-dataset-agent-write.md)
+- [TASK-0327](../done/TASK-0327-dataset-agent-write.md)
 
 ## Acceptance Criteria
 

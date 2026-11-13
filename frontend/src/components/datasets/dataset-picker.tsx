@@ -49,7 +49,7 @@ export function DatasetPicker({ id, value, binding, disabled, onChange }: {
 }
 
 export function DatasetBindingNotice({ value, binding, permission }: {
-  value?: string; binding: BindingLookup | null; permission: DatasetNodePermission
+  value?: string; binding: BindingLookup | null; permission: DatasetNodePermission | 'read_write'
 }) {
   const { t } = useTranslation()
   const missingGrant = binding?.permission !== undefined && (permission === 'delete'
