@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0325
 - Title: Execute workflow Dataset row deletion
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -46,6 +46,8 @@ Remove one dataset row from a saved workflow or a connected token when delete is
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Decisions: [DEC-0098](../../decisions/DEC-0098-dataset-delete-and-public.md)
+- Review: [REV-0309](../../artifacts/REV-0309-TASK-0325-dataset-delete-runtime.md)
+- QA: [QA-0309](../../artifacts/QA-0309-TASK-0325-dataset-delete-runtime.md)
 - Discovery:
 - Clarifications:
 
@@ -93,7 +95,10 @@ Remove one dataset row from a saved workflow or a connected token when delete is
 ## Activity Log
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
+- 2026-11-13: Owner asked for task-start. Branched `factory/task-0325-dataset-delete-runtime` from `origin/develop` at `a83ef088` and moved to doing. No source edits.
+- 2026-11-13: Owner asked to implement through finish. Added workflow and connected `delete_row`. Review REV-0309. QA QA-0309. Moved to done.
 
 ## Handoff Notes
 
-- Start from `develop` after TASK-0324 merges, on `factory/task-0325-dataset-delete-runtime`.
+- Branch `factory/task-0325-dataset-delete-runtime` from `origin/develop` at `a83ef088`. One commit, Ready PR into `develop`. Do not merge until the owner asks and required CI is green.
+- Leave the untracked stale TASK-0310–TASK-0322 copies and the two HTML previews uncommitted.

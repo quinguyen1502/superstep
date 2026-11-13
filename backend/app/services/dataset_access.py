@@ -115,12 +115,13 @@ class DatasetAccessService:
         return {"ok": True}
 
     def workflow_dataset(self, caller_id: str, saved_workflow_id: str | None, dataset_id: str, operation: str,
-                         *, public: bool = False) -> tuple[Dataset, Workflow, DatasetWorkflowGrant]:
+                         *, public: bool = False, deleting: bool = False) -> tuple[Dataset, Workflow, DatasetWorkflowGrant]:
         if public or not saved_workflow_id:
             raise AppError("DATASET_GRANT_DENIED")
         workflow = self.access.workflow(saved_workflow_id, caller_id, P.RUN)
         grant = self.repo.grant(dataset_id, workflow.id)
-        if grant is None or not _allows(grant.permission, operation):
+        allowed = grant is not None and (grant.allow_delete if deleting else _allows(grant.permission, operation))
+        if not allowed:
             raise AppError("DATASET_GRANT_DENIED")
         try:
             dataset = self.datasets.definition(workflow.owner, dataset_id)
@@ -135,11 +136,12 @@ class DatasetAccessService:
         dataset, workflow, grant = self.workflow_dataset(caller_id, saved_workflow_id, dataset_id, operation, public=public)
         return DatasetPrincipal(dataset.id, workflow.id, grant.permission)
 
-    def token_dataset(self, secret: str, dataset_id: str, operation: str) -> tuple[Dataset, DatasetApiToken]:
+    def token_dataset(self, secret: str, dataset_id: str, operation: str, *, deleting: bool = False) -> tuple[Dataset, DatasetApiToken]:
         if not secret.startswith(TOKEN_PREFIX) or len(secret) > 100:
             raise AppError("AUTH_TOKEN_INVALID")
         token = self.repo.token_for_hash(digest(secret))
-        if token is None or token.dataset_id != dataset_id or not _allows(token.permission, operation):
+        allowed = token is not None and (token.allow_delete if deleting else _allows(token.permission, operation))
+        if token is None or token.dataset_id != dataset_id or not allowed:
             raise AppError("AUTH_TOKEN_INVALID")
         try:
             dataset = self.datasets.editable_definition(token.issuer_id, dataset_id, None)

@@ -9,12 +9,13 @@ from .issues import Issue
 
 SCOPE = "_dataset_workflow"
 DRY_RUN = "_dataset_dry_run"
-ACCESS = {"find_rows": "read", "get_row": "read", "insert_row": "write", "upsert_row": "write"}
+ACCESS = {"find_rows": "read", "get_row": "read", "insert_row": "write", "upsert_row": "write", "delete_row": "delete"}
 INPUTS = {
     "find_rows": {"filters", "filter_mode", "search", "sorts", "limit", "offset"},
     "get_row": {"row_id"},
     "insert_row": {"values"},
     "upsert_row": {"values", "key"},
+    "delete_row": {"row_id", "key", "value"},
 }
 AGENT_MAX_ROWS = 20
 AGENT_MAX_FILTERS = 12
@@ -23,6 +24,26 @@ KEY = re.compile(r"[a-z][a-z0-9_]{0,62}")
 
 def _key(value) -> bool:
     return isinstance(value, str) and KEY.fullmatch(value) is not None
+
+
+def _valid_delete(args: dict) -> bool:
+    has_id, has_key = "row_id" in args, "key" in args or "value" in args
+    if has_id == has_key or (has_key and ("key" not in args or "value" not in args)):
+        return False
+    if has_id:
+        row_id = args["row_id"]
+        return isinstance(row_id, str) and 0 < len(row_id) <= 100
+    value = args["value"]
+    return _key(args.get("key")) and value is not None and not isinstance(value, (dict, list))
+
+
+def delete_target(arguments: dict) -> tuple[str | None, str | None, object]:
+    """Return a row id, or a unique column and its value. The two forms are exclusive."""
+    if not isinstance(arguments, dict) or not _valid_delete(arguments):
+        raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+    if "row_id" in arguments:
+        return arguments["row_id"], None, None
+    return None, arguments["key"], arguments["value"]
 
 
 def valid(data: dict) -> bool:
@@ -46,6 +67,8 @@ def valid(data: dict) -> bool:
                 return False
     elif operation == "get_row":
         return isinstance(args.get("row_id"), str) and bool(args["row_id"])
+    elif operation == "delete_row":
+        return _valid_delete(args)
     else:
         values = args.get("values")
         if not isinstance(values, dict) or len(values) > 100 or not all(_key(field) for field in values):

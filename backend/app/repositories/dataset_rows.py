@@ -253,6 +253,55 @@ class DatasetRowRepository:
     def _clear_keys(session: Session, dataset_id: str, row_id: str) -> None:
         session.execute(delete(DatasetRowKey).where(DatasetRowKey.dataset_id == dataset_id, DatasetRowKey.row_id == row_id))
 
+    def remove(self, uid: str, dataset: Dataset, *, row_id: str | None, match: tuple[str, CellValue] | None,
+               workflow: WorkflowWrite | None = None, connected: ConnectedWrite | None = None) -> tuple[str, bool]:
+        receipt = workflow or connected
+        with self.datasets.db.session() as session:
+            if workflow and workflow.fence is not None:
+                checked = session.execute(update(Run).where(
+                    Run.id == workflow.run_id, Run.workflow_id == (workflow.run_workflow_id or workflow.workflow_id),
+                    Run.lease_gen == workflow.fence,
+                ).values(lease_gen=Run.lease_gen))
+                if checked.rowcount != 1:
+                    raise StaleLease(workflow.run_id)
+            self.datasets.lock(session, uid, dataset.id, dataset.revision)
+            if workflow:
+                grant = session.get(DatasetWorkflowGrant, (dataset.id, workflow.workflow_id))
+                if grant is None or not grant.allow_delete:
+                    raise AppError("DATASET_GRANT_DENIED")
+            if connected:
+                token = session.get(DatasetApiToken, connected.token_id)
+                if (token is None or token.dataset_id != dataset.id or token.issuer_id != uid
+                        or token.token_hash != connected.token_hash or token.revoked is not None
+                        or not token.allow_delete):
+                    raise AppError("AUTH_TOKEN_INVALID")
+            if receipt:
+                fingerprint, scope = receipt.fingerprint, receipt.scope
+                previous = session.scalar(select(DatasetWriteReceipt).where(
+                    DatasetWriteReceipt.scope == scope, DatasetWriteReceipt.operation_id == receipt.operation_id,
+                ))
+                if previous is not None:
+                    if previous.dataset_id != dataset.id or previous.fingerprint != fingerprint:
+                        raise AppError("DATASET_RECEIPT_CONFLICT")
+                    return previous.result["row_id"], True
+            if match is not None:
+                field, value = match
+                key = session.get(DatasetRowKey, (dataset.id, field, key_digest(value)))
+                row_id = key.row_id if key is not None else None
+            row = session.get(DatasetRow, (dataset.id, row_id)) if row_id is not None else None
+            if row is None:
+                raise AppError("DATASET_ROW_NOT_FOUND")
+            deleted_id = row.id
+            self._clear_keys(session, dataset.id, deleted_id)
+            session.delete(row)
+            if receipt:
+                session.add(DatasetWriteReceipt(
+                    dataset_id=dataset.id, scope=scope, operation_id=receipt.operation_id, fingerprint=fingerprint,
+                    result={"row_id": deleted_id, "deleted": True}, created=time(),
+                ))
+            self._commit(session)
+            return deleted_id, False
+
     def delete(self, uid: str, dataset: Dataset, row_id: str, revision: int | None) -> None:
         with self.datasets.db.session() as session:
             self.datasets.lock(session, uid, dataset.id, dataset.revision)

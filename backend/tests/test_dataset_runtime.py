@@ -1,8 +1,12 @@
 import asyncio
+import json
 from time import time
 from copy import deepcopy
 
+from sqlalchemy import select
+
 from app.api import deps
+from app.models import AuditEvent
 from test_dataset_rows import call
 from test_datasets import auth, client, create, error  # noqa: F401
 from test_identity_migration import db  # noqa: F401
@@ -40,8 +44,8 @@ def save(client, workflow):
     return result["id"]
 
 
-def grant(client, did, wid, permission):
-    call(client, "PUT", f"/api/datasets/{did}/access/grants/{wid}", body={"permission": permission})
+def grant(client, did, wid, permission, allow_delete=False):
+    call(client, "PUT", f"/api/datasets/{did}/access/grants/{wid}", body={"permission": permission, "allow_delete": allow_delete})
 
 
 def run(client, request, uid="owner"):
@@ -107,6 +111,63 @@ def test_dataset_runtime_write_lookup_permissions_and_dry_run(client):
     assert_error(events, "DATASET_GRANT_DENIED")
     rows = call(client, "POST", f"/api/datasets/{did}/rows/query", body={})
     assert [item["values"]["ticket"] for item in rows["items"]] == ["A"]
+
+
+def test_workflow_delete_requires_the_separate_capability(client, db):
+    did = dataset_fixture(client)
+    created = call(client, "POST", f"/api/datasets/{did}/rows", body={"values": {"ticket": "A", "score": 1}}, status=201)
+    row_id = created["row"]["id"]
+    rows = f"/api/datasets/{did}/rows/query"
+    by_id = save(client, graph("Delete id", dataset_node(did, "delete_row", {"row_id": row_id})))
+    grant(client, did, by_id, "write")
+    assert_error(run(client, {"workflow_id": by_id}), "DATASET_GRANT_DENIED")
+    grant(client, did, by_id, "read", allow_delete=True)
+
+    svc = deps.run_service()
+    plan = svc.plan("owner", {"workflow_id": by_id})
+    svc.apply_test(plan, {"mock": True})
+    events = []
+
+    async def send(event):
+        events.append(event)
+        return True
+
+    async def listen():
+        await asyncio.Future()
+
+    assert asyncio.run(svc.execute(plan, send, listen, "owner")) == "ok"
+    assert final(events) == {"row_id": row_id, "deleted": True, "dry_run": True}
+    assert [item["id"] for item in call(client, "POST", rows, body={})["items"]] == [row_id]
+
+    assert final(run(client, {"workflow_id": by_id})) == {"row_id": row_id, "deleted": True}
+    assert call(client, "POST", rows, body={})["items"] == []
+    assert_error(run(client, {"workflow_id": by_id}), "DATASET_ROW_NOT_FOUND")
+
+    call(client, "POST", f"/api/datasets/{did}/rows", body={"values": {"ticket": "B"}}, status=201)
+    by_key = save(client, graph("Delete key", dataset_node(did, "delete_row", {"key": "ticket", "value": "{{state.ticket}}"})))
+    grant(client, did, by_key, "read", allow_delete=True)
+    deleted = final(run(client, {"workflow_id": by_key, "input": {"ticket": "B"}}))
+    assert deleted["deleted"] is True
+    assert call(client, "POST", rows, body={})["items"] == []
+
+    kept = call(client, "POST", f"/api/datasets/{did}/rows", body={"values": {"ticket": "C"}}, status=201)["row"]["id"]
+    plan = svc.plan("owner", {"workflow_id": by_key, "input": {"ticket": "C"}})
+    plan.source = "api"
+    events.clear()
+    assert asyncio.run(svc.execute(plan, send, listen, "owner")) == "error"
+    assert_error(events, "DATASET_GRANT_DENIED")
+    assert [item["id"] for item in call(client, "POST", rows, body={})["items"]] == [kept]
+
+    response = client.post("/api/workflows", headers=auth("owner"), json=graph(
+        "Bad key", dataset_node(did, "delete_row", {"key": "score", "value": "1"}),
+    ))
+    assert response.status_code == 400 and response.json()["error"]["code"] == "DATASET_UPSERT_KEY_INVALID"
+    assert [item["id"] for item in call(client, "POST", rows, body={})["items"]] == [kept]
+
+    with db.session() as session:
+        audits = list(session.scalars(select(AuditEvent).where(AuditEvent.action == "dataset.row_delete")))
+    assert audits and all("A" not in event.details and "B" not in event.details for event in audits)
+    assert all(json.loads(event.details)["row_id"] for event in audits)
 
 
 def test_dataset_nested_scope_and_revocation_before_resume(client):

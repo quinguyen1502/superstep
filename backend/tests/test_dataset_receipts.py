@@ -58,6 +58,57 @@ def test_receipt_replays_original_result_after_commit_and_worker_takeover(client
         assert len(list(session.scalars(select(DatasetWriteReceipt)))) == 2
 
 
+def test_delete_receipt_miss_does_not_stick_and_upsert_stays_serialized(client, db, writes):
+    repo, dataset, base = writes
+    call(client, "PUT", f"{base}/access/grants/receipts-flow", body={"permission": "write", "allow_delete": True})
+    write(repo, dataset, "seed", "A")
+    missing = WorkflowWrite(
+        run_id="receipts-run", workflow_id="receipts-flow", operation_id="delete-missing",
+        arguments={"operation": "delete_row", "row_id": "absent"}, fence=1,
+    )
+    with pytest.raises(AppError) as absent:
+        repo.remove("owner", dataset, row_id="absent", match=None, workflow=missing)
+    assert absent.value.code == "DATASET_ROW_NOT_FOUND"
+    with db.session() as session:
+        assert len(list(session.scalars(select(DatasetWriteReceipt)))) == 1
+    deleted, replayed = repo.remove("owner", dataset, row_id=None, match=("ticket", "A"), workflow=WorkflowWrite(
+        run_id="receipts-run", workflow_id="receipts-flow", operation_id="delete-a",
+        arguments={"operation": "delete_row", "key": "ticket", "value": "A"}, fence=1,
+    ))
+    assert replayed is False
+    again, replayed = repo.remove("owner", dataset, row_id=None, match=("ticket", "A"), workflow=WorkflowWrite(
+        run_id="receipts-run", workflow_id="receipts-flow", operation_id="delete-a",
+        arguments={"operation": "delete_row", "key": "ticket", "value": "A"}, fence=1,
+    ))
+    assert replayed is True and again == deleted
+    with pytest.raises(AppError) as conflict:
+        repo.remove("owner", dataset, row_id="other", match=None, workflow=WorkflowWrite(
+            run_id="receipts-run", workflow_id="receipts-flow", operation_id="delete-a",
+            arguments={"operation": "delete_row", "row_id": "other"}, fence=1,
+        ))
+    assert conflict.value.code == "DATASET_RECEIPT_CONFLICT"
+
+    write(repo, dataset, "seed-b", "B")
+
+    def upsert():
+        return repo.save("owner", dataset, lambda _: {"ticket": "B"}, match=("ticket", "B"), workflow=WorkflowWrite(
+            run_id="receipts-run", workflow_id="receipts-flow", operation_id="upsert-b",
+            arguments={"operation": "upsert", "values": {"ticket": "B"}}, fence=1,
+        ))
+
+    def remove():
+        return repo.remove("owner", dataset, row_id=None, match=("ticket", "B"), workflow=WorkflowWrite(
+            run_id="receipts-run", workflow_id="receipts-flow", operation_id="delete-b",
+            arguments={"operation": "delete_row", "key": "ticket", "value": "B"}, fence=1,
+        ))
+
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        list(workers.map(lambda fn: fn(), (upsert, remove)))
+    with db.session() as session:
+        remaining = list(session.scalars(select(DatasetWriteReceipt.operation_id)))
+    assert {"delete-b", "upsert-b"} <= set(remaining)
+
+
 def test_failed_write_has_no_receipt_and_revocation_blocks_replay(client, db, writes):
     repo, dataset, base = writes
     write(repo, dataset, "step#1", "A")
