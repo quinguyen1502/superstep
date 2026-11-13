@@ -9,7 +9,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/in
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetUrl, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetUrl, deleteRowName, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetActionsMenu } from './dataset-actions-menu'
 import { DatasetRowDialog } from './dataset-dialogs'
@@ -42,9 +42,10 @@ function inDatasetCalendar(target: EventTarget | null) {
 }
 
 
-export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters }: {
+export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, viewOnlyId }: {
   dataset: Dataset
   editable: boolean
+  viewOnlyId?: string
   reloadDataset: () => void
   initialFilters?: DatasetFilters
 }) {
@@ -347,7 +348,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters }
   const heading = (key: string) => dataset.columns.find(column => column.key === key)
 
   function askDelete(row: DatasetRow) {
-    confirm.ask({ name: row.id, requireTyping: false, title: t('dataset.deleteRow'), description: t('dataset.deleteRowBody'),
+    const named = deleteRowName(dataset, row)
+    confirm.ask({ name: named?.value ?? row.id, requireTyping: false, title: t('dataset.deleteRow'),
+      description: named ? t('dataset.deleteRowNamed', { field: named.label, value: named.value }) : t('dataset.deleteRowById', { id: row.id }),
       onConfirm: async () => {
         await api(`${url}/${row.id}?revision=${row.revision}`, { method: 'DELETE' })
         setSelection(current => { const next = { ...current }; delete next[row.id]; return next })
@@ -389,11 +392,12 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters }
             value={searchText} maxLength={120} disabled={editing || !dataset.columns.some(column => TEXT_KINDS.has(column.kind))}
             onChange={event => setSearchText(event.target.value)} />
         </InputGroup>
-        {editable && <Button ref={addButton} className="ml-auto sm:ml-0" disabled={editing} onClick={() => {
-          setActive(null)
-          setDraft(Object.fromEntries(dataset.columns.map(column => [column.key, column.default])))
-          setNotice('')
-        }}><Plus />{t('dataset.addRow')}</Button>}
+        <Button ref={addButton} className="ml-auto sm:ml-0" disabled={editing || !editable} aria-describedby={editable ? undefined : viewOnlyId}
+          onClick={() => {
+            setActive(null)
+            setDraft(Object.fromEntries(dataset.columns.map(column => [column.key, column.default])))
+            setNotice('')
+          }}><Plus />{t('dataset.addRow')}</Button>
       </div>
     </div>
     {loadError && <Alert variant="destructive"><AlertDescription>{loadError}<Button variant="outline" onClick={reload}>{t('common.retry')}</Button></AlertDescription></Alert>}
@@ -543,7 +547,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters }
               <DatasetActionsMenu label={t('dataset.rowActions', { row: offset + index + 1 })} triggerId={rowActionId(row.id)}
                 disabled={!!edit || !!draft}
                 view={{ label: t(editable ? 'dataset.viewEditRow' : 'dataset.viewRow'), onSelect: () => setRowDetails(row.original) }}
-                remove={editable ? { label: t('dataset.deleteRow'), onSelect: () => askDelete(row.original) } : undefined} />
+                remove={{ label: t('dataset.deleteRow'), onSelect: () => askDelete(row.original), disabled: !editable }} />
             </TableCell>
           </TableRow>)}
         </TableBody>

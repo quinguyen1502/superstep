@@ -17,6 +17,7 @@ MAX_CSV_RECORDS = 1_000
 MAX_EXPORT_BYTES = 16_777_216
 MAX_PREVIEW_ROWS = 20
 MAX_ISSUES = 100
+ISSUE_VALUE_CHARS = 200
 NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
 
 
@@ -145,11 +146,13 @@ class DatasetCsvService:
         invalid_rows = set()
         records = []
         keys = {key: {} for key, column in columns.items() if column.unique}
+        key_values = {}
 
-        def issue(line: int, error: AppError, field: str | None = None):
+        def issue(line: int, error: AppError, field: str | None = None, value: object = None):
             invalid_rows.add(line)
             if len(issues) < MAX_ISSUES:
-                issues.append({"row": line, "field": field, "error": error.to_dict()})
+                rejected = None if value is None else str(value)[:ISSUE_VALUE_CHARS]
+                issues.append({"row": line, "field": field, "value": rejected, "error": error.to_dict()})
 
         for line, record in table.rows:
             if len(record) != len(table.headers):
@@ -162,7 +165,7 @@ class DatasetCsvService:
                     value = _coerce(column.kind, incoming[key]) if key in incoming else column.default_value
                     values[key] = _normalize(column, value)
                 except AppError as exc:
-                    issue(line, exc, key)
+                    issue(line, exc, key, incoming.get(key))
             if line in invalid_rows:
                 continue
             if dataset_size(values) > MAX_ROW_BYTES:
@@ -171,8 +174,9 @@ class DatasetCsvService:
             for field, hashes in keys.items():
                 if values[field] is not None:
                     digest = key_digest(values[field])
+                    key_values[field, line] = values[field]
                     if digest in hashes:
-                        issue(line, AppError("DATASET_UNIQUE_CONFLICT"), field)
+                        issue(line, AppError("DATASET_UNIQUE_CONFLICT"), field, values[field])
                     hashes.setdefault(digest, []).append(line)
             records.append(values)
 
@@ -180,7 +184,8 @@ class DatasetCsvService:
             for field, hashes in keys.items():
                 for digest in self.rows.matching_keys(dataset.id, field, set(hashes)):
                     for line in hashes[digest]:
-                        issue(line, AppError("DATASET_UNIQUE_CONFLICT"), field)
+                        issue(line, AppError("DATASET_UNIQUE_CONFLICT"), field, key_values.get((field, line)))
+        issues.sort(key=lambda item: item["row"])
         result = {
             "headers": table.headers, "columns": _detail(dataset)["columns"], "mapping": mapping,
             "schema_revision": dataset.revision if dataset_id else None, "total_rows": len(table.rows),

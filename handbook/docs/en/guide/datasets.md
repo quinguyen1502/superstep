@@ -28,6 +28,8 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
 - The grid edits rows. A save sends the row revision. If someone else saved
   first, Studio asks you to reload instead of overwriting that edit.
 - Removing a dataset, column, or grant asks you to type the item's name.
+  Deleting a row names it by its first unique field, or by its row ID when the
+  row has no unique value.
 - Removing a column clears its values from every row. Its key stays reserved,
   so it cannot be reused, and removed columns do not count toward the 100
   column limit.
@@ -39,7 +41,10 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
   also matches empty cells. Each filter condition explains its operator.
 
 You need `resources.manage` to create a dataset or change its rows. Anyone who
-can see the dataset can read rows.
+can see the dataset can read rows. Without that permission the create, edit,
+import, and delete controls stay visible but disabled, with a note that explains
+why. A link to a dataset that was deleted, or that you cannot open, shows
+"Dataset not found" with a way back to the catalog.
 
 A personal dataset is managed by its owner. A team dataset is managed by the
 member who created it and by admins. Other team members with
@@ -93,7 +98,9 @@ row's revision and update time.
 - Preview suggests a field key and a kind for each column. You can change the
   mapping, skip a column, and edit the schema before import.
 - Import is atomic. If any row is invalid, or repeats a unique value, nothing
-  is written. The preview lists up to 100 issues.
+  is written. The preview lists up to 100 issues in line order, with a count
+  for each kind of issue. Each issue names the column label and the rejected
+  value, shortened when it is long.
 - **Export CSV** needs read access. It includes every row. Values that a
   spreadsheet would treat as formulas are prefixed with an apostrophe. The
   download is at most 16 MiB.

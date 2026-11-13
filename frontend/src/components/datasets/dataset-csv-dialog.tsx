@@ -1,6 +1,7 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { AlertTriangle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -8,14 +9,15 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { api, ApiError } from '@/lib/api'
-import { datasetUrl, fromDraft, toDraft, type ColumnDraft, type Dataset, type DatasetColumn, type DatasetTeam } from '@/lib/datasets'
+import { csvIssueSummary, datasetUrl, fromDraft, shortCsvValue, toDraft, type ColumnDraft, type CsvIssue, type Dataset, type DatasetColumn, type DatasetTeam } from '@/lib/datasets'
 import { errorText, type ApiErrorBody } from '@/lib/i18n'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetColumnFields } from './dataset-fields'
 
 const MAX_CSV_BYTES = 1_048_576
 const SKIP = '__skip__'
-type CsvIssue = { row: number; field: string | null; error: ApiErrorBody }
+/** The server reports at most this many issues per check. */
+const MAX_CSV_ISSUES = 100
 type CsvPreview = {
   headers: string[]
   columns: DatasetColumn[]
@@ -188,18 +190,21 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
             <p role="status" className="text-sm text-muted-foreground">
               {t('dataset.csvSummary', { total: preview.total_rows, invalid: preview.invalid_rows })}
             </p>
-            {!!issues.length && <Alert variant="destructive"><AlertDescription>
-              <ul className="space-y-1">
-                {issues.map((issue, index) => <li key={index}>
-                  {t('dataset.csvRowError', { row: issue.row, message: errorText(issue.error) })}
-                </li>)}
-              </ul>
-            </AlertDescription></Alert>}
+            {!!issues.length && <CsvIssueList issues={issues} invalidRows={preview.invalid_rows}
+              labels={Object.fromEntries((dataset ? preview.columns : columns).map(column => [column.key, column.label]))} />}
             {!!preview.sample.length && <div className="rounded-md border">
               <Table aria-label={t('dataset.csvPreview')}>
                 <TableHeader><TableRow>
-                  <TableHead scope="col">{t('dataset.csvLine')}</TableHead>
-                  {preview.headers.map((header, index) => <TableHead key={index} scope="col" className="max-w-48 truncate">{header}</TableHead>)}
+                  <TableHead scope="col" className="h-auto align-top">{t('dataset.csvLine')}</TableHead>
+                  {preview.headers.map((header, index) => {
+                    const target = (dataset ? preview.columns : columns).find(column => column.key && column.key === mapping[index])
+                    return <TableHead key={index} scope="col" className="h-auto max-w-48 align-top">
+                      <span className="block truncate">{header}</span>
+                      <span className="block truncate text-xs font-normal text-muted-foreground">
+                        {target ? t('dataset.csvMappedTo', { label: target.label }) : t('dataset.csvSkipped')}
+                      </span>
+                    </TableHead>
+                  })}
                 </TableRow></TableHeader>
                 <TableBody>{preview.sample.map(record => <TableRow key={record.row}>
                   <TableCell>{record.row}</TableCell>
@@ -218,4 +223,29 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
       </DialogFooter>
     </DialogContent>
   </Dialog>
+}
+
+function CsvIssueList({ issues, labels, invalidRows }: { issues: CsvIssue[]; labels: Record<string, string>; invalidRows: number }) {
+  const { t } = useTranslation()
+  const { sorted, counts } = csvIssueSummary(issues)
+  const kind = (code: string) => t(`dataset.csvIssueKind.${code}`, { defaultValue: t('dataset.csvIssueKind.other') })
+  return <Alert variant="destructive" data-testid="dataset-csv-issues"><AlertTriangle />
+    <AlertTitle>{t('dataset.csvIssuesTitle', { count: invalidRows })}</AlertTitle>
+    <AlertDescription>
+      <p>{counts.map(([code, count]) => t('dataset.csvIssueCount', { kind: kind(code), count })).join(' · ')}</p>
+      {issues.length >= MAX_CSV_ISSUES && <p>{t('dataset.csvIssuesFirst', { count: issues.length })}</p>}
+      <ul className="max-h-60 w-full space-y-1 overflow-y-auto">
+        {sorted.map((issue, index) => {
+          const label = issue.field ? labels[issue.field] ?? issue.field : null
+          const details = { ...issue.error.details, ...(label ? { field: label } : {}) }
+          return <li key={index} className="wrap-anywhere" data-csv-line={issue.row}>
+            <span className="font-medium">{t('dataset.csvLineLabel', { row: issue.row })}</span>
+            {label && <span>{' · '}{label}</span>}
+            {issue.value != null && <span>{' · '}{t('dataset.csvRejectedValue', { value: shortCsvValue(issue.value) })}</span>}
+            <span>{' — '}{errorText({ ...issue.error, details } as ApiErrorBody)}</span>
+          </li>
+        })}
+      </ul>
+    </AlertDescription>
+  </Alert>
 }

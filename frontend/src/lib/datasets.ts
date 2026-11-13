@@ -94,3 +94,30 @@ export type DatasetNodeConfig = {
     sorts?: { field: string; descending: boolean }[]
   }
 }
+
+/** The label and value that name a row in a delete confirmation: its first unique field with a value. */
+export function deleteRowName(dataset: Dataset, row: DatasetRow): { label: string; value: string } | null {
+  for (const column of dataset.columns) {
+    const value = row.values[column.key]
+    if (column.unique && value !== null && value !== undefined && value !== '') return { label: column.label, value: String(value) }
+  }
+  return null
+}
+
+export type CsvIssue = { row: number; field: string | null; value?: string | null; error: { code?: string; message?: string; details?: Record<string, unknown> } }
+
+/** Issues ordered by CSV line, and the number of issues of each error code in first-seen order. */
+export function csvIssueSummary(issues: CsvIssue[]): { sorted: CsvIssue[]; counts: [string, number][] } {
+  const sorted = [...issues].sort((a, b) => a.row - b.row)
+  const counts = new Map<string, number>()
+  for (const issue of sorted) {
+    const code = issue.error.code ?? 'INTERNAL_ERROR'
+    counts.set(code, (counts.get(code) ?? 0) + 1)
+  }
+  return { sorted, counts: [...counts] }
+}
+
+/** A rejected cell for display: at most `max` characters, with an ellipsis when cut. */
+export function shortCsvValue(value: string, max = 60): string {
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value
+}
