@@ -17,7 +17,8 @@
     "saveForGrant": "Save this workflow, then grant it access from the dataset’s Access menu.",
     "grantMissing": {
       "read": "Grant this workflow read access from the dataset’s Access menu.",
-      "write": "Grant this workflow write access from the dataset’s Access menu."
+      "write": "Grant this workflow write access from the dataset’s Access menu.",
+      "delete": "Turn on Allow row deletion for this workflow in the dataset’s Access menu."
     },
     "openDataset": "Open dataset",
     "chooseFirst": "Choose a dataset in Settings to configure the mapping.",
@@ -25,7 +26,8 @@
       "find_rows": "Find rows",
       "get_row": "Get row",
       "insert_row": "Insert row",
-      "upsert_row": "Upsert row"
+      "upsert_row": "Upsert row",
+      "delete_row": "Delete row"
     },
     "literal": "Literal value",
     "template": "State template",
@@ -35,6 +37,13 @@
     "maxRows": "Maximum rows",
     "upsertKey": "Unique match field",
     "uniqueRequired": "Upsert needs a column with the Unique constraint.",
+    "deleteBy": "Delete by",
+    "deleteModes": {"row_id": "Row ID", "key": "Unique field"},
+    "deleteKey": "Unique field to match",
+    "deleteValue": "Value of {{label}}",
+    "deleteUniqueRequired": "Delete by field needs a column with the Unique constraint. Use Row ID, or mark a column Unique in Schema.",
+    "deleteTargetMissing": "Choose the row to delete: enter a row ID, or pick a unique field and its value.",
+    "deleteResult": "The node deletes one row and writes the deleted row ID to the output field.",
     "mappedFields": "Fields to write",
     "returnFields": "Fields to return",
     "dryRunBadge": "Dry run",

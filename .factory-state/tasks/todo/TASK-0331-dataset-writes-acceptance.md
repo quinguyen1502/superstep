@@ -63,7 +63,7 @@ Prove one support-ticket path across the new operations and document the boundar
 
 ## Dependencies
 
-- [TASK-0326](TASK-0326-dataset-delete-editor.md)
+- [TASK-0326](../done/TASK-0326-dataset-delete-editor.md)
 - [TASK-0328](TASK-0328-dataset-public-entry.md)
 - [TASK-0329](TASK-0329-dataset-export-python-delete.md)
 - [TASK-0330](TASK-0330-dataset-export-typescript-delete.md)

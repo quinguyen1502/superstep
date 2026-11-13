@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api } from '@/lib/api'
-import { datasetUrl, type DatasetPage, type DatasetSummary } from '@/lib/datasets'
+import { datasetUrl, type DatasetNodePermission, type DatasetPage, type DatasetSummary } from '@/lib/datasets'
 import type { BindingLookup } from './use-dataset-node-binding'
 
 export function DatasetPicker({ id, value, binding, disabled, onChange }: {
@@ -49,10 +49,12 @@ export function DatasetPicker({ id, value, binding, disabled, onChange }: {
 }
 
 export function DatasetBindingNotice({ value, binding, permission }: {
-  value?: string; binding: BindingLookup | null; permission: 'read' | 'write'
+  value?: string; binding: BindingLookup | null; permission: DatasetNodePermission
 }) {
   const { t } = useTranslation()
-  const missingGrant = binding?.permission !== undefined && binding.permission !== 'read_write' && binding.permission !== permission
+  const missingGrant = binding?.permission !== undefined && (permission === 'delete'
+    ? !binding.allowDelete
+    : binding.permission !== 'read_write' && binding.permission !== permission)
   return <>
     {!value && <Alert variant="warning"><AlertTriangle /><AlertDescription>{t('datasetNode.rebind')}</AlertDescription></Alert>}
     {binding?.error && <Alert variant="destructive"><AlertDescription>{binding.error} {t('datasetNode.rebind')}</AlertDescription></Alert>}

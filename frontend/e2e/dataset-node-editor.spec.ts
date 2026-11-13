@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { N, newWorkflow, signIn } from './helpers'
 import { expectRowAligned } from './helpers/alignment'
+import { literally, vt } from './catalog'
 
 async function pick(page: Page, trigger: Locator, name: string) {
   await trigger.click()
@@ -129,4 +130,106 @@ test('Dataset node configures lookup and upsert, simulates tests and rebinds tem
   await expect(page.getByText('These fields are missing from the selected dataset: ticket.')).toBeVisible()
   await page.getByRole('button', { name: 'Remove missing mappings' }).click()
   await expect(page.getByText('These fields are missing', { exact: false })).toHaveCount(0)
+})
+
+test('Dataset node configures Delete row by unique field or row ID and needs the delete capability', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('lang')) localStorage.setItem('lang', 'en')
+    localStorage.setItem('theme', 'light')
+  })
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const datasetName = `Dataset delete records ${Date.now()}`
+  const created = await page.request.post('/api/datasets', { headers, data: { name: datasetName, columns: [
+    { key: 'ticket', label: 'Ticket', kind: 'text', required: true, unique: true },
+    { key: 'subject', label: 'Subject', kind: 'text' },
+  ] } })
+  expect(created.ok()).toBeTruthy()
+  const dataset = (await created.json()).data
+  const base = `/api/datasets/${dataset.id}`
+  const seeded = await page.request.post(`${base}/rows`, { headers, data: { values: { ticket: 'T-09', subject: 'Close me' } } })
+  expect(seeded.ok()).toBeTruthy()
+  const wid = await newWorkflow(page, headers, {
+    name: `Dataset delete workflow ${Date.now()}`, state: [{ name: 'result', type: 'object' }],
+    nodes: [N('s', 'start', 40), N('data', 'dataset', 290, { label: 'Records', operation: 'find_rows' }), N('e', 'end', 540)],
+    edges: [{ id: 'a', source: 's', target: 'data' }, { id: 'b', source: 'data', target: 'e' }],
+  })
+  const tickets = async () => {
+    const response = await page.request.post(`${base}/rows/query`, { headers, data: {} })
+    expect(response.ok()).toBeTruthy()
+    return (await response.json()).data.items.map((row: { values: { ticket: string } }) => row.values.ticket)
+  }
+  const savedConfig = async () => {
+    const response = await page.request.get(`/api/workflows/${wid}`, { headers })
+    expect(response.ok()).toBeTruthy()
+    return (await response.json()).data.nodes.find((node: { id: string }) => node.id === 'data').data
+  }
+  const save = async () => {
+    await page.locator('#save-btn').click()
+    await expect(page.locator('#unsaved-badge')).toHaveCount(0)
+  }
+  const grant = async (allow_delete: boolean) => {
+    const response = await page.request.put(`${base}/access/grants/${wid}`, { headers, data: { permission: 'read_write', allow_delete } })
+    expect(response.ok()).toBeTruthy()
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  }
+  const dataTab = page.locator('#config-tab-data')
+
+  await grant(false)
+  await page.goto(`/workflows/${wid}`)
+  await page.locator('.react-flow__node[data-id="data"]').click()
+  await page.locator('#config-tab-settings').click()
+  await pick(page, page.getByRole('combobox', { name: 'Dataset', exact: true }), datasetName)
+  await pick(page, page.getByRole('combobox', { name: 'Operation' }), 'Delete row')
+  const deleteHint = page.getByText('Turn on Allow row deletion for this workflow', { exact: false })
+  await expect(deleteHint).toBeVisible()
+
+  await dataTab.click()
+  await expect(page.getByText('Choose the row to delete', { exact: false })).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Fields to return' })).toHaveCount(0)
+  await pick(page, page.getByRole('combobox', { name: 'Delete by' }), 'Unique field')
+  const keyPicker = page.getByRole('combobox', { name: 'Unique field to match' })
+  await keyPicker.click()
+  await expect(page.getByRole('option', { name: 'Subject', exact: true })).toHaveCount(0)
+  await page.getByRole('option', { name: 'Ticket', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Value of Ticket', exact: true }).fill('T-09')
+  await expect(page.getByText('Choose the row to delete', { exact: false })).toHaveCount(0)
+  await pick(page, page.getByRole('combobox', { name: 'Output field' }), 'result')
+  await save()
+  expect(await savedConfig()).toMatchObject({ dataset_id: dataset.id, operation: 'delete_row', fields: ['ticket'],
+    output_field: 'result', arguments: { key: 'ticket', value: 'T-09' } })
+  expect(Object.keys((await savedConfig()).arguments).sort()).toEqual(['key', 'value'])
+
+  await page.locator('#run-btn').click()
+  await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'error', { timeout: 30_000 })
+  expect(await tickets()).toEqual(['T-09'])
+
+  await grant(true)
+  await page.locator('#config-tab-settings').click()
+  await expect(deleteHint).toHaveCount(0)
+  await page.locator('#run-btn').click()
+  await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
+  await expect.poll(tickets).toEqual([])
+
+  await page.evaluate(() => localStorage.setItem('lang', 'vi'))
+  await page.reload()
+  await page.locator('.react-flow__node[data-id="data"]').click()
+  await dataTab.click()
+  const mode = page.getByRole('combobox', { name: vt('datasetNode.deleteBy') })
+  await mode.focus()
+  await page.keyboard.press('Enter')
+  const rowOption = page.getByRole('option', { name: vt('datasetNode.deleteModes.row_id'), exact: true })
+  await expect(page.getByRole('option', { name: vt('datasetNode.deleteModes.key'), exact: true })).toBeFocused()
+  await page.keyboard.press('ArrowUp')
+  await expect(rowOption).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(mode).toHaveText(vt('datasetNode.deleteModes.row_id'))
+  await expect(page.getByText(vt('datasetNode.deleteTargetMissing'))).toBeVisible()
+  const rowLabel = page.locator('label').filter({ hasText: new RegExp(`^${literally(vt('dataset.rowId')).source}$`) })
+  const editor = page.locator(`[id="${await rowLabel.getAttribute('for')}"]`)
+  await editor.focus()
+  await page.keyboard.type('row-123')
+  await expect(page.getByText(vt('datasetNode.deleteTargetMissing'))).toHaveCount(0)
+  await save()
+  expect((await savedConfig()).arguments).toEqual({ row_id: 'row-123' })
 })
