@@ -189,6 +189,7 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         <Label><Checkbox checked={column.unique} aria-describedby={existing ? `${id}-unique-help` : undefined}
           onCheckedChange={value => onChange({ ...column, unique: value === true })} />{t('dataset.unique')}</Label>
       </div>
+      {!existing && column.required && <p className="text-xs text-muted-foreground">{t('dataset.requiredDefaultHelp')}</p>}
       {existing && <>
         <p id={`${id}-required-help`} className="text-xs text-muted-foreground">{t('dataset.requiredLocked')}</p>
         <p id={`${id}-unique-help`} className="text-xs text-muted-foreground">{t('dataset.uniqueLaterHelp')}</p>

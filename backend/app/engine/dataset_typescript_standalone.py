@@ -742,6 +742,58 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
   return result;
 }
 
+async function datasetDelete(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>, fields: string[], argumentsValue: Record<string, unknown>, operationId: string, binding: string): Promise<Record<string, unknown>> {
+  if (!/^[A-Za-z0-9_.:-]{1,128}$/.test(operationId)) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+  const names = Object.keys(argumentsValue).sort().join(",");
+  if (names !== "row_id" && names !== "key,value") datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+  let target: { key: string | null; row_id: string | null; value: unknown };
+  if (names === "row_id") {
+    const rowId = argumentsValue.row_id;
+    if (typeof rowId !== "string" || rowId.length < 1 || rowId.length > 100) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+    target = { key: null, row_id: rowId, value: null };
+  } else {
+    const key = argumentsValue.key;
+    if (typeof key !== "string") datasetFail("DATASET_UPSERT_KEY_INVALID", { field: String(key) });
+    const column = datasetColumn(columns, key);
+    const raw = argumentsValue.value;
+    if (!column.unique || (raw !== null && typeof raw === "object")) datasetFail("DATASET_UPSERT_KEY_INVALID", { field: key });
+    const value = datasetNormalize(column, raw, false);
+    if (value === null || value === undefined) datasetFail("DATASET_UPSERT_KEY_INVALID", { field: key });
+    target = { key, row_id: null, value };
+  }
+  const fingerprint = writeFingerprint({ arguments: target, fields, operation: "delete_row" });
+  const previous = await connection.get(
+    "SELECT fingerprint, result FROM superstep_dataset_receipts WHERE dataset_id = ? AND operation_id = ?",
+    [datasetIdValue, operationId],
+  );
+  if (previous) {
+    if (previous.fingerprint !== fingerprint) datasetFail("DATASET_RECEIPT_CONFLICT");
+    return storedJson(previous.result, binding);
+  }
+  let rowId = target.row_id;
+  if (target.key !== null) {
+    const hit = await connection.get(
+      "SELECT row_id FROM superstep_dataset_keys WHERE dataset_id = ? AND field = ? AND digest = ?",
+      [datasetIdValue, target.key, datasetDigest(target.value)],
+    );
+    rowId = hit ? String(hit.row_id) : null;
+  }
+  const row = rowId === null ? undefined : await connection.get(
+    "SELECT id FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?", [datasetIdValue, rowId],
+  );
+  // A row that is already gone fails without a receipt.
+  if (!row) datasetFail("DATASET_ROW_NOT_FOUND");
+  const deleted = String(row.id);
+  await connection.run("DELETE FROM superstep_dataset_keys WHERE dataset_id = ? AND row_id = ?", [datasetIdValue, deleted]);
+  await connection.run("DELETE FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?", [datasetIdValue, deleted]);
+  const result = { deleted: true, row_id: deleted };
+  await connection.run(
+    "INSERT INTO superstep_dataset_receipts (dataset_id, operation_id, fingerprint, result) VALUES (?, ?, ?, ?)",
+    [datasetIdValue, operationId, fingerprint, datasetJson(result, true)],
+  );
+  return result;
+}
+
 async function datasetStandalone(binding: string, backend: string, operation: string, fields: string[], argumentsValue: Record<string, unknown>, operationId?: string): Promise<Record<string, unknown>> {
   const columns = datasetContract(binding).columns;
   const allowed = DATASET_OPERATION_INPUTS[operation];
@@ -750,7 +802,7 @@ async function datasetStandalone(binding: string, backend: string, operation: st
   }
   for (const field of fields) datasetColumn(columns, field);
   const [connection, datasetIdValue] = await openDataset(binding, backend, false);
-  const write = operation === "insert_row" || operation === "upsert_row";
+  const write = operation === "insert_row" || operation === "upsert_row" || operation === "delete_row";
   try {
     return await connection.transaction(write, datasetIdValue, async () => {
       await datasetStorageReady(connection, binding);
@@ -760,6 +812,7 @@ async function datasetStandalone(binding: string, backend: string, operation: st
       await datasetSchemasMatch(connection, datasetIdValue, binding);
       if (write) {
         if (operationId === undefined) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+        if (operation === "delete_row") return datasetDelete(connection, datasetIdValue, columns, fields, argumentsValue, operationId, binding);
         return datasetWrite(connection, datasetIdValue, columns, operation, fields, argumentsValue, operationId, binding);
       }
       if (operation === "find_rows") return datasetFind(connection, datasetIdValue, columns, fields, argumentsValue, binding);

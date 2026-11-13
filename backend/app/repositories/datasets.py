@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from sqlalchemy import delete, insert, select, update
+import json
+from dataclasses import dataclass
+
+from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
-from ..core.dataset_types import key_digest
+from ..core.dataset_types import MAX_ROW_BYTES, dataset_size, key_digest
 from ..core.errors import AppError
 from ..models.database import Database
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
@@ -15,6 +18,15 @@ from ..models.workflow import Workflow
 
 UNIQUE_SAMPLE_ROWS = 5
 KEY_BATCH = 500
+CLEAR_BATCH = 500
+
+
+@dataclass(frozen=True)
+class RowChange:
+    """One field changed on every row with the definition: cleared, or filled with a default."""
+    field: str
+    clear: bool = False
+    value: object = None
 
 
 def delete_dataset_definitions(session: Session, condition) -> None:
@@ -87,25 +99,71 @@ class DatasetRepository:
             raise AppError("DATASET_SCHEMA_CONFLICT")
 
     def save(self, uid: str, dataset: Dataset, revision: int, *, require_empty: bool = False,
-             unique: tuple[str, bool] | None = None) -> Dataset:
-        """Save a definition under the writer lock. `unique` adds or drops one column's row keys in the same transaction."""
+             unique: tuple[str, bool] | None = None, rows: RowChange | None = None) -> tuple[Dataset, int]:
+        """Save a definition under the writer lock and return it with the number of rows changed.
+
+        `rows` clears or fills one field on every row, and `unique` adds or drops one column's row keys,
+        both in the same transaction as the definition."""
         with self.db.session() as session:
             self.lock(session, uid, dataset.id, revision, advance=True)
             if require_empty and session.scalar(select(DatasetRow.id).where(DatasetRow.dataset_id == dataset.id).limit(1)):
                 raise AppError("DATASET_SCHEMA_HAS_ROWS")
             dataset.revision = revision + 1
             result = session.merge(dataset)
+            session.flush()
+            changed = 0
+            if rows is not None:
+                changed = self._clear_field(session, dataset.id, rows.field) if rows.clear else self._fill_field(session, dataset.id, rows)
             if unique is not None:
                 field, enabled = unique
                 if enabled:
-                    session.flush()
                     self._backfill_keys(session, dataset.id, field)
                 else:
                     session.execute(delete(DatasetRowKey).where(
                         DatasetRowKey.dataset_id == dataset.id, DatasetRowKey.field == field,
                     ))
             self._commit(session)
-            return result
+            return result, changed
+
+    @staticmethod
+    def _clear_field(session: Session, dataset_id: str, field: str) -> int:
+        """Remove a field from every row in batches. Returns the number of rows that held it."""
+        if session.get_bind().dialect.name == "postgresql":
+            statement = text(
+                'UPDATE dataset_rows SET "values" = "values" - CAST(:field AS text) WHERE dataset_id = :dataset AND id IN ('
+                'SELECT id FROM dataset_rows WHERE dataset_id = :dataset AND jsonb_exists("values", :field) LIMIT :batch)'
+            )
+        else:
+            statement = text(
+                'UPDATE dataset_rows SET "values" = json_remove("values", :path) WHERE dataset_id = :dataset AND id IN ('
+                'SELECT id FROM dataset_rows WHERE dataset_id = :dataset AND json_type("values", :path) IS NOT NULL LIMIT :batch)'
+            )
+        params = {"dataset": dataset_id, "field": field, "path": f'$."{field}"', "batch": CLEAR_BATCH}
+        total = 0
+        while True:
+            count = session.execute(statement, params).rowcount
+            total += count
+            if count < CLEAR_BATCH:
+                return total
+
+    @staticmethod
+    def _fill_field(session: Session, dataset_id: str, change: RowChange) -> int:
+        """Write a default into every row after checking that no row would pass the byte limit."""
+        extra = dataset_size({change.field: change.value}) - 1
+        sizes = select(DatasetRow.values).where(DatasetRow.dataset_id == dataset_id).execution_options(yield_per=KEY_BATCH)
+        for values in session.scalars(sizes):
+            if dataset_size(values) + extra > MAX_ROW_BYTES:
+                raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
+        if session.get_bind().dialect.name == "postgresql":
+            statement = text(
+                'UPDATE dataset_rows SET "values" = "values" || jsonb_build_object(CAST(:field AS text), CAST(:value AS jsonb)) '
+                'WHERE dataset_id = :dataset'
+            )
+        else:
+            statement = text('UPDATE dataset_rows SET "values" = json_set("values", :path, json(:value)) WHERE dataset_id = :dataset')
+        return session.execute(statement, {
+            "dataset": dataset_id, "field": change.field, "path": f'$."{change.field}"', "value": json.dumps(change.value),
+        }).rowcount
 
     @staticmethod
     def _backfill_keys(session: Session, dataset_id: str, field: str) -> None:

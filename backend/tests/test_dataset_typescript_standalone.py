@@ -8,16 +8,17 @@ import subprocess
 import pytest
 
 from test_dataset_connected import dataset, token
+from test_dataset_rows import call as rows_call
 from test_dataset_project_export import project, target, workflow  # noqa: F401
 from test_dataset_runtime import save
 from test_datasets import auth, client  # noqa: F401
 from test_identity_migration import db  # noqa: F401
-from test_python_export import E, N
+from test_python_export import E, F, N
 from test_typescript_export import DENO, DENO_ARGS, deno_env  # noqa: F401
 
 
 PROBE = r'''
-import { datasetCall, setupDatasets, DATASET_BINDINGS } from "./deno-agent.ts";
+import { datasetAgent, datasetCall, setupDatasets, DATASET_BINDINGS } from "./deno-agent.ts";
 
 const command = Deno.env.get("DATASET_PROBE") ?? "";
 const columns = DATASET_BINDINGS.DATASET_1.columns as { kind: string }[];
@@ -58,6 +59,22 @@ if (command === "duplicate") {
   try {
     await datasetCall("DATASET_1", "insert_row", ["ticket"], { values: { ticket: "Concurrent" } }, "duplicate");
     console.log("UNEXPECTED");
+  } catch (error) { fail(error); }
+}
+
+if (command === "insert" || command === "delete") {
+  try {
+    const args = command === "insert" ? { values: { ticket: Deno.env.get("PROBE_TICKET") } } : JSON.parse(Deno.env.get("PROBE_ARGS") ?? "{}");
+    console.log(JSON.stringify(await datasetCall("DATASET_1", command === "insert" ? "insert_row" : "delete_row", ["ticket"], args,
+      Deno.env.get("PROBE_ID") ?? "")));
+  } catch (error) { fail(error); }
+}
+
+if (command === "agent") {
+  const writes = { operations: ["find_rows", "insert_row"], write_fields: ["ticket"] };
+  try {
+    console.log(JSON.stringify(await datasetAgent("DATASET_1", ["ticket"], { ticket: ["eq"] }, 5,
+      JSON.parse(Deno.env.get("PROBE_ARGS") ?? "{}"), writes, Deno.env.get("PROBE_ID"))));
   } catch (error) { fail(error); }
 }
 
@@ -207,3 +224,122 @@ def test_generated_typescript_mixes_connected_and_standalone_bindings(client, db
     assert result.returncode == 0, result.stderr
     assert "FromExport" in result.stdout and '"remote"' in result.stdout
     assert [request["operation"] for request in requests] == ["find_rows"]
+
+
+def test_typescript_standalone_delete_row_locks_replays_and_skips_missing_rows(client, db, monkeypatch, target, tmp_path, deno_env):
+    source = dataset(client, name="Delete source")
+    graph = workflow(source["id"])
+    graph["nodes"].insert(-1, N("removed", "dataset", label="Removed", dataset_id=source["id"], operation="delete_row",
+                                fields=["ticket"], arguments={"key": "ticket", "value": "{{state.updated.row.values.ticket}}"},
+                                output_field="removed"))
+    destination = dataset(client, name="API read destination")  # one run reads through the API and deletes locally
+    graph["nodes"].insert(-1, N("remote", "dataset", label="Remote", dataset_id=destination["id"],
+                                operation="find_rows", fields=["ticket"], arguments={}, output_field="remote"))
+    graph["edges"][-1:] = [E("agent", "removed"), E("removed", "remote"), E("remote", "end")]
+    graph["state"] += [{"name": "removed", "type": "object"}, {"name": "remote", "type": "object"}]
+    wid = save(client, graph)
+    configure(monkeypatch, db, tmp_path)
+    url, requests = target
+    secret = token(client, f"/api/datasets/{destination['id']}", "read")["token"]
+    for name, value in {"BACKEND": "superstep", "API_URL": url, "ID": destination["id"], "API_TOKEN": secret}.items():
+        monkeypatch.setenv(f"DATASET_2_{name}", value)
+    response = client.get(f"/api/workflows/{wid}/export/typescript", headers=auth("owner"))
+    assert response.status_code == 200, response.text
+    script = tmp_path / "deno-agent.ts"
+    script.write_text(response.text)
+    assert run_deno(deno_env, tmp_path, script, "--setup-datasets").returncode == 0
+    for _ in range(2):  # a deleted row lets the next run insert it again
+        run = run_deno(deno_env, tmp_path, script)
+        assert run.returncode == 0, run.stderr
+        assert '"deleted": true' in run.stdout
+    assert [request["operation"] for request in requests] == ["find_rows", "find_rows"]
+    assert run_deno(deno_env, tmp_path, script, "--setup-datasets").returncode == 0
+
+    def insert(ticket, identity):
+        result = probe(deno_env, tmp_path, "insert", PROBE_TICKET=ticket, PROBE_ID=identity)
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout)["row"]["id"]
+
+    def delete(identity, **arguments):
+        return probe(deno_env, tmp_path, "delete", PROBE_ID=identity, PROBE_ARGS=json.dumps(arguments))
+
+    assert json.loads(probe(deno_env, tmp_path, "count").stdout)["items"] == []
+    missing = delete("late", key="ticket", value="Later")
+    assert missing.returncode and "DATASET_ROW_NOT_FOUND" in missing.stderr
+    first = insert("Later", "insert-1")
+    for _ in range(2):  # the miss stored no receipt; the hit replays
+        removed = delete("late", key="ticket", value="Later")
+        assert removed.returncode == 0, removed.stderr
+        assert json.loads(removed.stdout) == {"deleted": True, "row_id": first}
+    conflict = delete("late", row_id=first)
+    assert conflict.returncode and "DATASET_RECEIPT_CONFLICT" in conflict.stderr
+    assert "DATASET_UPSERT_KEY_INVALID" in delete("bad-key", key="score", value=1).stderr
+    assert "DATASET_NODE_ARGUMENTS_INVALID" in delete("both", row_id=first, key="ticket", value="Later").stderr
+
+    kept, gone = insert("Kept", "insert-2"), insert("Gone", "insert-3")
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        raced = list(workers.map(lambda n: delete(f"race-{n}", row_id=gone), (1, 2)))
+    assert sorted(item.returncode for item in raced) == [0, 1]
+    assert any("DATASET_ROW_NOT_FOUND" in item.stderr for item in raced)
+    rows = json.loads(probe(deno_env, tmp_path, "count").stdout)["items"]
+    assert [row["id"] for row in rows] == [kept]
+    assert insert("Gone", "insert-4") != gone  # the unique key was released with the row
+
+
+def test_generated_typescript_agent_writes_and_connected_delete(client, db, monkeypatch, target, tmp_path, deno_env):
+    source = dataset(client, name="Agent source")
+    destination = dataset(client, name="API delete destination")
+    url, requests = target
+    base = f"/api/datasets/{destination['id']}"
+    graph = {
+        "name": "Agent writes", "state": [F("answer"), F("steps", "list"), F("removed", "object")],
+        "nodes": [
+            N("start", "start"),
+            N("agent", "agent", prompt="TK-9", output_field="answer", steps_field="steps", tools=[
+                {"name": "save_ticket", "source": "dataset", "dataset_id": source["id"], "fields": ["ticket", "score"],
+                 "filter_ops": {}, "limit": 1, "operations": ["upsert_row"], "write_fields": ["ticket"], "key": "ticket"},
+            ]),
+            N("removed", "dataset", label="Removed", dataset_id=destination["id"], operation="delete_row",
+              fields=["ticket"], arguments={"key": "ticket", "value": "Remote"}, output_field="removed"),
+            N("end", "end"),
+        ],
+    }
+    graph["edges"] = [E(a["id"], b["id"]) for a, b in zip(graph["nodes"], graph["nodes"][1:])]
+    wid = save(client, graph)
+    response = client.get(f"/api/workflows/{wid}/export/typescript", headers=auth("owner"))
+    assert response.status_code == 200, response.text
+    assert "const stepId = await datasetOperationId(config);" in response.text
+    script = tmp_path / "deno-agent.ts"
+    script.write_text(response.text)
+    configure(monkeypatch, db, tmp_path)
+    reader = token(client, base, "read_write")["token"]
+    for name, value in {"BACKEND": "superstep", "API_URL": url, "ID": destination["id"], "API_TOKEN": reader}.items():
+        monkeypatch.setenv(f"DATASET_2_{name}", value)
+    assert run_deno(deno_env, tmp_path, script, "--setup-datasets").returncode == 0
+    remote = rows_call(client, "POST", f"{base}/rows", body={"values": {"ticket": "Remote"}}, status=201)["row"]["id"]
+    denied = run_deno(deno_env, tmp_path, script)
+    assert denied.returncode and "AUTH_TOKEN_INVALID" in denied.stderr
+    monkeypatch.setenv("DATASET_2_API_TOKEN", token(client, base, "read_write", allow_delete=True)["token"])
+    result = run_deno(deno_env, tmp_path, script)
+    assert result.returncode == 0, result.stderr
+    assert '"deleted": true' in result.stdout and remote in result.stdout
+    assert '"operation": "upsert_row"' in result.stdout and '"count": 1' in result.stdout
+    assert [request["operation"] for request in requests] == ["delete_row", "delete_row"]
+    rows = json.loads(probe(deno_env, tmp_path, "count").stdout)["items"]
+    assert [row["values"] for row in rows] == [{"ticket": "TK-9"}]  # two runs, one upserted row
+    assert '\\"inserted\\": false}' in result.stdout and '\\"values\\"' not in result.stdout  # identifiers only without Find
+
+    def agent(identity, **args):
+        return probe(deno_env, tmp_path, "agent", PROBE_ID=identity, PROBE_ARGS=json.dumps(args))
+
+    inserted = agent("call-1", operation="insert_row", values={"ticket": "TK-11"})
+    assert inserted.returncode == 0, inserted.stderr
+    first = json.loads(inserted.stdout)
+    assert first["inserted"] and first["values"] == {"ticket": "TK-11"}
+    assert json.loads(agent("call-1", operation="insert_row", values={"ticket": "TK-11"}).stdout) == first
+    assert "DATASET_RECEIPT_CONFLICT" in agent("call-1", operation="insert_row", values={"ticket": "TK-12"}).stderr
+    for args in ({"operation": "insert_row", "values": {"score": 1}}, {"operation": "upsert_row", "values": {"ticket": "X"}},
+                 {"operation": "delete_row"}, {"operation": "insert_row", "values": {}}):
+        assert "DATASET_NODE_ARGUMENTS_INVALID" in agent("call-2", **args).stderr
+    found = agent("call-3", filters=[{"field": "ticket", "op": "eq", "value": "TK-11"}])
+    assert json.loads(found.stdout) == {"rows": [{"ticket": "TK-11"}], "truncated": False}
