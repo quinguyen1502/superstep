@@ -26,14 +26,19 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
   cho Upsert hoặc Xoá dòng.
 - Lưới sửa dòng. Lần lưu gửi revision của dòng. Nếu người khác đã lưu trước,
   Studio bảo bạn tải lại thay vì ghi đè sửa đổi đó.
-- Xoá tập dữ liệu, cột, hoặc quyền yêu cầu bạn gõ đúng tên mục đó.
+- Xoá tập dữ liệu, cột, hoặc quyền yêu cầu bạn gõ đúng tên mục đó. Khi xoá một
+  dòng, Studio gọi tên dòng theo trường duy nhất đầu tiên, hoặc theo ID dòng
+  nếu dòng không có giá trị duy nhất.
 - Xoá cột sẽ xoá giá trị của cột đó trong mọi dòng. Khoá của cột vẫn được giữ
   nên không dùng lại được, và cột đã xoá không tính vào giới hạn 100 cột.
 - Cột bắt buộc thêm vào tập dữ liệu đã có dòng cần giá trị mặc định. Mọi dòng
   hiện có nhận giá trị mặc định, miễn là không dòng nào vượt giới hạn 64 KiB.
 
 Bạn cần `resources.manage` để tạo tập dữ liệu hoặc đổi lược đồ và dòng. Ai nhìn
-thấy tập dữ liệu thì đọc được dòng.
+thấy tập dữ liệu thì đọc được dòng. Khi thiếu quyền đó, các nút tạo, sửa, nhập,
+và xoá vẫn hiện nhưng bị tắt, kèm ghi chú giải thích lý do. Liên kết tới tập dữ
+liệu đã bị xoá, hoặc bạn không mở được, hiện "Không tìm thấy tập dữ liệu" kèm
+đường quay lại danh mục.
 
 ## Quyền truy cập
 
@@ -63,7 +68,9 @@ trị nào thì giữ nguyên revision và thời điểm cập nhật của dò
 - Bản xem trước gợi ý khoá trường và kiểu cho mỗi cột. Bạn có thể đổi ánh xạ,
   bỏ qua một cột, và sửa lược đồ trước khi nhập.
 - Việc nhập là nguyên tử. Nếu có dòng không hợp lệ, hoặc trùng giá trị duy nhất,
-  thì không ghi gì. Bản xem trước liệt kê tối đa 100 lỗi.
+  thì không ghi gì. Bản xem trước liệt kê tối đa 100 lỗi theo thứ tự dòng, kèm
+  số lỗi của mỗi loại. Mỗi lỗi nêu nhãn cột và giá trị bị từ chối, rút gọn khi
+  quá dài.
 - **Xuất CSV** cần quyền đọc. Tệp gồm mọi dòng. Giá trị mà bảng tính coi là công
   thức được thêm dấu nháy đơn ở đầu. Bản tải về tối đa 16 MiB.
 

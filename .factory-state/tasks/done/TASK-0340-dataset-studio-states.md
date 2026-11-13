@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0340
 - Title: Explain Dataset Studio states and name what is deleted
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -47,6 +47,8 @@ Every Datasets state a user can reach shows why and what to do, deletions name t
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Plan: [PLAN-0018](../../artifacts/PLAN-0018-dataset-phase1-fixes.md)
+- Review: [REV-0329](../../artifacts/REV-0329-TASK-0340-dataset-studio-states.md)
+- QA: [QA-0329](../../artifacts/QA-0329-TASK-0340-dataset-studio-states.md)
 
 ## Dependencies
 
@@ -74,7 +76,9 @@ Every Datasets state a user can reach shows why and what to do, deletions name t
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Owner accepted REQ-0100 and PLAN-0018. Started on `factory/task-0340-dataset-studio-states` after TASK-0338 and merged `develop` once it landed. Users without `resources.manage` see every create, edit, import, and delete control disabled with an inline reason. The empty catalog offers Create, Import CSV, and the handbook. A missing dataset shows a neutral not-found state with a link back and no Retry. Row deletion names the first unique value or the row ID. CSV issues are sorted by line with column labels, the rejected value, and per-kind counts, and the preview header shows each mapped field. TASK-0335 is not merged, so the team-manager reason is a follow-up. Review REV-0329. QA QA-0329. Moved to done.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0340-dataset-studio-states` from `develop` when implementation begins.
+- Branch `factory/task-0340-dataset-studio-states`. Ready PR into `develop`; merge when every required check is green.
+- Follow-up for TASK-0335: once team managers can manage their team's datasets, `editable` in `frontend/src/pages/Datasets.tsx` must use the per-dataset permission, and the disabled reason needs a team-manager variant (for example, "Only managers of this team can change it").

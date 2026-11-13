@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, Download, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Table2, Trash2, Upload, X } from 'lucide-react'
+import { ChevronRight, Download, Info, PanelLeftClose, PanelLeftOpen, Pencil, Plus, SearchX, Table2, Trash2, Upload, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -17,13 +18,14 @@ import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
 import { DatasetFieldIcon } from '@/components/datasets/dataset-field-icon'
 import { DatasetGrid } from '@/components/datasets/dataset-grid'
 import type { DatasetFilters } from '@/components/datasets/dataset-query-controls'
+import { HandbookLink } from '@/components/handbook-link'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { Logo } from '@/components/logo'
 import { StudioResourceNav } from '@/components/studio-resource-nav'
 import { Tip } from '@/components/tip'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { UserMenu } from '@/components/user-menu'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { datasetUrl, displayValue, type Dataset, type DatasetColumn, type DatasetPage, type DatasetSummary, type DatasetTeam } from '@/lib/datasets'
 import { can, useMe } from '@/lib/rbac'
 import { useLoadWhen } from '@/lib/use-when'
@@ -35,13 +37,14 @@ export function DatasetsPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
-  const editable = can(useMe(), 'resources.manage')
+  const me = useMe()
+  const editable = can(me, 'resources.manage')
   const confirm = useConfirmDelete()
   const datasetMenu = useRef<HTMLButtonElement>(null)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
   const [catalog, setCatalog] = useState<DatasetPage<DatasetSummary> | null>(null)
   const [catalogError, setCatalogError] = useState('')
-  const [detailFailure, setDetailFailure] = useState<{ id: string; message: string } | null>(null)
+  const [detailFailure, setDetailFailure] = useState<{ id: string; message: string; missing: boolean } | null>(null)
   const [teams, setTeams] = useState<DatasetTeam[] | null>(null)
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [datasetDialog, setDatasetDialog] = useState<'create' | 'edit' | null>(null)
@@ -54,6 +57,8 @@ export function DatasetsPage() {
   const [gridFilter, setGridFilter] = useState<{ id: string; seq: number; filters: DatasetFilters } | null>(null)
   const current = dataset?.id === id ? dataset : null
   const detailError = detailFailure?.id === id ? detailFailure?.message : undefined
+  const missing = detailFailure?.id === id && !!detailFailure?.missing
+  const viewOnly = me && !editable ? t('dataset.viewOnlyReason') : undefined
 
   const loadCatalog = useCallback(async (offset = 0) => {
     try {
@@ -82,7 +87,7 @@ export function DatasetsPage() {
     let active = true
     if (id) api<Dataset>(datasetUrl(id))
       .then(data => { if (active) { setDataset(data); setDetailFailure(null) } })
-      .catch(error => { if (active) { setDataset(null); setDetailFailure({ id, message: error.message }) } })
+      .catch(error => { if (active) { setDataset(null); setDetailFailure({ id, message: error.message, missing: error instanceof ApiError && error.code === 'DATASET_NOT_FOUND' }) } })
     return () => { active = false }
   }, [detailRefresh, id])
 
@@ -157,10 +162,12 @@ export function DatasetsPage() {
               }}>{collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}</Button>
           </Tip>
           <h1 className={cn('min-w-0 flex-1 truncate text-sm font-semibold', collapsed && 'sr-only')}>{t('dataset.title')}</h1>
-          {editable && <Tip tip={t('dataset.createDataset')}>
-            <Button size="icon" variant="outline" className={cn(collapsed && 'ml-auto md:ml-0')}
-              aria-label={t('dataset.createDataset')} onClick={() => setDatasetDialog('create')}><Plus /></Button>
-          </Tip>}
+          <Tip tip={viewOnly ?? t('dataset.createDataset')}>
+            <span className={cn('inline-flex', collapsed && 'ml-auto md:ml-0')} tabIndex={viewOnly ? 0 : undefined}>
+              <Button size="icon" variant="outline" disabled={!editable} aria-describedby={viewOnly ? 'dataset-view-only' : undefined}
+                aria-label={t('dataset.createDataset')} onClick={() => setDatasetDialog('create')}><Plus /></Button>
+            </span>
+          </Tip>
         </div>
         <div id="dataset-catalog-list" className={cn('space-y-2 px-2 pb-2', collapsed && 'max-md:hidden')}>
           {catalogError && !collapsed && <Alert variant="destructive"><AlertDescription>{catalogError}
@@ -190,12 +197,39 @@ export function DatasetsPage() {
         </div>
       </aside>
       <section className="min-w-0 space-y-3">
-        {detailError && <Alert variant="destructive"><AlertDescription>{detailError}
+        {viewOnly && <p id="dataset-view-only" className="flex items-start gap-2 px-4 pt-4 text-sm text-muted-foreground md:px-6">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" /><span>{viewOnly}</span>
+        </p>}
+        {missing && <Empty className="m-4 w-auto border" data-testid="dataset-not-found">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><SearchX /></EmptyMedia>
+            <EmptyTitle>{t('dataset.notFoundTitle')}</EmptyTitle>
+            <EmptyDescription>{t('dataset.notFoundDescription')}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent><Button asChild variant="outline"><Link to="/datasets">{t('dataset.backToDatasets')}</Link></Button></EmptyContent>
+        </Empty>}
+        {detailError && !missing && <Alert variant="destructive" className="m-4 w-auto"><AlertDescription>{detailError}
           <Button variant="outline" onClick={reloadDataset}>{t('common.retry')}</Button>
         </AlertDescription></Alert>}
-        {!current && !detailError && <Card className="m-4 gap-2 p-4">
-          <h2 className="font-medium">{id ? t('common.loading') : t('dataset.selectDataset')}</h2>
-          {!id && <p className="text-sm text-muted-foreground">{t('dataset.selectDatasetDescription')}</p>}
+        {!id && catalog && !catalog.items.length && <Empty className="m-4 w-auto border" data-testid="dataset-empty">
+          <EmptyHeader>
+            <EmptyMedia variant="icon"><Table2 /></EmptyMedia>
+            <EmptyTitle>{t('dataset.emptyTitle')}</EmptyTitle>
+            <EmptyDescription>{t('dataset.emptyDescription')}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button disabled={!editable} aria-describedby={viewOnly ? 'dataset-view-only' : undefined}
+                onClick={() => setDatasetDialog('create')}><Plus />{t('dataset.createDataset')}</Button>
+              <Button variant="outline" disabled={!editable} aria-describedby={viewOnly ? 'dataset-view-only' : undefined}
+                onClick={() => setCsv({ initial: { name: '', teamId: null } })}><Upload />{t('dataset.importCsv')}</Button>
+            </div>
+            <span className="text-sm text-muted-foreground"><HandbookLink page="guide/datasets" label={t('dataset.learnMore')} /></span>
+          </EmptyContent>
+        </Empty>}
+        {!current && !detailError && !(!id && catalog && !catalog.items.length) && <Card className="m-4 gap-2 p-4">
+          <h2 className="font-medium">{id || !catalog ? t('common.loading') : t('dataset.selectDataset')}</h2>
+          {!id && catalog && <p className="text-sm text-muted-foreground">{t('dataset.selectDatasetDescription')}</p>}
         </Card>}
         {current && <>
           <div className="flex items-start justify-between gap-2 px-4 pt-4 md:px-6">
@@ -206,17 +240,18 @@ export function DatasetsPage() {
             </div>
             <DatasetActionsMenu size="icon" label={t('dataset.datasetActions')} triggerRef={datasetMenu}
               schema={{ label: t('dataset.viewSchema'), onSelect: () => setSchemaId(current.id) }}
-              edit={editable ? { label: t('dataset.editDataset'), onSelect: () => setDatasetDialog('edit') } : undefined}
-              access={editable ? { label: t('dataset.access'), onSelect: () => setAccessId(current.id) } : undefined}
+              edit={{ label: t('dataset.editDataset'), onSelect: () => setDatasetDialog('edit'), disabled: !editable }}
+              access={{ label: t('dataset.access'), onSelect: () => setAccessId(current.id), disabled: !editable }}
               actions={[
-                ...(editable ? [{ icon: Upload, label: t('dataset.importCsv'), onSelect: () => setCsv({ dataset: current }) }] : []),
+                { icon: Upload, label: t('dataset.importCsv'), onSelect: () => setCsv({ dataset: current }), disabled: !editable },
                 { icon: Download, label: t('dataset.exportCsv'), onSelect: () => { void exportCsv(current) } },
               ]}
-              remove={editable ? { label: t('dataset.deleteDataset'), onSelect: () => askDeleteDataset(current) } : undefined} />
+              note={viewOnly}
+              remove={{ label: t('dataset.deleteDataset'), onSelect: () => askDeleteDataset(current), disabled: !editable }} />
           </div>
           {csvError && <Alert variant="destructive" className="mx-4"><AlertDescription>{csvError}</AlertDescription></Alert>}
           {csvNotice?.id === current.id && <p role="status" className="px-4 text-sm text-muted-foreground">{t('dataset.csvImported', { count: csvNotice.count })}</p>}
-          <div className="border-t"><DatasetGrid key={`${current.id}-${gridFilter?.id === current.id ? gridFilter.seq : 0}`} dataset={current} editable={editable}
+          <div className="border-t"><DatasetGrid viewOnlyId={viewOnly ? 'dataset-view-only' : undefined} key={`${current.id}-${gridFilter?.id === current.id ? gridFilter.seq : 0}`} dataset={current} editable={editable}
             reloadDataset={reloadDataset} initialFilters={gridFilter?.id === current.id ? gridFilter.filters : undefined} /></div>
           <Dialog open={schemaId === current.id} onOpenChange={open => { if (!open) setSchemaId(null) }}>
             <DialogContent showCloseButton={false} className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-3xl" onCloseAutoFocus={event => {
@@ -228,9 +263,11 @@ export function DatasetsPage() {
                   <DialogTitle>{t('dataset.schema')}</DialogTitle>
                   <DialogDescription className="wrap-anywhere">{current.name}</DialogDescription>
                   <p className="text-xs text-muted-foreground">{t('dataset.columnCount', { count: current.columns.length, max: 100 })}</p>
+                  {viewOnly && <p id={`${current.id}-schema-view-only`} className="text-xs text-muted-foreground">{viewOnly}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
-                  {editable && <Button onClick={() => setColumnDialog('new')}><Plus />{t('dataset.addColumn')}</Button>}
+                  <Button disabled={!editable} aria-describedby={viewOnly ? `${current.id}-schema-view-only` : undefined}
+                    onClick={() => setColumnDialog('new')}><Plus />{t('dataset.addColumn')}</Button>
                   <DialogClose asChild><Button variant="ghost" size="icon" aria-label={t('common.close')}><X /></Button></DialogClose>
                 </div>
               </DialogHeader>
@@ -243,10 +280,10 @@ export function DatasetsPage() {
                       <TableHead scope="col">{t('dataset.columnType')}</TableHead>
                       <TableHead scope="col">{t('dataset.constraints')}</TableHead>
                       <TableHead scope="col">{t('dataset.defaultValue')}</TableHead>
-                      {editable && <TableHead scope="col"><span className="sr-only">{t('dataset.actions')}</span></TableHead>}
+                      <TableHead scope="col"><span className="sr-only">{t('dataset.actions')}</span></TableHead>
                     </TableRow></TableHeader>
                     <TableBody>
-                      {!current.columns.length && <TableRow><TableCell colSpan={editable ? 6 : 5}>{t('dataset.noColumns')}</TableCell></TableRow>}
+                      {!current.columns.length && <TableRow><TableCell colSpan={6}>{t('dataset.noColumns')}</TableCell></TableRow>}
                       {current.columns.map(column => <TableRow key={column.key}>
                         <TableCell><div className="flex items-center gap-1.5"><DatasetFieldIcon kind={column.kind} />{column.label}</div></TableCell>
                         <TableCell className="font-mono">{column.key}</TableCell>
@@ -256,11 +293,13 @@ export function DatasetsPage() {
                           {column.unique && <Badge variant="outline">{t('dataset.unique')}</Badge>}
                         </div></TableCell>
                         <TableCell>{displayValue(column.default, t('dataset.valueTrue'), t('dataset.valueFalse'))}</TableCell>
-                        {editable && <TableCell><div className="flex gap-1">
-                          <Button variant="ghost" size="icon-sm" aria-label={t('dataset.editColumnNamed', { name: column.label })} onClick={() => setColumnDialog(column)}><Pencil /></Button>
-                          <Button variant="ghost" size="icon-sm" className="text-destructive"
+                        <TableCell><div className="flex gap-1">
+                          <Button variant="ghost" size="icon-sm" disabled={!editable} aria-describedby={viewOnly ? `${current.id}-schema-view-only` : undefined}
+                            aria-label={t('dataset.editColumnNamed', { name: column.label })} onClick={() => setColumnDialog(column)}><Pencil /></Button>
+                          <Button variant="ghost" size="icon-sm" className="text-destructive" disabled={!editable}
+                            aria-describedby={viewOnly ? `${current.id}-schema-view-only` : undefined}
                             aria-label={t('dataset.deleteColumn')} onClick={() => askDeleteColumn(current, column)}><Trash2 /></Button>
-                        </div></TableCell>}
+                        </div></TableCell>
                       </TableRow>)}
                     </TableBody>
                   </Table>
