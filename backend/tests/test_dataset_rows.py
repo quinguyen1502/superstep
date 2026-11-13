@@ -55,7 +55,7 @@ def test_row_filter_projection_sort_and_paging(client, rows, monkeypatch):
     a = insert(client, rows, ticket="A", title="Hello%", score=10)
     b = insert(client, rows, ticket="B", title="Hello", score=2)
     c = insert(client, rows, ticket="C", title=None)
-    insert(client, rows, ticket="D", title="hello")
+    d = insert(client, rows, ticket="D", title="hello")
     page = query(client, rows, sort="score", descending=False, limit=1, fields=["ticket"])
     assert page["next_offset"] == 1 and page["items"][0]["values"] == {"ticket": "B"}
     page = query(client, rows, sort="score", descending=False, limit=1, offset=1)
@@ -64,7 +64,7 @@ def test_row_filter_projection_sort_and_paging(client, rows, monkeypatch):
     assert [row["id"] for row in query(client, rows, filters=[{"field": "score", "op": "lt", "value": 3}])["items"]] == [b["id"]]
     assert [row["id"] for row in query(client, rows, filters=[{"field": "title", "op": "is_null"}])["items"]] == [c["id"]]
     assert [row["id"] for row in query(client, rows, filters=[{"field": "title", "op": "contains", "value": "%"}])["items"]] == [a["id"]]
-    assert [row["id"] for row in query(client, rows, search="Hello")["items"]] == [a["id"], b["id"]]
+    assert [row["id"] for row in query(client, rows, search="Hello")["items"]] == [a["id"], b["id"], d["id"]]
     assert len(query(client, rows, filters=[{"field": "done", "op": "eq", "value": False}])["items"]) == 4
     assert query(client, rows, filters=[{"field": "done", "op": "ne", "value": False}])["items"] == []
     error(client.post(f"{rows}/query", headers=auth("owner"), json={"filters": [{"field": "done", "op": "lt", "value": True}]}),
@@ -130,3 +130,37 @@ def test_schema_evolution_and_row_cleanup(client, rows, db):
     with db.session() as session:
         assert list(session.scalars(select(DatasetRow))) == []
         assert list(session.scalars(select(DatasetRowKey))) == []
+
+
+def test_ne_matches_empty_cells_and_text_matching_ignores_case(client, rows):
+    a = insert(client, rows, ticket="A", title="Webhook retry", score=5)
+    b = insert(client, rows, ticket="B", title="WEBHOOK timeout", score=1)
+    c = insert(client, rows, ticket="C", title="webhook")
+    d = insert(client, rows, ticket="D", title="\u0110\u01a1n h\u00e0ng \u1ea4n \u0110\u1ed9", score=2, done=True)
+    e = insert(client, rows, ticket="E")
+
+    def ids(**options):
+        return [row["id"] for row in query(client, rows, **options)["items"]]
+
+    assert ids(filters=[{"field": "score", "op": "ne", "value": 5}]) == [b["id"], c["id"], d["id"], e["id"]]
+    assert ids(filters=[{"field": "title", "op": "ne", "value": "webhook"}]) == [a["id"], b["id"], d["id"], e["id"]]
+    assert ids(filters=[{"field": "done", "op": "ne", "value": True}]) == [a["id"], b["id"], c["id"], e["id"]]
+    for term in ("webhook", "WEBHOOK", "Webhook"):
+        assert ids(search=term) == [a["id"], b["id"], c["id"]]
+        assert ids(filters=[{"field": "title", "op": "contains", "value": term}]) == [a["id"], b["id"], c["id"]]
+    assert ids(search="\u0111\u01a1n h\u00e0ng \u1ea5n \u0111\u1ed9") == [d["id"]]
+    assert ids(filters=[{"field": "title", "op": "contains", "value": "\u0110\u1ed8"}]) == [d["id"]]
+    assert ids(filters=[{"field": "title", "op": "eq", "value": "webhook"}]) == [c["id"]]
+    assert ids(filters=[{"field": "title", "op": "eq", "value": "Webhook"}]) == []
+    assert ids(filters=[{"field": "ticket", "op": "eq", "value": "a"}]) == []
+
+
+def test_text_sort_ignores_case_with_an_exact_tiebreak(client, rows):
+    for ticket, title in (("A", "beta"), ("B", "Alpha"), ("C", "alpha"), ("D", "\u0110\u00e0 N\u1eb5ng"), ("E", "\u0111\u00e0 l\u1ea1t"), ("F", None), ("G", "ALPHA")):
+        insert(client, rows, ticket=ticket, title=title)
+
+    def tickets(descending=False):
+        return [row["values"]["ticket"] for row in query(client, rows, sorts=[{"field": "title", "descending": descending}])["items"]]
+
+    assert tickets() == ["G", "B", "C", "A", "E", "D", "F"]
+    assert tickets(descending=True) == ["D", "E", "A", "C", "B", "G", "F"]
