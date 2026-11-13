@@ -28,9 +28,9 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
 
 6. **Dark mode must work.** Use tokens only (never `dark:` colour overrides), and check that the screen looks right in both themes.
 
-7. **Every delete is confirmed by typing the item's name**. This covers deleting, removing, revoking and unlinking anything: workflows, users, teams and members, shares, credentials, knowledge bases and documents, MCP servers, approval connections, API tokens, linked chat accounts.
+7. **Deletion requires confirmation**. Deleting, removing, revoking and unlinking require typing the item's name by default. Dataset row deletion uses a confirmation button without typed input. Dataset and column deletion still require the exact name.
    - Use the one shared `ConfirmDeleteDialog` (`components/confirm-delete-dialog.tsx`: shadcn AlertDialog + Input), usually through `useConfirmDelete().ask({ title, name, description, children, onConfirm })` (`components/use-confirm-delete.tsx`). Never `window.confirm`, and never a hand-made dialog.
-   - The destructive button stays disabled until the typed text matches `name` exactly. Consequences such as dependents, reassignment or mode go in the `children` slot. Strings live in en + vi.
+   - When typing is required, the destructive button stays disabled until the text matches `name` exactly. Consequences such as dependents, reassignment or mode go in the `children` slot. Strings live in en + vi.
    - The confirmation is UI-only, as on GitHub. The API stays a plain `DELETE` with no `confirm_name`, so API clients and scripts are unaffected.
 
 8. **Attention icons use a semantic colour**. Every warning or alert icon shows how serious it is:
@@ -86,7 +86,7 @@ Applies to all frontend code in `frontend/src`. Coding agents and reviewers must
   `rg -n "(text|bg|border|ring)-(red|emerald|green|amber|yellow|orange|sky|blue|violet|purple|teal|zinc|gray|slate)-[0-9]|text-white|bg-white" frontend/src --glob '!components/ui/**'`
 - [ ] This command finds no hex colours outside the channel logos:
   `rg -n "#[0-9a-fA-F]{3,8}\b" frontend/src --glob '*.tsx' --glob '!**/components/ui/**' --glob '!**/approvals/channel-logo.tsx'`
-- [ ] Every new delete/remove/revoke/unlink goes through `ConfirmDeleteDialog` (type the name; UI-only, the API stays a plain DELETE).
+- [ ] Every new delete/remove/revoke/unlink goes through `ConfirmDeleteDialog`. Type the name except for dataset row deletion. Confirmation is UI-only.
 - [ ] Node fields rendered as `{{state.field}}` templates use `TemplateEditor`.
 - [ ] Warning/alert icons: destructive for danger, `variant="warning"` / `text-warning` for cautions; none left in the neutral default colour.
 - [ ] New vi strings follow the glossary (rule 10) and `npm test` passes the locale checks.

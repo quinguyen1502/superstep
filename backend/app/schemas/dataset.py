@@ -71,13 +71,22 @@ class DatasetFilter(BaseModel):
     value: CellValue = None
 
 
+class DatasetSort(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    field: ColumnKey
+    descending: bool = False
+
+
 class DatasetRowQuery(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     filters: list[DatasetFilter] = Field(default_factory=list, max_length=12)
+    filter_mode: Literal["and", "or"] = "and"
     fields: list[ColumnKey] | None = Field(default=None, max_length=100)
     search: str | None = Field(default=None, max_length=120)
     sort: ColumnKey | None = None
     descending: bool = False
+    sorts: list[DatasetSort] | None = Field(default=None, max_length=12)
     limit: int = Field(default=50, ge=1, le=100)
     offset: int = Field(default=0, ge=0, le=25_000)

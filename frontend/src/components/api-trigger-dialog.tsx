@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DeliveriesList } from '@/components/deliveries-list'
@@ -58,7 +58,7 @@ export function ApiTriggerDialog(props: { wid?: string; open?: boolean; onOpenCh
       <TabsList className="shrink-0"><TabsTrigger value="tokens">{t('api.tokensTab')}</TabsTrigger><TabsTrigger value="deliveries" id="api-deliveries-tab">{t('deliveries.tab')}</TabsTrigger><TabsTrigger value="mcp" id="api-mcp-tab">{t('mcpServer.tab')}</TabsTrigger></TabsList>
       {tab === 'deliveries' && <Tip tip={t('deliveries.refresh')}><Button variant="ghost" size="icon" className="ml-auto" id="deliveries-refresh" aria-label={t('deliveries.refresh')} onClick={() => setDeliveriesRefresh(n => n + 1)}><RefreshCw /></Button></Tip>}
       </div>
-      <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-1" id="api-scroll">
+      <DialogBody className="space-y-4" id="api-scroll">
       {err && <Alert variant="destructive"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
       {(created?.token || created?.signing_secret) && <Alert id="api-new-token"><Check /><AlertDescription className="space-y-2">
         <span>{t('api.copyOnce')}</span>
@@ -94,7 +94,7 @@ export function ApiTriggerDialog(props: { wid?: string; open?: boolean; onOpenCh
       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">{t('api.example')}</Label>
         <pre id="api-curl" className="overflow-x-auto rounded-md bg-muted p-3 font-mono text-[11px] text-muted-foreground whitespace-pre">{curl}</pre>
         <p className="text-xs text-muted-foreground">{t('api.modes')}</p></div>
-      </TabsContent></div></Tabs>
+      </TabsContent></DialogBody></Tabs>
     </DialogContent>
     {confirmDel.dialog}
   </Dialog>

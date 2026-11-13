@@ -93,6 +93,26 @@ def test_row_constraints_and_concurrent_upsert(client, rows):
     assert len(query(client, rows, filters=[{"field": "ticket", "op": "eq", "value": "C"}])["items"]) == 1
 
 
+def test_row_filter_modes_and_multicolumn_sort(client, rows):
+    insert(client, rows, ticket="A", title="Shared", score=1)
+    insert(client, rows, ticket="B", title="Shared", score=3, done=True)
+    insert(client, rows, ticket="C", title="Other", score=2, done=True)
+    insert(client, rows, ticket="D", title="Other", score=4)
+    insert(client, rows, ticket="E", title="Shared")
+    filters = [{"field": "title", "op": "eq", "value": "Shared"}, {"field": "done", "op": "eq", "value": True}]
+    sorts = [{"field": "title"}, {"field": "score", "descending": True}]
+
+    def tickets(**options):
+        return [row["values"]["ticket"] for row in query(client, rows, filters=filters, sorts=sorts, **options)["items"]]
+
+    assert tickets() == ["B"]
+    assert tickets(filter_mode="or") == ["C", "B", "A", "E"]
+    assert tickets(filter_mode="or", search="Shared") == ["B", "A", "E"]
+    assert tickets(filter_mode="or", offset=1, limit=2) == ["B", "A"]
+    error(client.post(f"{rows}/query", headers=auth("other"), json={"filters": filters, "filter_mode": "or"}),
+          404, "DATASET_NOT_FOUND")
+
+
 def test_schema_evolution_and_row_cleanup(client, rows, db):
     insert(client, rows, ticket="A", title="Original")
     dataset_url = rows.removesuffix("/rows")

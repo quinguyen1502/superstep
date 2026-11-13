@@ -3,7 +3,7 @@ import { ExternalLink, AlertTriangle, FlaskConical, GitBranch, ShieldAlert, Hist
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { JsonEditor } from '@/components/json-editor'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -113,7 +113,7 @@ export function EditorRunPanel() {
       <Dialog open={allOpen} onOpenChange={setAllOpen}>
         <DialogContent className="flex max-h-[80vh] flex-col sm:max-w-4xl" id="history-dialog">
           <DialogHeader><DialogTitle>{t('editor.tabHistory')}</DialogTitle><DialogDescription>{t('editor.historyDesc')}</DialogDescription></DialogHeader>
-          <ScrollArea className="min-h-0 flex-1"><div onClick={e => { if ((e.target as HTMLElement).closest('[data-testid=history-row]')) setAllOpen(false) }}>
+          <DialogBody><div onClick={e => { if ((e.target as HTMLElement).closest('[data-testid=history-row]')) setAllOpen(false) }}>
           <div className="p-3 space-y-1">
             {wid && !source && <div className="flex items-center gap-2 pb-1"><Switch id="history-tests" checked={testRuns !== null} onCheckedChange={showTests} />
               <Label htmlFor="history-tests" className="text-xs font-normal">{t('tests.showRuns')}</Label></div>}
@@ -147,7 +147,7 @@ export function EditorRunPanel() {
             </button>
             {canSave && <span className="flex w-6 shrink-0 justify-center">{finished(h.status) && saveButton(h.id)}</span>}</div>)}
           </div>
-          </div></ScrollArea>
+          </div></DialogBody>
         </DialogContent>
       </Dialog>
       {draft && wid && <TestCaseDialog wid={wid} value={draft} onClose={() => setDraft(null)} onSaved={c => { setDraft(null); setPicked(c.id); setTab('tests') }} />}

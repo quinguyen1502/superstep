@@ -29,6 +29,7 @@ import { can, canEdit, useMe, type Access } from '@/lib/rbac'
 import { useLoadWhen } from '@/lib/use-when'
 import { Tip } from '@/components/tip'
 import { Logo } from '@/components/logo'
+import { StudioResourceNav } from '@/components/studio-resource-nav'
 import { AppMeta } from '@/components/app-meta'
 
 type W = { id: string; name: string; updated: number; node_count: number; last_run_status: string | null; last_run_at: number | null; access: Access; mine: boolean; owner_email: string | null }
@@ -77,8 +78,9 @@ export function WorkflowsPage() {
       <div className="rounded-full bg-muted p-3 text-muted-foreground">{icon}</div><div className="font-medium">{title}</div><div className="text-sm text-muted-foreground">{body}</div></div></TableCell></TableRow>
 
   return <div className="flex min-h-dvh flex-col bg-background text-foreground">
-    <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6">
+    <header className="flex min-h-14 flex-wrap items-center gap-3 border-b px-4 md:px-6">
       <Logo />
+      <StudioResourceNav active="workflows" />
       <div className="ml-auto flex items-center gap-1"><PendingBadge /><NotificationBell /><LanguageSwitcher /><ThemeToggle /><UserMenu /></div>
     </header>
     <main className="mx-auto w-full max-w-6xl flex-1 space-y-4 p-4 md:p-6">

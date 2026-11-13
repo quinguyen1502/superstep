@@ -28,7 +28,7 @@ Deliver native operational datasets in Studio, deterministic workflow and Agent 
 | --- | --- | --- | --- |
 | [TASK-0310](../tasks/done/TASK-0310-dataset-schema.md) | Studio | Dataset schema and ownership API | — |
 | [TASK-0311](../tasks/done/TASK-0311-dataset-rows.md) | Studio | Typed row CRUD, query and concurrency | TASK-0310 |
-| [TASK-0312](../tasks/todo/TASK-0312-dataset-studio-grid.md) | Studio | Dataset catalog, schema editor and grid | TASK-0310, TASK-0311 |
+| [TASK-0312](../tasks/done/TASK-0312-dataset-studio-grid.md) | Studio | Dataset catalog, schema editor and grid | TASK-0310, TASK-0311 |
 | [TASK-0313](../tasks/todo/TASK-0313-dataset-csv.md) | Studio | Dataset CSV preview, import and export | TASK-0311, TASK-0312 |
 | [TASK-0314](../tasks/todo/TASK-0314-dataset-access.md) | Runtime | Workflow grants and scoped Dataset API tokens | TASK-0310, TASK-0311, TASK-0312 |
 | [TASK-0315](../tasks/todo/TASK-0315-dataset-node-runtime.md) | Runtime | Dataset node runtime and atomic write receipts | TASK-0311, TASK-0314 |
