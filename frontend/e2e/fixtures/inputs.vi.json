@@ -33,7 +33,9 @@
       "lonely": "Tool không tới được",
       "kb": "FAQ hỗ trợ",
       "kbDesc": "Câu trả lời về giao hàng và hoàn tiền",
-      "faq": "Giao hàng\n\nĐơn hàng được giao trong hai ngày làm việc.\n\nHoàn tiền\n\nTiền được hoàn về thẻ trong 7 ngày sau khi nhận hàng trả lại."
+      "faq": "Giao hàng\n\nĐơn hàng được giao trong hai ngày làm việc.\n\nHoàn tiền\n\nTiền được hoàn về thẻ trong 7 ngày sau khi nhận hàng trả lại.",
+      "dataset": "Phiếu hỗ trợ",
+      "printer": "Kẹt máy in"
     },
     "messages": {
       "orderWhereA100": "Đơn A100 của tôi đang ở đâu?",

@@ -47,6 +47,7 @@ nav:
       - Mẫu workflow: guide/templates.md
       - Phiên bản: guide/versions.md
       - Xuất ra Python: guide/python-export.md
+      - Tập dữ liệu: guide/datasets.md
   - Chạy:
       - run/index.md
       - Run và trace: run/traces.md
