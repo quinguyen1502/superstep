@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0338
 - Title: Fix removed-column limits and required columns on existing rows
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -44,6 +44,8 @@ Removed columns stop counting toward the column limit and stop holding data, and
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Plan: [PLAN-0018](../../artifacts/PLAN-0018-dataset-phase1-fixes.md)
+- Review: [REV-0325](../../artifacts/REV-0325-TASK-0338-dataset-schema-limits.md)
+- QA: [QA-0325](../../artifacts/QA-0325-TASK-0338-dataset-schema-limits.md)
 
 ## Dependencies
 
@@ -71,7 +73,9 @@ Removed columns stop counting toward the column limit and stop holding data, and
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Owner accepted REQ-0100 and PLAN-0018. Started on `factory/task-0338-dataset-schema-limits` after TASK-0336, then merged `develop` once TASK-0336 landed. The column limit counts active columns with a 200-definition cap, removing a column clears its values and keys in batches under the writer lock, and a required column with a default backfills existing rows after the row byte check. Review REV-0325. QA QA-0325. Moved to done.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0338-dataset-schema-limits` from `develop` when implementation begins.
+- Branch `factory/task-0338-dataset-schema-limits`. Ready PR into `develop`; merge when every required check is green.
+- A required unique column with a default can be added only while the dataset has at most one row; with more rows the default would repeat and the request fails with `DATASET_UNIQUE_DUPLICATES`.

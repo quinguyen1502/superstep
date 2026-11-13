@@ -120,3 +120,133 @@ def test_concurrent_insert_during_backfill_never_leaves_duplicates(client, db):
             assert values == ["X"] and key_count(db, dataset["id"], "code") == 1
         else:
             assert marked.json()["error"]["code"] in {"DATASET_UNIQUE_DUPLICATES", "DATASET_SCHEMA_CONFLICT"}
+
+
+def raw_rows(db, dataset_id):
+    from app.models import DatasetRow
+    with db.session() as session:
+        return [row.values for row in session.scalars(select(DatasetRow).where(DatasetRow.dataset_id == dataset_id).order_by(DatasetRow.created))]
+
+
+def test_removed_columns_free_the_active_limit_and_keep_keys_reserved(client, monkeypatch):
+    from app.services import dataset_service
+    dataset = create(client, name="Wide", columns=[{"key": f"c{i}", "label": f"C{i}", "kind": "text"} for i in range(100)])
+    url = f"/api/datasets/{dataset['id']}"
+    extra = {"key": "extra", "label": "Extra", "kind": "text"}
+    body = client.post(f"{url}/columns", headers=auth("owner"), json={"revision": 1, "column": extra}).json()
+    assert body["error"]["code"] == "DATASET_COLUMN_LIMIT" and body["error"]["details"] == {"max": 100}
+    revision = call(client, "DELETE", f"{url}/columns/c0?revision=1")["revision"]
+    added = call(client, "POST", f"{url}/columns", body={"revision": revision, "column": extra}, status=201)
+    assert len(added["columns"]) == 100 and "c0" not in [item["key"] for item in added["columns"]]
+    revision = call(client, "DELETE", f"{url}/columns/c1?revision={added['revision']}")["revision"]
+    error(client.post(f"{url}/columns", headers=auth("owner"), json={
+        "revision": revision, "column": {"key": "c0", "label": "Again", "kind": "text"}}), 409, "DATASET_COLUMN_KEY_TAKEN")
+    monkeypatch.setattr(dataset_service, "MAX_COLUMN_DEFINITIONS", 101)
+    body = client.post(f"{url}/columns", headers=auth("owner"), json={
+        "revision": revision, "column": {"key": "another", "label": "Another", "kind": "text"}}).json()
+    assert body["error"]["code"] == "DATASET_COLUMN_LIMIT" and body["error"]["details"] == {"max": 101}
+
+
+def test_removing_a_column_clears_its_values_in_batches(client, db, monkeypatch):
+    import json as jsonlib
+    from app.models import AuditEvent
+    from app.repositories import datasets as repository
+    monkeypatch.setattr(repository, "CLEAR_BATCH", 2)
+    dataset = create(client, name="Clear", columns=[
+        {"key": "ticket", "label": "Ticket", "kind": "text", "unique": True},
+        {"key": "title", "label": "Title", "kind": "text"},
+    ])
+    url = f"/api/datasets/{dataset['id']}"
+    for index in range(5):
+        insert(client, f"{url}/rows", ticket=f"T-{index}", title=None if index == 4 else f"Title {index}")
+    revision = call(client, "DELETE", f"{url}/columns/ticket?revision=1")["revision"]
+    assert all("ticket" not in values for values in raw_rows(db, dataset["id"]))
+    assert key_count(db, dataset["id"], "ticket") == 0
+    call(client, "DELETE", f"{url}/columns/title?revision={revision}")
+    assert raw_rows(db, dataset["id"]) == [{}] * 5
+    with db.session() as session:
+        events = list(session.scalars(select(AuditEvent).where(AuditEvent.action == "dataset.column_remove").order_by(AuditEvent.ts)))
+        assert [jsonlib.loads(event.details) for event in events] == [{"field": "ticket", "rows": 5}, {"field": "title", "rows": 5}]
+    exported = client.get(f"{url}/csv", headers=auth("owner"))
+    assert exported.status_code == 200 and "Ticket" not in exported.text and "Title" not in exported.text
+
+
+def test_export_snapshot_excludes_removed_keys(client, db):
+    from app.api import deps
+    dataset = create(client, name="Snapshot", columns=[
+        {"key": "ticket", "label": "Ticket", "kind": "text"}, {"key": "secret", "label": "Secret", "kind": "text"},
+    ])
+    url = f"/api/datasets/{dataset['id']}"
+    insert(client, f"{url}/rows", ticket="A", secret="hidden")
+    call(client, "DELETE", f"{url}/columns/secret?revision=1")
+    rows = deps.dataset_row_service().export_rows("owner", dataset["id"], 10)
+    assert [row["values"] for row in rows] == [{"ticket": "A"}]
+    assert raw_rows(db, dataset["id"]) == [{"ticket": "A"}]
+
+
+def test_required_column_with_default_backfills_existing_rows(client, db):
+    dataset = create(client, name="Backfill", columns=[{"key": "ticket", "label": "Ticket", "kind": "text"}])
+    url = f"/api/datasets/{dataset['id']}"
+    for ticket in ("A", "B"):
+        insert(client, f"{url}/rows", ticket=ticket)
+    error(client.post(f"{url}/columns", headers=auth("owner"), json={
+        "revision": 1, "column": {"key": "status", "label": "Status", "kind": "text", "required": True}}), 409, "DATASET_SCHEMA_HAS_ROWS")
+    added = call(client, "POST", f"{url}/columns", body={"revision": 1, "column": {
+        "key": "status", "label": "Status", "kind": "select", "required": True, "options": ["Open", "Closed"], "default": "Open"}}, status=201)
+    assert [values["status"] for values in raw_rows(db, dataset["id"])] == ["Open", "Open"]
+    found = call(client, "POST", f"{url}/rows/query", body={"filters": [{"field": "status", "op": "eq", "value": "Open"}]})["items"]
+    assert len(found) == 2
+    revision = added["revision"]
+    body = client.post(f"{url}/columns", headers=auth("owner"), json={"revision": revision, "column": {
+        "key": "code", "label": "Code", "kind": "number", "required": True, "unique": True, "default": 7}}).json()
+    assert body["error"]["code"] == "DATASET_UNIQUE_DUPLICATES" and body["error"]["details"]["count"] == 2
+    assert all("code" not in values for values in raw_rows(db, dataset["id"]))
+    assert call(client, "GET", url)["revision"] == revision
+    flag = call(client, "POST", f"{url}/columns", body={"revision": revision, "column": {
+        "key": "done", "label": "Done", "kind": "boolean", "required": True, "default": False}}, status=201)
+    assert [values["done"] for values in raw_rows(db, dataset["id"])] == [False, False]
+    assert flag["revision"] == revision + 1
+
+
+def test_required_default_checks_the_row_byte_limit_first(client, db):
+    dataset = create(client, name="Large", columns=[{"key": f"body{i}", "label": f"Body {i}", "kind": "text"} for i in range(4)])
+    url = f"/api/datasets/{dataset['id']}"
+    insert(client, f"{url}/rows", **{f"body{i}": "x" * 15_000 for i in range(4)})
+    before = raw_rows(db, dataset["id"])
+    body = client.post(f"{url}/columns", headers=auth("owner"), json={"revision": 1, "column": {
+        "key": "extra", "label": "Extra", "kind": "text", "required": True, "default": "y" * 6_000}}).json()
+    assert body["error"]["code"] == "DATASET_ROW_TOO_LARGE"
+    assert raw_rows(db, dataset["id"]) == before and call(client, "GET", url)["revision"] == 1
+
+
+def test_schema_row_changes_stay_within_the_query_budget(client, db):
+    from uuid import uuid4
+
+    from sqlalchemy import event
+
+    from app.models import DatasetRow
+    dataset = create(client, name="Budget", columns=[{"key": "ticket", "label": "Ticket", "kind": "text"},
+                                                     {"key": "note", "label": "Note", "kind": "text"}])
+    url = f"/api/datasets/{dataset['id']}"
+    with db.session() as session:
+        session.add_all(DatasetRow(dataset_id=dataset["id"], id=uuid4().hex, values={"ticket": f"T-{i}", "note": "n"},
+                                   revision=1, created=i, updated=i) for i in range(1_600))
+        session.commit()
+    statements = []
+
+    def count(*_args):
+        statements.append(1)
+
+    event.listen(db.engine, "before_cursor_execute", count)
+    try:
+        revision = call(client, "DELETE", f"{url}/columns/note?revision=1")["revision"]
+        removed = len(statements)
+        statements.clear()
+        call(client, "POST", f"{url}/columns", body={"revision": revision, "column": {
+            "key": "state", "label": "State", "kind": "text", "required": True, "default": "new"}}, status=201)
+        added = len(statements)
+    finally:
+        event.remove(db.engine, "before_cursor_execute", count)
+    assert removed <= 30 and added <= 30, (removed, added)
+    values = raw_rows(db, dataset["id"])
+    assert len(values) == 1_600 and all(item == {"ticket": item["ticket"], "state": "new"} for item in values)

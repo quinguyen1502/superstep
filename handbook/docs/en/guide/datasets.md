@@ -28,6 +28,11 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
 - The grid edits rows. A save sends the row revision. If someone else saved
   first, Studio asks you to reload instead of overwriting that edit.
 - Removing a dataset, column, or grant asks you to type the item's name.
+- Removing a column clears its values from every row. Its key stays reserved,
+  so it cannot be reused, and removed columns do not count toward the 100
+  column limit.
+- A required column added to a dataset that has rows needs a default. Every
+  existing row gets the default, as long as no row passes the 64 KiB limit.
 
 You need `resources.manage` to create a dataset or change its schema and rows.
 Anyone who can see the dataset can read rows.
@@ -89,7 +94,7 @@ Supported bounds:
 
 | Limit | Value |
 | --- | --- |
-| Columns | 100 |
+| Columns | 100 in use, 200 including removed columns |
 | Rows in one dataset | 25,000 |
 | One row | 64 KiB |
 | CSV import | 1 MiB and 1,000 records |

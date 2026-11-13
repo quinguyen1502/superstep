@@ -65,7 +65,7 @@
 | `DATASET_SCHEMA_INCOMPATIBLE` | 409 | Changing the definition of field {field} would be incompatible |
 | `DATASET_DEFINITION_INVALID` | 400 | Invalid dataset definition for {field} |
 | `DATASET_VALUE_INVALID` | 400 | Field {field} requires a valid {kind} value |
-| `DATASET_SCHEMA_HAS_ROWS` | 409 | A required column cannot be added while this dataset has rows |
+| `DATASET_SCHEMA_HAS_ROWS` | 409 | A required column needs a default while this dataset has rows |
 | `DATASET_ROW_NOT_FOUND` | 404 | Dataset row not found |
 | `DATASET_ROW_CONFLICT` | 409 | The row changed. Reload it and try again |
 | `DATASET_UNIQUE_CONFLICT` | 409 | A row already has this unique field value |

@@ -9,11 +9,12 @@ from ..core.dataset_types import INVALID_TEXT, normalize_cell
 from ..core.errors import AppError
 from ..engine import dataset_nodes
 from ..models.dataset import Dataset, DatasetColumn
-from ..repositories.datasets import DatasetRepository
+from ..repositories.datasets import DatasetRepository, RowChange
 from .access import AccessService
 from .audit_service import AuditService
 
 MAX_COLUMNS = 100
+MAX_COLUMN_DEFINITIONS = 200  # active plus removed; a removed key stays reserved
 
 
 def _label(value: str, field: str) -> str:
@@ -87,9 +88,12 @@ class DatasetService:
         return dataset
 
     def _save(self, uid: str, dataset: Dataset, action: str, *, require_empty: bool = False,
-              unique_change: tuple[str, bool] | None = None, **details) -> dict:
+              unique_change: tuple[str, bool] | None = None, rows: RowChange | None = None, **details) -> dict:
         dataset.updated = time()
-        saved = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty, unique=unique_change)
+        saved, changed = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty,
+                                        unique=unique_change, rows=rows)
+        if rows is not None:
+            details["rows"] = changed
         self.audit.record(uid, action, "dataset", dataset.id, **details)
         return _detail(saved)
 
@@ -146,10 +150,16 @@ class DatasetService:
         dataset = self.editable_definition(uid, dataset_id, revision)
         if any(field.key == column["key"] for field in dataset.columns):
             raise AppError("DATASET_COLUMN_KEY_TAKEN")
-        if len(dataset.columns) >= MAX_COLUMNS:
+        if sum(not field.archived for field in dataset.columns) >= MAX_COLUMNS:
             raise AppError("DATASET_COLUMN_LIMIT", max=MAX_COLUMNS)
+        if len(dataset.columns) >= MAX_COLUMN_DEFINITIONS:
+            raise AppError("DATASET_COLUMN_LIMIT", max=MAX_COLUMN_DEFINITIONS)
         field = _column(column, len(dataset.columns))
         dataset.columns.append(field)
+        if field.required and field.default_value is not None:
+            # Existing rows take the default in the same transaction; a unique default fails on a second row.
+            return self._save(uid, dataset, "dataset.column_add", rows=RowChange(field.key, value=field.default_value),
+                              unique_change=(field.key, True) if field.unique else None, field=field.key)
         return self._save(uid, dataset, "dataset.column_add", require_empty=field.required, field=field.key)
 
     def update_column(self, uid: str, dataset_id: str, key: str, *, column: dict, revision: int) -> dict:
@@ -192,4 +202,5 @@ class DatasetService:
         dataset = self.editable_definition(uid, dataset_id, revision)
         field = self._find_column(dataset, key)
         field.archived = True
-        return self._save(uid, dataset, "dataset.column_remove", field=key)
+        dropped = (key, False) if field.unique else None
+        return self._save(uid, dataset, "dataset.column_remove", rows=RowChange(key, clear=True), unique_change=dropped, field=key)
