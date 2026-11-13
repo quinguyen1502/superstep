@@ -24,10 +24,12 @@ class DatasetRuntimeService:
         did, operation = binding.get("dataset_id"), binding.get("operation")
         if not isinstance(did, str) or not 0 < len(did) <= 100:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
-        write = operation in ("insert_row", "upsert_row", "delete_row")
-        definition = self.access.datasets.editable_definition(actor, did, None) if write else self.access.datasets.definition(actor, did)
         is_agent = "filter_ops" in binding
-        valid = dataset_nodes.valid_agent(binding) if is_agent else dataset_nodes.valid(binding)
+        agent_writes = dataset_nodes.agent_writes(binding) if is_agent else []
+        write = operation in ("insert_row", "upsert_row", "delete_row") or bool(agent_writes)
+        definition = self.access.datasets.editable_definition(actor, did, None) if write else self.access.datasets.definition(actor, did)
+        # A per-call Agent write binding carries its values; the saved tool binding carries its limits.
+        valid = dataset_nodes.valid_agent(binding) if is_agent and operation == "find_rows" else dataset_nodes.valid(binding)
         if not valid:
             return  # the normal graph validator reports incomplete draft configuration
         columns = _active_columns(definition)
@@ -38,6 +40,8 @@ class DatasetRuntimeService:
         ]
         if operation == "delete_row" and args.get("key"):
             references.append(args["key"])
+        if agent_writes:
+            references.extend(binding.get("write_fields") or [])
         for field in references:
             _column(columns, field)
         if is_agent:
@@ -46,6 +50,8 @@ class DatasetRuntimeService:
                     raise AppError("DATASET_FILTER_INVALID", field=field)
         if operation == "upsert_row" and not _column(columns, args["key"]).unique:
             raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
+        if "upsert_row" in agent_writes and not _column(columns, binding["key"]).unique:
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=binding["key"])
         if operation == "delete_row" and "key" in args and not _column(columns, args["key"]).unique:
             raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
 

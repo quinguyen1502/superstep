@@ -65,7 +65,7 @@ Let a saved workflow use its Dataset grant from chat and the API trigger, while 
 ## Dependencies
 
 - [TASK-0325](../done/TASK-0325-dataset-delete-runtime.md)
-- [TASK-0327](TASK-0327-dataset-agent-write.md)
+- [TASK-0327](../done/TASK-0327-dataset-agent-write.md)
 
 ## Acceptance Criteria
 

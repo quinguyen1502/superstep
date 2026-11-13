@@ -3,11 +3,13 @@ export const SOURCES = ['mcp', 'http', 'builtin', 'knowledge', 'workflow', 'data
 export type ToolSource = typeof SOURCES[number]
 export type Schema = { type?: string; properties?: Record<string, { type?: string; description?: string }>; required?: string[] }
 import type { UrlBinding } from './browser-tools'
+import type { DatasetAgentOperation } from './datasets'
 export type AgentTool = { name: string; description?: string; source: ToolSource; approval?: boolean
   server_id?: string; tool?: string; url_binding?: UrlBinding; parameters?: Schema; function?: string; knowledge_base_id?: string; top_k?: number
   method?: string; url?: string; body?: string
   workflow_id?: string; inputs?: string[]; outputs?: string[]
-  dataset_id?: string; fields?: string[]; filter_ops?: Record<string, string[]>; limit?: number }
+  dataset_id?: string; fields?: string[]; filter_ops?: Record<string, string[]>; limit?: number
+  operations?: DatasetAgentOperation[]; write_fields?: string[]; key?: string }
 export type BuiltinTool = { name: string; doc?: string; parameters?: Schema | null }
 
 export const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']

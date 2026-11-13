@@ -49,6 +49,9 @@ export type DatasetOperation = (typeof datasetOperations)[number]
 export type DatasetGrantPermission = 'read' | 'write' | 'read_write'
 
 export const DATASET_AGENT_MAX_ROWS = 20
+/** What an Agent Dataset tool may do. Delete row is never offered to an Agent. */
+export const datasetAgentOperations = ['find_rows', 'insert_row', 'upsert_row'] as const
+export type DatasetAgentOperation = (typeof datasetAgentOperations)[number]
 
 export function datasetFilterOperators(kind: DatasetColumn['kind']) {
   if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null']
