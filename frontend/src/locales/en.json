@@ -347,8 +347,10 @@
     },
     "nodeInfo": {
       "connections": "Connections",
-      "incoming": "Incoming",
-      "outgoing": "Outgoing",
+      "incoming_one": "{{count}} incoming connection",
+      "incoming_other": "{{count}} incoming connections",
+      "outgoing_one": "{{count}} outgoing connection",
+      "outgoing_other": "{{count}} outgoing connections",
       "none": "No connections yet."
     },
     "config": "Config",
@@ -1858,7 +1860,7 @@
     "blockedChannels": "Your role cannot use organization approval channels at run time (admin policy)."
   },
   "confirmDelete": {
-    "typeToConfirm": "Type <b>{{name}}</b> to confirm",
+    "typeToConfirm": "Type \"<b>{{name}}</b>\" to confirm",
     "placeholder": "Type the name exactly",
     "irreversible": "This cannot be undone.",
     "delete": "Delete",

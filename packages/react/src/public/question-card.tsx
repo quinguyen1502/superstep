@@ -39,7 +39,7 @@ export function QuestionCard({ chat: explicit, question: supplied, showPrompt = 
         {fields.map(f => <div key={f.name} className="space-y-1.5"><Label htmlFor={`${id}-${f.name}`}>{f.label}</Label>
           {['boolean','checkbox'].includes(f.type) ? <Checkbox id={`${id}-${f.name}`} checked={values[f.name] === true} disabled={chat.busy} onCheckedChange={v => setValues(x => ({ ...x, [f.name]: v === true }))} />
             : f.options?.length ? <Select value={String(values[f.name] ?? '')} disabled={chat.busy} onValueChange={v => setValues(x => ({ ...x, [f.name]: v }))}>
-              <SelectTrigger id={`${id}-${f.name}`}><SelectValue placeholder={t('chat.toolkit.choose')} /></SelectTrigger><SelectContent>{f.options.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select>
+              <SelectTrigger id={`${id}-${f.name}`} className="w-full"><SelectValue placeholder={t('chat.toolkit.choose')} /></SelectTrigger><SelectContent>{f.options.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select>
             : f.type === 'textarea' ? <Textarea id={`${id}-${f.name}`} value={String(values[f.name] ?? '')} maxLength={4000} disabled={chat.busy} required={f.required} placeholder={f.placeholder} onChange={e => setValues(x => ({ ...x, [f.name]: e.target.value }))} />
             : <Input id={`${id}-${f.name}`} type={f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : 'text'} value={String(values[f.name] ?? '')} maxLength={4000} disabled={chat.busy} required={f.required} placeholder={f.placeholder} onChange={e => setValues(x => ({ ...x, [f.name]: e.target.value }))} />}</div>)}
         <Button type="submit" disabled={chat.busy || !valid}>{t('chat.toolkit.answer')}</Button>

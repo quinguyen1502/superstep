@@ -37,7 +37,7 @@ export function ConfirmDeleteDialog({ open, onOpenChange, title, name, requireTy
       {children}
       {requireTyping && <div className="space-y-1.5">
         <Label htmlFor={`${idPrefix}-input`} className="block wrap-break-word font-normal"><span className="leading-relaxed">
-          <Trans i18nKey="confirmDelete.typeToConfirm" values={{ name }} components={{ b: <code className="box-decoration-clone rounded-md border bg-muted px-1.5 py-0.5 font-mono font-semibold text-foreground" /> }} /></span></Label>
+          <Trans i18nKey="confirmDelete.typeToConfirm" values={{ name }} components={{ b: <strong data-confirm-name="" className="font-semibold text-foreground" /> }} /></span></Label>
         <Input id={`${idPrefix}-input`} autoComplete="off" spellCheck={false} placeholder={t('confirmDelete.placeholder')} value={typed}
           onChange={e => setTyped(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && match && !disabled && !busy) go() }} aria-invalid={!!typed && !match} />
       </div>}

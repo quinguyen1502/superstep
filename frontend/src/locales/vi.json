@@ -347,8 +347,10 @@
     },
     "nodeInfo": {
       "connections": "Kết nối",
-      "incoming": "Đầu vào",
-      "outgoing": "Đầu ra",
+      "incoming_one": "{{count}} kết nối đầu vào",
+      "incoming_other": "{{count}} kết nối đầu vào",
+      "outgoing_one": "{{count}} kết nối đầu ra",
+      "outgoing_other": "{{count}} kết nối đầu ra",
       "none": "Chưa có kết nối."
     },
     "config": "Cấu hình",
@@ -1858,7 +1860,7 @@
     "blockedChannels": "Vai trò của bạn không được dùng kênh duyệt của tổ chức khi chạy (chính sách quản trị)."
   },
   "confirmDelete": {
-    "typeToConfirm": "Nhập <b>{{name}}</b> để xác nhận",
+    "typeToConfirm": "Nhập \"<b>{{name}}</b>\" để xác nhận",
     "placeholder": "Nhập chính xác tên",
     "irreversible": "Không thể hoàn tác.",
     "delete": "Xoá",

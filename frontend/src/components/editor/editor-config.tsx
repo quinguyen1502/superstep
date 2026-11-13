@@ -219,8 +219,8 @@ export function EditorConfig() {
             <section className="space-y-3" aria-label={t('editor.nodeInfo.connections')}>
               {(['incoming', 'outgoing'] as const).map(dir => {
                 const linked = edges.filter(e => dir === 'incoming' ? e.target === selNode!.id : e.source === selNode!.id)
-                return <div key={dir} className="space-y-1.5"><div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
-                  <span>{t(`editor.nodeInfo.${dir}`)}</span><span className="tabular-nums">{linked.length}</span></div>
+                return <div key={dir} className="space-y-1.5"><div className="text-xs text-muted-foreground">
+                  <span className="tabular-nums">{t(`editor.nodeInfo.${dir}`, { count: linked.length })}</span></div>
                   {linked.length ? linked.map(edge => { const target = nodes.find(n => n.id === (dir === 'incoming' ? edge.source : edge.target))
                     return <Button key={edge.id} variant="outline" className="w-full justify-start min-w-0" onClick={() => target && setSel({ kind: 'node', id: target.id })}>
                       <span className="truncate">{String(target?.data.label || target?.id || '—')}</span>{edge.label && <Badge variant="secondary" className="ml-auto">{String(edge.label)}</Badge>}
