@@ -18,6 +18,7 @@ from ..repositories.dataset_rows import DatasetRowRepository
 from ..repositories.datasets import DatasetRepository
 from ..services.dataset_access import DatasetAccessService
 from ..services.dataset_connected import DatasetConnectedService
+from ..services.dataset_csv import DatasetCsvService
 from ..services.dataset_rows import DatasetRowService
 from ..services.dataset_runtime import DatasetRuntimeService
 from ..services.dataset_service import DatasetService
@@ -286,6 +287,9 @@ def dataset_connected_service() -> DatasetConnectedService:
     access = dataset_access_service()
     return DatasetConnectedService(access, DatasetRowService(access.datasets, DatasetRowRepository(access.datasets.repo)))
 
+def dataset_csv_service() -> DatasetCsvService:
+    datasets = dataset_service()
+    return DatasetCsvService(datasets, DatasetRowRepository(datasets.repo))
 
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())

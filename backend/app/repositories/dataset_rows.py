@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from time import time
 from uuid import uuid4
@@ -127,10 +127,9 @@ class DatasetRowRepository:
         if revision is not None and row.revision != revision:
             raise AppError("DATASET_ROW_CONFLICT")
 
-    @staticmethod
-    def _commit(session: Session) -> None:
+    def _commit(self, session: Session) -> None:
         try:
-            session.commit()
+            self.datasets._commit(session)
         except IntegrityError as exc:
             constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
             if constraint == "uq_dataset_write_identity" or "UNIQUE constraint failed: dataset_write_receipts.scope" in str(exc.orig):
@@ -195,12 +194,7 @@ class DatasetRowRepository:
                 self._check_revision(row, revision)
                 row.values, row.updated, row.revision = values, now, row.revision + 1
                 self._clear_keys(session, dataset.id, row.id)
-            session.add_all(
-                DatasetRowKey(dataset_id=dataset.id, field=column.key, row_id=row.id,
-                              value_hash=key_digest(values[column.key]))
-                for column in dataset.columns
-                if column.unique and not column.archived and values.get(column.key) is not None
-            )
+            session.add_all(self._keys(dataset, row))
             if receipt:
                 result = {"row": {"id": row.id, "values": row.values, "revision": row.revision,
                                   "created": row.created, "updated": row.updated}, "inserted": inserted}
@@ -208,6 +202,52 @@ class DatasetRowRepository:
                                                 fingerprint=fingerprint, result=result, created=now))
             self._commit(session)
             return row, inserted, False
+
+    @staticmethod
+    def _keys(dataset: Dataset, row: DatasetRow) -> Iterator[DatasetRowKey]:
+        for column in dataset.columns:
+            value = row.values.get(column.key)
+            if column.unique and not column.archived and value is not None:
+                yield DatasetRowKey(dataset_id=dataset.id, field=column.key, row_id=row.id, value_hash=key_digest(value))
+
+    def matching_keys(self, dataset_id: str, field: str, hashes: set[str]) -> set[str]:
+        candidates = sorted(hashes)
+        found: set[str] = set()
+        with self.datasets.db.session() as session:
+            for start in range(0, len(candidates), 200):
+                found.update(session.scalars(select(DatasetRowKey.value_hash).where(
+                    DatasetRowKey.dataset_id == dataset_id, DatasetRowKey.field == field,
+                    DatasetRowKey.value_hash.in_(candidates[start:start + 200]),
+                )))
+        return found
+
+    def import_rows(self, uid: str, dataset: Dataset, values: list[dict], *, create: bool) -> None:
+        with self.datasets.db.session() as session:
+            if create:
+                session.add(dataset)
+                try:
+                    session.flush()
+                except IntegrityError as exc:
+                    self.datasets.raise_integrity_error(exc)
+            self.datasets.lock(session, uid, dataset.id, dataset.revision)
+            count = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
+            if count + len(values) > MAX_DATASET_ROWS:
+                raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
+            now = time()
+            rows = [DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=record, revision=1,
+                               created=now + index / 1_000_000, updated=now + index / 1_000_000)
+                    for index, record in enumerate(values)]
+            session.add_all(rows)
+            session.flush()
+            session.add_all(key for row in rows for key in self._keys(dataset, row))
+            self._commit(session)
+
+    def export_values(self, uid: str, dataset_id: str) -> Iterator[dict]:
+        statement = select(DatasetRow.values).join(Dataset, DatasetRow.dataset_id == Dataset.id).where(
+            DatasetRow.dataset_id == dataset_id, self.datasets._visible(uid),
+        ).order_by(DatasetRow.created, DatasetRow.id).execution_options(yield_per=128)
+        with self.datasets.db.session() as session:
+            yield from session.scalars(statement)
 
     @staticmethod
     def _clear_keys(session: Session, dataset_id: str, row_id: str) -> None:

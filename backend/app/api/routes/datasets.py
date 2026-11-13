@@ -1,12 +1,14 @@
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, Query, Response
 
 from ...core.errors import AppError
 from ...schemas.dataset import (
-    DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetGrantInput, DatasetTokenInput, DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
+    DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetGrantInput, DatasetTokenInput,
+    DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
 )
-from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_row_service, dataset_service, limit_body
+from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_csv_service, dataset_row_service, dataset_service, limit_body
 
 router = APIRouter(prefix="/api/datasets", tags=["datasets"])
 Revision = Annotated[int | None, Query(ge=1)]
@@ -22,6 +24,16 @@ def list_datasets(limit: Annotated[int, Query(ge=1, le=100)] = 50,
 @router.post("", status_code=201)
 def create_dataset(body: DatasetCreate, user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.create(user["id"], **body.model_dump())
+
+
+@router.post("/csv/preview")
+def preview_csv(body: DatasetCsvInput, user=Depends(current_user), svc=Depends(dataset_csv_service)):
+    return svc.preview(user["id"], **body.model_dump())
+
+
+@router.post("/csv/import")
+def import_csv(body: DatasetCsvInput, user=Depends(current_user), svc=Depends(dataset_csv_service)):
+    return svc.import_csv(user["id"], **body.model_dump())
 
 
 @router.get("/{dataset_id}/access")
@@ -64,6 +76,16 @@ def rotate_dataset_token(dataset_id: str, token_id: str, response: Response,
 def revoke_dataset_token(dataset_id: str, token_id: str,
                          user=Depends(current_user), svc=Depends(dataset_access_service)):
     return svc.revoke_token(user["id"], dataset_id, token_id)
+
+
+@router.get("/{dataset_id}/csv")
+def export_csv(dataset_id: str, user=Depends(current_user), svc=Depends(dataset_csv_service)):
+    name, content = svc.export(user["id"], dataset_id)
+    filename = quote(f"{name}.csv", safe="")
+    return Response(content, media_type="text/csv; charset=utf-8", headers={
+        "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
+        "Cache-Control": "no-store",
+    })
 
 
 @router.get("/{dataset_id}")

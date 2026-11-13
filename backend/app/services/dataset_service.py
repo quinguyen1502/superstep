@@ -89,7 +89,7 @@ class DatasetService:
     def get(self, uid: str, dataset_id: str) -> dict:
         return _detail(self.definition(uid, dataset_id))
 
-    def create(self, uid: str, *, name: str, description: str | None, team_id: str | None, columns: list[dict]) -> dict:
+    def prepare_create(self, uid: str, *, name: str, description: str | None, team_id: str | None, columns: list[dict]) -> Dataset:
         self.access.require(uid, P.RESOURCES_MANAGE)
         if team_id is not None and team_id not in self.access.teams.teams_of(uid):
             raise AppError("DATASET_NOT_FOUND")
@@ -99,11 +99,14 @@ class DatasetService:
             raise AppError("DATASET_COLUMN_KEY_TAKEN")
         label = _label(name, "name")
         now = time()
-        dataset = self.repo.add(Dataset(
+        return Dataset(
             id=uuid4().hex, owner_id=uid if team_id is None else None, team_id=team_id,
             name=label, name_key=label.casefold(), description=_description(description),
             revision=1, created=now, updated=now, columns=fields,
-        ))
+        )
+
+    def create(self, uid: str, *, name: str, description: str | None, team_id: str | None, columns: list[dict]) -> dict:
+        dataset = self.repo.add(self.prepare_create(uid, name=name, description=description, team_id=team_id, columns=columns))
         self.audit.record(uid, "dataset.create", "dataset", dataset.id)
         return _detail(dataset)
 

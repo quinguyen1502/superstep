@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0313
 - Title: Dataset CSV preview, import and export
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-12
-- Updated: 2026-11-12
+- Updated: 2026-11-13
 - Requirement IDs: REQ-0097
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -55,6 +55,8 @@ Run the applicable full Factory profile and repository gates. Capture review and
 - [Architecture](../../artifacts/ARCH-0003-datasets.md)
 - [Decision](../../decisions/DEC-0097-dataset-grid-and-export.md)
 - [Plan](../../artifacts/PLAN-0016-datasets.md)
+- [Review](../../artifacts/REV-0298-TASK-0313-dataset-csv.md)
+- [QA](../../artifacts/QA-0298-TASK-0313-dataset-csv.md)
 
 ## Open Questions
 
@@ -62,7 +64,12 @@ None blocking. Use the plan and architecture boundaries for implementation choic
 
 ## Activity Log
 
+- 2026-11-13: Owner approved finish and merge. Moved to done. Review REV-0298. QA QA-0298.
 - 2026-11-12: Created during owner-approved requirements planning.
+
+- 2026-11-12: Started on an explicit stack over the reviewed Studio branch. CSV import is bounded to 1 MiB and 1,000 records per transaction, and export fails explicitly above 16 MiB.
+
+- 2026-11-12: Implemented preview, mapping, atomic import and formula-safe export. Targeted API, browser and frontend checks passed.
 
 ## Handoff Notes
 

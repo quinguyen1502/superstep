@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Table2, Trash2, X } from 'lucide-react'
+import { ChevronRight, Download, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Table2, Trash2, Upload, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, Dial
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
+import { DatasetCsvDialog } from '@/components/datasets/dataset-csv-dialog'
 import { DatasetColumnDialog, DatasetFormDialog } from '@/components/datasets/dataset-dialogs'
 import { DatasetAccessDialog } from '@/components/datasets/dataset-access-dialog'
 import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
@@ -44,6 +45,9 @@ export function DatasetsPage() {
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [datasetDialog, setDatasetDialog] = useState<'create' | 'edit' | null>(null)
   const [accessId, setAccessId] = useState<string | null>(null)
+  const [csv, setCsv] = useState<{ dataset?: Dataset; initial?: { name: string; teamId: string | null } } | null>(null)
+  const [csvNotice, setCsvNotice] = useState<{ id: string; count: number } | null>(null)
+  const [csvError, setCsvError] = useState('')
   const [schemaId, setSchemaId] = useState<string | null>(null)
   const [columnDialog, setColumnDialog] = useState<DatasetColumn | 'new' | null>(null)
   const current = dataset?.id === id ? dataset : null
@@ -85,6 +89,21 @@ export function DatasetsPage() {
     setDataset(data)
     void loadCatalog()
     if (id !== data.id) navigate(`/datasets/${data.id}`)
+  }
+
+  async function exportCsv(data: Dataset) {
+    setCsvError('')
+    try {
+      const blob = await api<Blob>(`${datasetUrl(data.id)}/csv`, { response: 'blob' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${data.name}.csv`
+      link.click()
+      window.setTimeout(() => URL.revokeObjectURL(url), 0)
+    } catch (failure) {
+      setCsvError(failure instanceof Error ? failure.message : t('errors.INTERNAL_ERROR'))
+    }
   }
 
   function askDeleteDataset(data: Dataset) {
@@ -187,8 +206,14 @@ export function DatasetsPage() {
               schema={{ label: t('dataset.viewSchema'), onSelect: () => setSchemaId(current.id) }}
               edit={editable ? { label: t('dataset.editDataset'), onSelect: () => setDatasetDialog('edit') } : undefined}
               access={editable ? { label: t('dataset.access'), onSelect: () => setAccessId(current.id) } : undefined}
+              actions={[
+                ...(editable ? [{ icon: Upload, label: t('dataset.importCsv'), onSelect: () => setCsv({ dataset: current }) }] : []),
+                { icon: Download, label: t('dataset.exportCsv'), onSelect: () => { void exportCsv(current) } },
+              ]}
               remove={editable ? { label: t('dataset.deleteDataset'), onSelect: () => askDeleteDataset(current) } : undefined} />
           </div>
+          {csvError && <Alert variant="destructive" className="mx-4"><AlertDescription>{csvError}</AlertDescription></Alert>}
+          {csvNotice?.id === current.id && <p role="status" className="px-4 text-sm text-muted-foreground">{t('dataset.csvImported', { count: csvNotice.count })}</p>}
           <div className="border-t"><DatasetGrid key={current.id} dataset={current} editable={editable} reloadDataset={reloadDataset} /></div>
           <Dialog open={schemaId === current.id} onOpenChange={open => { if (!open) setSchemaId(null) }}>
             <DialogContent showCloseButton={false} className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-3xl" onCloseAutoFocus={event => {
@@ -243,7 +268,14 @@ export function DatasetsPage() {
       </section>
     </main>
     {datasetDialog && (datasetDialog === 'create' || current) && <DatasetFormDialog dataset={datasetDialog === 'edit' ? current ?? undefined : undefined}
-      teams={teams} onClose={() => setDatasetDialog(null)} onSave={saveDataset} />}
+      teams={teams} onClose={() => setDatasetDialog(null)} onSave={saveDataset}
+      onImportCsv={initial => { setDatasetDialog(null); setCsv({ initial }) }} />}
+    {csv && <DatasetCsvDialog dataset={csv.dataset} initial={csv.initial} teams={teams} onClose={() => setCsv(null)}
+      onImported={(data, count) => {
+        setCsv(null)
+        setCsvNotice({ id: data.id, count })
+        saveDataset(data)
+      }} />}
     {current && columnDialog && <DatasetColumnDialog dataset={current} column={columnDialog === 'new' ? undefined : columnDialog}
       onClose={() => setColumnDialog(null)} onSave={data => { setDataset(data); setColumnDialog(null) }} />}
     {current && accessId === current.id && <DatasetAccessDialog dataset={current} scope={scopeName(current)} onClose={() => setAccessId(null)} />}

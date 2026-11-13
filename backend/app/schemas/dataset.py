@@ -117,3 +117,13 @@ class DatasetConnectedInput(BaseModel):
     fields: list[ColumnKey] = Field(min_length=1, max_length=100)
     arguments: dict = Field(default_factory=dict, max_length=10)
     operation_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.:-]{1,128}$")
+
+
+class DatasetCsvInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    text: str = Field(max_length=1_048_576)
+    dataset_id: str | None = Field(default=None, min_length=1, max_length=100)
+    schema_revision: int | None = Field(default=None, ge=1)
+    create: DatasetCreate | None = None
+    mapping: list[ColumnKey | None] | None = Field(default=None, max_length=100)

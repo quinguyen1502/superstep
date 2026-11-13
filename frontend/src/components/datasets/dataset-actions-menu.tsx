@@ -1,17 +1,18 @@
 import type { Ref } from 'react'
-import { Columns3, Eye, KeyRound, MoreHorizontal, Pencil, Settings, Trash2 } from 'lucide-react'
+import { Columns3, Eye, KeyRound, MoreHorizontal, Pencil, Settings, Trash2, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 type MenuAction = { label: string; onSelect: () => void }
 
-export function DatasetActionsMenu({ label, remove, edit, schema, view, access, triggerRef, triggerId, size = 'icon-sm', disabled }: {
+export function DatasetActionsMenu({ label, remove, edit, schema, view, access, actions, triggerRef, triggerId, size = 'icon-sm', disabled }: {
   label: string
   remove?: MenuAction
   edit?: MenuAction
   schema?: MenuAction
   view?: MenuAction
   access?: MenuAction
+  actions?: (MenuAction & { icon: LucideIcon })[]
   triggerId?: string
   triggerRef?: Ref<HTMLButtonElement>
   size?: 'icon' | 'icon-sm'
@@ -26,6 +27,7 @@ export function DatasetActionsMenu({ label, remove, edit, schema, view, access, 
       {view && <DropdownMenuItem onSelect={view.onSelect}><Eye />{view.label}</DropdownMenuItem>}
       {edit && <DropdownMenuItem onSelect={edit.onSelect}><Pencil />{edit.label}</DropdownMenuItem>}
       {access && <DropdownMenuItem onSelect={access.onSelect}><KeyRound />{access.label}</DropdownMenuItem>}
+      {actions?.map(({ icon: Icon, label: actionLabel, onSelect }) => <DropdownMenuItem key={actionLabel} onSelect={onSelect}><Icon />{actionLabel}</DropdownMenuItem>)}
       {remove && <DropdownMenuItem variant="destructive" onSelect={remove.onSelect}><Trash2 /><span className="wrap-anywhere">{remove.label}</span></DropdownMenuItem>}
     </DropdownMenuContent>
   </DropdownMenu>
