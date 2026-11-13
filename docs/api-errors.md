@@ -71,6 +71,7 @@
 | `DATASET_ROW_NOT_FOUND` | 404 | Dataset row not found |
 | `DATASET_ROW_CONFLICT` | 409 | The row changed. Reload it and try again |
 | `DATASET_UNIQUE_CONFLICT` | 409 | A row already has this unique field value |
+| `DATASET_UNIQUE_DUPLICATES` | 409 | Field {field} cannot become unique because {count} rows share a value |
 | `DATASET_FILTER_INVALID` | 400 | Invalid dataset filter for {field} |
 | `DATASET_UPSERT_KEY_INVALID` | 400 | Upsert requires a value for the unique field {field} |
 | `DATASET_ROW_TOO_LARGE` | 413 | A dataset row must be at most {max} bytes |

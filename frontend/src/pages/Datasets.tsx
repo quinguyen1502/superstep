@@ -17,6 +17,7 @@ import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
 import { DatasetFieldIcon } from '@/components/datasets/dataset-field-icon'
 import { DatasetGrid } from '@/components/datasets/dataset-grid'
 import { DatasetOwnerDialog } from '@/components/datasets/dataset-owner-dialog'
+import type { DatasetFilters } from '@/components/datasets/dataset-query-controls'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { Logo } from '@/components/logo'
 import { StudioResourceNav } from '@/components/studio-resource-nav'
@@ -53,6 +54,7 @@ export function DatasetsPage() {
   const [csvError, setCsvError] = useState('')
   const [schemaId, setSchemaId] = useState<string | null>(null)
   const [columnDialog, setColumnDialog] = useState<DatasetColumn | 'new' | null>(null)
+  const [gridFilter, setGridFilter] = useState<{ id: string; seq: number; filters: DatasetFilters } | null>(null)
   const current = dataset?.id === id ? dataset : null
   const manageable = !!current && canManageDataset(me, current)
   const manageNote = editable && !manageable ? t('dataset.manageOnly') : undefined
@@ -221,7 +223,8 @@ export function DatasetsPage() {
           </div>
           {csvError && <Alert variant="destructive" className="mx-4"><AlertDescription>{csvError}</AlertDescription></Alert>}
           {csvNotice?.id === current.id && <p role="status" className="px-4 text-sm text-muted-foreground">{t('dataset.csvImported', { count: csvNotice.count })}</p>}
-          <div className="border-t"><DatasetGrid key={current.id} dataset={current} editable={editable} reloadDataset={reloadDataset} /></div>
+          <div className="border-t"><DatasetGrid key={`${current.id}-${gridFilter?.id === current.id ? gridFilter.seq : 0}`} dataset={current} editable={editable}
+            reloadDataset={reloadDataset} initialFilters={gridFilter?.id === current.id ? gridFilter.filters : undefined} /></div>
           <Dialog open={schemaId === current.id} onOpenChange={open => { if (!open) setSchemaId(null) }}>
             <DialogContent showCloseButton={false} className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-3xl" onCloseAutoFocus={event => {
               event.preventDefault()
@@ -285,7 +288,12 @@ export function DatasetsPage() {
         saveDataset(data)
       }} />}
     {current && columnDialog && <DatasetColumnDialog dataset={current} column={columnDialog === 'new' ? undefined : columnDialog}
-      onClose={() => setColumnDialog(null)} onSave={data => { setDataset(data); setColumnDialog(null) }} />}
+      onClose={() => setColumnDialog(null)} onSave={data => { setDataset(data); setColumnDialog(null) }}
+      onShowDuplicates={({ field, value }) => {
+        setColumnDialog(null)
+        setSchemaId(null)
+        setGridFilter(previous => ({ id: current.id, seq: (previous?.seq ?? 0) + 1, filters: { mode: 'and', rules: [{ field, op: 'eq', value }] } }))
+      }} />}
     {current && ownerId === current.id && <DatasetOwnerDialog dataset={current} onClose={() => setOwnerId(null)}
       onSave={data => { saveDataset(data); setOwnerId(null) }} />}
     {current && accessId === current.id && <DatasetAccessDialog dataset={current} scope={scopeName(current)} onClose={() => setAccessId(null)} />}
