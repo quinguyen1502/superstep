@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ChannelLogo } from '@/components/approvals/channel-logo'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api } from '@/lib/api'
@@ -59,7 +59,7 @@ export function ChatTriggersDialog({ wid, open, onOpenChange }: { wid?: string; 
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="sm:max-w-2xl max-h-[90dvh] flex flex-col overflow-hidden" id="chat-triggers-dialog">
       <DialogHeader className="shrink-0"><DialogTitle>{t('chatTriggers.title')}</DialogTitle><DialogDescription>{t(form.event ? 'eventBinding.description' : 'chatTriggers.desc')}</DialogDescription></DialogHeader>
-      <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-1">
+      <DialogBody className="space-y-4">
         {err && <Alert variant="destructive"><AlertCircle /><AlertDescription>{err}</AlertDescription></Alert>}
         <div className="space-y-2" id="chat-trigger-list">
           {items.map(c => <div key={c.id} data-testid="chat-trigger-row" data-name={c.name} className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm">
@@ -128,7 +128,7 @@ export function ChatTriggersDialog({ wid, open, onOpenChange }: { wid?: string; 
           </div></>}
         </div>
         <p className="text-xs text-muted-foreground">{t(form.event ? 'eventBinding.replyHelp' : 'chatTriggers.help')}</p>
-      </div>
+      </DialogBody>
     </DialogContent>
     {confirmDel.dialog}
   </Dialog>

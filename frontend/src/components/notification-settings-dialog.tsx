@@ -2,7 +2,7 @@ import { ShieldAlert, TriangleAlert } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { api } from '@/lib/api'
@@ -26,15 +26,15 @@ export function NotificationSettingsDialog({ open, onOpenChange }: { open: boole
     <Switch id={`notify-pref-${k}`} checked={!!prefs?.[k]} disabled={!prefs || disabled || readOnly} onCheckedChange={v => save(k, v)} />
   </div>
   return <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="sm:max-w-md" id="notify-settings-dialog">
+    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-md" id="notify-settings-dialog">
       <DialogHeader><DialogTitle>{t('notifyPrefs.title')}</DialogTitle><DialogDescription>{t('notifyPrefs.description')}</DialogDescription></DialogHeader>
-      <div className="space-y-3">
+      <DialogBody className="space-y-3">
         {readOnly && <Alert variant="warning" id="notify-read-only"><ShieldAlert /><AlertDescription>{t('demo.readOnly')}</AlertDescription></Alert>}
         {row('in_app')}
         {row('email')}
         {prefs && !prefs.email_configured && <Alert variant="warning" id="notify-email-off"><TriangleAlert /><AlertDescription>{t('notifyPrefs.emailNotConfigured')}</AlertDescription></Alert>}
         {err && <Alert variant="destructive"><AlertDescription>{err}</AlertDescription></Alert>}
-      </div>
+      </DialogBody>
     </DialogContent>
   </Dialog>
 }

@@ -5,7 +5,7 @@ import json
 from time import time
 from uuid import uuid4
 
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -72,25 +72,25 @@ class DatasetRowRepository:
         with self.datasets.db.session() as session:
             return session.get(DatasetRow, (dataset_id, row_id))
 
-    def query(self, dataset_id: str, *, filters: list[RowFilter], search: str | None,
-              search_columns: list[DatasetColumn], sort: DatasetColumn | None, descending: bool,
+    def query(self, dataset_id: str, *, filters: list[RowFilter], filter_mode: str, search: str | None,
+              search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
               limit: int, offset: int) -> list[DatasetRow]:
         postgres = self.datasets.db.engine.dialect.name == "postgresql"
-        query = select(DatasetRow).where(
-            DatasetRow.dataset_id == dataset_id, *(_predicate(spec, dataset_id, postgres) for spec in filters),
-        )
+        query = select(DatasetRow).where(DatasetRow.dataset_id == dataset_id)
+        if filters:
+            combine = or_ if filter_mode == "or" else and_
+            query = query.where(combine(*(_predicate(spec, dataset_id, postgres) for spec in filters)))
         if search:
             if not search_columns:
                 return []
             query = query.where(or_(*(_contains(_column_value(column), search, postgres) for column in search_columns)))
-        if sort is not None:
+        order = []
+        for sort, descending in sorts:
             expression = _column_value(sort)
             if sort.kind not in {"number", "boolean"}:
                 expression = expression.collate("C" if postgres else "BINARY")
-            order = (expression.desc() if descending else expression.asc()).nulls_last()
-            query = query.order_by(order, DatasetRow.id)
-        else:
-            query = query.order_by(DatasetRow.created, DatasetRow.id)
+            order.append((expression.desc() if descending else expression.asc()).nulls_last())
+        query = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id)
         with self.datasets.db.session() as session:
             return list(session.scalars(query.limit(limit).offset(offset)))
 

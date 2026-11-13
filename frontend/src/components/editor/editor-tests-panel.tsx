@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { JsonEditor } from '@/components/json-editor'
 import { Tip } from '@/components/tip'
@@ -221,7 +221,7 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
     <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl" id="test-dialog">
       <DialogHeader className="shrink-0"><DialogTitle className="flex items-center gap-2"><FlaskConical className="size-4" />{t(value?.id ? 'tests.editTitle' : 'tests.addTitle')}</DialogTitle>
         <DialogDescription>{t('tests.dialogDesc')}</DialogDescription></DialogHeader>
-      <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
+      <DialogBody className="space-y-4">
         <div className="space-y-1.5"><Label htmlFor="test-name">{t('tests.name')}</Label><Input id="test-name" value={name} onChange={e => setName(e.target.value)} maxLength={120} /></div>
         <div className="space-y-1.5"><Label htmlFor="test-input">{t('tests.input')}</Label><JsonEditor id="test-input" value={input} onChange={setInput} className="h-32" /></div>
         {humans.length > 0 && <div className="space-y-2"><Label>{t('tests.answers')}</Label><p className="text-xs text-muted-foreground">{t('tests.answersHelp')}</p>
@@ -265,7 +265,7 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
           <Button size="sm" variant="outline" data-testid="check-add" onClick={() => setChecks(cs => [...cs, blank('field')])}><Plus />{t('tests.addCheck')}</Button>
         </div>
         {err && <Alert variant="destructive"><AlertDescription data-testid="test-dialog-error">{err}</AlertDescription></Alert>}
-      </div>
+      </DialogBody>
       <DialogFooter className="shrink-0"><Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
         <Button id="test-save" onClick={save} disabled={busy || !name.trim()}>{busy && <Loader2 className="animate-spin" />}{t('common.save')}</Button></DialogFooter>
     </DialogContent>

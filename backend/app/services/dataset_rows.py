@@ -64,16 +64,19 @@ class DatasetRowService:
         return _response(row, _active_columns(dataset))
 
     def query(self, uid: str, dataset_id: str, *, filters: list[dict], fields: list[str] | None,
-              search: str | None, sort: str | None, descending: bool, limit: int, offset: int) -> dict:
+              search: str | None, sort: str | None, descending: bool, limit: int, offset: int,
+              filter_mode: str = "and", sorts: list[dict] | None = None) -> dict:
         dataset = self.datasets.definition(uid, dataset_id)
         columns = _active_columns(dataset)
         projection = columns if fields is None else {field: _column(columns, field) for field in fields}
         if search and INVALID_TEXT.search(search):
             raise AppError("DATASET_FILTER_INVALID", field="search")
+        if sorts is None:
+            sorts = [{"field": sort, "descending": descending}] if sort else []
         rows = self.rows.query(
-            dataset.id, filters=[_filter(columns, **spec) for spec in filters], search=search,
+            dataset.id, filters=[_filter(columns, **spec) for spec in filters], filter_mode=filter_mode, search=search,
             search_columns=[column for column in columns.values() if column.kind in TEXT_KINDS],
-            sort=_column(columns, sort) if sort else None, descending=descending, limit=limit + 1, offset=offset,
+            sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts], limit=limit + 1, offset=offset,
         )
         items = []
         remaining = MAX_PAGE_BYTES

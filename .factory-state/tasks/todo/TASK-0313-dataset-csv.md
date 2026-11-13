@@ -33,7 +33,7 @@ CSV services, routes and Studio actions for new and existing datasets.
 
 ## Dependencies
 
-[TASK-0311](../done/TASK-0311-dataset-rows.md), [TASK-0312](TASK-0312-dataset-studio-grid.md)
+[TASK-0311](../done/TASK-0311-dataset-rows.md), [TASK-0312](../done/TASK-0312-dataset-studio-grid.md)
 
 ## Acceptance Criteria
 
