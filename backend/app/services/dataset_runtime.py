@@ -6,7 +6,7 @@ from ..core.errors import AppError
 from ..engine import dataset_nodes
 from ..repositories.dataset_rows import WorkflowWrite
 from ..schemas.dataset import DatasetRowIn, DatasetRowQuery, DatasetRowUpsert
-from .dataset_access import DatasetAccessService
+from .dataset_access import DatasetAccessService, can_read
 from .dataset_rows import DatasetRowService, _active_columns, _column
 
 
@@ -62,7 +62,7 @@ class DatasetRuntimeService:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
         did, operation, fields = binding["dataset_id"], binding["operation"], binding["fields"]
         deleting = operation == "delete_row"
-        dataset, workflow, _ = self.access.workflow_dataset(
+        dataset, workflow, grant = self.access.workflow_dataset(
             actor, workflow_id, did, "read" if deleting else dataset_nodes.ACCESS[operation],
             public=public, deleting=deleting,
         )
@@ -113,4 +113,11 @@ class DatasetRuntimeService:
             arguments={"operation": operation, "fields": fields, **args}, fence=fence,
             run_workflow_id=root_workflow_id, actor_id=actor,
         )
-        return self.rows.save(owner, dataset.id, **args, fields=fields, workflow=receipt, dry_run=simulate)
+        readable, projection = can_read(grant.permission), fields
+        if "filter_ops" in binding:
+            # The model sees row values only through Find. An Agent write outcome carries identifiers
+            # unless the tool can also Find and the grant can read.
+            readable = readable and "find_rows" in (binding.get("operations") or [])
+            projection = fields if readable else []
+        return self.rows.save(owner, dataset.id, **args, fields=projection, workflow=receipt, dry_run=simulate,
+                              readable=readable)
