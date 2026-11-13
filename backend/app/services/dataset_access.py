@@ -29,6 +29,11 @@ def _allows(permission: str, operation: str) -> bool:
     return operation in OPERATIONS and permission in {operation, "read_write"}
 
 
+def can_read(permission: str) -> bool:
+    """Whether a grant or token may see cell values. Write-only callers get row identifiers only."""
+    return _allows(permission, "read")
+
+
 def _token_payload(token: DatasetApiToken) -> dict:
     return {"id": token.id, "name": token.name, "permission": token.permission,
             "allow_delete": token.allow_delete, "prefix": token.prefix, "created": token.created}

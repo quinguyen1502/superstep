@@ -24,7 +24,7 @@ def graph(name, node, *, waiting=False):
 
 def dataset_node(did, operation, arguments, fields=None):
     return {"id": "dataset", "type": "dataset", "data": {
-        "dataset_id": did, "operation": operation, "arguments": arguments, "fields": fields or ["ticket"],
+        "dataset_id": did, "operation": operation, "arguments": arguments, "fields": ["ticket"] if fields is None else fields,
         "output_field": "result",
     }}
 
@@ -74,7 +74,10 @@ def test_dataset_runtime_write_lookup_permissions_and_dry_run(client):
     }, ["ticket", "score", "done"])))
     args = {"workflow_id": writer, "input": {"ticket": "A", "score": 0, "done": False}}
     assert_error(run(client, args), "DATASET_GRANT_DENIED")
-    grant(client, did, writer, "write")
+    grant(client, did, writer, "write")  # write-only: returning fields would read the row
+    assert_error(run(client, args), "DATASET_GRANT_DENIED")
+    assert call(client, "POST", f"/api/datasets/{did}/rows/query", body={})["items"] == []
+    grant(client, did, writer, "read_write")
     output = final(run(client, args))
     assert output["inserted"] is True
     assert output["row"]["values"] == {"ticket": "A", "score": 0, "done": False}
@@ -213,7 +216,7 @@ def test_worker_replays_dataset_write_after_commit_before_progress(client, db, m
     from app.repositories.runs import StaleLease
 
     did = dataset_fixture(client)
-    writer = graph("Scheduled", dataset_node(did, "insert_row", {"values": {"ticket": "{{state.ticket}}"}}))
+    writer = graph("Scheduled", dataset_node(did, "insert_row", {"values": {"ticket": "{{state.ticket}}"}}, []))
     wid = save(client, writer)
     grant(client, did, wid, "write")
     svc = deps.run_service()
@@ -253,13 +256,13 @@ def test_worker_replays_dataset_write_after_commit_before_progress(client, db, m
     monkeypatch.setattr(svc.dataset_runtime, "execute", real_execute)
     events.clear()
     assert asyncio.run(svc.execute(resumed, send, listen, "owner")) == "ok"
-    assert final(events)["row"]["id"] == row["id"]
+    assert final(events)["row"] == {"id": row["id"], "revision": 1}
     assert call(client, "POST", url, body={})["items"] == [row]
 
 
 def test_debug_run_keeps_dry_run_after_human_resume(client):
     did = dataset_fixture(client)
-    wid = save(client, graph("Debug writer", dataset_node(did, "insert_row", {"values": {"ticket": "Debug"}}), waiting=True))
+    wid = save(client, graph("Debug writer", dataset_node(did, "insert_row", {"values": {"ticket": "Debug"}}, []), waiting=True))
     grant(client, did, wid, "write")
     paused = run(client, {"workflow_id": wid, "steps": 1})
     assert paused[-1]["status"] == "waiting"
