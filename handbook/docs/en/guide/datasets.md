@@ -20,6 +20,11 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
   date, datetime, email, or select. A column can be required or unique. The
   key stays the same when you rename the label, so workflow mappings keep
   working.
+- Required is chosen when you add a column. Unique can be turned on later in
+  **Edit column**, for example after importing a CSV without a key. Studio
+  first checks the existing rows. If some rows share a value, it shows how many
+  and links to those rows so you can fix them. Unique cannot be turned off
+  while a workflow uses the field to find rows for Upsert or Delete row.
 - The grid edits rows. A save sends the row revision. If someone else saved
   first, Studio asks you to reload instead of overwriting that edit.
 - Removing a dataset, column, or grant asks you to type the item's name.

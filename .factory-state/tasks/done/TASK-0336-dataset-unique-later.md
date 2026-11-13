@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0336
 - Title: Make an existing Dataset column unique
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -45,6 +45,8 @@ A manager can turn on (and off) unique for an existing column after a duplicate 
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Plan: [PLAN-0018](../../artifacts/PLAN-0018-dataset-phase1-fixes.md)
+- Review: [REV-0321](../../artifacts/REV-0321-TASK-0336-dataset-unique-later.md)
+- QA: [QA-0321](../../artifacts/QA-0321-TASK-0336-dataset-unique-later.md)
 
 ## Dependencies
 
@@ -72,7 +74,9 @@ A manager can turn on (and off) unique for an existing column after a duplicate 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+- 2026-11-13: Owner accepted REQ-0100 and PLAN-0018 and asked for the fix tasks to run in parallel streams. Branched `factory/task-0336-dataset-unique-later` from `origin/develop` at `1740e49b` and merged the accepted planning branch `factory/plan-dataset-fixes-phase3` so the lifecycle files exist. Unique can be turned on after a duplicate check that backfills row keys under the writer lock, and turned off after a binding check. Review REV-0321. QA QA-0321. Moved to done.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0336-dataset-unique-later` from `develop` when implementation begins.
+- Branch `factory/task-0336-dataset-unique-later` from `origin/develop` at `1740e49b`, plus a merge of `factory/plan-dataset-fixes-phase3`. Ready PR into `develop`; merge when every required check is green.
+- The binding check reads saved workflow graphs. Exported projects that call the connected API with an upsert key cannot be seen; their writes fail with `DATASET_UPSERT_KEY_INVALID` after unique is turned off.
