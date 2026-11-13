@@ -46,6 +46,8 @@
 | `BAD_REQUEST` | 400 | Bad request |
 | `NOT_FOUND` | 404 | Resource not found |
 | `DATASET_GRANT_DENIED` | 403 | The workflow does not have the required dataset grant |
+| `DATASET_MANAGE_DENIED` | 403 | Only the dataset owner or an admin can change its schema, access, or tokens, or delete it |
+| `DATASET_OWNER_INVALID` | 400 | The new owner must be a member of the dataset's team who can manage resources |
 | `DATASET_TOKEN_NOT_FOUND` | 404 | Dataset token not found |
 | `DATASET_RECEIPT_CONFLICT` | 409 | The dataset write key was already used with different arguments |
 | `DATASET_NODE_ARGUMENTS_INVALID` | 400 | Invalid arguments or binding for the Dataset node |
