@@ -43,3 +43,27 @@ export function fromDraft({ optionsText, ...column }: ColumnDraft): DatasetColum
   return { ...column, key: column.key.trim(), label: column.label.trim(),
     options: column.kind === 'select' ? optionsText.split('\n').map(option => option.trim()).filter(Boolean) : [] }
 }
+
+export const datasetOperations = ['find_rows', 'get_row', 'insert_row', 'upsert_row'] as const
+export type DatasetOperation = (typeof datasetOperations)[number]
+export type DatasetGrantPermission = 'read' | 'write' | 'read_write'
+
+export const datasetWriteOperation = (operation?: DatasetOperation) => operation === 'insert_row' || operation === 'upsert_row'
+
+export type DatasetNodeConfig = {
+  dataset_id?: string
+  operation?: DatasetOperation
+  fields?: string[]
+  output_field?: string
+  arguments?: {
+    values?: Record<string, CellValue>
+    key?: string
+    row_id?: string
+    limit?: number
+    offset?: number
+    search?: string | null
+    filter_mode?: 'and' | 'or'
+    filters?: { field: string; op: string; value: CellValue }[]
+    sorts?: { field: string; descending: boolean }[]
+  }
+}

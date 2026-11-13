@@ -105,6 +105,8 @@ function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; met
       <span className={cn('rounded p-0.5', m.color)}><I className="size-3" /></span>
       <span className={cn('truncate font-medium shrink-0 max-w-[45%]', s.status === 'error' && 'text-destructive')}>{s.label}</span>
       {s.iter > 1 && !s.agent && <Badge variant="secondary" size="sm">#{s.iter}</Badge>}
+      {s.type === 'dataset' && Object.values(s.output ?? {}).some(value => (value as { dry_run?: boolean } | null)?.dry_run === true)
+        && <Badge variant="secondary" size="sm" data-testid="span-dataset-dry-run">{t('datasetNode.dryRunBadge')}</Badge>}
       {s.code?.runtime === 'subprocess' && <Badge variant="warning" size="sm" data-testid="span-unisolated">{t('code.runtimeLabel', { runtime: s.code.runtime })}</Badge>}
       {s.browser?.status && !s.agent && <Badge variant="outline" size="sm" data-testid="span-browser-status">{t(`chat.browser.status.${s.browser.status}`)}</Badge>}
       {s.agent ? <AgentSummary a={s.agent} /> : <span className="truncate shrink-0 max-w-[25%] text-muted-foreground font-mono text-[10px]">{s.node}</span>}

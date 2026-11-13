@@ -1,4 +1,47 @@
 {
+  "datasetNode": {
+    "dataset": "Dataset",
+    "chooseDataset": "Choose a dataset",
+    "operation": "Operation",
+    "unavailable": "Dataset unavailable",
+    "rebind": "Choose a dataset for this node. Imported templates need a local binding.",
+    "saveForGrant": "Save this workflow, then grant it access from the dataset’s Access menu.",
+    "grantMissing": {
+      "read": "Grant this workflow read access from the dataset’s Access menu.",
+      "write": "Grant this workflow write access from the dataset’s Access menu."
+    },
+    "openDataset": "Open dataset",
+    "chooseFirst": "Choose a dataset in Settings to configure the mapping.",
+    "operations": {
+      "find_rows": "Find rows",
+      "get_row": "Get row",
+      "insert_row": "Insert row",
+      "upsert_row": "Upsert row"
+    },
+    "literal": "Literal value",
+    "template": "State template",
+    "mappingMode": "Input source for {{label}}",
+    "missingFields": "These fields are missing from the selected dataset: {{fields}}.",
+    "removeMissing": "Remove missing mappings",
+    "maxRows": "Maximum rows",
+    "upsertKey": "Unique match field",
+    "uniqueRequired": "Upsert needs a column with the Unique constraint.",
+    "mappedFields": "Fields to write",
+    "returnFields": "Fields to return",
+    "dryRunBadge": "Dry run",
+    "dryRun": "Tests, debug runs and unsaved edits simulate writes. Save the workflow and run it normally to write to the dataset.",
+    "filterOps": {
+      "eq": "Equals",
+      "ne": "Does not equal",
+      "lt": "Less than",
+      "lte": "At most",
+      "gt": "Greater than",
+      "gte": "At least",
+      "is_null": "Is empty",
+      "not_null": "Is not empty",
+      "contains": "Contains"
+    }
+  },
   "dataset": {
     "title": "Datasets",
     "navigation": "Studio navigation",
@@ -421,6 +464,7 @@
     "join": "Wait for all parallel branches",
     "subgraph": "Run another saved workflow",
     "retriever": "Search a knowledge base",
+    "dataset": "Find or write rows in a dataset",
     "mcp": "Call a tool on an MCP server",
     "foreach": "Repeat a branch for each list item",
     "decision": "Ask TypeSafe Jev typed questions",
