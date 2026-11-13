@@ -28,6 +28,11 @@ def dataset_access(dataset_id: str, user=Depends(current_user), svc=Depends(data
     return svc.list(user["id"], dataset_id)
 
 
+@router.get("/{dataset_id}/access/grants/{workflow_id}")
+def dataset_grant_status(dataset_id: str, workflow_id: str, user=Depends(current_user), svc=Depends(dataset_access_service)):
+    return svc.grant_status(user["id"], dataset_id, workflow_id)
+
+
 @router.put("/{dataset_id}/access/grants/{workflow_id}")
 def grant_dataset(dataset_id: str, workflow_id: str, body: DatasetGrantInput,
                   user=Depends(current_user), svc=Depends(dataset_access_service)):

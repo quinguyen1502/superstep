@@ -1,4 +1,47 @@
 {
+  "datasetNode": {
+    "dataset": "Tập dữ liệu",
+    "chooseDataset": "Chọn tập dữ liệu",
+    "operation": "Thao tác",
+    "unavailable": "Tập dữ liệu không khả dụng",
+    "rebind": "Chọn tập dữ liệu cho node này. Mẫu đã nhập cần liên kết với tập dữ liệu tại đây.",
+    "saveForGrant": "Lưu quy trình rồi cấp quyền trong menu Quyền truy cập của tập dữ liệu.",
+    "grantMissing": {
+      "read": "Cấp quyền đọc cho quy trình trong menu Quyền truy cập của tập dữ liệu.",
+      "write": "Cấp quyền ghi cho quy trình trong menu Quyền truy cập của tập dữ liệu."
+    },
+    "openDataset": "Mở tập dữ liệu",
+    "chooseFirst": "Chọn tập dữ liệu trong phần Cài đặt để cấu hình ánh xạ.",
+    "operations": {
+      "find_rows": "Tìm dòng",
+      "get_row": "Lấy dòng",
+      "insert_row": "Thêm dòng",
+      "upsert_row": "Thêm hoặc cập nhật dòng"
+    },
+    "literal": "Giá trị cố định",
+    "template": "Mẫu biến trạng thái",
+    "mappingMode": "Nguồn giá trị cho {{label}}",
+    "missingFields": "Tập dữ liệu đã chọn thiếu các trường sau: {{fields}}.",
+    "removeMissing": "Bỏ ánh xạ trường bị thiếu",
+    "maxRows": "Số dòng tối đa",
+    "upsertKey": "Trường duy nhất dùng để đối chiếu",
+    "uniqueRequired": "Thao tác thêm hoặc cập nhật cần một cột có ràng buộc duy nhất.",
+    "mappedFields": "Trường cần ghi",
+    "returnFields": "Trường trả về",
+    "dryRunBadge": "Chạy thử",
+    "dryRun": "Chạy kiểm thử, gỡ lỗi và thay đổi chưa lưu chỉ mô phỏng thao tác ghi. Lưu quy trình và chạy bình thường để ghi vào tập dữ liệu.",
+    "filterOps": {
+      "eq": "Bằng",
+      "ne": "Không bằng",
+      "lt": "Nhỏ hơn",
+      "lte": "Không quá",
+      "gt": "Lớn hơn",
+      "gte": "Ít nhất",
+      "is_null": "Để trống",
+      "not_null": "Không trống",
+      "contains": "Chứa"
+    }
+  },
   "dataset": {
     "title": "Tập dữ liệu",
     "navigation": "Điều hướng Studio",
@@ -421,6 +464,7 @@
     "join": "Chờ mọi nhánh song song",
     "subgraph": "Chạy một workflow đã lưu",
     "retriever": "Tìm trong kho tri thức",
+    "dataset": "Tìm hoặc ghi dòng trong tập dữ liệu",
     "mcp": "Gọi công cụ trên máy chủ MCP",
     "foreach": "Lặp nhánh cho từng phần tử",
     "decision": "Hỏi TypeSafe Jev, nhận câu trả lời có kiểu",

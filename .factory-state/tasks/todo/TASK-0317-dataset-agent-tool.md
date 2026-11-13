@@ -33,7 +33,7 @@ Read-only Dataset tool plus its editor configuration and run trace support.
 
 ## Dependencies
 
-[TASK-0315](../done/TASK-0315-dataset-node-runtime.md), [TASK-0316](TASK-0316-dataset-node-editor.md)
+[TASK-0315](../done/TASK-0315-dataset-node-runtime.md), [TASK-0316](../done/TASK-0316-dataset-node-editor.md)
 
 ## Acceptance Criteria
 

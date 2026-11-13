@@ -23,6 +23,8 @@ import { TextButton } from '@/components/text-link'
 import { ModelPicker } from '@/components/model-picker'
 import { ModelFallbackSettings } from '@/components/model-fallback-settings'
 import { SubgraphSettings } from '@/components/subgraph-settings'
+import { DatasetNodeData, DatasetNodeSettings } from '@/components/datasets/dataset-node-settings'
+import { useDatasetNodeBinding } from '@/components/datasets/use-dataset-node-binding'
 import { RetrieverSettings } from '@/components/retriever-settings'
 import { McpSettings } from '@/components/mcp-settings'
 import { BrowserRecipeSettings, BrowserRecipeData } from '@/components/browser-recipe-config'
@@ -50,9 +52,9 @@ import { StateFieldPicker } from '@/components/state-field-action'
  *  Execution: how it runs (retry, timeout, cache, limits). A tab a node does not use stays in its place, disabled. */
 const CONFIG_TABS = ['general', 'settings', 'data', 'execution'] as const
 type ConfigTab = typeof CONFIG_TABS[number]
-const FIELD_PICKERS = new Set(['email', 'decision', 'condition', 'foreach'])  // state fields picked besides RUNTIME's input fields
+const FIELD_PICKERS = new Set(['email', 'decision', 'condition', 'foreach', 'dataset'])  // state fields picked besides RUNTIME's input fields
 const LIMITS = new Set(['foreach'])  // an execution limit without RUNTIME's retry / timeout / cache
-const WRITERS = new Set(['llm', 'tool', 'human', 'retriever', 'mcp', 'agent'])  // output_field required (backend engine/validator.py)
+const WRITERS = new Set(['llm', 'tool', 'human', 'retriever', 'mcp', 'agent', 'dataset'])  // output_field required (backend engine/validator.py)
 
 /** Right panel: config of the selected node or edge. */
 export function EditorConfig() {
@@ -71,10 +73,11 @@ export function EditorConfig() {
   const chatCreds = creds.filter(c => (providers.find(p => p.id === c.provider)?.kind ?? 'chat') === 'chat')  // TypeSafe keys: Decision nodes; SMTP: Send email
   const tpl = { fields: state, readOnly: !edit, placeholder: t('template.placeholder', { open: '{{' }) }
   const type = selNode?.type || ''
+  const datasetBinding = useDatasetNodeBinding(type === 'dataset' ? d.dataset_id : undefined, wid)
   const node = !!selNode && type !== 'note'
   const runtime = RUNTIME.has(type)
   const has: Record<ConfigTab, boolean> = { general: true, settings: type !== 'end', data: type === 'start' || runtime || FIELD_PICKERS.has(type), execution: runtime || LIMITS.has(type) }
-  const issue: Record<ConfigTab, boolean> = { general: false, settings: type === 'agent' && !(Array.isArray(d.tools) && d.tools.length), data: WRITERS.has(type) && !d.output_field, execution: false }
+  const issue: Record<ConfigTab, boolean> = { general: false, settings: (type === 'agent' && !(Array.isArray(d.tools) && d.tools.length)) || (type === 'dataset' && (!d.dataset_id || !!datasetBinding?.error)), data: (WRITERS.has(type) && !d.output_field) || (type === 'dataset' && !d.fields?.length), execution: false }
   const enabled = CONFIG_TABS.filter(k => has[k])
   const active = enabled.includes(tab) ? tab : enabled[0]
   const output = <F label={t('field.outputField')}><StateFieldPicker value={d.output_field} onChange={v => upd('output_field', v)} options={fieldNames} /></F>
@@ -132,6 +135,8 @@ export function EditorConfig() {
       <F label={t('field.reference')}><Input readOnly value={d.ref || ''} className="font-mono text-xs" /></F>
       <F label={t('field.source')}><pre className="h-72 w-full overflow-auto rounded-md border bg-muted/50 p-2 text-[11px] leading-relaxed whitespace-pre">{d.source}</pre></F>
     </>}
+    {type === 'dataset' && selNode && <DatasetNodeSettings key={selNode.id} data={d} binding={datasetBinding}
+      disabled={!edit} onChange={patch => mark(selNode.id, patch)} />}
     {type === 'retriever' && <>
       <RetrieverSettings kb={d.knowledge_base_id} topK={d.top_k} onKb={v => upd('knowledge_base_id', v)} onTopK={v => upd('top_k', v)} />
       <F label={t('field.queryTemplate', { field: '{{state.field}}' })}><TemplateEditor {...tpl} rows={3} id="retriever-query" value={d.query || ''} onChange={v => upd('query', v)} /></F>
@@ -152,6 +157,8 @@ export function EditorConfig() {
     {type === 'start' && <BrowserRecipeData value={browserRecipe} fields={state} onChange={setBrowserRecipe} />}
     {isBrowser && selNode && <BrowserMcpData data={d} fields={state} observations={observations} recipe={!!browserRecipe} readOnly={!edit} onChange={patch => mark(selNode.id, patch)} />}
     {['llm', 'human', 'tool', 'retriever', 'mcp'].includes(type) && output}
+    {type === 'dataset' && selNode && <DatasetNodeData key={`${selNode.id}-${d.operation}`} data={d} binding={datasetBinding}
+      state={state} disabled={!edit} onChange={patch => mark(selNode.id, patch)} />}
     {type === 'agent' && selNode && <AgentData data={d} fields={state} readOnly={!edit} fieldNames={fieldNames} listFields={state.filter(f => f.type === 'list').map(f => f.name)} onChange={p => mark(selNode.id, p)} />}
     {type === 'email' && selNode && <EmailData data={d} fields={state} onChange={p => mark(selNode.id, p)} />}
     {type === 'decision' && selNode && <DecisionData data={d} fields={state} onChange={p => mark(selNode.id, p)} />}

@@ -20,11 +20,13 @@ class DatasetRuntimeService:
                 self._authoring_access(actor, binding)
 
     def _authoring_access(self, actor: str, binding: dict):
-        if not dataset_nodes.valid(binding):
+        did, operation = binding.get("dataset_id"), binding.get("operation")
+        if not isinstance(did, str) or not 0 < len(did) <= 100:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
-        did, operation = binding["dataset_id"], binding["operation"]
-        write = dataset_nodes.ACCESS[operation] == "write"
+        write = operation in ("insert_row", "upsert_row")
         definition = self.access.datasets.editable_definition(actor, did, None) if write else self.access.datasets.definition(actor, did)
+        if not dataset_nodes.valid(binding):
+            return  # the normal graph validator reports incomplete draft configuration
         columns = _active_columns(definition)
         args = binding.get("arguments") or {}
         references = [

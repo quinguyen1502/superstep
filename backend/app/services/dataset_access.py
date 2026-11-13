@@ -60,6 +60,12 @@ class DatasetAccessService:
             "tokens": [_token_payload(token) for token in self.repo.tokens(dataset.id)],
         }
 
+    def grant_status(self, uid: str, dataset_id: str, workflow_id: str) -> dict:
+        dataset = self.datasets.definition(uid, dataset_id)
+        workflow = self.access.workflow(workflow_id, uid, P.VIEW)
+        grant = self.repo.grant(dataset.id, workflow.id) if self._in_scope(dataset, workflow) else None
+        return {"permission": grant.permission if grant else None}
+
     def grant(self, uid: str, dataset_id: str, workflow_id: str, permission: str) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         workflow = self.access.workflow(workflow_id, uid, P.SHARE)

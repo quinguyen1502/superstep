@@ -19,6 +19,7 @@ META.subgraph = { label: 'Subgraph', icon: NODE_ICONS.subgraph, color: 'bg-node-
 META.subgraph_exit = META.subgraph
 META.mcp = { label: 'MCP tool', icon: NODE_ICONS.mcp, color: 'bg-node-mcp-muted text-node-mcp', accent: 'bg-node-mcp' }
 META.retriever = { label: 'Retriever', icon: NODE_ICONS.retriever, color: 'bg-node-retriever-muted text-node-retriever', accent: 'bg-node-retriever' }
+META.dataset = { label: 'Dataset', icon: NODE_ICONS.dataset, color: 'bg-node-retriever-muted text-node-retriever', accent: 'bg-node-retriever' }
 META.foreach = { label: 'For each', icon: NODE_ICONS.foreach, color: 'bg-node-foreach-muted text-node-foreach', accent: 'bg-node-foreach' }
 META.decision = { label: 'Decision (Jev)', icon: NODE_ICONS.decision, color: 'bg-node-decision-muted text-node-decision', accent: 'bg-node-decision' }
 META.email = { label: 'Send email', icon: NODE_ICONS.email, color: 'bg-node-email-muted text-node-email', accent: 'bg-node-email' }
@@ -30,7 +31,7 @@ META.agent_tool = { ...META.agent, icon: NODE_ICONS.agent_tool }
 META.agent_exit = META.agent
 META.agent_join = { ...META.agent, icon: NODE_ICONS.agent_join }
 META.agent_handoff = { ...META.agent, icon: NODE_ICONS.agent_handoff }
-export const TYPES = ['start', 'llm', 'agent', 'decision', 'retriever', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
+export const TYPES = ['start', 'llm', 'agent', 'decision', 'retriever', 'dataset', 'tool', 'mcp', 'email', 'condition', 'foreach', 'human', 'join', 'subgraph', 'end']
 export const INSERTABLE = TYPES.filter(t => t !== 'start' && t !== 'end')
 export const RUNTIME = new Set(['llm', 'agent', 'retriever', 'tool', 'mcp', 'human', 'decision'])
 /** Reducers per field type: how parallel writes combine. */
@@ -55,6 +56,7 @@ export const DEFAULTS: Record<string, any> = {
   foreach: { label: 'For each', items_field: '', item_field: '', index_field: '', max_items: 100 },
   human: { label: 'Approval', prompt: '', output_field: '' },
   mcp: { label: 'MCP tool', server_id: '', tool: '', arguments: {}, output_field: '' },
+  dataset: { label: 'Dataset', dataset_id: '', operation: 'find_rows', fields: [], arguments: { limit: 10, filters: [] }, output_field: '' },
   retriever: { label: 'Retriever', knowledge_base_id: '', query: '{{state.message}}', top_k: 4, output_field: '' },
   join: { label: 'Join' }, subgraph: { label: 'Subgraph', workflow_id: '' }, // response (text, or approved / rejected) goes to output_field
 }

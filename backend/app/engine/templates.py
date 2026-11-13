@@ -7,7 +7,7 @@ FORMAT, VERSION = "superstep/template", 1
 FORMATS = (FORMAT, "langgraph-studio/template")  # files exported by v0.1.0 still import
 
 # node data fields that point at per-user resources or secrets: never copied into a template
-REF_FIELDS = ("credential_id", "knowledge_base_id", "server_id", "channel_id", "workflow_id")
+REF_FIELDS = ("credential_id", "knowledge_base_id", "server_id", "channel_id", "workflow_id", "dataset_id")
 SECRET_KEYS = ("headers", "api_key", "secret", "token", "password", "authorization")
 
 

@@ -3,7 +3,7 @@ import { previewLayout, type Template } from '@/lib/templates'
 /** Static thumbnail of a template graph: node colours come from the --node-* theme vars (strict shadcn). */
 const FILL: Record<string, string> = {
   start: 'fill-node-start', end: 'fill-node-end', llm: 'fill-node-llm', tool: 'fill-node-tool', condition: 'fill-node-condition', code: 'fill-node-code',
-  human: 'fill-node-human', join: 'fill-node-join', mcp: 'fill-node-mcp', retriever: 'fill-node-retriever', subgraph: 'fill-node-subgraph', foreach: 'fill-node-foreach', decision: 'fill-node-decision', email: 'fill-node-email',
+  human: 'fill-node-human', join: 'fill-node-join', mcp: 'fill-node-mcp', retriever: 'fill-node-retriever', dataset: 'fill-node-retriever', subgraph: 'fill-node-subgraph', foreach: 'fill-node-foreach', decision: 'fill-node-decision', email: 'fill-node-email',
 }
 
 export function TemplatePreview({ tpl, w = 240, h = 96 }: { tpl: Pick<Template, 'nodes' | 'edges'>; w?: number; h?: number }) {
