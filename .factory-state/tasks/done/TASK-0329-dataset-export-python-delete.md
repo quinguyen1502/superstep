@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0329
 - Title: Add Python standalone delete and Agent writes
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
@@ -46,6 +46,8 @@ Make an exported Python project delete rows and perform Agent writes with the sa
 - Design: [DES-0007](../../artifacts/DES-0007-datasets.md)
 - Architecture: [ARCH-0003](../../artifacts/ARCH-0003-datasets.md)
 - Decisions: [DEC-0098](../../decisions/DEC-0098-dataset-delete-and-public.md)
+- Review: [REV-0313](../../artifacts/REV-0313-TASK-0329-dataset-export-python-delete.md)
+- QA: [QA-0313](../../artifacts/QA-0313-TASK-0329-dataset-export-python-delete.md)
 - Discovery:
 - Clarifications:
 
@@ -91,7 +93,11 @@ Make an exported Python project delete rows and perform Agent writes with the sa
 ## Activity Log
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
+- 2026-11-13: Branched `factory/task-0329-dataset-export-python-delete` on TASK-0328. Added standalone Delete row, Agent insert and upsert in the exported Python runtime, manifest operations for Agent writes, and the Python export doc. Review REV-0313. QA QA-0313. Moved to done.
 
 ## Handoff Notes
 
-- Start from `develop` after TASK-0325 and TASK-0327 merge, on `factory/task-0329-dataset-export-python-delete`.
+- `dataset_standalone` supports `delete_row` under the writer lock with a receipt; a missed delete stores none.
+- `dataset_agent` takes the tool's operations, write fields, and key. The generated tool node derives one operation ID per model call from the step's checkpoint namespace and the call id.
+- The exported offline mock model fills enums and Dataset write values like the Studio mock.
+- TASK-0330 mirrors this in the TypeScript runtime.

@@ -18,7 +18,7 @@ The output is a pure function of its input: the same graph gives the same bytes.
 from __future__ import annotations
 import ast, builtins, inspect, io, json, keyword, re, tokenize
 from typing import Any, Dict, List, Optional
-from . import agents, approval_policy, attachments, foreach
+from . import agents, approval_policy, attachments, dataset_nodes, foreach
 from .browser_export import PY_RUNTIME, export_binding
 from .dataset_export import DatasetExport
 from .dataset_export_runtime import PY_DATASET
@@ -448,8 +448,17 @@ def mock_agent(messages: list, tools: Optional[list], model: str) -> tuple:
             params = best.get("parameters") or {}
             props, required = params.get("properties") or {}, set(params.get("required") or [])
             empty = {"number": 0, "integer": 0, "boolean": False, "array": [], "object": {}}
-            args = {k: task if (v or {}).get("type", "string") == "string" else empty.get((v or {}).get("type"))
-                    for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+            text = lambda v: v.get("type", "string") == "string" or (isinstance(v.get("type"), list) and "string" in v["type"])  # noqa: E731
+
+            def value(v: dict):  # the task text, the first enum value, or an object of text properties
+                if v.get("enum"): return v["enum"][0]
+                if text(v): return task
+                if v.get("type") == "object" and v.get("properties"):
+                    return {k: value(p or {}) for k, p in v["properties"].items() if text(p or {})}
+                return empty.get(v.get("type"))
+            args = {k: value(v or {}) for k, v in props.items() if k in required or (v or {}).get("type", "string") == "string"}
+            if args.get("operation") in ("insert_row", "upsert_row") and isinstance(props.get("values"), dict):
+                args["values"] = value(props["values"])  # a Dataset write tool: the mock writes the task text
             calls.append({"id": f"mock_call_{i}", "name": best["name"], "args": args})
         return "", calls
     said = (results[-1].get("content") or "") if results else (task.strip().splitlines() or [""])[-1]
@@ -1091,7 +1100,7 @@ class _Writer(GraphWriter):
             self.tool(g, nid, cls, head, ret)
         elif t == "dataset":
             operation = d.get("operation")
-            write = operation in {"insert_row", "upsert_row"}
+            write = operation in {"insert_row", "upsert_row", "delete_row"}
             config = ", config: RunnableConfig" if write else ""
             key = ", dataset_operation_id(config)" if write else ""
             self.add(f"{const}_ARGUMENTS = {lit(d.get('arguments') or {})}")
@@ -1391,7 +1400,7 @@ class _Writer(GraphWriter):
         self.agent_calls(d, name, const, cls)
         self.add("")
         self.add("")
-        self.add(f"def {tool}(state: {cls}) -> dict:")
+        self.add(f"def {tool}(state: {cls}{', config: RunnableConfig' if self.dataset_writes(d) else ''}) -> dict:")
         self.add(f'    """{_doc(who)}: runs the tool calls waiting from the model and gives the results back, in the model\'s order.')
         self.add(f"    With {const}_PARALLEL on, up to wave_cap() calls run together. A failure becomes that call's result;")
         self.add("    the others still finish.")
@@ -1413,6 +1422,9 @@ class _Writer(GraphWriter):
             self.add("            break")
         self.add("    batch, chat[\"pending\"] = pending[:n], pending[n:]")
         dataset_tools = [tool["name"] for tool in d.get("tools") or [] if isinstance(tool, dict) and tool.get("source") == "dataset"]
+        writes = self.dataset_writes(d)
+        if writes:
+            self.add("    step_id = dataset_operation_id(config)  # one receipt per model call: this step plus the call id")
         self.add("    def one(call: dict) -> tuple:")
         if dataset_tools:
             self.add(f"        dataset = call[\"name\"] in {lit(dataset_tools)}")
@@ -1441,8 +1453,12 @@ class _Writer(GraphWriter):
         self.add("        else:")
         self.add("            try:")
         if dataset_tools:
-            self.add(f"                value = call_{name}_tool(call[\"name\"], call[\"args\"], state)")
-            self.add("                count = len(value[\"rows\"]) if dataset else None")
+            if writes:
+                self.add("                operation_id = hashlib.sha256((step_id + \"#\" + str(call[\"id\"])).encode()).hexdigest()")
+                self.add(f"                value = call_{name}_tool(call[\"name\"], call[\"args\"], state, operation_id)")
+            else:
+                self.add(f"                value = call_{name}_tool(call[\"name\"], call[\"args\"], state)")
+            self.add("                count = (len(value[\"rows\"]) if \"rows\" in value else 1) if dataset else None")
             self.add("                status, result = \"ok\", tool_text(value)")
         else:
             self.add(f"                status, result = \"ok\", tool_text(call_{name}_tool(call[\"name\"], call[\"args\"], state))")
@@ -1454,7 +1470,11 @@ class _Writer(GraphWriter):
         self.add("                \"ms\": round((time.perf_counter() - started) * 1000, 2)}")
         if dataset_tools:
             self.add("        if dataset:")
-            self.add("            step.update(args={}, result=\"\", dataset={\"count\": count})")
+            if writes:
+                self.add("            operation = call[\"args\"].get(\"operation\") if isinstance(call[\"args\"], dict) else None")
+                self.add("            step.update(args={}, result=\"\", dataset={\"count\": count, **({\"operation\": operation} if operation in (\"insert_row\", \"upsert_row\") else {})})")
+            else:
+                self.add("            step.update(args={}, result=\"\", dataset={\"count\": count})")
         if approval:
             self.add("        if answer is not None:")
             self.add("            step[\"approval\"] = \"rejected\" if status == \"rejected\" else \"approved\"")
@@ -1492,11 +1512,17 @@ class _Writer(GraphWriter):
         bound = f"bind_browser_url({lit(binding)}, {prepared}, state)"
         return f"browser_call({lit(info.get('alias') or '')}, {lit(tool)}, {bound}, state)"
 
+    @staticmethod
+    def dataset_writes(d: dict) -> bool:
+        """Whether an Agent node has a Dataset tool that may insert or upsert rows."""
+        return any(isinstance(t, dict) and t.get("source") == "dataset"
+                   and dataset_nodes.agent_writes(dataset_nodes.agent_binding(t)) for t in d.get("tools") or [])
+
     def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
         """call_<agent>_tool(): what each of the Agent node's tools does."""
         self.add("")
         self.add("")
-        self.add(f"def call_{name}_tool(name: str, args: dict, state: {cls}) -> Any:")
+        self.add(f"def call_{name}_tool(name: str, args: dict, state: {cls}{', operation_id: str | None = None' if self.dataset_writes(d) else ''}) -> Any:")
         self.add("    \"\"\"Runs the tool the model asked for with the model's arguments.\"\"\"")
         for t in d.get("tools") or []:
             if not isinstance(t, dict): continue
@@ -1509,7 +1535,13 @@ class _Writer(GraphWriter):
                     self.add(f"        # TODO: the function {lit(fn)} is not registered on this server any more.")
                     self.add(f"        raise LookupError({lit(f'tool {tname}: the function {fn} is not registered on the Superstep server any more: add it to this file')})")
             elif src == "dataset":
-                self.add(f"        return dataset_agent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args)")
+                binding = dataset_nodes.agent_binding(t)
+                head = f"dataset_agent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args"
+                if dataset_nodes.agent_writes(binding):
+                    writes = {key: binding[key] for key in ("operations", "write_fields", "key") if key in binding}
+                    self.add(f"        return {head}, {lit(writes)}, operation_id)")
+                else:
+                    self.add(f"        return {head})")
             elif src == "knowledge":
                 self.add(f"        return retrieve({lit(self.kb_prefix(t))}, str(args.get(\"query\") or \"\"), top_k={_number(t.get('top_k'), int) or 4})")
             elif src == "mcp":

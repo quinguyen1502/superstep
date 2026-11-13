@@ -35,11 +35,18 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
             referenced.update(rule["field"] for name in ("filters", "sorts") for rule in args.get(name, []))
             if operation == "delete_row" and "key" in args:
                 referenced.add(args["key"])
+            agent_writes = dataset_nodes.agent_writes(binding) if "filter_ops" in binding else []
+            if agent_writes:
+                referenced.update(binding["write_fields"])
             if absent := sorted(referenced - columns.keys()):
                 raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=absent[0])
             if operation in {"upsert_row", "delete_row"} and "key" in args and not columns[args["key"]]["unique"]:
                 raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
+            if "upsert_row" in agent_writes and not columns[binding["key"]]["unique"]:
+                raise AppError("DATASET_UPSERT_KEY_INVALID", field=binding["key"])
+            used = binding.get("operations", [operation]) if "filter_ops" in binding else [operation]
             operations = contract["operations"]
-            if operation not in operations:
-                operations.append(operation)
+            for name in used:
+                if name not in operations:
+                    operations.append(name)
     return out
