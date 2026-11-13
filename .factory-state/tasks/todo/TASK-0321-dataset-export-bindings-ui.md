@@ -33,7 +33,7 @@ A guided export flow in both languages, generated README and environment templat
 
 ## Dependencies
 
-[TASK-0316](../done/TASK-0316-dataset-node-editor.md), [TASK-0319](TASK-0319-dataset-export-python-standalone.md), [TASK-0320](TASK-0320-dataset-export-typescript-standalone.md)
+[TASK-0316](../done/TASK-0316-dataset-node-editor.md), [TASK-0319](../done/TASK-0319-dataset-export-python-standalone.md), [TASK-0320](TASK-0320-dataset-export-typescript-standalone.md)
 
 ## Acceptance Criteria
 

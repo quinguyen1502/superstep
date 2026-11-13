@@ -1,14 +1,8 @@
-import json
-
-from ..core.dataset_types import INVALID_TEXT, TEXT_KINDS, filter_operators, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, WorkflowWrite
 from .dataset_service import DatasetService
-
-MAX_ROW_BYTES = 65_536
-MAX_PAGE_BYTES = 1_048_576
-
 
 def _active_columns(dataset: Dataset) -> dict[str, DatasetColumn]:
     return {column.key: column for column in dataset.columns if not column.archived}
@@ -23,10 +17,6 @@ def _column(columns: dict[str, DatasetColumn], field: str) -> DatasetColumn:
 def _normalize(column: DatasetColumn, value, *, required: bool | None = None):
     return normalize_cell(column.key, column.kind, value, column.options,
                           required=column.required if required is None else required)
-
-
-def _size(payload: dict) -> int:
-    return len(json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode())
 
 
 def _response(row: DatasetRow, columns) -> dict:
@@ -92,7 +82,7 @@ class DatasetRowService:
         remaining = MAX_PAGE_BYTES
         for row in rows[:limit]:
             item = _response(row, projection)
-            remaining -= _size(item)
+            remaining -= dataset_size(item)
             if remaining < 0:
                 break
             items.append(item)
@@ -121,7 +111,7 @@ class DatasetRowService:
                     result[field] = incoming[field]
                 elif field not in result:
                     result[field] = _normalize(column, column.default_value) if previous is None else None
-            if _size(result) > MAX_ROW_BYTES:
+            if dataset_size(result) > MAX_ROW_BYTES:
                 raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
             return result
 

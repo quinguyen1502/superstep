@@ -52,7 +52,7 @@ def target(client):
             requests.append(request)
             result = client.post(self.path, headers={"Authorization": self.headers["Authorization"], "Content-Type": "application/json"}, content=raw)
             # The receiver commits the first write, then a gateway loses its response.
-            if len(requests) == 1 and result.status_code == 200:
+            if len(requests) == 1 and request["operation"] in {"insert_row", "upsert_row"} and result.status_code == 200:
                 self.send_response(503)
                 self.end_headers()
                 return
@@ -131,7 +131,7 @@ def test_exported_project_runs_against_connected_dataset(client, target, tmp_pat
     wid = save(client, workflow(source["id"]))
     folder = project(client, wid, language, tmp_path, source["id"], destination["id"], issued["token"], url)
     missing = run(folder)
-    assert missing.returncode and "DATASET_1_BACKEND=superstep" in missing.stderr
+    assert missing.returncode and "DATASET_1_BACKEND" in missing.stderr
     settings = {"DATASET_1_BACKEND": "superstep", "DATASET_1_API_URL": url,
                 "DATASET_1_ID": destination["id"], "DATASET_1_API_TOKEN": issued["token"]}
     output = run(folder, **settings)

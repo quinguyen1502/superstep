@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0319
 - Title: Standalone SQLite and PostgreSQL for Python export
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-12
-- Updated: 2026-11-12
+- Updated: 2026-11-13
 - Requirement IDs: REQ-0097
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -55,13 +55,21 @@ Run the applicable full Factory profile and repository gates. Capture review and
 - [Decision](../../decisions/DEC-0097-dataset-grid-and-export.md)
 - [Plan](../../artifacts/PLAN-0016-datasets.md)
 
+- [Review](../../artifacts/REV-0304-TASK-0319-dataset-export-python-standalone.md)
+- [QA](../../artifacts/QA-0304-TASK-0319-dataset-export-python-standalone.md)
+
 ## Open Questions
 
 None blocking. Use the plan and architecture boundaries for implementation choices.
 
 ## Activity Log
 
+- 2026-11-13: Owner approved finish and merge. Moved to done. Review REV-0304. QA QA-0304.
 - 2026-11-12: Created during owner-approved requirements planning.
+
+- 2026-11-13: Started on the connected export stack at PR #374.
+
+- 2026-11-13: Ran the generated projects against SQLite and PostgreSQL 17.11 and moved to review.
 
 ## Handoff Notes
 

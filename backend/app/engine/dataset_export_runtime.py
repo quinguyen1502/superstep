@@ -10,9 +10,10 @@ def dataset_operation_id(config: RunnableConfig) -> str:
 def dataset_call(binding: str, operation: str, fields: list[str], arguments: dict, operation_id: str | None = None) -> dict:
     if binding not in DATASET_BINDINGS:
         raise RuntimeError("DATASET_BINDING_MISSING: configure the Dataset in Studio before exporting")
-    backend, address, token, dataset_id = (os.getenv(f"{binding}_{suffix}") for suffix in ("BACKEND", "API_URL", "API_TOKEN", "ID"))
+    backend = dataset_backend(binding)
     if backend != "superstep":
-        raise RuntimeError(f"DATASET_BINDING_MISSING: set {binding}_BACKEND=superstep")
+        return dataset_standalone(binding, backend, operation, fields, arguments, operation_id)
+    address, token, dataset_id = (os.getenv(f"{binding}_{suffix}") for suffix in ("API_URL", "API_TOKEN", "ID"))
     if not address or not token or not dataset_id:
         raise RuntimeError(f"DATASET_BINDING_MISSING: set {binding}_API_URL, {binding}_API_TOKEN and {binding}_ID")
     try:

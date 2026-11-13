@@ -2,9 +2,9 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..core.dataset_types import CellValue, ColumnKind, FilterOperator
+from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, FilterOperator
 
-ColumnKey = Annotated[str, Field(pattern=r"^[a-z][a-z0-9_]{0,62}$")]
+ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]
 Label = Annotated[str, Field(min_length=1, max_length=120)]
 Option = Annotated[str, Field(min_length=1, max_length=120)]
 
