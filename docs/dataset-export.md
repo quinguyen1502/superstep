@@ -4,7 +4,9 @@ A Python or TypeScript project that uses Dataset nodes or Agent tools includes `
 
 ## Superstep API
 
-For a connected binding, set `_BACKEND` to `superstep`. Set `_API_URL` to the base URL of the destination Superstep server, `_ID` to the destination dataset ID, and `_API_TOKEN` to a Dataset token issued for that dataset. The token needs read permission for Find rows and Get row, and write permission for Insert row and Upsert row. Delete row also needs a token issued with delete allowed. An Agent tool uses read permission for Find rows and write permission when it may insert or upsert rows. Use an HTTPS server URL for deployments and a separate destination dataset when running write examples.
+For a connected binding, set `_BACKEND` to `superstep`. Set `_API_URL` to the base URL of the destination Superstep server, `_ID` to the destination dataset ID, and `_API_TOKEN` to a Dataset token issued for that dataset. The token needs read permission for Find rows and Get row, and write permission for Insert row and Upsert row. Delete row also needs a token issued with delete allowed. An Agent tool uses read permission for Find rows and write permission when it may insert or upsert rows.
+
+A token with write but not read permission receives identifiers only. Insert row and Upsert row then return `{"row": {"id": "...", "revision": 1}, "inserted": true}` with no `values`, including when a receipt is replayed. Such a token must send `"fields": []`; a non-empty `fields` list returns `403 DATASET_GRANT_DENIED` and nothing is written. `fields` may be empty only for Insert row and Upsert row, where it asks for identifiers only for any token. Upsert still reports `inserted: false` when the key exists, so a write-only token can learn whether a key value is present; use Insert row when that must stay hidden. An upsert that leaves every value unchanged keeps the row's `revision` and `updated` time. Use an HTTPS server URL for deployments and a separate destination dataset when running write examples.
 
 ### Wire format
 
@@ -28,7 +30,7 @@ Set `_BACKEND` to the chosen value. Install the requirements, export the environ
 
 The startup check reports `DATASET_SETUP_REQUIRED` when a database or binding has not been initialized. `DATASET_BINDING_SCHEMA_MISMATCH` identifies a binding whose stored schema differs from the export. Setup rejects incompatible changes and preserves the stored schema and rows. Standalone retries with the same operation ID and arguments return the previously stored result.
 
-Delete row takes the same writer lock as Insert row and Upsert row, removes the row and its unique keys, and stores a receipt. A row that is already gone returns `DATASET_ROW_NOT_FOUND` and stores no receipt. An Agent tool that may insert or upsert rows sends only its configured write fields. Each model call gets its own operation ID, so a retried graph step replays the call and a later call writes again.
+Delete row takes the same writer lock as Insert row and Upsert row, removes the row and its unique keys, and stores a receipt. A row that is already gone returns `DATASET_ROW_NOT_FOUND` and stores no receipt. An Agent tool that may insert or upsert rows sends only its configured write fields, and it receives row values only when it can also Find rows. Otherwise the model gets the row id and whether the row was inserted. Each model call gets its own operation ID, so a retried graph step replays the call and a later call writes again.
 
 ## TypeScript standalone
 

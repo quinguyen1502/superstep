@@ -96,6 +96,10 @@ def test_python_standalone_runs_generated_project_and_replays_receipts(client, d
         exported["setup_datasets"](create=True)
     changed_column["kind"] = "text"
     assert len(query(["ticket"])["items"]) == 2
+    ids_only = call("DATASET_1", "insert_row", [], {"values": {"ticket": "IdsOnly"}}, "ids-only")
+    assert ids_only["inserted"] and set(ids_only["row"]) == {"id", "revision"}
+    with pytest.raises(RuntimeError, match="DATASET_NODE_ARGUMENTS_INVALID"):
+        query([])
     monkeypatch.setenv("DATASET_1_BACKEND", "mysql")
     malformed = run_cli(script)
     assert malformed.returncode and "DATASET_1_BACKEND" in malformed.stderr
@@ -247,6 +251,7 @@ def test_generated_python_agent_writes_and_connected_delete(client, db, monkeypa
         with pytest.raises(ValueError):
             agent("DATASET_1", ["ticket"], {}, 1, args, writes, "call-1")
     first = agent("DATASET_1", ["ticket"], {}, 1, {"operation": "upsert_row", "values": {"ticket": "TK-10"}}, writes, "call-2")
+    assert set(first) == {"row_id", "inserted"}  # a tool that cannot Find gets identifiers only
     assert first["inserted"] and agent("DATASET_1", ["ticket"], {}, 1, {"operation": "upsert_row", "values": {"ticket": "TK-10"}},
                                        writes, "call-2") == first
     with pytest.raises(ValueError):

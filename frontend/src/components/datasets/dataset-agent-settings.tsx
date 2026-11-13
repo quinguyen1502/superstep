@@ -113,6 +113,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
           <DatasetFieldIcon kind={column.kind} />{column.label}
         </Label>)}
         {!validFields.length && <p className="text-xs text-destructive">{t('datasetTool.fieldsRequired')}</p>}
+        {writes && !finds && <p className="text-xs text-muted-foreground">{t('datasetTool.writeWithoutFind')}</p>}
       </fieldset>
       {finds && <fieldset className="space-y-1.5">
         <legend className="mb-2 text-sm font-medium">{t('datasetTool.filterPermissions')}</legend>

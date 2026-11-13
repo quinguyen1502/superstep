@@ -79,9 +79,14 @@ def dataset_agent(binding: str, fields: list[str], allowed: dict, limit: int, ar
             if values.get(writes["key"]) is None:
                 raise ValueError("DATASET_UPSERT_KEY_INVALID")
             arguments["key"] = writes["key"]
-        result = dataset_call(binding, operation, fields, arguments, operation_id or uuid.uuid4().hex)
+        # As in Studio, the model sees row values only through a tool that can also Find rows.
+        readable = "find_rows" in operations
+        result = dataset_call(binding, operation, fields if readable else [], arguments, operation_id or uuid.uuid4().hex)
         row = result["row"]
-        return {"row_id": row["id"], "inserted": result["inserted"], "values": row["values"]}
+        outcome = {"row_id": row["id"], "inserted": result["inserted"]}
+        if readable and "values" in row:
+            outcome["values"] = row["values"]
+        return outcome
     if args.keys() - {"filters", "operation"}:
         raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
     filters = args.get("filters", [])
