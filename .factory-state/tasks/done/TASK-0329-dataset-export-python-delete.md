@@ -94,6 +94,8 @@ Make an exported Python project delete rows and perform Agent writes with the sa
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
 - 2026-11-13: Branched `factory/task-0329-dataset-export-python-delete` on TASK-0328. Added standalone Delete row, Agent insert and upsert in the exported Python runtime, manifest operations for Agent writes, and the Python export doc. Review REV-0313. QA QA-0313. Moved to done.
+- 2026-11-13: Merged TASK-0328 and `develop` (TASK-0332). Exported Agent writes now return identifiers only unless the tool can Find rows. Resolved the shared connected-section conflict in `docs/dataset-export.md`.
+
 
 ## Handoff Notes
 

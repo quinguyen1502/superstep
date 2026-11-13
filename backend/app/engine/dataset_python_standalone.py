@@ -346,7 +346,9 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
         except sa.exc.IntegrityError:
             raise AppError("DATASET_UNIQUE_CONFLICT") from None
     stored = connection.execute(query.where(DATASET_ROWS.c.id == row_id)).mappings().one()
-    result = {"row": dataset_row_payload(stored, fields), "inserted": row is None}
+    # An empty field list asks for identifiers only, the shape a write-only connected token receives.
+    outcome = dataset_row_payload(stored, fields) if fields else {"id": stored["id"], "revision": stored["revision"]}
+    result = {"row": outcome, "inserted": row is None}
     connection.execute(receipts.insert().values(dataset_id=dataset_id, operation_id=operation_id,
                                                 fingerprint=fingerprint, result=result))
     return result
@@ -403,7 +405,7 @@ def dataset_standalone(binding: str, backend: str, operation: str, fields: list[
     columns = dataset_contract(binding)["columns"]
     allowed = DATASET_OPERATION_INPUTS.get(operation)
     if (allowed is None or not isinstance(arguments, dict) or set(arguments) - set(allowed)
-            or not fields or len(fields) != len(set(fields))):
+            or (not fields and operation not in {"insert_row", "upsert_row"}) or len(fields) != len(set(fields))):
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     for field in fields:
         dataset_column(columns, field)

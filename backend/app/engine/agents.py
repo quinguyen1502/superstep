@@ -212,7 +212,9 @@ def dataset_result(page: dict) -> tuple[str, int]:
     """Keep complete rows in the model message, within the shared result budget."""
     if "row" in page:  # an insert or upsert outcome
         row = page["row"]
-        outcome = {"row_id": row.get("id"), "inserted": page.get("inserted"), "values": row.get("values") or {}}
+        outcome = {"row_id": row.get("id"), "inserted": page.get("inserted")}
+        if "values" in row:  # absent when the tool may not read the dataset
+            outcome["values"] = row["values"]
         if page.get("dry_run"):
             outcome["simulated"] = True
         return shorten(json.dumps(outcome, ensure_ascii=False), RESULT_CHARS), 1
