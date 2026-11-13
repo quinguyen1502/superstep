@@ -5,14 +5,18 @@ import json
 from time import time
 from uuid import uuid4
 
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..core.dataset_types import CellValue
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
+from ..models.dataset_access import DatasetWorkflowGrant
+from ..models.dataset_receipt import DatasetWriteReceipt
+from ..models.run import Run
 from .datasets import DatasetRepository
+from .runs import StaleLease
 
 MAX_DATASET_ROWS = 25_000
 
@@ -21,6 +25,22 @@ def key_digest(value: CellValue) -> str:
     if isinstance(value, float) and value.is_integer():
         value = int(value)
     return sha256(json.dumps(value, ensure_ascii=True, separators=(",", ":")).encode()).hexdigest()
+
+
+@dataclass(frozen=True)
+class WorkflowWrite:
+    run_id: str
+    workflow_id: str
+    operation_id: str
+    arguments: dict
+    fence: int | None = None
+    run_workflow_id: str | None = None
+    actor_id: str | None = None
+
+    @property
+    def fingerprint(self) -> str:
+        encoded = json.dumps([self.workflow_id, self.arguments], ensure_ascii=True, separators=(",", ":"), sort_keys=True, allow_nan=False)
+        return sha256(encoded.encode()).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -105,15 +125,38 @@ class DatasetRowRepository:
             session.commit()
         except IntegrityError as exc:
             constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
+            if constraint == "uq_dataset_write_identity" or "UNIQUE constraint failed: dataset_write_receipts.scope" in str(exc.orig):
+                raise AppError("DATASET_RECEIPT_CONFLICT") from exc
             if constraint == "dataset_row_keys_pkey" or "UNIQUE constraint failed: dataset_row_keys." in str(exc.orig):
                 raise AppError("DATASET_UNIQUE_CONFLICT") from exc
             raise
 
     def save(self, uid: str, dataset: Dataset, build_values: Callable[[dict | None], dict], *,
              row_id: str | None = None, revision: int | None = None,
-             match: tuple[str, CellValue] | None = None) -> tuple[DatasetRow, bool]:
+             match: tuple[str, CellValue] | None = None, workflow: WorkflowWrite | None = None) -> tuple[DatasetRow, bool, bool]:
         with self.datasets.db.session() as session:
+            if workflow and workflow.fence is not None:
+                checked = session.execute(update(Run).where(
+                    Run.id == workflow.run_id, Run.workflow_id == (workflow.run_workflow_id or workflow.workflow_id),
+                    Run.lease_gen == workflow.fence,
+                ).values(lease_gen=Run.lease_gen))
+                if checked.rowcount != 1:
+                    raise StaleLease(workflow.run_id)
             self.datasets.lock(session, uid, dataset.id, dataset.revision)
+            if workflow:
+                grant = session.get(DatasetWorkflowGrant, (dataset.id, workflow.workflow_id))
+                if grant is None or grant.permission not in {"write", "read_write"}:
+                    raise AppError("DATASET_GRANT_DENIED")
+                fingerprint = workflow.fingerprint
+                scope = f"run:{workflow.run_id}"
+                previous = session.scalar(select(DatasetWriteReceipt).where(
+                    DatasetWriteReceipt.scope == scope, DatasetWriteReceipt.operation_id == workflow.operation_id,
+                ))
+                if previous is not None:
+                    if previous.dataset_id != dataset.id or previous.fingerprint != fingerprint:
+                        raise AppError("DATASET_RECEIPT_CONFLICT")
+                    snapshot = previous.result
+                    return DatasetRow(dataset_id=dataset.id, **snapshot["row"]), snapshot["inserted"], True
             if match is not None:
                 field, value = match
                 key = session.get(DatasetRowKey, (dataset.id, field, key_digest(value)))
@@ -141,8 +184,13 @@ class DatasetRowRepository:
                 for column in dataset.columns
                 if column.unique and not column.archived and values.get(column.key) is not None
             )
+            if workflow:
+                result = {"row": {"id": row.id, "values": row.values, "revision": row.revision,
+                                  "created": row.created, "updated": row.updated}, "inserted": inserted}
+                session.add(DatasetWriteReceipt(dataset_id=dataset.id, scope=scope, operation_id=workflow.operation_id,
+                                                fingerprint=fingerprint, result=result, created=now))
             self._commit(session)
-            return row, inserted
+            return row, inserted, False
 
     @staticmethod
     def _clear_keys(session: Session, dataset_id: str, row_id: str) -> None:

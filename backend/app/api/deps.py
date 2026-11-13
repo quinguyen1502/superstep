@@ -18,6 +18,7 @@ from ..repositories.dataset_rows import DatasetRowRepository
 from ..repositories.datasets import DatasetRepository
 from ..services.dataset_access import DatasetAccessService
 from ..services.dataset_rows import DatasetRowService
+from ..services.dataset_runtime import DatasetRuntimeService
 from ..services.dataset_service import DatasetService
 from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
@@ -240,7 +241,8 @@ def workflow_service() -> WorkflowService:
                                           access=access_service(), shares=WorkflowShareRepository(db), users=UserRepository(db),
                                           teams=TeamRepository(db), audit=audit_service(), tests=WorkflowTestRepository(db),
                                           chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db),
-                                          jobs=get_job_queue(), export_resources=mcp_service().check_export)
+                                          jobs=get_job_queue(), export_resources=mcp_service().check_export,
+                                          dataset_runtime=dataset_runtime_service())
 
 def template_service() -> TemplateService:
     return TemplateService(TemplateRepository(get_db()), workflow_service(), access_service(), tests=workflow_test_service)
@@ -275,6 +277,10 @@ def dataset_access_service() -> DatasetAccessService:
     datasets = dataset_service()
     return DatasetAccessService(datasets, DatasetAccessRepository(datasets.repo))
 
+def dataset_runtime_service() -> DatasetRuntimeService:
+    access = dataset_access_service()
+    return DatasetRuntimeService(access, DatasetRowService(access.datasets, DatasetRowRepository(access.datasets.repo)))
+
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())
 
@@ -308,7 +314,7 @@ def run_service() -> RunService:
                       knowledge=knowledge_service(), mcp=mcp_service(), access=access_service(),
                       policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service,
                       jobs=get_job_queue,browser=browser_session_service() if config.browser_runtime_enabled() else None,
-                      usage=RunUsageRepository(db), budgets=usage_budget_service())
+                      usage=RunUsageRepository(db), budgets=usage_budget_service(), dataset_runtime=dataset_runtime_service())
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),
