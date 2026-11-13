@@ -58,8 +58,36 @@ def dataset_call(binding: str, operation: str, fields: list[str], arguments: dic
     raise RuntimeError("DATASET_TRANSPORT_ERROR: could not reach the connected Dataset")
 
 
-def dataset_agent(binding: str, fields: list[str], allowed: dict, limit: int, args: dict) -> dict:
-    if not isinstance(args, dict) or args.keys() - {"filters"}:
+def dataset_agent(binding: str, fields: list[str], allowed: dict, limit: int, args: dict,
+                  writes: dict | None = None, operation_id: str | None = None) -> dict:
+    """One Agent tool call: Find rows, or Insert row / Upsert row limited to the tool's write fields."""
+    operations = (writes or {}).get("operations") or ["find_rows"]
+    can_write = any(operation in ("insert_row", "upsert_row") for operation in operations)
+    if not isinstance(args, dict) or (not can_write and "operation" in args):
+        raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
+    operation = args.get("operation", "find_rows")
+    if operation not in operations:
+        raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
+    if operation in ("insert_row", "upsert_row"):
+        values = args.get("values")
+        if (args.keys() - {"operation", "values"} or not isinstance(values, dict) or not values
+                or any(field not in writes["write_fields"] for field in values)
+                or any(isinstance(value, (dict, list)) for value in values.values())):
+            raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
+        arguments = {"values": values}
+        if operation == "upsert_row":
+            if values.get(writes["key"]) is None:
+                raise ValueError("DATASET_UPSERT_KEY_INVALID")
+            arguments["key"] = writes["key"]
+        # As in Studio, the model sees row values only through a tool that can also Find rows.
+        readable = "find_rows" in operations
+        result = dataset_call(binding, operation, fields if readable else [], arguments, operation_id or uuid.uuid4().hex)
+        row = result["row"]
+        outcome = {"row_id": row["id"], "inserted": result["inserted"]}
+        if readable and "values" in row:
+            outcome["values"] = row["values"]
+        return outcome
+    if args.keys() - {"filters", "operation"}:
         raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
     filters = args.get("filters", [])
     if not isinstance(filters, list) or len(filters) > 12:
