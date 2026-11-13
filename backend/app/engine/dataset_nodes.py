@@ -157,7 +157,9 @@ def agent_parameters(tool: dict) -> dict:
             "type": "array", "maxItems": AGENT_MAX_FILTERS, "description": f"Match every filter. Allowed operators by field: {policies}.",
             "items": {"type": "object", "additionalProperties": False, "required": ["field", "op"], "properties": {
                 "field": {"type": "string", "enum": list(allowed)},
-                "op": {"type": "string", "enum": sorted({op for ops in allowed.values() for op in ops})},
+                "op": {"type": "string", "enum": sorted({op for ops in allowed.values() for op in ops}),
+                       "description": "eq matches the exact value, letter case included. ne also matches empty cells. "
+                                      "contains ignores letter case. is_null matches empty cells and not_null filled ones."},
                 "value": {"description": "A string, number or boolean matching the field type. Omit for is_null and not_null.",
                           "type": ["string", "number", "boolean", "null"]},
             }},

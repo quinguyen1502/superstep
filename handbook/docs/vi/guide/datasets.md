@@ -22,6 +22,11 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
 - Lưới sửa dòng. Lần lưu gửi revision của dòng. Nếu người khác đã lưu trước,
   Studio bảo bạn tải lại thay vì ghi đè sửa đổi đó.
 - Xoá tập dữ liệu, cột, hoặc quyền yêu cầu bạn gõ đúng tên mục đó.
+- **Tìm trong bảng** và bộ lọc **Chứa** không phân biệt chữ hoa chữ thường, nên
+  "webhook" cũng tìm thấy "Webhook", và "đơn" tìm thấy "ĐƠN". Sắp xếp văn bản
+  cũng không phân biệt chữ hoa chữ thường. **Bằng** và khoá duy nhất khớp đúng
+  giá trị. **Không bằng** khớp cả ô để trống. Mỗi điều kiện lọc có giải thích
+  cho toán tử của nó.
 
 Bạn cần `resources.manage` để tạo tập dữ liệu hoặc đổi lược đồ và dòng. Ai nhìn
 thấy tập dữ liệu thì đọc được dòng.
