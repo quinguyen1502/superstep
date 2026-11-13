@@ -3,7 +3,7 @@
 ## Metadata
 
 - Project: superstep
-- QA ID: QA-0317
+- QA ID: QA-0318
 - Task ID: TASK-0334
 - QA Owner: implementation QA
 - Created: 2026-11-13

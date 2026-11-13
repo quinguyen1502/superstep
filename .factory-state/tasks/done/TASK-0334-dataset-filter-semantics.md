@@ -77,7 +77,7 @@
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
-- 2026-11-13: Owner accepted REQ-0100 and PLAN-0018 and asked to implement the fixes with merge when green. Branched `factory/task-0334-dataset-filter-semantics` from `origin/develop` at `1740e49b` and merged the planning branch so the task files exist. Implemented null-safe `ne` and one case fold for contains, search, and text sort. Review REV-0317. QA QA-0317. Moved to done.
+- 2026-11-13: Owner accepted REQ-0100 and PLAN-0018 and asked to implement the fixes with merge when green. Branched `factory/task-0334-dataset-filter-semantics` from `origin/develop` at `1740e49b` and merged the planning branch so the task files exist. Implemented null-safe `ne` and one case fold for contains, search, and text sort. Review REV-0318. QA QA-0318. Moved to done.
 
 ## Handoff Notes
 
