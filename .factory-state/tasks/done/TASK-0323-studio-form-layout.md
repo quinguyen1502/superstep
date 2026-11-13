@@ -5,10 +5,12 @@
 - Project: superstep
 - Task ID: TASK-0323
 - Title: Align Studio form controls and delete confirmation
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-13
+- Review: owner approval on 2026-11-13 after the layout review in chat and green CI on PR #379. No separate REV artifact.
+- QA: GitHub checks on PR #379 passed on 27c411e3, including factory verify, backend pytest, frontend builds, and Playwright. No separate QA artifact.
 - Requirement IDs: REQ-0098
 - Design IDs: DEC-0008
 - Architecture IDs: DEC-0025
@@ -36,7 +38,7 @@ Connection counts read as a phrase. External-link icons sit before their labels.
 
 - Dataset pages and dialogs.
 - Stretching the access-token form or the team member email field.
-- Validation, review, and QA artifacts. Those follow on this same branch after the owner asks.
+- A separate review or QA artifact. The owner approved the merge from the chat review and the green checks.
 
 ## Dependencies
 
@@ -50,7 +52,7 @@ Connection counts read as a phrase. External-link icons sit before their labels.
 
 ## Validation Plan
 
-- Not run locally. GitHub CI on the draft pull request is the first check. Full `factory verify` waits until the owner asks to validate.
+- GitHub CI on 27c411e3 passed, including factory verify. This done move does not change product code.
 
 ## Assumptions
 
@@ -64,7 +66,8 @@ Connection counts read as a phrase. External-link icons sit before their labels.
 ## Activity Log
 
 - 2026-11-13: Owner asked to open the pull request after the Dataset review found no further UI changes. Implementation was already on the local tree. Reapplied it onto `origin/develop` and moved this task to review.
+- 2026-11-13: Owner asked to check CI and merge. CI on 27c411e3 was green. Moved to done on PR #379.
 
 ## Handoff Notes
 
-- Branch `factory/task-0323-studio-form-layout`. One draft pull request into `develop`. Do not merge until the owner asks.
+- Branch `factory/task-0323-studio-form-layout`. Pull request #379 into `develop`. Merge with a merge commit after the checks on this done move are green.
