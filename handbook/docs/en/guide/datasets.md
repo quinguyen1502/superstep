@@ -23,6 +23,10 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
 - The grid edits rows. A save sends the row revision. If someone else saved
   first, Studio asks you to reload instead of overwriting that edit.
 - Removing a dataset, column, or grant asks you to type the item's name.
+- **Search rows** and the **Contains** filter ignore letter case, so "webhook"
+  also finds "Webhook". This includes Vietnamese letters with diacritics. Text
+  sorts ignore letter case too. **Equals** and unique keys match the exact value. **Does not equal**
+  also matches empty cells. Each filter condition explains its operator.
 
 You need `resources.manage` to create a dataset or change its schema and rows.
 Anyone who can see the dataset can read rows.

@@ -66,6 +66,7 @@ test('Dataset node configures lookup and upsert, simulates tests and rebinds tem
   await page.getByRole('button', { name: 'Add condition' }).click()
   const condition = page.getByRole('group', { name: 'Condition 1' })
   await expectRowAligned([condition.getByRole('combobox', { name: 'Filter column' }), condition.getByRole('button', { name: 'Remove condition' })], { label: 'Dataset condition controls' })
+  await expect(condition.getByText('Matches the exact value, letter case included.')).toBeVisible()
   await condition.getByRole('textbox', { name: 'Filter value' }).fill('T-01')
   await returned.getByRole('checkbox', { name: 'Ticket', exact: true }).check()
   await pick(page, page.getByRole('combobox', { name: 'Output field' }), 'result')

@@ -6,6 +6,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from ..core import config
+from ..core.dataset_types import TEXT_FOLD_FUNCTION, fold_text
 
 try: import fcntl
 except ImportError: fcntl = None  # Windows: no file lock (single dev process)
@@ -23,6 +24,7 @@ def make_engine(url: str | None = None) -> Engine:
         @event.listens_for(eng, "connect")
         def _pragmas(dbapi_conn, _):  # same behaviour as the MVP: WAL + 15 s busy timeout
             cur = dbapi_conn.cursor(); cur.execute("PRAGMA journal_mode=WAL"); cur.close()
+            dbapi_conn.create_function(TEXT_FOLD_FUNCTION, 1, fold_text, deterministic=True)
     return eng
 
 
