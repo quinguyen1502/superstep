@@ -12,7 +12,7 @@
 
 ## Review Scope
 
-Diff for the Dataset Studio viewer, empty, and not-found states, the row delete confirmation, and the CSV issue list against REQ-0100, PLAN-0018, DES-0007, ARCH-0003, `docs/ui-conventions.md`, and the TASK-0340 acceptance criteria. Grid layout (TASK-0341) and team authority (TASK-0335) were checked to stay unchanged.
+Diff for the Dataset Studio viewer, empty, and not-found states, the row delete confirmation, and the CSV issue list against REQ-0100, PLAN-0018, DES-0007, ARCH-0003, `docs/ui-conventions.md`, and the TASK-0340 acceptance criteria. Grid layout (TASK-0341) was checked to stay unchanged. TASK-0335 merged first, and its per-dataset manage check was combined with these states.
 
 ## Reference Artifacts
 
@@ -29,7 +29,7 @@ Diff for the Dataset Studio viewer, empty, and not-found states, the row delete 
 
 ### Non-Blocking
 
-- TASK-0335 is not merged. `editable` still reads the global `resources.manage` permission, so a team manager without it sees the viewer reason. The team-manager reason is recorded as a follow-up in the task handoff.
+- Two reasons exist: the view-only reason (no `resources.manage`) and TASK-0335's manager reason (a team member who is not the dataset manager). Dataset-level controls show whichever applies, in the dataset menu and the Schema dialog; row controls follow `resources.manage` only.
 - The view-only note appears only after the current user loads, so it does not flash for managers.
 - The issue list says it shows the first issues found once the server limit of 100 is reached; issues found later can belong to earlier lines.
 
@@ -58,7 +58,7 @@ Diff for the Dataset Studio viewer, empty, and not-found states, the row delete 
 
 ## Required Follow-Up
 
-- After TASK-0335: use the per-dataset permission for `editable` and add a team-manager reason.
+- None.
 
 ## Review Decision
 

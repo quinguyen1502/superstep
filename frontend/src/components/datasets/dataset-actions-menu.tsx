@@ -18,7 +18,6 @@ export function DatasetActionsMenu({ label, remove, edit, schema, view, access, 
   triggerRef?: Ref<HTMLButtonElement>
   size?: 'icon' | 'icon-sm'
   disabled?: boolean
-  note?: string
 }) {
   return <DropdownMenu modal={false}>
     <DropdownMenuTrigger asChild>

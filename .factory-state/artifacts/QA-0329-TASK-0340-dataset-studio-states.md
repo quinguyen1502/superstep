@@ -48,7 +48,7 @@ TASK-0340 on `factory/task-0340-dataset-studio-states`. Backend tests used `back
 ## Gaps Or Untested Areas
 
 - PostgreSQL and the other E2E shards run in CI.
-- Team managers without `resources.manage` are not covered until TASK-0335 lands.
+- The team-member case is covered by `e2e/dataset-team-authority.spec.ts` from TASK-0335, rerun after the merge.
 
 ## Residual Risk
 
@@ -60,7 +60,7 @@ TASK-0340 on `factory/task-0340-dataset-studio-states`. Backend tests used `back
 
 ## Required Follow-Up
 
-- After TASK-0335: use the per-dataset permission for the disabled state and add a team-manager reason.
+- None.
 
 ## QA Decision
 
