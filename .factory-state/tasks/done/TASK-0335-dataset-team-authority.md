@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0335
 - Title: Enforce team dataset management authority
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0100
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -76,7 +76,10 @@ Only the people DEC-0100 names can change schema, delete a team dataset, manage 
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
 - 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): DEC-0100 Option A accepted; only managers issue, rotate, and revoke tokens.
+- 2026-11-14: Implemented on `factory/task-0335-dataset-team-authority`. Added `datasets.team_owner_id` (migration 0068, backfilled from the create audit event), one management check for schema, delete, grants and tokens, issuer-preserving rotation, admin-only audited ownership transfer (`PUT /api/datasets/{id}/owner`), and disabled Studio actions with an explanation. Review REV-0319. QA QA-0319. Moved to done.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0335-dataset-team-authority` from `develop` when implementation begins.
+- Branch `factory/task-0335-dataset-team-authority`, started on the TASK-0334 branch and then merged with `origin/develop` after PR #390 (normal merge). One PR into `develop`.
+- Migration `0068_dataset_team_owner` follows `0067_dataset_delete_capability`; no other open stream adds a migration.
+- Team datasets whose creator is gone, or that have no `dataset.create` audit event, get no owner and only admins manage them until an admin transfers them.

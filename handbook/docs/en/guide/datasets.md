@@ -33,8 +33,16 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
   sorts ignore letter case too. **Equals** and unique keys match the exact value. **Does not equal**
   also matches empty cells. Each filter condition explains its operator.
 
-You need `resources.manage` to create a dataset or change its schema and rows.
-Anyone who can see the dataset can read rows.
+You need `resources.manage` to create a dataset or change its rows. Anyone who
+can see the dataset can read rows.
+
+A personal dataset is managed by its owner. A team dataset is managed by the
+member who created it and by admins. Other team members with
+`resources.manage` add, edit, import, and delete rows. Only a manager edits the
+dataset, changes its columns, manages access and tokens, or deletes it. Studio
+shows these actions disabled, with an explanation, for other members. An
+admin can move a team dataset to another team member with **Transfer
+ownership** in the dataset menu.
 
 ## Access
 
@@ -44,7 +52,8 @@ it. Deleting rows is a separate capability: check **Allow row deletion** on the
 grant. Read and write alone do not allow Delete row.
 
 Issue a Dataset token for an exported project that calls the Superstep API.
-The token is shown once. Revoking it stops later calls. A token also needs
+The token is shown once. Rotating it keeps the person who issued it, so the
+new secret acts with the same authority. Revoking it stops later calls. A token also needs
 **Allow row deletion** before the project can delete rows. A person who cannot
 see the dataset gets "not found", including for CSV download.
 

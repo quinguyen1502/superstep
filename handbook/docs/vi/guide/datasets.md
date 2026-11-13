@@ -33,8 +33,16 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
   giá trị. **Không bằng** khớp cả ô để trống. Mỗi điều kiện lọc có giải thích
   cho toán tử của nó.
 
-Bạn cần `resources.manage` để tạo tập dữ liệu hoặc đổi lược đồ và dòng. Ai nhìn
-thấy tập dữ liệu thì đọc được dòng.
+Bạn cần `resources.manage` để tạo tập dữ liệu hoặc đổi dòng. Ai nhìn thấy tập
+dữ liệu thì đọc được dòng.
+
+Tập dữ liệu cá nhân do chủ sở hữu quản lý. Tập dữ liệu nhóm do thành viên đã tạo
+nó và quản trị viên quản lý. Các thành viên khác trong nhóm có
+`resources.manage` thêm, sửa, nhập và xoá dòng. Chỉ người quản lý mới sửa tập dữ
+liệu, đổi cột, quản lý quyền truy cập và token, hoặc xoá tập dữ liệu. Studio hiện
+các thao tác này ở trạng thái tắt, kèm giải thích, cho các thành viên khác. Quản
+trị viên có thể chuyển tập dữ liệu nhóm cho thành viên khác bằng **Chuyển quyền
+sở hữu** trong menu tập dữ liệu.
 
 ## Quyền truy cập
 
@@ -44,7 +52,8 @@ bảng này. Xoá dòng là một quyền riêng: chọn **Cho phép xoá dòng*
 cấp. Chỉ quyền đọc và ghi thì không được Xoá dòng.
 
 Phát hành token Tập dữ liệu cho dự án xuất ra gọi API Superstep. Token chỉ
-hiện một lần. Thu hồi token thì các lần gọi sau dừng. Token cũng cần **Cho phép
+hiện một lần. Xoay token vẫn giữ người đã phát hành, nên khoá mới có cùng quyền.
+Thu hồi token thì các lần gọi sau dừng. Token cũng cần **Cho phép
 xoá dòng** thì dự án mới xoá được dòng. Người không nhìn thấy tập dữ liệu nhận
 kết quả không tìm thấy, kể cả khi tải CSV.
 
