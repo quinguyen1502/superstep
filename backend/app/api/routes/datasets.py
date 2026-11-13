@@ -49,7 +49,7 @@ def dataset_grant_status(dataset_id: str, workflow_id: str, user=Depends(current
 @router.put("/{dataset_id}/access/grants/{workflow_id}")
 def grant_dataset(dataset_id: str, workflow_id: str, body: DatasetGrantInput,
                   user=Depends(current_user), svc=Depends(dataset_access_service)):
-    return svc.grant(user["id"], dataset_id, workflow_id, body.permission)
+    return svc.grant(user["id"], dataset_id, workflow_id, body.permission, body.allow_delete)
 
 
 @router.delete("/{dataset_id}/access/grants/{workflow_id}")
@@ -62,7 +62,7 @@ def revoke_dataset_grant(dataset_id: str, workflow_id: str,
 def issue_dataset_token(dataset_id: str, body: DatasetTokenInput, response: Response,
                         user=Depends(current_user), svc=Depends(dataset_access_service)):
     response.headers["Cache-Control"] = "no-store"
-    return svc.issue(user["id"], dataset_id, body.name, body.permission)
+    return svc.issue(user["id"], dataset_id, body.name, body.permission, body.allow_delete)
 
 
 @router.post("/{dataset_id}/access/tokens/{token_id}/rotate")

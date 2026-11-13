@@ -31,7 +31,7 @@ def _allows(permission: str, operation: str) -> bool:
 
 def _token_payload(token: DatasetApiToken) -> dict:
     return {"id": token.id, "name": token.name, "permission": token.permission,
-            "prefix": token.prefix, "created": token.created}
+            "allow_delete": token.allow_delete, "prefix": token.prefix, "created": token.created}
 
 
 class DatasetAccessService:
@@ -52,8 +52,8 @@ class DatasetAccessService:
     def list(self, uid: str, dataset_id: str) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         return {
-            "grants": [{"workflow_id": grant.workflow_id, "workflow_name": name, "permission": grant.permission}
-                       for grant, name in self.repo.grants(dataset.id)],
+            "grants": [{"workflow_id": grant.workflow_id, "workflow_name": name, "permission": grant.permission,
+                        "allow_delete": grant.allow_delete} for grant, name in self.repo.grants(dataset.id)],
             "workflows": [{"id": workflow.id, "name": workflow.name}
                           for workflow, _ in self.access.visible(uid)
                           if self.access.may(workflow.id, uid, P.SHARE) and self._in_scope(dataset, workflow)],
@@ -64,19 +64,21 @@ class DatasetAccessService:
         dataset = self.datasets.definition(uid, dataset_id)
         workflow = self.access.workflow(workflow_id, uid, P.VIEW)
         grant = self.repo.grant(dataset.id, workflow.id) if self._in_scope(dataset, workflow) else None
-        return {"permission": grant.permission if grant else None}
+        return {"permission": grant.permission if grant else None, "allow_delete": bool(grant and grant.allow_delete)}
 
-    def grant(self, uid: str, dataset_id: str, workflow_id: str, permission: str) -> dict:
+    def grant(self, uid: str, dataset_id: str, workflow_id: str, permission: str, allow_delete: bool = False) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         workflow = self.access.workflow(workflow_id, uid, P.SHARE)
         if not self._in_scope(dataset, workflow):
             raise AppError("DATASET_GRANT_DENIED")
         self.repo.set_grant(uid, dataset, DatasetWorkflowGrant(
-            dataset_id=dataset.id, workflow_id=workflow.id, permission=permission, created=time(),
+            dataset_id=dataset.id, workflow_id=workflow.id, permission=permission,
+            allow_delete=allow_delete, created=time(),
         ))
         self.datasets.audit.record(uid, "dataset.grant", "dataset", dataset.id,
-                                   workflow_id=workflow.id, permission=permission)
-        return {"workflow_id": workflow.id, "workflow_name": workflow.name, "permission": permission}
+                                   workflow_id=workflow.id, permission=permission, allow_delete=allow_delete)
+        return {"workflow_id": workflow.id, "workflow_name": workflow.name,
+                "permission": permission, "allow_delete": allow_delete}
 
     def revoke_grant(self, uid: str, dataset_id: str, workflow_id: str) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
@@ -84,17 +86,18 @@ class DatasetAccessService:
         self.datasets.audit.record(uid, "dataset.grant_revoke", "dataset", dataset.id, workflow_id=workflow_id)
         return {"ok": True}
 
-    def issue(self, uid: str, dataset_id: str, name: str, permission: str) -> dict:
+    def issue(self, uid: str, dataset_id: str, name: str, permission: str, allow_delete: bool = False) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         name = name.strip()
         if not name or INVALID_TEXT.search(name):
             raise AppError("BAD_REQUEST")
         secret = TOKEN_PREFIX + token_urlsafe(32)
         token = DatasetApiToken(id=uuid4().hex, dataset_id=dataset.id, issuer_id=uid, name=name,
-                                permission=permission, token_hash=digest(secret), prefix=secret[:10], created=time())
+                                permission=permission, allow_delete=allow_delete, token_hash=digest(secret),
+                                prefix=secret[:10], created=time())
         self.repo.add_token(uid, dataset, token)
         self.datasets.audit.record(uid, "dataset.token_issue", "dataset", dataset.id,
-                                   token_id=token.id, permission=permission)
+                                   token_id=token.id, permission=permission, allow_delete=allow_delete)
         return {**_token_payload(token), "token": secret}
 
     def rotate(self, uid: str, dataset_id: str, token_id: str) -> dict:

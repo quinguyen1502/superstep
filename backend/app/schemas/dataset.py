@@ -101,6 +101,7 @@ class DatasetGrantInput(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     permission: DatasetPermission
+    allow_delete: bool = False
 
 
 class DatasetTokenInput(DatasetGrantInput):
