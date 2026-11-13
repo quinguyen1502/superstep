@@ -266,3 +266,20 @@ def test_agent_dataset_write_authoring_checks_write_access_and_keys(client):
     for bad in ({"operations": ["delete_row"]}, {"operations": []}, {"write_fields": []}, {"key": "done"}):
         result = call(client, "POST", "/api/workflows", body=wf(tools=[write_tool(did, **bad)]))
         assert [issue["code"] for issue in result["issues"]] == ["AGENT_TOOL_DATASET"], bad
+
+
+def test_agent_dataset_filters_ignore_case_and_ne_matches_empty_cells(client, monkeypatch):
+    did = dataset_fixture(client)
+    rows = f"/api/datasets/{did}/rows"
+    for values in ({"ticket": "Webhook-1", "score": 5}, {"ticket": "WEBHOOK-2"}, {"ticket": "Other", "score": 1}):
+        call(client, "POST", rows, body={"values": values}, status=201)
+    tool = dataset_tool(did, filter_ops={"ticket": ["contains"], "score": ["ne"]}, limit=10)
+    wid = save(client, wf(tools=[tool], steps_field="steps"))
+    grant(client, did, wid, "read")
+    lookup = {"filters": [{"field": "ticket", "op": "contains", "value": "webhook"}, {"field": "score", "op": "ne", "value": 5}]}
+    seen = script(monkeypatch, [("", [tool_call(tool["name"], lookup)]), ("Finished", [])])
+    run(client, {"workflow_id": wid, "input": {"message": "Find"}})
+    response = next(message["content"] for message in seen[1][0] if message["role"] == "tool")
+    assert json.loads(response) == {"rows": [{"ticket": "WEBHOOK-2"}], "truncated": False}
+    op = seen[0][1][0]["parameters"]["properties"]["filters"]["items"]["properties"]["op"]
+    assert "ignores letter case" in op["description"] and "empty cells" in op["description"]
