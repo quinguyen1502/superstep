@@ -66,7 +66,7 @@ Prove one support-ticket path across the new operations and document the boundar
 - [TASK-0326](../done/TASK-0326-dataset-delete-editor.md)
 - [TASK-0328](../done/TASK-0328-dataset-public-entry.md)
 - [TASK-0329](../done/TASK-0329-dataset-export-python-delete.md)
-- [TASK-0330](TASK-0330-dataset-export-typescript-delete.md)
+- [TASK-0330](../done/TASK-0330-dataset-export-typescript-delete.md)
 
 ## Acceptance Criteria
 
