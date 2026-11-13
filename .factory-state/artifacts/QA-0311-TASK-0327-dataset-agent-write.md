@@ -53,6 +53,7 @@ TASK-0327 on `factory/task-0327-dataset-agent-write`. Backend tests used `backen
 
 ## Residual Risk
 
+- Known risk, unchanged by this task: a workflow with only a write grant can see existing row values through an Agent Upsert row. When the upsert matches an existing row, the tool result sent to the model contains that row's values for the tool's returned fields, including fields the call did not write. The model can repeat them in its answer. This follows the phase 1 upsert response, which returns the projected row to write-only grants and tokens. Insert row returns only the new row. The owner has not yet decided whether to fix this, so this chain does not change it.
 - Public entries still deny Agent writes until TASK-0328. Exported projects do not run Agent writes until TASK-0329 and TASK-0330.
 
 ## Assumptions
