@@ -13,6 +13,8 @@ from ..services.audit_service import AuditService
 from ..services.code_service import CodeService
 from ..services.inbox_service import InboxService
 from ..services.policy_service import PolicyService
+from ..repositories.datasets import DatasetRepository
+from ..services.dataset_service import DatasetService
 from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
 from ..core import permissions as P
@@ -257,6 +259,9 @@ def auto_approval_service() -> AutoApprovalService:
 def auto_review_service() -> AutoReviewService:
     db = get_db(); creds = credential_service()
     return AutoReviewService(ApprovalRepository(db), AutoApprovalService(SettingsRepository(db)), creds.resolve)
+
+def dataset_service() -> DatasetService:
+    return DatasetService(DatasetRepository(get_db()), access_service(), audit_service())
 
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())
