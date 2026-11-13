@@ -19,6 +19,11 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
 - Mỗi cột có nhãn, khoá ổn định, và kiểu: văn bản, số, boolean, ngày, ngày giờ,
   email, hoặc chọn. Cột có thể bắt buộc hoặc duy nhất. Khoá không đổi khi bạn
   đổi nhãn, nên ánh xạ trong workflow vẫn đúng.
+- Bắt buộc được chọn khi thêm cột. Duy nhất có thể bật sau trong **Sửa cột**,
+  ví dụ sau khi nhập CSV chưa có khoá. Studio kiểm tra các dòng hiện có trước.
+  Nếu có dòng trùng giá trị, Studio cho biết số dòng và dẫn tới các dòng đó để
+  bạn sửa. Không thể tắt Duy nhất khi còn workflow dùng trường này để tìm dòng
+  cho Upsert hoặc Xoá dòng.
 - Lưới sửa dòng. Lần lưu gửi revision của dòng. Nếu người khác đã lưu trước,
   Studio bảo bạn tải lại thay vì ghi đè sửa đổi đó.
 - Xoá tập dữ liệu, cột, hoặc quyền yêu cầu bạn gõ đúng tên mục đó.
