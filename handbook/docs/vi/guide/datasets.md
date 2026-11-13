@@ -49,6 +49,16 @@ Nơi bắt đầu lần chạy quyết định quyền đã cấp cho phép gì:
 Công cụ workflow theo lần chạy đã gọi nó. Workflow chưa lưu không dùng được tập
 dữ liệu. Gỡ quyền cũng chặn lần chạy đang chờ tiếp tục.
 
+Quyền ghi mà không có quyền đọc được chèn và upsert dòng nhưng không bao giờ
+nhận giá trị ô. Kết quả chỉ có mã dòng, revision và cho biết dòng có được thêm
+mới hay không, dù là run thật, run kiểm thử hay gỡ lỗi, hoặc lần ghi được
+thử lại. Node Tập dữ liệu có quyền chỉ ghi không chọn được trường trả về; node
+đã lưu mà vẫn yêu cầu trường sẽ lỗi `DATASET_GRANT_DENIED` trước khi ghi. Công
+cụ của Agent không có **Tìm dòng** chỉ đưa cho mô hình các mã định danh đó, kể
+cả khi có quyền đọc và ghi. Upsert vẫn cho biết đã có dòng mang khoá đó hay
+chưa. Nếu điều này cần được giữ kín, hãy dùng **Thêm dòng**. Upsert không đổi giá
+trị nào thì giữ nguyên revision và thời điểm cập nhật của dòng.
+
 ## CSV
 
 **Nhập CSV** xem trước tệp trước khi ghi.

@@ -92,6 +92,8 @@ Make an exported TypeScript project delete rows and perform Agent writes with th
 
 - 2026-11-13: Created during owner-approved planning of REQ-0099.
 - 2026-11-13: Branched `factory/task-0330-dataset-export-typescript-delete` on TASK-0329. Added standalone Delete row and Agent insert and upsert to the exported TypeScript runtime, and the TypeScript export doc. Review REV-0314. QA QA-0314. Moved to done.
+- 2026-11-13: Merged TASK-0329, which brings in TASK-0328 and `develop` with TASK-0332. Exported TypeScript Agent writes now return identifiers only unless the tool can Find rows.
+
 
 ## Handoff Notes
 

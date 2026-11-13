@@ -44,6 +44,8 @@ TASK-0329 on `factory/task-0329-dataset-export-python-delete`. Generated project
 
 - None.
 
+- After merging `develop` with TASK-0332: exported `dataset_agent` asks for no fields and returns `{row_id, inserted}` when the tool cannot Find rows, as Studio does. `pytest -q tests/test_dataset_python_standalone.py tests/test_python_export.py tests/test_dataset_project_export.py tests/test_dataset_write_only.py` — 58 passed.
+
 ## Gaps Or Untested Areas
 
 - PostgreSQL runs in CI.

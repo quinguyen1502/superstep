@@ -51,6 +51,10 @@ if (command === "bad-type") {
   } catch (error) { fail(error); }
 }
 
+if (command === "ids-only") {
+  console.log(JSON.stringify(await datasetCall("DATASET_1", "insert_row", [], { values: { ticket: "IdsOnly" } }, "ids-only")));
+}
+
 if (command === "duplicate") {
   try {
     await datasetCall("DATASET_1", "insert_row", ["ticket"], { values: { ticket: "Concurrent" } }, "duplicate");
@@ -184,6 +188,10 @@ def test_typescript_standalone_runs_generated_project_and_replays_receipts(clien
     mismatch_setup = probe(deno_env, folder, "mismatch-setup")
     assert mismatch_setup.returncode and "DATASET_BINDING_SCHEMA_MISMATCH" in mismatch_setup.stderr
     assert len(json.loads(probe(deno_env, folder, "count").stdout)["items"]) == 2
+    ids_only = probe(deno_env, folder, "ids-only")
+    assert ids_only.returncode == 0, ids_only.stderr
+    outcome = json.loads(ids_only.stdout)
+    assert outcome["inserted"] and set(outcome["row"]) == {"id", "revision"}
     monkeypatch.setenv("DATASET_1_BACKEND", "mysql")
     malformed = run_deno(deno_env, folder, script)
     assert malformed.returncode and "DATASET_1_BACKEND" in malformed.stderr
@@ -319,6 +327,7 @@ def test_generated_typescript_agent_writes_and_connected_delete(client, db, monk
     assert [request["operation"] for request in requests] == ["delete_row", "delete_row"]
     rows = json.loads(probe(deno_env, tmp_path, "count").stdout)["items"]
     assert [row["values"] for row in rows] == [{"ticket": "TK-9"}]  # two runs, one upserted row
+    assert '\\"inserted\\": false}' in result.stdout and '\\"values\\"' not in result.stdout  # identifiers only without Find
 
     def agent(identity, **args):
         return probe(deno_env, tmp_path, "agent", PROBE_ID=identity, PROBE_ARGS=json.dumps(args))

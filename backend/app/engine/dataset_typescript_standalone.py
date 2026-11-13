@@ -722,7 +722,9 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
     [datasetIdValue, rowId],
   );
   if (!stored) datasetFail("DATASET_STORAGE_ERROR", { binding });
-  const result = { inserted: !existing, row: datasetRow(stored, fields, binding) };
+  // An empty field list asks for identifiers only, the shape a write-only connected token receives.
+  const outcome = fields.length ? datasetRow(stored, fields, binding) : { id: String(stored.id), revision: Number(stored.revision) };
+  const result = { inserted: !existing, row: outcome };
   try {
     await connection.run(
       "INSERT INTO superstep_dataset_receipts (dataset_id, operation_id, fingerprint, result) VALUES (?, ?, ?, ?)",
@@ -795,7 +797,7 @@ async function datasetDelete(connection: SqlConnection, datasetIdValue: string, 
 async function datasetStandalone(binding: string, backend: string, operation: string, fields: string[], argumentsValue: Record<string, unknown>, operationId?: string): Promise<Record<string, unknown>> {
   const columns = datasetContract(binding).columns;
   const allowed = DATASET_OPERATION_INPUTS[operation];
-  if (!allowed || !plainObject(argumentsValue) || Object.keys(argumentsValue).some((key) => !allowed.includes(key)) || !fields.length || new Set(fields).size !== fields.length) {
+  if (!allowed || !plainObject(argumentsValue) || Object.keys(argumentsValue).some((key) => !allowed.includes(key)) || (!fields.length && operation !== "insert_row" && operation !== "upsert_row") || new Set(fields).size !== fields.length) {
     datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
   }
   for (const field of fields) datasetColumn(columns, field);
