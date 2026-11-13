@@ -208,9 +208,11 @@ export async function datasetAgent(binding: string, fields: string[], allowed: R
       if (values[key] === null || values[key] === undefined) throw new Error("DATASET_UPSERT_KEY_INVALID");
       request.key = key;
     }
-    const result = await datasetCall(binding, operation, fields, request, operationId ?? crypto.randomUUID().replace(/-/g, ""));
-    const row = result.row as { id: string; values: Record<string, unknown> };
-    return { row_id: row.id, inserted: result.inserted, values: row.values };
+    // As in Studio, the model sees row values only through a tool that can also Find rows.
+    const readable = operations.includes("find_rows");
+    const result = await datasetCall(binding, operation, readable ? fields : [], request, operationId ?? crypto.randomUUID().replace(/-/g, ""));
+    const row = result.row as { id: string; values?: Record<string, unknown> };
+    return readable && row.values ? { row_id: row.id, inserted: result.inserted, values: row.values } : { row_id: row.id, inserted: result.inserted };
   }
   if (Object.keys(args).some((key) => key !== "filters" && key !== "operation")) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
   const filters = Object.hasOwn(args, "filters") ? args.filters : [];

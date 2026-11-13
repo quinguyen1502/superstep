@@ -327,6 +327,7 @@ def test_generated_typescript_agent_writes_and_connected_delete(client, db, monk
     assert [request["operation"] for request in requests] == ["delete_row", "delete_row"]
     rows = json.loads(probe(deno_env, tmp_path, "count").stdout)["items"]
     assert [row["values"] for row in rows] == [{"ticket": "TK-9"}]  # two runs, one upserted row
+    assert '\\"inserted\\": false}' in result.stdout and '\\"values\\"' not in result.stdout  # identifiers only without Find
 
     def agent(identity, **args):
         return probe(deno_env, tmp_path, "agent", PROBE_ID=identity, PROBE_ARGS=json.dumps(args))

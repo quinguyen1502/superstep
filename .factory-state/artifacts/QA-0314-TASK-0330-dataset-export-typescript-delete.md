@@ -44,6 +44,8 @@ TASK-0330 on `factory/task-0330-dataset-export-typescript-delete`. Generated mod
 
 - None.
 
+- After merging TASK-0329 and `develop` (TASK-0332): exported `datasetAgent` asks for no fields and returns `{row_id, inserted}` when the tool cannot Find rows. The Agent graph test checks that the model's tool result has no `values`. `pytest -q tests/test_dataset_typescript_standalone.py tests/test_typescript_export.py` — 43 passed.
+
 ## Gaps Or Untested Areas
 
 - PostgreSQL runs in CI. The Node.js `node:sqlite` project variant runs only when `STUDIO_DATASET_EXPORT_JS_MODULES` is set, and it was not run for this task. It uses the same generated runtime code as the Deno module.
