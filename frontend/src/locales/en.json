@@ -111,6 +111,7 @@
     "csvMapColumn": "Map source column {{column}} ({{name}})",
     "csvSkip": "Skip column",
     "csvCheck": "Check rows",
+    "csvTypeHint": "Codes with a leading zero or +, and numbers longer than 15 digits, are read as text. Change the type to read them as numbers.",
     "csvSummary": "{{total}} records, {{invalid}} with errors.",
     "csvRowError": "Line {{row}} · {{message}}",
     "csvPreview": "CSV preview",

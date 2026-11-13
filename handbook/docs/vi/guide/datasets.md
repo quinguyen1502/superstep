@@ -58,10 +58,14 @@ trị nào thì giữ nguyên revision và thời điểm cập nhật của dò
 - Tệp là UTF-8, tối đa 1 MiB và 1.000 bản ghi. Bắt buộc có dòng tiêu đề.
 - Bản xem trước gợi ý khoá trường và kiểu cho mỗi cột. Bạn có thể đổi ánh xạ,
   bỏ qua một cột, và sửa lược đồ trước khi nhập.
+- Giá trị có số 0 hoặc dấu `+` ở đầu, như `00123` hay `+84901234567`, và số dài
+  hơn 15 chữ số được gợi ý là văn bản để không mất dữ liệu. Đổi kiểu cột sang
+  Số nếu muốn đọc chúng là số.
 - Việc nhập là nguyên tử. Nếu có dòng không hợp lệ, hoặc trùng giá trị duy nhất,
   thì không ghi gì. Bản xem trước liệt kê tối đa 100 lỗi.
 - **Xuất CSV** cần quyền đọc. Tệp gồm mọi dòng. Giá trị mà bảng tính coi là công
-  thức được thêm dấu nháy đơn ở đầu. Bản tải về tối đa 16 MiB.
+  thức được thêm dấu nháy đơn ở đầu. Khi nhập, dấu nháy đó được bỏ đi, nên xuất
+  rồi nhập lại cho đúng các giá trị cũ. Bản tải về tối đa 16 MiB.
 
 ## Workflow và xuất dự án
 

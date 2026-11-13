@@ -20,6 +20,7 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Changed
 
+- **Dataset CSV fidelity.** CSV preview suggests text for values with a leading zero or `+` and for numbers longer than 15 digits, so codes and phone numbers keep their digits. Import removes the apostrophe that export adds before formula-like values, so an export imports back to the same values. Deleting a row, a column or a dataset through `/api/datasets` now requires the `revision` query parameter: a request without it fails with 422 `VALIDATION_ERROR`, and a stale one with the existing conflict code. Scripts that call these routes with a personal access token must send `?revision=`.
 - **Dataset filters.** `ne` (Does not equal) now also matches empty cells. Search, the `contains` filter and text sorting ignore letter case, Vietnamese letters included, on SQLite and PostgreSQL; text sorts break ties by the exact value. `eq`, unique keys and upsert matching stay exact. Saved workflows, Agent tools and API calls that use `ne` or `contains` can return more rows than before.
 - A provider HTTP 429 now fails with `PROVIDER_RATE_LIMITED` instead of `PROVIDER_BAD_RESPONSE`. It still answers 502 to API clients and still switches to a configured fallback model.
 

@@ -18,6 +18,20 @@ MAX_EXPORT_BYTES = 16_777_216
 MAX_PREVIEW_ROWS = 20
 MAX_ISSUES = 100
 NUMBER = re.compile(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?")
+TEXT_LIKE_NUMBER = re.compile(r"\+|-?0[0-9]")  # phone numbers, codes and IDs keep their leading `+` or zero
+MAX_NUMBER_DIGITS = 15  # longer digit runs lose precision as a number
+FORMULA_START = ("=", "+", "-", "@", "\uff1d", "\uff0b", "\uff0d", "\uff20")
+
+
+def _guarded(value: str) -> bool:
+    """True when export prefixes `'` so a spreadsheet does not run the value as a formula."""
+    value = value.lstrip("'")  # a value that already starts with the guard keeps it on the way back
+    return value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(FORMULA_START)
+
+
+def unguard(value: str) -> str:
+    """Remove the export formula guard so export then import gives the original value."""
+    return value[1:] if value.startswith("'") and _guarded(value[1:]) else value
 
 
 @dataclass
@@ -36,6 +50,7 @@ def parse_csv(text: str) -> CsvTable:
     line = 1
     try:
         headers = next(reader, [])
+        headers = [unguard(header) for header in headers]
         if not headers or len(headers) > MAX_COLUMNS or any(not header.strip() for header in headers):
             raise AppError("DATASET_CSV_INVALID", row=1)
         line = reader.line_num + 1
@@ -59,6 +74,9 @@ def _coerce(kind: str, text: str) -> CellValue:
 
 
 def _matches(kind: str, value: str) -> bool:
+    if kind == "number" and (TEXT_LIKE_NUMBER.match(value.strip())
+                             or sum(char.isdigit() for char in value) > MAX_NUMBER_DIGITS):
+        return False
     if kind == "boolean" and value.strip().lower() not in {"true", "false"}:
         return False
     try:
@@ -82,8 +100,9 @@ def _suggest_columns(table: CsvTable) -> list[dict]:
             suffix += 1
         used.add(key)
         values = [row[index] for _, row in table.rows if len(row) == len(table.headers) and row[index] != ""]
-        kind = next((kind for kind in ("boolean", "date", "datetime", "email", "number")
-                     if values and all(_matches(kind, value) for value in values)), "text")
+        kind = "text" if any(unguard(value) != value for value in values) else next(
+            (kind for kind in ("boolean", "date", "datetime", "email", "number")
+             if values and all(_matches(kind, value) for value in values)), "text")
         columns.append({"key": key, "label": header.strip()[:120], "kind": kind,
                         "required": False, "unique": False, "default": None, "options": []})
     return columns
@@ -111,7 +130,7 @@ def _csv_value(value: CellValue) -> str | int | float:
         return ""
     if type(value) is bool:
         return "true" if value else "false"
-    if isinstance(value, str) and (value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(("=", "+", "-", "@", "＝", "＋", "－", "＠"))):
+    if isinstance(value, str) and _guarded(value):
         return "'" + value
     return value
 
@@ -155,7 +174,7 @@ class DatasetCsvService:
             if len(record) != len(table.headers):
                 issue(line, AppError("DATASET_CSV_INVALID", row=line))
                 continue
-            incoming = {key: value for key, value in zip(mapping, record) if key is not None and value != ""}
+            incoming = {key: unguard(value) for key, value in zip(mapping, record) if key is not None and value != ""}
             values = {}
             for key, column in columns.items():
                 try:
@@ -185,7 +204,7 @@ class DatasetCsvService:
             "headers": table.headers, "columns": _detail(dataset)["columns"], "mapping": mapping,
             "schema_revision": dataset.revision if dataset_id else None, "total_rows": len(table.rows),
             "invalid_rows": len(invalid_rows), "issues": issues,
-            "sample": [{"row": line, "cells": [cell[:300] for cell in record[:MAX_COLUMNS]]}
+            "sample": [{"row": line, "cells": [unguard(cell)[:300] for cell in record[:MAX_COLUMNS]]}
                        for line, record in table.rows[:MAX_PREVIEW_ROWS]],
         }
         return dataset, records, result

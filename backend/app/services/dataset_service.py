@@ -117,7 +117,7 @@ class DatasetService:
         dataset.description = _description(description)
         return self._save(uid, dataset, "dataset.update")
 
-    def delete(self, uid: str, dataset_id: str, revision: int | None) -> dict:
+    def delete(self, uid: str, dataset_id: str, revision: int) -> dict:
         dataset = self.editable_definition(uid, dataset_id, revision)
         self.repo.delete(uid, dataset.id, dataset.revision)
         self.audit.record(uid, "dataset.delete", "dataset", dataset.id)
@@ -155,7 +155,7 @@ class DatasetService:
         field.default_value = proposed.default_value
         return self._save(uid, dataset, "dataset.column_update", field=key)
 
-    def remove_column(self, uid: str, dataset_id: str, key: str, revision: int | None) -> dict:
+    def remove_column(self, uid: str, dataset_id: str, key: str, revision: int) -> dict:
         dataset = self.editable_definition(uid, dataset_id, revision)
         field = self._find_column(dataset, key)
         field.archived = True
