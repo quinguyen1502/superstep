@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from ..core import config
 from ..core import permissions as P
 from ..core.errors import AppError
-from ..engine import dataset_nodes, exporters, handoffs, project_export, subgraphs
+from ..engine import dataset_export, dataset_nodes, exporters, handoffs, project_export, subgraphs
 from ..engine.export_common import slug
 from ..engine.issues import issues_of
 from ..engine.examples import EXAMPLE
@@ -151,16 +151,20 @@ class WorkflowService:
         managed_placeholders = bool(self.export_resources([wf, *children.values()])) if self.export_resources is not None else False
         case = (self.tests.list_for_workflow(wid) or [None])[0] if self.tests is not None else None
         example = {"input": json.loads(case.input), "answers": json.loads(case.answers)} if case else None
-        out = exporter.write(wf, w.name, n, children, example)
+        datasets = dataset_export.prepare(
+            [wf, *children.values()], lambda dataset_id: self.dataset_runtime.access.datasets.get(uid, dataset_id)["columns"],
+        ) if self.dataset_runtime is not None else None
+        out = exporter.write(wf, w.name, n, children, example, datasets=datasets)
         return {"language": exporter.id, "media_type": exporter.media_type, "filename": out.filename, "version": n,
-                "code": out.code, "nodes": out.nodes, "managed_placeholders": managed_placeholders}
+                "code": out.code, "nodes": out.nodes, "managed_placeholders": managed_placeholders,
+                **({"dataset_bindings": out.dataset_bindings} if out.dataset_bindings else {})}
 
     def export_project(self, wid: str, uid: str, version: int | None = None, language: str = exporters.DEFAULT) -> dict:
         """The export as a runnable LangGraph project (a zip for `langgraph dev` and LangSmith Studio)."""
         out = self.export(wid, uid, version, language)
         name = self.owned(wid, uid).name
         return {"filename": f"{slug(name, 'workflow').replace('_', '-')}-{out['language']}.zip",
-                "content": project_export.to_project(out["language"], out["code"], name)}
+                "content": project_export.to_project(out["language"], out["code"], name, out.get("dataset_bindings"))}
 
     def owned(self, wid: str, uid: str, action: str = P.VIEW) -> Workflow:
         """The workflow if `uid` may perform `action` on it (owner, share or admin, )."""

@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Header, Query, Response
 
+from ...core.errors import AppError
 from ...schemas.dataset import (
-    DatasetColumnUpdate, DatasetCreate, DatasetGrantInput, DatasetTokenInput, DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
+    DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetGrantInput, DatasetTokenInput, DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
 )
-from ..deps import current_user, dataset_access_service, dataset_row_service, dataset_service
+from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_row_service, dataset_service, limit_body
 
 router = APIRouter(prefix="/api/datasets", tags=["datasets"])
 Revision = Annotated[int | None, Query(ge=1)]
@@ -96,6 +97,19 @@ def update_column(dataset_id: str, key: str, body: DatasetColumnUpdate,
 def remove_column(dataset_id: str, key: str, revision: Revision = None,
                   user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.remove_column(user["id"], dataset_id, key, revision)
+
+
+@router.post("/{dataset_id}/connected", dependencies=[Depends(limit_body)])
+def execute_connected(dataset_id: str, body: DatasetConnectedInput, response: Response,
+                      authorization: Annotated[str | None, Header()] = None,
+                      svc=Depends(dataset_connected_service)):
+    if authorization is None:
+        raise AppError("AUTH_REQUIRED")
+    scheme, _, secret = authorization.partition(" ")
+    if scheme.lower() != "bearer":
+        raise AppError("AUTH_TOKEN_INVALID")
+    response.headers["Cache-Control"] = "no-store"
+    return svc.execute(dataset_id, secret, body)
 
 
 @router.post("/{dataset_id}/rows/query")

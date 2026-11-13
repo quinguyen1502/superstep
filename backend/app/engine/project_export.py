@@ -16,7 +16,7 @@ LANGGRAPH_JS = "^1.0.0"
 # The guard that runs the TypeScript example on import (Deno sets import.meta.main; Node does not, so it would run
 # while the Agent Server loads the graph). In the project the example runs only through `npm run example`.
 TS_MAIN = "if ((import.meta as { main?: boolean }).main !== false) await main();"
-TS_MAIN_PROJECT = 'if (process.env.RUN_EXAMPLE === "1") await main();'
+TS_MAIN_PROJECT = 'if (env("RUN_EXAMPLE") === "1") await main();'
 NPM_SPEC = re.compile(r"""(["'])npm:((?:@[\w.-]+/)?[\w.-]+)(?:@([^"']+))?\1""")
 PY_ENV = re.compile(r"""os\.(?:environ\.get|getenv)\(\s*["'](\w+)["']|os\.environ\[\s*["'](\w+)["']\s*\]""")
 TS_ENV = re.compile(r"""\benv\(\s*["'](\w+)["']\s*\)|process\.env\.(\w+)""")
@@ -156,12 +156,26 @@ def project_files(language: str, code: str, title: str) -> Dict[str, str]:
     return (_python if language == "python" else _typescript)(code, title, graph_id)
 
 
-def to_project(language: str, code: str, title: str) -> bytes:
+def to_project(language: str, code: str, title: str, datasets: dict | None = None) -> bytes:
     """The project as a zip with one top-level folder; fixed timestamps keep the bytes reproducible."""
     root = slug(title, "workflow").replace("_", "-")
     buf = io.BytesIO()
+    files = project_files(language, code, title)
+    if datasets:
+        files["datasets.json"] = json.dumps(datasets, ensure_ascii=False, indent=2) + "\n"
+        files[".env.example"] += "\n# Dataset bindings (see datasets.json)\n" + "".join(
+            f"{binding['name']}_{setting}=\n" for binding in datasets["bindings"]
+            for setting in ("BACKEND", "API_URL", "API_TOKEN", "ID")
+        )
+        files["README.md"] += (
+            "\n## Dataset bindings\n\n"
+            "See `datasets.json` for the columns and operations required by each binding. Set its `BACKEND` to "
+            "`superstep`, `API_URL` to the server base URL, `ID` to the destination dataset, and `API_TOKEN` "
+            "to a scoped Dataset token with the required permissions. Keep all deployment values in the environment. "
+            "Dataset writes affect the configured destination. Use a separate dataset when running examples.\n"
+        )
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        for path, text in sorted(project_files(language, code, title).items()):
+        for path, text in sorted(files.items()):
             info = zipfile.ZipInfo(f"{root}/{path}", date_time=(1980, 1, 1, 0, 0, 0))
             info.external_attr = 0o644 << 16
             z.writestr(info, text, zipfile.ZIP_DEFLATED)

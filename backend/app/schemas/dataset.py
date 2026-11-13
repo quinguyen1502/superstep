@@ -9,17 +9,19 @@ Label = Annotated[str, Field(min_length=1, max_length=120)]
 Option = Annotated[str, Field(min_length=1, max_length=120)]
 
 
-class DatasetColumnIn(BaseModel):
+class DatasetFieldContract(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     key: ColumnKey
-    label: Label
     kind: ColumnKind
     required: bool = False
     unique: bool = False
     default: CellValue = None
     options: list[Option] = Field(default_factory=list, max_length=100)
 
+
+class DatasetColumnIn(DatasetFieldContract):
+    label: Label
 
 class DatasetCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -103,3 +105,15 @@ class DatasetGrantInput(BaseModel):
 
 class DatasetTokenInput(DatasetGrantInput):
     name: Annotated[str, Field(min_length=1, max_length=80)]
+
+
+
+class DatasetConnectedInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    version: Literal[1]
+    operation: Literal["find_rows", "get_row", "insert_row", "upsert_row"]
+    columns: list[DatasetFieldContract] = Field(min_length=1, max_length=100)
+    fields: list[ColumnKey] = Field(min_length=1, max_length=100)
+    arguments: dict = Field(default_factory=dict, max_length=10)
+    operation_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.:-]{1,128}$")

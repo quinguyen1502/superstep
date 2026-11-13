@@ -33,7 +33,7 @@ Runnable Python project with per-binding SQLite or PostgreSQL configuration and 
 
 ## Dependencies
 
-[TASK-0318](TASK-0318-dataset-export-api.md)
+[TASK-0318](../done/TASK-0318-dataset-export-api.md)
 
 ## Acceptance Criteria
 

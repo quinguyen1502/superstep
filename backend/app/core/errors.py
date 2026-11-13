@@ -26,6 +26,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "DATASET_NAME_TAKEN": (409, "A dataset with this name already exists in this scope"),
     "DATASET_COLUMN_KEY_TAKEN": (409, "A dataset column already uses this field key"),
     "DATASET_COLUMN_LIMIT": (400, "A dataset can define at most {max} column keys"),
+    "DATASET_BINDING_SCHEMA_MISMATCH": (409, "The connected dataset schema does not match field {field}"),
     "DATASET_SCHEMA_CONFLICT": (409, "The dataset changed. Reload its definition and try again"),
     "DATASET_SCHEMA_INCOMPATIBLE": (409, "Changing the definition of field {field} would be incompatible"),
     "DATASET_DEFINITION_INVALID": (400, "Invalid dataset definition for {field}"),
