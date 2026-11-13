@@ -45,6 +45,15 @@
 | `VALIDATION_ERROR` | 422 | Request validation failed |
 | `BAD_REQUEST` | 400 | Bad request |
 | `NOT_FOUND` | 404 | Resource not found |
+| `DATASET_NOT_FOUND` | 404 | Dataset not found |
+| `DATASET_COLUMN_NOT_FOUND` | 404 | Dataset column not found |
+| `DATASET_NAME_TAKEN` | 409 | A dataset with this name already exists in this scope |
+| `DATASET_COLUMN_KEY_TAKEN` | 409 | A dataset column already uses this field key |
+| `DATASET_COLUMN_LIMIT` | 400 | A dataset can define at most {max} column keys |
+| `DATASET_SCHEMA_CONFLICT` | 409 | The dataset changed. Reload its definition and try again |
+| `DATASET_SCHEMA_INCOMPATIBLE` | 409 | Changing the definition of field {field} would be incompatible |
+| `DATASET_DEFINITION_INVALID` | 400 | Invalid dataset definition for {field} |
+| `DATASET_VALUE_INVALID` | 400 | Field {field} requires a valid {kind} value |
 | `USAGE_BUDGET_EXISTS` | 409 | A monthly budget already exists for this user or team |
 | `METHOD_NOT_ALLOWED` | 405 | Method not allowed |
 | `PAYLOAD_TOO_LARGE` | 413 | Payload too large |

@@ -10,6 +10,7 @@ from .workflow_version import WorkflowVersion
 from .notification import Notification
 from .webhook_delivery import WebhookDelivery
 from .node_result import NodeResult
+from .dataset import Dataset, DatasetColumn
 from .knowledge import KnowledgeBase, KbDocument, KbChunk
 from .mcp_server import McpServer, McpOperation
 from .workflow_share import WorkflowShare
@@ -28,7 +29,7 @@ from .workflow_test import WorkflowTest, WorkflowTestResult, WorkflowTestSuite
 from .agent_thread import AgentThread, AgentThreadRun
 from .approval import ApprovalAudit, ApprovalChannel, ApprovalRequest, ApprovalAutoQuota, ApprovalWait, ApprovalWaitApprover, ChannelIdentity
 
-__all__ = ["Base", "BrowserArtifact", "User", "Workflow", "Run", "Credential", "WorkflowToken", "WorkflowVersion", "Notification", "WebhookDelivery", "NodeResult", "ApprovalChannel", "ChannelIdentity", "ApprovalRequest", "ApprovalAudit", "ApprovalWait", "ApprovalWaitApprover", "ApprovalAutoQuota", "KnowledgeBase", "KbDocument", "KbChunk", "McpServer", "WorkflowShare", "Team", "TeamMember", "WorkflowTeamShare", "AuditEvent", "StudioSetting", "WorkflowTemplate", "LoginThrottle", "PasswordReset", "PersonalAccessToken", "CliDevice", "WorkflowSchedule", "WorkflowChatTrigger", "ChatLogo", "ChatMessage", "ChatAttachment", "ChatRating", "ChatSession", "ChatTurn", "ChatEdit", "WorkflowTest", "WorkflowTestSuite", "WorkflowTestResult", "AgentThread", "AgentThreadRun", "RunUsage", "UsageBudget", "UsageBudgetWarning"]
+__all__ = ["Base", "Dataset", "DatasetColumn", "BrowserArtifact", "User", "Workflow", "Run", "Credential", "WorkflowToken", "WorkflowVersion", "Notification", "WebhookDelivery", "NodeResult", "ApprovalChannel", "ChannelIdentity", "ApprovalRequest", "ApprovalAudit", "ApprovalWait", "ApprovalWaitApprover", "ApprovalAutoQuota", "KnowledgeBase", "KbDocument", "KbChunk", "McpServer", "WorkflowShare", "Team", "TeamMember", "WorkflowTeamShare", "AuditEvent", "StudioSetting", "WorkflowTemplate", "LoginThrottle", "PasswordReset", "PersonalAccessToken", "CliDevice", "WorkflowSchedule", "WorkflowChatTrigger", "ChatLogo", "ChatMessage", "ChatAttachment", "ChatRating", "ChatSession", "ChatTurn", "ChatEdit", "WorkflowTest", "WorkflowTestSuite", "WorkflowTestResult", "AgentThread", "AgentThreadRun", "RunUsage", "UsageBudget", "UsageBudgetWarning"]
 
 from .browser_session import BrowserSession, BrowserCommand, BrowserIntent
 from .run_usage import RunUsage

@@ -16,6 +16,16 @@ CATALOG: dict[str, tuple[int, str]] = {
     "BROWSER_ARTIFACT_INVALID": (400, "Browser screenshot exceeds the supported PNG bounds"),
     "BROWSER_DISABLED": (404, "Browser connections are disabled"),
     "BROWSER_RUNTIME_UNAVAILABLE": (503, "Browser execution requires a verified isolated worker and trusted run context"),
+    # datasets
+    "DATASET_NOT_FOUND": (404, "Dataset not found"),
+    "DATASET_COLUMN_NOT_FOUND": (404, "Dataset column not found"),
+    "DATASET_NAME_TAKEN": (409, "A dataset with this name already exists in this scope"),
+    "DATASET_COLUMN_KEY_TAKEN": (409, "A dataset column already uses this field key"),
+    "DATASET_COLUMN_LIMIT": (400, "A dataset can define at most {max} column keys"),
+    "DATASET_SCHEMA_CONFLICT": (409, "The dataset changed. Reload its definition and try again"),
+    "DATASET_SCHEMA_INCOMPATIBLE": (409, "Changing the definition of field {field} would be incompatible"),
+    "DATASET_DEFINITION_INVALID": (400, "Invalid dataset definition for {field}"),
+    "DATASET_VALUE_INVALID": (400, "Field {field} requires a valid {kind} value"),
     # generic / transport
     "VALIDATION_ERROR": (422, "Request validation failed"),
     "BAD_REQUEST": (400, "Bad request"),
