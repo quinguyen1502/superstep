@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0314
 - Title: Workflow grants and scoped Dataset API tokens
-- Status: todo
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-12
-- Updated: 2026-11-12
+- Updated: 2026-11-13
 - Requirement IDs: REQ-0097
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -55,6 +55,8 @@ Run the applicable full Factory profile and repository gates. Capture review and
 - [Architecture](../../artifacts/ARCH-0003-datasets.md)
 - [Decision](../../decisions/DEC-0097-dataset-grid-and-export.md)
 - [Plan](../../artifacts/PLAN-0016-datasets.md)
+- [Review](../../artifacts/REV-0299-TASK-0314-dataset-access.md)
+- [QA](../../artifacts/QA-0299-TASK-0314-dataset-access.md)
 
 ## Open Questions
 
@@ -62,7 +64,12 @@ None blocking. Use the plan and architecture boundaries for implementation choic
 
 ## Activity Log
 
+- 2026-11-13: Owner approved finish and merge. Moved to done. Review REV-0299. QA QA-0299.
 - 2026-11-12: Created during owner-approved requirements planning.
+
+- 2026-11-12: Started in an independent stack over the reviewed Studio branch. Team workflow grants require the workflow to be shared with the dataset team and owned by an active team member. Personal datasets can only grant their owner’s workflows.
+
+- 2026-11-12: Implemented workflow grants, scoped credentials and Studio management. Targeted backend, browser, locale and architecture checks passed.
 
 ## Handoff Notes
 

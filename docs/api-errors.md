@@ -45,6 +45,8 @@
 | `VALIDATION_ERROR` | 422 | Request validation failed |
 | `BAD_REQUEST` | 400 | Bad request |
 | `NOT_FOUND` | 404 | Resource not found |
+| `DATASET_GRANT_DENIED` | 403 | The workflow does not have the required dataset grant |
+| `DATASET_TOKEN_NOT_FOUND` | 404 | Dataset token not found |
 | `DATASET_NOT_FOUND` | 404 | Dataset not found |
 | `DATASET_COLUMN_NOT_FOUND` | 404 | Dataset column not found |
 | `DATASET_NAME_TAKEN` | 409 | A dataset with this name already exists in this scope |

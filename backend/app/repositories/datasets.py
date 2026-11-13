@@ -5,12 +5,15 @@ from sqlalchemy.orm import Session, joinedload
 from ..core.errors import AppError
 from ..models.database import Database
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
+from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
 from ..models.team import TeamMember
 
 
 def delete_dataset_definitions(session: Session, condition) -> None:
     """Clean up definitions explicitly on SQLite as well as on PostgreSQL."""
     ids = select(Dataset.id).where(condition)
+    session.execute(delete(DatasetApiToken).where(DatasetApiToken.dataset_id.in_(ids)))
+    session.execute(delete(DatasetWorkflowGrant).where(DatasetWorkflowGrant.dataset_id.in_(ids)))
     session.execute(delete(DatasetRowKey).where(DatasetRowKey.dataset_id.in_(ids)))
     session.execute(delete(DatasetRow).where(DatasetRow.dataset_id.in_(ids)))
     session.execute(delete(DatasetColumn).where(DatasetColumn.dataset_id.in_(ids)))

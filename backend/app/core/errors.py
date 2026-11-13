@@ -17,6 +17,8 @@ CATALOG: dict[str, tuple[int, str]] = {
     "BROWSER_DISABLED": (404, "Browser connections are disabled"),
     "BROWSER_RUNTIME_UNAVAILABLE": (503, "Browser execution requires a verified isolated worker and trusted run context"),
     # datasets
+    "DATASET_GRANT_DENIED": (403, "The workflow does not have the required dataset grant"),
+    "DATASET_TOKEN_NOT_FOUND": (404, "Dataset token not found"),
     "DATASET_NOT_FOUND": (404, "Dataset not found"),
     "DATASET_COLUMN_NOT_FOUND": (404, "Dataset column not found"),
     "DATASET_NAME_TAKEN": (409, "A dataset with this name already exists in this scope"),

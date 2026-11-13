@@ -7,6 +7,7 @@ from ..models.database import Database
 from ..models.run_usage import RunUsage
 from ..models.usage_budget import UsageBudget
 from ..models.dataset import Dataset
+from ..models.dataset_access import DatasetApiToken
 from .datasets import delete_dataset_definitions
 from .usage_budgets import delete_budget_rows
 
@@ -32,6 +33,7 @@ class UserDataRepository:
             s.execute(delete(ApprovalChannel).where(ApprovalChannel.owner == uid, ApprovalChannel.scope == "user"))
             s.execute(delete(ChannelIdentity).where(ChannelIdentity.user_id == uid))
             s.execute(delete(WorkflowToken).where(WorkflowToken.owner == uid))
+            s.execute(delete(DatasetApiToken).where(DatasetApiToken.issuer_id == uid))
             delete_dataset_definitions(s, Dataset.owner_id == uid)
             delete_budget_rows(s, UsageBudget.user_id == uid)
             s.execute(update(UsageBudget).where(UsageBudget.created_by == uid).values(created_by=None))

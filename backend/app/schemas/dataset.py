@@ -90,3 +90,16 @@ class DatasetRowQuery(BaseModel):
     sorts: list[DatasetSort] | None = Field(default=None, max_length=12)
     limit: int = Field(default=50, ge=1, le=100)
     offset: int = Field(default=0, ge=0, le=25_000)
+
+
+DatasetPermission = Literal["read", "write", "read_write"]
+
+
+class DatasetGrantInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    permission: DatasetPermission
+
+
+class DatasetTokenInput(DatasetGrantInput):
+    name: Annotated[str, Field(min_length=1, max_length=80)]

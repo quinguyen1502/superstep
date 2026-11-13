@@ -1,11 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 
 from ...schemas.dataset import (
-    DatasetColumnUpdate, DatasetCreate, DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
+    DatasetColumnUpdate, DatasetCreate, DatasetGrantInput, DatasetTokenInput, DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
 )
-from ..deps import current_user, dataset_row_service, dataset_service
+from ..deps import current_user, dataset_access_service, dataset_row_service, dataset_service
 
 router = APIRouter(prefix="/api/datasets", tags=["datasets"])
 Revision = Annotated[int | None, Query(ge=1)]
@@ -21,6 +21,43 @@ def list_datasets(limit: Annotated[int, Query(ge=1, le=100)] = 50,
 @router.post("", status_code=201)
 def create_dataset(body: DatasetCreate, user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.create(user["id"], **body.model_dump())
+
+
+@router.get("/{dataset_id}/access")
+def dataset_access(dataset_id: str, user=Depends(current_user), svc=Depends(dataset_access_service)):
+    return svc.list(user["id"], dataset_id)
+
+
+@router.put("/{dataset_id}/access/grants/{workflow_id}")
+def grant_dataset(dataset_id: str, workflow_id: str, body: DatasetGrantInput,
+                  user=Depends(current_user), svc=Depends(dataset_access_service)):
+    return svc.grant(user["id"], dataset_id, workflow_id, body.permission)
+
+
+@router.delete("/{dataset_id}/access/grants/{workflow_id}")
+def revoke_dataset_grant(dataset_id: str, workflow_id: str,
+                         user=Depends(current_user), svc=Depends(dataset_access_service)):
+    return svc.revoke_grant(user["id"], dataset_id, workflow_id)
+
+
+@router.post("/{dataset_id}/access/tokens", status_code=201)
+def issue_dataset_token(dataset_id: str, body: DatasetTokenInput, response: Response,
+                        user=Depends(current_user), svc=Depends(dataset_access_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.issue(user["id"], dataset_id, body.name, body.permission)
+
+
+@router.post("/{dataset_id}/access/tokens/{token_id}/rotate")
+def rotate_dataset_token(dataset_id: str, token_id: str, response: Response,
+                         user=Depends(current_user), svc=Depends(dataset_access_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.rotate(user["id"], dataset_id, token_id)
+
+
+@router.delete("/{dataset_id}/access/tokens/{token_id}")
+def revoke_dataset_token(dataset_id: str, token_id: str,
+                         user=Depends(current_user), svc=Depends(dataset_access_service)):
+    return svc.revoke_token(user["id"], dataset_id, token_id)
 
 
 @router.get("/{dataset_id}")

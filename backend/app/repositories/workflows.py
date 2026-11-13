@@ -2,6 +2,7 @@ from typing import Optional
 from sqlalchemy import delete, select, update
 from ..models import Workflow
 from ..models.database import Database
+from ..models.dataset_access import DatasetWorkflowGrant
 
 
 class WorkflowRepository:
@@ -55,6 +56,7 @@ class WorkflowRepository:
 
     def delete(self, wid: str) -> None:
         with self.db.session() as s:
+            s.execute(delete(DatasetWorkflowGrant).where(DatasetWorkflowGrant.workflow_id == wid))
             s.execute(delete(Workflow).where(Workflow.id == wid)); s.commit()
 
     def exists(self, wid: str) -> bool:
