@@ -3,11 +3,11 @@ from dataclasses import dataclass
 from time import time
 from uuid import uuid4
 
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, literal, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..core.dataset_types import MAX_DATASET_ROWS, CellValue, key_digest, write_fingerprint
+from ..core.dataset_types import MAX_DATASET_ROWS, TEXT_FOLD_FUNCTION, CellValue, key_digest, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
@@ -67,11 +67,41 @@ def _column_value(column: DatasetColumn):
     return value.as_string()
 
 
-def _contains(expression, value: str, postgres: bool):
-    return (func.strpos if postgres else func.instr)(expression, value) > 0
+FOLD_COLLATIONS = ("und-x-icu", "pg_c_utf8")  # Unicode case mapping that does not depend on the server locale
 
 
-def _predicate(spec: RowFilter, dataset_id: str, postgres: bool):
+def _fold_collation(engine) -> str | None:
+    """The PostgreSQL collation `lower` folds with: ICU or the builtin UTF-8 provider when present, else the database default."""
+    if not hasattr(engine, "_dataset_fold_collation"):
+        with engine.connect() as connection:
+            names = set(connection.execute(
+                text("SELECT collname FROM pg_collation WHERE collname = ANY(:names)"), {"names": list(FOLD_COLLATIONS)},
+            ).scalars())
+        engine._dataset_fold_collation = next((name for name in FOLD_COLLATIONS if name in names), None)
+    return engine._dataset_fold_collation
+
+
+@dataclass(frozen=True)
+class _Text:
+    """Dialect-specific text expressions: exact comparison and one Unicode case fold for both databases."""
+    postgres: bool
+    collation: str | None = None
+
+    def exact(self, expression):
+        return expression.collate("C" if self.postgres else "BINARY")
+
+    def fold(self, expression):
+        if not self.postgres:
+            return getattr(func, TEXT_FOLD_FUNCTION)(expression)
+        folded = func.lower(expression.collate(self.collation) if self.collation else expression)
+        return folded.collate("C")
+
+    def contains(self, expression, value: str):
+        position = func.strpos if self.postgres else func.instr
+        return position(self.fold(expression), self.fold(literal(value))) > 0
+
+
+def _predicate(spec: RowFilter, dataset_id: str, texts: _Text):
     column, op, value = spec.column, spec.op, spec.value
     expression = _column_value(column)
     if op == "eq" and column.unique:
@@ -81,13 +111,15 @@ def _predicate(spec: RowFilter, dataset_id: str, postgres: bool):
         )
         return DatasetRow.id.in_(ids)
     if op == "contains":
-        return _contains(expression, value, postgres)
+        return texts.contains(expression, value)
     if op in {"is_null", "not_null"}:
         return expression.is_(None) if op == "is_null" else expression.is_not(None)
     if column.kind not in {"number", "boolean"}:
-        expression = expression.collate("C" if postgres else "BINARY")
+        expression = texts.exact(expression)
+    if op == "ne":
+        return expression.is_distinct_from(value)
     return {
-        "eq": expression.__eq__, "ne": expression.__ne__, "lt": expression.__lt__,
+        "eq": expression.__eq__, "lt": expression.__lt__,
         "lte": expression.__le__, "gt": expression.__gt__, "gte": expression.__ge__,
     }[op](value)
 
@@ -103,21 +135,24 @@ class DatasetRowRepository:
     def query(self, dataset_id: str, *, filters: list[RowFilter], filter_mode: str, search: str | None,
               search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
               limit: int, offset: int) -> list[DatasetRow]:
-        postgres = self.datasets.db.engine.dialect.name == "postgresql"
+        engine = self.datasets.db.engine
+        postgres = engine.dialect.name == "postgresql"
+        texts = _Text(postgres, _fold_collation(engine) if postgres else None)
         query = select(DatasetRow).where(DatasetRow.dataset_id == dataset_id)
         if filters:
             combine = or_ if filter_mode == "or" else and_
-            query = query.where(combine(*(_predicate(spec, dataset_id, postgres) for spec in filters)))
+            query = query.where(combine(*(_predicate(spec, dataset_id, texts) for spec in filters)))
         if search:
             if not search_columns:
                 return []
-            query = query.where(or_(*(_contains(_column_value(column), search, postgres) for column in search_columns)))
+            query = query.where(or_(*(texts.contains(_column_value(column), search) for column in search_columns)))
         order = []
         for sort, descending in sorts:
             expression = _column_value(sort)
+            keys = [expression]
             if sort.kind not in {"number", "boolean"}:
-                expression = expression.collate("C" if postgres else "BINARY")
-            order.append((expression.desc() if descending else expression.asc()).nulls_last())
+                keys = [texts.fold(expression), texts.exact(expression)]  # case-insensitive, then exact as the tiebreak
+            order.extend((key.desc() if descending else key.asc()).nulls_last() for key in keys)
         query = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id)
         with self.datasets.db.session() as session:
             return list(session.scalars(query.limit(limit).offset(offset)))

@@ -13,6 +13,12 @@ CellValue: TypeAlias = str | int | float | bool | None
 FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null"]
 FILTER_OPERATORS = get_args(FilterOperator)
 TEXT_KINDS = frozenset({"text", "email", "select"})
+TEXT_FOLD_FUNCTION = "dataset_text_fold"
+
+
+def fold_text(value: object) -> object:
+    """The case fold that SQLite registers for search, contains and text sort; PostgreSQL uses `lower`."""
+    return value.lower() if isinstance(value, str) else value
 
 
 def filter_operators(kind: ColumnKind) -> tuple[str, ...]:

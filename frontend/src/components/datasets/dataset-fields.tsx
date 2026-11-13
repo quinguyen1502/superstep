@@ -180,10 +180,19 @@ export function DatasetColumnFields({ column, onChange, existing }: {
       <Label htmlFor={`${id}-options`}>{t('dataset.options')}</Label>
       <Textarea id={`${id}-options`} required value={column.optionsText} onChange={event => onChange({ ...column, optionsText: event.target.value })} />
     </div>}
-    {existing ? <p className="text-xs text-muted-foreground sm:col-span-2">{t('dataset.columnConstraintsLocked')}</p>
-      : <div className="flex flex-wrap gap-4 sm:col-span-2">
-        <Label><Checkbox checked={column.required} onCheckedChange={value => onChange({ ...column, required: value === true })} />{t('dataset.required')}</Label>
-        <Label><Checkbox checked={column.unique} onCheckedChange={value => onChange({ ...column, unique: value === true })} />{t('dataset.unique')}</Label>
-      </div>}
+    <div className="space-y-1 sm:col-span-2">
+      <div className="flex flex-wrap gap-4">
+        <Label className={cn(existing && 'text-muted-foreground')}>
+          <Checkbox checked={column.required} disabled={existing} aria-describedby={existing ? `${id}-required-help` : undefined}
+            onCheckedChange={value => onChange({ ...column, required: value === true })} />{t('dataset.required')}
+        </Label>
+        <Label><Checkbox checked={column.unique} aria-describedby={existing ? `${id}-unique-help` : undefined}
+          onCheckedChange={value => onChange({ ...column, unique: value === true })} />{t('dataset.unique')}</Label>
+      </div>
+      {existing && <>
+        <p id={`${id}-required-help`} className="text-xs text-muted-foreground">{t('dataset.requiredLocked')}</p>
+        <p id={`${id}-unique-help`} className="text-xs text-muted-foreground">{t('dataset.uniqueLaterHelp')}</p>
+      </>}
+    </div>
   </div>
 }
