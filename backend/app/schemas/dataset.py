@@ -113,7 +113,7 @@ class DatasetConnectedInput(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     version: Literal[1]
-    operation: Literal["find_rows", "get_row", "insert_row", "upsert_row"]
+    operation: Literal["find_rows", "get_row", "insert_row", "upsert_row", "delete_row"]
     columns: list[DatasetFieldContract] = Field(min_length=1, max_length=100)
     fields: list[ColumnKey] = Field(min_length=1, max_length=100)
     arguments: dict = Field(default_factory=dict, max_length=10)

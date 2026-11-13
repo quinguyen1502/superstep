@@ -62,7 +62,7 @@ Let a workflow author configure Delete row without writing the binding by hand.
 
 ## Dependencies
 
-- [TASK-0325](TASK-0325-dataset-delete-runtime.md)
+- [TASK-0325](../done/TASK-0325-dataset-delete-runtime.md)
 
 ## Acceptance Criteria
 

@@ -142,6 +142,43 @@ class DatasetRowService:
             self.datasets.audit.record(actor, action, "dataset", dataset.id, row_id=row.id, **context)
         return {"row": _response(row, projection), "inserted": inserted}
 
+    def delete_granted(self, uid: str, dataset_id: str, *, row_id: str | None = None, key: str | None = None,
+                       value=None, schema_revision: int | None = None, fields: list[str] | None = None,
+                       workflow: WorkflowWrite | None = None, dry_run: bool = False,
+                       connected: ConnectedWrite | None = None) -> dict:
+        dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
+        columns = _active_columns(dataset)
+        if fields is not None:
+            _projection(columns, fields)
+        match = None
+        if key is not None:
+            column = _column(columns, key)
+            if not column.unique or (value := _normalize(column, value)) is None:
+                raise AppError("DATASET_UPSERT_KEY_INVALID", field=key)
+            match = (key, value)
+        if dry_run:
+            found = self._granted_row_id(dataset, columns, row_id, match)
+            if found is None:
+                raise AppError("DATASET_ROW_NOT_FOUND")
+            return {"row_id": found, "deleted": True, "dry_run": True}
+        deleted_id, replayed = self.rows.remove(uid, dataset, row_id=row_id, match=match, workflow=workflow, connected=connected)
+        if not replayed:
+            context = {"workflow_id": workflow.workflow_id, "run_id": workflow.run_id} if workflow else {}
+            if connected:
+                context.update(credential_id=connected.token_id, operation="delete_row")
+            actor = (workflow.actor_id or uid) if workflow else uid
+            self.datasets.audit.record(actor, "dataset.row_delete", "dataset", dataset.id, row_id=deleted_id, **context)
+        return {"row_id": deleted_id, "deleted": True}
+
+    def _granted_row_id(self, dataset: Dataset, columns: dict, row_id: str | None, match: tuple[str, object] | None):
+        if match is None:
+            row = self.rows.get(dataset.id, row_id or "")
+            return None if row is None else row.id
+        field, value = match
+        found = self.rows.query(dataset.id, filters=[RowFilter(columns[field], "eq", value)], filter_mode="and",
+                                search=None, search_columns=[], sorts=[], limit=1, offset=0)
+        return found[0].id if found else None
+
     def delete(self, uid: str, dataset_id: str, row_id: str, revision: int | None) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         self.rows.delete(uid, dataset, row_id, revision)

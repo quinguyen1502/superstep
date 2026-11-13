@@ -19,8 +19,9 @@ def dataset(client, name="Connected"):
     return create(client, name=name, columns=columns)
 
 
-def token(client, base, permission="read_write"):
-    return call(client, "POST", f"{base}/access/tokens", body={"name": permission, "permission": permission}, status=201)
+def token(client, base, permission="read_write", allow_delete=False):
+    return call(client, "POST", f"{base}/access/tokens",
+                body={"name": permission, "permission": permission, "allow_delete": allow_delete}, status=201)
 
 
 def request(operation, **args):
@@ -78,6 +79,43 @@ def test_connected_write_receipt_projection_and_token_rotation(client, db):
     assert len(events) == 4
     assert all(json.loads(event.details)["credential_id"] == issued["id"] for event in events)
     assert all(secret not in event.details for event in events)
+
+
+def test_connected_delete_replays_and_ignores_write_permission(client, db):
+    data = dataset(client)
+    base = f"/api/datasets/{data['id']}"
+    writer = token(client, base)
+    inserted = post(client, base, writer["token"], request(
+        "insert_row", operation_id="job:write", arguments={"values": {"ticket": "A", "score": 1, "active": False}},
+    )).json()["data"]
+    row_id = inserted["row"]["id"]
+    denied = request("delete_row", operation_id="job:delete", arguments={"row_id": row_id})
+    error(post(client, base, writer["token"], denied), 401, "AUTH_TOKEN_INVALID")
+    remover = token(client, base, "read", allow_delete=True)
+    secret = remover["token"]
+    deleted = post(client, base, secret, denied)
+    assert deleted.status_code == 200
+    assert deleted.json()["data"] == {"row_id": row_id, "deleted": True}
+    assert post(client, base, secret, denied).json()["data"] == deleted.json()["data"]
+    conflict = request("delete_row", operation_id="job:delete", arguments={"key": "ticket", "value": "A"})
+    error(post(client, base, secret, conflict), 409, "DATASET_RECEIPT_CONFLICT")
+    missing = request("delete_row", operation_id="job:missing", arguments={"row_id": "absent"})
+    error(post(client, base, secret, missing), 404, "DATASET_ROW_NOT_FOUND")
+    again = post(client, base, writer["token"], request(
+        "insert_row", operation_id="job:again", arguments={"values": {"ticket": "B", "score": 0, "active": True}},
+    ))
+    assert again.status_code == 200
+    by_key = request("delete_row", operation_id="job:missing", arguments={"key": "ticket", "value": "B"})
+    assert post(client, base, secret, by_key).json()["data"]["deleted"] is True
+    assert call(client, "POST", f"{base}/rows/query", body={})["items"] == []
+    error(post(client, base, secret, request(
+        "delete_row", operation_id="job:bad", arguments={"key": "score", "value": 1},
+    )), 400, "DATASET_UPSERT_KEY_INVALID")
+    with db.session() as session:
+        audits = list(session.scalars(select(AuditEvent).where(AuditEvent.action == "dataset.row_delete")))
+    assert len(audits) == 2
+    assert all(json.loads(event.details)["credential_id"] == remover["id"] for event in audits)
+    assert all("A" not in event.details and "B" not in event.details and secret not in event.details for event in audits)
 
 
 def test_connected_schema_and_scope_fail_explicitly(client):

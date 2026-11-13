@@ -34,7 +34,7 @@ Deliver workflow row delete, Agent insert and upsert, and granted Dataset lookup
 | Task | Phase | Outcome | Dependencies |
 | --- | --- | --- | --- |
 | [TASK-0324](../tasks/done/TASK-0324-dataset-delete-capability.md) | Access | `allow_delete` on grants and tokens, and the Access control | — |
-| [TASK-0325](../tasks/todo/TASK-0325-dataset-delete-runtime.md) | Runtime | `delete_row` receipts, locks, and connected token execution | TASK-0324 |
+| [TASK-0325](../tasks/done/TASK-0325-dataset-delete-runtime.md) | Runtime | `delete_row` receipts, locks, and connected token execution | TASK-0324 |
 | [TASK-0326](../tasks/todo/TASK-0326-dataset-delete-editor.md) | Studio | Dataset node Delete row mapping | TASK-0325 |
 | [TASK-0327](../tasks/todo/TASK-0327-dataset-agent-write.md) | Runtime | Agent insert and upsert, including its settings | — |
 | [TASK-0328](../tasks/todo/TASK-0328-dataset-public-entry.md) | Runtime | Public lookup and writes; public delete and demo mode stay denied | TASK-0325, TASK-0327 |

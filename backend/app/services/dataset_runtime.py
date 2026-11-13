@@ -24,7 +24,7 @@ class DatasetRuntimeService:
         did, operation = binding.get("dataset_id"), binding.get("operation")
         if not isinstance(did, str) or not 0 < len(did) <= 100:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
-        write = operation in ("insert_row", "upsert_row")
+        write = operation in ("insert_row", "upsert_row", "delete_row")
         definition = self.access.datasets.editable_definition(actor, did, None) if write else self.access.datasets.definition(actor, did)
         is_agent = "filter_ops" in binding
         valid = dataset_nodes.valid_agent(binding) if is_agent else dataset_nodes.valid(binding)
@@ -36,6 +36,8 @@ class DatasetRuntimeService:
             *binding["fields"], *(args.get("values") or {}),
             *(rule["field"] for rule in args.get("filters", [])), *(rule["field"] for rule in args.get("sorts", [])),
         ]
+        if operation == "delete_row" and args.get("key"):
+            references.append(args["key"])
         for field in references:
             _column(columns, field)
         if is_agent:
@@ -44,6 +46,8 @@ class DatasetRuntimeService:
                     raise AppError("DATASET_FILTER_INVALID", field=field)
         if operation == "upsert_row" and not _column(columns, args["key"]).unique:
             raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
+        if operation == "delete_row" and "key" in args and not _column(columns, args["key"]).unique:
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
 
     def execute(self, *, actor: str, workflow_id: str | None, root_workflow_id: str | None, run_id: str,
                 fence: int | None, public: bool, unsaved: bool, dry_run: bool, operation_id: str | None,
@@ -51,7 +55,11 @@ class DatasetRuntimeService:
         if not dataset_nodes.valid(binding):
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
         did, operation, fields = binding["dataset_id"], binding["operation"], binding["fields"]
-        dataset, workflow, _ = self.access.workflow_dataset(actor, workflow_id, did, dataset_nodes.ACCESS[operation], public=public)
+        deleting = operation == "delete_row"
+        dataset, workflow, _ = self.access.workflow_dataset(
+            actor, workflow_id, did, "read" if deleting else dataset_nodes.ACCESS[operation],
+            public=public, deleting=deleting,
+        )
         if unsaved:
             self._authoring_access(actor, binding)
         owner = workflow.owner
@@ -64,6 +72,8 @@ class DatasetRuntimeService:
             elif operation in {"insert_row", "upsert_row"}:
                 schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
                 request = schema.model_validate(arguments)
+            elif deleting:
+                target = dataset_nodes.delete_target(arguments)
         except ValidationError as exc:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID") from exc
 
@@ -74,6 +84,20 @@ class DatasetRuntimeService:
             if not isinstance(row_id, str) or not 0 < len(row_id) <= 100:
                 raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
             return self.rows.get(owner, dataset.id, row_id, fields=fields)
+        if deleting:
+            row_id, key, value = target
+            simulate = dry_run or unsaved
+            if not simulate and not operation_id:
+                raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+            receipt = None if simulate else WorkflowWrite(
+                run_id=run_id, workflow_id=workflow.id, operation_id=operation_id,
+                arguments={"operation": operation, "fields": fields, "row_id": row_id, "key": key, "value": value},
+                fence=fence, run_workflow_id=root_workflow_id, actor_id=actor,
+            )
+            return self.rows.delete_granted(
+                owner, dataset.id, row_id=row_id, key=key, value=value, fields=fields,
+                workflow=receipt, dry_run=simulate,
+            )
         simulate = dry_run or unsaved
         if not simulate and not operation_id:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
