@@ -10,14 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetUrl, deleteRowName, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type CellValue, type Dataset, type DatasetColumn, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetActionsMenu } from './dataset-actions-menu'
 import { DatasetRowDialog } from './dataset-dialogs'
 import { DatasetColumnControls, DatasetUniqueBadge } from './dataset-column-controls'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
-import { DatasetQueryControls, type DatasetFilters } from './dataset-query-controls'
+import { DatasetQueryControls } from './dataset-query-controls'
 
 const NO_ROWS: DatasetRow[] = []
 const rowModel = getCoreRowModel<DatasetRow>()
@@ -74,7 +74,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [notice, setNotice] = useState('')
   const [search, setSearch] = useState('')
   const [searchText, setSearchText] = useState('')
-  const [filters, setFilters] = useState<DatasetFilters>(initialFilters ?? { mode: 'and', rules: [] })
+  const [filters, setFilters] = useState<DatasetFilters>(initialFilters ?? emptyDatasetFilters())
   const [sorting, setSorting] = useState<SortingState>([])
   const [offsets, setOffsets] = useState([0])
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 })
@@ -191,9 +191,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   useEffect(() => {
     let active = true
     const fields = new Set(dataset.columns.map(column => column.key))
+    const filterTree = keepDatasetFilterFields(filters, fields)
     api<DatasetRowPage>(`${url}/query`, {
       method: 'POST', json: {
-        search: search || null, filter_mode: filters.mode, filters: filters.rules.filter(rule => fields.has(rule.field)),
+        search: search || null, ...(filterTree.children.length ? { filter_tree: filterTree } : {}),
         sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
         offset, limit: pagination.pageSize,
       },

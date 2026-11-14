@@ -1,5 +1,5 @@
 import { useId, useState } from 'react'
-import { AlertTriangle, Plus, X } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -11,9 +11,10 @@ import { StateFieldPicker } from '@/components/state-field-action'
 import { TemplateEditor } from '@/components/template-editor'
 import type { Field } from '@/components/editor/meta'
 import {
-  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
-  type DatasetColumn, type DatasetNodeConfig, type DatasetOperation,
+  DATASET_QUERY_LIMIT, datasetFilterRules, datasetListFilter, datasetSubstringFilter, keepDatasetFilterFields, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
+  type DatasetColumn, type DatasetFilters, type DatasetNodeConfig, type DatasetOperation,
 } from '@/lib/datasets'
+import { DatasetFilterBuilder } from './dataset-filter-builder'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
 import { DatasetBindingNotice, DatasetPicker } from './dataset-picker'
@@ -76,8 +77,8 @@ export function ColumnSelect({ id, value, columns, onChange, disabled }: {
   </Select>
 }
 
-function MappedValue({ label, column, value, fields, disabled, onChange, substring }: {
-  label: string; column: DatasetColumn; value: CellValue; fields: Field[]; disabled: boolean; onChange: (value: CellValue) => void; substring?: boolean
+function MappedValue({ label, column, value, fields, disabled, onChange, substring, nullable = true }: {
+  label: string; column: DatasetColumn; value: CellValue; fields: Field[]; disabled: boolean; onChange: (value: CellValue) => void; substring?: boolean; nullable?: boolean
 }) {
   const { t } = useTranslation()
   const id = useId()
@@ -95,7 +96,7 @@ function MappedValue({ label, column, value, fields, disabled, onChange, substri
           value={typeof value === 'string' ? value : ''} onChange={onChange} />
       : substring ? <Input id={id} aria-label={label} disabled={disabled} maxLength={120}
           value={typeof value === 'string' ? value : ''} onChange={event => onChange(event.target.value)} />
-      : <DatasetValueField id={id} label={label} column={column} value={value} nullable disabled={disabled} onChange={onChange} />}
+      : <DatasetValueField id={id} label={label} column={column} value={value} nullable={nullable} disabled={disabled} onChange={onChange} />}
   </div>
 }
 
@@ -110,10 +111,22 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
   const operation = data.operation ?? 'find_rows'
   const fields = data.fields ?? []
   const values = args.values ?? {}
-  const filters = args.filters ?? []
+  const filterTree: DatasetFilters = args.filter_tree ?? {
+    type: 'group', conjunction: args.filter_mode ?? 'and',
+    children: (args.filters ?? []).map(rule => ({ type: 'rule', ...rule })),
+  }
   const sorts = args.sorts ?? []
   const patchArgs = (patch: DatasetNodeConfig['arguments']) => onChange({ arguments: { ...args, ...patch } })
-  const referenced = [...new Set([...fields, ...Object.keys(values), ...filters.map(rule => rule.field), ...sorts.map(rule => rule.field), args.key ?? ''])]
+  function filterArguments(tree: DatasetFilters): DatasetNodeConfig['arguments'] {
+    const useTree = tree.children.length > 0 && (args.filter_tree || tree.children.length > DATASET_QUERY_LIMIT
+      || tree.children.some(child => child.type === 'group' || child.op === 'not_contains' || datasetListFilter(child.op)))
+    if (useTree) return { filters: undefined, filter_mode: undefined, filter_tree: tree }
+    return {
+      filter_tree: undefined, filter_mode: tree.conjunction,
+      filters: datasetFilterRules(tree).map(({ field, op, value }) => ({ field, op, value: Array.isArray(value) ? null : value })),
+    }
+  }
+  const referenced = [...new Set([...fields, ...Object.keys(values), ...datasetFilterRules(filterTree).map(rule => rule.field), ...sorts.map(rule => rule.field), args.key ?? ''])]
   const missing = referenced.filter(key => key && !keyPresent(columns, key))
   const deleting = operation === 'delete_row'
   const writing = datasetWriteOperation(operation)
@@ -136,7 +149,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
           arguments: {
             ...args,
             ...(args.values ? { values: Object.fromEntries(Object.entries(values).filter(([field]) => !missing.includes(field))) } : {}),
-            ...(args.filters ? { filters: filters.filter(rule => !missing.includes(rule.field)) } : {}),
+            ...((args.filters || args.filter_tree) ? filterArguments(keepDatasetFilterFields(filterTree, new Set(columns.map(column => column.key)))) : {}),
             ...(args.sorts ? { sorts: sorts.filter(rule => !missing.includes(rule.field)) } : {}),
             ...(args.key && missing.includes(args.key) ? { key: '' } : {}),
           },
@@ -187,42 +200,10 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
         <Label htmlFor={`${id}-limit`}>{t('datasetNode.maxRows')}</Label>
         <Input id={`${id}-limit`} type="number" min={1} max={100} disabled={disabled} value={args.limit ?? 10}
           onChange={event => patchArgs({ limit: Math.max(1, Math.min(100, Number(event.target.value) || 10)) })} />
-        <div className="space-y-1.5">
-          <Label htmlFor={`${id}-match`}>{t('dataset.filterMatch')}</Label>
-          <Select value={args.filter_mode ?? 'and'} disabled={disabled} onValueChange={value => patchArgs({ filter_mode: value === 'or' ? 'or' : 'and' })}>
-            <SelectTrigger id={`${id}-match`} className="w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="and">{t('dataset.filterMatchAll')}</SelectItem>
-              <SelectItem value="or">{t('dataset.filterMatchAny')}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {filters.map((rule, index) => {
-          const column = columns.find(item => item.key === rule.field)
-          const replace = (patch: Partial<typeof rule>) => patchArgs({ filters: filters.map((item, position) => position === index ? { ...item, ...patch } : item) })
-          const ops = column ? datasetFilterOperators(column.kind) : []
-          return <fieldset className="space-y-2 rounded-md border p-2" key={index}>
-            <legend className="px-1 text-xs">{t('dataset.filterCondition', { number: index + 1 })}</legend>
-            <div className="flex items-center gap-1">
-              <div className="min-w-0 flex-1">
-                <Label htmlFor={`${id}-filter-${index}`} className="sr-only">{t('dataset.filterColumn')}</Label>
-                <ColumnSelect id={`${id}-filter-${index}`} columns={columns} value={rule.field} disabled={disabled}
-                  onChange={field => replace({ field, op: 'eq', value: null })} />
-              </div>
-              <Button variant="ghost" size="icon" disabled={disabled} aria-label={t('dataset.removeFilterCondition')}
-                onClick={() => patchArgs({ filters: filters.filter((_, position) => position !== index) })}><X /></Button>
-            </div>
-            <Select value={rule.op} disabled={disabled || !column} onValueChange={op => replace({ op, value: null })}>
-              <SelectTrigger aria-label={t('dataset.filterOperator')} className="w-full"><SelectValue /></SelectTrigger>
-              <SelectContent>{ops.map(op => <SelectItem key={op} value={op}>{t(`datasetNode.filterOps.${op}`)}</SelectItem>)}</SelectContent>
-            </Select>
-            {column && ops.includes(rule.op) && <p className="text-xs text-muted-foreground">{t(`datasetNode.filterOpHelp.${rule.op}`)}</p>}
-            {column && !['is_null', 'not_null'].includes(rule.op) && <MappedValue key={rule.field} label={t('dataset.filterValue')}
-              column={column} value={rule.value} fields={state} disabled={disabled} substring={rule.op === 'contains'} onChange={value => replace({ value })} />}
-          </fieldset>
-        })}
-        <Button variant="outline" size="sm" disabled={disabled || !columns.length || filters.length >= DATASET_QUERY_LIMIT}
-          onClick={() => patchArgs({ filters: [...filters, { field: columns[0].key, op: 'eq', value: null }] })}><Plus />{t('dataset.addFilterCondition')}</Button>
+        <DatasetFilterBuilder tree={filterTree} columns={columns} disabled={disabled}
+          onChange={tree => patchArgs(filterArguments(tree))}
+          renderValue={({ label, column, value, onChange, op }) => <MappedValue label={label} column={column}
+            value={value} fields={state} disabled={disabled} onChange={onChange} substring={datasetSubstringFilter(op)} nullable={false} />} />
       </div>}
       {operation === 'upsert_row' && <div className="space-y-1.5">
         <Label htmlFor={`${id}-key`}>{t('datasetNode.upsertKey')}</Label>
