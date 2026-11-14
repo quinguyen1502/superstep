@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetSystemTime, datasetTextKind, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetSystemTime, datasetTextKind, datasetUrl, deleteRowName, displayColumnValue, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetColumnSummary } from './dataset-column-summary'
 import { DatasetActionsMenu } from './dataset-actions-menu'
@@ -642,7 +642,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           </form> :
             <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
               className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0', column.kind === 'url' && value && 'pr-9')}
-              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value, column.kind) })}
+              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
               aria-pressed={isFocused}
               onPointerDown={event => { if (keepInvalidEditorFocused()) event.preventDefault() }}
               onFocus={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
@@ -650,7 +650,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               onClick={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
               onDoubleClick={() => beginEdit(row.original, column)}
               onKeyDown={event => handleCellKey(event, row.original, column)}>
-              <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{format(value, column.kind) || '—'}</span>
+              <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) || '—'}</span>
             </Button>
           }
           {!isEditing && column.kind === 'url' && typeof value === 'string' && /^https?:\/\//i.test(value) &&
@@ -688,7 +688,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             const operation = summaryColumns[column.key]
             const value = group.values[column.key]
             return operation && value != null && <span key={column.key} className="text-xs text-muted-foreground">
-              {t('dataset.groupSummary', { column: column.label, metric: t(`dataset.summaryFunctions.${operation}`), value: format(value, column.kind) })}
+              {t('dataset.groupSummary', { column: column.label, metric: t(`dataset.summaryFunctions.${operation}`), value: displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
             </span>
           })}
         </div>

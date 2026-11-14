@@ -107,6 +107,31 @@
     }
   },
   "dataset": {
+    "columnRules": "Validation rules",
+    "columnFormat": "Display format",
+    "rule": {
+      "min_length": "Minimum length",
+      "max_length": "Maximum length",
+      "min": "Minimum value",
+      "max": "Maximum value",
+      "integer": "Whole numbers only",
+      "domains": "Allowed domains (comma separated)"
+    },
+    "format": {
+      "decimals": "Decimal places",
+      "style": "Number format",
+      "decimal": "Decimal",
+      "percent": "Percent",
+      "currency": "Currency",
+      "currencyCode": "Currency code",
+      "thousands": "Thousands separator",
+      "dateStyle": "Date format",
+      "default": "Default format",
+      "short": "Short date",
+      "medium": "Medium date",
+      "long": "Long date",
+      "iso": "ISO format"
+    },
     "gridLayout": "Grid layout",
     "rowHeight": "Row height",
     "rowHeights": {
@@ -843,6 +868,8 @@
     "DATASET_NOT_FOUND": "Dataset not found",
     "DATASET_COLUMN_NOT_FOUND": "Dataset column not found",
     "DATASET_COLUMN_READ_ONLY": "Dataset column {{field}} is read-only.",
+    "DATASET_COLUMN_RULE_VIOLATION": "Value violates the validation rules for {{field}}.",
+    "DATASET_COLUMN_RULE_EXISTING_ROWS": "{{count}} existing rows violate the rules for {{field}}.",
     "DATASET_NAME_TAKEN": "A dataset with this name already exists in this scope",
     "DATASET_COLUMN_KEY_TAKEN": "A dataset column already uses this field key",
     "DATASET_COLUMN_LIMIT": "A dataset can define at most {{max}} column keys",

@@ -832,3 +832,38 @@ test('edits long text and URLs while leaving system timestamps read-only', async
   await row.getByRole('button', { name: /^Edit Notes:/ }).dblclick()
   await expect(row.getByRole('textbox', { name: 'Notes' })).toHaveValue('First line\nSecond line')
 })
+
+test('configures number validation and display format without changing the stored value', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Column rules ${Date.now()}`, columns: [{ key: 'score', label: 'Score', kind: 'number' }],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const url = `/api/datasets/${id}/rows`
+  expect((await page.request.post(url, { headers, data: { values: { score: 2 } } })).ok()).toBeTruthy()
+  await page.goto(`/datasets/${id}`)
+  await page.getByRole('tab', { name: 'Schema' }).click()
+  await page.getByRole('button', { name: 'Edit Score', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit column' })
+  await dialog.getByRole('spinbutton', { name: 'Minimum value' }).fill('3')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(dialog.getByRole('alert')).toContainText('1 existing rows violate')
+  await dialog.getByRole('spinbutton', { name: 'Minimum value' }).fill('1')
+  await dialog.getByRole('checkbox', { name: 'Whole numbers only' }).check()
+  await dialog.getByRole('combobox', { name: 'Number format' }).click()
+  await page.getByRole('option', { name: 'Currency', exact: true }).click()
+  await dialog.getByRole('spinbutton', { name: 'Decimal places' }).fill('2')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(dialog).toBeHidden()
+  await page.getByRole('tab', { name: 'Rows' }).click()
+  const cell = page.getByRole('button', { name: 'Edit Score: $2.00' })
+  await expect(cell).toBeVisible()
+  await cell.dblclick()
+  await expect(page.getByRole('spinbutton', { name: 'Score' })).toHaveValue('2')
+  await page.getByRole('spinbutton', { name: 'Score' }).fill('2.5')
+  await page.getByRole('spinbutton', { name: 'Score' }).press('Enter')
+  await expect(page.getByRole('alert')).toContainText('Value violates the validation rules')
+})

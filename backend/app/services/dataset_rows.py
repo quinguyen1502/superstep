@@ -2,6 +2,7 @@ from time import time
 
 from ..core import config
 from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_VALUES
+from ..core.dataset_rules import enforce_rules
 from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, SYSTEM_TIME_KINDS, TEXT_KINDS, dataset_timestamp, dataset_size, filter_operators, normalize_cell, summary_functions
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
@@ -18,9 +19,10 @@ def _column(columns: dict[str, DatasetColumn], field: str) -> DatasetColumn:
     return columns[field]
 
 
-def _normalize(column: DatasetColumn, value, *, required: bool | None = None):
-    return normalize_cell(column.key, column.kind, value, column.options,
-                          required=column.required if required is None else required)
+def _normalize(column: DatasetColumn, value, *, required: bool | None = None, enforce: bool = True):
+    value = normalize_cell(column.key, column.kind, value, column.options,
+                           required=column.required if required is None else required)
+    return enforce_rules(column.key, value, column.validation_rules) if enforce else value
 
 
 def _row_values(row: DatasetRow, columns) -> dict:
@@ -78,9 +80,9 @@ def _filter(columns: dict[str, DatasetColumn], field: str, op: str, value) -> Ro
     elif op in LIST_FILTERS:
         if not isinstance(value, list) or not 1 <= len(value) <= MAX_FILTER_VALUES:
             raise AppError("DATASET_FILTER_INVALID", field=field)
-        value = [_normalize(column, item, required=True) for item in value]
+        value = [_normalize(column, item, required=True, enforce=False) for item in value]
     else:
-        value = _normalize(column, value, required=True)
+        value = _normalize(column, value, required=True, enforce=False)
     return RowFilter(column, op, value)
 
 
@@ -296,7 +298,7 @@ class DatasetRowService:
         match = None
         if key is not None:
             column = _column(columns, key)
-            if not column.unique or (value := _normalize(column, value)) is None:
+            if not column.unique or (value := _normalize(column, value, enforce=False)) is None:
                 raise AppError("DATASET_UPSERT_KEY_INVALID", field=key)
             match = (key, value)
         if dry_run:
