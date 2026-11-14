@@ -253,16 +253,24 @@ def test_a_slow_first_progress_write_does_not_count_against_the_child_run_time(m
     write (before any node) waited 12.6 s for the database; the 5 s limit had started before it, so the child timed out
     without running a node and the parent's tool call failed. Here that write of the child takes longer than the limit."""
     import time as _t
-    monkeypatch.setenv("STUDIO_RUN_TIMEOUT", "1")
     tok = user(); _, sup = setup(tok, specialist("Slow store desk", llm()))
     rid, evs = start(tok, sup)
-    cid = next(e for e in evs if e["type"] == "run_waiting")["wait"]["run_id"]
+    waiting = next((event for event in evs if event["type"] == "run_waiting"), None)
+    assert waiting is not None, evs[-1]
+    cid = waiting["wait"]["run_id"]
     repo = run_service().runs; real = type(repo).save_progress; slowed = []
     def slow_first(self, run_id, events, checkpoint, fence=None):
-        if run_id == cid and not slowed: slowed.append(run_id); _t.sleep(1.5)  # longer than the limit
+        if run_id == cid and not slowed:
+            slowed.append(run_id)
+            _t.sleep(3.5)  # longer than the child segment's limit
         return real(self, run_id, events, checkpoint, fence)
-    monkeypatch.setattr(type(repo), "save_progress", slow_first)
-    assert drain() == 2
+    with monkeypatch.context() as child_patch:
+        child_patch.setenv("STUDIO_RUN_TIMEOUT", "3")
+        child_patch.setattr(type(repo), "save_progress", slow_first)
+        job = get_job_queue().dequeue(0.05)
+        assert job is not None and job["run_id"] == cid
+        assert asyncio.run(run_worker().run_job(job)) == "ok"
+    assert drain() == 1  # the parent's resume runs with its regular timeout
     child, parent = repo.get(cid), repo.get(rid)
     assert slowed == [cid]
     assert child.status == "ok", json.loads(child.events)[-1]

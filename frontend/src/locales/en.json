@@ -78,6 +78,8 @@
     "dryRunBadge": "Dry run",
     "dryRun": "Tests, debug runs and unsaved edits simulate writes. Save the workflow and run it normally to write to the dataset.",
     "filterOps": {
+      "contains_any": "Contains any",
+      "contains_all": "Contains all",
       "eq": "Equals",
       "ne": "Does not equal",
       "lt": "Less than",
@@ -92,6 +94,8 @@
       "not_contains": "Does not contain"
     },
     "filterOpHelp": {
+      "contains_any": "Matches at least one selected option.",
+      "contains_all": "Matches every selected option.",
       "eq": "Matches the exact value, letter case included.",
       "ne": "Matches every other value, empty cells included.",
       "lt": "Matches smaller values.",
@@ -358,6 +362,8 @@
     "deleteColumnBody": "This removes the column and clears its values from every row. Its field key stays reserved and cannot be used again.",
     "noColumns": "No columns yet.",
     "kind": {
+      "multi_select": "Multiple select",
+      "auto_number": "Auto-number",
       "long_text": "Long text",
       "url": "URL",
       "created_time": "Created time",

@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0352
 - Title: Add multi-select and auto-number fields
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -71,6 +71,12 @@ Datasets support multi-select values and server-assigned auto-numbers.
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
 - 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): `;` delimiter confirmed.
+
+- 2026-11-14: Readiness gate passed. Started stacked on scalar column types in PR #408.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0343](../../artifacts/REV-0343-TASK-0352-dataset-structured-field-types.md) and QA [QA-0343](../../artifacts/QA-0343-TASK-0352-dataset-structured-field-types.md).
+
+- 2026-11-14: Owner approved merging PR #410 into develop after successful checks.
 
 ## Handoff Notes
 

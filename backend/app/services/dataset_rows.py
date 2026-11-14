@@ -2,7 +2,7 @@ from time import time
 
 from ..core import config
 from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_VALUES
-from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, SYSTEM_TIME_KINDS, TEXT_KINDS, dataset_timestamp, dataset_size, filter_operators, normalize_cell, summary_functions
+from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, READ_ONLY_KINDS, SYSTEM_TIME_KINDS, TEXT_KINDS, dataset_timestamp, dataset_size, filter_operators, normalize_cell, summary_functions
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, RowFilterGroup, WorkflowWrite
@@ -75,6 +75,10 @@ def _filter(columns: dict[str, DatasetColumn], field: str, op: str, value) -> Ro
     elif op in {"contains", "not_contains"}:
         if not isinstance(value, str) or not 0 < len(value) <= 120 or INVALID_TEXT.search(value):
             raise AppError("DATASET_FILTER_INVALID", field=field)
+    elif op in {"contains_any", "contains_all"}:
+        if not isinstance(value, list) or not 1 <= len(value) <= MAX_FILTER_VALUES:
+            raise AppError("DATASET_FILTER_INVALID", field=field)
+        value = _normalize(column, value, required=True)
     elif op in LIST_FILTERS:
         if not isinstance(value, list) or not 1 <= len(value) <= MAX_FILTER_VALUES:
             raise AppError("DATASET_FILTER_INVALID", field=field)
@@ -234,7 +238,7 @@ class DatasetRowService:
         incoming = {}
         for field, value in values.items():
             column = _column(columns, field)
-            if column.kind in SYSTEM_TIME_KINDS:
+            if column.kind in READ_ONLY_KINDS:
                 raise AppError("DATASET_COLUMN_READ_ONLY", field=field, details={"field": field})
             incoming[field] = _normalize(column, value)
         match = None
@@ -247,7 +251,7 @@ class DatasetRowService:
         def build(previous: dict | None) -> dict:
             result = dict(previous or {})
             for field, column in columns.items():
-                if column.kind in SYSTEM_TIME_KINDS:
+                if column.kind in READ_ONLY_KINDS:
                     continue
                 if field in incoming:
                     result[field] = incoming[field]

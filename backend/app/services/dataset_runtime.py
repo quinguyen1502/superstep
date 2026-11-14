@@ -2,7 +2,7 @@
 from pydantic import ValidationError
 
 from ..core.dataset_filters import filter_rules
-from ..core.dataset_types import SYSTEM_TIME_KINDS, filter_operators
+from ..core.dataset_types import READ_ONLY_KINDS, filter_operators
 from ..core.errors import AppError
 from ..engine import dataset_nodes
 from ..repositories.dataset_rows import WorkflowWrite
@@ -46,7 +46,7 @@ class DatasetRuntimeService:
         for field in references:
             _column(columns, field)
         for field in [*(args.get("values") or {}), *(binding.get("write_fields") or [])]:
-            if _column(columns, field).kind in SYSTEM_TIME_KINDS:
+            if _column(columns, field).kind in READ_ONLY_KINDS:
                 raise AppError("DATASET_COLUMN_READ_ONLY", field=field, details={"field": field})
         if is_agent:
             for field, operators in binding["filter_ops"].items():

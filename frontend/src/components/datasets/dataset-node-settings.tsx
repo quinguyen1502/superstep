@@ -11,7 +11,7 @@ import { StateFieldPicker } from '@/components/state-field-action'
 import { TemplateEditor } from '@/components/template-editor'
 import type { Field } from '@/components/editor/meta'
 import {
-  DATASET_QUERY_LIMIT, datasetSummaryFunctions, datasetFilterRules, datasetListFilter, datasetSubstringFilter, datasetSystemTime, keepDatasetFilterFields, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
+  DATASET_QUERY_LIMIT, datasetSummaryFunctions, datasetFilterRules, datasetListFilter, datasetSubstringFilter, datasetReadOnly, keepDatasetFilterFields, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
   type DatasetColumn, type DatasetSummaryFunction, type DatasetFilters, type DatasetNodeConfig, type DatasetOperation,
 } from '@/lib/datasets'
 import { DatasetFilterBuilder } from './dataset-filter-builder'
@@ -210,7 +210,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
         <DatasetFilterBuilder tree={filterTree} columns={columns} disabled={disabled}
           onChange={tree => patchArgs(filterArguments(tree))}
           renderValue={({ label, column, value, onChange, op }) => <MappedValue label={label} column={column}
-            value={value} fields={state} disabled={disabled} onChange={onChange} substring={datasetSubstringFilter(op)} nullable={false} filter />} />
+            value={value} fields={state} disabled={disabled} onChange={value => { if (!Array.isArray(value)) onChange(value) }} substring={datasetSubstringFilter(op)} nullable={false} filter />} />
       </div>}
       {aggregates && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('dataset.summary')}</legend>
@@ -250,7 +250,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
       </div>}
       {datasetWriteOperation(operation) && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetNode.mappedFields')}</legend>
-        {columns.filter(column => !datasetSystemTime(column.kind)).map(column => {
+        {columns.filter(column => !datasetReadOnly(column.kind)).map(column => {
           const mapped = Object.hasOwn(values, column.key)
           return <div key={column.key} className="space-y-2 rounded-md border p-2">
             <Label className="gap-1.5"><Checkbox checked={mapped} disabled={disabled || (operation === 'upsert_row' && args.key === column.key)} onCheckedChange={checked => {

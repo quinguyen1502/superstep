@@ -27,6 +27,7 @@ class RowChange:
     field: str
     clear: bool = False
     value: object = None
+    auto_number: bool = False
 
 
 def delete_dataset_definitions(session: Session, condition) -> None:
@@ -109,11 +110,17 @@ class DatasetRepository:
             if require_empty and session.scalar(select(DatasetRow.id).where(DatasetRow.dataset_id == dataset.id).limit(1)):
                 raise AppError("DATASET_SCHEMA_HAS_ROWS")
             dataset.revision = revision + 1
+            dataset.auto_number_counter = session.get(Dataset, dataset.id).auto_number_counter
             result = session.merge(dataset)
             session.flush()
             changed = 0
             if rows is not None:
-                changed = self._clear_field(session, dataset.id, rows.field) if rows.clear else self._fill_field(session, dataset.id, rows)
+                if rows.auto_number:
+                    changed = self._backfill_auto_numbers(session, dataset.id, rows.field)
+                elif rows.clear:
+                    changed = self._clear_field(session, dataset.id, rows.field)
+                else:
+                    changed = self._fill_field(session, dataset.id, rows)
             if unique is not None:
                 field, enabled = unique
                 if enabled:
@@ -124,6 +131,24 @@ class DatasetRepository:
                     ))
             self._commit(session)
             return result, changed
+
+    @staticmethod
+    def reserve_auto_numbers(session: Session, dataset_id: str, count: int) -> int:
+        """The caller holds the dataset writer lock for this transaction."""
+        counter = session.get(Dataset, dataset_id)
+        first = counter.auto_number_counter + 1
+        counter.auto_number_counter += count
+        return first
+
+    def _backfill_auto_numbers(self, session: Session, dataset_id: str, field: str) -> int:
+        rows = list(session.scalars(select(DatasetRow).where(DatasetRow.dataset_id == dataset_id)
+                                    .order_by(DatasetRow.created, DatasetRow.id)))
+        first = self.reserve_auto_numbers(session, dataset_id, len(rows))
+        for index, row in enumerate(rows, first):
+            row.values = {**row.values, field: index}
+            row.revision += 1
+        session.flush()
+        return len(rows)
 
     @staticmethod
     def _clear_field(session: Session, dataset_id: str, field: str) -> int:

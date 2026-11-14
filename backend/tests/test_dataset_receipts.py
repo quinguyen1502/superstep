@@ -3,10 +3,10 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import select, update
+from sqlalchemy import MetaData, Table, select, update
 
 from app.core.errors import AppError
-from app.models import Dataset, DatasetWriteReceipt, Run, User, Workflow
+from app.models import DatasetWriteReceipt, Run, User, Workflow
 from app.models.database import MIGRATIONS_DIR
 from app.repositories.dataset_rows import DatasetRowRepository, WorkflowWrite
 from app.repositories.datasets import DatasetRepository
@@ -174,8 +174,10 @@ def test_receipt_migration_minimizes_all_cells_and_supports_downgrade(db):
     with db.session() as session:
         session.add(User(id="legacy-owner", email="legacy@example.com", role="editor"))
         session.flush()
-        session.add(Dataset(id="legacy", owner_id="legacy-owner", name="Legacy", name_key="legacy", revision=1, created=1, updated=1))
-        session.flush()
+        datasets = Table("datasets", MetaData(), autoload_with=session.connection())
+        session.execute(datasets.insert().values(
+            id="legacy", owner_id="legacy-owner", name="Legacy", name_key="legacy", revision=1, created=1, updated=1,
+        ))
         session.add_all(
             DatasetWriteReceipt(dataset_id="legacy", scope="legacy", operation_id=str(i), fingerprint="x",
                                 result={"row": {"id": str(i), "revision": 2, "values": {"private": f"secret-{i}"},
