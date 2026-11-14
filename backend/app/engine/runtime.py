@@ -95,6 +95,17 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         return {"node": nid, "label": nodes[nid]["data"].get("label"), "node_type": nodes[nid]["type"],
                 **({'browser_private': True} if browser_private else {})}
 
+    def dataset_summary(nid, delta=None, *, failed=False):
+        node = nodes.get(nid)
+        if node is None or node["type"] != "dataset":
+            return {}
+        data = node["data"]
+        result = (delta or {}).get(data.get("output_field"), {})
+        operation = data["operation"]
+        count = 0 if failed else len(result.get("items", [])) if operation == "find_rows" else 1
+        outcome = "failed" if failed else "simulated" if result.get("dry_run") else "completed"
+        return {"dataset": {"id": data["dataset_id"], "operation": operation, "count": count, "outcome": outcome}}
+
     def started(nid):
         counts[nid] = counts.get(nid, 0) + 1
         return {"type": "node_started", **meta(nid), "iteration": counts[nid]}
@@ -146,6 +157,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                        "input": cap_payload(agents.visible(before) if dataset_agent else before), "delta": cap_payload(agents.visible(delta)),
                        **({'browser': browser_presentation.detail(nodes[nid]['data'].get('tool'), delta.get(nodes[nid]['data'].get('output_field')) or {})}
                           if nodes[nid]['type'] == 'mcp' and browser_private and ports is not None and ports.browser is not None and ports.browser.is_browser(nodes[nid]['data'].get('server_id')) else {}),  # input: time travel forks from it
+                       **dataset_summary(nid, delta),
                        **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did
                        **({"usage": usage.pop(nid)} if nid in usage else {}), **({"embedding_usage": embedding.pop(nid)} if nid in embedding else {}), **({"reused": True} if reused else {}),
                        **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
@@ -172,6 +184,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", **(meta(nid) if nid in nodes else {}), "iteration": counts.get(nid, 1) if nid else None,
                "duration_ms": round((time.perf_counter() - t0) * 1000, 2), "input": cap_payload(dict(state)),
                "code": getattr(e, "code", "NODE_FAILED"), "errors": [safe_error(e)],
+               **dataset_summary(nid, failed=True),
                **_provider_of(e, nodes[nid]["data"] if nid in nodes else {}),
                **({"browser": e.browser} if isinstance(getattr(e, "browser", None), dict) else {}),
                **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),

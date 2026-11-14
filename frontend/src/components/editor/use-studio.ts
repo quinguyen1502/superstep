@@ -229,7 +229,20 @@ export function useStudio() {
       if (ev.code === 4401) { setErrors([t('editor.expiredDuringRun')]); setTimeout(sessionExpired, 1500) }
       setRunning(false); setNodes(ns => ns.map(n => n.data._status === 'running' ? { ...n, data: { ...n.data, _status: 'error' } } : n)); loadHistory(wid) }
   }
-  const run = () => {
+  const [datasetWriteNotice, setDatasetWriteNotice] = useState(false)
+  const run = (confirmed = false) => {
+    const writes = (operation: unknown) => operation === 'insert_row' || operation === 'upsert_row' || operation === 'delete_row'
+    const writesDataset = nodes.some(node => node.type === 'dataset' && writes(node.data.operation)
+      || node.type === 'agent' && Array.isArray(node.data.tools)
+        && node.data.tools.some(tool => tool?.source === 'dataset' && Array.isArray(tool.operations) && tool.operations.some(writes)))
+    if (!confirmed && writesDataset && !demo && !sessionStorage.getItem('studio-dataset-write-notice')) {
+      setDatasetWriteNotice(true)
+      return
+    }
+    if (confirmed) {
+      setDatasetWriteNotice(false)
+      sessionStorage.setItem('studio-dataset-write-notice', '1')
+    }
     let inp: any; try { inp = JSON.parse(input) } catch { setErrors([t('editor.badInput')]); setTab('input'); return }
     stream({ workflow_id: wid, workflow: toJSON(), input: inp })
   }
@@ -428,7 +441,7 @@ export function useStudio() {
     id, nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange, state, setState, name, setName, wid, setSel,
     input, setInput, log, setLog, errors, setErrors, tools, mode, source, creds, setCreds, providers, channels, history,
     tab, setTab, running, traceSel, setTraceSel, replay, setReplay, loadErr, access, ownerEmail, edit, canSave, dark, rf,
-    hist, load, openRun, toJSON, save, mark, run, respond, fork, cancelRun, removeIds, observeChatRun, refreshHistory: loadHistory,
+    hist, load, openRun, toJSON, save, mark, run: () => run(), datasetWriteNotice, setDatasetWriteNotice, confirmDatasetRun: () => run(true), respond, fork, cancelRun, removeIds, observeChatRun, refreshHistory: loadHistory,
     clipNote, note, insert, editable, layoutDir, cheat, setCheat, insertAround, addNode, addNote, dlg, setDlg, ctx, setCtx,
     delWf, isDirty, saves, paletteCmds, addCentered, trace, traceMeta, step, continueRun, nodesView, edgesView, onEdgesView, onNodeClick, onConnect, onDrop,
     selNode, selEdge, upd, setRuntime, d, runTo, fieldNames, canvasLock, setCanvasLock, copyIds, chatOpen: chatOpen && canChat, setChatOpen, canChat,

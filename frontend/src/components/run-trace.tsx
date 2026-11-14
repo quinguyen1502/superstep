@@ -18,6 +18,7 @@ import { agentOf, buildTrace, fmtCost, fmtMs, stateDiff, type AgentStep, type Ru
 import { api } from '@/lib/api'
 import { TextLink } from '@/components/text-link'
 import { cn } from '@/lib/utils'
+import { fmtDate } from "@/lib/i18n"
 import { Tip } from '@/components/tip'
 
 type Meta = (type: string) => { icon: LucideIcon; color: string; label: string }
@@ -147,7 +148,7 @@ function DiffView({ s }: { s: Span }) {
 
 function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void }) {
   const { t } = useTranslation(); const m = meta(s.type); const I = m.icon
-  const [tab, setTab] = useState(s.browser || s.agent?.browser || s.status === 'error' || (s.status === 'running' && s.live) ? 'output' : 'diff')
+  const [tab, setTab] = useState(s.dataset || s.browser || s.agent?.browser || s.status === 'error' || (s.status === 'running' && s.live) ? 'output' : 'diff')
   return <div className="w-[46%] min-w-80 border-l flex flex-col min-h-0" id="trace-detail">
     <div className="flex items-center gap-2 px-3 py-1.5 border-b text-xs">
       <span className={cn('rounded p-0.5', m.color)}><I className="size-3.5" /></span>
@@ -161,7 +162,13 @@ function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void
       <ScrollArea className="flex-1 min-h-0"><div className="p-3 pt-2">
         {s.error && <Alert variant="destructive" className="mb-2 text-xs"><AlertTriangle /><AlertDescription className="wrap-break-word text-xs">{s.error}</AlertDescription></Alert>}
         <TabsContent value="input"><JsonView value={s.input} /></TabsContent>
-        <TabsContent value="output">{s.status === 'running' && s.live
+        <TabsContent value="output">{s.dataset ? <div className="space-y-2">
+          <p>{t(`datasetNode.trace.${s.dataset.outcome}`, {
+            operation: t(`datasetNode.operations.${s.dataset.operation}`), dataset: s.dataset.id,
+            count: s.dataset.count, time: fmtDate(s.end ?? s.start),
+          })}</p>
+          <details><summary className="cursor-pointer text-muted-foreground">{t('trace.raw')}</summary><JsonView value={s.output} /></details>
+        </div> : s.status === 'running' && s.live
           ? <div className="space-y-1" id="trace-live"><div className="flex items-center gap-1 text-[11px] text-muted-foreground"><Loader2 className="size-3 animate-spin" />{t('trace.streaming')}</div>
               <pre className="whitespace-pre-wrap break-words rounded-md border bg-muted/40 p-2 font-mono text-[11px]">{s.live}</pre></div>
           : <div className="space-y-2">{(s.browser || s.agent?.browser) && <BrowserTraceDetail value={(s.browser || s.agent?.browser)!} />}{s.status !== 'error' && <JsonView value={s.agent ?? s.output} />}<CodeConsole stdout={s.code?.stdout} traceback={s.code?.traceback} id="trace-code-output" />
