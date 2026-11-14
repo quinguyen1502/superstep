@@ -98,6 +98,8 @@ def attachment_s3() -> dict:
 def attachment_fs_path() -> str:
     """The folder of the `fs` attachment backend; on the data volume by default."""
     return (os.environ.get("STUDIO_ATTACHMENT_FS_PATH") or "/data/attachments").strip()
+def dataset_receipt_days() -> int: return max(1, _int("STUDIO_DATASET_RECEIPT_DAYS", 30))
+
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)
 # --- ---
 def webhook_max_attempts() -> int: return max(1, _int("STUDIO_WEBHOOK_MAX_ATTEMPTS", 5))
