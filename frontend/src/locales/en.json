@@ -1,5 +1,8 @@
 {
   "datasetTool": {
+    "traceGroups": "{{tool}} · {{count}} aggregate groups",
+    "aggregateAccess": "Aggregate requires read access and returns summary values.",
+    "allowedAggregateFields": "Fields available to this tool",
     "readOnly": "Find rows with read-only access. The Agent can use only the selected fields and operators.",
     "writeAccess": "Insert and upsert use the workflow’s write grant and only the fields selected below. An Agent cannot delete rows.",
     "operations": "Operations the Agent can use",
@@ -18,6 +21,9 @@
     "traceUpserted_other": "{{tool}} upserted {{count}} rows"
   },
   "datasetNode": {
+    "aggregateRequired": "Choose at least one column to summarize.",
+    "aggregateNoGrouping": "All matching rows",
+    "aggregateGroupBy": "Group by",
     "grantShortcut": "Grant access",
     "runNoticeTitle": "This run can change Dataset rows",
     "runNotice": "Running this workflow can add, update or delete stored rows. Workflow tests simulate these changes.",
@@ -41,6 +47,7 @@
     "openDataset": "Open dataset",
     "chooseFirst": "Choose a dataset in Settings to configure the mapping.",
     "operations": {
+      "aggregate_rows": "Aggregate rows",
       "find_rows": "Find rows",
       "get_row": "Get row",
       "insert_row": "Insert row",
@@ -100,6 +107,25 @@
     }
   },
   "dataset": {
+    "gridLayout": "Grid layout",
+    "rowHeight": "Row height",
+    "rowHeights": {
+      "short": "Short",
+      "medium": "Medium",
+      "tall": "Tall"
+    },
+    "freezeColumns": "Freeze columns",
+    "frozenCount_zero": "Freeze columns",
+    "frozenCount_one": "1 frozen column",
+    "frozenCount_other": "{{count}} frozen columns",
+    "groupBy": "Group by",
+    "noGrouping": "No grouping",
+    "groupEmpty": "Empty",
+    "groupRows_one": "{{count}} row",
+    "groupRows_other": "{{count}} rows",
+    "groupSummary": "{{column}} · {{metric}} {{value}}",
+    "previousGroups": "Previous groups",
+    "nextGroups": "Next groups",
     "openUrl": "Open {{column}} in a new tab",
     "invalidUrl": "Enter a valid HTTP or HTTPS URL.",
     "summary": "Summary",
@@ -832,6 +858,7 @@
     "DATASET_UNIQUE_CONFLICT": "A row already has this unique field value",
     "DATASET_UNIQUE_DUPLICATES": "Field {{field}} cannot become unique because {{count}} rows share a value",
     "DATASET_EXPORT_FILTER_UNSUPPORTED": "This Dataset filter is not yet supported by code export",
+    "DATASET_EXPORT_AGGREGATE_UNSUPPORTED": "Dataset aggregation is not yet supported by code export",
     "DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED": "A Dataset column type is not yet supported by code export",
     "DATASET_FILTER_INVALID": "Invalid dataset filter for {{field}}",
     "DATASET_SUMMARY_INVALID": "Invalid dataset summary for {{field}}.",

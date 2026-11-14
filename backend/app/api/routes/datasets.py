@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from ...core.errors import AppError
 from ...schemas.dataset import (
     DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetGrantInput, DatasetTokenInput,
-    DatasetOwnerUpdate, DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetSummaryQuery, DatasetUpdate,
+    DatasetOwnerUpdate, DatasetRowIn, DatasetGroupedRowQuery, DatasetGroupsQuery, DatasetGroupRowsQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetSummaryQuery, DatasetUpdate,
 )
 from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_csv_service, dataset_row_service, dataset_service, limit_body
 
@@ -141,6 +141,16 @@ def execute_connected(dataset_id: str, body: DatasetConnectedInput, response: Re
 
 @router.post("/{dataset_id}/rows/query")
 def query_rows(dataset_id: str, body: DatasetGroupedRowQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.query(user["id"], dataset_id, include_total=True, **body.model_dump())
+
+
+@router.post("/{dataset_id}/rows/groups")
+def list_row_groups(dataset_id: str, body: DatasetGroupsQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.groups(user["id"], dataset_id, **body.model_dump())
+
+
+@router.post("/{dataset_id}/rows/groups/query")
+def query_row_group(dataset_id: str, body: DatasetGroupRowsQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
     return svc.query(user["id"], dataset_id, include_total=True, **body.model_dump())
 
 

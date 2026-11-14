@@ -66,6 +66,10 @@ const generalSummaryFunctions = ['count', 'empty_count', 'empty_percent', 'uniqu
 export type DatasetSummaryFunction = (typeof generalSummaryFunctions)[number] | 'sum' | 'avg' | 'min' | 'max'
 export type DatasetColumnSummaries = Partial<Record<string, DatasetSummaryFunction>>
 export type DatasetSummaryResult = { total: number; values: Record<string, CellValue>; schema_revision: number }
+export type DatasetRowGroup = { group: CellValue; total: number; values: Record<string, CellValue> }
+export type DatasetGroupsPage = { groups: DatasetRowGroup[]; next_offset: number | null; schema_revision: number }
+export const datasetGroupable = (kind: DatasetKind) => ['select', 'boolean', 'text', 'date'].includes(kind)
+
 
 export function datasetSummaryFunctions(kind: DatasetKind): readonly DatasetSummaryFunction[] {
   if (kind === 'number') return [...generalSummaryFunctions, 'sum', 'avg', 'min', 'max']
@@ -105,13 +109,13 @@ export function fromDraft({ optionsText, ...column }: ColumnDraft): DatasetColum
     options: column.kind === 'select' ? optionsText.split('\n').map(option => option.trim()).filter(Boolean) : [] }
 }
 
-export const datasetOperations = ['find_rows', 'get_row', 'insert_row', 'upsert_row', 'delete_row'] as const
+export const datasetOperations = ['find_rows', 'aggregate_rows', 'get_row', 'insert_row', 'upsert_row', 'delete_row'] as const
 export type DatasetOperation = (typeof datasetOperations)[number]
 export type DatasetGrantPermission = 'read' | 'write' | 'read_write'
 
 export const DATASET_AGENT_MAX_ROWS = 20
 /** What an Agent Dataset tool may do. Delete row is never offered to an Agent. */
-export const datasetAgentOperations = ['find_rows', 'insert_row', 'upsert_row'] as const
+export const datasetAgentOperations = ['find_rows', 'aggregate_rows', 'insert_row', 'upsert_row'] as const
 export type DatasetAgentOperation = (typeof datasetAgentOperations)[number]
 
 export function datasetFilterOperators(kind: DatasetColumn['kind']) {
@@ -144,6 +148,8 @@ export type DatasetNodeConfig = {
     filter_mode?: 'and' | 'or'
     filters?: { field: string; op: string; value: CellValue }[]
     filter_tree?: DatasetFilters
+    summaries?: DatasetColumnSummaries
+    group_by?: string
     sorts?: { field: string; descending: boolean }[]
   }
 }

@@ -59,6 +59,25 @@ The project download can prefill `_BACKEND` for a binding. The generated graph s
 
 Standalone Dataset writes keep identifier-only receipts for 30 days by default. Both runtimes use `STUDIO_DATASET_RECEIPT_DAYS` and expire old receipts before writes. Replaying a retained receipt projects current values when the row still exists, or returns identifiers after deletion. An unchanged upsert retains the revision and update time. Find uses case-insensitive contains, search and text sorting, and `ne` includes null cells.
 
+### Dataset aggregation
+
+In Studio, a Dataset node or an Agent tool with Aggregate enabled can run
+`aggregate_rows` with a read grant. The call takes `summaries` as a map of
+column keys to summary functions, the same flat filters or `filter_tree` as
+Find rows, and an optional `group_by` column. Both summarized and grouping
+columns must be in the binding's configured `fields`. The summary functions
+are `count` (filled cells), `empty_count`, `empty_percent`, `unique_count`,
+plus `sum`, `avg`, `min`, and `max` where supported by the column type.
+
+The result contains `group_by`, `groups`, and `truncated`. Each group has
+`group` (the typed grouping value or null), `total` (the count of matching
+rows in that group), and `values` (the requested statistics). With a grouping
+column, the result includes up to 20 groups, by descending total then
+ascending key with null last on ties. Without a grouping column there is one
+group with a null key, even when the filter matches zero rows.
+
+Python and TypeScript export reject aggregate bindings until their respective
+parity tasks implement this contract.
 ### Scalar and system column types
 
 Studio supports `long_text` (multiline text up to 16,384 characters, without a

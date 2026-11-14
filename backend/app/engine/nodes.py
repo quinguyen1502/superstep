@@ -147,7 +147,7 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
                 raise AppError("DATASET_GRANT_DENIED")
             raw = d.get("arguments", {})
             args = render_args(raw, state)
-            if d["operation"] == "find_rows":
+            if d["operation"] in {"find_rows", "aggregate_rows"}:
                 dataset_nodes.check_mapped_filters(node["id"], raw, args, state)
             key = effects.key(node["id"]) if effects is not None else None
             try:
