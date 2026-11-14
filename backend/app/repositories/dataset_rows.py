@@ -220,9 +220,10 @@ class DatasetRowRepository:
             if connected:
                 token = session.get(DatasetApiToken, connected.token_id)
                 if (token is None or token.dataset_id != dataset.id or token.issuer_id != uid
-                        or token.token_hash != connected.token_hash or token.revoked is not None
-                        or token.permission not in {"write", "read_write"}):
+                        or token.token_hash != connected.token_hash or token.revoked is not None):
                     raise AppError("AUTH_TOKEN_INVALID")
+                if token.permission not in {"write", "read_write"}:
+                    raise AppError("DATASET_TOKEN_SCOPE")
                 if reveal and token.permission != "read_write":
                     raise AppError("DATASET_GRANT_DENIED")
             if receipt:
@@ -340,9 +341,10 @@ class DatasetRowRepository:
             if connected:
                 token = session.get(DatasetApiToken, connected.token_id)
                 if (token is None or token.dataset_id != dataset.id or token.issuer_id != uid
-                        or token.token_hash != connected.token_hash or token.revoked is not None
-                        or not token.allow_delete):
+                        or token.token_hash != connected.token_hash or token.revoked is not None):
                     raise AppError("AUTH_TOKEN_INVALID")
+                if not token.allow_delete:
+                    raise AppError("DATASET_TOKEN_SCOPE")
             if receipt:
                 fingerprint, scope = receipt.fingerprint, receipt.scope
                 previous = session.scalar(select(DatasetWriteReceipt).where(

@@ -6,6 +6,7 @@ import re
 from ..core.dataset_types import FILTER_OPERATORS
 from ..core.errors import AppError
 from .issues import Issue
+from .templating import refs, value
 
 SCOPE = "_dataset_workflow"
 DRY_RUN = "_dataset_dry_run"
@@ -22,6 +23,26 @@ AGENT_MAX_FILTERS = 12
 AGENT_OPERATIONS = ("find_rows", "insert_row", "upsert_row")  # an Agent can never delete
 AGENT_WRITES = ("insert_row", "upsert_row")
 KEY = re.compile(r"[a-z][a-z0-9_]{0,62}")
+
+
+def filter_error(node: str, position: int, field: str, state_key: str | None = None) -> AppError:
+    details = {"node": node, "position": position, "field": field}
+    context = f"{field} (node {node}, filter {position})"
+    if state_key is not None:
+        details["state_key"] = state_key
+        context += f": state.{state_key} is empty"
+    return AppError("DATASET_FILTER_INVALID", field=context, details=details)
+
+
+def check_mapped_filters(node: str, raw: dict, rendered: dict, state: dict) -> None:
+    for position, (rule, resolved) in enumerate(zip(raw.get("filters", []), rendered.get("filters", [])), start=1):
+        expression = rule.get("value")
+        if rule.get("op") in {"is_null", "not_null"} or resolved.get("value") not in (None, ""):
+            continue
+        if isinstance(expression, str):
+            for ref in refs(expression):
+                if value(ref, state) in (None, ""):
+                    raise filter_error(node, position, rule["field"], ".".join([ref.field, *ref.path]))
 
 
 def _key(value) -> bool:

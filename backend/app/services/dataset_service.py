@@ -137,7 +137,7 @@ class DatasetService:
     def prepare_create(self, uid: str, *, name: str, description: str | None, team_id: str | None, columns: list[dict]) -> Dataset:
         self.access.require(uid, P.RESOURCES_MANAGE)
         if team_id is not None and team_id not in self.access.teams.teams_of(uid):
-            raise AppError("DATASET_NOT_FOUND")
+            raise AppError("DATASET_TEAM_FORBIDDEN")
         fields = [_column(data, i) for i, data in enumerate(columns)]
         keys = [field.key for field in fields]
         if len(set(keys)) != len(keys):

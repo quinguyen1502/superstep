@@ -111,8 +111,15 @@ class DatasetRowService:
             raise AppError("DATASET_FILTER_INVALID", field="search")
         if sorts is None:
             sorts = [{"field": sort, "descending": descending}] if sort else []
+        predicates = []
+        for position, spec in enumerate(filters, start=1):
+            try:
+                predicates.append(_filter(columns, **spec))
+            except AppError as exc:
+                raise AppError("DATASET_FILTER_INVALID", field=spec["field"],
+                               details={"field": spec["field"], "position": position}) from exc
         rows, total = self.rows.query_page(
-            dataset.id, filters=[_filter(columns, **spec) for spec in filters], filter_mode=filter_mode, search=search,
+            dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
             search_columns=[column for column in columns.values() if column.kind in TEXT_KINDS],
             sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts], limit=limit + 1, offset=offset, include_total=include_total,
         )
