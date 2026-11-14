@@ -254,16 +254,6 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     observer.observe(viewport)
     return () => observer.disconnect()
   }, [])
-  useEffect(() => {
-    function clearOutsideCell(event: PointerEvent) {
-      const target = event.target
-      if (target instanceof Element && (inDatasetCalendar(target)
-        || (gridViewport.current?.contains(target) && inDatasetCell(target)))) return
-      setActive(null)
-    }
-    document.addEventListener('pointerdown', clearOutsideCell, true)
-    return () => document.removeEventListener('pointerdown', clearOutsideCell, true)
-  }, [])
 
   // oxlint-disable-next-line react/incompatible-library -- The table instance stays within this component.
   const displayPage = autoPage ?? page
@@ -279,6 +269,18 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     onColumnVisibilityChange: updater => setColumnVisibility(typeof updater === 'function' ? updater(layout.visibility) : updater),
     onColumnSizingChange: setColumnSizing, onColumnPinningChange: setPinning,
   })
+  useEffect(() => {
+    function clearOutsideCell(event: PointerEvent) {
+      const target = event.target
+      if (target instanceof Element && (inDatasetCalendar(target)
+        || target.closest('[data-dataset-clipboard]')
+        || (gridViewport.current?.contains(target) && inDatasetCell(target)))) return
+      setActive(null)
+      if (table.getFocusedCell()) table.resetCellSelection(true)
+    }
+    document.addEventListener('pointerdown', clearOutsideCell, true)
+    return () => document.removeEventListener('pointerdown', clearOutsideCell, true)
+  }, [table])
   const rows = table.getRowModel().rows
   const scrollViewport = () => gridViewport.current?.querySelector<HTMLDivElement>('[data-slot="table-container"]') ?? null
   const useVirtualRows = !groupColumn && rows.length > 25
@@ -841,9 +843,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       <div className="flex flex-wrap items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" aria-label={t('dataset.clipboardMenu')} disabled={editing}><Clipboard /></Button>
+            <Button variant="outline" size="icon" aria-label={t('dataset.clipboardMenu')} data-dataset-clipboard="" disabled={editing}><Clipboard /></Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
+          <DropdownMenuContent align="start" data-dataset-clipboard="">
             <DropdownMenuItem disabled={!table.getSelectedCellCount()} onSelect={() => copyRanges()}>{t('dataset.clipboardCopy')}</DropdownMenuItem>
             <DropdownMenuItem disabled={!editable || !table.getFocusedCell()} onSelect={() => {
               void navigator.clipboard.readText().then(pasteText).catch(() => setBatchError(t('dataset.clipboardPermission')))
