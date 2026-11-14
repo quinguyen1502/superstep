@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 
 from ...core.errors import AppError
 from ...schemas.dataset import (
-    DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetGrantInput, DatasetTokenInput,
+    DatasetBatchUpdate, DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetGrantInput, DatasetTokenInput,
     DatasetOwnerUpdate, DatasetRowIn, DatasetGroupedRowQuery, DatasetGroupsQuery, DatasetGroupRowsQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetSummaryQuery, DatasetUpdate,
 )
 from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_csv_service, dataset_row_service, dataset_service, limit_body
@@ -172,6 +172,11 @@ def upsert_row(dataset_id: str, body: DatasetRowUpsert, user=Depends(current_use
 @router.get("/{dataset_id}/rows/{row_id}")
 def get_row(dataset_id: str, row_id: str, user=Depends(current_user), svc=Depends(dataset_row_service)):
     return svc.get(user["id"], dataset_id, row_id)
+
+
+@router.patch("/{dataset_id}/rows/batch", dependencies=[Depends(limit_body)])
+def batch_update_rows(dataset_id: str, body: DatasetBatchUpdate, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.batch_update(user["id"], dataset_id, **body.model_dump())
 
 
 @router.patch("/{dataset_id}/rows/{row_id}")

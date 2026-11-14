@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   DATASET_FILTER_DEPTH, DATASET_FILTER_RULES, DATASET_FILTER_VALUES, datasetFilterOperators, datasetFilterRules,
   datasetListFilter, datasetSubstringFilter, datasetValueFreeFilter, emptyDatasetFilters,
-  type CellValue, type DatasetColumn, type DatasetFilterRule, type DatasetFilters,
+  type ScalarCellValue, type DatasetColumn, type DatasetFilterRule, type DatasetFilters,
 } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
@@ -18,8 +18,8 @@ type ValueProps = {
   label: string
   column: DatasetColumn
   op: string
-  value: CellValue
-  onChange: (value: CellValue) => void
+  value: ScalarCellValue
+  onChange: (value: ScalarCellValue) => void
   disabled: boolean
 }
 
@@ -45,7 +45,7 @@ function LiteralFilterValue({ id, label, column, op, value, disabled, onChange }
       value={String(value ?? '')} onChange={event => onChange(event.target.value)} />
   }
   return <DatasetValueField id={id} label={label} column={column} value={value}
-    nullable={false} filter disabled={disabled} onChange={onChange} />
+    nullable={false} filter disabled={disabled} onChange={next => { if (!Array.isArray(next)) onChange(next) }} />
 }
 
 export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false, renderValue }: {
@@ -66,7 +66,7 @@ export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false
     const removeChild = (index: number) =>
       change({ ...group, children: group.children.filter((_, current) => current !== index) })
     const canAdd = !disabled && !!columns.length && ruleCount < DATASET_FILTER_RULES && group.children.length < DATASET_FILTER_RULES
-    const newRule = (): DatasetFilterRule => ({ type: 'rule', field: renderValue ? columns[0]?.key ?? '' : '', op: 'eq', value: null })
+    const newRule = (): DatasetFilterRule => ({ type: 'rule', field: renderValue ? columns[0]?.key ?? '' : '', op: renderValue && columns.length ? datasetFilterOperators(columns[0].kind)[0] : 'eq', value: null })
     const matchLabel = path.length ? t('dataset.filterGroupMatch', { number: position }) : t('dataset.filterMatch')
 
     return <div role={remove ? 'group' : undefined} aria-label={remove ? t('dataset.filterGroup', { number: position }) : undefined}
@@ -94,8 +94,11 @@ export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false
         const error = ruleError(child, column)
         const replace = (patch: Partial<DatasetFilterRule>) => changeChild(index, { ...child, ...patch })
         const list = datasetListFilter(child.op)
-        const values: CellValue[] = Array.isArray(child.value) ? child.value : [child.value]
-        const valueControls = column && !datasetValueFreeFilter(child.op) && <div className="grid min-w-0 gap-2">
+        const values: ScalarCellValue[] = Array.isArray(child.value) ? child.value : [child.value]
+        const valueControls = column?.kind === 'multi_select' && !datasetValueFreeFilter(child.op)
+          ? <DatasetValueField id={`${id}-${key}`} label={t('dataset.filterValue')} column={column} value={Array.isArray(child.value) ? child.value.filter(item => typeof item === 'string') : null}
+              disabled={disabled} filter nullable={false} onChange={value => replace({ value: Array.isArray(value) ? value : null })} />
+          : column && !datasetValueFreeFilter(child.op) && <div className="grid min-w-0 gap-2">
           {values.map((value, valueIndex) => {
             const props: ValueProps = {
               id: `${id}-${key}-${valueIndex}`, label: list ? t('dataset.filterListValue', { number: valueIndex + 1 }) : t('dataset.filterValue'),
@@ -119,12 +122,12 @@ export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false
           <legend className={renderValue ? 'px-1 text-xs' : 'sr-only'}>{t('dataset.filterCondition', { number: key })}</legend>
           <div className="flex min-w-0 items-start gap-2">
             <div className={renderValue ? 'grid min-w-0 flex-1 gap-2' : 'grid min-w-0 flex-1 gap-2 sm:grid-cols-3'}>
-              <Select value={column?.key ?? ''} disabled={disabled} onValueChange={field => replace({ field, op: 'eq', value: null })}>
+              <Select value={column?.key ?? ''} disabled={disabled} onValueChange={field => replace({ field, op: datasetFilterOperators(columns.find(column => column.key === field)!.kind)[0], value: null })}>
                 <SelectTrigger aria-label={t('dataset.filterColumn')} className="w-full min-w-0"><SelectValue placeholder={t('dataset.filterColumn')} /></SelectTrigger>
                 <SelectContent>{columns.map(item => <SelectItem key={item.key} value={item.key}><DatasetFieldIcon kind={item.kind} /><span className="truncate">{item.label}</span></SelectItem>)}</SelectContent>
               </Select>
               <Select value={ops.includes(child.op) ? child.op : ''} disabled={disabled || !column}
-                onValueChange={op => replace({ op, value: datasetListFilter(op) ? [null] : null })}>
+                onValueChange={op => replace({ op, value: datasetListFilter(op) && column?.kind !== 'multi_select' ? [null] : null })}>
                 <SelectTrigger aria-label={t('dataset.filterOperator')} className="w-full min-w-0"><SelectValue placeholder={t('dataset.filterOperator')} /></SelectTrigger>
                 <SelectContent>{ops.map(op => <SelectItem key={op} value={op}>{t(`datasetNode.filterOps.${op}`)}</SelectItem>)}</SelectContent>
               </Select>

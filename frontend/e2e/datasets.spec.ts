@@ -118,7 +118,9 @@ test('creates a team dataset, edits typed rows, filters and confirms deletion', 
   await expect(dateType.locator('svg.lucide-calendar-days')).toBeVisible()
   await dateType.click()
   await expect(addColumnDialog.getByRole('combobox', { name: 'Column type' }).locator('svg.lucide-calendar-days')).toBeVisible()
-  const calendarSuffix = addColumnDialog.locator('[data-slot=input-group]').getByRole('button', { name: 'Choose a date' })
+  const defaultDate = page.getByLabel('Default value', { exact: true })
+  const calendarSuffix = addColumnDialog.locator('[data-slot=input-group]').filter({ has: defaultDate })
+    .getByRole('button', { name: 'Choose a date' })
   await expect(calendarSuffix.locator('svg.lucide-calendar-days')).toBeVisible()
   await addColumnDialog.getByRole('button', { name: 'Cancel' }).click()
   await schemaDialog.getByRole('button', { name: 'Edit Ticket' }).click()
@@ -831,4 +833,74 @@ test('edits long text and URLs while leaving system timestamps read-only', async
   await expect(row.getByRole('textbox', { name: 'Created' })).toHaveCount(0)
   await row.getByRole('button', { name: /^Edit Notes:/ }).dblclick()
   await expect(row.getByRole('textbox', { name: 'Notes' })).toHaveValue('First line\nSecond line')
+})
+
+test('edits multi-select rows and filters by option membership', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Structured grid ${Date.now()}`,
+    columns: [
+      { key: 'labels', label: 'Labels', kind: 'multi_select', options: ['Red', 'Blue'] },
+      { key: 'sequence', label: 'Sequence', kind: 'auto_number' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  await page.goto(`/datasets/${id}`)
+  await page.getByRole('button', { name: 'Add row' }).click()
+  const draft = page.getByTestId('dataset-row-draft')
+  await draft.getByRole('button', { name: 'Labels' }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Red', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Blue', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await draft.getByRole('button', { name: 'Save', exact: true }).click()
+  const row = page.getByTestId('dataset-row')
+  await expect(row.getByRole('button', { name: 'Sequence: 1' })).toBeVisible()
+  await expect(row.getByRole('button', { name: 'Edit Labels: Red, Blue' })).toBeVisible()
+  await page.getByRole('button', { name: 'Filter', exact: true }).click()
+  const filter = page.getByRole('dialog', { name: 'Filter', exact: true })
+  await filter.getByRole('combobox', { name: 'Filter column' }).click()
+  await page.getByRole('option', { name: 'Labels' }).click()
+  await filter.getByRole('button', { name: 'Filter value' }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Blue', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await filter.getByRole('button', { name: 'Apply filters' }).click()
+  await expect(row).toHaveCount(1)
+})
+
+test('configures number validation and display format without changing the stored value', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Column rules ${Date.now()}`, columns: [{ key: 'score', label: 'Score', kind: 'number' }],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const url = `/api/datasets/${id}/rows`
+  expect((await page.request.post(url, { headers, data: { values: { score: 2 } } })).ok()).toBeTruthy()
+  await page.goto(`/datasets/${id}`)
+  await page.getByRole('tab', { name: 'Schema' }).click()
+  await page.getByRole('button', { name: 'Edit Score', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Edit column' })
+  await dialog.getByRole('spinbutton', { name: 'Minimum value' }).fill('3')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(dialog.getByRole('alert')).toContainText('1 existing rows violate')
+  await dialog.getByRole('spinbutton', { name: 'Minimum value' }).fill('1')
+  await dialog.getByRole('checkbox', { name: 'Whole numbers only' }).check()
+  await dialog.getByRole('combobox', { name: 'Number format' }).click()
+  await page.getByRole('option', { name: 'Currency', exact: true }).click()
+  await dialog.getByRole('spinbutton', { name: 'Decimal places' }).fill('2')
+  await dialog.getByRole('button', { name: 'Save' }).click()
+  await expect(dialog).toBeHidden()
+  await page.getByRole('tab', { name: 'Rows' }).click()
+  const cell = page.getByRole('button', { name: 'Edit Score: $2.00' })
+  await expect(cell).toBeVisible()
+  await cell.dblclick()
+  await expect(page.getByRole('spinbutton', { name: 'Score' })).toHaveValue('2')
+  await page.getByRole('spinbutton', { name: 'Score' }).fill('2.5')
+  await page.getByRole('spinbutton', { name: 'Score' }).press('Enter')
+  await expect(page.getByRole('alert')).toContainText('Value violates the validation rules')
 })
