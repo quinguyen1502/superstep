@@ -1,11 +1,30 @@
-import { fmtDate, fmtCalendarDate } from "@/lib/i18n"
+import i18n, { fmtDate, fmtCalendarDate } from "@/lib/i18n"
 import { can, type Me } from '@/lib/rbac'
 
-export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select', 'long_text', 'url', 'created_time', 'updated_time'] as const
+export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select', 'long_text', 'url', 'created_time', 'updated_time', 'multi_select', 'auto_number'] as const
 export type DatasetKind = (typeof datasetKinds)[number]
 export const datasetSystemTime = (kind: DatasetKind) => kind === 'created_time' || kind === 'updated_time'
+export const datasetReadOnly = (kind: DatasetKind) => datasetSystemTime(kind) || kind === 'auto_number'
 export const datasetTextKind = (kind: DatasetKind) => ['text', 'long_text', 'email', 'select', 'url'].includes(kind)
-export type CellValue = string | number | boolean | null
+export type ScalarCellValue = string | number | boolean | null
+export type CellValue = ScalarCellValue | string[]
+export type DatasetValidationRules = {
+  min_length?: number
+  max_length?: number
+  min?: CellValue
+  max?: CellValue
+  integer?: boolean
+  domains?: string[]
+}
+
+export type DatasetDisplayFormat = {
+  decimals?: number
+  thousands?: boolean
+  style?: 'decimal' | 'percent' | 'currency'
+  currency?: string
+  date_style?: 'short' | 'medium' | 'long' | 'iso'
+}
+
 export type DatasetColumn = {
   key: string
   label: string
@@ -14,6 +33,8 @@ export type DatasetColumn = {
   unique: boolean
   default: CellValue
   options: string[]
+  validation_rules?: DatasetValidationRules
+  display_format?: DatasetDisplayFormat
 }
 export type DatasetSummary = {
   id: string
@@ -34,7 +55,7 @@ export const DATASET_FILTER_DEPTH = 3
 export const DATASET_FILTER_RULES = 20
 export const DATASET_FILTER_VALUES = 50
 
-export type DatasetFilterValue = CellValue | CellValue[]
+export type DatasetFilterValue = ScalarCellValue | ScalarCellValue[]
 export type DatasetFilterRule = { type: 'rule'; field: string; op: string; value: DatasetFilterValue }
 export type DatasetFilters = {
   type: 'group'
@@ -59,7 +80,7 @@ export function keepDatasetFilterFields(tree: DatasetFilters, fields: ReadonlySe
   return { ...tree, children }
 }
 
-export const datasetListFilter = (op: string) => op === 'in' || op === 'not_in'
+export const datasetListFilter = (op: string) => op === 'in' || op === 'not_in' || op === 'contains_any' || op === 'contains_all'
 export const datasetSubstringFilter = (op: string) => op === 'contains' || op === 'not_contains'
 export const datasetValueFreeFilter = (op: string) => op === 'is_null' || op === 'not_null'
 const generalSummaryFunctions = ['count', 'empty_count', 'empty_percent', 'unique_count'] as const
@@ -72,7 +93,7 @@ export const datasetGroupable = (kind: DatasetKind) => ['select', 'boolean', 'te
 
 
 export function datasetSummaryFunctions(kind: DatasetKind): readonly DatasetSummaryFunction[] {
-  if (kind === 'number') return [...generalSummaryFunctions, 'sum', 'avg', 'min', 'max']
+  if (kind === 'number' || kind === 'auto_number') return [...generalSummaryFunctions, 'sum', 'avg', 'min', 'max']
   if (kind === 'date' || kind === 'datetime' || datasetSystemTime(kind)) return [...generalSummaryFunctions, 'min', 'max']
   return generalSummaryFunctions
 }
@@ -93,6 +114,7 @@ export function newDatasetColumn(): DatasetColumn {
 
 export function displayValue(value: CellValue, yes: string, no: string, kind?: DatasetKind) {
   if (value === null) return '—'
+  if (Array.isArray(value)) return value.join(', ')
   if (typeof value === 'boolean') return value ? yes : no
   if (typeof value === 'string') {
     if (kind === 'date') return fmtCalendarDate(value)
@@ -101,12 +123,33 @@ export function displayValue(value: CellValue, yes: string, no: string, kind?: D
   return String(value)
 }
 
+export function displayColumnValue(value: CellValue, column: DatasetColumn, yes: string, no: string): string {
+  const settings = column.display_format
+  if (typeof value === 'number' && settings && column.kind === 'number') {
+    return new Intl.NumberFormat(i18n.resolvedLanguage, {
+      style: settings.style ?? 'decimal',
+      currency: settings.currency,
+      useGrouping: settings.thousands,
+      minimumFractionDigits: settings.decimals,
+      maximumFractionDigits: settings.decimals,
+    }).format(value)
+  }
+  if (typeof value === 'string' && settings?.date_style) {
+    if (settings.date_style === 'iso') return value
+    return new Intl.DateTimeFormat(i18n.resolvedLanguage, {
+      dateStyle: settings.date_style,
+      ...(column.kind === 'date' ? { timeZone: 'UTC' } : { timeStyle: 'short' }),
+    }).format(new Date(value))
+  }
+  return displayValue(value, yes, no, column.kind)
+}
+
 export type ColumnDraft = DatasetColumn & { optionsText: string }
 export const toDraft = (column: DatasetColumn): ColumnDraft => ({ ...column, optionsText: column.options.join('\n') })
 
 export function fromDraft({ optionsText, ...column }: ColumnDraft): DatasetColumn {
   return { ...column, key: column.key.trim(), label: column.label.trim(),
-    options: column.kind === 'select' ? optionsText.split('\n').map(option => option.trim()).filter(Boolean) : [] }
+    options: column.kind === 'select' || column.kind === 'multi_select' ? optionsText.split('\n').map(option => option.trim()).filter(Boolean) : [] }
 }
 
 export const datasetOperations = ['find_rows', 'aggregate_rows', 'get_row', 'insert_row', 'upsert_row', 'delete_row'] as const
@@ -119,6 +162,7 @@ export const datasetAgentOperations = ['find_rows', 'aggregate_rows', 'insert_ro
 export type DatasetAgentOperation = (typeof datasetAgentOperations)[number]
 
 export function datasetFilterOperators(kind: DatasetColumn['kind']) {
+  if (kind === 'multi_select') return ['contains_any', 'contains_all', 'is_null']
   if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null', 'in', 'not_in']
   const operators = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is_null', 'not_null']
   if (datasetTextKind(kind)) operators.push('contains', 'not_contains')
@@ -146,7 +190,7 @@ export type DatasetNodeConfig = {
     offset?: number
     search?: string | null
     filter_mode?: 'and' | 'or'
-    filters?: { field: string; op: string; value: CellValue }[]
+    filters?: { field: string; op: string; value: ScalarCellValue }[]
     filter_tree?: DatasetFilters
     summaries?: DatasetColumnSummaries
     group_by?: string

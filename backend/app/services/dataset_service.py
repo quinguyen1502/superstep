@@ -5,6 +5,7 @@ from time import time
 from uuid import uuid4
 
 from ..core import permissions as P
+from ..core.dataset_rules import column_display, column_rules, enforce_rules
 from ..core.dataset_types import INVALID_TEXT, SYSTEM_TIME_KINDS, normalize_cell
 from ..core.errors import AppError
 from ..engine import dataset_nodes
@@ -32,16 +33,23 @@ def _column(data: dict, position: int) -> DatasetColumn:
     key, kind = data["key"], data["kind"]
     if key in {"constructor", "prototype"}:
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
-    if ((kind == "long_text" and data["unique"])
+    if ((kind in {"long_text", "multi_select"} and data["unique"])
+            or (kind == "auto_number" and (data["required"] or data["default"] is not None))
             or (kind in SYSTEM_TIME_KINDS and (data["required"] or data["unique"] or data["default"] is not None))):
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
     options = [_label(option, key) for option in data["options"]]
-    if (kind == "select") != bool(options) or len(options) != len(set(options)):
+    if (kind in {"select", "multi_select"}) != bool(options) or len(options) != len(set(options)):
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
+    if kind == "multi_select" and any(";" in option for option in options):
+        raise AppError("DATASET_DEFINITION_INVALID", field=key)
+    rules = column_rules(key, kind, data.get("validation_rules"))
+    display = column_display(key, kind, data.get("display_format"))
+    default = normalize_cell(key, kind, data["default"], options, required=False)
     return DatasetColumn(
         key=key, kind=kind, label=_label(data["label"], key), position=position,
-        required=data["required"], unique=data["unique"], archived=False, options=options,
-        default_value=normalize_cell(key, kind, data["default"], options, required=False),
+        required=data["required"], unique=data["unique"] or kind == "auto_number", archived=False, options=options,
+        validation_rules=rules or None, display_format=display or None,
+        default_value=enforce_rules(key, default, rules),
     )
 
 
@@ -67,7 +75,9 @@ def _detail(dataset: Dataset) -> dict:
         **_summary(dataset),
         "columns": [
             {"key": col.key, "label": col.label, "kind": col.kind, "required": col.required,
-             "unique": col.unique, "default": col.default_value, "options": col.options}
+             "unique": col.unique, "default": col.default_value, "options": col.options,
+             **({"validation_rules": col.validation_rules} if col.validation_rules else {}),
+             **({"display_format": col.display_format} if col.display_format else {})}
             for col in dataset.columns if not col.archived
         ],
     }
@@ -108,10 +118,10 @@ class DatasetService:
         return dataset
 
     def _save(self, uid: str, dataset: Dataset, action: str, *, require_empty: bool = False,
-              unique_change: tuple[str, bool] | None = None, rows: RowChange | None = None, **details) -> dict:
+              unique_change: tuple[str, bool] | None = None, rows: RowChange | None = None, validate_field: str | None = None, **details) -> dict:
         dataset.updated = time()
         saved, changed = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty,
-                                        unique=unique_change, rows=rows)
+                                        unique=unique_change, rows=rows, validate_field=validate_field)
         if rows is not None:
             details["rows"] = changed
         self.audit.record(uid, action, "dataset", dataset.id, **details)
@@ -189,6 +199,9 @@ class DatasetService:
             raise AppError("DATASET_COLUMN_LIMIT", max=MAX_COLUMN_DEFINITIONS)
         field = _column(column, len(dataset.columns))
         dataset.columns.append(field)
+        if field.kind == "auto_number":
+            return self._save(uid, dataset, "dataset.column_add", rows=RowChange(field.key, auto_number=True),
+                              unique_change=(field.key, True), field=field.key)
         if field.required and field.default_value is not None:
             # Existing rows take the default in the same transaction; a unique default fails on a second row.
             return self._save(uid, dataset, "dataset.column_add", rows=RowChange(field.key, value=field.default_value),
@@ -209,12 +222,15 @@ class DatasetService:
             if not proposed.unique:
                 self._require_unbound_key(uid, dataset.id, key)
             unique_change = (key, proposed.unique)
+        validate_field = key if proposed.validation_rules and proposed.validation_rules != field.validation_rules else None
+        field.validation_rules = proposed.validation_rules
+        field.display_format = proposed.display_format
         field.label = proposed.label
         field.options = proposed.options
         field.default_value = proposed.default_value
         field.unique = proposed.unique
         changes = {"unique": proposed.unique} if unique_change else {}
-        return self._save(uid, dataset, "dataset.column_update", unique_change=unique_change, field=key, **changes)
+        return self._save(uid, dataset, "dataset.column_update", unique_change=unique_change, validate_field=validate_field, field=key, **changes)
 
     def _require_unbound_key(self, uid: str, dataset_id: str, key: str) -> None:
         """A field that a saved workflow uses to match rows (upsert or delete) must stay unique."""
