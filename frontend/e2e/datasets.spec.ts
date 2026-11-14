@@ -902,3 +902,56 @@ test('configures number validation and display format without changing the store
   await page.getByRole('spinbutton', { name: 'Score' }).press('Enter')
   await expect(page.getByRole('alert')).toContainText('Value violates the validation rules')
 })
+
+test('pastes a 5 by 20 range, fills down, undoes, and confirms new rows', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const columns = Array.from({ length: 20 }, (_, index) => ({
+    key: `score_${index}`, label: `Score ${index}`, kind: 'number',
+  }))
+  const response = await page.request.post('/api/datasets', { headers, data: { name: `Clipboard ${Date.now()}`, columns } })
+  expect(response.ok()).toBeTruthy()
+  const { id } = (await response.json()).data
+  const url = `/api/datasets/${id}/rows`
+  for (let i = 0; i < 5; i++) {
+    expect((await page.request.post(url, { headers, data: { values: { score_0: i + 1 } } })).ok()).toBeTruthy()
+  }
+  await page.goto(`/datasets/${id}`)
+  const rows = page.getByTestId('dataset-row')
+  const cells = (index: number) => rows.nth(index).locator('[data-dataset-cell] button')
+  const paste = async (text: string) => {
+    await page.evaluate(text => {
+      const transfer = new DataTransfer()
+      transfer.setData('text/plain', text)
+      document.activeElement?.dispatchEvent(new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: transfer }))
+    }, text)
+  }
+  const matrix = Array.from({ length: 5 }, (_, i) => Array.from({ length: 20 }, (_, j) => (i + 1) * 100 + j))
+  await cells(0).first().click()
+  await paste(matrix.map(row => row.join('\t')).join('\n'))
+  await expect(cells(0).first()).toHaveAccessibleName('Edit Score 0: 100')
+  await expect(cells(4).last()).toHaveAccessibleName('Edit Score 19: 519')
+  const batchNotice = page.getByRole('status').filter({ hasText: 'Cells saved.' })
+  await expect(batchNotice).toBeVisible()
+  await cells(0).first().click()
+  await page.keyboard.press('Shift+ArrowDown')
+  await page.keyboard.press('Shift+ArrowDown')
+  await expect(page.getByRole('status').filter({ hasText: '3 cells selected' })).toBeAttached()
+  await page.keyboard.press('Control+d')
+  await expect(cells(2).first()).toHaveAccessibleName('Edit Score 0: 100')
+  await cells(0).first().click()
+  await page.keyboard.press('Control+z')
+  await expect(cells(2).first()).toHaveAccessibleName('Edit Score 0: 300')
+  await cells(4).first().click()
+  await paste('900\n901')
+  const preview = page.getByRole('dialog', { name: 'Review paste' })
+  await expect(preview).toContainText('This paste adds 1 row.')
+  await preview.getByRole('button', { name: 'Paste cells' }).click()
+  await expect(rows).toHaveCount(6)
+  await expect(cells(5).first()).toHaveAccessibleName('Edit Score 0: 901')
+  await cells(0).first().click()
+  await page.keyboard.press('Control+z')
+  await expect(rows).toHaveCount(5)
+  await expect(cells(4).first()).toHaveAccessibleName('Edit Score 0: 500')
+})
