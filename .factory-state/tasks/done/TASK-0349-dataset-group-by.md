@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0349
 - Title: Group Dataset grid rows by a column
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -71,6 +71,8 @@ The grid can group rows by one select, boolean, text, or date column, with colla
 - 2026-11-14: Readiness gate passed. Started stacked on PR #406 to share the aggregate engine.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0340](../../artifacts/REV-0340-TASK-0349-dataset-group-by.md) and QA [QA-0340](../../artifacts/QA-0340-TASK-0349-dataset-group-by.md).
+
+- 2026-11-14: Owner approved merging PR #407 into develop after successful checks.
 
 ## Handoff Notes
 
