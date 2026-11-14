@@ -100,6 +100,20 @@
     }
   },
   "dataset": {
+    "summary": "Summary",
+    "summaryForColumn": "Summary for {{column}}",
+    "summaryNone": "None",
+    "summaryNoValue": "No value",
+    "summaryFunctions": {
+      "count": "Count",
+      "empty_count": "Empty count",
+      "empty_percent": "Empty percent",
+      "unique_count": "Unique count",
+      "sum": "Sum",
+      "avg": "Average",
+      "min": "Minimum",
+      "max": "Maximum"
+    },
     "pageSize": "Rows per page",
     "visibleRange": "{{start}}–{{end}} of {{total}}",
     "visibleRangeCapped": "{{start}}–{{end}} of {{total}}+",
@@ -812,6 +826,7 @@
     "DATASET_UNIQUE_DUPLICATES": "Field {{field}} cannot become unique because {{count}} rows share a value",
     "DATASET_EXPORT_FILTER_UNSUPPORTED": "This Dataset filter is not yet supported by code export",
     "DATASET_FILTER_INVALID": "Invalid dataset filter for {{field}}",
+    "DATASET_SUMMARY_INVALID": "Invalid dataset summary for {{field}}.",
     "DATASET_UPSERT_KEY_INVALID": "Upsert requires a value for the unique field {{field}}",
     "DATASET_ROW_TOO_LARGE": "A dataset row must be at most {{max}} bytes",
     "DATASET_ROW_LIMIT": "A dataset can contain at most {{max}} rows",

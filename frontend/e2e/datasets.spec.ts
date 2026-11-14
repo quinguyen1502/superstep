@@ -648,3 +648,41 @@ test('builds nested filters with the keyboard and matches the query API', async 
   await expect(table.getByRole('row')).toHaveCount(3)
   for (const ticket of results) await expect(table.getByRole('button', { name: `Edit Ticket: ${ticket}`, exact: true })).toBeVisible()
 })
+
+test('loads and remembers server summaries across pages and filters', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const name = `Dataset summaries ${Date.now()}`
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name, columns: [
+      { key: 'ticket', label: 'Ticket', kind: 'text' },
+      { key: 'score', label: 'Score', kind: 'number' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const rowsUrl = `/api/datasets/${id}/rows`
+  for (let n = 0; n <= 25; n++) {
+    const row = await page.request.post(rowsUrl, { headers, data: { values: { ticket: n === 25 ? 'Special' : `T-${n}`, score: n + 1 } } })
+    expect(row.ok()).toBeTruthy()
+  }
+  await page.goto(`/datasets/${id}`)
+  await page.getByRole('combobox', { name: 'Rows per page' }).click()
+  await page.getByRole('option', { name: '25', exact: true }).click()
+  const summaryButton = page.getByRole('button', { name: 'Summary', exact: true })
+  await summaryButton.click()
+  const scoreSummary = page.getByRole('combobox', { name: 'Summary for Score', exact: true })
+  const value = page.getByRole('status', { name: 'Summary for Score', exact: true })
+  await scoreSummary.click()
+  await page.getByRole('option', { name: 'Sum', exact: true }).click()
+  await expect(value).toHaveText('351')
+  await page.getByRole('button', { name: 'Next page' }).click()
+  await expect(value).toHaveText('351')
+  await page.getByRole('searchbox', { name: 'Search rows' }).fill('Special')
+  await expect(value).toHaveText('26')
+  await page.reload()
+  await expect(summaryButton).toHaveAttribute('aria-pressed', 'true')
+  await expect(scoreSummary).toHaveText('Sum')
+  await expect(value).toHaveText('351')
+})

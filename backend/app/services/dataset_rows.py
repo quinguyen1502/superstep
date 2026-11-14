@@ -2,7 +2,7 @@ from time import time
 
 from ..core import config
 from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_VALUES
-from ..core.dataset_types import INVALID_TEXT, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell, summary_functions
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, RowFilterGroup, WorkflowWrite
@@ -92,6 +92,14 @@ def _filter_predicate(columns, spec: dict, path: tuple[int, ...], *, grouped: bo
         raise AppError("DATASET_FILTER_INVALID", field=label, details=details) from exc
 
 
+def _query_predicates(columns, filters, filter_tree, search):
+    if search and INVALID_TEXT.search(search):
+        raise AppError("DATASET_FILTER_INVALID", field="search")
+    predicates = ([_filter_predicate(columns, filter_tree, (), grouped=True)] if filter_tree is not None
+                  else [_filter_predicate(columns, spec, (index,)) for index, spec in enumerate(filters, 1)])
+    return predicates, [column for column in columns.values() if column.kind in TEXT_KINDS]
+
+
 class DatasetRowService:
     def __init__(self, datasets: DatasetService, rows: DatasetRowRepository):
         self.datasets, self.rows = datasets, rows
@@ -121,6 +129,22 @@ class DatasetRowService:
         )
         return [_response(row, _active_columns(dataset)) for row in rows]
 
+    def summarize(self, uid: str, dataset_id: str, *, filters: list[dict], filter_tree: dict | None,
+                  filter_mode: str, search: str | None, summaries: dict[str, str],
+                  schema_revision: int | None = None) -> dict:
+        dataset = self._read_definition(uid, dataset_id, schema_revision)
+        columns = _active_columns(dataset)
+        predicates, search_columns = _query_predicates(columns, filters, filter_tree, search)
+        metrics = []
+        for field, operation in summaries.items():
+            column = _column(columns, field)
+            if operation not in summary_functions(column.kind):
+                raise AppError("DATASET_SUMMARY_INVALID", field=field, details={"field": field, "operation": operation})
+            metrics.append((column, operation))
+        count, values = self.rows.summarize(dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
+                                             search_columns=search_columns, summaries=metrics)
+        return {"total": count, "values": values, "schema_revision": dataset.revision}
+
     def query(self, uid: str, dataset_id: str, *, filters: list[dict], fields: list[str] | None,
               search: str | None, sort: str | None, descending: bool, limit: int, offset: int,
               filter_mode: str = "and", sorts: list[dict] | None = None, schema_revision: int | None = None,
@@ -128,15 +152,12 @@ class DatasetRowService:
         dataset = self._read_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _projection(columns, fields)
-        if search and INVALID_TEXT.search(search):
-            raise AppError("DATASET_FILTER_INVALID", field="search")
         if sorts is None:
             sorts = [{"field": sort, "descending": descending}] if sort else []
-        predicates = ([_filter_predicate(columns, filter_tree, (), grouped=True)] if filter_tree is not None
-                      else [_filter_predicate(columns, spec, (index,)) for index, spec in enumerate(filters, 1)])
+        predicates, search_columns = _query_predicates(columns, filters, filter_tree, search)
         rows, total = self.rows.query_page(
             dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
-            search_columns=[column for column in columns.values() if column.kind in TEXT_KINDS],
+            search_columns=search_columns,
             sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts], limit=limit + 1, offset=offset, include_total=include_total,
         )
         items = []

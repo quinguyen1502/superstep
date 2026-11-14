@@ -60,6 +60,17 @@ export function keepDatasetFilterFields(tree: DatasetFilters, fields: ReadonlySe
 export const datasetListFilter = (op: string) => op === 'in' || op === 'not_in'
 export const datasetSubstringFilter = (op: string) => op === 'contains' || op === 'not_contains'
 export const datasetValueFreeFilter = (op: string) => op === 'is_null' || op === 'not_null'
+const generalSummaryFunctions = ['count', 'empty_count', 'empty_percent', 'unique_count'] as const
+export type DatasetSummaryFunction = (typeof generalSummaryFunctions)[number] | 'sum' | 'avg' | 'min' | 'max'
+export type DatasetColumnSummaries = Partial<Record<string, DatasetSummaryFunction>>
+export type DatasetSummaryResult = { total: number; values: Record<string, CellValue>; schema_revision: number }
+
+export function datasetSummaryFunctions(kind: DatasetKind): readonly DatasetSummaryFunction[] {
+  if (kind === 'number') return [...generalSummaryFunctions, 'sum', 'avg', 'min', 'max']
+  if (kind === 'date' || kind === 'datetime') return [...generalSummaryFunctions, 'min', 'max']
+  return generalSummaryFunctions
+}
+
 export type DatasetTeam = { id: string; name: string; mine: boolean }
 
 /** Schema, access, tokens and deletion: the personal owner, a team dataset's owner, or an admin. Rows need only resources.manage. */

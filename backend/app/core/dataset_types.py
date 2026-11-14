@@ -11,6 +11,18 @@ from .errors import AppError
 ColumnKind: TypeAlias = Literal["text", "number", "boolean", "date", "datetime", "email", "select"]
 CellValue: TypeAlias = str | int | float | bool | None
 FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null", "in", "not_in", "not_contains"]
+SummaryFunction: TypeAlias = Literal["count", "empty_count", "empty_percent", "unique_count", "sum", "avg", "min", "max"]
+SUMMARY_FUNCTIONS = ("count", "empty_count", "empty_percent", "unique_count")
+
+
+def summary_functions(kind: ColumnKind) -> tuple[str, ...]:
+    if kind == "number":
+        return (*SUMMARY_FUNCTIONS, "sum", "avg", "min", "max")
+    if kind in {"date", "datetime"}:
+        return (*SUMMARY_FUNCTIONS, "min", "max")
+    return SUMMARY_FUNCTIONS
+
+
 FILTER_OPERATORS = get_args(FilterOperator)
 TEXT_KINDS = frozenset({"text", "email", "select"})
 TEXT_FOLD_FUNCTION = "dataset_text_fold"
