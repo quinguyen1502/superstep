@@ -172,7 +172,11 @@ def test_typescript_standalone_runs_generated_project_and_replays_receipts(clien
     assert all(item["row"]["id"] == first_id and not item["inserted"] for item in revised)
     replay = upsert("retry-key", 0)
     assert replay.returncode == 0, replay.stderr
-    assert json.loads(replay.stdout) == result[0]
+    replayed = json.loads(replay.stdout)
+    assert replayed["inserted"] and replayed["row"]["id"] == first_id and replayed["row"]["revision"] == 3
+    noop = upsert("no-op", replayed["row"]["values"]["score"])
+    assert noop.returncode == 0, noop.stderr
+    assert json.loads(noop.stdout) == {"inserted": False, "row": replayed["row"]}
     conflict = upsert("retry-key", 1)
     assert conflict.returncode and "DATASET_RECEIPT_CONFLICT" in conflict.stderr
     duplicate = probe(deno_env, folder, "duplicate")

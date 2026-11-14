@@ -1,10 +1,13 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import os
 import runpy
 import subprocess
 import sys
+import uuid
 
 import pytest
+import sqlalchemy as sa
 
 from test_dataset_connected import dataset, token
 from test_dataset_rows import call as rows_call
@@ -81,7 +84,19 @@ def test_python_standalone_runs_generated_project_and_replays_receipts(client, d
         results = list(workers.map(lambda n: upsert(f"update-{n}", n), (1, 2)))
     assert {item["row"]["revision"] for item in results} == {2, 3}
     assert all(item["row"]["id"] == first_id and not item["inserted"] for item in results)
-    assert upsert("retry-key", 0) == result[0]
+    replay = upsert("retry-key", 0)
+    assert replay["inserted"] and replay["row"]["id"] == first_id and replay["row"]["revision"] == 3
+    score = replay["row"]["values"]["score"]
+    noop = upsert("no-op", score)
+    assert noop["row"] == replay["row"] and not noop["inserted"]
+    assert query(["ticket"], search="fromexport")["items"][0]["values"] == {"ticket": "FromExport"}
+    assert query(["ticket"], filters=[{"field": "ticket", "op": "contains", "value": "FROMEXPORT"}])["items"]
+    engine, did = exported["dataset_database"]("DATASET_1", settings["BACKEND"])
+    receipts = exported["DATASET_RECEIPTS"]
+    with engine.begin() as connection:
+        saved = list(connection.scalars(receipts.select().with_only_columns(receipts.c.result)))
+        assert saved and all(set(payload) == {"row_id", "revision", "inserted"} for payload in saved)
+    engine.dispose()
     with pytest.raises(RuntimeError, match="DATASET_RECEIPT_CONFLICT"):
         upsert("retry-key", 1)
     with pytest.raises(RuntimeError, match="DATASET_UNIQUE_CONFLICT"):
@@ -267,3 +282,36 @@ def test_generated_python_agent_writes_and_connected_delete(client, db, monkeypa
 
 def call_api(client, base, ticket):
     return rows_call(client, "POST", f"{base}/rows", body={"values": {"ticket": ticket}}, status=201)["row"]["id"]
+
+
+def test_standalone_setup_migrates_old_receipts_and_expires_them(db, monkeypatch, tmp_path):
+    from app.engine.dataset_python_standalone import python_standalone
+
+    settings = configure(monkeypatch, db, tmp_path)
+    namespace = {"__file__": str(tmp_path / "agent.py"), "os": os, "uuid": uuid, "DATASET_BINDINGS": {
+        "DATASET_1": {"columns": [{"key": "ticket", "kind": "text", "required": True,
+                                    "unique": True, "default": None, "options": []}]},
+    }}
+    exec(python_standalone(), namespace)
+    engine, did = namespace["dataset_database"]("DATASET_1", settings["BACKEND"], setup=True)
+    receipts = namespace["DATASET_RECEIPTS"]
+    with engine.begin() as connection:
+        namespace["DATASET_METADATA"].create_all(connection)
+        connection.exec_driver_sql("ALTER TABLE superstep_dataset_receipts DROP COLUMN created")
+        connection.execute(namespace["DATASET_DEFINITIONS"].insert().values(
+            dataset_id=did, contract=namespace["dataset_contract"]("DATASET_1"),
+        ))
+        legacy = sa.Table(receipts.name, sa.MetaData(), autoload_with=connection)
+        connection.execute(legacy.insert().values(
+            dataset_id=did, operation_id="old", fingerprint="x",
+            result={"row": {"id": "gone", "revision": 1, "values": {"ticket": "private"}}, "inserted": True},
+        ))
+    namespace["setup_datasets"](create=True)
+    with engine.begin() as connection:
+        assert connection.scalar(sa.select(receipts.c.result)) == {"row_id": "gone", "revision": 1, "inserted": True}
+        connection.execute(receipts.update().values(created=1))
+    namespace["dataset_standalone"]("DATASET_1", settings["BACKEND"], "insert_row", [],
+                                    {"values": {"ticket": "new"}}, "new")
+    with engine.begin() as connection:
+        assert list(connection.scalars(sa.select(receipts.c.operation_id))) == ["new"]
+    engine.dispose()

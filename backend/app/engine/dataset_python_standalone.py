@@ -22,7 +22,9 @@ def python_standalone() -> str:
 
 IMPORTS = r'''
 # --- Standalone Dataset storage --------------------------------------------------------------------------------
+import json
 import math
+import re
 from datetime import date, datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -69,6 +71,7 @@ DATASET_RECEIPTS = sa.Table("superstep_dataset_receipts", DATASET_METADATA,
     sa.Column("operation_id", sa.String(128), primary_key=True),
     sa.Column("fingerprint", sa.String(64), nullable=False),
     sa.Column("result", sa.JSON, nullable=False),
+    sa.Column("created", sa.Float, nullable=False),
 )
 
 
@@ -111,6 +114,10 @@ def dataset_database(binding: str, backend: str, *, setup: bool = False):
         engine = sa.create_engine(url, poolclass=sa.pool.NullPool, hide_parameters=True, **options)
     except (ImportError, ValueError, sa.exc.SQLAlchemyError):
         raise AppError("DATASET_STORAGE_ERROR", binding=binding) from None
+    if backend == "sqlite":
+        @sa.event.listens_for(engine, "connect")
+        def register_fold(dbapi_connection, _record):
+            dbapi_connection.create_function(TEXT_FOLD_FUNCTION, 1, fold_text, deterministic=True)
     return engine, dataset_id
 
 
@@ -129,7 +136,9 @@ def dataset_check_schema(connection, dataset_id: str, binding: str) -> None:
 
 def dataset_check_storage(connection, binding: str) -> None:
     inspector = sa.inspect(connection)
-    if not all(inspector.has_table(table.name) for table in DATASET_METADATA.sorted_tables):
+    if not all(inspector.has_table(table.name) for table in DATASET_METADATA.sorted_tables) or not any(
+        column["name"] == "created" for column in inspector.get_columns(DATASET_RECEIPTS.name)
+    ):
         raise AppError("DATASET_SETUP_REQUIRED", binding=binding)
 
 
@@ -195,8 +204,11 @@ def setup_datasets(*, create: bool) -> None:
         engine, dataset_id = dataset_database(binding, backend, setup=create)
         try:
             with engine.begin() as connection:
+                if create and backend == "sqlite":
+                    connection.exec_driver_sql("BEGIN IMMEDIATE")
                 if create:
                     DATASET_METADATA.create_all(connection)
+                    dataset_migrate_receipts(connection, backend == "postgresql")
                     insert = postgres_insert if backend == "postgresql" else sqlite_insert
                     connection.execute(insert(DATASET_DEFINITIONS).values(dataset_id=dataset_id, contract=dataset_contract(binding))
                                        .on_conflict_do_nothing(index_elements=[DATASET_DEFINITIONS.c.dataset_id]))
@@ -209,6 +221,40 @@ def setup_datasets(*, create: bool) -> None:
             raise AppError("DATASET_STORAGE_ERROR", binding=binding) from None
         finally:
             engine.dispose()
+
+
+def dataset_migrate_receipts(connection, postgres: bool) -> None:
+    receipts = DATASET_RECEIPTS
+    if postgres:
+        connection.exec_driver_sql("LOCK TABLE superstep_dataset_receipts IN ACCESS EXCLUSIVE MODE")
+    if any(column["name"] == "created" for column in sa.inspect(connection).get_columns(receipts.name)):
+        return
+    connection.exec_driver_sql(
+        "ALTER TABLE superstep_dataset_receipts ADD COLUMN created DOUBLE PRECISION NOT NULL DEFAULT 0"
+    )
+    key = (receipts.c.dataset_id, receipts.c.operation_id)
+    base = sa.select(*key, receipts.c.result).order_by(*key).limit(200)
+    batch = base
+    now = dataset_now()
+    while rows := connection.execute(batch).all():
+        for dataset_id, operation_id, result in rows:
+            legacy = result.get("row")
+            if legacy is not None:
+                result = {"row_id": legacy["id"], "revision": legacy["revision"], "inserted": result["inserted"]}
+            connection.execute(receipts.update().where(
+                key[0] == dataset_id, key[1] == operation_id,
+            ).values(result=result, created=now))
+        batch = base.where(sa.tuple_(*key) > sa.tuple_(*rows[-1][:2]))
+
+
+def dataset_expire_receipts(connection, dataset_id: str) -> None:
+    try:
+        days = max(1, int(os.getenv("STUDIO_DATASET_RECEIPT_DAYS", "30")))
+    except ValueError:
+        days = 30
+    connection.execute(DATASET_RECEIPTS.delete().where(
+        DATASET_RECEIPTS.c.dataset_id == dataset_id, DATASET_RECEIPTS.c.created < dataset_now() - days * 86400,
+    ))
 
 
 def dataset_column(columns: dict, field: str) -> dict:
@@ -236,11 +282,26 @@ def dataset_expression(column: dict, postgres: bool):
     return value.as_string().collate("C" if postgres else "BINARY")
 
 
-def dataset_contains(expression, value: str, postgres: bool):
-    return (sa.func.strpos if postgres else sa.func.instr)(expression, value) > 0
+def dataset_fold(expression, connection):
+    if connection.dialect.name != "postgresql":
+        return getattr(sa.func, TEXT_FOLD_FUNCTION)(expression)
+    marker = "dataset_fold_collation"
+    if marker not in connection.info:
+        names = set(connection.execute(sa.text(
+            "SELECT collname FROM pg_collation WHERE collname IN ('und-x-icu', 'pg_c_utf8')"
+        )).scalars())
+        connection.info[marker] = next((name for name in ("und-x-icu", "pg_c_utf8") if name in names), None)
+    collation = connection.info[marker]
+    return sa.func.lower(expression.collate(collation) if collation else expression.collate("default")).collate("C")
 
 
-def dataset_filter(columns: dict, rule: DatasetFilter, dataset_id: str, postgres: bool):
+def dataset_contains(expression, value: str, connection):
+    position = sa.func.strpos if connection.dialect.name == "postgresql" else sa.func.instr
+    return position(dataset_fold(expression, connection), dataset_fold(sa.literal(value), connection)) > 0
+
+
+def dataset_filter(columns: dict, rule: DatasetFilter, dataset_id: str, connection):
+    postgres = connection.dialect.name == "postgresql"
     column = dataset_column(columns, rule.field)
     expression = dataset_expression(column, postgres)
     op, value = rule.op, rule.value
@@ -253,14 +314,16 @@ def dataset_filter(columns: dict, rule: DatasetFilter, dataset_id: str, postgres
     if op == "contains":
         if not isinstance(value, str) or not 0 < len(value) <= 120 or INVALID_TEXT.search(value):
             raise AppError("DATASET_FILTER_INVALID", field=rule.field)
-        return dataset_contains(expression, value, postgres)
+        return dataset_contains(expression, value, connection)
     value = dataset_normalize(column, value, required=True)
     if op == "eq" and column["unique"]:
         ids = sa.select(DATASET_KEYS.c.row_id).where(DATASET_KEYS.c.dataset_id == dataset_id,
                                                      DATASET_KEYS.c.field == rule.field,
                                                      DATASET_KEYS.c.digest == key_digest(value))
         return DATASET_ROWS.c.id.in_(ids)
-    compare = {"eq": expression.__eq__, "ne": expression.__ne__, "lt": expression.__lt__,
+    if op == "ne":
+        return expression.is_distinct_from(value)
+    compare = {"eq": expression.__eq__, "lt": expression.__lt__,
                "lte": expression.__le__, "gt": expression.__gt__, "gte": expression.__ge__}
     return compare[op](value)
 
@@ -270,17 +333,19 @@ def dataset_find(connection, query, dataset_id: str, columns: dict, fields: list
     postgres = connection.dialect.name == "postgresql"
     if params.filters:
         combine = sa.or_ if params.filter_mode == "or" else sa.and_
-        query = query.where(combine(*(dataset_filter(columns, rule, dataset_id, postgres) for rule in params.filters)))
+        query = query.where(combine(*(dataset_filter(columns, rule, dataset_id, connection) for rule in params.filters)))
     if params.search:
         if INVALID_TEXT.search(params.search):
             raise AppError("DATASET_FILTER_INVALID", field="search")
-        terms = [dataset_contains(dataset_expression(column, postgres), params.search, postgres)
+        terms = [dataset_contains(dataset_expression(column, postgres), params.search, connection)
                  for column in columns.values() if column["kind"] in TEXT_KINDS]
         query = query.where(sa.or_(*terms) if terms else sa.false())
     order = []
     for sort in params.sorts or []:
-        expr = dataset_expression(dataset_column(columns, sort.field), postgres)
-        order.append((expr.desc() if sort.descending else expr.asc()).nulls_last())
+        column = dataset_column(columns, sort.field)
+        expr = dataset_expression(column, postgres)
+        keys = [expr] if column["kind"] in {"number", "boolean"} else [dataset_fold(expr, connection), expr]
+        order.extend((key.desc() if sort.descending else key.asc()).nulls_last() for key in keys)
     query = query.order_by(*(order or [DATASET_ROWS.c.created]), DATASET_ROWS.c.id)
     rows = connection.execute(query.offset(params.offset).limit(params.limit + 1)).mappings()
     items, remaining = [], MAX_PAGE_BYTES
@@ -312,7 +377,12 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
     if previous is not None:
         if previous.fingerprint != fingerprint:
             raise AppError("DATASET_RECEIPT_CONFLICT")
-        return previous.result
+        result = previous.result
+        row = connection.execute(query.where(DATASET_ROWS.c.id == result["row_id"])).mappings().one_or_none()
+        outcome = dataset_row_payload(row, fields) if row is not None and fields else {
+            "id": result["row_id"], "revision": row.revision if row is not None else result["revision"],
+        }
+        return {"row": outcome, "inserted": result["inserted"]}
     row = None
     keys = DATASET_KEYS
     if key:
@@ -334,13 +404,13 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
     row_id = row.id if row is not None else uuid.uuid4().hex
     if row is None:
         connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=values, revision=1, created=now, updated=now))
-    else:
+    elif values != row["values"]:
         connection.execute(DATASET_ROWS.update().where(DATASET_ROWS.c.dataset_id == dataset_id, DATASET_ROWS.c.id == row_id)
                            .values(values=values, revision=row.revision + 1, updated=now))
         connection.execute(keys.delete().where(keys.c.dataset_id == dataset_id, keys.c.row_id == row_id))
     entries = [{"dataset_id": dataset_id, "field": field, "digest": key_digest(values[field]), "row_id": row_id}
                for field, column in columns.items() if column["unique"] and values.get(field) is not None]
-    if entries:
+    if entries and (row is None or values != row["values"]):
         try:
             connection.execute(keys.insert(), entries)
         except sa.exc.IntegrityError:
@@ -350,7 +420,8 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
     outcome = dataset_row_payload(stored, fields) if fields else {"id": stored["id"], "revision": stored["revision"]}
     result = {"row": outcome, "inserted": row is None}
     connection.execute(receipts.insert().values(dataset_id=dataset_id, operation_id=operation_id,
-                                                fingerprint=fingerprint, result=result))
+                                                fingerprint=fingerprint, created=now,
+                                                result={"row_id": row_id, "revision": stored.revision, "inserted": row is None}))
     return result
 
 
@@ -396,7 +467,7 @@ def dataset_delete(connection, query, dataset_id: str, columns: dict, fields: li
     connection.execute(DATASET_ROWS.delete().where(DATASET_ROWS.c.dataset_id == dataset_id, DATASET_ROWS.c.id == row.id))
     result = {"row_id": row.id, "deleted": True}
     connection.execute(receipts.insert().values(dataset_id=dataset_id, operation_id=operation_id,
-                                                fingerprint=fingerprint, result=result))
+                                                fingerprint=fingerprint, result=result, created=dataset_now()))
     return result
 
 
@@ -418,6 +489,7 @@ def dataset_standalone(binding: str, backend: str, operation: str, fields: list[
                 # Insert, upsert and delete take the writer lock before reading the receipt or the key.
                 connection.execute(DATASET_DEFINITIONS.update().where(DATASET_DEFINITIONS.c.dataset_id == dataset_id)
                                    .values(dataset_id=DATASET_DEFINITIONS.c.dataset_id))
+                dataset_expire_receipts(connection, dataset_id)
             dataset_check_schema(connection, dataset_id, binding)
             query = sa.select(DATASET_ROWS).where(DATASET_ROWS.c.dataset_id == dataset_id)
             if operation == "delete_row":

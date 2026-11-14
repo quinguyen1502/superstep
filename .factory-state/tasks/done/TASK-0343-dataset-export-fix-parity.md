@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0343
 - Title: Carry the Dataset fixes into Python and TypeScript exports
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0100
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -70,6 +70,12 @@ Exported projects follow the same write-only result, receipt, filter, and error 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+
+- 2026-11-14: Started on a branch containing the TASK-0333 and TASK-0337 heads. This branch depends on both PRs.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0334](../../artifacts/REV-0334-TASK-0343-dataset-export-fix-parity.md) and QA [QA-0334](../../artifacts/QA-0334-TASK-0343-dataset-export-fix-parity.md).
+
+- 2026-11-14: Owner approved merging PR #400 into develop after the final checks pass.
 
 ## Handoff Notes
 
