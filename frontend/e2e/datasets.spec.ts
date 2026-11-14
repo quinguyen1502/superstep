@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import { signIn } from './helpers'
 
 test('creates a team dataset, edits typed rows, filters and confirms deletion', async ({ page }, testInfo) => {
@@ -579,6 +579,121 @@ test('loads subsequent result pages and validates typed editors', async ({ page 
   await expect(page.getByRole('button', { name: 'Next page' })).toBeDisabled()
   await page.getByRole('button', { name: 'Previous page' }).click()
   await expect(page.getByTestId('dataset-row')).toHaveCount(50)
+})
+
+
+test('builds nested filters with the keyboard and matches the query API', async ({ page }, info) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const name = `Grouped filters ${Date.now()}`
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name, columns: [
+      { key: 'ticket', label: 'Ticket', kind: 'text' },
+      { key: 'score', label: 'Score', kind: 'number' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const url = `/api/datasets/${id}/rows`
+  for (const [ticket, score] of [['A', 1], ['B', 2], ['C', 3]]) {
+    expect((await page.request.post(url, { headers, data: { values: { ticket, score } } })).ok()).toBeTruthy()
+  }
+  await page.goto('/datasets')
+  await page.getByRole('link', { name, exact: true }).click()
+  const filterButton = page.getByRole('button', { name: 'Filter', exact: true })
+  const dialog = page.getByRole('dialog', { name: 'Filter', exact: true })
+  const key = async (el: Locator, value = 'Enter') => {
+    await el.focus()
+    await page.keyboard.press(value)
+  }
+  const choose = async (el: Locator, text: string) => {
+    await key(el, 'Space')
+    const option = page.getByRole('option', { name: text, exact: true })
+    await expect(option).toBeVisible()
+    await key(option)
+  }
+
+  await key(filterButton)
+  const rootRule = dialog.getByRole('group', { name: 'Condition 1', exact: true })
+  await choose(rootRule.getByRole('combobox', { name: 'Filter column' }), 'Ticket')
+  await choose(rootRule.getByRole('combobox', { name: 'Filter operator' }), 'Does not contain')
+  await rootRule.getByRole('textbox', { name: 'Filter value' }).focus()
+  await page.keyboard.type('B')
+
+  await key(dialog.getByRole('button', { name: 'Add group' }))
+  const group = dialog.getByRole('group', { name: 'Group 2', exact: true })
+  await choose(group.getByRole('combobox', { name: 'Match conditions in group 2' }), 'Match any (OR)')
+  await choose(group.getByRole('combobox', { name: 'Filter column' }), 'Score')
+  await choose(group.getByRole('combobox', { name: 'Filter operator' }), 'Is one of')
+  await group.getByRole('spinbutton', { name: 'Value 1', exact: true }).focus()
+  await page.keyboard.type('1')
+  await key(group.getByRole('button', { name: 'Add value' }))
+  await group.getByRole('spinbutton', { name: 'Value 2', exact: true }).focus()
+  await page.keyboard.type('3')
+  await info.attach('nested-dataset-filters-light', { body: await page.screenshot(), contentType: 'image/png' })
+  await page.evaluate(() => document.documentElement.classList.add('dark'))
+  await info.attach('nested-dataset-filters-dark', { body: await page.screenshot(), contentType: 'image/png' })
+  const tree = { type: 'group', conjunction: 'and', children: [
+    { type: 'rule', field: 'ticket', op: 'not_contains', value: 'B' },
+    { type: 'group', conjunction: 'or', children: [{ type: 'rule', field: 'score', op: 'in', value: [1, 3] }] },
+  ] }
+  const response = await page.request.post(`${url}/query`, { headers, data: { filter_tree: tree, sorts: [{ field: 'score' }] } })
+  expect(response.ok()).toBeTruthy()
+  const results = (await response.json()).data.items.map((row: { values: { ticket: string } }) => row.values.ticket) as string[]
+  expect(results).toEqual(['A', 'C'])
+  await key(dialog.getByRole('button', { name: 'Apply filters' }))
+  await expect(filterButton).toContainText('2')
+  const table = page.getByRole('table')
+  await expect(table.getByRole('row')).toHaveCount(3)
+  for (const ticket of results) await expect(table.getByRole('button', { name: `Edit Ticket: ${ticket}`, exact: true })).toBeVisible()
+})
+
+test('loads and remembers server summaries across pages and filters', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const name = `Dataset summaries ${Date.now()}`
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name, columns: [
+      { key: 'ticket', label: 'Ticket', kind: 'text' },
+      { key: 'score', label: 'Score', kind: 'number' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const rowsUrl = `/api/datasets/${id}/rows`
+  for (let n = 0; n <= 25; n++) {
+    const row = await page.request.post(rowsUrl, { headers, data: { values: { ticket: n === 25 ? 'Special' : `T-${n}`, score: n + 1 } } })
+    expect(row.ok()).toBeTruthy()
+  }
+  await page.goto(`/datasets/${id}`)
+  await page.getByRole('combobox', { name: 'Rows per page' }).click()
+  await page.getByRole('option', { name: '25', exact: true }).click()
+  const summaryButton = page.getByRole('button', { name: 'Summary', exact: true })
+  await summaryButton.click()
+  const scoreSummary = page.getByRole('combobox', { name: 'Summary for Score', exact: true })
+  const value = page.getByRole('status', { name: 'Summary for Score', exact: true })
+  await scoreSummary.click()
+  await page.getByRole('option', { name: 'Sum', exact: true }).click()
+  await expect(value).toHaveText('351')
+  await page.getByRole('button', { name: 'Next page' }).click()
+  await expect(value).toHaveText('351')
+  await page.getByRole('searchbox', { name: 'Search rows' }).fill('Special')
+  await expect(value).toHaveText('26')
+  await page.getByRole('searchbox', { name: 'Search rows' }).clear()
+  await expect(value).toHaveText('351')
+  await page.getByRole('button', { name: 'Filter', exact: true }).click()
+  const filter = page.getByRole('dialog', { name: 'Filter', exact: true })
+  await filter.getByRole('combobox', { name: 'Filter column' }).click()
+  await page.getByRole('option', { name: 'Ticket', exact: true }).click()
+  await filter.getByRole('textbox', { name: 'Filter value' }).fill('Special')
+  await filter.getByRole('button', { name: 'Apply filters' }).click()
+  await expect(value).toHaveText('26')
+  await page.reload()
+  await expect(summaryButton).toHaveAttribute('aria-pressed', 'true')
+  await expect(scoreSummary).toHaveText('Sum')
+  await expect(value).toHaveText('351')
 })
 
 test('edits long text and URLs while leaving system timestamps read-only', async ({ page }) => {

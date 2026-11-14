@@ -9,7 +9,7 @@ from sqlalchemy import and_, delete, func, literal, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..core.dataset_types import MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, CellValue, key_digest, timestamp_millis, write_fingerprint
+from ..core.dataset_types import MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, CellValue, dataset_timestamp, key_digest, timestamp_millis, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
@@ -165,9 +165,7 @@ class DatasetRowRepository:
                                   search_columns=search_columns, sorts=sorts, limit=limit, offset=offset)
         return rows
 
-    def query_page(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup], filter_mode: str, search: str | None,
-                   search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
-                   limit: int, offset: int, include_total: bool = False) -> tuple[list[DatasetRow], int | None]:
+    def _filtered_query(self, dataset_id, filters, filter_mode, search, search_columns):
         engine = self.datasets.db.engine
         postgres = engine.dialect.name == "postgresql"
         texts = _Text(postgres, _fold_collation(engine) if postgres else None)
@@ -176,9 +174,44 @@ class DatasetRowRepository:
             combine = or_ if filter_mode == "or" else and_
             query = query.where(combine(*(_predicate(spec, dataset_id, texts) for spec in filters)))
         if search:
-            if not search_columns:
-                return [], 0 if include_total else None
-            query = query.where(or_(*(texts.contains(_column_value(column), search) for column in search_columns)))
+            matches = [texts.contains(_column_value(column), search) for column in search_columns]
+            query = query.where(or_(*matches) if matches else literal(False))
+        return query, texts
+
+    def summarize(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup],
+                  filter_mode: str, search: str | None, search_columns: list[DatasetColumn],
+                  summaries: list[tuple[DatasetColumn, str]]) -> tuple[int, dict[str, CellValue]]:
+        query, texts = self._filtered_query(dataset_id, filters, filter_mode, search, search_columns)
+        matched = func.count()
+        metrics = []
+        for column, operation in summaries:
+            value = _column_value(column)
+            if column.kind not in {"number", "boolean"} | SYSTEM_TIME_KINDS:
+                value = texts.exact(value)
+            filled = func.count(value)
+            expression = {
+                "count": filled,
+                "empty_count": matched - filled,
+                "empty_percent": 100.0 * (matched - filled) / func.nullif(matched, 0),
+                "unique_count": func.count(value.distinct()),
+                "sum": func.sum(value),
+                "avg": func.avg(value),
+                "min": func.min(value),
+                "max": func.max(value),
+            }[operation]
+            metrics.append(expression)
+        with self.datasets.db.session() as session:
+            total, *values = session.execute(query.with_only_columns(matched, *metrics)).one()
+        return total, {
+            column.key: dataset_timestamp(value / 1000)
+            if value is not None and column.kind in SYSTEM_TIME_KINDS and operation in {"min", "max"} else value
+            for (column, operation), value in zip(summaries, values, strict=True)
+        }
+
+    def query_page(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup], filter_mode: str, search: str | None,
+                   search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
+                   limit: int, offset: int, include_total: bool = False) -> tuple[list[DatasetRow], int | None]:
+        query, texts = self._filtered_query(dataset_id, filters, filter_mode, search, search_columns)
         order = []
         for sort, descending in sorts:
             expression = _column_value(sort)
