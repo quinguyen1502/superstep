@@ -27,7 +27,7 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
             if alias is None:
                 alias = f"DATASET_{len(out.aliases) + 1}"
                 out.aliases[did] = alias
-                columns = [{key: value for key, value in column.items() if key != "label"} for column in schema(did)]
+                columns = [{key: value for key, value in column.items() if key not in {"label", "display_format"}} for column in schema(did)]
                 out.bindings[alias] = {"name": alias, "columns": columns, "operations": []}
             contract = out.bindings[alias]
             columns = {column["key"]: column for column in contract["columns"]}
@@ -48,7 +48,9 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
                 referenced.update(binding["write_fields"])
             if absent := sorted(referenced - columns.keys()):
                 raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=absent[0])
-            unsupported = {"long_text", "url", "created_time", "updated_time"}
+            if any(column.get("validation_rules") for column in columns.values()):
+                raise AppError("DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED")
+            unsupported = {"long_text", "url", "created_time", "updated_time", "multi_select", "auto_number"}
             if unsupported.intersection(column["kind"] for column in columns.values()):
                 raise AppError("DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED")
             if operation in {"upsert_row", "delete_row"} and "key" in args and not columns[args["key"]]["unique"]:

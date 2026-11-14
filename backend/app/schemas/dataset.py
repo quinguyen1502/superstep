@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..core.dataset_filters import MAX_FILTER_VALUES, tree_rules
-from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, FilterOperator, SummaryFunction
+from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, DatasetValue, FilterOperator, SummaryFunction
 
 ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]
 Label = Annotated[str, Field(min_length=1, max_length=120)]
@@ -19,12 +19,35 @@ class DatasetFieldContract(BaseModel):
     kind: ColumnKind
     required: bool = False
     unique: bool = False
-    default: CellValue = None
+    default: DatasetValue = None
     options: list[Option] = Field(default_factory=list, max_length=100)
+
+
+class DatasetColumnRules(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True, allow_inf_nan=False)
+
+    min_length: int | None = None
+    max_length: int | None = None
+    min: int | float | str | None = None
+    max: int | float | str | None = None
+    integer: bool | None = None
+    domains: list[Annotated[str, Field(min_length=1, max_length=253)]] | None = Field(default=None, max_length=100)
+
+
+class DatasetColumnFormat(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    decimals: int | None = Field(default=None, ge=0, le=12)
+    thousands: bool | None = None
+    style: Literal["decimal", "percent", "currency"] | None = None
+    currency: Annotated[str, Field(pattern=r"^[A-Z]{3}$")] | None = None
+    date_style: Literal["short", "medium", "long", "iso"] | None = None
 
 
 class DatasetColumnIn(DatasetFieldContract):
     label: Label
+    validation_rules: DatasetColumnRules | None = None
+    display_format: DatasetColumnFormat | None = None
 
 class DatasetCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -57,7 +80,7 @@ class DatasetColumnUpdate(BaseModel):
     revision: int = Field(ge=1)
 
 
-RowValues = Annotated[dict[ColumnKey, CellValue], Field(max_length=100)]
+RowValues = Annotated[dict[ColumnKey, DatasetValue], Field(max_length=100)]
 
 
 class DatasetRowIn(BaseModel):

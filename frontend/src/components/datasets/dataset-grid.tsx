@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetSystemTime, datasetTextKind, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayColumnValue, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetColumnSummary } from './dataset-column-summary'
 import { DatasetActionsMenu } from './dataset-actions-menu'
@@ -44,7 +44,7 @@ const ROW_ID_WIDTH = 112
 const ROW_ACTIONS_WIDTH = 80
 const HEIGHTS = { short: 32, medium: 40, tall: 56 }
 type GridRowHeight = keyof typeof HEIGHTS
-const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160, long_text: 320, url: 250, created_time: 216, updated_time: 216 }
+const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160, long_text: 320, url: 250, created_time: 216, updated_time: 216, multi_select: 240, auto_number: 140 }
 const PAGE_SIZES = [25, 50, 100]
 
 function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: ColumnVisibilityState; summaries?: DatasetColumnSummaries; showSummaries?: boolean; groupBy?: string; pinned?: string[]; rowHeight?: GridRowHeight } {
@@ -415,7 +415,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   function beginEdit(row: DatasetRow, column: DatasetColumn) {
-    if (!editable || editing || saving.current || datasetSystemTime(column.kind)) return
+    if (!editable || editing || saving.current || datasetReadOnly(column.kind)) return
     setActive({ row: row.id, column: column.key })
     setSaveError(null)
     setStale(false)
@@ -459,7 +459,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     setDraftBusy(true)
     setDraftError('')
     try {
-      const values = Object.fromEntries(dataset.columns.filter(column => !datasetSystemTime(column.kind)).map(column => [
+      const values = Object.fromEntries(dataset.columns.filter(column => !datasetReadOnly(column.kind)).map(column => [
         column.key, Object.hasOwn(draft, column.key) ? draft[column.key] : column.default,
       ]))
       await api<DatasetRowResult>(url, { method: 'POST', json: { values, schema_revision: dataset.revision } })
@@ -601,8 +601,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const isFocused = !editing && isSelected
         const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
         const buttonId = cellId(row.id, column.key)
-        const cellEditable = editable && !datasetSystemTime(column.kind)
+        const cellEditable = editable && !datasetReadOnly(column.kind)
       const usesPicker = column.kind === 'boolean' || column.kind === 'select'
+      const multiSelect = column.kind === 'multi_select'
         return <TableCell key={cell.id} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
           (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : 'hover:bg-muted',
           cell.column.getIsPinned() && pinnedClass,
@@ -621,7 +622,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             }
             if (event.key === 'Escape' && !busy && !event.nativeEvent.isComposing) { event.stopPropagation(); closeEditor() }
           }} onBlur={event => {
-            if (!usesPicker && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
+            if (!usesPicker && !multiSelect && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
               && !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.checkValidity()) {
               void save(edit.value, false)
             }
@@ -634,6 +635,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
                 if (usesPicker && !stale) void save(value)
                 else setEdit({ ...edit, value })
               }} />
+            {multiSelect && !saveError && <div className="flex gap-1 p-1">
+              <Button type="submit" variant="outline" size="sm" disabled={busy}>{t('common.save')}</Button>
+              <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => closeEditor()}>{t('common.cancel')}</Button>
+            </div>}
             {saveError && !saveError.field && <div className="space-y-1 px-2 pb-2">
               {saveError.notice && <div role="status" className="text-xs wrap-anywhere text-muted-foreground">{saveError.message}</div>}
               {stale ? <Button type="button" variant="outline" size="sm" onClick={refreshEdit} disabled={busy}>{t('dataset.refreshEdit')}</Button>
@@ -642,7 +647,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           </form> :
             <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
               className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0', column.kind === 'url' && value && 'pr-9')}
-              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value, column.kind) })}
+              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
               aria-pressed={isFocused}
               onPointerDown={event => { if (keepInvalidEditorFocused()) event.preventDefault() }}
               onFocus={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
@@ -650,7 +655,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               onClick={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
               onDoubleClick={() => beginEdit(row.original, column)}
               onKeyDown={event => handleCellKey(event, row.original, column)}>
-              <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{format(value, column.kind) || '—'}</span>
+              <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) || '—'}</span>
             </Button>
           }
           {!isEditing && column.kind === 'url' && typeof value === 'string' && /^https?:\/\//i.test(value) &&
@@ -688,7 +693,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             const operation = summaryColumns[column.key]
             const value = group.values[column.key]
             return operation && value != null && <span key={column.key} className="text-xs text-muted-foreground">
-              {t('dataset.groupSummary', { column: column.label, metric: t(`dataset.summaryFunctions.${operation}`), value: format(value, column.kind) })}
+              {t('dataset.groupSummary', { column: column.label, metric: t(`dataset.summaryFunctions.${operation}`), value: displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
             </span>
           })}
         </div>

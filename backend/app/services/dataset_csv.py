@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass
 
 from ..core import permissions as P
-from ..core.dataset_types import INVALID_TEXT, MAX_ROW_BYTES, SYSTEM_TIME_KINDS, CellValue, dataset_size, key_digest, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_ROW_BYTES, READ_ONLY_KINDS, DatasetValue, dataset_size, key_digest, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import DatasetColumn
 from ..repositories.dataset_rows import DatasetRowRepository
@@ -66,7 +66,9 @@ def parse_csv(text: str) -> CsvTable:
     return CsvTable(headers, rows)
 
 
-def _coerce(kind: str, text: str) -> CellValue:
+def _coerce(kind: str, text: str) -> DatasetValue:
+    if kind == "multi_select":
+        return text.split(";")
     if kind == "number" and NUMBER.fullmatch(text.strip()):
         return float(text)
     if kind == "boolean" and text.strip().lower() in {"true", "false", "1", "0"}:
@@ -126,7 +128,9 @@ def _suggest_mapping(headers: list[str], columns: list[DatasetColumn]) -> list[s
     return mapping
 
 
-def _csv_value(value: CellValue) -> str | int | float:
+def _csv_value(value: DatasetValue) -> str | int | float:
+    if isinstance(value, list):
+        value = ";".join(value)
     if value is None:
         return ""
     if type(value) is bool:
@@ -155,7 +159,7 @@ class DatasetCsvService:
             }
             dataset = self.datasets.prepare_create(uid, **definition)
         columns = _active_columns(dataset)
-        writable = {key: column for key, column in columns.items() if column.kind not in SYSTEM_TIME_KINDS}
+        writable = {key: column for key, column in columns.items() if column.kind not in READ_ONLY_KINDS}
         if mapping is None:
             mapping = _suggest_mapping(table.headers, list(writable.values())) if dataset_id or create else list(columns)
         mapped = [key for key in mapping if key is not None]
@@ -165,7 +169,7 @@ class DatasetCsvService:
         issues = []
         invalid_rows = set()
         records = []
-        keys = {key: {} for key, column in columns.items() if column.unique}
+        keys = {key: {} for key, column in writable.items() if column.unique}
         key_values = {}
 
         def issue(line: int, error: AppError, field: str | None = None, value: object = None):

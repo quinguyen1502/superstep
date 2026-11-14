@@ -5,7 +5,8 @@ from dataclasses import dataclass
 from time import time
 from uuid import uuid4
 
-from sqlalchemy import and_, delete, func, literal, or_, select, text, update
+from sqlalchemy import cast, and_, delete, func, literal, or_, select, text, update
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -71,6 +72,8 @@ def _column_value(column: DatasetColumn):
         stamp = DatasetRow.created if column.kind == "created_time" else DatasetRow.updated
         return func.floor(stamp * 1000)
     value = DatasetRow.values[column.key]
+    if column.kind == "auto_number":
+        return value.as_integer()
     if column.kind == "number":
         return value.as_float()
     if column.kind == "boolean":
@@ -125,6 +128,17 @@ def _predicate(spec: RowFilter | RowFilterGroup, dataset_id: str, texts: _Text):
             DatasetRowKey.value_hash.in_(hashes),
         )
         return DatasetRow.id.in_(ids)
+    if column.kind == "multi_select":
+        data = DatasetRow.values[column.key]
+        if op == "is_null":
+            return data.as_string().is_(None)
+        if texts.postgres:
+            matches = [cast(data, JSONB).contains([item]) for item in value]
+        else:
+            members = func.json_each(data).table_valued("value", joins_implicitly=True)
+            matches = [select(1).select_from(members).where(members.c.value == item).exists() for item in value]
+        combine = and_ if op == "contains_all" else or_
+        return combine(*matches)
     if op in {"contains", "not_contains"}:
         contains = texts.contains(expression, value)
         return contains if op == "contains" else or_(expression.is_(None), ~contains)
@@ -132,7 +146,7 @@ def _predicate(spec: RowFilter | RowFilterGroup, dataset_id: str, texts: _Text):
         return expression.is_(None) if op == "is_null" else expression.is_not(None)
     if column.kind in SYSTEM_TIME_KINDS:
         value = [timestamp_millis(item) for item in value] if op in {"in", "not_in"} else timestamp_millis(value)
-    elif column.kind not in {"number", "boolean"}:
+    elif column.kind not in {"number", "boolean", "auto_number"}:
         expression = texts.exact(expression)
     if op in {"in", "not_in"}:
         return expression.in_(value) if op == "in" else or_(expression.is_(None), expression.not_in(value))
@@ -146,7 +160,7 @@ def _predicate(spec: RowFilter | RowFilterGroup, dataset_id: str, texts: _Text):
 
 def _summary_expression(column, operation, texts, matched):
     value = _column_value(column)
-    if column.kind not in {"number", "boolean"} | SYSTEM_TIME_KINDS:
+    if column.kind not in {"number", "boolean", "auto_number"} | SYSTEM_TIME_KINDS:
         value = texts.exact(value)
     filled = func.count(value)
     return {
@@ -206,7 +220,7 @@ class DatasetRowRepository:
             statement = query.with_only_columns(literal(None), matched, *metrics)
         else:
             key = _column_value(group_by)
-            if group_by.kind not in {"number", "boolean"} | SYSTEM_TIME_KINDS:
+            if group_by.kind not in {"number", "boolean", "auto_number"} | SYSTEM_TIME_KINDS:
                 key = texts.exact(key)
             statement = query.with_only_columns(key, matched, *metrics).group_by(key)
             statement = statement.order_by(matched.desc(), key.asc().nulls_last()).limit(group_limit).offset(group_offset)
@@ -230,7 +244,7 @@ class DatasetRowRepository:
         for sort, descending in sorts:
             expression = _column_value(sort)
             keys = [expression]
-            if sort.kind not in {"number", "boolean"} | SYSTEM_TIME_KINDS:
+            if sort.kind not in {"number", "boolean", "auto_number"} | SYSTEM_TIME_KINDS:
                 keys = [texts.fold(expression), texts.exact(expression)]  # case-insensitive, then exact as the tiebreak
             order.extend((key.desc() if descending else key.asc()).nulls_last() for key in keys)
         page = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id)
@@ -322,6 +336,7 @@ class DatasetRowRepository:
                 count = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
                 if count >= MAX_DATASET_ROWS:
                     raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
+                self._assign_auto_numbers(session, dataset, [values])
                 row = DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=values, revision=1, created=now, updated=now)
                 session.add(row)
                 session.flush()
@@ -357,6 +372,13 @@ class DatasetRowRepository:
                 )))
         return found
 
+    def _assign_auto_numbers(self, session: Session, dataset: Dataset, records: list[dict]) -> None:
+        columns = [column.key for column in dataset.columns if column.kind == "auto_number" and not column.archived]
+        if columns and records:
+            first = self.datasets.reserve_auto_numbers(session, dataset.id, len(records))
+            for value, record in enumerate(records, first):
+                record.update(dict.fromkeys(columns, value))
+
     def import_rows(self, uid: str, dataset: Dataset, values: list[dict], *, create: bool) -> None:
         with self.datasets.db.session() as session:
             if create:
@@ -369,6 +391,7 @@ class DatasetRowRepository:
             count = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
             if count + len(values) > MAX_DATASET_ROWS:
                 raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
+            self._assign_auto_numbers(session, dataset, values)
             now = time()
             rows = [DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=record, revision=1,
                                created=now + index / 1_000_000, updated=now + index / 1_000_000)
