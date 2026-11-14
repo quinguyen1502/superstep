@@ -42,7 +42,7 @@ Close the Datasets phase 1 review findings, starting with the P0 write-only read
 | [TASK-0340](../tasks/done/TASK-0340-dataset-studio-states.md) | P1 | Viewer, empty, not-found states; delete names the row; CSV issue list | — |
 | [TASK-0341](../tasks/done/TASK-0341-dataset-grid-usability.md) | P2 | Layout persistence, page size, totals, widths, dates, tabs | TASK-0340 |
 | [TASK-0342](../tasks/done/TASK-0342-dataset-run-feedback.md) | P2 | Trace summary, real-write notice, Grant shortcut | TASK-0341 |
-| [TASK-0343](../tasks/review/TASK-0343-dataset-export-fix-parity.md) | P1 | Python and TypeScript parity for the fixes | TASK-0329, TASK-0330, TASK-0332, TASK-0333, TASK-0334, TASK-0337 |
+| [TASK-0343](../tasks/done/TASK-0343-dataset-export-fix-parity.md) | P1 | Python and TypeScript parity for the fixes | TASK-0329, TASK-0330, TASK-0332, TASK-0333, TASK-0334, TASK-0337 |
 | [TASK-0344](../tasks/review/TASK-0344-dataset-fixes-acceptance.md) | P1 | Regression suite, screenshots, handbook | TASK-0332 to TASK-0343 |
 
 ## P0 Ordering Against The Phase 2 Chain
