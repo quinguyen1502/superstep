@@ -58,3 +58,8 @@ Make `factory validate --only hygiene` pass honestly: no artifact references in 
 ## Integration
 
 - Merged into develop via PR #346 at `86715d2c`. The lifecycle was reconciled on 2026-11-14.
+
+## Review and QA History
+
+- Review: [Merged PR #346](https://github.com/quinguyen1502/superstep/pull/346) contains the delivered scope and merge history. No separate review artifact was recorded.
+- QA: The original PR records the hygiene findings before and after cleanup and the backend, SDK, and frontend test results. See the validation section of the merged PR.
