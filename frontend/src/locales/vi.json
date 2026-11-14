@@ -19,8 +19,8 @@
   },
   "datasetNode": {
     "grantShortcut": "Cấp quyền",
-    "runNoticeTitle": "Lần chạy này có thể thay đổi hàng trong tập dữ liệu",
-    "runNotice": "Chạy quy trình này có thể thêm, cập nhật hoặc xóa hàng đã lưu. Các bài kiểm thử quy trình chỉ mô phỏng những thay đổi này.",
+    "runNoticeTitle": "Run này có thể thay đổi hàng trong tập dữ liệu",
+    "runNotice": "Chạy quy trình này có thể thêm, cập nhật hoặc xoá hàng đã lưu. Các bài kiểm thử quy trình chỉ mô phỏng những thay đổi này.",
     "trace": {
       "completed": "{{operation}} trên tập dữ liệu {{dataset}} đã hoàn tất lúc {{time}} ({{count}} hàng).",
       "simulated": "{{operation}} trên tập dữ liệu {{dataset}} được mô phỏng lúc {{time}} ({{count}} hàng).",
