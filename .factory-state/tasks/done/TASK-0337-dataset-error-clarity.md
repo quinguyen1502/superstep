@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0337
 - Title: Return Dataset errors that name the real cause
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -76,6 +76,8 @@ Team membership, workflow sharing, filter mapping, and token scope failures each
 - 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): the insufficient-token case moves from 401 to 403 `DATASET_TOKEN_SCOPE` (confirmed).
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0331](../../artifacts/REV-0331-TASK-0337-dataset-error-clarity.md) and QA [QA-0331](../../artifacts/QA-0331-TASK-0337-dataset-error-clarity.md).
+
+- 2026-11-14: Owner approved merging PR #397 into develop after the final checks pass.
 
 ## Handoff Notes
 
