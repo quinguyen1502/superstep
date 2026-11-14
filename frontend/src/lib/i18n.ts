@@ -33,6 +33,10 @@ export function issueTexts(errors: string[], issues?: Issue[]): string[] {
 const DYNAMIC = new Set(['WORKFLOW_INVALID', 'NODE_FAILED', 'RUN_FAILED'])
 export function eventErrors(ev: { error?: ApiErrorBody; errors?: string[]; issues?: Issue[] }): string[] {
   if (!ev.error || DYNAMIC.has(ev.error.code || '')) return ev.errors ? issueTexts(ev.errors, ev.issues) : ev.error ? [errorText(ev.error)] : []
+  const details = ev.error.details
+  if (ev.error.code === 'DATASET_FILTER_INVALID' && details?.node && details?.position) {
+    return [i18n.t(details.state_key ? 'dataset.emptyMappedFilter' : 'dataset.invalidNodeFilter', details)]
+  }
   return [errorText(ev.error)]
 }
 

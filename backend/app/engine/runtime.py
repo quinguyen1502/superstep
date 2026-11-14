@@ -12,6 +12,7 @@ from .limits import safe_error
 from .reducers import apply as apply_delta
 from .usage import merge as merge_usage
 from ..core.config import recursion_limit
+from ..core.errors import AppError
 
 TRACE_CAP = 16_000  # max JSON chars per traced payload (input/delta) in an event
 
@@ -172,6 +173,8 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", **(meta(nid) if nid in nodes else {}), "iteration": counts.get(nid, 1) if nid else None,
                "duration_ms": round((time.perf_counter() - t0) * 1000, 2), "input": cap_payload(dict(state)),
                "code": getattr(e, "code", "NODE_FAILED"), "errors": [safe_error(e)],
+               **({"error": {**e.to_dict(), "message": safe_error(e)}}
+                  if isinstance(e, AppError) and e.code == "DATASET_FILTER_INVALID" else {}),
                **_provider_of(e, nodes[nid]["data"] if nid in nodes else {}),
                **({"browser": e.browser} if isinstance(getattr(e, "browser", None), dict) else {}),
                **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),

@@ -86,6 +86,8 @@
     }
   },
   "dataset": {
+    "invalidNodeFilter": "Bộ lọc tập dữ liệu số {{position}} cho {{field}} không hợp lệ tại nút {{node}}",
+    "emptyMappedFilter": "Bộ lọc tập dữ liệu số {{position}} cho {{field}} tại nút {{node}} cần giá trị từ state.{{state_key}}",
     "title": "Tập dữ liệu",
     "navigation": "Điều hướng Studio",
     "catalog": "Danh sách tập dữ liệu",
@@ -747,6 +749,9 @@
     "VALIDATION_ERROR": "Dữ liệu không hợp lệ",
     "BAD_REQUEST": "Yêu cầu không hợp lệ",
     "NOT_FOUND": "Không tìm thấy",
+    "DATASET_TOKEN_SCOPE": "Mã truy cập tập dữ liệu không cho phép thao tác này",
+    "DATASET_WORKFLOW_NOT_SHARED": "Hãy chia sẻ quy trình với nhóm {{team}} trước khi cấp quyền truy cập tập dữ liệu",
+    "DATASET_TEAM_FORBIDDEN": "Bạn phải là thành viên của nhóm để tạo tập dữ liệu trong nhóm đó",
     "DATASET_GRANT_DENIED": "Quy trình thiếu quyền cần thiết đối với tập dữ liệu",
     "DATASET_MANAGE_DENIED": "Chỉ chủ sở hữu tập dữ liệu hoặc quản trị viên mới đổi được lược đồ, quyền truy cập, token, hoặc xoá tập dữ liệu",
     "DATASET_OWNER_INVALID": "Chủ sở hữu mới phải là thành viên của nhóm sở hữu tập dữ liệu và có quyền quản lý tài nguyên",

@@ -318,7 +318,7 @@ def test_generated_typescript_agent_writes_and_connected_delete(client, db, monk
     assert run_deno(deno_env, tmp_path, script, "--setup-datasets").returncode == 0
     remote = rows_call(client, "POST", f"{base}/rows", body={"values": {"ticket": "Remote"}}, status=201)["row"]["id"]
     denied = run_deno(deno_env, tmp_path, script)
-    assert denied.returncode and "AUTH_TOKEN_INVALID" in denied.stderr
+    assert denied.returncode and "DATASET_TOKEN_SCOPE" in denied.stderr
     monkeypatch.setenv("DATASET_2_API_TOKEN", token(client, base, "read_write", allow_delete=True)["token"])
     result = run_deno(deno_env, tmp_path, script)
     assert result.returncode == 0, result.stderr
