@@ -237,7 +237,8 @@ class DatasetRowService:
                 **({"total": min(total, MAX_DATASET_ROWS), "total_capped": total > MAX_DATASET_ROWS}
                    if total is not None else {})}
 
-    def batch_update(self, uid: str, dataset_id: str, *, schema_revision: int, rows: list[dict]) -> dict:
+    def batch_update(self, uid: str, dataset_id: str, *, schema_revision: int, rows: list[dict],
+                     append: list[dict] | None = None, remove: dict[str, int] | None = None) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         issues, updates = [], {}
@@ -249,13 +250,28 @@ class DatasetRowService:
                 except AppError as exc:
                     issues.append({"id": item["id"], "field": field, "error": exc.to_dict()})
             updates[item["id"]] = (item["revision"], cells)
+        records = []
+        for number, raw in enumerate(append or [], 1):
+            record = {}
+            for field in raw.keys() - columns.keys():
+                issues.append({"index": number, "field": field, "error": AppError("DATASET_COLUMN_NOT_FOUND").to_dict()})
+            for field, column in columns.items():
+                try:
+                    if field in raw:
+                        record[field] = _write_value(columns, field, raw[field])
+                    elif column.kind not in READ_ONLY_KINDS:
+                        record[field] = _normalize(column, column.default_value)
+                except AppError as exc:
+                    issues.append({"index": number, "field": field, "error": exc.to_dict()})
+            records.append(record)
         if issues:
             raise AppError("DATASET_BATCH_INVALID", details={"issues": issues})
-        changed = self.rows.batch_update(uid, dataset, updates)
-        if changed:
+        changed, added = self.rows.batch_update(uid, dataset, updates, records, remove or {})
+        if changed or added or remove:
             self.datasets.audit.record(uid, "dataset.rows_batch_update", "dataset", dataset.id,
-                                       rows=len(changed), cells=sum(len(item["previous"]) for item in changed))
-        return {"rows": changed, "schema_revision": dataset.revision}
+                                       rows=len(changed), cells=sum(len(item["previous"]) for item in changed),
+                                       added=len(added), removed=len(remove or {}))
+        return {"rows": changed, "schema_revision": dataset.revision, **({"added": added} if added else {})}
 
     def save(self, uid: str, dataset_id: str, *, values: dict, schema_revision: int | None,
              row_id: str | None = None, revision: int | None = None, key: str | None = None,

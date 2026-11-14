@@ -125,13 +125,19 @@ class DatasetBatchUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     schema_revision: int = Field(ge=1)
-    rows: list[DatasetBatchRow] = Field(min_length=1, max_length=100)
+    rows: list[DatasetBatchRow] = Field(default_factory=list, max_length=100)
+    append: list[RowValues] = Field(default_factory=list, max_length=100)
+    remove: dict[Annotated[str, Field(min_length=1, max_length=100)], Annotated[int, Field(ge=1)]] = Field(default_factory=dict, max_length=100)
 
     @model_validator(mode="after")
     def batch_limits(self):
-        if sum(len(row.values) for row in self.rows) > 500:
+        if self.remove and self.append:
+            raise ValueError("Remove applies only to a separate revert batch")
+        if not 1 <= len(self.rows) + len(self.append) + len(self.remove) <= 100:
+            raise ValueError("A batch must contain between 1 and 100 rows")
+        if sum(len(row.values) for row in self.rows) + sum(map(len, self.append)) > 500:
             raise ValueError("A batch can contain at most 500 cells")
-        if len({row.id for row in self.rows}) != len(self.rows):
+        if len({row.id for row in self.rows}) != len(self.rows) or any(row.id in self.remove for row in self.rows):
             raise ValueError("Each row may appear once in a batch")
         return self
 

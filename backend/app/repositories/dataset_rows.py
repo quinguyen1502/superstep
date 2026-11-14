@@ -354,15 +354,27 @@ class DatasetRowRepository:
             self._commit(session)
             return row, inserted, False, changed
 
-    def batch_update(self, uid: str, dataset: Dataset, updates: dict) -> list[dict]:
+    def batch_update(self, uid: str, dataset: Dataset, updates: dict, records: list[dict],
+                     removals: dict[str, int]) -> tuple[list[dict], list[dict]]:
         def issue(row_id, field, code, **params):
             return {"id": row_id, "field": field, "error": AppError(code, **params).to_dict()}
 
         with self.datasets.db.session() as session:
             self.datasets.lock(session, uid, dataset.id, dataset.revision)
-            statement = select(DatasetRow).where(DatasetRow.dataset_id == dataset.id, DatasetRow.id.in_(updates))
+            statement = select(DatasetRow).where(DatasetRow.dataset_id == dataset.id, DatasetRow.id.in_([*updates, *removals]))
             rows = {row.id: row for row in session.scalars(statement)}
             changed, issues = {}, []
+            for row_id, revision in removals.items():
+                row = rows.get(row_id)
+                if row is None or row.revision != revision:
+                    issues.append(issue(row_id, None, "DATASET_ROW_NOT_FOUND" if row is None else "DATASET_ROW_CONFLICT"))
+            if records:
+                total = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
+                if total + len(records) > MAX_DATASET_ROWS:
+                    raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
+                for index, record in enumerate(records, 1):
+                    if dataset_size(record) > MAX_ROW_BYTES:
+                        issues.append({"index": index, "field": None, "error": AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES).to_dict()})
             for row_id, (revision, cells) in updates.items():
                 row = rows.get(row_id)
                 row_error = "DATASET_ROW_NOT_FOUND" if row is None else "DATASET_ROW_CONFLICT" if row.revision != revision else None
@@ -392,16 +404,36 @@ class DatasetRowRepository:
                         issues.append(issue(row_id, field, "DATASET_UNIQUE_CONFLICT"))
                         issues.append(issue(keys[identity], field, "DATASET_UNIQUE_CONFLICT"))
                     keys[identity] = row_id
+            added = []
+            self._assign_auto_numbers(session, dataset, records)
+            for index, record in enumerate(records, 1):
+                row_id = uuid4().hex
+                for field in unique:
+                    value = record.get(field)
+                    if value is None:
+                        continue
+                    identity = (field, key_digest(value))
+                    if identity in keys:
+                        issues.append({"index": index, "field": field, "error": AppError("DATASET_UNIQUE_CONFLICT").to_dict()})
+                    keys[identity] = row_id
+                added.append((row_id, record))
+            added_indices = {row_id: index for index, (row_id, _) in enumerate(added, 1)}
             for (field, digest), row_id in keys.items():
                 existing = session.get(DatasetRowKey, (dataset.id, field, digest))
-                if existing is not None and (existing.row_id not in changed or field not in changed[existing.row_id][1]):
-                    issues.append(issue(row_id, field, "DATASET_UNIQUE_CONFLICT"))
+                if existing is not None and existing.row_id not in removals and (
+                    existing.row_id not in changed or field not in changed[existing.row_id][1]
+                ):
+                    conflict = issue(row_id, field, "DATASET_UNIQUE_CONFLICT")
+                    if row_id in added_indices:
+                        del conflict["id"]
+                        conflict["index"] = added_indices[row_id]
+                    issues.append(conflict)
             if issues:
                 raise AppError("DATASET_BATCH_CONFLICT", details={"issues": issues})
 
-            if changed:
+            if changed or removals:
                 session.execute(delete(DatasetRowKey).where(
-                    DatasetRowKey.dataset_id == dataset.id, DatasetRowKey.row_id.in_(changed),
+                    DatasetRowKey.dataset_id == dataset.id, DatasetRowKey.row_id.in_([*changed, *removals]),
                 ))
             now = time()
             result = []
@@ -409,8 +441,18 @@ class DatasetRowRepository:
                 row.values, row.updated, row.revision = values, now, row.revision + 1
                 session.add_all(self._keys(dataset, row))
                 result.append({"id": row.id, "revision": row.revision, "previous": previous})
+            for row_id in removals:
+                session.delete(rows[row_id])
+            added_rows = []
+            for index, (row_id, record) in enumerate(added):
+                timestamp = now + index / 1_000_000
+                row = DatasetRow(dataset_id=dataset.id, id=row_id, values=record, revision=1, created=timestamp, updated=timestamp)
+                added_rows.append(row)
+            session.add_all(added_rows)
+            session.flush()
+            session.add_all(key for row in added_rows for key in self._keys(dataset, row))
             self._commit(session)
-            return result
+            return result, [{"id": row.id, "revision": row.revision} for row in added_rows]
 
     @staticmethod
     def _keys(dataset: Dataset, row: DatasetRow) -> Iterator[DatasetRowKey]:
