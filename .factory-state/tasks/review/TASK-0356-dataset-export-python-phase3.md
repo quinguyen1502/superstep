@@ -3,41 +3,38 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0352
-- Title: Add multi-select and auto-number fields
-- Status: backlog
+- Task ID: TASK-0356
+- Title: Carry Dataset phase 3 into the Python export
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
 - Decision IDs: —
 - Plan: PLAN-0019
-- Phase: 3 Fields
-- Priority: P2
+- Phase: 3 Export
+- Priority: P1
 - Size: M
 
 ## Objective
 
-Datasets support multi-select values and server-assigned auto-numbers.
+Generated Python projects support the filter tree, new operators, `aggregate_rows`, and the new field types and rules on every backend.
 
 ## Scope
 
 ### In Scope
 
-- `multi_select`: array of declared options stored in the JSON row; operators `contains_any`, `contains_all`, `is_null`; CSV cells use `;` as the delimiter (owner-confirmed); not unique.
-- `auto_number`: assigned under the writer lock from a per-dataset counter, unique, read-only, never reused; added to an existing dataset it backfills by created order.
-- Node mapping, Agent tool schema, summaries, and filters per kind.
-- Python and TypeScript export parity lands in TASK-0356 and TASK-0357; this task documents the contract in `docs/dataset-export.md`.
+- Connected, SQLite, and PostgreSQL runtimes; standalone schema setup for new kinds and rules; `docs/dataset-export.md` Python section only.
 
 ### Out Of Scope
 
-- Option colors beyond theme tokens; user fields.
+- Studio grid features (no export impact).
 
 ## Inputs
 
-- TASK-0351 type plumbing.
+- Python export runtime; TASK-0343 parity suite.
 
 ## Related Artifacts
 
@@ -48,15 +45,15 @@ Datasets support multi-select values and server-assigned auto-numbers.
 
 ## Dependencies
 
-- TASK-0351 merged.
+- TASK-0345, TASK-0348, TASK-0351, TASK-0352, TASK-0353 merged; REQ-0100 TASK-0343 merged.
 
 ## Acceptance Criteria
 
-- Concurrent inserts get distinct auto-numbers on both databases; multi-select filters return the expected rows.
+- The shared parity cases pass on the Superstep API, SQLite, and PostgreSQL, including a mixed-backend graph.
 
 ## Tests
 
-- Concurrency tests; filter tests; CSV round trip.
+- Python export parity suite.
 
 ## Validation Plan
 
@@ -70,8 +67,11 @@ Datasets support multi-select values and server-assigned auto-numbers.
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
-- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): `;` delimiter confirmed.
+
+- 2026-11-14: Readiness gate passed. Started stacked on Phase 3 schema and runtime changes in PR #411.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0347](../../artifacts/REV-0347-TASK-0356-dataset-export-python-phase3.md) and QA [QA-0347](../../artifacts/QA-0347-TASK-0356-dataset-export-python-phase3.md).
 
 ## Handoff Notes
 
-- Use branch `factory/task-0352-dataset-structured-field-types` from `develop` when implementation begins.
+- Use branch `factory/task-0356-dataset-export-python-phase3` from `develop` when implementation begins.

@@ -1537,9 +1537,9 @@ class _Writer(GraphWriter):
             elif src == "dataset":
                 binding = dataset_nodes.agent_binding(t)
                 head = f"dataset_agent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args"
-                if dataset_nodes.agent_writes(binding):
+                if dataset_nodes.agent_writes(binding) or "aggregate_rows" in binding["operations"]:
                     writes = {key: binding[key] for key in ("operations", "write_fields", "key") if key in binding}
-                    self.add(f"        return {head}, {lit(writes)}, operation_id)")
+                    self.add(f"        return {head}, {lit(writes)}{', operation_id' if self.dataset_writes(d) else ''})")
                 else:
                     self.add(f"        return {head})")
             elif src == "knowledge":

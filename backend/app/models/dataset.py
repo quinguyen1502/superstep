@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, CheckConstraint, ForeignKey, ForeignKeyConstraint, Index, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, CheckConstraint, ForeignKey, ForeignKeyConstraint, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,6 +21,7 @@ class Dataset(Base):
     name_key: Mapped[str]
     description: Mapped[str | None]
     revision: Mapped[int]
+    auto_number_counter: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
     created: Mapped[float]
     updated: Mapped[float]
     columns: Mapped[list["DatasetColumn"]] = relationship(
@@ -37,7 +38,9 @@ class DatasetColumn(Base):
     kind: Mapped[str]
     required: Mapped[bool]
     unique: Mapped[bool]
-    default_value: Mapped[str | int | float | bool | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    default_value: Mapped[str | int | float | bool | list[str] | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    validation_rules: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    display_format: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     options: Mapped[list[str]] = mapped_column(JSON)
     position: Mapped[int]
     archived: Mapped[bool]

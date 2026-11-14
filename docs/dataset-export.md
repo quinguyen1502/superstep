@@ -24,9 +24,8 @@ Find rows accepts either the existing `filters` and `filter_mode` arguments or a
 `children`. A rule has `type: "rule"`, `field`, `op`, and `value`. A tree
 supports three group levels and 20 rules. The `in` and `not_in` operators
 take 1 to 50 values of the field's type. Null cells match `not_in` and
-`not_contains`, and `not_contains` ignores case. Code export reports
-`DATASET_EXPORT_FILTER_UNSUPPORTED` for these filters until both generated
-runtimes support them.
+`not_contains`, and `not_contains` ignores case. The generated Python and
+TypeScript runtimes accept the same filter tree and operators.
 
 ## Python standalone
 
@@ -76,8 +75,9 @@ column, the result includes up to 20 groups, by descending total then
 ascending key with null last on ties. Without a grouping column there is one
 group with a null key, even when the filter matches zero rows.
 
-Python and TypeScript export reject aggregate bindings until their respective
-parity tasks implement this contract.
+Python and TypeScript exports implement the same aggregation contract on
+Superstep, SQLite and PostgreSQL.
+
 ### Scalar and system column types
 
 Studio supports `long_text` (multiline text up to 16,384 characters, without a
@@ -88,5 +88,37 @@ including for existing rows. Reads, filters, sorting, and CSV export can use
 these fields. CSV import leaves the system fields unmapped, and attempts to
 write them through a row operation fail with `DATASET_COLUMN_READ_ONLY`.
 
-Code export currently rejects dataset bindings whose schema includes these
-new kinds. Python and TypeScript support will land with their parity tasks.
+
+### Multi-select and auto-number
+
+`multi_select` accepts an array of declared option strings and stores values in
+schema option order. An unselected optional value is null. Filters accept
+`contains_any`, `contains_all`, and `is_null`. CSV represents selections as
+semicolon-delimited values and disallows semicolons inside option names.
+
+`auto_number` is a read-only positive integer. Successful row inserts reserve a
+number under the dataset write lock. A newly added auto-number column receives
+consecutive values, ordered by row creation time and row ID. Deletion leaves
+the counter unchanged. CSV exports the generated value and skips the column
+on import.
+
+### Column rules and formatting
+
+Dataset columns can have `validation_rules` for text length, numeric bounds
+and integers, date bounds, or allowed email domains. Server-side rules apply
+to all row writes, including CSV import, connected credentials, and workflow
+operations. Rules that conflict with existing data produce a count and up to
+five row IDs and leave the schema revision unchanged.
+
+`display_format` affects only Studio presentation. Numeric options are
+`decimals`, `thousands`, `style` and `currency`. Calendar date options use
+`date_style`. Node output, CSV, stored values and comparisons use the
+underlying typed values.
+
+### Phase 3 runtime support
+
+Both exporters support grouped filters, the Phase 3 operators and column types,
+aggregate results, and column validation rules on Superstep, SQLite and
+PostgreSQL. The connected contract checks the rules against the
+server schema. Running `--setup-datasets` also upgrades existing standalone
+storage with the auto-number watermark.
