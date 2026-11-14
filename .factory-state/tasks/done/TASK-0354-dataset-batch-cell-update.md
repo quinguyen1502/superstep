@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0354
 - Title: Add an atomic batch cell update for Dataset rows
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -74,6 +74,8 @@ Studio can apply a rectangular paste or fill as one checked change.
 - 2026-11-14: Readiness gate passed. Started stacked on TASK-0353 to reuse its validation.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0345](../../artifacts/REV-0345-TASK-0354-dataset-batch-cell-update.md) and QA [QA-0345](../../artifacts/QA-0345-TASK-0354-dataset-batch-cell-update.md).
+
+- 2026-11-14: Owner approved merging PR #412 into develop after successful checks.
 
 ## Handoff Notes
 
