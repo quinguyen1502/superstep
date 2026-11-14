@@ -157,3 +157,5 @@ Giới hạn được hỗ trợ:
 | Nhập CSV | 1 MiB và 1.000 bản ghi |
 | Xuất CSV | 16 MiB |
 | Ảnh chụp trong một dự án | 1.000 dòng |
+
+Biên nhận ghi Dataset mặc định giữ mã hàng và kết quả trong 30 ngày. Khi thử lại cùng một yêu cầu, hệ thống trả về cùng mã hàng và kết quả chèn, kèm giá trị hiện tại nếu người gọi có quyền đọc. Nếu hàng đã bị xóa, hệ thống chỉ trả mã định danh cho đến khi biên nhận hết hạn. Sau khi hết hạn, thao tác ghi có thể chạy lại.

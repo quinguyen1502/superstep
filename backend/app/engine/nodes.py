@@ -6,7 +6,7 @@ import httpx
 from ..core import config
 from ..core.errors import AppError
 from ..core.net import pinned_request, public_address
-from . import agents, attachments, code_languages, code_runtime, decisions, emails, foreach
+from . import agents, attachments, code_languages, code_runtime, dataset_nodes, decisions, emails, foreach
 from .effects import Effects, call_tool
 from .errors import Interrupt
 from .llm import LLMError, TokenBuffer, call_llm
@@ -145,9 +145,19 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
         def fn(state):
             if ports.dataset_call is None:
                 raise AppError("DATASET_GRANT_DENIED")
-            args = render_args(d.get("arguments", {}), state)
+            raw = d.get("arguments", {})
+            args = render_args(raw, state)
+            if d["operation"] == "find_rows":
+                dataset_nodes.check_mapped_filters(node["id"], raw, args, state)
             key = effects.key(node["id"]) if effects is not None else None
-            return {d["output_field"]: ports.dataset_call(d, args, key)}
+            try:
+                result = ports.dataset_call(d, args, key)
+            except AppError as exc:
+                details = exc.details or {}
+                if exc.code == "DATASET_FILTER_INVALID" and "position" in details:
+                    raise dataset_nodes.filter_error(node["id"], details["position"], details["field"]) from exc
+                raise
+            return {d["output_field"]: result}
     elif t == "decision":
         fn = decisions.node_fn(node, resolve, usage, offline=offline)
     elif t == "foreach":

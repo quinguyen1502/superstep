@@ -56,7 +56,9 @@ def test_connected_write_receipt_projection_and_token_rotation(client, db):
     assert updated.json()["data"]["row"]["values"] == {"ticket": "A", "score": 1}
     assert updated.json()["data"]["inserted"] is False
     replayed = post(client, base, secret, insert)
-    assert replayed.json()["data"] == result
+    current = replayed.json()["data"]
+    assert current["inserted"] and current["row"]["id"] == row_id
+    assert current["row"]["revision"] == 2 and current["row"]["values"] == {"ticket": "A", "score": 1, "active": False}
     got = post(client, base, secret, request("get_row", fields=["active"], arguments={"row_id": row_id}))
     assert got.json()["data"]["values"] == {"active": False}
     found = post(client, base, secret, request("find_rows", fields=["score"], arguments={
@@ -67,7 +69,7 @@ def test_connected_write_receipt_projection_and_token_rotation(client, db):
     token_path = f"{base}/access/tokens/{issued['id']}"
     rotated = call(client, "POST", f"{token_path}/rotate")
     error(post(client, base, secret, insert), 401, "AUTH_TOKEN_INVALID")
-    assert post(client, base, rotated["token"], insert).json()["data"] == result
+    assert post(client, base, rotated["token"], insert).json()["data"] == current
     call(client, "DELETE", token_path)
     error(post(client, base, rotated["token"], insert), 401, "AUTH_TOKEN_INVALID")
     assert len(call(client, "POST", f"{base}/rows/query", body={})["items"]) == 1
@@ -90,7 +92,7 @@ def test_connected_delete_replays_and_ignores_write_permission(client, db):
     )).json()["data"]
     row_id = inserted["row"]["id"]
     denied = request("delete_row", operation_id="job:delete", arguments={"row_id": row_id})
-    error(post(client, base, writer["token"], denied), 401, "AUTH_TOKEN_INVALID")
+    error(post(client, base, writer["token"], denied), 403, "DATASET_TOKEN_SCOPE")
     remover = token(client, base, "read", allow_delete=True)
     secret = remover["token"]
     deleted = post(client, base, secret, denied)
@@ -126,11 +128,14 @@ def test_connected_schema_and_scope_fail_explicitly(client):
     lookup = request("find_rows")
     error(client.post(f"{base}/connected", json=lookup), 401, "AUTH_REQUIRED")
     error(client.post(f"{base}/connected", headers=auth("owner"), json=lookup), 401, "AUTH_TOKEN_INVALID")
-    error(post(client, base, write, lookup), 401, "AUTH_TOKEN_INVALID")
+    error(post(client, base, write, lookup), 403, "DATASET_TOKEN_SCOPE")
     other = dataset(client, name="Another")
-    error(post(client, f"/api/datasets/{other['id']}", read, lookup), 401, "AUTH_TOKEN_INVALID")
+    wrong_dataset = post(client, f"/api/datasets/{other['id']}", read, lookup)
+    error(wrong_dataset, 401, "AUTH_TOKEN_INVALID")
+    missing = post(client, "/api/datasets/missing", read, lookup)
+    assert wrong_dataset.json()["error"] == missing.json()["error"]
     insert = request("insert_row", operation_id="job:write", arguments={"values": {"ticket": "A"}})
-    error(post(client, base, read, insert), 401, "AUTH_TOKEN_INVALID")
+    error(post(client, base, read, insert), 403, "DATASET_TOKEN_SCOPE")
     error(post(client, base, write, {**insert, "operation_id": None}), 400, "DATASET_NODE_ARGUMENTS_INVALID")
     error(post(client, base, read, {**lookup, "columns": [TICKET]}), 409, "DATASET_BINDING_SCHEMA_MISMATCH")
     renamed = call(client, "PUT", f"{base}/columns/score", body={

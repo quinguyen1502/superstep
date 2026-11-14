@@ -80,7 +80,7 @@ def test_support_ticket_agent_upsert_public_find_and_studio_delete(client, monke
     columns = [{key: value for key, value in column.items() if key != "label"} for column in call(client, "GET", base)["columns"]]
     request = {"version": 1, "operation": "delete_row", "columns": columns, "fields": ["ticket"],
                "arguments": {"key": "ticket", "value": "KEEP-1"}, "operation_id": "connected-delete"}
-    for allow_delete, status_code in ((False, 401), (True, 200)):
+    for allow_delete, status_code in ((False, 403), (True, 200)):
         secret = call(client, "POST", f"{base}/access/tokens", status=201,
                       body={"name": "export", "permission": "read_write", "allow_delete": allow_delete})["token"]
         response = client.post(f"{base}/connected", headers={"Authorization": f"Bearer {secret}"}, json=request)
@@ -88,7 +88,7 @@ def test_support_ticket_agent_upsert_public_find_and_studio_delete(client, monke
         if allow_delete:
             assert response.json()["data"]["deleted"] is True
         else:
-            assert response.json()["error"]["code"] == "AUTH_TOKEN_INVALID"
+            assert response.json()["error"]["code"] == "DATASET_TOKEN_SCOPE"
     assert tickets(client, did) == []
 
     # The exported Delete workflow runs on its own SQLite database, and repeated setup keeps the rows left.

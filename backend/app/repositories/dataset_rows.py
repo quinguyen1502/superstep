@@ -128,6 +128,12 @@ class DatasetRowRepository:
     def __init__(self, datasets: DatasetRepository):
         self.datasets = datasets
 
+    def expire_receipts(self, cutoff: float) -> int:
+        with self.datasets.db.session() as session:
+            removed = session.execute(delete(DatasetWriteReceipt).where(DatasetWriteReceipt.created < cutoff))
+            session.commit()
+            return removed.rowcount
+
     def get(self, dataset_id: str, row_id: str) -> DatasetRow | None:
         with self.datasets.db.session() as session:
             return session.get(DatasetRow, (dataset_id, row_id))
@@ -214,9 +220,10 @@ class DatasetRowRepository:
             if connected:
                 token = session.get(DatasetApiToken, connected.token_id)
                 if (token is None or token.dataset_id != dataset.id or token.issuer_id != uid
-                        or token.token_hash != connected.token_hash or token.revoked is not None
-                        or token.permission not in {"write", "read_write"}):
+                        or token.token_hash != connected.token_hash or token.revoked is not None):
                     raise AppError("AUTH_TOKEN_INVALID")
+                if token.permission not in {"write", "read_write"}:
+                    raise AppError("DATASET_TOKEN_SCOPE")
                 if reveal and token.permission != "read_write":
                     raise AppError("DATASET_GRANT_DENIED")
             if receipt:
@@ -228,8 +235,11 @@ class DatasetRowRepository:
                 if previous is not None:
                     if previous.dataset_id != dataset.id or previous.fingerprint != fingerprint:
                         raise AppError("DATASET_RECEIPT_CONFLICT")
-                    snapshot = previous.result
-                    return DatasetRow(dataset_id=dataset.id, **snapshot["row"]), snapshot["inserted"], True, False
+                    result = previous.result
+                    row = session.get(DatasetRow, (dataset.id, result["row_id"]))
+                    if row is None:
+                        row = DatasetRow(dataset_id=dataset.id, id=result["row_id"], revision=result["revision"])
+                    return row, result["inserted"], True, False
             if match is not None:
                 field, value = match
                 key = session.get(DatasetRowKey, (dataset.id, field, key_digest(value)))
@@ -256,8 +266,7 @@ class DatasetRowRepository:
             if changed:
                 session.add_all(self._keys(dataset, row))
             if receipt:
-                result = {"row": {"id": row.id, "values": row.values, "revision": row.revision,
-                                  "created": row.created, "updated": row.updated}, "inserted": inserted}
+                result = {"row_id": row.id, "inserted": inserted, "revision": row.revision}
                 session.add(DatasetWriteReceipt(dataset_id=dataset.id, scope=scope, operation_id=receipt.operation_id,
                                                 fingerprint=fingerprint, result=result, created=now))
             self._commit(session)
@@ -332,9 +341,10 @@ class DatasetRowRepository:
             if connected:
                 token = session.get(DatasetApiToken, connected.token_id)
                 if (token is None or token.dataset_id != dataset.id or token.issuer_id != uid
-                        or token.token_hash != connected.token_hash or token.revoked is not None
-                        or not token.allow_delete):
+                        or token.token_hash != connected.token_hash or token.revoked is not None):
                     raise AppError("AUTH_TOKEN_INVALID")
+                if not token.allow_delete:
+                    raise AppError("DATASET_TOKEN_SCOPE")
             if receipt:
                 fingerprint, scope = receipt.fingerprint, receipt.scope
                 previous = session.scalar(select(DatasetWriteReceipt).where(

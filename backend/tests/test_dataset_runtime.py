@@ -281,3 +281,20 @@ def test_dataset_node_filters_ignore_case_and_ne_matches_empty_cells(client):
     grant(client, did, reader, "read")
     output = final(run(client, {"workflow_id": reader, "input": {"ticket": "\u0110\u01a0N"}}))
     assert [item["values"]["ticket"] for item in output["items"]] == ["\u0111\u01a1n-b", "\u0110\u01a0N-C"]
+
+
+def test_dataset_node_names_invalid_filter_and_empty_state_key(client):
+    did = dataset_fixture(client)
+    reader = save(client, graph("Read", dataset_node(did, "find_rows", {
+        "filters": [{"field": "ticket", "op": "is_null"},
+                    {"field": "score", "op": "eq", "value": "{{state.ticket}}"}],
+    })))
+    grant(client, did, reader, "read")
+    for supplied, expected in [
+        ("", {"node": "dataset", "position": 2, "field": "score", "state_key": "ticket"}),
+        ("not a number", {"node": "dataset", "position": 2, "field": "score"}),
+    ]:
+        events = run(client, {"workflow_id": reader, "input": {"ticket": supplied}})
+        errors = [event["error"] for event in events if event.get("error", {}).get("code") == "DATASET_FILTER_INVALID"]
+        assert errors and errors[0]["details"] == expected
+        assert "node dataset, filter 2" in errors[0]["message"]

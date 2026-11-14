@@ -1,3 +1,6 @@
+from time import time
+
+from ..core import config
 from ..core.dataset_types import INVALID_TEXT, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
@@ -28,7 +31,8 @@ def _response(row: DatasetRow, columns) -> dict:
 
 def _write_result(row: DatasetRow, inserted: bool, projection) -> dict:
     """The one insert/upsert outcome shape. `projection` is None for a caller that may not read values."""
-    if projection is None:
+    # An identifier-only replay can refer to a row that has since been deleted.
+    if projection is None or row.values is None:
         return {"row": {"id": row.id, "revision": row.revision}, "inserted": inserted}
     return {"row": _response(row, projection), "inserted": inserted}
 
@@ -71,6 +75,9 @@ class DatasetRowService:
     def __init__(self, datasets: DatasetService, rows: DatasetRowRepository):
         self.datasets, self.rows = datasets, rows
 
+    def expire_receipts(self) -> int:
+        return self.rows.expire_receipts(time() - config.dataset_receipt_days() * 86400)
+
     def _read_definition(self, uid: str, dataset_id: str, schema_revision: int | None):
         dataset = self.datasets.definition(uid, dataset_id)
         if schema_revision is not None and dataset.revision != schema_revision:
@@ -104,8 +111,15 @@ class DatasetRowService:
             raise AppError("DATASET_FILTER_INVALID", field="search")
         if sorts is None:
             sorts = [{"field": sort, "descending": descending}] if sort else []
+        predicates = []
+        for position, spec in enumerate(filters, start=1):
+            try:
+                predicates.append(_filter(columns, **spec))
+            except AppError as exc:
+                raise AppError("DATASET_FILTER_INVALID", field=spec["field"],
+                               details={"field": spec["field"], "position": position}) from exc
         rows, total = self.rows.query_page(
-            dataset.id, filters=[_filter(columns, **spec) for spec in filters], filter_mode=filter_mode, search=search,
+            dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
             search_columns=[column for column in columns.values() if column.kind in TEXT_KINDS],
             sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts], limit=limit + 1, offset=offset, include_total=include_total,
         )

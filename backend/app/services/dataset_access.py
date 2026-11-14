@@ -75,6 +75,9 @@ class DatasetAccessService:
         dataset = self.datasets.managed_definition(uid, dataset_id, None)
         workflow = self.access.workflow(workflow_id, uid, P.SHARE)
         if not self._in_scope(dataset, workflow):
+            if dataset.team_id is not None:
+                team = self.access.teams.get(dataset.team_id)
+                raise AppError("DATASET_WORKFLOW_NOT_SHARED", team=team.name if team else dataset.team_id)
             raise AppError("DATASET_GRANT_DENIED")
         self.repo.set_grant(uid, dataset, DatasetWorkflowGrant(
             dataset_id=dataset.id, workflow_id=workflow.id, permission=permission,
@@ -148,13 +151,15 @@ class DatasetAccessService:
         if not secret.startswith(TOKEN_PREFIX) or len(secret) > 100:
             raise AppError("AUTH_TOKEN_INVALID")
         token = self.repo.token_for_hash(digest(secret))
-        allowed = token is not None and (token.allow_delete if deleting else _allows(token.permission, operation))
-        if token is None or token.dataset_id != dataset_id or not allowed:
+        if token is None or token.dataset_id != dataset_id:
             raise AppError("AUTH_TOKEN_INVALID")
         try:
             dataset = self.datasets.editable_definition(token.issuer_id, dataset_id, None)
         except AppError as exc:
             raise AppError("AUTH_TOKEN_INVALID") from exc
+        allowed = token.allow_delete if deleting else _allows(token.permission, operation)
+        if not allowed:
+            raise AppError("DATASET_TOKEN_SCOPE")
         return dataset, token
 
     def for_token(self, secret: str, dataset_id: str, operation: str) -> DatasetPrincipal:

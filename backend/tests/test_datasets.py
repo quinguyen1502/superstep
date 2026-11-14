@@ -62,7 +62,7 @@ def test_dataset_visibility_and_lifecycle(client, db):
     error(client.put(team_url, headers=auth("member"), json={"name": "New", "revision": 1}),
           403, "PERMISSION_DENIED")
     error(client.post("/api/datasets", headers=auth("other"), json={"name": "Guess", "team_id": "support"}),
-          404, "DATASET_NOT_FOUND")
+          403, "DATASET_TEAM_FORBIDDEN")
     page = client.get("/api/datasets?limit=1", headers=auth("owner")).json()["data"]
     assert len(page["items"]) == 1 and page["next_offset"] == 1
     error(client.post("/api/datasets", headers=auth("owner"), json={"name": " tickets "}),
