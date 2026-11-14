@@ -486,7 +486,8 @@ test('loads subsequent result pages and validates typed editors', async ({ page 
     expect((await page.request.post(`/api/datasets/${id}/rows`, { headers, data: { values: { value, date: '2026-12-05' } } })).ok()).toBeTruthy()
   }
   await page.goto(`/datasets/${id}`)
-  await expect(page.getByTestId('dataset-row')).toHaveCount(50)
+  await expect(page.getByText('1–50 of 51', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('dataset-row').first()).toBeVisible()
   await page.getByRole('button', { name: 'Next page' }).click()
   await expect(page.getByText('Page 2', { exact: true })).toBeVisible()
   await expect(page.getByTestId('dataset-row')).toHaveCount(1)
@@ -578,7 +579,8 @@ test('loads subsequent result pages and validates typed editors', async ({ page 
   await expect(page.getByRole('status').filter({ hasText: 'Row saved.' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Next page' })).toBeDisabled()
   await page.getByRole('button', { name: 'Previous page' }).click()
-  await expect(page.getByTestId('dataset-row')).toHaveCount(50)
+  await expect(page.getByText('1–50 of 51', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('dataset-row').first()).toBeVisible()
 })
 
 
@@ -737,4 +739,63 @@ test('groups matching rows by status including empty and expands only the select
   await page.reload()
   await expect(picker).toHaveText('Status')
   await expect(open).toBeVisible()
+})
+
+test('pins columns, loads the next rows on scroll, and persists row height', async ({ page }, info) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const columns = Array.from({ length: 8 }, (_, index) => ({
+    key: `field_${index}`, label: `Field ${index}`, kind: index === 0 ? 'number' : 'text',
+  }))
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Grid layout ${Date.now()}`, columns,
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const count = process.env.DATASET_GRID_BENCH === '1' ? 10_000 : 51
+  const seedStart = performance.now()
+  for (let offset = 0; offset < count; offset += 1000) {
+    const lines = Array.from({ length: Math.min(1000, count - offset) }, (_, index) => String(offset + index + 1))
+    expect((await page.request.post('/api/datasets/csv/import', { headers, data: {
+      dataset_id: id, schema_revision: 1, text: ['Field 0', ...lines].join('\n'),
+    } })).ok()).toBeTruthy()
+  }
+  await page.goto(`/datasets/${id}`)
+  const range = (end: number) => `1–${end} of ${count}`
+  await expect(page.getByText(range(50), { exact: true })).toBeVisible()
+  if (count === 10_000) console.log(`Seed and show 10,000 rows: ${Math.round(performance.now() - seedStart)} ms`)
+  const container = page.locator('[data-slot="table-container"]')
+  const layout = page.getByRole('button', { name: 'Grid layout' })
+  await layout.click()
+  await page.getByRole('combobox', { name: 'Freeze columns' }).click()
+  await page.getByRole('option', { name: '1 frozen column' }).click()
+  await page.getByRole('combobox', { name: 'Row height' }).click()
+  await page.getByRole('option', { name: 'Tall' }).click()
+  await page.keyboard.press('Escape')
+  const firstRow = page.getByTestId('dataset-row').first()
+  await expect.poll(async () => (await firstRow.boundingBox())?.height).toBeGreaterThanOrEqual(56)
+  const cell = firstRow.getByRole('button', { name: 'Edit Field 0: 1', exact: true })
+  const header = page.getByRole('columnheader', { name: /^Field 0/ })
+  await container.evaluate(el => { el.scrollLeft = 800 })
+  await expect.poll(async () => Math.abs((await header.boundingBox())!.x - (await cell.boundingBox())!.x)).toBeLessThan(3)
+  await cell.focus()
+  await page.keyboard.press('ArrowDown')
+  await expect(page.getByRole('button', { name: 'Edit Field 0: 2', exact: true })).toBeFocused()
+  const scrolling = performance.now()
+  await container.evaluate(el => { el.scrollTop = el.scrollHeight })
+  await expect(page.getByText(range(Math.min(100, count)), { exact: true })).toBeVisible()
+  if (count === 10_000) console.log(`Load next 50 from a 10,000-row dataset: ${Math.round(performance.now() - scrolling)} ms`)
+  await container.evaluate(el => { el.scrollTop = el.scrollHeight })
+  await expect(page.getByRole('button', { name: 'Edit Field 0: 51', exact: true })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.locator('#theme-btn').click()
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  await container.evaluate(el => { el.scrollTop = 0; el.scrollLeft = 800 })
+  await expect.poll(async () => Math.abs((await header.boundingBox())!.x - (await cell.boundingBox())!.x)).toBeLessThan(3)
+  await info.attach('dataset-pinning-dark-mobile', { body: await page.screenshot(), contentType: 'image/png' })
+  await page.reload()
+  await layout.click()
+  await expect(page.getByRole('combobox', { name: 'Freeze columns' })).toHaveText('1 frozen column')
+  await expect(page.getByRole('combobox', { name: 'Row height' })).toHaveText('Tall')
 })

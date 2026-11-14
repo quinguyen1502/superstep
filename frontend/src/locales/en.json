@@ -107,6 +107,17 @@
     }
   },
   "dataset": {
+    "gridLayout": "Grid layout",
+    "rowHeight": "Row height",
+    "rowHeights": {
+      "short": "Short",
+      "medium": "Medium",
+      "tall": "Tall"
+    },
+    "freezeColumns": "Freeze columns",
+    "frozenCount_zero": "Freeze columns",
+    "frozenCount_one": "1 frozen column",
+    "frozenCount_other": "{{count}} frozen columns",
     "groupBy": "Group by",
     "noGrouping": "No grouping",
     "groupEmpty": "Empty",
