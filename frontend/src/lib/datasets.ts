@@ -64,6 +64,10 @@ const generalSummaryFunctions = ['count', 'empty_count', 'empty_percent', 'uniqu
 export type DatasetSummaryFunction = (typeof generalSummaryFunctions)[number] | 'sum' | 'avg' | 'min' | 'max'
 export type DatasetColumnSummaries = Partial<Record<string, DatasetSummaryFunction>>
 export type DatasetSummaryResult = { total: number; values: Record<string, CellValue>; schema_revision: number }
+export type DatasetRowGroup = { group: CellValue; total: number; values: Record<string, CellValue> }
+export type DatasetGroupsPage = { groups: DatasetRowGroup[]; next_offset: number | null; schema_revision: number }
+export const datasetGroupable = (kind: DatasetKind) => ['select', 'boolean', 'text', 'date'].includes(kind)
+
 
 export function datasetSummaryFunctions(kind: DatasetKind): readonly DatasetSummaryFunction[] {
   if (kind === 'number') return [...generalSummaryFunctions, 'sum', 'avg', 'min', 'max']

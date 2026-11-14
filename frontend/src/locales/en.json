@@ -107,6 +107,14 @@
     }
   },
   "dataset": {
+    "groupBy": "Group by",
+    "noGrouping": "No grouping",
+    "groupEmpty": "Empty",
+    "groupRows_one": "{{count}} row",
+    "groupRows_other": "{{count}} rows",
+    "groupSummary": "{{column}} · {{metric}} {{value}}",
+    "previousGroups": "Previous groups",
+    "nextGroups": "Next groups",
     "summary": "Summary",
     "summaryForColumn": "Summary for {{column}}",
     "summaryNone": "None",

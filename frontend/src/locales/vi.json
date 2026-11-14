@@ -107,6 +107,14 @@
     }
   },
   "dataset": {
+    "groupBy": "Nhóm theo",
+    "noGrouping": "Không nhóm",
+    "groupEmpty": "Trống",
+    "groupRows_one": "{{count}} dòng",
+    "groupRows_other": "{{count}} dòng",
+    "groupSummary": "{{column}} · {{metric}} là {{value}}",
+    "previousGroups": "Nhóm trước",
+    "nextGroups": "Nhóm tiếp theo",
     "summary": "Thống kê",
     "summaryForColumn": "Thống kê cột {{column}}",
     "summaryNone": "Không thống kê",

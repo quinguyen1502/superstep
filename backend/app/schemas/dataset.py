@@ -156,6 +156,18 @@ class DatasetAggregateQuery(DatasetSummaryQuery):
     group_by: ColumnKey | None = None
 
 
+class DatasetGroupsQuery(DatasetFilterQuery):
+    group_by: ColumnKey
+    summaries: dict[ColumnKey, SummaryFunction] = Field(default_factory=dict, max_length=100)
+    offset: int = Field(default=0, ge=0, le=25_000)
+    limit: int = Field(default=50, ge=1, le=100)
+
+
+class DatasetGroupRowsQuery(DatasetGroupedRowQuery):
+    group_by: ColumnKey
+    group: CellValue
+
+
 DatasetPermission = Literal["read", "write", "read_write"]
 
 
