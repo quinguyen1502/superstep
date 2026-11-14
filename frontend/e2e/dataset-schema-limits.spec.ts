@@ -19,7 +19,7 @@ test('adds a required column with a default to rows and clears removed column va
   await page.goto(`/datasets/${dataset.id}`)
   await page.getByRole('button', { name: 'Dataset actions' }).click()
   await page.getByRole('menuitem', { name: 'View schema', exact: true }).click()
-  const schema = page.getByRole('dialog', { name: 'Schema', exact: true })
+  const schema = page.getByRole('tabpanel', { name: 'Schema', exact: true })
   await expect(schema.getByText('2 of 100 columns. Removed columns do not count.')).toBeVisible()
   await schema.getByRole('button', { name: 'Add column' }).click()
   const add = page.getByRole('dialog', { name: 'Add column' })

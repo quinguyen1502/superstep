@@ -141,7 +141,7 @@ def execute_connected(dataset_id: str, body: DatasetConnectedInput, response: Re
 
 @router.post("/{dataset_id}/rows/query")
 def query_rows(dataset_id: str, body: DatasetRowQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
-    return svc.query(user["id"], dataset_id, **body.model_dump())
+    return svc.query(user["id"], dataset_id, include_total=True, **body.model_dump())
 
 
 @router.post("/{dataset_id}/rows", status_code=201)

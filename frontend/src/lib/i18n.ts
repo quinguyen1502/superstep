@@ -35,11 +35,14 @@ export function eventErrors(ev: { error?: ApiErrorBody; errors?: string[]; issue
   if (!ev.error || DYNAMIC.has(ev.error.code || '')) return ev.errors ? issueTexts(ev.errors, ev.issues) : ev.error ? [errorText(ev.error)] : []
   const details = ev.error.details
   if (ev.error.code === 'DATASET_FILTER_INVALID' && details?.node && details?.position) {
-    return [i18n.t(details.state_key ? 'dataset.emptyMappedFilter' : 'dataset.invalidNodeFilter', details)]
+    return [i18n.t(details.state_key ? 'dataset.emptyMappedFilter' : 'dataset.invalidNodeFilter', {
+      node: details.node, field: details.field, position: details.position, state_key: details.state_key,
+    })]
   }
   return [errorText(ev.error)]
 }
 
+export const fmtCalendarDate = (value: string) => new Date(value).toLocaleDateString(i18n.resolvedLanguage, { timeZone: "UTC" })
 export const fmtDate = (t: number) => new Date(t * 1000).toLocaleString(i18n.resolvedLanguage)
 /** The UI language sent with run and chat requests, so offline (mock) answers match it. */
 export const uiLocale = (): string => i18n.resolvedLanguage ?? 'en'

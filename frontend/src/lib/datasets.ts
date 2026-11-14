@@ -1,3 +1,4 @@
+import { fmtDate, fmtCalendarDate } from "@/lib/i18n"
 import { can, type Me } from '@/lib/rbac'
 
 export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select'] as const
@@ -24,7 +25,7 @@ export type DatasetSummary = {
 export type Dataset = DatasetSummary & { columns: DatasetColumn[] }
 export type DatasetRow = { id: string; revision: number; values: Record<string, CellValue> }
 export type DatasetPage<T> = { items: T[]; next_offset: number | null }
-export type DatasetRowPage = DatasetPage<DatasetRow> & { schema_revision: number }
+export type DatasetRowPage = DatasetPage<DatasetRow> & { schema_revision: number; total: number; total_capped: boolean }
 export type DatasetRowResult = { row: DatasetRow; inserted: boolean }
 export const DATASET_QUERY_LIMIT = 12
 export type DatasetTeam = { id: string; name: string; mine: boolean }
@@ -41,8 +42,14 @@ export function newDatasetColumn(): DatasetColumn {
   return { key: '', label: '', kind: 'text', required: false, unique: false, default: null, options: [] }
 }
 
-export function displayValue(value: CellValue, yes: string, no: string) {
-  return value === null ? '—' : typeof value === 'boolean' ? value ? yes : no : String(value)
+export function displayValue(value: CellValue, yes: string, no: string, kind?: DatasetKind) {
+  if (value === null) return '—'
+  if (typeof value === 'boolean') return value ? yes : no
+  if (typeof value === 'string') {
+    if (kind === 'date') return fmtCalendarDate(value)
+    if (kind === 'datetime') return fmtDate(Date.parse(value) / 1000)
+  }
+  return String(value)
 }
 
 export type ColumnDraft = DatasetColumn & { optionsText: string }
