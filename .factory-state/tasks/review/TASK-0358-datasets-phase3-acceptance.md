@@ -3,38 +3,39 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0356
-- Title: Carry Dataset phase 3 into the Python export
-- Status: backlog
+- Task ID: TASK-0358
+- Title: Accept Datasets phase 3 and update the handbook
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
 - Decision IDs: —
 - Plan: PLAN-0019
-- Phase: 3 Export
+- Phase: 3 Acceptance
 - Priority: P1
-- Size: M
+- Size: S
 
 ## Objective
 
-Generated Python projects support the filter tree, new operators, `aggregate_rows`, and the new field types and rules on every backend.
+One end-to-end path and the handbook cover phase 3.
 
 ## Scope
 
 ### In Scope
 
-- Connected, SQLite, and PostgreSQL runtimes; standalone schema setup for new kinds and rules; `docs/dataset-export.md` Python section only.
+- Support-ticket scenario: nested filter, summary row, group by team, Agent aggregate answer, URL and auto-number fields, a validation rule, a paste, and a fill down.
+- English and Vietnamese handbook with matching anchors; screenshots in both themes.
 
 ### Out Of Scope
 
-- Studio grid features (no export impact).
+- Out-of-scope items listed in REQ-0101.
 
 ## Inputs
 
-- Python export runtime; TASK-0343 parity suite.
+- Handbook Datasets guide.
 
 ## Related Artifacts
 
@@ -45,15 +46,15 @@ Generated Python projects support the filter tree, new operators, `aggregate_row
 
 ## Dependencies
 
-- TASK-0345, TASK-0348, TASK-0351, TASK-0352, TASK-0353 merged; REQ-0100 TASK-0343 merged.
+- All other PLAN-0019 tasks merged or explicitly deferred by the owner.
 
 ## Acceptance Criteria
 
-- The shared parity cases pass on the Superstep API, SQLite, and PostgreSQL, including a mixed-backend graph.
+- The scenario passes in Playwright; the handbook build passes.
 
 ## Tests
 
-- Python export parity suite.
+- Playwright scenario; handbook build.
 
 ## Validation Plan
 
@@ -68,6 +69,10 @@ Generated Python projects support the filter tree, new operators, `aggregate_row
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
 
+- 2026-11-14: Acceptance work is stacked on the unmerged TypeScript export and clipboard branches. Merge this task only after all PLAN-0019 dependencies have merged.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0349](../../artifacts/REV-0349-TASK-0358-datasets-phase3-acceptance.md) and QA [QA-0349](../../artifacts/QA-0349-TASK-0358-datasets-phase3-acceptance.md).
+
 ## Handoff Notes
 
-- Use branch `factory/task-0356-dataset-export-python-phase3` from `develop` when implementation begins.
+- Use branch `factory/task-0358-datasets-phase3-acceptance` from `develop` when implementation begins.

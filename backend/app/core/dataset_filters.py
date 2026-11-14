@@ -7,7 +7,7 @@ from .dataset_types import COLUMN_KEY_PATTERN, FILTER_OPERATORS
 MAX_FILTER_DEPTH = 3
 MAX_FILTER_RULES = 20
 MAX_FILTER_VALUES = 50
-LIST_FILTERS = frozenset({"in", "not_in"})
+LIST_FILTERS = frozenset({"in", "not_in", "contains_any", "contains_all"})
 
 
 def tree_rules(tree: dict) -> Iterator[tuple[tuple[int, ...], dict]]:

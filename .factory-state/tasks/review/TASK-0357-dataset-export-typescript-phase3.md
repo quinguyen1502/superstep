@@ -3,39 +3,38 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0358
-- Title: Accept Datasets phase 3 and update the handbook
-- Status: backlog
+- Task ID: TASK-0357
+- Title: Carry Dataset phase 3 into the TypeScript export
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
 - Decision IDs: —
 - Plan: PLAN-0019
-- Phase: 3 Acceptance
+- Phase: 3 Export
 - Priority: P1
-- Size: S
+- Size: M
 
 ## Objective
 
-One end-to-end path and the handbook cover phase 3.
+Generated TypeScript projects support the filter tree, new operators, `aggregate_rows`, and the new field types and rules on every backend.
 
 ## Scope
 
 ### In Scope
 
-- Support-ticket scenario: nested filter, summary row, group by team, Agent aggregate answer, URL and auto-number fields, a validation rule, a paste, and a fill down.
-- English and Vietnamese handbook with matching anchors; screenshots in both themes.
+- Connected, SQLite, and PostgreSQL runtimes; standalone schema setup for new kinds and rules; `docs/dataset-export.md` TypeScript section only.
 
 ### Out Of Scope
 
-- Out-of-scope items listed in REQ-0101.
+- Studio grid features (no export impact).
 
 ## Inputs
 
-- Handbook Datasets guide.
+- TypeScript export runtime; TASK-0343 parity suite.
 
 ## Related Artifacts
 
@@ -46,15 +45,15 @@ One end-to-end path and the handbook cover phase 3.
 
 ## Dependencies
 
-- All other PLAN-0019 tasks merged or explicitly deferred by the owner.
+- Same as TASK-0356; may run in parallel with it.
 
 ## Acceptance Criteria
 
-- The scenario passes in Playwright; the handbook build passes.
+- The shared parity cases pass on the Superstep API, SQLite, and PostgreSQL, including a mixed-backend graph.
 
 ## Tests
 
-- Playwright scenario; handbook build.
+- TypeScript export parity suite.
 
 ## Validation Plan
 
@@ -69,6 +68,10 @@ One end-to-end path and the handbook cover phase 3.
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
 
+- 2026-11-14: Readiness gate passed. Started stacked after the Python export to share the connected contract and parity fixtures.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0348](../../artifacts/REV-0348-TASK-0357-dataset-export-typescript-phase3.md) and QA [QA-0348](../../artifacts/QA-0348-TASK-0357-dataset-export-typescript-phase3.md).
+
 ## Handoff Notes
 
-- Use branch `factory/task-0358-datasets-phase3-acceptance` from `develop` when implementation begins.
+- Use branch `factory/task-0357-dataset-export-typescript-phase3` from `develop` when implementation begins.

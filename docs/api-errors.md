@@ -62,6 +62,8 @@
 | `DATASET_NOT_FOUND` | 404 | Dataset not found |
 | `DATASET_COLUMN_NOT_FOUND` | 404 | Dataset column not found |
 | `DATASET_COLUMN_READ_ONLY` | 400 | Dataset column {field} is read-only |
+| `DATASET_COLUMN_RULE_VIOLATION` | 400 | Value violates the validation rules for {field} |
+| `DATASET_COLUMN_RULE_EXISTING_ROWS` | 409 | {count} existing rows violate the rules for {field} |
 | `DATASET_NAME_TAKEN` | 409 | A dataset with this name already exists in this scope |
 | `DATASET_COLUMN_KEY_TAKEN` | 409 | A dataset column already uses this field key |
 | `DATASET_COLUMN_LIMIT` | 400 | A dataset can define at most {max} column keys |
@@ -74,6 +76,8 @@
 | `DATASET_SCHEMA_HAS_ROWS` | 409 | A required column needs a default while this dataset has rows |
 | `DATASET_ROW_NOT_FOUND` | 404 | Dataset row not found |
 | `DATASET_ROW_CONFLICT` | 409 | The row changed. Reload it and try again |
+| `DATASET_BATCH_INVALID` | 400 | One or more dataset cells are invalid |
+| `DATASET_BATCH_CONFLICT` | 409 | The dataset batch conflicts with existing rows |
 | `DATASET_UNIQUE_CONFLICT` | 409 | A row already has this unique field value |
 | `DATASET_UNIQUE_DUPLICATES` | 409 | Field {field} cannot become unique because {count} rows share a value |
 | `DATASET_EXPORT_FILTER_UNSUPPORTED` | 400 | This Dataset filter is not yet supported by code export |

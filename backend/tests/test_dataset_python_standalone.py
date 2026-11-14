@@ -315,3 +315,56 @@ def test_standalone_setup_migrates_old_receipts_and_expires_them(db, monkeypatch
     with engine.begin() as connection:
         assert list(connection.scalars(sa.select(receipts.c.operation_id))) == ["new"]
     engine.dispose()
+
+
+def test_python_phase_three_matches_connected_and_standalone(client, db, target, monkeypatch, tmp_path):
+    from test_dataset_filter_groups import group, rule
+    from test_dataset_runtime import dataset_node, graph
+    from test_datasets import create
+
+    source = create(client, name="Python phase three", columns=[
+        {"key": "ticket", "label": "Ticket", "kind": "long_text"},
+        {"key": "score", "label": "Score", "kind": "number", "validation_rules": {"integer": True}},
+        {"key": "labels", "label": "Labels", "kind": "multi_select", "options": ["Open", "Pending"]},
+        {"key": "url", "label": "URL", "kind": "url"},
+        {"key": "created_at", "label": "Created", "kind": "created_time"},
+        {"key": "code", "label": "Code", "kind": "auto_number"},
+    ])
+    did = source["id"]
+    path = f"/api/datasets/{did}"
+    secret = token(client, path)["token"]
+    tree = group("and", rule("labels", "contains_any", ["Open"]),
+                 group("or", rule("score", "in", [4, 5]), rule("ticket", "not_contains", "skip")))
+    arguments = {"filter_tree": tree, "summaries": {"score": "sum"}}
+    wid = save(client, graph("Python aggregate", dataset_node(did, "aggregate_rows", arguments, ["score"])))
+    response = client.get(f"/api/workflows/{wid}/export/python", headers=auth("owner"))
+    assert response.status_code == 200, response.text
+    script = tmp_path / "agent.py"
+    script.write_text(response.text)
+    settings = configure(monkeypatch, db, tmp_path)
+    monkeypatch.setenv("DATASET_1_ID", "phase-three")
+    exported = runpy.run_path(str(script))
+    exported["setup_datasets"](create=True)
+    call = exported["dataset_call"]
+    rows = [
+        {"ticket": "One\nlong description", "labels": ["Open"], "score": 4, "url": "https://example.org/one"},
+        {"ticket": "skip", "labels": ["Pending"], "score": 10, "url": "http://example.org/two"},
+    ]
+    fields = ["ticket", "labels", "score", "url", "created_at", "code"]
+    for index, values in enumerate(rows, 1):
+        result = call("DATASET_1", "insert_row", fields, {"values": values}, f"standalone-{index}")
+        assert result["row"]["values"]["code"] == index and result["row"]["values"]["created_at"].endswith("Z")
+    with pytest.raises(RuntimeError, match="DATASET_COLUMN_RULE_VIOLATION"):
+        call("DATASET_1", "insert_row", fields, {"values": {"score": 1.5}}, "invalid")
+    standalone = call("DATASET_1", "aggregate_rows", ["score"], arguments)
+    assert standalone["groups"] == [{"group": None, "total": 1, "values": {"score": 4}}]
+    assert call("DATASET_1", "find_rows", ["ticket"], {"filter_tree": tree})["items"][0]["values"] == {"ticket": rows[0]["ticket"]}
+    address, _ = target
+    monkeypatch.setenv("DATASET_1_BACKEND", "superstep")
+    monkeypatch.setenv("DATASET_1_ID", did)
+    monkeypatch.setenv("DATASET_1_API_URL", address)
+    monkeypatch.setenv("DATASET_1_API_TOKEN", secret)
+    for index, values in enumerate(rows, 1):
+        assert call("DATASET_1", "insert_row", fields, {"values": values}, f"connected-{index}")["row"]["values"]["code"] == index
+    assert call("DATASET_1", "aggregate_rows", ["score"], arguments) == standalone
+    assert settings

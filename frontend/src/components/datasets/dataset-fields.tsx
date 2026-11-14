@@ -5,6 +5,7 @@ import { format, parseISO } from 'date-fns'
 import { enUS, vi } from 'date-fns/locale'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
@@ -12,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import { datasetKinds, datasetSystemTime, displayValue, fromDraft, type CellValue, type ColumnDraft, type DatasetColumn, type DatasetKind } from '@/lib/datasets'
+import { datasetKinds, datasetReadOnly, datasetSystemTime, displayValue, fromDraft, type CellValue, type ColumnDraft, type DatasetColumn, type DatasetKind } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
+import { DatasetColumnOptions } from './dataset-column-options'
 import { DatasetFieldIcon } from './dataset-field-icon'
 
 function localDatetime(value: string) {
@@ -76,7 +78,7 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   filter?: boolean
 }) {
   const { t } = useTranslation()
-  const kind = datasetSystemTime(column.kind) ? 'datetime' : column.kind
+  const kind = datasetSystemTime(column.kind) ? 'datetime' : column.kind === 'auto_number' ? 'number' : column.kind
   const [validation, setValidation] = useState('')
   const [multiline, setMultiline] = useState(() => typeof value === 'string' && (value.length > 80 || value.includes('\n')))
   const inlineStyle = inline && 'rounded-none border-0 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent dark:aria-invalid:ring-0'
@@ -84,10 +86,29 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   const invalidProps = { 'aria-invalid': !!message, 'aria-describedby': message ? `${id}-error` : undefined }
   const feedback = message && <p id={`${id}-error`} role="alert"
     className={cn('text-xs wrap-anywhere text-destructive', inline ? 'px-2 pb-1' : 'mt-1')}>{message}</p>
-  if (datasetSystemTime(column.kind) && !filter) {
+  if (datasetReadOnly(column.kind) && !filter) {
     return <output id={id} aria-label={label} className="text-sm">
       {displayValue(value, t('dataset.valueTrue'), t('dataset.valueFalse'), column.kind)}
     </output>
+  }
+  if (kind === 'multi_select') {
+    const selected = Array.isArray(value) ? value : []
+    return <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button id={id} type="button" variant="outline" aria-label={label} disabled={disabled}
+          autoFocus={focus} className={cn('w-full justify-start', inlineStyle)} {...invalidProps}>
+          <span className="truncate">{selected.length ? selected.join(', ') : t('dataset.chooseValue')}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {column.options.map(option => <DropdownMenuCheckboxItem key={option} checked={selected.includes(option)}
+          onSelect={event => event.preventDefault()} onCheckedChange={checked => {
+            const next = column.options.filter(item => item === option ? checked : selected.includes(item))
+            onChange(next.length ? next : null)
+          }}>{option}</DropdownMenuCheckboxItem>)}
+      </DropdownMenuContent>
+      {feedback}
+    </DropdownMenu>
   }
   if (kind === 'boolean' || kind === 'select') {
     const items = kind === 'boolean'
@@ -185,28 +206,28 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         onChange={event => onChange({ ...column, key: event.target.value })} />
     </div>
     <div className="space-y-1"><Label htmlFor={`${id}-kind`}>{t('dataset.columnType')}</Label>
-      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, default: null, optionsText: '',
-        required: datasetSystemTime(kind as DatasetKind) ? false : column.required,
-        unique: kind === 'long_text' || datasetSystemTime(kind as DatasetKind) ? false : column.unique })}>
+      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, default: null, optionsText: '', validation_rules: undefined, display_format: undefined,
+        required: datasetReadOnly(kind as DatasetKind) ? false : column.required,
+        unique: kind === 'auto_number' || (!['long_text', 'multi_select'].includes(kind) && !datasetReadOnly(kind as DatasetKind) && column.unique) })}>
         <SelectTrigger id={`${id}-kind`} className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>{datasetKinds.map(kind => <SelectItem value={kind} key={kind}><DatasetFieldIcon kind={kind} /><span>{t(`dataset.kind.${kind}`)}</span></SelectItem>)}</SelectContent>
       </Select>
     </div>
-    {!datasetSystemTime(column.kind) && <div className="space-y-1"><Label htmlFor={`${id}-default`}>{t('dataset.defaultValue')}</Label>
+    {!datasetReadOnly(column.kind) && <div className="space-y-1"><Label htmlFor={`${id}-default`}>{t('dataset.defaultValue')}</Label>
       <DatasetValueField id={`${id}-default`} label={t('dataset.defaultValue')} column={{ ...column, options }} value={column.default}
         onChange={value => onChange({ ...column, default: value })} nullable />
     </div>}
-    {column.kind === 'select' && <div className="space-y-1 sm:col-span-2">
+    {(column.kind === 'select' || column.kind === 'multi_select') && <div className="space-y-1 sm:col-span-2">
       <Label htmlFor={`${id}-options`}>{t('dataset.options')}</Label>
       <Textarea id={`${id}-options`} required value={column.optionsText} onChange={event => onChange({ ...column, optionsText: event.target.value })} />
     </div>}
-    {!datasetSystemTime(column.kind) && <div className="space-y-1 sm:col-span-2">
+    {!datasetReadOnly(column.kind) && <div className="space-y-1 sm:col-span-2">
       <div className="flex flex-wrap gap-4">
         <Label className={cn(existing && 'text-muted-foreground')}>
           <Checkbox checked={column.required} disabled={existing} aria-describedby={existing ? `${id}-required-help` : undefined}
             onCheckedChange={value => onChange({ ...column, required: value === true })} />{t('dataset.required')}
         </Label>
-        <Label><Checkbox checked={column.unique} disabled={column.kind === 'long_text'} aria-describedby={existing ? `${id}-unique-help` : undefined}
+        <Label><Checkbox checked={column.unique} disabled={column.kind === 'long_text' || column.kind === 'multi_select'} aria-describedby={existing ? `${id}-unique-help` : undefined}
           onCheckedChange={value => onChange({ ...column, unique: value === true })} />{t('dataset.unique')}</Label>
       </div>
       {!existing && column.required && <p className="text-xs text-muted-foreground">{t('dataset.requiredDefaultHelp')}</p>}
@@ -215,5 +236,6 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         <p id={`${id}-unique-help`} className="text-xs text-muted-foreground">{t('dataset.uniqueLaterHelp')}</p>
       </>}
     </div>}
+    <DatasetColumnOptions column={column} onChange={onChange} />
   </div>
 }

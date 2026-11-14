@@ -44,6 +44,35 @@ class Handler(BaseHTTPRequestHandler):
             return self._send({"ok": True, "text": body.get("text"), "echo_auth": auth, "operation_key": self.headers.get("Idempotency-Key")}, 201)
         if self.path == "/ollama/api/chat":
             if body.get("model") not in OLLAMA_MODELS: return self._send({"error": f"model '{body.get('model')}' not found"}, 404)
+            tools = body.get("tools") or []
+            aggregate = next((tool["function"] for tool in tools
+                              if tool["function"]["name"] == "summarize_tickets"), None)
+            if aggregate:
+                result = next((message for message in reversed(body.get("messages", []))
+                               if message.get("role") == "tool"), None)
+                message = {"role": "assistant", "content": ""}
+                if result is None:
+                    message["tool_calls"] = [{"function": {"name": aggregate["name"], "arguments": {
+                        "operation": "aggregate_rows", "group_by": "team", "summaries": {"score": "sum"},
+                        "filter_tree": {"type": "group", "conjunction": "and", "children": [
+                            {"type": "rule", "field": "status", "op": "eq", "value": "Open"},
+                            {"type": "group", "conjunction": "or", "children": [
+                                {"type": "rule", "field": "score", "op": "eq", "value": 4},
+                                {"type": "rule", "field": "score", "op": "eq", "value": 5},
+                            ]},
+                        ]},
+                    }}}]
+                else:
+                    groups = json.loads(result["content"])["groups"]
+                    total = sum(group["values"]["score"] for group in groups)
+                    message["content"] = f"The total priority is {total:g} across {len(groups)} teams."
+                self.send_response(200)
+                self.send_header("Content-Type", "application/x-ndjson")
+                self.end_headers()
+                self.wfile.write(json.dumps({"model": body["model"], "message": message, "done": True,
+                                            "done_reason": "stop", "prompt_eval_count": 5,
+                                            "eval_count": 3}).encode() + b"\n")
+                return
             classify = "classify" in json.dumps(body).lower()
             judge = "<request>" in json.dumps(body)  # the AI review judge of an approval: a fixed, confident verdict
             if judge: classify = True
