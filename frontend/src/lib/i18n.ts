@@ -35,7 +35,9 @@ export function eventErrors(ev: { error?: ApiErrorBody; errors?: string[]; issue
   if (!ev.error || DYNAMIC.has(ev.error.code || '')) return ev.errors ? issueTexts(ev.errors, ev.issues) : ev.error ? [errorText(ev.error)] : []
   const details = ev.error.details
   if (ev.error.code === 'DATASET_FILTER_INVALID' && details?.node && details?.position) {
-    return [i18n.t(details.state_key ? 'dataset.emptyMappedFilter' : 'dataset.invalidNodeFilter', details)]
+    return [i18n.t(details.state_key ? 'dataset.emptyMappedFilter' : 'dataset.invalidNodeFilter', {
+      node: details.node, field: details.field, position: details.position, state_key: details.state_key,
+    })]
   }
   return [errorText(ev.error)]
 }
