@@ -25,6 +25,13 @@ def _normalize(column: DatasetColumn, value, *, required: bool | None = None, en
     return enforce_rules(column.key, value, column.validation_rules) if enforce else value
 
 
+def _write_value(columns, field, value):
+    column = _column(columns, field)
+    if column.kind in READ_ONLY_KINDS:
+        raise AppError("DATASET_COLUMN_READ_ONLY", field=field, details={"field": field})
+    return _normalize(column, value)
+
+
 def _row_values(row: DatasetRow, columns) -> dict:
     return {
         key: dataset_timestamp(row.created if column.kind == "created_time" else row.updated)
@@ -230,6 +237,26 @@ class DatasetRowService:
                 **({"total": min(total, MAX_DATASET_ROWS), "total_capped": total > MAX_DATASET_ROWS}
                    if total is not None else {})}
 
+    def batch_update(self, uid: str, dataset_id: str, *, schema_revision: int, rows: list[dict]) -> dict:
+        dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
+        columns = _active_columns(dataset)
+        issues, updates = [], {}
+        for item in rows:
+            cells = {}
+            for field, value in item["values"].items():
+                try:
+                    cells[field] = _write_value(columns, field, value)
+                except AppError as exc:
+                    issues.append({"id": item["id"], "field": field, "error": exc.to_dict()})
+            updates[item["id"]] = (item["revision"], cells)
+        if issues:
+            raise AppError("DATASET_BATCH_INVALID", details={"issues": issues})
+        changed = self.rows.batch_update(uid, dataset, updates)
+        if changed:
+            self.datasets.audit.record(uid, "dataset.rows_batch_update", "dataset", dataset.id,
+                                       rows=len(changed), cells=sum(len(item["previous"]) for item in changed))
+        return {"rows": changed, "schema_revision": dataset.revision}
+
     def save(self, uid: str, dataset_id: str, *, values: dict, schema_revision: int | None,
              row_id: str | None = None, revision: int | None = None, key: str | None = None,
              fields: list[str] | None = None, workflow: WorkflowWrite | None = None, dry_run: bool = False,
@@ -237,12 +264,7 @@ class DatasetRowService:
         dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _write_projection(columns, fields, readable)
-        incoming = {}
-        for field, value in values.items():
-            column = _column(columns, field)
-            if column.kind in READ_ONLY_KINDS:
-                raise AppError("DATASET_COLUMN_READ_ONLY", field=field, details={"field": field})
-            incoming[field] = _normalize(column, value)
+        incoming = {field: _write_value(columns, field, value) for field, value in values.items()}
         match = None
         if key is not None:
             column = _column(columns, key)

@@ -106,6 +106,36 @@ class DatasetFilter(BaseModel):
     value: CellValue = None
 
 
+class DatasetBatchRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: Annotated[str, Field(min_length=1, max_length=100)]
+    revision: int = Field(ge=1)
+    values: RowValues
+
+    @field_validator("values")
+    @classmethod
+    def nonempty(cls, values):
+        if not values:
+            raise ValueError("Each batch row needs at least one cell")
+        return values
+
+
+class DatasetBatchUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    schema_revision: int = Field(ge=1)
+    rows: list[DatasetBatchRow] = Field(min_length=1, max_length=100)
+
+    @model_validator(mode="after")
+    def batch_limits(self):
+        if sum(len(row.values) for row in self.rows) > 500:
+            raise ValueError("A batch can contain at most 500 cells")
+        if len({row.id for row in self.rows}) != len(self.rows):
+            raise ValueError("Each row may appear once in a batch")
+        return self
+
+
 class DatasetSort(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 

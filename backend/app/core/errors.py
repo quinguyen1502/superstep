@@ -48,6 +48,8 @@ CATALOG: dict[str, tuple[int, str]] = {
     "DATASET_SCHEMA_HAS_ROWS": (409, "A required column needs a default while this dataset has rows"),
     "DATASET_ROW_NOT_FOUND": (404, "Dataset row not found"),
     "DATASET_ROW_CONFLICT": (409, "The row changed. Reload it and try again"),
+    "DATASET_BATCH_INVALID": (400, "One or more dataset cells are invalid"),
+    "DATASET_BATCH_CONFLICT": (409, "The dataset batch conflicts with existing rows"),
     "DATASET_UNIQUE_CONFLICT": (409, "A row already has this unique field value"),
     "DATASET_UNIQUE_DUPLICATES": (409, "Field {field} cannot become unique because {count} rows share a value"),
     "DATASET_EXPORT_FILTER_UNSUPPORTED": (400, "This Dataset filter is not yet supported by code export"),
