@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0287
 - Title: Model metrics, distinct 429 and unpriced usage
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -61,3 +61,7 @@ Give Grafana per-model visibility and make provider failures and unknown prices 
 
 - Review: `.factory-state/artifacts/REV-0273-TASK-0287-model-metrics.md`
 - QA: `.factory-state/artifacts/QA-0273-TASK-0287-model-metrics.md`
+
+## Integration
+
+- Delivered in the bundled implementation merged into develop via PR #350 at `f4f407a8`. The lifecycle was reconciled on 2026-11-14.

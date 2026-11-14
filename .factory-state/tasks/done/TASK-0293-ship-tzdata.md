@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0293
 - Title: Ship Python tzdata so schedule time zones resolve
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -54,3 +54,7 @@ Make every IANA zone a browser can report (for example `Asia/Saigon`) resolve on
 
 - Review: `.factory-state/artifacts/REV-0270-TASK-0293-ship-tzdata.md`
 - QA: `.factory-state/artifacts/QA-0270-TASK-0293-ship-tzdata.md`
+
+## Integration
+
+- Delivered in the bundled implementation merged into develop via PR #349 at `290b2638`. The lifecycle was reconciled on 2026-11-14.

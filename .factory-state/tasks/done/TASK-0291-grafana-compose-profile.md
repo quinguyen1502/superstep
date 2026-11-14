@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0291
 - Title: Grafana Compose profile, starter dashboard and alert rules
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -64,3 +64,7 @@ Ship an operator stack next to Jaeger: OpenTelemetry Collector, Prometheus and G
 
 - Review: `.factory-state/artifacts/REV-0277-TASK-0291-grafana-compose-profile.md`
 - QA: `.factory-state/artifacts/QA-0277-TASK-0291-grafana-compose-profile.md`
+
+## Integration
+
+- Merged into develop via PR #352 at `790e0ce5`. The lifecycle was reconciled on 2026-11-14.

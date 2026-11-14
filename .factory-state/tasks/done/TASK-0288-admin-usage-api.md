@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0288
 - Title: Admin usage API from run columns
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: DES-0006
 - Architecture IDs: DEC-0094, DEC-0095
@@ -61,3 +61,7 @@ Add `GET /api/admin/usage` that aggregates existing `runs` columns for a time wi
 
 - Review: `.factory-state/artifacts/REV-0274-TASK-0288-admin-usage-api.md`
 - QA: `.factory-state/artifacts/QA-0274-TASK-0288-admin-usage-api.md`
+
+## Integration
+
+- Merged into develop via PR #351 at `73dbf52d`. The lifecycle was reconciled on 2026-11-14.

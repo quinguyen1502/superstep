@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0284
 - Title: Readiness endpoint and honest health
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -63,3 +63,7 @@ Add `GET /api/ready` beside `/api/health` that really checks the database, Redis
 
 - Review: `.factory-state/artifacts/REV-0269-TASK-0284-readiness-endpoint.md`
 - QA: `.factory-state/artifacts/QA-0269-TASK-0284-readiness-endpoint.md`
+
+## Integration
+
+- Merged into develop via PR #349 at `290b2638`. The lifecycle was reconciled on 2026-11-14.
