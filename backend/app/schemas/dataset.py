@@ -145,7 +145,7 @@ class DatasetFilterGroup(BaseModel):
 
     type: Literal["group"]
     conjunction: Literal["and", "or"]
-    children: list[Annotated[DatasetFilterRule | DatasetFilterGroup, Field(discriminator="type")]]
+    children: 'list[Annotated[DatasetFilterRule | DatasetFilterGroup, Field(discriminator="type")]]'
 
 
 class DatasetFilterQuery(BaseModel):
