@@ -58,3 +58,16 @@ Delete row, Agent insert and Agent upsert behave as in Python. Delete takes the 
 The project download can prefill `_BACKEND` for a binding. The generated graph still reads the backend from the environment, so a deployment can change it without a new export. A snapshot is off unless that binding is explicitly selected and its backend is SQLite or PostgreSQL. The caller needs read access to the dataset. A snapshot holds at most 1,000 rows in `dataset-snapshots.json` and is the only row data in the archive. Setup imports a snapshot row when its id is not already stored. An existing row is left unchanged, including its values. A snapshot whose schema does not match the binding is rejected.
 
 Standalone Dataset writes keep identifier-only receipts for 30 days by default. Both runtimes use `STUDIO_DATASET_RECEIPT_DAYS` and expire old receipts before writes. Replaying a retained receipt projects current values when the row still exists, or returns identifiers after deletion. An unchanged upsert retains the revision and update time. Find uses case-insensitive contains, search and text sorting, and `ne` includes null cells.
+
+### Scalar and system column types
+
+Studio supports `long_text` (multiline text up to 16,384 characters, without a
+unique constraint) and `url` (an absolute HTTP or HTTPS URL). The editable
+columns are available to Studio, Dataset nodes, Agent tools, and CSV import.
+`created_time` and `updated_time` are UTC timestamps derived from row metadata,
+including for existing rows. Reads, filters, sorting, and CSV export can use
+these fields. CSV import leaves the system fields unmapped, and attempts to
+write them through a row operation fail with `DATASET_COLUMN_READ_ONLY`.
+
+Code export currently rejects dataset bindings whose schema includes these
+new kinds. Python and TypeScript support will land with their parity tasks.

@@ -5,11 +5,11 @@ import re
 from dataclasses import dataclass
 
 from ..core import permissions as P
-from ..core.dataset_types import INVALID_TEXT, MAX_ROW_BYTES, CellValue, dataset_size, key_digest, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_ROW_BYTES, SYSTEM_TIME_KINDS, CellValue, dataset_size, key_digest, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import DatasetColumn
 from ..repositories.dataset_rows import DatasetRowRepository
-from .dataset_rows import _active_columns, _normalize
+from .dataset_rows import _row_values, _active_columns, _normalize
 from .dataset_service import MAX_COLUMNS, DatasetService, _detail
 
 MAX_CSV_BYTES = 1_048_576
@@ -155,10 +155,11 @@ class DatasetCsvService:
             }
             dataset = self.datasets.prepare_create(uid, **definition)
         columns = _active_columns(dataset)
+        writable = {key: column for key, column in columns.items() if column.kind not in SYSTEM_TIME_KINDS}
         if mapping is None:
-            mapping = _suggest_mapping(table.headers, list(columns.values())) if dataset_id or create else list(columns)
+            mapping = _suggest_mapping(table.headers, list(writable.values())) if dataset_id or create else list(columns)
         mapped = [key for key in mapping if key is not None]
-        if len(mapping) != len(table.headers) or len(set(mapped)) != len(mapped) or set(mapped) - columns.keys() or (commit and not mapped):
+        if len(mapping) != len(table.headers) or len(set(mapped)) != len(mapped) or set(mapped) - writable.keys() or (commit and not mapped):
             raise AppError("DATASET_CSV_MAPPING_INVALID")
 
         issues = []
@@ -179,7 +180,7 @@ class DatasetCsvService:
                 continue
             incoming = {key: unguard(value) for key, value in zip(mapping, record) if key is not None and value != ""}
             values = {}
-            for key, column in columns.items():
+            for key, column in writable.items():
                 try:
                     value = _coerce(column.kind, incoming[key]) if key in incoming else column.default_value
                     values[key] = _normalize(column, value)
@@ -242,10 +243,11 @@ class DatasetCsvService:
             if len(output) > MAX_EXPORT_BYTES:
                 raise AppError("DATASET_CSV_LIMIT", max=MAX_EXPORT_BYTES)
         append(_csv_value(column.label) for column in columns.values())
-        rows = self.rows.export_values(uid, dataset.id)
+        rows = self.rows.export_rows(uid, dataset.id)
         try:
             for row in rows:
-                append(_csv_value(row.get(key)) for key in columns)
+                values = _row_values(row, columns)
+                append(_csv_value(values[key]) for key in columns)
         finally:
             rows.close()
         return dataset.name, bytes(output)

@@ -11,7 +11,7 @@ import { StateFieldPicker } from '@/components/state-field-action'
 import { TemplateEditor } from '@/components/template-editor'
 import type { Field } from '@/components/editor/meta'
 import {
-  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
+  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetNodePermission, datasetOperations, datasetSystemTime, datasetWriteOperation, type CellValue,
   type DatasetColumn, type DatasetNodeConfig, type DatasetOperation,
 } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
@@ -76,8 +76,8 @@ export function ColumnSelect({ id, value, columns, onChange, disabled }: {
   </Select>
 }
 
-function MappedValue({ label, column, value, fields, disabled, onChange, substring }: {
-  label: string; column: DatasetColumn; value: CellValue; fields: Field[]; disabled: boolean; onChange: (value: CellValue) => void; substring?: boolean
+function MappedValue({ label, column, value, fields, disabled, onChange, substring, filter }: {
+  label: string; column: DatasetColumn; value: CellValue; fields: Field[]; disabled: boolean; onChange: (value: CellValue) => void; substring?: boolean; filter?: boolean
 }) {
   const { t } = useTranslation()
   const id = useId()
@@ -95,7 +95,7 @@ function MappedValue({ label, column, value, fields, disabled, onChange, substri
           value={typeof value === 'string' ? value : ''} onChange={onChange} />
       : substring ? <Input id={id} aria-label={label} disabled={disabled} maxLength={120}
           value={typeof value === 'string' ? value : ''} onChange={event => onChange(event.target.value)} />
-      : <DatasetValueField id={id} label={label} column={column} value={value} nullable disabled={disabled} onChange={onChange} />}
+      : <DatasetValueField id={id} label={label} column={column} value={value} filter={filter} nullable disabled={disabled} onChange={onChange} />}
   </div>
 }
 
@@ -218,7 +218,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
             </Select>
             {column && ops.includes(rule.op) && <p className="text-xs text-muted-foreground">{t(`datasetNode.filterOpHelp.${rule.op}`)}</p>}
             {column && !['is_null', 'not_null'].includes(rule.op) && <MappedValue key={rule.field} label={t('dataset.filterValue')}
-              column={column} value={rule.value} fields={state} disabled={disabled} substring={rule.op === 'contains'} onChange={value => replace({ value })} />}
+              column={column} value={rule.value} fields={state} disabled={disabled} substring={rule.op === 'contains'} filter onChange={value => replace({ value })} />}
           </fieldset>
         })}
         <Button variant="outline" size="sm" disabled={disabled || !columns.length || filters.length >= DATASET_QUERY_LIMIT}
@@ -233,7 +233,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
       </div>}
       {datasetWriteOperation(operation) && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetNode.mappedFields')}</legend>
-        {columns.map(column => {
+        {columns.filter(column => !datasetSystemTime(column.kind)).map(column => {
           const mapped = Object.hasOwn(values, column.key)
           return <div key={column.key} className="space-y-2 rounded-md border p-2">
             <Label className="gap-1.5"><Checkbox checked={mapped} disabled={disabled || (operation === 'upsert_row' && args.key === column.key)} onCheckedChange={checked => {

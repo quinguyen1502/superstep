@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import { datasetKinds, fromDraft, type CellValue, type ColumnDraft, type DatasetColumn, type DatasetKind } from '@/lib/datasets'
+import { datasetKinds, datasetSystemTime, displayValue, fromDraft, type CellValue, type ColumnDraft, type DatasetColumn, type DatasetKind } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetFieldIcon } from './dataset-field-icon'
 
@@ -60,7 +60,7 @@ function DatasetCalendar({ inputId, value, nullable, disabled, kind, onPick }: {
   </Popover>
 }
 
-export function DatasetValueField({ id, label, column, value, onChange, nullable = !column.required, focus, disabled, inline, openPicker, onCalendarPick, error }: {
+export function DatasetValueField({ id, label, column, value, onChange, nullable = !column.required, focus, disabled, inline, openPicker, onCalendarPick, error, filter }: {
   id: string
   label: string
   column: DatasetColumn
@@ -73,8 +73,10 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   openPicker?: boolean
   onCalendarPick?: (value: CellValue) => void
   error?: string
+  filter?: boolean
 }) {
   const { t } = useTranslation()
+  const kind = datasetSystemTime(column.kind) ? 'datetime' : column.kind
   const [validation, setValidation] = useState('')
   const [multiline, setMultiline] = useState(() => typeof value === 'string' && (value.length > 80 || value.includes('\n')))
   const inlineStyle = inline && 'rounded-none border-0 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent dark:aria-invalid:ring-0'
@@ -82,8 +84,13 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   const invalidProps = { 'aria-invalid': !!message, 'aria-describedby': message ? `${id}-error` : undefined }
   const feedback = message && <p id={`${id}-error`} role="alert"
     className={cn('text-xs wrap-anywhere text-destructive', inline ? 'px-2 pb-1' : 'mt-1')}>{message}</p>
-  if (column.kind === 'boolean' || column.kind === 'select') {
-    const items = column.kind === 'boolean'
+  if (datasetSystemTime(column.kind) && !filter) {
+    return <output id={id} aria-label={label} className="text-sm">
+      {displayValue(value, t('dataset.valueTrue'), t('dataset.valueFalse'), column.kind)}
+    </output>
+  }
+  if (kind === 'boolean' || kind === 'select') {
+    const items = kind === 'boolean'
       ? [{ value: true, label: t('dataset.valueTrue') }, { value: false, label: t('dataset.valueFalse') }]
       : column.options.map(option => ({ value: option, label: option }))
     const selected = items.findIndex(item => item.value === value)
@@ -95,27 +102,27 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
       </SelectContent>
     </Select>{feedback}</div>
   }
-  if (column.kind === 'text' && multiline) {
+  if (kind === 'long_text' || (kind === 'text' && multiline)) {
     return <div className="min-w-0">
-      <Textarea id={id} aria-label={label} className={cn(inlineStyle)} value={String(value ?? '')} autoFocus={focus}
+      <Textarea id={id} maxLength={16384} aria-label={label} className={cn(inlineStyle)} value={String(value ?? '')} autoFocus={focus}
         required={!nullable} disabled={disabled} {...invalidProps} onChange={event => onChange(event.target.value)} />
       {nullable && <Button type="button" variant="ghost" size="sm" disabled={disabled}
         onClick={() => onChange(null)}>{t('dataset.clearValue')}</Button>}
       {feedback}
     </div>
   }
-  const type = column.kind === 'datetime' ? 'datetime-local' : column.kind
-  const inputValue = column.kind === 'datetime' && typeof value === 'string' ? localDatetime(value) : String(value ?? '')
-  const calendarKind = column.kind === 'date' || column.kind === 'datetime' ? column.kind : undefined
+  const type = kind === 'datetime' ? 'datetime-local' : kind
+  const inputValue = kind === 'datetime' && typeof value === 'string' ? localDatetime(value) : String(value ?? '')
+  const calendarKind = kind === 'date' || kind === 'datetime' ? kind : undefined
   function change(next: string, numeric = 0, update = onChange) {
-    if (column.kind === 'number') update(next === '' ? null : numeric)
-    else if (column.kind === 'datetime') {
+    if (kind === 'number') update(next === '' ? null : numeric)
+    else if (kind === 'datetime') {
       const date = new Date(next)
       update(Number.isNaN(date.getTime()) ? null : date.toISOString())
     }
-    else update(next === '' && column.kind !== 'text' ? null : next)
+    else update(next === '' && kind !== 'text' ? null : next)
   }
-  const clearable = column.kind === 'text' && nullable
+  const clearable = kind === 'text' && nullable
   const grouped = calendarKind || clearable
   const Control = grouped ? InputGroupInput : Input
   const input = <Control id={id} type={type} aria-label={label} value={inputValue}
@@ -132,13 +139,13 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
     onInvalid={event => {
       event.preventDefault()
       const validity = event.currentTarget.validity
-      const formatError = column.kind === 'email' ? 'dataset.invalidEmail' : column.kind === 'number' ? 'dataset.invalidNumber'
-        : calendarKind ? 'dataset.invalidDate' : 'dataset.invalidValue'
+      const formatError = kind === 'email' ? 'dataset.invalidEmail' : kind === 'number' ? 'dataset.invalidNumber'
+        : calendarKind ? 'dataset.invalidDate' : kind === 'url' ? 'dataset.invalidUrl' : 'dataset.invalidValue'
       setValidation(t(validity.badInput || !validity.valueMissing ? formatError : 'dataset.valueRequired'))
     }} onChange={event => {
       const input = event.currentTarget
       if (input.validity.valid) setValidation('')
-      if (column.kind === 'text' && input.value.length > 80) setMultiline(true)
+      if (kind === 'text' && input.value.length > 80) setMultiline(true)
       change(input.value, input.valueAsNumber)
     }} />
   return <div className="min-w-0">
@@ -147,7 +154,7 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
       {calendarKind ? <InputGroupAddon align="inline-end">
         <DatasetCalendar inputId={id} value={inputValue} nullable={nullable} kind={calendarKind} disabled={disabled} onPick={day => {
           setValidation('')
-          change(day && column.kind === 'datetime' ? `${day}T${inputValue.slice(11) || '00:00'}` : day ?? '', 0, onCalendarPick)
+          change(day && kind === 'datetime' ? `${day}T${inputValue.slice(11) || '00:00'}` : day ?? '', 0, onCalendarPick)
         }} />
       </InputGroupAddon> : value !== null && !disabled && <InputGroupAddon align="inline-end">
         <InputGroupButton size="icon-xs" aria-label={t('dataset.clearValue')} onClick={() => {
@@ -178,26 +185,28 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         onChange={event => onChange({ ...column, key: event.target.value })} />
     </div>
     <div className="space-y-1"><Label htmlFor={`${id}-kind`}>{t('dataset.columnType')}</Label>
-      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, default: null, optionsText: '' })}>
+      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, default: null, optionsText: '',
+        required: datasetSystemTime(kind as DatasetKind) ? false : column.required,
+        unique: kind === 'long_text' || datasetSystemTime(kind as DatasetKind) ? false : column.unique })}>
         <SelectTrigger id={`${id}-kind`} className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>{datasetKinds.map(kind => <SelectItem value={kind} key={kind}><DatasetFieldIcon kind={kind} /><span>{t(`dataset.kind.${kind}`)}</span></SelectItem>)}</SelectContent>
       </Select>
     </div>
-    <div className="space-y-1"><Label htmlFor={`${id}-default`}>{t('dataset.defaultValue')}</Label>
+    {!datasetSystemTime(column.kind) && <div className="space-y-1"><Label htmlFor={`${id}-default`}>{t('dataset.defaultValue')}</Label>
       <DatasetValueField id={`${id}-default`} label={t('dataset.defaultValue')} column={{ ...column, options }} value={column.default}
         onChange={value => onChange({ ...column, default: value })} nullable />
-    </div>
+    </div>}
     {column.kind === 'select' && <div className="space-y-1 sm:col-span-2">
       <Label htmlFor={`${id}-options`}>{t('dataset.options')}</Label>
       <Textarea id={`${id}-options`} required value={column.optionsText} onChange={event => onChange({ ...column, optionsText: event.target.value })} />
     </div>}
-    <div className="space-y-1 sm:col-span-2">
+    {!datasetSystemTime(column.kind) && <div className="space-y-1 sm:col-span-2">
       <div className="flex flex-wrap gap-4">
         <Label className={cn(existing && 'text-muted-foreground')}>
           <Checkbox checked={column.required} disabled={existing} aria-describedby={existing ? `${id}-required-help` : undefined}
             onCheckedChange={value => onChange({ ...column, required: value === true })} />{t('dataset.required')}
         </Label>
-        <Label><Checkbox checked={column.unique} aria-describedby={existing ? `${id}-unique-help` : undefined}
+        <Label><Checkbox checked={column.unique} disabled={column.kind === 'long_text'} aria-describedby={existing ? `${id}-unique-help` : undefined}
           onCheckedChange={value => onChange({ ...column, unique: value === true })} />{t('dataset.unique')}</Label>
       </div>
       {!existing && column.required && <p className="text-xs text-muted-foreground">{t('dataset.requiredDefaultHelp')}</p>}
@@ -205,6 +214,6 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         <p id={`${id}-required-help`} className="text-xs text-muted-foreground">{t('dataset.requiredLocked')}</p>
         <p id={`${id}-unique-help`} className="text-xs text-muted-foreground">{t('dataset.uniqueLaterHelp')}</p>
       </>}
-    </div>
+    </div>}
   </div>
 }

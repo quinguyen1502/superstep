@@ -46,6 +46,9 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
                 referenced.update(binding["write_fields"])
             if absent := sorted(referenced - columns.keys()):
                 raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=absent[0])
+            unsupported = {"long_text", "url", "created_time", "updated_time"}
+            if unsupported.intersection(column["kind"] for column in columns.values()):
+                raise AppError("DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED")
             if operation in {"upsert_row", "delete_row"} and "key" in args and not columns[args["key"]]["unique"]:
                 raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
             if "upsert_row" in agent_writes and not columns[binding["key"]]["unique"]:

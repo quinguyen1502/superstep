@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0351
 - Title: Add long text, URL, and created and updated time fields
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -69,6 +69,10 @@ Datasets support long text, URL, and read-only created and updated time columns 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+
+- 2026-11-14: Readiness gate passed. Started independently from develop.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0341](../../artifacts/REV-0341-TASK-0351-dataset-scalar-field-types.md) and QA [QA-0341](../../artifacts/QA-0341-TASK-0351-dataset-scalar-field-types.md).
 
 ## Handoff Notes
 

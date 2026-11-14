@@ -5,15 +5,39 @@ import re
 from datetime import date, datetime, timezone
 from hashlib import sha256
 from typing import Literal, TypeAlias, get_args
+from urllib.parse import urlsplit
 
 from .errors import AppError
 
-ColumnKind: TypeAlias = Literal["text", "number", "boolean", "date", "datetime", "email", "select"]
+ColumnKind: TypeAlias = Literal["text", "number", "boolean", "date", "datetime", "email", "select", "long_text", "url", "created_time", "updated_time"]
 CellValue: TypeAlias = str | int | float | bool | None
 FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null", "in", "not_in", "not_contains"]
 FILTER_OPERATORS = get_args(FilterOperator)
-TEXT_KINDS = frozenset({"text", "email", "select"})
+TEXT_KINDS = frozenset({"text", "long_text", "url", "email", "select"})
+SYSTEM_TIME_KINDS = frozenset({"created_time", "updated_time"})
+DATETIME_KINDS = SYSTEM_TIME_KINDS | {"datetime"}
 TEXT_FOLD_FUNCTION = "dataset_text_fold"
+
+
+def dataset_timestamp(seconds: float) -> str:
+    return datetime.fromtimestamp(seconds, timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def timestamp_millis(value: str) -> int:
+    value = datetime.fromisoformat(value)
+    delta = value - datetime(1970, 1, 1, tzinfo=timezone.utc)
+    return (delta.days * 86_400 + delta.seconds) * 1000 + delta.microseconds // 1000
+
+
+def valid_url(value: str) -> bool:
+    if len(value) > 2048 or re.search(r"[\s\x00-\x1f\x7f\\]", value):
+        return False
+    try:
+        parts = urlsplit(value)
+        parts.port  # Invalid numeric ports raise ValueError.
+        return parts.scheme in {"http", "https"} and bool(parts.hostname) and parts.username is None
+    except ValueError:
+        return False
 
 
 def fold_text(value: object) -> object:
@@ -49,17 +73,19 @@ def normalize_cell(key: str, kind: ColumnKind, value: CellValue, options: list[s
         if -MAX_SAFE_INTEGER <= value <= MAX_SAFE_INTEGER and math.isfinite(value):
             return value
     if isinstance(value, str) and not INVALID_TEXT.search(value):
-        if kind == "text" and len(value) <= MAX_TEXT:
+        if kind in {"text", "long_text"} and len(value) <= MAX_TEXT:
             return value
         if kind == "select" and value in options:
             return value
         if kind == "email" and len(value.strip()) <= 254 and EMAIL.fullmatch(value.strip()):
             return value.strip().lower()
-        if kind in ("date", "datetime"):
+        if kind == "url" and valid_url(value):
+            return value
+        if kind == "date" or kind in DATETIME_KINDS:
             try:
                 if kind == "date" and DATE.fullmatch(value):
                     return date.fromisoformat(value).isoformat()
-                if kind == "datetime" and DATETIME.fullmatch(value):
+                if kind in DATETIME_KINDS and DATETIME.fullmatch(value):
                     utc = datetime.fromisoformat(value).astimezone(timezone.utc)
                     return utc.isoformat(timespec="milliseconds").replace("+00:00", "Z")
             except (ValueError, OverflowError):

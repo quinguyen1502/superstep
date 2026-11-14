@@ -9,7 +9,7 @@ from sqlalchemy import and_, delete, func, literal, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..core.dataset_types import MAX_DATASET_ROWS, TEXT_FOLD_FUNCTION, CellValue, key_digest, write_fingerprint
+from ..core.dataset_types import MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, CellValue, key_digest, timestamp_millis, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
@@ -67,6 +67,9 @@ class RowFilterGroup:
 
 
 def _column_value(column: DatasetColumn):
+    if column.kind in SYSTEM_TIME_KINDS:
+        stamp = DatasetRow.created if column.kind == "created_time" else DatasetRow.updated
+        return func.floor(stamp * 1000)
     value = DatasetRow.values[column.key]
     if column.kind == "number":
         return value.as_float()
@@ -127,7 +130,9 @@ def _predicate(spec: RowFilter | RowFilterGroup, dataset_id: str, texts: _Text):
         return contains if op == "contains" else or_(expression.is_(None), ~contains)
     if op in {"is_null", "not_null"}:
         return expression.is_(None) if op == "is_null" else expression.is_not(None)
-    if column.kind not in {"number", "boolean"}:
+    if column.kind in SYSTEM_TIME_KINDS:
+        value = [timestamp_millis(item) for item in value] if op in {"in", "not_in"} else timestamp_millis(value)
+    elif column.kind not in {"number", "boolean"}:
         expression = texts.exact(expression)
     if op in {"in", "not_in"}:
         return expression.in_(value) if op == "in" else or_(expression.is_(None), expression.not_in(value))
@@ -178,7 +183,7 @@ class DatasetRowRepository:
         for sort, descending in sorts:
             expression = _column_value(sort)
             keys = [expression]
-            if sort.kind not in {"number", "boolean"}:
+            if sort.kind not in {"number", "boolean"} | SYSTEM_TIME_KINDS:
                 keys = [texts.fold(expression), texts.exact(expression)]  # case-insensitive, then exact as the tiebreak
             order.extend((key.desc() if descending else key.asc()).nulls_last() for key in keys)
         page = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id)
@@ -326,8 +331,8 @@ class DatasetRowRepository:
             session.add_all(key for row in rows for key in self._keys(dataset, row))
             self._commit(session)
 
-    def export_values(self, uid: str, dataset_id: str) -> Iterator[dict]:
-        statement = select(DatasetRow.values).join(Dataset, DatasetRow.dataset_id == Dataset.id).where(
+    def export_rows(self, uid: str, dataset_id: str) -> Iterator[DatasetRow]:
+        statement = select(DatasetRow).join(Dataset, DatasetRow.dataset_id == Dataset.id).where(
             DatasetRow.dataset_id == dataset_id, self.datasets._visible(uid),
         ).order_by(DatasetRow.created, DatasetRow.id).execution_options(yield_per=128)
         with self.datasets.db.session() as session:

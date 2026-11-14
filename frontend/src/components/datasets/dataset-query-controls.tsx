@@ -125,7 +125,7 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
                   </Select>
                   {!column && <Input disabled aria-label={t('dataset.filterValue')} placeholder={t('dataset.filterValue')} />}
                   {column && rule.op === 'eq' && <DatasetValueField key={column.key} id={`${id}-filter-${rule.key}`} label={t('dataset.filterValue')} column={column}
-                    value={rule.value} nullable={false} onChange={value => updateFilter(rule.key, { value })} />}
+                    value={rule.value} filter nullable={false} onChange={value => updateFilter(rule.key, { value })} />}
                 </div>
                 <Button type="button" variant="ghost" size="icon" aria-label={t('dataset.removeFilterCondition')}
                   onClick={() => setFilterDraft(current => current.filter(item => item.key !== rule.key))}><X /></Button>
