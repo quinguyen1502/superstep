@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0357
 - Title: Carry Dataset phase 3 into the TypeScript export
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -67,6 +67,10 @@ Generated TypeScript projects support the filter tree, new operators, `aggregate
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+
+- 2026-11-14: Readiness gate passed. Started stacked after the Python export to share the connected contract and parity fixtures.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0348](../../artifacts/REV-0348-TASK-0357-dataset-export-typescript-phase3.md) and QA [QA-0348](../../artifacts/QA-0348-TASK-0357-dataset-export-typescript-phase3.md).
 
 ## Handoff Notes
 

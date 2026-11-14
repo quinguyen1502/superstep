@@ -21,7 +21,10 @@ const DATASET_DATE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 const DATASET_DATETIME = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,3})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])$/;
 const DATASET_EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 const DATASET_INVALID_TEXT = /[\u0000\ud800-\udfff]/;
-const DATASET_TEXT_KINDS = new Set(["text", "email", "select"]);
+const DATASET_TEXT_KINDS = new Set(["text", "long_text", "url", "email", "select"]);
+const DATASET_TIME_KINDS = new Set(["created_time", "updated_time"]);
+const DATASET_READ_ONLY = new Set([...DATASET_TIME_KINDS, "auto_number"]);
+
 const DATASET_MAX_TEXT = 16384;
 const DATASET_MAX_SAFE_INTEGER = (1 << 53) - 1;
 const DATASET_MAX_ROW_BYTES = 65536;
@@ -36,6 +39,7 @@ interface DatasetColumn {
   unique: boolean;
   default: unknown;
   options: string[];
+  validation_rules?: { min_length?: number; max_length?: number; min?: number | string; max?: number | string; integer?: boolean; domains?: string[] };
 }
 
 interface DatasetFilter {
@@ -44,13 +48,16 @@ interface DatasetFilter {
   value: unknown;
 }
 
+interface DatasetFilterGroup { conjunction: "and" | "or"; children: FilterNode[]; }
+type FilterNode = DatasetFilter | DatasetFilterGroup;
+
 interface DatasetSort {
   field: string;
   descending: boolean;
 }
 
 interface DatasetQuery {
-  filters: DatasetFilter[];
+  filters: FilterNode[];
   filterMode: "and" | "or";
   search: string | null;
   sorts: DatasetSort[];
@@ -283,7 +290,8 @@ async function openDataset(binding: string, backend: string, setup: boolean): Pr
 const DATASET_DDL = [
   `CREATE TABLE IF NOT EXISTS superstep_dataset_definitions (
     dataset_id VARCHAR(100) PRIMARY KEY,
-    contract TEXT NOT NULL)`,
+    contract TEXT NOT NULL,
+    auto_number_counter BIGINT NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS superstep_dataset_rows (
     dataset_id VARCHAR(100) NOT NULL REFERENCES superstep_dataset_definitions (dataset_id),
     id VARCHAR(32) NOT NULL,
@@ -389,7 +397,7 @@ async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue:
   if (!Array.isArray(chosen.rows)) datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
   if (chosen.rows.length > DATASET_MAX_SNAPSHOT_ROWS) datasetFail("DATASET_SNAPSHOT_TOO_LARGE", { max: DATASET_MAX_SNAPSHOT_ROWS });
   const columns = contract.columns;
-  const prepared: { id: string; values: Record<string, unknown> }[] = [];
+  const prepared: { id: string; values: Record<string, unknown>; created: number; updated: number }[] = [];
   for (const item of chosen.rows) {
     if (!plainObject(item) || typeof item.id !== "string" || !/^[a-f0-9]{32}$/.test(item.id) || !plainObject(item.values)) {
       datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
@@ -398,6 +406,7 @@ async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue:
     const stored: Record<string, unknown> = {};
     try {
       for (const [field, column] of Object.entries(columns)) {
+        if (DATASET_TIME_KINDS.has(column.kind)) continue;
         stored[field] = datasetNormalize(column, Object.hasOwn(item.values, field) ? item.values[field] : column.default, column.required);
       }
     } catch (error) {
@@ -405,17 +414,26 @@ async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue:
       throw error;
     }
     if (datasetSize(stored) > DATASET_MAX_ROW_BYTES) datasetFail("DATASET_ROW_TOO_LARGE", { max: DATASET_MAX_ROW_BYTES });
-    prepared.push({ id: item.id, values: stored });
+    const now = Date.now() / 1000;
+    const created = item.created ?? now;
+    const updated = item.updated ?? now;
+    if (typeof created !== "number" || typeof updated !== "number") datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
+    prepared.push({ id: item.id, values: stored, created, updated });
   }
+  const auto = Object.values(columns).filter(column => column.kind === "auto_number");
+  const watermark = Math.max(0, ...prepared.flatMap(row => auto.map(column => Number(row.values[column.key] ?? 0))));
+  if (watermark) await connection.run(
+    "UPDATE superstep_dataset_definitions SET auto_number_counter = ? WHERE dataset_id = ? AND auto_number_counter < ?",
+    [watermark, datasetIdValue, watermark],
+  );
   for (const row of prepared) {
     const existing = await connection.get("SELECT id FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?", [datasetIdValue, row.id]);
     if (existing) continue;
     const count = Number((await connection.get("SELECT COUNT(*) AS n FROM superstep_dataset_rows WHERE dataset_id = ?", [datasetIdValue]))?.n ?? 0);
     if (count >= DATASET_MAX_ROWS) datasetFail("DATASET_ROW_LIMIT", { max: DATASET_MAX_ROWS });
-    const now = Date.now() / 1000;
     await connection.run(
       'INSERT INTO superstep_dataset_rows (dataset_id, id, "values", revision, created, updated) VALUES (?, ?, ?, ?, ?, ?)',
-      [datasetIdValue, row.id, datasetJson(row.values, false), 1, now, now],
+      [datasetIdValue, row.id, datasetJson(row.values, false), 1, row.created, row.updated],
     );
     for (const [field, column] of Object.entries(columns)) {
       if (!column.unique || row.values[field] === null || row.values[field] === undefined) continue;
@@ -441,6 +459,11 @@ export async function setupDatasets(create: boolean): Promise<void> {
       await connection.transaction(create && backend === "sqlite", datasetIdValue, async () => {
         if (create) {
           for (const statement of DATASET_DDL) await connection.exec(statement);
+          if (backend === "postgresql") {
+            await connection.exec("ALTER TABLE superstep_dataset_definitions ADD COLUMN IF NOT EXISTS auto_number_counter BIGINT NOT NULL DEFAULT 0");
+          } else if (!(await connection.all("PRAGMA table_info(superstep_dataset_definitions)")).some(col => col.name === "auto_number_counter")) {
+            await connection.exec("ALTER TABLE superstep_dataset_definitions ADD COLUMN auto_number_counter BIGINT NOT NULL DEFAULT 0");
+          }
           await datasetMigrateReceipts(connection, backend, binding);
           await connection.run(
             `INSERT INTO superstep_dataset_definitions (dataset_id, contract) VALUES (?, ?)
@@ -468,14 +491,44 @@ function datasetColumn(columns: Record<string, DatasetColumn>, field: string): D
   return column;
 }
 
-function datasetNormalize(column: DatasetColumn, value: unknown, required: boolean): unknown {
+function datasetNormalize(column: DatasetColumn, value: unknown, required: boolean, validateRule = true): unknown {
+  const normalized = datasetNormalizeType(column, value, required);
+  const rule = validateRule && column.validation_rules;
+  if (rule && normalized !== null) {
+    const text = typeof normalized === "string" ? normalized : "";
+    const size = [...text].length;
+    if ((rule.min_length !== undefined && size < rule.min_length) || (rule.max_length !== undefined && size > rule.max_length)
+        || (rule.integer && !Number.isInteger(normalized))
+        || (rule.domains && !rule.domains.includes(text.slice(text.lastIndexOf("@") + 1)))
+        || (rule.min !== undefined && compareValue(column.kind, normalized, rule.min) < 0)
+        || (rule.max !== undefined && compareValue(column.kind, normalized, rule.max) > 0)) {
+      datasetFail("DATASET_COLUMN_RULE_VIOLATION", { field: column.key });
+    }
+  }
+  return normalized;
+}
+
+function datasetNormalizeType(column: DatasetColumn, value: unknown, required: boolean): unknown {
   if (value === null && !required) return null;
+  if (column.kind === "multi_select" && Array.isArray(value)) {
+    if (!value.length && !required) return null;
+    if (value.length && new Set(value).size === value.length && value.every(item => typeof item === "string" && column.options.includes(item))) {
+      return column.options.filter(option => value.includes(option));
+    }
+  }
+  if (column.kind === "auto_number" && typeof value === "number" && Number.isSafeInteger(value) && value > 0) return value;
   if (column.kind === "boolean" && typeof value === "boolean") return value;
   if (column.kind === "number" && typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= DATASET_MAX_SAFE_INTEGER) {
     return value;
   }
   if (typeof value === "string" && !DATASET_INVALID_TEXT.test(value)) {
-    if (column.kind === "text" && value.length <= DATASET_MAX_TEXT) return value;
+    if ((column.kind === "text" || column.kind === "long_text") && [...value].length <= DATASET_MAX_TEXT) return value;
+    if (column.kind === "url" && value.length <= 2048 && /^https?:\/\//i.test(value) && !/[\s\u0000-\u001f\u007f\\]/u.test(value)) {
+      try {
+        const url = new URL(value);
+        if (url.hostname && !url.username && !url.password) return value;
+      } catch { /* Report invalid field below. */ }
+    }
     if (column.kind === "select" && column.options.includes(value)) return value;
     if (column.kind === "email") {
       const email = value.trim();
@@ -486,7 +539,7 @@ function datasetNormalize(column: DatasetColumn, value: unknown, required: boole
       const date = new Date(Date.UTC(year, month - 1, day));
       if (date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day) return value;
     }
-    if (column.kind === "datetime" && DATASET_DATETIME.test(value)) {
+    if ((column.kind === "datetime" || DATASET_TIME_KINDS.has(column.kind)) && DATASET_DATETIME.test(value)) {
       const parsed = new Date(value);
       if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
     }
@@ -495,9 +548,10 @@ function datasetNormalize(column: DatasetColumn, value: unknown, required: boole
 }
 
 function filterOperators(kind: string): string[] {
-  if (kind === "boolean") return ["eq", "ne", "is_null", "not_null"];
-  const operators = ["eq", "ne", "lt", "lte", "gt", "gte", "is_null", "not_null"];
-  if (DATASET_TEXT_KINDS.has(kind)) operators.splice(6, 0, "contains");
+  if (kind === "multi_select") return ["contains_any", "contains_all", "is_null"];
+  if (kind === "boolean") return ["eq", "ne", "is_null", "not_null", "in", "not_in"];
+  const operators = ["eq", "ne", "lt", "lte", "gt", "gte", "is_null", "not_null", "in", "not_in"];
+  if (DATASET_TEXT_KINDS.has(kind)) operators.splice(6, 0, "contains", "not_contains");
   return operators;
 }
 
@@ -513,20 +567,29 @@ function compareText(left: string, right: string): number {
 }
 
 function compareValue(kind: string, left: unknown, right: unknown): number {
-  if (kind === "number") return Number(left) < Number(right) ? -1 : Number(left) > Number(right) ? 1 : 0;
+  if (kind === "number" || kind === "auto_number") return Number(left) < Number(right) ? -1 : Number(left) > Number(right) ? 1 : 0;
   if (kind === "boolean") return Number(left) - Number(right);
   return compareText(String(left), String(right));
 }
 
 function valuesEqual(kind: string, left: unknown, right: unknown): boolean {
-  if (kind === "number") return Number(left) === Number(right);
-  return left === right;
+  if (kind === "number" || kind === "auto_number") return Number(left) === Number(right);
+  return Array.isArray(left) && Array.isArray(right) ? datasetJson(left, true) === datasetJson(right, true) : left === right;
+}
+
+function rowValue(row: SqlRow, values: Record<string, unknown>, column: DatasetColumn): unknown {
+  if (DATASET_TIME_KINDS.has(column.kind)) {
+    const stamp = Number(column.kind === "created_time" ? row.created : row.updated);
+    return new Date(Math.floor(stamp * 1000)).toISOString();
+  }
+  return values[column.key] ?? null;
 }
 
 function datasetRow(row: SqlRow, fields: string[], binding: string): Record<string, unknown> {
   const values = storedJson(row.payload ?? row.values, binding);
   const projected: Record<string, unknown> = {};
-  for (const field of fields) projected[field] = values[field] ?? null;
+  const columns = datasetContract(binding).columns;
+  for (const field of fields) projected[field] = rowValue(row, values, columns[field]);
   return {
     id: String(row.id),
     revision: Number(row.revision),
@@ -545,15 +608,51 @@ function integerArg(value: unknown, name: string, min: number, max: number, fall
 }
 
 function parseQuery(argumentsValue: Record<string, unknown>, columns: Record<string, DatasetColumn>): DatasetQuery {
-  const filters: DatasetFilter[] = [];
-  const rawFilters = argumentsValue.filters ?? [];
-  if (!Array.isArray(rawFilters) || rawFilters.length > 12) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
-  for (const rule of rawFilters) {
-    if (!plainObject(rule) || typeof rule.field !== "string" || typeof rule.op !== "string" || Object.keys(rule).some((key) => !["field", "op", "value"].includes(key))) {
+  const filters: FilterNode[] = [];
+  let ruleCount = 0;
+  function parseRule(value: unknown, tagged: boolean): DatasetFilter {
+    if (!plainObject(value) || typeof value.field !== "string" || typeof value.op !== "string"
+        || Object.keys(value).some(key => !["field", "op", "value", ...(tagged ? ["type"] : [])].includes(key))) {
       datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
     }
-    if (!DATASET_COLUMN_KEY.test(rule.field)) datasetFail("DATASET_COLUMN_NOT_FOUND", { field: rule.field });
-    filters.push({ field: rule.field, op: rule.op, value: Object.hasOwn(rule, "value") ? rule.value : null });
+    const column = datasetColumn(columns, value.field);
+    if (!filterOperators(column.kind).includes(value.op)) datasetFail("DATASET_FILTER_INVALID", { field: column.key });
+    let operand: unknown = value.value ?? null;
+    if (["is_null", "not_null"].includes(value.op)) {
+      if (operand !== null) datasetFail("DATASET_FILTER_INVALID", { field: column.key });
+    } else if (["contains", "not_contains"].includes(value.op)) {
+      if (typeof operand !== "string" || !operand.length || [...operand].length > 120 || DATASET_INVALID_TEXT.test(operand)) {
+        datasetFail("DATASET_FILTER_INVALID", { field: column.key });
+      }
+    } else if (["in", "not_in", "contains_any", "contains_all"].includes(value.op)) {
+      if (!Array.isArray(operand) || !operand.length || operand.length > 50) datasetFail("DATASET_FILTER_INVALID", { field: column.key });
+      operand = column.kind === "multi_select" ? datasetNormalize(column, operand, true, false)
+        : operand.map(item => datasetNormalize(column, item, true, false));
+    } else operand = datasetNormalize(column, operand, true, false);
+    return { field: column.key, op: value.op, value: operand };
+  }
+
+  function parseGroup(value: unknown, depth: number): DatasetFilterGroup {
+    if (depth > 3 || !plainObject(value) || value.type !== "group"
+        || (value.conjunction !== "and" && value.conjunction !== "or") || Object.keys(value).length !== 3
+        || !Array.isArray(value.children) || !value.children.length || value.children.length > 20) {
+      datasetFail("DATASET_FILTER_INVALID");
+    }
+    const children = value.children.map(child => {
+      if (plainObject(child) && child.type === "group") return parseGroup(child, depth + 1);
+      if (!plainObject(child) || child.type !== "rule" || ++ruleCount > 20) datasetFail("DATASET_FILTER_INVALID");
+      return parseRule(child, true);
+    });
+    return { conjunction: value.conjunction, children };
+  }
+
+  if (argumentsValue.filter_tree !== undefined && argumentsValue.filter_tree !== null) {
+    if (Object.hasOwn(argumentsValue, "filters") || Object.hasOwn(argumentsValue, "filter_mode")) datasetFail("DATASET_FILTER_INVALID");
+    filters.push(parseGroup(argumentsValue.filter_tree, 1));
+  } else {
+    const rawFilters = argumentsValue.filters ?? [];
+    if (!Array.isArray(rawFilters) || rawFilters.length > 12) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+    filters.push(...rawFilters.map(rule => parseRule(rule, false)));
   }
   const sorts: DatasetSort[] = [];
   const rawSorts = argumentsValue.sorts ?? [];
@@ -582,31 +681,37 @@ function parseQuery(argumentsValue: Record<string, unknown>, columns: Record<str
 
 function rowMatches(row: SqlRow, query: DatasetQuery, columns: Record<string, DatasetColumn>, keyHits: Map<string, Set<string>>, binding: string): boolean {
   const values = storedJson(row.payload ?? row.values, binding);
-  const checks = query.filters.map((rule) => {
-    const column = datasetColumn(columns, rule.field);
-    if (!filterOperators(column.kind).includes(rule.op)) datasetFail("DATASET_FILTER_INVALID", { field: rule.field });
-    const current = Object.hasOwn(values, rule.field) ? values[rule.field] : null;
-    if (rule.op === "is_null" || rule.op === "not_null") {
-      if (rule.value !== null) datasetFail("DATASET_FILTER_INVALID", { field: rule.field });
-      return rule.op === "is_null" ? current === null : current !== null;
+  function check(rule: FilterNode): boolean {
+    if ("children" in rule) return rule.conjunction === "or" ? rule.children.some(check) : rule.children.every(check);
+    const column = columns[rule.field];
+    const current = rowValue(row, values, column);
+    if (rule.op === "is_null" || rule.op === "not_null") return rule.op === "is_null" ? current === null : current !== null;
+    if (rule.op === "contains" || rule.op === "not_contains") {
+      const contains = typeof current === "string" && current.toLowerCase().includes((rule.value as string).toLowerCase());
+      return rule.op === "contains" ? contains : !contains;
     }
-    if (rule.op === "contains") {
-      if (typeof rule.value !== "string" || rule.value.length === 0 || rule.value.length > 120 || DATASET_INVALID_TEXT.test(rule.value)) {
-        datasetFail("DATASET_FILTER_INVALID", { field: rule.field });
-      }
-      return typeof current === "string" && current.toLowerCase().includes(rule.value.toLowerCase());
+    if (rule.op === "contains_any" || rule.op === "contains_all") {
+      if (!Array.isArray(current)) return false;
+      const options = rule.value as string[];
+      return rule.op === "contains_any" ? options.some(item => current.includes(item)) : options.every(item => current.includes(item));
     }
-    const expected = datasetNormalize(column, rule.value, true);
-    if (rule.op === "eq" && column.unique) return keyHits.get(`${rule.field}:${datasetDigest(expected)}`)?.has(String(row.id)) === true;
-    if (current === null) return rule.op === "ne";
+    const expected = rule.value;
+    const equal = (value: unknown) => column.unique && (rule.op === "eq" || rule.op === "in")
+      ? keyHits.get(`${rule.field}:${datasetDigest(value)}`)?.has(String(row.id)) === true
+      : current !== null && valuesEqual(column.kind, current, value);
+    if (rule.op === "in" || rule.op === "not_in") {
+      const included = (expected as unknown[]).some(equal);
+      return rule.op === "in" ? included : !included;
+    }
+    if (rule.op === "eq" || rule.op === "ne") return rule.op === "eq" ? equal(expected) : !equal(expected);
+    if (current === null) return false;
     const compared = compareValue(column.kind, current, expected);
-    if (rule.op === "eq") return valuesEqual(column.kind, current, expected);
-    if (rule.op === "ne") return !valuesEqual(column.kind, current, expected);
     if (rule.op === "lt") return compared < 0;
     if (rule.op === "lte") return compared <= 0;
     if (rule.op === "gt") return compared > 0;
     return compared >= 0;
-  });
+  }
+  const checks = query.filters.map(check);
   if (checks.length && !(query.filterMode === "or" ? checks.some(Boolean) : checks.every(Boolean))) return false;
   if (query.search) {
     if (DATASET_INVALID_TEXT.test(query.search)) datasetFail("DATASET_FILTER_INVALID", { field: "search" });
@@ -617,33 +722,39 @@ function rowMatches(row: SqlRow, query: DatasetQuery, columns: Record<string, Da
   return true;
 }
 
-async function datasetFind(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>, fields: string[], argumentsValue: Record<string, unknown>, binding: string): Promise<Record<string, unknown>> {
-  const query = parseQuery(argumentsValue, columns);
+async function matchingRows(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>, query: DatasetQuery, binding: string) {
   const rows = await connection.all(
     'SELECT id, "values" AS payload, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ?',
     [datasetIdValue],
   );
   const keyHits = new Map<string, Set<string>>();
-  for (const rule of query.filters) {
-    const column = columns[rule.field];
-    if (rule.op === "eq" && column?.unique && rule.value !== null) {
-      const expected = datasetNormalize(column, rule.value, true);
+  function flatten(nodes: FilterNode[]): DatasetFilter[] {
+    return nodes.flatMap(item => "children" in item ? flatten(item.children) : [item]);
+  }
+  for (const rule of flatten(query.filters)) {
+    if (!columns[rule.field].unique || (rule.op !== "eq" && rule.op !== "in")) continue;
+    for (const expected of rule.op === "in" ? rule.value as unknown[] : [rule.value]) {
       const digest = datasetDigest(expected);
       const hits = await connection.all(
         "SELECT row_id FROM superstep_dataset_keys WHERE dataset_id = ? AND field = ? AND digest = ?",
         [datasetIdValue, rule.field, digest],
       );
-      keyHits.set(`${rule.field}:${digest}`, new Set(hits.map((hit) => String(hit.row_id))));
+      keyHits.set(`${rule.field}:${digest}`, new Set(hits.map(hit => String(hit.row_id))));
     }
   }
-  const matched = rows.filter((row) => rowMatches(row, query, columns, keyHits, binding));
+  return rows.filter(row => rowMatches(row, query, columns, keyHits, binding));
+}
+
+async function datasetFind(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>, fields: string[], argumentsValue: Record<string, unknown>, binding: string): Promise<Record<string, unknown>> {
+  const query = parseQuery(argumentsValue, columns);
+  const matched = await matchingRows(connection, datasetIdValue, columns, query, binding);
   matched.sort((left, right) => {
     const leftValues = storedJson(left.payload, binding);
     const rightValues = storedJson(right.payload, binding);
     for (const sort of query.sorts) {
       const column = datasetColumn(columns, sort.field);
-      const a = Object.hasOwn(leftValues, sort.field) ? leftValues[sort.field] : null;
-      const b = Object.hasOwn(rightValues, sort.field) ? rightValues[sort.field] : null;
+      const a = rowValue(left, leftValues, column);
+      const b = rowValue(right, rightValues, column);
       if (a === null || b === null) {
         if (a !== b) return a === null ? 1 : -1;
         continue;
@@ -667,6 +778,62 @@ async function datasetFind(connection: SqlConnection, datasetIdValue: string, co
   return { items, next_offset: null, schema_revision: 1 };
 }
 
+async function datasetAggregate(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>, fields: string[], args: Record<string, unknown>, binding: string) {
+  const groupBy = args.group_by ?? null;
+  if (groupBy !== null && (typeof groupBy !== "string" || !fields.includes(groupBy))) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+  if (!plainObject(args.summaries) || !Object.keys(args.summaries).length) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+  const functions = new Map<string, string>();
+  for (const [field, op] of Object.entries(args.summaries)) {
+    if (!fields.includes(field)) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
+    const kind = columns[field].kind;
+    const supported = ["count", "empty_count", "empty_percent", "unique_count"];
+    if (kind === "number" || kind === "auto_number") supported.push("sum", "avg", "min", "max");
+    if (kind === "date" || kind === "datetime" || DATASET_TIME_KINDS.has(kind)) supported.push("min", "max");
+    if (typeof op !== "string" || !supported.includes(op)) datasetFail("DATASET_SUMMARY_INVALID", { field });
+    functions.set(field, op);
+  }
+  const query = parseQuery(args, columns);
+  const rows = await matchingRows(connection, datasetIdValue, columns, query, binding);
+  const groups = new Map<string, { group: unknown; rows: SqlRow[] }>();
+  if (groupBy === null) groups.set("null", { group: null, rows });
+  else for (const row of rows) {
+    const value = rowValue(row, storedJson(row.payload, binding), columns[groupBy]);
+    const key = datasetJson(value, true);
+    if (!groups.has(key)) groups.set(key, { group: value, rows: [] });
+    groups.get(key)!.rows.push(row);
+  }
+  const ordered = [...groups.values()].sort((left, right) => right.rows.length - left.rows.length
+    || (left.group === null ? Number(right.group !== null) : right.group === null ? -1
+      : compareValue(columns[groupBy!].kind, left.group, right.group)));
+  return {
+    group_by: groupBy,
+    truncated: ordered.length > 20,
+    groups: ordered.slice(0, 20).map(({ group, rows }) => ({
+      group,
+      total: rows.length,
+      values: Object.fromEntries([...functions].map(([field, op]) => {
+        const column = columns[field];
+        const values = rows.map(row => rowValue(row, storedJson(row.payload, binding), column)).filter(value => value !== null);
+        const empty = rows.length - values.length;
+        if (op === "count") return [field, values.length];
+        if (op === "empty_count") return [field, empty];
+        if (op === "empty_percent") return [field, rows.length ? 100 * empty / rows.length : null];
+        if (op === "unique_count") return [field, new Set(values.map(value => datasetJson(value, true))).size];
+        if (!values.length) return [field, null];
+        if (op === "sum" || op === "avg") {
+          const sum = values.reduce<number>((total, value) => total + Number(value), 0);
+          return [field, op === "avg" ? sum / values.length : sum];
+        }
+        return [field, values.slice(1).reduce((result, value) => {
+          const order = compareValue(column.kind, value, result);
+          return (op === "min" ? order < 0 : order > 0) ? value : result;
+        }, values[0])];
+      })),
+    })),
+  };
+}
+
+
 function isUniqueViolation(error: unknown): boolean {
   const code = (error as { code?: string }).code;
   const message = error instanceof Error ? error.message : String(error);
@@ -682,7 +849,9 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
   if (Object.keys(argumentsValue.values).length > 100) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
   const incoming: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(argumentsValue.values)) {
-    incoming[key] = datasetNormalize(datasetColumn(columns, key), value, datasetColumn(columns, key).required);
+    const column = datasetColumn(columns, key);
+    if (DATASET_READ_ONLY.has(column.kind)) datasetFail("DATASET_COLUMN_READ_ONLY", { field: key });
+    incoming[key] = datasetNormalize(column, value, column.required);
   }
   const key = operation === "upsert_row" ? argumentsValue.key : null;
   if (operation === "upsert_row" && (typeof key !== "string" || !datasetColumn(columns, key).unique || incoming[key] === null || incoming[key] === undefined)) {
@@ -728,8 +897,18 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
     const count = Number((await connection.get("SELECT COUNT(*) AS n FROM superstep_dataset_rows WHERE dataset_id = ?", [datasetIdValue]))?.n ?? 0);
     if (count >= DATASET_MAX_ROWS) datasetFail("DATASET_ROW_LIMIT", { max: DATASET_MAX_ROWS });
     rowValues = {};
+    const autoColumns = Object.values(columns).filter(column => column.kind === "auto_number");
+    if (autoColumns.length) {
+      const counter = await connection.get(
+        "UPDATE superstep_dataset_definitions SET auto_number_counter = auto_number_counter + 1 WHERE dataset_id = ? RETURNING auto_number_counter",
+        [datasetIdValue],
+      );
+      for (const column of autoColumns) rowValues[column.key] = Number(counter?.auto_number_counter);
+    }
     for (const [field, column] of Object.entries(columns)) {
-      rowValues[field] = Object.hasOwn(incoming, field) ? incoming[field] : datasetNormalize(column, column.default, column.required);
+      if (!DATASET_READ_ONLY.has(column.kind)) {
+        rowValues[field] = Object.hasOwn(incoming, field) ? incoming[field] : datasetNormalize(column, column.default, column.required);
+      }
     }
   } else {
     rowValues = { ...storedJson(existing.payload, binding), ...incoming };
@@ -851,6 +1030,7 @@ async function datasetStandalone(binding: string, backend: string, operation: st
         if (operation === "delete_row") return datasetDelete(connection, datasetIdValue, columns, fields, argumentsValue, operationId, binding);
         return datasetWrite(connection, datasetIdValue, columns, operation, fields, argumentsValue, operationId, binding);
       }
+      if (operation === "aggregate_rows") return datasetAggregate(connection, datasetIdValue, columns, fields, argumentsValue, binding);
       if (operation === "find_rows") return datasetFind(connection, datasetIdValue, columns, fields, argumentsValue, binding);
       if (operation === "get_row") {
         const rowId = argumentsValue.row_id;
