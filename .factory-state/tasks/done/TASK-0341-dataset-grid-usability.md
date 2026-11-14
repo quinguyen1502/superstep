@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0341
 - Title: Improve Dataset grid layout, paging, and formatting
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0100
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -75,6 +75,10 @@ The grid keeps its layout, shows totals and page choices, sizes columns by type,
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
 - 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): layout stays in the browser and uses TanStack Table state (DEC-0101).
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0332](../../artifacts/REV-0332-TASK-0341-dataset-grid-usability.md) and QA [QA-0332](../../artifacts/QA-0332-TASK-0341-dataset-grid-usability.md).
+
+- 2026-11-14: Owner approved merging PR #398 into develop after the final checks pass.
 
 ## Handoff Notes
 

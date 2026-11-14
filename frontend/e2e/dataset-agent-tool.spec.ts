@@ -132,6 +132,7 @@ test('Agent Dataset tool upserts only its configured fields and the row appears 
   ])
 
   await page.locator('#run-btn').click()
+  await page.getByRole('alertdialog', { name: 'This run can change Dataset rows' }).getByRole('button', { name: 'Run', exact: true }).click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30_000 })
   const span = page.locator('.trace-row').filter({ hasText: 'upserted 1 row' })
   await expect(span).toBeVisible()

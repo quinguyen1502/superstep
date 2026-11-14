@@ -58,6 +58,7 @@ def test_row_filter_projection_sort_and_paging(client, rows, monkeypatch):
     d = insert(client, rows, ticket="D", title="hello")
     page = query(client, rows, sort="score", descending=False, limit=1, fields=["ticket"])
     assert page["next_offset"] == 1 and page["items"][0]["values"] == {"ticket": "B"}
+    assert (page["total"], page["total_capped"]) == (4, False)
     page = query(client, rows, sort="score", descending=False, limit=1, offset=1)
     assert page["items"][0]["id"] == a["id"]
     assert [row["id"] for row in query(client, rows, filters=[{"field": "score", "op": "eq", "value": 2.0}])["items"]] == [b["id"]]
@@ -65,6 +66,14 @@ def test_row_filter_projection_sort_and_paging(client, rows, monkeypatch):
     assert [row["id"] for row in query(client, rows, filters=[{"field": "title", "op": "is_null"}])["items"]] == [c["id"]]
     assert [row["id"] for row in query(client, rows, filters=[{"field": "title", "op": "contains", "value": "%"}])["items"]] == [a["id"]]
     assert [row["id"] for row in query(client, rows, search="Hello")["items"]] == [a["id"], b["id"], d["id"]]
+    filtered = query(client, rows, search="HELLO", filters=[{"field": "score", "op": "lt", "value": 3}], limit=1)
+    assert filtered["total"] == 1 and filtered["items"][0]["id"] == b["id"]
+    with monkeypatch.context() as limited:
+        from app.repositories import dataset_rows as row_repository
+        limited.setattr(row_repository, "MAX_DATASET_ROWS", 2)
+        limited.setattr(dataset_rows, "MAX_DATASET_ROWS", 2)
+        capped = query(client, rows)
+        assert (capped["total"], capped["total_capped"]) == (2, True)
     assert len(query(client, rows, filters=[{"field": "done", "op": "eq", "value": False}])["items"]) == 4
     assert query(client, rows, filters=[{"field": "done", "op": "ne", "value": False}])["items"] == []
     error(client.post(f"{rows}/query", headers=auth("owner"), json={"filters": [{"field": "done", "op": "lt", "value": True}]}),

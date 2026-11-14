@@ -33,10 +33,10 @@ test('team members edit rows while only the owner or an admin manages the datase
   await expect(peer.getByRole('menuitem', { name: 'Transfer ownership' })).toHaveCount(0)
   await expect(peer.getByText(note, { exact: false })).toBeVisible()
   await peer.getByRole('menuitem', { name: 'View schema' }).click()
-  const schema = peer.getByRole('dialog', { name: 'Schema' })
+  const schema = peer.getByRole('tabpanel', { name: 'Schema' })
   await expect(schema.getByRole('button', { name: 'Add column' })).toBeDisabled()
   await expect(schema.getByText(note, { exact: false })).toBeVisible()
-  await schema.getByRole('button', { name: 'Close' }).click()
+  await peer.getByRole('tab', { name: 'Rows' }).click()
   await expect(peer.getByRole('button', { name: 'Add row' })).toBeEnabled()
 
   await page.goto(`/datasets/${dataset.id}`)

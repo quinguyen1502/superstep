@@ -4,7 +4,7 @@ import { signIn } from './helpers'
 async function openColumn(page: Page, label: string) {
   await page.getByRole('button', { name: 'Dataset actions' }).click()
   await page.getByRole('menuitem', { name: 'View schema', exact: true }).click()
-  const schema = page.getByRole('dialog', { name: 'Schema', exact: true })
+  const schema = page.getByRole('tabpanel', { name: 'Schema', exact: true })
   await schema.getByRole('button', { name: `Edit ${label}` }).click()
   return { schema, editor: page.getByRole('dialog', { name: 'Edit column' }) }
 }
@@ -52,7 +52,7 @@ test('marks an existing column unique after the duplicate check', async ({ page 
   await editor.getByRole('checkbox', { name: 'Unique' }).click()
   await editor.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(editor).toHaveCount(0)
-  const schema = page.getByRole('dialog', { name: 'Schema', exact: true })
+  const schema = page.getByRole('tabpanel', { name: 'Schema', exact: true })
   await expect(schema.getByRole('row', { name: /Ticket ID.*ticket_id.*Unique/ })).toBeVisible()
 
   const upsert = await page.request.post(`${rowsUrl}/upsert`, { headers, data: { key: 'ticket_id', values: { ticket_id: 'T-3', subject: 'Updated' } } })

@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { api } from '@/lib/api'
-import { datasetUrl, type DatasetNodePermission, type DatasetPage, type DatasetSummary } from '@/lib/datasets'
+import { useMe } from "@/lib/rbac"
+import { canManageDataset, datasetUrl, type DatasetNodePermission, type DatasetPage, type DatasetSummary } from '@/lib/datasets'
 import type { BindingLookup } from './use-dataset-node-binding'
 
 export function DatasetPicker({ id, value, binding, disabled, onChange }: {
@@ -52,6 +53,7 @@ export function DatasetBindingNotice({ value, binding, permission }: {
   value?: string; binding: BindingLookup | null; permission: DatasetNodePermission | 'read_write'
 }) {
   const { t } = useTranslation()
+  const me = useMe()
   const missingGrant = binding?.permission !== undefined && (permission === 'delete'
     ? !binding.allowDelete
     : binding.permission !== 'read_write' && binding.permission !== permission)
@@ -60,7 +62,14 @@ export function DatasetBindingNotice({ value, binding, permission }: {
     {binding?.error && <Alert variant="destructive"><AlertDescription>{binding.error} {t('datasetNode.rebind')}</AlertDescription></Alert>}
     {binding?.dataset && !binding.workflowId && <p className="text-xs text-muted-foreground">{t('datasetNode.saveForGrant')}</p>}
     {binding?.grantError && <Alert variant="warning"><AlertTriangle /><AlertDescription>{binding.grantError}</AlertDescription></Alert>}
-    {missingGrant && <Alert variant="warning"><AlertTriangle /><AlertDescription>{t(`datasetNode.grantMissing.${permission}`)}</AlertDescription></Alert>}
+    {missingGrant && <Alert variant="warning"><AlertTriangle /><AlertDescription className="space-y-2">
+      <p>{t(`datasetNode.grantMissing.${permission}`)}</p>
+      {binding?.dataset && binding.workflowId && canManageDataset(me, binding.dataset) &&
+        <Button variant="outline" size="sm" asChild>
+          <Link to={`/datasets/${encodeURIComponent(binding.dataset.id)}?tab=access&workflow=${encodeURIComponent(binding.workflowId)}`}
+            target="_blank" rel="noopener">{t('datasetNode.grantShortcut')}</Link>
+        </Button>}
+    </AlertDescription></Alert>}
     {binding?.dataset && <Button variant="outline" size="sm" asChild>
       <Link to={`/datasets/${encodeURIComponent(binding.dataset.id)}`} target="_blank" rel="noopener"><ExternalLink />{t('datasetNode.openDataset')}</Link>
     </Button>}

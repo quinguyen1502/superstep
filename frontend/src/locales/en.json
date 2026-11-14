@@ -18,6 +18,14 @@
     "traceUpserted_other": "{{tool}} upserted {{count}} rows"
   },
   "datasetNode": {
+    "grantShortcut": "Grant access",
+    "runNoticeTitle": "This run can change Dataset rows",
+    "runNotice": "Running this workflow can add, update or delete stored rows. Workflow tests simulate these changes.",
+    "trace": {
+      "completed": "{{operation}} on dataset {{dataset}} completed at {{time}} ({{count}} rows).",
+      "simulated": "{{operation}} on dataset {{dataset}} was simulated at {{time}} ({{count}} rows).",
+      "failed": "{{operation}} on dataset {{dataset}} failed at {{time}}."
+    },
     "dataset": "Dataset",
     "chooseDataset": "Choose a dataset",
     "operation": "Operation",
@@ -86,6 +94,9 @@
     }
   },
   "dataset": {
+    "pageSize": "Rows per page",
+    "visibleRange": "{{start}}–{{end}} of {{total}}",
+    "visibleRangeCapped": "{{start}}–{{end}} of {{total}}+",
     "invalidNodeFilter": "Invalid dataset filter {{position}} for {{field}} in node {{node}}",
     "emptyMappedFilter": "Dataset filter {{position}} for {{field}} in node {{node}} needs a value from state.{{state_key}}",
     "title": "Datasets",
