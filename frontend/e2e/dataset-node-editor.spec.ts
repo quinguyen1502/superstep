@@ -73,6 +73,32 @@ test('Dataset node configures lookup and upsert, simulates tests and rebinds tem
   await save()
   expect(await savedConfig()).toMatchObject({ dataset_id: dataset.id, operation: 'find_rows', fields: ['ticket'], output_field: 'result', arguments: { filters: [{ field: 'ticket', op: 'eq', value: 'T-01' }] } })
 
+  await page.getByRole('button', { name: 'Add group' }).click()
+  const nested = page.getByRole('group', { name: 'Group 2', exact: true })
+  await pick(page, nested.getByRole('combobox', { name: 'Match conditions in group 2' }), 'Match any (OR)')
+  await pick(page, nested.getByRole('combobox', { name: 'Filter operator' }), 'Is one of')
+  await expect(nested.getByRole('status')).toHaveText('Enter a value for each input.')
+  await nested.getByRole('textbox', { name: 'Value 1', exact: true }).fill('T-02')
+  await nested.getByRole('button', { name: 'Add value' }).click()
+  await nested.getByRole('textbox', { name: 'Value 2', exact: true }).fill('T-03')
+  await expect(nested.getByRole('status')).toHaveCount(0)
+  await save()
+  const grouped = {
+    type: 'group', conjunction: 'and', children: [
+      { type: 'rule', field: 'ticket', op: 'eq', value: 'T-01' },
+      { type: 'group', conjunction: 'or', children: [
+        { type: 'rule', field: 'ticket', op: 'in', value: ['T-02', 'T-03'] },
+      ] },
+    ],
+  }
+  const savedArguments = (await savedConfig()).arguments
+  expect(savedArguments.filter_tree).toEqual(grouped)
+  expect(savedArguments.filters).toBeUndefined()
+  await page.reload()
+  await settings()
+  await dataTab.click()
+  await expect(nested.getByRole('textbox', { name: 'Value 2', exact: true })).toHaveValue('T-03')
+
   await page.locator('#config-tab-settings').click()
   await pick(page, page.getByRole('combobox', { name: 'Operation' }), 'Upsert row')
   await dataTab.click()

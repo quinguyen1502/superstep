@@ -1,20 +1,17 @@
-import { useId, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { SortingState } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, ArrowUpDown, ListFilter, Plus, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription } from '@/components/ui/empty'
-import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { DATASET_QUERY_LIMIT, type CellValue, type DatasetColumn } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetFilterRules, emptyDatasetFilters, keepDatasetFilterFields, type DatasetColumn, type DatasetFilters } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
-import { DatasetValueField } from './dataset-fields'
+import { DatasetFilterBuilder, validDatasetFilters } from './dataset-filter-builder'
 
-type Filter = { field: string; op: 'eq' | 'is_null'; value: CellValue }
-export type DatasetFilters = { mode: 'and' | 'or'; rules: Filter[] }
-type FilterDraft = Filter & { key: number }
 type SortDraft = SortingState[number] & { key: number }
 
 export function DatasetQueryControls({ columns, disabled, filters, sorting, onFilters, onSorting }: {
@@ -26,18 +23,12 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
   onSorting: (sorting: SortingState) => void
 }) {
   const { t } = useTranslation()
-  const id = useId()
   const nextKey = useRef(0)
   const [panel, setPanel] = useState<'filter' | 'sort' | null>(null)
-  const [mode, setMode] = useState<DatasetFilters['mode']>('and')
-  const [filterDraft, setFilterDraft] = useState<FilterDraft[]>([])
+  const [filterDraft, setFilterDraft] = useState(emptyDatasetFilters)
+  const activeCount = datasetFilterRules(filters).length
   const [sortDraft, setSortDraft] = useState<SortDraft[]>([])
   const hasColumn = (key: string) => columns.some(column => column.key === key)
-
-  function addFilter() {
-    const key = nextKey.current++
-    setFilterDraft(current => [...current, { key, field: '', op: 'eq', value: null }])
-  }
 
   function addSort() {
     const key = nextKey.current++
@@ -46,19 +37,14 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
 
   function changePanel(name: 'filter' | 'sort', open: boolean) {
     if (open && name === 'filter') {
-      const rules = filters.rules.filter(rule => hasColumn(rule.field)).map(rule => ({ ...rule, key: nextKey.current++ }))
-      setMode(filters.mode)
-      setFilterDraft(rules.length ? rules : [{ key: nextKey.current++, field: '', op: 'eq', value: null }])
+      const tree = keepDatasetFilterFields(filters, new Set(columns.map(column => column.key)))
+      setFilterDraft(tree.children.length ? tree : { ...tree, children: [{ type: 'rule', field: '', op: 'eq', value: null }] })
     }
     if (open && name === 'sort') {
       const rules = sorting.filter(rule => hasColumn(rule.id)).map(rule => ({ ...rule, key: nextKey.current++ }))
       setSortDraft(rules.length ? rules : [{ key: nextKey.current++, id: '', desc: false }])
     }
     setPanel(current => open ? name : current === name ? null : current)
-  }
-
-  function updateFilter(key: number, change: Partial<Filter>) {
-    setFilterDraft(current => current.map(rule => rule.key === key ? { ...rule, ...change } : rule))
   }
 
   function updateSort(key: number, change: Partial<SortingState[number]>) {
@@ -88,59 +74,25 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
   return <>
     <Popover open={panel === 'filter'} onOpenChange={open => changePanel('filter', open)}>
       <PopoverTrigger asChild>
-        <Button variant={panel === 'filter' || filters.rules.length ? 'secondary' : 'outline'} disabled={disabled}>
+        <Button variant={panel === 'filter' || activeCount ? 'secondary' : 'outline'} disabled={disabled} aria-label={t('dataset.filter')} aria-description={activeCount ? t('dataset.activeFilterCount', { count: activeCount }) : undefined}>
           <ListFilter />{t('dataset.filter')}
+          {activeCount > 0 && <Badge variant="secondary" size="sm" aria-hidden="true">{activeCount}</Badge>}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" aria-label={t('dataset.filter')} className="max-w-[calc(100vw-1.5rem)] sm:w-152">
         <form className="grid gap-3" onSubmit={event => {
           event.preventDefault()
-          applyFilters({ mode, rules: filterDraft.map(({ field, op, value }) => ({ field, op, value })) })
+          if (validDatasetFilters(filterDraft, columns)) applyFilters(filterDraft)
         }}>
-          <Select value={mode} onValueChange={value => setMode(value === 'or' ? 'or' : 'and')}>
-            <SelectTrigger aria-label={t('dataset.filterMatch')} className="w-fit max-w-full"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="and">{t('dataset.filterMatchAll')}</SelectItem>
-              <SelectItem value="or">{t('dataset.filterMatchAny')}</SelectItem>
-            </SelectContent>
-          </Select>
           <div className="grid max-h-[45dvh] gap-2 overflow-y-auto p-1">
-            {!filterDraft.length && <Empty className="p-3"><EmptyDescription>{t('dataset.noFilterConditions')}</EmptyDescription></Empty>}
-            {filterDraft.map((rule, index) => {
-              const column = columns.find(candidate => candidate.key === rule.field)
-              return <div key={rule.key} role="group" aria-label={t('dataset.filterCondition', { number: index + 1 })}
-                className="flex items-start gap-2">
-                <span aria-hidden="true" className="grid h-8 w-4 place-items-center text-xs tabular-nums text-muted-foreground">{index + 1}</span>
-                <div className="grid min-w-0 flex-1 items-start gap-2 sm:grid-cols-3">
-                  <Select value={column?.key ?? ''} onValueChange={field => updateFilter(rule.key, { field, value: null })}>
-                    <SelectTrigger aria-label={t('dataset.filterColumn')} className="w-full min-w-0"><SelectValue placeholder={t('dataset.filterColumn')} /></SelectTrigger>
-                    <SelectContent>{columns.map(item => <SelectItem key={item.key} value={item.key}><DatasetFieldIcon kind={item.kind} /><span className="truncate">{item.label}</span></SelectItem>)}</SelectContent>
-                  </Select>
-                  <Select disabled={!column} value={column ? rule.op : ''} onValueChange={op => updateFilter(rule.key, { op: op === 'is_null' ? 'is_null' : 'eq', value: null })}>
-                    <SelectTrigger aria-label={t('dataset.filterOperator')} className="w-full min-w-0"><SelectValue placeholder={t('dataset.filterOperator')} /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="eq">{t('dataset.filterEquals')}</SelectItem>
-                      <SelectItem value="is_null">{t('dataset.filterIsEmpty')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {!column && <Input disabled aria-label={t('dataset.filterValue')} placeholder={t('dataset.filterValue')} />}
-                  {column && rule.op === 'eq' && <DatasetValueField key={column.key} id={`${id}-filter-${rule.key}`} label={t('dataset.filterValue')} column={column}
-                    value={rule.value} nullable={false} onChange={value => updateFilter(rule.key, { value })} />}
-                </div>
-                <Button type="button" variant="ghost" size="icon" aria-label={t('dataset.removeFilterCondition')}
-                  onClick={() => setFilterDraft(current => current.filter(item => item.key !== rule.key))}><X /></Button>
-              </div>
-            })}
+            <DatasetFilterBuilder tree={filterDraft} columns={columns} onChange={setFilterDraft} />
           </div>
           <p className="text-xs text-muted-foreground">{t('dataset.filterHelp')}</p>
           <Separator />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <Button type="button" variant="ghost" onClick={addFilter} disabled={!columns.length || filterDraft.length >= DATASET_QUERY_LIMIT}>
-              <Plus />{t('dataset.addFilterCondition')}
-            </Button>
             <div className="ml-auto flex gap-2">
-              <Button type="button" variant="ghost" onClick={() => applyFilters({ mode: 'and', rules: [] })}>{t('dataset.resetQuery')}</Button>
-              <Button type="submit" disabled={filterDraft.some(rule => !hasColumn(rule.field) || (rule.op === 'eq' && rule.value === null))}>{t('dataset.applyFilters')}</Button>
+              <Button type="button" variant="ghost" onClick={() => applyFilters(emptyDatasetFilters())}>{t('dataset.resetQuery')}</Button>
+              <Button type="submit" disabled={!validDatasetFilters(filterDraft, columns)}>{t('dataset.applyFilters')}</Button>
             </div>
           </div>
         </form>

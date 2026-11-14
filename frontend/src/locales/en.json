@@ -79,7 +79,10 @@
       "gte": "At least",
       "is_null": "Is empty",
       "not_null": "Is not empty",
-      "contains": "Contains"
+      "contains": "Contains",
+      "in": "Is one of",
+      "not_in": "Is none of",
+      "not_contains": "Does not contain"
     },
     "filterOpHelp": {
       "eq": "Matches the exact value, letter case included.",
@@ -90,7 +93,10 @@
       "gte": "Matches the value or larger ones.",
       "is_null": "Matches cells with no value.",
       "not_null": "Matches cells with any value.",
-      "contains": "Matches text that includes this value, ignoring letter case."
+      "contains": "Matches text that includes this value, ignoring letter case.",
+      "in": "Matches any listed value.",
+      "not_in": "Matches cells that differ from every listed value, empty cells included.",
+      "not_contains": "Matches text without this value, ignoring letter case, and empty cells."
     }
   },
   "dataset": {
@@ -246,6 +252,18 @@
     "applyFilters": "Apply filters",
     "noFilterConditions": "No filter conditions.",
     "filterHelp": "Equals matches the exact value, letter case included. Is empty matches cells with no value. Search ignores letter case.",
+    "addFilterGroup": "Add group",
+    "filterGroup": "Group {{number}}",
+    "filterGroupMatch": "Match conditions in group {{number}}",
+    "removeFilterGroup": "Remove group",
+    "addFilterValue": "Add value",
+    "filterListValue": "Value {{number}}",
+    "removeFilterValue": "Remove value {{number}}",
+    "filterChooseColumn": "Choose a column.",
+    "filterChooseOperator": "Choose an operator for this column.",
+    "filterEnterValue": "Enter a value for each input.",
+    "activeFilterCount_one": "{{count}} active filter",
+    "activeFilterCount_other": "{{count}} active filters",
     "rowsUnavailable": "Rows unavailable.",
     "noRows": "No matching rows.",
     "previousPage": "Previous page",

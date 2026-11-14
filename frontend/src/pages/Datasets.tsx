@@ -18,7 +18,6 @@ import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
 import { DatasetFieldIcon } from '@/components/datasets/dataset-field-icon'
 import { DatasetGrid } from '@/components/datasets/dataset-grid'
 import { DatasetOwnerDialog } from '@/components/datasets/dataset-owner-dialog'
-import type { DatasetFilters } from '@/components/datasets/dataset-query-controls'
 import { HandbookLink } from '@/components/handbook-link'
 import { LanguageSwitcher } from '@/components/language-switcher'
 import { Logo } from '@/components/logo'
@@ -27,7 +26,7 @@ import { Tip } from '@/components/tip'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { UserMenu } from '@/components/user-menu'
 import { api, ApiError } from '@/lib/api'
-import { canManageDataset, datasetUrl, displayValue, type Dataset, type DatasetColumn, type DatasetPage, type DatasetSummary, type DatasetTeam } from '@/lib/datasets'
+import { canManageDataset, datasetUrl, displayValue, emptyDatasetFilters, type DatasetFilters, type Dataset, type DatasetColumn, type DatasetPage, type DatasetSummary, type DatasetTeam } from '@/lib/datasets'
 import { can, useMe } from '@/lib/rbac'
 import { useLoadWhen } from '@/lib/use-when'
 import { cn } from '@/lib/utils'
@@ -343,7 +342,7 @@ export function DatasetsPage() {
       onShowDuplicates={({ field, value }) => {
         setColumnDialog(null)
         changeTab('rows')
-        setGridFilter(previous => ({ id: current.id, seq: (previous?.seq ?? 0) + 1, filters: { mode: 'and', rules: [{ field, op: 'eq', value }] } }))
+        setGridFilter(previous => ({ id: current.id, seq: (previous?.seq ?? 0) + 1, filters: { ...emptyDatasetFilters(), children: [{ type: 'rule', field, op: 'eq', value }] } }))
       }} />}
     {current && ownerId === current.id && <DatasetOwnerDialog dataset={current} onClose={() => setOwnerId(null)}
       onSave={data => { saveDataset(data); setOwnerId(null) }} />}

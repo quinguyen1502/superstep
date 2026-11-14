@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import { signIn } from './helpers'
 
 test('creates a team dataset, edits typed rows, filters and confirms deletion', async ({ page }, testInfo) => {
@@ -579,4 +579,72 @@ test('loads subsequent result pages and validates typed editors', async ({ page 
   await expect(page.getByRole('button', { name: 'Next page' })).toBeDisabled()
   await page.getByRole('button', { name: 'Previous page' }).click()
   await expect(page.getByTestId('dataset-row')).toHaveCount(50)
+})
+
+
+test('builds nested filters with the keyboard and matches the query API', async ({ page }, info) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const name = `Grouped filters ${Date.now()}`
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name, columns: [
+      { key: 'ticket', label: 'Ticket', kind: 'text' },
+      { key: 'score', label: 'Score', kind: 'number' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const url = `/api/datasets/${id}/rows`
+  for (const [ticket, score] of [['A', 1], ['B', 2], ['C', 3]]) {
+    expect((await page.request.post(url, { headers, data: { values: { ticket, score } } })).ok()).toBeTruthy()
+  }
+  await page.goto('/datasets')
+  await page.getByRole('link', { name, exact: true }).click()
+  const filterButton = page.getByRole('button', { name: 'Filter', exact: true })
+  const dialog = page.getByRole('dialog', { name: 'Filter', exact: true })
+  const key = async (el: Locator, value = 'Enter') => {
+    await el.focus()
+    await page.keyboard.press(value)
+  }
+  const choose = async (el: Locator, text: string) => {
+    await key(el, 'Space')
+    const option = page.getByRole('option', { name: text, exact: true })
+    await expect(option).toBeVisible()
+    await key(option)
+  }
+
+  await key(filterButton)
+  const rootRule = dialog.getByRole('group', { name: 'Condition 1', exact: true })
+  await choose(rootRule.getByRole('combobox', { name: 'Filter column' }), 'Ticket')
+  await choose(rootRule.getByRole('combobox', { name: 'Filter operator' }), 'Does not contain')
+  await rootRule.getByRole('textbox', { name: 'Filter value' }).focus()
+  await page.keyboard.type('B')
+
+  await key(dialog.getByRole('button', { name: 'Add group' }))
+  const group = dialog.getByRole('group', { name: 'Group 2', exact: true })
+  await choose(group.getByRole('combobox', { name: 'Match conditions in group 2' }), 'Match any (OR)')
+  await choose(group.getByRole('combobox', { name: 'Filter column' }), 'Score')
+  await choose(group.getByRole('combobox', { name: 'Filter operator' }), 'Is one of')
+  await group.getByRole('spinbutton', { name: 'Value 1', exact: true }).focus()
+  await page.keyboard.type('1')
+  await key(group.getByRole('button', { name: 'Add value' }))
+  await group.getByRole('spinbutton', { name: 'Value 2', exact: true }).focus()
+  await page.keyboard.type('3')
+  await info.attach('nested-dataset-filters-light', { body: await page.screenshot(), contentType: 'image/png' })
+  await page.evaluate(() => document.documentElement.classList.add('dark'))
+  await info.attach('nested-dataset-filters-dark', { body: await page.screenshot(), contentType: 'image/png' })
+  const tree = { type: 'group', conjunction: 'and', children: [
+    { type: 'rule', field: 'ticket', op: 'not_contains', value: 'B' },
+    { type: 'group', conjunction: 'or', children: [{ type: 'rule', field: 'score', op: 'in', value: [1, 3] }] },
+  ] }
+  const response = await page.request.post(`${url}/query`, { headers, data: { filter_tree: tree, sorts: [{ field: 'score' }] } })
+  expect(response.ok()).toBeTruthy()
+  const results = (await response.json()).data.items.map((row: { values: { ticket: string } }) => row.values.ticket) as string[]
+  expect(results).toEqual(['A', 'C'])
+  await key(dialog.getByRole('button', { name: 'Apply filters' }))
+  await expect(filterButton).toContainText('2')
+  const table = page.getByRole('table')
+  await expect(table.getByRole('row')).toHaveCount(3)
+  for (const ticket of results) await expect(table.getByRole('button', { name: `Edit Ticket: ${ticket}`, exact: true })).toBeVisible()
 })

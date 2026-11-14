@@ -79,7 +79,10 @@
       "gte": "Ít nhất",
       "is_null": "Để trống",
       "not_null": "Không trống",
-      "contains": "Chứa"
+      "contains": "Chứa",
+      "in": "Thuộc danh sách",
+      "not_in": "Không thuộc danh sách",
+      "not_contains": "Không chứa"
     },
     "filterOpHelp": {
       "eq": "Khớp đúng giá trị, có phân biệt chữ hoa chữ thường.",
@@ -90,7 +93,10 @@
       "gte": "Khớp giá trị này hoặc lớn hơn.",
       "is_null": "Khớp các ô chưa có giá trị.",
       "not_null": "Khớp các ô đã có giá trị.",
-      "contains": "Khớp văn bản có chứa giá trị này, không phân biệt chữ hoa chữ thường."
+      "contains": "Khớp văn bản có chứa giá trị này, không phân biệt chữ hoa chữ thường.",
+      "in": "Khớp một trong các giá trị đã nhập.",
+      "not_in": "Khớp ô có giá trị ngoài danh sách và ô trống.",
+      "not_contains": "Khớp văn bản không chứa giá trị này và ô trống. Không phân biệt chữ hoa chữ thường."
     }
   },
   "dataset": {
@@ -246,6 +252,18 @@
     "applyFilters": "Áp dụng bộ lọc",
     "noFilterConditions": "Chưa có điều kiện lọc.",
     "filterHelp": "Bằng khớp đúng giá trị, có phân biệt chữ hoa chữ thường. Để trống khớp các ô chưa có giá trị. Tìm trong bảng không phân biệt chữ hoa chữ thường.",
+    "addFilterGroup": "Thêm nhóm",
+    "filterGroup": "Nhóm {{number}}",
+    "filterGroupMatch": "Cách khớp điều kiện trong nhóm {{number}}",
+    "removeFilterGroup": "Bỏ nhóm",
+    "addFilterValue": "Thêm giá trị",
+    "filterListValue": "Giá trị {{number}}",
+    "removeFilterValue": "Bỏ giá trị {{number}}",
+    "filterChooseColumn": "Chọn một cột.",
+    "filterChooseOperator": "Chọn phép so sánh cho cột này.",
+    "filterEnterValue": "Nhập giá trị cho từng ô.",
+    "activeFilterCount_one": "{{count}} bộ lọc đang áp dụng",
+    "activeFilterCount_other": "{{count}} bộ lọc đang áp dụng",
     "rowsUnavailable": "Không tải được các dòng.",
     "noRows": "Không có dòng phù hợp.",
     "previousPage": "Trang trước",
