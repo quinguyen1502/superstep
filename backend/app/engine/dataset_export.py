@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import Callable, Iterable
 
-from ..core.dataset_filters import LIST_FILTERS
+from ..core.dataset_filters import LIST_FILTERS, filter_rules
 from ..core.errors import AppError
 from . import dataset_nodes
 
@@ -16,7 +16,7 @@ class DatasetExport:
         return {"format": "superstep/dataset-bindings", "version": 1, "bindings": list(self.bindings.values())}
 
 
-def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> DatasetExport:
+def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]], *, phase3: bool = False) -> DatasetExport:
     out = DatasetExport({}, {})
     for graph in graphs:
         for binding in dataset_nodes.bindings(graph).values():
@@ -32,15 +32,16 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
             contract = out.bindings[alias]
             columns = {column["key"]: column for column in contract["columns"]}
             args = binding.get("arguments") or {}
-            if operation == "aggregate_rows" or "aggregate_rows" in binding.get("operations", []):
+            if not phase3 and (operation == "aggregate_rows" or "aggregate_rows" in binding.get("operations", [])):
                 raise AppError("DATASET_EXPORT_AGGREGATE_UNSUPPORTED")
             new_operators = LIST_FILTERS | {"not_contains"}
-            if (args.get("filter_tree") is not None
+            if not phase3 and (args.get("filter_tree") is not None
                     or any(rule.get("op") in new_operators for rule in args.get("filters", []))
                     or any(new_operators.intersection(ops) for ops in binding.get("filter_ops", {}).values())):
                 raise AppError("DATASET_EXPORT_FILTER_UNSUPPORTED")
             referenced = {*binding["fields"], *(args.get("values") or {}), *binding.get("filter_ops", {})}
-            referenced.update(rule["field"] for name in ("filters", "sorts") for rule in args.get(name, []))
+            referenced.update(rule["field"] for _, rule in filter_rules(args))
+            referenced.update(rule["field"] for rule in args.get("sorts", []))
             if operation == "delete_row" and "key" in args:
                 referenced.add(args["key"])
             agent_writes = dataset_nodes.agent_writes(binding) if "filter_ops" in binding else []
@@ -48,10 +49,10 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
                 referenced.update(binding["write_fields"])
             if absent := sorted(referenced - columns.keys()):
                 raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=absent[0])
-            if any(column.get("validation_rules") for column in columns.values()):
+            if not phase3 and any(column.get("validation_rules") for column in columns.values()):
                 raise AppError("DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED")
             unsupported = {"long_text", "url", "created_time", "updated_time", "multi_select", "auto_number"}
-            if unsupported.intersection(column["kind"] for column in columns.values()):
+            if not phase3 and unsupported.intersection(column["kind"] for column in columns.values()):
                 raise AppError("DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED")
             if operation in {"upsert_row", "delete_row"} and "key" in args and not columns[args["key"]]["unique"]:
                 raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])

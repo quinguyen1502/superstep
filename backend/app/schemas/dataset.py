@@ -49,6 +49,10 @@ class DatasetColumnIn(DatasetFieldContract):
     validation_rules: DatasetColumnRules | None = None
     display_format: DatasetColumnFormat | None = None
 
+class DatasetConnectedColumn(DatasetFieldContract):
+    validation_rules: DatasetColumnRules | None = None
+
+
 class DatasetCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -210,8 +214,8 @@ class DatasetConnectedInput(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     version: Literal[1]
-    operation: Literal["find_rows", "get_row", "insert_row", "upsert_row", "delete_row"]
-    columns: list[DatasetFieldContract] = Field(min_length=1, max_length=100)
+    operation: Literal["find_rows", "aggregate_rows", "get_row", "insert_row", "upsert_row", "delete_row"]
+    columns: list[DatasetConnectedColumn] = Field(min_length=1, max_length=100)
     fields: list[ColumnKey] = Field(max_length=100)  # empty only for Insert and Upsert: identifiers only
     arguments: dict = Field(default_factory=dict, max_length=10)
     operation_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_.:-]{1,128}$")

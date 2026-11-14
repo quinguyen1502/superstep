@@ -117,3 +117,11 @@ five row IDs and leave the schema revision unchanged.
 `date_style`. Node output, CSV, stored values and comparisons use the
 underlying typed values. Code export parity for column rules is tracked
 separately.
+
+### Python Phase 3 support
+
+The Python exporter now includes grouped filters, the Phase 3 operators and
+column types, aggregate results, and column validation rules for Superstep,
+SQLite, and PostgreSQL. The connected contract checks the rules against the
+server schema. Running `--setup-datasets` also upgrades existing standalone
+storage with the auto-number watermark.
