@@ -31,6 +31,49 @@ export type DatasetPage<T> = { items: T[]; next_offset: number | null }
 export type DatasetRowPage = DatasetPage<DatasetRow> & { schema_revision: number; total: number; total_capped: boolean }
 export type DatasetRowResult = { row: DatasetRow; inserted: boolean }
 export const DATASET_QUERY_LIMIT = 12
+export const DATASET_FILTER_DEPTH = 3
+export const DATASET_FILTER_RULES = 20
+export const DATASET_FILTER_VALUES = 50
+
+export type DatasetFilterValue = CellValue | CellValue[]
+export type DatasetFilterRule = { type: 'rule'; field: string; op: string; value: DatasetFilterValue }
+export type DatasetFilters = {
+  type: 'group'
+  conjunction: 'and' | 'or'
+  children: (DatasetFilters | DatasetFilterRule)[]
+}
+
+export const emptyDatasetFilters = (): DatasetFilters => ({ type: 'group', conjunction: 'and', children: [] })
+export const datasetFilterRules = ({ children }: DatasetFilters): DatasetFilterRule[] =>
+  children.flatMap(child => child.type === 'rule' ? [child] : datasetFilterRules(child))
+
+export function keepDatasetFilterFields(tree: DatasetFilters, fields: ReadonlySet<string>): DatasetFilters {
+  const children: DatasetFilters['children'] = []
+  for (const child of tree.children) {
+    if (child.type === 'rule') {
+      if (fields.has(child.field)) children.push(child)
+    } else {
+      const group = keepDatasetFilterFields(child, fields)
+      if (group.children.length) children.push(group)
+    }
+  }
+  return { ...tree, children }
+}
+
+export const datasetListFilter = (op: string) => op === 'in' || op === 'not_in' || op === 'contains_any' || op === 'contains_all'
+export const datasetSubstringFilter = (op: string) => op === 'contains' || op === 'not_contains'
+export const datasetValueFreeFilter = (op: string) => op === 'is_null' || op === 'not_null'
+const generalSummaryFunctions = ['count', 'empty_count', 'empty_percent', 'unique_count'] as const
+export type DatasetSummaryFunction = (typeof generalSummaryFunctions)[number] | 'sum' | 'avg' | 'min' | 'max'
+export type DatasetColumnSummaries = Partial<Record<string, DatasetSummaryFunction>>
+export type DatasetSummaryResult = { total: number; values: Record<string, CellValue>; schema_revision: number }
+
+export function datasetSummaryFunctions(kind: DatasetKind): readonly DatasetSummaryFunction[] {
+  if (kind === 'number' || kind === 'auto_number') return [...generalSummaryFunctions, 'sum', 'avg', 'min', 'max']
+  if (kind === 'date' || kind === 'datetime' || datasetSystemTime(kind)) return [...generalSummaryFunctions, 'min', 'max']
+  return generalSummaryFunctions
+}
+
 export type DatasetTeam = { id: string; name: string; mine: boolean }
 
 /** Schema, access, tokens and deletion: the personal owner, a team dataset's owner, or an admin. Rows need only resources.manage. */
@@ -75,10 +118,10 @@ export type DatasetAgentOperation = (typeof datasetAgentOperations)[number]
 
 export function datasetFilterOperators(kind: DatasetColumn['kind']) {
   if (kind === 'multi_select') return ['contains_any', 'contains_all', 'is_null']
-  if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null']
+  if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null', 'in', 'not_in']
   const operators = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is_null', 'not_null']
-  if (datasetTextKind(kind)) operators.push('contains')
-  return operators
+  if (datasetTextKind(kind)) operators.push('contains', 'not_contains')
+  return [...operators, 'in', 'not_in']
 }
 
 export const datasetWriteOperation = (operation?: DatasetOperation) => operation === 'insert_row' || operation === 'upsert_row'
@@ -103,6 +146,7 @@ export type DatasetNodeConfig = {
     search?: string | null
     filter_mode?: 'and' | 'or'
     filters?: { field: string; op: string; value: CellValue }[]
+    filter_tree?: DatasetFilters
     sorts?: { field: string; descending: boolean }[]
   }
 }

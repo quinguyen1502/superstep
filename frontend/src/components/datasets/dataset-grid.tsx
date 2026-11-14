@@ -7,17 +7,18 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetSummaryFunctions, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
+import { DatasetColumnSummary } from './dataset-column-summary'
 import { DatasetActionsMenu } from './dataset-actions-menu'
 import { DatasetRowDialog } from './dataset-dialogs'
 import { DatasetColumnControls, DatasetUniqueBadge } from './dataset-column-controls'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
-import { DatasetQueryControls, type DatasetFilters } from './dataset-query-controls'
+import { DatasetQueryControls } from './dataset-query-controls'
 
 const NO_ROWS: DatasetRow[] = []
 const rowModel = getCoreRowModel<DatasetRow>()
@@ -34,7 +35,7 @@ const ROW_ACTIONS_WIDTH = 80
 const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160, long_text: 320, url: 250, created_time: 216, updated_time: 216, multi_select: 240, auto_number: 140 }
 const PAGE_SIZES = [25, 50, 100]
 
-function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: VisibilityState } {
+function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: VisibilityState; summaries?: DatasetColumnSummaries; showSummaries?: boolean } {
   try {
     return JSON.parse(localStorage.getItem(key) ?? '{}') ?? {}
   } catch {
@@ -73,7 +74,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [notice, setNotice] = useState('')
   const [search, setSearch] = useState('')
   const [searchText, setSearchText] = useState('')
-  const [filters, setFilters] = useState<DatasetFilters>(initialFilters ?? { mode: 'and', rules: [] })
+  const [filters, setFilters] = useState<DatasetFilters>(initialFilters ?? emptyDatasetFilters())
   const [sorting, setSorting] = useState<SortingState>([])
   const [offsets, setOffsets] = useState([0])
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 })
@@ -84,13 +85,17 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(storedLayout.visibility ?? {})
   const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(storedLayout.order ?? [])
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(storedLayout.sizes ?? {})
+  const [summaryOperations, setSummaryOperations] = useState<DatasetColumnSummaries>(storedLayout.summaries ?? {})
+  const [showSummaries, setShowSummaries] = useState(storedLayout.showSummaries ?? false)
+  const [summary, setSummary] = useState<{ key: string; data: DatasetSummaryResult } | null>(null)
+  const [summaryError, setSummaryError] = useState<{ key: string; message: string } | null>(null)
   useEffect(() => {
     try {
-      localStorage.setItem(layoutKey, JSON.stringify({ order: columnOrder, sizes: columnSizing, visibility: columnVisibility }))
+      localStorage.setItem(layoutKey, JSON.stringify({ order: columnOrder, sizes: columnSizing, visibility: columnVisibility, summaries: summaryOperations, showSummaries }))
     } catch {
       // The grid remains usable when browser storage is unavailable.
     }
-  }, [columnOrder, columnSizing, columnVisibility, layoutKey])
+  }, [columnOrder, columnSizing, columnVisibility, layoutKey, showSummaries, summaryOperations])
   const [viewportWidth, setViewportWidth] = useState(0)
   const [active, setActive] = useState<Cell | null>(null)
   const [draft, setDraft] = useState<Record<string, CellValue> | null>(null)
@@ -131,10 +136,45 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       visibility: showAll ? {} : columnVisibility,
       columns: dataset.columns.map(column => ({
         id: column.key, accessorFn: (row: DatasetRow) => row.values[column.key],
+        footer: column.key,
         size: defaultWidth(column) + (fill?.key === column.key ? fillWidth : 0),
       })),
     }
   }, [addingRow, columnOrder, columnSizing, columnVisibility, dataset.columns, viewportWidth])
+
+  const summaryColumns = useMemo(() => Object.fromEntries(layout.fields.flatMap(column => {
+    const operation = summaryOperations[column.key]
+    return operation && datasetSummaryFunctions(column.kind).includes(operation) ? [[column.key, operation]] : []
+  })), [layout.fields, summaryOperations])
+  const summaryRequest = useMemo(() => {
+    const tree = keepDatasetFilterFields(filters, new Set(dataset.columns.map(column => column.key)))
+    return {
+      search: search || null, ...(tree.children.length ? { filter_tree: tree } : {}),
+      summaries: summaryColumns,
+    }
+  }, [dataset.columns, filters, search, summaryColumns])
+
+  const summaryKey = JSON.stringify([dataset.revision, refresh, summaryRequest])
+  const currentSummaryError = summaryError?.key === summaryKey ? summaryError.message : null
+  const currentSummary = summary?.key === summaryKey ? summary.data : null
+  useEffect(() => {
+    if (!showSummaries || !Object.keys(summaryRequest.summaries).length) return
+    const controller = new AbortController()
+    void api<DatasetSummaryResult>(`${url}/summary`, {
+      method: 'POST', json: summaryRequest, signal: controller.signal,
+    }).then(result => {
+      if (controller.signal.aborted) return
+      if (result.schema_revision !== dataset.revision) {
+        reloadDataset()
+        return
+      }
+      setSummary({ key: summaryKey, data: result })
+      setSummaryError(null)
+    }).catch(error => {
+      if (!controller.signal.aborted) setSummaryError({ key: summaryKey, message: error.message })
+    })
+    return () => controller.abort()
+  }, [dataset.revision, refresh, reloadDataset, showSummaries, summaryKey, summaryRequest, url])
 
   useLayoutEffect(() => {
     if (busy || !restoreEditorFocus.current) return
@@ -190,9 +230,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   useEffect(() => {
     let active = true
     const fields = new Set(dataset.columns.map(column => column.key))
+    const filterTree = keepDatasetFilterFields(filters, fields)
     api<DatasetRowPage>(`${url}/query`, {
       method: 'POST', json: {
-        search: search || null, filter_mode: filters.mode, filters: filters.rules.filter(rule => fields.has(rule.field)),
+        search: search || null, ...(filterTree.children.length ? { filter_tree: filterTree } : {}),
         sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
         offset, limit: pagination.pageSize,
       },
@@ -410,6 +451,8 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   return <div>
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
       <div className="flex items-center gap-2">
+        <Button variant={showSummaries ? 'secondary' : 'outline'} aria-pressed={showSummaries} disabled={editing}
+          onClick={() => { setSummary(null); setSummaryError(null); setShowSummaries(value => !value) }}>{t('dataset.summary')}</Button>
         <DatasetQueryControls columns={dataset.columns} disabled={editing} filters={filters} sorting={sorting}
           onFilters={applyFilters} onSorting={changeSorting} />
         <DatasetColumnControls columns={layout.orderedFields} visibleKeys={new Set(layout.fields.map(column => column.key))}
@@ -596,6 +639,24 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             </TableCell>
           </TableRow>)}
         </TableBody>
+        {showSummaries && <TableFooter>
+          {table.getFooterGroups().map(group => <TableRow key={group.id}>
+            <TableCell aria-label={t('dataset.summary')} colSpan={layout.showRowId ? 2 : 1} />
+            {group.headers.map(header => {
+              const column = layout.fields.find(field => field.key === header.column.id)
+              return <TableCell key={header.id} className={DIVIDER}>
+                {!header.isPlaceholder && column && <DatasetColumnSummary column={column}
+                  operation={summaryColumns[column.key]} value={currentSummary?.values[column.key]} disabled={editing}
+                  loading={!currentSummary} failed={!!currentSummaryError}
+                  onChange={operation => setSummaryOperations(current => ({ ...current, [column.key]: operation }))} />}
+              </TableCell>
+            })}
+            <TableCell className={ROW_ACTIONS} />
+          </TableRow>)}
+          {currentSummaryError && <TableRow><TableCell colSpan={span}>
+            <Alert variant="warning"><AlertDescription>{currentSummaryError}</AlertDescription></Alert>
+          </TableCell></TableRow>}
+        </TableFooter>}
       </Table>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1 text-sm">

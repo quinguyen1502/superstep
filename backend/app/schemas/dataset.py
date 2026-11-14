@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..core.dataset_filters import MAX_FILTER_VALUES, tree_rules
-from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, DatasetValue, FilterOperator
+from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, DatasetValue, FilterOperator, SummaryFunction
 
 ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]
 Label = Annotated[str, Field(min_length=1, max_length=120)]
@@ -121,7 +121,11 @@ class DatasetFilterGroup(BaseModel):
     children: list[Annotated[DatasetFilterRule | DatasetFilterGroup, Field(discriminator="type")]]
 
 
-class DatasetGroupedRowQuery(DatasetRowQuery):
+class DatasetFilterQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    filter_mode: Literal["and", "or"] = "and"
+    search: str | None = Field(default=None, max_length=120)
     filters: list[DatasetQueryFilter] = Field(default_factory=list, max_length=12)
     filter_tree: DatasetFilterGroup | None = None
 
@@ -138,6 +142,14 @@ class DatasetGroupedRowQuery(DatasetRowQuery):
         if self.filter_tree is not None and {"filters", "filter_mode"} & self.model_fields_set:
             raise ValueError("Use either filter_tree or flat filters")
         return self
+
+
+class DatasetGroupedRowQuery(DatasetFilterQuery, DatasetRowQuery):
+    pass
+
+
+class DatasetSummaryQuery(DatasetFilterQuery):
+    summaries: dict[ColumnKey, SummaryFunction] = Field(min_length=1, max_length=100)
 
 
 DatasetPermission = Literal["read", "write", "read_write"]

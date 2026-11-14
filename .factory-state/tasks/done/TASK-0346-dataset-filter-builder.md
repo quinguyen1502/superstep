@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0346
 - Title: Build the nested filter builder for the grid and the Dataset node
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -69,6 +69,12 @@ Users build AND/OR groups with typed rules in the grid toolbar and the Dataset n
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+
+- 2026-11-14: Started after the readiness gate passed. Stacked on TASK-0345 (PR #403), which itself includes the Factory state reconciliation (PR #402).
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0337](../../artifacts/REV-0337-TASK-0346-dataset-filter-builder.md) and QA [QA-0337](../../artifacts/QA-0337-TASK-0346-dataset-filter-builder.md).
+
+- 2026-11-14: Owner approved merging PR #404 into develop after successful checks.
 
 ## Handoff Notes
 

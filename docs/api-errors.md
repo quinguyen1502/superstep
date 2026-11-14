@@ -79,6 +79,7 @@
 | `DATASET_EXPORT_FILTER_UNSUPPORTED` | 400 | This Dataset filter is not yet supported by code export |
 | `DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED` | 400 | A Dataset column type is not yet supported by code export |
 | `DATASET_FILTER_INVALID` | 400 | Invalid dataset filter for {field} |
+| `DATASET_SUMMARY_INVALID` | 400 | Invalid dataset summary for {field} |
 | `DATASET_UPSERT_KEY_INVALID` | 400 | Upsert requires a value for the unique field {field} |
 | `DATASET_ROW_TOO_LARGE` | 413 | A dataset row must be at most {max} bytes |
 | `DATASET_ROW_LIMIT` | 409 | A dataset can contain at most {max} rows |

@@ -13,6 +13,18 @@ ColumnKind: TypeAlias = Literal["text", "number", "boolean", "date", "datetime",
 CellValue: TypeAlias = str | int | float | bool | None
 DatasetValue: TypeAlias = CellValue | list[str]
 FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null", "in", "not_in", "not_contains", "contains_any", "contains_all"]
+SummaryFunction: TypeAlias = Literal["count", "empty_count", "empty_percent", "unique_count", "sum", "avg", "min", "max"]
+SUMMARY_FUNCTIONS = ("count", "empty_count", "empty_percent", "unique_count")
+
+
+def summary_functions(kind: ColumnKind) -> tuple[str, ...]:
+    if kind in {"number", "auto_number"}:
+        return (*SUMMARY_FUNCTIONS, "sum", "avg", "min", "max")
+    if kind == "date" or kind in DATETIME_KINDS:
+        return (*SUMMARY_FUNCTIONS, "min", "max")
+    return SUMMARY_FUNCTIONS
+
+
 FILTER_OPERATORS = get_args(FilterOperator)
 TEXT_KINDS = frozenset({"text", "long_text", "url", "email", "select"})
 SYSTEM_TIME_KINDS = frozenset({"created_time", "updated_time"})
@@ -49,7 +61,7 @@ def fold_text(value: object) -> object:
 
 def filter_operators(kind: ColumnKind) -> tuple[str, ...]:
     if kind == "boolean":
-        return ("eq", "ne", "is_null", "not_null")
+        return ("eq", "ne", "is_null", "not_null", "in", "not_in")
     if kind == "multi_select":
         return ("contains_any", "contains_all", "is_null")
     return tuple(op for op in FILTER_OPERATORS if op not in {"contains_any", "contains_all"}
