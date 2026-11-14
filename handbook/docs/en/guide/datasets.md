@@ -4,11 +4,16 @@ A dataset is a typed table owned by you or by a team. Workflows can look up and
 write rows. An exported project can use the same rows through the Superstep API
 or through its own SQLite or PostgreSQL database.
 
-## Authoring
+## Authoring {#authoring}
 
-Open **Datasets** from the studio navigation.
+Open **Datasets** from the Studio navigation. **Rows**, **Schema**, and
+**Access** are tabs that you can link to directly. The grid saves column order,
+widths, and visibility in your browser for each dataset. Choose 25, 50, or 100
+rows per page. The range reflects the active search and filters.
 
 ![The Support tickets grid](../images/datasets-grid.png)
+
+[View the grid in dark mode](../images/datasets-grid-dark.png)
 
 On a narrow screen the catalog folds under the header and the grid scrolls sideways.
 
@@ -54,9 +59,9 @@ shows these actions disabled, with an explanation, for other members. An
 admin can move a team dataset to another team member with **Transfer
 ownership** in the dataset menu.
 
-## Access
+## Access {#access}
 
-The dataset menu **Access** grants one saved workflow read or write permission.
+The **Access** tab grants one saved workflow read or write permission.
 A workflow without that grant cannot run a Dataset node or Dataset tool against
 it. Deleting rows is a separate capability: check **Allow row deletion** on the
 grant. Read and write alone do not allow Delete row.
@@ -88,7 +93,7 @@ write access. Upsert still reveals whether a row with that key exists. If that
 must stay hidden, use **Insert row**. An upsert that changes no value keeps the
 row's revision and update time.
 
-## CSV
+## CSV {#csv}
 
 **Import CSV** previews the file before it writes anything.
 
@@ -109,7 +114,7 @@ row's revision and update time.
   removes that apostrophe again, so exporting and importing a file gives the
   same values. The download is at most 16 MiB.
 
-## Workflows and export
+## Workflows and export {#workflows-and-export}
 
 A Dataset node can find rows, get one row, insert a row, upsert a row, or
 delete a row. **Delete row** targets either a row id from the state or one
@@ -137,14 +142,26 @@ environment, so a deployment can change it without exporting again. Set:
 Run `python agent.py --setup-datasets` or the TypeScript equivalent before the
 first run. Setup is safe to repeat. It creates the project tables and keeps
 rows that are already stored. Delete row and Agent writes also work in a
-standalone database, and each write is recorded so a retry returns the first
-result. A snapshot is off unless you check **Include
+standalone database. An exact retry within the receipt window returns its
+original row ID and insert outcome, with current values when the row still
+exists. Run setup after upgrading an existing standalone export to migrate old
+receipts. A snapshot is off unless you check **Include
 current rows** for a standalone binding. The archive then contains at most
 1,000 rows in `dataset-snapshots.json`. Setup imports a snapshot row only when
 its id is not already stored, and it rejects a snapshot whose schema does not
 match the binding.
 
-## Backup, upgrade, and limits
+Before Studio runs a workflow that can write rows, it asks you to confirm once
+in your browser session. Workflow tests simulate writes. The Dataset trace
+shows the operation, outcome, row count and time, with raw output available on
+request. Managers can use **Grant access** in the missing-grant hint to open
+**Access** with the workflow selected.
+
+A valid Dataset API token with insufficient scope returns
+`403 DATASET_TOKEN_SCOPE`. Invalid, revoked, and other-dataset tokens return
+`401 AUTH_TOKEN_INVALID`.
+
+## Backup, upgrade, and limits {#backup-upgrade-and-limits}
 
 Back up a standalone SQLite file by copying it while no writer is open, or back
 up PostgreSQL with `pg_dump`. The Superstep database holds Studio rows in the

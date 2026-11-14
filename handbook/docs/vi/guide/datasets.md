@@ -4,11 +4,18 @@ Tập dữ liệu là một bảng có kiểu, thuộc về bạn hoặc một n
 cứu và ghi dòng. Dự án xuất ra có thể dùng cùng các dòng đó qua API Superstep
 hoặc qua cơ sở SQLite hay PostgreSQL riêng.
 
-## Soạn thảo
+## Soạn thảo {#authoring}
 
 Mở **Tập dữ liệu** từ điều hướng của studio.
 
+**Dòng dữ liệu**, **Định nghĩa cột** và **Quyền truy cập** là các thẻ có liên kết trực tiếp.
+Trình duyệt lưu thứ tự, độ rộng và trạng thái ẩn cột riêng cho từng tập dữ liệu.
+Bạn có thể chọn 25, 50 hoặc 100 dòng mỗi trang. Phạm vi đang hiển thị phản ánh
+kết quả tìm kiếm và bộ lọc hiện tại.
+
 ![Lưới Phiếu hỗ trợ](../images/datasets-grid.png)
+
+[Xem lưới ở giao diện tối](../images/datasets-grid-dark.png)
 
 Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn ngang.
 
@@ -53,9 +60,9 @@ các thao tác này ở trạng thái tắt, kèm giải thích, cho các thành
 trị viên có thể chuyển tập dữ liệu nhóm cho thành viên khác bằng **Chuyển quyền
 sở hữu** trong menu tập dữ liệu.
 
-## Quyền truy cập
+## Quyền truy cập {#access}
 
-Menu **Quyền truy cập** cấp cho một workflow đã lưu quyền đọc hoặc ghi. Workflow
+Thẻ **Quyền truy cập** cấp cho một workflow đã lưu quyền đọc hoặc ghi. Workflow
 không có quyền đó không chạy được node Tập dữ liệu hoặc công cụ Tập dữ liệu trên
 bảng này. Xoá dòng là một quyền riêng: chọn **Cho phép xoá dòng** trên quyền đã
 cấp. Chỉ quyền đọc và ghi thì không được Xoá dòng.
@@ -87,7 +94,7 @@ cả khi có quyền đọc và ghi. Upsert vẫn cho biết đã có dòng mang
 chưa. Nếu điều này cần được giữ kín, hãy dùng **Thêm dòng**. Upsert không đổi giá
 trị nào thì giữ nguyên revision và thời điểm cập nhật của dòng.
 
-## CSV
+## CSV {#csv}
 
 **Nhập CSV** xem trước tệp trước khi ghi.
 
@@ -107,7 +114,7 @@ trị nào thì giữ nguyên revision và thời điểm cập nhật của dò
   thức được thêm dấu nháy đơn ở đầu. Khi nhập, dấu nháy đó được bỏ đi, nên xuất
   rồi nhập lại cho đúng các giá trị cũ. Bản tải về tối đa 16 MiB.
 
-## Workflow và xuất dự án
+## Workflow và xuất dự án {#workflows-and-export}
 
 Node Tập dữ liệu có thể tìm dòng, lấy một dòng, chèn dòng, upsert dòng, hoặc
 xoá dòng. **Xoá dòng** chọn dòng theo id dòng lấy từ state, hoặc theo một trường
@@ -135,12 +142,25 @@ triển khai có thể đổi backend mà không cần xuất lại. Đặt:
 Chạy `python agent.py --setup-datasets` hoặc lệnh TypeScript tương ứng trước
 lần chạy đầu. Setup lặp lại vẫn an toàn. Lệnh tạo các bảng của dự án và giữ
 những dòng đã có. Xoá dòng và thao tác ghi của Agent cũng chạy trên cơ sở dữ
-liệu độc lập, và mỗi lần ghi được lưu lại để lần thử lại trả về kết quả đầu. Ảnh chụp tắt trừ khi bạn chọn **Kèm các dòng hiện tại** cho
+liệu độc lập. Khi thử lại đúng yêu cầu trong thời hạn lưu biên nhận, hệ thống
+trả mã dòng và kết quả chèn ban đầu, kèm giá trị hiện tại nếu dòng còn tồn tại.
+Sau khi nâng cấp bản xuất độc lập, hãy chạy lại lệnh thiết lập để chuyển đổi
+biên nhận cũ. Ảnh chụp tắt trừ khi bạn chọn **Kèm các dòng hiện tại** cho
 binding độc lập. Khi đó gói chứa tối đa 1.000 dòng trong
 `dataset-snapshots.json`. Setup chỉ nhập dòng ảnh chụp khi id đó chưa được lưu,
 và từ chối ảnh chụp có lược đồ không khớp binding.
 
-## Sao lưu, nâng cấp, và giới hạn
+Trước khi chạy một quy trình có thể ghi dữ liệu, Studio yêu cầu xác nhận một
+lần trong phiên trình duyệt. Kiểm thử quy trình chỉ mô phỏng thao tác ghi.
+Nhật ký nút tập dữ liệu hiển thị thao tác, kết quả, số dòng và thời gian.
+Bạn có thể mở phần dữ liệu thô khi cần. Người quản lý có thể dùng **Cấp quyền**
+trong thông báo thiếu quyền để mở thẻ **Quyền truy cập** với quy trình đã chọn.
+
+Mã truy cập hợp lệ nhưng thiếu quyền thao tác trả về `403 DATASET_TOKEN_SCOPE`.
+Mã không hợp lệ, đã bị thu hồi hoặc thuộc tập dữ liệu khác trả về
+`401 AUTH_TOKEN_INVALID`.
+
+## Sao lưu, nâng cấp, và giới hạn {#backup-upgrade-and-limits}
 
 Sao lưu tệp SQLite độc lập bằng cách chép tệp khi không có tiến trình ghi, hoặc
 sao lưu PostgreSQL bằng `pg_dump`. Cơ sở Superstep giữ dòng của Studio trong

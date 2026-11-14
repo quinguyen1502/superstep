@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0344
 - Title: Accept the Dataset fixes and update the handbook
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0100
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -70,6 +70,12 @@ One acceptance pass proves the review findings are closed and the handbook state
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
+
+- 2026-11-14: Started acceptance on the integrated implementation heads from PRs #396 through #400. Final acceptance runs again after those PRs merge.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0335](../../artifacts/REV-0335-TASK-0344-dataset-fixes-acceptance.md) and QA [QA-0335](../../artifacts/QA-0335-TASK-0344-dataset-fixes-acceptance.md).
+
+- 2026-11-14: Owner approved merging PR #401 into develop after the final checks pass.
 
 ## Handoff Notes
 
