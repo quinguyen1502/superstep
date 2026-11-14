@@ -3,12 +3,12 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0353
-- Title: Add per-column validation rules and display formats
-- Status: backlog
+- Task ID: TASK-0352
+- Title: Add multi-select and auto-number fields
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -20,24 +20,24 @@
 
 ## Objective
 
-Managers set validation rules and display formats per column, and every writer enforces the rules.
+Datasets support multi-select values and server-assigned auto-numbers.
 
 ## Scope
 
 ### In Scope
 
-- Rules: text min and max length, number min and max and integer only, date and datetime min and max, email allowed domains.
-- Enforced for Studio edits, CSV import (per-row issues), Dataset node, Agent tool, tokens; a new rule on a dataset with violating rows is refused with the count and sample rows.
-- Display formats: number decimals, thousands separator, percent, currency code; date format presets; display only, stored values unchanged.
+- `multi_select`: array of declared options stored in the JSON row; operators `contains_any`, `contains_all`, `is_null`; CSV cells use `;` as the delimiter (owner-confirmed); not unique.
+- `auto_number`: assigned under the writer lock from a per-dataset counter, unique, read-only, never reused; added to an existing dataset it backfills by created order.
+- Node mapping, Agent tool schema, summaries, and filters per kind.
 - Python and TypeScript export parity lands in TASK-0356 and TASK-0357; this task documents the contract in `docs/dataset-export.md`.
 
 ### Out Of Scope
 
-- Regular expression rules (owner-confirmed: not offered, to avoid slow patterns); conditional formatting.
+- Option colors beyond theme tokens; user fields.
 
 ## Inputs
 
-- Schema service; CSV issue list from TASK-0340; PolarBase field validation as reference.
+- TASK-0351 type plumbing.
 
 ## Related Artifacts
 
@@ -48,15 +48,15 @@ Managers set validation rules and display formats per column, and every writer e
 
 ## Dependencies
 
-- REQ-0100 TASK-0338 and TASK-0340 merged; TASK-0351 merged.
+- TASK-0351 merged.
 
 ## Acceptance Criteria
 
-- A rule violation returns `DATASET_VALUE_INVALID` naming the rule from every writer; formats render in en/vi locales.
+- Concurrent inserts get distinct auto-numbers on both databases; multi-select filters return the expected rows.
 
 ## Tests
 
-- Rule tests per writer; Playwright schema editor and formatted grid.
+- Concurrency tests; filter tests; CSV round trip.
 
 ## Validation Plan
 
@@ -70,8 +70,14 @@ Managers set validation rules and display formats per column, and every writer e
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
-- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): no regular expression rules.
+- 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): `;` delimiter confirmed.
+
+- 2026-11-14: Readiness gate passed. Started stacked on scalar column types in PR #408.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0343](../../artifacts/REV-0343-TASK-0352-dataset-structured-field-types.md) and QA [QA-0343](../../artifacts/QA-0343-TASK-0352-dataset-structured-field-types.md).
+
+- 2026-11-14: Owner approved merging PR #410 into develop after successful checks.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0353-dataset-validation-formats` from `develop` when implementation begins.
+- Use branch `factory/task-0352-dataset-structured-field-types` from `develop` when implementation begins.

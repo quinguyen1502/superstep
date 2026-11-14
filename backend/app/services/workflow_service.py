@@ -160,6 +160,7 @@ class WorkflowService:
         example = {"input": json.loads(case.input), "answers": json.loads(case.answers)} if case else None
         datasets = dataset_export.prepare(
             [wf, *children.values()], lambda dataset_id: self.dataset_runtime.access.datasets.get(uid, dataset_id)["columns"],
+            phase3=exporter.id == "python",
         ) if self.dataset_runtime is not None else None
         return exporter, w, n, wf, children, example, managed_placeholders, datasets
 

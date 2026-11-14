@@ -1,7 +1,7 @@
 """Standalone Python Dataset runtime embedded in the exported graph."""
 from inspect import getsource
 
-from ..core import dataset_types
+from ..core import dataset_filters, dataset_rules, dataset_types
 from ..schemas import dataset
 from .dataset_nodes import INPUTS
 
@@ -11,11 +11,15 @@ def python_standalone() -> str:
     operation_inputs = {operation: sorted(args) for operation, args in INPUTS.items()}
     shared = [
         getsource(dataset_types).split("from .errors import AppError\n", 1)[1],
+        getsource(dataset_filters).split("from .dataset_types import COLUMN_KEY_PATTERN, FILTER_OPERATORS\n", 1)[1],
+        getsource(dataset_rules).split("from .errors import AppError\n", 1)[1],
         "ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]",
         f"DATASET_OPERATION_INPUTS = {operation_inputs!r}",
-        "RowValues = Annotated[dict[ColumnKey, CellValue], Field(max_length=100)]",
+        "RowValues = Annotated[dict[ColumnKey, DatasetValue], Field(max_length=100)]",
         *(getsource(cls) for cls in (dataset.DatasetFilter, dataset.DatasetSort, dataset.DatasetRowQuery,
-                                     dataset.DatasetRowIn, dataset.DatasetRowUpsert)),
+                                     dataset.DatasetQueryFilter, dataset.DatasetFilterRule, dataset.DatasetFilterGroup,
+                                     dataset.DatasetFilterQuery, dataset.DatasetGroupedRowQuery, dataset.DatasetSummaryQuery,
+                                     dataset.DatasetAggregateQuery, dataset.DatasetRowIn, dataset.DatasetRowUpsert)),
     ]
     return "\n".join((IMPORTS, *shared, STANDALONE))
 
@@ -25,15 +29,17 @@ IMPORTS = r'''
 import json
 import math
 import re
+from collections.abc import Iterator
 from datetime import date, datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 from time import time as dataset_now
 from typing import Annotated, Literal, TypeAlias, get_args
+from urllib.parse import urlsplit
 
 import sqlalchemy as sa
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
-from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from sqlalchemy.dialects.postgresql import JSONB, insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 
@@ -48,11 +54,12 @@ DATASET_METADATA = sa.MetaData()
 DATASET_DEFINITIONS = sa.Table("superstep_dataset_definitions", DATASET_METADATA,
     sa.Column("dataset_id", sa.String(100), primary_key=True),
     sa.Column("contract", sa.JSON, nullable=False),
+    sa.Column("auto_number_counter", sa.BigInteger, nullable=False, server_default="0"),
 )
 DATASET_ROWS = sa.Table("superstep_dataset_rows", DATASET_METADATA,
     sa.Column("dataset_id", sa.String(100), sa.ForeignKey(DATASET_DEFINITIONS.c.dataset_id), primary_key=True),
     sa.Column("id", sa.String(32), primary_key=True),
-    sa.Column("values", sa.JSON, nullable=False),
+    sa.Column("values", sa.JSON().with_variant(JSONB(), "postgresql"), nullable=False),
     sa.Column("revision", sa.Integer, nullable=False),
     sa.Column("created", sa.Float, nullable=False),
     sa.Column("updated", sa.Float, nullable=False),
@@ -173,20 +180,29 @@ def dataset_restore_snapshot(connection, dataset_id: str, binding: str) -> None:
         if not isinstance(values, dict) or set(values) - set(columns):
             raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", binding=binding)
         try:
-            stored = {field: dataset_normalize(column, values[field] if field in values else column["default"]) for field, column in columns.items()}
+            stored = {field: dataset_normalize(column, values[field] if field in values else column["default"]) for field, column in columns.items() if column["kind"] not in SYSTEM_TIME_KINDS}
         except AppError:
             raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", binding=binding) from None
         if dataset_size(stored) > MAX_ROW_BYTES:
             raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
-        prepared.append((item["id"], stored))
-    for row_id, stored in prepared:
+        now = dataset_now()
+        created, updated = item.get("created", now), item.get("updated", now)
+        if type(created) not in (int, float) or type(updated) not in (int, float):
+            raise AppError("DATASET_SNAPSHOT_INVALID", binding=binding)
+        prepared.append((item["id"], stored, created, updated))
+    watermark = max((stored.get(field) or 0 for _, stored, _, _ in prepared
+                     for field, column in columns.items() if column["kind"] == "auto_number"), default=0)
+    definitions = DATASET_DEFINITIONS
+    connection.execute(definitions.update().where(definitions.c.dataset_id == dataset_id,
+                                                   definitions.c.auto_number_counter < watermark)
+                       .values(auto_number_counter=watermark))
+    for row_id, stored, created, updated in prepared:
         if connection.scalar(sa.select(DATASET_ROWS.c.id).where(DATASET_ROWS.c.dataset_id == dataset_id, DATASET_ROWS.c.id == row_id)) is not None:
             continue
         count = connection.scalar(sa.select(sa.func.count()).select_from(DATASET_ROWS).where(DATASET_ROWS.c.dataset_id == dataset_id))
         if count >= MAX_DATASET_ROWS:
             raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
-        now = dataset_now()
-        connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=stored, revision=1, created=now, updated=now))
+        connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=stored, revision=1, created=created, updated=updated))
         entries = [{"dataset_id": dataset_id, "field": field, "digest": key_digest(stored[field]), "row_id": row_id}
                    for field, column in columns.items() if column["unique"] and stored.get(field) is not None]
         if entries:
@@ -208,6 +224,8 @@ def setup_datasets(*, create: bool) -> None:
                     connection.exec_driver_sql("BEGIN IMMEDIATE")
                 if create:
                     DATASET_METADATA.create_all(connection)
+                    if not any(column["name"] == "auto_number_counter" for column in sa.inspect(connection).get_columns(DATASET_DEFINITIONS.name)):
+                        connection.exec_driver_sql("ALTER TABLE superstep_dataset_definitions ADD COLUMN auto_number_counter BIGINT NOT NULL DEFAULT 0")
                     dataset_migrate_receipts(connection, backend == "postgresql")
                     insert = postgres_insert if backend == "postgresql" else sqlite_insert
                     connection.execute(insert(DATASET_DEFINITIONS).values(dataset_id=dataset_id, contract=dataset_contract(binding))
@@ -263,21 +281,32 @@ def dataset_column(columns: dict, field: str) -> dict:
     return columns[field]
 
 
-def dataset_normalize(column: dict, value, *, required: bool | None = None):
-    return normalize_cell(column["key"], column["kind"], value, column["options"],
-                          required=column["required"] if required is None else required)
+def dataset_normalize(column: dict, value, *, required: bool | None = None, validate_rule: bool = True):
+    normalized = normalize_cell(column["key"], column["kind"], value, column["options"],
+                                required=column["required"] if required is None else required)
+    return enforce_rules(column["key"], normalized, column.get("validation_rules")) if validate_rule else normalized
 
 
-def dataset_row_payload(row, fields: list[str]) -> dict:
-    return {"id": row.id, "revision": row.revision, "created": row.created, "updated": row.updated,
-            "values": {field: row["values"].get(field) for field in fields}}
+def dataset_row_payload(row, fields: list[str], columns: dict) -> dict:
+    values = {}
+    for field in fields:
+        kind = columns[field]["kind"]
+        stamp = row.created if kind == "created_time" else row.updated
+        values[field] = dataset_timestamp(stamp) if kind in SYSTEM_TIME_KINDS else row["values"].get(field)
+    return {"id": row.id, "revision": row.revision, "created": row.created, "updated": row.updated, "values": values}
 
 
 def dataset_expression(column: dict, postgres: bool):
+    kind = column["kind"]
+    if kind in SYSTEM_TIME_KINDS:
+        stamp = DATASET_ROWS.c.created if kind == "created_time" else DATASET_ROWS.c.updated
+        return sa.func.floor(stamp * 1000)
     value = DATASET_ROWS.c["values"][column["key"]]
-    if column["kind"] == "number":
+    if kind == "number":
         return value.as_float()
-    if column["kind"] == "boolean":
+    if kind == "auto_number":
+        return value.as_integer()
+    if kind == "boolean":
         return value.as_boolean()
     return value.as_string().collate("C" if postgres else "BINARY")
 
@@ -300,27 +329,52 @@ def dataset_contains(expression, value: str, connection):
     return position(dataset_fold(expression, connection), dataset_fold(sa.literal(value), connection)) > 0
 
 
-def dataset_filter(columns: dict, rule: DatasetFilter, dataset_id: str, connection):
+def dataset_filter(columns, rule, dataset_id, connection):
+    if isinstance(rule, DatasetFilterGroup):
+        combine = sa.or_ if rule.conjunction == "or" else sa.and_
+        return combine(*(dataset_filter(columns, child, dataset_id, connection) for child in rule.children))
     postgres = connection.dialect.name == "postgresql"
     column = dataset_column(columns, rule.field)
+    kind = column["kind"]
     expression = dataset_expression(column, postgres)
     op, value = rule.op, rule.value
-    if op not in filter_operators(column["kind"]):
+    if op not in filter_operators(kind):
         raise AppError("DATASET_FILTER_INVALID", field=rule.field)
     if op in {"is_null", "not_null"}:
         if value is not None:
             raise AppError("DATASET_FILTER_INVALID", field=rule.field)
         return expression.is_(None) if op == "is_null" else expression.is_not(None)
-    if op == "contains":
+    if op in {"contains", "not_contains"}:
         if not isinstance(value, str) or not 0 < len(value) <= 120 or INVALID_TEXT.search(value):
             raise AppError("DATASET_FILTER_INVALID", field=rule.field)
-        return dataset_contains(expression, value, connection)
-    value = dataset_normalize(column, value, required=True)
-    if op == "eq" and column["unique"]:
+        contains = dataset_contains(expression, value, connection)
+        return contains if op == "contains" else sa.or_(expression.is_(None), ~contains)
+    if op in LIST_FILTERS:
+        if not isinstance(value, list) or not 1 <= len(value) <= MAX_FILTER_VALUES:
+            raise AppError("DATASET_FILTER_INVALID", field=rule.field)
+        if kind == "multi_select":
+            normalized = dataset_normalize(column, value, required=True, validate_rule=False)
+            data = DATASET_ROWS.c["values"][column["key"]]
+            if postgres:
+                matches = [sa.cast(data, JSONB).contains([item]) for item in normalized]
+            else:
+                members = sa.func.json_each(data).table_valued("value", joins_implicitly=True)
+                matches = [sa.select(1).select_from(members).where(members.c.value == item).exists() for item in normalized]
+            return (sa.and_ if op == "contains_all" else sa.or_)(*matches)
+        value = [dataset_normalize(column, item, required=True, validate_rule=False) for item in value]
+    else:
+        value = dataset_normalize(column, value, required=True, validate_rule=False)
+    if op in {"eq", "in"} and column["unique"]:
+        hashes = [key_digest(item) for item in value] if op == "in" else [key_digest(value)]
         ids = sa.select(DATASET_KEYS.c.row_id).where(DATASET_KEYS.c.dataset_id == dataset_id,
-                                                     DATASET_KEYS.c.field == rule.field,
-                                                     DATASET_KEYS.c.digest == key_digest(value))
+                                                     DATASET_KEYS.c.field == rule.field, DATASET_KEYS.c.digest.in_(hashes))
         return DATASET_ROWS.c.id.in_(ids)
+    if kind in SYSTEM_TIME_KINDS:
+        value = [timestamp_millis(item) for item in value] if op in LIST_FILTERS else timestamp_millis(value)
+    if op == "in":
+        return expression.in_(value)
+    if op == "not_in":
+        return sa.or_(expression.is_(None), expression.not_in(value))
     if op == "ne":
         return expression.is_distinct_from(value)
     compare = {"eq": expression.__eq__, "lt": expression.__lt__,
@@ -328,10 +382,11 @@ def dataset_filter(columns: dict, rule: DatasetFilter, dataset_id: str, connecti
     return compare[op](value)
 
 
-def dataset_find(connection, query, dataset_id: str, columns: dict, fields: list[str], arguments: dict) -> dict:
-    params = DatasetRowQuery.model_validate(arguments)
+def dataset_filtered_query(connection, query, dataset_id, columns, params):
     postgres = connection.dialect.name == "postgresql"
-    if params.filters:
+    if params.filter_tree is not None:
+        query = query.where(dataset_filter(columns, params.filter_tree, dataset_id, connection))
+    elif params.filters:
         combine = sa.or_ if params.filter_mode == "or" else sa.and_
         query = query.where(combine(*(dataset_filter(columns, rule, dataset_id, connection) for rule in params.filters)))
     if params.search:
@@ -340,11 +395,55 @@ def dataset_find(connection, query, dataset_id: str, columns: dict, fields: list
         terms = [dataset_contains(dataset_expression(column, postgres), params.search, connection)
                  for column in columns.values() if column["kind"] in TEXT_KINDS]
         query = query.where(sa.or_(*terms) if terms else sa.false())
+    return query
+
+
+def dataset_aggregate(connection, query, dataset_id, columns, fields, arguments):
+    params = DatasetAggregateQuery.model_validate(arguments)
+    if set(params.summaries) - set(fields) or (params.group_by is not None and params.group_by not in fields):
+        raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+    query = dataset_filtered_query(connection, query, dataset_id, columns, params)
+    postgres = connection.dialect.name == "postgresql"
+    total = sa.func.count()
+    metrics = []
+    for key, operation in params.summaries.items():
+        column = dataset_column(columns, key)
+        if operation not in summary_functions(column["kind"]):
+            raise AppError("DATASET_SUMMARY_INVALID", field=key)
+        value = dataset_expression(column, postgres)
+        filled = sa.func.count(value)
+        metrics.append({
+            "count": filled, "empty_count": total - filled,
+            "empty_percent": 100.0 * (total - filled) / sa.func.nullif(total, 0),
+            "unique_count": sa.func.count(value.distinct()),
+            "sum": sa.func.sum(value), "avg": sa.func.avg(value), "min": sa.func.min(value), "max": sa.func.max(value),
+        }[operation])
+    group = dataset_expression(columns[params.group_by], postgres) if params.group_by else sa.literal(None)
+    statement = query.with_only_columns(group, total, *metrics)
+    if params.group_by:
+        statement = statement.group_by(group).order_by(total.desc(), group.asc().nulls_last()).limit(MAX_AGGREGATE_GROUPS + 1)
+    result = connection.execute(statement).all()
+    output = []
+    for group_value, count, *values in result[:MAX_AGGREGATE_GROUPS]:
+        if group_value is not None and columns[params.group_by]["kind"] in SYSTEM_TIME_KINDS:
+            group_value = dataset_timestamp(group_value / 1000)
+        output.append({"group": group_value, "total": count, "values": {
+            key: dataset_timestamp(value / 1000) if value is not None and op in {"min", "max"}
+            and columns[key]["kind"] in SYSTEM_TIME_KINDS else value
+            for (key, op), value in zip(params.summaries.items(), values, strict=True)
+        }})
+    return {"group_by": params.group_by, "groups": output, "truncated": len(result) > MAX_AGGREGATE_GROUPS}
+
+
+def dataset_find(connection, query, dataset_id: str, columns: dict, fields: list[str], arguments: dict) -> dict:
+    params = DatasetGroupedRowQuery.model_validate(arguments)
+    postgres = connection.dialect.name == "postgresql"
+    query = dataset_filtered_query(connection, query, dataset_id, columns, params)
     order = []
     for sort in params.sorts or []:
         column = dataset_column(columns, sort.field)
         expr = dataset_expression(column, postgres)
-        keys = [expr] if column["kind"] in {"number", "boolean"} else [dataset_fold(expr, connection), expr]
+        keys = [expr] if column["kind"] in {"number", "boolean", "auto_number"} | SYSTEM_TIME_KINDS else [dataset_fold(expr, connection), expr]
         order.extend((key.desc() if sort.descending else key.asc()).nulls_last() for key in keys)
     query = query.order_by(*(order or [DATASET_ROWS.c.created]), DATASET_ROWS.c.id)
     rows = connection.execute(query.offset(params.offset).limit(params.limit + 1)).mappings()
@@ -352,7 +451,7 @@ def dataset_find(connection, query, dataset_id: str, columns: dict, fields: list
     for row in rows:
         if len(items) == params.limit:
             return {"items": items, "next_offset": params.offset + len(items), "schema_revision": 1}
-        item = dataset_row_payload(row, fields)
+        item = dataset_row_payload(row, fields, columns)
         remaining -= dataset_size(item)
         if remaining < 0:
             return {"items": items, "next_offset": params.offset + len(items), "schema_revision": 1}
@@ -366,6 +465,9 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
     request = schema.model_validate(arguments)
+    for field in request.values:
+        if dataset_column(columns, field)["kind"] in READ_ONLY_KINDS:
+            raise AppError("DATASET_COLUMN_READ_ONLY", field=field)
     incoming = {key: dataset_normalize(dataset_column(columns, key), value) for key, value in request.values.items()}
     key = request.key if operation == "upsert_row" else None
     if key and (not dataset_column(columns, key)["unique"] or incoming.get(key) is None):
@@ -379,7 +481,7 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
             raise AppError("DATASET_RECEIPT_CONFLICT")
         result = previous.result
         row = connection.execute(query.where(DATASET_ROWS.c.id == result["row_id"])).mappings().one_or_none()
-        outcome = dataset_row_payload(row, fields) if row is not None and fields else {
+        outcome = dataset_row_payload(row, fields, columns) if row is not None and fields else {
             "id": result["row_id"], "revision": row.revision if row is not None else result["revision"],
         }
         return {"row": outcome, "inserted": result["inserted"]}
@@ -395,7 +497,14 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
         if count >= MAX_DATASET_ROWS:
             raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
         values = {field: incoming[field] if field in incoming else dataset_normalize(column, column["default"])
-                  for field, column in columns.items()}
+                  for field, column in columns.items() if column["kind"] not in READ_ONLY_KINDS}
+        definitions = DATASET_DEFINITIONS
+        auto_columns = [field for field, column in columns.items() if column["kind"] == "auto_number"]
+        if auto_columns:
+            number = connection.scalar(definitions.update().where(definitions.c.dataset_id == dataset_id)
+                                       .values(auto_number_counter=definitions.c.auto_number_counter + 1)
+                                       .returning(definitions.c.auto_number_counter))
+            values.update(dict.fromkeys(auto_columns, number))
     else:
         values = {**row["values"], **incoming}
     if dataset_size(values) > MAX_ROW_BYTES:
@@ -417,7 +526,7 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
             raise AppError("DATASET_UNIQUE_CONFLICT") from None
     stored = connection.execute(query.where(DATASET_ROWS.c.id == row_id)).mappings().one()
     # An empty field list asks for identifiers only, the shape a write-only connected token receives.
-    outcome = dataset_row_payload(stored, fields) if fields else {"id": stored["id"], "revision": stored["revision"]}
+    outcome = dataset_row_payload(stored, fields, columns) if fields else {"id": stored["id"], "revision": stored["revision"]}
     result = {"row": outcome, "inserted": row is None}
     connection.execute(receipts.insert().values(dataset_id=dataset_id, operation_id=operation_id,
                                                 fingerprint=fingerprint, created=now,
@@ -496,6 +605,8 @@ def dataset_standalone(binding: str, backend: str, operation: str, fields: list[
                 return dataset_delete(connection, query, dataset_id, columns, fields, arguments, operation_id)
             if write:
                 return dataset_write(connection, query, dataset_id, columns, operation, fields, arguments, operation_id)
+            if operation == "aggregate_rows":
+                return dataset_aggregate(connection, query, dataset_id, columns, fields, arguments)
             if operation == "find_rows":
                 return dataset_find(connection, query, dataset_id, columns, fields, arguments)
             if operation == "get_row":
@@ -505,7 +616,7 @@ def dataset_standalone(binding: str, backend: str, operation: str, fields: list[
                 row = connection.execute(query.where(DATASET_ROWS.c.id == row_id)).mappings().one_or_none()
                 if row is None:
                     raise AppError("DATASET_ROW_NOT_FOUND")
-                return dataset_row_payload(row, fields)
+                return dataset_row_payload(row, fields, columns)
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     except ValidationError:
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID") from None
