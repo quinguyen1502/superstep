@@ -10,7 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..core.dataset_types import MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, CellValue, dataset_timestamp, key_digest, timestamp_millis, write_fingerprint
+from ..core.dataset_types import MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, MAX_ROW_BYTES, CellValue, dataset_size, dataset_timestamp, key_digest, timestamp_millis, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
@@ -353,6 +353,64 @@ class DatasetRowRepository:
                                                 fingerprint=fingerprint, result=result, created=now))
             self._commit(session)
             return row, inserted, False, changed
+
+    def batch_update(self, uid: str, dataset: Dataset, updates: dict) -> list[dict]:
+        def issue(row_id, field, code, **params):
+            return {"id": row_id, "field": field, "error": AppError(code, **params).to_dict()}
+
+        with self.datasets.db.session() as session:
+            self.datasets.lock(session, uid, dataset.id, dataset.revision)
+            statement = select(DatasetRow).where(DatasetRow.dataset_id == dataset.id, DatasetRow.id.in_(updates))
+            rows = {row.id: row for row in session.scalars(statement)}
+            changed, issues = {}, []
+            for row_id, (revision, cells) in updates.items():
+                row = rows.get(row_id)
+                row_error = "DATASET_ROW_NOT_FOUND" if row is None else "DATASET_ROW_CONFLICT" if row.revision != revision else None
+                if row_error:
+                    issues.extend(issue(row_id, field, row_error) for field in cells)
+                    continue
+                previous = {field: row.values.get(field) for field, value in cells.items() if row.values.get(field) != value}
+                if not previous:
+                    continue
+                next_values = {**row.values, **cells}
+                if dataset_size(next_values) > MAX_ROW_BYTES:
+                    issues.extend(issue(row_id, field, "DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES) for field in previous)
+                    continue
+                changed[row_id] = (row, previous, next_values)
+            if issues:
+                raise AppError("DATASET_BATCH_CONFLICT", details={"issues": issues})
+
+            keys = {}
+            unique = {column.key for column in dataset.columns if column.unique and not column.archived}
+            for row_id, (_, previous, values) in changed.items():
+                for field in previous.keys() & unique:
+                    value = values[field]
+                    if value is None:
+                        continue
+                    identity = (field, key_digest(value))
+                    if identity in keys:
+                        issues.append(issue(row_id, field, "DATASET_UNIQUE_CONFLICT"))
+                        issues.append(issue(keys[identity], field, "DATASET_UNIQUE_CONFLICT"))
+                    keys[identity] = row_id
+            for (field, digest), row_id in keys.items():
+                existing = session.get(DatasetRowKey, (dataset.id, field, digest))
+                if existing is not None and (existing.row_id not in changed or field not in changed[existing.row_id][1]):
+                    issues.append(issue(row_id, field, "DATASET_UNIQUE_CONFLICT"))
+            if issues:
+                raise AppError("DATASET_BATCH_CONFLICT", details={"issues": issues})
+
+            if changed:
+                session.execute(delete(DatasetRowKey).where(
+                    DatasetRowKey.dataset_id == dataset.id, DatasetRowKey.row_id.in_(changed),
+                ))
+            now = time()
+            result = []
+            for row, previous, values in changed.values():
+                row.values, row.updated, row.revision = values, now, row.revision + 1
+                session.add_all(self._keys(dataset, row))
+                result.append({"id": row.id, "revision": row.revision, "previous": previous})
+            self._commit(session)
+            return result
 
     @staticmethod
     def _keys(dataset: Dataset, row: DatasetRow) -> Iterator[DatasetRowKey]:

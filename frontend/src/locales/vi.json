@@ -888,6 +888,8 @@
     "DATASET_SCHEMA_HAS_ROWS": "Cột bắt buộc cần giá trị mặc định khi tập dữ liệu đã có dòng",
     "DATASET_ROW_NOT_FOUND": "Không tìm thấy dòng trong tập dữ liệu",
     "DATASET_ROW_CONFLICT": "Dòng đã thay đổi. Hãy tải lại và thử lại",
+    "DATASET_BATCH_INVALID": "Một hoặc nhiều ô trong tập dữ liệu không hợp lệ.",
+    "DATASET_BATCH_CONFLICT": "Thay đổi hàng loạt xung đột với các dòng hiện tại.",
     "DATASET_UNIQUE_CONFLICT": "Đã có dòng sử dụng giá trị duy nhất này",
     "DATASET_UNIQUE_DUPLICATES": "Không thể đặt trường {{field}} là duy nhất vì có {{count}} dòng trùng giá trị",
     "DATASET_EXPORT_FILTER_UNSUPPORTED": "Tính năng xuất mã chưa hỗ trợ bộ lọc tập dữ liệu này",
