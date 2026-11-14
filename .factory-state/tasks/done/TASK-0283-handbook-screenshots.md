@@ -61,6 +61,11 @@ Replace the README and handbook screenshots that no longer match the Studio UI o
 
 - Merged into develop via PR #347 at `f8c76fba`. The lifecycle was reconciled on 2026-11-14.
 
+## Review and QA History
+
+- Review: [Merged PR #347](https://github.com/quinguyen1502/superstep/pull/347) contains the delivered scope and merge history. No separate review artifact was recorded.
+- QA: The original PR records the screenshot capture specs and successful handbook, quickstart, and supporting capture runs. See the validation section of the merged PR.
+
 ## Handoff Notes
 
 - Branch `factory/task-0283-handbook-screenshots`. Do not merge without the owner.
