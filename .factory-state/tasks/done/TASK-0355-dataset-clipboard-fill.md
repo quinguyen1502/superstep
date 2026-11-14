@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0355
 - Title: Add range selection, clipboard paste, and fill to the Dataset grid
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -79,6 +79,8 @@ Users select a cell range, copy and paste with spreadsheets, and fill a selectio
 - 2026-11-14: Readiness gate passed. Started stacked on the atomic batch API in PR #412 and TanStack 9 in PR #409.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0346](../../artifacts/REV-0346-TASK-0355-dataset-clipboard-fill.md) and QA [QA-0346](../../artifacts/QA-0346-TASK-0355-dataset-clipboard-fill.md).
+
+- 2026-11-14: Owner approved merging PR #413 into develop after successful checks.
 
 ## Handoff Notes
 
