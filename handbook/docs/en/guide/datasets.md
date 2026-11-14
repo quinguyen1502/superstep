@@ -180,3 +180,27 @@ Supported bounds:
 | Snapshot in a project | 1,000 rows |
 
 A Dataset write receipt keeps the row identifier and outcome for 30 days by default. An exact retry returns the same row ID and insert outcome, with current values when the caller can read the row. A retry after row deletion returns identifiers only until the receipt expires. After expiry, the write can run again.
+
+## Triage support tickets {#support-ticket-triage}
+
+1. Give each ticket an **Auto-number** ID and a **URL** for its reference. Set
+   the priority column to **Number**, then require whole numbers from 1 to 5
+   in **Edit column**. Studio validates edits and clipboard values before it
+   saves them. Auto-number values are assigned as rows are added.
+2. Select the first priority cell and paste a column of values from your
+   spreadsheet. Extend your selection down with **Shift + ↓**. From
+   **Clipboard**, choose **Fill down** to copy the first selected value to the
+   rest of the selection. **Undo** reverses the last clipboard edit.
+3. Open **Filter**. Add **Status equals Open**, then add a group set to
+   **Match any (OR)** for priority conditions. Apply the filter. Turn on
+   **Summary** and choose **Sum** under Priority. The result uses all matching
+   rows, including rows on other pages. Choose **Team** under **Group by** and
+   expand a team to inspect its matching tickets.
+4. Grant an Agent workflow read access under **Access**. In its Dataset tool,
+   enable **Aggregate**, select Team, Status and Priority, and allow the
+   filters the Agent needs. Ask for the sum of Priority grouped by Team for
+   open tickets. The Agent can answer from the grouped totals.
+
+![Filtered tickets grouped by team with the priority summary](../images/datasets-triage.png)
+
+[View the same grid in dark mode](../images/datasets-triage-dark.png)

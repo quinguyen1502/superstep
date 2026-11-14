@@ -42,7 +42,7 @@ Deliver Datasets phase 3 (REQ-0101) after the phase 2 chain and the REQ-0100 fix
 | [TASK-0355](../tasks/done/TASK-0355-dataset-clipboard-fill.md) | P2 | TanStack cell selection and copy; typed paste, fill down and right, one-step undo | DEC-0101, TASK-0354, TASK-0350 |
 | [TASK-0356](../tasks/review/TASK-0356-dataset-export-python-phase3.md) | P1 | Python export parity | TASK-0345, TASK-0348, TASK-0351, TASK-0352, TASK-0353, TASK-0343 |
 | [TASK-0357](../tasks/review/TASK-0357-dataset-export-typescript-phase3.md) | P1 | TypeScript export parity | Same as TASK-0356 |
-| [TASK-0358](../tasks/doing/TASK-0358-datasets-phase3-acceptance.md) | P1 | Acceptance scenario and handbook | All PLAN-0019 tasks |
+| [TASK-0358](../tasks/review/TASK-0358-datasets-phase3-acceptance.md) | P1 | Acceptance scenario and handbook | All PLAN-0019 tasks |
 
 ## Sequence
 

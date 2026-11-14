@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0358
 - Title: Accept Datasets phase 3 and update the handbook
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -68,6 +68,10 @@ One end-to-end path and the handbook cover phase 3.
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+
+- 2026-11-14: Acceptance work is stacked on the unmerged TypeScript export and clipboard branches. Merge this task only after all PLAN-0019 dependencies have merged.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0349](../../artifacts/REV-0349-TASK-0358-datasets-phase3-acceptance.md) and QA [QA-0349](../../artifacts/QA-0349-TASK-0358-datasets-phase3-acceptance.md).
 
 ## Handoff Notes
 
