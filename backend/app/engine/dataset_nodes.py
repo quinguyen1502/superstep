@@ -2,18 +2,20 @@
 from __future__ import annotations
 
 import re
+from typing import get_args
 
 from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_DEPTH, MAX_FILTER_RULES, MAX_FILTER_VALUES, filter_rules, tree_rules
-from ..core.dataset_types import FILTER_OPERATORS
+from ..core.dataset_types import FILTER_OPERATORS, SummaryFunction
 from ..core.errors import AppError
 from .issues import Issue
 from .templating import refs, value
 
 SCOPE = "_dataset_workflow"
 DRY_RUN = "_dataset_dry_run"
-ACCESS = {"find_rows": "read", "get_row": "read", "insert_row": "write", "upsert_row": "write", "delete_row": "delete"}
+ACCESS = {"find_rows": "read", "aggregate_rows": "read", "get_row": "read", "insert_row": "write", "upsert_row": "write", "delete_row": "delete"}
 INPUTS = {
     "find_rows": {"filter_tree", "filters", "filter_mode", "search", "sorts", "limit", "offset"},
+    "aggregate_rows": {"filter_tree", "filters", "filter_mode", "search", "summaries", "group_by"},
     "get_row": {"row_id"},
     "insert_row": {"values"},
     "upsert_row": {"values", "key"},
@@ -21,7 +23,7 @@ INPUTS = {
 }
 AGENT_MAX_ROWS = 20
 AGENT_MAX_FILTERS = 12
-AGENT_OPERATIONS = ("find_rows", "insert_row", "upsert_row")  # an Agent can never delete
+AGENT_OPERATIONS = ("find_rows", "aggregate_rows", "insert_row", "upsert_row")  # an Agent can never delete
 AGENT_WRITES = ("insert_row", "upsert_row")
 KEY = re.compile(r"[a-z][a-z0-9_]{0,62}")
 
@@ -78,6 +80,13 @@ def delete_target(arguments: dict) -> tuple[str | None, str | None, object]:
     return None, arguments["key"], arguments["value"]
 
 
+def _valid_aggregate(args, fields):
+    summaries, grouping = args.get("summaries"), args.get("group_by")
+    return (isinstance(summaries, dict) and bool(summaries)
+            and all(field in fields and op in get_args(SummaryFunction) for field, op in summaries.items())
+            and (grouping is None or grouping in fields))
+
+
 def valid(data: dict) -> bool:
     if not isinstance(data, dict):
         return False
@@ -92,7 +101,7 @@ def valid(data: dict) -> bool:
             or not all(_key(field) for field in fields) or len(set(fields)) != len(fields)
             or not isinstance(args, dict) or set(args) - INPUTS[operation]):
         return False
-    if operation == "find_rows":
+    if operation in {"find_rows", "aggregate_rows"}:
         for name in ("filters", "sorts"):
             rules = args.get(name, [])
             if not isinstance(rules, list) or len(rules) > 12:
@@ -106,6 +115,8 @@ def valid(data: dict) -> bool:
                 list(tree_rules(args["filter_tree"]))
             except ValueError:
                 return False
+        if operation == "aggregate_rows" and not _valid_aggregate(args, fields):
+            return False
     elif operation == "get_row":
         return isinstance(args.get("row_id"), str) and bool(args["row_id"])
     elif operation == "delete_row":
@@ -171,17 +182,27 @@ def agent_parameters(tool: dict) -> dict:
     ok = valid_agent(binding)
     operations = binding["operations"] if ok else ["find_rows"]
     writes = agent_writes(binding) if ok else []
-    allowed = binding["filter_ops"] if ok and "find_rows" in operations else {}
+    aggregates = "aggregate_rows" in operations
+    allowed = binding["filter_ops"] if ok and ({"find_rows", "aggregate_rows"} & set(operations)) else {}
     properties: dict = {}
     required: list[str] = []
-    if writes:
+    if writes or aggregates:
         properties["operation"] = {
             "type": "string", "enum": [op for op in AGENT_OPERATIONS if op in operations],
-            "description": "find_rows looks rows up. insert_row adds a row. upsert_row updates the row whose "
-                           f"{binding.get('key')} matches, or adds it." if "upsert_row" in writes
-                           else "find_rows looks rows up. insert_row adds a row.",
+            "description": "find_rows looks rows up. aggregate_rows returns summary statistics. "
+                           "insert_row adds a row. upsert_row updates a matching row or adds it.",
         }
         required.append("operation")
+    if aggregates:
+        properties["summaries"] = {
+            "type": "object", "minProperties": 1, "additionalProperties": False,
+            "description": "Aggregate only. Map a selected column to its summary function.",
+            "properties": {field: {"enum": list(get_args(SummaryFunction))} for field in binding["fields"]},
+        }
+        properties["group_by"] = {
+            "enum": [*binding["fields"], None], "description": "Aggregate only. Optionally group by one selected column.",
+        }
+    if writes:
         properties["values"] = {
             "type": "object", "additionalProperties": False,
             "description": "Field values for insert_row or upsert_row. Omit for find_rows."
@@ -228,12 +249,16 @@ def agent_query(tool: dict, args: dict, scope: str | None) -> tuple[dict, dict]:
     if not valid_agent(binding) or not isinstance(args, dict):
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     writes = agent_writes(binding)
-    operation = args.get("operation", "find_rows") if writes else "find_rows"
-    if operation not in binding["operations"] or (not writes and "operation" in args):
+    explicit = bool(writes) or "aggregate_rows" in binding["operations"]
+    operation = args.get("operation", "find_rows") if explicit else "find_rows"
+    if operation not in binding["operations"] or (not explicit and "operation" in args):
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     if operation in AGENT_WRITES:
         return _agent_write(binding, operation, args, scope)
-    if set(args) - {"filters", "filter_tree", "operation"} or {"filters", "filter_tree"} <= args.keys():
+    read_inputs = {"filters", "filter_tree", "operation"}
+    if operation == "aggregate_rows":
+        read_inputs.update({"summaries", "group_by"})
+    if set(args) - read_inputs or {"filters", "filter_tree"} <= args.keys():
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     filters = args.get("filters", [])
     if not isinstance(filters, list) or len(filters) > AGENT_MAX_FILTERS:
@@ -249,6 +274,11 @@ def agent_query(tool: dict, args: dict, scope: str | None) -> tuple[dict, dict]:
         if rule.get("op") not in allowed.get(rule["field"], []):
             raise AppError("DATASET_FILTER_INVALID", field=rule["field"])
     query = {"filters": filters} if args.get("filter_tree") is None else {"filter_tree": args["filter_tree"]}
+    if operation == "aggregate_rows":
+        query.update(summaries=args.get("summaries"), group_by=args.get("group_by"))
+        if not _valid_aggregate(query, binding["fields"]):
+            raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+        return {**binding, "operation": operation, "arguments": query, SCOPE: scope}, query
     return {**binding, SCOPE: scope}, {**binding["arguments"], **query}
 
 

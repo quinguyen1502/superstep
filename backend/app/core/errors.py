@@ -48,6 +48,7 @@ CATALOG: dict[str, tuple[int, str]] = {
     "DATASET_UNIQUE_CONFLICT": (409, "A row already has this unique field value"),
     "DATASET_UNIQUE_DUPLICATES": (409, "Field {field} cannot become unique because {count} rows share a value"),
     "DATASET_EXPORT_FILTER_UNSUPPORTED": (400, "This Dataset filter is not yet supported by code export"),
+    "DATASET_EXPORT_AGGREGATE_UNSUPPORTED": (400, "Dataset aggregation is not yet supported by code export"),
     "DATASET_FILTER_INVALID": (400, "Invalid dataset filter for {field}"),
     "DATASET_SUMMARY_INVALID": (400, "Invalid dataset summary for {field}"),
     "DATASET_UPSERT_KEY_INVALID": (400, "Upsert requires a value for the unique field {field}"),

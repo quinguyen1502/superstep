@@ -152,6 +152,10 @@ class DatasetSummaryQuery(DatasetFilterQuery):
     summaries: dict[ColumnKey, SummaryFunction] = Field(min_length=1, max_length=100)
 
 
+class DatasetAggregateQuery(DatasetSummaryQuery):
+    group_by: ColumnKey | None = None
+
+
 DatasetPermission = Literal["read", "write", "read_write"]
 
 

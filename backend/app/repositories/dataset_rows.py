@@ -9,7 +9,7 @@ from sqlalchemy import and_, delete, func, literal, or_, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..core.dataset_types import MAX_DATASET_ROWS, TEXT_FOLD_FUNCTION, CellValue, key_digest, write_fingerprint
+from ..core.dataset_types import MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, TEXT_FOLD_FUNCTION, CellValue, key_digest, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
@@ -139,6 +139,23 @@ def _predicate(spec: RowFilter | RowFilterGroup, dataset_id: str, texts: _Text):
     }[op](value)
 
 
+def _summary_expression(column, operation, texts, matched):
+    value = _column_value(column)
+    if column.kind not in {"number", "boolean"}:
+        value = texts.exact(value)
+    filled = func.count(value)
+    return {
+        "count": filled,
+        "empty_count": matched - filled,
+        "empty_percent": 100.0 * (matched - filled) / func.nullif(matched, 0),
+        "unique_count": func.count(value.distinct()),
+        "sum": func.sum(value),
+        "avg": func.avg(value),
+        "min": func.min(value),
+        "max": func.max(value),
+    }[operation]
+
+
 class DatasetRowRepository:
     def __init__(self, datasets: DatasetRepository):
         self.datasets = datasets
@@ -175,29 +192,26 @@ class DatasetRowRepository:
 
     def summarize(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup],
                   filter_mode: str, search: str | None, search_columns: list[DatasetColumn],
-                  summaries: list[tuple[DatasetColumn, str]]) -> tuple[int, dict[str, CellValue]]:
+                  summaries: list[tuple[DatasetColumn, str]], group_by: DatasetColumn | None = None) -> list[dict]:
         query, texts = self._filtered_query(dataset_id, filters, filter_mode, search, search_columns)
         matched = func.count()
-        metrics = []
-        for column, operation in summaries:
-            value = _column_value(column)
-            if column.kind not in {"number", "boolean"}:
-                value = texts.exact(value)
-            filled = func.count(value)
-            expression = {
-                "count": filled,
-                "empty_count": matched - filled,
-                "empty_percent": 100.0 * (matched - filled) / func.nullif(matched, 0),
-                "unique_count": func.count(value.distinct()),
-                "sum": func.sum(value),
-                "avg": func.avg(value),
-                "min": func.min(value),
-                "max": func.max(value),
-            }[operation]
-            metrics.append(expression)
+        metrics = [_summary_expression(column, operation, texts, matched) for column, operation in summaries]
+        if group_by is None:
+            statement = query.with_only_columns(literal(None), matched, *metrics)
+        else:
+            key = _column_value(group_by)
+            if group_by.kind not in {"number", "boolean"}:
+                key = texts.exact(key)
+            statement = query.with_only_columns(key, matched, *metrics).group_by(key)
+            statement = statement.order_by(matched.desc(), key.asc().nulls_last()).limit(MAX_AGGREGATE_GROUPS + 1)
         with self.datasets.db.session() as session:
-            total, *values = session.execute(query.with_only_columns(matched, *metrics)).one()
-        return total, {column.key: value for (column, _), value in zip(summaries, values, strict=True)}
+            groups = session.execute(statement).all()
+        return [
+            {"group": key, "total": total, "values": {
+                column.key: value for (column, _), value in zip(summaries, values, strict=True)
+            }}
+            for key, total, *values in groups
+        ]
 
     def query_page(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup], filter_mode: str, search: str | None,
                    search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],

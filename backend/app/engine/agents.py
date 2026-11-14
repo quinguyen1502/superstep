@@ -218,6 +218,15 @@ def dataset_result(page: dict) -> tuple[str, int]:
         if page.get("dry_run"):
             outcome["simulated"] = True
         return shorten(json.dumps(outcome, ensure_ascii=False), RESULT_CHARS), 1
+    if "groups" in page:
+        groups, size = [], len(json.dumps({**page, "groups": []}, ensure_ascii=False)) + 5
+        for group in page["groups"]:
+            size += len(json.dumps(group, ensure_ascii=False)) + 2
+            if size > RESULT_CHARS:
+                break
+            groups.append(group)
+        result = {**page, "groups": groups, "truncated": page["truncated"] or len(groups) < len(page["groups"])}
+        return json.dumps(result, ensure_ascii=False), len(groups)
     rows, size = [], 0
     for item in page["items"]:
         row = json.dumps(item["values"], ensure_ascii=False)
@@ -232,7 +241,7 @@ def dataset_result(page: dict) -> tuple[str, int]:
 def dataset_step(args: Any) -> Dict[str, Any]:
     """The operation name for the trace. Values stay in the model message only."""
     operation = args.get("operation") if isinstance(args, dict) else None
-    return {"operation": operation} if operation in dataset_nodes.AGENT_WRITES else {}
+    return {"operation": operation} if operation in (*dataset_nodes.AGENT_WRITES, "aggregate_rows") else {}
 
 
 def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None, dataset_scope=None, call_id=None) -> Any:
@@ -244,7 +253,7 @@ def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str,
             raise AppError("DATASET_GRANT_DENIED")
         binding, query = dataset_nodes.agent_query(t, args, dataset_scope)
         # One receipt per logical tool call: a retry of this call replays, another call writes again.
-        key = f"{effects.key(nid)}#{call_id}" if effects is not None and call_id and binding["operation"] != "find_rows" else None
+        key = f"{effects.key(nid)}#{call_id}" if effects is not None and call_id and binding["operation"] in dataset_nodes.AGENT_WRITES else None
         return ports.dataset_call(binding, query, key)
     if src == "knowledge":
         if ports.retrieve is None: raise RuntimeError("Agent knowledge base tools need a knowledge base service")

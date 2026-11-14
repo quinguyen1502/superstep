@@ -32,6 +32,8 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
             contract = out.bindings[alias]
             columns = {column["key"]: column for column in contract["columns"]}
             args = binding.get("arguments") or {}
+            if operation == "aggregate_rows" or "aggregate_rows" in binding.get("operations", []):
+                raise AppError("DATASET_EXPORT_AGGREGATE_UNSUPPORTED")
             new_operators = LIST_FILTERS | {"not_contains"}
             if (args.get("filter_tree") is not None
                     or any(rule.get("op") in new_operators for rule in args.get("filters", []))

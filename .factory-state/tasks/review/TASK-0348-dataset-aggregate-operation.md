@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0348
 - Title: Let Agents and workflows aggregate Dataset rows
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -71,6 +71,10 @@ An Agent tool and the Dataset node can count, sum, average, or take min and max 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+
+- 2026-11-14: Readiness gate passed. Started stacked on the summary engine in PR #405.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0339](../../artifacts/REV-0339-TASK-0348-dataset-aggregate-operation.md) and QA [QA-0339](../../artifacts/QA-0339-TASK-0348-dataset-aggregate-operation.md).
 
 ## Handoff Notes
 
