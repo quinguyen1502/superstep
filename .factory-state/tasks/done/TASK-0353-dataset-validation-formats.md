@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0353
 - Title: Add per-column validation rules and display formats
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -75,6 +75,8 @@ Managers set validation rules and display formats per column, and every writer e
 - 2026-11-14: Readiness gate passed. Started stacked on scalar fields in PR #408. Integrated after PR #410 to keep the Dataset migration history linear.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0344](../../artifacts/REV-0344-TASK-0353-dataset-validation-formats.md) and QA [QA-0344](../../artifacts/QA-0344-TASK-0353-dataset-validation-formats.md).
+
+- 2026-11-14: Owner approved merging PR #411 into develop after successful checks.
 
 ## Handoff Notes
 
