@@ -94,11 +94,11 @@
     }
   },
   "dataset": {
-    "invalidNodeFilter": "Invalid dataset filter {{position}} for {{field}} in node {{node}}",
-    "emptyMappedFilter": "Dataset filter {{position}} for {{field}} in node {{node}} needs a value from state.{{state_key}}",
     "pageSize": "Rows per page",
     "visibleRange": "{{start}}–{{end}} of {{total}}",
     "visibleRangeCapped": "{{start}}–{{end}} of {{total}}+",
+    "invalidNodeFilter": "Invalid dataset filter {{position}} for {{field}} in node {{node}}",
+    "emptyMappedFilter": "Dataset filter {{position}} for {{field}} in node {{node}} needs a value from state.{{state_key}}",
     "title": "Datasets",
     "navigation": "Studio navigation",
     "catalog": "Dataset catalog",

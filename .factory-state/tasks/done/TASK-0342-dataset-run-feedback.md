@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0342
 - Title: Summarize Dataset node runs and offer a Grant shortcut
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -75,6 +75,8 @@ Run traces for Dataset nodes read as a sentence, Studio Run warns before writing
 - 2026-11-14: Started on the TASK-0341 branch while its Access view awaits integration. The PR depends on TASK-0341.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0333](../../artifacts/REV-0333-TASK-0342-dataset-run-feedback.md) and QA [QA-0333](../../artifacts/QA-0333-TASK-0342-dataset-run-feedback.md).
+
+- 2026-11-14: Owner approved merging PR #399 into develop after the final checks pass.
 
 ## Handoff Notes
 

@@ -94,11 +94,11 @@
     }
   },
   "dataset": {
-    "invalidNodeFilter": "Bộ lọc tập dữ liệu số {{position}} cho {{field}} không hợp lệ tại nút {{node}}",
-    "emptyMappedFilter": "Bộ lọc tập dữ liệu số {{position}} cho {{field}} tại nút {{node}} cần giá trị từ state.{{state_key}}",
     "pageSize": "Số hàng mỗi trang",
     "visibleRange": "{{start}}–{{end}} trên {{total}}",
     "visibleRangeCapped": "{{start}}–{{end}} trên {{total}}+",
+    "invalidNodeFilter": "Bộ lọc tập dữ liệu số {{position}} cho {{field}} không hợp lệ tại nút {{node}}",
+    "emptyMappedFilter": "Bộ lọc tập dữ liệu số {{position}} cho {{field}} tại nút {{node}} cần giá trị từ state.{{state_key}}",
     "title": "Tập dữ liệu",
     "navigation": "Điều hướng Studio",
     "catalog": "Danh sách tập dữ liệu",
