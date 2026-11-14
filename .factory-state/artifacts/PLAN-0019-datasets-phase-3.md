@@ -36,9 +36,9 @@ Deliver Datasets phase 3 (REQ-0101) after the phase 2 chain and the REQ-0100 fix
 | [TASK-0349](../tasks/done/TASK-0349-dataset-group-by.md) | P2 | Group by one column | TASK-0347 |
 | [TASK-0350](../tasks/done/TASK-0350-dataset-grid-layout.md) | P2 | TanStack Table 9 upgrade; column pinning, row height, TanStack Virtual | TASK-0341 |
 | [TASK-0351](../tasks/done/TASK-0351-dataset-scalar-field-types.md) | P1 | Long text, URL, created and updated time | TASK-0338, TASK-0339 |
-| [TASK-0352](../tasks/review/TASK-0352-dataset-structured-field-types.md) | P2 | Multi-select and auto-number | TASK-0351 |
-| [TASK-0353](../tasks/review/TASK-0353-dataset-validation-formats.md) | P2 | Per-column validation and display formats | TASK-0338, TASK-0340, TASK-0351 |
-| [TASK-0354](../tasks/review/TASK-0354-dataset-batch-cell-update.md) | P2 | Atomic batch cell update | DEC-0101, TASK-0353 |
+| [TASK-0352](../tasks/done/TASK-0352-dataset-structured-field-types.md) | P2 | Multi-select and auto-number | TASK-0351 |
+| [TASK-0353](../tasks/done/TASK-0353-dataset-validation-formats.md) | P2 | Per-column validation and display formats | TASK-0338, TASK-0340, TASK-0351 |
+| [TASK-0354](../tasks/done/TASK-0354-dataset-batch-cell-update.md) | P2 | Atomic batch cell update | DEC-0101, TASK-0353 |
 | [TASK-0355](../tasks/done/TASK-0355-dataset-clipboard-fill.md) | P2 | TanStack cell selection and copy; typed paste, fill down and right, one-step undo | DEC-0101, TASK-0354, TASK-0350 |
 | [TASK-0356](../tasks/backlog/TASK-0356-dataset-export-python-phase3.md) | P1 | Python export parity | TASK-0345, TASK-0348, TASK-0351, TASK-0352, TASK-0353, TASK-0343 |
 | [TASK-0357](../tasks/backlog/TASK-0357-dataset-export-typescript-phase3.md) | P1 | TypeScript export parity | Same as TASK-0356 |
