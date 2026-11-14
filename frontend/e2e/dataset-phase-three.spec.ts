@@ -11,7 +11,7 @@ test('triages support tickets with Dataset views, clipboard and an Agent aggrega
   })
   await page.goto('/login')
   const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
-  const name = process.env.HANDBOOK_SHOTS ? 'Support tickets · Triage' : `Support tickets ${Date.now()}`
+  const name = process.env.HANDBOOK_SHOTS ? 'Support tickets · Triage' : `Ticket triage ${Date.now()}`
   const created = await page.request.post('/api/datasets', { headers, data: { name, columns: [
     { key: 'number', label: 'Ticket ID', kind: 'auto_number' },
     { key: 'subject', label: 'Subject', kind: 'text' },
