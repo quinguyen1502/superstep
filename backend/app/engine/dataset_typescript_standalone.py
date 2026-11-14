@@ -306,6 +306,7 @@ const DATASET_DDL = [
     operation_id VARCHAR(128) NOT NULL,
     fingerprint VARCHAR(64) NOT NULL,
     result TEXT NOT NULL,
+    created DOUBLE PRECISION NOT NULL,
     PRIMARY KEY (dataset_id, operation_id))`,
 ];
 
@@ -323,10 +324,44 @@ async function datasetStorageReady(connection: SqlConnection, binding: string): 
     await connection.get('SELECT dataset_id FROM superstep_dataset_definitions LIMIT 1');
     await connection.get('SELECT dataset_id FROM superstep_dataset_rows LIMIT 1');
     await connection.get('SELECT dataset_id FROM superstep_dataset_keys LIMIT 1');
-    await connection.get('SELECT dataset_id FROM superstep_dataset_receipts LIMIT 1');
+    await connection.get('SELECT created FROM superstep_dataset_receipts LIMIT 1');
   } catch {
     datasetFail("DATASET_SETUP_REQUIRED", { binding });
   }
+}
+
+async function datasetMigrateReceipts(connection: SqlConnection, backend: string, binding: string): Promise<void> {
+  const postgres = backend === "postgresql";
+  if (postgres) await connection.exec("LOCK TABLE superstep_dataset_receipts IN ACCESS EXCLUSIVE MODE");
+  const columns = postgres
+    ? await connection.all("SELECT attname AS name FROM pg_attribute WHERE attrelid = 'superstep_dataset_receipts'::regclass AND attnum > 0 AND NOT attisdropped")
+    : await connection.all("PRAGMA table_info(superstep_dataset_receipts)");
+  if (columns.some((column) => column.name === "created")) return;
+  await connection.exec("ALTER TABLE superstep_dataset_receipts ADD COLUMN created DOUBLE PRECISION NOT NULL DEFAULT 0");
+  const now = Date.now() / 1000;
+  let anchor: unknown[] = [];
+  while (true) {
+    const predicate = anchor.length ? "WHERE (dataset_id, operation_id) > (?, ?)" : "";
+    const batch = await connection.all(
+      `SELECT dataset_id, operation_id, result FROM superstep_dataset_receipts ${predicate} ORDER BY dataset_id, operation_id LIMIT 200`, anchor,
+    );
+    if (!batch.length) return;
+    for (const receipt of batch) {
+      const old = storedJson(receipt.result, binding);
+      const result = plainObject(old.row) ? { row_id: old.row.id, revision: old.row.revision, inserted: old.inserted } : old;
+      await connection.run("UPDATE superstep_dataset_receipts SET result = ?, created = ? WHERE dataset_id = ? AND operation_id = ?",
+        [datasetJson(result, true), now, receipt.dataset_id, receipt.operation_id]);
+    }
+    const last = batch[batch.length - 1];
+    anchor = [last.dataset_id, last.operation_id];
+  }
+}
+
+async function datasetExpireReceipts(connection: SqlConnection, datasetIdValue: string): Promise<void> {
+  const setting = env("STUDIO_DATASET_RECEIPT_DAYS")?.trim() ?? "";
+  const days = /^[-+]?\d+$/.test(setting) ? Math.max(1, Number(setting)) : 30;
+  await connection.run("DELETE FROM superstep_dataset_receipts WHERE dataset_id = ? AND created < ?",
+    [datasetIdValue, Date.now() / 1000 - days * 86400]);
 }
 
 async function datasetSchemasMatch(connection: SqlConnection, datasetIdValue: string, binding: string): Promise<void> {
@@ -403,9 +438,10 @@ export async function setupDatasets(create: boolean): Promise<void> {
     if (backend === "superstep") continue;
     const [connection, datasetIdValue] = await openDataset(binding, backend, create);
     try {
-      await connection.transaction(false, datasetIdValue, async () => {
+      await connection.transaction(create && backend === "sqlite", datasetIdValue, async () => {
         if (create) {
           for (const statement of DATASET_DDL) await connection.exec(statement);
+          await datasetMigrateReceipts(connection, backend, binding);
           await connection.run(
             `INSERT INTO superstep_dataset_definitions (dataset_id, contract) VALUES (?, ?)
              ON CONFLICT (dataset_id) DO NOTHING`,
@@ -558,11 +594,11 @@ function rowMatches(row: SqlRow, query: DatasetQuery, columns: Record<string, Da
       if (typeof rule.value !== "string" || rule.value.length === 0 || rule.value.length > 120 || DATASET_INVALID_TEXT.test(rule.value)) {
         datasetFail("DATASET_FILTER_INVALID", { field: rule.field });
       }
-      return typeof current === "string" && current.includes(rule.value);
+      return typeof current === "string" && current.toLowerCase().includes(rule.value.toLowerCase());
     }
     const expected = datasetNormalize(column, rule.value, true);
     if (rule.op === "eq" && column.unique) return keyHits.get(`${rule.field}:${datasetDigest(expected)}`)?.has(String(row.id)) === true;
-    if (current === null) return false;
+    if (current === null) return rule.op === "ne";
     const compared = compareValue(column.kind, current, expected);
     if (rule.op === "eq") return valuesEqual(column.kind, current, expected);
     if (rule.op === "ne") return !valuesEqual(column.kind, current, expected);
@@ -576,7 +612,7 @@ function rowMatches(row: SqlRow, query: DatasetQuery, columns: Record<string, Da
     if (DATASET_INVALID_TEXT.test(query.search)) datasetFail("DATASET_FILTER_INVALID", { field: "search" });
     const terms = Object.values(columns).filter((column) => DATASET_TEXT_KINDS.has(column.kind));
     if (!terms.length) return false;
-    if (!terms.some((column) => typeof values[column.key] === "string" && (values[column.key] as string).includes(query.search as string))) return false;
+    if (!terms.some((column) => typeof values[column.key] === "string" && (values[column.key] as string).toLowerCase().includes(query.search!.toLowerCase()))) return false;
   }
   return true;
 }
@@ -612,7 +648,8 @@ async function datasetFind(connection: SqlConnection, datasetIdValue: string, co
         if (a !== b) return a === null ? 1 : -1;
         continue;
       }
-      const compared = compareValue(column.kind, a, b);
+      const folded = typeof a === "string" && typeof b === "string" ? compareText(a.toLowerCase(), b.toLowerCase()) : 0;
+      const compared = folded || compareValue(column.kind, a, b);
       if (compared !== 0) return sort.descending ? -compared : compared;
     }
     if (!query.sorts.length && Number(left.created) !== Number(right.created)) return Number(left.created) < Number(right.created) ? -1 : 1;
@@ -664,7 +701,14 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
   );
   if (previous) {
     if (previous.fingerprint !== fingerprint) datasetFail("DATASET_RECEIPT_CONFLICT");
-    return storedJson(previous.result, binding);
+    const result = storedJson(previous.result, binding);
+    const current = await connection.get(
+      'SELECT id, "values" AS payload, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?',
+      [datasetIdValue, result.row_id],
+    );
+    const row = current && fields.length ? datasetRow(current, fields, binding)
+      : { id: result.row_id, revision: current ? Number(current.revision) : result.revision };
+    return { row, inserted: result.inserted };
   }
   let existing: SqlRow | undefined;
   if (typeof key === "string") {
@@ -693,12 +737,13 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
   if (datasetSize(rowValues) > DATASET_MAX_ROW_BYTES) datasetFail("DATASET_ROW_TOO_LARGE", { max: DATASET_MAX_ROW_BYTES });
   const now = Date.now() / 1000;
   const rowId = existing ? String(existing.id) : crypto.randomUUID().replace(/-/g, "");
+  const changed = !existing || datasetJson(rowValues, true) !== datasetJson(storedJson(existing.payload, binding), true);
   if (!existing) {
     await connection.run(
       'INSERT INTO superstep_dataset_rows (dataset_id, id, "values", revision, created, updated) VALUES (?, ?, ?, ?, ?, ?)',
       [datasetIdValue, rowId, datasetJson(rowValues, false), 1, now, now],
     );
-  } else {
+  } else if (changed) {
     await connection.run(
       'UPDATE superstep_dataset_rows SET "values" = ?, revision = ?, updated = ? WHERE dataset_id = ? AND id = ?',
       [datasetJson(rowValues, false), Number(existing.revision) + 1, now, datasetIdValue, rowId],
@@ -706,7 +751,7 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
     await connection.run("DELETE FROM superstep_dataset_keys WHERE dataset_id = ? AND row_id = ?", [datasetIdValue, rowId]);
   }
   for (const [field, column] of Object.entries(columns)) {
-    if (!column.unique || rowValues[field] === null || rowValues[field] === undefined) continue;
+    if (!changed || !column.unique || rowValues[field] === null || rowValues[field] === undefined) continue;
     try {
       await connection.run(
         "INSERT INTO superstep_dataset_keys (dataset_id, field, digest, row_id) VALUES (?, ?, ?, ?)",
@@ -725,20 +770,10 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
   // An empty field list asks for identifiers only, the shape a write-only connected token receives.
   const outcome = fields.length ? datasetRow(stored, fields, binding) : { id: String(stored.id), revision: Number(stored.revision) };
   const result = { inserted: !existing, row: outcome };
-  try {
-    await connection.run(
-      "INSERT INTO superstep_dataset_receipts (dataset_id, operation_id, fingerprint, result) VALUES (?, ?, ?, ?)",
-      [datasetIdValue, operationId, fingerprint, datasetJson(result, true)],
-    );
-  } catch (error) {
-    if (!isUniqueViolation(error)) throw error;
-    const raced = await connection.get(
-      "SELECT fingerprint, result FROM superstep_dataset_receipts WHERE dataset_id = ? AND operation_id = ?",
-      [datasetIdValue, operationId],
-    );
-    if (raced && raced.fingerprint === fingerprint) return storedJson(raced.result, binding);
-    datasetFail("DATASET_RECEIPT_CONFLICT");
-  }
+  await connection.run(
+    "INSERT INTO superstep_dataset_receipts (dataset_id, operation_id, fingerprint, result, created) VALUES (?, ?, ?, ?, ?)",
+    [datasetIdValue, operationId, fingerprint, datasetJson({ row_id: rowId, revision: Number(stored.revision), inserted: !existing }, true), now],
+  );
   return result;
 }
 
@@ -788,8 +823,8 @@ async function datasetDelete(connection: SqlConnection, datasetIdValue: string, 
   await connection.run("DELETE FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?", [datasetIdValue, deleted]);
   const result = { deleted: true, row_id: deleted };
   await connection.run(
-    "INSERT INTO superstep_dataset_receipts (dataset_id, operation_id, fingerprint, result) VALUES (?, ?, ?, ?)",
-    [datasetIdValue, operationId, fingerprint, datasetJson(result, true)],
+    "INSERT INTO superstep_dataset_receipts (dataset_id, operation_id, fingerprint, result, created) VALUES (?, ?, ?, ?, ?)",
+    [datasetIdValue, operationId, fingerprint, datasetJson(result, true), Date.now() / 1000],
   );
   return result;
 }
@@ -808,6 +843,7 @@ async function datasetStandalone(binding: string, backend: string, operation: st
       await datasetStorageReady(connection, binding);
       if (write) {
         await connection.run("UPDATE superstep_dataset_definitions SET dataset_id = dataset_id WHERE dataset_id = ?", [datasetIdValue]);
+        await datasetExpireReceipts(connection, datasetIdValue);
       }
       await datasetSchemasMatch(connection, datasetIdValue, binding);
       if (write) {
