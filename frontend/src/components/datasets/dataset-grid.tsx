@@ -1,15 +1,16 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getCoreRowModel, useReactTable, type ColumnOrderState, type ColumnSizingState, type RowSelectionState, type SortingState, type Updater, type VisibilityState } from '@tanstack/react-table'
+import { getCoreRowModel, useReactTable, type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater, type VisibilityState } from '@tanstack/react-table'
 import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetUrl, deleteRowName, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetUrl, deleteRowName, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetActionsMenu } from './dataset-actions-menu'
 import { DatasetRowDialog } from './dataset-dialogs'
@@ -31,6 +32,17 @@ const MAX_COLUMN_WIDTH = 4096
 const ROW_NUMBER_WIDTH = 56
 const ROW_ID_WIDTH = 112
 const ROW_ACTIONS_WIDTH = 80
+const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160 }
+const PAGE_SIZES = [25, 50, 100]
+
+function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: VisibilityState } {
+  try {
+    return JSON.parse(localStorage.getItem(key) ?? '{}') ?? {}
+  } catch {
+    return {}
+  }
+}
+
 const ROW_ACTIONS = 'sticky right-0 z-20 border-l bg-background'
 
 function inDatasetCell(target: EventTarget | null) {
@@ -65,11 +77,21 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [filters, setFilters] = useState<DatasetFilters>(initialFilters ?? { mode: 'and', rules: [] })
   const [sorting, setSorting] = useState<SortingState>([])
   const [offsets, setOffsets] = useState([0])
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 })
   const [refresh, setRefresh] = useState(0)
   const [selection, setSelection] = useState<RowSelectionState>({})
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>([])
-  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({})
+  const layoutKey = `studio-dataset-layout:${dataset.id}`
+  const [storedLayout] = useState(() => readLayout(layoutKey))
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(storedLayout.visibility ?? {})
+  const [columnOrder, setColumnOrder] = useState<ColumnOrderState>(storedLayout.order ?? [])
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(storedLayout.sizes ?? {})
+  useEffect(() => {
+    try {
+      localStorage.setItem(layoutKey, JSON.stringify({ order: columnOrder, sizes: columnSizing, visibility: columnVisibility }))
+    } catch {
+      // The grid remains usable when browser storage is unavailable.
+    }
+  }, [columnOrder, columnSizing, columnVisibility, layoutKey])
   const [viewportWidth, setViewportWidth] = useState(0)
   const [active, setActive] = useState<Cell | null>(null)
   const [draft, setDraft] = useState<Record<string, CellValue> | null>(null)
@@ -82,7 +104,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [busy, setBusy] = useState(false)
   const editing = !!edit || !!draft || !!rowDetails
   const addingRow = !!draft
-  const offset = offsets.at(-1) ?? 0
+  const offset = offsets[pagination.pageIndex] ?? 0
   const url = `${datasetUrl(dataset.id)}/rows`
   const layout = useMemo(() => {
     const remainingFields = new Map(dataset.columns.map(column => [column.key, column]))
@@ -98,7 +120,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     const fields = showAll ? orderedFields : selectedFields
     const showRowId = !dataset.columns.some(column => column.unique)
     const fixedWidth = ROW_NUMBER_WIDTH + (showRowId ? ROW_ID_WIDTH : 0) + ROW_ACTIONS_WIDTH
-    const defaultWidth = (column: DatasetColumn) => column.unique ? 160 : 138
+    const defaultWidth = (column: DatasetColumn) => Math.max(column.unique ? 160 : 0, DEFAULT_WIDTH[column.kind])
     const fieldWidth = (column: DatasetColumn) => Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, columnSizing[column.key] ?? defaultWidth(column)))
     const minimumWidth = fields.reduce((width, column) => width + fieldWidth(column), fixedWidth)
     const remaining = Math.max(0, viewportWidth - minimumWidth)
@@ -142,9 +164,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   // oxlint-disable-next-line react/incompatible-library -- The table instance stays within this component.
   const table = useReactTable({
     data: page?.items ?? NO_ROWS, columns: layout.columns, getRowId: row => row.id,
-    getCoreRowModel: rowModel, manualSorting: true, maxMultiSortColCount: DATASET_QUERY_LIMIT,
+    getCoreRowModel: rowModel, manualSorting: true, manualPagination: true, rowCount: page?.total, maxMultiSortColCount: DATASET_QUERY_LIMIT,
     defaultColumn: { minSize: MIN_COLUMN_WIDTH, maxSize: MAX_COLUMN_WIDTH },
-    state: { sorting, rowSelection: selection, columnOrder, columnVisibility: layout.visibility, columnSizing },
+    state: { pagination, sorting, rowSelection: selection, columnOrder, columnVisibility: layout.visibility, columnSizing },
+    onPaginationChange: setPagination,
     onRowSelectionChange: setSelection, onSortingChange: changeSorting,
     onColumnVisibilityChange: updater => setColumnVisibility(typeof updater === 'function' ? updater(layout.visibility) : updater),
     onColumnSizingChange: setColumnSizing,
@@ -161,7 +184,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     if (next.length === sorting.length && next.every((rule, index) => rule.id === sorting[index].id && rule.desc === sorting[index].desc)) return
     setSorting(next)
     setSelection({})
-    setOffsets([0])
+    resetPaging()
     setPage(null)
   }
 
@@ -172,7 +195,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       method: 'POST', json: {
         search: search || null, filter_mode: filters.mode, filters: filters.rules.filter(rule => fields.has(rule.field)),
         sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
-        offset, limit: 50,
+        offset, limit: pagination.pageSize,
       },
     }).then(result => {
       if (!active) return
@@ -183,14 +206,14 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       if (active) setLoadError(error.message)
     })
     return () => { active = false }
-  }, [filters, dataset.columns, dataset.revision, offset, refresh, reloadDataset, search, sorting, url])
+  }, [filters, dataset.columns, dataset.revision, offset, pagination.pageSize, refresh, reloadDataset, search, sorting, url])
 
   useEffect(() => {
     const next = searchText.trim()
     if (editing || next === search) return
     const timer = window.setTimeout(() => {
       setSearch(next)
-      setOffsets([0])
+      resetPaging()
       setSelection({})
     }, 250)
     return () => window.clearTimeout(timer)
@@ -203,7 +226,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
 
   function applyFilters(next: DatasetFilters) {
     if (edit || draft) return
-    setOffsets([0])
+    resetPaging()
     setSelection({})
     setFilters(next)
     reload()
@@ -334,7 +357,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       if (schema.revision !== dataset.revision) reloadDataset()
       setEdit({ ...edit, row })
       setStale(false)
-      setSaveError({ message: t('dataset.editRefreshed', { value: format(row.values[edit.column.key] ?? null) }), notice: true })
+      setSaveError({ message: t('dataset.editRefreshed', { value: format(row.values[edit.column.key] ?? null, edit.column.kind) }), notice: true })
       reload()
       restoreEditorFocus.current = true
     } catch (error) {
@@ -344,7 +367,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     }
   }
 
-  const format = (value: CellValue) => displayValue(value, t('dataset.valueTrue'), t('dataset.valueFalse'))
+  const format = (value: CellValue, kind: DatasetKind) => displayValue(value, t('dataset.valueTrue'), t('dataset.valueFalse'), kind)
   const heading = (key: string) => dataset.columns.find(column => column.key === key)
 
   function askDelete(row: DatasetRow) {
@@ -354,15 +377,23 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       onConfirm: async () => {
         await api(`${url}/${row.id}?revision=${row.revision}`, { method: 'DELETE' })
         setSelection(current => { const next = { ...current }; delete next[row.id]; return next })
-        if (page?.items.length === 1 && offset) setOffsets(current => current.slice(0, -1))
+        if (page?.items.length === 1 && offset) changePage(-1)
         reload()
       },
     })
   }
 
-  function changePage(next: number[]) {
+  function resetPaging() {
+    setOffsets([0])
+    setPagination(current => ({ ...current, pageIndex: 0 }))
+  }
+
+  function changePage(direction: -1 | 1) {
+    const nextOffset = page?.next_offset
+    if (direction === 1 && nextOffset == null) return
     setSelection({})
-    setOffsets(next)
+    if (direction === 1) setOffsets([...offsets.slice(0, pagination.pageIndex + 1), nextOffset!])
+    table.setPageIndex(pagination.pageIndex + direction)
     setPage(null)
   }
 
@@ -422,7 +453,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             const Icon = direction === 'asc' ? ArrowUp : direction === 'desc' ? ArrowDown : ArrowUpDown
             return <TableHead key={header.id} scope="col" className={cn(DIVIDER, 'relative p-0 hover:bg-muted')}
               aria-sort={priority === 0 && direction ? (direction === 'asc' ? 'ascending' : 'descending') : undefined}>
-              <Button variant="ghost" size="sm" className={cn(CELL_BUTTON, 'absolute inset-0 h-full gap-1 px-2')}
+              <Button variant="ghost" size="sm" className={cn(CELL_BUTTON, 'absolute inset-y-0 left-0 right-2 h-full gap-1 px-2')}
                 onClick={header.column.getToggleSortingHandler()} disabled={!!edit || !!draft}>
                 <DatasetFieldIcon kind={column.kind} />
                 <span className="relative top-px min-w-0 truncate leading-none" title={column.label}>{column.label}</span>
@@ -507,6 +538,11 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
                   void save(edit.value)
                 }} onKeyDown={event => {
                   if (inDatasetCalendar(event.target)) return
+                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target instanceof HTMLTextAreaElement
+                    && !event.nativeEvent.isComposing) {
+                    event.preventDefault()
+                    void save(edit.value)
+                  }
                   if (event.key === 'Escape' && !busy && !event.nativeEvent.isComposing) { event.stopPropagation(); closeEditor() }
                 }} onBlur={event => {
                   if (!usesPicker && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
@@ -530,7 +566,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
                 </form> :
                   <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
                     className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0')}
-                    aria-label={t(editable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value) })}
+                    aria-label={t(editable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value, column.kind) })}
                     aria-pressed={isFocused}
                     onPointerDown={event => { if (keepInvalidEditorFocused()) event.preventDefault() }}
                     onFocus={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
@@ -538,7 +574,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
                     onClick={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
                     onDoubleClick={() => beginEdit(row.original, column)}
                     onKeyDown={event => handleCellKey(event, row.original, column)}>
-                    <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{format(value) || '—'}</span>
+                    <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{format(value, column.kind) || '—'}</span>
                   </Button>
                 }
               </TableCell>
@@ -555,7 +591,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1 text-sm">
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground" aria-live="polite">
-        <span>{t('dataset.visibleRows', { count: rows.length })}</span>
+        {page && <span>{t(page.total_capped ? 'dataset.visibleRangeCapped' : 'dataset.visibleRange', {
+          start: rows.length ? offset + 1 : 0, end: rows.length ? offset + rows.length : 0, total: page.total,
+        })}</span>}
         {!!selectedCount && <span>{t('dataset.rowsSelected', { count: selectedCount })}</span>}
         {edit ? <span>{t('dataset.discardEditKeys')}</span>
           : editable && <span className="hidden lg:inline">{t('dataset.gridKeys')}</span>}
@@ -564,11 +602,20 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         <span role="status" className="flex items-center gap-1 text-xs text-muted-foreground">
           {notice && <><Check aria-hidden="true" className="size-3" />{notice}</>}
         </span>
-        <span className="text-xs text-muted-foreground">{t('dataset.page', { page: offsets.length })}</span>
-        <Button variant="outline" size="icon-sm" aria-label={t('dataset.previousPage')} disabled={offsets.length === 1 || !!edit || !!draft}
-          onClick={() => changePage(offsets.slice(0, -1))}><ChevronLeft /></Button>
-        <Button variant="outline" size="icon-sm" aria-label={t('dataset.nextPage')} disabled={page?.next_offset == null || !!edit || !!draft}
-          onClick={() => { if (page?.next_offset != null) changePage([...offsets, page.next_offset]) }}><ChevronRight /></Button>
+        <Select value={String(pagination.pageSize)} disabled={editing} onValueChange={value => {
+          setOffsets([0])
+          setSelection({})
+          setPage(null)
+          table.setPagination({ pageIndex: 0, pageSize: Number(value) })
+        }}>
+          <SelectTrigger size="sm" aria-label={t('dataset.pageSize')}><SelectValue /></SelectTrigger>
+          <SelectContent>{PAGE_SIZES.map(size => <SelectItem key={size} value={String(size)}>{size}</SelectItem>)}</SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground">{t('dataset.page', { page: pagination.pageIndex + 1 })}</span>
+        <Button variant="outline" size="icon-sm" aria-label={t('dataset.previousPage')} disabled={pagination.pageIndex === 0 || editing}
+          onClick={() => changePage(-1)}><ChevronLeft /></Button>
+        <Button variant="outline" size="icon-sm" aria-label={t('dataset.nextPage')} disabled={page?.next_offset == null || editing}
+          onClick={() => changePage(1)}><ChevronRight /></Button>
       </div>
     </div>
     {rowDetails && <DatasetRowDialog dataset={dataset} row={rowDetails} editable={editable} triggerId={rowActionId(rowDetails.id)}

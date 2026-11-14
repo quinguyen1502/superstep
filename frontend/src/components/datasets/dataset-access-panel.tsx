@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -33,7 +32,7 @@ function PermissionPicker({ id, value, onChange, disabled }: {
   </div>
 }
 
-export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Dataset; scope: string; onClose: () => void }) {
+export function DatasetAccessPanel({ dataset, workflow }: { dataset: Dataset; workflow?: string }) {
   const { t } = useTranslation()
   const id = useId()
   const confirm = useConfirmDelete()
@@ -51,12 +50,21 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
-    setAccess(await api<Access>(path))
+    const next = await api<Access>(path)
+    setAccess(next)
   }, [path])
 
   useEffect(() => {
     void load().catch(failure => setError(failure instanceof Error ? failure.message : t('errors.INTERNAL_ERROR')))
   }, [load, t])
+
+  useEffect(() => {
+    if (!workflow || !access?.workflows.some(item => item.id === workflow)) return
+    const current = access.grants.find(item => item.workflow_id === workflow)
+    setWorkflowId(workflow)
+    setGrantPermission(current?.permission ?? 'read')
+    setGrantAllowDelete(current?.allow_delete ?? false)
+  }, [access, workflow])
 
   async function mutate(action: () => Promise<void>) {
     setBusy(true)
@@ -107,10 +115,7 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
     } })
   }
 
-  return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
-    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-2xl">
-      <DialogHeader><DialogTitle>{t('dataset.access')}</DialogTitle><DialogDescription>{dataset.name} · {scope}</DialogDescription></DialogHeader>
-      <DialogBody className="space-y-5">
+  return <div className="space-y-5 p-4 md:px-6">
         {!access && !error && <p role="status" className="text-sm text-muted-foreground">{t('common.loading')}</p>}
         {access && <>
           <section className="space-y-2">
@@ -188,9 +193,6 @@ export function DatasetAccessDialog({ dataset, scope, onClose }: { dataset: Data
           </section>
         </>}
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-      </DialogBody>
-      <DialogFooter><Button variant="outline" disabled={busy} onClick={onClose}>{t('common.close')}</Button></DialogFooter>
-      {confirm.dialog}
-    </DialogContent>
-  </Dialog>
+    {confirm.dialog}
+  </div>
 }

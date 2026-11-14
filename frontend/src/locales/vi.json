@@ -86,6 +86,9 @@
     }
   },
   "dataset": {
+    "pageSize": "Số hàng mỗi trang",
+    "visibleRange": "{{start}}–{{end}} trên {{total}}",
+    "visibleRangeCapped": "{{start}}–{{end}} trên {{total}}+",
     "title": "Tập dữ liệu",
     "navigation": "Điều hướng Studio",
     "catalog": "Danh sách tập dữ liệu",

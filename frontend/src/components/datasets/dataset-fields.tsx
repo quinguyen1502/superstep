@@ -76,6 +76,7 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
 }) {
   const { t } = useTranslation()
   const [validation, setValidation] = useState('')
+  const [multiline, setMultiline] = useState(() => typeof value === 'string' && (value.length > 80 || value.includes('\n')))
   const inlineStyle = inline && 'rounded-none border-0 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent dark:aria-invalid:ring-0'
   const message = validation || error
   const invalidProps = { 'aria-invalid': !!message, 'aria-describedby': message ? `${id}-error` : undefined }
@@ -93,6 +94,15 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
         {items.map((item, index) => <SelectItem key={String(item.value)} value={String(index)}>{item.label}</SelectItem>)}
       </SelectContent>
     </Select>{feedback}</div>
+  }
+  if (column.kind === 'text' && multiline) {
+    return <div className="min-w-0">
+      <Textarea id={id} aria-label={label} className={cn(inlineStyle)} value={String(value ?? '')} autoFocus={focus}
+        required={!nullable} disabled={disabled} {...invalidProps} onChange={event => onChange(event.target.value)} />
+      {nullable && <Button type="button" variant="ghost" size="sm" disabled={disabled}
+        onClick={() => onChange(null)}>{t('dataset.clearValue')}</Button>}
+      {feedback}
+    </div>
   }
   const type = column.kind === 'datetime' ? 'datetime-local' : column.kind
   const inputValue = column.kind === 'datetime' && typeof value === 'string' ? localDatetime(value) : String(value ?? '')
@@ -128,6 +138,7 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
     }} onChange={event => {
       const input = event.currentTarget
       if (input.validity.valid) setValidation('')
+      if (column.kind === 'text' && input.value.length > 80) setMultiline(true)
       change(input.value, input.valueAsNumber)
     }} />
   return <div className="min-w-0">

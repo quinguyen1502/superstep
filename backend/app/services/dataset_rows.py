@@ -1,4 +1,4 @@
-from ..core.dataset_types import INVALID_TEXT, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, WorkflowWrite
@@ -95,7 +95,8 @@ class DatasetRowService:
 
     def query(self, uid: str, dataset_id: str, *, filters: list[dict], fields: list[str] | None,
               search: str | None, sort: str | None, descending: bool, limit: int, offset: int,
-              filter_mode: str = "and", sorts: list[dict] | None = None, schema_revision: int | None = None) -> dict:
+              filter_mode: str = "and", sorts: list[dict] | None = None, schema_revision: int | None = None,
+              include_total: bool = False) -> dict:
         dataset = self._read_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _projection(columns, fields)
@@ -103,10 +104,10 @@ class DatasetRowService:
             raise AppError("DATASET_FILTER_INVALID", field="search")
         if sorts is None:
             sorts = [{"field": sort, "descending": descending}] if sort else []
-        rows = self.rows.query(
+        rows, total = self.rows.query_page(
             dataset.id, filters=[_filter(columns, **spec) for spec in filters], filter_mode=filter_mode, search=search,
             search_columns=[column for column in columns.values() if column.kind in TEXT_KINDS],
-            sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts], limit=limit + 1, offset=offset,
+            sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts], limit=limit + 1, offset=offset, include_total=include_total,
         )
         items = []
         remaining = MAX_PAGE_BYTES
@@ -117,7 +118,9 @@ class DatasetRowService:
                 break
             items.append(item)
         return {"items": items, "next_offset": offset + len(items) if len(items) < len(rows) else None,
-                "schema_revision": dataset.revision}
+                "schema_revision": dataset.revision,
+                **({"total": min(total, MAX_DATASET_ROWS), "total_capped": total > MAX_DATASET_ROWS}
+                   if total is not None else {})}
 
     def save(self, uid: str, dataset_id: str, *, values: dict, schema_revision: int | None,
              row_id: str | None = None, revision: int | None = None, key: str | None = None,

@@ -100,7 +100,7 @@ test('a viewer sees every dataset action disabled with the reason', async ({ pag
   await viewer.reload()
   await viewer.getByRole('button', { name: tx('vi', 'dataset.datasetActions') }).click()
   await viewer.getByRole('menuitem', { name: tx('vi', 'dataset.viewSchema') }).click()
-  const schema = viewer.getByRole('dialog', { name: tx('vi', 'dataset.schema'), exact: true })
+  const schema = viewer.getByRole('tabpanel', { name: tx('vi', 'dataset.schema'), exact: true })
   await expect(schema.getByRole('button', { name: tx('vi', 'dataset.addColumn') })).toBeDisabled()
   await expect(schema.getByRole('button', { name: tx('vi', 'dataset.editColumnNamed', { name: 'Ticket' }) })).toBeDisabled()
   await expect(schema.getByText(tx('vi', 'dataset.viewOnlyReason'))).toBeVisible()

@@ -135,6 +135,13 @@ class DatasetRowRepository:
     def query(self, dataset_id: str, *, filters: list[RowFilter], filter_mode: str, search: str | None,
               search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
               limit: int, offset: int) -> list[DatasetRow]:
+        rows, _ = self.query_page(dataset_id, filters=filters, filter_mode=filter_mode, search=search,
+                                  search_columns=search_columns, sorts=sorts, limit=limit, offset=offset)
+        return rows
+
+    def query_page(self, dataset_id: str, *, filters: list[RowFilter], filter_mode: str, search: str | None,
+                   search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
+                   limit: int, offset: int, include_total: bool = False) -> tuple[list[DatasetRow], int | None]:
         engine = self.datasets.db.engine
         postgres = engine.dialect.name == "postgresql"
         texts = _Text(postgres, _fold_collation(engine) if postgres else None)
@@ -144,7 +151,7 @@ class DatasetRowRepository:
             query = query.where(combine(*(_predicate(spec, dataset_id, texts) for spec in filters)))
         if search:
             if not search_columns:
-                return []
+                return [], 0 if include_total else None
             query = query.where(or_(*(texts.contains(_column_value(column), search) for column in search_columns)))
         order = []
         for sort, descending in sorts:
@@ -153,9 +160,14 @@ class DatasetRowRepository:
             if sort.kind not in {"number", "boolean"}:
                 keys = [texts.fold(expression), texts.exact(expression)]  # case-insensitive, then exact as the tiebreak
             order.extend((key.desc() if descending else key.asc()).nulls_last() for key in keys)
-        query = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id)
+        page = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id)
         with self.datasets.db.session() as session:
-            return list(session.scalars(query.limit(limit).offset(offset)))
+            rows = list(session.scalars(page.limit(limit).offset(offset)))
+            total = None
+            if include_total:
+                matches = query.with_only_columns(DatasetRow.id).limit(MAX_DATASET_ROWS + 1)
+                total = session.scalar(select(func.count()).select_from(matches.subquery()))
+            return rows, total
 
     @staticmethod
     def _check_revision(row: DatasetRow, revision: int | None) -> None:
