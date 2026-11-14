@@ -262,3 +262,42 @@ test('Dataset node configures Delete row by unique field or row ID and needs the
   await save()
   expect((await savedConfig()).arguments).toEqual({ row_id: 'row-123' })
 })
+
+test('Dataset node configures column summaries and grouping', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const name = `Aggregate source ${Date.now()}`
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name, columns: [
+      { key: 'team', label: 'Team', kind: 'text' },
+      { key: 'score', label: 'Score', kind: 'number' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const wid = await newWorkflow(page, headers, {
+    name: `Aggregate workflow ${Date.now()}`, state: [{ name: 'result', type: 'object' }],
+    nodes: [N('s', 'start', 40), N('data', 'dataset', 290, { dataset_id: id, label: 'Aggregate', operation: 'find_rows', fields: ['score'], output_field: 'result' }), N('e', 'end', 540)],
+    edges: [{ id: 'a', source: 's', target: 'data' }, { id: 'b', source: 'data', target: 'e' }],
+  })
+  expect((await page.request.put(`/api/datasets/${id}/access/grants/${wid}`, { headers, data: { permission: 'read' } })).ok()).toBeTruthy()
+  await page.goto(`/workflows/${wid}`)
+  await page.locator('.react-flow__node[data-id="data"]').click()
+  await page.locator('#config-tab-settings').click()
+  await pick(page, page.getByRole('combobox', { name: 'Operation' }), 'Aggregate rows')
+  await page.locator('#config-tab-data').click()
+  const metrics = page.getByRole('group', { name: 'Summary', exact: true })
+  await expect(metrics.getByRole('status')).toHaveText('Choose at least one column to summarize.')
+  await pick(page, metrics.getByRole('combobox', { name: 'Group by' }), 'Team')
+  await pick(page, metrics.getByRole('combobox', { name: 'Score', exact: true }), 'Average')
+  await expect(metrics.getByRole('status')).toHaveCount(0)
+  await page.locator('#save-btn').click()
+  await expect(page.locator('#unsaved-badge')).toHaveCount(0)
+  const stored = await page.request.get(`/api/workflows/${wid}`, { headers })
+  expect(stored.ok()).toBeTruthy()
+  const saved = (await stored.json()).data.nodes.find((node: { id: string }) => node.id === 'data').data
+  expect(saved).toMatchObject({
+    operation: 'aggregate_rows', fields: ['score', 'team'], arguments: { group_by: 'team', summaries: { score: 'avg' } },
+  })
+})

@@ -77,6 +77,7 @@
 | `DATASET_UNIQUE_CONFLICT` | 409 | A row already has this unique field value |
 | `DATASET_UNIQUE_DUPLICATES` | 409 | Field {field} cannot become unique because {count} rows share a value |
 | `DATASET_EXPORT_FILTER_UNSUPPORTED` | 400 | This Dataset filter is not yet supported by code export |
+| `DATASET_EXPORT_AGGREGATE_UNSUPPORTED` | 400 | Dataset aggregation is not yet supported by code export |
 | `DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED` | 400 | A Dataset column type is not yet supported by code export |
 | `DATASET_FILTER_INVALID` | 400 | Invalid dataset filter for {field} |
 | `DATASET_SUMMARY_INVALID` | 400 | Invalid dataset summary for {field} |

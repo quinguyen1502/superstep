@@ -3,41 +3,40 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0348
-- Title: Let Agents and workflows aggregate Dataset rows
-- Status: backlog
+- Task ID: TASK-0351
+- Title: Add long text, URL, and created and updated time fields
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
 - Decision IDs: —
 - Plan: PLAN-0019
-- Phase: 3 Agent
+- Phase: 3 Fields
 - Priority: P1
 - Size: M
 
 ## Objective
 
-An Agent tool and the Dataset node can count, sum, average, or take min and max by filter, optionally grouped by one field, without loading rows into the model.
+Datasets support long text, URL, and read-only created and updated time columns within the JSON row storage.
 
 ## Scope
 
 ### In Scope
 
-- Operation `aggregate_rows`: functions as in TASK-0347, optional `group_by` one field, at most 20 groups returned, filter tree.
-- Read grant required; Agent tool setting lets the author enable Aggregate separately from Find; trace shows the operation and group count without values beyond the returned aggregates.
-- Allowed from the same entries as Find under DEC-0098.
+- `long_text` (up to `MAX_TEXT`, multi-line editor, not unique), `url` (http or https, validated, opens in a new tab), `created_time` and `updated_time` (system columns derived from row metadata, read-only, filterable and sortable).
+- CSV import and export, Dataset node mapping (system columns are not writable), Agent tool schema, filters and summaries per kind.
 - Python and TypeScript export parity lands in TASK-0356 and TASK-0357; this task documents the contract in `docs/dataset-export.md`.
 
 ### Out Of Scope
 
-- External MCP exposure (REQ-0097 out of scope) and agent schema-changing tools.
+- Formula, relation, attachment, JSON, and map fields.
 
 ## Inputs
 
-- Summary engine from TASK-0347; Agent Dataset tool; PolarBase `server/src/features/mcp/servers/database` tool split as reference.
+- `core/dataset_types.py` `ColumnKind`, `normalize_cell`; schema service; grid editors.
 
 ## Related Artifacts
 
@@ -48,16 +47,15 @@ An Agent tool and the Dataset node can count, sum, average, or take min and max 
 
 ## Dependencies
 
-- TASK-0347 merged; REQ-0099 chain (TASK-0331) merged.
+- REQ-0100 TASK-0338 and TASK-0339 merged.
 
 ## Acceptance Criteria
 
-- "How many open high-priority tickets per team?" is answered with one `aggregate_rows` call.
-- A tool without Aggregate cannot call it; a write-only grant cannot call it.
+- Each type validates, imports, exports, filters, and sorts on both databases; writing a system column is rejected with a schema error.
 
 ## Tests
 
-- Engine, Agent tool, and permission tests on both databases; public-entry test.
+- Type unit tests; API and CSV tests; Playwright editors.
 
 ## Validation Plan
 
@@ -72,6 +70,12 @@ An Agent tool and the Dataset node can count, sum, average, or take min and max 
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
 
+- 2026-11-14: Readiness gate passed. Started independently from develop.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0341](../../artifacts/REV-0341-TASK-0351-dataset-scalar-field-types.md) and QA [QA-0341](../../artifacts/QA-0341-TASK-0351-dataset-scalar-field-types.md).
+
+- 2026-11-14: Owner approved merging PR #408 into develop after successful checks.
+
 ## Handoff Notes
 
-- Use branch `factory/task-0348-dataset-aggregate-operation` from `develop` when implementation begins.
+- Use branch `factory/task-0351-dataset-scalar-field-types` from `develop` when implementation begins.

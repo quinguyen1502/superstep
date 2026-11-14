@@ -61,7 +61,7 @@ function AgentSummary({ a }: { a: AgentStep }) {
   const text = a.kind === 'handoff' ? t(a.reason ? 'trace.agent.handoffReason' : 'trace.agent.handoff', { to: a.to_label || a.to, reason: a.reason })
     : a.kind === 'tool' ? a.dataset ? a.dataset.count == null
       ? a.tool || '' : t(a.dataset.operation === 'insert_row' ? 'datasetTool.traceInserted' : a.dataset.operation === 'upsert_row'
-        ? 'datasetTool.traceUpserted' : 'datasetTool.traceRows', { tool: a.tool, count: a.dataset.count })
+        ? 'datasetTool.traceUpserted' : a.dataset.operation === 'aggregate_rows' ? 'datasetTool.traceGroups' : 'datasetTool.traceRows', { tool: a.tool, count: a.dataset.count })
       : `${a.tool} → ${a.result ?? ''}`
     : a.tool_calls?.length ? t('trace.agent.calls', { tools: a.tool_calls.map(c => c.name).join(', ') }) : t('trace.agent.answer', { text: a.text || '—' })
   return <>

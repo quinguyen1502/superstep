@@ -6,7 +6,7 @@ from ..core.dataset_types import READ_ONLY_KINDS, filter_operators
 from ..core.errors import AppError
 from ..engine import dataset_nodes
 from ..repositories.dataset_rows import WorkflowWrite
-from ..schemas.dataset import DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpsert
+from ..schemas.dataset import DatasetAggregateQuery, DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpsert
 from .dataset_access import DatasetAccessService, can_read
 from .dataset_rows import DatasetRowService, _active_columns, _column
 
@@ -79,7 +79,9 @@ class DatasetRuntimeService:
             raise AppError("DATASET_GRANT_DENIED")
 
         try:
-            if operation == "find_rows":
+            if operation == "aggregate_rows":
+                query = DatasetAggregateQuery.model_validate(arguments)
+            elif operation == "find_rows":
                 query = DatasetGroupedRowQuery.model_validate({**arguments, "fields": fields})
             elif operation in {"insert_row", "upsert_row"}:
                 schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
@@ -89,12 +91,12 @@ class DatasetRuntimeService:
         except ValidationError as exc:
             for error in exc.errors():
                 location = error["loc"]
-                if operation == "find_rows" and len(location) >= 2 and location[0] == "filters":
+                if operation in {"find_rows", "aggregate_rows"} and len(location) >= 2 and location[0] == "filters":
                     index = location[1]
                     field = arguments["filters"][index]["field"]
                     raise AppError("DATASET_FILTER_INVALID", field=field,
                                    details={"position": index + 1, "field": field}) from exc
-                if operation == "find_rows" and location and location[0] == "filter_tree":
+                if operation in {"find_rows", "aggregate_rows"} and location and location[0] == "filter_tree":
                     indices = [location[i + 1] + 1 for i, part in enumerate(location[:-1])
                                if part == "children" and isinstance(location[i + 1], int)]
                     if indices:
@@ -108,6 +110,8 @@ class DatasetRuntimeService:
 
         if operation == "find_rows":
             return self.rows.query(owner, dataset.id, **query.model_dump())
+        if operation == "aggregate_rows":
+            return self.rows.aggregate(owner, dataset.id, **query.model_dump())
         if operation == "get_row":
             row_id = arguments.get("row_id")
             if not isinstance(row_id, str) or not 0 < len(row_id) <= 100:

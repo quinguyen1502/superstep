@@ -14,6 +14,7 @@ CellValue: TypeAlias = str | int | float | bool | None
 DatasetValue: TypeAlias = CellValue | list[str]
 FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null", "in", "not_in", "not_contains", "contains_any", "contains_all"]
 SummaryFunction: TypeAlias = Literal["count", "empty_count", "empty_percent", "unique_count", "sum", "avg", "min", "max"]
+MAX_AGGREGATE_GROUPS = 20
 SUMMARY_FUNCTIONS = ("count", "empty_count", "empty_percent", "unique_count")
 
 
