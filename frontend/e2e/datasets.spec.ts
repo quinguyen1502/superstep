@@ -695,3 +695,46 @@ test('loads and remembers server summaries across pages and filters', async ({ p
   await expect(scoreSummary).toHaveText('Sum')
   await expect(value).toHaveText('351')
 })
+
+test('groups matching rows by status including empty and expands only the selected group', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Dataset groups ${Date.now()}`,
+    columns: [
+      { key: 'ticket', label: 'Ticket', kind: 'text' },
+      { key: 'status', label: 'Status', kind: 'select', options: ['Open', 'Closed'] },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  const url = `/api/datasets/${id}/rows`
+  for (const [ticket, status] of [['A', 'Open'], ['B', 'Open'], ['C', 'Closed'], ['D', null]]) {
+    expect((await page.request.post(url, { headers, data: { values: { ticket, status } } })).ok()).toBeTruthy()
+  }
+  const result = await page.request.post(`${url}/groups`, { headers, data: { group_by: 'status' } })
+  expect(result.ok()).toBeTruthy()
+  expect((await result.json()).data.groups.map((group: { total: number }) => group.total)).toEqual([2, 1, 1])
+  await page.goto(`/datasets/${id}`)
+  const picker = page.getByRole('combobox', { name: 'Group by' })
+  await picker.click()
+  await page.getByRole('option', { name: 'Status', exact: true }).click()
+  const open = page.getByRole('button', { name: 'Open 2 rows', exact: true })
+  const empty = page.getByRole('button', { name: 'Empty 1 row', exact: true })
+  await expect(page.getByRole('button', { name: 'Closed 1 row', exact: true })).toBeVisible()
+  await expect(empty).toBeVisible()
+  await expect(page.getByTestId('dataset-row')).toHaveCount(0)
+  await open.click()
+  await expect(open).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByTestId('dataset-row')).toHaveCount(2)
+  await empty.click()
+  await expect(open).toHaveAttribute('aria-expanded', 'false')
+  await expect(page.getByTestId('dataset-row')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Edit Ticket: D', exact: true })).toBeVisible()
+  await empty.click()
+  await expect(page.getByTestId('dataset-row')).toHaveCount(0)
+  await page.reload()
+  await expect(picker).toHaveText('Status')
+  await expect(open).toBeVisible()
+})

@@ -1,7 +1,7 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { getCoreRowModel, useReactTable, type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater, type VisibilityState } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react'
+import { getCoreRowModel, useReactTable, type ExpandedState, type GroupingState, type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater, type VisibilityState } from '@tanstack/react-table'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Search, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetSummaryFunctions, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetColumnSummary } from './dataset-column-summary'
 import { DatasetActionsMenu } from './dataset-actions-menu'
@@ -36,13 +36,16 @@ const ROW_ACTIONS_WIDTH = 80
 const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160 }
 const PAGE_SIZES = [25, 50, 100]
 
-function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: VisibilityState; summaries?: DatasetColumnSummaries; showSummaries?: boolean } {
+function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: VisibilityState; summaries?: DatasetColumnSummaries; showSummaries?: boolean; groupBy?: string } {
   try {
     return JSON.parse(localStorage.getItem(key) ?? '{}') ?? {}
   } catch {
     return {}
   }
 }
+
+const GROUP_PAGE_SIZE = 50
+const groupKey = (value: CellValue) => JSON.stringify(value)
 
 const ROW_ACTIONS = 'sticky right-0 z-20 border-l bg-background'
 
@@ -88,15 +91,22 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>(storedLayout.sizes ?? {})
   const [summaryOperations, setSummaryOperations] = useState<DatasetColumnSummaries>(storedLayout.summaries ?? {})
   const [showSummaries, setShowSummaries] = useState(storedLayout.showSummaries ?? false)
+  const [grouping, setGrouping] = useState<GroupingState>(storedLayout.groupBy ? [storedLayout.groupBy] : [])
+  const groupColumn = dataset.columns.find(column => column.key === grouping[0] && datasetGroupable(column.kind))
+  const [expanded, setExpanded] = useState<ExpandedState>({})
+  const selectedGroup = expanded === true ? undefined : Object.keys(expanded).find(key => expanded[key])
+  const [groupOffset, setGroupOffset] = useState(0)
+  const [groupResult, setGroupResult] = useState<{ request: string; data: DatasetGroupsPage } | null>(null)
+  const [groupsError, setGroupsError] = useState<{ request: string; message: string } | null>(null)
   const [summary, setSummary] = useState<{ key: string; data: DatasetSummaryResult } | null>(null)
   const [summaryError, setSummaryError] = useState<{ key: string; message: string } | null>(null)
   useEffect(() => {
     try {
-      localStorage.setItem(layoutKey, JSON.stringify({ order: columnOrder, sizes: columnSizing, visibility: columnVisibility, summaries: summaryOperations, showSummaries }))
+      localStorage.setItem(layoutKey, JSON.stringify({ order: columnOrder, sizes: columnSizing, visibility: columnVisibility, summaries: summaryOperations, showSummaries, groupBy: grouping[0] }))
     } catch {
       // The grid remains usable when browser storage is unavailable.
     }
-  }, [columnOrder, columnSizing, columnVisibility, layoutKey, showSummaries, summaryOperations])
+  }, [columnOrder, columnSizing, columnVisibility, grouping, layoutKey, showSummaries, summaryOperations])
   const [viewportWidth, setViewportWidth] = useState(0)
   const [active, setActive] = useState<Cell | null>(null)
   const [draft, setDraft] = useState<Record<string, CellValue> | null>(null)
@@ -177,6 +187,30 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     return () => controller.abort()
   }, [dataset.revision, refresh, reloadDataset, showSummaries, summaryKey, summaryRequest, url])
 
+  const groupsRequest = groupColumn ? JSON.stringify({
+    ...summaryRequest, summaries: showSummaries ? summaryRequest.summaries : {},
+    group_by: groupColumn.key, offset: groupOffset, limit: GROUP_PAGE_SIZE,
+  }) : null
+  const groupsRequestKey = JSON.stringify([groupsRequest, dataset.revision, refresh])
+  const groups = groupResult?.request === groupsRequestKey ? groupResult.data : null
+  const groupError = groupsError?.request === groupsRequestKey ? groupsError.message : null
+
+  useEffect(() => {
+    if (!groupsRequest) return
+    const controller = new AbortController()
+    void api<DatasetGroupsPage>(`${url}/groups`, {
+      method: 'POST', body: groupsRequest, headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
+    }).then(result => {
+      if (controller.signal.aborted) return
+      if (result.schema_revision !== dataset.revision) reloadDataset()
+      setGroupResult({ request: groupsRequestKey, data: result })
+      setGroupsError(null)
+    }).catch(error => {
+      if (!controller.signal.aborted) setGroupsError({ request: groupsRequestKey, message: error.message })
+    })
+    return () => controller.abort()
+  }, [dataset.revision, groupsRequest, groupsRequestKey, reloadDataset, url])
+
   useLayoutEffect(() => {
     if (busy || !restoreEditorFocus.current) return
     restoreEditorFocus.current = false
@@ -204,10 +238,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   // oxlint-disable-next-line react/incompatible-library -- The table instance stays within this component.
   const table = useReactTable({
     data: page?.items ?? NO_ROWS, columns: layout.columns, getRowId: row => row.id,
-    getCoreRowModel: rowModel, manualSorting: true, manualPagination: true, rowCount: page?.total, maxMultiSortColCount: DATASET_QUERY_LIMIT,
+    getCoreRowModel: rowModel, manualSorting: true, manualPagination: true, manualGrouping: true, manualExpanding: true, groupedColumnMode: false, rowCount: page?.total, maxMultiSortColCount: DATASET_QUERY_LIMIT,
     defaultColumn: { minSize: MIN_COLUMN_WIDTH, maxSize: MAX_COLUMN_WIDTH },
-    state: { pagination, sorting, rowSelection: selection, columnOrder, columnVisibility: layout.visibility, columnSizing },
-    onPaginationChange: setPagination,
+    state: { pagination, sorting, grouping, expanded, rowSelection: selection, columnOrder, columnVisibility: layout.visibility, columnSizing },
+    onPaginationChange: setPagination, onGroupingChange: setGrouping, onExpandedChange: setExpanded,
     onRowSelectionChange: setSelection, onSortingChange: changeSorting,
     onColumnVisibilityChange: updater => setColumnVisibility(typeof updater === 'function' ? updater(layout.visibility) : updater),
     onColumnSizingChange: setColumnSizing,
@@ -229,13 +263,15 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   useEffect(() => {
+    if (groupColumn && selectedGroup === undefined) return
     let active = true
     const fields = new Set(dataset.columns.map(column => column.key))
     const filterTree = keepDatasetFilterFields(filters, fields)
-    api<DatasetRowPage>(`${url}/query`, {
+    api<DatasetRowPage>(`${url}/${groupColumn ? "groups/query" : "query"}`, {
       method: 'POST', json: {
         search: search || null, ...(filterTree.children.length ? { filter_tree: filterTree } : {}),
         sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
+        ...(groupColumn && selectedGroup !== undefined ? { group_by: groupColumn.key, group: JSON.parse(selectedGroup) as CellValue } : {}),
         offset, limit: pagination.pageSize,
       },
     }).then(result => {
@@ -247,18 +283,19 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       if (active) setLoadError(error.message)
     })
     return () => { active = false }
-  }, [filters, dataset.columns, dataset.revision, offset, pagination.pageSize, refresh, reloadDataset, search, sorting, url])
+  }, [filters, dataset.columns, dataset.revision, groupColumn, offset, pagination.pageSize, refresh, reloadDataset, search, selectedGroup, sorting, url])
 
   useEffect(() => {
     const next = searchText.trim()
     if (editing || next === search) return
     const timer = window.setTimeout(() => {
       setSearch(next)
+      if (groupColumn) { setExpanded({}); setGroupOffset(0); setPage(null) }
       resetPaging()
       setSelection({})
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [editing, search, searchText])
+  }, [editing, groupColumn, search, searchText])
 
   function reload() {
     setLoadError('')
@@ -270,6 +307,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     resetPaging()
     setSelection({})
     setFilters(next)
+    if (groupColumn) { setExpanded({}); setGroupOffset(0); setPage(null) }
     reload()
   }
 
@@ -449,9 +487,134 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
 
   const span = 1 + layout.fields.length + Number(layout.showRowId) + 1
 
+  function renderRow(row: (typeof rows)[number], index: number) {
+    return <TableRow key={row.id} data-testid="dataset-row" data-state={row.getIsSelected() ? 'selected' : undefined}
+      className="group/row">
+      <TableCell className={cn(DIVIDER, 'p-0')}><label className="grid min-h-10 cursor-pointer place-items-center">
+        <Checkbox aria-label={t('dataset.selectRow', { row: offset + index + 1 })} checked={row.getIsSelected()}
+          className="col-start-1 row-start-1 opacity-0 group-hover/row:opacity-100 group-has-[:focus-visible]/row:opacity-100 data-[state=checked]:opacity-100"
+          onCheckedChange={checked => row.toggleSelected(checked === true)} />
+        <span aria-hidden="true" data-testid="dataset-row-number" className={cn(
+          'pointer-events-none col-start-1 row-start-1 text-xs tabular-nums text-muted-foreground group-hover/row:opacity-0 group-has-[:focus-visible]/row:opacity-0',
+          row.getIsSelected() && 'opacity-0',
+        )}>{offset + index + 1}</span>
+      </label></TableCell>
+      {layout.showRowId && <TableCell className={cn(DIVIDER, 'truncate font-mono text-xs text-muted-foreground')} title={row.id}>{row.id}</TableCell>}
+      {row.getVisibleCells().map(cell => {
+        const column = heading(cell.column.id)!
+        const value = (cell.getValue() as CellValue | undefined) ?? null
+        const isEditing = edit?.row.id === row.id && edit.column.key === column.key
+        const isSelected = selectedCell?.row === row.id && selectedCell.column === column.key
+        const isFocused = !editing && isSelected
+        const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
+        const buttonId = cellId(row.id, column.key)
+        const usesPicker = column.kind === 'boolean' || column.kind === 'select'
+        return <TableCell key={cell.id} data-dataset-cell="" className={cn(DIVIDER, 'relative p-0 whitespace-normal',
+          (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : 'hover:bg-muted',
+        )}>
+          {isEditing ? <form onFocus={event => {
+            if (!isSelected && event.currentTarget.contains(event.target)) setActive({ row: row.id, column: column.key })
+          }} onSubmit={event => {
+            event.preventDefault()
+            void save(edit.value)
+          }} onKeyDown={event => {
+            if (inDatasetCalendar(event.target)) return
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target instanceof HTMLTextAreaElement
+              && !event.nativeEvent.isComposing) {
+              event.preventDefault()
+              void save(edit.value)
+            }
+            if (event.key === 'Escape' && !busy && !event.nativeEvent.isComposing) { event.stopPropagation(); closeEditor() }
+          }} onBlur={event => {
+            if (!usesPicker && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
+              && !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.checkValidity()) {
+              void save(edit.value, false)
+            }
+          }}>
+            <DatasetValueField id={editId} label={column.label} column={column} value={edit.value} focus inline openPicker disabled={busy}
+              error={saveError?.notice ? undefined : saveError?.message}
+              onCalendarPick={column.kind === 'date' && !stale ? value => { void save(value) } : undefined}
+              onChange={value => {
+                if (saveError?.field) setSaveError(null)
+                if (usesPicker && !stale) void save(value)
+                else setEdit({ ...edit, value })
+              }} />
+            {saveError && !saveError.field && <div className="space-y-1 px-2 pb-2">
+              {saveError.notice && <div role="status" className="text-xs wrap-anywhere text-muted-foreground">{saveError.message}</div>}
+              {stale ? <Button type="button" variant="outline" size="sm" onClick={refreshEdit} disabled={busy}>{t('dataset.refreshEdit')}</Button>
+                : <Button type="submit" variant="outline" size="sm" disabled={busy}>{t('common.save')}</Button>}
+            </div>}
+          </form> :
+            <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
+              className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0')}
+              aria-label={t(editable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value, column.kind) })}
+              aria-pressed={isFocused}
+              onPointerDown={event => { if (keepInvalidEditorFocused()) event.preventDefault() }}
+              onFocus={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
+              onBlur={event => { if (!inDatasetCell(event.relatedTarget)) setActive(null) }}
+              onClick={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
+              onDoubleClick={() => beginEdit(row.original, column)}
+              onKeyDown={event => handleCellKey(event, row.original, column)}>
+              <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{format(value, column.kind) || '—'}</span>
+            </Button>
+          }
+        </TableCell>
+      })}
+      <TableCell className={cn(ROW_ACTIONS, 'group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted')}>
+        <DatasetActionsMenu label={t('dataset.rowActions', { row: offset + index + 1 })} triggerId={rowActionId(row.id)}
+          disabled={!!edit || !!draft}
+          view={{ label: t(editable ? 'dataset.viewEditRow' : 'dataset.viewRow'), onSelect: () => setRowDetails(row.original) }}
+          remove={{ label: t('dataset.deleteRow'), onSelect: () => askDelete(row.original), disabled: !editable }} />
+      </TableCell>
+    </TableRow>
+  }
+
+  function renderGroupHeader(group: DatasetRowGroup, columnKind: DatasetKind) {
+    const key = groupKey(group.group)
+    const open = selectedGroup === key
+    return <TableRow className="bg-muted/50">
+      <TableCell colSpan={span}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="ghost" size="sm" aria-expanded={open} disabled={editing} onClick={() => {
+            table.setExpanded(open ? {} : { [key]: true })
+            resetPaging()
+            setSelection({})
+            setPage(null)
+          }}>
+            {open ? <ChevronDown /> : <ChevronRight />}
+            {group.group === null ? t('dataset.groupEmpty') : format(group.group, columnKind)}
+            <span className="tabular-nums text-muted-foreground">{t('dataset.groupRows', { count: group.total })}</span>
+          </Button>
+          {showSummaries && layout.fields.map(column => {
+            const operation = summaryColumns[column.key]
+            const value = group.values[column.key]
+            return operation && value != null && <span key={column.key} className="text-xs text-muted-foreground">
+              {t('dataset.groupSummary', { column: column.label, metric: t(`dataset.summaryFunctions.${operation}`), value: format(value, column.kind) })}
+            </span>
+          })}
+        </div>
+      </TableCell>
+    </TableRow>
+  }
+
   return <div>
     <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Select value={groupColumn?.key ?? '$none'} disabled={editing} onValueChange={field => {
+          table.setGrouping(field === '$none' ? [] : [field])
+          table.setExpanded({})
+          setGroupOffset(0)
+          setSelection({})
+          resetPaging()
+          setPage(null)
+        }}>
+          <SelectTrigger aria-label={t('dataset.groupBy')}><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="$none">{t('dataset.noGrouping')}</SelectItem>
+            {dataset.columns.filter(column => datasetGroupable(column.kind)).map(column =>
+              <SelectItem value={column.key} key={column.key}>{column.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <Button variant={showSummaries ? 'secondary' : 'outline'} aria-pressed={showSummaries} disabled={editing}
           onClick={() => { setSummary(null); setSummaryError(null); setShowSummaries(value => !value) }}>{t('dataset.summary')}</Button>
         <DatasetQueryControls columns={dataset.columns} disabled={editing} filters={filters} sorting={sorting}
@@ -476,7 +639,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     </div>
     {loadError && <Alert variant="destructive"><AlertDescription>{loadError}<Button variant="outline" onClick={reload}>{t('common.retry')}</Button></AlertDescription></Alert>}
     <div ref={gridViewport} className="border-y">
-      <Table aria-label={t('dataset.gridView')} aria-busy={!page && !loadError}
+      <Table aria-label={t('dataset.gridView')} aria-busy={groupColumn ? !groups && !groupError : !page && !loadError}
         className="table-fixed" style={{ width: layout.width }}>
         <colgroup>
           <col style={{ width: ROW_NUMBER_WIDTH }} />
@@ -547,88 +710,18 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             </TableCell>
           </TableRow>}
           {draftError && <TableRow><TableCell colSpan={span}><Alert variant="destructive"><AlertDescription>{draftError}</AlertDescription></Alert></TableCell></TableRow>}
-          {!draft && !page?.items.length && <TableRow><TableCell colSpan={span} className="text-muted-foreground">
+          {groupColumn && (!groups || !groups.groups.length) && <TableRow><TableCell colSpan={span} className="text-muted-foreground">
+            {groupError ? <Alert variant="destructive"><AlertDescription>{groupError}
+              <Button variant="outline" onClick={reload}>{t('common.retry')}</Button>
+            </AlertDescription></Alert> : groups ? t('dataset.noRows') : t('common.loading')}
+          </TableCell></TableRow>}
+          {!groupColumn && !draft && !page?.items.length && <TableRow><TableCell colSpan={span} className="text-muted-foreground">
             {loadError ? t('dataset.rowsUnavailable') : page ? t('dataset.noRows') : t('common.loading')}
           </TableCell></TableRow>}
-          {rows.map((row, index) => <TableRow key={row.id} data-testid="dataset-row" data-state={row.getIsSelected() ? 'selected' : undefined}
-            className="group/row">
-            <TableCell className={cn(DIVIDER, 'p-0')}><label className="grid min-h-10 cursor-pointer place-items-center">
-              <Checkbox aria-label={t('dataset.selectRow', { row: offset + index + 1 })} checked={row.getIsSelected()}
-                className="col-start-1 row-start-1 opacity-0 group-hover/row:opacity-100 group-has-[:focus-visible]/row:opacity-100 data-[state=checked]:opacity-100"
-                onCheckedChange={checked => row.toggleSelected(checked === true)} />
-              <span aria-hidden="true" data-testid="dataset-row-number" className={cn(
-                'pointer-events-none col-start-1 row-start-1 text-xs tabular-nums text-muted-foreground group-hover/row:opacity-0 group-has-[:focus-visible]/row:opacity-0',
-                row.getIsSelected() && 'opacity-0',
-              )}>{offset + index + 1}</span>
-            </label></TableCell>
-            {layout.showRowId && <TableCell className={cn(DIVIDER, 'truncate font-mono text-xs text-muted-foreground')} title={row.id}>{row.id}</TableCell>}
-            {row.getVisibleCells().map(cell => {
-              const column = heading(cell.column.id)!
-              const value = (cell.getValue() as CellValue | undefined) ?? null
-              const isEditing = edit?.row.id === row.id && edit.column.key === column.key
-              const isSelected = selectedCell?.row === row.id && selectedCell.column === column.key
-              const isFocused = !editing && isSelected
-              const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
-              const buttonId = cellId(row.id, column.key)
-              const usesPicker = column.kind === 'boolean' || column.kind === 'select'
-              return <TableCell key={cell.id} data-dataset-cell="" className={cn(DIVIDER, 'relative p-0 whitespace-normal',
-                (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : 'hover:bg-muted',
-              )}>
-                {isEditing ? <form onFocus={event => {
-                  if (!isSelected && event.currentTarget.contains(event.target)) setActive({ row: row.id, column: column.key })
-                }} onSubmit={event => {
-                  event.preventDefault()
-                  void save(edit.value)
-                }} onKeyDown={event => {
-                  if (inDatasetCalendar(event.target)) return
-                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target instanceof HTMLTextAreaElement
-                    && !event.nativeEvent.isComposing) {
-                    event.preventDefault()
-                    void save(edit.value)
-                  }
-                  if (event.key === 'Escape' && !busy && !event.nativeEvent.isComposing) { event.stopPropagation(); closeEditor() }
-                }} onBlur={event => {
-                  if (!usesPicker && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
-                    && !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.checkValidity()) {
-                    void save(edit.value, false)
-                  }
-                }}>
-                  <DatasetValueField id={editId} label={column.label} column={column} value={edit.value} focus inline openPicker disabled={busy}
-                    error={saveError?.notice ? undefined : saveError?.message}
-                    onCalendarPick={column.kind === 'date' && !stale ? value => { void save(value) } : undefined}
-                    onChange={value => {
-                      if (saveError?.field) setSaveError(null)
-                      if (usesPicker && !stale) void save(value)
-                      else setEdit({ ...edit, value })
-                    }} />
-                  {saveError && !saveError.field && <div className="space-y-1 px-2 pb-2">
-                    {saveError.notice && <div role="status" className="text-xs wrap-anywhere text-muted-foreground">{saveError.message}</div>}
-                    {stale ? <Button type="button" variant="outline" size="sm" onClick={refreshEdit} disabled={busy}>{t('dataset.refreshEdit')}</Button>
-                      : <Button type="submit" variant="outline" size="sm" disabled={busy}>{t('common.save')}</Button>}
-                  </div>}
-                </form> :
-                  <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
-                    className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0')}
-                    aria-label={t(editable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value, column.kind) })}
-                    aria-pressed={isFocused}
-                    onPointerDown={event => { if (keepInvalidEditorFocused()) event.preventDefault() }}
-                    onFocus={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
-                    onBlur={event => { if (!inDatasetCell(event.relatedTarget)) setActive(null) }}
-                    onClick={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
-                    onDoubleClick={() => beginEdit(row.original, column)}
-                    onKeyDown={event => handleCellKey(event, row.original, column)}>
-                    <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{format(value, column.kind) || '—'}</span>
-                  </Button>
-                }
-              </TableCell>
-            })}
-            <TableCell className={cn(ROW_ACTIONS, 'group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted')}>
-              <DatasetActionsMenu label={t('dataset.rowActions', { row: offset + index + 1 })} triggerId={rowActionId(row.id)}
-                disabled={!!edit || !!draft}
-                view={{ label: t(editable ? 'dataset.viewEditRow' : 'dataset.viewRow'), onSelect: () => setRowDetails(row.original) }}
-                remove={{ label: t('dataset.deleteRow'), onSelect: () => askDelete(row.original), disabled: !editable }} />
-            </TableCell>
-          </TableRow>)}
+          {groupColumn ? groups?.groups.map(group => <Fragment key={groupKey(group.group)}>
+            {renderGroupHeader(group, groupColumn.kind)}
+            {selectedGroup === groupKey(group.group) && rows.map(renderRow)}
+          </Fragment>) : rows.map(renderRow)}
         </TableBody>
         {showSummaries && <TableFooter>
           {table.getFooterGroups().map(group => <TableRow key={group.id}>
@@ -659,6 +752,15 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         {edit ? <span>{t('dataset.discardEditKeys')}</span>
           : editable && <span className="hidden lg:inline">{t('dataset.gridKeys')}</span>}
       </div>
+      {groupColumn && <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" disabled={groupOffset === 0 || editing} onClick={() => {
+          setGroupOffset(current => Math.max(0, current - GROUP_PAGE_SIZE)); table.setExpanded({}); setPage(null); setSelection({}); resetPaging()
+        }}>{t('dataset.previousGroups')}</Button>
+        <Button variant="outline" size="sm" disabled={groups?.next_offset == null || editing} onClick={() => {
+          if (groups?.next_offset == null) return
+          setGroupOffset(groups.next_offset); table.setExpanded({}); setPage(null); setSelection({}); resetPaging()
+        }}>{t('dataset.nextGroups')}</Button>
+      </div>}
       <div className="flex items-center gap-2">
         <span role="status" className="flex items-center gap-1 text-xs text-muted-foreground">
           {notice && <><Check aria-hidden="true" className="size-3" />{notice}</>}

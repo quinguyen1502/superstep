@@ -159,16 +159,45 @@ class DatasetRowService:
                                    group_by=_column(columns, group_by) if group_by is not None else None)
         return {"group_by": group_by, "groups": rows[:MAX_AGGREGATE_GROUPS], "truncated": len(rows) > MAX_AGGREGATE_GROUPS}
 
+    def groups(self, uid: str, dataset_id: str, *, filters: list[dict], filter_tree: dict | None,
+               filter_mode: str, search: str | None, summaries: dict[str, str],
+               group_by: str, offset: int, limit: int) -> dict:
+        dataset = self._read_definition(uid, dataset_id, None)
+        columns = _active_columns(dataset)
+        predicates, search_columns = _query_predicates(columns, filters, filter_tree, search)
+        grouping = self._grid_group_column(columns, group_by)
+        groups = self.rows.summarize(dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
+                                     search_columns=search_columns, summaries=_summary_metrics(columns, summaries),
+                                     group_by=grouping, group_offset=offset, group_limit=limit + 1)
+        return {"groups": groups[:limit], "next_offset": offset + limit if len(groups) > limit else None,
+                "schema_revision": dataset.revision}
+
+    @staticmethod
+    def _grid_group_column(columns: dict[str, DatasetColumn], key: str) -> DatasetColumn:
+        column = _column(columns, key)
+        if column.kind not in {"select", "boolean", "text", "date"}:
+            raise AppError("DATASET_FILTER_INVALID", field=key)
+        return column
+
     def query(self, uid: str, dataset_id: str, *, filters: list[dict], fields: list[str] | None,
               search: str | None, sort: str | None, descending: bool, limit: int, offset: int,
               filter_mode: str = "and", sorts: list[dict] | None = None, schema_revision: int | None = None,
-              include_total: bool = False, filter_tree: dict | None = None) -> dict:
+              include_total: bool = False, filter_tree: dict | None = None,
+              group_by: str | None = None, group=None) -> dict:
         dataset = self._read_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _projection(columns, fields)
         if sorts is None:
             sorts = [{"field": sort, "descending": descending}] if sort else []
         predicates, search_columns = _query_predicates(columns, filters, filter_tree, search)
+        if group_by is not None:
+            column = self._grid_group_column(columns, group_by)
+            within = _filter(columns, column.key, "is_null" if group is None else "eq", group)
+            if predicates:
+                predicates = [RowFilterGroup(filter_mode, predicates), within]
+            else:
+                predicates = [within]
+            filter_mode = "and"
         rows, total = self.rows.query_page(
             dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
             search_columns=search_columns,

@@ -192,7 +192,8 @@ class DatasetRowRepository:
 
     def summarize(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup],
                   filter_mode: str, search: str | None, search_columns: list[DatasetColumn],
-                  summaries: list[tuple[DatasetColumn, str]], group_by: DatasetColumn | None = None) -> list[dict]:
+                  summaries: list[tuple[DatasetColumn, str]], group_by: DatasetColumn | None = None,
+                  group_offset: int = 0, group_limit: int = MAX_AGGREGATE_GROUPS + 1) -> list[dict]:
         query, texts = self._filtered_query(dataset_id, filters, filter_mode, search, search_columns)
         matched = func.count()
         metrics = [_summary_expression(column, operation, texts, matched) for column, operation in summaries]
@@ -203,7 +204,7 @@ class DatasetRowRepository:
             if group_by.kind not in {"number", "boolean"}:
                 key = texts.exact(key)
             statement = query.with_only_columns(key, matched, *metrics).group_by(key)
-            statement = statement.order_by(matched.desc(), key.asc().nulls_last()).limit(MAX_AGGREGATE_GROUPS + 1)
+            statement = statement.order_by(matched.desc(), key.asc().nulls_last()).limit(group_limit).offset(group_offset)
         with self.datasets.db.session() as session:
             groups = session.execute(statement).all()
         return [
