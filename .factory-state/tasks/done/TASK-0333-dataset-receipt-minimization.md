@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0333
 - Title: Keep only identifiers in Dataset write receipts and expire them
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -81,6 +81,8 @@ Write receipts hold identifiers and outcome only, existing receipts lose their r
 - 2026-11-14: Started from develop after the write-only results fix merged.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0330](../../artifacts/REV-0330-TASK-0333-dataset-receipt-minimization.md) and QA [QA-0330](../../artifacts/QA-0330-TASK-0333-dataset-receipt-minimization.md).
+
+- 2026-11-14: Owner approved merging PR #396 into develop after the final checks pass.
 
 ## Handoff Notes
 

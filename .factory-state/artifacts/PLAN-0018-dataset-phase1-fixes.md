@@ -32,7 +32,7 @@ Close the Datasets phase 1 review findings, starting with the P0 write-only read
 | Task | Priority | Outcome | Dependencies |
 | --- | --- | --- | --- |
 | [TASK-0332](../tasks/review/TASK-0332-dataset-write-only-results.md) | P0 | Write-only callers get identifiers only; no-op writes keep the revision | DEC-0099 (accepted); after #383 (TASK-0327), before TASK-0328 |
-| [TASK-0333](../tasks/review/TASK-0333-dataset-receipt-minimization.md) | P1 | Identifier-only receipts, migration, retention | TASK-0332 |
+| [TASK-0333](../tasks/done/TASK-0333-dataset-receipt-minimization.md) | P1 | Identifier-only receipts, migration, retention | TASK-0332 |
 | [TASK-0334](../tasks/done/TASK-0334-dataset-filter-semantics.md) | P1 | Null-safe `ne`; case-insensitive contains, search, sort | — |
 | [TASK-0335](../tasks/done/TASK-0335-dataset-team-authority.md) | P1 | Team dataset management authority; rotate keeps issuer | DEC-0100 (accepted) |
 | [TASK-0336](../tasks/done/TASK-0336-dataset-unique-later.md) | P1 | Make an existing column unique after a duplicate check | — |
