@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0356
 - Title: Carry Dataset phase 3 into the Python export
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-14
+- Updated: 2026-11-15
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -71,6 +71,8 @@ Generated Python projects support the filter tree, new operators, `aggregate_row
 - 2026-11-14: Readiness gate passed. Started stacked on Phase 3 schema and runtime changes in PR #411.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0347](../../artifacts/REV-0347-TASK-0356-dataset-export-python-phase3.md) and QA [QA-0347](../../artifacts/QA-0347-TASK-0356-dataset-export-python-phase3.md).
+
+- 2026-11-15: Owner approved merging PR #414 into develop after successful checks.
 
 ## Handoff Notes
 
