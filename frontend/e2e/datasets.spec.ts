@@ -99,19 +99,16 @@ test('creates a team dataset, edits typed rows, filters and confirms deletion', 
   await expect(editDataset.getByLabel('Name', { exact: true })).toHaveValue('Support Tickets')
   await editDataset.getByRole('button', { name: 'Cancel' }).click()
 
-  await expect(page.getByRole('tab', { name: 'Schema' })).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: 'Schema' })).toBeVisible()
   await datasetActions.click()
   await page.getByRole('menuitem', { name: 'View schema', exact: true }).click()
-  const schemaDialog = page.getByRole('dialog', { name: 'Schema', exact: true })
+  const schemaDialog = page.getByRole('tabpanel', { name: 'Schema', exact: true })
   await expect(schemaDialog.getByRole('row', { name: /Ticket.*ticket.*Unique/ })).toBeVisible()
   const addColumnButton = schemaDialog.getByRole('button', { name: 'Add column' })
   await testInfo.attach('datasets-schema', { body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png' })
   const addColumn = (await addColumnButton.boundingBox())!
   const addColumnHeight = await addColumnButton.evaluate(button => button.offsetHeight)
   const schema = (await schemaDialog.getByRole('table', { name: 'Schema' }).boundingBox())!
-  const close = (await schemaDialog.getByRole('button', { name: 'Close' }).boundingBox())!
-  expect(addColumn.x + addColumn.width).toBeLessThan(close.x)
-  expect(addColumn.y).toBeCloseTo(close.y)
   expect(addColumn.y + addColumn.height).toBeLessThan(schema.y)
   await addColumnButton.click()
   const addColumnDialog = page.getByRole('dialog', { name: 'Add column' })
@@ -141,8 +138,7 @@ test('creates a team dataset, edits typed rows, filters and confirms deletion', 
   await schemaDialog.getByRole('row', { name: /Subject.*subject/ }).getByRole('button', { name: 'Remove column', exact: true }).click()
   await expect(confirm.locator('[id$="-submit"]')).toBeDisabled()
   await confirm.getByRole('button', { name: 'Cancel' }).click()
-  await schemaDialog.getByRole('button', { name: 'Close', exact: true }).click()
-  await expect(datasetActions).toBeFocused()
+  await page.getByRole('tab', { name: 'Rows' }).click()
   for (const name of ['Filter', 'Sort', 'Columns', 'Add row']) {
     expect(await page.getByRole('button', { name, exact: true }).evaluate(button => button.offsetHeight)).toBe(addColumnHeight)
   }
@@ -537,13 +533,13 @@ test('loads subsequent result pages and validates typed editors', async ({ page 
   await email.fill('valid@example.com')
   await email.press('Enter')
   await expect(row.getByRole('button', { name: 'Edit Email: valid@example.com' })).toBeVisible()
-  await row.getByRole('button', { name: 'Edit Date: 2026-12-05' }).dblclick()
+  await row.getByRole('button', { name: 'Edit Date: 12/5/2026' }).dblclick()
   await row.getByRole('button', { name: 'Choose a date' }).click()
   const calendar = page.getByRole('dialog', { name: 'Choose a date' })
   await expect(calendar).toBeVisible()
   await testInfo.attach('datasets-calendar', { body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png' })
   await calendar.getByRole('button', { name: /December 10/ }).click()
-  await expect(row.getByRole('button', { name: 'Edit Date: 2026-12-10' })).toBeVisible()
+  await expect(row.getByRole('button', { name: 'Edit Date: 12/10/2026' })).toBeVisible()
 
   const actions = row.getByRole('button', { name: /Row .* actions/ })
   await actions.click()

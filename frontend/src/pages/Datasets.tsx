@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ChevronRight, Download, Info, PanelLeftClose, PanelLeftOpen, Pencil, Plus, SearchX, Table2, Trash2, Upload, UserRoundCog, X } from 'lucide-react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ChevronRight, Download, Info, PanelLeftClose, PanelLeftOpen, Pencil, Plus, SearchX, Table2, Trash2, Upload, UserRoundCog } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { Dialog, DialogBody, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { DatasetCsvDialog } from '@/components/datasets/dataset-csv-dialog'
 import { DatasetColumnDialog, DatasetFormDialog } from '@/components/datasets/dataset-dialogs'
-import { DatasetAccessDialog } from '@/components/datasets/dataset-access-dialog'
+import { DatasetAccessPanel } from '@/components/datasets/dataset-access-panel'
 import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
 import { DatasetFieldIcon } from '@/components/datasets/dataset-field-icon'
 import { DatasetGrid } from '@/components/datasets/dataset-grid'
@@ -38,6 +38,18 @@ export function DatasetsPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const tab = requestedTab === 'schema' || requestedTab === 'access' ? requestedTab : 'rows'
+  function changeTab(value: string) {
+    setSearchParams(params => {
+      const next = new URLSearchParams(params)
+      if (value === 'rows') next.delete('tab')
+      else next.set('tab', value)
+      if (value !== 'access') next.delete('workflow')
+      return next
+    })
+  }
   const me = useMe()
   const editable = can(me, 'resources.manage')
   const confirm = useConfirmDelete()
@@ -49,12 +61,10 @@ export function DatasetsPage() {
   const [teams, setTeams] = useState<DatasetTeam[] | null>(null)
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [datasetDialog, setDatasetDialog] = useState<'create' | 'edit' | null>(null)
-  const [accessId, setAccessId] = useState<string | null>(null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [csv, setCsv] = useState<{ dataset?: Dataset; initial?: { name: string; teamId: string | null } } | null>(null)
   const [csvNotice, setCsvNotice] = useState<{ id: string; count: number } | null>(null)
   const [csvError, setCsvError] = useState('')
-  const [schemaId, setSchemaId] = useState<string | null>(null)
   const [columnDialog, setColumnDialog] = useState<DatasetColumn | 'new' | null>(null)
   const [gridFilter, setGridFilter] = useState<{ id: string; seq: number; filters: DatasetFilters } | null>(null)
   const current = dataset?.id === id ? dataset : null
@@ -240,14 +250,14 @@ export function DatasetsPage() {
         {current && <>
           <div className="flex items-start justify-between gap-2 px-4 pt-4 md:px-6">
             <div className="min-w-0 space-y-1">
-              <div className="flex items-center gap-1 text-xs text-muted-foreground"><span>{scopeName(current)}</span><ChevronRight className="size-3" /><span>{t('dataset.title')}</span></div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground"><Link to="/datasets">{t('dataset.title')}</Link><ChevronRight aria-hidden="true" className="size-3" /><span aria-current="page">{current.name}</span></div>
               <h2 className="break-words text-2xl font-semibold tracking-tight">{current.name}</h2>
               {current.description && <p className="break-words text-sm text-muted-foreground">{current.description}</p>}
             </div>
             <DatasetActionsMenu size="icon" label={t('dataset.datasetActions')} triggerRef={datasetMenu}
-              schema={{ label: t('dataset.viewSchema'), onSelect: () => setSchemaId(current.id) }}
+              schema={{ label: t('dataset.viewSchema'), onSelect: () => changeTab('schema') }}
               edit={{ label: t('dataset.editDataset'), onSelect: () => setDatasetDialog('edit'), disabled: !manageable }}
-              access={{ label: t('dataset.access'), onSelect: () => setAccessId(current.id), disabled: !manageable }}
+              access={{ label: t('dataset.access'), onSelect: () => changeTab('access'), disabled: !manageable }}
               actions={[
                 { icon: Upload, label: t('dataset.importCsv'), onSelect: () => setCsv({ dataset: current }), disabled: !editable },
                 { icon: Download, label: t('dataset.exportCsv'), onSelect: () => { void exportCsv(current) } },
@@ -258,27 +268,26 @@ export function DatasetsPage() {
           </div>
           {csvError && <Alert variant="destructive" className="mx-4"><AlertDescription>{csvError}</AlertDescription></Alert>}
           {csvNotice?.id === current.id && <p role="status" className="px-4 text-sm text-muted-foreground">{t('dataset.csvImported', { count: csvNotice.count })}</p>}
-          <div className="border-t"><DatasetGrid viewOnlyId={viewOnly ? 'dataset-view-only' : undefined} key={`${current.id}-${gridFilter?.id === current.id ? gridFilter.seq : 0}`} dataset={current} editable={editable}
-            reloadDataset={reloadDataset} initialFilters={gridFilter?.id === current.id ? gridFilter.filters : undefined} /></div>
-          <Dialog open={schemaId === current.id} onOpenChange={open => { if (!open) setSchemaId(null) }}>
-            <DialogContent showCloseButton={false} className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-3xl" onCloseAutoFocus={event => {
-              event.preventDefault()
-              datasetMenu.current?.focus()
-            }}>
-              <DialogHeader className="flex-row items-start justify-between gap-2 pr-0">
+          <Tabs value={tab} onValueChange={changeTab} className="gap-0">
+            <TabsList variant="panel" aria-label={t('dataset.title')}>
+              <TabsTrigger value="rows" className="flex-none">{t('dataset.rows')}</TabsTrigger>
+              <TabsTrigger value="schema" className="flex-none">{t('dataset.schema')}</TabsTrigger>
+              <TabsTrigger value="access" className="flex-none">{t('dataset.access')}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="rows">
+              <DatasetGrid viewOnlyId={viewOnly ? 'dataset-view-only' : undefined}
+                key={`${current.id}-${gridFilter?.id === current.id ? gridFilter.seq : 0}`} dataset={current} editable={editable}
+                reloadDataset={reloadDataset} initialFilters={gridFilter?.id === current.id ? gridFilter.filters : undefined} />
+            </TabsContent>
+            <TabsContent value="schema" className="space-y-3 p-4 md:px-6">
+              <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 space-y-1">
-                  <DialogTitle>{t('dataset.schema')}</DialogTitle>
-                  <DialogDescription className="wrap-anywhere">{current.name}</DialogDescription>
                   <p className="text-xs text-muted-foreground">{t('dataset.columnCount', { count: current.columns.length, max: 100 })}</p>
                   {datasetNote && <p id={`${current.id}-schema-note`} className="text-xs text-muted-foreground">{datasetNote}</p>}
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button disabled={!manageable} aria-describedby={datasetNote ? `${current.id}-schema-note` : undefined}
-                    onClick={() => setColumnDialog('new')}><Plus />{t('dataset.addColumn')}</Button>
-                  <DialogClose asChild><Button variant="ghost" size="icon" aria-label={t('common.close')}><X /></Button></DialogClose>
-                </div>
-              </DialogHeader>
-              <DialogBody>
+                <Button disabled={!manageable} aria-describedby={datasetNote ? `${current.id}-schema-note` : undefined}
+                  onClick={() => setColumnDialog('new')}><Plus />{t('dataset.addColumn')}</Button>
+              </div>
                 <div className="rounded-md border">
                   <Table aria-label={t('dataset.schema')}>
                     <TableHeader><TableRow>
@@ -299,7 +308,7 @@ export function DatasetsPage() {
                           {column.required && <Badge variant="outline">{t('dataset.required')}</Badge>}
                           {column.unique && <Badge variant="outline">{t('dataset.unique')}</Badge>}
                         </div></TableCell>
-                        <TableCell>{displayValue(column.default, t('dataset.valueTrue'), t('dataset.valueFalse'))}</TableCell>
+                        <TableCell>{displayValue(column.default, t('dataset.valueTrue'), t('dataset.valueFalse'), column.kind)}</TableCell>
                         <TableCell><div className="flex gap-1">
                           <Button variant="ghost" size="icon-sm" disabled={!manageable} aria-describedby={datasetNote ? `${current.id}-schema-note` : undefined}
                             aria-label={t('dataset.editColumnNamed', { name: column.label })} onClick={() => setColumnDialog(column)}><Pencil /></Button>
@@ -311,9 +320,12 @@ export function DatasetsPage() {
                     </TableBody>
                   </Table>
                 </div>
-              </DialogBody>
-            </DialogContent>
-          </Dialog>
+            </TabsContent>
+            <TabsContent value="access">
+              {manageable ? <DatasetAccessPanel key={current.id} dataset={current} workflow={searchParams.get('workflow') ?? undefined} />
+                : <p className="p-4 text-sm text-muted-foreground">{datasetNote}</p>}
+            </TabsContent>
+          </Tabs>
         </>}
       </section>
     </main>
@@ -330,12 +342,11 @@ export function DatasetsPage() {
       onClose={() => setColumnDialog(null)} onSave={data => { setDataset(data); setColumnDialog(null) }}
       onShowDuplicates={({ field, value }) => {
         setColumnDialog(null)
-        setSchemaId(null)
+        changeTab('rows')
         setGridFilter(previous => ({ id: current.id, seq: (previous?.seq ?? 0) + 1, filters: { mode: 'and', rules: [{ field, op: 'eq', value }] } }))
       }} />}
     {current && ownerId === current.id && <DatasetOwnerDialog dataset={current} onClose={() => setOwnerId(null)}
       onSave={data => { saveDataset(data); setOwnerId(null) }} />}
-    {current && accessId === current.id && <DatasetAccessDialog dataset={current} scope={scopeName(current)} onClose={() => setAccessId(null)} />}
     {confirm.dialog}
   </div>
 }

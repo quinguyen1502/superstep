@@ -13,7 +13,7 @@ test('manages workflow grants and scoped Dataset API tokens', async ({ page }) =
   await page.goto(`/datasets/${dataset.id}`)
   await page.getByRole('button', { name: 'Dataset actions' }).click()
   await page.getByRole('menuitem', { name: 'Access', exact: true }).click()
-  const access = page.getByRole('dialog', { name: 'Access' })
+  const access = page.getByRole('tabpanel', { name: 'Access' })
   const grantForm = access.locator('form').nth(0)
   const grantDelete = grantForm.getByRole('checkbox', { name: 'Allow row deletion' })
   await expect(grantDelete).toBeDisabled()

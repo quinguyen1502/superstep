@@ -166,7 +166,7 @@ export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDu
             </p>}
             {onShowDuplicates && <Button type="button" variant="outline" size="sm" className="mt-1"
               onClick={() => onShowDuplicates({ field: duplicates.field, value: duplicates.value })}>
-              {t('dataset.uniqueDuplicatesShow', { value: displayValue(duplicates.value, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
+              {t('dataset.uniqueDuplicatesShow', { value: displayValue(duplicates.value, t('dataset.valueTrue'), t('dataset.valueFalse'), draft.kind) })}
             </Button>}
           </AlertDescription>
         </Alert> : error && <Alert variant="destructive"><AlertTriangle /><AlertDescription>
