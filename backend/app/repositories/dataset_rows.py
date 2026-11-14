@@ -160,7 +160,7 @@ def _predicate(spec: RowFilter | RowFilterGroup, dataset_id: str, texts: _Text):
 
 def _summary_expression(column, operation, texts, matched):
     value = _column_value(column)
-    if column.kind not in {"number", "boolean"} | SYSTEM_TIME_KINDS:
+    if column.kind not in {"number", "boolean", "auto_number"} | SYSTEM_TIME_KINDS:
         value = texts.exact(value)
     filled = func.count(value)
     return {
@@ -220,7 +220,7 @@ class DatasetRowRepository:
             statement = query.with_only_columns(literal(None), matched, *metrics)
         else:
             key = _column_value(group_by)
-            if group_by.kind not in {"number", "boolean"} | SYSTEM_TIME_KINDS:
+            if group_by.kind not in {"number", "boolean", "auto_number"} | SYSTEM_TIME_KINDS:
                 key = texts.exact(key)
             statement = query.with_only_columns(key, matched, *metrics).group_by(key)
             statement = statement.order_by(matched.desc(), key.asc().nulls_last()).limit(group_limit).offset(group_offset)

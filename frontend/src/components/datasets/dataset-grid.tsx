@@ -601,8 +601,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const isFocused = !editing && isSelected
         const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
         const buttonId = cellId(row.id, column.key)
-        const cellEditable = editable && !datasetSystemTime(column.kind)
+        const cellEditable = editable && !datasetReadOnly(column.kind)
       const usesPicker = column.kind === 'boolean' || column.kind === 'select'
+      const multiSelect = column.kind === 'multi_select'
         return <TableCell key={cell.id} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
           (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : 'hover:bg-muted',
           cell.column.getIsPinned() && pinnedClass,
@@ -621,7 +622,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             }
             if (event.key === 'Escape' && !busy && !event.nativeEvent.isComposing) { event.stopPropagation(); closeEditor() }
           }} onBlur={event => {
-            if (!usesPicker && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
+            if (!usesPicker && !multiSelect && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
               && !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.checkValidity()) {
               void save(edit.value, false)
             }
@@ -634,6 +635,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
                 if (usesPicker && !stale) void save(value)
                 else setEdit({ ...edit, value })
               }} />
+            {multiSelect && !saveError && <div className="flex gap-1 p-1">
+              <Button type="submit" variant="outline" size="sm" disabled={busy}>{t('common.save')}</Button>
+              <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => closeEditor()}>{t('common.cancel')}</Button>
+            </div>}
             {saveError && !saveError.field && <div className="space-y-1 px-2 pb-2">
               {saveError.notice && <div role="status" className="text-xs wrap-anywhere text-muted-foreground">{saveError.message}</div>}
               {stale ? <Button type="button" variant="outline" size="sm" onClick={refreshEdit} disabled={busy}>{t('dataset.refreshEdit')}</Button>
