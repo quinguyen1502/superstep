@@ -118,7 +118,7 @@ def get_job_queue() -> JobQueue:
 @lru_cache
 def run_worker() -> RunWorker:
     return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service,browser=browser_session_service,
-                     telemetry=get_telemetry())
+                     telemetry=get_telemetry(), expire_dataset_receipts=lambda: dataset_row_service().expire_receipts())
 
 
 @lru_cache

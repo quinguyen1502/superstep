@@ -18,7 +18,7 @@ from .job_queue import JobQueue
 from .run_service import RunService, error_event
 
 log = get_logger("worker")
-CHAT_CLEANUP_EVERY = 3600  # seconds between chat retention sweeps
+RETENTION_EVERY = 3600  # seconds between retention sweeps
 HEARTBEAT_EVERY = 5  # seconds between two worker heartbeats
 _recovered = False  # start-up recovery runs once per process: later lifespans (tests) share the same in-memory queue
 
@@ -27,12 +27,13 @@ class RunWorker:
     def __init__(self, jobs: JobQueue, services: Callable[[], RunService], deliveries: Optional[Callable[[], object]] = None,
                  schedules: Optional[Callable[[], object]] = None, approvals: Optional[Callable[[], object]] = None,
                  chat: Optional[Callable[[], object]] = None, langsmith: Optional[Callable[[], object]] = None, browser=None,
-                 telemetry=None):
+                 telemetry=None, expire_dataset_receipts: Callable[[], int] | None = None):
         self.jobs, self.services, self.deliveries = jobs, services, deliveries  # deliveries: -> DeliveryService
         self.schedules = schedules  # -> ScheduleService: due cron schedules start runs from maintain()
         self.approvals = approvals  # -> ApprovalService: Human node reminders and deadlines from maintain()
         self.chat = chat  # -> ChatRunService: chat_message jobs check a message and start its run
         self.browser = browser
+        self.expire_dataset_receipts = expire_dataset_receipts
         self.langsmith = langsmith  # -> LangSmithService: langsmith_suite jobs send a finished test suite as an experiment
         self._tasks: list[asyncio.Task] = []; self._stop = False
         self.busy = 0; self.capacity = 0  # job slots in use and started (heartbeat)
@@ -158,11 +159,19 @@ class RunWorker:
             if self.approvals is not None:
                 try: await asyncio.to_thread(self.approvals().fire_deadlines)
                 except Exception: log.exception("firing approval deadlines failed")
-            if self.chat is not None and time.time() - last_cleanup >= CHAT_CLEANUP_EVERY:  # chat history retention
+            if time.time() - last_cleanup >= RETENTION_EVERY:
                 last_cleanup = time.time()
-                try:
-                    if (web := self.chat().web) is not None: await asyncio.to_thread(web.cleanup)
-                except Exception: log.exception("cleaning up old chats failed")
+                if self.chat is not None:
+                    try:
+                        if (web := self.chat().web) is not None:
+                            await asyncio.to_thread(web.cleanup)
+                    except Exception:
+                        log.exception("cleaning up old chats failed")
+                if self.expire_dataset_receipts is not None:
+                    try:
+                        await asyncio.to_thread(self.expire_dataset_receipts)
+                    except Exception:
+                        log.exception("cleaning up old Dataset receipts failed")
             if time.time() - last_reap >= config.job_reap_every():
                 last_reap = time.time(); await self.reap()
             await asyncio.sleep(min(1.0, config.job_reap_every()))
