@@ -347,3 +347,62 @@ def test_generated_typescript_agent_writes_and_connected_delete(client, db, monk
         assert "DATASET_NODE_ARGUMENTS_INVALID" in agent("call-2", **args).stderr
     found = agent("call-3", filters=[{"field": "ticket", "op": "eq", "value": "TK-11"}])
     assert json.loads(found.stdout) == {"rows": [{"ticket": "TK-11"}], "truncated": False}
+
+
+def test_typescript_phase_three_matches_connected_and_standalone(client, db, target, monkeypatch, tmp_path, deno_env):
+    from test_dataset_filter_groups import group, rule
+    from test_dataset_runtime import dataset_node, graph
+    from test_datasets import create
+
+    source = create(client, name="TypeScript phase three", columns=[
+        {"key": "ticket", "label": "Ticket", "kind": "long_text"},
+        {"key": "score", "label": "Score", "kind": "number", "validation_rules": {"integer": True}},
+        {"key": "labels", "label": "Labels", "kind": "multi_select", "options": ["Open", "Pending"]},
+        {"key": "created_at", "label": "Created", "kind": "created_time"},
+        {"key": "code", "label": "Code", "kind": "auto_number"},
+    ])
+    did = source["id"]
+    secret = token(client, f"/api/datasets/{did}")["token"]
+    tree = group("and", rule("labels", "contains_any", ["Open"]),
+                 group("or", rule("score", "in", [4, 5]), rule("ticket", "not_contains", "skip")))
+    arguments = {"filter_tree": tree, "summaries": {"score": "sum"}}
+    wid = save(client, graph("TS aggregate", dataset_node(did, "aggregate_rows", arguments, ["score"])))
+    response = client.get(f"/api/workflows/{wid}/export/typescript", headers=auth("owner"))
+    assert response.status_code == 200, response.text
+    exported = tmp_path / "deno-agent.ts"
+    exported.write_text(response.text)
+    check = subprocess.run([DENO, "check", "-q", *DENO_ARGS, str(exported)], env=deno_env,
+                           capture_output=True, text=True, timeout=300)
+    assert check.returncode == 0, check.stderr
+    script = tmp_path / "phase3.ts"
+    script.write_text(r'''
+import { datasetCall, setupDatasets } from "./deno-agent.ts";
+const request = JSON.parse(Deno.env.get("PARITY_ARGUMENTS") ?? "{}");
+const fields = ["ticket", "score", "labels", "created_at", "code"];
+await setupDatasets(true);
+let rejected = false;
+try {
+  await datasetCall("DATASET_1", "insert_row", fields, { values: { score: 1.5 } }, "invalid");
+} catch (error) { rejected = String(error).includes("DATASET_COLUMN_RULE_VIOLATION"); }
+if (!rejected) throw new Error("Expected column validation");
+const result = await datasetCall("DATASET_1", "insert_row", fields, {
+  values: { ticket: "One\nlong description", score: 4, labels: ["Open"] },
+}, "accepted");
+const values = result.row as { values: { code: number; created_at: string } };
+if (values.values.code !== 1 || !values.values.created_at.endsWith("Z")) throw new Error("Expected system values");
+console.log(JSON.stringify(await datasetCall("DATASET_1", "aggregate_rows", ["score"], request)));
+''')
+    configure(monkeypatch, db, tmp_path)
+    monkeypatch.setenv("DATASET_1_ID", "phase-three")
+    extra = {"PARITY_ARGUMENTS": json.dumps(arguments)}
+    standalone = run_deno(deno_env, tmp_path, script, extra=extra)
+    assert standalone.returncode == 0, standalone.stderr
+    expected = {"group_by": None, "groups": [{"group": None, "total": 1, "values": {"score": 4}}], "truncated": False}
+    assert json.loads(standalone.stdout.strip().splitlines()[-1]) == expected
+    address, _ = target
+    connected = run_deno(deno_env, tmp_path, script, extra={
+        **extra, "DATASET_1_BACKEND": "superstep", "DATASET_1_ID": did,
+        "DATASET_1_API_URL": address, "DATASET_1_API_TOKEN": secret,
+    })
+    assert connected.returncode == 0, connected.stderr
+    assert json.loads(connected.stdout.strip().splitlines()[-1]) == expected

@@ -206,8 +206,8 @@ type DatasetAgentWrites = { operations: string[]; write_fields?: string[]; key?:
 export async function datasetAgent(binding: string, fields: string[], allowed: Record<string, string[]>, limit: number, args: Record<string, unknown>,
   writes?: DatasetAgentWrites, operationId?: string) {
   const operations = writes?.operations ?? ["find_rows"];
-  const canWrite = operations.includes("insert_row") || operations.includes("upsert_row");
-  if (!args || typeof args !== "object" || Array.isArray(args) || (!canWrite && Object.hasOwn(args, "operation"))) {
+  const explicit = operations.some(operation => operation !== "find_rows");
+  if (!args || typeof args !== "object" || Array.isArray(args) || (!explicit && Object.hasOwn(args, "operation"))) {
     throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
   }
   const operation = Object.hasOwn(args, "operation") ? args.operation : "find_rows";
@@ -217,7 +217,7 @@ export async function datasetAgent(binding: string, fields: string[], allowed: R
     if (Object.keys(args).some((key) => key !== "operation" && key !== "values") || !values || typeof values !== "object"
       || Array.isArray(values) || !Object.keys(values).length
       || Object.keys(values).some((field) => !(writes?.write_fields ?? []).includes(field))
-      || Object.values(values).some((value) => value !== null && typeof value === "object")) {
+      || Object.values(values).some(value => Array.isArray(value) ? value.some(item => typeof item !== "string") : value !== null && typeof value === "object")) {
       throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
     }
     const request: Record<string, unknown> = { values };
@@ -232,15 +232,44 @@ export async function datasetAgent(binding: string, fields: string[], allowed: R
     const row = result.row as { id: string; values?: Record<string, unknown> };
     return readable && row.values ? { row_id: row.id, inserted: result.inserted, values: row.values } : { row_id: row.id, inserted: result.inserted };
   }
-  if (Object.keys(args).some((key) => key !== "filters" && key !== "operation")) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
-  const filters = Object.hasOwn(args, "filters") ? args.filters : [];
+  const names = ["filters", "filter_tree", "operation", ...(operation === "aggregate_rows" ? ["summaries", "group_by"] : [])];
+  if (Object.keys(args).some(key => !names.includes(key)) || ("filters" in args && "filter_tree" in args)) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
+  const filters = args.filters ?? [];
   if (!Array.isArray(filters) || filters.length > 12) throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
-  for (const rule of filters) {
-    if (!rule || typeof rule.field !== "string" || !Object.hasOwn(allowed, rule.field) || !allowed[rule.field].includes(rule.op)) {
-      throw new Error("DATASET_FILTER_INVALID");
+  let rules = 0;
+  const check = (rule: unknown, depth: number): void => {
+    if (!plainObject(rule)) throw new Error("DATASET_FILTER_INVALID");
+    if (rule.type === "group") {
+      if (depth > 3 || !Array.isArray(rule.children) || !rule.children.length || rule.children.length > 20) {
+        throw new Error("DATASET_FILTER_INVALID");
+      }
+      for (const item of rule.children) check(item, depth + 1);
+      return;
     }
+    if (++rules > 20 || typeof rule.field !== "string" || typeof rule.op !== "string"
+        || !Object.hasOwn(allowed, rule.field) || !allowed[rule.field].includes(rule.op)) throw new Error("DATASET_FILTER_INVALID");
+  };
+  const selector = args.filter_tree === undefined ? { filters } : { filter_tree: args.filter_tree };
+  if (args.filter_tree === undefined) for (const rule of filters) check(rule, 1);
+  else check(args.filter_tree, 1);
+  if (operation === "aggregate_rows") {
+    if (!plainObject(args.summaries) || !Object.keys(args.summaries).length
+        || Object.keys(args.summaries).some(field => !fields.includes(field))
+        || (args.group_by != null && (typeof args.group_by !== "string" || !fields.includes(args.group_by)))) {
+      throw new Error("DATASET_NODE_ARGUMENTS_INVALID");
+    }
+    const page = await datasetCall(binding, operation, fields, { ...selector, summaries: args.summaries, group_by: args.group_by });
+    const output: unknown[] = [];
+    const groups = page.groups as unknown[];
+    let length = JSON.stringify({ ...page, groups: [] }).length + 5;
+    for (const group of groups) {
+      length += JSON.stringify(group).length + 2;
+      if (length > 8000) break;
+      output.push(group);
+    }
+    return { ...page, groups: output, truncated: page.truncated || output.length < groups.length };
   }
-  const page = await datasetCall(binding, "find_rows", fields, { filters, limit });
+  const page = await datasetCall(binding, "find_rows", fields, { ...selector, limit });
   const items = page.items as { values: Record<string, unknown> }[];
   const rows = [];
   let length = 0;
