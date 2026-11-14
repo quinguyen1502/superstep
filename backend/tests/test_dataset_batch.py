@@ -58,3 +58,30 @@ def test_stale_concurrent_batch_never_overwrites_the_winner(client):
     assert sorted(response.status_code for response in responses) == [200, 409]
     current = call(client, "GET", f"{path}/{row['id']}")
     assert current["revision"] == 2 and current["values"]["score"] in [1, 2]
+
+
+def test_batch_append_and_revert_with_revision_checks(client):
+    data = create(client, name="Append and revert", columns=[
+        {"key": "ticket", "label": "Ticket", "kind": "text", "unique": True},
+        {"key": "position", "label": "Position", "kind": "auto_number"},
+    ])
+    path = f"/api/datasets/{data['id']}/rows"
+    first = insert(client, path, ticket="A")
+    update = {"id": first["id"], "revision": 1, "values": {"ticket": "B"}}
+    url = f"{path}/batch"
+    error(client.patch(url, headers=auth("owner"), json={
+        "schema_revision": 1, "rows": [update], "append": [{"ticket": "B"}],
+    }), 409, "DATASET_BATCH_CONFLICT")
+    assert call(client, "GET", f"{path}/{first['id']}") == first
+    result = call(client, "PATCH", url, body={
+        "schema_revision": 1, "rows": [update], "append": [{"ticket": "A"}],
+    })
+    added, = result["added"]
+    assert call(client, "GET", f"{path}/{added['id']}")["values"] == {"ticket": "A", "position": 2}
+    revert = {
+        "schema_revision": 1, "remove": {added["id"]: added["revision"]},
+        "rows": [{"id": first["id"], "revision": 2, "values": {"ticket": "A"}}],
+    }
+    assert call(client, "PATCH", url, body=revert)["rows"][0]["revision"] == 3
+    error(client.get(f"{path}/{added['id']}", headers=auth("owner")), 404, "DATASET_ROW_NOT_FOUND")
+    assert insert(client, path, ticket="C")["values"]["position"] == 3
