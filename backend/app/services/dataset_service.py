@@ -32,15 +32,18 @@ def _column(data: dict, position: int) -> DatasetColumn:
     key, kind = data["key"], data["kind"]
     if key in {"constructor", "prototype"}:
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
-    if ((kind == "long_text" and data["unique"])
+    if ((kind in {"long_text", "multi_select"} and data["unique"])
+            or (kind == "auto_number" and (data["required"] or data["default"] is not None))
             or (kind in SYSTEM_TIME_KINDS and (data["required"] or data["unique"] or data["default"] is not None))):
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
     options = [_label(option, key) for option in data["options"]]
-    if (kind == "select") != bool(options) or len(options) != len(set(options)):
+    if (kind in {"select", "multi_select"}) != bool(options) or len(options) != len(set(options)):
+        raise AppError("DATASET_DEFINITION_INVALID", field=key)
+    if kind == "multi_select" and any(";" in option for option in options):
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
     return DatasetColumn(
         key=key, kind=kind, label=_label(data["label"], key), position=position,
-        required=data["required"], unique=data["unique"], archived=False, options=options,
+        required=data["required"], unique=data["unique"] or kind == "auto_number", archived=False, options=options,
         default_value=normalize_cell(key, kind, data["default"], options, required=False),
     )
 
@@ -189,6 +192,9 @@ class DatasetService:
             raise AppError("DATASET_COLUMN_LIMIT", max=MAX_COLUMN_DEFINITIONS)
         field = _column(column, len(dataset.columns))
         dataset.columns.append(field)
+        if field.kind == "auto_number":
+            return self._save(uid, dataset, "dataset.column_add", rows=RowChange(field.key, auto_number=True),
+                              unique_change=(field.key, True), field=field.key)
         if field.required and field.default_value is not None:
             # Existing rows take the default in the same transaction; a unique default fails on a second row.
             return self._save(uid, dataset, "dataset.column_add", rows=RowChange(field.key, value=field.default_value),
