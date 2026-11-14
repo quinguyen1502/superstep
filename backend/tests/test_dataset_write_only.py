@@ -149,9 +149,9 @@ def test_write_only_token_reproduces_review_probe(client, db):
     added = post(client, base, secret, connected("insert_row", [], operation_id="probe:3",
                                                  arguments={"values": {"ticket": "T-2", "note": "new"}}))
     assert added.json()["data"]["inserted"] is True and set(added.json()["data"]["row"]) == {"id", "revision"}
-    error(post(client, base, secret, connected("find_rows", ["ticket"])), 401, "AUTH_TOKEN_INVALID")
-    error(post(client, base, secret, connected("get_row", ["note"], arguments={"row_id": row["id"]})), 401,
-          "AUTH_TOKEN_INVALID")
+    error(post(client, base, secret, connected("find_rows", ["ticket"])), 403, "DATASET_TOKEN_SCOPE")
+    error(post(client, base, secret, connected("get_row", ["note"], arguments={"row_id": row["id"]})), 403,
+          "DATASET_TOKEN_SCOPE")
     assert stored(client, base)["T-1"]["revision"] == 1
 
     full = call(client, "POST", f"{base}/access/tokens", status=201,

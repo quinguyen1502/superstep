@@ -83,6 +83,13 @@ class DatasetRuntimeService:
             elif deleting:
                 target = dataset_nodes.delete_target(arguments)
         except ValidationError as exc:
+            for error in exc.errors():
+                location = error["loc"]
+                if operation == "find_rows" and len(location) >= 2 and location[0] == "filters":
+                    index = location[1]
+                    field = arguments["filters"][index]["field"]
+                    raise AppError("DATASET_FILTER_INVALID", field=field,
+                                   details={"position": index + 1, "field": field}) from exc
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID") from exc
 
         if operation == "find_rows":

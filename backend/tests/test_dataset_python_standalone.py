@@ -232,7 +232,7 @@ def test_generated_python_agent_writes_and_connected_delete(client, db, monkeypa
     assert run_cli(script, "--setup-datasets").returncode == 0
     remote = call_api(client, base, "Remote")
     denied = run_cli(script)
-    assert denied.returncode and "AUTH_TOKEN_INVALID" in denied.stderr
+    assert denied.returncode and "DATASET_TOKEN_SCOPE" in denied.stderr
     monkeypatch.setenv("DATASET_2_API_TOKEN", token(client, base, "read_write", allow_delete=True)["token"])
     result = run_cli(script)
     assert result.returncode == 0, result.stderr
