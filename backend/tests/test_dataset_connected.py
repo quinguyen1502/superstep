@@ -56,7 +56,9 @@ def test_connected_write_receipt_projection_and_token_rotation(client, db):
     assert updated.json()["data"]["row"]["values"] == {"ticket": "A", "score": 1}
     assert updated.json()["data"]["inserted"] is False
     replayed = post(client, base, secret, insert)
-    assert replayed.json()["data"] == result
+    current = replayed.json()["data"]
+    assert current["inserted"] and current["row"]["id"] == row_id
+    assert current["row"]["revision"] == 2 and current["row"]["values"] == {"ticket": "A", "score": 1, "active": False}
     got = post(client, base, secret, request("get_row", fields=["active"], arguments={"row_id": row_id}))
     assert got.json()["data"]["values"] == {"active": False}
     found = post(client, base, secret, request("find_rows", fields=["score"], arguments={
@@ -67,7 +69,7 @@ def test_connected_write_receipt_projection_and_token_rotation(client, db):
     token_path = f"{base}/access/tokens/{issued['id']}"
     rotated = call(client, "POST", f"{token_path}/rotate")
     error(post(client, base, secret, insert), 401, "AUTH_TOKEN_INVALID")
-    assert post(client, base, rotated["token"], insert).json()["data"] == result
+    assert post(client, base, rotated["token"], insert).json()["data"] == current
     call(client, "DELETE", token_path)
     error(post(client, base, rotated["token"], insert), 401, "AUTH_TOKEN_INVALID")
     assert len(call(client, "POST", f"{base}/rows/query", body={})["items"]) == 1
