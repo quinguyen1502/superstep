@@ -62,8 +62,8 @@ def dataset_agent(binding: str, fields: list[str], allowed: dict, limit: int, ar
                   writes: dict | None = None, operation_id: str | None = None) -> dict:
     """One Agent tool call: Find rows, or Insert row / Upsert row limited to the tool's write fields."""
     operations = (writes or {}).get("operations") or ["find_rows"]
-    can_write = any(operation in ("insert_row", "upsert_row") for operation in operations)
-    if not isinstance(args, dict) or (not can_write and "operation" in args):
+    explicit = any(operation != "find_rows" for operation in operations)
+    if not isinstance(args, dict) or (not explicit and "operation" in args):
         raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
     operation = args.get("operation", "find_rows")
     if operation not in operations:
@@ -72,7 +72,8 @@ def dataset_agent(binding: str, fields: list[str], allowed: dict, limit: int, ar
         values = args.get("values")
         if (args.keys() - {"operation", "values"} or not isinstance(values, dict) or not values
                 or any(field not in writes["write_fields"] for field in values)
-                or any(isinstance(value, (dict, list)) for value in values.values())):
+                or any(isinstance(value, dict) or (isinstance(value, list) and not all(isinstance(item, str) for item in value))
+                       for value in values.values())):
             raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
         arguments = {"values": values}
         if operation == "upsert_row":
@@ -87,16 +88,33 @@ def dataset_agent(binding: str, fields: list[str], allowed: dict, limit: int, ar
         if readable and "values" in row:
             outcome["values"] = row["values"]
         return outcome
-    if args.keys() - {"filters", "operation"}:
+    allowed_inputs = {"filters", "filter_tree", "operation"}
+    if operation == "aggregate_rows":
+        allowed_inputs.update({"summaries", "group_by"})
+    if args.keys() - allowed_inputs or {"filters", "filter_tree"} <= args.keys():
         raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
     filters = args.get("filters", [])
     if not isinstance(filters, list) or len(filters) > 12:
         raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
-    for rule in filters:
+    for _, rule in filter_rules(args):
         if (not isinstance(rule, dict) or not isinstance(rule.get("field"), str)
                 or rule.get("op") not in allowed.get(rule["field"], [])):
             raise ValueError("DATASET_FILTER_INVALID")
-    page = dataset_call(binding, "find_rows", fields, {"filters": filters, "limit": limit})
+    request = {"filters": filters} if args.get("filter_tree") is None else {"filter_tree": args["filter_tree"]}
+    if operation == "aggregate_rows":
+        summaries, grouping = args.get("summaries"), args.get("group_by")
+        if not isinstance(summaries, dict) or not summaries or set(summaries) - set(fields) or (grouping is not None and grouping not in fields):
+            raise ValueError("DATASET_NODE_ARGUMENTS_INVALID")
+        page = dataset_call(binding, operation, fields, {**request, "summaries": summaries, "group_by": grouping})
+        groups = []
+        length = len(json.dumps({**page, "groups": []}, ensure_ascii=False)) + 5
+        for group in page["groups"]:
+            length += len(json.dumps(group, ensure_ascii=False)) + 2
+            if length > 8000:
+                break
+            groups.append(group)
+        return {**page, "groups": groups, "truncated": page["truncated"] or len(groups) < len(page["groups"])}
+    page = dataset_call(binding, "find_rows", fields, {**request, "limit": limit})
     rows, length = [], 0
     for item in page["items"]:
         length += len(json.dumps(item["values"], ensure_ascii=False)) + 2

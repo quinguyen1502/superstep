@@ -6,7 +6,7 @@ from ..core.dataset_types import TEXT_KINDS
 from ..core.errors import AppError
 from ..engine.dataset_nodes import ACCESS, delete_target, valid
 from ..repositories.dataset_rows import ConnectedWrite
-from ..schemas.dataset import DatasetConnectedInput, DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpsert
+from ..schemas.dataset import DatasetAggregateQuery, DatasetConnectedInput, DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpsert
 from .dataset_access import DatasetAccessService, can_read
 from .dataset_rows import DatasetRowService, _active_columns
 
@@ -32,7 +32,7 @@ class DatasetConnectedService:
         if len(expected) != len(request.columns):
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
         referenced = {*fields}
-        if operation == "find_rows":
+        if operation in {"find_rows", "aggregate_rows"}:
             referenced.update(rule["field"] for _, rule in filter_rules(arguments))
             referenced.update(rule["field"] for rule in arguments.get("sorts", []))
             if arguments.get("search"):
@@ -47,7 +47,8 @@ class DatasetConnectedService:
             column = columns.get(field)
             if (column is None or column.kind != contract.kind or column.unique != contract.unique
                     or column.required != contract.required or column.default_value != contract.default
-                    or set(column.options) != set(contract.options)):
+                    or set(column.options) != set(contract.options)
+                    or (column.validation_rules or {}) != (contract.validation_rules.model_dump(exclude_none=True) if contract.validation_rules else {})):
                 raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=field)
         if write:
             for field in columns.keys() - expected.keys():
@@ -56,7 +57,9 @@ class DatasetConnectedService:
                     raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=field)
 
         try:
-            if operation == "find_rows":
+            if operation == "aggregate_rows":
+                query = DatasetAggregateQuery.model_validate(arguments)
+            elif operation == "find_rows":
                 query = DatasetGroupedRowQuery.model_validate({**arguments, "fields": fields})
             elif write:
                 schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
@@ -82,6 +85,8 @@ class DatasetConnectedService:
                                   connected=receipt, readable=can_read(token.permission), **payload)
         if operation == "find_rows":
             result = self.rows.query(uid, dataset_id, schema_revision=dataset.revision, **query.model_dump())
+        elif operation == "aggregate_rows":
+            result = self.rows.aggregate(uid, dataset_id, **query.model_dump())
         else:
             row_id = arguments["row_id"]
             if len(row_id) > 100:
