@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0347
 - Title: Show server-side column summaries in the Dataset grid
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -70,6 +70,12 @@ A summary row under the grid shows per-column statistics computed on the server 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+
+- 2026-11-14: Readiness gate passed. Started stacked on PR #403. The finished change is stacked on PR #404 so the grid summary and row query use the same filter tree.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0338](../../artifacts/REV-0338-TASK-0347-dataset-column-summaries.md) and QA [QA-0338](../../artifacts/QA-0338-TASK-0347-dataset-column-summaries.md).
+
+- 2026-11-14: Owner approved merging PR #405 into develop after successful checks.
 
 ## Handoff Notes
 
