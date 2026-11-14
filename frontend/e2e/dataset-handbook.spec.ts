@@ -32,7 +32,7 @@ test('capture the dataset grid, a narrow layout, and the CSV preview', async ({ 
       viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.5, locale: lang === 'vi' ? 'vi-VN' : 'en-US',
     })
     const page = await context.newPage()
-    await page.addInitScript(value => localStorage.setItem('lang', value), lang)
+    await page.addInitScript(value => { localStorage.setItem('lang', value); localStorage.setItem('theme', 'light') }, lang)
     await page.goto('/login')
     const token = await signIn(page, 'admin@example.com', 'admin123')
     const headers = { Authorization: `Bearer ${token}` }
@@ -63,6 +63,15 @@ test('capture the dataset grid, a narrow layout, and the CSV preview', async ({ 
     await expect(page.getByRole('heading', { name: copy.name })).toBeVisible()
     await expect(page.getByTestId('dataset-row')).toHaveCount(3)
     await shot(page, lang, 'datasets-grid')
+    await page.evaluate(() => {
+      localStorage.setItem('theme', 'dark')
+      document.documentElement.classList.add('dark')
+    })
+    await shot(page, lang, 'datasets-grid-dark')
+    await page.evaluate(() => {
+      localStorage.setItem('theme', 'light')
+      document.documentElement.classList.remove('dark')
+    })
 
     await page.setViewportSize({ width: 390, height: 844 })
     await expect(page.getByTestId('dataset-row').first()).toBeVisible()
