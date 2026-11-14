@@ -74,6 +74,58 @@ def test_csv_export_includes_multiple_pages_and_escapes_formula_strings(client):
     assert records[-1] == ["58"]
 
 
+def test_csv_round_trip_keeps_leading_zeros_plus_signs_and_formulas(client):
+    keys = ["code", "phone", "formula", "note", "long"]
+    values = [
+        {"code": "00123", "phone": "+84901234567", "formula": "=SUM(A1)", "note": "'=already guarded", "long": "1234567890123456"},
+        {"code": "007", "phone": "+15550100", "formula": "-5", "note": "it's fine", "long": "9876543210987654"},
+    ]
+    source = create(client, name="Contacts", team_id="support",
+                    columns=[{"key": key, "kind": "text", "label": key.title()} for key in keys])
+    for row in values:
+        insert(client, f"/api/datasets/{source['id']}/rows", **row)
+    exported = client.get(f"/api/datasets/{source['id']}/csv", headers=auth("owner")).content.decode("utf-8-sig")
+    records = list(csv.reader(io.StringIO(exported, newline="")))
+    assert records[1] == ["00123", "'+84901234567", "'=SUM(A1)", "''=already guarded", "1234567890123456"]
+    preview = call(client, "POST", PREVIEW, body={"text": exported})
+    assert [column["kind"] for column in preview["columns"]] == ["text"] * 5
+    assert preview["sample"][0]["cells"] == list(values[0].values())
+    copy = call(client, "POST", IMPORT, body={"text": exported, "mapping": preview["mapping"],
+                                              "create": {"name": "Copy", "team_id": "support", "columns": preview["columns"]}})
+    for dataset in (source, copy["dataset"]):
+        rows = query(client, f"/api/datasets/{dataset['id']}/rows", sort="code", descending=False)["items"]
+        assert [row["values"] for row in rows] == values
+
+
+def test_csv_infers_codes_phone_numbers_and_long_digit_runs_as_text(client):
+    text = "Code,Phone,Long,Score,Ratio\n00123,+84901234567,1234567890123456,0,0.5\n-007,+1,1,12,-1.5\n"
+    preview = call(client, "POST", PREVIEW, body={"text": text})
+    assert [column["kind"] for column in preview["columns"]] == ["text", "text", "text", "number", "number"]
+
+
+def test_csv_import_into_a_typed_column_still_reads_numbers(client):
+    dataset = create(client, name="Scores", team_id="support", columns=[{"key": "score", "kind": "number", "label": "Score"}])
+    call(client, "POST", IMPORT, body={"text": "Score\n007\n'-5\n", "dataset_id": dataset["id"], "schema_revision": 1, "mapping": ["score"]})
+    rows = query(client, f"/api/datasets/{dataset['id']}/rows", sort="score", descending=False)["items"]
+    assert [row["values"]["score"] for row in rows] == [-5, 7]
+
+
+def test_studio_deletes_require_the_revision(client):
+    dataset = create(client, name="Tickets", columns=[
+        {"key": "ticket", "kind": "text", "label": "Ticket"}, {"key": "note", "kind": "text", "label": "Note"}])
+    url = f"/api/datasets/{dataset['id']}"
+    row = insert(client, f"{url}/rows", ticket="A")
+    row_url = f"{url}/rows/{row['id']}"
+    error(client.delete(row_url, headers=auth("owner")), 422, "VALIDATION_ERROR")
+    error(client.delete(f"{row_url}?revision={row['revision'] + 1}", headers=auth("owner")), 409, "DATASET_ROW_CONFLICT")
+    assert call(client, "DELETE", f"{row_url}?revision={row['revision']}") == {"ok": True}
+    error(client.delete(f"{url}/columns/note", headers=auth("owner")), 422, "VALIDATION_ERROR")
+    error(client.delete(f"{url}/columns/note?revision=2", headers=auth("owner")), 409, "DATASET_SCHEMA_CONFLICT")
+    error(client.delete(url, headers=auth("owner")), 422, "VALIDATION_ERROR")
+    error(client.delete(f"{url}?revision=2", headers=auth("owner")), 409, "DATASET_SCHEMA_CONFLICT")
+    assert call(client, "DELETE", f"{url}?revision=1") == {"ok": True}
+
+
 def test_csv_issue_values_are_truncated(client):
     dataset = create(client, name="Truncated", columns=[{"key": "score", "kind": "number", "label": "Score"}])
     payload = {"dataset_id": dataset["id"], "schema_revision": 1, "text": "Score\n" + "x" * 500 + "\n"}

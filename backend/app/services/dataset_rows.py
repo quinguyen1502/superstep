@@ -208,7 +208,7 @@ class DatasetRowService:
                                 search=None, search_columns=[], sorts=[], limit=1, offset=0)
         return found[0].id if found else None
 
-    def delete(self, uid: str, dataset_id: str, row_id: str, revision: int | None) -> dict:
+    def delete(self, uid: str, dataset_id: str, row_id: str, revision: int) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         self.rows.delete(uid, dataset, row_id, revision)
         self.datasets.audit.record(uid, "dataset.row_delete", "dataset", dataset.id, row_id=row_id)

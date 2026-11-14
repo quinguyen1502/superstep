@@ -97,13 +97,17 @@ row's revision and update time.
 - The file is UTF-8, at most 1 MiB and 1,000 records. A header row is required.
 - Preview suggests a field key and a kind for each column. You can change the
   mapping, skip a column, and edit the schema before import.
+- Values with a leading zero or `+`, such as `00123` or `+84901234567`, and
+  numbers longer than 15 digits are suggested as text so nothing is lost.
+  Change the column type to Number to read them as numbers.
 - Import is atomic. If any row is invalid, or repeats a unique value, nothing
   is written. The preview lists up to 100 issues in line order, with a count
   for each kind of issue. Each issue names the column label and the rejected
   value, shortened when it is long.
 - **Export CSV** needs read access. It includes every row. Values that a
-  spreadsheet would treat as formulas are prefixed with an apostrophe. The
-  download is at most 16 MiB.
+  spreadsheet would treat as formulas are prefixed with an apostrophe. Import
+  removes that apostrophe again, so exporting and importing a file gives the
+  same values. The download is at most 16 MiB.
 
 ## Workflows and export
 

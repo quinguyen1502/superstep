@@ -126,7 +126,7 @@ def test_schema_evolution_and_row_cleanup(client, rows, db):
     assert insert(client, rows, ticket="B")["values"]["new"] == "Default"
     assert call(client, "DELETE", f"{dataset_url}/columns/title?revision=2")["revision"] == 3
     assert "title" not in query(client, rows)["items"][0]["values"]
-    assert call(client, "DELETE", dataset_url) == {"ok": True}
+    assert call(client, "DELETE", f"{dataset_url}?revision=3") == {"ok": True}
     with db.session() as session:
         assert list(session.scalars(select(DatasetRow))) == []
         assert list(session.scalars(select(DatasetRowKey))) == []

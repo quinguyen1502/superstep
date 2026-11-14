@@ -119,6 +119,7 @@
     "csvMapColumn": "Ánh xạ cột nguồn {{column}} ({{name}})",
     "csvSkip": "Bỏ qua cột",
     "csvCheck": "Kiểm tra dữ liệu",
+    "csvTypeHint": "Mã có số 0 hoặc dấu + ở đầu, và số dài hơn 15 chữ số, được đọc là văn bản. Đổi kiểu để đọc chúng là số.",
     "csvSummary": "{{total}} bản ghi, {{invalid}} bản ghi có lỗi.",
     "csvPreview": "Xem trước CSV",
     "csvLine": "Dòng",

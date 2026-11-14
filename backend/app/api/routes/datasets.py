@@ -11,7 +11,7 @@ from ...schemas.dataset import (
 from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_csv_service, dataset_row_service, dataset_service, limit_body
 
 router = APIRouter(prefix="/api/datasets", tags=["datasets"])
-Revision = Annotated[int | None, Query(ge=1)]
+Revision = Annotated[int, Query(ge=1)]  # deletes always name the revision they saw
 
 
 @router.get("")
@@ -104,7 +104,7 @@ def transfer_dataset(dataset_id: str, body: DatasetOwnerUpdate, user=Depends(cur
 
 
 @router.delete("/{dataset_id}")
-def delete_dataset(dataset_id: str, revision: Revision = None,
+def delete_dataset(dataset_id: str, revision: Revision,
                    user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.delete(user["id"], dataset_id, revision)
 
@@ -121,7 +121,7 @@ def update_column(dataset_id: str, key: str, body: DatasetColumnUpdate,
 
 
 @router.delete("/{dataset_id}/columns/{key}")
-def remove_column(dataset_id: str, key: str, revision: Revision = None,
+def remove_column(dataset_id: str, key: str, revision: Revision,
                   user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.remove_column(user["id"], dataset_id, key, revision)
 
@@ -165,6 +165,6 @@ def update_row(dataset_id: str, row_id: str, body: DatasetRowUpdate, user=Depend
 
 
 @router.delete("/{dataset_id}/rows/{row_id}")
-def delete_row(dataset_id: str, row_id: str, revision: Revision = None,
+def delete_row(dataset_id: str, row_id: str, revision: Revision,
                user=Depends(current_user), svc=Depends(dataset_row_service)):
     return svc.delete(user["id"], dataset_id, row_id, revision)

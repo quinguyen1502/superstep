@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0339
 - Title: Keep CSV values intact and require revisions on Studio deletes
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0100
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -72,7 +72,10 @@ CSV import keeps leading zeros and round-trips the formula guard, and Studio del
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0100 and PLAN-0018.
 - 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): required revision on Studio DELETE confirmed.
+- 2026-11-14: Implemented on `factory/task-0339-dataset-csv-fidelity` from `origin/develop` at `fe6cdb55`. CSV preview infers text for leading zeros, a leading `+`, and more than 15 digits; import removes the export formula guard; row, column, and dataset DELETE require `revision`. Review REV-0320. QA QA-0320. Moved to done.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0339-dataset-csv-fidelity` from `develop` when implementation begins.
+- Branch `factory/task-0339-dataset-csv-fidelity` from `origin/develop` at `fe6cdb55`. One PR into `develop`.
+- Import removes the guard exactly when export would have added it (the same character set as export, including full-width signs, leading spaces before a formula sign, and line feed), so export then import is lossless. A value that already starts with the guard gets a second apostrophe on export.
+- Column DELETE also requires `revision`, matching the objective that Studio deletes always check it.

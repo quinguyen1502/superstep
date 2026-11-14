@@ -70,7 +70,7 @@ def test_dataset_visibility_and_lifecycle(client, db):
     renamed = client.put(personal_url, headers=auth("owner"), json={"name": "Incidents", "revision": 1})
     assert renamed.status_code == 200, renamed.text
     assert renamed.json()["data"]["revision"] == 2
-    assert client.delete(personal_url, headers=auth("owner")).status_code == 200
+    assert client.delete(f"{personal_url}?revision=2", headers=auth("owner")).status_code == 200
     TeamRepository(db).delete("support")
     with db.session() as session:
         assert list(session.scalars(select(Dataset))) == []

@@ -53,3 +53,38 @@ test('previews, maps, imports and downloads Dataset CSV', async ({ page }) => {
   expect(exported).toContain("'=formula")
   expect(exported).toContain('C,,Corrected mapping')
 })
+
+test('keeps codes as text unless the preview type is changed, and round-trips formula guards', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  await signIn(page, 'admin@example.com', 'admin123')
+  await page.goto('/datasets')
+  await page.getByRole('button', { name: 'Create dataset' }).click()
+  await page.getByRole('button', { name: 'Create from CSV' }).click()
+  const creator = page.getByRole('dialog', { name: 'Create from CSV' })
+  await creator.getByLabel('CSV file').setInputFiles({
+    name: 'CSV codes.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from("Code,Phone,Count\n00123,'+84901234567,007\n"),
+  })
+  await expect(creator.getByText('Codes with a leading zero or +')).toBeVisible()
+  await expect(creator.getByRole('table', { name: 'CSV preview' })).toContainText('+84901234567')
+  await expect(creator.getByRole('table', { name: 'CSV preview' })).not.toContainText("'+84901234567")
+  const count = creator.getByRole('group', { name: 'Count' })
+  await expect(count.getByRole('combobox', { name: 'Column type' })).toHaveText('Text')
+  await count.getByRole('combobox', { name: 'Column type' }).click()
+  await page.getByRole('option', { name: 'Number', exact: true }).click()
+  await creator.getByRole('button', { name: 'Check rows' }).click()
+  await creator.getByRole('button', { name: 'Import CSV' }).click()
+  await expect(page.getByRole('heading', { name: 'CSV codes' })).toBeVisible()
+  const row = page.getByTestId('dataset-row')
+  await expect(row).toHaveCount(1)
+  await expect(row).toContainText('00123')
+  await expect(row).toContainText('+84901234567')
+
+  await page.getByRole('button', { name: 'Dataset actions' }).click()
+  const download = page.waitForEvent('download')
+  await page.getByRole('menuitem', { name: 'Export CSV' }).click()
+  const exported = await readFile(await (await download).path(), 'utf8')
+  expect(exported.replace(/^\ufeff/, '')).toBe("Code,Phone,Count\r\n00123,'+84901234567,7.0\r\n")
+})

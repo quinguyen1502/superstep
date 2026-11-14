@@ -178,6 +178,7 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
             </div>
             {!dataset && <fieldset disabled={busy} className="space-y-3">
               <legend className="mb-2 text-sm font-medium">{t('dataset.schema')}</legend>
+              <p className="text-sm text-muted-foreground">{t('dataset.csvTypeHint')}</p>
               {columns.map((column, index) => <fieldset key={index} className="rounded-md border p-3">
                 <legend className="px-1 text-sm font-medium">{preview.headers[index]}</legend>
                 <DatasetColumnFields column={column} onChange={next => {
