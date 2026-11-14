@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Textarea } from '@/components/ui/textarea'
 import { datasetKinds, datasetReadOnly, datasetSystemTime, displayValue, fromDraft, type CellValue, type ColumnDraft, type DatasetColumn, type DatasetKind } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
+import { DatasetColumnOptions } from './dataset-column-options'
 import { DatasetFieldIcon } from './dataset-field-icon'
 
 function localDatetime(value: string) {
@@ -205,7 +206,7 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         onChange={event => onChange({ ...column, key: event.target.value })} />
     </div>
     <div className="space-y-1"><Label htmlFor={`${id}-kind`}>{t('dataset.columnType')}</Label>
-      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, default: null, optionsText: '',
+      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, default: null, optionsText: '', validation_rules: undefined, display_format: undefined,
         required: datasetReadOnly(kind as DatasetKind) ? false : column.required,
         unique: kind === 'auto_number' || (!['long_text', 'multi_select'].includes(kind) && !datasetReadOnly(kind as DatasetKind) && column.unique) })}>
         <SelectTrigger id={`${id}-kind`} className="w-full"><SelectValue /></SelectTrigger>
@@ -235,5 +236,6 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         <p id={`${id}-unique-help`} className="text-xs text-muted-foreground">{t('dataset.uniqueLaterHelp')}</p>
       </>}
     </div>}
+    <DatasetColumnOptions column={column} onChange={onChange} />
   </div>
 }

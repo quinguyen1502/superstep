@@ -103,3 +103,17 @@ number under the dataset write lock. A newly added auto-number column receives
 consecutive values, ordered by row creation time and row ID. Deletion leaves
 the counter unchanged. CSV exports the generated value and skips the column
 on import. Code export parity is tracked separately.
+
+### Column rules and formatting
+
+Dataset columns can have `validation_rules` for text length, numeric bounds
+and integers, date bounds, or allowed email domains. Server-side rules apply
+to all row writes, including CSV import, connected credentials, and workflow
+operations. Rules that conflict with existing data produce a count and up to
+five row IDs and leave the schema revision unchanged.
+
+`display_format` affects only Studio presentation. Numeric options are
+`decimals`, `thousands`, `style` and `currency`. Calendar date options use
+`date_style`. Node output, CSV, stored values and comparisons use the
+underlying typed values. Code export parity for column rules is tracked
+separately.

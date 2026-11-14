@@ -1,4 +1,4 @@
-import { fmtDate, fmtCalendarDate } from "@/lib/i18n"
+import i18n, { fmtDate, fmtCalendarDate } from "@/lib/i18n"
 import { can, type Me } from '@/lib/rbac'
 
 export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select', 'long_text', 'url', 'created_time', 'updated_time', 'multi_select', 'auto_number'] as const
@@ -8,6 +8,23 @@ export const datasetReadOnly = (kind: DatasetKind) => datasetSystemTime(kind) ||
 export const datasetTextKind = (kind: DatasetKind) => ['text', 'long_text', 'email', 'select', 'url'].includes(kind)
 export type ScalarCellValue = string | number | boolean | null
 export type CellValue = ScalarCellValue | string[]
+export type DatasetValidationRules = {
+  min_length?: number
+  max_length?: number
+  min?: CellValue
+  max?: CellValue
+  integer?: boolean
+  domains?: string[]
+}
+
+export type DatasetDisplayFormat = {
+  decimals?: number
+  thousands?: boolean
+  style?: 'decimal' | 'percent' | 'currency'
+  currency?: string
+  date_style?: 'short' | 'medium' | 'long' | 'iso'
+}
+
 export type DatasetColumn = {
   key: string
   label: string
@@ -16,6 +33,8 @@ export type DatasetColumn = {
   unique: boolean
   default: CellValue
   options: string[]
+  validation_rules?: DatasetValidationRules
+  display_format?: DatasetDisplayFormat
 }
 export type DatasetSummary = {
   id: string
@@ -102,6 +121,27 @@ export function displayValue(value: CellValue, yes: string, no: string, kind?: D
     if (kind === 'datetime' || (kind && datasetSystemTime(kind))) return fmtDate(Date.parse(value) / 1000)
   }
   return String(value)
+}
+
+export function displayColumnValue(value: CellValue, column: DatasetColumn, yes: string, no: string): string {
+  const settings = column.display_format
+  if (typeof value === 'number' && settings && column.kind === 'number') {
+    return new Intl.NumberFormat(i18n.resolvedLanguage, {
+      style: settings.style ?? 'decimal',
+      currency: settings.currency,
+      useGrouping: settings.thousands,
+      minimumFractionDigits: settings.decimals,
+      maximumFractionDigits: settings.decimals,
+    }).format(value)
+  }
+  if (typeof value === 'string' && settings?.date_style) {
+    if (settings.date_style === 'iso') return value
+    return new Intl.DateTimeFormat(i18n.resolvedLanguage, {
+      dateStyle: settings.date_style,
+      ...(column.kind === 'date' ? { timeZone: 'UTC' } : { timeStyle: 'short' }),
+    }).format(new Date(value))
+  }
+  return displayValue(value, yes, no, column.kind)
 }
 
 export type ColumnDraft = DatasetColumn & { optionsText: string }
