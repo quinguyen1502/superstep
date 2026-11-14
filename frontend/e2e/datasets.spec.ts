@@ -833,6 +833,41 @@ test('edits long text and URLs while leaving system timestamps read-only', async
   await expect(row.getByRole('textbox', { name: 'Notes' })).toHaveValue('First line\nSecond line')
 })
 
+test('edits multi-select rows and filters by option membership', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Structured grid ${Date.now()}`,
+    columns: [
+      { key: 'labels', label: 'Labels', kind: 'multi_select', options: ['Red', 'Blue'] },
+      { key: 'sequence', label: 'Sequence', kind: 'auto_number' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  await page.goto(`/datasets/${id}`)
+  await page.getByRole('button', { name: 'Add row' }).click()
+  const draft = page.getByTestId('dataset-row-draft')
+  await draft.getByRole('button', { name: 'Labels' }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Red', exact: true }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Blue', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await draft.getByRole('button', { name: 'Save', exact: true }).click()
+  const row = page.getByTestId('dataset-row')
+  await expect(row.getByRole('button', { name: 'Sequence: 1' })).toBeVisible()
+  await expect(row.getByRole('button', { name: 'Edit Labels: Red, Blue' })).toBeVisible()
+  await page.getByRole('button', { name: 'Filter', exact: true }).click()
+  const filter = page.getByRole('dialog', { name: 'Filter', exact: true })
+  await filter.getByRole('combobox', { name: 'Filter column' }).click()
+  await page.getByRole('option', { name: 'Labels' }).click()
+  await filter.getByRole('button', { name: 'Filter value' }).click()
+  await page.getByRole('menuitemcheckbox', { name: 'Blue', exact: true }).click()
+  await page.keyboard.press('Escape')
+  await filter.getByRole('button', { name: 'Apply filters' }).click()
+  await expect(row).toHaveCount(1)
+})
+
 test('configures number validation and display format without changing the stored value', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('lang', 'en'))
   await page.goto('/login')

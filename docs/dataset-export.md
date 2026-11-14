@@ -91,6 +91,19 @@ write them through a row operation fail with `DATASET_COLUMN_READ_ONLY`.
 Code export currently rejects dataset bindings whose schema includes these
 new kinds. Python and TypeScript support will land with their parity tasks.
 
+### Multi-select and auto-number
+
+`multi_select` accepts an array of declared option strings and stores values in
+schema option order. An unselected optional value is null. Filters accept
+`contains_any`, `contains_all`, and `is_null`. CSV represents selections as
+semicolon-delimited values and disallows semicolons inside option names.
+
+`auto_number` is a read-only positive integer. Successful row inserts reserve a
+number under the dataset write lock. A newly added auto-number column receives
+consecutive values, ordered by row creation time and row ID. Deletion leaves
+the counter unchanged. CSV exports the generated value and skips the column
+on import. Code export parity is tracked separately.
+
 ### Column rules and formatting
 
 Dataset columns can have `validation_rules` for text length, numeric bounds

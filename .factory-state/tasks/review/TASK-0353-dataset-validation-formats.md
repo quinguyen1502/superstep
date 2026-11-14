@@ -72,7 +72,7 @@ Managers set validation rules and display formats per column, and every writer e
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
 - 2026-11-13: Updated after the owner's answers on PR #388 (22:33 Asia/Saigon): no regular expression rules.
 
-- 2026-11-14: Readiness gate passed. Started stacked on scalar fields in PR #408.
+- 2026-11-14: Readiness gate passed. Started stacked on scalar fields in PR #408. Integrated after PR #410 to keep the Dataset migration history linear.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0344](../../artifacts/REV-0344-TASK-0353-dataset-validation-formats.md) and QA [QA-0344](../../artifacts/QA-0344-TASK-0353-dataset-validation-formats.md).
 

@@ -3,7 +3,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0071_dataset_column_rules"
-down_revision = "0069_dataset_receipt_retention"
+down_revision = "0070_dataset_auto_number"
 branch_labels = None
 depends_on = None
 

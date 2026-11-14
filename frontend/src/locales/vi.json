@@ -78,6 +78,8 @@
     "dryRunBadge": "Chạy thử",
     "dryRun": "Chạy kiểm thử, gỡ lỗi và thay đổi chưa lưu chỉ mô phỏng thao tác ghi. Lưu quy trình và chạy bình thường để ghi vào tập dữ liệu.",
     "filterOps": {
+      "contains_any": "Chứa ít nhất một",
+      "contains_all": "Chứa tất cả",
       "eq": "Bằng",
       "ne": "Không bằng",
       "lt": "Nhỏ hơn",
@@ -92,6 +94,8 @@
       "not_contains": "Không chứa"
     },
     "filterOpHelp": {
+      "contains_any": "Khớp ít nhất một lựa chọn.",
+      "contains_all": "Khớp tất cả lựa chọn đã chọn.",
       "eq": "Khớp đúng giá trị, có phân biệt chữ hoa chữ thường.",
       "ne": "Khớp mọi giá trị khác, kể cả ô để trống.",
       "lt": "Khớp giá trị nhỏ hơn.",
@@ -383,6 +387,8 @@
     "deleteColumnBody": "Cột sẽ bị xoá và giá trị của cột trong mọi dòng sẽ bị xoá. Khoá trường vẫn được giữ và không dùng lại được.",
     "noColumns": "Chưa có cột.",
     "kind": {
+      "multi_select": "Chọn nhiều",
+      "auto_number": "Số tự động",
       "long_text": "Văn bản dài",
       "url": "Địa chỉ web",
       "created_time": "Thời điểm tạo",
