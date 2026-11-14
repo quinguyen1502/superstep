@@ -1,3 +1,6 @@
+from time import time
+
+from ..core import config
 from ..core.dataset_types import INVALID_TEXT, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
@@ -28,7 +31,8 @@ def _response(row: DatasetRow, columns) -> dict:
 
 def _write_result(row: DatasetRow, inserted: bool, projection) -> dict:
     """The one insert/upsert outcome shape. `projection` is None for a caller that may not read values."""
-    if projection is None:
+    # An identifier-only replay can refer to a row that has since been deleted.
+    if projection is None or row.values is None:
         return {"row": {"id": row.id, "revision": row.revision}, "inserted": inserted}
     return {"row": _response(row, projection), "inserted": inserted}
 
@@ -70,6 +74,9 @@ def _filter(columns: dict[str, DatasetColumn], field: str, op: str, value) -> Ro
 class DatasetRowService:
     def __init__(self, datasets: DatasetService, rows: DatasetRowRepository):
         self.datasets, self.rows = datasets, rows
+
+    def expire_receipts(self) -> int:
+        return self.rows.expire_receipts(time() - config.dataset_receipt_days() * 86400)
 
     def _read_definition(self, uid: str, dataset_id: str, schema_revision: int | None):
         dataset = self.datasets.definition(uid, dataset_id)

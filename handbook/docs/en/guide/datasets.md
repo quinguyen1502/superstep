@@ -161,3 +161,5 @@ Supported bounds:
 | CSV import | 1 MiB and 1,000 records |
 | CSV export | 16 MiB |
 | Snapshot in a project | 1,000 rows |
+
+A Dataset write receipt keeps the row identifier and outcome for 30 days by default. An exact retry returns the same row ID and insert outcome, with current values when the caller can read the row. A retry after row deletion returns identifiers only until the receipt expires. After expiry, the write can run again.
