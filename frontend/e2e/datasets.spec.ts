@@ -462,7 +462,7 @@ test('creates a team dataset, edits typed rows, filters and confirms deletion', 
   await rowActions.click()
   await page.getByRole('menuitem', { name: 'Delete row' }).click()
   await expect(confirm.getByRole('textbox')).toHaveCount(0)
-  await expect(confirm).toContainText('This permanently deletes the selected row.')
+  await expect(confirm).toContainText(/This permanently deletes the row where Ticket is /)
   await expect(confirm.locator('[id$="-submit"]')).toBeEnabled()
   await testInfo.attach('datasets-delete-row', { body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png' })
   await confirm.locator('[id$="-submit"]').click()

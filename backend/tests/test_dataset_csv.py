@@ -47,8 +47,9 @@ def test_csv_reports_bad_rows_and_does_not_apply_partial_import(client):
     insert(client, f"{url}/rows", ticket="A")
     payload = {"dataset_id": dataset["id"], "schema_revision": 1, "text": "Ticket,Score\nB,1\nA,2\nC,no\nD\n"}
     preview = call(client, "POST", PREVIEW, body=payload)
-    assert [(item["row"], item["error"]["code"]) for item in preview["issues"]] == [
-        (4, "DATASET_VALUE_INVALID"), (5, "DATASET_CSV_INVALID"), (3, "DATASET_UNIQUE_CONFLICT"),
+    assert [(item["row"], item["field"], item["value"], item["error"]["code"]) for item in preview["issues"]] == [
+        (3, "ticket", "A", "DATASET_UNIQUE_CONFLICT"), (4, "score", "no", "DATASET_VALUE_INVALID"),
+        (5, None, None, "DATASET_CSV_INVALID"),
     ]
     error(client.post(IMPORT, headers=auth("owner"), json=payload), 400, "DATASET_CSV_ROWS_INVALID")
     assert len(query(client, f"{url}/rows")["items"]) == 1
@@ -123,3 +124,10 @@ def test_studio_deletes_require_the_revision(client):
     error(client.delete(url, headers=auth("owner")), 422, "VALIDATION_ERROR")
     error(client.delete(f"{url}?revision=2", headers=auth("owner")), 409, "DATASET_SCHEMA_CONFLICT")
     assert call(client, "DELETE", f"{url}?revision=1") == {"ok": True}
+
+
+def test_csv_issue_values_are_truncated(client):
+    dataset = create(client, name="Truncated", columns=[{"key": "score", "kind": "number", "label": "Score"}])
+    payload = {"dataset_id": dataset["id"], "schema_revision": 1, "text": "Score\n" + "x" * 500 + "\n"}
+    [issue] = call(client, "POST", PREVIEW, body=payload)["issues"]
+    assert issue["row"] == 2 and issue["field"] == "score" and issue["value"] == "x" * 200

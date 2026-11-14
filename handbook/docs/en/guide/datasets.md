@@ -28,6 +28,8 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
 - The grid edits rows. A save sends the row revision. If someone else saved
   first, Studio asks you to reload instead of overwriting that edit.
 - Removing a dataset, column, or grant asks you to type the item's name.
+  Deleting a row names it by its first unique field, or by its row ID when the
+  row has no unique value.
 - Removing a column clears its values from every row. Its key stays reserved,
   so it cannot be reused, and removed columns do not count toward the 100
   column limit.
@@ -39,7 +41,10 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
   also matches empty cells. Each filter condition explains its operator.
 
 You need `resources.manage` to create a dataset or change its rows. Anyone who
-can see the dataset can read rows.
+can see the dataset can read rows. Without that permission the create, edit,
+import, and delete controls stay visible but disabled, with a note that explains
+why. A link to a dataset that was deleted, or that you cannot open, shows
+"Dataset not found" with a way back to the catalog.
 
 A personal dataset is managed by its owner. A team dataset is managed by the
 member who created it and by admins. Other team members with
@@ -53,10 +58,25 @@ ownership** in the dataset menu.
 
 The dataset menu **Access** grants one saved workflow read or write permission.
 A workflow without that grant cannot run a Dataset node or Dataset tool against
-it. Issue a Dataset token for an exported project that calls the Superstep API.
+it. Deleting rows is a separate capability: check **Allow row deletion** on the
+grant. Read and write alone do not allow Delete row.
+
+Issue a Dataset token for an exported project that calls the Superstep API.
 The token is shown once. Rotating it keeps the person who issued it, so the
-new secret acts with the same authority. Revoking it stops later calls. A person who cannot see
-the dataset gets "not found", including for CSV download.
+new secret acts with the same authority. Revoking it stops later calls. A token also needs
+**Allow row deletion** before the project can delete rows. A person who cannot
+see the dataset gets "not found", including for CSV download.
+
+Where a run starts decides what the grant allows:
+
+| Run started from | Find, Get, Insert, Upsert | Delete row |
+| --- | --- | --- |
+| Studio Run, a schedule, or a workflow test | With the grant | With the grant and **Allow row deletion** |
+| Studio chat, public chat, or the API trigger | With the grant | Never |
+| Demo mode | Never | Never |
+
+A workflow tool follows the run that called it. An unsaved workflow cannot use a
+dataset. Removing a grant also stops a run that is waiting to resume.
 
 Write without read can insert and upsert rows but never returns cell values.
 The result has only the row ID, its revision, and whether the row was inserted,
@@ -81,7 +101,9 @@ row's revision and update time.
   numbers longer than 15 digits are suggested as text so nothing is lost.
   Change the column type to Number to read them as numbers.
 - Import is atomic. If any row is invalid, or repeats a unique value, nothing
-  is written. The preview lists up to 100 issues.
+  is written. The preview lists up to 100 issues in line order, with a count
+  for each kind of issue. Each issue names the column label and the rejected
+  value, shortened when it is long.
 - **Export CSV** needs read access. It includes every row. Values that a
   spreadsheet would treat as formulas are prefixed with an apostrophe. Import
   removes that apostrophe again, so exporting and importing a file gives the
@@ -89,9 +111,19 @@ row's revision and update time.
 
 ## Workflows and export
 
-A Dataset node can find rows, get one row, insert a row, or upsert a row. An
-Agent tool can only read. Several nodes that use the same dataset share one
-export binding.
+A Dataset node can find rows, get one row, insert a row, upsert a row, or
+delete a row. **Delete row** targets either a row id from the state or one
+unique field and its value, and returns the deleted row id. A row that is
+already gone fails the step.
+
+An Agent tool reads by default. Under **Operations the Agent can use**, you can
+also allow **Insert row** and **Upsert row**, and choose the fields the Agent
+can write. Upsert needs a unique key field. An Agent tool cannot delete rows.
+Agent writes use the workflow's write grant. A retried model call does not
+write twice. The run trace shows the operation and the row count, not the
+values.
+
+Several nodes and tools that use the same dataset share one export binding.
 
 On the **Code** tab, **Project .zip** lists each binding. Choose Superstep API,
 SQLite, or PostgreSQL. The generated graph reads that choice from the
@@ -104,7 +136,9 @@ environment, so a deployment can change it without exporting again. Set:
 
 Run `python agent.py --setup-datasets` or the TypeScript equivalent before the
 first run. Setup is safe to repeat. It creates the project tables and keeps
-rows that are already stored. A snapshot is off unless you check **Include
+rows that are already stored. Delete row and Agent writes also work in a
+standalone database, and each write is recorded so a retry returns the first
+result. A snapshot is off unless you check **Include
 current rows** for a standalone binding. The archive then contains at most
 1,000 rows in `dataset-snapshots.json`. Setup imports a snapshot row only when
 its id is not already stored, and it rejects a snapshot whose schema does not
