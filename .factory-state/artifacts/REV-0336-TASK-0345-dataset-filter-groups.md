@@ -18,4 +18,4 @@ No blocking findings in the reviewed diff. Generated code reports unsupported fi
 
 ## Standards And References
 
-Reviewed against REQ-0100, PLAN-0018 and the project architecture and UI conventions applicable to the change.
+Reviewed against REQ-0101, PLAN-0019 and the project architecture and UI conventions applicable to the change.

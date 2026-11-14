@@ -29,7 +29,7 @@ Deliver Datasets phase 3 (REQ-0101) after the phase 2 chain and the REQ-0100 fix
 
 | Task | Priority | Outcome | Dependencies |
 | --- | --- | --- | --- |
-| [TASK-0345](../tasks/doing/TASK-0345-dataset-filter-groups.md) | P1 | Filter tree and `in`, `not_in`, `not_contains` | TASK-0334 |
+| [TASK-0345](../tasks/review/TASK-0345-dataset-filter-groups.md) | P1 | Filter tree and `in`, `not_in`, `not_contains` | TASK-0334 |
 | [TASK-0346](../tasks/backlog/TASK-0346-dataset-filter-builder.md) | P1 | Nested filter builder in grid and node editor | TASK-0345 |
 | [TASK-0347](../tasks/backlog/TASK-0347-dataset-column-summaries.md) | P1 | Server-side column summaries and the summary row | TASK-0345 |
 | [TASK-0348](../tasks/backlog/TASK-0348-dataset-aggregate-operation.md) | P1 | `aggregate_rows` for the Agent tool and Dataset node | TASK-0347, TASK-0331 |
