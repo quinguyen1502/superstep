@@ -107,6 +107,17 @@
     }
   },
   "dataset": {
+    "gridLayout": "Bố cục bảng",
+    "rowHeight": "Chiều cao dòng",
+    "rowHeights": {
+      "short": "Thấp",
+      "medium": "Vừa",
+      "tall": "Cao"
+    },
+    "freezeColumns": "Cố định cột",
+    "frozenCount_zero": "Cố định cột",
+    "frozenCount_one": "Cố định 1 cột",
+    "frozenCount_other": "Cố định {{count}} cột",
     "groupBy": "Nhóm theo",
     "noGrouping": "Không nhóm",
     "groupEmpty": "Trống",
