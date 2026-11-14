@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetSystemTime, datasetTextKind, datasetUrl, deleteRowName, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayValue, type CellValue, type Dataset, type DatasetColumn, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetActionsMenu } from './dataset-actions-menu'
 import { DatasetRowDialog } from './dataset-dialogs'
@@ -31,7 +31,7 @@ const MAX_COLUMN_WIDTH = 4096
 const ROW_NUMBER_WIDTH = 56
 const ROW_ID_WIDTH = 112
 const ROW_ACTIONS_WIDTH = 80
-const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160, long_text: 320, url: 250, created_time: 216, updated_time: 216 }
+const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160, long_text: 320, url: 250, created_time: 216, updated_time: 216, multi_select: 240, auto_number: 140 }
 const PAGE_SIZES = [25, 50, 100]
 
 function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: VisibilityState } {
@@ -251,7 +251,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   function beginEdit(row: DatasetRow, column: DatasetColumn) {
-    if (!editable || editing || saving.current || datasetSystemTime(column.kind)) return
+    if (!editable || editing || saving.current || datasetReadOnly(column.kind)) return
     setActive({ row: row.id, column: column.key })
     setSaveError(null)
     setStale(false)
@@ -289,7 +289,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     setDraftBusy(true)
     setDraftError('')
     try {
-      const values = Object.fromEntries(dataset.columns.filter(column => !datasetSystemTime(column.kind)).map(column => [
+      const values = Object.fromEntries(dataset.columns.filter(column => !datasetReadOnly(column.kind)).map(column => [
         column.key, Object.hasOwn(draft, column.key) ? draft[column.key] : column.default,
       ]))
       await api<DatasetRowResult>(url, { method: 'POST', json: { values, schema_revision: dataset.revision } })
@@ -526,8 +526,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               const isFocused = !editing && isSelected
               const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
               const buttonId = cellId(row.id, column.key)
-              const cellEditable = editable && !datasetSystemTime(column.kind)
+              const cellEditable = editable && !datasetReadOnly(column.kind)
               const usesPicker = column.kind === 'boolean' || column.kind === 'select'
+              const multiSelect = column.kind === 'multi_select'
               return <TableCell key={cell.id} data-dataset-cell="" className={cn(DIVIDER, 'relative p-0 whitespace-normal',
                 (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : 'hover:bg-muted',
               )}>
@@ -545,7 +546,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
                   }
                   if (event.key === 'Escape' && !busy && !event.nativeEvent.isComposing) { event.stopPropagation(); closeEditor() }
                 }} onBlur={event => {
-                  if (!usesPicker && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
+                  if (!usesPicker && !multiSelect && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
                     && !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.checkValidity()) {
                     void save(edit.value, false)
                   }
@@ -558,6 +559,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
                       if (usesPicker && !stale) void save(value)
                       else setEdit({ ...edit, value })
                     }} />
+                  {multiSelect && !saveError && <div className="flex gap-1 p-1">
+                    <Button type="submit" variant="outline" size="sm" disabled={busy}>{t('common.save')}</Button>
+                    <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => closeEditor()}>{t('common.cancel')}</Button>
+                  </div>}
                   {saveError && !saveError.field && <div className="space-y-1 px-2 pb-2">
                     {saveError.notice && <div role="status" className="text-xs wrap-anywhere text-muted-foreground">{saveError.message}</div>}
                     {stale ? <Button type="button" variant="outline" size="sm" onClick={refreshEdit} disabled={busy}>{t('dataset.refreshEdit')}</Button>

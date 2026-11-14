@@ -11,7 +11,7 @@ import { StateFieldPicker } from '@/components/state-field-action'
 import { TemplateEditor } from '@/components/template-editor'
 import type { Field } from '@/components/editor/meta'
 import {
-  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetNodePermission, datasetOperations, datasetSystemTime, datasetWriteOperation, type CellValue,
+  DATASET_QUERY_LIMIT, datasetFilterOperators, datasetNodePermission, datasetOperations, datasetReadOnly, datasetWriteOperation, type CellValue,
   type DatasetColumn, type DatasetNodeConfig, type DatasetOperation,
 } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
@@ -207,7 +207,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
               <div className="min-w-0 flex-1">
                 <Label htmlFor={`${id}-filter-${index}`} className="sr-only">{t('dataset.filterColumn')}</Label>
                 <ColumnSelect id={`${id}-filter-${index}`} columns={columns} value={rule.field} disabled={disabled}
-                  onChange={field => replace({ field, op: 'eq', value: null })} />
+                  onChange={field => replace({ field, op: datasetFilterOperators(columns.find(column => column.key === field)!.kind)[0], value: null })} />
               </div>
               <Button variant="ghost" size="icon" disabled={disabled} aria-label={t('dataset.removeFilterCondition')}
                 onClick={() => patchArgs({ filters: filters.filter((_, position) => position !== index) })}><X /></Button>
@@ -222,7 +222,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
           </fieldset>
         })}
         <Button variant="outline" size="sm" disabled={disabled || !columns.length || filters.length >= DATASET_QUERY_LIMIT}
-          onClick={() => patchArgs({ filters: [...filters, { field: columns[0].key, op: 'eq', value: null }] })}><Plus />{t('dataset.addFilterCondition')}</Button>
+          onClick={() => patchArgs({ filters: [...filters, { field: columns[0].key, op: datasetFilterOperators(columns[0].kind)[0], value: null }] })}><Plus />{t('dataset.addFilterCondition')}</Button>
       </div>}
       {operation === 'upsert_row' && <div className="space-y-1.5">
         <Label htmlFor={`${id}-key`}>{t('datasetNode.upsertKey')}</Label>
@@ -233,7 +233,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
       </div>}
       {datasetWriteOperation(operation) && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetNode.mappedFields')}</legend>
-        {columns.filter(column => !datasetSystemTime(column.kind)).map(column => {
+        {columns.filter(column => !datasetReadOnly(column.kind)).map(column => {
           const mapped = Object.hasOwn(values, column.key)
           return <div key={column.key} className="space-y-2 rounded-md border p-2">
             <Label className="gap-1.5"><Checkbox checked={mapped} disabled={disabled || (operation === 'upsert_row' && args.key === column.key)} onCheckedChange={checked => {

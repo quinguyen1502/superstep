@@ -8,11 +8,11 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { DATASET_QUERY_LIMIT, type CellValue, type DatasetColumn } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetFilterOperators, type CellValue, type DatasetColumn } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
 
-type Filter = { field: string; op: 'eq' | 'is_null'; value: CellValue }
+type Filter = { field: string; op: string; value: CellValue }
 export type DatasetFilters = { mode: 'and' | 'or'; rules: Filter[] }
 type FilterDraft = Filter & { key: number }
 type SortDraft = SortingState[number] & { key: number }
@@ -112,19 +112,19 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
                 className="flex items-start gap-2">
                 <span aria-hidden="true" className="grid h-8 w-4 place-items-center text-xs tabular-nums text-muted-foreground">{index + 1}</span>
                 <div className="grid min-w-0 flex-1 items-start gap-2 sm:grid-cols-3">
-                  <Select value={column?.key ?? ''} onValueChange={field => updateFilter(rule.key, { field, value: null })}>
+                  <Select value={column?.key ?? ''} onValueChange={field => updateFilter(rule.key, { field, op: datasetFilterOperators(columns.find(item => item.key === field)!.kind)[0], value: null })}>
                     <SelectTrigger aria-label={t('dataset.filterColumn')} className="w-full min-w-0"><SelectValue placeholder={t('dataset.filterColumn')} /></SelectTrigger>
                     <SelectContent>{columns.map(item => <SelectItem key={item.key} value={item.key}><DatasetFieldIcon kind={item.kind} /><span className="truncate">{item.label}</span></SelectItem>)}</SelectContent>
                   </Select>
-                  <Select disabled={!column} value={column ? rule.op : ''} onValueChange={op => updateFilter(rule.key, { op: op === 'is_null' ? 'is_null' : 'eq', value: null })}>
+                  <Select disabled={!column} value={column ? rule.op : ''} onValueChange={op => updateFilter(rule.key, { op, value: null })}>
                     <SelectTrigger aria-label={t('dataset.filterOperator')} className="w-full min-w-0"><SelectValue placeholder={t('dataset.filterOperator')} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="eq">{t('dataset.filterEquals')}</SelectItem>
-                      <SelectItem value="is_null">{t('dataset.filterIsEmpty')}</SelectItem>
+                      {(column?.kind === 'multi_select' ? datasetFilterOperators(column.kind) : ['eq', 'is_null']).map(op =>
+                        <SelectItem key={op} value={op}>{t(`datasetNode.filterOps.${op}`)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   {!column && <Input disabled aria-label={t('dataset.filterValue')} placeholder={t('dataset.filterValue')} />}
-                  {column && rule.op === 'eq' && <DatasetValueField key={column.key} id={`${id}-filter-${rule.key}`} label={t('dataset.filterValue')} column={column}
+                  {column && rule.op !== 'is_null' && <DatasetValueField key={column.key} id={`${id}-filter-${rule.key}`} label={t('dataset.filterValue')} column={column}
                     value={rule.value} filter nullable={false} onChange={value => updateFilter(rule.key, { value })} />}
                 </div>
                 <Button type="button" variant="ghost" size="icon" aria-label={t('dataset.removeFilterCondition')}
@@ -140,7 +140,7 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
             </Button>
             <div className="ml-auto flex gap-2">
               <Button type="button" variant="ghost" onClick={() => applyFilters({ mode: 'and', rules: [] })}>{t('dataset.resetQuery')}</Button>
-              <Button type="submit" disabled={filterDraft.some(rule => !hasColumn(rule.field) || (rule.op === 'eq' && rule.value === null))}>{t('dataset.applyFilters')}</Button>
+              <Button type="submit" disabled={filterDraft.some(rule => !hasColumn(rule.field) || (rule.op !== 'is_null' && rule.value === null))}>{t('dataset.applyFilters')}</Button>
             </div>
           </div>
         </form>

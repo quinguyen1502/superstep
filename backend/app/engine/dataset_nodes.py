@@ -186,7 +186,9 @@ def agent_parameters(tool: dict) -> dict:
             "type": "object", "additionalProperties": False,
             "description": "Field values for insert_row or upsert_row. Omit for find_rows."
                            + (f" upsert_row needs {binding['key']}." if "upsert_row" in writes else ""),
-            "properties": {field: {"type": ["string", "number", "boolean", "null"]} for field in binding["write_fields"]},
+            "properties": {field: {"anyOf": [{"type": ["string", "number", "boolean", "null"]},
+                                                    {"type": "array", "items": {"type": "string"}, "maxItems": 100}]}
+                           for field in binding["write_fields"]},
         }
     if allowed:
         policies = ", ".join(f"{field}: {'/'.join(ops)}" for field, ops in allowed.items())
@@ -258,7 +260,8 @@ def _agent_write(binding: dict, operation: str, args: dict, scope: str | None) -
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     if any(not isinstance(field, str) or field not in binding["write_fields"] for field in values):
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
-    if any(isinstance(value, (dict, list)) for value in values.values()):
+    if any(isinstance(value, dict) or (isinstance(value, list) and not all(isinstance(item, str) for item in value))
+           for value in values.values()):
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     arguments: dict = {"values": values}
     if operation == "upsert_row":

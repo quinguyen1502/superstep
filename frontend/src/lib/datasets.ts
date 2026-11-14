@@ -1,11 +1,12 @@
 import { fmtDate, fmtCalendarDate } from "@/lib/i18n"
 import { can, type Me } from '@/lib/rbac'
 
-export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select', 'long_text', 'url', 'created_time', 'updated_time'] as const
+export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select', 'long_text', 'url', 'created_time', 'updated_time', 'multi_select', 'auto_number'] as const
 export type DatasetKind = (typeof datasetKinds)[number]
 export const datasetSystemTime = (kind: DatasetKind) => kind === 'created_time' || kind === 'updated_time'
+export const datasetReadOnly = (kind: DatasetKind) => datasetSystemTime(kind) || kind === 'auto_number'
 export const datasetTextKind = (kind: DatasetKind) => ['text', 'long_text', 'email', 'select', 'url'].includes(kind)
-export type CellValue = string | number | boolean | null
+export type CellValue = string | number | boolean | string[] | null
 export type DatasetColumn = {
   key: string
   label: string
@@ -46,6 +47,7 @@ export function newDatasetColumn(): DatasetColumn {
 
 export function displayValue(value: CellValue, yes: string, no: string, kind?: DatasetKind) {
   if (value === null) return '—'
+  if (Array.isArray(value)) return value.join(', ')
   if (typeof value === 'boolean') return value ? yes : no
   if (typeof value === 'string') {
     if (kind === 'date') return fmtCalendarDate(value)
@@ -59,7 +61,7 @@ export const toDraft = (column: DatasetColumn): ColumnDraft => ({ ...column, opt
 
 export function fromDraft({ optionsText, ...column }: ColumnDraft): DatasetColumn {
   return { ...column, key: column.key.trim(), label: column.label.trim(),
-    options: column.kind === 'select' ? optionsText.split('\n').map(option => option.trim()).filter(Boolean) : [] }
+    options: column.kind === 'select' || column.kind === 'multi_select' ? optionsText.split('\n').map(option => option.trim()).filter(Boolean) : [] }
 }
 
 export const datasetOperations = ['find_rows', 'get_row', 'insert_row', 'upsert_row', 'delete_row'] as const
@@ -72,6 +74,7 @@ export const datasetAgentOperations = ['find_rows', 'insert_row', 'upsert_row'] 
 export type DatasetAgentOperation = (typeof datasetAgentOperations)[number]
 
 export function datasetFilterOperators(kind: DatasetColumn['kind']) {
+  if (kind === 'multi_select') return ['contains_any', 'contains_all', 'is_null']
   if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null']
   const operators = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is_null', 'not_null']
   if (datasetTextKind(kind)) operators.push('contains')
