@@ -3,12 +3,12 @@
 ## Metadata
 
 - Project: superstep
-- Task ID: TASK-0357
-- Title: Carry Dataset phase 3 into the TypeScript export
-- Status: review
+- Task ID: TASK-0356
+- Title: Carry Dataset phase 3 into the Python export
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-14
+- Updated: 2026-11-15
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -20,13 +20,13 @@
 
 ## Objective
 
-Generated TypeScript projects support the filter tree, new operators, `aggregate_rows`, and the new field types and rules on every backend.
+Generated Python projects support the filter tree, new operators, `aggregate_rows`, and the new field types and rules on every backend.
 
 ## Scope
 
 ### In Scope
 
-- Connected, SQLite, and PostgreSQL runtimes; standalone schema setup for new kinds and rules; `docs/dataset-export.md` TypeScript section only.
+- Connected, SQLite, and PostgreSQL runtimes; standalone schema setup for new kinds and rules; `docs/dataset-export.md` Python section only.
 
 ### Out Of Scope
 
@@ -34,7 +34,7 @@ Generated TypeScript projects support the filter tree, new operators, `aggregate
 
 ## Inputs
 
-- TypeScript export runtime; TASK-0343 parity suite.
+- Python export runtime; TASK-0343 parity suite.
 
 ## Related Artifacts
 
@@ -45,7 +45,7 @@ Generated TypeScript projects support the filter tree, new operators, `aggregate
 
 ## Dependencies
 
-- Same as TASK-0356; may run in parallel with it.
+- TASK-0345, TASK-0348, TASK-0351, TASK-0352, TASK-0353 merged; REQ-0100 TASK-0343 merged.
 
 ## Acceptance Criteria
 
@@ -53,7 +53,7 @@ Generated TypeScript projects support the filter tree, new operators, `aggregate
 
 ## Tests
 
-- TypeScript export parity suite.
+- Python export parity suite.
 
 ## Validation Plan
 
@@ -68,10 +68,12 @@ Generated TypeScript projects support the filter tree, new operators, `aggregate
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
 
-- 2026-11-14: Readiness gate passed. Started stacked after the Python export to share the connected contract and parity fixtures.
+- 2026-11-14: Readiness gate passed. Started stacked on Phase 3 schema and runtime changes in PR #411.
 
-- 2026-11-14: Implemented and ran targeted checks. Review [REV-0348](../../artifacts/REV-0348-TASK-0357-dataset-export-typescript-phase3.md) and QA [QA-0348](../../artifacts/QA-0348-TASK-0357-dataset-export-typescript-phase3.md).
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0347](../../artifacts/REV-0347-TASK-0356-dataset-export-python-phase3.md) and QA [QA-0347](../../artifacts/QA-0347-TASK-0356-dataset-export-python-phase3.md).
+
+- 2026-11-15: Owner approved merging PR #414 into develop after successful checks.
 
 ## Handoff Notes
 
-- Use branch `factory/task-0357-dataset-export-typescript-phase3` from `develop` when implementation begins.
+- Use branch `factory/task-0356-dataset-export-python-phase3` from `develop` when implementation begins.
