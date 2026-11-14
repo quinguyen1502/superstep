@@ -1,7 +1,7 @@
-import { AtSign, CalendarClock, CalendarDays, CircleDot, Hash, ToggleLeft, Type } from 'lucide-react'
+import { AtSign, CalendarClock, CalendarDays, CircleDot, Hash, Link2, TextAlignStart, ToggleLeft, Type } from 'lucide-react'
 import type { DatasetKind } from '@/lib/datasets'
 
-const FIELD_ICON = { text: Type, number: Hash, boolean: ToggleLeft, date: CalendarDays, datetime: CalendarClock, email: AtSign, select: CircleDot }
+const FIELD_ICON = { text: Type, number: Hash, boolean: ToggleLeft, date: CalendarDays, datetime: CalendarClock, email: AtSign, select: CircleDot, long_text: TextAlignStart, url: Link2, created_time: CalendarClock, updated_time: CalendarClock }
 
 export function DatasetFieldIcon({ kind }: { kind: DatasetKind }) {
   const Icon = FIELD_ICON[kind]

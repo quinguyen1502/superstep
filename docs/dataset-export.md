@@ -78,3 +78,15 @@ group with a null key, even when the filter matches zero rows.
 
 Python and TypeScript export reject aggregate bindings until their respective
 parity tasks implement this contract.
+### Scalar and system column types
+
+Studio supports `long_text` (multiline text up to 16,384 characters, without a
+unique constraint) and `url` (an absolute HTTP or HTTPS URL). The editable
+columns are available to Studio, Dataset nodes, Agent tools, and CSV import.
+`created_time` and `updated_time` are UTC timestamps derived from row metadata,
+including for existing rows. Reads, filters, sorting, and CSV export can use
+these fields. CSV import leaves the system fields unmapped, and attempts to
+write them through a row operation fail with `DATASET_COLUMN_READ_ONLY`.
+
+Code export currently rejects dataset bindings whose schema includes these
+new kinds. Python and TypeScript support will land with their parity tasks.

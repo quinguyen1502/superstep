@@ -7,7 +7,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { AgentTool } from '@/lib/agent'
-import { DATASET_AGENT_MAX_ROWS, datasetAgentOperations, datasetFilterOperators, type DatasetAgentOperation } from '@/lib/datasets'
+import { DATASET_AGENT_MAX_ROWS, datasetAgentOperations, datasetFilterOperators, datasetSystemTime, type DatasetAgentOperation } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { ColumnSelect } from './dataset-node-settings'
 import { DatasetBindingNotice, DatasetPicker } from './dataset-picker'
@@ -97,7 +97,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
       </div>}
       {writes && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetTool.writeFields')}</legend>
-        {columns.map(column => <Label key={column.key} className="gap-1.5">
+        {columns.filter(column => !datasetSystemTime(column.kind)).map(column => <Label key={column.key} className="gap-1.5">
           <Checkbox checked={writeFields.includes(column.key)} disabled={disabled || (upserts && tool.key === column.key)}
             onCheckedChange={checked => onChange({
               write_fields: checked ? [...writeFields, column.key] : writeFields.filter(field => field !== column.key),

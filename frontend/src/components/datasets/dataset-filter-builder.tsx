@@ -45,7 +45,7 @@ function LiteralFilterValue({ id, label, column, op, value, disabled, onChange }
       value={String(value ?? '')} onChange={event => onChange(event.target.value)} />
   }
   return <DatasetValueField id={id} label={label} column={column} value={value}
-    nullable={false} disabled={disabled} onChange={onChange} />
+    nullable={false} filter disabled={disabled} onChange={onChange} />
 }
 
 export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false, renderValue }: {

@@ -7,7 +7,7 @@ import {
   type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater,
 } from '@tanstack/react-table'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Search, Settings2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Plus, Search, Settings2, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetSystemTime, datasetTextKind, datasetUrl, deleteRowName, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetColumnSummary } from './dataset-column-summary'
 import { DatasetActionsMenu } from './dataset-actions-menu'
@@ -32,7 +32,6 @@ const features = tableFeatures({
   columnGroupingFeature, columnOrderingFeature, columnPinningFeature, columnSizingFeature, columnResizingFeature,
   columnVisibilityFeature, rowExpandingFeature, rowPaginationFeature, rowSelectionFeature, rowSortingFeature,
 })
-const TEXT_KINDS = new Set(['text', 'select', 'email'])
 type Edit = { row: DatasetRow; column: DatasetColumn; value: CellValue }
 type Cell = { row: string; column: string }
 const MOVEMENT: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
@@ -45,7 +44,7 @@ const ROW_ID_WIDTH = 112
 const ROW_ACTIONS_WIDTH = 80
 const HEIGHTS = { short: 32, medium: 40, tall: 56 }
 type GridRowHeight = keyof typeof HEIGHTS
-const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160 }
+const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160, long_text: 320, url: 250, created_time: 216, updated_time: 216 }
 const PAGE_SIZES = [25, 50, 100]
 
 function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: ColumnVisibilityState; summaries?: DatasetColumnSummaries; showSummaries?: boolean; groupBy?: string; pinned?: string[]; rowHeight?: GridRowHeight } {
@@ -416,7 +415,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   function beginEdit(row: DatasetRow, column: DatasetColumn) {
-    if (!editable || editing || saving.current) return
+    if (!editable || editing || saving.current || datasetSystemTime(column.kind)) return
     setActive({ row: row.id, column: column.key })
     setSaveError(null)
     setStale(false)
@@ -460,7 +459,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     setDraftBusy(true)
     setDraftError('')
     try {
-      const values = Object.fromEntries(dataset.columns.map(column => [
+      const values = Object.fromEntries(dataset.columns.filter(column => !datasetSystemTime(column.kind)).map(column => [
         column.key, Object.hasOwn(draft, column.key) ? draft[column.key] : column.default,
       ]))
       await api<DatasetRowResult>(url, { method: 'POST', json: { values, schema_revision: dataset.revision } })
@@ -602,7 +601,8 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const isFocused = !editing && isSelected
         const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
         const buttonId = cellId(row.id, column.key)
-        const usesPicker = column.kind === 'boolean' || column.kind === 'select'
+        const cellEditable = editable && !datasetSystemTime(column.kind)
+      const usesPicker = column.kind === 'boolean' || column.kind === 'select'
         return <TableCell key={cell.id} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
           (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : 'hover:bg-muted',
           cell.column.getIsPinned() && pinnedClass,
@@ -641,8 +641,8 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             </div>}
           </form> :
             <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
-              className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0')}
-              aria-label={t(editable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value, column.kind) })}
+              className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0', column.kind === 'url' && value && 'pr-9')}
+              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: format(value, column.kind) })}
               aria-pressed={isFocused}
               onPointerDown={event => { if (keepInvalidEditorFocused()) event.preventDefault() }}
               onFocus={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
@@ -653,6 +653,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{format(value, column.kind) || '—'}</span>
             </Button>
           }
+          {!isEditing && column.kind === 'url' && typeof value === 'string' && /^https?:\/\//i.test(value) &&
+            <Button asChild variant="ghost" size="icon-sm" className="absolute inset-y-0 right-0 my-auto">
+              <a href={value} target="_blank" rel="noopener noreferrer" aria-label={t('dataset.openUrl', { column: column.label })}><ExternalLink /></a>
+            </Button>}
         </TableCell>
       })}
       <TableCell className={cn(ROW_ACTIONS, 'group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted')}>
@@ -743,7 +747,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         <InputGroup className="order-last sm:order-none sm:w-44">
           <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
           <InputGroupInput type="search" aria-label={t('dataset.searchRows')} placeholder={t('dataset.searchRows')}
-            value={searchText} maxLength={120} disabled={editing || !dataset.columns.some(column => TEXT_KINDS.has(column.kind))}
+            value={searchText} maxLength={120} disabled={editing || !dataset.columns.some(column => datasetTextKind(column.kind))}
             onChange={event => setSearchText(event.target.value)} />
         </InputGroup>
         <Button ref={addButton} className="ml-auto sm:ml-0" disabled={editing || !editable} aria-describedby={editable ? undefined : viewOnlyId}

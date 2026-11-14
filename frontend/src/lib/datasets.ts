@@ -1,8 +1,10 @@
 import { fmtDate, fmtCalendarDate } from "@/lib/i18n"
 import { can, type Me } from '@/lib/rbac'
 
-export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select'] as const
+export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select', 'long_text', 'url', 'created_time', 'updated_time'] as const
 export type DatasetKind = (typeof datasetKinds)[number]
+export const datasetSystemTime = (kind: DatasetKind) => kind === 'created_time' || kind === 'updated_time'
+export const datasetTextKind = (kind: DatasetKind) => ['text', 'long_text', 'email', 'select', 'url'].includes(kind)
 export type CellValue = string | number | boolean | null
 export type DatasetColumn = {
   key: string
@@ -71,7 +73,7 @@ export const datasetGroupable = (kind: DatasetKind) => ['select', 'boolean', 'te
 
 export function datasetSummaryFunctions(kind: DatasetKind): readonly DatasetSummaryFunction[] {
   if (kind === 'number') return [...generalSummaryFunctions, 'sum', 'avg', 'min', 'max']
-  if (kind === 'date' || kind === 'datetime') return [...generalSummaryFunctions, 'min', 'max']
+  if (kind === 'date' || kind === 'datetime' || datasetSystemTime(kind)) return [...generalSummaryFunctions, 'min', 'max']
   return generalSummaryFunctions
 }
 
@@ -94,7 +96,7 @@ export function displayValue(value: CellValue, yes: string, no: string, kind?: D
   if (typeof value === 'boolean') return value ? yes : no
   if (typeof value === 'string') {
     if (kind === 'date') return fmtCalendarDate(value)
-    if (kind === 'datetime') return fmtDate(Date.parse(value) / 1000)
+    if (kind === 'datetime' || (kind && datasetSystemTime(kind))) return fmtDate(Date.parse(value) / 1000)
   }
   return String(value)
 }
@@ -119,7 +121,7 @@ export type DatasetAgentOperation = (typeof datasetAgentOperations)[number]
 export function datasetFilterOperators(kind: DatasetColumn['kind']) {
   if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null', 'in', 'not_in']
   const operators = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is_null', 'not_null']
-  if (kind === 'text' || kind === 'email' || kind === 'select') operators.push('contains', 'not_contains')
+  if (datasetTextKind(kind)) operators.push('contains', 'not_contains')
   return [...operators, 'in', 'not_in']
 }
 

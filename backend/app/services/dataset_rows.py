@@ -2,7 +2,7 @@ from time import time
 
 from ..core import config
 from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_VALUES
-from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell, summary_functions
+from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, SYSTEM_TIME_KINDS, TEXT_KINDS, dataset_timestamp, dataset_size, filter_operators, normalize_cell, summary_functions
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, RowFilterGroup, WorkflowWrite
@@ -23,10 +23,18 @@ def _normalize(column: DatasetColumn, value, *, required: bool | None = None):
                           required=column.required if required is None else required)
 
 
+def _row_values(row: DatasetRow, columns) -> dict:
+    return {
+        key: dataset_timestamp(row.created if column.kind == "created_time" else row.updated)
+        if column.kind in SYSTEM_TIME_KINDS else row.values.get(key)
+        for key, column in columns.items()
+    }
+
+
 def _response(row: DatasetRow, columns) -> dict:
     return {
         "id": row.id, "revision": row.revision, "created": row.created, "updated": row.updated,
-        "values": {key: row.values.get(key) for key in columns},
+        "values": _row_values(row, columns),
     }
 
 
@@ -223,7 +231,12 @@ class DatasetRowService:
         dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _write_projection(columns, fields, readable)
-        incoming = {field: _normalize(_column(columns, field), value) for field, value in values.items()}
+        incoming = {}
+        for field, value in values.items():
+            column = _column(columns, field)
+            if column.kind in SYSTEM_TIME_KINDS:
+                raise AppError("DATASET_COLUMN_READ_ONLY", field=field, details={"field": field})
+            incoming[field] = _normalize(column, value)
         match = None
         if key is not None:
             column = _column(columns, key)
@@ -234,6 +247,8 @@ class DatasetRowService:
         def build(previous: dict | None) -> dict:
             result = dict(previous or {})
             for field, column in columns.items():
+                if column.kind in SYSTEM_TIME_KINDS:
+                    continue
                 if field in incoming:
                     result[field] = incoming[field]
                 elif field not in result:
@@ -251,8 +266,10 @@ class DatasetRowService:
                 row = {"id": current.id if current is not None else None,
                        "revision": current.revision if current is not None else None}
             else:
-                row = {"id": current.id if current is not None else None,
-                       "values": {field: values.get(field) for field in projection}}
+                now = time()
+                preview = DatasetRow(id=current.id if current is not None else None, values=values,
+                                     created=current.created if current is not None else now, updated=now)
+                row = {"id": preview.id, "values": _row_values(preview, projection)}
             return {"row": row, "inserted": current is None, "dry_run": True}
 
         row, inserted, replayed, changed = self.rows.save(

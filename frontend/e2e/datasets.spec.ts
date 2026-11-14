@@ -799,3 +799,36 @@ test('pins columns, loads the next rows on scroll, and persists row height', asy
   await expect(page.getByRole('combobox', { name: 'Freeze columns' })).toHaveText('1 frozen column')
   await expect(page.getByRole('combobox', { name: 'Row height' })).toHaveText('Tall')
 })
+
+test('edits long text and URLs while leaving system timestamps read-only', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Scalar editors ${Date.now()}`,
+    columns: [
+      { key: 'notes', label: 'Notes', kind: 'long_text' },
+      { key: 'site', label: 'Site', kind: 'url' },
+      { key: 'created_at', label: 'Created', kind: 'created_time' },
+      { key: 'updated_at', label: 'Updated', kind: 'updated_time' },
+    ],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  await page.goto(`/datasets/${id}`)
+  await page.getByRole('button', { name: 'Add row' }).click()
+  const draft = page.getByTestId('dataset-row-draft')
+  await draft.getByRole('textbox', { name: 'Notes' }).fill('First line\nSecond line')
+  await draft.getByRole('textbox', { name: 'Site' }).fill('https://example.org/reference')
+  await expect(draft.getByRole('status', { name: 'Created' })).toBeVisible()
+  await draft.getByRole('button', { name: 'Save', exact: true }).click()
+  const row = page.getByTestId('dataset-row')
+  const link = row.getByRole('link', { name: 'Open Site in a new tab' })
+  await expect(link).toHaveAttribute('target', '_blank')
+  await expect(link).toHaveAttribute('href', 'https://example.org/reference')
+  const stamp = row.getByRole('button', { name: /^Created:/ })
+  await stamp.dblclick()
+  await expect(row.getByRole('textbox', { name: 'Created' })).toHaveCount(0)
+  await row.getByRole('button', { name: /^Edit Notes:/ }).dblclick()
+  await expect(row.getByRole('textbox', { name: 'Notes' })).toHaveValue('First line\nSecond line')
+})
