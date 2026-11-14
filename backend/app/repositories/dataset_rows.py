@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from time import time
@@ -55,7 +57,13 @@ class ConnectedWrite:
 class RowFilter:
     column: DatasetColumn
     op: str
-    value: CellValue
+    value: CellValue | list[CellValue]
+
+
+@dataclass(frozen=True)
+class RowFilterGroup:
+    conjunction: str
+    children: list[RowFilter | RowFilterGroup]
 
 
 def _column_value(column: DatasetColumn):
@@ -101,21 +109,28 @@ class _Text:
         return position(self.fold(expression), self.fold(literal(value))) > 0
 
 
-def _predicate(spec: RowFilter, dataset_id: str, texts: _Text):
+def _predicate(spec: RowFilter | RowFilterGroup, dataset_id: str, texts: _Text):
+    if isinstance(spec, RowFilterGroup):
+        combine = or_ if spec.conjunction == "or" else and_
+        return combine(*(_predicate(child, dataset_id, texts) for child in spec.children))
     column, op, value = spec.column, spec.op, spec.value
     expression = _column_value(column)
-    if op == "eq" and column.unique:
+    if op in {"eq", "in"} and column.unique:
+        hashes = [key_digest(item) for item in value] if op == "in" else [key_digest(value)]
         ids = select(DatasetRowKey.row_id).where(
             DatasetRowKey.dataset_id == dataset_id, DatasetRowKey.field == column.key,
-            DatasetRowKey.value_hash == key_digest(value),
+            DatasetRowKey.value_hash.in_(hashes),
         )
         return DatasetRow.id.in_(ids)
-    if op == "contains":
-        return texts.contains(expression, value)
+    if op in {"contains", "not_contains"}:
+        contains = texts.contains(expression, value)
+        return contains if op == "contains" else or_(expression.is_(None), ~contains)
     if op in {"is_null", "not_null"}:
         return expression.is_(None) if op == "is_null" else expression.is_not(None)
     if column.kind not in {"number", "boolean"}:
         expression = texts.exact(expression)
+    if op in {"in", "not_in"}:
+        return expression.in_(value) if op == "in" else or_(expression.is_(None), expression.not_in(value))
     if op == "ne":
         return expression.is_distinct_from(value)
     return {
@@ -145,7 +160,7 @@ class DatasetRowRepository:
                                   search_columns=search_columns, sorts=sorts, limit=limit, offset=offset)
         return rows
 
-    def query_page(self, dataset_id: str, *, filters: list[RowFilter], filter_mode: str, search: str | None,
+    def query_page(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup], filter_mode: str, search: str | None,
                    search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
                    limit: int, offset: int, include_total: bool = False) -> tuple[list[DatasetRow], int | None]:
         engine = self.datasets.db.engine

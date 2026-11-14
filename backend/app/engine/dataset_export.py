@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from typing import Callable, Iterable
 
+from ..core.dataset_filters import LIST_FILTERS
 from ..core.errors import AppError
 from . import dataset_nodes
 
@@ -31,6 +32,11 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]]) -> Data
             contract = out.bindings[alias]
             columns = {column["key"]: column for column in contract["columns"]}
             args = binding.get("arguments") or {}
+            new_operators = LIST_FILTERS | {"not_contains"}
+            if (args.get("filter_tree") is not None
+                    or any(rule.get("op") in new_operators for rule in args.get("filters", []))
+                    or any(new_operators.intersection(ops) for ops in binding.get("filter_ops", {}).values())):
+                raise AppError("DATASET_EXPORT_FILTER_UNSUPPORTED")
             referenced = {*binding["fields"], *(args.get("values") or {}), *binding.get("filter_ops", {})}
             referenced.update(rule["field"] for name in ("filters", "sorts") for rule in args.get(name, []))
             if operation == "delete_row" and "key" in args:

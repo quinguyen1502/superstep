@@ -155,7 +155,7 @@ def node_fn(node: Dict[str, Any], resolve: Optional[Resolver] = None, usage: Opt
             except AppError as exc:
                 details = exc.details or {}
                 if exc.code == "DATASET_FILTER_INVALID" and "position" in details:
-                    raise dataset_nodes.filter_error(node["id"], details["position"], details["field"]) from exc
+                    raise dataset_nodes.filter_error(node["id"], details["position"], details["field"], group=details.get("group")) from exc
                 raise
             return {d["output_field"]: result}
     elif t == "decision":

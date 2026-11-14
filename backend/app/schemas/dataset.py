@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from ..core.dataset_filters import MAX_FILTER_VALUES, tree_rules
 from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, FilterOperator
 
 ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]
@@ -99,6 +102,42 @@ class DatasetRowQuery(BaseModel):
     sorts: list[DatasetSort] | None = Field(default=None, max_length=12)
     limit: int = Field(default=50, ge=1, le=100)
     offset: int = Field(default=0, ge=0, le=25_000)
+
+
+
+class DatasetQueryFilter(DatasetFilter):
+    value: CellValue | Annotated[list[CellValue], Field(max_length=MAX_FILTER_VALUES)] = None
+
+
+class DatasetFilterRule(DatasetQueryFilter):
+    type: Literal["rule"]
+
+
+class DatasetFilterGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    type: Literal["group"]
+    conjunction: Literal["and", "or"]
+    children: list[Annotated[DatasetFilterRule | DatasetFilterGroup, Field(discriminator="type")]]
+
+
+class DatasetGroupedRowQuery(DatasetRowQuery):
+    filters: list[DatasetQueryFilter] = Field(default_factory=list, max_length=12)
+    filter_tree: DatasetFilterGroup | None = None
+
+    @field_validator("filter_tree", mode="before")
+    @classmethod
+    def bound_tree(cls, tree):
+        if tree is not None:
+            for _ in tree_rules(tree):
+                pass
+        return tree
+
+    @model_validator(mode="after")
+    def choose_filter_form(self):
+        if self.filter_tree is not None and {"filters", "filter_mode"} & self.model_fields_set:
+            raise ValueError("Use either filter_tree or flat filters")
+        return self
 
 
 DatasetPermission = Literal["read", "write", "read_write"]

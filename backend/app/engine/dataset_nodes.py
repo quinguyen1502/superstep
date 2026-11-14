@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 
+from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_DEPTH, MAX_FILTER_RULES, MAX_FILTER_VALUES, filter_rules, tree_rules
 from ..core.dataset_types import FILTER_OPERATORS
 from ..core.errors import AppError
 from .issues import Issue
@@ -12,7 +13,7 @@ SCOPE = "_dataset_workflow"
 DRY_RUN = "_dataset_dry_run"
 ACCESS = {"find_rows": "read", "get_row": "read", "insert_row": "write", "upsert_row": "write", "delete_row": "delete"}
 INPUTS = {
-    "find_rows": {"filters", "filter_mode", "search", "sorts", "limit", "offset"},
+    "find_rows": {"filter_tree", "filters", "filter_mode", "search", "sorts", "limit", "offset"},
     "get_row": {"row_id"},
     "insert_row": {"values"},
     "upsert_row": {"values", "key"},
@@ -25,9 +26,12 @@ AGENT_WRITES = ("insert_row", "upsert_row")
 KEY = re.compile(r"[a-z][a-z0-9_]{0,62}")
 
 
-def filter_error(node: str, position: int, field: str, state_key: str | None = None) -> AppError:
+def filter_error(node: str, position: int, field: str, state_key: str | None = None, group: str | None = None) -> AppError:
     details = {"node": node, "position": position, "field": field}
     context = f"{field} (node {node}, filter {position})"
+    if group is not None:
+        details["group"] = group
+        context = f"{field} (node {node}, group {group}, rule {position})"
     if state_key is not None:
         details["state_key"] = state_key
         context += f": state.{state_key} is empty"
@@ -35,14 +39,19 @@ def filter_error(node: str, position: int, field: str, state_key: str | None = N
 
 
 def check_mapped_filters(node: str, raw: dict, rendered: dict, state: dict) -> None:
-    for position, (rule, resolved) in enumerate(zip(raw.get("filters", []), rendered.get("filters", [])), start=1):
-        expression = rule.get("value")
-        if rule.get("op") in {"is_null", "not_null"} or resolved.get("value") not in (None, ""):
+    grouped = raw.get("filter_tree") is not None
+    for (path, rule), (_, resolved) in zip(filter_rules(raw), filter_rules(rendered)):
+        if rule.get("op") in {"is_null", "not_null"}:
             continue
-        if isinstance(expression, str):
+        raw_value, resolved_value = rule.get("value"), resolved.get("value")
+        inputs = zip(raw_value, resolved_value) if isinstance(raw_value, list) else [(raw_value, resolved_value)]
+        for expression, actual in inputs:
+            if actual not in (None, "") or not isinstance(expression, str):
+                continue
             for ref in refs(expression):
                 if value(ref, state) in (None, ""):
-                    raise filter_error(node, position, rule["field"], ".".join([ref.field, *ref.path]))
+                    group = (".".join(map(str, path[:-1])) or "root") if grouped else None
+                    raise filter_error(node, path[-1], rule["field"], ".".join([ref.field, *ref.path]), group)
 
 
 def _key(value) -> bool:
@@ -89,6 +98,13 @@ def valid(data: dict) -> bool:
             if not isinstance(rules, list) or len(rules) > 12:
                 return False
             if any(not isinstance(rule, dict) or not _key(rule.get("field")) for rule in rules):
+                return False
+        if args.get("filter_tree") is not None:
+            if {"filters", "filter_mode"} & args.keys():
+                return False
+            try:
+                list(tree_rules(args["filter_tree"]))
+            except ValueError:
                 return False
     elif operation == "get_row":
         return isinstance(args.get("row_id"), str) and bool(args["row_id"])
@@ -185,6 +201,23 @@ def agent_parameters(tool: dict) -> dict:
                           "type": ["string", "number", "boolean", "null"]},
             }},
         }
+        rule = properties["filters"]["items"]
+        scalar = rule["properties"]["value"]
+        if any(LIST_FILTERS.intersection(ops) for ops in allowed.values()):
+            rule["properties"]["value"] = {"anyOf": [scalar, {
+                "type": "array", "minItems": 1, "maxItems": MAX_FILTER_VALUES,
+                "items": {"type": ["string", "number", "boolean"]},
+            }]}
+        tagged = {**rule, "required": ["type", *rule["required"]],
+                  "properties": {"type": {"const": "rule"}, **rule["properties"]}}
+
+        def group(depth):
+            child = tagged if depth == 1 else {"anyOf": [tagged, group(depth - 1)]}
+            return {"type": "object", "additionalProperties": False, "required": ["type", "conjunction", "children"],
+                    "properties": {"type": {"const": "group"}, "conjunction": {"enum": ["and", "or"]},
+                                   "children": {"type": "array", "minItems": 1, "maxItems": MAX_FILTER_RULES, "items": child}}}
+
+        properties["filter_tree"] = {**group(MAX_FILTER_DEPTH), "description": "Nested AND/OR; omit flat filters when used."}
     schema = {"type": "object", "properties": properties, "additionalProperties": False}
     return {**schema, "required": required} if required else schema
 
@@ -200,18 +233,23 @@ def agent_query(tool: dict, args: dict, scope: str | None) -> tuple[dict, dict]:
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     if operation in AGENT_WRITES:
         return _agent_write(binding, operation, args, scope)
-    if set(args) - {"filters", "operation"}:
+    if set(args) - {"filters", "filter_tree", "operation"} or {"filters", "filter_tree"} <= args.keys():
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     filters = args.get("filters", [])
     if not isinstance(filters, list) or len(filters) > AGENT_MAX_FILTERS:
         raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
     allowed = binding["filter_ops"]
-    for rule in filters:
+    try:
+        rules = list(filter_rules(args))
+    except ValueError as exc:
+        raise AppError("DATASET_FILTER_INVALID", field=str(exc)) from exc
+    for _, rule in rules:
         if not isinstance(rule, dict) or not _key(rule.get("field")):
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
         if rule.get("op") not in allowed.get(rule["field"], []):
             raise AppError("DATASET_FILTER_INVALID", field=rule["field"])
-    return {**binding, SCOPE: scope}, {**binding["arguments"], "filters": filters}
+    query = {"filters": filters} if args.get("filter_tree") is None else {"filter_tree": args["filter_tree"]}
+    return {**binding, SCOPE: scope}, {**binding["arguments"], **query}
 
 
 def _agent_write(binding: dict, operation: str, args: dict, scope: str | None) -> tuple[dict, dict]:
