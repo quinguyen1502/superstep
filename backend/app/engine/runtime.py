@@ -103,7 +103,9 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         data = node["data"]
         result = (delta or {}).get(data.get("output_field"), {})
         operation = data["operation"]
-        count = 0 if failed else len(result.get("items", [])) if operation == "find_rows" else 1
+        count = 0 if failed else 1
+        if not failed and operation in {"find_rows", "aggregate_rows"}:
+            count = len(result.get("groups" if operation == "aggregate_rows" else "items", []))
         outcome = "failed" if failed else "simulated" if result.get("dry_run") else "completed"
         return {"dataset": {"id": data["dataset_id"], "operation": operation, "count": count, "outcome": outcome}}
 

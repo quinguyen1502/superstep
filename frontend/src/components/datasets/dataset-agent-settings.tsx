@@ -21,6 +21,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
   const columns = binding?.dataset?.columns
   const operations: DatasetAgentOperation[] = tool.operations?.length ? tool.operations : ['find_rows']
   const finds = operations.includes('find_rows')
+  const aggregates = operations.includes('aggregate_rows')
   const upserts = operations.includes('upsert_row')
   const writes = upserts || operations.includes('insert_row')
   const fields = tool.fields ?? []
@@ -38,7 +39,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
   const outdated = columns && (validFields.length !== fields.length || (writes && validWriteFields.length !== writeFields.length)
     || (upserts && !!tool.key && !keyValid)
     || Object.entries(filterOps).some(([field, ops]) => ops.length !== validFilters[field]?.length))
-  const permission = finds && writes ? 'read_write' : writes ? 'write' : 'read'
+  const permission = (finds || aggregates) && writes ? 'read_write' : writes ? 'write' : 'read'
 
   function toggleOperator(field: string, operator: string, checked: boolean) {
     const current = filterOps[field] ?? []
@@ -54,7 +55,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
     if (!next.length) return
     const patch: Partial<AgentTool> = { operations: next }
     if (!next.includes('upsert_row')) patch.key = undefined
-    if (!next.some(op => op !== 'find_rows')) patch.write_fields = undefined
+    if (!next.some(op => op === 'insert_row' || op === 'upsert_row')) patch.write_fields = undefined
     onChange(patch)
   }
 
@@ -69,7 +70,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
           onCheckedChange={checked => toggleOperation(operation, checked === true)} />
         {t(`datasetNode.operations.${operation}`)}
       </Label>)}
-      <p className="text-xs text-muted-foreground">{t(writes ? 'datasetTool.writeAccess' : 'datasetTool.readOnly')}</p>
+      <p className="text-xs text-muted-foreground">{t(writes ? 'datasetTool.writeAccess' : aggregates ? 'datasetTool.aggregateAccess' : 'datasetTool.readOnly')}</p>
     </fieldset>
     {columns && <>
       {outdated && <Alert variant="warning"><AlertTriangle /><AlertDescription>
@@ -106,7 +107,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
         {!validWriteFields.length && <p className="text-xs text-destructive">{t('datasetTool.writeFieldsRequired')}</p>}
       </fieldset>}
       <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">{t('datasetNode.returnFields')}</legend>
+        <legend className="mb-2 text-sm font-medium">{t(aggregates ? 'datasetTool.allowedAggregateFields' : 'datasetNode.returnFields')}</legend>
         {columns.map(column => <Label key={column.key} className="gap-1.5">
           <Checkbox checked={fields.includes(column.key)} disabled={disabled} onCheckedChange={checked =>
             onChange({ fields: checked ? [...fields, column.key] : fields.filter(field => field !== column.key) })} />
@@ -115,7 +116,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
         {!validFields.length && <p className="text-xs text-destructive">{t('datasetTool.fieldsRequired')}</p>}
         {writes && !finds && <p className="text-xs text-muted-foreground">{t('datasetTool.writeWithoutFind')}</p>}
       </fieldset>
-      {finds && <fieldset className="space-y-1.5">
+      {(finds || aggregates) && <fieldset className="space-y-1.5">
         <legend className="mb-2 text-sm font-medium">{t('datasetTool.filterPermissions')}</legend>
         {columns.map(column => <DropdownMenu key={column.key}>
           <DropdownMenuTrigger asChild>

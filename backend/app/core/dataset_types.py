@@ -12,6 +12,7 @@ ColumnKind: TypeAlias = Literal["text", "number", "boolean", "date", "datetime",
 CellValue: TypeAlias = str | int | float | bool | None
 FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null", "in", "not_in", "not_contains"]
 SummaryFunction: TypeAlias = Literal["count", "empty_count", "empty_percent", "unique_count", "sum", "avg", "min", "max"]
+MAX_AGGREGATE_GROUPS = 20
 SUMMARY_FUNCTIONS = ("count", "empty_count", "empty_percent", "unique_count")
 
 
@@ -35,7 +36,7 @@ def fold_text(value: object) -> object:
 
 def filter_operators(kind: ColumnKind) -> tuple[str, ...]:
     if kind == "boolean":
-        return ("eq", "ne", "is_null", "not_null")
+        return ("eq", "ne", "is_null", "not_null", "in", "not_in")
     return tuple(op for op in FILTER_OPERATORS if op not in {"contains", "not_contains"} or kind in TEXT_KINDS)
 
 COLUMN_KEY_PATTERN = r"^[a-z][a-z0-9_]{0,62}$"

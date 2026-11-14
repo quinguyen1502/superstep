@@ -11,8 +11,8 @@ import { StateFieldPicker } from '@/components/state-field-action'
 import { TemplateEditor } from '@/components/template-editor'
 import type { Field } from '@/components/editor/meta'
 import {
-  DATASET_QUERY_LIMIT, datasetFilterRules, datasetListFilter, datasetSubstringFilter, keepDatasetFilterFields, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
-  type DatasetColumn, type DatasetFilters, type DatasetNodeConfig, type DatasetOperation,
+  DATASET_QUERY_LIMIT, datasetSummaryFunctions, datasetFilterRules, datasetListFilter, datasetSubstringFilter, keepDatasetFilterFields, datasetNodePermission, datasetOperations, datasetWriteOperation, type CellValue,
+  type DatasetColumn, type DatasetSummaryFunction, type DatasetFilters, type DatasetNodeConfig, type DatasetOperation,
 } from '@/lib/datasets'
 import { DatasetFilterBuilder } from './dataset-filter-builder'
 import { DatasetFieldIcon } from './dataset-field-icon'
@@ -33,6 +33,7 @@ const deleteFields = (fields: string[] | undefined, columns: DatasetColumn[], pr
 
 function defaultArguments(operation: DatasetOperation): DatasetNodeConfig['arguments'] {
   if (operation === 'find_rows') return { limit: 10, filters: [] }
+  if (operation === 'aggregate_rows') return { summaries: {} }
   if (operation === 'get_row' || operation === 'delete_row') return { row_id: '' }
   return { values: {} }
 }
@@ -109,6 +110,8 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
   const columns = dataset?.columns ?? []
   const args = data.arguments ?? {}
   const operation = data.operation ?? 'find_rows'
+  const aggregates = operation === 'aggregate_rows'
+  const summaries = args.summaries ?? {}
   const fields = data.fields ?? []
   const values = args.values ?? {}
   const filterTree: DatasetFilters = args.filter_tree ?? {
@@ -126,7 +129,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
       filters: datasetFilterRules(tree).map(({ field, op, value }) => ({ field, op, value: Array.isArray(value) ? null : value })),
     }
   }
-  const referenced = [...new Set([...fields, ...Object.keys(values), ...datasetFilterRules(filterTree).map(rule => rule.field), ...sorts.map(rule => rule.field), args.key ?? ''])]
+  const referenced = [...new Set([...fields, ...Object.keys(values), ...datasetFilterRules(filterTree).map(rule => rule.field), ...sorts.map(rule => rule.field), args.key ?? '', args.group_by ?? ''])]
   const missing = referenced.filter(key => key && !keyPresent(columns, key))
   const deleting = operation === 'delete_row'
   const writing = datasetWriteOperation(operation)
@@ -152,6 +155,8 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
             ...((args.filters || args.filter_tree) ? filterArguments(keepDatasetFilterFields(filterTree, new Set(columns.map(column => column.key)))) : {}),
             ...(args.sorts ? { sorts: sorts.filter(rule => !missing.includes(rule.field)) } : {}),
             ...(args.key && missing.includes(args.key) ? { key: '' } : {}),
+            ...(args.group_by && missing.includes(args.group_by) ? { group_by: undefined } : {}),
+            ...(args.summaries ? { summaries: Object.fromEntries(Object.entries(summaries).filter(([field]) => !missing.includes(field))) } : {}),
           },
           ...(deleting ? { fields: deleteFields(fields.filter(field => !missing.includes(field)), columns) } : {}),
         })}>{t('datasetNode.removeMissing')}</Button>}
@@ -196,15 +201,46 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
         {missingTarget && <Alert variant="warning"><AlertTriangle /><AlertDescription>{t('datasetNode.deleteTargetMissing')}</AlertDescription></Alert>}
         <p className="text-xs text-muted-foreground">{t('datasetNode.deleteResult')}</p>
       </div>}
-      {operation === 'find_rows' && <div className="space-y-2">
-        <Label htmlFor={`${id}-limit`}>{t('datasetNode.maxRows')}</Label>
-        <Input id={`${id}-limit`} type="number" min={1} max={100} disabled={disabled} value={args.limit ?? 10}
-          onChange={event => patchArgs({ limit: Math.max(1, Math.min(100, Number(event.target.value) || 10)) })} />
+      {(operation === 'find_rows' || aggregates) && <div className="space-y-2">
+        {!aggregates && <div className="space-y-1.5">
+          <Label htmlFor={`${id}-limit`}>{t('datasetNode.maxRows')}</Label>
+          <Input id={`${id}-limit`} type="number" min={1} max={100} disabled={disabled} value={args.limit ?? 10}
+            onChange={event => patchArgs({ limit: Math.max(1, Math.min(100, Number(event.target.value) || 10)) })} />
+        </div>}
         <DatasetFilterBuilder tree={filterTree} columns={columns} disabled={disabled}
           onChange={tree => patchArgs(filterArguments(tree))}
           renderValue={({ label, column, value, onChange, op }) => <MappedValue label={label} column={column}
             value={value} fields={state} disabled={disabled} onChange={onChange} substring={datasetSubstringFilter(op)} nullable={false} />} />
       </div>}
+      {aggregates && <fieldset className="space-y-2">
+        <legend className="mb-2 text-sm font-medium">{t('dataset.summary')}</legend>
+        <Select value={args.group_by ?? '$none'} disabled={disabled} onValueChange={group => {
+          const group_by = group === '$none' ? undefined : group
+          onChange({ arguments: { ...args, group_by }, fields: [...new Set([...Object.keys(summaries), ...(group_by ? [group_by] : [])])] })
+        }}>
+          <SelectTrigger aria-label={t('datasetNode.aggregateGroupBy')} className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="$none">{t('datasetNode.aggregateNoGrouping')}</SelectItem>
+            {columns.map(column => <SelectItem key={column.key} value={column.key}>{column.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        {columns.map(column => <div key={column.key} className="space-y-1">
+          <Label htmlFor={`${id}-summary-${column.key}`}>{column.label}</Label>
+          <Select value={summaries[column.key] ?? '$none'} disabled={disabled} onValueChange={operation => {
+            const next = { ...summaries }
+            if (operation === '$none') delete next[column.key]
+            else next[column.key] = operation as DatasetSummaryFunction
+            onChange({ arguments: { ...args, summaries: next }, fields: [...new Set([...Object.keys(next), ...(args.group_by ? [args.group_by] : [])])] })
+          }}>
+            <SelectTrigger id={`${id}-summary-${column.key}`} className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="$none">{t('dataset.summaryNone')}</SelectItem>
+              {datasetSummaryFunctions(column.kind).map(item => <SelectItem value={item} key={item}>{t(`dataset.summaryFunctions.${item}`)}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>)}
+        {!Object.keys(summaries).length && <p role="status" className="text-xs text-destructive">{t('datasetNode.aggregateRequired')}</p>}
+      </fieldset>}
       {operation === 'upsert_row' && <div className="space-y-1.5">
         <Label htmlFor={`${id}-key`}>{t('datasetNode.upsertKey')}</Label>
         <ColumnSelect id={`${id}-key`} columns={columns.filter(column => column.unique)} value={args.key} disabled={disabled}
@@ -234,7 +270,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
           {t('datasetNode.writeOnlyFields')}
           {!disabled && <Button size="sm" variant="outline" onClick={() => onChange({ fields: [] })}>{t('datasetNode.returnIdentifiersOnly')}</Button>}
         </AlertDescription></Alert>}
-      </div> : !deleting && <fieldset className="space-y-2">
+      </div> : !deleting && !aggregates && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetNode.returnFields')}</legend>
         {columns.map(column => <Label key={column.key} className="gap-1.5">
           <Checkbox checked={fields.includes(column.key)} disabled={disabled} onCheckedChange={checked =>

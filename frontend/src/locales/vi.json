@@ -1,5 +1,8 @@
 {
   "datasetTool": {
+    "traceGroups": "{{tool}} · {{count}} nhóm kết quả",
+    "aggregateAccess": "Thao tác tổng hợp cần quyền đọc và trả về các giá trị thống kê.",
+    "allowedAggregateFields": "Các trường công cụ có thể dùng",
     "readOnly": "Tìm dòng với quyền chỉ đọc. Agent chỉ dùng được các trường và toán tử đã chọn.",
     "writeAccess": "Thêm dòng và Thêm hoặc cập nhật dòng dùng quyền ghi của quy trình, và chỉ ghi các trường chọn bên dưới. Agent không thể xoá dòng.",
     "operations": "Thao tác Agent được dùng",
@@ -18,6 +21,9 @@
     "traceUpserted_other": "{{tool}} đã thêm hoặc cập nhật {{count}} dòng"
   },
   "datasetNode": {
+    "aggregateRequired": "Chọn ít nhất một cột để thống kê.",
+    "aggregateNoGrouping": "Tất cả dòng khớp",
+    "aggregateGroupBy": "Nhóm theo",
     "grantShortcut": "Cấp quyền",
     "runNoticeTitle": "Run này có thể thay đổi hàng trong tập dữ liệu",
     "runNotice": "Chạy quy trình này có thể thêm, cập nhật hoặc xoá hàng đã lưu. Các bài kiểm thử quy trình chỉ mô phỏng những thay đổi này.",
@@ -41,6 +47,7 @@
     "openDataset": "Mở tập dữ liệu",
     "chooseFirst": "Chọn tập dữ liệu trong phần Cài đặt để cấu hình ánh xạ.",
     "operations": {
+      "aggregate_rows": "Tổng hợp các dòng",
       "find_rows": "Tìm dòng",
       "get_row": "Lấy dòng",
       "insert_row": "Thêm dòng",
@@ -825,6 +832,7 @@
     "DATASET_UNIQUE_CONFLICT": "Đã có dòng sử dụng giá trị duy nhất này",
     "DATASET_UNIQUE_DUPLICATES": "Không thể đặt trường {{field}} là duy nhất vì có {{count}} dòng trùng giá trị",
     "DATASET_EXPORT_FILTER_UNSUPPORTED": "Tính năng xuất mã chưa hỗ trợ bộ lọc tập dữ liệu này",
+    "DATASET_EXPORT_AGGREGATE_UNSUPPORTED": "Tính năng xuất mã chưa hỗ trợ tổng hợp tập dữ liệu",
     "DATASET_FILTER_INVALID": "Bộ lọc tập dữ liệu không hợp lệ tại {{field}}",
     "DATASET_SUMMARY_INVALID": "Phép thống kê không hợp lệ cho cột {{field}}.",
     "DATASET_UPSERT_KEY_INVALID": "Thao tác upsert yêu cầu giá trị cho trường duy nhất {{field}}",
