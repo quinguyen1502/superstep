@@ -179,3 +179,27 @@ Giới hạn được hỗ trợ:
 | Ảnh chụp trong một dự án | 1.000 dòng |
 
 Biên nhận ghi Dataset mặc định giữ mã hàng và kết quả trong 30 ngày. Khi thử lại cùng một yêu cầu, hệ thống trả về cùng mã hàng và kết quả chèn, kèm giá trị hiện tại nếu người gọi có quyền đọc. Nếu hàng đã bị xóa, hệ thống chỉ trả mã định danh cho đến khi biên nhận hết hạn. Sau khi hết hạn, thao tác ghi có thể chạy lại.
+
+## Phân loại phiếu hỗ trợ {#support-ticket-triage}
+
+1. Dùng cột **Số tự động** làm mã phiếu và cột **URL** cho liên kết tham chiếu.
+   Đặt cột mức ưu tiên thành kiểu **Số**, rồi yêu cầu số nguyên từ 1 đến 5
+   trong **Sửa cột**. Studio kiểm tra giá trị khi sửa ô hoặc dán. Mã phiếu
+   được cấp khi thêm dòng.
+2. Chọn ô mức ưu tiên đầu tiên rồi dán một cột giá trị từ bảng tính. Mở rộng
+   vùng chọn bằng **Shift + ↓**. Trong menu bảng nhớ tạm, chọn thao tác điền
+   xuống để chép giá trị ở ô đầu vào các ô còn lại. Dùng **Hoàn tác** để
+   đảo ngược thao tác gần nhất trên vùng ô.
+3. Mở bộ lọc và thêm điều kiện trạng thái bằng **Đang mở**. Thêm một nhóm
+   điều kiện mức ưu tiên theo phép **HOẶC** rồi áp dụng. Bật hàng thống kê
+   và chọn phép **Tổng** ở cột mức ưu tiên. Tổng tính trên mọi dòng khớp,
+   kể cả các trang khác. Nhóm theo đội rồi mở một đội để xem các phiếu khớp.
+4. Cấp quyền đọc cho workflow của Agent trong thẻ **Quyền truy cập**. Trong
+   công cụ Tập dữ liệu, bật thao tác tổng hợp, chọn các trường đội, trạng thái
+   và mức ưu tiên, rồi cho phép các bộ lọc cần dùng. Hỏi Agent tổng mức ưu
+   tiên của các phiếu đang mở theo từng đội. Agent có thể trả lời từ kết quả
+   tổng hợp theo nhóm.
+
+![Phiếu hỗ trợ đã lọc, nhóm theo đội và có hàng thống kê mức ưu tiên](../images/datasets-triage.png)
+
+[Xem lưới ở giao diện tối](../images/datasets-triage-dark.png)
