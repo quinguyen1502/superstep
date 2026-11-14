@@ -6,7 +6,8 @@ export type DatasetKind = (typeof datasetKinds)[number]
 export const datasetSystemTime = (kind: DatasetKind) => kind === 'created_time' || kind === 'updated_time'
 export const datasetReadOnly = (kind: DatasetKind) => datasetSystemTime(kind) || kind === 'auto_number'
 export const datasetTextKind = (kind: DatasetKind) => ['text', 'long_text', 'email', 'select', 'url'].includes(kind)
-export type CellValue = string | number | boolean | string[] | null
+export type ScalarCellValue = string | number | boolean | null
+export type CellValue = ScalarCellValue | string[]
 export type DatasetColumn = {
   key: string
   label: string
@@ -35,7 +36,7 @@ export const DATASET_FILTER_DEPTH = 3
 export const DATASET_FILTER_RULES = 20
 export const DATASET_FILTER_VALUES = 50
 
-export type DatasetFilterValue = CellValue | CellValue[]
+export type DatasetFilterValue = ScalarCellValue | ScalarCellValue[]
 export type DatasetFilterRule = { type: 'rule'; field: string; op: string; value: DatasetFilterValue }
 export type DatasetFilters = {
   type: 'group'
@@ -145,7 +146,7 @@ export type DatasetNodeConfig = {
     offset?: number
     search?: string | null
     filter_mode?: 'and' | 'or'
-    filters?: { field: string; op: string; value: CellValue }[]
+    filters?: { field: string; op: string; value: ScalarCellValue }[]
     filter_tree?: DatasetFilters
     sorts?: { field: string; descending: boolean }[]
   }

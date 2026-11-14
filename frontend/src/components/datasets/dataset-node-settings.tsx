@@ -203,7 +203,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
         <DatasetFilterBuilder tree={filterTree} columns={columns} disabled={disabled}
           onChange={tree => patchArgs(filterArguments(tree))}
           renderValue={({ label, column, value, onChange, op }) => <MappedValue label={label} column={column}
-            value={value} fields={state} disabled={disabled} onChange={onChange} substring={datasetSubstringFilter(op)} nullable={false} filter />} />
+            value={value} fields={state} disabled={disabled} onChange={value => { if (!Array.isArray(value)) onChange(value) }} substring={datasetSubstringFilter(op)} nullable={false} filter />} />
       </div>}
       {operation === 'upsert_row' && <div className="space-y-1.5">
         <Label htmlFor={`${id}-key`}>{t('datasetNode.upsertKey')}</Label>
