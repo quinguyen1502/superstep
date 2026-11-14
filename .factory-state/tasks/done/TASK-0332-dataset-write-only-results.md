@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0332
 - Title: Stop write-only Dataset callers from reading row values
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0100
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -92,6 +92,10 @@ A caller with write but not read permission gets identifiers only from insert, u
 
 - Review: [REV-0316](../../artifacts/REV-0316-TASK-0332-dataset-write-only-results.md)
 - QA: [QA-0316](../../artifacts/QA-0316-TASK-0332-dataset-write-only-results.md)
+
+## Integration
+
+- Merged into develop via PR #389 at `10cc53f2`. The lifecycle was reconciled on 2026-11-14.
 
 ## Handoff Notes
 

@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0290
 - Title: Product health counts: approvals, webhooks, schedules
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: DES-0006
 - Architecture IDs: DEC-0094, DEC-0095
@@ -59,3 +59,7 @@ Show cheap product SLO counts on the Usage page and export them as gauges for al
 
 - Review: `.factory-state/artifacts/REV-0276-TASK-0290-product-health-panels.md`
 - QA: `.factory-state/artifacts/QA-0276-TASK-0290-product-health-panels.md`
+
+## Integration
+
+- Delivered in the bundled implementation merged into develop via PR #351 at `73dbf52d`. The lifecycle was reconciled on 2026-11-14.

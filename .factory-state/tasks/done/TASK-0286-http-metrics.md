@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0286
 - Title: HTTP request metrics by route template
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -57,3 +57,7 @@ Count HTTP requests and record latency and 5xx by route template, method and sta
 
 - Review: `.factory-state/artifacts/REV-0272-TASK-0286-http-metrics.md`
 - QA: `.factory-state/artifacts/QA-0272-TASK-0286-http-metrics.md`
+
+## Integration
+
+- Delivered in the bundled implementation merged into develop via PR #350 at `f4f407a8`. The lifecycle was reconciled on 2026-11-14.

@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0282
 - Title: Clean the repository hygiene debt and enforce the hygiene checks in CI
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0093
 - Architecture IDs: DEC-0093
 
@@ -54,3 +54,12 @@ Make `factory validate --only hygiene` pass honestly: no artifact references in 
 ## Activity Log
 
 - 2026-11-09: Owner asked to clean up the debt (pt267u). Branch `factory/task-0282-hygiene-debt` from the TASK-0281 head `2aba4ec5`.
+
+## Integration
+
+- Merged into develop via PR #346 at `86715d2c`. The lifecycle was reconciled on 2026-11-14.
+
+## Review and QA History
+
+- Review: [Merged PR #346](https://github.com/quinguyen1502/superstep/pull/346) contains the delivered scope and merge history. No separate review artifact was recorded.
+- QA: The original PR records the hygiene findings before and after cleanup and the backend, SDK, and frontend test results. See the validation section of the merged PR.

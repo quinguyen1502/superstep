@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0292
 - Title: Handbook: observability, readiness, Usage page and alerts
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -56,3 +56,7 @@ Rewrite `operate/observability.md` in en and vi for the new surface.
 
 - Review: `.factory-state/artifacts/REV-0278-TASK-0292-observability-handbook.md`
 - QA: `.factory-state/artifacts/QA-0278-TASK-0292-observability-handbook.md`
+
+## Integration
+
+- Merged into develop via PR #353 at `6047c732`. The lifecycle was reconciled on 2026-11-14.

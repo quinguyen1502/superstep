@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0289
 - Title: Settings Usage section
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: DES-0006
 - Architecture IDs: DEC-0094, DEC-0095
@@ -60,3 +60,7 @@ Add the Usage section at `/settings/usage` per DES-0006.
 
 - Review: `.factory-state/artifacts/REV-0275-TASK-0289-usage-settings-section.md`
 - QA: `.factory-state/artifacts/QA-0275-TASK-0289-usage-settings-section.md`
+
+## Integration
+
+- Delivered in the bundled implementation merged into develop via PR #351 at `73dbf52d`. The lifecycle was reconciled on 2026-11-14.

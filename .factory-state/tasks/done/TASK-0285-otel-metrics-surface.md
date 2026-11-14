@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0285
 - Title: OTel metrics surface with queue, worker and process gauges
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-09
-- Updated: 2026-11-09
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0094
 - Design IDs: 
 - Architecture IDs: DEC-0094, DEC-0095
@@ -62,3 +62,7 @@ Make `services/telemetry.py` the single metrics surface per DEC-0094: bounded la
 
 - Review: `.factory-state/artifacts/REV-0271-TASK-0285-otel-metrics-surface.md`
 - QA: `.factory-state/artifacts/QA-0271-TASK-0285-otel-metrics-surface.md`
+
+## Integration
+
+- Merged into develop via PR #350 at `f4f407a8`. The lifecycle was reconciled on 2026-11-14.
