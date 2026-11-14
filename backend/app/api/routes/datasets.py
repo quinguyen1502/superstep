@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from ...core.errors import AppError
 from ...schemas.dataset import (
     DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetGrantInput, DatasetTokenInput,
-    DatasetOwnerUpdate, DatasetRowIn, DatasetRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
+    DatasetOwnerUpdate, DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetUpdate,
 )
 from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_csv_service, dataset_row_service, dataset_service, limit_body
 
@@ -140,7 +140,7 @@ def execute_connected(dataset_id: str, body: DatasetConnectedInput, response: Re
 
 
 @router.post("/{dataset_id}/rows/query")
-def query_rows(dataset_id: str, body: DatasetRowQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
+def query_rows(dataset_id: str, body: DatasetGroupedRowQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
     return svc.query(user["id"], dataset_id, include_total=True, **body.model_dump())
 
 

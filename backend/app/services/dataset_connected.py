@@ -1,11 +1,12 @@
 """Run the portable Dataset contract with a dataset-scoped deployment credential."""
 from pydantic import ValidationError
 
+from ..core.dataset_filters import filter_rules
 from ..core.dataset_types import TEXT_KINDS
 from ..core.errors import AppError
 from ..engine.dataset_nodes import ACCESS, delete_target, valid
 from ..repositories.dataset_rows import ConnectedWrite
-from ..schemas.dataset import DatasetConnectedInput, DatasetRowIn, DatasetRowQuery, DatasetRowUpsert
+from ..schemas.dataset import DatasetConnectedInput, DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpsert
 from .dataset_access import DatasetAccessService, can_read
 from .dataset_rows import DatasetRowService, _active_columns
 
@@ -32,7 +33,8 @@ class DatasetConnectedService:
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
         referenced = {*fields}
         if operation == "find_rows":
-            referenced.update(rule["field"] for name in ("filters", "sorts") for rule in arguments.get(name, []))
+            referenced.update(rule["field"] for _, rule in filter_rules(arguments))
+            referenced.update(rule["field"] for rule in arguments.get("sorts", []))
             if arguments.get("search"):
                 referenced.update(column.key for column in columns.values() if column.kind in TEXT_KINDS)
         if write:
@@ -55,7 +57,7 @@ class DatasetConnectedService:
 
         try:
             if operation == "find_rows":
-                query = DatasetRowQuery.model_validate({**arguments, "fields": fields})
+                query = DatasetGroupedRowQuery.model_validate({**arguments, "fields": fields})
             elif write:
                 schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
                 payload = schema.model_validate(arguments).model_dump(exclude={"schema_revision"})

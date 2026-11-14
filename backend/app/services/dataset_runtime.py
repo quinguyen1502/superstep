@@ -1,11 +1,12 @@
 """Bind Dataset execution to the authenticated actor and effective saved workflow."""
 from pydantic import ValidationError
 
+from ..core.dataset_filters import filter_rules
 from ..core.dataset_types import filter_operators
 from ..core.errors import AppError
 from ..engine import dataset_nodes
 from ..repositories.dataset_rows import WorkflowWrite
-from ..schemas.dataset import DatasetRowIn, DatasetRowQuery, DatasetRowUpsert
+from ..schemas.dataset import DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpsert
 from .dataset_access import DatasetAccessService, can_read
 from .dataset_rows import DatasetRowService, _active_columns, _column
 
@@ -36,7 +37,7 @@ class DatasetRuntimeService:
         args = binding.get("arguments") or {}
         references = [
             *binding["fields"], *(args.get("values") or {}),
-            *(rule["field"] for rule in args.get("filters", [])), *(rule["field"] for rule in args.get("sorts", [])),
+            *(rule["field"] for _, rule in filter_rules(args)), *(rule["field"] for rule in args.get("sorts", [])),
         ]
         if operation == "delete_row" and args.get("key"):
             references.append(args["key"])
@@ -76,7 +77,7 @@ class DatasetRuntimeService:
 
         try:
             if operation == "find_rows":
-                query = DatasetRowQuery.model_validate({**arguments, "fields": fields})
+                query = DatasetGroupedRowQuery.model_validate({**arguments, "fields": fields})
             elif operation in {"insert_row", "upsert_row"}:
                 schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
                 request = schema.model_validate(arguments)
@@ -90,6 +91,16 @@ class DatasetRuntimeService:
                     field = arguments["filters"][index]["field"]
                     raise AppError("DATASET_FILTER_INVALID", field=field,
                                    details={"position": index + 1, "field": field}) from exc
+                if operation == "find_rows" and location and location[0] == "filter_tree":
+                    indices = [location[i + 1] + 1 for i, part in enumerate(location[:-1])
+                               if part == "children" and isinstance(location[i + 1], int)]
+                    if indices:
+                        rule = dict(filter_rules(arguments)).get(tuple(indices))
+                        if rule:
+                            group = ".".join(map(str, indices[:-1])) or "root"
+                            raise AppError("DATASET_FILTER_INVALID", field=rule["field"],
+                                           details={"position": indices[-1], "field": rule["field"], "group": group}) from exc
+                    raise AppError("DATASET_FILTER_INVALID", field=error["msg"]) from exc
             raise AppError("DATASET_NODE_ARGUMENTS_INVALID") from exc
 
         if operation == "find_rows":

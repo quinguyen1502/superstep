@@ -17,6 +17,17 @@ Find accepts typed filters, sorting and paging. Get accepts `row_id`. Insert and
 Responses use the standard Superstep API envelope. `AUTH_TOKEN_INVALID` covers invalid, revoked, differently scoped, or insufficient tokens. `DATASET_BINDING_SCHEMA_MISMATCH` identifies the first incompatible field. `DATASET_SCHEMA_CONFLICT` means the destination changed during the request. In generated code, `DATASET_BINDING_MISSING` names the environment variables to set, `DATASET_BINDING_INVALID` reports invalid connection settings, and `DATASET_TRANSPORT_ERROR` indicates that the response could not be used.
 
 
+### Grouped filters in the connected API
+
+Find rows accepts either the existing `filters` and `filter_mode` arguments or a
+`filter_tree`. A group has `type: "group"`, `conjunction: "and" | "or"`, and
+`children`. A rule has `type: "rule"`, `field`, `op`, and `value`. A tree
+supports three group levels and 20 rules. The `in` and `not_in` operators
+take 1 to 50 values of the field's type. Null cells match `not_in` and
+`not_contains`, and `not_contains` ignores case. Code export reports
+`DATASET_EXPORT_FILTER_UNSUPPORTED` for these filters until both generated
+runtimes support them.
+
 ## Python standalone
 
 Choose the backend for each binding independently. An exported Python project can read a connected dataset and write to a standalone database in the same run.

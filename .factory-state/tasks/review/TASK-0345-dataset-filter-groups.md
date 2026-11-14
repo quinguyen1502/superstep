@@ -5,10 +5,10 @@
 - Project: superstep
 - Task ID: TASK-0345
 - Title: Add nested AND/OR filter groups and new Dataset operators
-- Status: backlog
+- Status: review
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
-- Updated: 2026-11-13
+- Updated: 2026-11-14
 - Requirement IDs: REQ-0101
 - Design IDs: DES-0007
 - Architecture IDs: ARCH-0003
@@ -73,6 +73,10 @@ Dataset queries accept a filter tree of AND/OR groups and the operators in, not 
 ## Activity Log
 
 - 2026-11-13: Created by planning on branch `factory/plan-dataset-fixes-phase3`. No implementation. Stays in backlog until the owner accepts REQ-0101 and PLAN-0019.
+
+- 2026-11-14: Started on top of the lifecycle reconciliation in PR #402.
+
+- 2026-11-14: Implemented and ran targeted checks. Review [REV-0336](../../artifacts/REV-0336-TASK-0345-dataset-filter-groups.md) and QA [QA-0336](../../artifacts/QA-0336-TASK-0345-dataset-filter-groups.md).
 
 ## Handoff Notes
 

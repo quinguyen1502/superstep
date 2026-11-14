@@ -1,10 +1,11 @@
 from time import time
 
 from ..core import config
+from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_VALUES
 from ..core.dataset_types import INVALID_TEXT, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, TEXT_KINDS, dataset_size, filter_operators, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
-from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, WorkflowWrite
+from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, RowFilterGroup, WorkflowWrite
 from .dataset_service import DatasetService
 
 def _active_columns(dataset: Dataset) -> dict[str, DatasetColumn]:
@@ -63,12 +64,32 @@ def _filter(columns: dict[str, DatasetColumn], field: str, op: str, value) -> Ro
     if op in {"is_null", "not_null"}:
         if value is not None:
             raise AppError("DATASET_FILTER_INVALID", field=field)
-    elif op == "contains":
+    elif op in {"contains", "not_contains"}:
         if not isinstance(value, str) or not 0 < len(value) <= 120 or INVALID_TEXT.search(value):
             raise AppError("DATASET_FILTER_INVALID", field=field)
+    elif op in LIST_FILTERS:
+        if not isinstance(value, list) or not 1 <= len(value) <= MAX_FILTER_VALUES:
+            raise AppError("DATASET_FILTER_INVALID", field=field)
+        value = [_normalize(column, item, required=True) for item in value]
     else:
         value = _normalize(column, value, required=True)
     return RowFilter(column, op, value)
+
+
+def _filter_predicate(columns, spec: dict, path: tuple[int, ...], *, grouped: bool = False):
+    if spec.get("type") == "group":
+        children = [_filter_predicate(columns, child, (*path, index), grouped=True)
+                    for index, child in enumerate(spec["children"], 1)]
+        return RowFilterGroup(spec["conjunction"], children)
+    field = spec["field"]
+    try:
+        return _filter(columns, field, spec["op"], spec.get("value"))
+    except AppError as exc:
+        details = {"field": field, "position": path[-1]}
+        if grouped:
+            details["group"] = ".".join(map(str, path[:-1])) or "root"
+        label = field if not grouped else f"{field} (group {details['group']}, rule {path[-1]})"
+        raise AppError("DATASET_FILTER_INVALID", field=label, details=details) from exc
 
 
 class DatasetRowService:
@@ -103,7 +124,7 @@ class DatasetRowService:
     def query(self, uid: str, dataset_id: str, *, filters: list[dict], fields: list[str] | None,
               search: str | None, sort: str | None, descending: bool, limit: int, offset: int,
               filter_mode: str = "and", sorts: list[dict] | None = None, schema_revision: int | None = None,
-              include_total: bool = False) -> dict:
+              include_total: bool = False, filter_tree: dict | None = None) -> dict:
         dataset = self._read_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         projection = _projection(columns, fields)
@@ -111,13 +132,8 @@ class DatasetRowService:
             raise AppError("DATASET_FILTER_INVALID", field="search")
         if sorts is None:
             sorts = [{"field": sort, "descending": descending}] if sort else []
-        predicates = []
-        for position, spec in enumerate(filters, start=1):
-            try:
-                predicates.append(_filter(columns, **spec))
-            except AppError as exc:
-                raise AppError("DATASET_FILTER_INVALID", field=spec["field"],
-                               details={"field": spec["field"], "position": position}) from exc
+        predicates = ([_filter_predicate(columns, filter_tree, (), grouped=True)] if filter_tree is not None
+                      else [_filter_predicate(columns, spec, (index,)) for index, spec in enumerate(filters, 1)])
         rows, total = self.rows.query_page(
             dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
             search_columns=[column for column in columns.values() if column.kind in TEXT_KINDS],

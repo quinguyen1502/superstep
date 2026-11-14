@@ -10,7 +10,7 @@ from .errors import AppError
 
 ColumnKind: TypeAlias = Literal["text", "number", "boolean", "date", "datetime", "email", "select"]
 CellValue: TypeAlias = str | int | float | bool | None
-FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null"]
+FilterOperator: TypeAlias = Literal["eq", "ne", "lt", "lte", "gt", "gte", "contains", "is_null", "not_null", "in", "not_in", "not_contains"]
 FILTER_OPERATORS = get_args(FilterOperator)
 TEXT_KINDS = frozenset({"text", "email", "select"})
 TEXT_FOLD_FUNCTION = "dataset_text_fold"
@@ -24,7 +24,7 @@ def fold_text(value: object) -> object:
 def filter_operators(kind: ColumnKind) -> tuple[str, ...]:
     if kind == "boolean":
         return ("eq", "ne", "is_null", "not_null")
-    return tuple(op for op in FILTER_OPERATORS if op != "contains" or kind in TEXT_KINDS)
+    return tuple(op for op in FILTER_OPERATORS if op not in {"contains", "not_contains"} or kind in TEXT_KINDS)
 
 COLUMN_KEY_PATTERN = r"^[a-z][a-z0-9_]{0,62}$"
 MAX_ROW_BYTES = 65_536
