@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0350
 - Title: Add frozen columns, row height, and virtual scrolling to the Dataset grid
-- Status: review
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-13
 - Updated: 2026-11-14
@@ -74,6 +74,8 @@ Wide and long datasets stay usable: users freeze leading columns, choose a row h
 - 2026-11-14: Readiness gate passed. Stacked on the grid changes in PR #407 so the upgrade covers grouping and summaries.
 
 - 2026-11-14: Implemented and ran targeted checks. Review [REV-0342](../../artifacts/REV-0342-TASK-0350-dataset-grid-layout.md) and QA [QA-0342](../../artifacts/QA-0342-TASK-0350-dataset-grid-layout.md).
+
+- 2026-11-14: Owner approved merging PR #409 into develop after successful checks.
 
 ## Handoff Notes
 
