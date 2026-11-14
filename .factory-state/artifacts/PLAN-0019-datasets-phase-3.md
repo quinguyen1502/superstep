@@ -32,7 +32,7 @@ Deliver Datasets phase 3 (REQ-0101) after the phase 2 chain and the REQ-0100 fix
 | [TASK-0345](../tasks/done/TASK-0345-dataset-filter-groups.md) | P1 | Filter tree and `in`, `not_in`, `not_contains` | TASK-0334 |
 | [TASK-0346](../tasks/done/TASK-0346-dataset-filter-builder.md) | P1 | Nested filter builder in grid and node editor | TASK-0345 |
 | [TASK-0347](../tasks/done/TASK-0347-dataset-column-summaries.md) | P1 | Server-side column summaries and the summary row | TASK-0345 |
-| [TASK-0348](../tasks/review/TASK-0348-dataset-aggregate-operation.md) | P1 | `aggregate_rows` for the Agent tool and Dataset node | TASK-0347, TASK-0331 |
+| [TASK-0348](../tasks/done/TASK-0348-dataset-aggregate-operation.md) | P1 | `aggregate_rows` for the Agent tool and Dataset node | TASK-0347, TASK-0331 |
 | [TASK-0349](../tasks/backlog/TASK-0349-dataset-group-by.md) | P2 | Group by one column | TASK-0347 |
 | [TASK-0350](../tasks/backlog/TASK-0350-dataset-grid-layout.md) | P2 | TanStack Table 9 upgrade; column pinning, row height, TanStack Virtual | TASK-0341 |
 | [TASK-0351](../tasks/backlog/TASK-0351-dataset-scalar-field-types.md) | P1 | Long text, URL, created and updated time | TASK-0338, TASK-0339 |
