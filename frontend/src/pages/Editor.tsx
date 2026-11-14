@@ -4,6 +4,7 @@ import '@xyflow/react/dist/style.css'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button'
 import { EditorLayout, type MobileView } from '@/components/editor-layout'
 import { EditorSkeleton } from '@/components/editor/editor-skeleton'
@@ -54,5 +55,17 @@ function Studio() {
       right={<EditorConfig />} bottom={<EditorRunPanel />} rightCollapsed={narrow && !studio.selNode && !studio.selEdge}
       mobile={mobile ? { view, onView: setView, selected: !!(studio.selNode || studio.selEdge) } : undefined}
       chat={studio.chatOpen && wid ? <ChatSidePanel wid={wid} canConfigure={studio.access === 'owner'} canEdit={studio.edit && !studio.source} dirty={studio.edit && studio.isDirty()} onClose={() => studio.setChatOpen(false)} /> : undefined} />
+    <AlertDialog open={studio.datasetWriteNotice} onOpenChange={studio.setDatasetWriteNotice}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('datasetNode.runNoticeTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('datasetNode.runNotice')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={studio.confirmDatasetRun}>{t('editor.run')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </StudioContext.Provider>
 }
