@@ -17,6 +17,9 @@ CATALOG: dict[str, tuple[int, str]] = {
     "BROWSER_DISABLED": (404, "Browser connections are disabled"),
     "BROWSER_RUNTIME_UNAVAILABLE": (503, "Browser execution requires a verified isolated worker and trusted run context"),
     # datasets
+    "DATASET_TOKEN_SCOPE": (403, "The dataset token does not allow this operation"),
+    "DATASET_WORKFLOW_NOT_SHARED": (403, "Share the workflow with team {team} before granting dataset access"),
+    "DATASET_TEAM_FORBIDDEN": (403, "You must be a member of the team to create a dataset there"),
     "DATASET_GRANT_DENIED": (403, "The workflow does not have the required dataset grant"),
     "DATASET_MANAGE_DENIED": (403, "Only the dataset owner or an admin can change its schema, access, or tokens, or delete it"),
     "DATASET_OWNER_INVALID": (400, "The new owner must be a member of the dataset's team who can manage resources"),

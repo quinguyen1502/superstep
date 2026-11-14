@@ -4,6 +4,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
+- Dataset errors distinguish team membership, workflow sharing, invalid mapped filters, and insufficient token scope. A valid Dataset token that lacks the requested operation now returns `403 DATASET_TOKEN_SCOPE`.
+
 ### Added
 
 - **JSON log format.** Set `STUDIO_LOG_FORMAT=json` for one JSON line per log event with `request_id`, `run_id`, `workflow_id` and `trace_id` when known. `X-Request-ID` is echoed when safe. Default text logs stay unchanged. The observability Compose profile turns JSON logs on.

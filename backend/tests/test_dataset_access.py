@@ -15,6 +15,7 @@ def test_grants_require_saved_workflow_and_explicit_team_scope(client, db):
         session.add_all([
             Workflow(id="support-flow", name="Support", owner="owner"),
             Workflow(id="other-flow", name="Other", owner="other"),
+            Workflow(id="unshared-flow", name="Unshared", owner="owner"),
         ])
         session.flush()  # PostgreSQL checks the share’s foreign key when the row is inserted.
         session.add(WorkflowTeamShare(workflow_id="support-flow", team_id="support", role="viewer", created=1, shared_by="owner"))
@@ -25,6 +26,9 @@ def test_grants_require_saved_workflow_and_explicit_team_scope(client, db):
         svc.for_workflow("owner", "support-flow", dataset["id"], "read")
     error(client.put(f"{base}/grants/support-flow", headers=auth("member"), json={"permission": "read"}), 403, "PERMISSION_DENIED")
     error(client.put(f"{base}/grants/other-flow", headers=auth("owner"), json={"permission": "read"}), 404, "WORKFLOW_NOT_FOUND")
+    unshared = client.put(f"{base}/grants/unshared-flow", headers=auth("owner"), json={"permission": "read"})
+    error(unshared, 403, "DATASET_WORKFLOW_NOT_SHARED")
+    assert unshared.json()["error"]["details"] == {"team": "Support"}
     call(client, "PUT", f"{base}/grants/support-flow", body={"permission": "read"})
     assert svc.for_workflow("member", "support-flow", dataset["id"], "read").subject_id == "support-flow"
     assert svc.for_workflow("owner", "support-flow", dataset["id"], "read", public=True).subject_id == "support-flow"
@@ -51,7 +55,7 @@ def test_dataset_token_rotation_and_scope(client, db):
     for did, op in [(dataset["id"], "read"), (other["id"], "write")]:
         with pytest.raises(AppError) as exc:
             svc.for_token(token, did, op)
-        assert exc.value.code == "AUTH_TOKEN_INVALID"
+        assert exc.value.code == ("DATASET_TOKEN_SCOPE" if did == dataset["id"] else "AUTH_TOKEN_INVALID")
     error(client.get(f"/api/datasets/{dataset['id']}", headers={"Authorization": f"Bearer {token}"}), 401, "AUTH_TOKEN_INVALID")
     token_url = f"{base}/tokens/{credential['id']}"
     rotated = call(client, "POST", f"{token_url}/rotate")["token"]
