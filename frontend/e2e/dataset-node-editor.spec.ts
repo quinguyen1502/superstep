@@ -92,6 +92,7 @@ test('Dataset node configures lookup and upsert, simulates tests and rebinds tem
   expect(await rows()).toEqual([])
 
   await page.locator('#run-btn').click()
+  await page.getByRole('alertdialog', { name: 'This run can change Dataset rows' }).getByRole('button', { name: 'Run', exact: true }).click()
   await expect.poll(async () => (await rows()).map((row: { values: unknown }) => row.values)).toEqual([{ ticket: 'T-01', subject: null }])
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok')
   await expect(page.getByTestId('span-dataset-dry-run')).toHaveCount(0)
@@ -202,6 +203,7 @@ test('Dataset node configures Delete row by unique field or row ID and needs the
   expect(Object.keys((await savedConfig()).arguments).sort()).toEqual(['key', 'value'])
 
   await page.locator('#run-btn').click()
+  await page.getByRole('alertdialog', { name: 'This run can change Dataset rows' }).getByRole('button', { name: 'Run', exact: true }).click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'error', { timeout: 30_000 })
   expect(await tickets()).toEqual(['T-09'])
 
