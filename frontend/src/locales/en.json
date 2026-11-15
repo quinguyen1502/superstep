@@ -112,6 +112,7 @@
   },
   "dataset": {
     "clipboardMenu": "Clipboard",
+    "shortcutIntro": "Select a cell to use grid shortcuts. To select a range, drag across cells or hold Shift while moving with the arrow keys.",
     "clipboardCopy": "Copy cells",
     "clipboardPaste": "Paste cells",
     "clipboardFillDown": "Fill down",
@@ -164,7 +165,7 @@
       "tall": "Tall"
     },
     "freezeColumns": "Freeze columns",
-    "frozenCount_zero": "Freeze columns",
+    "frozenCount_zero": "No frozen data columns",
     "frozenCount_one": "1 frozen column",
     "frozenCount_other": "{{count}} frozen columns",
     "groupBy": "Group by",
@@ -224,6 +225,8 @@
     "importCsv": "Import CSV",
     "exportCsv": "Export CSV",
     "csvFile": "CSV file",
+    "csvDropHint": "Drop a CSV file here or click to browse",
+    "csvSingleFile": "Choose one CSV file at a time.",
     "csvLimits": "Upload a UTF-8 CSV file with a header row, up to 1 MiB and 1,000 records.",
     "csvUtf8": "Choose a CSV file encoded as UTF-8.",
     "csvSource": "Source column",
@@ -355,6 +358,8 @@
     "filterEnterValue": "Enter a value for each input.",
     "activeFilterCount_one": "{{count}} active filter",
     "activeFilterCount_other": "{{count}} active filters",
+    "activeSortCount_one": "{{count}} column sorted",
+    "activeSortCount_other": "{{count}} columns sorted",
     "rowsUnavailable": "Rows unavailable.",
     "noRows": "No matching rows.",
     "previousPage": "Previous page",
@@ -2112,6 +2117,12 @@
       "navigation": "Navigation"
     },
     "actions": {
+      "datasetMove": "Move between cells",
+      "datasetSelectRange": "Extend the selected range",
+      "datasetEdit": "Edit the focused cell",
+      "datasetSaveEdit": "Save a single-line edit",
+      "datasetSaveText": "Save a multiline edit",
+      "datasetDiscardEdit": "Discard the cell edit",
       "save": "Save workflow",
       "cheatsheet": "Show this cheat sheet",
       "escape": "Clear selection / close panel",

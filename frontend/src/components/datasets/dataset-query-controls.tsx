@@ -74,7 +74,7 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
   return <>
     <Popover open={panel === 'filter'} onOpenChange={open => changePanel('filter', open)}>
       <PopoverTrigger asChild>
-        <Button variant={panel === 'filter' || activeCount ? 'secondary' : 'outline'} disabled={disabled} aria-label={t('dataset.filter')} aria-description={activeCount ? t('dataset.activeFilterCount', { count: activeCount }) : undefined}>
+        <Button variant="toolbar" data-active={activeCount > 0} disabled={disabled} aria-label={t('dataset.filter')} aria-description={activeCount ? t('dataset.activeFilterCount', { count: activeCount }) : undefined}>
           <ListFilter />{t('dataset.filter')}
           {activeCount > 0 && <Badge variant="secondary" size="sm" aria-hidden="true">{activeCount}</Badge>}
         </Button>
@@ -100,8 +100,10 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
     </Popover>
     <Popover open={panel === 'sort'} onOpenChange={open => changePanel('sort', open)}>
       <PopoverTrigger asChild>
-        <Button variant={panel === 'sort' || sorting.length ? 'secondary' : 'outline'} disabled={disabled}>
+        <Button variant="toolbar" data-active={sorting.length > 0} disabled={disabled} aria-label={t('dataset.sort')}
+          aria-description={sorting.length ? t('dataset.activeSortCount', { count: sorting.length }) : undefined}>
           <ArrowUpDown />{t('dataset.sort')}
+          {sorting.length > 0 && <Badge variant="secondary" size="sm" aria-hidden="true">{sorting.length}</Badge>}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" aria-label={t('dataset.sort')} className="max-w-[calc(100vw-1.5rem)] sm:w-132">

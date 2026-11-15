@@ -33,7 +33,7 @@ export function DatasetColumnControls({ columns, visibleKeys, disabled, onVisibi
   const [drag, setDrag] = useState<ColumnDrag | null>(null)
   return <Popover>
     <PopoverTrigger asChild>
-      <Button variant={visibleKeys.size < columns.length ? 'secondary' : 'outline'}
+      <Button variant="toolbar" data-active={visibleKeys.size < columns.length}
         aria-label={t('dataset.visibleColumns')} disabled={disabled || !columns.length}>
         <Columns3 /><span className="hidden sm:inline">{t('dataset.visibleColumns')}</span>
       </Button>

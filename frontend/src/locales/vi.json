@@ -112,6 +112,7 @@
   },
   "dataset": {
     "clipboardMenu": "Bộ nhớ tạm",
+    "shortcutIntro": "Chọn một ô để dùng phím tắt của bảng. Để chọn một vùng, kéo qua các ô hoặc giữ Shift và dùng phím mũi tên.",
     "clipboardCopy": "Sao chép ô",
     "clipboardPaste": "Dán ô",
     "clipboardFillDown": "Điền xuống",
@@ -164,7 +165,7 @@
       "tall": "Cao"
     },
     "freezeColumns": "Cố định cột",
-    "frozenCount_zero": "Cố định cột",
+    "frozenCount_zero": "Không cố định cột dữ liệu",
     "frozenCount_one": "Cố định 1 cột",
     "frozenCount_other": "Cố định {{count}} cột",
     "groupBy": "Nhóm theo",
@@ -224,6 +225,8 @@
     "importCsv": "Nhập CSV",
     "exportCsv": "Xuất CSV",
     "csvFile": "Tệp CSV",
+    "csvDropHint": "Thả tệp CSV vào đây hoặc bấm để chọn",
+    "csvSingleFile": "Chỉ chọn một tệp CSV mỗi lần.",
     "csvLimits": "Tải lên tệp CSV UTF-8 có dòng tiêu đề, tối đa 1 MiB và 1.000 bản ghi.",
     "csvUtf8": "Chọn tệp CSV dùng mã hoá UTF-8.",
     "csvSource": "Cột nguồn",
@@ -355,6 +358,8 @@
     "filterEnterValue": "Nhập giá trị cho từng ô.",
     "activeFilterCount_one": "{{count}} bộ lọc đang áp dụng",
     "activeFilterCount_other": "{{count}} bộ lọc đang áp dụng",
+    "activeSortCount_one": "{{count}} cột đang sắp xếp",
+    "activeSortCount_other": "{{count}} cột đang sắp xếp",
     "rowsUnavailable": "Không tải được các dòng.",
     "noRows": "Không có dòng phù hợp.",
     "previousPage": "Trang trước",
@@ -2112,6 +2117,12 @@
       "navigation": "Điều hướng"
     },
     "actions": {
+      "datasetMove": "Di chuyển giữa các ô",
+      "datasetSelectRange": "Mở rộng vùng đã chọn",
+      "datasetEdit": "Sửa ô đang chọn",
+      "datasetSaveEdit": "Lưu nội dung một dòng",
+      "datasetSaveText": "Lưu nội dung nhiều dòng",
+      "datasetDiscardEdit": "Bỏ thay đổi trong ô",
       "save": "Lưu workflow",
       "cheatsheet": "Hiện bảng phím tắt",
       "escape": "Bỏ chọn / đóng bảng",

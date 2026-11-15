@@ -27,9 +27,17 @@ test('previews, maps, imports and downloads Dataset CSV', async ({ page }) => {
   await actions.click()
   await page.getByRole('menuitem', { name: 'Import CSV' }).click()
   const importer = page.getByRole('dialog', { name: 'Import CSV' })
-  await importer.getByLabel('CSV file').setInputFiles({
-    name: 'additional.csv', mimeType: 'text/csv', buffer: Buffer.from('Ref,Score,Notes\nC,invalid,Corrected mapping\n'),
+  await expect(importer.getByText('Drop a CSV file here or click to browse')).toBeVisible()
+  const fileInput = importer.getByLabel('CSV file')
+  const drop = await page.evaluateHandle(() => {
+    const data = new DataTransfer()
+    data.items.add(new File(['Ref,Score,Notes\nC,invalid,Corrected mapping\n'], 'additional.csv', { type: 'text/csv' }))
+    return data
   })
+  await fileInput.dispatchEvent('dragover', { dataTransfer: drop })
+  await fileInput.dispatchEvent('drop', { dataTransfer: drop })
+  await drop.dispose()
+  await expect(importer.getByText('additional.csv', { exact: true })).toBeVisible()
   await expect(importer.getByRole('alert')).toContainText('Line 2')
   await expect(importer.getByRole('button', { name: 'Import CSV' })).toBeDisabled()
   await expect(rows).toHaveCount(2)

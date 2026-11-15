@@ -91,7 +91,7 @@ export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false
         }
         const column = columns.find(item => item.key === child.field)
         const ops = column ? datasetFilterOperators(column.kind) : []
-        const error = ruleError(child, column)
+        const error = renderValue ? ruleError(child, column) : undefined
         const replace = (patch: Partial<DatasetFilterRule>) => changeChild(index, { ...child, ...patch })
         const list = datasetListFilter(child.op)
         const values: ScalarCellValue[] = Array.isArray(child.value) ? child.value : [child.value]

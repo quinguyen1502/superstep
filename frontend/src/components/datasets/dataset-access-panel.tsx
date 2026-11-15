@@ -21,7 +21,7 @@ function PermissionPicker({ id, value, onChange, disabled }: {
   id: string; value: Permission; onChange: (value: Permission) => void; disabled: boolean
 }) {
   const { t } = useTranslation()
-  return <div className="min-w-0 space-y-1">
+  return <div className="flex min-w-0 flex-col gap-1">
     <Label htmlFor={id}>{t('dataset.accessPermission')}</Label>
     <Select value={value} onValueChange={value => onChange(value as Permission)} disabled={disabled}>
       <SelectTrigger id={id} className="w-full"><SelectValue /></SelectTrigger>
@@ -115,10 +115,10 @@ export function DatasetAccessPanel({ dataset, workflow }: { dataset: Dataset; wo
     } })
   }
 
-  return <div className="space-y-5 p-4 md:px-6">
+  return <div className="grid gap-y-5 p-4 sm:grid-cols-[repeat(2,minmax(0,1fr))_auto] sm:gap-x-2 sm:[&>*]:col-span-full md:px-6">
         {!access && !error && <p role="status" className="text-sm text-muted-foreground">{t('common.loading')}</p>}
         {access && <>
-          <section className="space-y-2">
+          <section className="grid gap-2 sm:grid-cols-subgrid sm:[&>*]:col-span-full">
             <h3 className="font-medium">{t('dataset.workflowGrants')}</h3>
             {!access.grants.length && <p className="text-sm text-muted-foreground">{t('dataset.noWorkflowGrants')}</p>}
             {access.grants.map(item => <div key={item.workflow_id} className="flex items-center justify-between gap-2 rounded-md border p-2">
@@ -129,8 +129,8 @@ export function DatasetAccessPanel({ dataset, workflow }: { dataset: Dataset; wo
               <Button variant="ghost" size="icon-sm" className="text-destructive" aria-label={t('dataset.accessRevoke')} disabled={busy}
                 onClick={() => revoke(item.workflow_name ?? item.workflow_id, `grants/${encodeURIComponent(item.workflow_id)}`)}><Trash2 /></Button>
             </div>)}
-            <form className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={grant}>
-              <div className="min-w-0 space-y-1"><Label htmlFor={`${id}-workflow`}>{t('dataset.accessWorkflow')}</Label>
+            <form className="grid items-end gap-2 sm:grid-cols-subgrid" onSubmit={grant}>
+              <div className="flex min-w-0 flex-col gap-1"><Label htmlFor={`${id}-workflow`}>{t('dataset.accessWorkflow')}</Label>
                 <Select disabled={busy || !access.workflows.length} value={workflowId} onValueChange={value => {
                   setWorkflowId(value)
                   const current = access.grants.find(item => item.workflow_id === value)
@@ -150,7 +150,7 @@ export function DatasetAccessPanel({ dataset, workflow }: { dataset: Dataset; wo
             </form>
             {!access.workflows.length && <p className="text-xs text-muted-foreground">{t('dataset.accessNoEligibleWorkflow')}</p>}
           </section>
-          <section className="space-y-2">
+          <section className="grid gap-2 sm:grid-cols-subgrid sm:[&>*]:col-span-full">
             <h3 className="font-medium">{t('dataset.accessTokens')}</h3>
             {!access.tokens.length && <p className="text-sm text-muted-foreground">{t('dataset.noAccessTokens')}</p>}
             {access.tokens.map(item => <div key={item.id} className="flex items-center justify-between gap-2 rounded-md border p-2">
@@ -168,8 +168,8 @@ export function DatasetAccessPanel({ dataset, workflow }: { dataset: Dataset; wo
                   onClick={() => revoke(item.name, `tokens/${item.id}`)}><Trash2 /></Button>
               </div>
             </div>)}
-            <form className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" onSubmit={createToken}>
-              <div className="min-w-0 space-y-1">
+            <form className="grid items-end gap-2 sm:grid-cols-subgrid" onSubmit={createToken}>
+              <div className="flex min-w-0 flex-col gap-1">
                 <Label htmlFor={`${id}-token-name`}>{t('dataset.accessTokenName')}</Label>
                 <Input id={`${id}-token-name`} value={tokenName} maxLength={80} disabled={busy} required onChange={event => setTokenName(event.target.value)} />
               </div>
