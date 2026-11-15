@@ -16,7 +16,7 @@ export type Run = Partial<Omit<RunResult, 'run_id' | 'status'>> & { run_id: stri
 export type Schedule = Schemas['Schedule']
 export type ScheduleDeleted = Schemas['ScheduleDeleted']
 
-export const VERSION = '0.2.0'
+export const VERSION = '0.3.0'
 const PENDING: readonly RunStatus[] = ['queued', 'running']
 
 /** True once the run has stopped changing (any status but `queued` / `running`). */

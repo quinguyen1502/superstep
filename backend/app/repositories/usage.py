@@ -2,7 +2,7 @@
 the JSON `runs.events` column is never read. Top-level runs only: a workflow tool's child run is part of its
 parent, whose node usage already includes the child's tokens and cost."""
 from typing import Optional
-from sqlalchemy import BigInteger, and_, case, cast, func, select
+from sqlalchemy import and_, case, func, select
 from ..models import Run
 from ..models.approval import ApprovalWait
 from ..models.chat_message import ChatMessage
@@ -51,9 +51,8 @@ class UsageRepository:
         return int(total), int(ok or 0)
 
     def series(self, since: float, until: float, size: int) -> list[tuple[int, str, int]]:
-        """(bucket index, status, runs): bucket i covers [since + i*size, since + (i+1)*size). Integer division of
-        non-negative integers floors on both SQLite and Postgres."""
-        bucket = (cast(Run.started, BigInteger) - int(since)) / size
+        """(bucket index, status, runs): bucket i covers [since + i*size, since + (i+1)*size)."""
+        bucket = func.floor((Run.started - since) / size)
         with self.db.session() as s:
             rows = s.execute(select(bucket, Run.status, func.count()).where(*self._window(since, until)).group_by(bucket, Run.status)).all()
         return [(int(b), st or "unknown", int(n)) for b, st, n in rows]

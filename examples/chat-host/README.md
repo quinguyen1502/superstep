@@ -94,12 +94,12 @@ en/vi, light/dark, widget, mobile and revoked-key states. Screenshots stay under
 `frontend/test-results/chat-host/`, `react-chat/` and `widget-chat/`; link CI artifacts from the PR instead of
 adding images to Git. Auth traces are disabled because they capture tokens.
 
-This sample targets Superstep 0.12.0 with matching Python SDK/CLI/server versions,
-TypeScript SDK 0.2.0 and React toolkit 0.1.3. The npm packages keep independent
-versions. See the [0.12.0 release notes](../../CHANGELOG.md) for the integrated
+This sample targets Superstep 0.13.0 with matching Python SDK/CLI/server versions,
+TypeScript SDK 0.3.0 and React toolkit 0.1.4. The npm packages keep independent
+versions. See the [0.13.0 release notes](../../CHANGELOG.md) for the integrated
 scope. The WebView token bridge is documented. The React Native package remains
 deferred. Release tags and package publication follow the owner-approved release process.
 
 `examples/react-native` calls
-this host's `POST /api/auth/chat-token`. That example is not part of the 0.12.0
+this host's `POST /api/auth/chat-token`. That example is not part of the 0.13.0
 publication, and starting it does not publish `@superstep/react-native`.
