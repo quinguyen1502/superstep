@@ -91,20 +91,24 @@ test('a viewer sees every dataset action disabled with the reason', async ({ pag
     await expect(viewer.getByRole('button', { name: tx(lang, 'dataset.addRow') })).toBeDisabled()
     await expect(viewer.getByRole('button', { name: tx(lang, 'dataset.addRow') })).toHaveAccessibleDescription(reason)
     await viewer.getByRole('button', { name: tx(lang, 'dataset.datasetActions') }).click()
-    for (const key of ['dataset.editDataset', 'dataset.access', 'dataset.importCsv', 'dataset.deleteDataset']) {
+    for (const key of ['dataset.editDataset', 'dataset.importCsv', 'dataset.deleteDataset']) {
       await expect(viewer.getByRole('menuitem', { name: tx(lang, key) })).toBeDisabled()
     }
     await expect(viewer.getByRole('menuitem', { name: tx(lang, 'dataset.exportCsv') })).toBeEnabled()
     await expect(viewer.getByRole('menu').getByText(reason)).toBeVisible()
   })
   await viewer.reload()
-  await viewer.getByRole('button', { name: tx('vi', 'dataset.datasetActions') }).click()
-  await viewer.getByRole('menuitem', { name: tx('vi', 'dataset.viewSchema') }).click()
+  await viewer.getByRole('tab', { name: tx('vi', 'dataset.schema'), exact: true }).click()
   const schema = viewer.getByRole('tabpanel', { name: tx('vi', 'dataset.schema'), exact: true })
   await expect(schema.getByRole('button', { name: tx('vi', 'dataset.addColumn') })).toBeDisabled()
   await expect(schema.getByRole('button', { name: tx('vi', 'dataset.editColumnNamed', { name: 'Ticket' }) })).toBeDisabled()
   await expect(schema.getByText(tx('vi', 'dataset.viewOnlyReason'))).toBeVisible()
   await testInfo.attach('dataset-viewer-schema-vi', { body: await viewer.screenshot({ animations: 'disabled' }), contentType: 'image/png' })
+  const accessName = tx('vi', 'dataset.access')
+  await viewer.getByRole('tab', { name: accessName, exact: true }).click()
+  const access = viewer.getByRole('tabpanel', { name: accessName, exact: true })
+  await expect(access).toContainText(tx('vi', 'dataset.viewOnlyReason'))
+  await expect(access.locator('form')).toHaveCount(0)
   await context.close()
 })
 

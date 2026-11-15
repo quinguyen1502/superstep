@@ -26,16 +26,21 @@ test('team members edit rows while only the owner or an admin manages the datase
   await peer.goto(`/datasets/${dataset.id}`)
   const note = 'Only the dataset owner or an admin can edit this dataset'
   await peer.getByRole('button', { name: 'Dataset actions' }).click()
-  for (const name of ['Edit dataset', 'Access', 'Delete dataset']) {
+  for (const name of ['Edit dataset', 'Delete dataset']) {
     await expect(peer.getByRole('menuitem', { name, exact: true })).toBeDisabled()
   }
   await expect(peer.getByRole('menuitem', { name: 'Import CSV', exact: true })).toBeEnabled()
   await expect(peer.getByRole('menuitem', { name: 'Transfer ownership' })).toHaveCount(0)
   await expect(peer.getByText(note, { exact: false })).toBeVisible()
-  await peer.getByRole('menuitem', { name: 'View schema' }).click()
+  await peer.keyboard.press('Escape')
+  await peer.getByRole('tab', { name: 'Schema', exact: true }).click()
   const schema = peer.getByRole('tabpanel', { name: 'Schema' })
   await expect(schema.getByRole('button', { name: 'Add column' })).toBeDisabled()
   await expect(schema.getByText(note, { exact: false })).toBeVisible()
+  await peer.getByRole('tab', { name: 'Access', exact: true }).click()
+  const access = peer.getByRole('tabpanel', { name: 'Access', exact: true })
+  await expect(access).toContainText(note)
+  await expect(access.locator('form')).toHaveCount(0)
   await peer.getByRole('tab', { name: 'Rows' }).click()
   await expect(peer.getByRole('button', { name: 'Add row' })).toBeEnabled()
 

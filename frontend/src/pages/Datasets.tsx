@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronRight, Download, Info, PanelLeftClose, PanelLeftOpen, Pencil, Plus, SearchX, Table2, Trash2, Upload, UserRoundCog } from 'lucide-react'
+import { ChevronRight, Download, Info, PanelLeftClose, PanelLeftOpen, Pencil, Plus, SearchX, Settings, Table2, Trash2, Upload, UserRoundCog } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -253,10 +253,8 @@ export function DatasetsPage() {
               <h2 className="break-words text-2xl font-semibold tracking-tight">{current.name}</h2>
               {current.description && <p className="break-words text-sm text-muted-foreground">{current.description}</p>}
             </div>
-            <DatasetActionsMenu size="icon" label={t('dataset.datasetActions')} triggerRef={datasetMenu}
-              schema={{ label: t('dataset.viewSchema'), onSelect: () => changeTab('schema') }}
+            <DatasetActionsMenu size="icon" icon={Settings} label={t('dataset.datasetActions')} triggerRef={datasetMenu}
               edit={{ label: t('dataset.editDataset'), onSelect: () => setDatasetDialog('edit'), disabled: !manageable }}
-              access={{ label: t('dataset.access'), onSelect: () => changeTab('access'), disabled: !manageable }}
               actions={[
                 { icon: Upload, label: t('dataset.importCsv'), onSelect: () => setCsv({ dataset: current }), disabled: !editable },
                 { icon: Download, label: t('dataset.exportCsv'), onSelect: () => { void exportCsv(current) } },
@@ -268,7 +266,7 @@ export function DatasetsPage() {
           {csvError && <Alert variant="destructive" className="mx-4"><AlertDescription>{csvError}</AlertDescription></Alert>}
           {csvNotice?.id === current.id && <p role="status" className="px-4 text-sm text-muted-foreground">{t('dataset.csvImported', { count: csvNotice.count })}</p>}
           <Tabs value={tab} onValueChange={changeTab} className="gap-0">
-            <TabsList variant="panel" aria-label={t('dataset.title')}>
+            <TabsList variant="panel" className="border-t" aria-label={t('dataset.title')}>
               <TabsTrigger value="rows" className="flex-none">{t('dataset.rows')}</TabsTrigger>
               <TabsTrigger value="schema" className="flex-none">{t('dataset.schema')}</TabsTrigger>
               <TabsTrigger value="access" className="flex-none">{t('dataset.access')}</TabsTrigger>

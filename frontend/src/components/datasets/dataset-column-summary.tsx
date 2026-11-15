@@ -19,17 +19,22 @@ export function DatasetColumnSummary({ column, operation, value, loading, failed
       ? { style: 'percent', maximumFractionDigits: 2 }
       : { maximumFractionDigits: 8 }).format(operation === 'empty_percent' ? value / 100 : value)
     : typeof value === 'string' ? displayValue(value, t('dataset.valueTrue'), t('dataset.valueFalse'), column.kind) : t('dataset.summaryNoValue')
-  return <div className="grid gap-1">
+  const result = failed ? t('dataset.summaryNoValue') : loading ? t('common.loading') : format
+  const metric = operation ? t(`dataset.summaryFunctions.${operation}`) : t('dataset.summaryNone')
+  return <>
     <Select value={operation ?? 'none'} disabled={disabled} onValueChange={selection => onChange(operations.find(item => item === selection))}>
-      <SelectTrigger size="sm" aria-label={label} className="w-full min-w-0"><SelectValue /></SelectTrigger>
+      <SelectTrigger size="sm" aria-label={label} title={operation ? `${metric}: ${result}` : metric}
+        className="w-full min-w-0 *:data-[slot=select-value]:min-w-0">
+        <SelectValue>
+          <span className="truncate">{operation ? `${metric}: ` : metric}</span>
+          {operation && <span aria-hidden="true" className="max-w-[55%] shrink-0 truncate font-semibold tabular-nums">{result}</span>}
+        </SelectValue>
+      </SelectTrigger>
       <SelectContent>
         <SelectItem value="none">{t('dataset.summaryNone')}</SelectItem>
         {operations.map(item => <SelectItem key={item} value={item}>{t(`dataset.summaryFunctions.${item}`)}</SelectItem>)}
       </SelectContent>
     </Select>
-    {operation && <output aria-label={label} className="truncate text-sm tabular-nums"
-      title={!loading && !failed ? format : undefined}>
-      {failed ? t('dataset.summaryNoValue') : loading ? t('common.loading') : format}
-    </output>}
-  </div>
+    {operation && <output aria-label={label} className="sr-only">{result}</output>}
+  </>
 }

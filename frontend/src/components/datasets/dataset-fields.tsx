@@ -100,7 +100,7 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
           <span className="truncate">{selected.length ? selected.join(', ') : t('dataset.chooseValue')}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent align="start" data-dataset-editor-popup={inline ? "" : undefined}>
         {column.options.map(option => <DropdownMenuCheckboxItem key={option} checked={selected.includes(option)}
           onSelect={event => event.preventDefault()} onCheckedChange={checked => {
             const next = column.options.filter(item => item === option ? checked : selected.includes(item))
@@ -117,7 +117,7 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
     const selected = items.findIndex(item => item.value === value)
     return <div className="min-w-0"><Select disabled={disabled} defaultOpen={openPicker} value={selected >= 0 ? String(selected) : nullable ? 'null' : ''} onValueChange={next => onChange(next === 'null' ? null : items[Number(next)].value)}>
       <SelectTrigger id={id} aria-label={label} className={cn('w-full', inlineStyle)} autoFocus={focus} {...invalidProps}><SelectValue placeholder={t('dataset.chooseValue')} /></SelectTrigger>
-      <SelectContent>
+      <SelectContent data-dataset-editor-popup={inline ? "" : undefined}>
         {nullable && <SelectItem value="null">{t('dataset.emptyValue')}</SelectItem>}
         {items.map((item, index) => <SelectItem key={String(item.value)} value={String(index)}>{item.label}</SelectItem>)}
       </SelectContent>

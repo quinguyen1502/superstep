@@ -42,8 +42,7 @@ test('write-only Dataset access explains identifier-only results in the node and
   expect((await saved.json()).data.nodes.find((node: { id: string }) => node.id === 'data').data.fields).toEqual([])
 
   await page.goto(`/datasets/${dataset.id}`)
-  await page.getByRole('button', { name: 'Dataset actions' }).click()
-  await page.getByRole('menuitem', { name: 'Access', exact: true }).click()
+  await page.getByRole('tab', { name: 'Access', exact: true }).click()
   const access = page.getByRole('tabpanel', { name: 'Access' })
   const tokenForm = access.locator('form').nth(1)
   const writeNote = 'never returns cell values'

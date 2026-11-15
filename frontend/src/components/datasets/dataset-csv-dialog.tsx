@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Upload } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { cn } from 'cn'
 import { api, ApiError } from '@/lib/api'
 import { csvIssueSummary, datasetReadOnly, datasetUrl, fromDraft, shortCsvValue, toDraft, type ColumnDraft, type CsvIssue, type Dataset, type DatasetColumn, type DatasetTeam } from '@/lib/datasets'
 import { errorText, type ApiErrorBody } from '@/lib/i18n'
@@ -38,6 +39,8 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
 }) {
   const { t } = useTranslation()
   const id = useId()
+  const [filename, setFilename] = useState('')
+  const [dragging, setDragging] = useState(false)
   const [text, setText] = useState<string | null>(null)
   const [name, setName] = useState(initial?.name ?? '')
   const [teamId, setTeamId] = useState(initial?.teamId ?? 'personal')
@@ -60,6 +63,7 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
   }
 
   async function loadFile(file: File) {
+    setFilename(file.name)
     setText(null)
     setPreview(null)
     setError('')
@@ -130,10 +134,41 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
         <form id={id} className="space-y-4" onSubmit={submit}>
           <div className="space-y-1">
             <Label htmlFor={`${id}-file`}>{t('dataset.csvFile')}</Label>
-            <Input id={`${id}-file`} type="file" accept=".csv,text/csv" disabled={busy} onChange={event => {
-              const file = event.currentTarget.files?.[0]
-              if (file) void loadFile(file)
-            }} />
+            <div className={cn('relative grid justify-items-center gap-2 rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-ring',
+              busy ? 'opacity-75' : 'hover:bg-muted',
+              dragging && !busy && 'border-ring bg-muted')}
+              onDragOver={event => {
+                if (!event.dataTransfer.types.includes('Files')) return
+                event.preventDefault()
+                event.dataTransfer.dropEffect = busy ? 'none' : 'copy'
+                if (!busy) setDragging(true)
+              }}
+              onDragLeave={event => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false)
+              }}
+              onDrop={event => {
+                event.preventDefault()
+                setDragging(false)
+                if (busy) return
+                const files = event.dataTransfer.files
+                if (files.length > 1) {
+                  setError(t('dataset.csvSingleFile'))
+                } else if (files[0]) {
+                  void loadFile(files[0])
+                }
+              }}>
+              <Upload aria-hidden="true" className="size-5" />
+              <span id={`${id}-drop-hint`} className="max-w-full break-all" aria-live="polite">
+                {busy ? t('common.loading') : filename || t('dataset.csvDropHint')}
+              </span>
+              <Input id={`${id}-file`} type="file" accept=".csv,text/csv" disabled={busy}
+                aria-describedby={`${id}-drop-hint`} className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                onChange={event => {
+                  const file = event.currentTarget.files?.[0]
+                  event.currentTarget.value = ''
+                  if (file) void loadFile(file)
+                }} />
+            </div>
           </div>
           {preview && <>
             {!dataset && <div className="grid gap-3 sm:grid-cols-2">

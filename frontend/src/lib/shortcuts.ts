@@ -1,7 +1,7 @@
 /** Editor keyboard shortcuts: one registry used by the key handler, the cheat sheet and the
  * command palette. Combos are written platform-neutral: `mod` = ⌘ on macOS, Ctrl elsewhere. */
 export type ShortcutGroup = 'general' | 'canvas' | 'history' | 'clipboard' | 'run'
-export type Shortcut = { id: string; keys: string[]; group: ShortcutGroup; allowInInputs?: boolean }
+export type Shortcut = { id: string; keys: string[]; group: ShortcutGroup; allowInInputs?: boolean; labelKey?: string }
 
 export const SHORTCUTS: Shortcut[] = [
   { id: 'save', keys: ['mod+s'], group: 'general', allowInInputs: true },
@@ -64,6 +64,7 @@ export function resolve(e: KeyLike & { target: EventTarget | null }, list = SHOR
 const NAMES: Record<string, [string, string]> = {  // [mac, other]
   mod: ['⌘', 'Ctrl'], shift: ['⇧', 'Shift'], alt: ['⌥', 'Alt'], enter: ['↵', 'Enter'], escape: ['Esc', 'Esc'],
   delete: ['⌦', 'Del'], backspace: ['⌫', 'Backspace'],
+  arrows: ['↑ ↓ ← →', '↑ ↓ ← →'], f2: ['F2', 'F2'],
 }
 /** Key caps for one combo, e.g. `mod+shift+z` → ['Ctrl','Shift','Z'] or ['⌘','⇧','Z']. */
 export function keyCaps(combo: string, mac = isMac()): string[] {

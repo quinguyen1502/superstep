@@ -11,10 +11,23 @@ test('manages workflow grants and scoped Dataset API tokens', async ({ page }) =
   expect(result.ok()).toBeTruthy()
   const dataset = (await result.json()).data
   await page.goto(`/datasets/${dataset.id}`)
-  await page.getByRole('button', { name: 'Dataset actions' }).click()
-  await page.getByRole('menuitem', { name: 'Access', exact: true }).click()
+  await page.getByRole('tab', { name: 'Access', exact: true }).click()
   const access = page.getByRole('tabpanel', { name: 'Access' })
   const grantForm = access.locator('form').nth(0)
+  const tokenForm = access.locator('form').nth(1)
+  const workflow = grantForm.getByRole('combobox', { name: 'Workflow', exact: true })
+  await expect(workflow).toBeVisible()
+  const [workflowBox, grantBox, nameBox, tokenBox] = await Promise.all([
+    workflow.boundingBox(),
+    grantForm.getByRole('combobox', { name: 'Permission', exact: true }).boundingBox(),
+    tokenForm.getByRole('textbox', { name: 'Token name' }).boundingBox(),
+    tokenForm.getByRole('combobox', { name: 'Permission', exact: true }).boundingBox(),
+  ])
+  for (const control of [grantBox, nameBox, tokenBox]) {
+    expect(Math.abs(control!.width - workflowBox!.width)).toBeLessThanOrEqual(1)
+  }
+  expect(Math.abs(grantBox!.y - workflowBox!.y)).toBeLessThanOrEqual(1)
+  expect(Math.abs(tokenBox!.y - nameBox!.y)).toBeLessThanOrEqual(1)
   const grantDelete = grantForm.getByRole('checkbox', { name: 'Allow row deletion' })
   await expect(grantDelete).toBeDisabled()
   await access.getByRole('combobox', { name: 'Workflow', exact: true }).click()

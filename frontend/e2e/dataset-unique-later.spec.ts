@@ -2,8 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { signIn } from './helpers'
 
 async function openColumn(page: Page, label: string) {
-  await page.getByRole('button', { name: 'Dataset actions' }).click()
-  await page.getByRole('menuitem', { name: 'View schema', exact: true }).click()
+  await page.getByRole('tab', { name: 'Schema', exact: true }).click()
   const schema = page.getByRole('tabpanel', { name: 'Schema', exact: true })
   await schema.getByRole('button', { name: `Edit ${label}` }).click()
   return { schema, editor: page.getByRole('dialog', { name: 'Edit column' }) }

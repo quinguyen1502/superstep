@@ -7,22 +7,26 @@ import {
   type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater,
 } from '@tanstack/react-table'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Plus, Search, Settings2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Keyboard, Pin, PinOff, Plus, Rows2, Rows3, Rows4, Search, Settings2, Sigma, Ungroup, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
+import { ShortcutCheatsheet } from '@/components/shortcut-cheatsheet'
 import { api, ApiError } from '@/lib/api'
 import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayColumnValue, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { errorText, type ApiErrorBody } from '@/lib/i18n'
 import { datasetClipboardRows, datasetClipboardText, datasetClipboardValue, type DatasetBatchResult, type DatasetBatchRow } from '@/lib/dataset-clipboard'
 import { cn } from '@/lib/utils'
+import { useShortcuts } from '@/lib/use-shortcuts'
+import type { Shortcut } from '@/lib/shortcuts'
 import { DatasetColumnSummary } from './dataset-column-summary'
 import { DatasetActionsMenu } from './dataset-actions-menu'
 import { DatasetRowDialog } from './dataset-dialogs'
@@ -40,7 +44,7 @@ type Edit = { row: DatasetRow; column: DatasetColumn; value: CellValue }
 type Cell = { row: string; column: string }
 const DIRECTIONS: Record<string, CellSelectionDirection> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
 const MOVEMENT: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
-const DIVIDER = 'border-r border-border'
+const DIVIDER = 'border-e border-border'
 const CELL_BUTTON = 'w-full justify-start rounded-none hover:bg-transparent dark:hover:bg-transparent'
 const MIN_COLUMN_WIDTH = 100
 const MAX_COLUMN_WIDTH = 4096
@@ -48,9 +52,28 @@ const ROW_NUMBER_WIDTH = 56
 const ROW_ID_WIDTH = 112
 const ROW_ACTIONS_WIDTH = 80
 const HEIGHTS = { short: 32, medium: 40, tall: 56 }
+const ROW_HEIGHT_ICONS = { short: Rows4, medium: Rows3, tall: Rows2 }
 type GridRowHeight = keyof typeof HEIGHTS
 const DEFAULT_WIDTH: Record<DatasetKind, number> = { text: 200, number: 120, boolean: 104, date: 152, datetime: 216, email: 232, select: 160, long_text: 320, url: 250, created_time: 216, updated_time: 216, multi_select: 240, auto_number: 140 }
 const PAGE_SIZES = [25, 50, 100]
+const SHORTCUT_HELP: Shortcut[] = [{ id: 'cheatsheet', keys: ['?', 'mod+/'], group: 'general' }]
+const DATASET_VIEW_SHORTCUTS: Shortcut[] = [
+  ...SHORTCUT_HELP,
+  { id: 'datasetMove', keys: ['arrows'], group: 'general' },
+  { id: 'datasetSelectRange', keys: ['shift+arrows'], group: 'general' },
+  { id: 'copyCells', keys: ['mod+c'], group: 'clipboard', labelKey: 'dataset.clipboardCopy' },
+]
+const DATASET_EDIT_SHORTCUTS: Shortcut[] = [
+  ...DATASET_VIEW_SHORTCUTS,
+  { id: 'datasetEdit', keys: ['enter', 'f2'], group: 'general' },
+  { id: 'datasetSaveEdit', keys: ['enter'], group: 'general' },
+  { id: 'datasetSaveText', keys: ['mod+enter'], group: 'general' },
+  { id: 'datasetDiscardEdit', keys: ['escape'], group: 'general' },
+  { id: 'pasteCells', keys: ['mod+v'], group: 'clipboard', labelKey: 'dataset.clipboardPaste' },
+  { id: 'fillDown', keys: ['mod+d'], group: 'clipboard', labelKey: 'dataset.clipboardFillDown' },
+  { id: 'fillRight', keys: ['mod+r'], group: 'clipboard', labelKey: 'dataset.clipboardFillRight' },
+  { id: 'undoBatch', keys: ['mod+z'], group: 'clipboard', labelKey: 'dataset.clipboardUndo' },
+]
 
 function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizingState; visibility?: ColumnVisibilityState; summaries?: DatasetColumnSummaries; showSummaries?: boolean; groupBy?: string; pinned?: string[]; rowHeight?: GridRowHeight } {
   try {
@@ -63,7 +86,8 @@ function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizi
 const GROUP_PAGE_SIZE = 50
 const groupKey = (value: CellValue) => JSON.stringify(value)
 
-const ROW_ACTIONS = 'sticky right-0 z-20 border-l bg-background'
+const ROW_INDEX = 'sticky start-0 z-20 border-e border-border bg-background'
+const ROW_ACTIONS = 'sticky end-0 z-20 border-s border-border bg-background'
 
 function inDatasetCell(target: EventTarget | null) {
   return target instanceof Element && !!target.closest('[data-dataset-cell]')
@@ -73,6 +97,10 @@ function inDatasetCalendar(target: EventTarget | null) {
   return target instanceof Element && !!target.closest('[data-dataset-calendar]')
 }
 
+
+function inEditorPopup(target: EventTarget | null) {
+  return inDatasetCalendar(target) || (target instanceof Element && !!target.closest('[data-dataset-editor-popup]'))
+}
 
 export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, viewOnlyId }: {
   dataset: Dataset
@@ -85,7 +113,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const editId = useId()
   const addButton = useRef<HTMLButtonElement>(null)
   const gridViewport = useRef<HTMLDivElement>(null)
+  const gridFooter = useRef<HTMLDivElement>(null)
   const draftRow = useRef<HTMLTableRowElement>(null)
+  const inlineEditor = useRef<HTMLFormElement>(null)
   const saving = useRef(false)
   const restoreEditorFocus = useRef(false)
   const confirm = useConfirmDelete()
@@ -138,6 +168,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     }
   }, [columnOrder, columnSizing, columnVisibility, grouping, layoutKey, pinning, rowHeight, showSummaries, summaryOperations])
   const [viewportWidth, setViewportWidth] = useState(0)
+  const [headerHeight, setHeaderHeight] = useState(0)
   const [active, setActive] = useState<Cell | null>(null)
   const [draft, setDraft] = useState<Record<string, CellValue> | null>(null)
   const [draftError, setDraftError] = useState('')
@@ -147,7 +178,12 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [saveError, setSaveError] = useState<{ message: string; field?: boolean; notice?: boolean } | null>(null)
   const [stale, setStale] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const editing = !!edit || !!draft || !!rowDetails || batchBusy
+  useShortcuts({ cheatsheet: () => {
+    if (editing) return false
+    setShortcutsOpen(true)
+  } }, SHORTCUT_HELP)
   const addingRow = !!draft
   const offset = offsets[pagination.pageIndex] ?? 0
   const url = `${datasetUrl(dataset.id)}/rows`
@@ -249,10 +285,30 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
 
   useEffect(() => {
     const viewport = gridViewport.current
-    if (!viewport) return
-    const observer = new ResizeObserver(() => setViewportWidth(viewport.clientWidth))
+    const footer = gridFooter.current
+    const header = viewport?.querySelector('thead')
+    if (!viewport || !footer || !header) return
+    let frame = 0
+    const scheduleMeasure = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const gridTop = viewport.getBoundingClientRect().top + window.scrollY + viewport.clientTop
+        viewport.style.setProperty('--dataset-scroll-height', `${window.innerHeight - gridTop - footer.offsetHeight}px`)
+        setViewportWidth(viewport.clientWidth)
+        setHeaderHeight(header.offsetHeight)
+      })
+    }
+    const observer = new ResizeObserver(scheduleMeasure)
     observer.observe(viewport)
-    return () => observer.disconnect()
+    observer.observe(header)
+    observer.observe(footer)
+    observer.observe(document.body)
+    window.addEventListener('resize', scheduleMeasure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', scheduleMeasure)
+      cancelAnimationFrame(frame)
+    }
   }, [])
 
   // oxlint-disable-next-line react/incompatible-library -- The table instance stays within this component.
@@ -270,17 +326,34 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     onColumnSizingChange: setColumnSizing, onColumnPinningChange: setPinning,
   })
   useEffect(() => {
-    function clearOutsideCell(event: PointerEvent) {
+    function keepInvalidEditorFocused(event: MouseEvent) {
+      const form = inlineEditor.current
       const target = event.target
-      if (target instanceof Element && (inDatasetCalendar(target)
+      if (!form || !(target instanceof Node) || form.contains(target) || inEditorPopup(target)) return false
+      const invalid = !form.checkValidity() || (saveError && !saveError.notice)
+      if (!invalid) return false
+      event.preventDefault()
+      event.stopPropagation()
+      document.getElementById(editId)?.focus({ preventScroll: true })
+      return true
+    }
+
+    function clearOutsideCell(event: PointerEvent) {
+      if (keepInvalidEditorFocused(event)) return
+      const target = event.target
+      if (target instanceof Element && (inEditorPopup(target)
         || target.closest('[data-dataset-clipboard]')
         || (gridViewport.current?.contains(target) && inDatasetCell(target)))) return
       setActive(null)
       if (table.getFocusedCell()) table.resetCellSelection(true)
     }
     document.addEventListener('pointerdown', clearOutsideCell, true)
-    return () => document.removeEventListener('pointerdown', clearOutsideCell, true)
-  }, [table])
+    document.addEventListener('click', keepInvalidEditorFocused, true)
+    return () => {
+      document.removeEventListener('pointerdown', clearOutsideCell, true)
+      document.removeEventListener('click', keepInvalidEditorFocused, true)
+    }
+  }, [table, editId, saveError])
   const rows = table.getRowModel().rows
   const scrollViewport = () => gridViewport.current?.querySelector<HTMLDivElement>('[data-slot="table-container"]') ?? null
   const useVirtualRows = !groupColumn && rows.length > 25
@@ -288,6 +361,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     count: useVirtualRows ? rows.length : 0,
     getScrollElement: scrollViewport,
     estimateSize: () => HEIGHTS[rowHeight],
+    scrollMargin: headerHeight,
     overscan: 8,
     getItemKey: index => rows[index]?.id ?? index,
     rangeExtractor: range => {
@@ -338,11 +412,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     }
   }
   const pinnedStyle = (column: (ReturnType<typeof table.getVisibleLeafColumns>)[number]): CSSProperties | undefined =>
-    column.getIsPinned() === 'start' ? { insetInlineStart: column.getStart('start') } : undefined
+    column.getIsPinned() === 'start' ? { insetInlineStart: ROW_NUMBER_WIDTH + column.getStart('start') } : undefined
   const orderedVisible = [
     ...table.getStartVisibleLeafColumns(), ...table.getCenterVisibleLeafColumns(), ...table.getEndVisibleLeafColumns(),
   ]
-  const pinnedClass = '!sticky z-10 bg-background'
   const selectedCount = rows.filter(row => row.getIsSelected()).length
   const selectedCell = active && rows.some(row => row.id === active.row) && layout.fields.some(column => column.key === active.column)
     ? active : null
@@ -416,15 +489,6 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     setSaveError(null)
     setStale(false)
     if (restoreFocus && edit) window.requestAnimationFrame(() => document.getElementById(cellId(edit.row.id, edit.column.key))?.focus())
-  }
-
-  function keepInvalidEditorFocused() {
-    if (!edit) return false
-    const control = document.getElementById(editId)
-    const invalidInput = control instanceof HTMLInputElement && !control.checkValidity()
-    if (!invalidInput && (!saveError || saveError.notice)) return false
-    control?.focus()
-    return true
   }
 
   function beginEdit(row: DatasetRow, column: DatasetColumn) {
@@ -713,10 +777,11 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const span = 1 + layout.fields.length + Number(layout.showRowId) + 1
 
   function renderRow(row: (typeof rows)[number], index: number) {
+    // ui-class-ok: The selected row height controls spacing on data cells.
     return <TableRow key={row.id} data-testid="dataset-row" data-state={row.getIsSelected() ? 'selected' : undefined}
-      className="group/row" data-index={index} ref={useVirtualRows ? virtualizer.measureElement : undefined}
+      className="group/row [&>td]:py-0" data-index={index} ref={useVirtualRows ? virtualizer.measureElement : undefined}
       style={{ height: HEIGHTS[rowHeight] }}>
-      <TableCell className={cn(DIVIDER, 'p-0')}><label className="grid min-h-10 cursor-pointer place-items-center">
+      <TableCell className={cn(ROW_INDEX, 'p-0 group-hover/row:bg-muted group-data-[state=selected]/row:bg-muted')}><label className="grid absolute inset-0 cursor-pointer place-items-center">
         <Checkbox aria-label={t('dataset.selectRow', { row: offset + index + 1 })} checked={row.getIsSelected()}
           className="col-start-1 row-start-1 opacity-0 group-hover/row:opacity-100 group-has-[:focus-visible]/row:opacity-100 data-[state=checked]:opacity-100"
           onCheckedChange={checked => row.toggleSelected(checked === true)} />
@@ -736,20 +801,32 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
         const buttonId = cellId(row.id, column.key)
         const cellEditable = editable && !datasetReadOnly(column.kind)
-      const usesPicker = column.kind === 'boolean' || column.kind === 'select'
-      const multiSelect = column.kind === 'multi_select'
+        const usesPicker = column.kind === 'boolean' || column.kind === 'select'
+        const multiSelect = column.kind === 'multi_select'
         return <TableCell key={cell.id} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
-          (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : 'hover:bg-muted',
-          rangeSelected && 'bg-accent',
-          cell.column.getIsPinned() && pinnedClass,
+          (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : !rangeSelected && 'hover:bg-muted',
+          rangeSelected && 'bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]',
+          cell.column.getIsPinned() && '!sticky z-10',
+          cell.column.getIsPinned() && !isEditing && !isFocused && !rangeSelected && 'bg-background',
         )}>
-          {isEditing ? <form onFocus={event => {
+          {isEditing ? <form ref={inlineEditor} onFocus={event => {
             if (!isSelected && event.currentTarget.contains(event.target)) setActive({ row: row.id, column: column.key })
           }} onSubmit={event => {
             event.preventDefault()
             void save(edit.value)
           }} onKeyDown={event => {
-            if (inDatasetCalendar(event.target)) return
+            if (inEditorPopup(event.target)) return
+            if (event.key === 'Tab' && (!event.currentTarget.checkValidity() || (saveError && !saveError.notice))) {
+              const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('input, textarea, button'))
+                .filter(control => control.tabIndex >= 0 && !control.matches(':disabled') && control.getClientRects().length)
+              const first = controls[0]
+              const last = controls.at(-1)
+              if (event.target === (event.shiftKey ? first : last)) {
+                event.preventDefault()
+                const next = event.shiftKey ? last : first
+                next?.focus()
+              }
+            }
             if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && event.target instanceof HTMLTextAreaElement
               && !event.nativeEvent.isComposing) {
               event.preventDefault()
@@ -757,8 +834,15 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             }
             if (event.key === 'Escape' && !busy && !event.nativeEvent.isComposing) { event.stopPropagation(); closeEditor() }
           }} onBlur={event => {
-            if (!usesPicker && !multiSelect && !saveError && !inDatasetCalendar(event.target) && !inDatasetCalendar(event.relatedTarget)
-              && !event.currentTarget.contains(event.relatedTarget) && event.currentTarget.checkValidity()) {
+            const form = event.currentTarget
+            if (form.contains(event.relatedTarget) || inEditorPopup(event.target) || inEditorPopup(event.relatedTarget)) return
+            if (!form.checkValidity() || (saveError && !saveError.notice)) {
+              requestAnimationFrame(() => {
+                if (inlineEditor.current !== form || form.contains(document.activeElement)
+                  || inEditorPopup(document.activeElement)) return
+                document.getElementById(editId)?.focus({ preventScroll: true })
+              })
+            } else if (!usesPicker && !multiSelect && !saveError) {
               void save(edit.value, false)
             }
           }}>
@@ -786,10 +870,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               aria-pressed={isFocused || rangeSelected}
               onMouseDown={event => { if (!editing && event.button === 0) cell.getSelectionStartHandler()(event) }}
               onMouseEnter={event => { if (!editing) cell.getSelectionExtendHandler()(event) }}
-              onPointerDown={event => { if (keepInvalidEditorFocused()) event.preventDefault() }}
-              onFocus={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
+              onFocus={() => { if (!draft && (!saveError || saveError.notice)) setActive({ row: row.id, column: column.key }) }}
               onBlur={event => { if (!inDatasetCell(event.relatedTarget)) setActive(null) }}
-              onClick={() => { if (!draft && !keepInvalidEditorFocused()) setActive({ row: row.id, column: column.key }) }}
+              onClick={() => { if (!draft) setActive({ row: row.id, column: column.key }) }}
               onDoubleClick={() => beginEdit(row.original, column)}
               onKeyDown={event => handleCellKey(event, row.original, column)}>
               <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) || '—'}</span>
@@ -823,8 +906,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             setPage(null)
           }}>
             {open ? <ChevronDown /> : <ChevronRight />}
-            {group.group === null ? t('dataset.groupEmpty') : format(group.group, columnKind)}
-            <span className="tabular-nums text-muted-foreground">{t('dataset.groupRows', { count: group.total })}</span>
+            <span className="inline-flex items-baseline gap-1 leading-normal">
+              <span>{group.group === null ? t('dataset.groupEmpty') : format(group.group, columnKind)}</span>
+              <span className="tabular-nums text-muted-foreground">{t('dataset.groupRows', { count: group.total })}</span>
+            </span>
           </Button>
           {showSummaries && layout.fields.map(column => {
             const operation = summaryColumns[column.key]
@@ -843,7 +928,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       <div className="flex flex-wrap items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon" aria-label={t('dataset.clipboardMenu')} data-dataset-clipboard="" disabled={editing}><Clipboard /></Button>
+            <Button variant="toolbar" size="icon" aria-label={t('dataset.clipboardMenu')} data-dataset-clipboard="" disabled={editing}><Clipboard /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" data-dataset-clipboard="">
             <DropdownMenuItem disabled={!table.getSelectedCellCount()} onSelect={() => copyRanges()}>{t('dataset.clipboardCopy')}</DropdownMenuItem>
@@ -856,26 +941,37 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           </DropdownMenuContent>
         </DropdownMenu>
         <span className="sr-only" role="status">{t('dataset.clipboardSelection', { count: table.getSelectedCellCount() })}</span>
+        <ShortcutCheatsheet open={shortcutsOpen} onOpenChange={setShortcutsOpen}
+          list={editable ? DATASET_EDIT_SHORTCUTS : DATASET_VIEW_SHORTCUTS} intro={t('dataset.shortcutIntro')}
+          trigger={<Button variant="toolbar" size="icon" disabled={editing} aria-label={t('shortcuts.title')}><Keyboard /></Button>} />
         <Popover>
-          <PopoverTrigger asChild><Button variant="outline" size="icon" disabled={editing} aria-label={t('dataset.gridLayout')}><Settings2 /></Button></PopoverTrigger>
+          <PopoverTrigger asChild><Button variant="toolbar" size="icon" data-active={rowHeight !== 'medium' || !!pinning.start?.length} disabled={editing} aria-label={t('dataset.gridLayout')}><Settings2 /></Button></PopoverTrigger>
           <PopoverContent align="start" className="grid gap-2">
-            <Select value={rowHeight} disabled={editing} onValueChange={value => {
-              setRowHeight(value as GridRowHeight)
-              virtualizer.measure()
-            }}>
-              <SelectTrigger aria-label={t('dataset.rowHeight')}><SelectValue /></SelectTrigger>
-              <SelectContent>{(Object.keys(HEIGHTS) as GridRowHeight[]).map(size =>
-                <SelectItem value={size} key={size}>{t(`dataset.rowHeights.${size}`)}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={String(pinning.start?.length ?? 0)} disabled={editing} onValueChange={value => {
-              table.setColumnPinning({ start: orderedVisible.slice(0, Number(value)).map(column => column.id), end: [] })
-            }}>
-              <SelectTrigger aria-label={t('dataset.freezeColumns')}><SelectValue /></SelectTrigger>
-              <SelectContent>{[0, 1, 2, 3].map(count =>
-                <SelectItem value={String(count)} key={count} disabled={count > orderedVisible.length}>
-                  {t('dataset.frozenCount', { count })}
-                </SelectItem>)}</SelectContent>
-            </Select>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${editId}-row-height`}>{t('dataset.rowHeight')}</Label>
+              <Select value={rowHeight} disabled={editing} onValueChange={value => {
+                setRowHeight(value as GridRowHeight)
+                virtualizer.measure()
+              }}>
+                <SelectTrigger id={`${editId}-row-height`} className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>{(Object.keys(HEIGHTS) as GridRowHeight[]).map(size => {
+                  const Icon = ROW_HEIGHT_ICONS[size]
+                  return <SelectItem value={size} key={size}><Icon aria-hidden="true" />{t(`dataset.rowHeights.${size}`)}</SelectItem>
+                })}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor={`${editId}-freeze-columns`}>{t('dataset.freezeColumns')}</Label>
+              <Select value={String(pinning.start?.length ?? 0)} disabled={editing} onValueChange={value => {
+                table.setColumnPinning({ start: orderedVisible.slice(0, Number(value)).map(column => column.id), end: [] })
+              }}>
+                <SelectTrigger id={`${editId}-freeze-columns`} className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>{[0, 1, 2, 3].map(count =>
+                  <SelectItem value={String(count)} key={count} disabled={count > orderedVisible.length}>
+                    {count ? <Pin aria-hidden="true" /> : <PinOff aria-hidden="true" />}{t('dataset.frozenCount', { count })}
+                  </SelectItem>)}</SelectContent>
+              </Select>
+            </div>
           </PopoverContent>
         </Popover>
         <Select value={groupColumn?.key ?? '$none'} disabled={editing} onValueChange={field => {
@@ -886,15 +982,15 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           resetPaging()
           setPage(null)
         }}>
-          <SelectTrigger aria-label={t('dataset.groupBy')}><SelectValue /></SelectTrigger>
+          <SelectTrigger variant="toolbar" data-active={!!groupColumn} aria-label={t('dataset.groupBy')}><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="$none">{t('dataset.noGrouping')}</SelectItem>
+            <SelectItem value="$none"><Ungroup aria-hidden="true" />{t('dataset.noGrouping')}</SelectItem>
             {dataset.columns.filter(column => datasetGroupable(column.kind)).map(column =>
-              <SelectItem value={column.key} key={column.key}>{column.label}</SelectItem>)}
+              <SelectItem value={column.key} key={column.key}><DatasetFieldIcon kind={column.kind} /><span className="truncate">{column.label}</span></SelectItem>)}
           </SelectContent>
         </Select>
-        <Button variant={showSummaries ? 'secondary' : 'outline'} aria-pressed={showSummaries} disabled={editing}
-          onClick={() => { setSummary(null); setSummaryError(null); setShowSummaries(value => !value) }}>{t('dataset.summary')}</Button>
+        <Button variant="toolbar" aria-pressed={showSummaries} disabled={editing}
+          onClick={() => { setSummary(null); setSummaryError(null); setShowSummaries(value => !value) }}><Sigma />{t('dataset.summary')}</Button>
         <DatasetQueryControls columns={dataset.columns} disabled={editing} filters={filters} sorting={sorting}
           onFilters={applyFilters} onSorting={changeSorting} />
         <DatasetColumnControls columns={layout.orderedFields} visibleKeys={new Set(layout.fields.map(column => column.key))}
@@ -922,9 +1018,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         event.preventDefault()
         pasteText(event.clipboardData.getData('text/plain'))
       }
-    }} onScrollCapture={loadMoreOnScroll} className="border-y [&>[data-slot=table-container]]:max-h-[70dvh] [&>[data-slot=table-container]]:overflow-auto">
+    }} onScrollCapture={loadMoreOnScroll} className="border-t [&>[data-slot=table-container]]:max-h-[max(12rem,var(--dataset-scroll-height,100dvh))] [&>[data-slot=table-container]]:overflow-auto">
       <Table aria-label={t('dataset.gridView')} aria-busy={groupColumn ? !groups && !groupError : !page && !loadError}
-        className="table-fixed" style={{ width: layout.width }}>
+        className="table-fixed border-separate border-spacing-0 [&_tr:not([aria-hidden=true])>:is(td,th)]:border-b [&_tbody>tr:last-child>:is(td,th)]:border-b-0" style={{ width: layout.width }}>
         <colgroup>
           <col style={{ width: ROW_NUMBER_WIDTH }} />
           {layout.showRowId && <col style={{ width: ROW_ID_WIDTH }} />}
@@ -932,7 +1028,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           <col />
         </colgroup>
         <TableHeader className="bg-muted/50"><TableRow className="hover:bg-transparent">
-          <TableHead scope="col" className={cn(DIVIDER, 'p-0')}><div className="grid place-items-center"><Checkbox aria-label={t('dataset.selectVisibleRows')}
+          <TableHead scope="col" className={cn(ROW_INDEX, 'bg-muted p-0')}><div className="grid place-items-center"><Checkbox aria-label={t('dataset.selectVisibleRows')}
             disabled={!rows.length} checked={table.getIsAllRowsSelected() || (table.getIsSomeRowsSelected() ? 'indeterminate' : false)}
             onCheckedChange={checked => table.toggleAllRowsSelected(checked === true)} /></div></TableHead>
           {layout.showRowId && <TableHead scope="col" className={DIVIDER}>{t('dataset.rowId')}</TableHead>}
@@ -942,7 +1038,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             const column = heading(header.column.id)!
             const Icon = direction === 'asc' ? ArrowUp : direction === 'desc' ? ArrowDown : ArrowUpDown
             return <TableHead key={header.id} scope="col" style={pinnedStyle(header.column)}
-              className={cn(DIVIDER, 'relative p-0 hover:bg-muted', header.column.getIsPinned() && pinnedClass)}
+              className={cn(DIVIDER, 'relative p-0 hover:bg-muted', header.column.getIsPinned() && '!sticky z-10 bg-muted')}
               aria-sort={priority === 0 && direction ? (direction === 'asc' ? 'ascending' : 'descending') : undefined}>
               <Button variant="ghost" size="sm" className={cn(CELL_BUTTON, 'absolute inset-y-0 left-0 right-2 h-full gap-1 px-2')}
                 onClick={header.column.getToggleSortingHandler()} disabled={!!edit || !!draft}>
@@ -969,7 +1065,26 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             </TableHead>
           })}
           <TableHead scope="col" className={cn(ROW_ACTIONS, 'bg-muted')}><span className="sr-only">{t('dataset.actions')}</span></TableHead>
-        </TableRow></TableHeader>
+        </TableRow>
+          {showSummaries && <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableCell aria-label={t('dataset.summary')} className={cn(ROW_INDEX, 'bg-muted')} />
+            {layout.showRowId && <TableCell className={DIVIDER} />}
+            {orderedVisible.map(visible => {
+              const column = layout.fields.find(field => field.key === visible.id)
+              return <TableCell key={visible.id} style={pinnedStyle(visible)}
+                className={cn(DIVIDER, visible.getIsPinned() === 'start' && '!sticky z-10 bg-muted')}>
+                {column && <DatasetColumnSummary column={column}
+                  operation={summaryColumns[column.key]} value={currentSummary?.values[column.key]} disabled={editing}
+                  loading={!currentSummary} failed={!!currentSummaryError}
+                  onChange={operation => setSummaryOperations(current => ({ ...current, [column.key]: operation }))} />}
+              </TableCell>
+            })}
+            <TableCell className={cn(ROW_ACTIONS, 'bg-muted')} />
+          </TableRow>}
+          {showSummaries && currentSummaryError && <TableRow><TableCell colSpan={span}>
+            <Alert variant="warning"><AlertDescription>{currentSummaryError}</AlertDescription></Alert>
+          </TableCell></TableRow>}
+        </TableHeader>
         <TableBody>
           {draft && <TableRow ref={draftRow} data-testid="dataset-row-draft" className="bg-muted/40" onKeyDown={event => {
             if (inDatasetCalendar(event.target)) return
@@ -979,7 +1094,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               void saveDraft()
             }
           }}>
-            <TableCell className={cn(DIVIDER, 'p-0')}><div className="grid min-h-10 place-items-center">
+            <TableCell className={cn(ROW_INDEX, 'bg-muted p-0')}><div className="grid min-h-10 place-items-center">
               <Plus aria-hidden="true" className="size-4 text-muted-foreground" />
             </div></TableCell>
             {layout.showRowId && <TableCell className={DIVIDER}>—</TableCell>}
@@ -1008,37 +1123,19 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             {selectedGroup === groupKey(group.group) && rows.map(renderRow)}
           </Fragment>) : useVirtualRows ? <>
             {virtualRows.map((item, index) => {
-              const gap = item.start - (virtualRows[index - 1]?.end ?? 0)
+              const gap = item.start - (virtualRows[index - 1]?.end ?? headerHeight)
               return <Fragment key={item.key}>
                 {gap > 0 && <TableRow aria-hidden="true"><TableCell colSpan={span} style={{ height: gap }} className="border-0 p-0" /></TableRow>}
                 {renderRow(rows[item.index], item.index)}
               </Fragment>
             })}
             <TableRow aria-hidden="true"><TableCell colSpan={span}
-              style={{ height: Math.max(0, virtualizer.getTotalSize() - (virtualRows.at(-1)?.end ?? 0)) }} className="border-0 p-0" /></TableRow>
+              style={{ height: Math.max(0, virtualizer.getTotalSize() - ((virtualRows.at(-1)?.end ?? headerHeight) - headerHeight)) }} className="border-0 p-0" /></TableRow>
           </> : rows.map(renderRow)}
         </TableBody>
-        {showSummaries && <TableFooter>
-          {table.getFooterGroups().map(group => <TableRow key={group.id}>
-            <TableCell aria-label={t('dataset.summary')} colSpan={layout.showRowId ? 2 : 1} />
-            {group.headers.map(header => {
-              const column = layout.fields.find(field => field.key === header.column.id)
-              return <TableCell key={header.id} className={DIVIDER}>
-                {!header.isPlaceholder && column && <DatasetColumnSummary column={column}
-                  operation={summaryColumns[column.key]} value={currentSummary?.values[column.key]} disabled={editing}
-                  loading={!currentSummary} failed={!!currentSummaryError}
-                  onChange={operation => setSummaryOperations(current => ({ ...current, [column.key]: operation }))} />}
-              </TableCell>
-            })}
-            <TableCell className={ROW_ACTIONS} />
-          </TableRow>)}
-          {currentSummaryError && <TableRow><TableCell colSpan={span}>
-            <Alert variant="warning"><AlertDescription>{currentSummaryError}</AlertDescription></Alert>
-          </TableCell></TableRow>}
-        </TableFooter>}
       </Table>
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1 text-sm">
+    <div ref={gridFooter} data-testid="dataset-grid-footer" className="sticky bottom-0 z-30 flex flex-wrap items-center justify-between gap-2 border-t bg-background px-3 py-1 text-sm">
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground" aria-live="polite">
         {page && <span>{t(page.total_capped ? 'dataset.visibleRangeCapped' : 'dataset.visibleRange', {
           start: rows.length ? offset + 1 : 0, end: rows.length ? offset + rows.length : 0, total: page.total,
