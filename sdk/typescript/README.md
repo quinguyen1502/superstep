@@ -1,7 +1,7 @@
 # @superstep/sdk (TypeScript SDK)
 
-Headless chat and workflow runs for Superstep. Version 0.2.0 adds chat v1,
-typed streaming events, a framework-neutral store and server-side token signing.
+Headless chat, runs, and schedules for Superstep. Version 0.3.0 adds workflow-scoped
+cron schedule management and preview.
 Zero runtime dependencies; ESM and CommonJS; HTTP types generated from OpenAPI
 and socket types generated from the backend JSON Schemas. Chat uses `fetch` and
 an injectable WebSocket in browsers, Node 18+ and React Native.
@@ -16,7 +16,7 @@ an injectable WebSocket in browsers, Node 18+ and React Native.
 npm install @superstep/sdk
 ```
 
-The examples below describe 0.2.0; installing from npm requires that version to
+The examples below describe 0.3.0; installing from npm requires that version to
 have been published by the owner. Building this repository does not publish it.
 
 ## Chat

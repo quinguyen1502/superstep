@@ -4,9 +4,13 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
-- Dataset errors distinguish team membership, workflow sharing, invalid mapped filters, and insufficient token scope. A valid Dataset token that lacks the requested operation now returns `403 DATASET_TOKEN_SCOPE`.
+## 0.13.0 (release candidate)
 
 ### Added
+
+- **Datasets.** Create personal or team tables in Studio, manage column definitions and access, and import or export CSV. Workflow Dataset nodes and Agent tools can read, write, delete, or aggregate rows within their grants. Python and TypeScript workflow exports support Dataset bindings and aggregate operations.
+- **Dataset grid.** Nested filters, sorting indicators, per-column summaries, grouping, pinned columns, row density, and a grid keyboard shortcut guide. Clipboard paste and fill save as one batch and support undo. New column types include URL, long text, timestamps, multi-select, and auto-number. Apply per-column validation and display formatting.
+- **Usage budgets and service targets.** Administrators can configure monthly user and team usage budgets with notifications. The observability dashboard also tracks run success, API availability, and error budget burn.
 
 - **JSON log format.** Set `STUDIO_LOG_FORMAT=json` for one JSON line per log event with `request_id`, `run_id`, `workflow_id` and `trace_id` when known. `X-Request-ID` is echoed when safe. Default text logs stay unchanged. The observability Compose profile turns JSON logs on.
 - **Opt-in HTTP, SQL and Redis spans.** With `STUDIO_OTEL_INSTRUMENT=1` and a traces exporter, API requests get an HTTP span (route template) with SQL and Redis children, and runs get SQL and Redis spans under the run trace. Probe routes are skipped; span attributes never carry SQL parameters or Redis values. LangSmith still receives only run and node spans.
@@ -14,7 +18,7 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 - **Model latency and embedding usage.** With `STUDIO_OTEL_METRICS=1`, model call duration and time to first token by model, provider and status, and embedding tokens and cost by model, provider and source, with prices for the OpenAI embedding models. Runs that query a knowledge base include the query embedding tokens in their totals. New Slow provider alert.
 - **Integration and limit metrics.** Channel messages, MCP calls, browser sessions and actions, sandbox executions and rate-limit refusals by scope, all with bounded labels. New Integration errors and Throttling spike alerts.
 - **Usage by model, user and team.** Each finished run writes its model calls to a usage table (`python -m app.admin_cmd usage-backfill --days N` fills it for older runs). **Settings → Usage** adds Models, Users and Teams tables and refused chat trigger messages by reason and platform. New `studio.chat.refused` gauge and Channel refusals alert. Per-user and per-team figures come from the database only, never from metric labels.
-- **Public schedule API.** A workflow token can list, create, update, delete and preview cron schedules of its own workflow (`/api/hooks/workflows/{wid}/schedules`). The Python and TypeScript clients gain the matching methods. Package versions are unchanged. A schedule still runs as the token's owner, and it fires only while a worker is running.
+- **Public schedule API.** A workflow token can list, create, update, delete and preview cron schedules of its own workflow (`/api/hooks/workflows/{wid}/schedules`). The Python and TypeScript clients gain the matching methods. A schedule still runs as the token's owner, and it fires only while a worker is running.
 - **Readiness endpoint.** `GET /api/ready` checks the database and, when `REDIS_URL` is set, Redis, and answers 503 `SERVICE_NOT_READY` when either fails. It also reports queue depth, the oldest queued run and worker heartbeats. `GET /api/health` stays a liveness check and is unchanged; deploy templates keep using it.
 - **More OpenTelemetry metrics.** With `STUDIO_OTEL_METRICS=1`, the backend also exports HTTP requests and latency by route template, open WebSockets, model tokens, cost, unpriced calls, errors and fallbacks by model and provider, reaped and recovered jobs, and gauges for the database and Redis probes, queue depth, worker slots and heartbeat, the in-memory bus and process CPU and memory. Labels never carry a user id, run id or raw path. Run metrics gain `workflow_id`.
 - **Settings → Usage.** Admins with `users.manage` see runs, success rate, tokens and estimated cost for the last 24 hours, 7 days or 30 days, runs over time by status, the top workflows by runs or cost, and the share of runs without a model price. A product health block counts waiting and expired approvals, failed and retrying webhook deliveries, and overdue or stopped schedules. The same data is at `GET /api/admin/usage` and `GET /api/admin/usage/health`. Set `STUDIO_GRAFANA_URL` to add a Grafana link. With `STUDIO_OTEL_METRICS=1`, the worker also exports these product health counts as gauges. A migration adds indexes on run start time, approval waits and webhook deliveries.
@@ -22,6 +26,8 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Changed
 
+- Dataset errors distinguish team membership, workflow sharing, invalid mapped filters, and insufficient token scope. A valid Dataset token that lacks the requested operation now returns `403 DATASET_TOKEN_SCOPE`.
+- Browser connection discovery defaults on. Starting the local browser runtime still requires its separate runtime flag.
 - **Team dataset management.** A team dataset is managed by the member who created it and by admins. Other team members with `resources.manage` still add, edit, import and delete rows, but get `403 DATASET_MANAGE_DENIED` when they rename the dataset, change its columns, manage grants or tokens, or delete it. Studio shows those actions disabled with an explanation. Rotating a Dataset token keeps its original issuer. Admins can transfer a team dataset to another team member (`PUT /api/datasets/{id}/owner`, audited as `dataset.transfer`). Existing team datasets take the creator recorded in the audit log as owner; without one, only admins manage them until an admin transfers them.
 - **Dataset CSV fidelity.** CSV preview suggests text for values with a leading zero or `+` and for numbers longer than 15 digits, so codes and phone numbers keep their digits. Import removes the apostrophe that export adds before formula-like values, so an export imports back to the same values. Deleting a row, a column or a dataset through `/api/datasets` now requires the `revision` query parameter: a request without it fails with 422 `VALIDATION_ERROR`, and a stale one with the existing conflict code. Scripts that call these routes with a personal access token must send `?revision=`.
 - **Dataset filters.** `ne` (Does not equal) now also matches empty cells. Search, the `contains` filter and text sorting ignore letter case, Vietnamese letters included, on SQLite and PostgreSQL; text sorts break ties by the exact value. `eq`, unique keys and upsert matching stay exact. Saved workflows, Agent tools and API calls that use `ne` or `contains` can return more rows than before.
@@ -29,7 +35,14 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ### Fixed
 
+- Usage charts place runs in the correct time bucket at fractional-second boundaries on SQLite and PostgreSQL.
 - Schedules accept every IANA time zone a browser reports, such as `Asia/Saigon`, on images without system zone data: the backend now depends on `tzdata`.
+
+### Upgrade
+
+- Server, frontend, Python SDK, CLI, and installer target **0.13.0**. The React toolkit targets **0.1.4** and supports TypeScript SDK **0.2.x** and **0.3.x**. The TypeScript SDK targets **0.3.0** and includes the schedule API.
+- Back up the database and apply migrations **0059–0071** before serving traffic. They add observability indexes and records, usage budgets, and Dataset tables, ownership, grants, receipts, auto-number counters, and column rules.
+- Review the Dataset filter and revision changes above before upgrading direct API clients and saved workflows.
 
 ## 0.12.0 (2026-11-07)
 

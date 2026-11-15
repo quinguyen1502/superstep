@@ -1,5 +1,6 @@
 """Admin usage API: exact aggregates from run columns, product health counts, permissions, migration and gauges."""
 import os, time, uuid
+from types import SimpleNamespace
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -19,6 +20,7 @@ from app.models.workflow_schedule import WorkflowSchedule
 from app.repositories.usage import UsageRepository
 from app.schemas.usage import UsageHealth, UsageSummary
 from app.services import job_queue as jq
+from app.services import usage_service
 from app.services.health_probes import Probes
 from app.services.run_bus import InMemoryRunBus
 from app.services.run_worker import RunWorker
@@ -69,8 +71,11 @@ def seed(db, now):
         s.commit()
 
 
-def test_summary_is_exact(db):
-    now = time.time(); seed(db, now); svc = UsageService(UsageRepository(db))
+def test_summary_is_exact(db, monkeypatch):
+    now = 1_800_000_000.75
+    monkeypatch.setattr(usage_service, "time", SimpleNamespace(time=lambda: now))
+    seed(db, now)
+    svc = UsageService(UsageRepository(db))
     day = svc.summary("x", "24h")
     assert day["bucket"] == "hour" and len(day["series"]) == 24
     t = day["totals"]
@@ -90,6 +95,20 @@ def test_summary_is_exact(db):
     assert [x["workflow_id"] for x in svc.summary("x", "7d", sort="cost")["top_workflows"]] == ["gone", "wa"]
     assert svc.summary("x", "7d", bucket="hour")["series"].__len__() == 168
     UsageSummary.model_validate(week)
+
+
+def test_usage_buckets_preserve_fractional_boundaries(db):
+    since = 1_800_000_000.75
+    boundary = since + 3600
+    with db.session() as session:
+        session.add(Workflow(id="wa", name="Alpha", data="{}", updated=since, owner="u"))
+        add(session, workflow_id="wa", status="ok", started=boundary - 0.125)
+        add(session, workflow_id="wa", status="ok", started=boundary)
+        add(session, workflow_id="wa", status="ok", started=boundary + 0.125)
+        session.commit()
+
+    series = UsageRepository(db).series(since, since + 7200, 3600)
+    assert sorted(series) == [(0, "ok", 1), (1, "ok", 2)]
 
 
 def test_health_counts_are_exact(db):

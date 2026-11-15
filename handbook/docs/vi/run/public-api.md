@@ -225,9 +225,8 @@ có trang SDK headless, [bộ giao diện React](chat-react.md) và
 mẫu local; thay phần mẫu trước khi triển khai hệ thống tài khoản. CI lưu screenshot dưới dạng artifact tải
 về, không đưa ảnh vào Git.
 
-TypeScript hướng tới SDK 0.2.0. Python giữ version chung với CLI/server đến
-đợt release được duyệt tiếp theo, không hạ version xuống 0.2.0. Publish
-package và tạo release tag cần chủ dự án duyệt riêng.
+Bản chuẩn bị phát hành 0.13.0 gồm TypeScript SDK 0.3.0 và Python SDK 0.13.0.
+Python dùng cùng phiên bản với CLI và máy chủ.
 
 ## Lịch chạy
 

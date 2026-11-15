@@ -17,9 +17,8 @@ For a bubble on an existing website, see [Chat widget](chat-widget.md).
 4. Use compatible approved versions of `@superstep/react` and `@superstep/sdk`
    with React/React DOM 18 or later, i18next and react-i18next as peer dependencies.
 
-Package publication is separate from implementation. This repository prepares
-TypeScript SDK 0.2.0 and React toolkit 0.1.1; this guide does not imply a new npm
-release. To try the checkout before an approved package release:
+The 0.13.0 release candidate prepares TypeScript SDK 0.3.0 and React toolkit
+0.1.4. To try the packages from this checkout:
 
 ```sh
 npm ci
