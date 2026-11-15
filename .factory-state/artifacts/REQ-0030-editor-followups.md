@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: the remaining-work report of 2026-10-18 (items 9 and 11) and the owner's reply, “Ngoại trừ 2, 3, 4. Làm các phần còn lại”
+- Source: the remaining-work report of 2026-10-18 (items 9 and 11) and the owner's reply, “Except 2, 3, 4. Do the rest”
 
 ## Summary
 

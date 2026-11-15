@@ -1,4 +1,4 @@
-/** Editor undo/redo (TASK-0024, DEC-0027): a pure, capped history of graph snapshots.
+/** Editor undo/redo: a pure, capped history of graph snapshots.
  * Consecutive changes with the same `key` inside `COALESCE_MS` merge into one step (typing in one field, one drag). */
 export type Snap = { nodes: any[]; edges: any[]; state: any[] }
 export type History = { past: Snap[]; present: Snap; future: Snap[]; key: string | null; at: number }

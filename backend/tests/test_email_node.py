@@ -1,4 +1,4 @@
-"""TASK-0051: SMTP credentials and Send email nodes (dry run without a credential, effectively-once sending, quota)."""
+"""SMTP credentials and Send email nodes (dry run without a credential, effectively-once sending, quota)."""
 import copy, email, socket, uuid
 from email import policy
 import pytest

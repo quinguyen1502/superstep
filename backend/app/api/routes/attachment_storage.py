@@ -1,4 +1,4 @@
-"""Admin view and migration of chat attachment storage (TASK-0194, REQ-0080, DEC-0074)."""
+"""Admin view and migration of chat attachment storage."""
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from ..deps import attachment_migration, current_user

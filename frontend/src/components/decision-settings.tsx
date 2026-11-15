@@ -1,4 +1,4 @@
-/** Decision node settings (TASK-0050): a TypeSafe credential, the text Jev reads, and typed questions (choice, score, noul).
+/** Decision node settings: a TypeSafe credential, the text Jev reads, and typed questions (choice, score, noul).
  * Removing a question, option or level edits the unsaved canvas, so it is undoable (Ctrl+Z) like deleting a node. */
 import { useTranslation } from 'react-i18next'
 import { StateFieldPicker } from '@/components/state-field-action'
@@ -89,7 +89,7 @@ export function DecisionSettings({ data, fields, creds, providers, readOnly, onC
   </div>
 }
 
-/** Data tab (TASK-0121): the field each question's answer goes to, then the field for the whole result. */
+/** Data tab: the field each question's answer goes to, then the field for the whole result. */
 export function DecisionData({ data, fields, onChange }: Pick<Props, 'data' | 'fields' | 'onChange'>) {
   const { t } = useTranslation()
   const qs = data.questions || []

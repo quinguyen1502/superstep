@@ -27,7 +27,7 @@ def test_order_branch():
     assert out["intent"] == "order_status" and "A100" in out["tool_result"] and out["answer"]
 
 def test_general_branch():
-    out = compile_workflow(EXAMPLE).invoke({"message": "Giờ mở cửa?"})
+    out = compile_workflow(EXAMPLE).invoke({"message": "What are your opening hours?"})
     assert out["intent"] == "general" and "tool_result" not in out
 
 def test_stream_events():
@@ -40,7 +40,7 @@ def test_ws_run_and_history():
     c = TestClient(app)
     tok = c.post("/api/auth/login", json={"email": "admin@example.com", "password": "admin123"}).json()["data"]["token"]
     with c.websocket_connect(f"/ws/run?token={tok}") as ws:
-        ws.send_json({"workflow_id": "example", "input": {"message": "đơn C300 đâu rồi"}})
+        ws.send_json({"workflow_id": "example", "input": {"message": "where is order C300"}})
         evs = []
         while True:
             try: evs.append(ws.receive_json())

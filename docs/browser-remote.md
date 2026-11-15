@@ -1,8 +1,8 @@
 # Controlled remote browser and login profiles
 
-TASK-0244 extends the isolated worker; the Superstep Agent still chooses each
-primitive call. There is no hosted model loop. Managed browser execution remains
-gated until TASK-0245/0246 bind run sessions, fences and durable Human approval.
+The remote provider extends the isolated worker; the Superstep Agent still chooses each
+primitive call. There is no hosted model loop. Managed browser execution is
+gated by run sessions, fences and durable Human approval ([sessions](browser-sessions.md), [approvals](browser-approvals.md)).
 
 ## Provider and trust boundary
 
@@ -36,7 +36,7 @@ separate enforced gateway, resource bounds and watchdogs from
 [browser-runtime.md](browser-runtime.md). Every request binds full execution
 context/session/generation; foreign contexts fail. Per-session locks reject
 concurrent access rather than letting lock acquisition establish model order.
-TASK-0245 allocates deterministic command sequences before dispatch. Lost effects
+Run sessions allocate deterministic command sequences before dispatch. Lost effects
 remain unknown and close; old page refs are never reconstructed from cached data.
 
 The dedicated API is not mounted on Studio. Its default bind is localhost; expose
@@ -49,7 +49,7 @@ Startup cleanup selects only resources with this controller's exact Docker label
 validates returned names/IDs and deletes its prior pages/volumes. It never scans
 all application containers by a broad name prefix. Shutdown/periodic cleanup
 retries pending cleanup; daemon outages remain explicit. Durable Studio-side
-cleanup/fencing belongs to TASK-0245. No cross-process live-page reattachment is
+cleanup/fencing belongs to run sessions. No cross-process live-page reattachment is
 promised.
 
 ## Profiles
@@ -66,7 +66,7 @@ are refused. These are deliberate restrictions on the broader
 principal, personal scope and a current configuration digest. Public visitors,
 app users, other users and org-wide profile sharing are refused. The digest
 includes owner/scope/metadata and encrypted credential material; updating or
-removing state invalidates an old context. TASK-0245 must revalidate the current
+removing state invalidates an old context. Run sessions revalidate the current
 connection on every call and revoke affected live sessions on update/delete.
 The trusted RPC sender supplies a principal-bound seed; both supervisor and Node
 worker independently reject mismatches before use.

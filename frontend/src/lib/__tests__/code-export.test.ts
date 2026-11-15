@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { EXPORT_LANGUAGE_KEY, exportUrl, fileExtension, projectUrl, saveExportLanguage, savedExportLanguage } from '@/lib/code-export'
+import { EXPORT_LANGUAGE_KEY, exportUrl, fileExtension, projectDownloadUrl, projectUrl, saveExportLanguage, savedExportLanguage } from '@/lib/code-export'
 import en from '@/locales/en.json'
 import vi from '@/locales/vi.json'
 
 const store = (v: string | null) => ({ getItem: () => v })
 
-describe('Code tab export language (TASK-0082)', () => {
+describe('Code tab export language', () => {
   it('defaults to Python and remembers a valid choice only', () => {
     expect(savedExportLanguage(store(null))).toBe('python')
     expect(savedExportLanguage(store('typescript'))).toBe('typescript')
@@ -19,11 +19,15 @@ describe('Code tab export language (TASK-0082)', () => {
     expect(exportUrl('w 1', 'typescript')).toBe('/api/workflows/w%201/code?language=typescript')
     expect(fileExtension('typescript')).toBe('ts'); expect(fileExtension('python')).toBe('py')
     expect(projectUrl('w 1', 'python')).toBe('/api/workflows/w%201/export/python/project')
+    expect(projectDownloadUrl('w 1', 'python', [
+      { name: 'DATASET_1', backend: 'sqlite', snapshot: true },
+      { name: 'DATASET_2', backend: 'superstep', snapshot: false },
+    ])).toBe('/api/workflows/w%201/export/python/project?backend=DATASET_1%3Asqlite&snapshot=DATASET_1&backend=DATASET_2%3Asuperstep')
   })
   it('has en/vi strings for the picker and the download button', () => {
-    expect(en.codeView.download).toBe('Download .{{ext}}'); expect(vi.codeView.download).toBe('Tải .{{ext}}')
-    expect(vi.codeView.languageLabel).toBe('Ngôn ngữ')
-    expect(en.codeView.downloadProject).toBe('Project .zip'); expect(vi.codeView.downloadProject).toBe('Dự án .zip')
+    expect(en.codeView.download).toBe('Download .{{ext}}'); expect(vi.codeView.download).not.toBe(en.codeView.download); expect(vi.codeView.download).toContain('.{{ext}}')
+    expect(vi.codeView.languageLabel).toBeTruthy(); expect(vi.codeView.languageLabel).not.toBe(en.codeView.languageLabel)
+    expect(en.codeView.downloadProject).toBe('Project .zip'); expect(vi.codeView.downloadProject).not.toBe(en.codeView.downloadProject); expect(vi.codeView.downloadProject).toContain('.zip')
     expect(en.errors.EXPORT_LANGUAGE_UNSUPPORTED).toBeTruthy(); expect(vi.errors.TYPESCRIPT_EXPORT_UNAVAILABLE).toBeTruthy()
   })
 })

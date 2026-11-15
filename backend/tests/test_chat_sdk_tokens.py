@@ -42,7 +42,7 @@ def test_sdk_recorded_frames_match_the_published_schema():
 
 def test_human_form_validation_is_bounded_and_preserves_legacy_answers():
     from app.services.run_service import human_response, RESPONSE_MAX
-    form = {"approved": True, "note": "Đồng ý", "nested": {"values": [1, False, None]}}
+    form = {"approved": True, "note": "Agreed ✓", "nested": {"values": [1, False, None]}}
     assert human_response(form, allow_form=True) == form and human_response(form, allow_form=True) is not form
     with pytest.raises(AppError): human_response(form)  # no opt-in on LangGraph/studio/inbox/channel APIs
     assert human_response(True) == "approved" and human_response(False) == "rejected"

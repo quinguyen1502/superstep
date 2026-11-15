@@ -1,4 +1,4 @@
-"""LLM token usage and cost (TASK-0010). One place for the price table and the usage record shape."""
+"""LLM token usage and cost. One place for the price table and the usage record shape."""
 from __future__ import annotations
 import functools, json, logging, os
 from typing import Any, Callable, Dict, Optional
@@ -7,7 +7,9 @@ from typing import Any, Callable, Dict, Optional
 PRICES: Dict[str, tuple[float, float]] = {
     "gpt-4o-mini": (0.15, 0.60), "gpt-4o": (2.50, 10.00), "gpt-4.1-mini": (0.40, 1.60), "gpt-4.1": (2.00, 8.00),
     "claude-3-5-haiku": (0.80, 4.00), "claude-3-5-sonnet": (3.00, 15.00), "claude-3-7-sonnet": (3.00, 15.00),
-    "jev": (0.042, 0.0),  # TypeSafe Jev (TASK-0050): output tokens are free
+    "jev": (0.042, 0.0),  # TypeSafe Jev: output tokens are free
+    # embedding models: input tokens only
+    "text-embedding-3-small": (0.02, 0.0), "text-embedding-3-large": (0.13, 0.0), "text-embedding-ada-002": (0.10, 0.0),
 }
 
 UsageSink = Callable[[str, Dict[str, Any]], None]  # (node_id, usage) -> None
@@ -39,7 +41,7 @@ def _prices(env_json: str, path: str, mtime: float) -> Dict[str, tuple[float, fl
 
 def prices() -> Dict[str, tuple[float, float]]:
     """Built-in table overridden/extended by STUDIO_PRICES_FILE (JSON file) and STUDIO_PRICES (JSON string).
-    Re-read when the env or the file's mtime changes (TASK-0019)."""
+    Re-read when the env or the file's mtime changes."""
     path = os.environ.get("STUDIO_PRICES_FILE", "").strip()
     try: mtime = os.path.getmtime(path) if path else 0.0
     except OSError: mtime = -1.0
@@ -72,4 +74,6 @@ def merge(a: Optional[Dict[str, Any]], b: Dict[str, Any]) -> Dict[str, Any]:
     for k in ("tokens_in", "tokens_out", "tokens"): out[k] = a[k] + b[k]
     out["cost_usd"] = None if a["cost_usd"] is None or b["cost_usd"] is None else round(a["cost_usd"] + b["cost_usd"], 8)
     out["estimated"] = a["estimated"] or b["estimated"]
+    if "duration_ms" in a or "duration_ms" in b: out["duration_ms"] = round((a.get("duration_ms") or 0) + (b.get("duration_ms") or 0), 2)
+    if "ttft_ms" not in a and "ttft_ms" in b: out["ttft_ms"] = b["ttft_ms"]  # the node's first streamed call
     return out

@@ -1,4 +1,4 @@
-"""MCP server at /mcp (TASK-0114, DEC-0061; PAT + X-Superstep-Workflow, TASK-0171).
+"""MCP server at /mcp.
 
 The official MCP Python SDK serves Streamable HTTP, stateless JSON (any API replica can answer; runs live in the database).
 

@@ -6,20 +6,23 @@ upload, download, evaluate). Connections live under **Settings → MCP servers**
 No start URL belongs on the connection — URLs come from chat, workflow state, or
 a configured search tool at run time.
 
-This page is the English first-delivery setup guide. Executable Python/TypeScript
-exports are deferred.
+This page is the English first-delivery setup guide. Python/TypeScript exports
+can run the browser steps; see the export section below.
 
 ## Before you start
 
-1. Set both gates on the Studio API/worker (they default **off**):
+1. Browser discovery is **on by default**. Set `STUDIO_ENABLE_BROWSER=0` to hide
+   the `browser` / `web` managed adapters. Trusted runs that drive a browser still
+   need the separate runtime gate (default **off**):
 
    ```bash
+   # Optional: already the default
    STUDIO_ENABLE_BROWSER=1
+   # Required before a run opens Chromium / a remote controller
    STUDIO_ENABLE_BROWSER_RUNTIME=1
    ```
 
-   The first exposes the `browser` / `web` managed adapters. The second allows
-   trusted runs to open a worker. Discovery alone never launches Chromium.
+   Discovery alone never launches Chromium.
 
 2. For the **local** provider, build the worker and gateway images (once per
    host):
@@ -69,9 +72,9 @@ exports are deferred.
      extract / screenshot never wait).
    - Allow evaluate / upload / download — **off** until you need them.
 10. Save, then **Discover tools**. With the safety toggles left at their
-    defaults, the card lists six tools: navigate, snapshot, click, fill,
-    extract and screenshot. Evaluate, upload and download appear after those
-    toggles are turned on.
+    defaults, six tools are usable: navigate, snapshot, click, fill, extract
+    and screenshot. The card also lists upload, download and evaluate, each
+    marked as disabled on this connection until its toggle is turned on.
 
 ![Browser connection settings](../images/browser-connection-settings.png)
 

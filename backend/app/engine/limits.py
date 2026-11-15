@@ -1,4 +1,4 @@
-"""Runtime limits, payload caps and error sanitising (TASK-0004).
+"""Runtime limits, payload caps and error sanitising.
 
 Layers of caps:
 - TRACE_CAP (runtime.cap_payload, 16 000 JSON chars): per traced field (`input`/`delta`) so the

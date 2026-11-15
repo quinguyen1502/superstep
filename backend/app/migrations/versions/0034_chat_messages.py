@@ -1,4 +1,4 @@
-"""TASK-0075: chat messages that matched a chat trigger (REQ-0044): dedupe, the run they started, where to reply."""
+"""chat messages that matched a chat trigger: dedupe, the run they started, where to reply."""
 from alembic import op
 import sqlalchemy as sa
 

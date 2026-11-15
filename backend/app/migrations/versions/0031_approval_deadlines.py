@@ -1,4 +1,4 @@
-"""TASK-0066: Human node deadlines on waiting steps (due time, reminders, escalation)."""
+"""Human node deadlines on waiting steps (due time, reminders, escalation)."""
 from alembic import op
 import sqlalchemy as sa
 

@@ -1,4 +1,4 @@
-"""The trace of a workflow tool call (TASK-0136, REQ-0073): the tool step names its child run, the run API returns that
+"""The trace of a workflow tool call: the tool step names its child run, the run API returns that
 run to people who may read it, and a chat's full view carries the child run too."""
 import json
 import pytest

@@ -1,12 +1,12 @@
-"""The published web chat (TASK-0140, REQ-0074, DEC-0067): /c/{slug} for visitors without the run right.
+"""The published web chat: /c/{slug} for visitors without the run right.
 
 A chat is published when it is enabled and its `access` is "anonymous" (anyone with the link) or "signed_in" (any
 account of this studio). Visitors read the page settings, list and read their own sessions, and start new ones; the
-messages go over the public socket (TASK-0141). Every repository call acts for the trigger, never for the visitor, and
+messages go over the public socket. Every repository call acts for the trigger, never for the visitor, and
 the answers never carry the workflow, its graph or its owner.
 
-Messages and answers go over the public socket (TASK-0141, decision 4): `plan_message` checks the visitor, the limits
-and the session, then plans a `source = "chat"` run as the workflow's owner (DEC-0023) through RunService.plan; the
+Messages and answers go over the public socket: `plan_message` checks the visitor, the limits
+and the session, then plans a `source = "chat"` run as the workflow's owner through RunService.plan; the
 socket forwards only `public_event`s, cut down to the page's steps mode.
 
 An anonymous visitor is a signed token `<id>.<hmac>` bound to the slug. The router keeps it in an HttpOnly cookie, or
@@ -103,7 +103,7 @@ class PublicChatService:
 
     @staticmethod
     def attachment_limits(st: dict) -> dict:
-        """What the page's composer checks before an upload (TASK-0177): on or off, kinds, count and size; never the field."""
+        """What the page's composer checks before an upload: on or off, kinds, count and size; never the field."""
         a = {**ATTACH_DEFAULTS, **(st.get("attachments") or {})}
         return {k: a[k] for k in ("enabled", "kinds", "max_files", "max_mb")}
 
@@ -180,7 +180,7 @@ class PublicChatService:
         return result, v
 
     def turns(self, slug: str, sid: str, after: Optional[str], token: Optional[str], user: Optional[dict]) -> tuple[dict, Visitor]:
-        """The chat's turns after the turn `after` (incremental history, TASK-0215); all of them when `after` is empty."""
+        """The chat's turns after the turn `after` (incremental history, ); all of them when `after` is empty."""
         view, v = self.get(slug, sid, token, user)
         rows = view["turns"]
         if after:
@@ -197,7 +197,7 @@ class PublicChatService:
         return None if x is None else {"id": x.id, "status": x.status, "run_id": x.run_id}
 
     def rate(self, slug: str, sid: str, tid: str, token: Optional[str], user: Optional[dict], value, comment) -> tuple[dict, Visitor]:
-        """The visitor rates one of their own finished answers. An unpublished chat refuses it (DEC-0070)."""
+        """The visitor rates one of their own finished answers. An unpublished chat refuses it."""
         t, st = self.published(slug); v = self.visitor(slug, st, token, user)
         return self.chat.rate(self.own(t, sid, v), tid, value, comment), v
 

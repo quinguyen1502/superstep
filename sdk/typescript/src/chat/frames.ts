@@ -3,7 +3,7 @@ export type paths = Record<string, never>;
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description Who is chatting, before the message: an anonymous visitor token, or a user token signed by the app's backend (TASK-0218). */
+        /** @description Who is chatting, before the message: an anonymous visitor token, or a user token signed by the app's backend. */
         ClientAuth: {
             /** @constant */
             type: "auth";

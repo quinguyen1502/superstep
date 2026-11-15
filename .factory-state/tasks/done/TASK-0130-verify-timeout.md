@@ -15,7 +15,7 @@
 
 ## Objective
 
-Give the backend suite room under `factory verify` (owner request in chat on 2026-10-26: "Sửa luôn đi"). TASK-0129
+Give the backend suite room under `factory verify` (owner request in chat on 2026-10-26: "Fix it right away"). TASK-0129
 found that the backend suite takes 205 to 265 s in CI and 346 s locally, against a fixed 300 s per-command timeout.
 
 ## Changes

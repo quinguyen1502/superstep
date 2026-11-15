@@ -1,4 +1,4 @@
-"""Parallel tool calls of one Agent round (TASK-0157, REQ-0076, DEC-0069)."""
+"""Parallel tool calls of one Agent round."""
 import threading, time
 import respx
 from app.core import config
@@ -46,7 +46,7 @@ def run(monkeypatch, calls, tools, sleeps, mcp=None, **data):
 def test_three_calls_overlap_and_keep_the_model_order(monkeypatch):
     # The three calls must be in flight together. A barrier proves it without timing: each call waits until all three
     # have started, so a serial wave would time out here. (Comparing start and end times failed under load: a stall of
-    # the test process before the second and third worker threads started let the 50 ms call b end first; TASK-0191.)
+    # the test process before the second and third worker threads started let the 50 ms call b end first;.)
     monkeypatch.setenv("STUDIO_AGENT_PARALLEL_TOOLS", "4")
     tools = [tool("a"), tool("b"), tool("c")]
     together, inside, lock = threading.Barrier(3, timeout=30), [], threading.Lock()

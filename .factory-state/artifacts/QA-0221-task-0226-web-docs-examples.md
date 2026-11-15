@@ -63,7 +63,7 @@ The React example's own capture helper now waits for inherited foreground colors
 
 ## Owner Acceptance And Ready Finalisation (2026-11-03)
 
-The owner accepted PR #291 ("Duyệt") after reviewed head 5d2d847131051ce951a3bcaf9267160036dcd07a completed 22 successful CI checks and two expected deployment/publication skips. This includes strict en/vi handbook, both React host matrices, all Playwright shards, SQLite/Postgres backends, Factory, SDK/CLI and image/security checks. This supersedes the earlier pending-owner-acceptance/Draft-only statements.
+The owner accepted PR #291 ("Approve") after reviewed head 5d2d847131051ce951a3bcaf9267160036dcd07a completed 22 successful CI checks and two expected deployment/publication skips. This includes strict en/vi handbook, both React host matrices, all Playwright shards, SQLite/Postgres backends, Factory, SDK/CLI and image/security checks. This supersedes the earlier pending-owner-acceptance/Draft-only statements.
 
 TASK-0226 moves to done on the same PR for rebased single-commit Ready delivery. Develop remains 2ea51b0a. Product implementation, documentation and dependency versions are preserved. A minimal test-isolation correction discovered during final-head CI is recorded below. Required final validation is repeated, and exact-head CI outcomes are reported on #291. Merge, release tags and publication still require explicit instructions. REQ-0082/native work is not marked complete.
 

@@ -1,4 +1,4 @@
-/** App-wide command palette (TASK-0028, DEC-0031): Mod+K. Shows page commands (editor actions, add node, jump to node),
+/** App-wide command palette: Mod+K. Shows page commands (editor actions, add node, jump to node),
  * workflows and navigation; fuzzy search by cmdk; registry shortcuts shown next to actions. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

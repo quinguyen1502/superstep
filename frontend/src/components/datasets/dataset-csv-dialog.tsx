@@ -1,0 +1,287 @@
+import { useId, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { AlertTriangle, Upload } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { cn } from 'cn'
+import { api, ApiError } from '@/lib/api'
+import { csvIssueSummary, datasetReadOnly, datasetUrl, fromDraft, shortCsvValue, toDraft, type ColumnDraft, type CsvIssue, type Dataset, type DatasetColumn, type DatasetTeam } from '@/lib/datasets'
+import { errorText, type ApiErrorBody } from '@/lib/i18n'
+import { DatasetFieldIcon } from './dataset-field-icon'
+import { DatasetColumnFields } from './dataset-fields'
+
+const MAX_CSV_BYTES = 1_048_576
+const SKIP = '__skip__'
+/** The server reports at most this many issues per check. */
+const MAX_CSV_ISSUES = 100
+type CsvPreview = {
+  headers: string[]
+  columns: DatasetColumn[]
+  mapping: (string | null)[]
+  schema_revision: number | null
+  total_rows: number
+  invalid_rows: number
+  issues: CsvIssue[]
+  sample: { row: number; cells: string[] }[]
+}
+
+export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported }: {
+  dataset?: Dataset
+  teams: DatasetTeam[] | null
+  initial?: { name: string; teamId: string | null }
+  onClose: () => void
+  onImported: (dataset: Dataset, count: number) => void
+}) {
+  const { t } = useTranslation()
+  const id = useId()
+  const [filename, setFilename] = useState('')
+  const [dragging, setDragging] = useState(false)
+  const [text, setText] = useState<string | null>(null)
+  const [name, setName] = useState(initial?.name ?? '')
+  const [teamId, setTeamId] = useState(initial?.teamId ?? 'personal')
+  const [columns, setColumns] = useState<ColumnDraft[]>([])
+  const [mapping, setMapping] = useState<(string | null)[]>([])
+  const [preview, setPreview] = useState<CsvPreview | null>(null)
+  const [dirty, setDirty] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [importIssues, setImportIssues] = useState<CsvIssue[] | null>(null)
+  const issues = importIssues ?? preview?.issues ?? []
+  const members = teams?.filter(team => team.mine) ?? []
+  const canImport = !!preview && !dirty && !preview.invalid_rows && !importIssues && mapping.some(Boolean)
+    && (!dataset || preview.total_rows > 0)
+  const path = `${datasetUrl()}/csv`
+
+  function showError(failure: unknown) {
+    setError(failure instanceof Error ? failure.message : t('errors.INTERNAL_ERROR'))
+    if (failure instanceof ApiError && Array.isArray(failure.details?.issues)) setImportIssues(failure.details.issues)
+  }
+
+  async function loadFile(file: File) {
+    setFilename(file.name)
+    setText(null)
+    setPreview(null)
+    setError('')
+    setImportIssues(null)
+    setBusy(true)
+    try {
+      if (file.size > MAX_CSV_BYTES) throw new ApiError({ code: 'DATASET_CSV_LIMIT', details: { max: MAX_CSV_BYTES } }, 413)
+      const buffer = await file.arrayBuffer()
+      let contents: string
+      try { contents = new TextDecoder('utf-8', { fatal: true }).decode(buffer) }
+      catch { throw new Error(t('dataset.csvUtf8')) }
+      const result = await api<CsvPreview>(`${path}/preview`, { method: 'POST', json: {
+        text: contents, dataset_id: dataset?.id, schema_revision: dataset?.revision,
+      } })
+      if (!name) setName(file.name.replace(/\.csv$/i, '').slice(0, 120))
+      setText(contents)
+      setColumns(result.columns.map(toDraft))
+      setMapping(result.mapping)
+      setPreview(result)
+      setDirty(!dataset)
+    } catch (failure) {
+      showError(failure)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function changeDraft() {
+    setDirty(true)
+    setError('')
+    setImportIssues(null)
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (text === null || busy) return
+    const importNow = (event.nativeEvent as SubmitEvent).submitter?.getAttribute('data-csv-action') === 'import'
+    if (importNow && !canImport) return
+    const json = {
+      text, mapping, dataset_id: dataset?.id, schema_revision: preview?.schema_revision ?? dataset?.revision,
+      create: dataset ? undefined : { name, team_id: teamId === 'personal' ? null : teamId, columns: columns.map(fromDraft) },
+    }
+    setBusy(true)
+    setError('')
+    setImportIssues(null)
+    try {
+      if (importNow) {
+        const result = await api<{ dataset: Dataset; imported: number }>(`${path}/import`, { method: 'POST', json })
+        onImported(result.dataset, result.imported)
+      } else {
+        setPreview(await api<CsvPreview>(`${path}/preview`, { method: 'POST', json }))
+        setDirty(false)
+      }
+    } catch (failure) {
+      showError(failure)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
+    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-3xl">
+      <DialogHeader>
+        <DialogTitle>{t(dataset ? 'dataset.importCsv' : 'dataset.createFromCsv')}</DialogTitle>
+        <DialogDescription>{t('dataset.csvLimits')}</DialogDescription>
+      </DialogHeader>
+      <DialogBody>
+        <form id={id} className="space-y-4" onSubmit={submit}>
+          <div className="space-y-1">
+            <Label htmlFor={`${id}-file`}>{t('dataset.csvFile')}</Label>
+            <div className={cn('relative grid justify-items-center gap-2 rounded-md border border-dashed p-4 text-center text-sm text-muted-foreground focus-within:ring-2 focus-within:ring-ring',
+              busy ? 'opacity-75' : 'hover:bg-muted',
+              dragging && !busy && 'border-ring bg-muted')}
+              onDragOver={event => {
+                if (!event.dataTransfer.types.includes('Files')) return
+                event.preventDefault()
+                event.dataTransfer.dropEffect = busy ? 'none' : 'copy'
+                if (!busy) setDragging(true)
+              }}
+              onDragLeave={event => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false)
+              }}
+              onDrop={event => {
+                event.preventDefault()
+                setDragging(false)
+                if (busy) return
+                const files = event.dataTransfer.files
+                if (files.length > 1) {
+                  setError(t('dataset.csvSingleFile'))
+                } else if (files[0]) {
+                  void loadFile(files[0])
+                }
+              }}>
+              <Upload aria-hidden="true" className="size-5" />
+              <span id={`${id}-drop-hint`} className="max-w-full break-all" aria-live="polite">
+                {busy ? t('common.loading') : filename || t('dataset.csvDropHint')}
+              </span>
+              <Input id={`${id}-file`} type="file" accept=".csv,text/csv" disabled={busy}
+                aria-describedby={`${id}-drop-hint`} className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                onChange={event => {
+                  const file = event.currentTarget.files?.[0]
+                  event.currentTarget.value = ''
+                  if (file) void loadFile(file)
+                }} />
+            </div>
+          </div>
+          {preview && <>
+            {!dataset && <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1"><Label htmlFor={`${id}-name`}>{t('dataset.name')}</Label>
+                <Input id={`${id}-name`} value={name} maxLength={120} required disabled={busy} onChange={event => { setName(event.target.value); changeDraft() }} />
+              </div>
+              <div className="space-y-1"><Label htmlFor={`${id}-scope`}>{t('dataset.scope')}</Label>
+                <Select value={teamId} disabled={busy} onValueChange={value => { setTeamId(value); changeDraft() }}>
+                  <SelectTrigger id={`${id}-scope`} className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">{t('dataset.personal')}</SelectItem>
+                    {members.map(team => <SelectItem key={team.id} value={team.id}>{team.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead scope="col">{t('dataset.csvSource')}</TableHead>
+                  <TableHead scope="col">{t('dataset.csvTarget')}</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {preview.headers.map((header, index) => <TableRow key={index}>
+                    <TableCell className="max-w-60 whitespace-normal wrap-anywhere">{header}</TableCell>
+                    <TableCell><Select value={mapping[index] ?? SKIP} disabled={busy} onValueChange={value => {
+                      setMapping(current => current.map((key, item) => item === index ? value === SKIP ? null : value : key))
+                      changeDraft()
+                    }}>
+                      <SelectTrigger aria-label={t('dataset.csvMapColumn', { column: index + 1, name: header })} className="w-full min-w-36"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={SKIP}>{t('dataset.csvSkip')}</SelectItem>
+                        {columns.filter(column => column.key && !datasetReadOnly(column.kind)).map((column, columnIndex) =>
+                          <SelectItem key={columnIndex} value={column.key} disabled={mapping.some((key, item) => item !== index && key === column.key)}>
+                            <DatasetFieldIcon kind={column.kind} /><span className="truncate">{column.label}</span>
+                          </SelectItem>)}
+                      </SelectContent>
+                    </Select></TableCell>
+                  </TableRow>)}
+                </TableBody>
+              </Table>
+            </div>
+            {!dataset && <fieldset disabled={busy} className="space-y-3">
+              <legend className="mb-2 text-sm font-medium">{t('dataset.schema')}</legend>
+              <p className="text-sm text-muted-foreground">{t('dataset.csvTypeHint')}</p>
+              {columns.map((column, index) => <fieldset key={index} className="rounded-md border p-3">
+                <legend className="px-1 text-sm font-medium">{preview.headers[index]}</legend>
+                <DatasetColumnFields column={column} onChange={next => {
+                  setColumns(current => current.map((item, position) => position === index ? next : item))
+                  if (next.key !== column.key || datasetReadOnly(next.kind)) setMapping(current => current.map(key => key === column.key ? datasetReadOnly(next.kind) ? null : next.key || null : key))
+                  changeDraft()
+                }} />
+              </fieldset>)}
+            </fieldset>}
+            <p role="status" className="text-sm text-muted-foreground">
+              {t('dataset.csvSummary', { total: preview.total_rows, invalid: preview.invalid_rows })}
+            </p>
+            {!!issues.length && <CsvIssueList issues={issues} invalidRows={preview.invalid_rows}
+              labels={Object.fromEntries((dataset ? preview.columns : columns).map(column => [column.key, column.label]))} />}
+            {!!preview.sample.length && <div className="rounded-md border">
+              <Table aria-label={t('dataset.csvPreview')}>
+                <TableHeader><TableRow>
+                  <TableHead scope="col" className="h-auto align-top">{t('dataset.csvLine')}</TableHead>
+                  {preview.headers.map((header, index) => {
+                    const target = (dataset ? preview.columns : columns).find(column => column.key && column.key === mapping[index])
+                    return <TableHead key={index} scope="col" className="h-auto max-w-48 align-top">
+                      <span className="block truncate">{header}</span>
+                      <span className="block truncate text-xs font-normal text-muted-foreground">
+                        {target ? t('dataset.csvMappedTo', { label: target.label }) : t('dataset.csvSkipped')}
+                      </span>
+                    </TableHead>
+                  })}
+                </TableRow></TableHeader>
+                <TableBody>{preview.sample.map(record => <TableRow key={record.row}>
+                  <TableCell>{record.row}</TableCell>
+                  {preview.headers.map((_, index) => <TableCell key={index} className="max-w-48 truncate">{record.cells[index] ?? '—'}</TableCell>)}
+                </TableRow>)}</TableBody>
+              </Table>
+            </div>}
+          </>}
+          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+        </form>
+      </DialogBody>
+      <DialogFooter>
+        <Button variant="outline" disabled={busy} onClick={onClose}>{t('common.cancel')}</Button>
+        <Button type="submit" form={id} variant="outline" disabled={busy || !preview || !mapping.some(Boolean)}>{t('dataset.csvCheck')}</Button>
+        <Button type="submit" form={id} data-csv-action="import" disabled={busy || !canImport}>{t('dataset.importCsv')}</Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+}
+
+function CsvIssueList({ issues, labels, invalidRows }: { issues: CsvIssue[]; labels: Record<string, string>; invalidRows: number }) {
+  const { t } = useTranslation()
+  const { sorted, counts } = csvIssueSummary(issues)
+  const kind = (code: string) => t(`dataset.csvIssueKind.${code}`, { defaultValue: t('dataset.csvIssueKind.other') })
+  return <Alert variant="destructive" data-testid="dataset-csv-issues"><AlertTriangle />
+    <AlertTitle>{t('dataset.csvIssuesTitle', { count: invalidRows })}</AlertTitle>
+    <AlertDescription>
+      <p>{counts.map(([code, count]) => t('dataset.csvIssueCount', { kind: kind(code), count })).join(' · ')}</p>
+      {issues.length >= MAX_CSV_ISSUES && <p>{t('dataset.csvIssuesFirst', { count: issues.length })}</p>}
+      <ul className="max-h-60 w-full space-y-1 overflow-y-auto">
+        {sorted.map((issue, index) => {
+          const label = issue.field ? labels[issue.field] ?? issue.field : null
+          const details = { ...issue.error.details, ...(label ? { field: label } : {}) }
+          return <li key={index} className="wrap-anywhere" data-csv-line={issue.row}>
+            <span className="font-medium">{t('dataset.csvLineLabel', { row: issue.row })}</span>
+            {label && <span>{' · '}{label}</span>}
+            {issue.value != null && <span>{' · '}{t('dataset.csvRejectedValue', { value: shortCsvValue(issue.value) })}</span>}
+            <span>{' — '}{errorText({ ...issue.error, details } as ApiErrorBody)}</span>
+          </li>
+        })}
+      </ul>
+    </AlertDescription>
+  </Alert>
+}

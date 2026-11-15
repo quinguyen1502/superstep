@@ -1,4 +1,4 @@
-"""Envelope + error-code contract (DEC-0010): every REST response, success or error."""
+"""Envelope + error-code contract: every REST response, success or error."""
 import pathlib, json, re
 from fastapi.testclient import TestClient
 from app.core.errors import CATALOG

@@ -1,4 +1,4 @@
-"""STUDIO_TRUSTED_PROXIES: X-Forwarded-For walked right to left, skipping trusted hops (TASK-0022 follow-up)."""
+"""STUDIO_TRUSTED_PROXIES: X-Forwarded-For walked right to left, skipping trusted hops."""
 import pytest
 from app.core.client_ip import client_ip, parse_networks, resolve
 

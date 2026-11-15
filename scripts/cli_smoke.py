@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install and upgrade smoke for the all-in-one image (TASK-0156).
+"""Install and upgrade smoke for the all-in-one image.
 
 Uses the local image `ghcr.io/quinguyen1502/superstep:<cli version>`, or tags
 `superstep:ci` to that name. No pull and no publish.

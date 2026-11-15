@@ -4,7 +4,7 @@ from .base import Base
 
 
 class WorkflowShare(Base):
-    """A workflow shared with one user (TASK-0014): role viewer (open, run) or editor (also edit)."""
+    """A workflow shared with one user: role viewer (open, run) or editor (also edit)."""
     __tablename__ = "workflow_shares"
     workflow_id: Mapped[str] = mapped_column(Text, ForeignKey("workflows.id", ondelete="CASCADE"), primary_key=True)
     user_id: Mapped[str] = mapped_column(Text, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True)

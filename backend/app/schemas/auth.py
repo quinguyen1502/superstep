@@ -16,7 +16,7 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
-class ResetRequest(BaseModel):  # TASK-0045
+class ResetRequest(BaseModel):
     email: str
 
 
@@ -25,12 +25,12 @@ class ResetConfirm(BaseModel):
     password: str
 
 
-class PasswordChange(BaseModel):  # TASK-0052
+class PasswordChange(BaseModel):
     current_password: str
     new_password: str
 
 
-class TokenName(BaseModel):  # TASK-0167
+class TokenName(BaseModel):
     name: str
 
 

@@ -1,4 +1,4 @@
-"""Roles and permissions (TASK-0014, DEC-0023). Fixed in code: the single source for the API, the admin UI matrix and tests.
+"""Roles and permissions. Fixed in code: the single source for the API, the admin UI matrix and tests.
 
 Global role (users.role): what a user may do in the studio.
 Workflow access: owner, or a share (viewer | editor); admins act as owner on every workflow."""
@@ -12,7 +12,7 @@ ORG_MANAGE = "org.manage"              # org-wide approval channels and MCP serv
 WORKFLOWS_ALL = "workflows.all"        # owner-level access to every workflow
 WORKFLOWS_CREATE = "workflows.create"  # create, import and duplicate workflows
 RESOURCES_MANAGE = "resources.manage"  # own credentials, knowledge bases, personal MCP servers, API tokens
-CODE_WRITE = "code.write"              # add a Tool node in Code mode or change its source (TASK-0054, REQ-0039)
+CODE_WRITE = "code.write"              # add a Tool node in Code mode or change its source
 
 PERMISSIONS: dict[str, frozenset[str]] = {
     "admin": frozenset({USERS_MANAGE, ORG_MANAGE, WORKFLOWS_ALL, WORKFLOWS_CREATE, RESOURCES_MANAGE, CODE_WRITE}),
@@ -36,7 +36,7 @@ def best_share(roles) -> str | None:
     return "editor" if "editor" in rs else ("viewer" if rs else None)
 
 
-# org-wide approval channels and MCP servers at run time (admin policy, TASK-0029); admins always may
+# org-wide approval channels and MCP servers at run time (admin policy, ); admins always may
 ORG_RESOURCE_DEFAULT = ("admin", "editor")
 
 
@@ -46,7 +46,7 @@ def _lang_prefix(data: dict) -> str:
 
 
 def code_sources(graph: dict | None) -> dict[str, str]:
-    """Node id -> language and source of every Tool node in Code mode (TASK-0054; the language since TASK-0079, so
+    """Node id -> language and source of every Tool node in Code mode (; the language , so
     switching a node to another language is writing code too). Python nodes keep the bare source (no language key)."""
     nodes = (graph or {}).get("nodes") if isinstance(graph, dict) else None
     return {str(n.get("id")): _lang_prefix(n.get("data") or {}) + str((n.get("data") or {}).get("code") or "") for n in (nodes or [])

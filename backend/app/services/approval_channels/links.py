@@ -1,4 +1,4 @@
-"""Link channels (TASK-0047): e-mail and Microsoft Teams. Their messages carry Approve / Reject links to the studio's
+"""Link channels: e-mail and Microsoft Teams. Their messages carry Approve / Reject links to the studio's
 /approve page; the person signs in there and confirms, so the studio account is the identity and no chat account is
 linked. Both need STUDIO_PUBLIC_URL for the links."""
 import hashlib, html

@@ -1,4 +1,4 @@
-/** A chat's thread (TASK-0085), built as the shadcn Chat pattern: Message Scroller (autoScroll, a messageId on every
+/** A chat's thread, built as the shadcn Chat pattern: Message Scroller (autoScroll, a messageId on every
  *  item, the person's turns as scroll anchors), the person's turns as muted Bubbles, the agent's as Trace steps then
  *  Markdown with a Message footer of actions (Message pattern), an Empty state, and the scroll button. */
 import { useEffect, useState } from 'react'
@@ -57,7 +57,7 @@ function Answer({ text, steps, mode, status, code, live, turn, onRate, onSaveTes
   </Message>
 }
 
-/** Where a chat's files are downloaded from (TASK-0177): a file's address, and the headers the chat sends. */
+/** Where a chat's files are downloaded from: a file's address, and the headers the chat sends. */
 export type FileLinks = { url?: (id: string) => string; headers?: Record<string, string>; download?: (file: ChatAttachment) => Promise<void> }
 
 const Mine = ({ text, files, links, edit }: { text: string; files?: ChatAttachment[]; links?: FileLinks; edit?: React.ReactNode }) => <Message align="end" data-testid="chat-mine">
@@ -66,7 +66,7 @@ const Mine = ({ text, files, links, edit }: { text: string; files?: ChatAttachme
     {text && <Bubble align="end" variant="muted"><BubbleContent className="whitespace-pre-wrap">{text}</BubbleContent></Bubble>}
     {edit && <MessageFooter className="justify-end px-0">{edit}</MessageFooter>}</MessageContent></Message>
 
-/** `replyField`: the field whose tokens are the answer; none on the public page, whose socket sends only those (TASK-0142).
+/** `replyField`: the field whose tokens are the answer; none on the public page, whose socket sends only those.
  *  `empty`: what an empty chat shows instead of the default (the page's intro and suggestions). */
 export function ChatThread({ turns, mode, replyField, events, trace, pending, pendingFiles, running, replyPending = false, onAnswer, onRate, onSaveTest, onEdit, onRegenerate, onSource, empty, files }: {
   turns: ChatTurn[]; mode: StepsMode; replyField?: string; events: RunEvent[]; trace: RunTrace; pending: string | null; running: boolean

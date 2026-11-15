@@ -1,4 +1,4 @@
-"""Runs one Tool node Code call (TASK-0053, DEC-0041). Executed INSIDE the sandbox as ``python -I -c <this file>``.
+"""Runs one Tool node Code call. Executed INSIDE the sandbox as ``python -I -c <this file>``.
 Never imported by the server: it uses the standard library only, so any Python 3 image can run it.
 
 stdin: one JSON object {"source", "state", "stdout_max"}.

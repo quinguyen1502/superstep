@@ -71,4 +71,10 @@ configuring nodes, wiring state, and reusing work across workflows.
 
     See the workflow as LangGraph code, and run it on its own.
 
+-   :material-table:{ .lg .middle } **[Datasets](datasets.md)**
+
+    ---
+
+    Typed tables, CSV, workflow access, and standalone export.
+
 </div>

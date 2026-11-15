@@ -26,7 +26,7 @@ class CliDeviceRepository:
             s.commit(); return n == 1
 
     def expired_secrets(self, now: float) -> list[CliDevice]:
-        """Sign-ins past their deadline that still hold a token secret (written before TASK-0207)."""
+        """Sign-ins past their deadline that still hold a token secret (written )."""
         with self.db.session() as s:
             return list(s.scalars(select(CliDevice).where(CliDevice.expires < now, CliDevice.secret.is_not(None))))
 

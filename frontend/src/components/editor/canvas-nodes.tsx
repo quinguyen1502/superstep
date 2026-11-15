@@ -31,7 +31,7 @@ export function StatusBadge({ s }: { s?: string }) {
   return null
 }
 
-/** Tool node in Code mode while the server runs code without isolation (TASK-0056). */
+/** Tool node in Code mode while the server runs code without isolation. */
 function UnisolatedBadge() {
   const { t } = useTranslation(); const rt = useCodeRuntime()
   if (rt?.code_runtime !== 'subprocess') return null
@@ -63,7 +63,7 @@ export function StudioNode({ data, type, selected }: NodeProps) {
   </div>
 }
 
-/** An Agent node's hand-off handle (TASK-0182): a link drawn from it to another Agent adds a hand-off target. */
+/** An Agent node's hand-off handle: a link drawn from it to another Agent adds a hand-off target. */
 function HandoffHandle() {
   const { t } = useTranslation()
   return <Handle type="source" id={HANDOFF_HANDLE} position={Position.Bottom} aria-label={t('handoff.handle')} data-testid="handoff-handle"

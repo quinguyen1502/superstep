@@ -1,4 +1,4 @@
-"""Personal access tokens and the CLI device sign-in (TASK-0167)."""
+"""Personal access tokens and the CLI device sign-in."""
 import os, tempfile
 os.environ.setdefault("STUDIO_DB", tempfile.mktemp(suffix=".db"))
 import uuid
@@ -90,7 +90,7 @@ def test_a_denied_or_expired_device_does_not_return_a_token():
 
 
 def test_the_sign_in_link_does_not_carry_the_code_starts_are_limited_and_old_ones_are_removed(tmp_path):
-    """Review finding 6 (TASK-0205, DEC-0076): the link held the code, so whoever sent it could have it approved; the
+    """Review finding 6: the link held the code, so whoever sent it could have it approved; the
     unauthenticated start had no limit and the table was never cleaned."""
     import asyncio, time
     import pytest
@@ -115,7 +115,7 @@ def test_the_sign_in_link_does_not_carry_the_code_starts_are_limited_and_old_one
 
 
 def test_last_used_is_written_at_most_every_few_minutes(monkeypatch):
-    """Review finding 12 (TASK-0205): every request with a token wrote last_used; user_for_token was unused."""
+    """Review finding 12: every request with a token wrote last_used; user_for_token was unused."""
     from app.repositories import PersonalAccessTokenRepository
     from app.services.pat_service import PatService
     assert not hasattr(PatService, "user_for_token")

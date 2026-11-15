@@ -1,4 +1,4 @@
-"""Add conversation_id for cross-turn browser sessions (TASK-0245 / DEC-0085)."""
+"""Add conversation_id for cross-turn browser sessions."""
 from alembic import op
 import sqlalchemy as sa
 

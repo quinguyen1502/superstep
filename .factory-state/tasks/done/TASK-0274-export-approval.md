@@ -82,7 +82,7 @@ Export channel notices, deadlines, reminders and AI review for Human nodes and A
 - 2026-11-07: Channel notice, deadline and AI review are in both exporters. Python tests cover a reject rule, a local Telegram post and a 0.2s approve-on-timeout. Deno was not run.
 - 2026-11-07: `b6c9e52b` stops writing the judge instructions, which TASK-0188 forbids. PR #336 CI is green at that commit, including factory verify. Status stays doing until review and QA. Not merged.
 - 2026-11-07: Review REV-0260 approved for QA. QA QA-0260 conditionally passed. Advisory only. Status stays doing. Not merged.
-- 2026-11-07: Owner approved (duyệt). Moved to done with Review REV-0260 and QA QA-0260. Not merged.
+- 2026-11-07: Owner approved. Moved to done with Review REV-0260 and QA QA-0260. Not merged.
 
 ## Handoff Notes
 

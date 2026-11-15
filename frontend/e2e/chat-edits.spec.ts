@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test'
 import { signIn, newWorkflow, N } from './helpers'
+import { vt } from './catalog'
 test.use({ trace: 'off' })
 
 for (const locale of ['vi', 'en'] as const) test.describe(locale, () => {
   test.use({ locale: locale === 'vi' ? 'vi-VN' : 'en-US' })
   const text = locale === 'vi'
-    ? { edit: 'Sửa tin nhắn', save: 'Lưu và chạy trong nhánh mới', cancel: 'Huỷ', source: 'Cuộc trò chuyện gốc', regenerate: 'Tạo lại câu trả lời', run: 'Chạy lại trong nhánh mới' }
+    ? { edit: vt('chat.edit.title'), save: vt('chat.edit.saveRun'), cancel: vt('common.cancel'), source: vt('chat.edit.source'), regenerate: vt('chat.regenerate.title'), run: vt('chat.regenerate.run') }
     : { edit: 'Edit message', save: 'Save and run in new branch', cancel: 'Cancel', source: 'Original conversation', regenerate: 'Regenerate answer', run: 'Run again in new branch' }
 
   test('Studio and cookie-backed public chat keep originals when editing', async ({ page, browser }, info) => {

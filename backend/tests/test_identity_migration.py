@@ -1,4 +1,4 @@
-"""TASK-0022 follow-up: 0016 backfills the Slack workspace of existing identities (SQLite always, Postgres when configured)."""
+"""follow-up: 0016 backfills the Slack workspace of existing identities (SQLite always, Postgres when configured)."""
 import os, uuid
 import pytest
 from alembic import command

@@ -15,8 +15,7 @@
 ## Objective
 
 Let the builder upload a logo for a published chat, and give a chat without one a default look: the title's first
-letter and a built-in picture. Owner request on 2026-10-27 ("trong chatbot, có thể cho user upload logo và tạo 1
-default illustration"; "Ok, làm TASK-0145 theo đề xuất, đưa vào 0.9.0").
+letter and a built-in picture. Owner request on 2026-10-27 ("in the chatbot, can we let the user upload a logo and make a default illustration"; "OK, do TASK-0145 as proposed, put it in 0.9.0").
 
 ## Scope
 

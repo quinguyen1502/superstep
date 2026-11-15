@@ -1,7 +1,7 @@
-"""Per-user provider credentials (LLM, TypeSafe, SMTP; TASK-0051 adds non-secret `settings`): create/list/delete, model list / connection test, and the run-time resolver.
+"""Per-user provider credentials (LLM, TypeSafe, SMTP; adds non-secret `settings`): create/list/delete, model list / connection test, and the run-time resolver.
 
 Secrets are encrypted before they reach the repository and are only decrypted by `resolve()`.
-Provider specifics (defaults, key requirement, headers, model listing) live in engine/providers.py (DEC-0032)."""
+Provider specifics (defaults, key requirement, headers, model listing) live in engine/providers.py."""
 import json, time, uuid
 from typing import Any, Callable, Dict, Optional
 from ..core import crypto

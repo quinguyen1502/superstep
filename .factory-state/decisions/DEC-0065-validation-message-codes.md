@@ -16,7 +16,7 @@
 
 The static workflow checks (`engine/validator.py` and the node modules it calls) return English strings. The API sends
 them as `errors`, and the editor showed them as they came, so a Vietnamese UI listed "Retriever node r: choose a
-knowledge base" under "1 lỗi cần sửa" (REV-0114). API errors are already translated by code (`errors.<CODE>`,
+knowledge base" under "1 error to fix" (in vi) (REV-0114). API errors are already translated by code (`errors.<CODE>`,
 DEC-0010), but these messages had no code. About 130 different messages come from twelve modules.
 
 Options:

@@ -1,4 +1,4 @@
-/** Knowledge bases (TASK-0012): API types shared by the settings section and the Retriever node settings. */
+/** Knowledge bases: API types shared by the settings section and the Retriever node settings. */
 export type KbFile = { id: string; filename: string; size: number; chunks: number; created: number }
 export type KnowledgeBase = { id: string; name: string; description: string | null; model: string; credential_id: string | null
   embedder: string | null; dims?: number | null; documents: number; chunks: number; created: number; files?: KbFile[] }

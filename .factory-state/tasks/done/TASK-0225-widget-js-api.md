@@ -80,7 +80,7 @@ Give the widget a JS API, theming and signed-in embeds via token.
 
 ## Activity Log
 
-- 2026-11-03: Owner accepted PR #290 ("Duyệt") after e6b2f7c85b22eaae3d2428abb4f665ee5b0e4260 passed 21 CI checks with the expected GHCR publication skip. Move TASK-0225 to done on the same PR, record owner acceptance in REV/QA-0220, rebase on current develop 6218d840 and squash to one commit for Ready. Production/test/docs source is preserved; only lifecycle artifacts change. Required validation and checks apply to the rewritten head. Acceptance authorizes Ready finalisation; merging/publication still require explicit instructions.
+- 2026-11-03: Owner accepted PR #290 ("Approve") after e6b2f7c85b22eaae3d2428abb4f665ee5b0e4260 passed 21 CI checks with the expected GHCR publication skip. Move TASK-0225 to done on the same PR, record owner acceptance in REV/QA-0220, rebase on current develop 6218d840 and squash to one commit for Ready. Production/test/docs source is preserved; only lifecycle artifacts change. Required validation and checks apply to the rewritten head. Acceptance authorizes Ready finalisation; merging/publication still require explicit instructions.
 
 - 2026-11-03: Implementation complete; advisory REV-0220 and QA-0220 pass. Move to review for one Draft PR. Full Factory profile 8/8 passes; canonical root build/lint/tests repeat successfully (frontend 157, React 18, TypeScript SDK 94). All 16 original targeted chat regressions pass, and the final widget/native acceptance suite passes 3/3. Screenshots en/vi/custom/dark visually inspected outside Git. Human acceptance remains pending; no move to done or release approval is inferred.
 
@@ -90,7 +90,7 @@ Give the widget a JS API, theming and signed-in embeds via token.
 
 - Branch `factory/task-0225-widget-js-api` from `develop`.
 
-- 2026-11-03: Owner requested implementing the recommended TASK-0225 ("Ok tiến hành đi") through tests/screenshots and a separate Draft PR. Start from merged develop 6218d840; dependencies TASK-0218 and TASK-0223 are integrated. Preserve anonymous embeds and shared version 0.10.2; screenshots stay outside Git. No merge/release authority.
+- 2026-11-03: Owner requested implementing the recommended TASK-0225 ("OK, go ahead") through tests/screenshots and a separate Draft PR. Start from merged develop 6218d840; dependencies TASK-0218 and TASK-0223 are integrated. Preserve anonymous embeds and shared version 0.10.2; screenshots stay outside Git. No merge/release authority.
 
 - 2026-11-03: factory ready exited 0 before implementation. task-start preparation is complete: clean integration base, accepted REQ-0082/DEC-0077/DEC-0079, merged dependencies and dedicated branch. Owner already requested full implementation, so continue through development/validation/review/QA without a second start confirmation. UX: existing bubble and iframe, programmable open/close, per-host theme/locale, signed-in user/history switching and logout to stored anonymous identity, typed-safe events. Origin/source checks and stale-identity cancellation are mandatory; tokens remain in memory and never URLs/events/logs.
 

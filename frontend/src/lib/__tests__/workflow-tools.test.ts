@@ -3,7 +3,7 @@ import { SOURCES, defaultFields, newTool } from '@/lib/agent'
 import { liveSteps } from '@/lib/chat'
 import { buildTrace, type RunEvent } from '@/lib/trace'
 
-/** Workflow tools in the editor and the chat (TASK-0136, REQ-0073). */
+/** Workflow tools in the editor and the chat. */
 describe('workflow tools', () => {
   it('are a tool source with empty settings', () => {
     expect(SOURCES).toContain('workflow')

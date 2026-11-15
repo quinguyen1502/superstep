@@ -44,7 +44,7 @@ Release metadata on `factory/task-0276-release-0-12-0` against `develop` `ca278c
 
 ## Assumptions
 
-- The owner instruction “ok, release đi” authorises this release and the later checked publication steps.
+- The owner instruction “ok, release it” authorises this release and the later checked publication steps.
 
 ## Required Follow-Up
 

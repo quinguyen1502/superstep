@@ -1,4 +1,4 @@
-"""Administrative audit log (TASK-0029): who changed roles, shares, teams, ownership, accounts and policy."""
+"""Administrative audit log: who changed roles, shares, teams, ownership, accounts and policy."""
 from __future__ import annotations
 import json, time, uuid
 from typing import Optional

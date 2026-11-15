@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from fastapi import Depends, Request, WebSocket
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ..core import config, security
+from ..engine import activity, embeddings, llm
 from ..core.errors import AppError
 from ..services.notification_hub import NotificationHub, make_notification_hub
 from ..models.database import Database
@@ -12,6 +13,15 @@ from ..services.audit_service import AuditService
 from ..services.code_service import CodeService
 from ..services.inbox_service import InboxService
 from ..services.policy_service import PolicyService
+from ..repositories.dataset_access import DatasetAccessRepository
+from ..repositories.dataset_rows import DatasetRowRepository
+from ..repositories.datasets import DatasetRepository
+from ..services.dataset_access import DatasetAccessService
+from ..services.dataset_connected import DatasetConnectedService
+from ..services.dataset_csv import DatasetCsvService
+from ..services.dataset_rows import DatasetRowService
+from ..services.dataset_runtime import DatasetRuntimeService
+from ..services.dataset_service import DatasetService
 from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
 from ..core import permissions as P
@@ -59,6 +69,12 @@ from ..services.browser_approval_service import BrowserApprovalService
 from ..repositories.browser_intents import BrowserIntentRepository
 from ..services.browser_runtime_service import BrowserRuntimeService
 from .. import storage
+from ..services.health_probes import Probes
+from ..services.usage_service import UsageService
+from ..services.usage_budgets import UsageBudgetService
+from ..repositories.usage_budgets import UsageBudgetRepository
+from ..repositories.usage import UsageRepository
+from ..repositories.run_usage import RunUsageRepository
 from ..services.telemetry import Telemetry
 from ..services.workflow_service import WorkflowService
 from ..services.workflow_test_service import WorkflowTestService
@@ -101,7 +117,8 @@ def get_job_queue() -> JobQueue:
 
 @lru_cache
 def run_worker() -> RunWorker:
-    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service,browser=browser_session_service)
+    return RunWorker(get_job_queue(), run_service, delivery_service, schedule_service, approval_service, chat_run_service, langsmith_service,browser=browser_session_service,
+                     telemetry=get_telemetry(), expire_dataset_receipts=lambda: dataset_row_service().expire_receipts())
 
 
 @lru_cache
@@ -111,7 +128,7 @@ def get_rate_limiter() -> RateLimiter:
 
 @lru_cache
 def get_counter() -> Counter:
-    return make_counter(config.REDIS_URL)  # blocking twin of the rate limiter for quotas inside runs (TASK-0051)
+    return make_counter(config.REDIS_URL)  # blocking twin of the rate limiter for quotas inside runs
 
 
 def delivery_service() -> DeliveryService:
@@ -121,7 +138,7 @@ def delivery_service() -> DeliveryService:
 
 @lru_cache
 def get_notification_hub() -> NotificationHub:
-    return make_notification_hub(config.REDIS_URL)  # Redis pub/sub when REDIS_URL is set, else in-process (TASK-0021)
+    return make_notification_hub(config.REDIS_URL)  # Redis pub/sub when REDIS_URL is set, else in-process
 
 
 def notification_service() -> NotificationService:
@@ -157,12 +174,12 @@ def attachment_files() -> AttachmentFiles:
     db = get_db(); return AttachmentFiles(ChatAttachmentRepository(db), _attachment_stores(db))
 
 def attachment_migration():
-    """Moving files between backends (TASK-0194); used by the admin route and `app.admin_cmd`."""
+    """Moving files between backends; used by the admin route and `app.admin_cmd`."""
     from ..services.attachment_migration import AttachmentMigration
     db = get_db(); return AttachmentMigration(ChatAttachmentRepository(db), _attachment_stores(db), access_service())
 
 def attachment_archive():
-    """Attachment bytes in and out of a backup archive (TASK-0194); used by `app.admin_cmd`."""
+    """Attachment bytes in and out of a backup archive; used by `app.admin_cmd`."""
     from ..services.attachment_archive import AttachmentArchive
     db = get_db(); return AttachmentArchive(ChatAttachmentRepository(db), _attachment_stores(db))
 
@@ -198,9 +215,27 @@ def agent_server_service() -> AgentServerService:
                                              AuthService(UserRepository(db)).current, access=access_service(), runner=run_service)
 
 
+def usage_budget_service() -> UsageBudgetService:
+    return UsageBudgetService(UsageBudgetRepository(get_db()), access_service(), audit_service(), notification_service())
+
+
+def usage_service() -> UsageService:
+    return UsageService(UsageRepository(get_db()), access_service())
+
+
+@lru_cache
+def get_probes() -> Probes:
+    db = get_db(); return Probes(db, RunRepository(db), get_job_queue(), get_run_bus(), bool(config.REDIS_URL), config.IS_PROD)
+
+
 @lru_cache
 def get_telemetry() -> Telemetry:
-    return Telemetry()  # exporters from OTEL_* / LANGSMITH_* env; no-op when none
+    t = Telemetry()  # exporters from OTEL_* / LANGSMITH_* env; no-op when none
+    if t.metrics_enabled:
+        llm.observe(t.model_call)  # per-call model latency and time to first token
+        embeddings.observe(t.embedding_call)  # embedding tokens and cost, including ingestion outside a run
+        activity.observe(t.activity_event)  # channels, MCP, browser, sandbox and product limits
+    return t
 
 
 def workflow_service() -> WorkflowService:
@@ -208,7 +243,8 @@ def workflow_service() -> WorkflowService:
                                           access=access_service(), shares=WorkflowShareRepository(db), users=UserRepository(db),
                                           teams=TeamRepository(db), audit=audit_service(), tests=WorkflowTestRepository(db),
                                           chat_triggers=ChatTriggerRepository(db), chat_sessions=ChatSessionRepository(db),
-                                          jobs=get_job_queue(), export_resources=mcp_service().check_export)
+                                          jobs=get_job_queue(), export_resources=mcp_service().check_export,
+                                          dataset_runtime=dataset_runtime_service())
 
 def template_service() -> TemplateService:
     return TemplateService(TemplateRepository(get_db()), workflow_service(), access_service(), tests=workflow_test_service)
@@ -231,6 +267,29 @@ def auto_approval_service() -> AutoApprovalService:
 def auto_review_service() -> AutoReviewService:
     db = get_db(); creds = credential_service()
     return AutoReviewService(ApprovalRepository(db), AutoApprovalService(SettingsRepository(db)), creds.resolve)
+
+def dataset_service() -> DatasetService:
+    return DatasetService(DatasetRepository(get_db()), access_service(), audit_service())
+
+def dataset_row_service() -> DatasetRowService:
+    datasets = dataset_service()
+    return DatasetRowService(datasets, DatasetRowRepository(datasets.repo))
+
+def dataset_access_service() -> DatasetAccessService:
+    datasets = dataset_service()
+    return DatasetAccessService(datasets, DatasetAccessRepository(datasets.repo))
+
+def dataset_runtime_service() -> DatasetRuntimeService:
+    access = dataset_access_service()
+    return DatasetRuntimeService(access, DatasetRowService(access.datasets, DatasetRowRepository(access.datasets.repo)))
+
+def dataset_connected_service() -> DatasetConnectedService:
+    access = dataset_access_service()
+    return DatasetConnectedService(access, DatasetRowService(access.datasets, DatasetRowRepository(access.datasets.repo)))
+
+def dataset_csv_service() -> DatasetCsvService:
+    datasets = dataset_service()
+    return DatasetCsvService(datasets, DatasetRowRepository(datasets.repo))
 
 def team_service() -> TeamService:
     db = get_db(); return TeamService(TeamRepository(db), UserRepository(db), access_service(), audit_service())
@@ -264,7 +323,8 @@ def run_service() -> RunService:
     db = get_db(); return RunService(WorkflowRepository(db), RunRepository(db), credential_service(), get_run_bus(), get_telemetry(), WorkflowVersionRepository(db), notification_service(), NodeResultRepository(db), approval_service(), delivery_service,
                       knowledge=knowledge_service(), mcp=mcp_service(), access=access_service(),
                       policy=policy_service(), quota=get_counter(), audit=audit_service(), tests=workflow_test_service, chat=chat_run_service,
-                      jobs=get_job_queue,browser=browser_session_service() if config.browser_runtime_enabled() else None)
+                      jobs=get_job_queue,browser=browser_session_service() if config.browser_runtime_enabled() else None,
+                      usage=RunUsageRepository(db), budgets=usage_budget_service(), dataset_runtime=dataset_runtime_service())
 
 def langsmith_service() -> LangSmithService:
     db = get_db(); return LangSmithService(SettingsRepository(db), access_service(), WorkflowTestRepository(db), WorkflowRepository(db),
@@ -280,7 +340,7 @@ def channel_service() -> ChannelService:
 def approval_service() -> ApprovalService:
     db = get_db(); return ApprovalService(ApprovalRepository(db), UserRepository(db), WorkflowRepository(db), RunRepository(db), channel_service(), get_job_queue().enqueue,
                                          limiter=get_rate_limiter(), notifier=notification_service(), chat=chat_run_service,
-                                         reviewer=auto_review_service(),browser=lambda:browser_session_service().approvals)
+                                         reviewer=auto_review_service(),browser=lambda:browser_session_service().approvals, telemetry=get_telemetry())
 
 def inbox_service() -> InboxService:
     return InboxService(approval_service(), run_service(), access_service())
@@ -309,8 +369,8 @@ UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 def current_user(request: Request, cred: HTTPAuthorizationCredentials | None = Depends(bearer)) -> dict:
-    """The signed-in, active user with role and permissions (database-checked per request, TASK-0014).
-    A Bearer token wins; otherwise the session cookie (TASK-0045), whose writes must carry X-Requested-With (CSRF)."""
+    """The signed-in, active user with role and permissions (database-checked per request, ).
+    A Bearer token wins; otherwise the session cookie, whose writes must carry X-Requested-With (CSRF)."""
     token = cred.credentials if cred else None
     if token is None and (token := request.cookies.get(security.SESSION_COOKIE)):
         if request.method in UNSAFE and request.headers.get(security.CSRF_HEADER) != security.CSRF_VALUE: raise AppError("AUTH_CSRF")

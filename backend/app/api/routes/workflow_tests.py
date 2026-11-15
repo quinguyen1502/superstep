@@ -1,4 +1,4 @@
-"""Workflow tests (TASK-0067, TASK-0068, REQ-0042): test cases of a workflow and the suite runs that check them."""
+"""Workflow tests: test cases of a workflow and the suite runs that check them."""
 from fastapi import APIRouter, Body, Depends
 from ..deps import current_user, limit_body, workflow_test_service
 

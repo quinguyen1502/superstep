@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-// Superstep "Step-up" mark (DEC-0047). Theme tokens only: tile = primary, arrow = primary-foreground,
+// Superstep "Step-up" mark. Theme tokens only: tile = primary, arrow = primary-foreground,
 // exponent square = brand-accent. `mono` draws everything in currentColor (no tile fill).
 export function LogoMark({ className, mono = false }: { className?: string; mono?: boolean }) {
   return (

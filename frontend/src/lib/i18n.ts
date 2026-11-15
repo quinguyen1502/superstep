@@ -18,7 +18,7 @@ syncHtmlLang(i18n.resolvedLanguage || 'en'); i18n.on('languageChanged', syncHtml
 
 export { errorText, type ApiErrorBody } from '@superstep/react/errors'
 
-/** The code of one validation message, sent next to the English `errors` (TASK-0132); null when it has none. */
+/** The code of one validation message, sent next to the English `errors`; null when it has none. */
 export type Issue = { code: string; params?: Record<string, unknown> } | null
 
 /** Validation messages in the UI language: `validation.<code>` when the API sent a code we know, else the English text. */
@@ -33,9 +33,19 @@ export function issueTexts(errors: string[], issues?: Issue[]): string[] {
 const DYNAMIC = new Set(['WORKFLOW_INVALID', 'NODE_FAILED', 'RUN_FAILED'])
 export function eventErrors(ev: { error?: ApiErrorBody; errors?: string[]; issues?: Issue[] }): string[] {
   if (!ev.error || DYNAMIC.has(ev.error.code || '')) return ev.errors ? issueTexts(ev.errors, ev.issues) : ev.error ? [errorText(ev.error)] : []
+  const details = ev.error.details
+  if (ev.error.code === 'DATASET_FILTER_INVALID' && details?.node && details?.position) {
+    const key = details.group
+      ? details.state_key ? 'dataset.emptyMappedGroupFilter' : 'dataset.invalidGroupFilter'
+      : details.state_key ? 'dataset.emptyMappedFilter' : 'dataset.invalidNodeFilter'
+    return [i18n.t(key, {
+      node: details.node, field: details.field, position: details.position, state_key: details.state_key, group: details.group,
+    })]
+  }
   return [errorText(ev.error)]
 }
 
+export const fmtCalendarDate = (value: string) => new Date(value).toLocaleDateString(i18n.resolvedLanguage, { timeZone: "UTC" })
 export const fmtDate = (t: number) => new Date(t * 1000).toLocaleString(i18n.resolvedLanguage)
 /** The UI language sent with run and chat requests, so offline (mock) answers match it. */
 export const uiLocale = (): string => i18n.resolvedLanguage ?? 'en'

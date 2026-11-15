@@ -165,12 +165,12 @@ npm run test:e2e
 | `handbook/` | Site tài liệu (Zensical) |
 | `sdk/` | Client Python (`superstep`) và TypeScript (`@superstep/sdk`) cho API công khai ([SDK](sdk/README.md)); spec ở `docs/api/openapi.public.json` |
 | `scripts/promo/` | Công cụ render video bắt đầu nhanh |
-| `.factory-state/` | Requirement, decision, task, review và QA |
+| `.factory/` | Quy trình giao việc (AI Software Factory); kho của nó lưu requirement, decision, task, review và QA |
 
 ## Đóng góp
 
 Thay đổi đi theo quy trình trong [`AGENTS.md`](AGENTS.md): một requirement và
-một task trong `.factory-state/`, branch `factory/task-<id>-<name>`, kiểm tra,
+một task trong kho của factory, branch `factory/task-<id>-<name>`, kiểm tra,
 review, và merge sau khi có người duyệt. Xem
 [Phát triển](https://quinguyen1502.github.io/superstep/vi/reference/development/)
 để biết cách cài môi trường test và quy ước của từng lớp.

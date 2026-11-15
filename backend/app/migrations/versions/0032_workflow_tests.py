@@ -1,4 +1,4 @@
-"""TASK-0067: workflow test cases, suite runs and their results (REQ-0042)."""
+"""workflow test cases, suite runs and their results."""
 from alembic import op
 import sqlalchemy as sa
 

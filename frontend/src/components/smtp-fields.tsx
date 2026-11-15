@@ -1,4 +1,4 @@
-/** SMTP credential settings (TASK-0051): host, port, security, user name and sender. The password is the credential's
+/** SMTP credential settings: host, port, security, user name and sender. The password is the credential's
  * secret field in the dialog. A preset fills the server of a common provider. */
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/input'

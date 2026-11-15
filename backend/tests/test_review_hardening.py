@@ -1,4 +1,4 @@
-"""TASK-0039 (REQ-0027): HTTP Tool SSRF guard, deterministic Condition matching, CORS origins, log redaction."""
+"""HTTP Tool SSRF guard, deterministic Condition matching, CORS origins, log redaction."""
 import logging, socket
 import httpx, pytest, respx
 from app.core import config

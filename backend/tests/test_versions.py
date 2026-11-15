@@ -1,4 +1,4 @@
-"""TASK-0008: workflow versions (save → version), diff, restore, run ↔ version tagging, migration backfill."""
+"""workflow versions (save → version), diff, restore, run ↔ version tagging, migration backfill."""
 import uuid
 import pytest
 from fastapi.testclient import TestClient

@@ -1,4 +1,4 @@
-"""TASK-0007: per-workflow tokens, REST trigger (async + sync), job queue + worker, webhook callback, cancel."""
+"""per-workflow tokens, REST trigger (async + sync), job queue + worker, webhook callback, cancel."""
 import json, time, uuid
 import httpx, pytest
 from fastapi.testclient import TestClient
@@ -103,7 +103,7 @@ def test_webhook_callback_receives_result(c, monkeypatch):
         if got: break
         time.sleep(0.1)
     event, body, req = got[0]
-    # TASK-0019: connected to the pinned resolved IP, Host kept; HMAC-signed with the token's signing secret
+    #: connected to the pinned resolved IP, Host kept; HMAC-signed with the token's signing secret
     assert req.url.host in ("127.0.0.1", "::1") and req.headers["host"] == "localhost:9"
     assert created["signing_secret"].startswith("whsec_")
     assert webhooks.verify_signature(created["signing_secret"], req.headers["x-studio-signature"], req.content)
@@ -120,7 +120,7 @@ def test_result_is_scoped_to_the_token(c):
 
 def test_cancel_queued_run_is_skipped(c):
     """Without the worker running, a queued run can be cancelled and the worker then skips it.
-    Uses the module client: a second TestClient would start the shared worker on another event loop (TASK-0039)."""
+    Uses the module client: a second TestClient would start the shared worker on another event loop."""
     import asyncio
     from app.api.deps import run_service, trigger_service
     from app.services.run_worker import RunWorker

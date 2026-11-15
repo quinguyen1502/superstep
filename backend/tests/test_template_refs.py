@@ -1,4 +1,4 @@
-"""TASK-0044: `{{state.field}}` paths and filters (DEC-0034)."""
+"""`{{state.field}}` paths and filters."""
 import pytest
 from app.core.errors import AppError
 from app.engine.runtime import run_stream

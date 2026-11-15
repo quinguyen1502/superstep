@@ -15,7 +15,7 @@ import { AUTO_MODES, DEFAULT_CAP, DEFAULT_MIN, MAX_CAP, MAX_RULES, RULE_EFFECTS,
 
 type Cred = { id: string; name: string; provider: string; hint?: string }
 
-/** AI review of approvals (TASK-0188, REQ-0081): shared by the Human node and an Agent's tool approval. Only the
+/** AI review of approvals: shared by the Human node and an Agent's tool approval. Only the
  * workflow owner or an admin may choose "auto" (owner decision 3); editors may choose "suggest". The judge is any chat
  * credential (decision 4). The agreement rate comes from suggest mode (decision 1). */
 export function AutoApprovalSettings({ idp, value, wid, creds, canAuto, readOnly, onChange }: {

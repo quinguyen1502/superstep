@@ -71,4 +71,10 @@ node, nối state, và dùng lại công sức giữa các workflow.
 
     Xem workflow dưới dạng code LangGraph, và chạy nó độc lập.
 
+-   :material-table:{ .lg .middle } **[Tập dữ liệu](datasets.md)**
+
+    ---
+
+    Bảng có kiểu, CSV, quyền của workflow, và xuất độc lập.
+
 </div>

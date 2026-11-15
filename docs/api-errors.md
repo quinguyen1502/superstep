@@ -1,4 +1,4 @@
-# API response envelope and error codes (DEC-0010)
+# API response envelope and error codes
 
 ## Envelope (every REST endpoint)
 
@@ -23,7 +23,7 @@
 | Raising | `raise AppError("CODE", details=..., **template_params)`; no per-route try/except |
 | Success wrapping | `schemas/envelope.py` `EnvelopeResponse` (FastAPI `default_response_class`) |
 | Error wrapping | `api/error_handlers.py`: one handler each for AppError, 422, HTTP 404/405, unhandled Exception |
-| Body ceilings | `api/body_limit.py` `BodyLimit`: a body past the route's ceiling answers 413 `PAYLOAD_TOO_LARGE`, whether it declares a length or not and whatever the route parses (JSON, form, file) (TASK-0207, TASK-0208) |
+| Body ceilings | `api/body_limit.py` `BodyLimit`: a body past the route's ceiling answers 413 `PAYLOAD_TOO_LARGE`, whether it declares a length or not and whatever the route parses (JSON, form, file) |
 | Frontend unwrap | `frontend/src/lib/api.ts` `api()` |
 | Frontend translation | `frontend/src/locales/{en,vi}.json` → `errors.<CODE>`; `lib/i18n.ts` `errorText()` |
 
@@ -45,6 +45,52 @@
 | `VALIDATION_ERROR` | 422 | Request validation failed |
 | `BAD_REQUEST` | 400 | Bad request |
 | `NOT_FOUND` | 404 | Resource not found |
+| `DATASET_TOKEN_SCOPE` | 403 | The dataset token does not allow this operation |
+| `DATASET_WORKFLOW_NOT_SHARED` | 403 | Share the workflow with team {team} before granting dataset access |
+| `DATASET_TEAM_FORBIDDEN` | 403 | You must be a member of the team to create a dataset there |
+| `DATASET_GRANT_DENIED` | 403 | The workflow does not have the required dataset grant |
+| `DATASET_MANAGE_DENIED` | 403 | Only the dataset owner or an admin can change its schema, access, or tokens, or delete it |
+| `DATASET_OWNER_INVALID` | 400 | The new owner must be a member of the dataset's team who can manage resources |
+| `DATASET_TOKEN_NOT_FOUND` | 404 | Dataset token not found |
+| `DATASET_RECEIPT_CONFLICT` | 409 | The dataset write key was already used with different arguments |
+| `DATASET_NODE_ARGUMENTS_INVALID` | 400 | Invalid arguments or binding for the Dataset node |
+| `DATASET_CSV_INVALID` | 400 | Invalid CSV record at line {row} |
+| `DATASET_CSV_LIMIT` | 413 | CSV must be at most {max} bytes |
+| `DATASET_CSV_RECORD_LIMIT` | 413 | CSV import supports at most {max} records |
+| `DATASET_CSV_MAPPING_INVALID` | 400 | Map each source column to a distinct dataset field or skip it |
+| `DATASET_CSV_ROWS_INVALID` | 400 | Fix the CSV row errors before importing |
+| `DATASET_NOT_FOUND` | 404 | Dataset not found |
+| `DATASET_COLUMN_NOT_FOUND` | 404 | Dataset column not found |
+| `DATASET_COLUMN_READ_ONLY` | 400 | Dataset column {field} is read-only |
+| `DATASET_COLUMN_RULE_VIOLATION` | 400 | Value violates the validation rules for {field} |
+| `DATASET_COLUMN_RULE_EXISTING_ROWS` | 409 | {count} existing rows violate the rules for {field} |
+| `DATASET_NAME_TAKEN` | 409 | A dataset with this name already exists in this scope |
+| `DATASET_COLUMN_KEY_TAKEN` | 409 | A dataset column already uses this field key |
+| `DATASET_COLUMN_LIMIT` | 400 | A dataset can define at most {max} column keys |
+| `DATASET_BINDING_SCHEMA_MISMATCH` | 409 | The connected dataset schema does not match field {field} |
+| `DATASET_BINDING_INVALID` | 400 | Invalid dataset connection setting {setting} |
+| `DATASET_SCHEMA_CONFLICT` | 409 | The dataset changed. Reload its definition and try again |
+| `DATASET_SCHEMA_INCOMPATIBLE` | 409 | Changing the definition of field {field} would be incompatible |
+| `DATASET_DEFINITION_INVALID` | 400 | Invalid dataset definition for {field} |
+| `DATASET_VALUE_INVALID` | 400 | Field {field} requires a valid {kind} value |
+| `DATASET_SCHEMA_HAS_ROWS` | 409 | A required column needs a default while this dataset has rows |
+| `DATASET_ROW_NOT_FOUND` | 404 | Dataset row not found |
+| `DATASET_ROW_CONFLICT` | 409 | The row changed. Reload it and try again |
+| `DATASET_BATCH_INVALID` | 400 | One or more dataset cells are invalid |
+| `DATASET_BATCH_CONFLICT` | 409 | The dataset batch conflicts with existing rows |
+| `DATASET_UNIQUE_CONFLICT` | 409 | A row already has this unique field value |
+| `DATASET_UNIQUE_DUPLICATES` | 409 | Field {field} cannot become unique because {count} rows share a value |
+| `DATASET_EXPORT_FILTER_UNSUPPORTED` | 400 | This Dataset filter is not yet supported by code export |
+| `DATASET_EXPORT_AGGREGATE_UNSUPPORTED` | 400 | Dataset aggregation is not yet supported by code export |
+| `DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED` | 400 | A Dataset column type is not yet supported by code export |
+| `DATASET_FILTER_INVALID` | 400 | Invalid dataset filter for {field} |
+| `DATASET_SUMMARY_INVALID` | 400 | Invalid dataset summary for {field} |
+| `DATASET_UPSERT_KEY_INVALID` | 400 | Upsert requires a value for the unique field {field} |
+| `DATASET_ROW_TOO_LARGE` | 413 | A dataset row must be at most {max} bytes |
+| `DATASET_ROW_LIMIT` | 409 | A dataset can contain at most {max} rows |
+| `DATASET_SNAPSHOT_INVALID` | 400 | The dataset snapshot is not valid for {binding} |
+| `DATASET_SNAPSHOT_TOO_LARGE` | 409 | A dataset snapshot can contain at most {max} rows |
+| `USAGE_BUDGET_EXISTS` | 409 | A monthly budget already exists for this user or team |
 | `METHOD_NOT_ALLOWED` | 405 | Method not allowed |
 | `PAYLOAD_TOO_LARGE` | 413 | Payload too large |
 | `INTERNAL_ERROR` | 500 | Internal server error |
@@ -106,6 +152,7 @@
 | `PROVIDER_UNREACHABLE` | 502 | Could not reach {provider} at {base_url}: is the server running and reachable from the API? |
 | `PROVIDER_AUTH_FAILED` | 400 | {provider} rejected the API key: {reason} |
 | `PROVIDER_BAD_RESPONSE` | 502 | {provider} returned an unexpected response: {reason} |
+| `PROVIDER_RATE_LIMITED` | 502 | {provider} is rate limiting requests: {reason} |
 | `MODEL_NOT_FOUND` | 400 | {provider} has no model named {model} |
 | `CREDENTIAL_HEADER_UNSUPPORTED` | 400 | {provider} does not accept the header {header} |
 | `PROVIDER_EMBEDDINGS_UNSUPPORTED` | 400 | {provider} does not provide embeddings; choose another credential for this knowledge base |
@@ -184,6 +231,7 @@
 | `DEMO_READ_ONLY` | 403 | The public demo is read-only: you can open, edit and run workflows, but not save changes |
 | `CODE_RUNTIME_OFF` | 400 | Code nodes are turned off on this server (STUDIO_ENABLE_CODE_NODES) |
 | `CODE_RUNTIME_UNAVAILABLE` | 503 | Code nodes cannot run on this server: {reason} |
+| `SERVICE_NOT_READY` | 503 | The service is not ready: the database or Redis does not answer |
 | `CODE_INVALID` | 400 | Code node {node}: {reason} |
 | `CODE_FAILED` | 400 | Code node {node} raised {error} |
 | `CODE_TIMEOUT` | 400 | Code node {node} was stopped after {seconds} s |
@@ -300,24 +348,24 @@
 Codes used only in WebSocket events (`RUN_*`, `NODE_FAILED`) list their nominal status for reference.
 
 
-### LLM providers (TASK-0030)
+### LLM providers
 
-`PROVIDER_*` and `MODEL_NOT_FOUND` come from `POST /api/providers/{id}/test`, `GET /api/credentials/{id}/models` and, as the `code` of a run `error` event, from LLM nodes. `PROVIDER_AUTH_FAILED` is deliberately 400 (not 401) so the UI does not treat a rejected provider key as an expired studio session. `PROVIDER_UNREACHABLE` in Docker usually means the base URL says `localhost`: use `http://host.docker.internal:<port>` (see the handbook, *LLM providers*).
+`PROVIDER_*` and `MODEL_NOT_FOUND` come from `POST /api/providers/{id}/test`, `GET /api/credentials/{id}/models` and, as the `code` of a run `error` event, from LLM nodes. `PROVIDER_RATE_LIMITED` is an HTTP 429 from the provider; like `PROVIDER_BAD_RESPONSE` it is 502 to API clients and triggers a configured model fallback. `PROVIDER_AUTH_FAILED` is deliberately 400 (not 401) so the UI does not treat a rejected provider key as an expired studio session. `PROVIDER_UNREACHABLE` in Docker usually means the base URL says `localhost`: use `http://host.docker.internal:<port>` (see the handbook, *LLM providers*).
 
 `PROVIDER_EMBEDDINGS_UNSUPPORTED` and `KB_EMBEDDING_DIMENSION_MISMATCH` come from knowledge-base uploads, re-index, search and `POST /api/credentials/{id}/embeddings/test`. A knowledge base stores the dimension of its vectors (`dims`); a model that suddenly returns another size (same name, e.g. a re-pulled local model) is refused instead of mixing vectors. Changing the model or credential still re-indexes automatically.
 
-### Send email nodes (TASK-0051)
+### Send email nodes
 
 `CREDENTIAL_SETTINGS_INVALID` comes from creating, editing or testing an SMTP credential (`details.field` names the setting). `EMAIL_HOST_BLOCKED`, `EMAIL_AUTH_FAILED` and `EMAIL_SEND_FAILED` come from its *Test connection* and, as the `code` of a run `error` event, from Send email nodes, together with the other `EMAIL_*` codes. `EMAIL_AUTH_FAILED` is 400 (not 401) for the same reason as `PROVIDER_AUTH_FAILED`. `EMAIL_RATE_LIMITED` counts recipients per workflow owner in a fixed one-hour window (`STUDIO_EMAIL_NODE_HOURLY_LIMIT`, default 100).
 
-### Code mode of Tool nodes (TASK-0053)
+### Code mode of Tool nodes
 
-The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Code mode. `CODE_FAILED`, `CODE_INVALID` (raised by the code itself), `CODE_RESULT_NOT_JSON`, `CODE_TIMEOUT` and `CODE_MEMORY` events also carry `code_output` with `stdout`, `traceback` and `runtime`. The `DEMO_*` codes appear only with `STUDIO_DEMO_MODE=true` (the public demo, `docs/deploy/demo.md`). `CODE_RUNTIME_OFF` and `CODE_RUNTIME_UNAVAILABLE` mean the server cannot run code at all: the mode is off (`STUDIO_ENABLE_CODE_NODES`), Docker is not reachable, or the image (`STUDIO_CODE_IMAGE`, default `studio-code:1`) is missing. TypeScript nodes (TASK-0080) use their own image (`STUDIO_CODE_TS_IMAGE`, default `studio-code-ts:1`) or, on the subprocess runtime, the `deno` binary (`STUDIO_DENO`); a TypeScript import outside `STUDIO_CODE_TS_PACKAGES`, or one that is not in Deno's cache, is `CODE_INVALID`. The allowed entries are pinned `name@major` (default `npm:zod@3,npm:date-fns@4`) and an import must name the same major (`npm:zod@3`, `npm:zod@3.25.1` or `npm:zod@3/mini`); an unversioned `npm:zod` or another major is refused at save time with a reason that names the allowed spec (`import "npm:zod" needs a version: use "npm:zod@3"`), and an action Deno has no permission for (files, network, environment, processes) is `CODE_FAILED`.
+The `CODE_*` codes are the `code` of a run `error` event from a Tool node in Code mode. `CODE_FAILED`, `CODE_INVALID` (raised by the code itself), `CODE_RESULT_NOT_JSON`, `CODE_TIMEOUT` and `CODE_MEMORY` events also carry `code_output` with `stdout`, `traceback` and `runtime`. The `DEMO_*` codes appear only with `STUDIO_DEMO_MODE=true` (the public demo, `docs/deploy/demo.md`). `CODE_RUNTIME_OFF` and `CODE_RUNTIME_UNAVAILABLE` mean the server cannot run code at all: the mode is off (`STUDIO_ENABLE_CODE_NODES`), Docker is not reachable, or the image (`STUDIO_CODE_IMAGE`, default `studio-code:1`) is missing. TypeScript nodes use their own image (`STUDIO_CODE_TS_IMAGE`, default `studio-code-ts:1`) or, on the subprocess runtime, the `deno` binary (`STUDIO_DENO`); a TypeScript import outside `STUDIO_CODE_TS_PACKAGES`, or one that is not in Deno's cache, is `CODE_INVALID`. The allowed entries are pinned `name@major` (default `npm:zod@3,npm:date-fns@4`) and an import must name the same major (`npm:zod@3`, `npm:zod@3.25.1` or `npm:zod@3/mini`); an unversioned `npm:zod` or another major is refused at save time with a reason that names the allowed spec (`import "npm:zod" needs a version: use "npm:zod@3"`), and an action Deno has no permission for (files, network, environment, processes) is `CODE_FAILED`.
 
-`CODE_LANGUAGE_UNSUPPORTED` (TASK-0079) means the node's `data.language` is unknown or not in `STUDIO_CODE_LANGUAGES` on this server (`python` by default). Nodes without a `language` are Python. It is raised before anything runs, by a run and by *Test with sample state*; saving such a graph reports the same problem as a validation error.
+`CODE_LANGUAGE_UNSUPPORTED` means the node's `data.language` is unknown or not in `STUDIO_CODE_LANGUAGES` on this server (`python` by default). Nodes without a `language` are Python. It is raised before anything runs, by a run and by *Test with sample state*; saving such a graph reports the same problem as a validation error.
 
-`CODE_WRITE_FORBIDDEN` (TASK-0054) comes from saving a workflow, restoring a version, using or importing a template, and any other write that adds a Code node or changes its `code`, when the user's role lacks `code.write` (admins only by default). Running, moving, renaming or deleting a Code node, and duplicating a workflow, stay allowed. Nothing is stored when it is refused.
-`AUTO_APPROVAL_FORBIDDEN` (TASK-0186, REQ-0081) comes from saving a workflow, restoring a version or any other write that turns a node's AI review to `auto` or changes an `auto` policy, when the caller is neither the workflow owner nor an admin. Editors may save `suggest`. Nothing is stored when it is refused. `AUTO_APPROVAL_DISABLED` comes from the AI review endpoints when the operator turned the feature off (`STUDIO_AUTO_APPROVAL=off`).
+`CODE_WRITE_FORBIDDEN` comes from saving a workflow, restoring a version, using or importing a template, and any other write that adds a Code node or changes its `code`, when the user's role lacks `code.write` (admins only by default). Running, moving, renaming or deleting a Code node, and duplicating a workflow, stay allowed. Nothing is stored when it is refused.
+`AUTO_APPROVAL_FORBIDDEN` comes from saving a workflow, restoring a version or any other write that turns a node's AI review to `auto` or changes an `auto` policy, when the caller is neither the workflow owner nor an admin. Editors may save `suggest`. Nothing is stored when it is refused. `AUTO_APPROVAL_DISABLED` comes from the AI review endpoints when the operator turned the feature off (`STUDIO_AUTO_APPROVAL=off`).
 <!-- --8<-- [end:catalog] -->
 
 ## Browser connections

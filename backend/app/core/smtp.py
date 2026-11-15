@@ -1,4 +1,4 @@
-"""SMTP delivery shared by system e-mail (services/mailer.py) and Send email nodes (engine/emails.py; TASK-0051, DEC-0040).
+"""SMTP delivery shared by system e-mail (services/mailer.py) and Send email nodes (engine/emails.py; ).
 
 Settings: {host, port, security, username, password, sender, allow_private, tls_optional}.
 - `security`: "starttls" (upgrade before login, required unless `tls_optional`), "ssl" (TLS from the first byte) or "none".

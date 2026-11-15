@@ -1,4 +1,4 @@
-"""TASK-0066: Human node deadlines. Validation, reminders (at most 5), reject / approve / escalate on timeout, one
+"""Human node deadlines. Validation, reminders (at most 5), reject / approve / escalate on timeout, one
 firing per reminder and deadline with several sweeps, all with an injected clock (no sleeping)."""
 import json, threading, time, uuid
 import pytest

@@ -1,6 +1,6 @@
-/** A run's marks on the canvas (TASK-0147): each node's status badge (`_status`) and duration (`_dur`), from the run's
+/** A run's marks on the canvas: each node's status badge (`_status`) and duration (`_dur`), from the run's
  *  events. One source for the live socket (one event at a time) and for opening a run from history (all its events),
- *  so the canvas also shows the steps a run took on the server, such as a parent's after its child run (TASK-0134). */
+ * so the canvas also shows the steps a run took on the server, such as a parent's after its child run. */
 type Ev = { type: string; node?: string; duration_ms?: number; status?: string }
 type CanvasNode = { id: string; data: Record<string, any> }
 

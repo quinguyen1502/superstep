@@ -117,7 +117,7 @@ def test_run_execute_cancel(svc):
     assert status in ("cancelled", "error") and svc.runs.rows[0].workflow_id == "adhoc"
 
 
-# ---- credentials (TASK-0005) ----
+# ---- credentials ----
 from app.core import crypto
 from app.services.credential_service import CredentialService
 

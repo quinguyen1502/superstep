@@ -10,7 +10,7 @@ PENDING = ("auto", "suggest")  # ApprovalWait.review while the AI review is runn
 
 
 class ApprovalRepository:
-    """Channels, identities, approval requests and their audit log (TASK-0022)."""
+    """Channels, identities, approval requests and their audit log."""
     def __init__(self, db: Database): self.db = db
 
     # ---- channels ----
@@ -64,7 +64,7 @@ class ApprovalRepository:
                                                                   ChannelIdentity.external_id == external_id, ChannelIdentity.verified_at.is_not(None)))
 
     def linked(self, kind: str, external_id: str, team: str = "") -> bool:
-        """Someone linked this account, verified or not (chat triggers tell "not linked" from "not verified", TASK-0075)."""
+        """Someone linked this account, verified or not (chat triggers tell "not linked" from "not verified", )."""
         with self.db.session() as s:
             return s.scalar(select(ChannelIdentity.user_id).where(ChannelIdentity.kind == kind, ChannelIdentity.team_id == team,
                                                                   ChannelIdentity.external_id == external_id).limit(1)) is not None
@@ -125,7 +125,7 @@ class ApprovalRepository:
                           .values(status=status, decided_by=by, decided_external=external, decided_at=time.time())).rowcount
             s.commit(); return n == 1
 
-    # ---- waiting steps (TASK-0065, DEC-0043) ----
+    # ---- waiting steps ----
     def add_wait(self, w: ApprovalWait, approvers: list[str]) -> ApprovalWait:
         """A new pause at this node. An older open wait of the same node is closed. Other nodes of the run keep theirs."""
         with self.db.session() as s:
@@ -164,7 +164,7 @@ class ApprovalRepository:
             s.commit(); return n == 1
 
     def due_waits(self, now: float, limit: int = 200) -> list[ApprovalWait]:
-        """Open steps of waiting runs whose deadline or next reminder has come (TASK-0066)."""
+        """Open steps of waiting runs whose deadline or next reminder has come."""
         with self.db.session() as s:
             q = (select(ApprovalWait).join(Run, Run.id == ApprovalWait.run_id)
                  .where(ApprovalWait.status == "waiting", Run.status == "waiting", or_(ApprovalWait.due_at <= now, ApprovalWait.next_remind_at <= now)))
@@ -197,7 +197,7 @@ class ApprovalRepository:
             return list(s.scalars(q.order_by(ApprovalWait.due_at.is_(None), ApprovalWait.due_at, ApprovalWait.created).limit(limit)))
 
     def set_opinion(self, wid: str, decision: Optional[str], confidence: Optional[float], reason: Optional[str]) -> None:
-        """The AI's opinion on a waiting step (TASK-0187), shown to the people who answer it."""
+        """The AI's opinion on a waiting step, shown to the people who answer it."""
         with self.db.session() as s:
             s.execute(update(ApprovalWait).where(ApprovalWait.id == wid).values(ai_decision=decision, ai_confidence=confidence, ai_reason=reason))
             s.commit()
@@ -214,7 +214,7 @@ class ApprovalRepository:
 
     def reserve_auto(self, workflow_id: str, day: float, limit: Optional[int]) -> bool:
         """Takes one automatic answer of the workflow's day if fewer than `limit` are taken (None: always, a rule's
-        reject). One compare-and-set, so parallel reviews cannot pass the cap together (TASK-0204). A new day starts
+        reject). One compare-and-set, so parallel reviews cannot pass the cap together. A new day starts
         from the answers already in the audit, so the upgrade day keeps its count."""
         with self.db.session() as s:
             if s.get(ApprovalAutoQuota, (workflow_id, day)) is None:

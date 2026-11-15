@@ -1,4 +1,4 @@
-"""TASK-0013: registry of MCP servers (stdio / Streamable HTTP) with encrypted secrets and cached tool lists."""
+"""registry of MCP servers (stdio / Streamable HTTP) with encrypted secrets and cached tool lists."""
 from alembic import op
 import sqlalchemy as sa
 

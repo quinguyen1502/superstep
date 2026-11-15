@@ -66,7 +66,7 @@ Common pattern: a storage abstraction with a local-folder default and an S3-comp
 
 ## Approval
 
-- Accepted by the owner, Thái Quí Nguyễn, on 2026-10-31: "Duyệt đề xuất cả 3 backend db, fs, s3, merge #229 và lập task". All three backends and the recommendations above are accepted as proposed: `db` default; install offers `fs` (single host) and `s3` (full stack); streaming downloads, no presigned URLs; `attachments migrate` with SHA-256 checks and resumable batches; deletion in the service with an orphan sweep; backup as in decision 6 with `--include-attachments`; the Render demo stays on `db`; `boto3` optional extra included in the images.
+- Accepted by the owner, Thái Quí Nguyễn, on 2026-10-31: "Approve the proposal with all 3 backends db, fs, s3, merge #229 and create the tasks". All three backends and the recommendations above are accepted as proposed: `db` default; install offers `fs` (single host) and `s3` (full stack); streaming downloads, no presigned URLs; `attachments migrate` with SHA-256 checks and resumable batches; deletion in the service with an orphan sweep; backup as in decision 6 with `--include-attachments`; the Render demo stays on `db`; `boto3` optional extra included in the images.
 
 ## Review Or Revisit Trigger
 

@@ -1,8 +1,8 @@
-/** A workflow's Chat settings (TASK-0085, REQ-0048): on/off, who may chat, the input / reply / messages fields, the memory
+/** A workflow's Chat settings: on/off, who may chat, the input / reply / messages fields, the memory
  *  window, which steps visitors see and how long chats are kept. Anyone with the link or signed-in users publish the chat
- *  at /c/{slug} (TASK-0142, DEC-0067): its address, title, intro, suggested messages and daily limit. An anonymous chat
- *  can be embedded (TASK-0143): the sites allowed to frame it, and an iframe and a widget snippet to copy. Its logo
- *  (TASK-0145) is read here and goes with Save as a data: URL; Remove clears it on Save too. */
+ * at /c/{slug}: its address, title, intro, suggested messages and daily limit. An anonymous chat
+ * can be embedded: the sites allowed to frame it, and an iframe and a widget snippet to copy. Its logo
+ * is read here and goes with Save as a data: URL; Remove clears it on Save too. */
 import { useContext, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, Check, ChevronDown, Copy, ExternalLink, ImageUp, Plus, Save, Trash2, X } from 'lucide-react'

@@ -1,4 +1,4 @@
-/** Agent hand-offs in the Config panel (TASK-0182, REQ-0078, DEC-0073): the agents this one may hand the conversation
+/** Agent hand-offs in the Config panel: the agents this one may hand the conversation
  *  to, each with a description the model reads, and the workflow's hand-off limit. The canvas shows the same targets as
  *  dashed links (`lib/handoffs.ts`). */
 import { useTranslation } from 'react-i18next'

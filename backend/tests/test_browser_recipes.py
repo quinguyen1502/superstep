@@ -26,7 +26,7 @@ def recipe():return json.loads((ROOT/'examples/browser/lookup_shipment.json').re
 def fixture(tmp_path,monkeypatch):
     import app.services.browser_session_service as module, json as _json
     service,calls,workers=scoped_service(tmp_path,monkeypatch)
-    # Recipes that exercise human fill/click waits opt into mutating approval (DEC-0085 default OFF).
+    # Recipes that exercise human fill/click waits opt into mutating approval.
     row=service.mcp.repo.get('browser'); settings=_json.loads(row.settings or '{}')
     settings.setdefault('allowed_origins',['https://example.com']); settings['require_mutating_approval']=True
     row.settings=_json.dumps(settings); service.mcp.repo.save(row)

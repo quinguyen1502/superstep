@@ -3,7 +3,7 @@ import { MSG, appearance, bridgeError, channelId, epochId, errorCode, eventHub, 
   type Appearance, type Command, type TokenProvider, type WidgetAPI, type WidgetEvent, type WidgetPayload } from './protocol'
 export type FrameState = { epoch: number; kind: 'pending' | 'guest' | 'app' | 'error'; options: Appearance; visitor?: string; code?: string }
 const WAIT = 10000
-/** Native host channels (TASK-0228): iOS WKScriptMessageHandler, Android WebMessageListener, React Native WebView. Top-level page only. */
+/** Native host channels: iOS WKScriptMessageHandler, Android WebMessageListener, React Native WebView. Top-level page only. */
 export type NativeHost = (message: string) => void
 export function nativeHost(win: Window): NativeHost | null {
   if (win.parent !== win) return null

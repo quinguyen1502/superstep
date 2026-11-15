@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N, SIMPLE } from './helpers'
 import { settled } from './helpers/alignment'
+import { vt } from './catalog'
 
 for (const [lang, theme] of [['en', 'light'], ['vi', 'dark']] as const) {
   test(`editor quick actions and fixed dialog body (${lang}, ${theme})`, async ({ page }) => {
@@ -38,14 +39,14 @@ for (const [lang, theme] of [['en', 'light'], ['vi', 'dark']] as const) {
     expect(appearance.outline).not.toBe('none')
     expect(appearance.outlineWidth).toBeGreaterThan(0)
     await page.locator('#config-tab-data').click()
-    const add = lang === 'en' ? 'Add state field' : 'Thêm trường state'
+    const add = lang === 'en' ? 'Add state field' : vt('editor.newField.title')
     await page.getByRole('button', { name: add, exact: true }).first().click()
     const dialog = page.getByRole('dialog')
     const name = dialog.locator('input').first()
     await name.fill('answer')
     await expect(dialog.getByRole('alert')).toBeVisible()
     await name.fill('summary')
-    await dialog.getByRole('button', { name: lang === 'en' ? 'Add field' : 'Thêm trường', exact: true }).click()
+    await dialog.getByRole('button', { name: lang === 'en' ? 'Add field' : vt('editor.addField'), exact: true }).click()
     await expect(page.locator('#config-pane-data').getByRole('combobox').first()).toContainText('summary')
     await page.locator('#undo-btn').click()
     await expect(page.locator('#config-pane-data').getByRole('combobox').first()).toContainText('answer')
@@ -88,7 +89,7 @@ test('public chat appears and completes in an already-open Studio log', async ({
     await page.bringToFront()
     await expect(page.getByTestId('history-row')).toHaveCount(1, { timeout: 30000 })
     await expect(page.getByTestId('history-row')).toContainText('A public message')
-    await expect(page.getByTestId('history-row').locator('[data-slot=badge]').first()).toContainText('đang chạy')
+    await expect(page.getByTestId('history-row').locator('[data-slot=badge]').first()).toContainText(vt('status.running'))
     await expect(page.getByTestId('history-duration')).not.toContainText('-')
     await expect(page.getByTestId('history-duration')).toHaveText(/\d/)
     await page.getByTestId('history-row').click()
@@ -97,7 +98,7 @@ test('public chat appears and completes in an already-open Studio log', async ({
     await page.screenshot({ path: test.info().outputPath('public-run-running.png') })
     await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'ok', { timeout: 30000 })
     await page.screenshot({ path: test.info().outputPath('public-run-completed.png') })
-    await expect(page.locator('#run-picker')).not.toContainText('Chọn run')
+    await expect(page.locator('#run-picker')).not.toContainText(vt('editor.pickRun'))
     expect(navigations).toBe(0)
   } finally { await guestContext.close() }
 })

@@ -1,4 +1,4 @@
-/** MCP tool node settings (TASK-0013): server, tool (from the last discovery) and one input per tool argument. */
+/** MCP tool node settings: server, tool (from the last discovery) and one input per tool argument. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'

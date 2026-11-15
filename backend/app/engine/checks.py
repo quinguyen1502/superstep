@@ -1,4 +1,4 @@
-"""Checks of a workflow test case (TASK-0067, REQ-0042): what a finished test run must show to pass.
+"""Checks of a workflow test case: what a finished test run must show to pass.
 
 A check is a small dict:
 - {"kind": "status", "value": "ok" | "error" | "waiting"}
@@ -6,7 +6,7 @@ A check is a small dict:
 - {"kind": "node", "node": id, "ran": true | false}
 - {"kind": "tool", "node": Agent node id, "tool": name, "called": true | false}: whether the Agent node's model called the
   tool and the call ran (its result or its own error went back to the model); a call refused, rejected by an approver
-  or with invalid arguments did not run (TASK-0119)
+  or with invalid arguments did not run
 - {"kind": "duration", "max": seconds}  /  {"kind": "cost", "max": US dollars}
 
 `evaluate` returns one result per check: {passed: True | False | None, expected, actual, reason}. `passed` None means
@@ -118,7 +118,7 @@ def evaluate(checks: List[dict], run: Dict[str, Any], workflow: Dict[str, Any]) 
 def tool_ran(e: dict, agent: str, tool: str) -> bool:
     """Whether this `node_finished` event is a call of `tool` by Agent node `agent` that ran (engine/agents step summary)."""
     a = e.get("agent") if isinstance(e.get("agent"), dict) else {}
-    # a slot is `agent/__tool/1` (DEC-0069); older events used `agent/__tool`
+    # a slot is `agent/__tool/1`; older events used `agent/__tool`
     return agents.agent_of_step(str(e.get("node") or "")) == agent and a.get("kind") == "tool" and a.get("tool") == tool and outcome(a) in RAN
 
 

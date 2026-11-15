@@ -1,4 +1,4 @@
-"""Five-field cron expressions for scheduled runs (TASK-0046): `minute hour day-of-month month day-of-week`.
+"""Five-field cron expressions for scheduled runs: `minute hour day-of-month month day-of-week`.
 
 Each field takes `*`, numbers, ranges `a-b`, lists `a,b` and steps `*/n` or `a-b/n`. Months and weekdays also take names
 (`JAN`, `MON`); weekday 0 and 7 are Sunday. As in classic cron, when both day fields are restricted a day matches if

@@ -15,7 +15,7 @@ from app.services.managed_tools import sheets, telegram
 from tests.test_chat_trigger_runs import c, api, user, H, TG
 
 SETTINGS = {"spreadsheet_id": "fixture-spreadsheet-123", "sheet_name": "Expenses", "data_columns": 6}
-VALUES = ["2026-11-01", "Example", "=untrusted text", "Food", 50000, "Chờ duyệt"]
+VALUES = ["2026-11-01", "Example", "=untrusted text", "Food", 50000, "Pending approval"]
 
 
 @pytest.fixture(scope="module")

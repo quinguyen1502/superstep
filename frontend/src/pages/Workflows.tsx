@@ -29,6 +29,8 @@ import { can, canEdit, useMe, type Access } from '@/lib/rbac'
 import { useLoadWhen } from '@/lib/use-when'
 import { Tip } from '@/components/tip'
 import { Logo } from '@/components/logo'
+import { StudioResourceNav } from '@/components/studio-resource-nav'
+import { AppMeta } from '@/components/app-meta'
 
 type W = { id: string; name: string; updated: number; node_count: number; last_run_status: string | null; last_run_at: number | null; access: Access; mine: boolean; owner_email: string | null }
 
@@ -75,12 +77,13 @@ export function WorkflowsPage() {
     <TableRow className="hover:bg-transparent"><TableCell /* ui-class-ok: empty/loading table row spacing, layout not control sizing */ colSpan={5} className="py-14" id={id}><div className="flex flex-col items-center gap-2 text-center">
       <div className="rounded-full bg-muted p-3 text-muted-foreground">{icon}</div><div className="font-medium">{title}</div><div className="text-sm text-muted-foreground">{body}</div></div></TableCell></TableRow>
 
-  return <div className="min-h-screen bg-background text-foreground">
-    <header className="h-14 border-b flex items-center gap-3 px-4 md:px-6">
+  return <div className="flex min-h-dvh flex-col bg-background text-foreground">
+    <header className="flex min-h-14 flex-wrap items-center gap-3 border-b px-4 md:px-6">
       <Logo />
+      <StudioResourceNav active="workflows" />
       <div className="ml-auto flex items-center gap-1"><PendingBadge /><NotificationBell /><LanguageSwitcher /><ThemeToggle /><UserMenu /></div>
     </header>
-    <main className="max-w-6xl mx-auto p-4 md:p-6 space-y-4">
+    <main className="mx-auto w-full max-w-6xl flex-1 space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><h1 className="text-2xl font-semibold tracking-tight">{t('list.title')}</h1><p className="text-sm text-muted-foreground" id="wf-count">{loading ? t('common.loading') : q.trim() ? t('list.filtered', { shown: shown.length, total: items.length }) : t('list.count', { count: items.length })}</p></div>
         <div className="flex flex-wrap items-center gap-2 max-sm:w-full">
@@ -88,7 +91,7 @@ export function WorkflowsPage() {
           <div className="relative max-sm:order-last max-sm:w-full"><Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="wf-search" aria-label={t('list.searchLabel')} className="pl-8 pr-8 w-full sm:w-64" placeholder={t('list.search')} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key === 'Escape' && setQ('')} />
             {q && <Button variant="ghost" size="icon-sm" aria-label={t('list.clearSearch')} className="absolute right-0.5 top-0.5 text-muted-foreground" onClick={() => setQ('')}><X /></Button>}</div>
           {can(me, 'resources.manage') && <CredentialsDialog />}
-          {creates && importsOn && <ImportDialog />}
+          {creates && <ImportDialog enabled={importsOn} />}
           {creates && <Button onClick={() => setGallery(true)} id="new-wf"><Plus />{t('common.newWorkflow')}</Button>}
         </div>
       </div>
@@ -133,6 +136,7 @@ export function WorkflowsPage() {
         </Table>
       </Card>
     </main>
+    <AppMeta />
     <Dialog open={!!rename} onOpenChange={o => !o && setRename(null)}>
       <DialogContent><DialogHeader><DialogTitle>{t('list.renameTitle')}</DialogTitle></DialogHeader>
         <div className="space-y-1.5">

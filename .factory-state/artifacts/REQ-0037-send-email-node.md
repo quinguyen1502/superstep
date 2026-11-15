@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
 - Updated: 2026-10-19
-- Source: owner question "Hiện tại app có tính năng nào liên quan tới gửi email k?", the request "nghiên cứu cấu hình thêm 1 smtp tương tự credentials và thêm node send email", and the approval "Ok, triển khai theo thiết kế đề xuất (thiếu credential thì chạy thử, chỉ gửi văn bản thuần + HTML)" (2026-10-19)
+- Source: owner question "Does the app have any feature for sending email right now?", the request "research adding an SMTP config like credentials and adding a send email node", and the approval "OK, build it with the proposed design (a dry run when the credential is missing, plain text + HTML only)" (2026-10-19)
 
 ## Summary
 

@@ -68,7 +68,7 @@ Prove generic events/tools/model policy with the owner's expense flow, and docum
 
 ## Assumptions
 
-- The initial status remains "Chờ duyệt"; actual approval is future scope. Full REQ-0083 closes only after all feature PRs are approved and merged.
+- The initial status remains "Pending approval"; actual approval is future scope. Full REQ-0083 closes only after all feature PRs are approved and merged.
 
 ## Open Questions
 

@@ -1,7 +1,7 @@
-"""What every workflow-to-code exporter shares (TASK-0082, DEC-0051): the sanitised graph, node names, reading order,
+"""What every workflow-to-code exporter shares: the sanitised graph, node names, reading order,
 subgraph children, the state fields, the helpers a graph needs, and the example input of `main()`.
 
-`python_export` (TASK-0070) and `typescript_export` subclass `GraphWriter` and only write their own language;
+`python_export` and `typescript_export` subclass `GraphWriter` and only write their own language;
 `exporters.EXPORTERS` is the registry the service picks from. Nothing here knows a language's syntax.
 """
 from __future__ import annotations
@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from . import agents, approval_policy, deadlines, foreach
 from .templates import sanitize
+from .dataset_export import DatasetExport
 
 SKIP = ("start", "end", "note")  # canvas nodes that are not LangGraph nodes
 TITLES = {"agent": "Agent", "llm": "LLM", "foreach": "For each", "mcp": "MCP", "email": "Send email", "subgraph_exit": "Subgraph exit"}
@@ -23,10 +24,15 @@ class Export:
     nodes: Dict[str, List[List[int]]] = field(default_factory=dict)  # top-level node id -> 1-based [first, last] line ranges
     names: Dict[str, str] = field(default_factory=dict)  # node id ("sub/inner" inside subgraphs) -> LangGraph node name
     filename: str = "workflow.py"
+    dataset_bindings: dict | None = None
+
+
+# NFKD does not decompose the stroked d (U+0111, U+0110), so map it to a plain d before dropping combining marks.
+_STROKED_D = str.maketrans({0x0111: "d", 0x0110: "D"})
 
 
 def slug(text: str, fallback: str = "node") -> str:
-    s = unicodedata.normalize("NFKD", str(text or "").replace("đ", "d").replace("Đ", "D"))
+    s = unicodedata.normalize("NFKD", str(text or "").translate(_STROKED_D))
     s = re.sub(r"[^a-z0-9]+", "_", "".join(c for c in s if not unicodedata.combining(c)).lower()).strip("_")
     if not s: s = fallback
     return f"{fallback}_{s}" if s[0].isdigit() else s
@@ -63,10 +69,10 @@ class Names:
 class Graph:
     """One workflow (the exported one or a subgraph child), after `sanitize`, with its LangGraph names."""
 
-    def __init__(self, raw: dict, title: str, wid: Optional[str]):
+    def __init__(self, raw: dict, title: str, wid: Optional[str], datasets: DatasetExport):
         self.raw, self.title, self.wid = raw, title, wid
         self.wf = sanitize(raw)
-        # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it (TASK-0137)
+        # sanitize blanks resource ids, but a workflow tool's workflow is a graph of this same file: keep it
         kept = {(n.get("id"), t.get("name")): t.get("workflow_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                 for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "workflow"}
         def kept_managed(value):
@@ -86,7 +92,7 @@ class Graph:
                     if isinstance(tool, dict) and (flag := kept_managed(tool.get("_managed_export"))) is not None:
                         managed_tools[(n.get("id"), tool.get("name"))] = flag
         # credentials, the judge and the deadline are read from the raw node: sanitize blanks the ids and drops
-        # escalation addresses, and a judge with no credential does not parse (REQ-0090)
+        # escalation addresses, and a judge with no credential does not parse
         raw_llm, raw_fallback, raw_policy, raw_deadline = {}, {}, {}, {}
         for n in raw.get("nodes") or []:
             if not isinstance(n, dict): continue
@@ -98,7 +104,7 @@ class Graph:
                 policy = approval_policy.parse(data)
                 if policy:
                     judge = policy.get("judge") or {}
-                    # TASK-0188: the file may name the mode, rules and model, never the judge credential or instructions
+                    # the file may name the mode, rules and model, never the judge credential or instructions
                     raw_policy[n.get("id")] = ({"mode": policy["mode"], "max_per_day": policy.get("max_per_day"),
                         "min_confidence": policy.get("min_confidence"),
                         "rules": [{k: rule.get(k) for k in ("field", "op", "value", "effect")} for rule in policy.get("rules") or []],
@@ -116,16 +122,16 @@ class Graph:
                          for tool in (n.get("data") or {}).get("tools") or []
                          if isinstance(tool, dict) and isinstance(tool.get("_browser_export"), dict)}
         # sanitize blanks MCP server ids too; keep which nodes share a server, by an internal key that is never written
-        # out: the exporters turn it into an environment variable prefix (TASK-0269)
+        # out: the exporters turn it into an environment variable prefix
         raw_server = {n.get("id"): (n.get("data") or {}).get("server_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "mcp"}
         raw_tool_server = {(n.get("id"), t.get("name")): t.get("server_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                            for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "mcp"}
-        # the same for knowledge bases (TASK-0270): Retriever nodes and Agent knowledge tools
+        # the same for knowledge bases: Retriever nodes and Agent knowledge tools
         raw_kb = {n.get("id"): (n.get("data") or {}).get("knowledge_base_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "retriever"}
         raw_tool_kb = {(n.get("id"), t.get("name")): t.get("knowledge_base_id") for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                        for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "knowledge"}
         # a Send email node sends only when it has an SMTP credential in the studio (else a dry run): keep that fact,
-        # never the credential (TASK-0271)
+        # never the credential
         raw_mail = {n.get("id"): bool((n.get("data") or {}).get("credential_id")) for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "email"}
         for n in self.wf["nodes"]:
             if n["id"] in raw_mail: n["data"]["_email_sends"] = raw_mail[n["id"]]
@@ -149,9 +155,17 @@ class Graph:
                 if isinstance(t, dict) and t.get("source") == "workflow": t["workflow_id"] = kept.get((n["id"], t.get("name"))) or ""
                 if isinstance(t, dict) and (n["id"], t.get("name")) in managed_tools: t["_managed_export"] = managed_tools[(n["id"], t.get("name"))]
                 if isinstance(t, dict) and (n["id"], t.get("name")) in browser_tools: t["_browser_export"] = browser_tools[(n["id"], t.get("name"))]
+        for original, sanitized in zip(raw.get("nodes") or [], self.wf["nodes"]):
+            data = original.get("data") or {}
+            if original.get("type") == "dataset":
+                sanitized["data"]["dataset_id"] = datasets.aliases.get(data.get("dataset_id"), "")
+            if original.get("type") == "agent":
+                for source, target in zip(data.get("tools") or [], sanitized["data"].get("tools") or []):
+                    if isinstance(source, dict) and source.get("source") == "dataset":
+                        target["dataset_id"] = datasets.aliases.get(source.get("dataset_id"), "")
         self.refs = {n["id"]: (n.get("data") or {}).get("workflow_id") or "" for n in raw.get("nodes") or []
                      if isinstance(n, dict) and n.get("type") == "subgraph"}
-        # workflow tools of Agent nodes (TASK-0137, DEC-0066): their own graphs, with their own state, called by the tool
+        # workflow tools of Agent nodes: their own graphs, with their own state, called by the tool
         self.tool_refs = [t.get("workflow_id") or "" for n in raw.get("nodes") or [] if isinstance(n, dict) and n.get("type") == "agent"
                           for t in (n.get("data") or {}).get("tools") or [] if isinstance(t, dict) and t.get("source") == "workflow"]
         self.nodes = {n["id"]: n for n in self.wf["nodes"]}
@@ -179,9 +193,10 @@ class GraphWriter:
     """The language-neutral half of an exporter. Subclasses set RESERVED and write the file."""
     RESERVED: frozenset = frozenset()
 
-    def __init__(self, name: str, version: Optional[int], children: Dict[str, dict], example: Optional[dict]):
+    def __init__(self, name: str, version: Optional[int], children: Dict[str, dict], example: Optional[dict], datasets: DatasetExport | None = None):
         self.title, self.version = one_line(name) or "Workflow", version
         self.children, self.example = children, example or {}
+        self.datasets = datasets or DatasetExport({}, {})
         self.lines: List[str] = []
         self.spans: Dict[str, List[List[int]]] = {}
         self.uses: set = set()
@@ -207,11 +222,11 @@ class GraphWriter:
             g.names[nid] = names.take(slug((n.get("data") or {}).get("label") or nid, n["type"]))
             if n["type"] == "foreach":
                 g.cursors[nid] = names.take(self.cursor_name(g.names[nid]))
-            if n["type"] == "agent":  # one node per step, as the studio expands it (DEC-0063)
+            if n["type"] == "agent":  # one node per step, as the studio expands it
                 base = g.names[nid]
                 g.agents[nid] = {"model": names.take(f"{base}_model"), "tool": names.take(f"{base}_tool"), "exit": names.take(f"{base}_end"),
                                  "chat": names.take(f"agent_{base}")}
-                if self.handoff_raw(g, nid): g.agents[nid]["handoff"] = names.take(f"{base}_handoff")  # TASK-0183
+                if self.handoff_raw(g, nid): g.agents[nid]["handoff"] = names.take(f"{base}_handoff")
             if n["type"] == "subgraph": self.build_child(g.refs.get(nid) or "", names)
             if n["type"] == "agent":
                 for t in (n.get("data") or {}).get("tools") or []:
@@ -220,7 +235,7 @@ class GraphWriter:
     def build_child(self, ref: str, names: Names) -> None:
         """Name a subgraph's or workflow tool's workflow and its own nodes, each child once even when used twice."""
         if ref in self.children and ref not in self.built:
-            child = Graph(self.children[ref], one_line(self.children[ref].get("name")) or ref, ref)
+            child = Graph(self.children[ref], one_line(self.children[ref].get("name")) or ref, ref, self.datasets)
             self.built[ref] = (child, "", "")
             self.name_graphs(child, names)
             base = slug(child.title, "subgraph")
@@ -268,7 +283,7 @@ class GraphWriter:
 
     def prepare(self, raw: dict, taken: Iterable[str] = ()) -> Tuple[Graph, List[Graph]]:
         """Name everything and find what the file needs; (main graph, graphs children first then main)."""
-        main = Graph(raw, self.title, None)
+        main = Graph(raw, self.title, None, self.datasets)
         self.name_graphs(main, Names(self.RESERVED, {f.get("name") for f in self.every_field(main)} | set(taken)))
         graphs = self.children_first(main) + [main]
         for g in graphs: self.scan(g)
@@ -285,14 +300,15 @@ class GraphWriter:
             if t in ("llm", "decision"): self.uses.add("model")
             if t in ("llm", "agent", "decision"): self.llm_slot(str(d.get("_llm_credential") or ""))
             if t == "llm": self.llm_slot(str(d.get("_fallback_credential") or ""))
-            if t == "llm" and isinstance(d.get("fallback"), dict): self.uses.add("fallback")  # TASK-0264
-            if t in ("llm", "agent") and d.get("include_attachments"): self.uses.add("files")  # TASK-0176
-            if t == "llm" and isinstance(d.get("fallback"), dict) and d.get("include_attachments"): self.uses.add("fallback_files")  # TASK-0267
+            if t == "llm" and isinstance(d.get("fallback"), dict): self.uses.add("fallback")
+            if t in ("llm", "agent") and d.get("include_attachments"): self.uses.add("files")
+            if t == "llm" and isinstance(d.get("fallback"), dict) and d.get("include_attachments"): self.uses.add("fallback_files")
             if t in ("condition", "decision"): self.uses.add("routing")
             if t == "decision": self.uses.add("decide")
             if t == "human": self.uses.add("human")
             if t == "tool" and d.get("mode") == "code": self.uses.add("code")
-            if t == "tool" and d.get("mode") == "http": self.uses.add("http")  # TASK-0265
+            if t == "tool" and d.get("mode") == "http": self.uses.add("http")
+            if t == "dataset": self.uses.update({"templates", "dataset"})
             if t == "retriever": self.uses.add("retrieve"); self.kb_prefix(d)
             if t == "mcp": self.note_mcp(d)
             if t == "email": self.uses.add("send_email")
@@ -300,6 +316,7 @@ class GraphWriter:
                 self.uses.update({"templates", "model", "agent"})
                 if self.handoff_raw(g, n["id"]): self.uses.add("handoff")
                 sources = {x.get("source") for x in d.get("tools") or [] if isinstance(x, dict)}
+                if "dataset" in sources: self.uses.add("dataset")
                 if "knowledge" in sources: self.uses.add("retrieve")
                 for tool in d.get("tools") or []:
                     if isinstance(tool, dict) and tool.get("source") == "knowledge": self.kb_prefix(tool)
@@ -334,11 +351,11 @@ class GraphWriter:
             if isinstance(managed, str): self.managed_prefix(data)  # True is the placeholder: no prefix, two arguments
             return
         self.uses.add("call_mcp_tool")
-        self.mcp_prefix(data)  # TASK-0269: each server's environment variable prefix, in order of first use
+        self.mcp_prefix(data)  # each server's environment variable prefix, in order of first use
 
     def kb_prefix(self, data: dict) -> str:
         """KNOWLEDGE_BASE_<n>: the environment variable prefix of a Retriever node's or Agent tool's knowledge base,
-        numbered in order of first use (TASK-0270). The Studio knowledge base id is never written to the file."""
+        numbered in order of first use. The Studio knowledge base id is never written to the file."""
         bases = self.__dict__.setdefault("knowledge_bases", {})
         kid = str(data.get("_knowledge_base") or "")
         if kid not in bases: bases[kid] = f"KNOWLEDGE_BASE_{len(bases) + 1}"
@@ -387,7 +404,7 @@ class GraphWriter:
         ok = n["type"] != "subgraph" and isinstance(names, list) and names and all(x in known for x in names)
         return list(names) if ok else []
 
-    # ---- hand-offs (TASK-0183, DEC-0073 decision 5): the exports mirror the engine's steps and names ----
+    # ---- hand-offs: the exports mirror the engine's steps and names ----
     HANDOFF_FIELD, COUNT_FIELD, START_FIELD = "agent_handoff", "agent_handoffs", "start_agent"  # state fields of a graph with hand-offs
 
     @staticmethod

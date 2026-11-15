@@ -1,0 +1,29 @@
+# Factory pull request text check.
+#
+# Copy to .github/workflows/factory-pr-text.yml in a project that links
+# this framework at .factory/. It fails when the PR title or body contains
+# Vietnamese text and reruns when either is edited.
+
+name: Factory PR text
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-text:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install Factory CLI
+        run: python -m pip install ./.factory
+      - name: Check PR title and body
+        run: factory pr check

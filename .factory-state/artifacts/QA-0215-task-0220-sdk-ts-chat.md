@@ -42,6 +42,6 @@ Local QA passed; source CI status is recorded by the Draft PR's checks. Task rem
 
 ## Owner Approval And Finalisation
 
-Owner approved the reviewed phase-2 stack on 2026-11-02 ("Duyệt"). The task moves to done in the existing #285, to be squashed and marked Ready after final gates. This does not authorise merging or package publication. The browser fetch binding correction discovered and reviewed in TASK-0222 is included here with its existing default/explicit-fetch regression: 20 shared contract cases, 94 total SDK unit tests. No new behaviour is added beyond the reviewed final stack. Earlier pending-acceptance entries above are historical. Final-head CI remains the delivery gate.
+Owner approved the reviewed phase-2 stack on 2026-11-02 ("Approve"). The task moves to done in the existing #285, to be squashed and marked Ready after final gates. This does not authorise merging or package publication. The browser fetch binding correction discovered and reviewed in TASK-0222 is included here with its existing default/explicit-fetch regression: 20 shared contract cases, 94 total SDK unit tests. No new behaviour is added beyond the reviewed final stack. Earlier pending-acceptance entries above are historical. Final-head CI remains the delivery gate.
 
 Finalisation rerun: 94 TypeScript unit tests passed, typecheck, generated-contract check, ESM/CJS build and all root/chat/server package-export smoke checks passed. Backend/frontend source is unchanged from the passing full profile; each rewritten PR must pass its exact-head CI before delivery.

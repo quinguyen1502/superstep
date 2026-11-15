@@ -1,4 +1,4 @@
-"""Live notification push (TASK-0021): fan-out of new notifications to each user's open sockets.
+"""Live notification push: fan-out of new notifications to each user's open sockets.
 
 - RedisNotificationHub (REDIS_URL set): PUBLISH on `studio:notify:<user>`; every API process subscribes for the users
   connected to it, so a run recorded by a worker process reaches a browser connected to any API process.

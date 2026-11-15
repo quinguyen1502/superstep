@@ -1,4 +1,4 @@
-"""login, logout and whoami (TASK-0167). The browser is never opened."""
+"""login, logout and whoami. The browser is never opened."""
 import json
 import stat
 from pathlib import Path
@@ -7,6 +7,9 @@ import httpx
 import pytest
 
 from superstep.cli import run
+from superstep.cli.i18n import Catalog
+
+VI = Catalog.load("vi")
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +43,7 @@ def test_login_help_and_completion_name_the_commands():
     assert code == 0 and out == ""
     assert "Example: superstep login --url http://localhost:8000 --no-browser" in err
     code, out, err = invoke(["--lang", "vi", "login", "--help"])
-    assert "Ví dụ: superstep login --url http://localhost:8000 --no-browser" in err
+    assert VI.messages["example.login"] in err
     code, out, _err = invoke(["completion", "bash"])
     assert code == 0 and "login" in out and "logout" in out and "whoami" in out
 
@@ -107,7 +110,7 @@ def test_env_wins_logout_keeps_lang_and_a_missing_route_names_the_server(monkeyp
 
 
 def test_the_saved_token_goes_only_to_the_server_that_issued_it(monkeypatch, isolated_home):
-    """Review finding 4 (TASK-0205): `--url` or SUPERSTEP_URL naming another server sent it the saved token."""
+    """Review finding 4: `--url` or SUPERSTEP_URL naming another server sent it the saved token."""
     from superstep.cli.session import resolve_target, same_server
     path = Path.home() / ".superstep"
     path.mkdir()

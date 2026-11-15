@@ -1,4 +1,4 @@
-"""TASK-0021: idempotency keys + node-result ledger, LangGraph superstep checkpoints (fan-out, imported graphs),
+"""idempotency keys + node-result ledger, LangGraph superstep checkpoints (fan-out, imported graphs),
 fencing tokens, export of lost trace segments, live notification push, HTML e-mail and notification preferences."""
 import asyncio, email, http.server, json, os, socket, threading, time, uuid
 from types import SimpleNamespace as NS
@@ -55,7 +55,7 @@ class DictLedger:
 
 # ---------- (a) idempotency keys + ledger ----------
 def test_http_tool_node_sends_stable_idempotency_key(monkeypatch):
-    monkeypatch.setenv("STUDIO_HTTP_TOOL_ALLOW_PRIVATE", "1")  # the receiver is on 127.0.0.1 (TASK-0039 guard)
+    monkeypatch.setenv("STUDIO_HTTP_TOOL_ALLOW_PRIVATE", "1")  # the receiver is on 127.0.0.1
     seen = []
     class Hd(http.server.BaseHTTPRequestHandler):
         def do_POST(self):
@@ -270,7 +270,7 @@ def test_ui_run_paused_in_parallel_branch_does_not_rerun_sibling(c):
     wid = c.post("/api/workflows", json=w, headers=H(tok)).json()["data"]["id"]; CALLS.clear()
     evs = ws(c, tok, {"workflow_id": wid, "input": {}}); rid = evs[0]["run_id"]
     # The Human node pauses by raising, and LangGraph cancels sibling tasks that have not started yet when a task
-    # raises (pregel/_runner.py). So `a` may or may not run before the pause; both orders are valid (TASK-0109).
+    # raises (pregel/_runner.py). So `a` may or may not run before the pause; both orders are valid.
     ran_before = CALLS.get("a", []) == [1]
     assert any(e["type"] == "run_waiting" for e in evs) and CALLS.get("a", []) in ([], [1])
     assert bool(NodeResultRepository(get_db()).for_run(rid)) == ran_before  # recorded in the ledger only if it ran

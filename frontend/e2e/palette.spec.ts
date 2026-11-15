@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
 import { confirmDelete } from './confirm'
-// TASK-0028: command palette (Mod+K): fuzzy search, actions with shortcuts, add node in view, jump to node, open workflow, settings.
+// command palette (Mod+K): fuzzy search, actions with shortcuts, add node in view, jump to node, open workflow, settings.
 
 test('palette in the editor: add node, jump to node, run an action, open a workflow', async ({ page }) => {
   const H = await login(page); const stamp = Date.now()

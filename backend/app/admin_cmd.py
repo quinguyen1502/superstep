@@ -1,4 +1,4 @@
-"""Break-glass admin process: `python -m app.admin_cmd create|reset-password|list|attachments-*`.
+"""Break-glass admin process: `python -m app.admin_cmd create|reset-password|list|attachments-*|usage-backfill`.
 
 Opens the database through the existing deps and calls the service. No HTTP route.
 Stdout is the password, once, or one `email<TAB>role` line per admin; the attachment commands print one JSON object.
@@ -34,9 +34,16 @@ def main(argv: list[str] | None = None) -> int:
     migrate.add_argument("--batch", type=int, default=100)
     migrate.add_argument("--limit", type=int)
     migrate.add_argument("--dry-run", action="store_true")
+    backfill = commands.add_parser("usage-backfill")  # per-model usage rows for runs finished before the table existed
+    backfill.add_argument("--days", type=int, default=30)
     args = parser.parse_args(argv)
     db = get_db()
     db.migrate()
+    if args.command == "usage-backfill":
+        from .repositories import RunUsageRepository
+        from .services import run_usage
+        sys.stdout.write(json.dumps(run_usage.backfill(RunUsageRepository(db), max(1, args.days))) + "\n")
+        return 0
     if args.command.startswith("attachments-"):
         return _attachments(args)
     service = AdminAccountService(UserRepository(db))
@@ -55,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _attachments(args) -> int:
-    """TASK-0194: the files per backend, or a move to another backend, as one JSON object on stdout."""
+    """the files per backend, or a move to another backend, as one JSON object on stdout."""
     from .api.deps import attachment_archive, attachment_migration
     from .storage import StoreError
     if args.command in ("attachments-export", "attachments-import"):

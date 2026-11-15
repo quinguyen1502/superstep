@@ -1,4 +1,4 @@
-"""RunBus (TASK-0009): in-memory and Redis implementations share one contract; cancel via the bus."""
+"""RunBus: in-memory and Redis implementations share one contract; cancel via the bus."""
 import asyncio, json, os, time, uuid
 from types import SimpleNamespace as NS
 import pytest

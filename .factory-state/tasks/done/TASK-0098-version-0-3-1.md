@@ -26,7 +26,7 @@ Version 0.3.1 and MIT license.
 - **`LICENSE`:** the MIT license, `Copyright (c) 2026 Thái Quí Nguyễn`.
 - **`backend/pyproject.toml`:** `license = "MIT"`, an SPDX expression. That form needs setuptools 77 or later, so the build requirement moves from `setuptools>=68` to `setuptools>=77`.
 - **`frontend/package.json`:** `"license": "MIT"`.
-- **`README.md` and `README.vi.md`:** a License / Giấy phép section that links to `LICENSE`.
+- **`README.md` and `README.vi.md`:** a License section (translated in the vi README) that links to `LICENSE`.
 - `pip wheel .` builds the backend, and the wheel metadata shows `Version: 0.3.1` and `License-Expression: MIT`.
 - `package-lock.json` was regenerated with `npm version` and `npm install --package-lock-only`.
 

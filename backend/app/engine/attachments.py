@@ -1,4 +1,4 @@
-"""Chat attachments in model calls (TASK-0176, REQ-0077, DEC-0072 decisions 2 and 5).
+"""Chat attachments in model calls.
 
 An LLM or Agent node with `include_attachments` reads the file records in `attachments_field` (default "files"):
 {id, name, type, size, text?, text_cut?, data_url?}. Documents reach the model as labelled text blocks after the
@@ -9,6 +9,7 @@ state. A model that cannot see gets a note instead, and the run goes on. Nodes w
 from __future__ import annotations
 import base64
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from .locale import text as locale_text
 from .issues import Issue
 
 DEFAULT_FIELD = "files"
@@ -77,6 +78,6 @@ def build(prompt: str, files: List[Dict[str, Any]], vision: bool, load: Optional
 
 def summary(files: List[Dict[str, Any]], locale: str = "en") -> str:
     """What the offline mock says it received: each file's kind and name."""
-    words = {"en": ("Attachments", "image", "document"), "vi": ("Tệp đính kèm", "ảnh", "tài liệu")}
-    head, img, doc = words.get(locale, words["en"])
+    words = locale_text(locale, "attachments")
+    head, img, doc = words["heading"], words["image"], words["document"]
     return f"{head}: " + ", ".join(f"{img if is_image(r) else doc} {r['name']}" for r in files)

@@ -1,4 +1,4 @@
-"""Several Slack workspaces (and Telegram bots) per owner (TASK-0022 follow-up, DEC-0019). Idempotent.
+"""Several Slack workspaces (and Telegram bots) per owner ( follow-up, ). Idempotent.
 
 approval_channels.team_id: the platform account behind the connection, read from the platform when it is saved
 (Slack auth.test team_id, Telegram getMe bot id). The shared Slack callback URL routes by it; one connection per

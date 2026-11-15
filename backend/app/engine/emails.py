@@ -1,4 +1,4 @@
-"""Send email nodes (TASK-0051, DEC-0040): send one e-mail through the owner's SMTP credential.
+"""Send email nodes: send one e-mail through the owner's SMTP credential.
 
 Node data: `credential_id` (an SMTP credential), `to`, `cc`, `bcc`, `reply_to` (templates; addresses separated by
 `,` `;` or new lines, or one `{{state.x}}` holding a list), `subject` and `body` (templates), `format` ("text" or
@@ -72,7 +72,7 @@ def node_fn(node: Dict[str, Any], resolve=None, key: Callable[[], Optional[str]]
     def fn(state):
         m = build(nid, d, state)
         cred = None
-        if d.get("credential_id") and not ports.test:  # a test run never sends (DEC-0044)
+        if d.get("credential_id") and not ports.test:  # a test run never sends
             if resolve is None: raise AppError("EMAIL_CREDENTIAL_INVALID", node=nid)
             cred = resolve(d["credential_id"])
         head = {"to": m["to"], "cc": m["cc"], "bcc": m["bcc"], "subject": m["subject"]}

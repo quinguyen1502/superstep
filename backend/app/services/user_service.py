@@ -1,4 +1,4 @@
-"""User administration (TASK-0014; audit, deletion TASK-0029). Callers need users.manage."""
+"""User administration. Callers need users.manage."""
 from __future__ import annotations
 from ..core import permissions as P
 from ..core.errors import AppError

@@ -71,7 +71,7 @@ Split `Editor.tsx` into components and hooks, and clear the React hook oxlint wa
 ## Activity Log
 
 - 2026-10-18: Filed from the project review follow-up after TASK-0039. REQ-0028 approved by the owner's request to resolve the remaining items. Waiting for PR #41 and PR #42.
-- 2026-10-18: Owner said "Merge đi". PR #41 and PR #42 merged into `develop` (`5f303db`). Branch rebased onto it; task moved to `doing`.
+- 2026-10-18: Owner said "Merge it". PR #41 and PR #42 merged into `develop` (`5f303db`). Branch rebased onto it; task moved to `doing`.
 - 2026-10-18: `Editor.tsx` split into `components/editor/` (generated from the old line ranges so the JSX is unchanged): `use-studio.ts`, `studio-context.ts`, `meta.ts`, `canvas-nodes.tsx`, `canvas-edit.ts`, `node-types.ts`, `parts.tsx`, `editor-skeleton.tsx`, and five panels. oxlint 46 → 0: `lib/use-when.ts` (`useLoadWhen`, `useOnChange`), `useEffectEvent` in `use-studio` and `use-shortcuts`, state instead of a render-time ref in `use-graph-history`, hooks moved out of component files, shadcn variant exports annotated. REV-0039 has no blocking findings. QA-0039 passed. Task set to done. PR into `develop`. Not merged.
 
 ## Handoff Notes

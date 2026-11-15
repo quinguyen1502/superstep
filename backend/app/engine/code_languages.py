@@ -1,4 +1,4 @@
-"""Languages of the Tool node Code mode (TASK-0079, DEC-0048): one strategy per language, one shared runner.
+"""Languages of the Tool node Code mode: one strategy per language, one shared runner.
 
 `code_runtime` owns everything every language shares: the payload on stdin, the limits, the deadline and cancel, the
 one-line JSON result and the error codes. A `CodeLanguage` only says how to check a source without running it, which
@@ -43,7 +43,7 @@ class CodeLanguage:
     def packages(self) -> List[str]: raise NotImplementedError
 
     def container_env(self) -> Dict[str, str]:
-        """The fixed environment inside the container (TASK-0080). It never holds a secret."""
+        """The fixed environment inside the container. It never holds a secret."""
         return {"HOME": "/tmp"}
 
     def host_rlimits(self, memory: int, seconds: int, pids: int) -> List[tuple]:
@@ -90,7 +90,7 @@ COMMENTS_TS = re.compile(r"""("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'|`(?:\\.|[^
 
 
 class TypeScript(CodeLanguage):
-    """TypeScript (and JavaScript) on Deno, transpiled without type checking (TASK-0080, DEC-0049).
+    """TypeScript (and JavaScript) on Deno, transpiled without type checking.
     Deno runs with no permission at all, so even the host runtime cannot read files, open sockets, read the
     environment or start processes; the V8 heap is capped at the memory limit."""
     id = "typescript"
@@ -169,7 +169,7 @@ LANGUAGES: Dict[str, CodeLanguage] = {"python": Python(), "typescript": TypeScri
 
 
 def language_of(data: Optional[dict]) -> str:
-    """The language of a Code-mode node's data; graphs saved before TASK-0079 have none and are Python."""
+    """The language of a Code-mode node's data; graphs saved have none and are Python."""
     return str((data or {}).get("language") or DEFAULT)
 
 

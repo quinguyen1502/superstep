@@ -1,4 +1,4 @@
-"""Break-glass admin process (TASK-0154)."""
+"""Break-glass admin process."""
 import pytest
 
 from app.admin_cmd import main

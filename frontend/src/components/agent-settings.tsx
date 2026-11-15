@@ -1,14 +1,15 @@
-/** Agent node settings (TASK-0118, REQ-0072): model, prompts, the tools the model may call (MCP, HTTP, built-in,
- *  knowledge base, another workflow: TASK-0136, REQ-0073) and the approval settings for tools that need approval; its fields (`AgentData`) and round limit
- *  (`AgentExecution`) sit in the Config panel's Data and Execution tabs (TASK-0121). The engine is
- *  `backend/app/engine/agents.py` (DEC-0063). */
+/** Agent node settings: model, prompts, the tools the model may call (MCP, HTTP, built-in,
+ * knowledge base, another workflow: ) and the approval settings for tools that need approval; its fields (`AgentData`) and round limit
+ * (`AgentExecution`) sit in the Config panel's Data and Execution tabs. The engine is
+ * `backend/app/engine/agents.py`. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowDown, ArrowUp, Database, ExternalLink, Globe, Plug, Plus, TriangleAlert, Workflow, Wrench, X, type LucideIcon } from 'lucide-react'
+import { ArrowDown, ArrowUp, Database, ExternalLink, Globe, Plug, Plus, Table2, TriangleAlert, Workflow, Wrench, X, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { HandbookLink } from '@/components/handbook-link'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -29,13 +30,14 @@ import type { Channels } from '@/lib/approvals'
 import type { KnowledgeBase } from '@/lib/knowledge'
 import { browserServer, type BrowserRecipe } from '@/lib/browser-tools'
 import { AgentBrowserData } from './agent-browser-data'
+import { DatasetAgentSettings } from './datasets/dataset-agent-settings'
 import { useConfirmDelete } from './use-confirm-delete'
 import { useMcpServers } from '@/lib/use-mcp-servers'
 import type { McpServer } from '@/lib/mcp'
 import type { ProviderInfo } from '@/lib/providers'
 import { METHODS, PARAM_TYPES, SOURCES, defaultFields, newTool, toolName, type AgentTool, type BuiltinTool, type Schema, type ToolSource } from '@/lib/agent'
 
-const ICONS: Record<ToolSource, LucideIcon> = { mcp: Plug, http: Globe, builtin: Wrench, knowledge: Database, workflow: Workflow }
+const ICONS: Record<ToolSource, LucideIcon> = { mcp: Plug, http: Globe, builtin: Wrench, knowledge: Database, workflow: Workflow, dataset: Table2 }
 type Row = { name: string; type: string; description: string; required: boolean }
 const rowsOf = (s?: Schema): Row[] => Object.entries(s?.properties || {}).map(([name, p]) =>
   ({ name, type: p?.type || 'string', description: p?.description || '', required: (s?.required || []).includes(name) }))
@@ -67,14 +69,14 @@ function ParamsEditor({ id, value, onChange }: { id: string; value?: Schema; onC
   </div>
 }
 
-type ToolProps = { tool: AgentTool; index: number; count: number; taken: string[]; fields: TemplateField[]; readOnly?: boolean
+type ToolProps = { tool: AgentTool; index: number; count: number; taken: string[]; fields: TemplateField[]; readOnly?: boolean; wid?: string
   servers: McpServer[] | null; kbs: KnowledgeBase[] | null; builtins: BuiltinTool[]; workflows: Wf[] | null
   onChange: (t: AgentTool) => void; onMove: (by: number) => void; onRemove: () => void }
 
 type Wf = { id: string; name: string; description?: string }
 type Field = { name: string; type?: string }
 
-/** A workflow tool (TASK-0136, DEC-0066): which saved workflow runs, the state fields the model fills (parameters) and
+/** A workflow tool: which saved workflow runs, the state fields the model fills (parameters) and
  *  the fields of its final state the model gets back (result). The fields come from the workflow's latest version. */
 function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: AgentTool; others: string[]; workflows: Wf[] | null; set: (p: Partial<AgentTool>) => void }) {
   const { t } = useTranslation(); const [fields, setFields] = useState<Field[] | null>(null)
@@ -125,7 +127,7 @@ function WorkflowTool({ id, tool, others, workflows, set }: { id: string; tool: 
   </>
 }
 
-function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, builtins, workflows, onChange, onMove, onRemove }: ToolProps) {
+function ToolCard({ tool, index, count, taken, fields, readOnly, wid, servers, kbs, builtins, workflows, onChange, onMove, onRemove }: ToolProps) {
   const { t } = useTranslation(); const confirm = useConfirmDelete(); const I = ICONS[tool.source] ?? Wrench; const id = `agent-tool-${index}`
   const set = (patch: Partial<AgentTool>) => onChange({ ...tool, ...patch })
   const others = taken.filter(n => n !== tool.name)
@@ -169,6 +171,7 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
         <Input id={`${id}-topk`} type="number" min={1} max={20} value={tool.top_k ?? 4} onChange={e => set({ top_k: Math.max(1, Math.min(20, Number(e.target.value) || 1)) })} />
         <p className="text-[11px] text-muted-foreground">{t('agent.kbHint')}</p></div>
     </>}
+    {tool.source === 'dataset' && <DatasetAgentSettings id={id} tool={tool} wid={wid} disabled={readOnly} onChange={set} />}
     {tool.source === 'workflow' && <WorkflowTool id={id} tool={tool} others={others} workflows={workflows} set={set} />}
     {tool.source === 'http' && <>
       <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">{t('field.method')}</Label>
@@ -191,7 +194,10 @@ function ToolCard({ tool, index, count, taken, fields, readOnly, servers, kbs, b
       <Switch id={`${id}-approval`} size="sm" checked={mandatoryApproval || !!tool.approval} disabled={mandatoryApproval || readOnly} onCheckedChange={c => set({ approval: c || undefined })} />
       <Label htmlFor={`${id}-approval`} className="text-xs font-normal">{t('agent.needsApproval')}</Label>
     </div>
-    {browserServer(server) && <p className="text-xs text-muted-foreground">{t(mandatoryApproval ? 'browserTools.effectApproval' : 'browserTools.grantHelp')}</p>}
+    {browserServer(server) && <div className="space-y-1">
+      <p className="text-xs text-muted-foreground">{t(mandatoryApproval ? 'browserTools.effectApproval' : 'browserTools.grantHelp')}</p>
+      {['upload', 'download', 'evaluate'].includes(tool.tool || '') && <p className="text-xs text-muted-foreground">{t('browserTools.gatedToolHelp')}{' '}<HandbookLink id={`${id}-browser-guide`} page="guide/browser" label={t('docs.setupGuide')} ariaLabel={t('docs.browserGuideAria')} /></p>}
+    </div>}
     {confirm.dialog}
   </Card>
 }
@@ -203,7 +209,7 @@ type Patch = (patch: Record<string, any>) => void
 type Props = { data: Record<string, any>; fields: TemplateField[]; creds: Credential[]
   providers: ProviderInfo[]; channels: Channels | null; builtins: BuiltinTool[]; readOnly?: boolean; nodeId: string; onChange: Patch; wid?: string; canAuto?: boolean }
 
-/** Data tab (TASK-0121): the fields the agent writes its answer and steps to, and the history it reads. */
+/** Data tab: the fields the agent writes its answer and steps to, and the history it reads. */
 export function AgentData({ data: d, fieldNames, listFields, fields, readOnly, onChange }: { data: Record<string, any>; fieldNames: string[]; listFields: string[]; fields: TemplateField[]; readOnly?: boolean; onChange: Patch }) {
   const { t } = useTranslation()
   const optional = (key: string, id: string) => <StateFieldPicker id={id} value={d[key]} onChange={v => onChange({ [key]: v })}
@@ -216,7 +222,7 @@ export function AgentData({ data: d, fieldNames, listFields, fields, readOnly, o
   </div>
 }
 
-/** Execution tab (TASK-0121): the round limit, above the shared retry / timeout / cache settings. */
+/** Execution tab: the round limit, above the shared retry / timeout / cache settings. */
 export function AgentExecution({ data: d, onChange }: { data: Record<string, any>; onChange: Patch }) {
   const { t } = useTranslation()
   return <F label={t('agent.maxRounds')} htmlFor="agent-max-rounds"><Input id="agent-max-rounds" type="number" min={1} max={25} value={d.max_rounds ?? 5}
@@ -271,7 +277,7 @@ export function AgentSettings({ data: d, fields, creds, providers, channels, bui
     </div>
     <p className="text-[11px] text-muted-foreground">{t('agent.toolsHint')}</p>
     {!tools.length && <p className="text-[11px] text-destructive" id="agent-no-tools">{t('agent.noToolsYet')}</p>}
-    {tools.map((x, i) => <ToolCard key={keys[i]} tool={x} index={i} count={tools.length} taken={names} fields={fields} readOnly={readOnly}
+    {tools.map((x, i) => <ToolCard key={keys[i]} tool={x} index={i} count={tools.length} taken={names} fields={fields} readOnly={readOnly} wid={wid}
       servers={servers} kbs={kbs} builtins={builtins} workflows={workflows}
       onChange={nx => setTools(tools.map((y, j) => j === i ? nx : y), keys)}
       onMove={by => { const move = <T,>(xs: T[]) => { const next = [...xs]; const [it] = next.splice(i, 1); next.splice(i + by, 0, it); return next }

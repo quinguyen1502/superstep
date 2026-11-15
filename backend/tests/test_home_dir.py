@@ -1,4 +1,4 @@
-"""TASK-0058: the default data directory moved to ~/.superstep; a v0.1.0 ~/.langgraph-studio is still used."""
+"""the default data directory moved to ~/.superstep; a v0.1.0 ~/.langgraph-studio is still used."""
 from app.core import config
 
 

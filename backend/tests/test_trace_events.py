@@ -2,11 +2,11 @@ from app.engine.runtime import run_stream, cap_payload
 from app.engine.examples import EXAMPLE
 
 def test_finished_events_carry_input_type_iteration():
-    evs = list(run_stream(EXAMPLE, {"message": "Đơn hàng A100 của tôi đâu rồi?"}))
+    evs = list(run_stream(EXAMPLE, {"message": "Where is my order A100?"}))
     fin = [e for e in evs if e["type"] == "node_finished"]
     cls = next(e for e in fin if e["node"] == "classify")
     assert cls["node_type"] == "llm" and cls["iteration"] == 1
-    assert cls["input"] == {"message": "Đơn hàng A100 của tôi đâu rồi?"} and "intent" in cls["delta"]
+    assert cls["input"] == {"message": "Where is my order A100?"} and "intent" in cls["delta"]
     lookup = next(e for e in fin if e["node"] == "lookup")
     assert lookup["input"]["intent"] == cls["delta"]["intent"]
     assert all(e.get("node_type") for e in evs if e["type"] == "node_started")

@@ -2,6 +2,7 @@ import { createHmac } from 'crypto'
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
 import { confirmDelete } from './confirm'
+import { vt } from './catalog'
 
 const SECRET = 'fixture-only-event-signing-secret-0123456789'
 for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] as const) {
@@ -28,7 +29,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await page.locator('#chat-trigger-save').click()
     const row = page.locator(`[data-testid="chat-trigger-row"][data-name="Expenses ${suffix}"]`)
     await expect(row).toBeVisible()
-    await row.getByRole('button', { name: lang === 'en' ? `Edit chat trigger Expenses ${suffix}` : `Sửa chat trigger Expenses ${suffix}` }).click()
+    await row.getByRole('button', { name: lang === 'en' ? `Edit chat trigger Expenses ${suffix}` : vt('chatTriggers.editFor', { name: `Expenses ${suffix}` }) }).click()
     await expect(page.locator('#event-senders')).toHaveValue('employee-42')
     await expect(page.locator('#event-map-context')).toHaveValue('$')
     const body = JSON.stringify({ id: `expense-${suffix}`, type: 'message.text', time: '2026-11-01T10:00:00+07:00', place: 'expenses', sender: 'employee-42', data: { text: 'Lunch 50000' } })
@@ -39,7 +40,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     expect((await response.json()).data.outcome).toBe('queued')
     await expect.poll(async () => (await (await page.request.get(`/api/workflows/${wid}/runs`, { headers })).json()).data.length).toBe(1)
     await row.getByRole('switch').click(); await expect(row.getByRole('switch')).not.toBeChecked()
-    await row.getByRole('button', { name: lang === 'en' ? `Delete chat trigger Expenses ${suffix}` : `Xoá chat trigger Expenses ${suffix}` }).click()
+    await row.getByRole('button', { name: lang === 'en' ? `Delete chat trigger Expenses ${suffix}` : vt('chatTriggers.deleteFor', { name: `Expenses ${suffix}` }) }).click()
     await confirmDelete(page, `Expenses ${suffix}`)
     await expect(row).toHaveCount(0)
   })

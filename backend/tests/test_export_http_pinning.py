@@ -1,4 +1,4 @@
-"""TASK-0267 (REQ-0089, DEC-0088): exported HTTP Tool requests connect to the address they checked, as the studio does
+"""exported HTTP Tool requests connect to the address they checked, as the studio does
 (core/net.py). Executed in Python and in TypeScript (Deno) against local servers, with the name resolver replaced in
 the generated program's own process: a DNS rebind after the check cannot move the request, the Host header keeps
 the name, and HTTPS keeps SNI and the certificate check on the name (not the IP)."""

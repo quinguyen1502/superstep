@@ -1,4 +1,4 @@
-"""TASK-0025: template library: built-ins, save-as (sanitised), import/export, use, scopes, delete."""
+"""template library: built-ins, save-as (sanitised), import/export, use, scopes, delete."""
 import json, uuid
 from pathlib import Path
 import pytest
@@ -43,12 +43,12 @@ def test_sanitize_strips_refs_secrets_and_runtime():
 def test_builtins_are_well_formed():
     for b in T.BUILTINS:
         assert T.problems(T.export_payload(b["name"], b["description"], b["workflow"])) == []
-        # only "pick your KB" may remain, and a workflow tool's workflow, which a helper fills in when used (TASK-0137)
+        # only "pick your KB" may remain, and a workflow tool's workflow, which a helper fills in when used
         assert all("knowledge base" in e or (b.get("helpers") and "choose a workflow" in e) for e in validate(b["workflow"]))
 
 
 def test_builtins_have_a_name_and_description_in_both_ui_languages():
-    """The gallery shows built-ins by `templates.builtin.<id>` (TASK-0120 adds the Support agent's)."""
+    """The gallery shows built-ins by `templates.builtin.<id>`."""
     for lang in ("en", "vi"):
         shown = json.loads((Path(__file__).resolve().parents[2] / f"frontend/src/locales/{lang}.json").read_text())["templates"]["builtin"]
         assert sorted(shown) == sorted(b["id"] for b in T.BUILTINS), lang
@@ -67,7 +67,7 @@ INPUTS = {"request": "Refund order 1042, $80, the parcel arrived broken.", "mess
 
 
 def test_builtin_order_and_channel_kinds():
-    """TASK-0064: the built-ins, the new ones after the first four (TASK-0119 adds the Support agent, TASK-0137 the Support team). Human nodes on a channel store only its kind."""
+    """the built-ins, the new ones after the first four. Human nodes on a channel store only its kind."""
     assert [b["id"] for b in T.BUILTINS] == ["builtin-chatbot", "builtin-rag", "builtin-approval", "builtin-router", *NEW]
     kinds = {b["id"]: [n["data"]["approval"] for n in b["workflow"]["nodes"] if n["type"] == "human" and "approval" in n["data"]] for b in T.BUILTINS}
     assert {i: [a["channel"] for a in v] for i, v in kinds.items() if v} == {
@@ -77,7 +77,7 @@ def test_builtin_order_and_channel_kinds():
 
 
 def test_channel_templates_have_deadlines():
-    """TASK-0066: every Human node on a channel has a deadline that suits the process; only the social post approves on timeout."""
+    """every Human node on a channel has a deadline that suits the process; only the social post approves on timeout."""
     from app.engine import deadlines
     due = {(b["id"], n["id"]): deadlines.parse(n["data"]) for b in T.BUILTINS for n in b["workflow"]["nodes"] if n["type"] == "human" and n["data"].get("approval")}
     assert len(due) == 7 and all(due.values())
@@ -109,7 +109,7 @@ def test_channel_template_waits_in_the_studio_without_a_connection():
 
 
 def test_sanitize_blanks_the_resources_of_agent_tools():
-    """TASK-0119: an Agent node's tools point at knowledge bases and MCP servers too; secret-like keys go as well."""
+    """an Agent node's tools point at knowledge bases and MCP servers too; secret-like keys go as well."""
     wf = {"nodes": [{"id": "ag", "type": "agent", "data": {"credential_id": "c1", "tools": [
         {"name": "kb", "source": "knowledge", "knowledge_base_id": "kb-1", "top_k": 3},
         {"name": "m", "source": "mcp", "server_id": "srv-1", "tool": "add", "api_key": "sk-1"}, "odd"]}}]}
@@ -119,7 +119,7 @@ def test_sanitize_blanks_the_resources_of_agent_tools():
 
 
 def test_sanitize_keeps_only_the_channel_kind():
-    """Saved and exported templates drop a Human node's connection, target and approvers (TASK-0064)."""
+    """Saved and exported templates drop a Human node's connection, target and approvers."""
     wf = {"nodes": [{"id": "a", "type": "human", "data": {"approval": {"channel_id": "c1", "channel": "slack", "target": "C1", "approvers": ["x@y.z"]}}},
                     {"id": "b", "type": "human", "data": {"approval": {"channel_id": "c2"}}}], "edges": []}
     assert [n["data"]["approval"] for n in T.sanitize(wf)["nodes"]] == [{"channel": "slack"}, {}]
@@ -187,7 +187,7 @@ def test_v010_format_still_imports():
     assert T.problems(old) == [] and T.export_payload("x", None, b["workflow"])["format"] == "superstep/template"
 
 
-# ---------- test cases of the built-in templates (TASK-0069) ----------
+# ---------- test cases of the built-in templates ----------
 def test_builtin_test_cases_are_valid():
     from app.engine import checks
     for b in T.BUILTINS:
@@ -215,7 +215,7 @@ def test_builtin_test_cases_pass_in_mock_mode(monkeypatch):
             if any(n["type"] in ("retriever", "agent") for n in wf["nodes"]):
                 for n in wf["nodes"]:
                     if n["type"] == "retriever": n["data"]["knowledge_base_id"] = kb["id"]
-                    for t in n["data"].get("tools") or []:  # an Agent node's knowledge base tools (TASK-0119)
+                    for t in n["data"].get("tools") or []:  # an Agent node's knowledge base tools
                         if t.get("source") == "knowledge": t["knowledge_base_id"] = kb["id"]
                 cl.post("/api/workflows", json=wf, headers=h)
             suite = run_all(cl, {"token": u.token}, wid, mock=True)

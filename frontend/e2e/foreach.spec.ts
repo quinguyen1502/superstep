@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
-// TASK-0049: For each node: the second edge drawn from it is labelled `done`, the panel offers list/item/index fields,
+// For each node: the second edge drawn from it is labelled `done`, the panel offers list/item/index fields,
 // and a run goes through the body once per item.
 const WF = (name: string) => ({ name,
   state: [{ name: 'items', type: 'list' }, { name: 'item', type: 'string' }, { name: 'i', type: 'integer' }, { name: 'results', type: 'list', reducer: 'append' }],
@@ -21,7 +21,7 @@ test('for each: connect done, configure, run once per item', async ({ page }) =>
   await page.locator('.react-flow__node[data-id="fe"]').click()
   await page.locator('#config-tab-settings').click()
   await expect(page.locator('#loop-hint')).toBeVisible()
-  await page.locator('#config-tab-data').click(); await expect(page.locator('#loop-index')).toHaveText('i')  // TASK-0121 tabs
+  await page.locator('#config-tab-data').click(); await expect(page.locator('#loop-index')).toHaveText('i')  // tabs
   await page.locator('#config-tab-execution').click(); await expect(page.locator('#loop-max')).toHaveValue('100')
 
   // draw the second edge: it becomes `done`

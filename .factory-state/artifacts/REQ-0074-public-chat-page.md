@@ -9,8 +9,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-27
-- Source: owner request in chat on 2026-10-27. The owner first asked why Agent chat was not next ("Sao k làm agent
-  chat?"), then asked to ship it in the same release as REQ-0073 ("Tôi muốn đưa vào chung release luôn"). This
+- Source: owner request in chat on 2026-10-27. The owner first asked why Agent chat was not next ("Why not do agent chat?"), then asked to ship it in the same release as REQ-0073 ("I want it in the same release"). This
   requirement is phase 2 of REQ-0048.
 
 ## Summary

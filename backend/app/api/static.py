@@ -2,7 +2,7 @@
 /api and /ws (PaaS platforms route one port per service). Unknown non-API paths get index.html (SPA routes); unknown
 /api and /ws paths keep the API's 404 envelope.
 
-Frames (TASK-0143, DEC-0067 decision 6): no page of the studio may be framed by another site, except a published chat
+Frames: no page of the studio may be framed by another site, except a published chat
 page /c/{slug}, which the sites in its `embed_origins` may frame. nginx does the same in Compose."""
 import os, re
 from typing import Callable

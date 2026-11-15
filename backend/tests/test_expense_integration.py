@@ -16,7 +16,7 @@ from tests.test_managed_tools import c, api, account, external, create, user, H,
 from tests.test_chat_trigger_runs import until, runs_of
 
 FILE = Path(__file__).resolve().parents[2] / "examples/telegram-expenses.template.json"
-VALID = {"is_expense": True, "amount": 50000, "description": "Ăn trưa", "category": "Ăn uống", "expense_date": "2026-10-31"}
+VALID = {"is_expense": True, "amount": 50000, "description": "Lunch", "category": "Food", "expense_date": "2026-10-31"}
 
 
 @pytest.fixture(autouse=True)
@@ -73,10 +73,10 @@ def setup(c, account):
     return owner, wid, telegram, google, graph
 
 
-def deliver(c, telegram, message="Ăn trưa 50000 ngày 2026-10-31", event_id=None):
+def deliver(c, telegram, message="Lunch 50000 on 2026-10-31", event_id=None):
     body = {"update_id": event_id or int(uuid.uuid4().hex[:12], 16), "message": {
         "message_id": 101, "date": int(datetime(2026, 11, 1, 18, 30, tzinfo=timezone.utc).timestamp()),
-        "from": {"id": 42, "first_name": "Nhân viên mẫu"}, "chat": {"id": -100123, "type": "supergroup"}, "text": message}}
+        "from": {"id": 42, "first_name": "Sample employee"}, "chat": {"id": -100123, "type": "supergroup"}, "text": message}}
     response = c.post(f"/api/approvals/callback/telegram/{telegram['settings']['channel_id']}", json=body,
                       headers={"X-Telegram-Bot-Api-Secret-Token": TG["webhook_secret"]})
     assert response.status_code == 200, response.text
@@ -92,10 +92,10 @@ def test_exact_template_valid_expense_date_metadata_duplicate_and_worker_replay(
     assert deliver(c, telegram, event_id=10101) == "queued"
     run = settled(wid)
     assert run.status == "ok", run.events
-    assert external.rows[0][:7] == ["2026-10-31", "Nhân viên mẫu", "Ăn trưa", "Ăn uống", 50000, "Chờ duyệt", "2026-11-02T01:30:00+07:00"]
+    assert external.rows[0][:7] == ["2026-10-31", "Sample employee", "Lunch", "Food", 50000, "Pending approval", "2026-11-02T01:30:00+07:00"]
     assert len(external.rows[0]) == 8 and len(external.messages) == 2
-    assert external.messages[0]["text"].startswith("Đang xử lý")
-    assert external.messages[1]["text"].startswith("Đã ghi khoản chi")
+    assert external.messages[0]["text"].startswith("Processing your expense")
+    assert external.messages[1]["text"].startswith("Recorded expense")
     append_index = next(i for i, call in enumerate(external.calls) if call[1].endswith(":append"))
     reply_indices = [i for i, call in enumerate(external.calls) if call[1].endswith("/sendMessage")]
     assert reply_indices[0] < append_index < reply_indices[1]
@@ -116,16 +116,16 @@ def test_invalid_or_missing_amount_never_writes(c, external, account, model, amo
     assert deliver(c, telegram) == "queued"
     assert settled(wid).status == "ok"
     assert not external.rows and len(external.messages) == 2
-    assert external.messages[-1]["text"].startswith("Vui lòng")
-    assert not any(message["text"].startswith("Đã ghi") for message in external.messages)
+    assert external.messages[-1]["text"].startswith("Please")
+    assert not any(message["text"].startswith("Recorded") for message in external.messages)
 
 
 def test_unrelated_text_and_missing_date_default(c, external, account, model):
     model["response"] = json.dumps({**VALID, "is_expense": False, "amount": None})
     owner, wid, telegram, google, graph = setup(c, account)
-    deliver(c, telegram, "Chào mọi người")
+    deliver(c, telegram, "Hello everyone")
     assert settled(wid).status == "ok" and not external.rows
-    assert "chưa có khoản chi" in external.messages[-1]["text"]
+    assert "has no expense yet" in external.messages[-1]["text"]
     model["response"] = json.dumps({**VALID, "expense_date": None})
     deliver(c, telegram, event_id=20202)
     until(lambda: len(runs_of(wid)) == 2 and all(run.status == "ok" for run in runs_of(wid)), timeout=20)
@@ -138,7 +138,7 @@ def test_invalid_expense_date_requests_correction_without_write(c, external, acc
     owner, wid, telegram, google, graph = setup(c, account)
     deliver(c, telegram)
     assert settled(wid).status == "ok" and not external.rows
-    assert "Ngày khoản chi không hợp lệ" in external.messages[-1]["text"]
+    assert "The expense date is not valid" in external.messages[-1]["text"]
 
 
 def test_model_cannot_override_actor_submission_time_or_tool_targets(c, external, account, model):
@@ -146,7 +146,7 @@ def test_model_cannot_override_actor_submission_time_or_tool_targets(c, external
     owner, wid, telegram, google, graph = setup(c, account)
     deliver(c, telegram)
     assert settled(wid).status == "ok"
-    assert external.rows[0][1:3] == ["Nhân viên mẫu", "=untrusted formula-like text"]
+    assert external.rows[0][1:3] == ["Sample employee", "=untrusted formula-like text"]
     assert external.rows[0][6] == "2026-11-02T01:30:00+07:00"
     assert all(message["chat_id"] == "-100123" for message in external.messages)
     assert all("another-target" not in call[1] for call in external.calls)

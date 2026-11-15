@@ -1,4 +1,4 @@
-"""AI review of approvals (TASK-0186, REQ-0081, DEC-0075): audit columns and the opinion on a waiting step."""
+"""AI review of approvals: audit columns and the opinion on a waiting step."""
 from alembic import op
 import sqlalchemy as sa
 

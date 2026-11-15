@@ -1,4 +1,4 @@
-"""TASK-0015: the import flag, the Docker argv, and job persistence. No daemon required."""
+"""the import flag, the Docker argv, and job persistence. No daemon required."""
 import json, os, time
 
 from fastapi.testclient import TestClient

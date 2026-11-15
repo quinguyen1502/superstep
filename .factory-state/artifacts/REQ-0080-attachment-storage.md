@@ -4,11 +4,11 @@
 
 - Project: superstep
 - Requirement ID: REQ-0080
-- Status: Accepted (2026-10-31, owner Thái Quí Nguyễn: "Duyệt đề xuất cả 3 backend db, fs, s3, merge #229 và lập task"). Planned into TASK-0191 to TASK-0195.
+- Status: Accepted (2026-10-31, owner Thái Quí Nguyễn: "Approve the proposal with all 3 backends db, fs, s3, merge #229 and create the tasks"). Planned into TASK-0191 to TASK-0195.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-30
 - Updated: 2026-10-31
-- Source: owner request on 2026-10-30 ("Nghiên cứu bổ sung thêm external storage, nếu ko db sẽ phình"). Follows REQ-0077 and DEC-0072, which store chat attachment bytes in `chat_attachments.data`.
+- Source: owner request on 2026-10-30 ("Research adding external storage, otherwise the db will bloat"). Follows REQ-0077 and DEC-0072, which store chat attachment bytes in `chat_attachments.data`.
 - Related Decision: DEC-0074 (Accepted)
 
 ## Summary

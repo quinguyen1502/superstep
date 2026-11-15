@@ -1,6 +1,6 @@
-"""Ownership transfer of workflows (TASK-0029). The owner or an admin hands a workflow to another editor/admin.
+"""Ownership transfer of workflows. The owner or an admin hands a workflow to another editor/admin.
 
-Runs use the owner's credentials, knowledge bases and personal MCP servers (DEC-0023), so a transfer checks every
+Runs use the owner's credentials, knowledge bases and personal MCP servers, so a transfer checks every
 reference against the new owner: each one the new owner cannot use is either re-bound to one of their own resources
 (`rebind: {node_id: resource_id}`) or reported back as a flagged issue (the node then fails clearly until fixed)."""
 from __future__ import annotations

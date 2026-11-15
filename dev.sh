@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Khởi động backend (FastAPI :8000) + frontend (Vite :5173)
+# Start backend (FastAPI :8000) + frontend (Vite :5173)
 set -e
 cd "$(dirname "$0")"
-# Cài lại khi venv thiếu hoặc chưa có package (một venv rỗng làm uvicorn/pytest không chạy được)
+# Recreate the venv when uvicorn is missing (an empty venv cannot run uvicorn/pytest)
 if [ ! -x backend/.venv/bin/uvicorn ]; then
   [ -x backend/.venv/bin/python ] || python3 -m venv backend/.venv
   backend/.venv/bin/pip install -q --prefer-binary -e "backend[dev]"

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, newWorkflow, N } from './helpers'
-// REQ-0074 (TASK-0143): a published chat embedded on another site. The widget's bubble opens the chat in an iframe and
+// a published chat embedded on another site. The widget's bubble opens the chat in an iframe and
 // the visitor keeps their chat after a reload (the token lives on the host page); a plain iframe works too; a site
 // that is not in embed_origins cannot frame the page. (The studio's own pages refuse frames through nginx and the
 // all-in-one image, not the Vite dev server: backend/tests/test_frame_headers.py and the smoke scripts cover them.)
@@ -34,7 +34,7 @@ async function publish(page: Page, extra: Record<string, unknown> = {}) {
 }
 
 test('the widget opens the chat and keeps it across a reload', async ({ page, browser }) => {
-  const { slug, wid } = await publish(page, { logo: LOGO })   // the logo shows in the frame's header (TASK-0145)
+  const { slug, wid } = await publish(page, { logo: LOGO })   // the logo shows in the frame's header
   // the builder copies the snippets from the Chat settings
   await page.goto(`/workflows/${wid}`)
   if (await page.locator('#chat-open').getAttribute('aria-pressed') !== 'true') await page.locator('#chat-open').click()
@@ -68,7 +68,7 @@ test('a plain iframe works; a site that is not allowed cannot frame the page', a
   await site(host, HOST, `<iframe id="chat" src="${STUDIO}/c/${slug}?embed=1" style="width:420px;height:560px;border:0"></iframe>`)
   await host.goto(`${HOST}/help.html`)
   const chat = host.frameLocator('#chat')
-  await chat.locator('#chat-input').fill('xin chào'); await chat.locator('#chat-input').press('Enter')
+  await chat.locator('#chat-input').fill('héllo wörld'); await chat.locator('#chat-input').press('Enter')
   await expect(chat.getByTestId('chat-answer').last()).toHaveAttribute('data-status', 'ok', { timeout: 20_000 })
   await expect(chat.locator('#public-chat')).toHaveAttribute('data-embed', 'iframe')
 

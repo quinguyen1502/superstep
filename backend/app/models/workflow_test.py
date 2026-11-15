@@ -5,7 +5,7 @@ from .base import Base
 
 
 class WorkflowTest(Base):
-    """A test case of a workflow (TASK-0067): an input, the answers for its Human nodes and the checks a run must pass."""
+    """A test case of a workflow: an input, the answers for its Human nodes and the checks a run must pass."""
     __tablename__ = "workflow_tests"
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     workflow_id: Mapped[str] = mapped_column(Text, index=True)

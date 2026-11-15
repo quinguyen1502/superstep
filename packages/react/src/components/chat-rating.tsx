@@ -1,4 +1,4 @@
-/** Thumbs on a finished answer (TASK-0163, TASK-0164, REQ-0075). `onRate` is absent when the builder is only reading
+/** Thumbs on a finished answer. `onRate` is absent when the builder is only reading
  *  a visitor's chat: the mark and the comment stay, and nothing is written. */
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'

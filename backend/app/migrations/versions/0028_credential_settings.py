@@ -1,4 +1,4 @@
-"""TASK-0051: non-secret provider settings on credentials (SMTP host, port, security, username, sender)."""
+"""non-secret provider settings on credentials (SMTP host, port, security, username, sender)."""
 from alembic import op
 import sqlalchemy as sa
 

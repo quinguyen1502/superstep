@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import cases from '../../../../backend/tests/fixtures/template_refs.json'
 import { badFilter, closeLen, openFilter, openRef, parseRef, refLabel, stateRef, stateRefRe } from '../state-refs'
 
-// Shared with backend/tests/test_template_refs.py, so the two patterns agree (TASK-0044)
+// Shared with backend/tests/test_template_refs.py, so the two patterns agree
 type Case = { text: string; refs: { field: string; path: string[]; filters: [string, string | number | null][] }[] }
 const CASES = cases as Case[]
 const refs = (s: string) => [...s.matchAll(stateRefRe())].map(parseRef)

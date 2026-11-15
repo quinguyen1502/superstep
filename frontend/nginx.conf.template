@@ -4,7 +4,7 @@ map $http_upgrade $connection_upgrade { default upgrade; '' close; }
 server {
   listen 80;
   root /usr/share/nginx/html;
-  # 10 MB for every request; only the upload routes below take WEB_MAX_BODY_SIZE (TASK-0207). The api enforces its own
+  # 10 MB for every request; only the upload routes below take WEB_MAX_BODY_SIZE. The api enforces its own
   # ceilings as well (STUDIO_MAX_BODY_MB, 1 MB for the chat and approval callbacks).
   client_max_body_size 10m;
   error_page 413 = @too_large;
@@ -28,7 +28,7 @@ server {
 
   # Upload routes (chat attachments, workflow import, knowledge documents): above every upload ceiling the api enforces
   # itself (STUDIO_CHAT_ATTACHMENT_MAX_MB, workflow zips 50 MB), so the api answers with its own error code; raise
-  # WEB_MAX_BODY_SIZE with a ceiling above 100 MB (TASK-0203, TASK-0207).
+  # WEB_MAX_BODY_SIZE with a ceiling above 100 MB.
   location ~ ^/api/(chat/sessions/[^/]+/attachments|public/(v1/)?chat/[^/]+/sessions/[^/]+/attachments|import|knowledge-bases/[^/]+/documents)/?$ {
     client_max_body_size ${WEB_MAX_BODY_SIZE};
     proxy_pass http://${API_UPSTREAM};
@@ -38,7 +38,7 @@ server {
     proxy_read_timeout 300s;
   }
 
-  location = /mcp {  # MCP server for workflow tokens (TASK-0114): Streamable HTTP, JSON responses
+  location = /mcp {  # MCP server for workflow tokens: Streamable HTTP, JSON responses
     proxy_pass http://${API_UPSTREAM};
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $remote_addr;
@@ -59,7 +59,7 @@ server {
 
   location /assets/ { expires 1y; add_header Cache-Control "public, immutable"; try_files $uri =404; }
 
-  # Frames (TASK-0143, DEC-0067): a published chat page may be framed by the sites in its embed_origins, which the api
+  # Frames: a published chat page may be framed by the sites in its embed_origins, which the api
   # gives as a Content-Security-Policy; every other page refuses frames. add_header is not inherited by locations that
   # set their own, so each HTML location sets it.
   location ~ ^/c/[a-z0-9-]+/?$ {

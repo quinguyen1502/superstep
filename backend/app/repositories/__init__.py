@@ -26,5 +26,7 @@ from .chat_sessions import ChatSessionRepository
 from .chat_attachments import ChatAttachmentRepository
 from .workflow_tests import WorkflowTestRepository
 from .agent_threads import AgentThreadRepository
+from .usage import UsageRepository
+from .run_usage import RunUsageRepository
 
-__all__ = ["AgentThreadRepository", "UserRepository", "WorkflowRepository", "RunRepository", "CredentialRepository", "WorkflowTokenRepository", "WorkflowVersionRepository", "NotificationRepository", "WebhookDeliveryRepository", "NodeResultRepository", "StaleLease", "ApprovalRepository", "KnowledgeRepository", "McpServerRepository", "WorkflowShareRepository", "TeamRepository", "AuditRepository", "SettingsRepository", "UserDataRepository", "TemplateRepository", "AuthSecurityRepository", "PersonalAccessTokenRepository", "CliDeviceRepository", "ScheduleRepository", "ChatTriggerRepository", "ChatMessageRepository", "ChatSessionRepository", "ChatAttachmentRepository", "WorkflowTestRepository"]
+__all__ = ["AgentThreadRepository", "UserRepository", "WorkflowRepository", "RunRepository", "CredentialRepository", "WorkflowTokenRepository", "WorkflowVersionRepository", "NotificationRepository", "WebhookDeliveryRepository", "NodeResultRepository", "StaleLease", "ApprovalRepository", "KnowledgeRepository", "McpServerRepository", "WorkflowShareRepository", "TeamRepository", "AuditRepository", "SettingsRepository", "UserDataRepository", "TemplateRepository", "AuthSecurityRepository", "PersonalAccessTokenRepository", "CliDeviceRepository", "ScheduleRepository", "ChatTriggerRepository", "ChatMessageRepository", "ChatSessionRepository", "ChatAttachmentRepository", "WorkflowTestRepository", "UsageRepository", "RunUsageRepository"]

@@ -48,7 +48,7 @@ function SectionView({ title, s, kind, a, b }: { title: string; s: Section; kind
   </div>
 }
 
-/** Workflow version history: list, diff any two versions, restore (TASK-0008). */
+/** Workflow version history: list, diff any two versions, restore. */
 export function VersionsDialog(props: { wid?: string; onRestored: (wf: any) => void; isDirty?: () => boolean; open?: boolean; onOpenChange?: (v: boolean) => void }) {
   const { wid, onRestored, isDirty } = props
   const { t } = useTranslation(); const [open, setOpen, controlled] = useOpenState(props.open, props.onOpenChange)

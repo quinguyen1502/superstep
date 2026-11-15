@@ -16,7 +16,7 @@
 ## Objective
 
 Fix a risk TASK-0123's review recorded: an answer to a waiting run is lost if the server restarts before the worker
-takes its resume job (owner request in chat on 2026-10-26: "Làm thêm phần rủi ro kia đi").
+takes its resume job (owner request in chat on 2026-10-26: "Do that risk part too").
 
 ## Findings
 

@@ -1,4 +1,4 @@
-/** The editor's Chat tab (TASK-0085, REQ-0048 phase 1): chat with the saved workflow as a visitor would. Your chats
+/** The editor's Chat tab: chat with the saved workflow as a visitor would. Your chats
  *  on the left and "New chat" on the right; the Builder / Visitor switch shows every step (builders always see full) or the steps
  *  the Chat settings give visitors. Runs use the saved workflow, like a chat trigger. Workflow history and ratings
  *  live in the separate workflow Chat history & feedback dialog. */
@@ -48,7 +48,7 @@ export function ChatPanel({ wid, active, canConfigure, canEdit, dirty, compact =
   const first = useRef(''); const { send: say, session } = chat
   const send = (text: string, files: ChatAttachment[] = []) => { if (sid) { say(text, files); return } first.current = text
     api<ChatSession>(`/api/workflows/${wid}/chat/sessions`, { method: 'POST' }).then(s => list(s.id)).catch(e => { first.current = ''; setErr(e.message) }) }
-  // files (TASK-0177): the first file of a new chat creates it; a typed answer to a Human node takes none
+  // files: the first file of a new chat creates it; a typed answer to a Human node takes none
   const made = useRef<Promise<string> | null>(null)
   const ensure = () => sid ? Promise.resolve(sid) : made.current ??= api<ChatSession>(`/api/workflows/${wid}/chat/sessions`, { method: 'POST' })
     .then(async s => { await list(s.id); return s.id }).finally(() => { made.current = null })

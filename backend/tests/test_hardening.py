@@ -1,4 +1,4 @@
-"""TASK-0019: phase-2 hardening (HITL active time + expiry, signed/pinned/rate-limited webhooks, reliable queue,
+"""phase-2 hardening (HITL active time + expiry, signed/pinned/rate-limited webhooks, reliable queue,
 sync wait cap, version pagination/retention/no-op restore/retry, migration lock, price override, LangSmith dedupe, async Redis)."""
 import asyncio, json, os, socket, threading, time, uuid
 import httpx, pytest
@@ -139,7 +139,7 @@ def _fake():
 
 
 def test_redis_queue_ack_and_lease_reaper():
-    """TASK-0020 replaced heartbeats with per-job leases (visibility timeout) reaped periodically."""
+    """replaced heartbeats with per-job leases (visibility timeout) reaped periodically."""
     r = _fake()
     dead = jq.RedisJobQueue("redis://fake", client=r, worker_id="dead", visibility=30)
     dead.enqueue({"run_id": "a"}); dead.enqueue({"run_id": "b"})

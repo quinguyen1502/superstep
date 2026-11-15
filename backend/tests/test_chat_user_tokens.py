@@ -1,4 +1,4 @@
-"""TASK-0218 / DEC-0077: external identity, JWT rejection, cross-origin transport and session isolation."""
+"""external identity, JWT rejection, cross-origin transport and session isolation."""
 from __future__ import annotations
 import base64, hashlib, hmac, json, time, uuid
 import pytest
@@ -231,7 +231,7 @@ def test_native_query_token_and_per_user_limits(monkeypatch):
 
 
 def test_failed_verifications_hit_the_message_ip_limit(monkeypatch):
-    """Failed JWT checks share the per-IP message budget (DEC-0077).
+    """Failed JWT checks share the per-IP message budget.
 
     Drive the public HTTP path with a unique X-Forwarded-For so we never share
     counters with other tests and never nest asyncio.run inside pytest-asyncio.

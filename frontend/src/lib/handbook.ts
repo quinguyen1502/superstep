@@ -1,4 +1,4 @@
-/** Contextual handbook links (TASK-0260, DEC-0086 option A): fixed published handbook, `/vi/` for Vietnamese. */
+/** Contextual handbook links: fixed published handbook, `/vi/` for Vietnamese. */
 export const HANDBOOK_URL = 'https://quinguyen1502.github.io/superstep/'
 
 /** `page` is a handbook path such as `operate/channels` (no `.md`); `anchor` a heading id. */

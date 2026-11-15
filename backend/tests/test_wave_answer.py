@@ -1,4 +1,4 @@
-"""A studio answer names the question on screen (TASK-0158). It does not approve another tool in the same wave,
+"""A studio answer names the question on screen. It does not approve another tool in the same wave,
 and two settles at once on SQLite both stick."""
 import asyncio, json, threading, time, uuid
 import pytest

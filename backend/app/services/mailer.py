@@ -1,5 +1,5 @@
-"""System e-mail (notifications, approval links, password reset; TASK-0045) through the studio's SMTP settings
-(`config.smtp()`). Delivery itself is core/smtp.py, shared with Send email nodes (TASK-0051)."""
+"""System e-mail (notifications, approval links, password reset; ) through the studio's SMTP settings
+(`config.smtp`). Delivery itself is core/smtp.py, shared with Send email nodes."""
 from typing import Optional
 from ..core import smtp as mail
 from ..core.errors import AppError

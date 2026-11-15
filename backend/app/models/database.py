@@ -1,11 +1,12 @@
 """Engine/session factory and schema migration (Alembic) bootstrap."""
 import os
 from contextlib import contextmanager
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event, literal, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from ..core import config
+from ..core.dataset_types import TEXT_FOLD_FUNCTION, fold_text
 
 try: import fcntl
 except ImportError: fcntl = None  # Windows: no file lock (single dev process)
@@ -23,6 +24,7 @@ def make_engine(url: str | None = None) -> Engine:
         @event.listens_for(eng, "connect")
         def _pragmas(dbapi_conn, _):  # same behaviour as the MVP: WAL + 15 s busy timeout
             cur = dbapi_conn.cursor(); cur.execute("PRAGMA journal_mode=WAL"); cur.close()
+            dbapi_conn.create_function(TEXT_FOLD_FUNCTION, 1, fold_text, deterministic=True)
     return eng
 
 
@@ -36,9 +38,21 @@ class Database:
     def session(self) -> Session:
         return self._factory()
 
+    def ping(self) -> bool:
+        """One round trip to the database (readiness probe)."""
+        with self.engine.connect() as conn:
+            return conn.execute(select(literal(1))).scalar() == 1
+
+    def pool_status(self) -> dict:
+        """Connections of this process's pool: checked out (in use), idle in the pool, and overflow beyond pool_size.
+        Empty for pools that do not count (e.g. a static pool)."""
+        pool = self.engine.pool
+        try: return {"in_use": pool.checkedout(), "idle": pool.checkedin(), "overflow": max(0, pool.overflow())}
+        except AttributeError: return {}
+
     def migrate(self) -> None:
         """Upgrade to the latest Alembic revision (idempotent; adopts pre-Alembic SQLite files).
-        Serialised across processes (TASK-0019): a Postgres advisory lock held for the migration transaction,
+        Serialised across processes: a Postgres advisory lock held for the migration transaction,
         or an exclusive file lock next to a SQLite database file, so API replicas + workers can start together."""
         from alembic import command
         from alembic.config import Config

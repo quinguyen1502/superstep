@@ -59,8 +59,9 @@ video's length and faded out over the last 3 s.
 
 | File | Role |
 | --- | --- |
-| `video.html` | The timeline: the en and vi captions, and the script of frames, cursor moves, clicks, drags, camera moves and the terminal. |
-| `render.mjs` | Loads `flow.json`, renders the poster, the frames and the final MP4. |
+| `video.html` | The timeline: the script of frames, cursor moves, clicks, drags, camera moves and the terminal. |
+| `locales/en.json`, `locales/vi.json` | The captions, one catalog per language with the same keys. |
+| `render.mjs` | Loads `flow.json` and the captions, renders the poster, the frames and the final MP4. |
 | `music.mjs` | Synthesises the music bed. Its section times match the timeline. |
 | `paths.mjs` | Shared paths and Chrome lookup. |
 

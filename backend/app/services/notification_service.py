@@ -1,4 +1,4 @@
-"""Notifications for runs that need a human (TASK-0020, DEC-0017).
+"""Notifications for runs that need a human.
 
 Always: an in-app row (bell in the header, mark read).
 Optional channels, each a no-op unless configured:
@@ -6,7 +6,7 @@ Optional channels, each a no-op unless configured:
 - A generic notify webhook (STUDIO_NOTIFY_WEBHOOK_URL, signed with STUDIO_NOTIFY_WEBHOOK_SECRET when set; same
   SSRF guard, DNS pinning and signature format as result webhooks).
 External channels run in a background thread so recording a run never waits on SMTP/HTTP.
-TASK-0021: new in-app notifications are pushed live (NotificationHub -> WebSocket /ws/notifications); e-mail is
+: new in-app notifications are pushed live (NotificationHub -> WebSocket /ws/notifications); e-mail is
 multipart (plain text + HTML template); per-user preferences switch the in-app and e-mail channels off/on.
 """
 import html, json, threading, time, uuid
@@ -21,8 +21,8 @@ from .approval_channels.messages import LANGS, lang_of
 
 log = get_logger("notify")
 KINDS = {"run_waiting": "A run is waiting for your response", "run_expired": "A waiting run expired",
-         "run_reminder": "A run is still waiting for your response", "run_escalated": "A run was handed to you for approval",  # TASK-0066
-         "run_auto_answered": "AI review answered an approval for you"}  # TASK-0187
+         "run_reminder": "A run is still waiting for your response", "run_escalated": "A run was handed to you for approval",
+         "run_auto_answered": "AI review answered an approval for you"}
 
 
 class NotificationService:
@@ -48,13 +48,27 @@ class NotificationService:
                          title=KINDS[kind], params=json.dumps(params, ensure_ascii=False), link=link, created=time.time())
         if prefs["in_app"]:
             n = self.repo.add(n)
-            if self.hub is not None:
-                try: self.hub.publish(uid, {"type": "notification", "notification": self.public(n), "unread": self.repo.unread_count(uid)})
-                except Exception: log.warning("live push of notification %s failed (the bell polls as a fallback)", n.id)
+        self.deliver(n, prefs)
+        return n
+
+    def budget_notice(self, uid: str, name: str, threshold: int, month: str) -> tuple[Notification, dict]:
+        params = {"budget_name": name, "threshold": threshold, "month": month}
+        notice = Notification(id=uuid.uuid4().hex, user_id=uid, kind="usage_budget_warning",
+                              title=f"Monthly usage budget reached {threshold}%", params=json.dumps(params),
+                              created=time.time())
+        return notice, self.preferences(uid)
+
+    def deliver(self, n: Notification, prefs: dict) -> None:
+        """Publish a committed in-app notification and dispatch its external channels."""
+        if prefs["in_app"] and self.hub is not None:
+            try:
+                self.hub.publish(n.user_id, {"type": "notification", "notification": self.public(n),
+                                             "unread": self.repo.unread_count(n.user_id)})
+            except Exception:
+                log.warning("live push of notification %s failed (the bell polls as a fallback)", n.id)
         if (config.smtp() and prefs["email"]) or config.notify_webhook():
             job = lambda: self.dispatch(n, email=prefs["email"])  # noqa: E731
             threading.Thread(target=job, daemon=True).start() if self.background else job()
-        return n
 
     def dispatch(self, n: Notification, email: bool = True) -> dict:
         """Send to the configured external channels. Never raises. Returns {channel: ok} (for tests/logs)."""
@@ -86,7 +100,7 @@ class NotificationService:
     def mark_all_read(self, uid: str) -> dict:
         self.repo.mark_read(uid); return {"ok": True, "unread": 0}
 
-    # ---- preferences (TASK-0021) ----
+    # ---- preferences ----
     def preferences(self, uid: str) -> dict:
         u = self.users.get_by_id(uid) if self.users else None
         return {"in_app": True if u is None or u.notify_in_app is None else bool(u.notify_in_app),
@@ -101,7 +115,7 @@ class NotificationService:
         return self.preferences(uid)
 
 
-LABELS = {"workflow_name": "Workflow", "label": "Step", "prompt": "Question", "ai_decision": "AI review", "ai_confidence": "Confidence", "ai_reason": "Reason"}
+LABELS = {"budget_name": "Budget", "month": "Month", "workflow_name": "Workflow", "label": "Step", "prompt": "Question", "ai_decision": "AI review", "ai_confidence": "Confidence", "ai_reason": "Reason"}
 
 
 def email_text(n: Notification, p: dict) -> str:

@@ -12,10 +12,10 @@ import { channelLabel, type Channels } from '@/lib/approvals'
 import type { AutoPolicy } from '@/lib/auto-approval'
 
 /** channel_id: the connection (personal or org); channel: its kind (kept for labels and older workflows). */
-export type Approval = { channel_id?: string; channel?: string; target?: string; approvers?: string[]; auto?: AutoPolicy }  // auto: AI review (TASK-0188)
+export type Approval = { channel_id?: string; channel?: string; target?: string; approvers?: string[]; auto?: AutoPolicy }  // auto: AI review
 
-/** Per-Human-node approval channel (TASK-0022): where the Approve/Reject message goes, and who may answer it, on any
- * Human node, from the channel or the Approvals inbox (TASK-0065). */
+/** Per-Human-node approval channel: where the Approve/Reject message goes, and who may answer it, on any
+ * Human node, from the channel or the Approvals inbox. */
 export function HumanApprovalSettings({ value, channels, onChange }: { value?: Approval; channels: Channels | null; onChange: (v: Approval) => void }) {
   const { t } = useTranslation(); const v = value || {}
   const set = (patch: Approval) => onChange({ ...v, ...patch })

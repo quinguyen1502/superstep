@@ -1,4 +1,4 @@
-"""TASK-0075: chat messages start runs (REQ-0044, DEC-0046): Slack events, Telegram messages, checks, replies."""
+"""chat messages start runs: Slack events, Telegram messages, checks, replies."""
 import asyncio, hashlib, hmac, json, time, uuid
 import httpx, pytest
 from fastapi.testclient import TestClient
@@ -9,6 +9,7 @@ from app.models import ChannelIdentity, Run
 from app.repositories import UserRepository, WorkflowRepository
 from app.services.approval_channels import ADAPTERS
 from tests.test_hitl import APPROVAL
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 SIGNING = "0123456789abcdef0123456789abcdef"
 TG = {"bot_token": "123456:AAbbCCddEEffGGhhIIjjKKll", "webhook_secret": "tg-secret-0123456789abcdef"}
@@ -148,7 +149,7 @@ def test_refusals_are_private_in_the_senders_language_and_audited(c, api, monkey
         assert (p["user"], p["channel"], p["thread_ts"]) == (user, "C0HR", "1700.1") and want in p["text"], p["text"]
     refused("echo hi", "U9", "Link your Slack account")
     refused("echo hi", "U3", "Verify your Slack account")
-    refused("echo hi", "U2", "Bạn không có quyền chạy workflow này")  # not shared with them; their language
+    refused("echo hi", "U2", vi_text("vi", "channels.CHAT_FORBIDDEN"))  # not shared with them; their language
     monkeypatch.setenv("STUDIO_INPUT_MAX_BYTES", "50")
     refused("echo " + "x" * 80, "U1", "too long")
     monkeypatch.delenv("STUDIO_INPUT_MAX_BYTES")
@@ -242,7 +243,7 @@ def test_telegram_messages_and_buttons_share_the_webhook(c, api):
 
 
 def test_settled_survives_a_cancelled_handler(c, monkeypatch):
-    """TASK-0083: the studio socket closes on run_summary, which cancels the handler while settled() waits for a
+    """the studio socket closes on run_summary, which cancels the handler while settled() waits for a
     thread. With every executor thread busy, a plain to_thread job was dropped and the chat reply never went out."""
     import threading
     from concurrent.futures import ThreadPoolExecutor

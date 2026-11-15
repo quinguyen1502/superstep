@@ -1,0 +1,12 @@
+{
+  "title": "Chat Superstep",
+  "demo": "Chỉ máy chủ mẫu. Đăng nhập bằng một trong hai người dùng thử.",
+  "loading": "Đang tải máy chủ mẫu",
+  "signIn": "Đăng nhập với",
+  "signOut": "Đăng xuất",
+  "english": "Tiếng Anh",
+  "vietnamese": "Tiếng Việt",
+  "language": "Ngôn ngữ",
+  "missing": "Máy chủ mẫu không trả về URL studio. Hãy chạy với CHAT_HOST_DEMO=1.",
+  "cookie": "Không đọc được cookie phiên của máy chủ mẫu. Giữ nguyên http://localhost:5188."
+}

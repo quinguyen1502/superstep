@@ -1,4 +1,4 @@
-/** My profile (TASK-0052): the account, language and notifications, and a password change that signs out
+/** My profile: the account, language and notifications, and a password change that signs out
  *  every other session of the account (this browser gets a fresh one). */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

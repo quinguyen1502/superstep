@@ -10,11 +10,11 @@ import { NotificationSettingsDialog } from '@/components/notification-settings-d
 import i18n from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-type Note = { id: string; kind: 'run_waiting' | 'run_expired' | 'run_reminder' | 'run_escalated' | 'run_auto_answered'; title: string; link: string | null; created: number; read: boolean
-  params: { workflow_name?: string | null; label?: string | null; prompt?: string | null } }
+type Note = { id: string; kind: 'run_waiting' | 'run_expired' | 'run_reminder' | 'run_escalated' | 'run_auto_answered' | 'usage_budget_warning'; title: string; link: string | null; created: number; read: boolean
+  params: { workflow_name?: string | null; label?: string | null; prompt?: string | null; budget_name?: string; threshold?: number; month?: string } }
 const POLL_MS = 30_000
 
-/** Live push (TASK-0021): WebSocket /ws/notifications; reconnects with backoff. Returns whether it is connected. */
+/** Live push: WebSocket /ws/notifications; reconnects with backoff. Returns whether it is connected. */
 function useLivePush(onPush: (n: Note, unread: number) => void) {
   const [live, setLive] = useState(false); const cb = useRef(onPush)
   useEffect(() => { cb.current = onPush })
@@ -35,8 +35,8 @@ function useLivePush(onPush: (n: Note, unread: number) => void) {
   return live
 }
 
-/** In-app notifications (TASK-0020): bell with unread count, list, mark read. Live push with polling as the fallback,
- *  and a settings dialog for the user's channels (TASK-0021). */
+/** In-app notifications: bell with unread count, list, mark read. Live push with polling as the fallback,
+ * and a settings dialog for the user's channels. */
 export function NotificationBell() {
   const { t } = useTranslation(); const nav = useNavigate()
   const [items, setItems] = useState<Note[]>([]); const [unread, setUnread] = useState(0); const [settings, setSettings] = useState(false)
@@ -50,7 +50,10 @@ export function NotificationBell() {
     if (n.link) nav(n.link)
   }
   const readAll = async () => { try { await api('/api/notifications/read-all', { method: 'POST' }); setUnread(0); setItems(xs => xs.map(x => ({ ...x, read: true }))) } catch { /* ignore */ } }
-  const text = (n: Note) => t(`notify.${n.kind}`, { workflow: n.params.workflow_name || t('notify.unknownWorkflow'), label: n.params.label || '' })
+  const text = (n: Note) => t(`notify.${n.kind}`, {
+    workflow: n.params.workflow_name || t('notify.unknownWorkflow'), label: n.params.label || '',
+    name: n.params.budget_name, threshold: n.params.threshold, month: n.params.month,
+  })
   return <><DropdownMenu onOpenChange={o => o && load()}>
     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" id="notify-bell" className="relative" data-live={live} aria-label={t('notify.unread', { count: unread })}>
       <Bell />{unread > 0 && <Badge size="sm" className="absolute -top-1 -right-1 min-w-4" data-testid="notify-count">{unread}</Badge>}</Button></DropdownMenuTrigger>

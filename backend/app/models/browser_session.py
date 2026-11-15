@@ -10,7 +10,7 @@ class BrowserSession(Base):
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     owner: Mapped[str] = mapped_column(Text, nullable=False, index=True)  # retain minimal pending cleanup after account deletion
     principal_id: Mapped[str] = mapped_column(Text, nullable=False)
-    conversation_id: Mapped[Optional[str]] = mapped_column(Text, index=True)  # chat-driven cross-turn binding (DEC-0085)
+    conversation_id: Mapped[Optional[str]] = mapped_column(Text, index=True)  # chat-driven cross-turn binding
     run_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     group_id: Mapped[str] = mapped_column(Text, nullable=False)
     connection_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)

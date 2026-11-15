@@ -23,7 +23,7 @@ Demo: locale-aware mock replies and per-visitor history.
 ## Scope (from the PR)
 
 - `engine/locale.py`: `pick()` returns `en` (default) or `vi` from an explicit value or an `Accept-Language` header.
-- `Ports.locale` carries the run's language; `mock_llm(prompt, model, locale)` answers `Answer:` / `Trả lời:`; the example `lookup_order` tool opts in by declaring a `locale` parameter (same opt-in pattern as `idempotency_key` in `call_tool`).
+- `Ports.locale` carries the run's language; `mock_llm(prompt, model, locale)` answers `Answer:` (and its vi label); the example `lookup_order` tool opts in by declaring a `locale` parameter (same opt-in pattern as `idempotency_key` in `call_tool`).
 - `/ws/run` sets the locale from the request's `locale` field, else `Accept-Language`. The studio sends `locale: uiLocale()` with editor runs and Chat panel messages and answers.
 - Exported Python/TS code's mock now answers in English, matching the engine's default.
 - Regenerated `handbook/docs/{en,vi}/images/overview.png` (README hero) plus the chat-tab, chat-visitor and chat-fullscreen shots. The English shots now show English replies.

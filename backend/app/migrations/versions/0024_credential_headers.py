@@ -1,4 +1,4 @@
-"""TASK-0030: optional extra HTTP headers on a credential (OpenRouter HTTP-Referer / X-Title), JSON text."""
+"""optional extra HTTP headers on a credential (OpenRouter HTTP-Referer / X-Title), JSON text."""
 from alembic import op
 import sqlalchemy as sa
 

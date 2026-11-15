@@ -1,5 +1,314 @@
 # Quan sát hệ thống
 
+## Health và readiness
+
+`GET /api/health` là **liveness**: trả 200 khi tiến trình còn phục vụ HTTP.
+Endpoint này không truy vấn cơ sở dữ liệu. Nó cho biết `llm_mode`, `database`
+(tên dialect), `run_bus` và bus có phản hồi không (`run_bus_ok`), `tracing` và
+`import_enabled`. Container `web` trả lời `/healthz`.
+
+`GET /api/ready` là **readiness**. Endpoint này không cần đăng nhập và:
+
+- chạy `SELECT 1` trên cơ sở dữ liệu và ping Redis khi có `REDIS_URL`, mỗi
+  lệnh có timeout 2 giây, và báo độ trễ;
+- báo hàng đợi (số job `ready`, `delayed`, `processing` và tuổi của run
+  queued lâu nhất), các worker còn sống (slot đang bận, sức chứa và tuổi của
+  heartbeat mới nhất), loại run bus, và `in_memory_in_production` khi
+  production chạy không có Redis.
+
+Endpoint trả 503 `SERVICE_NOT_READY` khi cơ sở dữ liệu lỗi, hoặc khi Redis
+được cấu hình mà lỗi, kèm cùng báo cáo trong `error.details`. Hàng đợi tồn
+đọng hay thiếu worker không làm readiness thất bại; hãy đặt cảnh báo cho
+chúng. Cả hai endpoint đều không trả URL, tên máy chủ hay secret.
+
+`HEALTHCHECK` của Docker và template Render, DigitalOcean vẫn dùng
+`/api/health`: khởi động lại container không sửa được cơ sở dữ liệu chết. Hãy
+trỏ load balancer hoặc rolling deploy tới `/api/ready` khi muốn ngừng gửi
+traffic tới instance không kết nối được cơ sở dữ liệu.
+
+## Metric
+
+Metric mặc định tắt. Đặt `STUDIO_OTEL_METRICS=1` cùng một endpoint OTLP
+(`OTEL_EXPORTER_OTLP_ENDPOINT`, hoặc `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`) thì
+mọi tiến trình API và worker sẽ đẩy metric OpenTelemetry tới đó.
+`OTEL_METRIC_EXPORT_INTERVAL` đặt chu kỳ gửi, tính bằng mili giây (mặc định
+60000). Backend không có trang `/metrics` riêng: hãy trỏ nó tới một
+OpenTelemetry Collector, rồi để Prometheus hoặc hệ thống khác đọc từ collector.
+
+Mỗi tiến trình báo `service.name` (`OTEL_SERVICE_NAME`, mặc định `superstep`)
+và `service.instance.id` riêng.
+
+### Run và model
+
+| Metric | Loại | Nhãn | Nghĩa |
+| --- | --- | --- | --- |
+| `studio.runs` | counter | `status`, `source`, `workflow_id` | Số run đã kết thúc |
+| `studio.run.duration` | histogram, ms | `status`, `source`, `workflow_id` | Thời gian run thực sự chạy |
+| `studio.tokens` | counter | `status`, `source`, `workflow_id`, `direction` | Token LLM của mỗi run |
+| `studio.cost` | counter, USD | `status`, `source`, `workflow_id` | Chi phí ước tính của mỗi run; run chưa có giá bị bỏ qua |
+| `studio.errors` | counter | `status`, `source`, `workflow_id` | Số sự kiện lỗi |
+| `studio.llm.tokens` | counter | `model`, `provider`, `workflow_id`, `direction` | Token của mỗi lời gọi model |
+| `studio.llm.cost` | counter, USD | `model`, `provider`, `workflow_id` | Chi phí ước tính của các lời gọi có giá |
+| `studio.llm.unpriced` | counter | `model`, `provider` | Lời gọi tới model chưa có giá |
+| `studio.llm.errors` | counter | `code`, `provider`, `model` | Lời gọi model thất bại, theo mã lỗi |
+| `studio.llm.fallbacks` | counter | `primary_provider`, `fallback_provider`, `code` | Lời gọi do model dự phòng trả lời |
+| `studio.llm.duration` | histogram, ms | `model`, `provider`, `status` | Thời gian của một lời gọi provider; model chính lỗi và model dự phòng là hai mẫu |
+| `studio.llm.ttft` | histogram, ms | `model`, `provider`, `status` | Thời gian đến token stream đầu tiên; chỉ lời gọi có stream |
+| `studio.embedding.tokens` | counter | `model`, `provider`, `source` | Token đầu vào gửi tới model embedding |
+| `studio.embedding.cost` | counter, USD | `model`, `provider`, `source` | Chi phí ước tính của lời gọi embedding có giá |
+| `studio.embedding.unpriced` | counter | `model`, `provider`, `source` | Lời gọi embedding tới model chưa có giá |
+
+HTTP 429 từ provider được tính là `PROVIDER_RATE_LIMITED`, tách riêng khỏi các
+lỗi provider khác. Run tạm (ad hoc) dùng `workflow_id="adhoc"`. `status` trên
+các histogram độ trễ là `ok` hoặc mã lỗi của provider. Lời gọi mock (offline)
+không được đo.
+
+`source` của embedding là `ingest` (thêm tài liệu hoặc index lại) hoặc `query`
+(tìm kiếm, node Retriever và công cụ knowledge base của agent). Token của
+embedding truy vấn trong một run được cộng vào token đầu vào và chi phí của run
+đó, và hiện trên node dưới dạng `embedding_usage`; ingest chỉ được tính trong
+metric. Giá của `text-embedding-3-small`, `text-embedding-3-large` và
+`text-embedding-ada-002` có sẵn; thêm model khác bằng `STUDIO_PRICES` như model
+chat. Embedding chưa có giá vẫn cộng token vào run nhưng giữ nguyên chi phí của
+run.
+
+### Server
+
+| Metric | Loại | Nhãn | Nghĩa |
+| --- | --- | --- | --- |
+| `studio.http.server.requests` | counter | `route`, `method`, `status_class` | Số request HTTP |
+| `studio.http.server.duration` | histogram, ms | `route`, `method`, `status_class` | Thời gian xử lý request; không đo `/api/health` và `/api/ready` |
+| `studio.ws.connections` | up-down counter | không có | Số WebSocket đang mở |
+| `studio.process.cpu_time` | counter, s | không có | Thời gian CPU của tiến trình |
+| `studio.process.rss` | gauge, byte | không có | Bộ nhớ thường trú của tiến trình |
+
+`route` là mẫu route, ví dụ `/api/workflows/{wid}`, không bao giờ là đường dẫn
+thô. Request không khớp route nào có nhãn `unmatched`.
+
+### Cơ sở dữ liệu, Redis, hàng đợi và worker
+
+| Metric | Loại | Nhãn | Nghĩa |
+| --- | --- | --- | --- |
+| `studio.ready.db` | gauge | không có | 1 khi kiểm tra cơ sở dữ liệu đạt, 0 khi lỗi |
+| `studio.ready.db.latency` | gauge, ms | không có | Thời gian kiểm tra cơ sở dữ liệu |
+| `studio.ready.redis` | gauge | không có | Tương tự cho Redis; không có khi thiếu `REDIS_URL` |
+| `studio.ready.redis.latency` | gauge, ms | không có | Thời gian kiểm tra Redis |
+| `studio.queue.depth` | gauge | `state` (`ready`, `delayed`, `processing`) | Số job trong hàng đợi |
+| `studio.queue.oldest_age` | gauge, s | không có | Tuổi của run queued lâu nhất |
+| `studio.worker.heartbeat_age` | gauge, s | không có | Tuổi của heartbeat worker mới nhất |
+| `studio.worker.busy` | gauge | không có | Slot job đang bận của worker này |
+| `studio.worker.capacity` | gauge | không có | Số slot job của worker này |
+| `studio.jobs.reaped` | counter | không có | Job được đưa lại hàng đợi khi hết hạn lease |
+| `studio.jobs.recovered` | counter | không có | Run chưa xong được đưa lại hàng đợi lúc khởi động |
+| `studio.run_bus.in_memory` | gauge | không có | 1 khi tiến trình chạy không có `REDIS_URL` |
+| `studio.db.pool.in_use` | gauge | không có | Kết nối cơ sở dữ liệu đang được lấy ra từ pool của tiến trình này |
+| `studio.db.pool.idle` | gauge | không có | Kết nối rảnh trong pool của tiến trình này |
+| `studio.db.pool.overflow` | gauge | không có | Kết nối vượt quá kích thước pool |
+
+Các gauge kiểm tra dùng lại phép kiểm tra của `/api/ready`, tối đa mỗi 5 giây
+một lần cho mỗi tiến trình.
+
+### Tích hợp và giới hạn
+
+| Metric | Loại | Nhãn | Nghĩa |
+| --- | --- | --- | --- |
+| `studio.channel.messages` | counter | `kind`, `direction`, `status` | Yêu cầu phê duyệt và trả lời chat đã gửi (`out`), lượt bấm nút và tin nhắn chat trigger đã nhận (`in`) |
+| `studio.mcp.calls` | counter | `transport`, `status`, `code` | Lời gọi công cụ MCP; `code` là mã lỗi của lời gọi thất bại |
+| `studio.mcp.duration` | histogram, ms | `transport`, `status`, `code` | Thời gian của một lời gọi công cụ MCP |
+| `studio.browser.sessions` | counter | `status` (`opened`, `closed`, `lost`, `revoked`, `expired`) | Phiên trình duyệt được mở và kết thúc |
+| `studio.browser.actions` | counter | `status`, `code` | Thao tác trình duyệt theo kết quả |
+| `studio.browser.active` | gauge | không có | Số phiên trình duyệt đang mở, trên mọi tiến trình (báo ở nơi có worker) |
+| `studio.sandbox.executions` | counter | `runtime`, `language`, `status` | Số lần chạy node Code; `status` là `ok` hoặc mã lỗi |
+| `studio.sandbox.duration` | histogram, ms | `runtime`, `language`, `status` | Thời gian của một lần chạy node Code |
+| `studio.rate_limit.hits` | counter | `scope` | Request bị một giới hạn của sản phẩm từ chối |
+
+`kind` là nền tảng kênh, `transport` là `stdio`, `http` hoặc `managed`,
+`runtime` là `docker`, `subprocess` hoặc `remote`. `scope` là tên giới hạn:
+`login`, `demo`, `public_chat`, `chat_trigger`, `api_trigger`,
+`approval_callback`, `code`, `pat`, `email_node`, `identity_code` hoặc `other`.
+Không nhãn nào mang tên server hay kết nối, URL, id người dùng hay khoá của
+bộ giới hạn. Giới hạn của provider vẫn nằm trong `studio.llm.errors` với
+`PROVIDER_RATE_LIMITED`; panel Throttling hiện cả hai.
+
+### Tình trạng sản phẩm
+
+Chỉ tiến trình có chạy worker mới báo các metric này (service `worker`, hoặc
+API khi tự chạy worker). Chúng được làm mới tối đa mỗi 30 giây.
+
+| Metric | Loại | Nghĩa |
+| --- | --- | --- |
+| `studio.approvals.waiting` | gauge | Bước duyệt đang chờ trả lời |
+| `studio.approvals.oldest_age` | gauge, s | Tuổi của bước duyệt chờ lâu nhất |
+| `studio.webhooks.failed` | gauge | Lần gửi webhook thất bại trong giờ vừa qua |
+| `studio.webhooks.retrying` | gauge | Lần gửi webhook đang chờ thử lại |
+| `studio.schedules.overdue` | gauge | Lịch chạy đang bật mà trễ quá 5 phút |
+| `studio.schedules.disabled` | gauge | Lịch chạy bị scheduler tắt sau nhiều lần lỗi |
+| `studio.chat.refused` | gauge, `code`, `kind` | Tin nhắn chat trigger bị từ chối trong giờ vừa qua, theo lý do và nền tảng |
+
+### Nhãn và số lượng series
+
+Nhãn chỉ nằm trong một danh sách cố định: `status`, `source`, `workflow_id`,
+`model`, `provider`, `code`, `direction`, `route`, `method`, `status_class`,
+`state`, `primary_provider`, `fallback_provider`, `kind`, `transport`,
+`runtime`, `language` và `scope`. Thuộc tính khác bị bỏ trước khi xuất, và giá
+trị của `kind`, `transport`, `runtime`, `language` và `scope` nằm ngoài danh
+sách cố định được xuất là `other`. Không metric nào mang id người dùng, id run, email, đường dẫn thô
+hay nội dung prompt. `workflow_id` tăng theo số workflow; hãy bỏ nhãn này ở
+collector nếu hệ thống của bạn không chịu được số series đó.
+
+## Grafana với Compose
+
+Profile `observability` chạy OpenTelemetry Collector, Prometheus, Grafana và
+Jaeger cạnh studio. Backend đẩy OTLP tới collector; Prometheus đọc từ
+collector; collector chuyển trace sang Jaeger. Cấu hình nằm trong
+`deploy/observability/`.
+
+```bash
+docker compose --env-file .env --env-file deploy/observability/observability.env \
+  --profile observability up --build
+```
+
+`deploy/observability/observability.env` đặt
+`OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318`,
+`STUDIO_OTEL_METRICS=1`, chu kỳ gửi 15 giây, `STUDIO_TRACE_URL` của Jaeger và
+`STUDIO_GRAFANA_URL=http://localhost:3000`.
+
+| Service | Địa chỉ |
+| --- | --- |
+| Grafana | `http://localhost:3000` (chỉ trên 127.0.0.1; `GRAFANA_PORT`) |
+| Jaeger | `http://localhost:16686` |
+| Prometheus, collector | chỉ trong mạng Compose |
+
+Grafana đăng nhập bằng `admin` với `GRAFANA_ADMIN_PASSWORD`, mặc định là
+`admin`. Hãy đặt mật khẩu riêng trong `.env` trước khi mở Grafana ra ngoài.
+`PROMETHEUS_RETENTION` (mặc định `31d`) đặt thời gian Prometheus giữ dữ liệu. Giữ ít nhất 30 ngày dữ liệu để tính SLO đủ cửa sổ.
+
+Dashboard **Superstep overview** trong thư mục **Superstep** có các hàng sau:
+
+| Hàng | Panel |
+| --- | --- |
+| Server | Request, độ trễ, tỉ lệ 5xx, route chậm nhất, WebSocket, CPU và bộ nhớ |
+| Database and Redis | Trạng thái sẵn sàng, pool kết nối của app, kết nối Postgres, giao dịch, tỉ lệ cache hit và dung lượng, bộ nhớ Redis, client, thao tác và key |
+| Queue and workers | Độ sâu hàng đợi và run chờ lâu nhất, worker, heartbeat, run bus |
+| Runs and models | Run theo trạng thái, tỉ lệ lỗi, thời gian, token và chi phí theo model và workflow, lời gọi chưa có giá, lỗi model, model dự phòng, độ trễ model và thời gian đến token đầu tiên, token và chi phí embedding |
+| Integrations and limits | Tin nhắn kênh, lời gọi MCP, phiên và thao tác trình duyệt, lần chạy sandbox, lần chạm giới hạn theo phạm vi |
+| Product health | Yêu cầu duyệt, webhook, lịch chạy và tin nhắn chat trigger bị từ chối |
+
+![Dashboard Superstep overview trong Grafana](../images/grafana-overview.png)
+
+Trong Prometheus, tên dùng dấu gạch dưới và không có hậu tố đơn vị:
+`studio.http.server.requests` thành `studio_http_server_requests`, và
+collector gắn nhãn `job` (tên service) và `instance` (id instance).
+
+### Server Postgres và Redis
+
+Collector cũng tự đọc server Postgres và Redis của stack Compose bằng các
+receiver `postgresql`, `sqlquery` và `redis`, nên Prometheus vẫn chỉ thu
+thập từ collector. Dashboard hiện số kết nối Postgres theo trạng thái so với
+`max_connections`, commit, rollback và deadlock, tỉ lệ trúng cache và dung
+lượng cơ sở dữ liệu, cùng bộ nhớ Redis so với `maxmemory`, số client, số thao
+tác mỗi giây, số key bị loại và số key. Khi không có Redis, các panel đó để
+trống.
+
+Collector đăng nhập Postgres bằng một role chỉ đọc thuộc `pg_monitor` (các
+view thống kê, không có dữ liệu bảng). Đặt `POSTGRES_MONITOR_PASSWORD` (và
+tuỳ chọn `POSTGRES_MONITOR_USER`, mặc định `superstep_monitor`) trong `.env`;
+service chạy một lần `postgres-monitor` tạo hoặc cập nhật role mỗi lần `up`.
+Khi mật khẩu trống, không role nào được tạo và các panel Postgres để trống.
+Với cơ sở dữ liệu được quản lý, hãy tự tạo role:
+
+```sql
+CREATE ROLE superstep_monitor LOGIN PASSWORD 'choose-a-password';
+GRANT pg_monitor TO superstep_monitor;
+```
+
+## Cảnh báo
+
+Profile tạo sẵn các quy tắc cảnh báo Grafana sau trong thư mục **Superstep**.
+Ngưỡng nằm ở đầu file
+`deploy/observability/grafana/provisioning/alerting/rules.yaml`, dưới
+`x-thresholds`; sửa rồi khởi động lại Grafana. Thêm một contact point trong
+Grafana để nhận thông báo.
+
+| Cảnh báo | Bật khi | Mặc định |
+| --- | --- | --- |
+| Instance down | Không tiến trình nào báo metric: collector bỏ tiến trình im lặng sau 5 phút, rồi quy tắc chờ thêm 5 phút | |
+| Thumbs-down spike | Trên 30% lượt không thích trong ít nhất 10 lượt gửi đánh giá chat trong 30 phút. |
+| Database down | `studio.ready.db` bằng 0 trong 1 phút | |
+| Redis down | `studio.ready.redis` bằng 0 trong 1 phút | |
+| HTTP 5xx share | Tỉ lệ phản hồi 5xx trong 5 phút | trên 5% trong 5 phút |
+| Queue backlog (depth) | Số job sẵn sàng trong hàng đợi | trên 100 trong 5 phút |
+| Queue backlog (oldest run) | `studio.queue.oldest_age` | trên 300 giây trong 5 phút |
+| Worker missing | `studio.worker.heartbeat_age`, hoặc không có heartbeat nào | trên 60 giây trong 2 phút |
+| Run error rate | Run kết thúc lỗi hoặc quá thời gian trong 15 phút | trên 20% trong 15 phút |
+| Provider auth or unreachable | `studio.llm.errors` với `PROVIDER_AUTH_FAILED` hoặc `PROVIDER_UNREACHABLE` | có lỗi trong 5 phút |
+| Provider rate limited | `studio.llm.errors` với `PROVIDER_RATE_LIMITED` (cảnh báo nhẹ) | có lỗi trong 5 phút |
+| Slow provider | p95 của `studio.llm.duration` cho bất kỳ provider nào trong 10 phút | trên 30 giây trong 10 phút |
+| Daily cost | Mức tăng của `studio.cost` trong 24 giờ | trên 50 USD |
+| Overdue schedules | `studio.schedules.overdue` | trên 0 trong 10 phút |
+| Webhook failures | `studio.webhooks.failed` (giờ vừa qua) | trên 0 |
+| Approvals waiting too long | `studio.approvals.oldest_age` | trên 1 ngày |
+| Integration errors | Lời gọi MCP, lượt gửi qua kênh và thao tác trình duyệt thất bại trong 15 phút | trên 10 trong 15 phút |
+| Throttling spike | `studio.rate_limit.hits` trong 5 phút | trên 50 trong 5 phút |
+| Channel refusals | `studio.chat.refused` (giờ vừa qua, mọi mã) | trên 20 trong 10 phút |
+| In-memory run bus | `studio.run_bus.in_memory` | bằng 1 trong 5 phút |
+| Postgres connections near limit | Số kết nối Postgres so với `max_connections` | trên 80% trong 5 phút |
+| Redis memory pressure | Bộ nhớ Redis đã dùng so với `maxmemory`, chỉ khi có đặt `maxmemory` | trên 90% trong 5 phút |
+| Fast SLO burn | Cả cửa sổ 5 phút và 1 giờ đều tiêu ngân sách nhanh hơn 14,4 lần. |
+| Slow SLO burn | Cả cửa sổ 30 phút và 6 giờ đều tiêu ngân sách nhanh hơn 6 lần. |
+
+Chi phí theo ngày chỉ tính run có giá; dashboard hiện số lời gọi chưa có giá
+bên cạnh. Khi không có Redis, cảnh báo bus in-memory bật là có chủ ý: hãy dùng
+`REDIS_URL` khi chạy nhiều hơn một tiến trình.
+
+## Trang Mức sử dụng
+
+**Cài đặt → Mức sử dụng** cho thấy studio được dùng thế nào mà không cần
+Grafana. Chỉ người có quyền `users.manage` (admin) thấy trang này.
+
+![Cài đặt → Mức sử dụng](../images/settings-usage.png)
+
+- Chọn 24 giờ, 7 ngày hoặc 30 ngày qua.
+- Thẻ số liệu: số run, tỉ lệ thành công, token vào và ra, chi phí ước tính và
+  run chưa có giá.
+- Run theo thời gian, xếp chồng theo trạng thái, và 10 workflow nhiều run hoặc
+  chi phí cao nhất. Workflow đã xoá hiện bằng id.
+- **Model**: số lời gọi, lỗi, token, thời gian gọi trung bình và chi phí ước
+  tính theo model và provider, tách thành node, embedding và AI duyệt. Sắp xếp
+  theo chi phí, token hoặc số lời gọi.
+- **Người dùng** và **Nhóm**: 20 mục đầu theo số run hoặc chi phí (cùng lựa
+  chọn với workflow), kèm dòng tổng. Người dùng đã xoá hiện là "Người dùng đã
+  xoá". Thành viên của nhiều nhóm được tính cho từng nhóm, và trang cho biết có
+  bao nhiêu người như vậy.
+- **Tình trạng sản phẩm**: yêu cầu duyệt đang chờ và đã hết hạn, lần gửi
+  webhook thất bại và đang thử lại, lịch chạy quá hạn và lịch chạy bị
+  scheduler dừng, kèm lý do, cùng tin nhắn chat trigger bị từ chối theo lý do
+  và nền tảng, với tỉ lệ trên tổng số tin đã xử lý.
+
+Chỉ run cấp cao nhất được tính; token và chi phí của workflow con thuộc về run
+đã gọi nó. Chi phí là ước tính từ bảng giá model. Run dùng model chưa có giá
+được tính là chưa có giá và không cộng vào chi phí, khi đó thẻ chi phí ghi
+"ít nhất". Thêm giá còn thiếu bằng `STUDIO_PRICES` hoặc `STUDIO_PRICES_FILE`
+(xem [Cấu hình](../reference/configuration.md)).
+
+Bảng Model đọc một bảng mức sử dụng theo run, được ghi khi run kết thúc. Mỗi
+run chỉ ghi lời gọi của chính nó, nên run của workflow con cũng có mặt và tổng
+của bảng có thể cao hơn các thẻ số liệu. Dữ liệu theo model bắt đầu từ lúc bảng
+được tạo; trang hiện ngày đó. Để điền cho các run đã xong trước đó, chạy một
+lần:
+
+```bash
+docker compose exec api python -m app.admin_cmd usage-backfill --days 30
+```
+
+Lệnh in ra số run và số dòng đã ghi; chạy lại không tạo dòng trùng. Số liệu
+theo người dùng và theo nhóm chỉ lấy từ cơ sở dữ liệu; không metric nào mang id
+người dùng hay id nhóm.
+
+Khi đặt `STUDIO_GRAFANA_URL`, trang có link sang Grafana để xem tình trạng
+server, cơ sở dữ liệu và hàng đợi. Cùng dữ liệu có ở `GET /api/admin/usage` và
+`GET /api/admin/usage/health`.
+
 ## Trace
 
 OpenTelemetry tạo một trace cho mỗi run và một span cho mỗi node, kèm các
@@ -19,6 +328,17 @@ mở run đó trong LangSmith. Kết quả test cũng có thể gửi sang LangS
 
 Khi exporter LangSmith của Studio bật, tracer LangSmith riêng của LangChain bị
 tắt, để mỗi lời gọi LLM chỉ được xuất một lần.
+
+### Request, SQL và Redis
+
+Khi có endpoint OTLP và `STUDIO_OTEL_INSTRUMENT=1`, API trace thêm từng request
+HTTP (`GET /api/workflows/{workflow_id}`, theo mẫu route, kèm mã trạng thái)
+cùng các truy vấn SQL và lệnh Redis chạy trong lúc xử lý request. Span SQL ghi
+dạng câu lệnh, không có giá trị tham số. Request khởi động một run sẽ liên kết
+trace của run với span của request, và truy vấn SQL hay lệnh Redis của một run
+nằm trong trace của run đó. Header `traceparent` gửi vào được tôn
+trọng. Các kiểm tra health và readiness không được trace. Instrumentation tốn
+thêm một ít chi phí cho mỗi request nên mặc định tắt.
 
 ## Jaeger với Compose
 
@@ -40,26 +360,48 @@ docker run -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one
 
 rồi trỏ backend tới `http://localhost:4318`.
 
-## Metric
-
-`STUDIO_OTEL_METRICS=1` cùng một endpoint OTLP sẽ xuất thêm:
-
-| Metric | Loại | Nghĩa |
-| --- | --- | --- |
-| `studio.runs` | counter | Số run đã kết thúc |
-| `studio.run.duration` | histogram, ms | Thời gian run thực sự chạy |
-| `studio.tokens` | counter | Token LLM |
-| `studio.cost` | counter, USD | Chi phí LLM ước tính |
-| `studio.errors` | counter | Số sự kiện lỗi |
-
-## Health
-
-`GET /api/health` cho biết `llm_mode`, `database`, `run_bus` và bus có phản
-hồi không (`run_bus_ok`), `tracing` và `import_enabled`. Container `web` trả lời
-`/healthz`.
-
 ## Log
 
 API ghi log ra stdout. Lỗi trong sự kiện gói trong một dòng, `sk-…`,
 `Bearer …` và `api_key=…` được che, và `?token=` hiện thành `token=***` trong
 access log của uvicorn.
+
+Mỗi response có header `X-Request-ID`; header hợp lệ gửi vào được giữ nguyên.
+Với `STUDIO_LOG_FORMAT=json`, API và worker ghi mỗi dòng một đối tượng JSON, kể
+cả access log của uvicorn:
+
+```json
+{"ts": "2026-11-10T08:15:02.120Z", "level": "INFO", "logger": "studio.runs", "message": "run finished", "request_id": "5f0c…", "run_id": "a1b2c3d4e5", "workflow_id": "support-triage", "trace_id": "4bf9…", "span_id": "00f0…"}
+```
+
+Chỉ những id đã biết mới được ghi. Tìm `run_id` trong log để xem mọi thứ về
+một run, hoặc tìm `trace_id` để chuyển qua lại giữa log và Jaeger hay Tempo.
+`STUDIO_LOG_LEVEL` (ví dụ `DEBUG`) đặt mức log cho các logger riêng của
+Superstep. Định dạng mặc định `text` không đổi.
+
+## Múi giờ của lịch chạy
+
+Backend đi kèm gói `tzdata`, nên lịch chạy nhận mọi múi giờ IANA mà trình
+duyệt báo, ví dụ `Asia/Saigon`, kể cả trên image không có dữ liệu múi giờ của
+hệ thống. Lịch chạy có múi giờ vẫn không đọc được sẽ bị tắt kèm ghi chú; nó
+hiện trong **Tình trạng sản phẩm** và trong `studio.schedules.disabled`.
+
+## Ngân sách tháng
+
+Trong **Cài đặt → Mức sử dụng**, quản trị viên có thể đặt ngân sách tháng bằng USD cho người dùng hoặc nhóm. Chi phí tính từ các dòng usage có giá của run hoàn tất trong tháng. Số dòng chưa có giá cho biết chi phí đã tính mới là mức tối thiểu. Chi phí nhóm tính theo thành viên hiện tại. Đặt `STUDIO_TIMEZONE` theo tên múi giờ IANA để xác định ranh giới tháng. Mặc định là UTC.
+
+Usage mới ghi nhận sẽ kích hoạt cảnh báo khi đạt 80% và 100%, mỗi ngưỡng một lần cho mỗi ngân sách trong tháng. Ngân sách người dùng gửi thông báo cho người đó. Ngân sách nhóm gửi cho các thành viên đang hoạt động. Thông báo tuân theo tuỳ chọn hiện có và workflow tiếp tục chạy ở mọi mức chi phí.
+
+## Mục tiêu mức dịch vụ
+
+Mục tiêu mặc định trong 30 ngày gần nhất là 99% run thành công và 99,5% API sẵn sàng. Tỷ lệ run tính các run đã kết thúc với trạng thái thành công, lỗi, quá thời gian hoặc hết hạn. Độ sẵn sàng API tính phản hồi dưới HTTP 500 và bỏ qua probe health và readiness. Ngân sách lỗi là tỷ lệ lỗi được phép, phần còn lại là tỷ lệ ngân sách chưa dùng.
+
+Đặt `STUDIO_SLO_RUN_SUCCESS` và `STUDIO_SLO_API_AVAILABILITY` bằng số lớn hơn 0 và nhỏ hơn 1. Khởi động lại API và Prometheus để trang Mức sử dụng và Grafana cùng dùng mục tiêu mới. Trang Mức sử dụng đọc tỷ lệ run từ cơ sở dữ liệu. Grafana hiển thị cả hai mục tiêu và tốc độ tiêu ngân sách.
+
+Để kiểm tra cảnh báo nhanh trên stack local, tạo tải cô lập với 20% run lỗi trong hơn một giờ. Với mục tiêu 99%, cả hai cửa sổ sẽ tiêu ngân sách nhanh khoảng 20 lần. Xem quy tắc trong Grafana và đợi một chu kỳ đánh giá.
+
+## Tín hiệu chất lượng
+
+Trang Mức sử dụng đọc đánh giá mới nhất của mỗi câu trả lời và xếp hạng workflow theo tỷ lệ không thích trong khoảng đã chọn. Tỷ lệ xuất hiện khi workflow có ít nhất năm lượt đánh giá. Bảng kiểm thử hiển thị bộ kiểm thử đã hoàn tất gần nhất của từng workflow, kể cả khi hoàn tất trước khoảng đã chọn. Khi đã cấu hình LangSmith, đường dẫn mở phần cài đặt trong Studio.
+
+Grafana đếm lượt gửi đánh giá, kể cả lần sửa, qua `studio.chat.ratings`. Cảnh báo bật khi trên 30% trong ít nhất 10 lượt gửi trong 30 phút là không thích và tình trạng kéo dài năm phút.

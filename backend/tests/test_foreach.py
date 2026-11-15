@@ -1,4 +1,4 @@
-"""TASK-0049: For each node — run a branch once per list item, one at a time."""
+"""For each node — run a branch once per list item, one at a time."""
 import copy
 import pytest
 from app.engine import foreach

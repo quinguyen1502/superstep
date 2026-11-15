@@ -1,4 +1,4 @@
-/** Settings → Access tokens (TASK-0167). The secret is shown once. Revoke asks for the token's name; the DELETE has no confirm field. */
+/** Settings → Access tokens. The secret is shown once. Revoke asks for the token's name; the DELETE has no confirm field. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, KeyRound, Loader2, ShieldAlert } from 'lucide-react'

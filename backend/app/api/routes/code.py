@@ -1,4 +1,4 @@
-"""Tool node Code mode (TASK-0055): runtime facts for the editor and Test with sample state."""
+"""Tool node Code mode: runtime facts for the editor and Test with sample state."""
 from fastapi import APIRouter, Depends
 from ...schemas.code import CodeTest
 from ..deps import code_service, current_user, limit_body

@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
 - Updated: 2026-10-19
-- Source: remaining-work report of 2026-10-18 (item 7: "WhatsApp, Teams và e-mail mới có interface adapter") and the owner's reply, "Ngoại trừ 2, 3, 4. Làm các phần còn lại"
+- Source: remaining-work report of 2026-10-18 (item 7: "WhatsApp, Teams and e-mail only have an adapter interface so far") and the owner's reply, "Except 2, 3, 4. Do the rest"
 
 ## Summary
 

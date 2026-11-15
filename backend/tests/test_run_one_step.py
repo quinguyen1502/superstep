@@ -1,4 +1,4 @@
-"""TASK-0036: one superstep, then pause. A second step or continue uses the same run. Not a human wait."""
+"""one superstep, then pause. A second step or continue uses the same run. Not a human wait."""
 import uuid
 import pytest
 from fastapi.testclient import TestClient

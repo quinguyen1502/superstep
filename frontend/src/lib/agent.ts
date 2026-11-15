@@ -1,12 +1,15 @@
-/** Agent node tools (TASK-0118, REQ-0072): the shapes the settings edit and the engine reads (`engine/agents.py`). */
-export const SOURCES = ['mcp', 'http', 'builtin', 'knowledge', 'workflow'] as const
+/** Agent node tools: the shapes the settings edit and the engine reads (`engine/agents.py`). */
+export const SOURCES = ['mcp', 'http', 'builtin', 'knowledge', 'workflow', 'dataset'] as const
 export type ToolSource = typeof SOURCES[number]
 export type Schema = { type?: string; properties?: Record<string, { type?: string; description?: string }>; required?: string[] }
 import type { UrlBinding } from './browser-tools'
+import type { DatasetAgentOperation } from './datasets'
 export type AgentTool = { name: string; description?: string; source: ToolSource; approval?: boolean
   server_id?: string; tool?: string; url_binding?: UrlBinding; parameters?: Schema; function?: string; knowledge_base_id?: string; top_k?: number
   method?: string; url?: string; body?: string
-  workflow_id?: string; inputs?: string[]; outputs?: string[] }  // another saved workflow as a tool (REQ-0073)
+  workflow_id?: string; inputs?: string[]; outputs?: string[]
+  dataset_id?: string; fields?: string[]; filter_ops?: Record<string, string[]>; limit?: number
+  operations?: DatasetAgentOperation[]; write_fields?: string[]; key?: string }
 export type BuiltinTool = { name: string; doc?: string; parameters?: Schema | null }
 
 export const METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
@@ -22,16 +25,17 @@ export function toolName(raw: string, taken: string[]): string {
 
 /** A new tool of `source`, named so it does not clash with the node's other tools. */
 export function newTool(source: ToolSource, taken: string[]): AgentTool {
-  const name = toolName({ mcp: 'mcp_tool', http: 'http_request', builtin: 'function', knowledge: 'search_knowledge', workflow: 'workflow' }[source], taken)
+  const name = toolName({ mcp: 'mcp_tool', http: 'http_request', builtin: 'function', knowledge: 'search_knowledge', workflow: 'workflow', dataset: 'find_dataset_rows' }[source], taken)
   if (source === 'http') return { name, source, description: '', method: 'GET', url: '', body: '', parameters: { type: 'object', properties: {} } }
   if (source === 'knowledge') return { name, source, description: '', knowledge_base_id: '', top_k: 4 }
+  if (source === 'dataset') return { name, source, description: '', dataset_id: '', fields: [], filter_ops: {}, limit: 10 }
   if (source === 'workflow') return { name, source, description: '', workflow_id: '', inputs: [], outputs: [] }
   return { name, source, description: '' }
 }
 
-/** An Agent node's tool names, for the Tests panel's "tool called" check (TASK-0119). */
+/** An Agent node's tool names, for the Tests panel's "tool called" check. */
 export const toolNames = (data: unknown): string[] => (((data as { tools?: AgentTool[] })?.tools) ?? []).map(t => t.name).filter(Boolean)
-/** Whether an Agent node asks a person before a tool call: test cases answer it like a Human node (TASK-0117). */
+/** Whether an Agent node asks a person before a tool call: test cases answer it like a Human node. */
 export const needsApproval = (data: unknown): boolean => (((data as { tools?: AgentTool[] })?.tools) ?? []).some(t => t.approval)
 
 /** The fields a workflow tool sends and gets back when its workflow is picked: `message` in and `answer` out when the

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
 import { expectRowAligned, settled } from './helpers/alignment'
+import { vt } from './catalog'
 
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`
 for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] as const) {
@@ -42,7 +43,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await page.locator('#trace-detail').getByRole('tab', { name: lang === 'en' ? 'Raw' : 'Thô', exact: true }).click()
     await expect(page.locator('#trace-detail')).toContainText('model_attempts', { timeout: 20_000 })
     const attempts = page.locator('#trace-detail').getByText('model_attempts:', { exact: true }).locator('..')
-    const expand = lang === 'en' ? 'Expand' : 'Mở rộng'
+    const expand = lang === 'en' ? 'Expand' : vt('common.expand')
     await attempts.getByRole('button', { name: expand, exact: true }).click()
     while (await attempts.getByRole('button', { name: expand, exact: true }).count())
       await attempts.getByRole('button', { name: expand, exact: true }).first().click()

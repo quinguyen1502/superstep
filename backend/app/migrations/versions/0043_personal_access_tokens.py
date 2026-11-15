@@ -1,4 +1,4 @@
-"""Personal access tokens and CLI device sign-in (TASK-0167, DEC-0071)."""
+"""Personal access tokens and CLI device sign-in."""
 from alembic import op
 import sqlalchemy as sa
 

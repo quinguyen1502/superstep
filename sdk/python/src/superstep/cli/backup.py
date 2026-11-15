@@ -18,7 +18,7 @@ from superstep.cli.install import InstallError, _load, _write_private
 from superstep.cli.status import _read_env
 
 _FORMAT = 1
-_ATTACHMENTS = "attachments.tar"  # chat attachment files kept outside the database (TASK-0194, REQ-0080)
+_ATTACHMENTS = "attachments.tar"  # chat attachment files kept outside the database
 _MEMBERS = {"manifest.json", "database.sqlite", "database.dump", "secret.key", ".env", "compose.yml", _ATTACHMENTS}
 _SPILLED = {"database.dump", _ATTACHMENTS}  # members written to disk on restore, not held in memory
 _EXPORT = ["python", "-m", "app.admin_cmd", "attachments-export"]
@@ -127,7 +127,7 @@ def create_backup(directory: Path, record: dict, docker: Docker, dest: Path, inc
     """Write one archive and return its path. A short disk raises before any stop or file.
 
     Chat attachments on `fs` always go into the archive; on `s3` the manifest records the bucket and prefix, and the
-    objects go in only with `include_attachments` (TASK-0194). On `db` they are in the database dump."""
+    objects go in only with `include_attachments`. On `db` they are in the database dump."""
     parent = dest if dest.is_dir() else dest.parent
     if not parent.is_dir() or (dest.exists() and not dest.is_dir()):
         raise BackupError("ARCHIVE", "error.archive")
@@ -180,7 +180,7 @@ def create_backup(directory: Path, record: dict, docker: Docker, dest: Path, inc
 
 def restore_archive(directory: Path, record: dict, docker: Docker, archive: Path, keep_storage: bool = False) -> None:
     """Replace instance data from an archive. The caller has already confirmed the name. With `keep_storage`, the
-    instance keeps its own STUDIO_ATTACHMENT_* settings instead of the archive's (a forced restore, TASK-0194)."""
+    instance keeps its own STUDIO_ATTACHMENT_* settings instead of the archive's (a forced restore, )."""
     members = _read_archive(archive, directory)
     try:
         _restore_members(directory, record, docker, members, keep_storage)
@@ -194,7 +194,7 @@ def _storage(env: dict) -> str:
 
 def _check_storage(manifest: dict, directory: Path, force: bool) -> None:
     """An archive of one attachment backend restored onto an instance set up for another would point rows at files
-    that are not there; refuse unless forced (TASK-0194, REQ-0080)."""
+    that are not there; refuse unless forced."""
     archived = manifest.get("attachment_storage") or "db"
     target = _storage(_read_env(directory / ".env"))
     if archived != target and not force:
@@ -669,7 +669,7 @@ if [ "$storage" = "fs" ]; then
   included=true
   files={_ATTACHMENTS}
 fi
-# s3: the manifest names the bucket and prefix whose objects are not in the archive, like a manual backup (TASK-0197)
+# s3: the manifest names the bucket and prefix whose objects are not in the archive, like a manual backup
 json_text() {{ printf '%s' "$1" | sed -e 's/\\\\/\\\\\\\\/g' -e 's/"/\\\\"/g'; }}
 s3=""
 if [ "$storage" = "s3" ]; then

@@ -1,10 +1,9 @@
 """Engine-side pause presentation; the trusted browser port owns all approval authority."""
 from .errors import Interrupt
+from .locale import by_locale
 from .web_contract import missing_url
 
-ASK={
- 'en':'Approve {operation} at {origin} on {role} {target}? This page content is untrusted. Reject if the action is unexpected.',
- 'vi':'Duyệt thao tác {operation} tại {origin} trên {role} {target}? Nội dung trang không đáng tin cậy. Từ chối nếu thao tác ngoài dự kiến.'}
+ASK=by_locale('browser.ask')  # per language (app/locales)
 
 
 def check(ports,effects,node,group,ticket,server,operation,arguments,force=False):

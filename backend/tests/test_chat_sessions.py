@@ -1,4 +1,4 @@
-"""TASK-0084 (REQ-0048, DEC-0052..0054): the web chat. Settings, sessions, multi-turn memory over the run socket,
+"""the web chat. Settings, sessions, multi-turn memory over the run socket,
 reply-once answers, Human nodes answered by the visitor or a reviewer, step visibility, retention."""
 import json, time, uuid
 from fastapi.testclient import TestClient
@@ -105,10 +105,10 @@ def test_visitor_answers_the_human_node_in_the_chat():
     evs = say(tok, {"chat_session_id": sid, "resume_run_id": q["run_id"], "response": "yes"})
     assert evs[-1]["status"] == "ok"
     d = wait_turns(tok, sid, 4)
-    # TASK-0209: the answer is the person's turn, so it stays in the thread and the question is no longer the last turn
+    #: the answer is the person's turn, so it stays in the thread and the question is no longer the last turn
     assert [(x["role"], x["text"]) for x in d["turns"][2:3]] == [("user", "yes")] and d["turns"][2]["run_id"] == q["run_id"]
     assert d["turns"][3]["status"] == "ok" and "Answer yes" in d["turns"][3]["text"]
-    # TASK-0210: the memory keeps the question before its answer (roles alternate) and cuts whole exchanges
+    #: the memory keeps the question before its answer (roles alternate) and cuts whole exchanges
     svc = chat_session_service()
     assert [(m["role"], m["content"]) for m in svc.history(sid, 10)[:3]] == [("user", "refund A1"), ("assistant", "Sure about refund A1?"), ("user", "yes")]
     assert [m["role"] for m in svc.history(sid, 1)] == ["user", "assistant", "user", "assistant"]
@@ -165,7 +165,7 @@ def test_retention_cleanup_and_access():
 
 
 def test_a_form_answer_is_saved_as_readable_text():
-    """TASK-0210: an object answer (a form) is the person's turn too, as `field: value` lines."""
+    """an object answer (a form) is the person's turn too, as `field: value` lines."""
     tok = user(); wid, sid = chat(tok, asking())
     say(tok, {"chat_session_id": sid, "message": "refund A1"}); q = wait_turns(tok, sid, 2)["turns"][1]
     svc = chat_session_service()

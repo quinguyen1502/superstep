@@ -1,24 +1,24 @@
-"""Agent nodes (TASK-0116, REQ-0072, DEC-0063): the model picks and calls the tools the node allows, round after round,
+"""Agent nodes: the model picks and calls the tools the node allows, round after round,
 until it answers.
 
 An Agent node `A` is expanded before compilation, as subgraph nodes are, into ordinary LangGraph steps:
     A (entry: builds the conversation) → A/__model ⇄ a wave of A/__tool/1 .. A/__tool/8 → A/__join → A/__exit
 A wave is one superstep (LangGraph Send): the calls run together, up to the cap, and the join puts their results back
-in the model's order (DEC-0069). Each slot has its own ledger entry. The conversation lives in the hidden state field
+in the model's order. Each slot has its own ledger entry. The conversation lives in the hidden state field
 `agent:A` (plain JSON): {messages, pending, rounds, limit_hit, steps, answer, last}. A slot writes `agent:A#<n>`, not
 that object.
 
 Node data: credential_id, model, system_prompt, prompt, output_field, steps_field?, history_field?, max_rounds and
-`tools`, each {name, description, source: mcp | http | builtin | knowledge | workflow, approval?} plus its source's settings:
+`tools`, each {name, description, source: mcp | http | builtin | knowledge | workflow | dataset, approval?} plus its source's settings:
   mcp: server_id, tool, parameters (the server's input schema)    builtin: function (engine/tools.py)
   knowledge: knowledge_base_id, top_k                               http: method, url, body, parameters
   workflow: workflow_id, inputs (the state fields the model fills), outputs (the final state fields it gets back)
-A workflow tool (REQ-0073, DEC-0066) gets `snapshot` and `version` when a run is planned (`snapshot()`): the child's latest
+A workflow tool gets `snapshot` and `version` when a run is planned (`snapshot`): the child's latest
 saved workflow, so a paused or recovered run calls the same version.
 HTTP templates read the model's arguments as `{{state.args.<name>}}`; without a body, POST/PUT/PATCH send the
 arguments as JSON, and a GET whose URL does not use them gets them as query parameters.
 
-Approval (TASK-0117, DEC-0063 decision 7): before a call to a tool with `approval: true`, `A/__tool` pauses the run like a
+Approval: before a call to a tool with `approval: true`, `A/__tool` pauses the run like a
 Human node (`Interrupt`), with the Agent node's `approval` and `deadline` settings (copied onto the step by `expand`), so
 the Approvals inbox, the channels and the deadlines work unchanged. The answer `approved` runs the call; `rejected` or
 any other text rejects it, and the model gets "Rejected by a reviewer" plus that text as the tool result.
@@ -30,28 +30,30 @@ from urllib.parse import urlencode
 from ..core import config
 from ..core.errors import AppError
 from langgraph.types import Send
+from . import embeddings
 from .effects import Effects, call_tool
 from .errors import AwaitChild, Interrupt, ValidationError
 from .issues import Issue
 from .limits import safe_error
+from .locale import by_locale
 from .llm import call_agent
 from .ports import Ports
 from .state_schema import state_schema
-from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes, browser_presentation
+from . import attachments, subgraphs, browser_approval, web_contract, browser_recipes, browser_presentation, dataset_nodes
 from .templating import refs, render
 from .tools import PARAMETERS, TOOLS
 
 PREFIX, SEP = "agent:", "/"
 MODEL, TOOL, JOIN, EXIT, HANDOFF = "__model", "__tool", "__join", "__exit", "__handoff"
-# hand-offs (REQ-0078, DEC-0073): the pending hand-off {from, to, reason, messages, last} and the run's count
+# hand-offs: the pending hand-off {from, to, reason, messages, last} and the run's count
 HANDOFF_KEY, COUNT_KEY = PREFIX + "__handoff", PREFIX + "__handoffs"
-START_INPUT, START_KEY = "__start_agent", PREFIX + "__start"  # a chat continues with the agent that answered last (TASK-0181)
+START_INPUT, START_KEY = "__start_agent", PREFIX + "__start"  # a chat continues with the agent that answered last
 NOT_RUN = "Not run: the conversation was handed off"
 HANDOFF_NOTE = "The conversation was handed off to you by {source}.{reason} Continue it and answer the person yourself."
 NO_MORE = "You cannot hand the conversation off again in this run: answer the person yourself."
 TYPES = ("agent", "agent_model", "agent_tool", "agent_exit", "agent_join", "agent_handoff")
 ROUTERS = ("agent_model", "agent_join", "agent_handoff")  # steps that pick the next step (they may loop)
-SOURCES = ("mcp", "http", "builtin", "knowledge", "workflow")
+SOURCES = ("mcp", "http", "builtin", "knowledge", "workflow", "dataset")
 DEFAULT_ROUNDS, MAX_ROUNDS, MAX_CALLS_PER_ROUND = 5, 25, 8
 RESULT_CHARS = 8000  # a tool result goes back to the model shortened to this
 STEP_CHARS = 2000    # ... and into the steps field / trace shortened to this
@@ -60,8 +62,7 @@ METHODS = ("GET", "POST", "PUT", "PATCH", "DELETE")
 QUERY = {"type": "object", "properties": {"query": {"type": "string", "description": "What to search for"}}, "required": ["query"]}
 APPROVED, REJECTED = "approved", "rejected"
 FAILED = "The tool failed"  # the result of a call that ran and raised (checks.py tells it from calls that never ran)
-ASK = {"en": "{agent} wants to call {tool} with these arguments:\n{args}\nApprove to run it, or reject it. A text reply rejects it and tells the model why.",
-       "vi": "{agent} muốn gọi công cụ {tool} với các tham số:\n{args}\nDuyệt để chạy, hoặc từ chối. Trả lời bằng chữ là từ chối và cho model biết lý do."}
+ASK = by_locale("agent.ask")  # the approval question, per language (app/locales)
 JSON_TYPES = {"string": str, "number": (int, float), "integer": int, "boolean": bool, "array": list, "object": dict}
 
 
@@ -79,7 +80,7 @@ def owner(node: Dict[str, Any]) -> str:
 
 
 def agent_of_step(nid: str) -> Optional[str]:
-    """`A` for `A/__tool`, `A/__tool/2` or `A/__join`. Approvals and test answers use the Agent node's id (TASK-0117)."""
+    """`A` for `A/__tool`, `A/__tool/2` or `A/__join`. Approvals and test answers use the Agent node's id."""
     if not isinstance(nid, str): return None
     if nid.endswith(SEP + JOIN): return nid[:-(len(SEP) + len(JOIN))] or None
     head, _, rest = nid.rpartition(SEP + TOOL)
@@ -118,6 +119,7 @@ def step_of(delta: Dict[str, Any]) -> Optional[Dict[str, Any]]:
 def parameters(t: Dict[str, Any]) -> Dict[str, Any]:
     src = t.get("source")
     if src == "knowledge": return QUERY
+    if src == "dataset": return dataset_nodes.agent_parameters(t)
     if src == "builtin": return PARAMETERS.get(t.get("function") or "") or {"type": "object", "properties": {}}
     if src == "workflow":  # the child's state fields the model fills, typed from the snapshot once a run is planned
         if browser_recipes.parsed(t.get('snapshot') or {}) is not None:return browser_recipes.input_schema(t['snapshot'])
@@ -141,7 +143,7 @@ REASON = {"type": "object", "properties": {"reason": {"type": "string", "descrip
 
 
 def handoff_specs(d: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """The hand-off tools as the model sees them: `transfer_to_<target>` with an optional reason (TASK-0180)."""
+    """The hand-off tools as the model sees them: `transfer_to_<target>` with an optional reason."""
     return [{"name": h["name"], "description": h.get("description") or f"Hand the conversation to {h['label']}", "parameters": REASON}
             for h in d.get("handoff_tools") or []]
 
@@ -200,10 +202,59 @@ def http_request(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[
     return http_send(nid, method, url, body, headers)
 
 
-def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None) -> Any:
+def trace_arguments(ports: Ports, tool: dict | None, value: Any) -> Any:
+    if tool and tool.get("source") == "dataset":
+        return {}
+    return browser_approval.trace_arguments(ports, tool, value)
+
+
+def dataset_result(page: dict) -> tuple[str, int]:
+    """Keep complete rows in the model message, within the shared result budget."""
+    if "row" in page:  # an insert or upsert outcome
+        row = page["row"]
+        outcome = {"row_id": row.get("id"), "inserted": page.get("inserted")}
+        if "values" in row:  # absent when the tool may not read the dataset
+            outcome["values"] = row["values"]
+        if page.get("dry_run"):
+            outcome["simulated"] = True
+        return shorten(json.dumps(outcome, ensure_ascii=False), RESULT_CHARS), 1
+    if "groups" in page:
+        groups, size = [], len(json.dumps({**page, "groups": []}, ensure_ascii=False)) + 5
+        for group in page["groups"]:
+            size += len(json.dumps(group, ensure_ascii=False)) + 2
+            if size > RESULT_CHARS:
+                break
+            groups.append(group)
+        result = {**page, "groups": groups, "truncated": page["truncated"] or len(groups) < len(page["groups"])}
+        return json.dumps(result, ensure_ascii=False), len(groups)
+    rows, size = [], 0
+    for item in page["items"]:
+        row = json.dumps(item["values"], ensure_ascii=False)
+        size += len(row) + 1
+        if size > RESULT_CHARS - 50:
+            break
+        rows.append(row)
+    truncated = len(rows) < len(page["items"]) or page["next_offset"] is not None
+    return f'{{"rows":[{",".join(rows)}],"truncated":{str(truncated).lower()}}}', len(rows)
+
+
+def dataset_step(args: Any) -> Dict[str, Any]:
+    """The operation name for the trace. Values stay in the model message only."""
+    operation = args.get("operation") if isinstance(args, dict) else None
+    return {"operation": operation} if operation in (*dataset_nodes.AGENT_WRITES, "aggregate_rows") else {}
+
+
+def run_tool(nid: str, t: Dict[str, Any], args: Dict[str, Any], state: Dict[str, Any], ports: Ports, effects: Optional[Effects], *, group=None, ticket=None, dataset_scope=None, call_id=None) -> Any:
     src = t.get("source")
     if src == "mcp":
         return ports.call_mcp(t.get("server_id") or "", t.get("tool") or "", args, effects.key(nid) if effects else None, group=group, ticket=ticket)
+    if src == "dataset":
+        if ports.dataset_call is None:
+            raise AppError("DATASET_GRANT_DENIED")
+        binding, query = dataset_nodes.agent_query(t, args, dataset_scope)
+        # One receipt per logical tool call: a retry of this call replays, another call writes again.
+        key = f"{effects.key(nid)}#{call_id}" if effects is not None and call_id and binding["operation"] in dataset_nodes.AGENT_WRITES else None
+        return ports.dataset_call(binding, query, key)
     if src == "knowledge":
         if ports.retrieve is None: raise RuntimeError("Agent knowledge base tools need a knowledge base service")
         return ports.retrieve(t.get("knowledge_base_id") or "", str(args.get("query") or ""), int(t.get("top_k") or 4))
@@ -249,6 +300,8 @@ def errors(nid: str, d: Dict[str, Any], schema: List[Dict[str, Any]]) -> List[st
             if not t.get("knowledge_base_id"): errs.append(Issue("AGENT_TOOL_KB", **who))
             k = t.get("top_k", 4)
             if not isinstance(k, int) or isinstance(k, bool) or not 1 <= k <= 20: errs.append(Issue("AGENT_TOOL_TOP_K", **who))
+        if src == "dataset" and not dataset_nodes.valid_agent(dataset_nodes.agent_binding(t)):
+            errs.append(Issue("AGENT_TOOL_DATASET", **who))
         if src == "workflow":
             if not t.get("workflow_id"): errs.append(Issue("AGENT_TOOL_WORKFLOW", **who))
             for key, code in (("inputs", "AGENT_TOOL_INPUTS"), ("outputs", "AGENT_TOOL_OUTPUTS")):
@@ -318,7 +371,7 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
         edges += [{"id": f"{a}{SEP}e-model", "source": a, "target": m},
                   {"id": f"{a}{SEP}e-done", "source": m, "target": x, "label": "done"},
                   {"id": f"{a}{SEP}e-back", "source": j, "target": m, "label": "model"}]
-        if hand:  # a hand-off is its own step, then a jump to the target's entry (DEC-0073 decision 2)
+        if hand:  # a hand-off is its own step, then a jump to the target's entry ( decision 2)
             h = f"{a}{SEP}{HANDOFF}"
             nodes.append(step(HANDOFF, "agent_handoff", "hand-off", lean))
             edges += [{"id": f"{a}{SEP}e-handoff", "source": m, "target": h, "label": "handoff"}]
@@ -333,7 +386,7 @@ def expand(wf: Dict[str, Any]) -> Dict[str, Any]:
 
 def snapshot(wf: Dict[str, Any], load: subgraphs.Loader, self_id: Optional[str] = None,
              version: Optional[Callable[[str, Dict[str, Any]], Optional[int]]] = None) -> Dict[str, Any]:
-    """The workflow with each workflow tool's child copied in as `snapshot` (DEC-0066 decision 2): the child's latest saved
+    """The workflow with each workflow tool's child copied in as `snapshot` ( decision 2): the child's latest saved
     workflow with its subgraphs expanded and its own workflow tools snapshotted, and `version(id, child)` as `version`.
     Run after `subgraphs.expand`, so Agent nodes inside subgraphs are covered. Raises ValidationError (references).
     Snapshots that came with the workflow are dropped first: only the ones made here are run."""
@@ -369,7 +422,7 @@ def step_budget(wf: Dict[str, Any]) -> int:
             cost = r * (1 + 2 * MAX_CALLS_PER_ROUND) + 3
             total += cost; most = max(most, cost)
             any_hand = any_hand or bool(handoffs.targets(n.get("data") or {}))
-    if any_hand: total += handoffs.limit(wf) * (most + 2)  # each hand-off may run an agent again (TASK-0180)
+    if any_hand: total += handoffs.limit(wf) * (most + 2)  # each hand-off may run an agent again
     return total
 
 
@@ -394,7 +447,7 @@ def router(node: Dict[str, Any]):
 
 def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
     """The approver's answer for this step, consumed once (as for a Human node) so a later call to the tool asks again.
-    A wave keeps one answer per slot in `answers` (TASK-0158)."""
+    A wave keeps one answer per slot in `answers`."""
     if resume is None: return None
     bag = resume.get("answers")
     if isinstance(bag, dict) and nid in bag: return str(bag.pop(nid))
@@ -404,8 +457,8 @@ def answer(resume: Optional[Dict[str, Any]], nid: str) -> Optional[str]:
 
 def child_result(resume: Optional[Dict[str, Any]], nid: str) -> Optional[Dict[str, Any]]:
     """The finished child run of a workflow tool call, consumed once: {child_run_id, status, output, error, usage}. The
-    run service sends it as a dict; a person's answer is always text, so it can never pass for one (TASK-0134).
-    A wave keeps one result per slot in `children` until every wait has settled (TASK-0158)."""
+    run service sends it as a dict; a person's answer is always text, so it can never pass for one.
+    A wave keeps one result per slot in `children` until every wait has settled."""
     if resume is None: return None
     bag = resume.get("children")
     if isinstance(bag, dict) and isinstance(bag.get(nid), dict) and "child_run_id" in bag[nid]: return bag.pop(nid)
@@ -415,7 +468,7 @@ def child_result(resume: Optional[Dict[str, Any]], nid: str) -> Optional[Dict[st
 
 
 def _pause(effects: Optional[Effects], item: dict, exc: Exception) -> None:
-    """Record the pause, then raise it. Parallel slots all record before the superstep stops (TASK-0158)."""
+    """Record the pause, then raise it. Parallel slots all record before the superstep stops."""
     if effects is not None: effects.hold(item)
     raise exc
 
@@ -436,8 +489,8 @@ def rejection(response: str) -> str:
 
 def history(items, prompt: str) -> list:
     """The {role, content} messages of a history field, before the task prompt. A chat's conversation field ends with
-    the current message (DEC-0052); when the prompt already carries it (e.g. `{{state.message}}`), that last item is
-    left out so the model gets the message once, as the prompt (TASK-0214)."""
+    the current message; when the prompt already carries it (e.g. `{{state.message}}`), that last item is
+    left out so the model gets the message once, as the prompt."""
     msgs = [{"role": m["role"], "content": m["content"]} for m in items or []
             if isinstance(m, dict) and m.get("role") in ("user", "assistant") and isinstance(m.get("content"), str)]
     if msgs and msgs[-1]["role"] == "user" and msgs[-1]["content"].strip() in prompt: msgs.pop()
@@ -455,18 +508,18 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
     if t == "agent":
         def fn(state):
             got = state.get(HANDOFF_KEY) if isinstance(state.get(HANDOFF_KEY), dict) else None
-            got = got if got and got.get("to") == nid else None  # a hand-off to this agent (TASK-0180)
+            got = got if got and got.get("to") == nid else None  # a hand-off to this agent
             system = render(d["system_prompt"], state) if d.get("system_prompt") else ""
             if got:
                 why = f" Reason: {got['reason']}." if got.get("reason") else ""
                 system = "\n\n".join(x for x in (system, HANDOFF_NOTE.format(source=got.get("from_label") or got.get("from"), reason=why)) if x)
             msgs = [{"role": "system", "content": system}] if system else []
-            if got:  # the person's messages and the agents' replies, without tool traffic (DEC-0073 decision 3)
+            if got:  # the person's messages and the agents' replies, without tool traffic ( decision 3)
                 msgs += [{"role": m["role"], "content": m["content"]} for m in got.get("messages") or []]
             prompt = render(d.get("prompt") or "", state)
             if not got:
                 msgs += history(state.get(d["history_field"]) if d.get("history_field") else None, prompt)
-            files = attachments.records(state, d)  # chat attachments (TASK-0176): records only, image bytes are read per call
+            files = attachments.records(state, d)  # chat attachments: records only, image bytes are read per call
             msgs.append({"role": "user", "content": prompt, **({"files": files} if files else {})})
             out = {key: {"messages": msgs, "pending": [], "rounds": 0, "limit_hit": False, "steps": [], "answer": None, "last": None}}
             if got: out[HANDOFF_KEY] = None
@@ -506,17 +559,17 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             p.setdefault("messages", []).append({"role": "assistant", "content": out, **({"tool_calls": calls} if calls else {})})
             configured={item.get('name'):item for item in d.get('tools') or []}
             first = next((c for c in calls if c["name"] in hand), None) if can else None
-            if first is not None:  # the hand-off wins: the other calls of the round are answered, not run (TASK-0180)
+            if first is not None:  # the hand-off wins: the other calls of the round are answered, not run
                 h = hand[first["name"]]; args = first.get("args") if isinstance(first.get("args"), dict) else {}
                 reason = str(args.get("reason") or "")[:500]
                 for c in calls:
                     done = c is first
                     msg = f"Handed off to {h['label']}" if done else NOT_RUN
                     p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": msg})
-                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"]), "result": NOT_RUN, "status": "not_run", "ms": 0})
+                    if not done: p.setdefault("steps", []).append({"tool": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"]), "result": NOT_RUN, "status": "not_run", "ms": 0})
                 p["pending"], p["handoff"] = [], {"to": h["target"], "label": h["label"], "reason": reason, "tool": first["name"]}
                 p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": False,
-                             "tool_calls": [{"name": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"])} for c in calls]}
+                             "tool_calls": [{"name": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"])} for c in calls]}
                 return {key: p}
             p["pending"] = copy.deepcopy(calls[:MAX_CALLS_PER_ROUND])
             batch=[]
@@ -532,10 +585,10 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             for c in calls[MAX_CALLS_PER_ROUND:]:  # every call needs an answer, but these never run
                 why = f"Refused: at most {MAX_CALLS_PER_ROUND} tool calls per round"
                 p["messages"].append({"role": "tool", "tool_call_id": c["id"], "name": c["name"], "content": why})
-                p.setdefault("steps", []).append({"tool": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"]), "result": why, "status": "refused", "ms": 0})
+                p.setdefault("steps", []).append({"tool": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"]), "result": why, "status": "refused", "ms": 0})
             if not calls: p["answer"] = out
             p["last"] = {"kind": "model", "round": p["rounds"], "text": shorten(out, STEP_CHARS), "limit_hit": hit,
-                         "tool_calls": [{"name": c["name"], "args": browser_approval.trace_arguments(ports,configured.get(c["name"]),c["args"])} for c in calls]}
+                         "tool_calls": [{"name": c["name"], "args": trace_arguments(ports, configured.get(c["name"]), c["args"])} for c in calls]}
             return {key: p}
         return fn
 
@@ -549,6 +602,9 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             tool, args = by_name.get(call["name"]), call.get('_resolved_args',call.get("args"))
             bad = None if tool is None else call.get('_binding_error') or arg_error(parameters(tool),call.get('args'))
             decided = None
+            dataset = bool(tool and tool.get("source") == "dataset")
+            dataset_count = None
+            dataset_failed = False
             browser_result=None;browser_details=None
             browser=bool(tool is not None and tool.get('source')=='mcp' and ports.browser is not None and not (ports.test or ports.mock_models) and ports.browser.is_browser(tool.get('server_id')))
             missing_browser_url=bool(browser and not call.get('_binding_error') and tool.get('tool')=='navigate' and web_contract.missing_url(args))
@@ -577,7 +633,7 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
             elif got is not None:
                 status, result = child_outcome(tool, got)
                 if usage and got.get("usage"): usage(nid, got["usage"])  # the child's tokens and cost count on the Agent node
-            elif tool.get("source") == "workflow":  # start the child run (once per call) and wait for it (DEC-0066)
+            elif tool.get("source") == "workflow":  # start the child run (once per call) and wait for it
                 try:
                     if ports.start_child is None: raise RuntimeError("workflow tools need the run service")
                     browser_recipes.validate_input(tool.get('snapshot') or {},args)
@@ -595,19 +651,28 @@ def node_fn(node: Dict[str, Any], resolve=None, usage=None, effects: Optional[Ef
                     _pause(effects, {"node": nid, "kind": "child", "run_id": cid, **extra}, AwaitChild(nid, cid, extra))
             else:
                 try:
-                    value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'))
-                    status,result='ok',text(value)
+                    with embeddings.collect((lambda u: usage(nid, u)) if usage else None):  # a knowledge tool's query embedding
+                        value=run_tool(nid,tool,args,state,ports,effects,group=owner(node),ticket=call.get('_browser_ticket'),
+                                       dataset_scope=d.get(dataset_nodes.SCOPE), call_id=call.get("id"))
+                    if dataset:
+                        result, dataset_count = dataset_result(value)
+                    else:
+                        result = text(value)
+                    status = "ok"
                     if browser and isinstance(value,dict):
                         browser_details=value
                         if value.get('status')!='confirmed':status='waiting' if value.get('deferred') else 'error'
                 except Exception as e:
                     if getattr(e, "fenced", False): raise  # this worker lost the run
+                    dataset_failed = dataset
                     status, result = "error", f"{FAILED}: {safe_error(e)}"
             if call.get('_browser_ticket') and status in {'rejected','error'} and ports.browser is not None:
                 ports.browser.skip(owner(node),call['_browser_ticket'])
             ms = round((time.perf_counter() - t0) * 1000, 2)
-            trace_args=browser_approval.trace_arguments(ports,tool,args)
-            step = {"tool": call["name"], "args": trace_args, "result": shorten(result, STEP_CHARS), "status": status, "ms": ms,
+            trace_args = trace_arguments(ports, tool, args)
+            step = {"tool": call["name"], "args": trace_args, "status": status, "ms": ms,
+                    **({"dataset": {"count": dataset_count, **dataset_step(args)}} if dataset else {"result": shorten(result, STEP_CHARS)}),
+                    **({"result": FAILED} if dataset_failed else {}),
                     **({"child_run_id": got["child_run_id"], "child_workflow_id": tool.get("workflow_id")} if got is not None else {}),
                     **({"approval": APPROVED if status != "rejected" else REJECTED} if decided is not None else {}),
                     **({'browser':browser_presentation.detail(tool.get('tool'),browser_details)} if browser_details is not None else {})}

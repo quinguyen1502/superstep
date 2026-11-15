@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
 import { confirmDelete } from './confirm'
+import { vt, vin } from './catalog'
 
 test.skip(process.env.E2E_DRIVE_FIXTURE !== '1', 'Requires E2E_DRIVE_FIXTURE=1; all Google HTTP is isolated')
 for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] as const) {
@@ -13,9 +14,9 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     }, [lang, theme])
     await page.goto('/settings/mcp'); await page.locator('#mcp-add').click()
     await page.locator('#mcp-new-name').fill(name); await page.locator('#mcp-new-transport').click()
-    await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : 'Kết nối được quản lý', exact: true }).click()
+    await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : vt('managedTools.transport'), exact: true }).click()
     await page.locator('#mcp-new-adapter').click()
-    await page.getByRole('option', { name: lang === 'en' ? 'Google Drive files' : 'Tệp Google Drive', exact: true }).click()
+    await page.getByRole('option', { name: lang === 'en' ? 'Google Drive files' : vt('managedTools.adapters.google_drive'), exact: true }).click()
     await page.locator('#mcp-new-folder_id').fill(folder)
     if (process.env.REVIEW_SHOTS) await page.locator('#mcp-new').screenshot({ path: `${process.env.REVIEW_SHOTS}/managed-drive-${suffix}.png` })
     await page.locator('#mcp-new-google_credentials').fill(JSON.stringify({ type: 'authorized_user', client_id: 'fixture.apps.googleusercontent.com', client_secret: 'fixture-client-secret', refresh_token: 'fixture-refresh-token' }))
@@ -26,7 +27,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     for (const tool of ['list_files', 'get_file', 'read_text_file', 'create_text_file']) await expect(card.getByTestId('mcp-tools')).toContainText(tool)
     const server = (await (await page.request.get('/api/mcp/servers', { headers })).json()).data.servers.find((s: any) => s.name === name)
     const beforeUploads = (await (await page.request.get('/api/_drive-fixture')).json()).data.uploads
-    const content = 'Khoản chi mẫu: 50.000 VND\n'
+    const content = `${vin('drive.expense')}: 50.000 VND\n`
     const graph = { name: `Drive acceptance ${suffix}`, state: [{ name: 'created', type: 'object' }, { name: 'text', type: 'object' }, { name: 'files', type: 'object' }], nodes: [
       N('start', 'start', 20), N('create', 'mcp', 250, { label: 'Create receipt', server_id: server.id, tool: 'create_text_file', arguments: { name: 'receipt.txt', content }, output_field: 'created' }),
       N('read', 'mcp', 500, { label: 'Read receipt', server_id: server.id, tool: 'read_text_file', arguments: { file_id: '{{state.created.file.id}}' }, output_field: 'text' }),
@@ -42,7 +43,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await expect(page.locator('#trace-detail')).toContainText('receipt.txt')
     if (process.env.REVIEW_SHOTS) await page.locator('#trace-detail').screenshot({ path: `${process.env.REVIEW_SHOTS}/managed-drive-created-${suffix}.png` })
     await page.locator('.trace-row[data-span="read#1"]').click()
-    await expect(page.locator('#trace-detail')).toContainText('Khoản chi mẫu')
+    await expect(page.locator('#trace-detail')).toContainText(vin('drive.expense'))
     await expect(page.locator('#trace-detail')).not.toContainText('fixture-client-secret')
     const recorded = (await (await page.request.get('/api/_drive-fixture')).json()).data
     expect(recorded.uploads).toBe(beforeUploads + 1)
@@ -64,7 +65,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
       const unknown = operations.locator('[data-outcome="unknown"]')
       await expect(unknown).toHaveCount(1)
       if (process.env.REVIEW_SHOTS) await unknown.screenshot({ path: `${process.env.REVIEW_SHOTS}/managed-drive-unknown-${suffix}.png` })
-      await unknown.getByRole('button', { name: lang === 'en' ? 'Check external result' : 'Kiểm tra kết quả bên ngoài', exact: true }).click()
+      await unknown.getByRole('button', { name: lang === 'en' ? 'Check external result' : vt('managedTools.reconcile'), exact: true }).click()
       await expect(operations.locator('[data-outcome="unknown"]')).toHaveCount(0)
       await expect(operations.locator('[data-outcome="confirmed"]')).toHaveCount(4)
       const recovered = (await (await page.request.get('/api/_drive-fixture')).json()).data

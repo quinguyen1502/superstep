@@ -1,7 +1,7 @@
-/** The message box (TASK-0085), built as the shadcn Prompt Input pattern: a form with an Input Group, its textarea and
+/** The message box, built as the shadcn Prompt Input pattern: a form with an Input Group, its textarea and
  *  a block-end addon with the send button (Stop while a run goes). Enter sends, Shift+Enter adds a line. A counter
  *  shows near the limit.
- *  Attachments (TASK-0177, REQ-0077): when the chat accepts files, a paperclip button and drag-and-drop add them. Each
+ * Attachments: when the chat accepts files, a paperclip button and drag-and-drop add them. Each
  *  file is checked here first (kind, size, count: the chat's limits), then uploaded at once and shown as a chip with a
  *  thumbnail for images and a remove action. Send waits until every upload is done. */
 import { useEffect, useRef, useState } from 'react'

@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, N } from './helpers'
-// TASK-0027: auto-layout (Shift+L / toolbar), LR and TB, no overlaps, one undo step.
+// auto-layout (Shift+L / toolbar), LR and TB, no overlaps, one undo step.
 
 const boxes = (page: Page) => page.locator('.react-flow__node').evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { id: e.getAttribute('data-id')!, x: r.x, y: r.y, w: r.width, h: r.height } }))
 const overlap = (b: { x: number; y: number; w: number; h: number }[]) => b.some((a, i) => b.slice(i + 1).some(c => a.x < c.x + c.w && c.x < a.x + a.w && a.y < c.y + c.h && c.y < a.y + a.h))

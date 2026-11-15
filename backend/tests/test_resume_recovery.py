@@ -1,4 +1,4 @@
-"""TASK-0127: an answer to a waiting run survives a restart of a server with the in-memory job queue. The answer is kept
+"""an answer to a waiting run survives a restart of a server with the in-memory job queue. The answer is kept
 on the run before its resume job is queued; start-up recovery queues it again when the job was lost, and first puts a
 run that the resume had claimed, and that was cut off before it recorded anything, back to waiting."""
 import asyncio, json

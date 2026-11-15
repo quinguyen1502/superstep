@@ -133,72 +133,10 @@
 <div id="fade"></div>
 
 <script>
-const STRINGS = {
-  en: {
-    intro: 'From a blank canvas to an HTTP endpoint, in five steps.',
-    outro: 'Self-hosted. Built on LangGraph, FastAPI and React Flow.',
-    chapters: ['Create', 'Build', 'Configure', 'Run', 'Ship', 'New'],
-    create: 'Create a workflow: <b2>New workflow</b2> → <b2>Blank workflow</b2>',
-    drag: 'Drag an <code>LLM</code> and a <code>Human</code> node from the palette',
-    wire: 'Select the old edge, press <kbd>Del</kbd>, then wire Start → LLM → Human → End',
-    tidy: '<kbd>Shift</kbd><kbd>L</kbd> tidies the graph',
-    prompt: 'Write the prompt. <code>{{state.message}}</code> reads the run input',
-    output: 'In the <b2>Data</b2> tab: add a <code>reply</code> field and write the answer to it',
-    human: 'The Human node asks before the reply goes out',
-    channel: 'Send the request to Slack, Telegram, WhatsApp, e-mail or Teams too',
-    remote: 'Approvers can answer there: buttons in chat, links in e-mail and Teams',
-    save: 'Save. Every save is a new version',
-    input: 'Run it with a JSON input',
-    wait: 'The run stops at the Human node, with its state checkpointed',
-    approve: 'Approve, and the run finishes',
-    diff: 'Each step keeps its input, output and state diff',
-    token: 'Create a token for the service that will call it',
-    curl: 'That service starts a run over HTTP: <code>202 queued</code>',
-    cron: 'Or run it on a cron schedule, in its own time zone',
-    history: 'History lists both runs. The API run waits for approval',
-    agent: 'New: the <code>Agent</code> node. Start from the <b2>Support agent</b2> template',
-    tools: 'The model picks among the tools you allow. <b2>Needs approval</b2> guards one',
-    agentWait: 'The refund call waits for a person, like a Human node',
-    rounds: 'The trace shows each round: the model call, then the tool it chose',
-    travel: '<b2>Time travel</b2>: open a checkpoint, edit its state, fork a new run',
-    mcp: 'Serve the workflow as an MCP tool to Cursor, Claude Desktop or Claude Code',
-    phone: 'On a phone, the editor shows one pane at a time',
-  },
-  vi: {
-    intro: 'Từ canvas trống tới một endpoint HTTP, qua năm bước.',
-    outro: 'Tự host. Xây trên LangGraph, FastAPI và React Flow.',
-    chapters: ['Tạo', 'Dựng', 'Cấu hình', 'Chạy', 'Đưa vào dùng', 'Mới'],
-    create: 'Tạo workflow: <b2>Workflow mới</b2> → <b2>Workflow trống</b2>',
-    drag: 'Kéo một node <code>LLM</code> và một node <code>Human</code> từ palette',
-    wire: 'Chọn cạnh cũ, nhấn <kbd>Del</kbd>, rồi nối Start → LLM → Human → End',
-    tidy: '<kbd>Shift</kbd><kbd>L</kbd> sắp xếp lại graph',
-    prompt: 'Viết prompt. <code>{{state.message}}</code> đọc từ input của run',
-    output: 'Ở tab <b2>Dữ liệu</b2>: thêm field <code>reply</code> và ghi câu trả lời vào đó',
-    human: 'Node Human hỏi trước khi câu trả lời được gửi đi',
-    channel: 'Gửi yêu cầu duyệt tới cả Slack, Telegram, WhatsApp, e-mail hoặc Teams',
-    remote: 'Người duyệt trả lời ngay tại đó: nút trên chat, link trong e-mail và Teams',
-    save: 'Lưu. Mỗi lần lưu là một phiên bản mới',
-    input: 'Chạy với một input JSON',
-    wait: 'Run dừng ở node Human, state được lưu checkpoint',
-    approve: 'Duyệt, và run chạy tiếp tới hết',
-    diff: 'Mỗi bước giữ input, output và state diff',
-    token: 'Tạo token cho dịch vụ sẽ gọi workflow',
-    curl: 'Dịch vụ đó khởi chạy run qua HTTP: <code>202 queued</code>',
-    cron: 'Hoặc chạy theo lịch cron, theo múi giờ riêng',
-    history: 'Lịch sử có cả hai run. Run qua API đang chờ duyệt',
-    agent: 'Mới: node <code>Agent</code>. Bắt đầu từ template <b2>Agent hỗ trợ khách hàng</b2>',
-    tools: 'Model tự chọn trong các tool bạn cho phép. <b2>Cần duyệt</b2> giữ lại một tool',
-    agentWait: 'Lệnh hoàn tiền chờ người duyệt, như một node Human',
-    rounds: 'Trace hiện từng vòng: lời gọi model, rồi tool nó chọn',
-    travel: '<b2>Du hành thời gian</b2>: mở một checkpoint, sửa state, fork run mới',
-    mcp: 'Đưa workflow thành tool MCP cho Cursor, Claude Desktop hoặc Claude Code',
-    phone: 'Trên điện thoại, editor hiện từng pane một',
-  },
-}
-
 const LANG = new URLSearchParams(location.search).get('lang') === 'vi' ? 'vi' : 'en'
 document.documentElement.lang = LANG
-const S = STRINGS[LANG]
+// locales/<lang>.json: the captions. render.mjs injects them; a browser opened on the file reads them itself.
+const S = window.STRINGS || (() => { const x = new XMLHttpRequest(); x.open('GET', `locales/${LANG}.json`, false); x.send(); return JSON.parse(x.responseText) })()
 // flow.json from e2e/quickstart.spec.ts: the box of every control, per frame. render.mjs injects it.
 const FLOW = window.FLOW || (() => { const x = new XMLHttpRequest(); x.open('GET', `build/frames/${LANG}/flow.json`, false); x.send(); return JSON.parse(x.responseText) })()
 const tg = (frame, key) => { const b = FLOW.frames[frame].targets[key]; if (!b) throw new Error(`no target ${frame}.${key}`); return b }

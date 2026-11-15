@@ -47,9 +47,10 @@ person to approve it, and can be called from another service over HTTP.
 The state is the typed record that every node reads from and writes to. A new
 workflow has one field, `message`, which holds the run input.
 
-1. Select the **LLM** node. Its settings open in the **Config** panel.
+1. Select the **LLM** node. Its settings open in the **Config** panel, on the
+   **General** tab.
 2. Set **Label** to `Draft reply`.
-3. Replace the **Prompt template** with:
+3. Open the **Settings** tab and replace the **Prompt template** with:
 
     ```text
     Write a short, polite reply to this customer message: {{state.message}}
@@ -67,8 +68,9 @@ workflow has one field, `message`, which holds the run input.
 
 ## 4. Configure the Human node
 
-1. Select the **Human** node and set **Label** to `Approve reply`.
-2. Set **Question for the human** to:
+1. Select the **Human** node and, on the **General** tab, set **Label** to
+   `Approve reply`.
+2. On the **Settings** tab, set **Question for the human** to:
 
     ```text
     Send this reply to the customer?

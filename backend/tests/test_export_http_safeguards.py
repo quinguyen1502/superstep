@@ -1,4 +1,4 @@
-"""TASK-0265 (REQ-0088, DEC-0087): exported HTTP Tool requests keep the studio's safeguards. Executed in Python and in
+"""exported HTTP Tool requests keep the studio's safeguards. Executed in Python and in
 TypeScript (Deno) against a local server: private targets refused by default, redirects not followed, URL credentials
 sent as Basic auth (not in the URL), and a stable Idempotency-Key."""
 import base64, json, os, subprocess, sys, threading, uuid

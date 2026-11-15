@@ -1,5 +1,5 @@
-"""TASK-0065: the Approvals inbox. Waiting steps for every Human node, listing for owner / approver / stranger,
-answers from the inbox, first answer wins across inbox and editor (DEC-0043)."""
+"""the Approvals inbox. Waiting steps for every Human node, listing for owner / approver / stranger,
+answers from the inbox, first answer wins across inbox and editor."""
 import json, time, uuid
 import pytest
 from fastapi.testclient import TestClient
@@ -55,7 +55,7 @@ def test_inbox_lists_owner_and_approvers_only(c):
     assert theirs["mine"] is False and theirs["owner_email"] == owner["email"] and theirs["can_open"] is False
     assert set(theirs) == set(mine)  # the request only: no state, input or trace
     assert row(c, stranger, rid) is None
-    # the rest of the run stays the owner's (DEC-0013)
+    # the rest of the run stays the owner's
     assert c.get("/api/runs/pending", headers=H(approver["token"])).json()["data"] == []
     assert code(c.get(f"/api/workflows/{wid}/runs", headers=H(approver["token"]))) == "WORKFLOW_NOT_FOUND"
     assert code(c.post(f"/api/runs/{rid}/cancel", headers=H(approver["token"]))) == "RUN_NOT_FOUND"
@@ -119,7 +119,7 @@ def test_cancel_and_expiry_close_the_step(c, monkeypatch):
 
 
 def test_open_run_is_offered_to_an_admin_approver(c, monkeypatch):
-    """An admin may read every run (DEC-0023), so "Open run" shows for them; a plain approver gets the request only."""
+    """An admin may read every run, so "Open run" shows for them; a plain approver gets the request only."""
     email = f"adm{uuid.uuid4().hex[:6]}@example.com"; monkeypatch.setenv("STUDIO_ADMIN_EMAILS", email)
     d = c.post("/api/auth/register", json={"email": email, "password": "secret12"}).json()["data"]; adm = {"token": d["token"], **d["user"]}
     owner, approver = user(c), user(c)

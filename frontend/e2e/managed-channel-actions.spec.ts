@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
 import { confirmDelete } from './confirm'
+import { vt } from './catalog'
 
 const WITH_EMAIL = process.env.E2E_CHANNEL_SMTP === '1'
 for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] as const) {
@@ -25,7 +26,7 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
       const source = (await response.json()).data
       await page.goto('/settings/mcp'); await page.locator('#mcp-add').click()
       await page.locator('#mcp-new-name').fill(name); await page.locator('#mcp-new-transport').click()
-      await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : 'Kết nối được quản lý', exact: true }).click()
+      await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : vt('managedTools.transport'), exact: true }).click()
       await page.locator('#mcp-new-adapter').click(); await page.getByRole('option', { name: labels[kind], exact: true }).click()
       await page.locator('#mcp-new-channel_id').click(); await page.getByRole('option', { name: new RegExp(channelName) }).click()
       for (const [field, value] of Object.entries(fields[kind])) await page.locator(`#mcp-new-${field}`).fill(value)

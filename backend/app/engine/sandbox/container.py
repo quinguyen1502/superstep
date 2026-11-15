@@ -1,4 +1,4 @@
-"""Docker sandbox for imported repository code (TASK-0015).
+"""Docker sandbox for imported repository code.
 
 The daemon mounts only the import directory (read-write) and a copy of the runner
 (read-only). The image root is read-only. The process gets a fresh environment,
@@ -89,8 +89,8 @@ def _locked(name: str, network: str, memory: str, cpus: str, pids: int) -> List[
 
 def build_code(*, name: str, image: str, command: List[str], memory: str, cpus: str, pids: int,
                environment: Optional[Dict[str, str]] = None) -> List[str]:
-    """Tool node Code mode (TASK-0053): no network, no mounts, and a fixed environment that holds no secret.
-    `environment` comes from the language (TASK-0080); Python's is the default."""
+    """Tool node Code mode: no network, no mounts, and a fixed environment that holds no secret.
+    `environment` comes from the language; Python's is the default."""
     fixed = environment if environment is not None else {"HOME": "/tmp", "PYTHONUNBUFFERED": "1", "PYTHONDONTWRITEBYTECODE": "1"}
     env = [x for k, v in fixed.items() for x in ("-e", f"{k}={v}")]
     return _locked(name, "none", memory, cpus, pids) + env + ["-w", "/tmp", image] + command

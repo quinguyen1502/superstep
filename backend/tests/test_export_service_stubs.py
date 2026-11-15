@@ -1,4 +1,4 @@
-"""TASK-0263 (REQ-0088, DEC-0087): exported Studio-service stubs and missing targets never fake success.
+"""exported Studio-service stubs and missing targets never fake success.
 
 Each generated file is executed: Python in a fresh interpreter, TypeScript with Deno (skips without it).
 Offline example mode (no LLM_PROVIDER) keeps the studio's mock results and says so on stderr; with LLM_PROVIDER set
@@ -49,7 +49,7 @@ def test_python_offline_mock_is_announced(tmp_path):
 
 def test_python_live_run_refuses_unimplemented_services(tmp_path):
     p = py(tmp_path, SERVICES, live=True)
-    # the first service reached is the Retriever: unconfigured in a live run it names what to set (TASK-0270)
+    # the first service reached is the Retriever: unconfigured in a live run it names what to set
     assert p.returncode != 0 and "Knowledge base search KNOWLEDGE_BASE_1: set SUPERSTEP_URL" in p.stderr
     assert "(e-mail not sent)" not in p.stdout and "Final state:" not in p.stdout
 

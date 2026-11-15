@@ -1,4 +1,4 @@
-/** `{{state.field}}` references in node templates (TASK-0041, paths and filters TASK-0044 / DEC-0034).
+/** `{{state.field}}` references in node templates.
  * The pattern matches backend `engine/templating.py` VAR_RE: `{{ state.field[.key|.0]... [| filter[(arg)]]... }}`. */
 const NAME = '[A-Za-z_][A-Za-z0-9_]*'
 const ARG = String.raw`"[^"]*"|'[^']*'|-?\d+`

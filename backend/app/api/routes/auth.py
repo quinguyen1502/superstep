@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api", tags=["auth"])
 
 
 def _signed_in(session: dict, response: Response) -> dict:
-    """The browser keeps the JWT in an HttpOnly cookie (TASK-0045). The body still has `token` for API clients."""
+    """The browser keeps the JWT in an HttpOnly cookie. The body still has `token` for API clients."""
     response.set_cookie(security.SESSION_COOKIE, session["token"], max_age=max(1, session["expires_at"] - int(time.time())),
                         httponly=True, samesite="lax", secure=config.cookie_secure(), path="/")
     return session
@@ -68,5 +68,5 @@ def deny_cli_device(body: DeviceDecision, user=Depends(current_user), svc=Depend
 
 @router.post("/me/password")
 def change_password(body: PasswordChange, response: Response, user=Depends(current_user), svc=Depends(auth_service)):
-    """TASK-0052: a new session for this browser; every other session of the account is signed out."""
+    """a new session for this browser; every other session of the account is signed out."""
     return _signed_in(svc.change_password(user["id"], body.current_password, body.new_password), response)

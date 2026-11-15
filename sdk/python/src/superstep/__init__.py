@@ -1,4 +1,4 @@
-"""Superstep Python SDK: start workflow runs over the public API and read their results."""
+"""Superstep Python SDK: start workflow runs over the public API, manage their schedules, and read their results."""
 from ._client import AsyncClient, Client
 from ._chat import AsyncChatClient, ChatClient
 from ._chat_core import ChatResult

@@ -1,4 +1,4 @@
-"""Knowledge bases, documents and chunks (TASK-0012). Similarity search runs in SQL with pgvector, else brute force."""
+"""Knowledge bases, documents and chunks. Similarity search runs in SQL with pgvector, else brute force."""
 import json
 from typing import Optional
 from sqlalchemy import delete, func, select, text, update

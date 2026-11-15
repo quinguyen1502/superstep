@@ -1,4 +1,4 @@
-"""Independent chat branches and durable edit intents (TASK-0229)."""
+"""Independent chat branches and durable edit intents."""
 from alembic import op
 import sqlalchemy as sa
 

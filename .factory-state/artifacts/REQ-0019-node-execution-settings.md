@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: owner request 2026-10-18 ("làm 3 mục kia đi"), after a gap check against the LangGraph Graph API
+- Source: owner request 2026-10-18 ("do those 3 items"), after a gap check against the LangGraph Graph API
 
 ## Summary
 

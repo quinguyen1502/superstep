@@ -1,4 +1,4 @@
-"""GET /api/health reports the superstep-backend version (TASK-0149, DEC-0068)."""
+"""GET /api/health reports the superstep-backend version."""
 from importlib.metadata import PackageNotFoundError, version
 
 from fastapi.testclient import TestClient

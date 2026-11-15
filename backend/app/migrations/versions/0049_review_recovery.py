@@ -1,4 +1,4 @@
-"""AI review safety (TASK-0204): a waiting step remembers that its AI review is still due, so a review lost to a restart
+"""AI review safety: a waiting step remembers that its AI review is still due, so a review lost to a restart
 is noticed, and a per-workflow, per-day counter reserves the daily cap atomically."""
 from alembic import op
 import sqlalchemy as sa

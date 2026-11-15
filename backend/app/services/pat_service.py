@@ -1,4 +1,4 @@
-"""Personal access tokens and the browser sign-in `superstep login` polls (TASK-0167, DEC-0071)."""
+"""Personal access tokens and the browser sign-in `superstep login` polls."""
 import asyncio, hashlib, secrets, time, uuid
 from typing import Optional
 from ..core import config
@@ -12,7 +12,7 @@ DEVICE_TTL = 600
 POLL_INTERVAL = 1
 NAME_MAX = 80
 DEFAULT_NAME = "CLI"
-DEVICE_STARTS, DEVICE_WINDOW = 10, 600  # sign-ins started per client IP per 10 minutes (TASK-0205)
+DEVICE_STARTS, DEVICE_WINDOW = 10, 600  # sign-ins started per client IP per 10 minutes
 
 
 def digest(token: str) -> str:
@@ -38,10 +38,10 @@ class PatService:
         row = PersonalAccessToken(id=uuid.uuid4().hex[:12], user_id=user_id, name=name, token_hash=digest(secret),
                                    prefix=secret[:10], created=time.time(), last_used=None, revoked=None)
         try: return self.pats.add(row), secret
-        except PatNameTaken: raise AppError("PAT_NAME_TAKEN", name=name) from None  # lost a race to a create with the same name (TASK-0213)
+        except PatNameTaken: raise AppError("PAT_NAME_TAKEN", name=name) from None  # lost a race to a create with the same name
 
     def _free_name(self, user_id: str, name: str) -> str:
-        """`name`, or `name (2)`, `name (3)`... when a token with that name was created after approval (TASK-0208, DEC-0076)."""
+        """`name`, or `name (2)`, `name (3)`... when a token with that name was created after approval."""
         chosen, n = name, 1
         while self.pats.active_by_name(user_id, chosen):
             n += 1; suffix = f" ({n})"
@@ -49,7 +49,7 @@ class PatService:
         return chosen
 
     def _issue_free(self, user_id: str, name: str, attempts: int = 20) -> tuple[PersonalAccessToken, str]:
-        """_issue with a free name; a create that takes the chosen name at the same moment moves on to the next (TASK-0213)."""
+        """_issue with a free name; a create that takes the chosen name at the same moment moves on to the next."""
         for _ in range(attempts - 1):
             try: return self._issue(user_id, self._free_name(user_id, name))
             except AppError as exc:
@@ -71,7 +71,7 @@ class PatService:
         return {"ok": True}
 
     async def start_device_from(self, ip: str, name: Optional[str] = None) -> dict:
-        """start_device for an unauthenticated caller: limited per client IP, so the table cannot be flooded (TASK-0205)."""
+        """start_device for an unauthenticated caller: limited per client IP, so the table cannot be flooded."""
         if self.limiter is not None:
             ok, retry = await self.limiter.hit(f"cli-device:{ip}", DEVICE_STARTS, DEVICE_WINDOW)
             if not ok: raise AppError("RATE_LIMITED", headers={"Retry-After": str(retry)}, retry_after=retry)
@@ -81,12 +81,12 @@ class PatService:
         cleaned = self._name(name, required=False)
         device_code, user_code = secrets.token_urlsafe(32), secrets.token_hex(4)
         now = time.time()
-        for old in self.devices.expired_secrets(now): self._drop_secret(old)  # a token never collected is revoked (TASK-0207)
-        self.devices.delete_expired(now - DEVICE_TTL)  # sign-ins that ended long ago are kept no longer (TASK-0205)
+        for old in self.devices.expired_secrets(now): self._drop_secret(old)  # a token never collected is revoked
+        self.devices.delete_expired(now - DEVICE_TTL)  # sign-ins that ended long ago are kept no longer
         self.devices.add(CliDevice(id=uuid.uuid4().hex[:12], device_hash=digest(device_code), user_code_hash=digest(user_code),
                                     name=cleaned or None, user_id=None, token_id=None, status="pending", secret=None,
                                     expires=now + DEVICE_TTL, created=now))
-        path = "/cli/authorize"  # without the code: the person types the code their own terminal shows (TASK-0205, DEC-0076)
+        path = "/cli/authorize"  # without the code: the person types the code their own terminal shows
         base = config.public_url()
         return {"device_code": device_code, "user_code": user_code, "verification_uri": f"{base}{path}" if base else path,
                 "expires_in": DEVICE_TTL, "interval": POLL_INTERVAL}
@@ -102,7 +102,7 @@ class PatService:
 
     @staticmethod
     def _collected(row: CliDevice) -> bool:
-        """The CLI already has its token: delivered, or (before TASK-0207) approved with the secret already taken."""
+        """The CLI already has its token: delivered, or  approved with the secret already taken."""
         return row.status == "delivered" or (row.status == "approved" and bool(row.token_id) and not row.secret)
 
     def _fresh(self, row: CliDevice) -> CliDevice:
@@ -117,12 +117,12 @@ class PatService:
         if row.status == "denied": raise AppError("CLI_DEVICE_DENIED")
         row = self._fresh(row)
         if row.status == "pending": return {"status": "pending", "interval": POLL_INTERVAL}
-        if row.secret:  # approved before TASK-0207: the secret was stored
+        if row.secret:  # approved : the secret was stored
             secret = self.devices.take_secret(row.id)
             if not secret: raise AppError("CLI_DEVICE_INVALID")
             return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
         if self._collected(row) or not self.devices.claim(row.id, "approved", "delivered"): raise AppError("CLI_DEVICE_INVALID")
-        token, secret = self._issue_free(row.user_id, row.name or DEFAULT_NAME)  # minted now: no token waits in the table (TASK-0207)
+        token, secret = self._issue_free(row.user_id, row.name or DEFAULT_NAME)  # minted now: no token waits in the table
         self.devices.set_fields(row.id, token_id=token.id)
         return {"status": "approved", "token": secret, "interval": POLL_INTERVAL}
 
@@ -133,7 +133,7 @@ class PatService:
         if self.users.get_by_id(user_id) is None: raise AppError("AUTH_TOKEN_INVALID")
         if self.pats.active_by_name(user_id, chosen): raise AppError("PAT_NAME_TAKEN", name=chosen)
         if not self.devices.claim(row.id, "pending", "approved", user_id=user_id, name=chosen): raise AppError("CLI_DEVICE_INVALID")
-        # the token is minted when the CLI collects it, so none waits in the table (TASK-0207)
+        # the token is minted when the CLI collects it, so none waits in the table
         return {"ok": True, "name": chosen}
 
     def deny(self, user_code: str) -> dict:

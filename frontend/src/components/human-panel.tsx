@@ -4,7 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { HumanAnswer } from '@/components/human-answer'
 import type { Trace } from '@/lib/trace'
 
-/** Shown above the run timeline while a run waits at a Human node (TASK-0006). */
+/** Shown above the run timeline while a run waits at a Human node. */
 export function HumanPanel({ waiting, onRespond }: { waiting: NonNullable<Trace['waiting']>; onRespond: (response: string) => void }) {
   const { t } = useTranslation()
   return <Alert id="human-panel" className="m-3 w-auto border-node-human/40 bg-node-human-muted">

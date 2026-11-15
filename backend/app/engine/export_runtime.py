@@ -1,4 +1,4 @@
-"""Generated helpers for export slots' neighbours (REQ-0090, DEC-0089).
+"""Generated helpers for export slots' neighbours.
 
 The strings are source text inserted into the Python and TypeScript files. They import nothing from Superstep.
 A missing prefix still raises the managed-connection placeholder. Settings and secrets are read from the environment.

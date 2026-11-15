@@ -1,4 +1,4 @@
-"""Third-party chat JWTs (DEC-0077): pinned HS256, bounded claims, audience and origin; no key cache."""
+"""Third-party chat JWTs: pinned HS256, bounded claims, audience and origin; no key cache."""
 from __future__ import annotations
 import base64, binascii, hashlib, hmac, json, math, re, time
 from dataclasses import dataclass

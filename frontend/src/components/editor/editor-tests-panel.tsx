@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { JsonEditor } from '@/components/json-editor'
 import { Tip } from '@/components/tip'
@@ -21,12 +21,12 @@ import { agentOf } from '@/lib/trace'
 import { cn } from '@/lib/utils'
 import { useStudioCtx } from './studio-context'
 
-/** Workflow tests (TASK-0067, REQ-0042): test cases with an input, Human answers and checks; Run all / run one on the
+/** Workflow tests: test cases with an input, Human answers and checks; Run all / run one on the
  * saved version, with the offline mock model as an option; each case's checks with expected and actual values.
- * TASK-0068: each result compared with the latest suite run on an earlier version, Run against version, the suite
+ * each result compared with the latest suite run on an earlier version, Run against version, the suite
  * history, and checks that name a node or field no longer in the graph marked as stale. */
 type Kind = 'status' | 'field' | 'node' | 'tool' | 'duration' | 'cost'
-/** `tool`: whether an Agent node (`node`) called the tool and the call ran (TASK-0119). */
+/** `tool`: whether an Agent node (`node`) called the tool and the call ran. */
 export type TestCheck = { kind: Kind; value?: string; field?: string; op?: string; node?: string; ran?: boolean; tool?: string; called?: boolean; max?: number }
 type CheckResult = TestCheck & { passed: boolean | null; expected: string; actual: string | null; reason: string | null }
 type Change = 'regression' | 'fixed' | 'still_failing' | 'still_passing' | 'new'
@@ -203,7 +203,7 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
   const [name, setName] = useState(value?.name ?? ''); const [input, setInput] = useState(value ? JSON.stringify(value.input, null, 2) : runInput)
   const [answers, setAnswers] = useState<Record<string, string[]>>(value?.answers ?? {})
   const [checks, setChecks] = useState<TestCheck[]>(value?.checks ?? [blank('status')]); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)
-  // Human nodes, and Agent nodes with a tool that needs approval (answered under the Agent node's id, TASK-0117)
+  // Human nodes, and Agent nodes with a tool that needs approval (answered under the Agent node's id, )
   const humans = nodes.filter(n => n.type === 'human' || (n.type === 'agent' && needsApproval(n.data))); const graphNodes = nodes.filter(n => n.type !== 'note')
   const agentNodes = nodes.filter(n => n.type === 'agent'); const toolsOf = (nid: string) => toolNames(nodes.find(n => n.id === nid)?.data)
   const setCheck = (i: number, c: TestCheck) => setChecks(cs => cs.map((x, j) => j === i ? c : x))
@@ -221,7 +221,7 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
     <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl" id="test-dialog">
       <DialogHeader className="shrink-0"><DialogTitle className="flex items-center gap-2"><FlaskConical className="size-4" />{t(value?.id ? 'tests.editTitle' : 'tests.addTitle')}</DialogTitle>
         <DialogDescription>{t('tests.dialogDesc')}</DialogDescription></DialogHeader>
-      <div className="-mx-1 min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-1">
+      <DialogBody className="space-y-4">
         <div className="space-y-1.5"><Label htmlFor="test-name">{t('tests.name')}</Label><Input id="test-name" value={name} onChange={e => setName(e.target.value)} maxLength={120} /></div>
         <div className="space-y-1.5"><Label htmlFor="test-input">{t('tests.input')}</Label><JsonEditor id="test-input" value={input} onChange={setInput} className="h-32" /></div>
         {humans.length > 0 && <div className="space-y-2"><Label>{t('tests.answers')}</Label><p className="text-xs text-muted-foreground">{t('tests.answersHelp')}</p>
@@ -265,7 +265,7 @@ export function TestCaseDialog({ wid, value, onClose, onSaved }: { wid: string; 
           <Button size="sm" variant="outline" data-testid="check-add" onClick={() => setChecks(cs => [...cs, blank('field')])}><Plus />{t('tests.addCheck')}</Button>
         </div>
         {err && <Alert variant="destructive"><AlertDescription data-testid="test-dialog-error">{err}</AlertDescription></Alert>}
-      </div>
+      </DialogBody>
       <DialogFooter className="shrink-0"><Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
         <Button id="test-save" onClick={save} disabled={busy || !name.trim()}>{busy && <Loader2 className="animate-spin" />}{t('common.save')}</Button></DialogFooter>
     </DialogContent>

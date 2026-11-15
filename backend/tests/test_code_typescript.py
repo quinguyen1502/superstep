@@ -1,4 +1,4 @@
-"""TASK-0080 (DEC-0049): TypeScript Code nodes on Deno, with the same contract as Python.
+"""TypeScript Code nodes on Deno, with the same contract as Python.
 
 Host tests need a `deno` binary (STUDIO_DENO or PATH) and are skipped without one. Docker tests need Docker and
 `studio-code-ts:1` and are skipped without them (STUDIO_TEST_DOCKER=0 turns them off)."""

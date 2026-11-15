@@ -26,4 +26,4 @@ Recorded/shared-vector focused regression 62 passed; final complete Python SDK s
 
 ## Owner Approval And Finalisation
 
-Owner accepted the reviewed phase-2 stack on 2026-11-02 ("Duyệt"). TASK-0221 moves to done on existing #286, rebased onto finalised #285 and squashed for Ready delivery. No Python source changes are introduced by finalisation; the inherited reviewed fetch fix is now in #285. Shared version remains 0.10.2. Earlier pending/review entries are historical. Merge and publication are not authorised; exact-head CI must pass before delivery.
+Owner accepted the reviewed phase-2 stack on 2026-11-02 ("Approve"). TASK-0221 moves to done on existing #286, rebased onto finalised #285 and squashed for Ready delivery. No Python source changes are introduced by finalisation; the inherited reviewed fetch fix is now in #285. Shared version remains 0.10.2. Earlier pending/review entries are historical. Merge and publication are not authorised; exact-head CI must pass before delivery.

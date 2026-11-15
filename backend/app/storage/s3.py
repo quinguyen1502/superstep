@@ -1,9 +1,9 @@
-"""The `s3` backend (TASK-0193, REQ-0080, DEC-0074): S3-compatible object storage (AWS S3, Cloudflare R2, Backblaze B2,
+"""The `s3` backend: S3-compatible object storage (AWS S3, Cloudflare R2, Backblaze B2,
 MinIO) through `boto3`, an optional extra (`pip install "superstep-backend[s3]"`) that the published images include.
 
-Downloads stream through the backend (DEC-0074 decision 3): the bucket is never shown to the browser and no presigned
+Downloads stream through the backend ( decision 3): the bucket is never shown to the browser and no presigned
 URL is made. A file larger than one part (STUDIO_ATTACHMENT_S3_MULTIPART_MB, default 8) goes up as a multipart upload,
-at most two parts in memory; any failure aborts the upload, so the bucket keeps no incomplete parts (TASK-0200). Error
+at most two parts in memory; any failure aborts the upload, so the bucket keeps no incomplete parts. Error
 reasons name the failure (an S3 error code or the exception type), never the endpoint, bucket,
 key or credentials."""
 from __future__ import annotations
@@ -44,7 +44,7 @@ class S3Store(AttachmentStore):
 
     @staticmethod
     def _error(e: Exception, missing_codes=("NoSuchKey", "404", "NotFound")) -> StoreError:
-        if type(e).__name__ == "NoCredentialsError":  # no keys set and none in the default AWS chain (TASK-0207)
+        if type(e).__name__ == "NoCredentialsError":  # no keys set and none in the default AWS chain
             return StoreError("no S3 credentials: set STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID and STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY")
         code = getattr(e, "response", {}).get("Error", {}).get("Code") if hasattr(e, "response") else None
         if code in missing_codes: return StoreError("not found", missing=True)

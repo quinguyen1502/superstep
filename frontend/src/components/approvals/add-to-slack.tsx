@@ -1,4 +1,4 @@
-/** Add to Slack (TASK-0014): OAuth install of the studio's Slack app, shown when SLACK_CLIENT_ID/SECRET are configured.
+/** Add to Slack: OAuth install of the studio's Slack app, shown when SLACK_CLIENT_ID/SECRET are configured.
  *  Slack sends the browser back to /settings/channels?slack=installed (or ?slack_error=CODE): see SlackOAuthNotice. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

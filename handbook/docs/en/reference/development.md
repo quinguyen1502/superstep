@@ -13,7 +13,7 @@
 | `scripts/` | Compose smoke test, the quickstart video renderer |
 | `docs/` | Error catalogue, backend architecture and UI conventions |
 | `.env.example` | Every Compose and runtime variable |
-| `.factory/`, `.factory-state/` | The delivery workflow: requirements, decisions, tasks, reviews and QA |
+| `.factory/` | The delivery workflow and its store: requirements, decisions, tasks, reviews and QA |
 
 ## Tests
 
@@ -101,7 +101,7 @@ ffmpeg encodes it with a generated music bed. See `scripts/promo/README.md`.
 ## Contribution workflow
 
 Work follows the AI Software Factory in `.factory/` (see `AGENTS.md`):
-requirements, decisions and tasks live in `.factory-state/`, each task gets a
+requirements, decisions and tasks live in the factory store, each task gets a
 branch `factory/task-<id>-<name>`, and a merge needs a human approval. Backend
 changes keep the layers; schema changes go through Alembic; new error codes go
 into the catalogue, `docs/api-errors.md` and both locales; UI strings go into

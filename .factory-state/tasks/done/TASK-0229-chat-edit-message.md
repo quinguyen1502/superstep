@@ -83,7 +83,7 @@ Deliver non-destructive sent-message editing through the shared chat stack for 0
 
 - Branch `factory/task-0229-chat-edit-message` from `develop`.
 
-- 2026-11-03: Owner accepted DEC-0084 on PR #292 ("Duyệt") and authorised implementation. Preserve versions until release preparation and screenshots outside Git. No merge authority is implied.
+- 2026-11-03: Owner accepted DEC-0084 on PR #292 ("Approve") and authorised implementation. Preserve versions until release preparation and screenshots outside Git. No merge authority is implied.
 
 - 2026-11-03: factory ready exits 0 before source work. Existing branch/PR #292 is based on develop 02361fbd. Implement shared branch/admission and edit through existing layers; DEC-0084 is accepted.
 
@@ -93,4 +93,4 @@ Deliver non-destructive sent-message editing through the shared chat stack for 0
 - Screenshots are ignored test output and /private/tmp/superstep-0229-visual; no images/auth traces are added to Git. Owner accepted DEC-0084, not the new software delivery or merge. TASK-0230 follows the merged shared foundation; native work remains deferred.
 - 2026-11-03: Final full Factory profile passes 8/8 commands; final React tests pass 19/19; strict en/vi handbook and image validation pass. Final React 18/19 host runs each pass all three Node tests plus toolkit/widget/headless browser scenarios, including no inherited widget events. Advisory review REV-0222 has no blocking findings; QA-0222 passes local acceptance. Enter review on existing Draft #292; exact pushed-head CI (including live MinIO) and owner software approval remain delivery gates. Final UI fallback was built/tested after the full profile and covered by both final host runs.
 
-- 2026-11-03: Owner explicitly approved merging #292 and continuing TASK-0230 ("Duyệt" after the merge request). Reviewed head b80a0a1a passed 22 CI checks with two expected deploy/publication skips: SQLite 1221 passed/26 skipped, PostgreSQL/Redis 1187 passed/60 skipped, live MinIO 46 passed; all full E2E shards and React 18/19 host matrices passed. Move to done on this same PR, squash to one commit against latest develop, verify unchanged source, run final validation and wait for final-head CI before the authorised merge. No release tag/publication is authorised.
+- 2026-11-03: Owner explicitly approved merging #292 and continuing TASK-0230 ("Approve" after the merge request). Reviewed head b80a0a1a passed 22 CI checks with two expected deploy/publication skips: SQLite 1221 passed/26 skipped, PostgreSQL/Redis 1187 passed/60 skipped, live MinIO 46 passed; all full E2E shards and React 18/19 host matrices passed. Move to done on this same PR, squash to one commit against latest develop, verify unchanged source, run final validation and wait for final-head CI before the authorised merge. No release tag/publication is authorised.

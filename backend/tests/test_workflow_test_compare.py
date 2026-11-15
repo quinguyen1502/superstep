@@ -1,4 +1,4 @@
-"""TASK-0068: workflow test suites compared with an earlier version, run against a stored version, suite history, a draft
+"""workflow test suites compared with an earlier version, run against a stored version, suite history, a draft
 case from a run, stale checks and permissions."""
 import json, time, uuid
 from app.api.deps import run_service

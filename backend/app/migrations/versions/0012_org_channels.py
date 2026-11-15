@@ -1,4 +1,4 @@
-"""Org-wide approval channels managed by admins (TASK-0022 follow-up, DEC-0019). Idempotent; SQLite batch + Postgres.
+"""Org-wide approval channels managed by admins ( follow-up, ). Idempotent; SQLite batch + Postgres.
 
 - users.is_admin: who may create / edit / delete org-wide channels (set from STUDIO_ADMIN_EMAILS and the demo user).
 - approval_channels.scope (user | org) and an optional display name; the one-per-(owner, kind) unique constraint

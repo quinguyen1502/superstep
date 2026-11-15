@@ -13,7 +13,7 @@ type Delivery = { id: string; run_id: string; url: string; status: 'pending' | '
 const VARIANT = { ok: 'success', failed: 'destructive', retrying: 'warning', pending: 'secondary' } as const
 const when = (s: number) => new Date(s * 1000).toLocaleString(i18n.resolvedLanguage)
 
-/** Result-webhook delivery log with redelivery (TASK-0020). */
+/** Result-webhook delivery log with redelivery. */
 export function DeliveriesList({ wid, refreshKey = 0 }: { wid?: string; refreshKey?: number }) {
   const { t } = useTranslation(); const [items, setItems] = useState<Delivery[]>([]); const [err, setErr] = useState('')
   const load = () => { setErr(''); if (wid) api<Delivery[]>(`/api/workflows/${wid}/deliveries`).then(setItems).catch(e => setErr(e.message)) }

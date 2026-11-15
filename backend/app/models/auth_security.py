@@ -5,7 +5,7 @@ from .base import Base
 
 
 class LoginThrottle(Base):
-    """Failed sign-ins per e-mail (TASK-0045). Unknown e-mails are counted too, so a lockout says nothing about who exists."""
+    """Failed sign-ins per e-mail. Unknown e-mails are counted too, so a lockout says nothing about who exists."""
     __tablename__ = "login_throttle"
     email: Mapped[str] = mapped_column(Text, primary_key=True)  # normalised
     failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
@@ -14,7 +14,7 @@ class LoginThrottle(Base):
 
 
 class PasswordReset(Base):
-    """A one-time password reset link (TASK-0045). Only the SHA-256 of the token is stored."""
+    """A one-time password reset link. Only the SHA-256 of the token is stored."""
     __tablename__ = "password_resets"
     id: Mapped[str] = mapped_column(Text, primary_key=True)  # sha256(token) hex
     user_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)

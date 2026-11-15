@@ -1,4 +1,4 @@
-"""TASK-0114: workflows as MCP tools at /mcp, driven by the official MCP Python SDK client over Streamable HTTP
+"""workflows as MCP tools at /mcp, driven by the official MCP Python SDK client over Streamable HTTP
 against a real uvicorn server (with the in-process worker): opt-in, token auth, tool schema, run, Human-node pause,
 resume, get_run, and errors."""
 import asyncio, json, socket, threading, time, uuid
@@ -98,5 +98,5 @@ def test_opt_in_and_auth(base):
 
 
 def test_tool_name():
-    assert tool_name("Refund approval (v2)") == "run_refund_approval_v2" and tool_name("") == "run_workflow" and tool_name("Đơn") == "run_n"
+    assert tool_name("Refund approval (v2)") == "run_refund_approval_v2" and tool_name("") == "run_workflow" and tool_name("Café") == "run_caf"
     assert len(tool_name("x" * 200)) == 64

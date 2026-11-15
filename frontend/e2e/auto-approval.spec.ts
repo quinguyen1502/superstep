@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, N } from './helpers'
-// TASK-0189 (REQ-0081): AI review of approvals in en and vi. The judge is an Ollama credential on the fake API of
+import { vt } from './catalog'
+// AI review of approvals in en and vi. The judge is an Ollama credential on the fake API of
 // backend/tests/fixtures/mock_chat_api.py, which answers approve with 0.92. Suggest mode: the opinion shows in the
 // Approvals inbox, a person answers, the agreement rate counts it, and the workflow can be paused there.
 const CHAT = `http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}`
@@ -20,7 +21,7 @@ const WF = (name: string, cred: string) => ({ name, state: [{ name: 'message', t
 
 const TEXT = {
   en: { section: 'AI review', suggest: 'Suggests approve', panel: 'AI review', agreement: 'Agreement 100%' },
-  vi: { section: 'AI duyệt', suggest: 'Gợi ý duyệt', panel: 'AI duyệt', agreement: 'Đồng ý 100%' },
+  vi: { section: vt('aiReview.panelTitle'), suggest: vt('aiReview.decision.approve'), panel: vt('aiReview.panelTitle'), agreement: vt('aiReview.agreementShort', { rate: '100%' }) },
 }
 
 for (const lang of ['en', 'vi'] as const) {

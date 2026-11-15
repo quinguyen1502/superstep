@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
 import { expectRowAligned } from './helpers/alignment'
-// TASK-0114: expose a workflow as an MCP tool from the API dialog, copy the client config, and call /mcp with the token.
+// expose a workflow as an MCP tool from the API dialog, copy the client config, and call /mcp with the token.
 const shot = async (page: Page, name: string) => { if (process.env.REVIEW_SHOTS) await page.locator('#api-dialog').screenshot({ path: `${process.env.REVIEW_SHOTS}/${name}.png` }) }
 const rpc = (method: string, params: object = {}, id = 1) => ({ jsonrpc: '2.0', id, method, params })
 const MCP_HEADERS = (token: string) => ({ Authorization: `Bearer ${token}`, Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-06-18' })

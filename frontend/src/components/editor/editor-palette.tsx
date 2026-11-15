@@ -11,7 +11,7 @@ import { META, TYPES, REDUCERS } from './meta'
 import { useStudioCtx } from './studio-context'
 import { StateFieldAction } from '@/components/state-field-action'
 
-/** Left panel: node palette and the state schema (TASK-0040). `onAdd` (phones, TASK-0121): a tap on any card adds that
+/** Left panel: node palette and the state schema. `onAdd` (phones, ): a tap on any card adds that
  *  node, Start and End included as a drag does on desktop, since touch screens cannot drag a card onto the canvas. */
 export function EditorPalette({ onAdd }: { onAdd?: (type: string) => void }) {
   const { t } = useTranslation()

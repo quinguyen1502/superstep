@@ -82,7 +82,7 @@ Accept third-party user tokens (HS256 JWT) on the v1 HTTP API and socket, with p
 ## Activity Log
 
 - 2026-11-01: Final CI caught the attachment fixture's `ws://`/HTTPS-Origin mismatch after legacy-origin hardening. Reproduced locally and corrected the test to use explicit `wss://testserver`; production origin enforcement unchanged. Final CI reruns before merge.
-- 2026-11-01: Owner approved merging PR #276 ("Duyệt"). Review and local QA passed. Moved to done on this same PR; merge remains gated on all final-head CI checks passing.
+- 2026-11-01: Owner approved merging PR #276 ("Approve"). Review and local QA passed. Moved to done on this same PR; merge remains gated on all final-head CI checks passing.
 - 2026-11-01: Started locally after TASK-0217 merged as PR #275, with all final CI checks passed (24a65a8). Continues the owner's request to reconstruct the interrupted cloud implementation. Implement a stdlib HS256 verifier with no key cache, shared external-user session isolation, Bearer/first-frame auth, scoped CORS, per-user and failed-auth IP limits; then security tests and full declared verification. The workflow's `chat` object state field retains untrusted identity/meta in LangGraph like other input fields.
 
 - 2026-10-31: proposed in PLAN-0002 from REQ-0082. Status backlog until the owner approves the plan.

@@ -1,4 +1,4 @@
-/** Editor "Save as template" (TASK-0025): copies the saved workflow, minus credentials / resource refs / secrets (server-side sanitiser). */
+/** Editor "Save as template": copies the saved workflow, minus credentials / resource refs / secrets (server-side sanitiser). */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, CheckCircle2, LayoutTemplate, Loader2, TriangleAlert } from 'lucide-react'

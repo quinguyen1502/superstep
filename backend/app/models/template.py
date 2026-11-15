@@ -5,7 +5,7 @@ from .base import Base
 
 
 class WorkflowTemplate(Base):
-    """A reusable starting point (TASK-0025): a sanitised workflow graph, personal or org-wide. Built-ins live in code."""
+    """A reusable starting point: a sanitised workflow graph, personal or org-wide. Built-ins live in code."""
     __tablename__ = "workflow_templates"
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     name: Mapped[str] = mapped_column(Text, nullable=False)

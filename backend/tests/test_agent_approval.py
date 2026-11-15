@@ -1,4 +1,4 @@
-"""Agent node tool approval (TASK-0117, REQ-0072, DEC-0063 decision 7): the run waits before a call to a tool that needs
+"""Agent node tool approval: the run waits before a call to a tool that needs
 approval, through the Human node's path (the inbox, the channels, the deadlines, workflow test answers); approve runs the
 call once, reject tells the model. The restart cases are in test_durable_restart.py."""
 import http.server, json, threading, uuid
@@ -14,6 +14,7 @@ from app.engine.validator import validate
 from app.services.chat_session_service import answered_by
 from tests.test_agent_node import BUILTIN, call, final, script, wf
 from tests.test_approval_channels import api, connect, until  # noqa: F401 (api: fake Slack/Telegram, inline sends)
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 REFUND = {"name": "send_refund", "description": "Refund an order", "source": "http", "method": "POST", "url": "https://pay.example/refund", "approval": True,
           "parameters": {"type": "object", "properties": {"order": {"type": "string"}, "amount": {"type": "number"}}, "required": ["order", "amount"]}}
@@ -112,7 +113,7 @@ def test_no_approval_is_asked_for_a_call_that_cannot_run(monkeypatch):
 def test_prompt_in_vietnamese(monkeypatch):
     script(monkeypatch, [("", [call("send_refund", ARGS)])])
     w = waiting_at(list(run_stream(wf(tools=[REFUND]), {"message": "x"}, ports=Ports(locale="vi"))))
-    assert w["prompt"].startswith("Helper muốn gọi công cụ send_refund")
+    assert w["prompt"].startswith(vi_text("vi", "agent.ask").split("{args}")[0].format(agent="Helper", tool="send_refund"))
 
 
 def test_expansion_copies_the_approval_settings_and_the_validator_checks_the_deadline():

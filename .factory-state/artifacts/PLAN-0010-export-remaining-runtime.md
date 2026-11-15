@@ -45,7 +45,7 @@ Land per-node model slots, approval export and managed-connection calls in one b
 
 ## Sequence
 
-1. Record the requirement, decision and these tasks. Note the owner's decline on TASK-0266.
+1. Record the requirement, decision and these tasks. Record the owner's decision to decline cross-language code nodes in DEC-0089.
 2. Implement all three on `factory/req-0090-export-remaining` because the exporters are shared.
 3. Update the handbook in English and Vietnamese.
 4. Run the export tests. Review and QA come after the owner asks. Do not merge until the owner asks.

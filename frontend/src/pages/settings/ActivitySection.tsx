@@ -1,4 +1,4 @@
-/** Settings → Activity (TASK-0029, admins): audit log of roles, shares, teams, ownership, accounts and policy, with filters. */
+/** Settings → Activity: audit log of roles, shares, teams, ownership, accounts and policy, with filters. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'

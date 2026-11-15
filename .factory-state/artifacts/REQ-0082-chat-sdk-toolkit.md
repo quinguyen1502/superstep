@@ -131,7 +131,7 @@ The owner decided on 2026-10-31 (final):
 1. Support chat for third-party apps' signed-in users: the third party's backend issues tokens for its users; no PAT in clients. Anonymous visitor chat stays.
 2. Mobile: React Native first; native iOS and Android through a WebView of `/c/{slug}` with a guide and a token bridge. Native Swift and Kotlin SDKs are out of scope for now.
 
-The owner approved PR #271 on 2026-10-31 with all 11 recommendations of PLAN-0002 ("Duyệt plan #271 theo đề xuất cả 11 câu, merge và bắt đầu code giai đoạn 1"):
+The owner approved PR #271 on 2026-10-31 with all 11 recommendations of PLAN-0002 ("Approve plan #271 as proposed on all 11 questions, merge it and start coding phase 1"):
 
 1. Third-party user tokens: per-chat app keys with HS256 tokens signed by the third party's backend now; public/private key pairs (asymmetric signing) later (DEC-0077).
 2. No Superstep-issued token (token exchange) endpoint now; add it later only if a third party asks (DEC-0077).
@@ -145,7 +145,7 @@ The owner approved PR #271 on 2026-10-31 with all 11 recommendations of PLAN-000
 10. `@superstep/react-native` is a separate package; no device e2e in CI, manual simulator screenshots instead (DEC-0080).
 11. Release grouping: phases 1 and 2 ship as 0.11.0, phases 3 and 4 as 0.12.0.
 
-The owner also asked to keep notes of the work deferred to later ("Nhớ note các thứ sẽ làm sau lại nhé"); the list, with reasons and triggers, is in PLAN-0002 "Deferred / later".
+The owner also asked to keep notes of the work deferred to later ("Remember to note down the things to do later"); the list, with reasons and triggers, is in PLAN-0002 "Deferred / later".
 
 ## Open Questions
 
@@ -174,7 +174,7 @@ The owner prioritised TASK-0229 (edit sent message) and TASK-0230 (regenerate an
 
 The new revision semantics are proposed in `.factory-state/decisions/DEC-0084-chat-edit-regenerate.md`; architecture acceptance is pending. Native requirements are deferred, not fulfilled, so the overall requirement remains Accepted/incomplete. Shared Python SDK/CLI/server target 0.11.0; package versions, tags and publication wait for validated release preparation and explicit release instructions.
 
-- 2026-11-03: Owner accepted DEC-0084 in PR #292 ("Duyệt"); edit/regenerate design is now approved for implementation. Earlier Proposed/pending statements are historical. Native scope remains deferred.
+- 2026-11-03: Owner accepted DEC-0084 in PR #292 ("Approve"); edit/regenerate design is now approved for implementation. Earlier Proposed/pending statements are historical. Native scope remains deferred.
 
 ## Integrated Web Delivery And Release Preparation (2026-11-03)
 

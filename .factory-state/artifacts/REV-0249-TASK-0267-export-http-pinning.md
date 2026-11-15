@@ -5,7 +5,7 @@
 - Project: superstep
 - Review ID: REV-0249
 - Task ID: TASK-0267
-- Reviewer: Grok (advisory; owner authorised the work and green merge, "Làm đi" 2026-11-07)
+- Reviewer: Grok (advisory; owner authorised the work and green merge, "Do it" 2026-11-07)
 - Created: 2026-11-07
 - Updated: 2026-11-07
 - Outcome: approved for QA

@@ -1,6 +1,6 @@
 # Browser tools in the existing editor
 
-TASK-0250 / REQ-0086. Configure infrastructure in Settings → MCP servers first
+Configure infrastructure in Settings → MCP servers first
 ([connection settings](browser-settings.md)). Browser tools stay ordinary MCP
 tools on an existing Agent or MCP node. There is no Browser canvas node or second
 Agent/model setting. The usual General, Settings, Data and Execution tabs remain.
@@ -85,6 +85,6 @@ cannot repeat business data it has been given; builders must choose the appropri
 final answer and data scope. No raw intermediate state is published merely by
 selecting full chat steps.
 
-The feature remains experimental/default off. This task adds no schema/dependency,
+The browser runtime remains experimental/default off. The editor adds no schema/dependency,
 provider deployment or export runtime. Python/TypeScript executable exports and
-the consolidated handbook/acceptance remain TASK-0251/0252/0253.
+the handbook are documented separately.

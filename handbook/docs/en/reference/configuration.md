@@ -63,6 +63,8 @@ root lists every variable Compose passes; this page groups them.
 | --- | --- | --- |
 | `STUDIO_WORKER` | `1` | Run the worker inside the API process |
 | `STUDIO_WORKER_CONCURRENCY` | `2` | Jobs per worker |
+| `STUDIO_ENABLE_BROWSER` | `1` | Expose browser/web managed adapters (`0` hides them) |
+| `STUDIO_ENABLE_BROWSER_RUNTIME` | unset/`0` | Allow trusted runs to drive a browser worker |
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | `30` | Job lease (s) |
 | `STUDIO_JOB_REAP_EVERY` | `15` | Requeue expired leases every (s) |
 | `STUDIO_RECOVER_ON_START` | `1` | In-memory queue: requeue unfinished runs at start-up ([runs across restarts](../operate/deploy.md#runs-across-restarts)) |
@@ -86,7 +88,7 @@ root lists every variable Compose passes; this page groups them.
 | `STUDIO_ATTACHMENT_STORAGE` | `db` | Where chat attachment bytes are kept: `db` (in the database), `fs` (a folder) or `s3` (S3-compatible storage). Files keep the place they were stored in, so a change applies to new files. See [Chat: Attachments](../run/chat.md#attachments) |
 | `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | The folder of the `fs` backend. In docker compose, `api` and `worker` share it on the `apidata` volume. It must not be or contain the data folder |
 | `STUDIO_ATTACHMENT_S3_BUCKET` | (empty) | The bucket of the `s3` backend. Required for `s3` |
-| `STUDIO_ATTACHMENT_S3_PREFIX` | (empty) | A folder inside the bucket, so several installs can share one bucket. Leave it empty only on a bucket used by nothing else (TASK-0203) |
+| `STUDIO_ATTACHMENT_S3_PREFIX` | (empty) | A folder inside the bucket, so several installs can share one bucket. Leave it empty only on a bucket used by nothing else |
 | `STUDIO_ATTACHMENT_S3_ENDPOINT` | (empty) | The service URL for S3-compatible storage (R2, B2, MinIO). Empty means AWS S3 |
 | `STUDIO_ATTACHMENT_S3_REGION` | (empty) | The bucket's region; `auto` for Cloudflare R2 |
 | `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` for services that need path-style URLs, such as MinIO |
@@ -174,5 +176,13 @@ root lists every variable Compose passes; this page groups them.
 | `OTEL_SERVICE_NAME` | `superstep` | Service name |
 | `STUDIO_TRACE_URL` | empty | **Open trace** link template with `{trace_id}` |
 | `STUDIO_OTEL_METRICS` | `0` | Also export metrics |
+| `STUDIO_OTEL_INSTRUMENT` | `0` | With a traces endpoint: also trace HTTP requests, SQL queries and Redis calls (no parameter values) |
+| `STUDIO_GRAFANA_URL` | empty | Grafana address that **Settings → Usage** links to |
+| `STUDIO_TIMEZONE` | `UTC` | IANA time zone for monthly budget boundaries (UTC by default). |
+| `STUDIO_SLO_RUN_SUCCESS` | `0.99` | 30-day run success target as a fraction between 0 and 1. |
+| `STUDIO_SLO_API_AVAILABILITY` | `0.995` | 30-day API availability target as a fraction between 0 and 1. |
+| `STUDIO_LOG_FORMAT` | `text` | `json`: one JSON object per log line with `request_id`, `run_id`, `trace_id` |
+| `STUDIO_LOG_LEVEL` | empty | Log level of Superstep's own loggers, for example `INFO` or `DEBUG` |
+| `POSTGRES_MONITOR_USER`, `POSTGRES_MONITOR_PASSWORD` | `superstep_monitor`, empty | Compose `observability` profile: read-only Postgres role for server metrics; empty password turns them off |
 | `LANGSMITH_API_KEY`, `LANGSMITH_TRACING` | empty | Export to LangSmith |
 | `LANGSMITH_PROJECT`, `LANGSMITH_ENDPOINT` | empty | LangSmith project and endpoint |

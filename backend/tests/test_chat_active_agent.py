@@ -1,4 +1,4 @@
-"""A chat stays with the agent a hand-off left it with (TASK-0181, REQ-0078, DEC-0073 decision 4)."""
+"""A chat stays with the agent a hand-off left it with."""
 from app.api.deps import get_db
 from app.engine import agents
 from app.repositories import ChatSessionRepository

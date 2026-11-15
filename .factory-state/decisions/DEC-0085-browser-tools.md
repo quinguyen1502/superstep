@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0085
-- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "Ok triển khai" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved decision 10 and then asked for the task split. TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done.
+- Status: Accepted on 2026-11-06. Owner reviewed the amended package (relaxed approvals, cross-turn sessions, Browserless required, deferred exports, upload/download/evaluate JS, mandatory whitelist, two-layer toggles) and said "OK, go ahead and build it" with instruction to sync latest develop before coding. On 2026-11-07 the owner approved decision 10 and then asked for the task split. TASK-0261 is merged in PR #329 (`10300e20`, REV-0256, QA-0256). TASK-0262 is merged in PR #334 (`ddafdd18`, REV-0254, QA-0254). The owner closed AC11 on 2026-11-07. REQ-0086 is not marked done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-03
 - Updated: 2026-11-07 (TASK-0262 merged; owner closed AC11)
@@ -78,8 +78,8 @@ This preserves Superstep's LangGraph Agent orchestration, makes dynamic URLs ord
 
 - Approved By: Thái Quí Nguyễn (owner)
 - Approved On: 2026-11-06 (Asia/Saigon)
-- Scope And Limits: the owner accepted the amended package and authorised implementation into `develop` ("Ok triển khai", sync latest develop first). One task PR per delivery task; merge only when required checks are green. No release/version bump authorised by this acceptance. TASK-0251/0252 remain deferred.
-- 2026-11-07 addendum: the owner approved decision 10 ("ok ghi vào"). The approval covers that wording only. It does not merge the fixture-export pull requests, create live-driver tasks, or authorise implementation of decision 10.
+- Scope And Limits: the owner accepted the amended package and authorised implementation into `develop` ("OK, go ahead and build it", sync latest develop first). One task PR per delivery task; merge only when required checks are green. No release/version bump authorised by this acceptance. TASK-0251/0252 remain deferred.
+- 2026-11-07 addendum: the owner approved decision 10 ("ok, write it in"). The approval covers that wording only. It does not merge the fixture-export pull requests, create live-driver tasks, or authorise implementation of decision 10.
 
 ## Review Or Revisit Trigger
 

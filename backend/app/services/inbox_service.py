@@ -1,4 +1,4 @@
-"""The Approvals inbox (TASK-0065, DEC-0043): every waiting step a user may answer, as run owner or listed approver,
+"""The Approvals inbox: every waiting step a user may answer, as run owner or listed approver,
 across workflows, answered in place. An approver sees only the request, never the workflow, trace or state."""
 from typing import Optional
 from ..core.errors import AppError

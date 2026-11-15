@@ -83,7 +83,7 @@ def test_api_import_finalize_ws():
     assert evs[-1]["type"] == "run_finished" and evs[-1]["state"]["text"] == "answer to: why?"
 
 def test_run_checkpoints_and_resumes_in_a_fresh_subprocess(job):
-    """TASK-0021: the runner attaches a LangGraph saver, streams serialized superstep checkpoints, and a new
+    """the runner attaches a LangGraph saver, streams serialized superstep checkpoints, and a new
     subprocess continues from one of them (what a recovered queue job does)."""
     wf = importer.to_workflow(job, "router")
     evs = list(importer.run_imported(wf, {"text": "hi"}, checkpointing=True))

@@ -1,11 +1,12 @@
 import { expect, type Page } from '@playwright/test'
+import { vt } from './catalog'
 /** Shared e2e helpers for the Phase 5 editor specs. */
 export async function login(page: Page, email = 'admin@example.com', password = 'admin123') {
-  await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel('Mật khẩu', { exact: true }).fill(password)
+  await page.goto('/login'); await page.getByLabel('Email').fill(email); await page.getByLabel(vt('auth.password'), { exact: true }).fill(password)
   await page.locator('#auth-submit').click(); await expect(page).toHaveURL(/\/workflows$/)
   return { Authorization: `Bearer ${await apiToken(page, email, password)}` }
 }
-/** A Bearer token for API calls from a spec. The browser holds the session in an HttpOnly cookie (TASK-0045), so scripts cannot read it. */
+/** A Bearer token for API calls from a spec. The browser holds the session in an HttpOnly cookie, so scripts cannot read it. */
 export async function apiToken(page: Page, email = 'admin@example.com', password = 'admin123'): Promise<string> {
   return (await (await page.request.post('/api/auth/login', { data: { email, password } })).json()).data.token
 }

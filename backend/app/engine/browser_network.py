@@ -2,7 +2,7 @@
 
 This module does not grant browser access. Only a network-isolated worker using
 the gateway for *all* page traffic can enforce this policy (see browser-egress.md).
-Page destinations require a non-empty origin whitelist (Accepted DEC-0085);
+Page destinations require a non-empty origin whitelist (Accepted );
 empty allowlists deny every non-infrastructure resolve.
 """
 from __future__ import annotations
@@ -59,7 +59,7 @@ class DestinationPolicy:
 
     @classmethod
     def public_discovery(cls, allowed_origins=(), *, resolver=socket.getaddrinfo):
-        """Optional origin filter for separate web search/fetch (TASK-0247). Empty means any global public IP."""
+        """Optional origin filter for separate web search/fetch. Empty means any global public IP."""
         policy = cls(allowed_origins, resolver=resolver, require_whitelist=False) if allowed_origins else object.__new__(cls)
         if not allowed_origins:
             policy.allowed_origins = frozenset()

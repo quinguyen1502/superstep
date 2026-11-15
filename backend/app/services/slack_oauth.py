@@ -1,4 +1,4 @@
-"""Add to Slack (TASK-0014, closes the DEC-0019 leftover): OAuth v2 app distribution for approval channels.
+"""Add to Slack: OAuth v2 app distribution for approval channels.
 
 start(uid, scope)  -> Slack authorize URL; `state` is HMAC-signed (user, scope, expiry, nonce) so a callback can't be forged.
 finish(code, state) -> exchanges the code (oauth.v2.access) and saves the workspace as a Slack connection of that user,

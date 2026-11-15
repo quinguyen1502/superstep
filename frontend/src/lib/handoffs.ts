@@ -1,4 +1,4 @@
-/** Agent hand-offs (REQ-0078, DEC-0073): each Agent node lists the agents it may hand the conversation to in
+/** Agent hand-offs: each Agent node lists the agents it may hand the conversation to in
  *  `data.handoffs` [{target, description}]; the workflow's `max_handoffs` (default 5, 0 to 20) bounds a run. */
 export type Handoff = { target: string; description?: string }
 export const DEFAULT_MAX_HANDOFFS = 5, MAX_HANDOFFS = 20
@@ -21,7 +21,7 @@ export function pruneHandoffs<N extends NodeLike>(nodes: N[]): N[] {
   return changed ? out : nodes
 }
 
-/** Canvas links (TASK-0182): one dashed edge per hand-off, derived from the targets and never saved as a workflow edge.
+/** Canvas links: one dashed edge per hand-off, derived from the targets and never saved as a workflow edge.
  *  Its id is `handoff:<source>><target>`; the Agent node's `handoff` handle starts a new one. */
 export const HANDOFF_HANDLE = 'handoff'
 const PREFIX = 'handoff:'

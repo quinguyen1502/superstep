@@ -1,4 +1,4 @@
-"""Pure structural diff between two workflow JSON documents (TASK-0008).
+"""Pure structural diff between two workflow JSON documents.
 
 Nodes/edges are matched by id, state fields by name. Node position changes are reported as
 `moved` (layout only) so they don't drown real changes.

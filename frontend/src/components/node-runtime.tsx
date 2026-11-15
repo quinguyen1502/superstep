@@ -27,7 +27,7 @@ export function NodeRuntime({ data, onChange }: { data: any; onChange: (patch: R
     if (next.initial_interval === undefined) delete next.initial_interval
     onChange({ retry: next.max_attempts === undefined && next.initial_interval === undefined ? undefined : next })
   }
-  // the Config panel's Execution tab names the section (TASK-0121), so no heading of its own
+  // the Config panel's Execution tab names the section, so no heading of its own
   return <div className="space-y-3" id="node-runtime">
     <Field id="node-retry-attempts" label={t('editor.retryAttempts')} value={retry.max_attempts} onChange={v => setRetry('max_attempts', v)} />
     <Field id="node-retry-wait" label={t('editor.retryWait')} value={retry.initial_interval} step="0.1" onChange={v => setRetry('initial_interval', v)} />

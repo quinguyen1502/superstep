@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Superstep Chat",
+    "slug": "superstep-chat",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.superstep.chat.example"
+    },
+    "android": {
+      "package": "dev.superstep.chat.example",
+      "usesCleartextTraffic": true
+    }
+  }
+}

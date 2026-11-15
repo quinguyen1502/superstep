@@ -6,7 +6,7 @@ from ..models.database import Database
 
 
 class PatNameTaken(Exception):
-    """Another active token of the same user got this name first (TASK-0213)."""
+    """Another active token of the same user got this name first."""
 
 
 class PersonalAccessTokenRepository:
@@ -16,7 +16,7 @@ class PersonalAccessTokenRepository:
         with self.db.session() as s:
             s.add(row)
             try: s.commit()
-            except IntegrityError:  # the unique index on active names (TASK-0213); a token_hash clash is re-raised
+            except IntegrityError:  # the unique index on active names; a token_hash clash is re-raised
                 s.rollback()
                 if self.active_by_name(row.user_id, row.name) is None: raise
                 raise PatNameTaken(row.name) from None

@@ -1,4 +1,4 @@
-"""TASK-0022: approval of waiting runs through Slack / Telegram, with mocked platform APIs and signed callbacks."""
+"""approval of waiting runs through Slack / Telegram, with mocked platform APIs and signed callbacks."""
 import hashlib, hmac, json, re, time, uuid
 from urllib.parse import urlencode
 import httpx, pytest
@@ -7,6 +7,7 @@ from app.main import app
 from app.api.deps import approval_service
 from app.services.approval_channels import ADAPTERS
 from tests.test_hitl import APPROVAL
+from app.engine.locale import text as vi_text  # expected Vietnamese comes from the server catalog (app/locales/vi.json)
 
 SIGNING = "8f742231b10e8888abcd99yyyzzz85a5".replace("y", "1").replace("z", "2")
 SLACK = {"bot_token": "xoxb-1111-2222-abcdefgh", "signing_secret": SIGNING}
@@ -203,20 +204,21 @@ def test_chat_texts_follow_the_owner_and_presser_language(c, api):
     assert r.status_code == 422 and r.json()["error"]["code"] == "NOTIFICATION_PREFS_INVALID"
     c.put("/api/notifications/preferences", json={"lang": "vi"}, headers=H(approver["token"]))
     uo, ua, us = (f"U{uuid.uuid4().hex[:8].upper()}" for _ in range(3))
-    link(c, api, owner, "slack", uo); assert "Mã xác minh Superstep" in [b for b in api.named("chat.postMessage") if b["channel"] == uo][-1]["text"]
+    link(c, api, owner, "slack", uo); assert vi_text("vi", "channels.code").split(":")[0] in [b for b in api.named("chat.postMessage") if b["channel"] == uo][-1]["text"]
     link(c, api, approver, "slack", ua); link(c, api, stranger, "slack", us)
     assert "verification code" in [b for b in api.named("chat.postMessage") if b["channel"] == us][-1]["text"]
     ch = c.get("/api/approvals/channels", headers=H(owner["token"])).json()["data"]["channels"][0]
     wid = workflow(c, owner, {"channel_id": ch["id"], "channel": "slack", "target": "C0VI", "approvers": [approver["email"]]}); rid = start_waiting(c, owner, wid)
     post = until(lambda: [p for p in api.requests() if p["channel"] == "C0VI"])[-1]
     body = post["blocks"][0]["text"]["text"]
-    assert body.startswith("*Cần phê duyệt*") and "Bước: " in body and "Lượt chạy: " + rid in body
-    assert [e["text"]["text"] for e in post["blocks"][1]["elements"]] == ["Duyệt", "Từ chối"]
+    say = lambda key, **kw: vi_text("vi", f"channels.{key}").format(**kw)  # noqa: E731
+    assert body.startswith(f"*{say('title')}*") and say("step", v="") in body and say("run", v=rid) in body
+    assert [e["text"]["text"] for e in post["blocks"][1]["elements"]] == [say("approve"), say("reject")]
     approve = post["blocks"][1]["elements"][0]["value"]
     slack_post(c, ch["id"], press(approve, us))  # the stranger reads the refusal in English
     assert [b for u, b in api.calls if u.startswith("https://hooks.slack.com/")][-1]["text"] == "You are not allowed to approve this run"
     assert slack_post(c, ch["id"], press(approve, ua)).json()["data"] == {"outcome": "approved"}
-    assert api.named("chat.update")[-1]["text"].startswith(f"✅ {approver['email']} đã duyệt lúc ")
+    assert api.named("chat.update")[-1]["text"].startswith(say("at", text=say("approved_by", who=approver["email"]), when=""))
 
 
 def test_identity_is_verified_with_a_one_time_code(c, api, monkeypatch):
@@ -225,7 +227,7 @@ def test_identity_is_verified_with_a_one_time_code(c, api, monkeypatch):
     assert ident(c, a, "slack", uid).json()["error"]["code"] == "CHANNEL_NOT_FOUND"
     assert c.get("/api/approvals/identities", headers=H(a["token"])).json()["data"] == {"slots": [
         {"kind": k, "team_id": None, "team_name": None, "available": False, "external_id": None, "verified": False, "code_pending": False, "code_expires": None}
-        for k in ("telegram", "whatsapp")]}  # e-mail and Teams are link channels: no identity (TASK-0047)
+        for k in ("telegram", "whatsapp")]}  # e-mail and Teams are link channels: no identity
     connect(c, a, "slack")
     assert ident(c, a, "slack", "lower").json()["error"]["code"] == "IDENTITY_INVALID"
     assert c.post("/api/approvals/identities/slack/send-code", headers=H(a["token"])).json()["error"]["code"] == "IDENTITY_NOT_LINKED"
@@ -356,7 +358,7 @@ def test_expired_button_and_answer_in_studio_supersede(c, api):
 
 
 def test_inbox_answer_closes_the_channel_request(c, api):
-    """TASK-0065: an approver answers from the Approvals inbox first; the Slack buttons are refused afterwards."""
+    """an approver answers from the Approvals inbox first; the Slack buttons are refused afterwards."""
     owner, approver = user(c), user(c); ua = f"U{uuid.uuid4().hex[:8].upper()}"
     ch = connect(c, owner, "slack"); link(c, api, approver, "slack", ua)
     wid = workflow(c, owner, {"channel": "slack", "target": "C1", "approvers": [approver["email"]]})
@@ -371,7 +373,7 @@ def test_inbox_answer_closes_the_channel_request(c, api):
 
 
 def test_deadline_reminder_replaces_the_slack_message(c, api):
-    """TASK-0066: a reminder posts a new request and closes the old one; buttons expire at the deadline; a timeout edits it."""
+    """a reminder posts a new request and closes the old one; buttons expire at the deadline; a timeout edits it."""
     owner, approver = user(c), user(c); ua = f"U{uuid.uuid4().hex[:8].upper()}"
     ch = connect(c, owner, "slack"); link(c, api, approver, "slack", ua)
     wf = json.loads(json.dumps(APPROVAL)); wf["name"] = f"Leave {uuid.uuid4().hex[:4]}"
@@ -414,7 +416,7 @@ def test_send_failure_is_audited_and_the_run_keeps_waiting(c, api):
 
 
 def test_api_run_resumed_from_a_channel_sends_its_callback(c, api, monkeypatch):
-    """TASK-0022 follow-up: the callback_url of an API-triggered run gets the final result after a chat approval."""
+    """follow-up: the callback_url of an API-triggered run gets the final result after a chat approval."""
     from app.services import webhooks
     got = []
     def hook(req): got.append((req.headers["x-studio-event"], json.loads(req.content), req)); return httpx.Response(204)
@@ -433,7 +435,7 @@ def test_api_run_resumed_from_a_channel_sends_its_callback(c, api, monkeypatch):
     final = until(lambda: [(e, b, r) for e, b, r in got if b["run_id"] == rid and b["status"] == "ok"])[0]
     assert final[0] == "run.finished" and final[1]["final_state"]["decision"] == "approved"
     assert webhooks.verify_signature(tok["signing_secret"], final[2].headers["x-studio-signature"], final[2].content)  # same pipeline: signed
-    # the hook sees the request before the worker marks the delivery ok: wait for the log, do not read it once (TASK-0059)
+    # the hook sees the request before the worker marks the delivery ok: wait for the log, do not read it once
     statuses = lambda: sorted(d["status"] for d in c.get(f"/api/workflows/{wid}/deliveries", headers=H(owner["token"])).json()["data"] if d["run_id"] == rid)
     assert until(lambda: statuses() == ["ok", "ok"]), statuses()
 
@@ -511,7 +513,7 @@ def test_test_connection(c, api, monkeypatch):
     o = user(c); ch = connect(c, o, "slack")
     r = c.post(f"/api/approvals/channels/{ch['id']}/test", headers=H(o["token"]))
     assert r.status_code == 200 and r.json()["data"] == {"ok": True, "name": "Team 2222", "team_id": "2222", "matches": True,
-                                                         "missing_scopes": None}  # the fake sends no x-oauth-scopes: unknown (TASK-0074)
+                                                         "missing_scopes": None}  # the fake sends no x-oauth-scopes: unknown
     assert c.post(f"/api/approvals/channels/{ch['id']}/test", headers=H(user(c)["token"])).json()["error"]["code"] == "CHANNEL_NOT_FOUND"
     def broken(self, secrets): raise AppError("CHANNEL_API_FAILED", kind="Slack", reason="invalid_auth")
     monkeypatch.setattr(type(ADAPTERS["slack"]), "describe", broken)

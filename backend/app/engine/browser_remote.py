@@ -133,7 +133,7 @@ def approved_transport(secrets, controllers):
     """Bind a connection token to an operator-allowlisted Browserless control plane.
 
     The connection never supplies or invents the control endpoint — only an approved
-    controller list from operator config may be used (Accepted DEC-0085 / PLAN-0006).
+    controller list from operator config may be used (Accepted ).
     """
     token = secrets.get('browserless_token')
     approved = [item for item in controllers if isinstance(item, ApprovedController)]

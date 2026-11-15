@@ -1,4 +1,4 @@
-"""Chat attachments (TASK-0174, REQ-0077, DEC-0072): the files of a chat message, in the database."""
+"""Chat attachments: the files of a chat message, in the database."""
 from alembic import op
 import sqlalchemy as sa
 

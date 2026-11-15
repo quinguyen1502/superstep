@@ -1,4 +1,4 @@
-"""Template library (TASK-0025). Thin HTTP layer over TemplateService."""
+"""Template library. Thin HTTP layer over TemplateService."""
 from typing import Any, Literal, Optional
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field

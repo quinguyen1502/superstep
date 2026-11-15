@@ -1,4 +1,4 @@
-/** Pure graph edits shared by keyboard shortcuts, buttons and (later) the history/clipboard (TASK-0023+). */
+/** Pure graph edits shared by keyboard shortcuts, buttons and (later) the history/clipboard (+). */
 import type { Edge, Node } from '@xyflow/react'
 
 /** Start and End anchor every workflow: a delete always keeps at least one of each (extra copies can go). */

@@ -4,7 +4,7 @@ from .base import Base
 
 
 class NodeResult(Base):
-    """Ledger of a finished side-effect node (TASK-0021): its state update is reused instead of re-executing it."""
+    """Ledger of a finished side-effect node: its state update is reused instead of re-executing it."""
     __tablename__ = "node_results"
     run_id: Mapped[str] = mapped_column(Text, primary_key=True)
     node_id: Mapped[str] = mapped_column(Text, primary_key=True)

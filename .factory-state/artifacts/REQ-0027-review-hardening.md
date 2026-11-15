@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: project review on 2026-10-18 and the owner's reply, “Ko cần sửa billing của CI. Trước hết hoàn thành task 0038. Sau đó quay lại giải quyết các vấn đề bạn đã raise.”
+- Source: project review on 2026-10-18 and the owner's reply, “No need to fix the CI billing. First finish task 0038. Then come back to the issues you raised.”
 
 ## Summary
 

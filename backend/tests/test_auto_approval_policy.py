@@ -1,4 +1,4 @@
-"""TASK-0186 (REQ-0081, DEC-0075): the `approval.auto` policy, its validation, who may turn auto on, the kill switches
+"""the `approval.auto` policy, its validation, who may turn auto on, the kill switches
 and the migration."""
 import copy, os, uuid
 from types import SimpleNamespace as NS
@@ -136,7 +136,7 @@ def test_service_paused_combines_switches(monkeypatch):
     store.clear(); monkeypatch.setenv("STUDIO_AUTO_APPROVAL", "off"); assert svc.paused("w2")
 
 
-# ---- the Approvals page list (TASK-0188) ----
+# ---- the Approvals page list ----
 def test_reviewed_workflows_lists_own_with_ai_review():
     u = register(); other = register()
     on = data(c.post("/api/workflows", json=wf(auto("suggest")), headers=H(u.token)))["id"]
@@ -150,7 +150,7 @@ def test_reviewed_workflows_lists_own_with_ai_review():
     assert theirs in [r["workflow_id"] for r in data(c.get("/api/approvals/auto/workflows", headers=H(admin().token)))]
 
 
-# ---- exports (TASK-0188): a note, never the judge's credential or instructions ----
+# ---- exports: a note, never the judge's credential or instructions ----
 def test_exports_note_ai_review_without_secrets():
     from app.engine import python_export, typescript_export, project_export
     w = wf(auto())

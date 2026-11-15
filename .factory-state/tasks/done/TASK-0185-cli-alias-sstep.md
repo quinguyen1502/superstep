@@ -14,7 +14,7 @@
 
 ## Objective
 
-Add `sstep`, a short alias of the `superstep` command (owner request on 2026-10-30, "Ok, thêm đi").
+Add `sstep`, a short alias of the `superstep` command (owner request on 2026-10-30, "OK, add it").
 
 ## Scope
 

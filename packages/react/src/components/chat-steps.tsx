@@ -1,4 +1,4 @@
-/** A run's node steps (TASK-0085, DEC-0053), built as the shadcn Tool pattern on Trace: each node step is a plain
+/** A run's node steps, built as the shadcn Tool pattern on Trace: each node step is a plain
  *  TraceLine while it runs ("Running …"), and once it has output in the full mode a TraceCollapsible that opens to
  *  Code Blocks (input, output, error). Step names only ("labels") stay plain lines; "none" renders nothing. */
 import { useTranslation } from 'react-i18next'

@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0138
 - Status: done
-- 2026-10-27: PR #182 merged into develop (3c835fa) with the owner's approval ("Ok làm đi") after CI passed; moved to done.
+- 2026-10-27: PR #182 merged into develop (3c835fa) with the owner's approval ("OK, do it") after CI passed; moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-27
@@ -84,7 +84,7 @@ CHANGELOG entry.
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
 - 2026-10-26: started on `factory/task-0138-workflow-tool-handbook`, stacked on TASK-0137 (PR #181). The owner asked for
-  this order ("Làm tiếp dãy task, screenshots cho tôi xem rồi tới task cuối là handbook"); the e2e screenshots of
+  this order ("Carry on with the task chain, show me screenshots, and the last task is the handbook"); the e2e screenshots of
   TASK-0135 to TASK-0137 were sent in chat first.
 - 2026-10-26: written.
   - Agent node page (en, vi):

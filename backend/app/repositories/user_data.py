@@ -1,9 +1,15 @@
-"""Personal data of one user, for account deletion / anonymisation (TASK-0029). Org-scope resources are kept."""
+"""Personal data of one user, for account deletion / anonymisation. Org-scope resources are kept."""
 from ..models.browser_session import BrowserSession, BrowserCommand, BrowserIntent
 from sqlalchemy import delete, select, update
 from ..models import (ApprovalChannel, ChannelIdentity, Credential, KbChunk, KbDocument, KnowledgeBase, McpServer, Notification, Run, WorkflowTemplate,
                       TeamMember, User, WorkflowShare, WorkflowToken, BrowserArtifact)
 from ..models.database import Database
+from ..models.run_usage import RunUsage
+from ..models.usage_budget import UsageBudget
+from ..models.dataset import Dataset
+from ..models.dataset_access import DatasetApiToken
+from .datasets import delete_dataset_definitions
+from .usage_budgets import delete_budget_rows
 
 
 class UserDataRepository:
@@ -27,11 +33,17 @@ class UserDataRepository:
             s.execute(delete(ApprovalChannel).where(ApprovalChannel.owner == uid, ApprovalChannel.scope == "user"))
             s.execute(delete(ChannelIdentity).where(ChannelIdentity.user_id == uid))
             s.execute(delete(WorkflowToken).where(WorkflowToken.owner == uid))
+            s.execute(delete(DatasetApiToken).where(DatasetApiToken.issuer_id == uid))
+            delete_dataset_definitions(s, Dataset.owner_id == uid)
+            delete_budget_rows(s, UsageBudget.user_id == uid)
+            s.execute(update(UsageBudget).where(UsageBudget.created_by == uid).values(created_by=None))
             s.execute(delete(Notification).where(Notification.user_id == uid))
             s.execute(delete(WorkflowShare).where(WorkflowShare.user_id == uid))
             s.execute(delete(TeamMember).where(TeamMember.user_id == uid))
             s.execute(delete(WorkflowTemplate).where(WorkflowTemplate.owner == uid, WorkflowTemplate.scope == "user"))
-            if runs: s.execute(delete(Run).where(Run.owner == uid))
+            if runs:
+                s.execute(delete(RunUsage).where(RunUsage.run_id.in_(select(Run.id).where(Run.owner == uid))))
+                s.execute(delete(Run).where(Run.owner == uid))
             s.commit()
 
     def anonymise(self, uid: str) -> None:

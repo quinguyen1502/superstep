@@ -1,4 +1,4 @@
-"""TASK-0264 (REQ-0088, DEC-0087): LLM model fallback in exported code, executed in Python and TypeScript (Deno).
+"""LLM model fallback in exported code, executed in Python and TypeScript (Deno).
 
 The provider call is replaced by a local fake (no network, no paid call): the primary model fails with a status or a
 connection error, and the generated fallback logic must follow the studio's rules: fail over on unreachable / 5xx / 404,

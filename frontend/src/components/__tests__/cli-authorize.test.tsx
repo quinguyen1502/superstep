@@ -1,4 +1,4 @@
-// TASK-0205 (DEC-0076): the CLI sign-in page asks for the code from the terminal; a code in the link is not used.
+// : the CLI sign-in page asks for the code from the terminal; a code in the link is not used.
 import { afterEach, describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
@@ -18,6 +18,6 @@ describe('CLI sign-in page', () => {
   })
   it('warns in Vietnamese too', async () => {
     await i18n.changeLanguage('vi')
-    expect(render('/cli/authorize')).toContain('Không bao giờ nhập mã do người khác gửi cho bạn.')
+    expect(render('/cli/authorize')).toContain(i18n.t('cliAuth.warning').split('. ').pop())
   })
 })

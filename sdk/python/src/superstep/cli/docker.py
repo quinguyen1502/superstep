@@ -93,7 +93,7 @@ class Docker:
             raise DockerError(proc.stderr.decode("utf-8", "replace").strip() or "docker failed")
 
     def exec_from_file(self, directory: str, project: str, service: str, command: list[str], src: Path) -> bytes:
-        """Run a command with `src` as its stdin, without reading the file into this process (attachments, TASK-0194)."""
+        """Run a command with `src` as its stdin, without reading the file into this process (attachments, )."""
         try:
             with src.open("rb") as handle:
                 proc = subprocess.run(

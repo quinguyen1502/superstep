@@ -8,9 +8,8 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
-- Source: owner request in chat on 2026-10-27: "Tôi muốn thêm 1 REQ về việc build superstep cli để hỗ trợ deploy,
-  install, upgrade,... và nhiều thêm nữa dựa vào bạn đề xuất". The commands beyond install, deploy and upgrade are
-  the agent's proposals. The owner accepted them with the CLAR-0010 answers ("Làm theo đề xuất").
+- Source: owner request in chat on 2026-10-27: "I want to add a REQ for building a superstep cli to support deploy, install, upgrade, ... and more, based on what you propose". The commands beyond install, deploy and upgrade are
+  the agent's proposals. The owner accepted them with the CLAR-0010 answers ("Do it as proposed").
 
 ## Summary
 
@@ -32,7 +31,7 @@
 
 ## Owner Decisions
 
-The owner answered CLAR-0010 on 2026-10-27 with the recommended option for every question ("Làm theo đề xuất").
+The owner answered CLAR-0010 on 2026-10-27 with the recommended option for every question ("Do it as proposed").
 
 1. **Packaging**:
    - written in Python, as a `superstep` command in the `superstep` package (`cli` extra);

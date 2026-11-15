@@ -19,7 +19,7 @@ export function foldIcon(open: boolean) {
   return span
 }
 
-/** CodeMirror look shared by the JSON and Python editors (TASK-0055): theme tokens only, light and dark. */
+/** CodeMirror look shared by the JSON and Python editors: theme tokens only, light and dark. */
 export const editorTheme = EditorView.theme({
   '&': { height: '100%', backgroundColor: 'transparent', color: 'var(--foreground)' },
   '&.cm-focused': { outline: 'none' },

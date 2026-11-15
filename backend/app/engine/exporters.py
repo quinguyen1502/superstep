@@ -1,4 +1,4 @@
-"""The workflow-to-code exporters (TASK-0082, DEC-0051): one entry per language, all with the same signature
+"""The workflow-to-code exporters: one entry per language, all with the same signature
 `(wf, name, version, children, example) -> Export`. The service and the API pick one by `language`."""
 from __future__ import annotations
 from dataclasses import dataclass

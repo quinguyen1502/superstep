@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Bot, Brain, CirclePlay, Code2, Database, Flag, GitBranch, Layers, Mail, Merge, Plug, Repeat, Scale, UserCheck, Wrench, type LucideIcon } from 'lucide-react'
+import { ArrowRightLeft, Bot, Brain, CirclePlay, Code2, Database, Flag, GitBranch, Layers, Mail, Merge, Plug, Repeat, Scale, Table2, UserCheck, Wrench, type LucideIcon } from 'lucide-react'
 
 export const NODE_ICONS: Record<string, LucideIcon> = {
   start: CirclePlay,
@@ -11,6 +11,7 @@ export const NODE_ICONS: Record<string, LucideIcon> = {
   subgraph: Layers,
   mcp: Plug,
   retriever: Database,
+  dataset: Table2,
   foreach: Repeat,
   decision: Scale,
   email: Mail,

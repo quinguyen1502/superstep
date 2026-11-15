@@ -1,4 +1,4 @@
-"""TASK-0171: a personal access token plus X-Superstep-Workflow on /mcp. Workflow tokens stay scoped to themselves."""
+"""a personal access token plus X-Superstep-Workflow on /mcp. Workflow tokens stay scoped to themselves."""
 import os, tempfile
 os.environ.setdefault("STUDIO_DB", tempfile.mktemp(suffix=".db"))
 import asyncio, json, socket, threading, time, uuid

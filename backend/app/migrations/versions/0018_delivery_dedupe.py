@@ -1,4 +1,4 @@
-"""TASK-0022 follow-up: webhook_deliveries.dedupe_key, so each settled segment of an API run sends its callback once,
+"""follow-up: webhook_deliveries.dedupe_key, so each settled segment of an API run sends its callback once,
 whichever path resumed it (studio, Slack, Telegram, recovery). Nullable + unique (manual redeliveries carry none)."""
 from alembic import op
 import sqlalchemy as sa

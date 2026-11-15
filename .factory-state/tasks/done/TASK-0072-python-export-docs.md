@@ -94,7 +94,7 @@ and how to run the file.
 - 2026-10-22: implemented. Review REV-0067, QA QA-0067. The approval select's missing key is fixed by PR #95
   (TASK-0073); the screenshot is retaken after it merges.
 - 2026-10-22: PR #95 merged (owner approved the order); rebased, `code-tab.png` (en, vi) retaken: the select shows
-  "not connected" / "chưa kết nối". Owner approved; done.
+  "not connected" (and its vi label). Owner approved; done.
 
 ## Handoff Notes
 

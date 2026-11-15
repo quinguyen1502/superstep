@@ -25,7 +25,7 @@ class UserRepository:
             return list(s.scalars(select(User.id).where(User.id.startswith(prefix, autoescape=True), User.created < before)))
 
     def set_prefs(self, uid: str, **prefs) -> Optional[User]:
-        """Preferences: notify_in_app / notify_email (TASK-0021, booleans), lang (TASK-0022 follow-up, en | vi)."""
+        """Preferences: notify_in_app / notify_email, lang ( follow-up, en | vi)."""
         with self.db.session() as s:
             u = s.get(User, uid)
             if u is None: return None

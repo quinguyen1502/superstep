@@ -1,4 +1,4 @@
-"""TASK-0204: AI review findings 2, 8, 10 and 11 of the external review of v0.10.0 and v0.10.1. A request the judge
+"""AI review findings 2, 8, 10 and 11 of the external review of v0.10.0 and v0.10.1. A request the judge
 cannot see in full goes to people; a review lost to a restart goes to people; an event appended while a waiting run is
 updated is kept; parallel reviews cannot pass the daily cap together."""
 import json, threading, time, uuid

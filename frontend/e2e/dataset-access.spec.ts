@@ -1,0 +1,70 @@
+import { expect, test } from '@playwright/test'
+import { newWorkflow, signIn, SIMPLE } from './helpers'
+
+test('manages workflow grants and scoped Dataset API tokens', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const workflowName = `CSV support ${Date.now()}`
+  await newWorkflow(page, headers, SIMPLE(workflowName))
+  const result = await page.request.post('/api/datasets', { headers, data: { name: 'Accessible dataset' } })
+  expect(result.ok()).toBeTruthy()
+  const dataset = (await result.json()).data
+  await page.goto(`/datasets/${dataset.id}`)
+  await page.getByRole('tab', { name: 'Access', exact: true }).click()
+  const access = page.getByRole('tabpanel', { name: 'Access' })
+  const grantForm = access.locator('form').nth(0)
+  const tokenForm = access.locator('form').nth(1)
+  const workflow = grantForm.getByRole('combobox', { name: 'Workflow', exact: true })
+  await expect(workflow).toBeVisible()
+  const [workflowBox, grantBox, nameBox, tokenBox] = await Promise.all([
+    workflow.boundingBox(),
+    grantForm.getByRole('combobox', { name: 'Permission', exact: true }).boundingBox(),
+    tokenForm.getByRole('textbox', { name: 'Token name' }).boundingBox(),
+    tokenForm.getByRole('combobox', { name: 'Permission', exact: true }).boundingBox(),
+  ])
+  for (const control of [grantBox, nameBox, tokenBox]) {
+    expect(Math.abs(control!.width - workflowBox!.width)).toBeLessThanOrEqual(1)
+  }
+  expect(Math.abs(grantBox!.y - workflowBox!.y)).toBeLessThanOrEqual(1)
+  expect(Math.abs(tokenBox!.y - nameBox!.y)).toBeLessThanOrEqual(1)
+  const grantDelete = grantForm.getByRole('checkbox', { name: 'Allow row deletion' })
+  await expect(grantDelete).toBeDisabled()
+  await access.getByRole('combobox', { name: 'Workflow', exact: true }).click()
+  await page.getByRole('option', { name: workflowName, exact: true }).click()
+  await expect(grantDelete).toBeEnabled()
+  await expect(grantDelete).not.toBeChecked()
+  await grantDelete.focus()
+  await page.keyboard.press('Space')
+  await expect(grantDelete).toBeChecked()
+  await access.getByRole('button', { name: 'Save grant' }).click()
+  await expect(access.locator('.rounded-md').filter({ hasText: workflowName })).toContainText('Allow row deletion')
+  await access.getByRole('button', { name: 'Revoke access', exact: true }).click()
+  const confirm = page.getByRole('alertdialog')
+  const submit = confirm.locator('[id$="-submit"]')
+  await expect(submit).toBeDisabled()
+  await confirm.getByRole('textbox').fill(workflowName)
+  await submit.click()
+  await expect(access.getByText('No workflow grants.')).toBeVisible()
+
+  const tokenDelete = access.locator('form').nth(1).getByRole('checkbox', { name: 'Allow row deletion' })
+  await expect(tokenDelete).not.toBeChecked()
+  await tokenDelete.focus()
+  await page.keyboard.press('Space')
+  await expect(tokenDelete).toBeChecked()
+  await access.getByLabel('Token name').fill('Deployment')
+  await access.getByRole('button', { name: 'Create token' }).click()
+  await expect(access.locator('.rounded-md').filter({ hasText: 'Deployment' })).toContainText('Allow row deletion')
+  const secret = access.getByLabel('New token')
+  await expect(secret).toHaveValue(/^dsat_/)
+  const first = await secret.inputValue()
+  await access.getByRole('button', { name: 'Rotate token' }).click()
+  await expect(secret).not.toHaveValue(first)
+  await expect(secret).toHaveValue(/^dsat_/)
+  await access.getByRole('button', { name: 'Revoke access', exact: true }).click()
+  await expect(submit).toBeDisabled()
+  await confirm.getByRole('textbox').fill('Deployment')
+  await submit.click()
+  await expect(access.getByText('No API tokens.')).toBeVisible()
+  await expect(secret).toHaveCount(0)
+})

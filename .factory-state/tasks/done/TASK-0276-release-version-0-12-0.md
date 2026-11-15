@@ -18,7 +18,7 @@ Publish the owner-authorised 0.12.0 release from integrated develop, using the c
 
 ## Owner Approval
 
-The owner instructed “ok, release đi” on 2026-11-07 after PR #336 merged. This authorises the release metadata, the checked develop and main merges, immutable tags, a GitHub Release, and the configured PyPI, npm and GHCR publication. It does not authorise a React Native package, cross-language code nodes, or a live provider or bot cutover.
+The owner instructed “ok, release it” on 2026-11-07 after PR #336 merged. This authorises the release metadata, the checked develop and main merges, immutable tags, a GitHub Release, and the configured PyPI, npm and GHCR publication. It does not authorise a React Native package, cross-language code nodes, or a live provider or bot cutover.
 
 ## Acceptance Criteria
 

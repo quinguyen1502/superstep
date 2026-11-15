@@ -1,4 +1,4 @@
-"""Approval channel adapters (TASK-0022). Buttons: Slack, Telegram, WhatsApp. Links to the studio: e-mail, Teams (TASK-0047)."""
+"""Approval channel adapters. Buttons: Slack, Telegram, WhatsApp. Links to the studio: e-mail, Teams."""
 from .base import ApprovalChannel, ApprovalMessage, Callback, IncomingMessage
 from .links import EmailChannel, TeamsChannel
 from .slack import SlackChannel

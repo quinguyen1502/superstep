@@ -1,4 +1,4 @@
-"""`login`, `logout` and `whoami` (TASK-0167, DEC-0071)."""
+"""`login`, `logout` and `whoami`."""
 from __future__ import annotations
 
 import argparse

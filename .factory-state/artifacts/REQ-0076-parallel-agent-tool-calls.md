@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
-- Source: owner request in chat on 2026-10-27 ("3 hướng có thể làm thì bạn viết REQ trước đi"), from what REQ-0073
+- Source: owner request in chat on 2026-10-27 ("write the REQs for the 3 possible directions first"), from what REQ-0073
   left out: "A round's tool calls still run one after another".
 
 ## Summary
@@ -25,8 +25,7 @@
 
 ## Owner Decisions
 
-The owner answered CLAR-0007 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
-CLAR-0009 theo đề xuất, rồi merge #200").
+The owner answered CLAR-0007 on 2026-10-27 with the recommended option for every question ("Answer CLAR-0006 to CLAR-0009 as proposed, then merge #200").
 
 1. **Default**: on for every Agent node, with a per-node setting to turn it off. Off asks providers for one call at
    a time and runs the calls one after another.

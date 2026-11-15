@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { credentialModels } from '@/lib/providers'
 import { useOnChange } from '@/lib/use-when'
 
-/** Model field (TASK-0030; LLM node and knowledge-base embedding model): free text (manual entry always works) + models fetched from the chosen credential. */
+/** Model field (; LLM node and knowledge-base embedding model): free text (manual entry always works) + models fetched from the chosen credential. */
 export function ModelPicker({ credentialId, value, onChange, placeholder, idp = 'llm-model' }: { credentialId?: string; value: string; onChange: (v: string) => void; placeholder?: string; idp?: string }) {
   const { t } = useTranslation()
   const [models, setModels] = useState<string[] | null>(null); const [err, setErr] = useState(''); const [busy, setBusy] = useState(false)

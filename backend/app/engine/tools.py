@@ -2,9 +2,10 @@
 from __future__ import annotations
 import os, re, time
 from typing import Any, Callable, Dict
+from .locale import LOCALES, catalog
 
 TOOLS: Dict[str, Callable[[Dict[str, Any]], Any]] = {}
-PARAMETERS: Dict[str, Dict[str, Any]] = {}  # name -> JSON Schema of the arguments an Agent node's model fills (TASK-0116)
+PARAMETERS: Dict[str, Dict[str, Any]] = {}  # name -> JSON Schema of the arguments an Agent node's model fills
 NO_PARAMETERS: Dict[str, Any] = {"type": "object", "properties": {}}
 
 def register_tool(name: str, parameters: Dict[str, Any] | None = None):
@@ -15,11 +16,8 @@ def register_tool(name: str, parameters: Dict[str, Any] | None = None):
         return fn
     return deco
 
-ORDERS = {"en": {"A100": "Delivered on 2026-10-10", "B200": "In transit, expected 2026-10-18", "C300": "Processing",
-                  "unknown": "not in our system"},
-          "vi": {"A100": "Đã giao hàng (delivered) ngày 2026-10-10", "B200": "Đang vận chuyển (in transit), dự kiến 2026-10-18",
-                 "C300": "Đang xử lý (processing)", "unknown": "không tồn tại trong hệ thống"}}
-ORDER_TEXT = {"en": ("No order number found in the message.", "Order"), "vi": ("Không tìm thấy mã đơn hàng trong tin nhắn.", "Đơn")}
+ORDERS = {lang: catalog(lang)["tools"]["orders"] for lang in LOCALES}  # example order statuses per language (app/locales)
+ORDER_TEXT = {lang: (catalog(lang)["tools"]["no_order"], catalog(lang)["tools"]["order_label"]) for lang in LOCALES}
 
 LOOKUP_ORDER_PARAMETERS = {"type": "object", "properties": {"message": {"type": "string", "description": "Text that contains the order number, e.g. A100"}},
                            "required": ["message"]}
@@ -34,15 +32,14 @@ def lookup_order(state: Dict[str, Any], locale: str = "en") -> str:
     oid, orders = m.group(1), ORDERS[lang]
     return f"{ORDER_TEXT[lang][1]} {oid}: {orders.get(oid, orders['unknown'])}"
 
-REFUND_TEXT = {"en": ("No order number found in the message.", "Refund requested for order {oid} (example: nothing was paid)."),
-               "vi": ("Không tìm thấy mã đơn hàng trong tin nhắn.", "Đã gửi yêu cầu hoàn tiền cho đơn {oid} (ví dụ: chưa trả tiền thật).")}
+REFUND_TEXT = {lang: (catalog(lang)["tools"]["no_order"], catalog(lang)["tools"]["refund_requested"]) for lang in LOCALES}
 
 REQUEST_REFUND_PARAMETERS = {"type": "object", "properties": {"message": {"type": "string", "description": "Text that contains the order number, e.g. A100"}},
                              "required": ["message"]}
 
 @register_tool("request_refund", REQUEST_REFUND_PARAMETERS)  # one line: the Python export copies the function without its decorator
 def request_refund(state: Dict[str, Any], locale: str = "en") -> str:
-    """Example function: request a refund for the order id (e.g. A100) in state.message. Nothing is paid (TASK-0119)."""
+    """Example function: request a refund for the order id (e.g. A100) in state.message. Nothing is paid."""
     lang = locale if locale in REFUND_TEXT else "en"
     m = re.search(r"\b([A-Z]\d{3})\b", str(state.get("message", "")).upper())
     return REFUND_TEXT[lang][1].format(oid=m.group(1)) if m else REFUND_TEXT[lang][0]

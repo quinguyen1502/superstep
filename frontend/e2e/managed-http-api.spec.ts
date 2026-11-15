@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
+import { vt } from './catalog'
 
 for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] as const) {
   test(`managed HTTP API: configure, discover, execute and redact (${lang}, ${theme})`, async ({ page }) => {
@@ -12,9 +13,9 @@ for (const lang of ['en', 'vi'] as const) for (const theme of ['light', 'dark'] 
     await page.goto('/settings/mcp'); await page.locator('#mcp-add').click()
     await page.locator('#mcp-new-name').fill(name)
     await page.locator('#mcp-new-transport').click()
-    await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : 'Kết nối được quản lý', exact: true }).click()
+    await page.getByRole('option', { name: lang === 'en' ? 'Managed connection' : vt('managedTools.transport'), exact: true }).click()
     await page.locator('#mcp-new-adapter').click()
-    await page.getByRole('option', { name: lang === 'en' ? 'Generic HTTP API' : 'HTTP API tổng quát', exact: true }).click()
+    await page.getByRole('option', { name: lang === 'en' ? 'Generic HTTP API' : vt('managedTools.adapters.http_api'), exact: true }).click()
     await page.locator('#mcp-new-base_url').fill(`http://127.0.0.1:${process.env.E2E_CHAT_PORT || 8111}/generic`)
     await expect(page.locator('#mcp-new-tools_json')).toHaveValue(/create_record/)
     const tools = JSON.parse(await page.locator('#mcp-new-tools_json').inputValue())

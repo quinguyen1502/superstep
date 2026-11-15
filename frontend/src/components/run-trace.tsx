@@ -18,6 +18,7 @@ import { agentOf, buildTrace, fmtCost, fmtMs, stateDiff, type AgentStep, type Ru
 import { api } from '@/lib/api'
 import { TextLink } from '@/components/text-link'
 import { cn } from '@/lib/utils'
+import { fmtDate } from "@/lib/i18n"
 import { Tip } from '@/components/tip'
 
 type Meta = (type: string) => { icon: LucideIcon; color: string; label: string }
@@ -58,10 +59,13 @@ function AgentSummary({ a }: { a: AgentStep }) {
   const { t } = useTranslation()
   const status = browserStatus(a.browser?.status)
   const text = a.kind === 'handoff' ? t(a.reason ? 'trace.agent.handoffReason' : 'trace.agent.handoff', { to: a.to_label || a.to, reason: a.reason })
-    : a.kind === 'tool' ? `${a.tool} → ${a.result ?? ''}`
+    : a.kind === 'tool' ? a.dataset ? a.dataset.count == null
+      ? a.tool || '' : t(a.dataset.operation === 'insert_row' ? 'datasetTool.traceInserted' : a.dataset.operation === 'upsert_row'
+        ? 'datasetTool.traceUpserted' : a.dataset.operation === 'aggregate_rows' ? 'datasetTool.traceGroups' : 'datasetTool.traceRows', { tool: a.tool, count: a.dataset.count })
+      : `${a.tool} → ${a.result ?? ''}`
     : a.tool_calls?.length ? t('trace.agent.calls', { tools: a.tool_calls.map(c => c.name).join(', ') }) : t('trace.agent.answer', { text: a.text || '—' })
   return <>
-    {/* what happened first: a narrow row clips the badges at its end (TASK-0117 statuses) */}
+    {/* what happened first: a narrow row clips the badges at its end ( statuses) */}
     {status && <Badge variant={status === 'confirmed' ? 'success' : status === 'unknown' ? 'destructive' : 'warning'} size="sm" data-testid="span-browser-status">{t(`chat.browser.status.${status}`)}</Badge>}
     {a.approval === 'approved' && <Badge variant="success" size="sm" data-testid="span-approved">{t('trace.agent.approved')}</Badge>}
     {a.kind === 'tool' && a.status !== 'ok' && <Badge variant={a.status === 'refused' || a.status === 'not_run' ? 'secondary' : a.status === 'rejected' ? 'warning' : 'destructive'} size="sm">{t(`trace.agent.status.${a.status}`)}</Badge>}
@@ -72,7 +76,7 @@ function AgentSummary({ a }: { a: AgentStep }) {
   </>
 }
 
-/** The steps of a workflow tool's child run under the tool call (TASK-0136, DEC-0066): fetched once, read-only, with a
+/** The steps of a workflow tool's child run under the tool call: fetched once, read-only, with a
  *  link to the child run. Shown in the studio trace and in a chat's full view. */
 export function ChildSteps({ runId, name, className }: { runId: string; name?: string; className?: string }) {
   const { t } = useTranslation()
@@ -105,6 +109,8 @@ function Row({ s, trace, meta, selected, onClick }: { s: Span; trace: Trace; met
       <span className={cn('rounded p-0.5', m.color)}><I className="size-3" /></span>
       <span className={cn('truncate font-medium shrink-0 max-w-[45%]', s.status === 'error' && 'text-destructive')}>{s.label}</span>
       {s.iter > 1 && !s.agent && <Badge variant="secondary" size="sm">#{s.iter}</Badge>}
+      {s.type === 'dataset' && Object.values(s.output ?? {}).some(value => (value as { dry_run?: boolean } | null)?.dry_run === true)
+        && <Badge variant="secondary" size="sm" data-testid="span-dataset-dry-run">{t('datasetNode.dryRunBadge')}</Badge>}
       {s.code?.runtime === 'subprocess' && <Badge variant="warning" size="sm" data-testid="span-unisolated">{t('code.runtimeLabel', { runtime: s.code.runtime })}</Badge>}
       {s.browser?.status && !s.agent && <Badge variant="outline" size="sm" data-testid="span-browser-status">{t(`chat.browser.status.${s.browser.status}`)}</Badge>}
       {s.agent ? <AgentSummary a={s.agent} /> : <span className="truncate shrink-0 max-w-[25%] text-muted-foreground font-mono text-[10px]">{s.node}</span>}
@@ -142,7 +148,7 @@ function DiffView({ s }: { s: Span }) {
 
 function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void }) {
   const { t } = useTranslation(); const m = meta(s.type); const I = m.icon
-  const [tab, setTab] = useState(s.browser || s.agent?.browser || s.status === 'error' || (s.status === 'running' && s.live) ? 'output' : 'diff')
+  const [tab, setTab] = useState(s.dataset || s.browser || s.agent?.browser || s.status === 'error' || (s.status === 'running' && s.live) ? 'output' : 'diff')
   return <div className="w-[46%] min-w-80 border-l flex flex-col min-h-0" id="trace-detail">
     <div className="flex items-center gap-2 px-3 py-1.5 border-b text-xs">
       <span className={cn('rounded p-0.5', m.color)}><I className="size-3.5" /></span>
@@ -156,7 +162,13 @@ function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void
       <ScrollArea className="flex-1 min-h-0"><div className="p-3 pt-2">
         {s.error && <Alert variant="destructive" className="mb-2 text-xs"><AlertTriangle /><AlertDescription className="wrap-break-word text-xs">{s.error}</AlertDescription></Alert>}
         <TabsContent value="input"><JsonView value={s.input} /></TabsContent>
-        <TabsContent value="output">{s.status === 'running' && s.live
+        <TabsContent value="output">{s.dataset ? <div className="space-y-2">
+          <p>{t(`datasetNode.trace.${s.dataset.outcome}`, {
+            operation: t(`datasetNode.operations.${s.dataset.operation}`), dataset: s.dataset.id,
+            count: s.dataset.count, time: fmtDate(s.end ?? s.start),
+          })}</p>
+          <details><summary className="cursor-pointer text-muted-foreground">{t('trace.raw')}</summary><JsonView value={s.output} /></details>
+        </div> : s.status === 'running' && s.live
           ? <div className="space-y-1" id="trace-live"><div className="flex items-center gap-1 text-[11px] text-muted-foreground"><Loader2 className="size-3 animate-spin" />{t('trace.streaming')}</div>
               <pre className="whitespace-pre-wrap break-words rounded-md border bg-muted/40 p-2 font-mono text-[11px]">{s.live}</pre></div>
           : <div className="space-y-2">{(s.browser || s.agent?.browser) && <BrowserTraceDetail value={(s.browser || s.agent?.browser)!} />}{s.status !== 'error' && <JsonView value={s.agent ?? s.output} />}<CodeConsole stdout={s.code?.stdout} traceback={s.code?.traceback} id="trace-code-output" />
@@ -170,7 +182,7 @@ function Detail({ s, meta, onClose }: { s: Span; meta: Meta; onClose: () => void
 
 export function RunTrace({ trace, events, meta, selected, onSelect, replay, onExitReplay, actions }: {
   trace: Trace; events: RunEvent[]; meta: Meta; selected: string | null; onSelect: (s: Span | null) => void; replay?: string; onExitReplay?: () => void
-  actions?: ReactNode  // extra buttons in the summary bar (Save as test case, TASK-0068)
+  actions?: ReactNode  // extra buttons in the summary bar (Save as test case, )
 }) {
   const { t } = useTranslation(); const [raw, setRaw] = useState(false)
   const sel = trace.spans.find(s => s.key === selected) || null

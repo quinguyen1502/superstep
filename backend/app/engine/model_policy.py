@@ -6,7 +6,7 @@ from langgraph.errors import NodeTimeoutError
 from .issues import Issue
 from .providers import LLMError, ProviderError, get
 
-FAILOVER_CODES = frozenset({"PROVIDER_UNREACHABLE", "PROVIDER_BAD_RESPONSE", "MODEL_NOT_FOUND"})
+FAILOVER_CODES = frozenset({"PROVIDER_UNREACHABLE", "PROVIDER_BAD_RESPONSE", "PROVIDER_RATE_LIMITED", "MODEL_NOT_FOUND"})
 
 
 def errors(nid: str, data: dict) -> list[str]:

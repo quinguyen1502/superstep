@@ -370,7 +370,7 @@ def run_imported(wf: dict, inp: dict, on_proc=None, resume: dict | None = None, 
 
     Docker is the runtime when import is enabled. The subprocess runtime remains for tests.
     checkpointing: the runner attaches an in-memory LangGraph saver (when the graph has none) and yields
-    ``_checkpoint`` {node, nodes, blob} after each superstep; resume = {"blob"} continues it (TASK-0021).
+    ``_checkpoint`` {node, nodes, blob} after each superstep; resume = {"blob"} continues it.
     """
     s = wf["source"]
     inp = {**inp, **({"__checkpointing__": True} if checkpointing else {}), **({"__resume__": resume["blob"]} if resume and resume.get("blob") else {})}

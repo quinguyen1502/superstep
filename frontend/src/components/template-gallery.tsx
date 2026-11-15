@@ -1,4 +1,4 @@
-/** "New workflow" gallery (TASK-0025): blank canvas, built-in / personal / org templates, import & export of template files. */
+/** "New workflow" gallery: blank canvas, built-in / personal / org templates, import & export of template files. */
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -36,7 +36,7 @@ export function TemplateGallery({ open, onOpenChange, onBlank }: Props) {
   })
   const exp = (tp: Template) => run(`x-${tp.id}`, async () => download(tp.name, await api(`/api/templates/${tp.id}/export`)))
   const imp = (f?: File) => f && run('import', async () => { await api('/api/templates/import', { method: 'POST', json: { file: await readTemplateFile(f) } }); await load() })
-  // built-ins show their name and description in the UI language (TASK-0064); saved and imported ones keep their author's text
+  // built-ins show their name and description in the UI language; saved and imported ones keep their author's text
   const text = (tp: Template) => tp.scope === 'builtin'
     ? { name: t(`templates.builtin.${tp.id}.name`, { defaultValue: tp.name }), description: t(`templates.builtin.${tp.id}.description`, { defaultValue: tp.description }) }
     : { name: tp.name, description: tp.description }

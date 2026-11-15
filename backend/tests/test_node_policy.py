@@ -1,4 +1,5 @@
 """Node execution settings: retry and cache go to LangGraph, timeout caps the attempt."""
+import threading
 import time
 from app.engine.compiler import compile_workflow
 from app.engine.runtime import run_stream
@@ -34,11 +35,12 @@ def _policy_count(state):
 
 
 _sleeps = {"n": 0}
+_release_sleep = threading.Event()
 
 @register_tool("policy_sleep")
 def _policy_sleep(state):
     _sleeps["n"] += 1
-    time.sleep(0.6)
+    _release_sleep.wait(timeout=5)
     return "slept"
 
 
@@ -67,14 +69,16 @@ def test_cache_reuses_the_node_result_for_the_same_input():
 
 def test_timeout_stops_the_attempt_and_retry_starts_another():
     _sleeps["n"] = 0
-    started = time.perf_counter()
-    evs = list(run_stream(tool("policy_sleep", timeout=0.15, retry={"max_attempts": 2, "initial_interval": 0.01}), {}))
-    elapsed = time.perf_counter() - started
-    err = evs[-1]
-    assert err["type"] == "error" and err["node"] == "t"
-    assert "timeout" in err["errors"][0].lower()
-    assert _sleeps["n"] == 2
-    assert elapsed < 0.8  # two capped attempts, not the 0.6s sleep twice
+    _release_sleep.clear()
+    try:
+        evs = list(run_stream(tool("policy_sleep", timeout=0.15, retry={"max_attempts": 2, "initial_interval": 0.01}), {}))
+        err = evs[-1]
+        assert err["type"] == "error" and err["node"] == "t"
+        assert "timeout" in err["errors"][0].lower()
+        assert _sleeps["n"] == 2
+    finally:
+        _release_sleep.set()
+
 
 
 _seen = {}

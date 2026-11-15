@@ -1,4 +1,4 @@
-"""Chat identities per workspace (TASK-0022 follow-up, DEC-0019). Idempotent; SQLite (batch) and Postgres.
+"""Chat identities per workspace ( follow-up, ). Idempotent; SQLite (batch) and Postgres.
 
 channel_identities gets team_id ("" for platforms without workspaces, e.g. Telegram) and the primary key becomes
 (user_id, kind, team_id): one account per user, platform and Slack workspace. Backfill: a Slack link gets the

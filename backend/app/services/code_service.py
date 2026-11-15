@@ -1,4 +1,4 @@
-"""Tool node Code mode for the editor (TASK-0055, DEC-0041): what the server can run, and Test with sample state."""
+"""Tool node Code mode for the editor: what the server can run, and Test with sample state."""
 from __future__ import annotations
 import asyncio
 from typing import Any, Optional
@@ -16,7 +16,7 @@ class CodeService:
 
     def runtime(self) -> dict:
         """The one source the UI reads for the Code mode: runtime, whether it can run now, image, limits and packages.
-        The top-level image/packages/starter are Python's (as before TASK-0079); `languages` has one entry per language."""
+        The top-level image/packages/starter are Python's (as ); `languages` has one entry per language."""
         why = code_runtime.unavailable()
         return {"code_runtime": config.code_runtime(), "available": why is None, "problem": None if why in (None, "off", "demo") else why, "demo": config.demo_mode(),
                 "image": config.code_image(), "packages": config.code_packages(), "starter": code_runtime.STARTER,

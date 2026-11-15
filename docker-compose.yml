@@ -1,10 +1,10 @@
-# Full stack: postgres + redis + api + web (TASK-0009). Usage: cp .env.example .env && docker compose up --build
+# Full stack: postgres + redis + api + web. Usage: cp .env.example .env && docker compose up --build
 # UI: http://localhost:${WEB_PORT:-8080}  (demo login admin@example.com / admin123)
 name: superstep
 
 services:
   postgres:
-    image: pgvector/pgvector:pg17  # Postgres 17 + pgvector (TASK-0012, DEC-0021): same major version, existing volumes keep working
+    image: pgvector/pgvector:pg17  # Postgres 17 + pgvector: same major version, existing volumes keep working
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-studio}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -36,13 +36,14 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       STUDIO_SECRET_KEY: ${STUDIO_SECRET_KEY:-}
       STUDIO_ENV: ${STUDIO_ENV:-dev}
+      STUDIO_TIMEZONE: ${STUDIO_TIMEZONE:-UTC}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
-      STUDIO_MCP_STDIO: ${STUDIO_MCP_STDIO:-0}                  # TASK-0013: 1 = admins may register stdio MCP servers (processes in this container)
+      STUDIO_MCP_STDIO: ${STUDIO_MCP_STDIO:-0}                  # 1 = admins may register stdio MCP servers (processes in this container)
       STUDIO_MCP_ALLOW_PRIVATE: ${STUDIO_MCP_ALLOW_PRIVATE:-0}  # 1 = HTTP MCP servers on private addresses (e.g. a sidecar)
       STUDIO_MCP_TIMEOUT: ${STUDIO_MCP_TIMEOUT:-30}
       STUDIO_RUN_TIMEOUT: ${STUDIO_RUN_TIMEOUT:-120}
-      # approval channels (TASK-0022): public https URL for Slack/Telegram callbacks, org-channel admins, callback limits.
+      # approval channels: public https URL for Slack/Telegram callbacks, org-channel admins, callback limits.
       # STUDIO_TRUSTED_PROXIES: CIDRs of proxies whose X-Forwarded-For hops are skipped (right to left). The default covers
       # the Compose network (the `web` nginx); add your load balancer's range. STUDIO_TRUST_PROXY=1 is the old one-hop alias.
       STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-}
@@ -51,7 +52,7 @@ services:
       STUDIO_APPROVAL_TTL: ${STUDIO_APPROVAL_TTL:-86400}
       STUDIO_ADMIN_EMAILS: ${STUDIO_ADMIN_EMAILS:-}
       STUDIO_ADMIN_PASSWORD: ${STUDIO_ADMIN_PASSWORD:-}  # first admin in production; empty = generated, printed once in the log
-      # RBAC (TASK-0014): role of new accounts; "Add to Slack" app credentials (empty = paste bot tokens only)
+      # RBAC: role of new accounts; "Add to Slack" app credentials (empty = paste bot tokens only)
       STUDIO_DEFAULT_ROLE: ${STUDIO_DEFAULT_ROLE:-editor}
       SLACK_CLIENT_ID: ${SLACK_CLIENT_ID:-}
       SLACK_CLIENT_SECRET: ${SLACK_CLIENT_SECRET:-}
@@ -59,19 +60,28 @@ services:
       STUDIO_TRUSTED_PROXIES: ${STUDIO_TRUSTED_PROXIES:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
       STUDIO_CALLBACK_RATE_LIMIT_IP: ${STUDIO_CALLBACK_RATE_LIMIT_IP:-60}
       STUDIO_CALLBACK_RATE_LIMIT_CHANNEL: ${STUDIO_CALLBACK_RATE_LIMIT_CHANNEL:-300}
-      # tracing (TASK-0010): empty = no-op. With `--profile tracing` set
-      # OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 and STUDIO_TRACE_URL=http://localhost:16686/trace/{trace_id}
+      # tracing: empty = no-op. With `--profile tracing` set
+      # OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 and STUDIO_TRACE_URL=http://localhost:16686/trace/{trace_id}.
+      # With `--profile observability`, add `--env-file deploy/observability/observability.env` (collector, metrics, Grafana link).
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_EXPORTER_OTLP_HEADERS: ${OTEL_EXPORTER_OTLP_HEADERS:-}
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-superstep}
       STUDIO_TRACE_URL: ${STUDIO_TRACE_URL:-}
+      STUDIO_OTEL_METRICS: ${STUDIO_OTEL_METRICS:-0}
+      STUDIO_OTEL_INSTRUMENT: ${STUDIO_OTEL_INSTRUMENT:-0}
+      STUDIO_LOG_FORMAT: ${STUDIO_LOG_FORMAT:-text}
+      STUDIO_LOG_LEVEL: ${STUDIO_LOG_LEVEL:-}
+      OTEL_METRIC_EXPORT_INTERVAL: ${OTEL_METRIC_EXPORT_INTERVAL:-60000}
+      STUDIO_GRAFANA_URL: ${STUDIO_GRAFANA_URL:-}
+      STUDIO_SLO_RUN_SUCCESS: ${STUDIO_SLO_RUN_SUCCESS:-0.99}
+      STUDIO_SLO_API_AVAILABILITY: ${STUDIO_SLO_API_AVAILABILITY:-0.995}
       LANGSMITH_API_KEY: ${LANGSMITH_API_KEY:-}
       LANGSMITH_TRACING: ${LANGSMITH_TRACING:-}
       LANGSMITH_PROJECT: ${LANGSMITH_PROJECT:-}
       LANGSMITH_ENDPOINT: ${LANGSMITH_ENDPOINT:-}
-      # API-triggered runs (TASK-0007) are executed by the `worker` service through the Redis queue
+      # API-triggered runs are executed by the `worker` service through the Redis queue
       STUDIO_WORKER: "0"
-      # Repo import (TASK-0015) is experimental and off by default. Do not set STUDIO_IMPORT_RUNTIME here:
+      # Repo import is experimental and off by default. Do not set STUDIO_IMPORT_RUNTIME here:
       # the code picks Docker only while the flag is on. The socket mount below is root-equivalent.
       STUDIO_ENABLE_IMPORT: ${STUDIO_ENABLE_IMPORT:-0}
       STUDIO_IMPORT_DIR: /imports
@@ -81,14 +91,14 @@ services:
       STUDIO_IMPORT_CPUS: ${STUDIO_IMPORT_CPUS:-1}
       STUDIO_IMPORT_MAX_AGE_HOURS: ${STUDIO_IMPORT_MAX_AGE_HOURS:-72}
       STUDIO_IMPORT_NETWORK: ${STUDIO_IMPORT_NETWORK:-bridge}
-      # Tool nodes in Code mode (TASK-0053): off by default. Build the image first:
+      # Tool nodes in Code mode: off by default. Build the image first:
       # docker build -t studio-code:1 docker/studio-code. The code runs with no network and no mounts.
       STUDIO_ENABLE_CODE_NODES: ${STUDIO_ENABLE_CODE_NODES:-0}
       STUDIO_CODE_IMAGE: ${STUDIO_CODE_IMAGE:-studio-code:1}
       STUDIO_CODE_MEMORY: ${STUDIO_CODE_MEMORY:-256m}
       STUDIO_CODE_CPUS: ${STUDIO_CODE_CPUS:-0.5}
       STUDIO_CODE_MAX_SECONDS: ${STUDIO_CODE_MAX_SECONDS:-30}
-      # TypeScript Code nodes (TASK-0080) run on Deno in their own image: docker build -t studio-code-ts:1 docker/studio-code-ts
+      # TypeScript Code nodes run on Deno in their own image: docker build -t studio-code-ts:1 docker/studio-code-ts
       STUDIO_CODE_LANGUAGES: ${STUDIO_CODE_LANGUAGES:-python,typescript}
       STUDIO_CODE_TS_IMAGE: ${STUDIO_CODE_TS_IMAGE:-studio-code-ts:1}
       STUDIO_CODE_TS_PACKAGES: ${STUDIO_CODE_TS_PACKAGES:-npm:zod@3,npm:date-fns@4}
@@ -97,11 +107,11 @@ services:
       STUDIO_CODE_RUNTIME: ${STUDIO_CODE_RUNTIME:-}
       STUDIO_SANDBOX_URL: ${STUDIO_SANDBOX_URL:-http://sandbox:8080}
       STUDIO_SANDBOX_TOKEN: ${STUDIO_SANDBOX_TOKEN:-}
-      # Chat attachment storage (TASK-0192, REQ-0080): db (default), fs (a folder on the apidata volume, which api and
+      # Chat attachment storage: db (default), fs (a folder on the apidata volume, which api and
       # worker share at /data) or s3. See the handbook, Configuration.
       STUDIO_ATTACHMENT_STORAGE: ${STUDIO_ATTACHMENT_STORAGE:-db}
       STUDIO_ATTACHMENT_FS_PATH: ${STUDIO_ATTACHMENT_FS_PATH:-/data/attachments}
-      # s3 (TASK-0193): any S3-compatible service. Empty keys use the default AWS credential chain.
+      # s3: any S3-compatible service. Empty keys use the default AWS credential chain.
       STUDIO_ATTACHMENT_S3_BUCKET: ${STUDIO_ATTACHMENT_S3_BUCKET:-}
       STUDIO_ATTACHMENT_S3_PREFIX: ${STUDIO_ATTACHMENT_S3_PREFIX:-}
       STUDIO_ATTACHMENT_S3_ENDPOINT: ${STUDIO_ATTACHMENT_S3_ENDPOINT:-}
@@ -109,7 +119,7 @@ services:
       STUDIO_ATTACHMENT_S3_PATH_STYLE: ${STUDIO_ATTACHMENT_S3_PATH_STYLE:-}
       STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID: ${STUDIO_ATTACHMENT_S3_ACCESS_KEY_ID:-}
       STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY: ${STUDIO_ATTACHMENT_S3_SECRET_ACCESS_KEY:-}
-    # Local LLM servers on the host (TASK-0030): use http://host.docker.internal:11434 (Ollama) or
+    # Local LLM servers on the host: use http://host.docker.internal:11434 (Ollama) or
     # http://host.docker.internal:1234/v1 (LM Studio) as the credential base URL; `localhost` would be the container.
     extra_hosts: &host-gw ["host.docker.internal:host-gateway"]
     networks: &api-nets [default, sandbox]
@@ -126,7 +136,7 @@ services:
       redis: { condition: service_healthy }
     restart: unless-stopped
 
-  # Executes queued API/webhook runs (TASK-0007). Scale with `docker compose up --scale worker=3`.
+  # Executes queued API/webhook runs. Scale with `docker compose up --scale worker=3`.
   worker:
     build: ./backend
     command: ["python", "-m", "app.worker"]
@@ -173,9 +183,10 @@ services:
     restart: unless-stopped
 
   # Optional trace viewer: `docker compose --profile tracing up`. Jaeger receives OTLP directly (4317 gRPC / 4318 HTTP).
+  # It also joins the observability profile, where the collector forwards traces to it.
   jaeger:
     image: jaegertracing/all-in-one:1.62.0
-    profiles: [tracing]
+    profiles: [tracing, observability]
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
     ports: ["${JAEGER_UI_PORT:-16686}:16686"]
@@ -186,11 +197,83 @@ services:
       retries: 10
     restart: unless-stopped
 
-# Named as in v0.1.0 (project "langgraph-studio"), so a stack started before the rename keeps its data (TASK-0058).
+  # Optional metrics stack: `docker compose --env-file .env --env-file deploy/observability/observability.env
+  # --profile observability up --build`. The backend pushes OTLP to the collector; Prometheus scrapes the collector;
+  # Grafana (http://localhost:3000) has the starter dashboard and alert rules. Config: deploy/observability/.
+  # Read-only Postgres role (pg_monitor) for the collector's server metrics; runs once per `up` and exits.
+  # Without POSTGRES_MONITOR_PASSWORD it creates nothing and the Postgres panels stay empty.
+  postgres-monitor:
+    image: pgvector/pgvector:pg17
+    profiles: [observability]
+    command: ["sh", "/postgres-monitor.sh"]
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-studio}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-}
+      PGDATABASE: ${POSTGRES_DB:-studio}
+      MONITOR_USER: ${POSTGRES_MONITOR_USER:-superstep_monitor}
+      MONITOR_PASSWORD: ${POSTGRES_MONITOR_PASSWORD:-}
+    volumes: ["./deploy/observability/postgres-monitor.sh:/postgres-monitor.sh:ro"]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    profiles: [observability]
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes: ["./deploy/observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro"]
+    environment:  # Postgres and Redis server metrics (postgresql, sqlquery and redis receivers)
+      POSTGRES_MONITOR_ENDPOINT: postgres:5432
+      POSTGRES_MONITOR_HOST: postgres
+      POSTGRES_MONITOR_PORT: "5432"
+      POSTGRES_MONITOR_USER: ${POSTGRES_MONITOR_USER:-superstep_monitor}
+      POSTGRES_MONITOR_PASSWORD: ${POSTGRES_MONITOR_PASSWORD:-}
+      POSTGRES_DB: ${POSTGRES_DB:-studio}
+      REDIS_MONITOR_ENDPOINT: redis:6379
+    depends_on: [jaeger]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: [observability]
+    entrypoint: ["/bin/sh", "/etc/prometheus/start-prometheus.sh"]
+    environment:
+      STUDIO_SLO_RUN_SUCCESS: ${STUDIO_SLO_RUN_SUCCESS:-0.99}
+      STUDIO_SLO_API_AVAILABILITY: ${STUDIO_SLO_API_AVAILABILITY:-0.995}
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-31d}"]
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/observability/start-prometheus.sh:/etc/prometheus/start-prometheus.sh:ro
+      - ./deploy/observability/slo-rules.yaml.in:/etc/prometheus/slo-rules.yaml.in:ro
+      - promdata:/prometheus
+    depends_on: [otel-collector]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.1
+    profiles: [observability]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      # Local-only default; set GRAFANA_ADMIN_PASSWORD in .env before exposing Grafana anywhere.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+    ports: ["127.0.0.1:${GRAFANA_PORT:-3000}:3000"]
+    volumes:
+      - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafanadata:/var/lib/grafana
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+# Named as in v0.1.0 (project "langgraph-studio"), so a stack started before the rename keeps its data.
 volumes:
   pgdata: {name: langgraph-studio_pgdata}
   redisdata: {name: langgraph-studio_redisdata}
   apidata: {name: langgraph-studio_apidata}
+  promdata:
+  grafanadata:
 
 networks:
   sandbox:

@@ -1,11 +1,11 @@
-"""TASK-0115: runs survive a server restart. A real uvicorn process (default SQLite database, in-memory job queue) is
+"""runs survive a server restart. A real uvicorn process (default SQLite database, in-memory job queue) is
 killed with SIGKILL and started again on the same database:
 - a run paused at a Human node is resumed after the restart;
 - an API run that was going (one node finished, the next one sleeping) continues from its progress checkpoint after
   the restart, without running the finished node again;
 - a run that keeps being interrupted ends as `error` RUN_INTERRUPTED instead of being retried forever.
-TASK-0117 adds the Agent node: a run paused at a tool approval resumes after a restart, and a run killed between two
-rounds continues without repeating the finished model call or tool call. TASK-0127: an answer accepted just before a
+adds the Agent node: a run paused at a tool approval resumes after a restart, and a run killed between two
+rounds continues without repeating the finished model call or tool call. : an answer accepted just before a
 restart is not lost."""
 import http.server, json, os, signal, socket, sqlite3, subprocess, sys, tempfile, threading, time, uuid
 from pathlib import Path
@@ -147,7 +147,7 @@ def ASK_THEN_SLOW(log):  # a Human node, then the slow Code node: the resume cla
 
 @pytest.mark.parametrize("server", [{**CODE, "STUDIO_RECOVER_MAX_ATTEMPTS": "2"}], indirect=True)
 def test_resumes_do_not_count_as_interruptions(server):
-    """TASK-0123: a resume after a Human node bumps the run's lease too; a restart right after it is the first
+    """a resume after a Human node bumps the run's lease too; a restart right after it is the first
     interruption, so the run continues (it used to end as RUN_INTERRUPTED at the limit)."""
     log = server.root / "calls.log"
     jwt, wid, tok = setup(server, ASK_THEN_SLOW(str(log)))
@@ -166,7 +166,7 @@ def test_resumes_do_not_count_as_interruptions(server):
     assert log.read_text().splitlines() == ["first", "slow", "slow"]
 
 def test_answer_queued_before_a_restart_is_not_lost(server):
-    """TASK-0127: the inbox answer is accepted, but the server stops before a worker takes its resume job (here the
+    """the inbox answer is accepted, but the server stops before a worker takes its resume job (here the
     process has no worker at all). The answer was kept on the run, so the restarted server resumes it; before, the
     run stayed waiting and its closed waiting step refused a second answer."""
     jwt, wid, tok = setup(server, APPROVAL)
@@ -181,7 +181,7 @@ def test_answer_queued_before_a_restart_is_not_lost(server):
     assert done["status"] == "ok" and done["final_state"]["decision"] == "approved"
     assert server.run_row(rid)["resume_job"] is None
 
-# ---- Agent node (TASK-0117) -------------------------------------------------------------------
+# ---- Agent node -------------------------------------------------------------------
 
 def agent(tool):
     return {"name": "Agent", "state": [{"name": "message", "type": "string"}, {"name": "answer", "type": "string"}, {"name": "steps", "type": "list"}],

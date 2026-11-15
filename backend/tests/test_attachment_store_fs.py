@@ -1,4 +1,4 @@
-"""TASK-0192 (REQ-0080, DEC-0074): the `fs` backend passes the shared contract, keeps keys inside its folder, writes
+"""the `fs` backend passes the shared contract, keeps keys inside its folder, writes
 atomically, and serves files of a chat end to end; the worker's heartbeat tells whether api and worker share it."""
 import os, stat
 import pytest

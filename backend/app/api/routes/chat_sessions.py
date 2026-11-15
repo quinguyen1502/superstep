@@ -1,16 +1,16 @@
-"""Web chat (TASK-0084, REQ-0048): a workflow's Chat settings and its chat sessions. Messages and answers go over
+"""Web chat: a workflow's Chat settings and its chat sessions. Messages and answers go over
 the run socket (/ws/run with {chat_session_id, message} or {chat_session_id, resume_run_id, response}) so they stream.
 
 GET  /api/workflows/{wid}/chat              the Chat settings (run right)       PUT the same (share right)
-GET  /api/workflows/{wid}/chat/logo?v=      the chat's logo, published or not (run right, TASK-0145)
+GET /api/workflows/{wid}/chat/logo?v= the chat's logo, published or not (run right, )
 GET  /api/workflows/{wid}/chat/sessions     my chats                            POST a new chat
 GET  /api/chat/sessions/{sid}?view=builder|visitor   turns with their steps     DELETE the chat
-GET  /api/workflows/{wid}/chat/visitors     the published page's chats (run right, TASK-0141); ?thumbs_down=1 filters
+GET /api/workflows/{wid}/chat/visitors the published page's chats (run right, ); ?thumbs_down=1 filters
 GET  /api/workflows/{wid}/chat/visitors/{sid}        one of them, read-only, with full steps
-GET  /api/workflows/{wid}/chat/ratings      up and down over 7 and 30 days (TASK-0162)
+GET /api/workflows/{wid}/chat/ratings up and down over 7 and 30 days
 PUT  /api/chat/sessions/{sid}/turns/{tid}/rating     the session owner's thumb, and an optional comment on down
 DELETE /api/chat/sessions/{sid}/turns/{tid}/rating
-POST /api/chat/sessions/{sid}/attachments            one file (multipart `file`) before the message (TASK-0174)
+POST /api/chat/sessions/{sid}/attachments one file (multipart `file`) before the message
 GET  /api/chat/sessions/{sid}/attachments/{aid}      download it                DELETE it while unsent
 GET  /api/workflows/{wid}/chat/visitors/{sid}/attachments/{aid}   a visitor's file, for the builder (run right)
 """

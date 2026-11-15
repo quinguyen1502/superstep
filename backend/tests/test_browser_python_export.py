@@ -1,4 +1,4 @@
-"""Executable Python browser export (TASK-0251).
+"""Executable Python browser export.
 
 The generated file is executed with ``python -I`` so it cannot import Superstep.
 """

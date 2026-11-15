@@ -5,7 +5,7 @@ from .base import Base
 
 
 class WorkflowVersion(Base):
-    """Immutable snapshot written on every save that changes a workflow (TASK-0008)."""
+    """Immutable snapshot written on every save that changes a workflow."""
     __tablename__ = "workflow_versions"
     __table_args__ = (UniqueConstraint("workflow_id", "version", name="uq_workflow_versions_wf_version"),)
     id: Mapped[str] = mapped_column(Text, primary_key=True)

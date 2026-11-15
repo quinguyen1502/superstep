@@ -35,7 +35,7 @@ def test_metadata_discovery_no_network_and_owner_scope(c):
     found = c.post(f"/api/mcp/servers/{server['id']}/discover", headers=H(owner["token"]))
     assert found.status_code == 200
     names = {tool["name"] for tool in found.json()["data"]["tools"]}
-    assert names == {"navigate", "snapshot", "click", "fill", "extract", "screenshot"}
+    assert names == {"navigate", "snapshot", "click", "fill", "extract", "screenshot", "upload", "download", "evaluate"}
     assert server["id"] not in str(c.get("/api/mcp/servers", headers=H(stranger["token"])).json())
     for method, path in [("post", "/discover"), ("put", ""), ("delete", "")]:
         kwargs = {"json": {"name": "stolen"}} if method == "put" else {}
@@ -50,6 +50,21 @@ def test_empty_whitelist_rejected(c):
     response = create(c, owner, settings={"allowed_origins": []})
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "MCP_CONFIG_INVALID"
+
+
+
+def test_nine_tools_visible_when_gated_off(c):
+    """Upload/download/evaluate stay discoverable with a disabled note when connection toggles are off."""
+    owner = user(c)
+    response = create(c, owner, settings={"allowed_origins": ["https://example.com"]})
+    assert response.status_code == 200, response.text
+    found = c.post(f"/api/mcp/servers/{response.json()['data']['id']}/discover", headers=H(owner["token"]))
+    tools = {tool["name"]: tool for tool in found.json()["data"]["tools"]}
+    assert set(tools) == {
+        "navigate", "snapshot", "click", "fill", "extract", "screenshot", "upload", "download", "evaluate",
+    }
+    for name in ("upload", "download", "evaluate"):
+        assert "Disabled on this connection" in tools[name]["description"]
 
 
 def test_nine_tools_when_connection_allows_file_and_js(c):
@@ -160,10 +175,27 @@ def test_invalid_configuration_uses_shared_envelope(c, settings, secrets):
     assert response.json()["error"]["code"] in {"MCP_CONFIG_INVALID", "BROWSER_PROFILE_DENIED"}
 
 
+
+def test_browser_feature_gate_defaults_on(monkeypatch):
+    from app.core import config
+    monkeypatch.delenv("STUDIO_ENABLE_BROWSER", raising=False)
+    assert config.browser_enabled() is True
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "0")
+    assert config.browser_enabled() is False
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "1")
+    assert config.browser_enabled() is True
+    monkeypatch.delenv("STUDIO_ENABLE_BROWSER_RUNTIME", raising=False)
+    assert config.browser_runtime_enabled() is False
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER_RUNTIME", "1")
+    assert config.browser_runtime_enabled() is True
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "0")
+    assert config.browser_runtime_enabled() is False
+
+
 def test_disabled_gate_hides_adapter_and_denies_saved_connection(c, monkeypatch):
     owner = user(c)
     server = create(c, owner).json()["data"]
-    monkeypatch.delenv("STUDIO_ENABLE_BROWSER", raising=False)
+    monkeypatch.setenv("STUDIO_ENABLE_BROWSER", "0")
     assert "browser" not in [
         item["id"] for item in c.get("/api/mcp/servers", headers=H(owner["token"])).json()["data"]["managed_adapters"]
     ]

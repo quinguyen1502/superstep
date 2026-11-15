@@ -1,15 +1,16 @@
 import { test, expect } from '@playwright/test'
 import { confirmDelete } from './confirm'
-// TASK-0007: create a workflow token in the UI, trigger a sync run over REST, see it in history as API.
+import { vt, literally } from './catalog'
+// create a workflow token in the UI, trigger a sync run over REST, see it in history as API.
 test('api trigger: token, sync run, history source', async ({ page }) => {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   await page.goto('/workflows/example')
   await page.locator('#more-btn').click(); await page.locator('#api-btn').click()
   await page.locator('#api-token-name').fill('e2e'); await page.locator('#api-create').click()
   const token = await page.locator('#api-token-value').inputValue()
   expect(token).toMatch(/^wft_/)
-  await expect(page.locator('#api-signing-secret')).toHaveValue(/^whsec_/)  // TASK-0019: shown once with the token
+  await expect(page.locator('#api-signing-secret')).toHaveValue(/^whsec_/)  //: shown once with the token
   await expect(page.locator('#api-curl')).toContainText(token)
   await expect(page.locator('[data-testid=api-token-row]', { hasText: 'e2e' }).first()).toBeVisible()
   const r = await page.request.post('/api/hooks/workflows/example/runs', { headers: { Authorization: `Bearer ${token}` }, data: { input: { message: 'where is my order A100' }, mode: 'sync' } })
@@ -22,12 +23,12 @@ test('api trigger: token, sync run, history source', async ({ page }) => {
   await page.keyboard.press('Escape')
   // revoked tokens are rejected
   await page.locator('#more-btn').click(); await page.locator('#api-btn').click()
-  await page.locator('[data-testid=api-token-row]', { hasText: 'e2e' }).first().getByRole('button', { name: /Thu hồi/ }).click()
+  await page.locator('[data-testid=api-token-row]', { hasText: 'e2e' }).first().getByRole('button', { name: literally(vt('tokens.revoke')) }).click()
   await confirmDelete(page, 'e2e')
   const r2 = await page.request.post('/api/hooks/workflows/example/runs', { headers: { Authorization: `Bearer ${token}` }, data: {} })
   expect(r2.status()).toBe(401); expect((await r2.json()).error.code).toBe('TRIGGER_TOKEN_INVALID')
   // revoked tokens are hidden until "Show revoked" is switched on; the dialog fits the viewport with its tabs visible
-  const revokedRows = page.locator('[data-testid=api-token-row]', { hasText: 'đã thu hồi' })
+  const revokedRows = page.locator('[data-testid=api-token-row]', { hasText: vt('api.revoked') })
   await expect(revokedRows).toHaveCount(0)
   const toggle = page.locator('#api-show-revoked'); await expect(toggle).toHaveAttribute('data-state', 'unchecked')
   await toggle.click(); await expect(revokedRows.first()).toBeVisible()

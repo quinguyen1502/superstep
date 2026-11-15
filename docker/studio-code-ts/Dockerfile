@@ -1,4 +1,4 @@
-# Image for TypeScript Tool nodes in Code mode (TASK-0080, DEC-0049): Deno plus a few pre-cached npm packages.
+# Image for TypeScript Tool nodes in Code mode: Deno plus a few pre-cached npm packages.
 # The server passes the runner on the command line (a data: URL), so nothing of the studio is copied in.
 # At run time the container has no network (--network none), a read-only root and an arbitrary non-root uid, and
 # Deno runs with no permission flag plus --cached-only: only the packages cached here can be imported.

@@ -1,4 +1,4 @@
-"""Request body ceilings, enforced by the app whatever proxy is in front (TASK-0207).
+"""Request body ceilings, enforced by the app whatever proxy is in front.
 
 nginx bounds bodies in Compose; the all-in-one image and PaaS deploys have no nginx, and an unauthenticated route that
 reads the whole body (`await request.body()`) before any check would otherwise take whatever it is sent. A body that
@@ -47,7 +47,7 @@ class BodyLimit:
                 if seen > limit: tripped = True; raise AppError("PAYLOAD_TOO_LARGE")
             return msg
         async def guarded(msg):
-            # FastAPI turns an error while it reads a JSON or form body into 400; once the ceiling tripped, answer 413 (TASK-0208)
+            # FastAPI turns an error while it reads a JSON or form body into 400; once the ceiling tripped, answer 413
             nonlocal replaced
             if tripped:
                 if msg["type"] == "http.response.start" and not replaced: replaced = True; await self._refuse(send)

@@ -1,4 +1,4 @@
-"""Registered MCP servers (TASK-0013). Secrets (stdio env vars / HTTP headers) are one Fernet token, never returned."""
+"""Registered MCP servers. Secrets (stdio env vars / HTTP headers) are one Fernet token, never returned."""
 from typing import Optional
 from sqlalchemy import Float, Text
 from sqlalchemy.orm import Mapped, mapped_column

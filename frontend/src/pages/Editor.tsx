@@ -4,6 +4,7 @@ import '@xyflow/react/dist/style.css'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button'
 import { EditorLayout, type MobileView } from '@/components/editor-layout'
 import { EditorSkeleton } from '@/components/editor/editor-skeleton'
@@ -18,16 +19,16 @@ import { useStudio } from '@/components/editor/use-studio'
 import { useIsMobile, useViewportWidth } from '@/lib/use-viewport-width'
 import { CONFIG_COLLAPSE_BELOW, chatStore } from '@/lib/panel-sizes'
 
-/** Workflow editor page. State and actions live in `useStudio`; the header and panels are in components/editor (TASK-0040). */
+/** Workflow editor page. State and actions live in `useStudio`; the header and panels are in components/editor. */
 export function EditorPage() { return <ReactFlowProvider><Studio /></ReactFlowProvider> }
 
 function Studio() {
   const { t } = useTranslation()
   const studio = useStudio(); const { id, wid, loadErr } = studio
-  // narrow screens (TASK-0085): Config folds away while nothing is selected, so the canvas keeps its room beside the chat
+  // narrow screens: Config folds away while nothing is selected, so the canvas keeps its room beside the chat
   const vw = useViewportWidth()
   const narrow = vw - (studio.chatOpen ? chatStore.read().width : 0) < CONFIG_COLLAPSE_BELOW
-  // phones (TASK-0121): one pane at a time; a run shows the Run pane, opening the chat shows the chat
+  // phones: one pane at a time; a run shows the Run pane, opening the chat shows the chat
   const mobile = useIsMobile(); const [view, setView] = useState<MobileView>('canvas')
   const { running, chatOpen, addCentered } = studio
   const [seen, setSeen] = useState({ running, chatOpen })
@@ -54,5 +55,17 @@ function Studio() {
       right={<EditorConfig />} bottom={<EditorRunPanel />} rightCollapsed={narrow && !studio.selNode && !studio.selEdge}
       mobile={mobile ? { view, onView: setView, selected: !!(studio.selNode || studio.selEdge) } : undefined}
       chat={studio.chatOpen && wid ? <ChatSidePanel wid={wid} canConfigure={studio.access === 'owner'} canEdit={studio.edit && !studio.source} dirty={studio.edit && studio.isDirty()} onClose={() => studio.setChatOpen(false)} /> : undefined} />
+    <AlertDialog open={studio.datasetWriteNotice} onOpenChange={studio.setDatasetWriteNotice}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('datasetNode.runNoticeTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('datasetNode.runNotice')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+          <AlertDialogAction onClick={studio.confirmDatasetRun}>{t('editor.run')}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </StudioContext.Provider>
 }

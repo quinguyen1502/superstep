@@ -23,7 +23,7 @@ Editor polish: focus ring, quoted node names, split left panel, Add node.
 ## Scope (from the PR)
 
 - **Focus ring in the test case dialog.** The scroll area now has 4 px of room on every side (`-mx-1 px-1 py-1`, the same pattern the API, schedules and chat-trigger dialogs use), so an input's focus ring is no longer cut off.
-- **Node names in quotes.** UI text that names a node now puts the name in quotes, for example `Showing “Classify intent”` / `Đang chỉ “Classify intent”`. A name written in one language no longer runs into a sentence in another. Strings changed in en and vi: `codeView.showing`, `editor.runToTip`, `transfer.rebindFor`, `transfer.flaggedLine`, and the test check results `ran`, `notRan` and `no_answer`. Error-catalog messages are unchanged.
+- **Node names in quotes.** UI text that names a node now puts the name in quotes, for example `Showing “Classify intent”` / `Pointing at “Classify intent”`. A name written in one language no longer runs into a sentence in another. Strings changed in en and vi: `codeView.showing`, `editor.runToTip`, `transfer.rebindFor`, `transfer.flaggedLine`, and the test check results `ran`, `notRan` and `no_answer`. Error-catalog messages are unchanged.
 - **Left panel in two halves.** The node palette and the state schema each take half the panel and scroll separately. **Add field** stays visible under the schema, so a long node list no longer pushes the schema out of view.
 - **Add node on the canvas.** Right-click on an empty part of the canvas to get **Add node** (a submenu of node types). The new node goes where you clicked and is selected. **Add note** is the next item.
 - `tsc -b`: passes.

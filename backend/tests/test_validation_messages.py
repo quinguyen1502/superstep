@@ -1,4 +1,4 @@
-"""TASK-0132 (DEC-0065): validation messages carry a code, the API sends the codes, and the locales follow MESSAGES."""
+"""validation messages carry a code, the API sends the codes, and the locales follow MESSAGES."""
 import json, pathlib, re, string
 from fastapi.testclient import TestClient
 from app.engine import subgraphs

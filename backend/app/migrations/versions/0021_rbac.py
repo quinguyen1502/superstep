@@ -1,4 +1,4 @@
-"""TASK-0014: RBAC. users.role (admin | editor | viewer) replaces users.is_admin (admins stay admins), users.active,
+"""RBAC. users.role (admin | editor | viewer) replaces users.is_admin (admins stay admins), users.active,
 and workflow_shares (workflow shared with a user as viewer or editor)."""
 from alembic import op
 import sqlalchemy as sa

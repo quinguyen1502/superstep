@@ -1,4 +1,4 @@
-"""Durable browser session/order metadata (TASK-0245)."""
+"""Durable browser session/order metadata."""
 from alembic import op
 import sqlalchemy as sa
 

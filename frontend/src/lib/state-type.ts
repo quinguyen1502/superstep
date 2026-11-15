@@ -1,4 +1,4 @@
-/** The workflow's state schema as a TypeScript type (TASK-0081): shown above a TypeScript Code node and used for
+/** The workflow's state schema as a TypeScript type: shown above a TypeScript Code node and used for
  * `state.` completions. Deno only strips types, so `State` needs no declaration in the node's code. */
 import type { CompletionContext } from '@codemirror/autocomplete'
 export type StateField = { name: string; type?: string }
@@ -20,7 +20,7 @@ export function stateType(fields: StateField[]): string {
 export const stateFields = (fields: StateField[], language: 'python' | 'typescript') =>
   fields.filter(f => f.name).map(f => ({ name: f.name, detail: language === 'typescript' ? tsType(f.type) : f.type }))
 
-/** `state.` completions with the workflow's state fields (TASK-0081). */
+/** `state.` completions with the workflow's state fields. */
 export const stateCompletions = (fields: { name: string; detail?: string }[]) => (ctx: CompletionContext) => {
   const m = ctx.matchBefore(/\bstate(?:\.|\[["'])\w*$/)
   if (!m) return null

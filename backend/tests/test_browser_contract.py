@@ -63,12 +63,19 @@ def test_contract_round_trip_and_nine_tools_with_whitelist():
     for schema in definitions.values():
         Draft202012Validator.check_schema(schema)
         assert schema["additionalProperties"] is False
-    gated = {item["name"] for item in tool_definitions(settings=parsed)}
-    assert gated == {"navigate", "snapshot", "click", "fill", "extract", "screenshot"}
+    gated = {item["name"]: item for item in tool_definitions(settings=parsed)}
+    assert set(gated) == set(ARGUMENT_MODELS)
+    for name in ("upload", "download", "evaluate"):
+        assert gated[name].get("available") is False
+        assert "Disabled on this connection" in gated[name]["description"]
     opened = BrowserSettings.model_validate(
         settings(allow_upload=True, allow_download=True, allow_evaluate_js=True)
     )
-    assert {item["name"] for item in tool_definitions(settings=opened)} == set(ARGUMENT_MODELS)
+    opened_defs = {item["name"]: item for item in tool_definitions(settings=opened)}
+    assert set(opened_defs) == set(ARGUMENT_MODELS)
+    for name in ("upload", "download", "evaluate"):
+        assert "available" not in opened_defs[name]
+        assert "Disabled on this connection" not in opened_defs[name]["description"]
 
 
 @pytest.mark.parametrize(

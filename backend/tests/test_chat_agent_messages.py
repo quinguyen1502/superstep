@@ -1,7 +1,7 @@
-"""TASK-0214: in a chat, the Agent node sends the current message to the model once. The conversation field holds the
-earlier exchanges plus this message (DEC-0052); an Agent whose task prompt already carries the message
+"""in a chat, the Agent node sends the current message to the model once. The conversation field holds the
+earlier exchanges plus this message; an Agent whose task prompt already carries the message
 (`{{state.message}}`) leaves that last history item out. Exact message lists for turns 1 and 3, with and without a
-Human node answered in the chat (TASK-0210)."""
+Human node answered in the chat."""
 import json
 from app.engine import agents
 from tests.test_chat_sessions import H, chat, node, say, user, wait_turns, STATE

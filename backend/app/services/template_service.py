@@ -1,7 +1,7 @@
-"""Template library (TASK-0025, DEC-0028): list built-in + personal + org templates, save a workflow as a template,
+"""Template library: list built-in + personal + org templates, save a workflow as a template,
 import/export the portable file, start a workflow from a template, delete. Persistence via TemplateRepository; graph
 sanitising and the file format live in engine.templates; new workflows go through WorkflowService.save (unique name).
-A workflow made from a built-in template gets that template's test cases (TASK-0069); saved templates carry none."""
+A workflow made from a built-in template gets that template's test cases; saved templates carry none."""
 from __future__ import annotations
 import json, time, uuid
 from typing import Callable, Optional
@@ -70,7 +70,7 @@ class TemplateService:
         self.access.require(uid, P.WORKFLOWS_CREATE)
         errs = T.problems(payload)
         if errs: raise AppError("TEMPLATE_INVALID", details=errs)
-        self.access.require_code(uid, None, payload["workflow"])  # a file can bring new Code nodes (TASK-0054)
+        self.access.require_code(uid, None, payload["workflow"])  # a file can bring new Code nodes
         return self._add(uid, payload.get("name"), payload.get("description"), scope, payload["workflow"])
 
     def export(self, tid: str, uid: str) -> dict:
@@ -80,7 +80,7 @@ class TemplateService:
         tname, _, graph = self._load(tid, uid)
         graph = T.sanitize(graph)
         helpers = next((b.get("helpers") or [] for b in T.BUILTINS if b["id"] == tid), [])
-        if helpers:  # the workflows its Agent tools call are created first (TASK-0137)
+        if helpers:  # the workflows its Agent tools call are created first
             ids = {h["key"]: self.workflows.save({**T.sanitize(h["workflow"]), "name": f"{name or tname} · {h['name']}"}, uid)["id"] for h in helpers}
             for n in graph["nodes"]:
                 for t in (n.get("data") or {}).get("tools") or []:

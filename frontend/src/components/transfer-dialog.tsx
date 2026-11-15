@@ -1,4 +1,4 @@
-/** Transfer ownership (TASK-0029): preview the references the new owner cannot use, re-bind them to the new owner's own
+/** Transfer ownership: preview the references the new owner cannot use, re-bind them to the new owner's own
  *  credentials / knowledge bases / MCP servers, or leave them flagged; then transfer. */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

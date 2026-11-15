@@ -1,6 +1,6 @@
-"""Export a workflow as one readable, runnable LangGraph.js TypeScript file (TASK-0082, REQ-0047, DEC-0051).
+"""Export a workflow as one readable, runnable LangGraph.js TypeScript file.
 
-The TypeScript twin of `python_export` (TASK-0070): the state as an `Annotation.Root` with the same reducers, one
+The TypeScript twin of `python_export`: the state as an `Annotation.Root` with the same reducers, one
 function per node, `buildGraph()` with `addNode` / `addEdge` / `addConditionalEdges`, and a `main()` that runs an
 example. It imports only `@langchain/langgraph` (and LangChain.js when `LLM_PROVIDER` is set), as `npm:` specifiers,
 so `deno run` / `deno check` work as is; for Node, drop the `npm:` prefixes.
@@ -10,24 +10,28 @@ environment variables at run time. TypeScript Code nodes are inlined as written;
 Python tool functions become stubs that throw. Retriever, MCP and Send email nodes call the studio's services through
 environment variables, as in the Python file. A node credential is an LLM_CRED_<n> slot. Approval extras and managed
 connections are included when a node has them.
-An Agent node is its model and tool steps in a loop, as in the Python file (TASK-0125, DEC-0063); its built-in tools are
+An Agent node is its model and tool steps in a loop, as in the Python file; its built-in tools are
 Python functions, so they throw too, and the model is told the tool failed.
 The output is a pure function of its input: the same graph gives the same bytes.
 """
 from __future__ import annotations
 import json, re
 from typing import Any, List, Optional, Tuple
-from . import agents, approval_policy, attachments, foreach
+from . import agents, approval_policy, attachments, dataset_nodes, foreach
 from .browser_export import export_binding
 from .browser_export_ts import TS_RUNTIME
+from .dataset_export import DatasetExport
+from .dataset_export_runtime import TS_DATASET
+from .dataset_typescript_standalone import typescript_standalone
 from .export_common import TITLES, RECURSION, Export, Graph, GraphWriter, camel, number, one_line, slug
 from .export_runtime import TS_APPROVAL, TS_MANAGED
+from .llm import CLASSIFY
 from .templating import VAR_RE, _ONE_FILTER, refs
 
 LANGGRAPH = "npm:@langchain/langgraph@^1.5"
 CHECKPOINT = "npm:@langchain/langgraph-checkpoint@^1"
 LANGCHAIN = "npm:langchain@^1"
-NODEMAILER = "npm:nodemailer@^6"  # Send email nodes with SMTP configured (TASK-0271)
+NODEMAILER = "npm:nodemailer@^6"  # Send email nodes with SMTP configured
 TS_TYPES = {"string": "string", "number": "number", "integer": "number", "boolean": "boolean",
             "object": "Record<string, unknown>", "list": "unknown[]"}
 REDUCERS = {"append": ("appendItems", "unknown[]", "[]"), "merge": ("mergeObjects", "Record<string, unknown>", "{}"),
@@ -48,6 +52,8 @@ GLOBALS = {
     "NaN", "Infinity", "parseInt", "parseFloat", "setTimeout", "Record", "Partial", "Response", "Request", "URL",
     "URLSearchParams", "performance"}
 HELPERS = {
+    "datasetCall", "datasetAgent", "datasetOperationId", "setupDatasets", "datasetStandalone", "datasetBackend",
+    "datasetCliArgs", "DATASET_BINDINGS",
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
     "DECISION_MODEL", "mockLlm", "callLlm", "resolveModel", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
@@ -215,10 +221,10 @@ const LLM_PROVIDER = env("LLM_PROVIDER");
 /** Offline answers: a category for classification prompts, else the last line of the prompt echoed back. */
 function mockLlm(prompt: string, model: string): string {
   const p = prompt.toLowerCase();
-  if (p.includes("classify") || p.includes("phân loại")) {
+  if (%(markers)s.some((k) => p.includes(k))) {
     const msg = p.includes("message:") ? p.split("message:").at(-1)! : p;
-    if (["order", "đơn", "giao hàng", "ship", "a100", "b200", "c300"].some((k) => msg.includes(k))) return "order_status";
-    if (["refund", "hoàn tiền", "return"].some((k) => msg.includes(k))) return "refund";
+    if (%(order)s.some((k) => msg.includes(k))) return "order_status";
+    if (%(refund)s.some((k) => msg.includes(k))) return "refund";
     return "general";
   }
   const tail = prompt.trim() ? prompt.trim().split(/\r?\n/).at(-1)! : "";
@@ -251,7 +257,7 @@ async function callLlm(prompt: string, model: string, provider?: string, slot?: 
   if (typeof reply.content === "string") return reply.content;
   return reply.content.map((b) => ("text" in b && typeof b.text === "string" ? b.text : "")).join("");
 }
-''' % {"langchain": LANGCHAIN}
+''' % {"langchain": LANGCHAIN, **{part: json.dumps(words, ensure_ascii=False) for part, words in CLASSIFY.items()}}  # mock words: app/locales
 
 
 FALLBACK = r'''
@@ -457,7 +463,7 @@ function waveCap(enabled: boolean): number {
   return Number.isInteger(n) && n >= 1 && n <= 8 ? n : 4;
 }
 
-type Schema = { type?: string; properties?: Record<string, unknown>; required?: string[] };
+type Schema = { type?: string; properties?: Record<string, unknown>; required?: string[]; additionalProperties?: boolean };
 type ToolSpec = { name: string; description: string; parameters: Schema };
 type ToolCall = { id: string; name: string; args: unknown };
 type ChatMessage = { role: string; content: string; tool_calls?: ToolCall[]; tool_call_id?: string; name?: string; files?: unknown; images?: unknown[] };
@@ -486,11 +492,25 @@ function mockAgent(messages: ChatMessage[], tools: ToolSpec[] | null, model: str
     const calls: ToolCall[] = picked.map((best, i) => {
       const required = best.parameters?.required ?? [];
       const empty: Record<string, unknown> = { number: 0, integer: 0, boolean: false, array: [], object: {} };
+      type Schema = { type?: unknown; enum?: unknown[]; properties?: Record<string, Schema> };
+      const text = (v: Schema) => (v.type ?? "string") === "string" || (Array.isArray(v.type) && v.type.includes("string"));
+      // the task text, the first enum value, or an object of text properties
+      const value = (v: Schema): unknown => {
+        if (v.enum?.length) return v.enum[0];
+        if (text(v)) return task;
+        if (v.type === "object" && v.properties) {
+          return Object.fromEntries(Object.entries(v.properties).filter(([, p]) => text(p ?? {})).map(([k, p]) => [k, value(p ?? {})]));
+        }
+        return empty[String(v.type)] ?? null;
+      };
+      const props = (best.parameters?.properties ?? {}) as Record<string, Schema>;
       const args: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(best.parameters?.properties ?? {})) {
-        const type = v !== null && typeof v === "object" && "type" in v ? v.type : "string";
-        if (type === "string") args[k] = task;
-        else if (required.includes(k)) args[k] = empty[String(type)] ?? null;
+      for (const [k, v] of Object.entries(props)) {
+        const schema = v !== null && typeof v === "object" ? v : {};
+        if (required.includes(k) || (schema.type ?? "string") === "string") args[k] = value(schema);
+      }
+      if ((args.operation === "insert_row" || args.operation === "upsert_row") && props.values) {
+        args.values = value(props.values);  // a Dataset write tool: the mock writes the task text
       }
       return { id: `mock_call_${i + 1}`, name: best.name, args };
     });
@@ -881,7 +901,8 @@ class _Writer(GraphWriter):
         self.lines = head + self.lines
         spans = {nid: [[a + len(head), b + len(head)] for a, b in r] for nid, r in self.spans.items()}
         return Export("\n".join(self.lines).rstrip("\n") + "\n", spans, self.expanded_names(main),
-                      f"{slug(self.title, 'workflow')}.ts")
+                      f"{slug(self.title, 'workflow')}.ts",
+                      self.datasets.manifest() if self.datasets.bindings else None)
 
     def state_name(self, base: str) -> str: return f"{camel(base)}State"
 
@@ -891,12 +912,20 @@ class _Writer(GraphWriter):
         v = f" (version {self.version})" if self.version is not None else ""
         file = f"{slug(self.title, 'workflow')}.ts"
         net = " --allow-net" if "fetch(" in body else ""
+        standalone = "function setupDatasets(" in body
+        write = " --allow-write" if standalone else ""
+        packages = "@langchain/langgraph @langchain/core" + (" pg" if standalone else "")
         doc = ["/**", f" * {_doc(self.title)}{v}: a LangGraph.js graph exported from Superstep.", " *",
                " * The graph on the canvas, written as TypeScript: the state, one function per node, and buildGraph(),",
                " * which connects them. Run it with Deno (the npm: packages are fetched on the first run):", " *",
-               f" *     deno run --allow-env --allow-read --allow-sys=homedir{net} {file}", " *",
-               " * For Node, drop the \"npm:\" prefixes and versions, `npm i @langchain/langgraph @langchain/core`, then",
+               f" *     deno run --allow-env --allow-read --allow-sys=homedir{write}{net} {file}", " *",
+               " * For Node, drop the \"npm:\" prefixes and versions, `npm i " + packages + "`, then",
                f" * `npx tsx {file}`.", " *"]
+        if standalone:
+            doc += [" * Dataset bindings use the Superstep API, SQLite (`node:sqlite`), or PostgreSQL (`pg`).",
+                    " * Export the binding variables and run this file with `--setup-datasets` before a standalone workflow.",
+                    " * Repeating setup keeps existing rows. SQLite needs Node 22.13 or newer, or `NODE_OPTIONS=--experimental-sqlite`",
+                    " * on Node 22.5 through 22.12. Deno 2.2 or newer includes the same SQLite module.", " *"]
         if "agent" in self.uses:
             doc += [" * LLM and Agent nodes use an offline mock model unless LLM_PROVIDER is set (see callLlm and callAgent",
                     " * below).", " *"]
@@ -914,6 +943,14 @@ class _Writer(GraphWriter):
                     key=lambda n: n.lower())
         out = [f"import {{ {', '.join(lg)} }} from \"{LANGGRAPH}\";"]
         if uses("InMemoryCache"): out.append(f"import {{ InMemoryCache }} from \"{CHECKPOINT}\";")
+        if "function setupDatasets(" in body:
+            out += [
+                'import { createHash } from "node:crypto";',
+                'import { existsSync, readFileSync } from "node:fs";',
+                'import { homedir } from "node:os";',
+                'import { dirname, resolve } from "node:path";',
+                'import { fileURLToPath } from "node:url";',
+            ]
         if self.imports:
             out += ["// imports of the TypeScript Code nodes"] + self.imports
         return doc + out + [""]
@@ -925,6 +962,10 @@ class _Writer(GraphWriter):
         if "fallback" in self.uses: self.add(FALLBACK.rstrip())
         if "http" in self.uses or "send_email" in self.uses: self.add(NET.rstrip())
         if "http" in self.uses: self.add(HTTP.rstrip())
+        if "dataset" in self.uses:
+            self.add("export const DATASET_BINDINGS: Record<string, { columns: unknown[]; name: string; operations: string[] }> = " + lit(self.datasets.bindings) + ";")
+            self.add(TS_DATASET.rstrip())
+            self.add(typescript_standalone().rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")
         if "files" in self.uses: self.add(FILES.rstrip() + (AGENT_FILES.rstrip() if "agent" in self.uses else ""))
@@ -1003,7 +1044,7 @@ class _Writer(GraphWriter):
         for f in self.all_fields(g): self.add(f"  {lit(f['name'])}: {self.ann(f)},")
         for c in g.cursors.values(): self.add(f"  {lit(c)}: Annotation<number>(),  // loop position of a For each node")
         for a in g.agents.values(): self.add(f"  {lit(a['chat'])}: Annotation<AgentChat | null>(),  // an Agent node's conversation")
-        if self.has_handoffs(g):  # TASK-0183
+        if self.has_handoffs(g):
             self.add(f"  {lit(self.HANDOFF_FIELD)}: Annotation<Handoff | null>(),  // a hand-off on its way to the next agent")
             self.add(f"  {lit(self.COUNT_FIELD)}: Annotation<number>(),  // hand-offs so far in this run")
             self.add(f"  {lit(self.START_FIELD)}: Annotation<string>(),  // input: start at this agent (a chat continues with the agent that answered last)")
@@ -1119,6 +1160,17 @@ class _Writer(GraphWriter):
             self.decision(g, nid, cls, head, sig)
         elif t == "tool":
             self.tool(g, nid, cls, head, ret, sig)
+        elif t == "dataset":
+            operation = d.get("operation")
+            write = operation in {"insert_row", "upsert_row", "delete_row"}
+            config = ", config: unknown" if write else ""
+            key = ", await datasetOperationId(config)" if write else ""
+            self.add(f"const {const}_ARGUMENTS = {lit(d.get('arguments') or {})};")
+            self.add("")
+            self.add(f"/** {head}: run a typed operation against the configured dataset. */")
+            self.add(f"async function {name}(state: {cls}{config}): Promise<Update> {{")
+            self.add(ret(f"await datasetCall({lit(d.get('dataset_id'))}, {lit(operation)}, {lit(d.get('fields') or [])}, renderArgs({const}_ARGUMENTS, state) as Record<string, unknown>{key})"))
+            self.add("}")
         elif t == "retriever":
             self.add(f"const {const}_QUERY = {lit(d.get('query') or '')};")
             self.add("")
@@ -1304,7 +1356,7 @@ class _Writer(GraphWriter):
         self.add("}")
 
     def agent(self, g: Graph, nid: str, cls: str, head: str, sig: str) -> None:
-        """An Agent node as the studio runs it (DEC-0063), as in the Python file: an entry node, the model node and the
+        """An Agent node as the studio runs it, as in the Python file: an entry node, the model node and the
         tool node in a loop, and an end node, with the conversation in its own state field."""
         d = g.nodes[nid].get("data") or {}; name, const, a = g.names[nid], g.names[nid].upper(), g.agents[nid]
         chat, model, tool, end = lit(a["chat"]), a["model"], a["tool"], a["exit"]
@@ -1438,7 +1490,7 @@ class _Writer(GraphWriter):
         if approval_policy.mode(d) != "off":
             self.add(" * In Superstep a model can review the request first (AI review); suggest mode still asks, and auto mode may answer.")
         self.add(" */")
-        self.add(f"async function {tool}(state: {cls}): Promise<Update> {{")
+        self.add(f"async function {tool}(state: {cls}{', config: unknown' if self.dataset_writes(d) else ''}): Promise<Update> {{")
         self.add(f"  const chat: AgentChat = {{ ...state[{chat}]! }};")
         self.add("  const pending = [...chat.pending];")
         self.add(f"  let n = Math.min(waveCap({const}_PARALLEL), pending.length);")
@@ -1448,7 +1500,14 @@ class _Writer(GraphWriter):
             self.add("  }")
         self.add("  const batch = pending.slice(0, n);")
         self.add("  chat.pending = pending.slice(n);")
+        dataset_tools = [tool["name"] for tool in d.get("tools") or [] if isinstance(tool, dict) and tool.get("source") == "dataset"]
+        writes = self.dataset_writes(d)
+        if writes:
+            self.add("  const stepId = await datasetOperationId(config);  // one receipt per model call: this step plus the call id")
         self.add("  async function one(call: ToolCall): Promise<[ChatMessage, AgentStep]> {")
+        if dataset_tools:
+            self.add(f"    const dataset = {lit(dataset_tools)}.includes(call.name);")
+            self.add("    let count: number | null = null;")
         self.add(f"    const spec = {const}_TOOLS.find((t) => t.name === call.name);")
         self.add("    const problem = spec ? checkArguments(spec.parameters, call.args) : null;")
         if approval:
@@ -1474,7 +1533,16 @@ class _Writer(GraphWriter):
             self.add("      [status, result] = [\"rejected\", \"Rejected by a reviewer\" + (comment ? `: ${comment}` : \"\")];")
         self.add("    } else {")
         self.add("      try {")
-        self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
+        if dataset_tools:
+            if writes:
+                self.add("        const operationId = await datasetOperationId({ metadata: { langgraph_checkpoint_ns: stepId + \"#\" + call.id } });")
+                self.add(f"        const value = await call_{name}_tool(call.name, call.args as Record<string, unknown>, state, operationId);")
+            else:
+                self.add(f"        const value = await call_{name}_tool(call.name, call.args as Record<string, unknown>, state);")
+            self.add("        if (dataset) count = Array.isArray((value as { rows?: unknown[] }).rows) ? (value as { rows: unknown[] }).rows.length : 1;")
+            self.add("        [status, result] = [\"ok\", toolText(value)];")
+        else:
+            self.add(f"        [status, result] = [\"ok\", toolText(await call_{name}_tool(call.name, call.args as Record<string, unknown>, state))];")
         self.add("      } catch (error) {  // the model hears about the failure and can try something else")
         self.add("        const paused = error instanceof Error ? error.name : \"\";")
         self.add("        if (paused === \"GraphInterrupt\" || paused === \"GraphBubbleUp\") throw error;")
@@ -1483,6 +1551,12 @@ class _Writer(GraphWriter):
         self.add("    }")
         self.add("    const step: AgentStep = { tool: call.name, args: call.args, result: shorten(result, STEP_CHARS), status,")
         self.add("      ms: Math.round((performance.now() - started) * 100) / 100 };")
+        if dataset_tools:
+            if writes:
+                self.add("    const operation = (call.args as Record<string, unknown> | null)?.operation;")
+                self.add("    if (dataset) Object.assign(step, { args: {}, result: \"\", dataset: { count, ...(operation === \"insert_row\" || operation === \"upsert_row\" ? { operation } : {}) } });")
+            else:
+                self.add("    if (dataset) Object.assign(step, { args: {}, result: \"\", dataset: { count } });")
         if approval: self.add("    if (answer !== null) step.approval = status === \"rejected\" ? \"rejected\" : \"approved\";")
         self.add("    const message: ChatMessage = { role: \"tool\", tool_call_id: call.id, name: call.name, content: shorten(result, RESULT_CHARS) };")
         self.add("    return [message, step];")
@@ -1517,11 +1591,17 @@ class _Writer(GraphWriter):
         bound = f"bindBrowserUrl({lit(binding)}, {prepared}, state)"
         return f"await browserCall({lit(info.get('alias') or '')}, {lit(tool)}, {bound}, state)"
 
+    @staticmethod
+    def dataset_writes(d: dict) -> bool:
+        """Whether an Agent node has a Dataset tool that may insert or upsert rows."""
+        return any(isinstance(t, dict) and t.get("source") == "dataset"
+                   and dataset_nodes.agent_writes(dataset_nodes.agent_binding(t)) for t in d.get("tools") or [])
+
     def agent_calls(self, d: dict, name: str, const: str, cls: str) -> None:
         """call_<agent>_tool(): what each of the Agent node's tools does."""
         self.add("")
         self.add("/** Runs the tool the model asked for with the model's arguments. */")
-        self.add(f"async function call_{name}_tool(name: string, args: Record<string, unknown>, state: {cls}): Promise<unknown> {{")
+        self.add(f"async function call_{name}_tool(name: string, args: Record<string, unknown>, state: {cls}{', operationId?: string' if self.dataset_writes(d) else ''}): Promise<unknown> {{")
         for t in d.get("tools") or []:
             if not isinstance(t, dict): continue
             src, tname = t.get("source"), t.get("name") or ""
@@ -1531,6 +1611,14 @@ class _Writer(GraphWriter):
                 self.uses.add("agent_builtin")
                 self.add(f"    // TODO: port the server's Python function {_doc(fn)} to TypeScript (the Python export has its source).")
                 self.add(f"    throw new Error({lit(f'{fn} is a Python function of the Superstep server: not implemented in TS export')});")
+            elif src == "dataset":
+                binding = dataset_nodes.agent_binding(t)
+                head = f"await datasetAgent({lit(t.get('dataset_id'))}, {lit(t.get('fields') or [])}, {lit(t.get('filter_ops') or {})}, {lit(t.get('limit', 10))}, args"
+                if dataset_nodes.agent_writes(binding) or "aggregate_rows" in binding["operations"]:
+                    writes = {key: binding[key] for key in ("operations", "write_fields", "key") if key in binding}
+                    self.add(f"    return {head}, {lit(writes)}{', operationId' if self.dataset_writes(d) else ''});")
+                else:
+                    self.add(f"    return {head});")
             elif src == "knowledge":
                 self.add(f"    return await retrieve({lit(self.kb_prefix(t))}, String(args.query || \"\"), {number(t.get('top_k'), int) or 4});")
             elif src == "mcp":
@@ -1687,7 +1775,7 @@ class _Writer(GraphWriter):
             i = queue.pop()
             if i in seen: continue
             seen.add(i); queue += [e["target"] for e in g.edges if e["source"] == i]
-            if i in g.agents: queue += [h["target"] for h in self.handoff_raw(g, i)]  # hand-off targets (TASK-0183)
+            if i in g.agents: queue += [h["target"] for h in self.handoff_raw(g, i)]  # hand-off targets
         return seen
 
     def run(self, main: Graph) -> None:
@@ -1704,6 +1792,13 @@ class _Writer(GraphWriter):
             self.add(f"const EXAMPLE_ANSWERS: Record<string, string[]> = {lit(answers)};")
         self.add("")
         self.add("async function main(): Promise<void> {")
+        if "dataset" in self.uses:
+            self.add('  if (datasetCliArgs().length === 1 && datasetCliArgs()[0] === "--setup-datasets") {')
+            self.add("    await setupDatasets(true);")
+            self.add('    console.log("Dataset storage is ready.");')
+            self.add("    return;")
+            self.add("  }")
+            self.add("  await setupDatasets(false);")
         self.add("  const graph = buildGraph(new MemorySaver());")
         cfg = '{ configurable: { thread_id: "example" }' + (f", recursionLimit: {RECURSION + budget}" if budget else "") + " }"
         self.add("  // thread_id names this run in the checkpointer" + ("; For each loops need more steps than the default 25." if budget else "."))
@@ -1762,6 +1857,6 @@ class _Writer(GraphWriter):
 
 
 def to_typescript(wf: dict, name: str, version: Optional[int] = None, children: Optional[dict] = None,
-                  example: Optional[dict] = None) -> Export:
+                  example: Optional[dict] = None, *, datasets: DatasetExport | None = None) -> Export:
     """The LangGraph.js TypeScript file for workflow `wf` (same arguments as `python_export.to_python`)."""
-    return _Writer(name, version, children or {}, example).write(wf)
+    return _Writer(name, version, children or {}, example, datasets).write(wf)

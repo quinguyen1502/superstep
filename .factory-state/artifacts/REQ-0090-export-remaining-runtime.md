@@ -29,7 +29,7 @@ An exported file could call MCP, a knowledge base and SMTP, and it could fall ba
 
 ### Out Of Scope
 
-- Cross-language code nodes (a Python file running TypeScript, or the reverse). The owner declined this on 2026-11-07. TASK-0266 keeps it as declined.
+- Cross-language code nodes (a Python file running TypeScript, or the reverse). The owner declined this on 2026-11-07.
 - React Native and Flutter (TASK-0227, TASK-0228).
 - Marking REQ-0086 or REQ-0089 done.
 - Embedding Studio secrets, channel targets, approver addresses or credential ids in the file.
@@ -95,5 +95,4 @@ An exported file could call MCP, a knowledge base and SMTP, and it could fall ba
 
 - `.factory-state/decisions/DEC-0089-export-remaining-runtime.md`
 - `.factory-state/artifacts/PLAN-0010-export-remaining-runtime.md`
-- `.factory-state/tasks/backlog/TASK-0266-export-remaining-gaps-proposal.md`
 - `.factory-state/artifacts/REQ-0089-export-parity-adapters.md`

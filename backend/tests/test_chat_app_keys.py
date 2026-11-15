@@ -1,4 +1,4 @@
-"""TASK-0217: copy-once credentials, permissions, rotation, concurrency, and access compatibility."""
+"""copy-once credentials, permissions, rotation, concurrency, and access compatibility."""
 import base64, concurrent.futures, os, time, uuid
 import pytest
 from alembic import command

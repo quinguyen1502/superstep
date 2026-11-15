@@ -72,7 +72,7 @@ Add a shared template editor with state field tags and use it for every node fie
 
 - 2026-10-18: Filed from the owner's request. REQ-0029 approved by that request. Branch `factory/task-0041-template-editor` from `develop` (`c74814f`); task moved to `doing`.
 
-- 2026-10-18: `components/template-editor.tsx` (CodeMirror: atomic tags for `{{state.x}}`, missing fields marked, `{{` completion, insert-field menu, one-line mode, read-only for viewers) and `lib/state-refs.ts` (the backend `VAR_RE`). Used for the LLM prompt, Human prompt, HTTP URL and body, Retriever query, and MCP arguments. The owner then asked for the header overlap ("Sẵn xử lý phần breaking layout này luôn") and the button icon offset ("text cứ lệch so với icon"): the header keeps the back button and logo, hides the product name by container query, and lets the name field shrink; `sm` buttons move the icon up 1px (measured). REV-0040 has no blocking findings. QA-0040 passed. Task set to done. PR into `develop`. Not merged.
+- 2026-10-18: `components/template-editor.tsx` (CodeMirror: atomic tags for `{{state.x}}`, missing fields marked, `{{` completion, insert-field menu, one-line mode, read-only for viewers) and `lib/state-refs.ts` (the backend `VAR_RE`). Used for the LLM prompt, Human prompt, HTTP URL and body, Retriever query, and MCP arguments. The owner then asked for the header overlap ("Fix this breaking layout while you are at it") and the button icon offset ("the text keeps sitting off the icon"): the header keeps the back button and logo, hides the product name by container query, and lets the name field shrink; `sm` buttons move the icon up 1px (measured). REV-0040 has no blocking findings. QA-0040 passed. Task set to done. PR into `develop`. Not merged.
 
 ## Handoff Notes
 

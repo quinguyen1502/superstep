@@ -1,4 +1,4 @@
-"""A canvas note is text for people. It is not a node the run executes (REQ-0025)."""
+"""A canvas note is text for people. It is not a node the run executes."""
 from app.engine.compiler import compile_workflow
 from app.engine.runtime import run_stream
 from app.engine.validator import validate

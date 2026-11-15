@@ -1,4 +1,4 @@
-"""TASK-0198 (REQ-0081, DEC-0075): the AI judge's tokens and cost count in the run's usage, like a model call of a node."""
+"""the AI judge's tokens and cost count in the run's usage, like a model call of a node."""
 import pytest
 from app.engine import approval_judge as J
 from app.engine.usage import make_usage

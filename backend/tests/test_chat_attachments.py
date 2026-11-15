@@ -1,4 +1,4 @@
-"""TASK-0174 (REQ-0077, DEC-0072): chat attachments are stored in the database, typed by their bytes, limited, kept
+"""chat attachments are stored in the database, typed by their bytes, limited, kept
 to their session, served only as downloads, and removed with their session or when never sent."""
 import json, time
 import pytest
@@ -15,7 +15,7 @@ def no_read_limit(monkeypatch): monkeypatch.setenv("STUDIO_PUBLIC_CHAT_RATE_READ
 
 
 def allow(wid, **a):
-    """Turns attachments on in the chat's settings (TASK-0175 adds them to the Chat settings form)."""
+    """Turns attachments on in the chat's settings."""
     triggers = ChatTriggerRepository(get_db()); t = triggers.web(wid)
     st = json.loads(t.settings or "{}"); st["attachments"] = {"enabled": True, **a}
     triggers.set_fields(t.id, settings=json.dumps(st))
@@ -35,7 +35,7 @@ def test_types_are_read_from_the_bytes():
     assert sniff("a.pdf", pdf()) == ("document", "application/pdf")
     assert sniff("shot.PNG", PNG) == ("image", "image/png")
     assert sniff("a.webp", b"RIFF\x00\x00\x00\x00WEBPVP8 ") == ("image", "image/webp")
-    assert sniff("notes.md", "# Hi đây".encode()) == ("document", "text/markdown")
+    assert sniff("notes.md", "# Hi café ☕".encode()) == ("document", "text/markdown")
     assert sniff("a.pdf", b"just text") is None  # renamed
     assert sniff("a.png", pdf()) is None  # the name must agree with the bytes
     assert sniff("a.txt", b"\x00\x01binary") is None

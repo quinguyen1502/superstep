@@ -83,7 +83,7 @@ def scoped_service(tmp_path,monkeypatch):
         def attach(cls,context,settings,worker_id,**kwargs):
             worker=workers.get(worker_id)
             if worker is None or worker.closed:raise BrowserWorkerError()
-            # Conversation pages may move to a later chat-turn run/lease (DEC-0085).
+            # Conversation pages may move to a later chat-turn run/lease.
             if worker.context!=context:
                 same=(worker.context.principal_id==context.principal_id and worker.context.connection_id==context.connection_id
                       and worker.context.group_id==context.group_id

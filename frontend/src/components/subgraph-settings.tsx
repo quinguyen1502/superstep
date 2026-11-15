@@ -1,4 +1,4 @@
-/** Subgraph node settings (TASK-0011): which saved workflow runs here, with a link to open it. */
+/** Subgraph node settings: which saved workflow runs here, with a link to open it. */
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'

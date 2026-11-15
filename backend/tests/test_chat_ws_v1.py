@@ -1,4 +1,4 @@
-"""The chat socket protocol v1 (TASK-0216, REQ-0082, DEC-0078): typed frames on /ws/public/v1/chat/{slug}, every frame
+"""The chat socket protocol v1: typed frames on /ws/public/v1/chat/{slug}, every frame
 validated against the published JSON Schema, and the unversioned socket unchanged."""
 import json, pathlib
 import pytest

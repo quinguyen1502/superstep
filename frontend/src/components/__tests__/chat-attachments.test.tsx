@@ -1,4 +1,4 @@
-// TASK-0177: the composer's attach button follows the chat's settings; chips show the file; the settings section keeps
+// the composer's attach button follows the chat's settings; chips show the file; the settings section keeps
 // the operator's ceiling.
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -33,7 +33,7 @@ describe('chat attachments UI', () => {
     await i18n.changeLanguage('en'); const en = html()
     expect(en).toContain('At most 20 on this server.'); expect(en).toMatch(/id="chat-attachments\.max_mb"[^>]*aria-invalid="true"/)
     expect(en).toContain('id="chat-attachments-kind-image"')
-    await i18n.changeLanguage('vi'); expect(html()).toContain('Máy chủ này cho phép tối đa 8.')
+    await i18n.changeLanguage('vi'); expect(html()).toContain(i18n.t('chat.files.settings.ceiling', { max: 8 }))
     await i18n.changeLanguage('en')
     expect(renderToStaticMarkup(<ChatAttachmentSettings value={{ ...value, enabled: false }} lists={[]} bad="" onChange={() => {}} />)).not.toContain('chat-attachments-kind')
   })

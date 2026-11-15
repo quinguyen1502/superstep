@@ -16,7 +16,7 @@ Prepare and publish the owner-approved 0.11.2 patch after TASK-0256 is integrate
 
 ## Owner Approval And Dependency
 
-The owner explicitly instructed “Merge và phát hành lên 0.11.2”. This authorises necessary task/release develop/main merges, immutable version tags, GitHub Release and configured PyPI/npm/GHCR publication. It does not authorise unrelated features, live provider/bot cutover or native delivery.
+The owner explicitly instructed “Merge and release 0.11.2”. This authorises necessary task/release develop/main merges, immutable version tags, GitHub Release and configured PyPI/npm/GHCR publication. It does not authorise unrelated features, live provider/bot cutover or native delivery.
 
 This task is deliberately **stacked on unmerged TASK-0256 PR #305**, source e1caf171, to prepare metadata while its final CI runs. The branch is factory/task-0257-release-0-11-2; release integration is blocked until #305 merges. Verify the release-only diff against integrated develop and rebase if it introduces changes; an integration merge of the identical e1caf171 tree needs no source rewrite. Do not claim publication from source status alone.
 

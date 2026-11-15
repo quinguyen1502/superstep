@@ -4,7 +4,7 @@ import json, time
 from typing import Any, Dict, List, Optional
 from langgraph.checkpoint.memory import InMemorySaver
 from .compiler import compile_workflow
-from . import agents, foreach, browser_recipes, browser_presentation
+from . import agents, foreach, browser_recipes, browser_presentation, dataset_nodes
 from .effects import Effects
 from .errors import Interrupt, ValidationError
 from .issues import Issue
@@ -12,6 +12,7 @@ from .limits import safe_error
 from .reducers import apply as apply_delta
 from .usage import merge as merge_usage
 from ..core.config import recursion_limit
+from ..core.errors import AppError
 
 TRACE_CAP = 16_000  # max JSON chars per traced payload (input/delta) in an event
 
@@ -47,22 +48,27 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     """Yield per-node events: started / finished(duration, input=state before, delta=output) / error. Sync generator.
     A Human node without a response yields `run_waiting` {node, prompt, checkpoint} and stops.
     steps: stop after this many supersteps that contain a node other than Start or End, yielding `run_paused`
-    {node, nodes, state, checkpoint} before the next superstep starts (TASK-0036). None runs to the end.
+    {node, nodes, state, checkpoint} before the next superstep starts. None runs to the end.
     A superstep that is only Start does not count, so the first step still reaches the first working node.
     until: pause after this node has finished. If the run ends without it, yield RUN_NODE_NOT_REACHED.
     resume = {"node" | "nodes", "state", "counts"?, "value"?} continues at that node (or those parallel nodes) with the
-    saved state: with "value" a paused Human node gets its response (TASK-0006); without it the run continues from a
-    progress checkpoint (recovery of queue jobs, TASK-0020).
-    Progress checkpoints come from LangGraph itself (TASK-0021): the graph is compiled with an in-memory saver and its
+    saved state: with "value" a paused Human node gets its response; without it the run continues from a
+    progress checkpoint (recovery of queue jobs, ).
+    Progress checkpoints come from LangGraph itself: the graph is compiled with an in-memory saver and its
     superstep checkpoints are observed (`stream_mode="checkpoints"`), so a step with several parallel nodes (fan-out)
     is resumable too. Each yields `_checkpoint` {node, nodes, state, counts}; callers must not forward it to clients.
-    effects: idempotency keys + node-result ledger + fencing guard for side-effect nodes (TASK-0021).
+    effects: idempotency keys + node-result ledger + fencing guard for side-effect nodes.
     ports: user-bound services for Retriever / MCP nodes (engine.ports.Ports)."""
     if resume is None and (bad := check_input(wf, inputs)): raise ValidationError(bad)
-    wf = agents.expand(wf)  # usually expanded already by the run service (idempotent, TASK-0116)
+    wf = agents.expand(wf)  # usually expanded already by the run service (idempotent, )
     if until and any(n["id"] == until and n.get("type") == "agent" for n in wf["nodes"]): until = f"{until}{agents.SEP}{agents.EXIT}"  # the whole agent
-    usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished (TASK-0010)
-    code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished (TASK-0053)
+    usage: Dict[str, Dict[str, Any]] = {}  # node id -> usage since its last node_finished
+    embedding: Dict[str, Dict[str, Any]] = {}  # node id -> embedding usage (Retriever, knowledge tools) since then
+
+    def add_usage(nid: str, u: Dict[str, Any]) -> None:
+        into = embedding if u.get("kind") == "embedding" else usage
+        into[nid] = merge_usage(into.get(nid), u)
+    code_out: Dict[str, Dict[str, Any]] = {}  # node id -> Code node stdout/runtime since its last node_finished
     model_attempts: Dict[str, List[dict]] = {}
     held = None
     if resume and ("value" in resume or resume.get("answers") or resume.get("children")):
@@ -71,7 +77,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         if isinstance(held.get("children"), dict): held["children"] = dict(held["children"])
     counts: Dict[str, int] = {k: int(v) for k, v in ((resume or {}).get("counts") or {}).items()}
     if effects is not None: effects.counts = counts  # node iterations feed the idempotency keys
-    app = compile_workflow(wf, resolve, lambda nid, u: usage.__setitem__(nid, merge_usage(usage.get(nid), u)),
+    app = compile_workflow(wf, resolve, add_usage,
                            entry=resume_nodes(resume) if resume else None, resume=held, effects=effects, checkpointer=InMemorySaver(), ports=ports)
     nodes = {n["id"]: n for n in wf["nodes"]}
     if until is not None and until not in nodes:
@@ -84,9 +90,24 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
     state = dict(inputs); cp_state, cp_counts = dict(state), dict(counts); first = True
 
     browser_private = browser_presentation.private_workflow(wf, ports)
+    # Dataset tool messages are private to the agent and its recovery checkpoint.
+    dataset_agent = any("filter_ops" in binding for binding in dataset_nodes.bindings(wf).values())
     def meta(nid):
         return {"node": nid, "label": nodes[nid]["data"].get("label"), "node_type": nodes[nid]["type"],
                 **({'browser_private': True} if browser_private else {})}
+
+    def dataset_summary(nid, delta=None, *, failed=False):
+        node = nodes.get(nid)
+        if node is None or node["type"] != "dataset":
+            return {}
+        data = node["data"]
+        result = (delta or {}).get(data.get("output_field"), {})
+        operation = data["operation"]
+        count = 0 if failed else 1
+        if not failed and operation in {"find_rows", "aggregate_rows"}:
+            count = len(result.get("groups" if operation == "aggregate_rows" else "items", []))
+        outcome = "failed" if failed else "simulated" if result.get("dry_run") else "completed"
+        return {"dataset": {"id": data["dataset_id"], "operation": operation, "count": count, "outcome": outcome}}
 
     def started(nid):
         counts[nid] = counts.get(nid, 0) + 1
@@ -102,14 +123,14 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
 
     try:
         for mode, chunk in app.stream(inputs, cfg, stream_mode=["updates", "checkpoints", "custom"]):
-            if mode == "custom":  # live LLM text (TASK-0030): sent to the client, never stored (node_finished has the result)
+            if mode == "custom":  # live LLM text: sent to the client, never stored (node_finished has the result)
                 if isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("model_attempt"):
                     model_attempts.setdefault(chunk["node"], []).append(chunk["model_attempt"])
                 elif isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("code_output"):
-                    code_out[chunk["node"]] = chunk["code_output"]  # Code node stdout (TASK-0053), stored on node_finished
+                    code_out[chunk["node"]] = chunk["code_output"]  # Code node stdout, stored on node_finished
                 elif isinstance(chunk, dict) and chunk.get("node") in nodes and chunk.get("delta"):
                     yield {"type": "node_token", "node": chunk["node"], "iteration": counts.get(chunk["node"], 1), "delta": chunk["delta"],
-                           "field": nodes[chunk["node"]]["data"].get("output_field")}  # the state field the text goes to (a chat's reply, TASK-0084)
+                           "field": nodes[chunk["node"]]["data"].get("output_field")}  # the state field the text goes to (a chat's reply, )
                 continue
             if mode == "checkpoints":  # superstep boundary: the nodes that run next, all inputs settled
                 nxt = [n for n in (chunk.get("next") or []) if n in nodes]
@@ -136,11 +157,12 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
                 finished_ids.add(nid)
                 yield {"type": "node_finished", **meta(nid), "iteration": counts.get(nid, 1), "superstep": superstep,
                        "duration_ms": round((time.perf_counter() - t0) * 1000, 2),
-                       "input": cap_payload(before), "delta": cap_payload(agents.visible(delta)),
+                       "input": cap_payload(agents.visible(before) if dataset_agent else before), "delta": cap_payload(agents.visible(delta)),
                        **({'browser': browser_presentation.detail(nodes[nid]['data'].get('tool'), delta.get(nodes[nid]['data'].get('output_field')) or {})}
                           if nodes[nid]['type'] == 'mcp' and browser_private and ports is not None and ports.browser is not None and ports.browser.is_browser(nodes[nid]['data'].get('server_id')) else {}),  # input: time travel forks from it
-                       **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did (TASK-0116)
-                       **({"usage": usage.pop(nid)} if nid in usage else {}), **({"reused": True} if reused else {}),
+                       **dataset_summary(nid, delta),
+                       **({"agent": cap_payload(step)} if (step := agents.step_of(delta)) else {}),  # what an agent step did
+                       **({"usage": usage.pop(nid)} if nid in usage else {}), **({"embedding_usage": embedding.pop(nid)} if nid in embedding else {}), **({"reused": True} if reused else {}),
                        **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                        **({"code_output": cap_payload(code_out.pop(nid))} if nid in code_out else {})}
     except Interrupt as i:  # a Human node or an Agent tool approval is waiting: hand back a checkpoint instead of an error
@@ -151,7 +173,7 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         browser_intents={hold['node']:hold['browser_intent'] for hold in holds if hold.get('browser_intent')}
         if browser_intents:cp['browser_intents']=browser_intents
         if len(holds)==1 and primary.get('browser_intent'):cp['browser_intent']=primary['browser_intent']
-        if len(holds) > 1: cp["waits"] = holds  # one resume after every wait of this superstep (TASK-0158)
+        if len(holds) > 1: cp["waits"] = holds  # one resume after every wait of this superstep
         elif holds[0]["kind"] == "child": cp["wait"] = {"kind": "child", "run_id": holds[0]["run_id"]}
         extra = {k: primary[k] for k in ("label", "tool", "arguments", "workflow_id", "browser_intent") if primary.get(k) is not None}
         if len(holds) == 1 and primary["kind"] == "child": extra["wait"] = {"kind": "child", "run_id": primary["run_id"]}
@@ -165,6 +187,10 @@ def run_stream(wf: Dict[str, Any], inputs: Dict[str, Any], resolve=None, resume:
         yield {"type": "error", **(meta(nid) if nid in nodes else {}), "iteration": counts.get(nid, 1) if nid else None,
                "duration_ms": round((time.perf_counter() - t0) * 1000, 2), "input": cap_payload(dict(state)),
                "code": getattr(e, "code", "NODE_FAILED"), "errors": [safe_error(e)],
+               **({"error": {**e.to_dict(), "message": safe_error(e)}}
+                  if isinstance(e, AppError) and e.code == "DATASET_FILTER_INVALID" else {}),
+               **dataset_summary(nid, failed=True),
+               **_provider_of(e, nodes[nid]["data"] if nid in nodes else {}),
                **({"browser": e.browser} if isinstance(getattr(e, "browser", None), dict) else {}),
                **({"model_attempts": model_attempts.pop(nid)} if nid in model_attempts else {}),
                **({"code_output": cap_payload(e.output)} if getattr(e, "output", None) else {})}
@@ -202,3 +228,10 @@ def _holds(effects, i: Interrupt) -> List[dict]:
 def resume_nodes(resume: Dict[str, Any]) -> List[str]:
     """Entry nodes of a resume/recovery checkpoint (older checkpoints only have "node")."""
     return list(resume.get("nodes") or [resume["node"]])
+
+
+def _provider_of(e: Exception, data: dict) -> dict:
+    """Provider and model of a failed model call (a ProviderError), for the run's metrics; nothing for other errors."""
+    params = getattr(e, "params", None)
+    if not isinstance(params, dict) or not isinstance(params.get("provider"), str): return {}
+    return {"provider": params["provider"], "model": params.get("model") or data.get("model") or ""}

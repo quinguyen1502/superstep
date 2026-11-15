@@ -70,3 +70,43 @@ class RunResultEnvelope(Envelope[RunResult]):
 
 class RunAcceptedEnvelope(Envelope[Union[RunAccepted, RunPending]]):
     """Success envelope of a 202: a queued run, or a sync run that is still going."""
+
+
+class Schedule(BaseModel):
+    """One cron schedule of the workflow. A due schedule starts a run as the token's owner."""
+    id: str = Field(..., examples=["a1b2c3d4e5"])
+    name: str
+    cron: str = Field(..., description="Five-field cron expression, or a macro such as `@daily`.", examples=["0 9 * * MON-FRI"])
+    timezone: str = Field(..., description="IANA time zone.", examples=["Asia/Ho_Chi_Minh"])
+    input: dict[str, Any] = Field(..., description="Initial state of each run this schedule starts.")
+    enabled: bool
+    next_runs: list[float] = Field(..., description="Upcoming fire times as Unix seconds. Empty while the schedule is off.")
+    last_run: Optional[float] = Field(None, description="Unix seconds of the last fire, if any.")
+    last_run_id: Optional[str] = None
+    note: Optional[str] = Field(None, description="Why the scheduler turned the schedule off, when it did.")
+    created: float = Field(..., description="Unix seconds.")
+
+
+class SchedulePreviewResult(BaseModel):
+    """Next fire times of a cron expression. Preview stores nothing."""
+    next_runs: list[float] = Field(..., description="The next fire times of the expression, as Unix seconds.")
+
+
+class ScheduleDeleted(BaseModel):
+    ok: Literal[True] = True
+
+
+class ScheduleEnvelope(Envelope[Schedule]):
+    """Success envelope carrying one schedule."""
+
+
+class ScheduleListEnvelope(Envelope[list[Schedule]]):
+    """Success envelope carrying the workflow's schedules."""
+
+
+class SchedulePreviewEnvelope(Envelope[SchedulePreviewResult]):
+    """Success envelope of a cron preview."""
+
+
+class ScheduleDeletedEnvelope(Envelope[ScheduleDeleted]):
+    """Success envelope of a deleted schedule."""

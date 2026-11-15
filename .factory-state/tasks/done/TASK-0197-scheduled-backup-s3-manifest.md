@@ -14,7 +14,7 @@
 
 ## Objective
 
-Scheduled backups record the S3 bucket. A manual backup with the s3 attachment backend records the bucket and prefix in the manifest (TASK-0194); the scheduled backup.sh did not, so a restore of a scheduled archive could not say which bucket to restore. The owner asked for this before v0.10.1 ("Làm cả 4 việc rồi mới release").
+Scheduled backups record the S3 bucket. A manual backup with the s3 attachment backend records the bucket and prefix in the manifest (TASK-0194); the scheduled backup.sh did not, so a restore of a scheduled archive could not say which bucket to restore. The owner asked for this before v0.10.1 ("Do all 4 items, then release").
 
 ## Scope
 
@@ -46,5 +46,5 @@ Scheduled backups record the S3 bucket. A manual backup with the s3 attachment b
 ## Activity Log
 
 - 2026-10-31: created from the owner's v0.10.1 follow-up list.
-- 2026-10-31: implemented on `factory/task-0197-scheduled-backup-s3-manifest` from `develop`. The scheduled `backup.sh` writes `attachment_s3` like a manual backup; the handbook says so in en and vi. `factory verify run --profile full` passed. The owner asked for these follow-ups before v0.10.1 ('Làm cả 4 việc rồi mới release'). Moved to done on this PR before the merge (TASK-0148).
+- 2026-10-31: implemented on `factory/task-0197-scheduled-backup-s3-manifest` from `develop`. The scheduled `backup.sh` writes `attachment_s3` like a manual backup; the handbook says so in en and vi. `factory verify run --profile full` passed. The owner asked for these follow-ups before v0.10.1 ('Do all 4 items, then release'). Moved to done on this PR before the merge (TASK-0148).
 - Review: `.factory-state/artifacts/REV-0185-task-0197.md`. QA: `.factory-state/artifacts/QA-0185-task-0197.md`.

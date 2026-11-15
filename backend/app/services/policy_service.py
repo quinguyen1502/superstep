@@ -1,4 +1,4 @@
-"""Studio policy edited by admins (TASK-0029): which roles may use org-wide approval channels and MCP servers at run time."""
+"""Studio policy edited by admins: which roles may use org-wide approval channels and MCP servers at run time."""
 from __future__ import annotations
 import time
 from ..core import permissions as P

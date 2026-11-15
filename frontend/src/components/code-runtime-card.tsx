@@ -1,4 +1,4 @@
-/** Admin view of where Tool nodes in Code mode run (TASK-0056): runtime, image, limits, and the risk of `subprocess`. */
+/** Admin view of where Tool nodes in Code mode run: runtime, image, limits, and the risk of `subprocess`. */
 import { Tip } from '@/components/tip'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, ShieldAlert } from 'lucide-react'

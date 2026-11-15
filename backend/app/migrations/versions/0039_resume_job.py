@@ -1,4 +1,4 @@
-"""An answer to a waiting run, kept on the run until the resumed segment records something (TASK-0127): an in-memory
+"""An answer to a waiting run, kept on the run until the resumed segment records something: an in-memory
 job queue loses it on a restart, and start-up recovery queues it again."""
 from alembic import op
 import sqlalchemy as sa

@@ -5,7 +5,7 @@ from .base import Base
 
 
 class WorkflowSchedule(Base):
-    """A cron schedule that starts runs of a workflow as its creator (TASK-0046)."""
+    """A cron schedule that starts runs of a workflow as its creator."""
     __tablename__ = "workflow_schedules"
     id: Mapped[str] = mapped_column(Text, primary_key=True)
     workflow_id: Mapped[str] = mapped_column(Text, index=True)

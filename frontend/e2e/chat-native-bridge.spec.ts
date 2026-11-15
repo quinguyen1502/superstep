@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto'
 import { test, expect } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
-// TASK-0228: a native app (iOS WKWebView, Android WebView, React Native WebView) shows /c/{slug}?embed=1 as its top-level
+// a native app (iOS WKWebView, Android WebView, React Native WebView) shows /c/{slug}?embed=1 as its top-level
 // page. This browser test plays the native side: it injects the same message channel the app would add, answers the
 // page's ready and token-request messages with Superstep.identify(token), and checks that no token reaches the URL.
 // It does not run on a device; the Swift, Kotlin and React Native snippets in the handbook are not executed here.

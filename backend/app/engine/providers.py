@@ -1,4 +1,4 @@
-"""LLM provider registry (TASK-0030, DEC-0032): one small strategy class per provider.
+"""LLM provider registry: one small strategy class per provider.
 
 A provider knows its defaults (base URL, whether a key is required, extra headers it accepts), how to list
 models and how to build a LangChain chat model (streaming + `bind_tools` come with it). `call_llm`
@@ -41,6 +41,7 @@ def _raise_for_status(provider: str, r: httpx.Response, model: str = "") -> None
     msg = (msg.get("message") if isinstance(msg, dict) else str(msg))[:200]
     if r.status_code in (401, 403): raise ProviderError("PROVIDER_AUTH_FAILED", provider, msg)
     if r.status_code == 404 and model: raise ProviderError("MODEL_NOT_FOUND", provider, msg, model=model)
+    if r.status_code == 429: raise ProviderError("PROVIDER_RATE_LIMITED", provider, msg, model=model)
     raise ProviderError("PROVIDER_BAD_RESPONSE", provider, f"HTTP {r.status_code}: {msg}")
 
 
@@ -64,9 +65,9 @@ class Provider:
     header_fields: ClassVar[Tuple[str, ...]] = ()   # optional extra HTTP headers stored on the credential
     supports_tools: ClassVar[bool] = True
     local: ClassVar[bool] = False                    # runs on the user's machine (Docker: host.docker.internal)
-    kind: ClassVar[str] = "chat"                     # "chat" (LLM nodes), "decision" (Decision nodes, TASK-0050), "email" (TASK-0051)
+    kind: ClassVar[str] = "chat"                     # "chat" (LLM nodes), "decision" (Decision nodes, ), "email"
     settings_fields: ClassVar[Tuple[str, ...]] = ()  # non-secret settings stored on the credential (SMTP host, port, ...)
-    vision: ClassVar[bool] = True                    # can send image parts; the model must also be in VISION_MODELS (DEC-0072)
+    vision: ClassVar[bool] = True                    # can send image parts; the model must also be in VISION_MODELS
 
     def info(self) -> Dict[str, Any]:
         return {"id": self.id, "label": self.label, "default_base_url": self.default_base_url, "default_model": self.default_model,
@@ -112,7 +113,7 @@ class Provider:
                images: Optional[List[Dict[str, str]]] = None) -> Tuple[str, Dict[str, Any]]:
         """Final text + usage. With `on_token` the LangChain model streams and every text delta is passed on as it arrives
         (the returned text is the same concatenation). `images` [{name, mime, data (base64)}] go with the prompt as image
-        parts (TASK-0176)."""
+        parts."""
         model = model or self.default_model
         ask = _lc_messages([{"role": "user", "content": prompt, "images": images}]) if images else prompt
         try:
@@ -133,13 +134,13 @@ class Provider:
             make_usage(self.id, model, estimate_tokens(prompt), estimate_tokens(out), estimated=True)
         return out.strip(), usage
 
-    parallel_tool_calls_flag: ClassVar[bool] = False  # OpenAI-compatible servers accept parallel_tool_calls=false (DEC-0069)
+    parallel_tool_calls_flag: ClassVar[bool] = False  # OpenAI-compatible servers accept parallel_tool_calls=false
 
     def invoke_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], model: str, cred: Dict[str, Any],
                      on_token: Optional[Callable[[str], None]] = None, parallel: Optional[bool] = None) -> Tuple[str, List[Dict[str, Any]], Dict[str, Any]]:
-        """One Agent node model call (TASK-0116): (text, tool calls [{id, name, args}], usage). `messages` are plain dicts
+        """One Agent node model call: (text, tool calls [{id, name, args}], usage). `messages` are plain dicts
         {role: system|user|assistant|tool, content, tool_calls?, tool_call_id?}; `tools` [{name, description, parameters}].
-        `parallel` False asks a server that supports it for one call at a time (DEC-0069)."""
+        `parallel` False asks a server that supports it for one call at a time."""
         model = model or self.default_model
         try:
             m = self.chat_model(cred, model, **(self.stream_kwargs if on_token else {}))
@@ -176,11 +177,22 @@ class Provider:
     def parse_embeddings(self, data: Dict[str, Any]) -> List[List[float]]:
         return [d["embedding"] for d in sorted(data["data"], key=lambda d: d.get("index", 0))]
 
+    def embedding_tokens(self, data: Dict[str, Any]) -> Optional[int]:
+        """Input tokens the provider reports for one embeddings response (OpenAI-style `usage`), None when absent."""
+        u = data.get("usage") if isinstance(data, dict) else None
+        n = (u or {}).get("prompt_tokens") or (u or {}).get("total_tokens") if isinstance(u, dict) else None
+        return int(n) if isinstance(n, (int, float)) and n >= 0 else None
+
     def embed(self, texts: List[str], model: str, cred: Dict[str, Any]) -> List[List[float]]:
         """One vector per text (OpenAI-style `/embeddings` by default). All vectors must share one dimension."""
+        return self.embed_with_usage(texts, model, cred)[0]
+
+    def embed_with_usage(self, texts: List[str], model: str, cred: Dict[str, Any]) -> Tuple[List[List[float]], Dict[str, Any]]:
+        """`embed` plus a usage record (input tokens only): the provider's count when every batch reports one, else estimated."""
         if not self.supports_embeddings: raise ProviderError("PROVIDER_EMBEDDINGS_UNSUPPORTED", self.id)
         model = model or self.default_embedding_model
         url, out = self.base(cred, self.default_base_url) + self.embeddings_path, []
+        tokens, estimated = 0, False
         for i in range(0, len(texts), self.embed_batch):
             batch = texts[i:i + self.embed_batch]
             data = request(self.id, "POST", url, self.auth_headers(cred), self.embed_request(model, batch), model=model)
@@ -188,8 +200,11 @@ class Provider:
             except (TypeError, KeyError, AttributeError): raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "invalid embeddings response") from None
             if len(vecs) != len(batch): raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "embedding count mismatch")
             out += vecs
+            n = self.embedding_tokens(data)
+            if n is None: n, estimated = sum(estimate_tokens(x) for x in batch), True
+            tokens += n
         if len({len(v) for v in out}) > 1: raise ProviderError("PROVIDER_BAD_RESPONSE", self.id, "embeddings of different dimensions")
-        return out
+        return out, {**make_usage(self.id, model, tokens, 0, estimated=estimated), "kind": "embedding"}
 
 
 def _lc_messages(messages: List[Dict[str, Any]]) -> list:
@@ -219,7 +234,7 @@ def user_content(text: str, images: Optional[List[Dict[str, str]]], part: Callab
     return [{"type": "text", "text": text}] + [part(i) for i in images] if images else text
 
 
-# Models that can see images (DEC-0072 decision 5), matched on the start of the name after any "vendor/" prefix.
+# Models that can see images ( decision 5), matched on the start of the name after any "vendor/" prefix.
 # Unknown models count as text only: they get a note in place of the image.
 VISION_MODELS = ("gpt-4o", "gpt-4.1", "gpt-4-turbo", "gpt-5", "chatgpt-4o", "o1", "o3", "o4", "claude-3", "claude-sonnet-4",
                  "claude-opus-4", "claude-haiku-4", "claude-4", "gemini", "llava", "bakllava", "llama3.2-vision", "llama-3.2-11b-vision",
@@ -244,6 +259,7 @@ def _map_http_error(e: Exception, provider: str, model: str, base_url: str = "")
         return ProviderError("PROVIDER_UNREACHABLE", provider, name, base_url=base_url)
     if status in (401, 403): return ProviderError("PROVIDER_AUTH_FAILED", provider, str(e)[:200])
     if status == 404: return ProviderError("MODEL_NOT_FOUND", provider, str(e)[:200], model=model)
+    if status == 429 or name == "RateLimitError": return ProviderError("PROVIDER_RATE_LIMITED", provider, str(e)[:200], model=model)
     return ProviderError("PROVIDER_BAD_RESPONSE", provider, f"{name}: {str(e)[:200]}")
 
 
@@ -279,6 +295,10 @@ class Ollama(Provider):
 
     def parse_embeddings(self, data): return data["embeddings"]
 
+    def embedding_tokens(self, data):
+        n = data.get("prompt_eval_count") if isinstance(data, dict) else None
+        return int(n) if isinstance(n, (int, float)) and n >= 0 else None
+
     def parse_models(self, data):
         return sorted(m.get("model") or m["name"] for m in data.get("models", []))
 
@@ -304,7 +324,7 @@ class PlainHTTP(Provider):
 
 
 class OpenAI(PlainHTTP):
-    """Hosted OpenAI (kept on plain HTTP like before TASK-0030; `ChatOpenAI` handles the same base URL for tools)."""
+    """Hosted OpenAI (kept on plain HTTP like ; `ChatOpenAI` handles the same base URL for tools)."""
     id, label, default_base_url, default_model, key_required = "openai", "OpenAI / OpenAI-compatible", "https://api.openai.com/v1", "gpt-4o-mini", True
     stream_kwargs = {"stream_usage": True}  # Agent node calls go through ChatOpenAI (invoke_tools)
     parallel_tool_calls_flag = True
@@ -372,7 +392,7 @@ class Anthropic(PlainHTTP):
 
 
 class TypeSafe(Provider):
-    """TypeSafe System One (TASK-0050, DEC-0039). Jev returns typed decisions (choice, score, noul) with probabilities,
+    """TypeSafe System One. Jev returns typed decisions (choice, score, noul) with probabilities,
     not text, so it serves Decision nodes only. The key check sends one tiny question (there is no model list endpoint)."""
     id, label, default_base_url, default_model, key_required = "typesafe", "TypeSafe (Jev)", "https://api.typesafe.ai", "jev-latest", True
     kind, supports_tools, supports_embeddings, vision = "decision", False, False, False
@@ -391,7 +411,7 @@ class TypeSafe(Provider):
 
 
 class Smtp(Provider):
-    """An SMTP server for Send email nodes (TASK-0051, DEC-0040). The password is the credential's secret; host, port,
+    """An SMTP server for Send email nodes. The password is the credential's secret; host, port,
     security, username and sender are its settings. The check connects, upgrades to TLS and signs in, then quits."""
     id, label, default_base_url = "smtp", "SMTP (e-mail)", ""
     kind, supports_tools, supports_embeddings, vision = "email", False, False, False

@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-27
 - Updated: 2026-10-30
-- Source: owner request in chat on 2026-10-27 ("3 hướng có thể làm thì bạn viết REQ trước đi"). REQ-0048 and
+- Source: owner request in chat on 2026-10-27 ("write the REQs for the 3 possible directions first"). REQ-0048 and
   REQ-0074 left attachments for a later phase, and `chat_turns.attachments` is reserved for them.
 
 ## Summary
@@ -21,8 +21,7 @@
 
 ## Owner Decisions
 
-The owner answered CLAR-0008 on 2026-10-27 with the recommended option for every question ("Trả lời CLAR-0006 đến
-CLAR-0009 theo đề xuất, rồi merge #200").
+The owner answered CLAR-0008 on 2026-10-27 with the recommended option for every question ("Answer CLAR-0006 to CLAR-0009 as proposed, then merge #200").
 
 1. **Kinds**: documents (`.txt`, `.md`, `.pdf`, `.csv`) and images (PNG, JPEG, WebP).
 2. **Workflow view**: a list field of file records. LLM and Agent nodes include the files only with "Include

@@ -1,4 +1,4 @@
-"""Approval through external channels (TASK-0022): channels, identities, requests, audit. Idempotent.
+"""Approval through external channels: channels, identities, requests, audit. Idempotent.
 
 Revision ID: 0010_approval_channels
 Revises: 0009_effectively_once

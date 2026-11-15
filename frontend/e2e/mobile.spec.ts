@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
-// TASK-0121: phones (below 768px). The pages never scroll sideways; the editor shows one pane at a time with a tab bar
+// phones (below 768px). The pages never scroll sideways; the editor shows one pane at a time with a tab bar
 // at the bottom (Canvas · Nodes · Config · Run, plus Chat while it is open).
 const PHONE = { width: 375, height: 812 }
 const noSideScroll = async (page: Page) =>

@@ -1,4 +1,4 @@
-"""Public Chat API v1 (TASK-0215, REQ-0082, DEC-0078): the versioned paths, the unversioned aliases, the public spec
+"""Public Chat API v1: the versioned paths, the unversioned aliases, the public spec
 and incremental history with `turns?after=`."""
 import pytest
 from app.api.openapi_public import public_openapi

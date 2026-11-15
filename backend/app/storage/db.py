@@ -1,4 +1,4 @@
-"""The `db` backend (TASK-0191): bytes in `chat_attachments.data`, today's behaviour and the default. The rows are the
+"""The `db` backend: bytes in `chat_attachments.data`, today's behaviour and the default. The rows are the
 objects: a key is an attachment id, and deleting the row deletes the bytes."""
 from __future__ import annotations
 from typing import Iterator
@@ -9,7 +9,7 @@ class DbStore(AttachmentStore):
     name, inline = "db", True
 
     def __init__(self, rows):
-        """rows: the attachment repository (data_of, set_data, keys); passed in, not imported (DEC-0009)."""
+        """rows: the attachment repository (data_of, set_data, keys); passed in, not imported."""
         self.rows = rows
 
     def put(self, key: str, data: Data, mime: str) -> None:

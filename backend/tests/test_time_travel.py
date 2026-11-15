@@ -53,7 +53,7 @@ def test_fork_errors_and_permissions():
 
 
 def test_checkpoints_follow_the_superstep_numbers():
-    """TASK-0123: nodes group by `superstep`, not by equal input state. A Condition leaves the state unchanged, so the
+    """nodes group by `superstep`, not by equal input state. A Condition leaves the state unchanged, so the
     node after it starts from the same state, yet runs in the next superstep; parallel nodes keep their superstep's state."""
     evs = [{"type": "node_finished", "node": "s", "node_type": "start", "input": {}, "superstep": 1},
            {"type": "node_finished", "node": "route", "node_type": "condition", "input": {"m": "go"}, "superstep": 2},
@@ -76,7 +76,7 @@ ROUTED = {"name": "Routed", "state": [{"name": "message", "type": "string"}, {"n
 
 
 def test_fork_before_a_condition_takes_one_branch():
-    """TASK-0123: forking before a Condition with an edited state runs the Condition alone, then the branch it picks
+    """forking before a Condition with an edited state runs the Condition alone, then the branch it picks
     (it used to run the old branch alongside it, and End twice)."""
     tok = user(); wid = c.post("/api/workflows", json=ROUTED, headers=H(tok)).json()["data"]["id"]
     rid = ws(tok, {"workflow_id": wid, "input": {"message": "go"}})[0]["run_id"]

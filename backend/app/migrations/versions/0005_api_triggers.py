@@ -1,4 +1,4 @@
-"""API triggers: workflow_tokens table + runs.source (TASK-0007). Idempotent.
+"""API triggers: workflow_tokens table + runs.source. Idempotent.
 
 Revision ID: 0005_api_triggers
 Revises: 0004_hitl

@@ -1,4 +1,4 @@
-/** The Tool node Mode select (TASK-0081): one option per Code language, "code:python" / "code:typescript". The stored
+/** The Tool node Mode select: one option per Code language, "code:python" / "code:typescript". The stored
  * model is unchanged: `mode: "code"` plus `data.language`; this maps between the two. */
 import { languageInfo, type CodeRuntime } from '@/lib/code-runtime'
 

@@ -1,4 +1,4 @@
-/** Locale checks (TASK-0078): en and vi have the same keys and placeholders, vi uses the glossary in
+/** Locale checks: en and vi have the same keys and placeholders, vi uses the glossary in
  * docs/ui-conventions.md, and any vi string left identical to en is on the reviewed allowlist below. */
 import { describe, expect, it } from 'vitest'
 import en from '../../locales/en.json'
@@ -16,6 +16,8 @@ const vars = (s: string) => [...s.matchAll(/{{\s*([\w.]+)\s*}}/g)].map((m) => m[
 const SAME_OK = new Set([
   'browserSettings.proxyPlaceholder', 'browserSettings.searchPlaceholder', // literal example URLs
   'activity.types.workflow',
+  'settings.usage.col.workflow',  // glossary term kept in English
+  'settings.usage.models.col.model', 'settings.usage.models.ms',  // glossary term kept in English, a unit
   'agent.workflow',
   'chat.page.title',
   'chat.embed.iframe',
@@ -67,6 +69,7 @@ const SAME_OK = new Set([
   'code.languages.typescript',
   'code.runtimeLabel',
   'code.traceback',
+  'codeView.exportBackendPostgresql', 'codeView.exportBackendSqlite',  // product names
   'codeView.tab',
   'codeView.version',
   'creds.anthropic',
@@ -129,7 +132,7 @@ const SAME_OK = new Set([
   'trace.output',
   'trace.tokensShort',
   'transfer.kinds.credential',
-  'aiReview.badge',  // "AI" in both languages (TASK-0188)
+  'aiReview.badge',  // "AI" in both languages
   'transfer.kinds.subgraph',
   'users.email',
   'validation.NODE_PROBLEM',

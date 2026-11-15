@@ -1,4 +1,4 @@
-"""TASK-0194 (REQ-0080, DEC-0074): moving attachment bytes between backends, and attachments in and out of a backup.
+"""moving attachment bytes between backends, and attachments in and out of a backup.
 
 Moves go all ways between db, fs and an external stand-in (and the real s3 backend against MinIO in CI), check size and
 SHA-256, resume after an interruption, and do nothing the second time."""

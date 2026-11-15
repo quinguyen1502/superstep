@@ -1,4 +1,4 @@
-"""`superstep mcp`: a local stdio MCP server that forwards tools to the studio (TASK-0171, DEC-0071).
+"""`superstep mcp`: a local stdio MCP server that forwards tools to the studio.
 
 Stdout is only the protocol while the server runs. The process speaks the newline-delimited JSON the MCP Python SDK
 1.x stdio client writes, and also Content-Length frames. It does not import `mcp` and it does not create a workflow token.

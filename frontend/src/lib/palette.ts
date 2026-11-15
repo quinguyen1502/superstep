@@ -1,4 +1,4 @@
-/** Command palette (TASK-0028, DEC-0031): pages contribute commands while mounted (the editor adds its actions, node
+/** Command palette: pages contribute commands while mounted (the editor adds its actions, node
  * types and nodes); the palette adds navigation and workflows. Small external store, no context provider needed. */
 import { useSyncExternalStore } from 'react'
 import type { LucideIcon } from 'lucide-react'

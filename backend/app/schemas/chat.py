@@ -1,11 +1,11 @@
-"""Web chat (TASK-0084): the workflow's Chat settings. Unset fields keep their value."""
+"""Web chat: the workflow's Chat settings. Unset fields keep their value."""
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
 class ChatSettingsIn(BaseModel):
     enabled: Optional[bool] = None
-    access: Optional[str | list[str]] = None  # legacy string or public modes (DEC-0077)
+    access: Optional[str | list[str]] = None  # legacy string or public modes
     slug: Optional[str] = None            # the page address: 3-64 of a-z, 0-9 and -, unique
     input_field: Optional[str] = None
     reply_field: Optional[str] = None
@@ -13,13 +13,13 @@ class ChatSettingsIn(BaseModel):
     max_turns: Optional[int] = None
     steps: Optional[str] = None           # none | labels | full: what a visitor sees (builders always see full)
     retention_days: Optional[int] = None
-    title: Optional[str] = None           # the public page (DEC-0067): its title, intro (Markdown) and up to 4 suggested messages
+    title: Optional[str] = None           # the public page: its title, intro (Markdown) and up to 4 suggested messages
     intro: Optional[str] = None
     suggestions: Optional[List[str]] = None
     daily_limit: Optional[int] = None     # visitor messages per day (UTC), 0 = no cap
     embed_origins: Optional[List[str]] = None  # sites that may embed the page (https://host[:port])
     logo: Optional[str] = None            # a data: URL (PNG, JPEG or WebP, 256 KB) sets the logo, "" removes it, its hash keeps it
-    attachments: Optional[dict] = None    # {enabled, kinds, max_files, max_mb, field} (REQ-0077, DEC-0072); off by default
+    attachments: Optional[dict] = None    # {enabled, kinds, max_files, max_mb, field}; off by default
 
 
 class ChatAppKeyIn(BaseModel):
@@ -28,7 +28,7 @@ class ChatAppKeyIn(BaseModel):
 
 
 class ChatRatingIn(BaseModel):
-    """A thumbs up or down on one finished answer (DEC-0070). `comment` is only kept with a thumbs down."""
+    """A thumbs up or down on one finished answer. `comment` is only kept with a thumbs down."""
     value: str
     comment: Optional[str] = None
 

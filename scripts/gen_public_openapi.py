@@ -1,5 +1,5 @@
 """Writes the public-only OpenAPI spec (the workflow-trigger API and the Chat API v1) and the AsyncAPI document of the
-chat socket v1 (docs/asyncapi/chat-v1.yaml, TASK-0216) from the backend app.
+chat socket v1 (docs/asyncapi/chat-v1.yaml, ) from the backend app.
 
   python scripts/gen_public_openapi.py           write the files below
   python scripts/gen_public_openapi.py --check   exit 1 when a committed file differs from the app

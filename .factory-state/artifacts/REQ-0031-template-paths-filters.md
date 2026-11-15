@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-18
 - Updated: 2026-10-18
-- Source: remaining-work report of 2026-10-18 (item 8: "Template: chỉ có `{{state.field}}`, chưa có filter hay đường dẫn lồng nhau") and the owner's reply, "Ngoại trừ 2, 3, 4. Làm các phần còn lại"
+- Source: remaining-work report of 2026-10-18 (item 8: "Template: only `{{state.field}}`, no filters or nested paths yet") and the owner's reply, "Except 2, 3, 4. Do the rest"
 
 ## Summary
 

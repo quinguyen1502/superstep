@@ -1,39 +1,41 @@
+import type { DatasetOperation } from './datasets'
 import type { BrowserDetail } from './browser-trace'
 import i18n, { eventErrors, type ApiErrorBody } from '@/lib/i18n'
 // Turns the run event stream into one span per node execution (LangSmith/Langfuse-style trace).
+export type DatasetTrace = { id: string; operation: DatasetOperation; count: number; outcome: 'completed' | 'simulated' | 'failed' }
 export type RunEvent = { type: string; node?: string; label?: string; node_type?: string; iteration?: number; duration_ms?: number
   input?: any; delta?: any; state?: any; errors?: string[]; error?: ApiErrorBody; ts?: number; tokens?: number; usage?: Usage & { total_tokens?: number }; run_id?: string; status?: string; reason?: string
   metrics?: RunMetrics | null; trace_id?: string | null; trace_url?: string | null; prompt?: string; response?: string
   code_output?: CodeOutput; agent?: AgentStep; superstep?: number
   wait?: { kind: 'child'; run_id: string }; tool?: string; workflow_id?: string
-  outcome?: string; model?: string; browser?: BrowserDetail; browser_private?: boolean }  // a run waiting for a workflow tool's child run (TASK-0134)
-/** What one step of an Agent node did (TASK-0116, DEC-0063): a model call (`model`) or one tool call (`tool`). */
+  outcome?: string; model?: string; browser?: BrowserDetail; dataset?: DatasetTrace; browser_private?: boolean }  // a run waiting for a workflow tool's child run
+/** What one step of an Agent node did: a model call (`model`) or one tool call (`tool`). */
 export type AgentStep = { kind: 'model' | 'tool' | 'handoff'; round: number; text?: string; limit_hit?: boolean; tool_calls?: { name: string; args: any }[]
-  tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected' | 'not_run'; to?: string; to_label?: string; reason?: string  // a hand-off (TASK-0182)
-  ms?: number; browser?: BrowserDetail
-  approval?: 'approved' | 'rejected'  // a tool that needed approval (TASK-0117)
-  child_run_id?: string; child_workflow_id?: string }  // a workflow tool's child run (TASK-0136)
+  tool?: string; args?: any; result?: string; status?: 'ok' | 'error' | 'refused' | 'rejected' | 'not_run'; to?: string; to_label?: string; reason?: string  // a hand-off
+  ms?: number; browser?: BrowserDetail; dataset?: { count: number | null; operation?: 'insert_row' | 'upsert_row' | 'aggregate_rows' }
+  approval?: 'approved' | 'rejected'  // a tool that needed approval
+  child_run_id?: string; child_workflow_id?: string }  // a workflow tool's child run
 /** An Agent node `ag` runs as `ag/__model`, `ag/__tool`, `ag/__tool/1`, `ag/__join`, `ag/__exit` and `ag/__handoff`. */
 export const agentOf = (node: string) => /^(.+)\/__(model|tool(?:\/\d+)?|join|exit|handoff)$/.exec(node)?.[1]
 /** State without the agents' conversations (`agent:<id>`), which the engine keeps for time travel only. */
 export const hideAgents = (state: any) => state && typeof state === 'object' && !Array.isArray(state) && !state._truncated
   ? Object.fromEntries(Object.entries(state).filter(([k]) => !k.startsWith('agent:'))) : state
-/** What a Tool node in Code mode printed, its traceback and where it ran (TASK-0053/0055). */
+/** What a Tool node in Code mode printed, its traceback and where it ran (/0055). */
 export type CodeOutput = { stdout?: string; traceback?: string; runtime?: string; duration_ms?: number }
-// TASK-0010: token usage on node_finished, per-run metrics on the final run_summary event (and in run history)
+// token usage on node_finished, per-run metrics on the final run_summary event (and in run history)
 export type Usage = { provider?: string; model?: string; tokens?: number; tokens_in?: number; tokens_out?: number; cost_usd?: number | null; estimated?: boolean }
 export type RunMetrics = { duration_ms: number; tokens: number; tokens_in: number; tokens_out: number; cost_usd: number | null; error_count: number }
 export type Span = { key: string; node: string; label: string; type: string; iter: number; status: 'running' | 'done' | 'error' | 'cancelled' | 'waiting'
   start: number; end?: number; duration?: number; input?: any; output?: any; error?: string; tokens?: number; cost?: number | null; usage?: Usage; events: RunEvent[]
-  /** the AI judge of this waiting step (TASK-0198): its tokens and cost are part of the step's */
+  /** the AI judge of this waiting step: its tokens and cost are part of the step's */
   review?: { outcome?: string; model?: string; usage: Usage }
-  live?: string; browser?: BrowserDetail; code?: CodeOutput; agent?: AgentStep; superstep?: number }  // TASK-0030: LLM text streamed so far (node_token deltas; not stored in run history)
+  live?: string; browser?: BrowserDetail; dataset?: DatasetTrace; code?: CodeOutput; agent?: AgentStep; superstep?: number }  // LLM text streamed so far (node_token deltas; not stored in run history)
 export type Trace = { runId?: string; spans: Span[]; status: 'idle' | 'running' | 'ok' | 'error' | 'cancelled' | 'timeout' | 'waiting' | 'expired' | 'paused'; start?: number; end?: number; total?: number
   tokens?: number; errors: string[]; final?: any; metrics?: RunMetrics; traceUrl?: string
   waiting?: { runId?: string; node?: string; label?: string; prompt?: string; child?: { runId: string; workflowId?: string; tool?: string } }
-  paused?: { runId?: string } }  // TASK-0036: one-step pause, not a human approval
+  paused?: { runId?: string } }  // one-step pause, not a human approval
 
-/** Tool calls of one Agent superstep share a start. A tool bar's width is that call's own `agent.ms` (TASK-0159). */
+/** Tool calls of one Agent superstep share a start. A tool bar's width is that call's own `agent.ms`. */
 function alignAgentWave(spans: Span[]) {
   for (const s of spans) {
     if (s.agent?.kind === 'tool' && typeof s.agent.ms === 'number') {
@@ -58,7 +60,7 @@ function alignAgentWave(spans: Span[]) {
   }
 }
 
-/** Adds an AI review's tokens and cost to a step's own (TASK-0198). */
+/** Adds an AI review's tokens and cost to a step's own. */
 function addReview(s: Span, u: Usage) {
   s.tokens = (s.tokens || 0) + (u.tokens ?? (u.tokens_in || 0) + (u.tokens_out || 0))
   s.cost = s.cost === undefined ? (u.cost_usd ?? null) : s.cost === null || u.cost_usd == null ? null : s.cost + u.cost_usd
@@ -84,13 +86,13 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
     } else if (e.type === 'node_finished' && n) {
       let s = open(n)
       if (!s) { const it = (counts[n] = (counts[n] || 0) + 1); s = { key: `${n}#${it}`, node: n, label: e.label || meta(n).label || n, type: e.node_type || meta(n).type || 'code', iter: it, status: 'running', start: t(e, i) - (e.duration_ms || 0) / 1000, events: [] }; spans.push(s) }
-      Object.assign(s, { status: 'done', end: t(e, i), duration: e.duration_ms, input: hideAgents(e.input), output: e.delta, browser: e.browser, agent: e.agent, superstep: e.superstep, tokens: e.tokens ?? e.usage?.tokens ?? e.usage?.total_tokens, cost: e.usage?.cost_usd, usage: e.usage, code: e.code_output })
-      if (s.review) addReview(s, s.review.usage)  // the AI judge's usage stays on the step after it resumes (TASK-0198)
+      Object.assign(s, { status: 'done', end: t(e, i), duration: e.duration_ms, input: hideAgents(e.input), output: e.delta, browser: e.browser, dataset: e.dataset, agent: e.agent, superstep: e.superstep, tokens: e.tokens ?? e.usage?.tokens ?? e.usage?.total_tokens, cost: e.usage?.cost_usd, usage: e.usage, code: e.code_output })
+      if (s.review) addReview(s, s.review.usage)  // the AI judge's usage stays on the step after it resumes
       s.events.push(e)
     } else if (e.type === 'error') {
       st.v = e.status === 'timeout' ? 'timeout' : 'error'; const msg = eventErrors(e).join('; ') || i18n.t('trace.error'); errors.push(msg)
       const s = (n ? open(n) ?? [...spans].reverse().find(x => x.node === n) : undefined) ?? (e.status === 'timeout' ? undefined : [...spans].reverse().find(x => x.status === 'running'))
-      if (s) { Object.assign(s, { status: 'error', end: t(e, i), duration: e.duration_ms ?? s.duration, error: msg, browser: e.browser, input: hideAgents(e.input) ?? s.input, code: e.code_output ?? s.code }); s.events.push(e) }
+      if (s) { Object.assign(s, { status: 'error', end: t(e, i), duration: e.duration_ms ?? s.duration, error: msg, browser: e.browser, dataset: e.dataset, input: hideAgents(e.input) ?? s.input, code: e.code_output ?? s.code }); s.events.push(e) }
     } else if (e.type === 'run_cancelled') { st.v = 'cancelled'
     } else if (e.type === 'run_expired') { st.v = 'expired'; waitingEv = undefined; spans.forEach(s => { if (s.status === 'waiting') s.status = 'cancelled' })
     } else if (e.type === 'run_finished') { if (st.v !== 'error') st.v = 'ok'; final = e.state
@@ -101,7 +103,7 @@ export function buildTrace(events: RunEvent[], meta: (id: string) => { label?: s
       if (s) { s.review = { outcome: e.outcome, model: e.model ?? e.usage.model, usage: e.usage }; s.events.push(e); addReview(s, e.usage) }
     } else if (e.type === 'run_paused') { st.v = 'paused'; waitingEv = undefined
     } else if (e.type === 'run_resumed' || e.type === 'run_recovered') { st.v = 'running'; waitingEv = undefined; resumed.clear(); if (n) resumed.add(n)
-      // a tool wave resumes once for every slot that waited (DEC-0069): each waiting span is reopened and keeps its row
+      // a tool wave resumes once for every slot that waited: each waiting span is reopened and keeps its row
       spans.forEach(x => { if (x.status === 'waiting') { x.status = 'running'; x.events.push(e); resumed.add(x.node) } }) }
   })
   // Speculative "started" rows (predicted next nodes) that never ran are dropped once the run ends.

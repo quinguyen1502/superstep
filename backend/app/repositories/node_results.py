@@ -8,7 +8,7 @@ from .runs import StaleLease
 
 
 class NodeResultRepository:
-    """Node-result ledger (TASK-0021). `put` is fenced: only the worker holding the run's current lease may write."""
+    """Node-result ledger. `put` is fenced: only the worker holding the run's current lease may write."""
     def __init__(self, db: Database): self.db = db
 
     def get(self, run_id: str, node_id: str, iteration: int) -> Optional[NodeResult]:

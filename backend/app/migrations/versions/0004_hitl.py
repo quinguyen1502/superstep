@@ -1,4 +1,4 @@
-"""Human-in-the-loop: runs.owner + runs.checkpoint (TASK-0006). Idempotent.
+"""Human-in-the-loop: runs.owner + runs.checkpoint. Idempotent.
 
 Revision ID: 0004_hitl
 Revises: 0003_run_metrics

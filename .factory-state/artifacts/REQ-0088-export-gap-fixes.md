@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0088
-- Status: Owner-authorised 2026-11-07 ("Sửa đi" on the code-export gap audit at develop a8471f0b); remaining design gaps proposed, not accepted
+- Status: Owner-authorised 2026-11-07 ("Fix it" on the code-export gap audit at develop a8471f0b); remaining design gaps proposed, not accepted
 - Owner: Thái Quí Nguyễn
 - Created/Updated: 2026-11-07
 - Related: DEC-0087, PLAN-0008, TASK-0263..0266; REQ-0043/0047 (exports); browser export (REQ-0086, TASK-0251/0252/0261/0262) excluded

@@ -117,4 +117,38 @@ describe('Superstep', () => {
     expect(Array.from({ length: 5 }, () => d.next().value)).toEqual([500, 1000, 2000, 2000, 2000])
     expect(() => pollDelays(0, 1, 1).next()).toThrow(RangeError)
   })
+
+  it('schedule methods call the public paths', async () => {
+    const schedule = { id: 's1', name: 'Morning', cron: '0 9 * * MON-FRI', timezone: 'Asia/Ho_Chi_Minh', input: { message: 'hi' },
+      enabled: true, next_runs: [1], last_run: null, last_run_id: null, note: null, created: 1 }
+    const { calls, client } = server(ok(schedule, 201), ok([schedule]), ok({ ...schedule, enabled: false }), ok({ ok: true }), ok({ next_runs: [9, 10] }))
+    const created = await client.createSchedule('0 9 * * MON-FRI', { name: 'Morning', timezone: 'Asia/Ho_Chi_Minh', input: { message: 'hi' } })
+    expect(created.id).toBe('s1')
+    expect(calls[0].init.method).toBe('POST')
+    expect(calls[0].url).toBe(`${BASE}/api/hooks/workflows/${WID}/schedules`)
+    expect(JSON.parse(calls[0].init.body as string)).toEqual({ name: 'Morning', cron: '0 9 * * MON-FRI', timezone: 'Asia/Ho_Chi_Minh', input: { message: 'hi' }, enabled: true })
+    expect((await client.listSchedules())[0].id).toBe('s1')
+    expect(calls[1].init.method).toBe('GET')
+    expect((await client.updateSchedule('s 1', { enabled: false })).enabled).toBe(false)
+    expect(calls[2].url.endsWith('/schedules/s%201')).toBe(true)
+    expect(calls[2].init.method).toBe('PATCH')
+    expect(JSON.parse(calls[2].init.body as string)).toEqual({ enabled: false })
+    expect(await client.deleteSchedule('s1')).toEqual({ ok: true })
+    expect(calls[3].init.method).toBe('DELETE')
+    expect(await client.previewSchedule('@daily')).toEqual([9, 10])
+    expect(calls[4].url.endsWith('/schedules/preview')).toBe(true)
+    expect(JSON.parse(calls[4].init.body as string)).toEqual({ cron: '@daily', timezone: 'UTC' })
+    expect(() => client.updateSchedule('s1', { colour: 'red' } as never)).toThrow(TypeError)
+  })
+
+  it.each([
+    ['SCHEDULE_CRON_INVALID', 400, InvalidRequestError],
+    ['SCHEDULE_LIMIT', 400, InvalidRequestError],
+    ['SCHEDULE_NOT_FOUND', 404, NotFoundError],
+  ] as const)('maps %s to a typed error', async (code, status, Cls) => {
+    const { client } = server(fail(code, status))
+    const err = await client.deleteSchedule('missing').catch((e) => e)
+    expect(err.constructor).toBe(Cls)
+    expect(err.code).toBe(code)
+  })
 })

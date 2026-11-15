@@ -1,4 +1,4 @@
-"""TASK-0065: waiting steps of runs paused at a Human node and who may answer them (the Approvals inbox, DEC-0043)."""
+"""waiting steps of runs paused at a Human node and who may answer them (the Approvals inbox, )."""
 from alembic import op
 import sqlalchemy as sa
 

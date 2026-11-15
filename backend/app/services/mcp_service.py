@@ -1,4 +1,4 @@
-"""MCP server registry (TASK-0013): CRUD with encrypted secrets, tool discovery, and the run-time `caller(uid)` port.
+"""MCP server registry: CRUD with encrypted secrets, tool discovery, and the run-time `caller(uid)` port.
 
 Scopes follow approval channels: `user` servers belong to their owner; `org` servers are managed by admins and usable by
 everyone. stdio servers start a process on the API host, so they need STUDIO_MCP_STDIO=1 and an admin. HTTP servers must
@@ -8,7 +8,7 @@ import json, re, time, uuid
 from typing import Any, Callable, Optional
 from ..core import config, crypto
 from ..core.errors import AppError
-from ..engine import mcp_client
+from ..engine import activity, mcp_client
 from ..engine.browser_export import public_policy, with_env
 from ..models import McpServer
 from ..repositories import McpServerRepository
@@ -42,6 +42,8 @@ class McpService:
         admin = self.is_admin(uid)
         return {"servers": [self.public(r, uid, admin) for r in self.repo.visible(uid)], "is_admin": admin,
                 "stdio_enabled": config.mcp_stdio_enabled(), "org_usable": self.org_allowed(uid),
+                "browser_enabled": config.browser_enabled(),
+                "browser_runtime_enabled": config.browser_runtime_enabled(),
                 "managed_adapters": [{"id": adapter.id, "settings_schema": adapter.settings_schema, "secret_fields": list(adapter.secret_fields)}
                                      for adapter in self.managed.adapters.values()
                                      if adapter.id not in {"browser","web"} or config.browser_enabled()]}
@@ -180,7 +182,11 @@ class McpService:
 
     def call(self, uid: str, sid: str, tool: str, args: dict, org_allowed: bool = True, operation_key=None, dry_run=False) -> Any:
         r = self._visible(sid, uid)
-        if r.scope == "org" and not org_allowed: raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")  # policy, TASK-0029
+        with activity.timed("mcp", "MCP_TOOL_FAILED", transport=r.transport):  # by transport only, never the server
+            return self._call(r, uid, sid, tool, args, org_allowed, operation_key, dry_run)
+
+    def _call(self, r: McpServer, uid: str, sid: str, tool: str, args: dict, org_allowed: bool, operation_key, dry_run) -> Any:
+        if r.scope == "org" and not org_allowed: raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")  # policy,
         if r.transport == "managed":
             if r.scope == "org" and not self.org_allowed(uid): raise AppError("ORG_RESOURCE_NOT_ALLOWED", kind="MCP server")
             definitions = {item["name"]: item for item in self.managed.tools(r)}
@@ -202,7 +208,7 @@ class McpService:
         return lambda sid, tool, args, key, dry: self.call(uid, sid, tool, args, org_allowed, key, dry)
 
     def check_export(self, graphs):
-        """Mark managed references on the temporary export graphs (TASK-0254, TASK-0251).
+        """Mark managed references on the temporary export graphs.
 
         Browser connections receive a public policy and an alias. Other managed adapters are
         named so the export can call them from MANAGED_<n> environment JSON. An invalid browser
@@ -225,7 +231,7 @@ class McpService:
                         reference["_browser_export"] = policy
                     else:
                         # A real adapter id is callable from MANAGED_<n> env JSON. An invalid browser stays the
-                        # placeholder (True), and the string "browser" is never stored as an adapter (REQ-0090).
+                        # placeholder (True), and the string "browser" is never stored as an adapter.
                         adapter = row.adapter if isinstance(row.adapter, str) and row.adapter and row.adapter != "browser" else True
                         reference["_managed_export"] = adapter
                         managed = True

@@ -50,7 +50,7 @@ def test_python_project_graph_runs_without_a_checkpointer(tmp_path, monkeypatch)
 
 
 def test_python_project_of_the_support_agent_template_runs(tmp_path, monkeypatch):
-    """TASK-0119: the Agent node template as a project: the module imports and its graph answers with the order tool."""
+    """the Agent node template as a project: the module imports and its graph answers with the order tool."""
     from app.engine.templates import BUILTINS
     monkeypatch.delenv("LLM_PROVIDER", raising=False)
     b = next(x for x in BUILTINS if x["id"] == "builtin-support-agent")

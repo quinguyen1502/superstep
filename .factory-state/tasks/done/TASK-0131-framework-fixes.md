@@ -15,8 +15,7 @@
 
 ## Objective
 
-Fix the four small framework issues found in TASK-0129 and TASK-0130 (owner request in chat on 2026-10-26: "Bạn sửa
-luôn đi").
+Fix the four small framework issues found in TASK-0129 and TASK-0130 (owner request in chat on 2026-10-26: "Fix them right away").
 
 ## Changes
 

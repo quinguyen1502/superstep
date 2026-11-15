@@ -1,4 +1,4 @@
-"""TASK-0047: WhatsApp (buttons, signed webhook, GET verification, templates), and the link channels e-mail and Teams
+"""WhatsApp (buttons, signed webhook, GET verification, templates), and the link channels e-mail and Teams
 (decided by the signed-in studio user on /approve)."""
 import hashlib, hmac, json, re, time, uuid
 import httpx, pytest

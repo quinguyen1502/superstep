@@ -1,4 +1,4 @@
-"""Chat attachment bytes in and out of a backup archive (TASK-0194, REQ-0080, DEC-0074).
+"""Chat attachment bytes in and out of a backup archive.
 
 `db` files travel inside the database dump, so only external backends export anything: a tar stream with one
 `attachments/<key>` member per file a row of those backends points at (`fs` always; `s3` when asked, since a bucket is
@@ -42,6 +42,6 @@ class AttachmentArchive:
                 handle = tar.extractfile(info)
                 if handle is None: continue
                 store = self.stores.get(wanted[key])
-                store.put(key, handle, "application/octet-stream"); n += 1  # streamed (TASK-0200)
-                self.repo.relocate(wanted[key], key, store.location)  # this host's folder or bucket (TASK-0203)
+                store.put(key, handle, "application/octet-stream"); n += 1  # streamed
+                self.repo.relocate(wanted[key], key, store.location)  # this host's folder or bucket
         return n

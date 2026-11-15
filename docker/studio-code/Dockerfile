@@ -1,4 +1,4 @@
-# Image for Tool nodes in Code mode (TASK-0053, DEC-0041): the standard library plus a few pinned packages.
+# Image for Tool nodes in Code mode: the standard library plus a few pinned packages.
 # The server passes the runner on the command line (python -I -c ...), so nothing of the studio is copied in.
 # Build: docker build -t studio-code:1 docker/studio-code   (STUDIO_CODE_IMAGE picks another tag)
 FROM python:3.12-slim

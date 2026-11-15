@@ -1,4 +1,4 @@
-"""TASK-0084: web chat (REQ-0048, DEC-0052): chat sessions and turns, and the web chat trigger's settings."""
+"""web chat: chat sessions and turns, and the web chat trigger's settings."""
 from alembic import op
 import sqlalchemy as sa
 

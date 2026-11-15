@@ -1,4 +1,4 @@
-"""For each nodes (TASK-0049, DEC-0038): run a branch once per item of a list field, one item after another.
+"""For each nodes: run a branch once per item of a list field, one item after another.
 
 Edges: the `each` edge leads into the loop body, whose last node connects back to the For each node; the `done` edge
 leaves the loop. Every visit takes the next item, writes it (and its 0-based index) to state and follows `each`; after

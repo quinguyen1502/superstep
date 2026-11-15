@@ -8,9 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-25
 - Updated: 2026-10-25
-- Source: owner request in chat, 2026-10-25 ("Node agent sẽ cho LLM tự chọn và gọi các tool bạn cho phép: tool từ MCP
-  server, HTTP, tool có sẵn và tìm trong knowledge base. Nó lặp cho tới khi ra câu trả lời, có giới hạn số vòng, và có
-  thể bắt phải duyệt trước khi gọi một tool nào đó."). It follows the comparison with Langflow, Flowise, Dify and n8n
+- Source: owner request in chat, 2026-10-25 ("The agent node lets the LLM choose and call the tools you allow: tools from an MCP server, HTTP, built-in tools and knowledge base search. It loops until it has an answer, with a cap on rounds, and can require an approval before it calls a given tool."). It follows the comparison with Langflow, Flowise, Dify and n8n
   (REQ-0069): those builders have an agent that picks its own tools; Superstep can call an MCP tool only from a fixed
   MCP node (REQ-0011).
 

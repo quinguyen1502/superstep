@@ -1,0 +1,150 @@
+"""Bind Dataset execution to the authenticated actor and effective saved workflow."""
+from pydantic import ValidationError
+
+from ..core.dataset_filters import filter_rules
+from ..core.dataset_types import READ_ONLY_KINDS, filter_operators
+from ..core.errors import AppError
+from ..engine import dataset_nodes
+from ..repositories.dataset_rows import WorkflowWrite
+from ..schemas.dataset import DatasetAggregateQuery, DatasetRowIn, DatasetGroupedRowQuery, DatasetRowUpsert
+from .dataset_access import DatasetAccessService, can_read
+from .dataset_rows import DatasetRowService, _active_columns, _column
+
+
+class DatasetRuntimeService:
+    def __init__(self, access: DatasetAccessService, rows: DatasetRowService):
+        self.access, self.rows = access, rows
+
+    def authorize_changes(self, actor: str, before: dict | None, workflow: dict) -> None:
+        previous = dataset_nodes.bindings(before)
+        for node_id, binding in dataset_nodes.bindings(workflow).items():
+            if binding.get("dataset_id") not in (None, "") and binding != previous.get(node_id):
+                self._authoring_access(actor, binding)
+
+    def _authoring_access(self, actor: str, binding: dict):
+        did, operation = binding.get("dataset_id"), binding.get("operation")
+        if not isinstance(did, str) or not 0 < len(did) <= 100:
+            raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+        is_agent = "filter_ops" in binding
+        agent_writes = dataset_nodes.agent_writes(binding) if is_agent else []
+        write = operation in ("insert_row", "upsert_row", "delete_row") or bool(agent_writes)
+        definition = self.access.datasets.editable_definition(actor, did, None) if write else self.access.datasets.definition(actor, did)
+        # A per-call Agent write binding carries its values; the saved tool binding carries its limits.
+        valid = dataset_nodes.valid_agent(binding) if is_agent and operation == "find_rows" else dataset_nodes.valid(binding)
+        if not valid:
+            return  # the normal graph validator reports incomplete draft configuration
+        columns = _active_columns(definition)
+        args = binding.get("arguments") or {}
+        references = [
+            *binding["fields"], *(args.get("values") or {}),
+            *(rule["field"] for _, rule in filter_rules(args)), *(rule["field"] for rule in args.get("sorts", [])),
+        ]
+        if operation == "delete_row" and args.get("key"):
+            references.append(args["key"])
+        if agent_writes:
+            references.extend(binding.get("write_fields") or [])
+        for field in references:
+            _column(columns, field)
+        for field in [*(args.get("values") or {}), *(binding.get("write_fields") or [])]:
+            if _column(columns, field).kind in READ_ONLY_KINDS:
+                raise AppError("DATASET_COLUMN_READ_ONLY", field=field, details={"field": field})
+        if is_agent:
+            for field, operators in binding["filter_ops"].items():
+                if set(operators) - set(filter_operators(_column(columns, field).kind)):
+                    raise AppError("DATASET_FILTER_INVALID", field=field)
+        if operation == "upsert_row" and not _column(columns, args["key"]).unique:
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
+        if "upsert_row" in agent_writes and not _column(columns, binding["key"]).unique:
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=binding["key"])
+        if operation == "delete_row" and "key" in args and not _column(columns, args["key"]).unique:
+            raise AppError("DATASET_UPSERT_KEY_INVALID", field=args["key"])
+
+    def execute(self, *, actor: str, workflow_id: str | None, root_workflow_id: str | None, run_id: str,
+                fence: int | None, public: bool, unsaved: bool, dry_run: bool, operation_id: str | None,
+                binding: dict, arguments: dict, demo: bool = False) -> dict:
+        if not dataset_nodes.valid(binding):
+            raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+        if public and unsaved:  # a public entry runs only the saved version under its grant
+            raise AppError("DATASET_GRANT_DENIED")
+        did, operation, fields = binding["dataset_id"], binding["operation"], binding["fields"]
+        deleting = operation == "delete_row"
+        dataset, workflow, grant = self.access.workflow_dataset(
+            actor, workflow_id, did, "read" if deleting else dataset_nodes.ACCESS[operation],
+            public=public, deleting=deleting, demo=demo,
+        )
+        if unsaved:
+            self._authoring_access(actor, binding)
+        owner = workflow.owner
+        if owner is None:
+            raise AppError("DATASET_GRANT_DENIED")
+
+        try:
+            if operation == "aggregate_rows":
+                query = DatasetAggregateQuery.model_validate(arguments)
+            elif operation == "find_rows":
+                query = DatasetGroupedRowQuery.model_validate({**arguments, "fields": fields})
+            elif operation in {"insert_row", "upsert_row"}:
+                schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
+                request = schema.model_validate(arguments)
+            elif deleting:
+                target = dataset_nodes.delete_target(arguments)
+        except ValidationError as exc:
+            for error in exc.errors():
+                location = error["loc"]
+                if operation in {"find_rows", "aggregate_rows"} and len(location) >= 2 and location[0] == "filters":
+                    index = location[1]
+                    field = arguments["filters"][index]["field"]
+                    raise AppError("DATASET_FILTER_INVALID", field=field,
+                                   details={"position": index + 1, "field": field}) from exc
+                if operation in {"find_rows", "aggregate_rows"} and location and location[0] == "filter_tree":
+                    indices = [location[i + 1] + 1 for i, part in enumerate(location[:-1])
+                               if part == "children" and isinstance(location[i + 1], int)]
+                    if indices:
+                        rule = dict(filter_rules(arguments)).get(tuple(indices))
+                        if rule:
+                            group = ".".join(map(str, indices[:-1])) or "root"
+                            raise AppError("DATASET_FILTER_INVALID", field=rule["field"],
+                                           details={"position": indices[-1], "field": rule["field"], "group": group}) from exc
+                    raise AppError("DATASET_FILTER_INVALID", field=error["msg"]) from exc
+            raise AppError("DATASET_NODE_ARGUMENTS_INVALID") from exc
+
+        if operation == "find_rows":
+            return self.rows.query(owner, dataset.id, **query.model_dump())
+        if operation == "aggregate_rows":
+            return self.rows.aggregate(owner, dataset.id, **query.model_dump())
+        if operation == "get_row":
+            row_id = arguments.get("row_id")
+            if not isinstance(row_id, str) or not 0 < len(row_id) <= 100:
+                raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+            return self.rows.get(owner, dataset.id, row_id, fields=fields)
+        if deleting:
+            row_id, key, value = target
+            simulate = dry_run or unsaved
+            if not simulate and not operation_id:
+                raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+            receipt = None if simulate else WorkflowWrite(
+                run_id=run_id, workflow_id=workflow.id, operation_id=operation_id,
+                arguments={"operation": operation, "fields": fields, "row_id": row_id, "key": key, "value": value},
+                fence=fence, run_workflow_id=root_workflow_id, actor_id=actor,
+            )
+            return self.rows.delete_granted(
+                owner, dataset.id, row_id=row_id, key=key, value=value, fields=fields,
+                workflow=receipt, dry_run=simulate,
+            )
+        simulate = dry_run or unsaved
+        if not simulate and not operation_id:
+            raise AppError("DATASET_NODE_ARGUMENTS_INVALID")
+        args = request.model_dump()
+        receipt = None if simulate else WorkflowWrite(
+            run_id=run_id, workflow_id=workflow.id, operation_id=operation_id,
+            arguments={"operation": operation, "fields": fields, **args}, fence=fence,
+            run_workflow_id=root_workflow_id, actor_id=actor,
+        )
+        readable, projection = can_read(grant.permission), fields
+        if "filter_ops" in binding:
+            # The model sees row values only through Find. An Agent write outcome carries identifiers
+            # unless the tool can also Find and the grant can read.
+            readable = readable and "find_rows" in (binding.get("operations") or [])
+            projection = fields if readable else []
+        return self.rows.save(owner, dataset.id, **args, fields=projection, workflow=receipt, dry_run=simulate,
+                              readable=readable)

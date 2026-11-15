@@ -1,6 +1,6 @@
 # Typed browser recipes as workflows
 
-TASK-0248 represents a recipe as an ordinary saved workflow containing a bounded
+A browser recipe is an ordinary saved workflow containing a bounded
 linear chain of the existing MCP browser actions. It uses existing workflow
 versions, workflow-as-tool child runs and MCP exposure. There is no separate
 recipe store, canvas node, orchestration language or hidden model loop. The
@@ -9,8 +9,8 @@ experimental browser flags and connection/profile/proxy policy still apply.
 The [lookup_shipment example](../examples/browser/lookup_shipment.json) accepts
 `url` and `order_id` per call and returns only the declared `shipment` extraction.
 Its literal target labels are an example layout contract; adapt them to the
-reviewed site before use. It is JSON/API metadata until TASK-0249/0250 supplies
-the connection/recipe configuration UI. Executable exports remain TASK-0251/0252.
+reviewed site before use. The recipe is configured through the connection/recipe UI
+([settings](browser-settings.md), [editor](browser-editor.md)); executable exports are documented separately.
 
 ## Definition and invocation
 

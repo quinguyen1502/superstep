@@ -16,13 +16,13 @@ LANGGRAPH_JS = "^1.0.0"
 # The guard that runs the TypeScript example on import (Deno sets import.meta.main; Node does not, so it would run
 # while the Agent Server loads the graph). In the project the example runs only through `npm run example`.
 TS_MAIN = "if ((import.meta as { main?: boolean }).main !== false) await main();"
-TS_MAIN_PROJECT = 'if (process.env.RUN_EXAMPLE === "1") await main();'
+TS_MAIN_PROJECT = 'if (env("RUN_EXAMPLE") === "1") await main();'
 NPM_SPEC = re.compile(r"""(["'])npm:((?:@[\w.-]+/)?[\w.-]+)(?:@([^"']+))?\1""")
 PY_ENV = re.compile(r"""os\.(?:environ\.get|getenv)\(\s*["'](\w+)["']|os\.environ\[\s*["'](\w+)["']\s*\]""")
 TS_ENV = re.compile(r"""\benv\(\s*["'](\w+)["']\s*\)|process\.env\.(\w+)""")
 BROWSER_ENV = re.compile(r"SUPERSTEP_BROWSER_[A-Z0-9_]+")
 # Numbered slots are built by concatenation, so the literal scanner cannot see them. The export lists the
-# assigned names in a comment; this picks those names up for .env.example (REQ-0090).
+# assigned names in a comment; this picks those names up for .env.example.
 EXPORT_ENV = re.compile(
     r"\b((?:LLM_CRED|MANAGED)_\d+|APPROVAL_[A-Z0-9]+)_(?:PROVIDER|API_KEY|BASE_URL|SETTINGS|SECRETS|WEBHOOK_URL|BOT_TOKEN|CHAT_ID)\b")
 # Keys a real model needs when LLM_PROVIDER is set, and LangSmith tracing (read by LangGraph itself).
@@ -111,6 +111,11 @@ def _python(code: str, title: str, graph_id: str) -> Dict[str, str]:
     body = code.rstrip("\n") + "\n\n\n# The graph the LangGraph Agent Server (langgraph dev, LangSmith Studio) loads, see langgraph.json.\n" \
         "# The server adds its own checkpointer, so none is given here.\ngraph = build_graph()\n"
     reqs = _py_requirements(code)
+    if "def setup_datasets(" in code:
+        versions = {"pydantic": "pydantic>=2", "sqlalchemy": "sqlalchemy>=2"}
+        reqs = [versions.get(req, req) for req in reqs] + ["psycopg[binary]>=3.2"]
+        body = body.replace("\ngraph = build_graph()\n",
+                            '\nif __name__ != "__main__":\n    setup_datasets(create=False)\ngraph = build_graph()\n', 1)
     deps = ",\n".join(f'    "{r}"' for r in reqs)
     pyproject = (f'[project]\nname = "{graph_id.replace("_", "-")}"\nversion = "0.1.0"\n'
                  f'description = "{title} (exported from Superstep)"\nrequires-python = ">=3.10"\n'
@@ -133,16 +138,20 @@ def _typescript(code: str, title: str, graph_id: str) -> Dict[str, str]:
     body = NPM_SPEC.sub(plain, code)
     body = body.replace(TS_MAIN, TS_MAIN_PROJECT).rstrip("\n") + \
         "\n\n// The graph the LangGraph Agent Server (langgraph dev, LangSmith Studio) loads, see langgraph.json.\n" \
-        "// The server adds its own checkpointer, so none is given here.\nexport const graph = buildGraph();\n"
+        "// The server adds its own checkpointer, so none is given here.\n"
+    standalone = "function setupDatasets(" in body
+    if standalone:
+        body += "await setupDatasets(false);\n"
+    body += "export const graph = buildGraph();\n"
     pkg = {"name": graph_id.replace("_", "-"), "version": "0.1.0", "private": True, "type": "module",
            "description": f"{title} (exported from Superstep)",
-           "scripts": {"dev": "langgraphjs dev", "example": f"RUN_EXAMPLE=1 tsx {file}"},
+           "scripts": {"dev": "langgraphjs dev", "example": ("NODE_OPTIONS=--experimental-sqlite " if standalone else "") + f"RUN_EXAMPLE=1 tsx {file}"},
            "dependencies": dict(sorted(deps.items())),
            "devDependencies": {"@langchain/langgraph-cli": "^1.0.0", "tsx": "^4.19.0", "typescript": "^5.6.0"},
-           "engines": {"node": ">=20"}}
+           "engines": {"node": ">=22.13" if standalone else ">=20"}}
     tsconfig = {"compilerOptions": {"target": "ES2022", "module": "NodeNext", "moduleResolution": "NodeNext",
                                     "strict": True, "skipLibCheck": True, "allowImportingTsExtensions": True, "noEmit": True}}
-    config = {"$schema": "https://langgra.ph/schema.json", "node_version": "20", "dependencies": ["."],
+    config = {"$schema": "https://langgra.ph/schema.json", "node_version": "22" if standalone else "20", "dependencies": ["."],
               "graphs": {graph_id: f"./{file}:graph"}, "env": ".env"}
     return {file: body, "langgraph.json": json.dumps(config, indent=2) + "\n", "package.json": json.dumps(pkg, indent=2) + "\n",
             "tsconfig.json": json.dumps(tsconfig, indent=2) + "\n",
@@ -156,12 +165,56 @@ def project_files(language: str, code: str, title: str) -> Dict[str, str]:
     return (_python if language == "python" else _typescript)(code, title, graph_id)
 
 
-def to_project(language: str, code: str, title: str) -> bytes:
+def to_project(language: str, code: str, title: str, datasets: dict | None = None,
+               backends: dict[str, str] | None = None, snapshots: dict | None = None) -> bytes:
     """The project as a zip with one top-level folder; fixed timestamps keep the bytes reproducible."""
     root = slug(title, "workflow").replace("_", "-")
     buf = io.BytesIO()
+    files = project_files(language, code, title)
+    if datasets:
+        files["datasets.json"] = json.dumps(datasets, ensure_ascii=False, indent=2) + "\n"
+        settings = ["BACKEND", "API_URL", "API_TOKEN", "ID", "SQLITE_PATH", "POSTGRES_DSN"]
+        chosen = backends or {}
+        files[".env.example"] += "\n# Dataset bindings (see datasets.json)\n" + "".join(
+            f"{binding['name']}_{setting}={chosen.get(binding['name'], '') if setting == 'BACKEND' else ''}\n"
+            for binding in datasets["bindings"] for setting in settings
+        )
+        files["README.md"] += (
+            "\n## Dataset bindings\n\n"
+            "See `datasets.json` for the columns and operations required by each binding. For a connected binding, set `BACKEND` to "
+            "`superstep`, `API_URL` to the server base URL, `ID` to the destination dataset, and `API_TOKEN` "
+            "to a scoped Dataset token with the required permissions. Keep all deployment values in the environment. "
+            "The generated graph reads each backend from the environment, so the same export can switch backends without being regenerated. "
+            "Dataset writes affect the configured destination. Use a separate dataset when running examples.\n"
+        )
+        if snapshots:
+            files["dataset-snapshots.json"] = json.dumps(snapshots, ensure_ascii=False, indent=2) + "\n"
+            files["README.md"] += (
+                "\n`dataset-snapshots.json` contains row data for the bindings selected at export. "
+                "`--setup-datasets` imports a snapshot row only when its id is not already stored. "
+                "Existing rows are left unchanged, and a snapshot whose schema does not match the binding is rejected.\n"
+            )
+        if language == "python":
+            files["README.md"] += (
+                "\nFor local SQLite, choose `BACKEND=sqlite` and set `SQLITE_PATH` to the database file. "
+                "For PostgreSQL, choose `BACKEND=postgresql` and set `POSTGRES_DSN` to the database URL. "
+                "Set `ID` to a stable dataset name within that database. Run `python agent.py --setup-datasets` "
+                "with those variables exported before running the workflow. Repeating setup keeps existing rows. "
+                "Each binding can use a different backend.\n"
+            )
+        else:
+            files["README.md"] += (
+                "\nFor local SQLite, choose `BACKEND=sqlite` and set `SQLITE_PATH` to the database file. "
+                "For PostgreSQL, choose `BACKEND=postgresql` and set `POSTGRES_DSN` to the database URL. "
+                "Set `ID` to a stable dataset name within that database. SQLite uses the built-in `node:sqlite` module, "
+                "which needs Node.js 22.13 or newer (Node.js 22.5 through 22.12 also need `--experimental-sqlite`). "
+                "PostgreSQL uses the `pg` package. Deno 2.2 or newer can run the same file. "
+                "Run `deno run --allow-env --allow-read --allow-write --allow-net --allow-sys=homedir agent.ts --setup-datasets` "
+                "or `npx tsx agent.ts --setup-datasets` with those variables exported before running the workflow. "
+                "Repeating setup keeps existing rows. Each binding can use a different backend.\n"
+            )
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        for path, text in sorted(project_files(language, code, title).items()):
+        for path, text in sorted(files.items()):
             info = zipfile.ZipInfo(f"{root}/{path}", date_time=(1980, 1, 1, 0, 0, 0))
             info.external_attr = 0o644 << 16
             z.writestr(info, text, zipfile.ZIP_DEFLATED)

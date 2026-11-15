@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { login, SIMPLE } from './helpers'
-// TASK-0024: undo / redo in the editor.
+// undo / redo in the editor.
 
 test('delete → undo → redo, coalesced typing, one step per drag, unsaved marker', async ({ page }) => {
   const H = await login(page)

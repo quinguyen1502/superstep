@@ -43,6 +43,7 @@ Leaving the key blank in the edit form keeps the stored key.
 | `PROVIDER_UNREACHABLE` | The base URL does not answer. |
 | `PROVIDER_AUTH_FAILED` | The key was refused. Returned as HTTP 400, so the UI does not treat it as an expired session. |
 | `PROVIDER_BAD_RESPONSE` | The server answered with something unexpected. |
+| `PROVIDER_RATE_LIMITED` | The provider answered HTTP 429 (too many requests or quota). A model fallback, when set, takes over. |
 | `MODEL_NOT_FOUND` | The model is not on the server. |
 
 During a run, a provider failure becomes the node's `error` event.

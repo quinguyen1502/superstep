@@ -20,7 +20,7 @@ classifiers = [
 [project.optional-dependencies]
 # `pip install superstep[cli]`. `run` needs websockets, pinned to the newest release whose
 # Requires-Python still allows 3.9 (15.0.1 is `>=3.9`; 16.0 is `>=3.10`). The MCP SDK is not a
-# dependency: `superstep mcp` speaks stdio itself (DEC-0071). The console script ships with the base package.
+# dependency: `superstep mcp` speaks stdio itself. The console script ships with the base package.
 cli = ["websockets==15.0.1"]
 chat = ["websockets==15.0.1"]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
@@ -29,7 +29,7 @@ test = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 [project.scripts]
 superstep = "superstep.cli:main"
-sstep = "superstep.cli:main"  # the short alias (TASK-0185)
+sstep = "superstep.cli:main"  # the short alias
 
 [project.urls]
 Homepage = "https://github.com/quinguyen1502/superstep"

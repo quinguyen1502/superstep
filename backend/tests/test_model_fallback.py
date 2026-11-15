@@ -54,7 +54,7 @@ def test_fallback_publishes_only_successful_answer_and_records_attempts(monkeypa
     assert [a["status"] for a in attempts] == ["error", "ok"] and attempts[0]["code"] == "PROVIDER_UNREACHABLE"
 
 
-@pytest.mark.parametrize("code,expected", [("PROVIDER_AUTH_FAILED", 1), ("PROVIDER_BAD_RESPONSE", 2), ("MODEL_NOT_FOUND", 2)])
+@pytest.mark.parametrize("code,expected", [("PROVIDER_AUTH_FAILED", 1), ("PROVIDER_BAD_RESPONSE", 2), ("PROVIDER_RATE_LIMITED", 2), ("MODEL_NOT_FOUND", 2)])
 def test_failure_policy_is_bounded_and_auth_is_not_hidden(monkeypatch, code, expected):
     calls = []
     def invoke(prompt, model, cred, report, on_token, **kwargs):
@@ -115,7 +115,7 @@ def test_non_chat_credential_is_rejected_and_templates_clear_alternate_reference
         model_policy.run(DATA, CREDS["primary"], resolve, lambda *_: "must not call", None, lambda _: None)
     clean = sanitize(graph())
     assert clean["nodes"][1]["data"]["fallback"] == {"credential_id": "", "model": "second"}
-    for export in (to_python, to_typescript):  # TASK-0264: exported with the fallback model name, never a credential id
+    for export in (to_python, to_typescript):  #: exported with the fallback model name, never a credential id
         code = export(graph(), "example").code
         assert '"second"' in code and "backup" not in code and "primary" not in code.replace("primary model", "").replace("primary mock", "")
 

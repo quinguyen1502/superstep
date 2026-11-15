@@ -86,7 +86,7 @@ Replace the managed-connection placeholder with real adapter calls whose setting
 - 2026-11-07: A named adapter exports `managed_operation` from `MANAGED_<n>` JSON. Python tests cover Telegram idempotency, conflict and an unknown outcome that is not retried. A missing adapter stays the placeholder. Deno was not run.
 - 2026-11-07: PR #336 CI is green at `b6c9e52b`, including factory verify. Status stays doing until review and QA. Not merged.
 - 2026-11-07: Review REV-0261 approved for QA. QA QA-0261 conditionally passed. Advisory only. Status stays doing. Not merged.
-- 2026-11-07: Owner approved (duyệt). Moved to done with Review REV-0261 and QA QA-0261. Not merged.
+- 2026-11-07: Owner approved. Moved to done with Review REV-0261 and QA QA-0261. Not merged.
 
 ## Handoff Notes
 

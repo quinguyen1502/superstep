@@ -15,7 +15,7 @@ class TelegramChannel(ApprovalChannel):
     patterns = {"bot_token": r"\d{3,15}:[\w-]{20,64}", "webhook_secret": r"[A-Za-z0-9_-]{16,256}"}
     identity_pattern = r"\d{1,20}"
     hint_field = "bot_token"
-    chat = True  # messages arrive on the same webhook as button presses (TASK-0074)
+    chat = True  # messages arrive on the same webhook as button presses
     place_pattern = r"-?\d{1,20}"  # chat id; groups are negative
 
     def prepare(self, values):
@@ -62,7 +62,7 @@ class TelegramChannel(ApprovalChannel):
     def send_dm(self, secrets, external_id, text):
         self._api(secrets, "sendMessage", {"chat_id": external_id, "text": text})  # works once the user pressed Start in the bot chat
 
-    # ---- chat triggers (TASK-0075): messages to the bot, in a private chat or a group ----
+    # ---- chat triggers: messages to the bot, in a private chat or a group ----
     def handle_message(self, body) -> Optional[IncomingMessage]:
         try: u = json.loads(body)
         except (ValueError, UnicodeDecodeError): return None

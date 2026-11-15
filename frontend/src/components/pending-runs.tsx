@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useInboxCount } from '@/lib/use-inbox-count'
 
-/** Workflows page: how many steps wait for the user, with a link to the Approvals inbox (TASK-0065). Hidden at 0. */
+/** Workflows page: how many steps wait for the user, with a link to the Approvals inbox. Hidden at 0. */
 export function PendingRuns() {
   const { t } = useTranslation(); const n = useInboxCount()
   if (!n) return null

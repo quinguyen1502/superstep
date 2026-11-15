@@ -43,6 +43,7 @@ nhà cung cấp là một class nhỏ trong `backend/app/engine/providers.py`.
 | `PROVIDER_UNREACHABLE` | Base URL không phản hồi. |
 | `PROVIDER_AUTH_FAILED` | Key bị từ chối. Trả về HTTP 400 để UI không coi đó là phiên hết hạn. |
 | `PROVIDER_BAD_RESPONSE` | Server trả về dữ liệu không như mong đợi. |
+| `PROVIDER_RATE_LIMITED` | Nhà cung cấp trả HTTP 429 (quá nhiều yêu cầu hoặc hết hạn mức). Nếu có model dự phòng, model đó sẽ thay thế. |
 | `MODEL_NOT_FOUND` | Server không có model đó. |
 
 Trong lúc chạy, lỗi từ nhà cung cấp thành sự kiện `error` của node.

@@ -8,9 +8,9 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-22
 - Updated: 2026-10-22
-- Source: owner request in chat, 2026-10-22 ("Làm đề xuất 6"). Proposal 6 from the suggestion list was to use
+- Source: owner request in chat, 2026-10-22 ("Do proposal 6"). Proposal 6 from the suggestion list was to use
   channels as triggers: a message to the Slack or Telegram bot runs a workflow. The channels are already connected,
-  but the feature touches many parts. The owner had set it aside ("Lớn hơn, để sau") and picked it up after REQ-0043.
+  but the feature touches many parts. The owner had set it aside ("Bigger, later") and picked it up after REQ-0043.
 
 ## Summary
 

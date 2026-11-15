@@ -1,4 +1,4 @@
-"""The CLI's saved server URL and personal access token (TASK-0167, DEC-0071).
+"""The CLI's saved server URL and personal access token.
 
 `SUPERSTEP_URL` and `SUPERSTEP_TOKEN` win over `~/.superstep/cli.json`. A flag wins over the environment for the URL.
 The token is never read from the command line.
@@ -75,7 +75,7 @@ def resolve_target(url_flag: Optional[str] = None) -> tuple[str, str]:
     """Base URL and token. `--url`, then `SUPERSTEP_URL`, then the file. The token is `SUPERSTEP_TOKEN`, else the
     saved token, but the saved token only for the server it was issued by: a `--url` or `SUPERSTEP_URL` naming
     another server gets no token (log in there, or pass SUPERSTEP_TOKEN), so the token never leaves for a server it
-    does not belong to (TASK-0205)."""
+    does not belong to."""
     data = load_config()
     url = url_flag or os.environ.get("SUPERSTEP_URL") or data.get("url") or ""
     if not isinstance(url, str):

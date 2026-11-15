@@ -1,4 +1,4 @@
-"""TASK-0006: Human node pauses a run (status waiting), pending list, owner-only resume, persistence across restarts."""
+"""Human node pauses a run (status waiting), pending list, owner-only resume, persistence across restarts."""
 import json, uuid
 from fastapi.testclient import TestClient
 from app.main import app

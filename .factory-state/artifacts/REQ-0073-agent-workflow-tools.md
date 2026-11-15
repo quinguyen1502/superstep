@@ -9,7 +9,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-26
-- Source: owner request in chat, 2026-10-26 ("Cả 2 lần lượt": after TASK-0132, write the requirement for the next
+- Source: owner request in chat, 2026-10-26 ("Both, one after the other": after TASK-0132, write the requirement for the next
   Agent feature, either extending the Agent node or several agents working together; analysis only, no code). REQ-0072
   left both out of scope: "Several agents handing work to each other" and "another workflow as a tool".
 

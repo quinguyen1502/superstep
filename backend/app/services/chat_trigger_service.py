@@ -1,9 +1,9 @@
-"""Chat triggers (TASK-0074, REQ-0044, DEC-0046): a command word that starts a workflow from a Slack or Telegram message.
+"""Chat triggers: a command word that starts a workflow from a Slack or Telegram message.
 
-A trigger names an approval connection (DEC-0019), the place it listens (a Slack channel, a Telegram chat, or "dm" for
+A trigger names an approval connection, the place it listens (a Slack channel, a Telegram chat, or "dm" for
 direct messages to the bot) and a command word, unique per connection and place. Managing triggers needs the workflow's
 share right (owner or admin), like schedules: a trigger spends the owner's resources when someone writes in a chat.
-Messages, runs and replies are TASK-0075.
+Messages, runs and replies are .
 """
 import json, re, time, uuid
 from typing import Optional
@@ -100,7 +100,7 @@ class ChatTriggerService:
     def delete(self, wid: str, tid: str, uid: str) -> dict:
         self._own(wid, tid, uid); self.triggers.delete(tid); return {"ok": True}
 
-    # ---- used by message handling (TASK-0075) ----
+    # ---- used by message handling ----
     def stop(self, t: WorkflowChatTrigger, note: str) -> None:
         """Turn a trigger off and say why: access (creator lost the share right), channel (connection deleted), scopes."""
         self.triggers.set_fields(t.id, enabled=False, note=note)

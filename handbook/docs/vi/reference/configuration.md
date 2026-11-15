@@ -63,6 +63,8 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | --- | --- | --- |
 | `STUDIO_WORKER` | `1` | Chạy worker trong process API |
 | `STUDIO_WORKER_CONCURRENCY` | `2` | Số job mỗi worker |
+| `STUDIO_ENABLE_BROWSER` | `1` | Mở adapter managed browser/web (`0` để ẩn) |
+| `STUDIO_ENABLE_BROWSER_RUNTIME` | unset/`0` | Cho phép run tin cậy điều khiển worker trình duyệt |
 | `STUDIO_JOB_VISIBILITY_TIMEOUT` | `30` | Thời hạn giữ job (giây) |
 | `STUDIO_JOB_REAP_EVERY` | `15` | Chu kỳ đưa job hết hạn về hàng đợi (giây) |
 | `STUDIO_RECOVER_ON_START` | `1` | Hàng đợi trong bộ nhớ: đưa lại run chưa xong vào hàng đợi khi khởi động ([run qua các lần khởi động lại](../operate/deploy.md#run-qua-cac-lan-khoi-ong-lai)) |
@@ -86,7 +88,7 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `STUDIO_ATTACHMENT_STORAGE` | `db` | Nơi lưu nội dung tệp đính kèm trong chat: `db` (trong cơ sở dữ liệu), `fs` (một thư mục) hoặc `s3` (kho lưu trữ tương thích S3). Mỗi tệp giữ nguyên nơi nó đã được lưu, nên thay đổi chỉ áp dụng cho tệp mới. Xem [Chat: Tệp đính kèm](../run/chat.md#tep-inh-kem) |
 | `STUDIO_ATTACHMENT_FS_PATH` | `/data/attachments` | Thư mục của backend `fs`. Với docker compose, `api` và `worker` dùng chung thư mục này trên volume `apidata`. Không được trùng với hoặc chứa thư mục dữ liệu |
 | `STUDIO_ATTACHMENT_S3_BUCKET` | (trống) | Bucket của backend `s3`. Bắt buộc khi dùng `s3` |
-| `STUDIO_ATTACHMENT_S3_PREFIX` | (trống) | Một thư mục trong bucket, để nhiều bản cài dùng chung một bucket. Chỉ để trống khi bucket không dùng cho việc gì khác (TASK-0203) |
+| `STUDIO_ATTACHMENT_S3_PREFIX` | (trống) | Một thư mục trong bucket, để nhiều bản cài dùng chung một bucket. Chỉ để trống khi bucket không dùng cho việc gì khác |
 | `STUDIO_ATTACHMENT_S3_ENDPOINT` | (trống) | URL của dịch vụ tương thích S3 (R2, B2, MinIO). Để trống là AWS S3 |
 | `STUDIO_ATTACHMENT_S3_REGION` | (trống) | Region của bucket; `auto` với Cloudflare R2 |
 | `STUDIO_ATTACHMENT_S3_PATH_STYLE` | `false` | `true` cho dịch vụ cần URL kiểu path, như MinIO |
@@ -174,5 +176,13 @@ liệt kê mọi biến mà Compose truyền vào; trang này gom chúng theo nh
 | `OTEL_SERVICE_NAME` | `superstep` | Tên dịch vụ |
 | `STUDIO_TRACE_URL` | trống | Mẫu link **Mở trace** có `{trace_id}` |
 | `STUDIO_OTEL_METRICS` | `0` | Xuất thêm metric |
+| `STUDIO_OTEL_INSTRUMENT` | `0` | Khi có endpoint trace: trace thêm request HTTP, truy vấn SQL và lệnh Redis (không ghi giá trị tham số) |
+| `STUDIO_GRAFANA_URL` | trống | Địa chỉ Grafana mà **Cài đặt → Mức sử dụng** liên kết tới |
+| `STUDIO_TIMEZONE` | `UTC` | Múi giờ IANA để xác định ranh giới ngân sách tháng (mặc định UTC). |
+| `STUDIO_SLO_RUN_SUCCESS` | `0.99` | Mục tiêu tỷ lệ run thành công trong 30 ngày, là số giữa 0 và 1. |
+| `STUDIO_SLO_API_AVAILABILITY` | `0.995` | Mục tiêu độ sẵn sàng API trong 30 ngày, là số giữa 0 và 1. |
+| `STUDIO_LOG_FORMAT` | `text` | `json`: mỗi dòng log là một đối tượng JSON có `request_id`, `run_id`, `trace_id` |
+| `STUDIO_LOG_LEVEL` | trống | Mức log của các logger riêng của Superstep, ví dụ `INFO` hoặc `DEBUG` |
+| `POSTGRES_MONITOR_USER`, `POSTGRES_MONITOR_PASSWORD` | `superstep_monitor`, trống | Profile `observability` của Compose: role Postgres chỉ đọc cho metric server; mật khẩu trống thì tắt |
 | `LANGSMITH_API_KEY`, `LANGSMITH_TRACING` | trống | Xuất sang LangSmith |
 | `LANGSMITH_PROJECT`, `LANGSMITH_ENDPOINT` | trống | Project và endpoint của LangSmith |

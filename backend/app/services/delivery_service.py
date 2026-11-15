@@ -1,4 +1,4 @@
-"""Result-webhook deliveries with a log and retries (TASK-0020, DEC-0017).
+"""Result-webhook deliveries with a log and retries.
 
 Each callback becomes a `webhook_deliveries` row. One attempt runs per queue job ({"kind": "delivery"}).
 A failed attempt is rescheduled with exponential backoff (base * 2^(n-1), capped) through the queue's delayed
@@ -25,7 +25,7 @@ class DeliveryService:
     def __init__(self, repo: WebhookDeliveryRepository, workflows: WorkflowRepository, jobs: JobQueue,
                  secrets: Optional[Callable[[Optional[str]], list[str]]] = None, access=None):
         self.repo, self.workflows, self.jobs, self.secrets = repo, workflows, jobs, secrets  # secrets: token id -> active secrets
-        self.access = access  # AccessService (TASK-0014)
+        self.access = access  # AccessService
 
     @staticmethod
     def public(d: WebhookDelivery) -> dict:

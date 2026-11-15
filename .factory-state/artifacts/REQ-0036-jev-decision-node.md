@@ -8,7 +8,7 @@
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-19
 - Updated: 2026-10-19
-- Source: owner question "langgraph có support Jev Model không?", the reference https://typesafe.ai/blog/introducing-system-one-models-and-jev, and the reply "Bắt đầu luôn đi" (2026-10-19)
+- Source: owner question "does langgraph support a Jev Model?", the reference https://typesafe.ai/blog/introducing-system-one-models-and-jev, and the reply "Start right away" (2026-10-19)
 
 ## Summary
 

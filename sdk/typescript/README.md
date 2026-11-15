@@ -1,7 +1,7 @@
 # @superstep/sdk (TypeScript SDK)
 
-Headless chat and workflow runs for Superstep. Version 0.2.0 adds chat v1,
-typed streaming events, a framework-neutral store and server-side token signing.
+Headless chat, runs, and schedules for Superstep. Version 0.3.0 adds workflow-scoped
+cron schedule management and preview.
 Zero runtime dependencies; ESM and CommonJS; HTTP types generated from OpenAPI
 and socket types generated from the backend JSON Schemas. Chat uses `fetch` and
 an injectable WebSocket in browsers, Node 18+ and React Native.
@@ -16,7 +16,7 @@ an injectable WebSocket in browsers, Node 18+ and React Native.
 npm install @superstep/sdk
 ```
 
-The examples below describe 0.2.0; installing from npm requires that version to
+The examples below describe 0.3.0; installing from npm requires that version to
 have been published by the owner. Building this repository does not publish it.
 
 ## Chat
@@ -167,7 +167,7 @@ getToken, WebSocket: YourSocketAdapter })`). The adapter needs `readyState`,
 `send`, `close`, `addEventListener` and `removeEventListener`; message events
 must carry JSON text in `data`. `fetch`, `Blob` and `FormData` are injectable.
 The SDK does not install a socket adapter or DOM polyfills. Actual device
-testing and native UI belong to TASK-0227; the current contract suite simulates
+testing and native UI live in the React Native example; the current contract suite simulates
 a native runtime without DOM/Buffer globals.
 
 ## Configure
@@ -216,6 +216,25 @@ Options of `runAndWait` and `wait`: `timeoutMs` (default 300000, `null` waits
 forever), `pollIntervalMs` (1000), `maxPollIntervalMs` (10000), `backoff`
 (1.5), `signal`. `run` also takes `callbackUrl`.
 
+## Schedules
+
+A workflow token lists, creates, updates, deletes and previews cron schedules
+of its own workflow. A schedule runs as the token's owner.
+`previewSchedule` returns the next fire times and stores nothing.
+
+```ts
+const schedule = await client.createSchedule('0 9 * * MON-FRI', {
+  name: 'Morning', timezone: 'Asia/Ho_Chi_Minh', input: { message: 'hi' },
+})
+await client.updateSchedule(schedule.id, { enabled: false })
+const times = await client.previewSchedule('@daily', { timezone: 'UTC' })
+await client.deleteSchedule(schedule.id)
+```
+
+`listSchedules()` returns the workflow's schedules. `SCHEDULE_CRON_INVALID`
+and `SCHEDULE_LIMIT` are `InvalidRequestError`. `SCHEDULE_NOT_FOUND` is
+`NotFoundError`.
+
 ### Cancel with AbortSignal
 
 Every method takes `signal`; aborting stops the request and the polling and
@@ -234,8 +253,8 @@ error code), `status`, `message` and `details`.
 | --- | --- |
 | `AuthenticationError` | Missing, invalid, expired or revoked workflow/chat authentication |
 | `PermissionDeniedError` | Forbidden chat origin or HTTP 403 |
-| `NotFoundError` | `404 RUN_NOT_FOUND` |
-| `InvalidRequestError` | `400 RUN_INPUT_INVALID`, `CALLBACK_URL_INVALID`; `422 VALIDATION_ERROR` |
+| `NotFoundError` | `404 RUN_NOT_FOUND`, `SCHEDULE_NOT_FOUND` |
+| `InvalidRequestError` | `400 RUN_INPUT_INVALID`, `CALLBACK_URL_INVALID`, `SCHEDULE_CRON_INVALID`, `SCHEDULE_LIMIT`; `422 VALIDATION_ERROR` |
 | `PayloadTooLargeError` | `413 RUN_INPUT_TOO_LARGE` |
 | `RateLimitError` | `429 RATE_LIMITED`; `retryAfter` holds the seconds to wait |
 | `ServerError` | `5xx` |
@@ -256,7 +275,7 @@ try {
 
 ## Types
 
-`Run`, `RunResult`, `RunStatus`, `RunMetrics` and the raw `paths`,
+`Run`, `Schedule`, `RunResult`, `RunStatus`, `RunMetrics` and the raw `paths`,
 `operations` and `components` are exported alongside `ChatEvent`, `ChatResult`,
 `ChatSession`, `ChatTurn` and other chat types. `src/schema.ts` comes from the
 public spec; `src/chat/frames.ts` comes from the backend's v1 JSON Schemas:

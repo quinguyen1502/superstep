@@ -1,4 +1,4 @@
-"""TASK-0074: chat trigger settings (REQ-0044, DEC-0046): rows per workflow, the management API, Slack scopes, Telegram webhook."""
+"""chat trigger settings: rows per workflow, the management API, Slack scopes, Telegram webhook."""
 import json, time, uuid
 import httpx, pytest
 from fastapi.testclient import TestClient

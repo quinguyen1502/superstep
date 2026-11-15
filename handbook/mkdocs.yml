@@ -48,6 +48,7 @@ nav:
       - Workflow templates: guide/templates.md
       - Versions: guide/versions.md
       - Export to Python: guide/python-export.md
+      - Datasets: guide/datasets.md
   - Run:
       - run/index.md
       - Runs and traces: run/traces.md

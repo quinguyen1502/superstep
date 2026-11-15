@@ -1,4 +1,4 @@
-/** Auto-layout (TASK-0027, DEC-0030): dagre layered layout using each node's measured size, left→right or top→bottom.
+/** Auto-layout: dagre layered layout using each node's measured size, left→right or top→bottom.
  * Pure; the editor applies the result in one state update, so it is one undo step. */
 import dagre from '@dagrejs/dagre'
 import type { Edge, Node } from '@xyflow/react'

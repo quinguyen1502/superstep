@@ -1,4 +1,4 @@
-"""Workflow sharing (TASK-0014, teams TASK-0029): the owner (or an admin) shares a workflow with users or teams as viewer or editor."""
+"""Workflow sharing: the owner (or an admin) shares a workflow with users or teams as viewer or editor."""
 from __future__ import annotations
 import time
 from ..core import config, permissions as P

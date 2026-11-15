@@ -1,4 +1,4 @@
-"""`test` runs workflow suites and writes JUnit XML (TASK-0170, DEC-0071)."""
+"""`test` runs workflow suites and writes JUnit XML."""
 from __future__ import annotations
 
 import argparse

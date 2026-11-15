@@ -1,4 +1,4 @@
-"""TASK-0045: sign-in lockout, password reset links, and users.password_changed (older sessions stop working)."""
+"""sign-in lockout, password reset links, and users.password_changed (older sessions stop working)."""
 from alembic import op
 import sqlalchemy as sa
 

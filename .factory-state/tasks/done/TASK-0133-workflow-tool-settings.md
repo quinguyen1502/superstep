@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0133
 - Status: done
-- 2026-10-27: PR #177 merged into develop (d36c64a) with the owner's approval ("Ok làm đi") after CI passed; moved to done.
+- 2026-10-27: PR #177 merged into develop (d36c64a) with the owner's approval ("OK, do it") after CI passed; moved to done.
 - Owner: Thái Quí Nguyễn
 - Created: 2026-10-26
 - Updated: 2026-10-27
@@ -101,7 +101,7 @@ run yet (TASK-0134).
 ## Activity Log
 
 - 2026-10-26: planned from REQ-0073 (CLAR-0004 answered).
-- 2026-10-26: started on `factory/task-0133-workflow-tool-settings` (owner in chat: "Bắt đầu triển khai đi"), from the
+- 2026-10-26: started on `factory/task-0133-workflow-tool-settings` (owner in chat: "Start building it"), from the
   planning branch of PR #175 with develop bfa096f merged in (TASK-0132's `issues.py`). The planning commits ride this
   task's PR if #175 is not merged first. DEC-0066 accepted with the start, as DEC-0063 was.
 - 2026-10-26: implemented. `agents.py`: the `workflow` source, `parameters()` from the child's state fields (required),

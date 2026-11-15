@@ -97,7 +97,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 /** Use inside a bounded flex DialogContent: header/footer remain outside the scroll viewport. */
 function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="dialog-body" className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain -mx-1 px-1 py-1", className)} {...props} />
+  return <div data-slot="dialog-body" className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain -mx-4 px-4 py-1", className)} {...props} />
 }
 
 function DialogFooter({

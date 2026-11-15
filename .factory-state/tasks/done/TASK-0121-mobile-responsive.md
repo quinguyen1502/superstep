@@ -37,7 +37,7 @@ Make the studio usable on a phone, and split the node Config panel into one fixe
 - en + vi strings (`editor.mobileNav.*`), e2e `frontend/e2e/mobile.spec.ts`.
 - Node Config tabs (owner, 2026-10-26: one set of tabs for all nodes, so builders learn where a setting lives,
   rather than tabs that change per node):
-  - Node icon, id and Label above a tab bar **Settings · Data · Execution** (vi: Cài đặt · Dữ liệu · Thực thi), the same
+  - Node icon, id and Label above a tab bar **Settings · Data · Execution** (translated in vi), the same
     three, same order, for every node.
   - Settings = what the node does; Data = every picker of a state field (output, steps, history, loop fields, the
     Condition field, Decision answer fields, input fields); Execution = retry, wait, timeout, cache, and limits

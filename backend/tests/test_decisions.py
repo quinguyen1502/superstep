@@ -1,4 +1,4 @@
-"""TASK-0050: Decision nodes call TypeSafe's Jev with typed questions and write the answers to state."""
+"""Decision nodes call TypeSafe's Jev with typed questions and write the answers to state."""
 import copy, json, uuid
 import httpx, pytest
 from fastapi.testclient import TestClient

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { apiToken, signIn } from './helpers'
-// TASK-0006: a run pauses at a Human node, shows up as pending, and resumes from the panel.
+import { vt } from './catalog'
+// a run pauses at a Human node, shows up as pending, and resumes from the panel.
 const APPROVAL = {
   name: `Approval e2e ${Date.now()}`, state: [{ name: 'message', type: 'string' }, { name: 'decision', type: 'string' }],
   nodes: [{ id: 's', type: 'start', position: { x: 40, y: 150 }, data: { label: 'Start' } },
@@ -11,7 +12,7 @@ const APPROVAL = {
     { id: '3', source: 'route', target: 'e', label: 'approved' }, { id: '4', source: 'route', target: 'e', label: 'rejected' }],
 }
 async function login(page: Page) {
-  await page.goto('/login'); await page.getByLabel('Mật khẩu', { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
+  await page.goto('/login'); await page.getByLabel(vt('auth.password'), { exact: true }).fill('admin123'); await page.locator('#auth-submit').click()
   await expect(page).toHaveURL(/\/workflows$/)
   return apiToken(page)
 }
@@ -27,9 +28,9 @@ test('human node: wait, pending list, approve, complete', async ({ page }) => {
   await page.locator('#run-btn').click()
   await expect(page.locator('#trace-summary')).toHaveAttribute('data-status', 'waiting', { timeout: 30_000 })
   await expect(page.locator('#human-question')).toHaveText('Approve refund for order A100?')
-  // the workflows page and the header badge lead to the Approvals inbox (TASK-0065), which links back to the run
+  // the workflows page and the header badge lead to the Approvals inbox, which links back to the run
   await page.goto('/workflows')
-  await expect(page.locator('[data-testid=pending-count]')).toBeVisible()  // header badge (TASK-0019)
+  await expect(page.locator('[data-testid=pending-count]')).toBeVisible()  // header badge
   expect(Number(await page.locator('[data-testid=pending-count]').textContent())).toBeGreaterThan(0)
   await page.locator('#pending-runs-open').click(); await expect(page).toHaveURL(/\/approvals$/)
   const row = page.locator('[data-testid=inbox-row]', { hasText: APPROVAL.name }); await expect(row).toBeVisible()
@@ -46,7 +47,7 @@ test('human node: wait, pending list, approve, complete', async ({ page }) => {
   await page.goto('/approvals'); await expect(page.locator('[data-testid=inbox-row]', { hasText: APPROVAL.name })).toHaveCount(0)
 })
 
-test('approvals inbox: a listed approver answers in place (TASK-0065)', async ({ page, browser }) => {
+test('approvals inbox: a listed approver answers in place', async ({ page, browser }) => {
   const token = await login(page); const email = `appr${Date.now()}@example.com`
   const other = await browser.newPage(); await other.request.post('/api/auth/register', { data: { email, password: 'secret12' } })  // its own session
   const wf = { ...APPROVAL, name: `Inbox e2e ${Date.now()}`, nodes: APPROVAL.nodes.map(n => n.id === 'ask' ? { ...n, data: { ...n.data, approval: { approvers: [email] } } } : n) }
@@ -68,7 +69,7 @@ test('approvals inbox: a listed approver answers in place (TASK-0065)', async ({
     { timeout: 30_000 }).toBe('rejected')
 })
 
-test('human node deadline: settings, due time in the inbox, rejected on time (TASK-0066)', async ({ page }) => {
+test('human node deadline: settings, due time in the inbox, rejected on time', async ({ page }) => {
   test.setTimeout(150_000)
   const token = await login(page)
   const wf = { ...APPROVAL, name: `Deadline e2e ${Date.now()}` }
@@ -77,9 +78,9 @@ test('human node deadline: settings, due time in the inbox, rejected on time (TA
   await page.locator('.react-flow__node[data-id="ask"]').click()
   await page.locator('#config-tab-settings').click()
   await page.locator('#deadline-on').click(); await expect(page.locator('#deadline-after')).toHaveValue('1')
-  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: 'Chuyển cho người duyệt khác' }).click()
+  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: vt('deadline.actions.escalate') }).click()
   await expect(page.locator('#deadline-escalate')).toBeVisible()
-  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: 'Từ chối' }).click()
+  await page.locator('#deadline-action').click(); await page.getByRole('option', { name: vt('aiReview.effects.reject') }).click()
   await page.locator('#deadline-after-unit').click(); await page.getByRole('option', { name: 'phút' }).click()
   await page.locator('#save-btn').click(); await expect(page.locator('#unsaved-badge')).toHaveCount(0)
   const saved = (await (await page.request.get(`/api/workflows/${wid}`, { headers: { Authorization: `Bearer ${token}` } })).json()).data

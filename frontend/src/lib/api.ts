@@ -1,5 +1,5 @@
 import { errorText, type ApiErrorBody } from '@/lib/i18n'
-// TASK-0045: the JWT lives in an HttpOnly cookie that scripts cannot read. The page keeps only the user and the expiry.
+// the JWT lives in an HttpOnly cookie that scripts cannot read. The page keeps only the user and the expiry.
 type Session = { expires_at: number; user: { id: string; email: string } }
 localStorage.removeItem('token')  // tokens stored by older versions
 export const getUser = (): { id: string; email: string } | null => JSON.parse(localStorage.getItem('user') || 'null')
@@ -47,7 +47,7 @@ export async function api<T = any>(path: string, opts: RequestInit & { json?: an
   if (opts.response === 'blob' && r.ok) return await r.blob() as T
   const body = await r.json().catch(() => null)
   if (r.status === 401 && !path.startsWith('/api/auth')) { sessionExpired(); throw new ApiError(body?.error ?? { code: 'AUTH_TOKEN_EXPIRED' }, 401) }
-  // deactivated by an admin (TASK-0014): drop the session; signing in again shows the reason
+  // deactivated by an admin: drop the session; signing in again shows the reason
   if (body?.error?.code === 'AUTH_ACCOUNT_DISABLED' && !path.startsWith('/api/auth')) { clearSession(); location.href = '/login' }
   if (!body?.success) throw new ApiError(body?.error ?? { code: r.status >= 500 ? 'INTERNAL_ERROR' : 'HTTP_ERROR', message: `HTTP ${r.status}` }, r.status)
   return body.data

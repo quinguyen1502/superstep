@@ -9,7 +9,7 @@ from ...engine.browser_contract import BrowserSettings, tool_definitions
 class BrowserTools:
     id = "browser"
     # Browserless token is required for provider=browserless. profile_state is optional encrypted
-    # origin-scoped login seed (TASK-0244); proxy secrets follow proxy.auth.
+    # origin-scoped login seed; proxy secrets follow proxy.auth.
     secret_fields = ("browserless_token", "proxy_username", "proxy_password", "profile_state")
     settings_limit = 16384
     settings_schema = BrowserSettings.model_json_schema()
@@ -68,7 +68,7 @@ class BrowserTools:
     @staticmethod
     def require_runtime():
         # Never enter the stateless managed-result ledger for a live page. The run
-        # context/session port and worker are implemented by TASK-0243–0245.
+        # context/session port and worker are implemented by .
         raise AppError("BROWSER_RUNTIME_UNAVAILABLE")
 
     def execute(self, *args, **kwargs):

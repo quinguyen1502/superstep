@@ -6,10 +6,18 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.api.openapi_public import public_openapi
 from app.schemas.envelope import ErrorEnvelope
-from app.schemas.public_api import RunAcceptedEnvelope, RunResultEnvelope
+from app.schemas.public_api import RunAcceptedEnvelope, RunResultEnvelope, ScheduleEnvelope, ScheduleListEnvelope, SchedulePreviewEnvelope
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-PUBLIC_OPS = {("post", "/api/hooks/workflows/{wid}/runs"): "startRun", ("get", "/api/hooks/workflows/{wid}/runs/{run_id}"): "getRun"}
+PUBLIC_OPS = {
+    ("post", "/api/hooks/workflows/{wid}/runs"): "startRun",
+    ("get", "/api/hooks/workflows/{wid}/runs/{run_id}"): "getRun",
+    ("get", "/api/hooks/workflows/{wid}/schedules"): "listSchedules",
+    ("post", "/api/hooks/workflows/{wid}/schedules"): "createSchedule",
+    ("post", "/api/hooks/workflows/{wid}/schedules/preview"): "previewSchedule",
+    ("patch", "/api/hooks/workflows/{wid}/schedules/{sid}"): "updateSchedule",
+    ("delete", "/api/hooks/workflows/{wid}/schedules/{sid}"): "deleteSchedule",
+}
 
 
 @pytest.fixture(scope="module")
@@ -77,3 +85,14 @@ def test_responses_match_the_documented_models(c, wft):
                        (c.post(f"/api/hooks/workflows/{wid}/runs", json={"mode": "later"}, headers=H(tok)), "VALIDATION_ERROR"),
                        (c.post(f"/api/hooks/workflows/{wid}/runs", json={}, headers={"X-Workflow-Token": "wft_bad", **H(tok)}), "TRIGGER_TOKEN_INVALID")):
         assert ErrorEnvelope.model_validate(resp.json()).error.code == code
+    created = c.post(f"/api/hooks/workflows/{wid}/schedules",
+                     json={"name": "Morning", "cron": "0 9 * * MON-FRI", "timezone": "Asia/Ho_Chi_Minh", "input": {"message": "hi"}},
+                     headers=H(tok))
+    assert created.status_code == 201
+    schedule = ScheduleEnvelope.model_validate(created.json()).data
+    assert schedule.cron == "0 9 * * MON-FRI" and schedule.next_runs
+    listed = ScheduleListEnvelope.model_validate(c.get(f"/api/hooks/workflows/{wid}/schedules", headers=H(tok)).json()).data
+    assert [item.id for item in listed] == [schedule.id]
+    preview = SchedulePreviewEnvelope.model_validate(c.post(
+        f"/api/hooks/workflows/{wid}/schedules/preview", json={"cron": "*/15 * * * *", "timezone": "UTC"}, headers=H(tok)).json()).data
+    assert len(preview.next_runs) >= 1

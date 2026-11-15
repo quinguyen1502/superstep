@@ -21,7 +21,7 @@ a message can be refused.
 
 ### In Scope
 
-- **New page `run/chat-triggers.md`** (en "Chat triggers", vi "Chạy từ chat"). It covers:
+- **New page `run/chat-triggers.md`** (en "Chat triggers", vi "Run from chat"). It covers:
   - what a chat trigger is;
   - Slack setup: the scopes, the Event Subscriptions URL, the `app_mention` and `message.im` events, reinstalling;
   - Telegram setup: "Register webhook" again, group privacy mode, the group id;

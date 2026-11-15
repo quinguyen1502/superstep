@@ -6,7 +6,7 @@ class TokenIn(BaseModel):
     name: str = Field("API token", max_length=80)
 
 
-class ScheduleIn(BaseModel):  # TASK-0046
+class ScheduleIn(BaseModel):
     name: str = Field("Schedule", max_length=80)
     cron: str = Field(..., max_length=120)
     timezone: str = Field("UTC", max_length=64)
@@ -27,7 +27,7 @@ class SchedulePreview(BaseModel):
     timezone: str = Field("UTC", max_length=64)
 
 
-class ChatTriggerIn(BaseModel):  # TASK-0074
+class ChatTriggerIn(BaseModel):
     name: str = Field("", max_length=80)
     channel_id: str = Field(..., max_length=64)
     place: str = Field("dm", max_length=64)
