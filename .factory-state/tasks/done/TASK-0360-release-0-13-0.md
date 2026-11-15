@@ -48,3 +48,5 @@ After explicit approval, integrate the checked Dataset and release PRs into deve
 - 2026-11-15: Owner approved merging PR #418 into develop after the integrated candidate passes CI. Publication remains a separate approval.
 
 - 2026-11-15: The first integrated CI run exposed a fractional-second Usage bucket regression in PostgreSQL. Fixed bucket calculation and added deterministic coverage for both database dialects on the same PR. Merge remains gated on CI for the updated commit.
+
+- 2026-11-15: Owner approved promotion to main and publication of 0.13.0. GitHub rejected the SDK publish workflow on develop because the TypeScript job declared `id-token` twice. The promotion PR removes the duplicate while keeping OIDC permissions and finalizes the changelog heading. Tag and registry verification follow the checked main merge.
