@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..core.dataset_filters import MAX_FILTER_VALUES, tree_rules
-from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, DatasetValue, FilterOperator, SummaryFunction
+from ..core.dataset_types import COLUMN_KEY_PATTERN, MAX_COLUMNS, CellValue, ColumnKind, DatasetValue, FilterOperator, SummaryFunction
 
 ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]
 Label = Annotated[str, Field(min_length=1, max_length=120)]
@@ -59,7 +59,7 @@ class DatasetCreate(BaseModel):
     name: Label
     description: str | None = Field(default=None, max_length=2_000)
     team_id: str | None = Field(default=None, min_length=1, max_length=100)
-    columns: list[DatasetColumnIn] = Field(default_factory=list, max_length=100)
+    columns: list[DatasetColumnIn] = Field(default_factory=list, max_length=MAX_COLUMNS)
 
 
 class DatasetUpdate(BaseModel):

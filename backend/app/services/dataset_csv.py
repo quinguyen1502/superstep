@@ -5,12 +5,12 @@ import re
 from dataclasses import dataclass
 
 from ..core import permissions as P
-from ..core.dataset_types import INVALID_TEXT, MAX_ROW_BYTES, READ_ONLY_KINDS, DatasetValue, dataset_size, key_digest, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_COLUMNS, MAX_ROW_BYTES, READ_ONLY_KINDS, DatasetValue, dataset_size, key_digest, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import DatasetColumn
 from ..repositories.dataset_rows import DatasetRowRepository
 from .dataset_rows import _row_values, _active_columns, _normalize
-from .dataset_service import MAX_COLUMNS, DatasetService, _detail
+from .dataset_service import DatasetService, _detail
 
 MAX_CSV_BYTES = 1_048_576
 MAX_CSV_RECORDS = 1_000
