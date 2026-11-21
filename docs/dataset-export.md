@@ -122,3 +122,13 @@ aggregate results, and column validation rules on Superstep, SQLite and
 PostgreSQL. The connected contract checks the rules against the
 server schema. Running `--setup-datasets` also upgrades existing standalone
 storage with the auto-number watermark.
+
+### Formula storage preview
+
+Formula configuration is off by default while Studio and standalone export support are in development. Enable `STUDIO_ENABLE_DATASET_FORMULAS=1` in an isolated test environment to add or edit Formula expressions through the schema API. Existing formulas still recalculate when input rows change after this setting is turned off.
+
+A Formula column uses its scalar result kind and optional `formula` metadata with `version: 1` and `expression`. Its result is read-only in all writers. CSV export includes computed values and CSV import skips those columns. Authorized row reads can include a `formula_errors` object keyed by projected column if a calculation returns null with an error. A missing input can also yield null, with no entry in that object. Writes under a write-only grant continue to return identifiers only. A connected request that references a Formula field includes its definition in `columns`. Test writes calculate with the available input and leave stored values and generated numbers untouched.
+
+Project export currently rejects a binding whose dataset contains Formula fields. Existing projects on regular datasets can use the same connected and standalone contracts.
+
+The migration adds two nullable metadata columns. Existing datasets without Formula fields can be downgraded to the preceding schema. An active Formula definition blocks the downgrade. Before enabling the preview, take a backup. To move back to a version that cannot recalculate formulas, freeze writes, retain a copy of the Formula definitions and results, and restore the pre-enable backup or explicitly remove the Formula columns before downgrading.

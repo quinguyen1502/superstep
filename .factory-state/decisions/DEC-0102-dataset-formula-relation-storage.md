@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Decision ID: DEC-0102
-- Status: Proposed for owner review
+- Status: Accepted for Formula storage implementation
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-21
 - Updated: 2026-11-21
@@ -27,4 +27,4 @@
 ## Approval And Review
 
 - Review actual backfill timings, concurrent link/delete outcomes and rollback behavior before the first migration.
-- Scope approval was received on 2026-11-21. This record requests approval of the specific storage and compatibility strategy.
+- Scope approval was received on 2026-11-21. The owner approved proceeding after the storage and layout review. The Formula persistence task uses the proposed additive migration and retains the rollout and rollback checks.

@@ -28,6 +28,8 @@ def prepare(graphs: Iterable[dict], schema: Callable[[str], list[dict]], *, phas
                 alias = f"DATASET_{len(out.aliases) + 1}"
                 out.aliases[did] = alias
                 columns = [{key: value for key, value in column.items() if key not in {"label", "display_format"}} for column in schema(did)]
+                if any(column.get("formula") for column in columns):
+                    raise AppError("DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED")
                 out.bindings[alias] = {"name": alias, "columns": columns, "operations": []}
             contract = out.bindings[alias]
             columns = {column["key"]: column for column in contract["columns"]}

@@ -4,7 +4,9 @@ import json
 from time import time
 from uuid import uuid4
 
+from ..core import config
 from ..core import permissions as P
+from ..core.dataset_formula import FORMULA_KINDS, Formula, FormulaDefinitionError
 from ..core.dataset_rules import column_display, column_rules, enforce_rules
 from ..core.dataset_types import INVALID_TEXT, MAX_COLUMNS, SYSTEM_TIME_KINDS, normalize_cell
 from ..core.errors import AppError
@@ -42,14 +44,35 @@ def _column(data: dict, position: int) -> DatasetColumn:
     if kind == "multi_select" and any(";" in option for option in options):
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
     rules = column_rules(key, kind, data.get("validation_rules"))
+    formula = data.get("formula")
+    if formula is not None and (kind not in FORMULA_KINDS or data["required"] or data["unique"]
+                                or data["default"] is not None or rules):
+        raise AppError("DATASET_FORMULA_INVALID", field=key, details={"reason": "column_settings"})
     display = column_display(key, kind, data.get("display_format"))
     default = normalize_cell(key, kind, data["default"], options, required=False)
     return DatasetColumn(
         key=key, kind=kind, label=_label(data["label"], key), position=position,
         required=data["required"], unique=data["unique"] or kind == "auto_number", archived=False, options=options,
-        validation_rules=rules or None, display_format=display or None,
+        validation_rules=rules or None, display_format=display or None, formula=formula,
         default_value=enforce_rules(key, default, rules),
     )
+
+
+def _require_formula_enabled() -> None:
+    if not config.dataset_formulas_enabled():
+        raise AppError("DATASET_FORMULA_DISABLED")
+
+
+def _compile_formulas(dataset: Dataset) -> dict[str, Formula]:
+    try:
+        return dataset.compile_formulas()
+    except FormulaDefinitionError as exc:
+        details = {"reason": exc.reason}
+        if exc.offset is not None:
+            details["offset"] = exc.offset
+        if exc.field is not None:
+            details["dependency"] = exc.field
+        raise AppError("DATASET_FORMULA_INVALID", field=exc.column or "", details=details) from exc
 
 
 def _matches_by(binding: dict, key: str) -> bool:
@@ -76,7 +99,8 @@ def _detail(dataset: Dataset) -> dict:
             {"key": col.key, "label": col.label, "kind": col.kind, "required": col.required,
              "unique": col.unique, "default": col.default_value, "options": col.options,
              **({"validation_rules": col.validation_rules} if col.validation_rules else {}),
-             **({"display_format": col.display_format} if col.display_format else {})}
+             **({"display_format": col.display_format} if col.display_format else {}),
+             **({"formula": col.formula} if col.formula is not None else {})}
             for col in dataset.columns if not col.archived
         ],
     }
@@ -117,11 +141,12 @@ class DatasetService:
         return dataset
 
     def _save(self, uid: str, dataset: Dataset, action: str, *, require_empty: bool = False,
-              unique_change: tuple[str, bool] | None = None, rows: RowChange | None = None, validate_field: str | None = None, **details) -> dict:
+              unique_change: tuple[str, bool] | None = None, rows: RowChange | None = None,
+              validate_field: str | None = None, formulas: dict[str, Formula] | None = None, **details) -> dict:
         dataset.updated = time()
         saved, changed = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty,
-                                        unique=unique_change, rows=rows, validate_field=validate_field)
-        if rows is not None:
+                                        unique=unique_change, rows=rows, validate_field=validate_field, formulas=formulas)
+        if rows is not None or formulas is not None:
             details["rows"] = changed
         self.audit.record(uid, action, "dataset", dataset.id, **details)
         return _detail(saved)
@@ -156,12 +181,16 @@ class DatasetService:
             raise AppError("DATASET_COLUMN_KEY_TAKEN")
         label = _label(name, "name")
         now = time()
-        return Dataset(
+        dataset = Dataset(
             id=uuid4().hex, owner_id=uid if team_id is None else None, team_id=team_id,
             team_owner_id=uid if team_id is not None else None,
             name=label, name_key=label.casefold(), description=_description(description),
             revision=1, created=now, updated=now, columns=fields,
         )
+        if any(field.formula is not None for field in fields):
+            _require_formula_enabled()
+            _compile_formulas(dataset)
+        return dataset
 
     def create(self, uid: str, *, name: str, description: str | None, team_id: str | None, columns: list[dict]) -> dict:
         dataset = self.repo.add(self.prepare_create(uid, name=name, description=description, team_id=team_id, columns=columns))
@@ -198,6 +227,9 @@ class DatasetService:
             raise AppError("DATASET_COLUMN_LIMIT", max=MAX_COLUMN_DEFINITIONS)
         field = _column(column, len(dataset.columns))
         dataset.columns.append(field)
+        if field.formula is not None:
+            _require_formula_enabled()
+            return self._save(uid, dataset, "dataset.column_add", formulas=_compile_formulas(dataset), field=field.key)
         if field.kind == "auto_number":
             return self._save(uid, dataset, "dataset.column_add", rows=RowChange(field.key, auto_number=True),
                               unique_change=(field.key, True), field=field.key)
@@ -210,9 +242,12 @@ class DatasetService:
     def update_column(self, uid: str, dataset_id: str, key: str, *, column: dict, revision: int) -> dict:
         dataset = self.managed_definition(uid, dataset_id, revision)
         field = self._find_column(dataset, key)
+        if field.formula is not None and column.get("formula") is None:
+            column = {**column, "formula": field.formula}
         proposed = _column(column, field.position)
         if (
             proposed.key != field.key or proposed.kind != field.kind or proposed.required != field.required
+            or (proposed.formula is None) != (field.formula is None)
             or not set(field.options).issubset(proposed.options)
         ):
             raise AppError("DATASET_SCHEMA_INCOMPATIBLE", field=key)
@@ -222,6 +257,11 @@ class DatasetService:
                 self._require_unbound_key(uid, dataset.id, key)
             unique_change = (key, proposed.unique)
         validate_field = key if proposed.validation_rules and proposed.validation_rules != field.validation_rules else None
+        formulas = None
+        if proposed.formula != field.formula:
+            _require_formula_enabled()
+            field.formula = proposed.formula
+            formulas = _compile_formulas(dataset)
         field.validation_rules = proposed.validation_rules
         field.display_format = proposed.display_format
         field.label = proposed.label
@@ -229,7 +269,8 @@ class DatasetService:
         field.default_value = proposed.default_value
         field.unique = proposed.unique
         changes = {"unique": proposed.unique} if unique_change else {}
-        return self._save(uid, dataset, "dataset.column_update", unique_change=unique_change, validate_field=validate_field, field=key, **changes)
+        return self._save(uid, dataset, "dataset.column_update", unique_change=unique_change, validate_field=validate_field,
+                          formulas=formulas, field=key, **changes)
 
     def _require_unbound_key(self, uid: str, dataset_id: str, key: str) -> None:
         """A field that a saved workflow uses to match rows (upsert or delete) must stay unique."""
@@ -250,5 +291,7 @@ class DatasetService:
         dataset = self.managed_definition(uid, dataset_id, revision)
         field = self._find_column(dataset, key)
         field.archived = True
+        remaining_formulas = _compile_formulas(dataset)
         dropped = (key, False) if field.unique else None
-        return self._save(uid, dataset, "dataset.column_remove", rows=RowChange(key, clear=True), unique_change=dropped, field=key)
+        return self._save(uid, dataset, "dataset.column_remove", rows=RowChange(key, clear=True), unique_change=dropped,
+                          formulas=remaining_formulas if field.formula is not None else None, field=key)

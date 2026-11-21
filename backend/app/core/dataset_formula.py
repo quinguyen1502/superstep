@@ -10,7 +10,7 @@ from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 from typing import Literal
 
-from .dataset_types import INVALID_TEXT, MAX_COLUMNS, MAX_SAFE_INTEGER, MAX_TEXT, TEXT_KINDS, CellValue
+from .dataset_types import INVALID_TEXT, MAX_COLUMNS, MAX_SAFE_INTEGER, MAX_TEXT, TEXT_KINDS, CellValue, DatasetValue
 
 FormulaKind = Literal["number", "boolean", "text"]
 FORMULA_KINDS = frozenset({"number", "boolean", "text"})
@@ -233,7 +233,7 @@ def compile_formulas(fields: Mapping[str, str], expressions: Mapping[str, str]) 
     return ordered
 
 
-def _number(value: CellValue) -> float:
+def _number(value: DatasetValue) -> float:
     if type(value) not in (int, float):
         raise _FormulaCellError("invalid_input")
     if not -MAX_SAFE_INTEGER <= value <= MAX_SAFE_INTEGER:
@@ -241,7 +241,7 @@ def _number(value: CellValue) -> float:
     return float(value) if value else 0.0
 
 
-def _text(value: CellValue) -> str:
+def _text(value: DatasetValue) -> str:
     if not isinstance(value, str) or INVALID_TEXT.search(value):
         raise _FormulaCellError("invalid_input")
     if len(value) > MAX_TEXT:
@@ -249,7 +249,7 @@ def _text(value: CellValue) -> str:
     return value
 
 
-def _evaluate(node: _Expression, values: Mapping[str, CellValue], errors: Mapping[str, str]) -> CellValue:
+def _evaluate(node: _Expression, values: Mapping[str, DatasetValue], errors: Mapping[str, str]) -> CellValue:
     if node.op == "literal":
         return node.value
     if node.op == "field":
@@ -288,7 +288,7 @@ def _evaluate(node: _Expression, values: Mapping[str, CellValue], errors: Mappin
     return result
 
 
-def evaluate_formulas(formulas: Mapping[str, Formula], row: Mapping[str, CellValue]) -> tuple[dict[str, CellValue], dict[str, str]]:
+def evaluate_formulas(formulas: Mapping[str, Formula], row: Mapping[str, DatasetValue]) -> tuple[dict[str, CellValue], dict[str, str]]:
     """Compute fresh typed values and diagnostics in dependency order without modifying the input row."""
     if not formulas:
         return {}, {}
@@ -301,3 +301,11 @@ def evaluate_formulas(formulas: Mapping[str, Formula], row: Mapping[str, CellVal
             values[key] = results[key] = None
             errors[key] = str(exc)
     return results, errors
+
+
+def materialize_formulas(formulas: Mapping[str, Formula], values: dict) -> tuple[dict, dict[str, str] | None]:
+    """Keep derived scalar values with the row and optional diagnostics in a separate payload."""
+    if not formulas:
+        return values, None
+    computed, errors = evaluate_formulas(formulas, values)
+    return {**values, **computed}, errors or None

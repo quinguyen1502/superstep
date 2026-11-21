@@ -62,6 +62,8 @@
 | `DATASET_NOT_FOUND` | 404 | Dataset not found |
 | `DATASET_COLUMN_NOT_FOUND` | 404 | Dataset column not found |
 | `DATASET_COLUMN_READ_ONLY` | 400 | Dataset column {field} is read-only |
+| `DATASET_FORMULA_DISABLED` | 403 | Dataset Formula configuration is disabled |
+| `DATASET_FORMULA_INVALID` | 400 | Invalid formula for dataset column {field} |
 | `DATASET_COLUMN_RULE_VIOLATION` | 400 | Value violates the validation rules for {field} |
 | `DATASET_COLUMN_RULE_EXISTING_ROWS` | 409 | {count} existing rows violate the rules for {field} |
 | `DATASET_NAME_TAKEN` | 409 | A dataset with this name already exists in this scope |

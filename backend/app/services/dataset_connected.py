@@ -48,6 +48,7 @@ class DatasetConnectedService:
             if (column is None or column.kind != contract.kind or column.unique != contract.unique
                     or column.required != contract.required or column.default_value != contract.default
                     or set(column.options) != set(contract.options)
+                    or column.formula != (contract.formula.model_dump() if contract.formula else None)
                     or (column.validation_rules or {}) != (contract.validation_rules.model_dump(exclude_none=True) if contract.validation_rules else {})):
                 raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=field)
         if write:

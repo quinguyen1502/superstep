@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..core.dataset_formula import materialize_formulas
 from ..core.dataset_types import MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, MAX_ROW_BYTES, CellValue, dataset_size, dataset_timestamp, key_digest, timestamp_millis, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
@@ -331,19 +332,25 @@ class DatasetRowRepository:
             values = build_values(row.values if row is not None else None)
             now = time()
             inserted = row is None
-            changed = inserted or values != row.values
-            if row is None:
+            if inserted:
                 count = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
                 if count >= MAX_DATASET_ROWS:
                     raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
                 self._assign_auto_numbers(session, dataset, [values])
-                row = DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=values, revision=1, created=now, updated=now)
-                session.add(row)
-                session.flush()
             else:
                 self._check_revision(row, revision)
-            if changed and not inserted:
-                row.values, row.updated, row.revision = values, now, row.revision + 1
+            values, errors = materialize_formulas(dataset.compile_formulas(), values)
+            if dataset_size(values) > MAX_ROW_BYTES:
+                raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
+            changed = inserted or values != row.values or errors != row.formula_errors
+            if inserted:
+                row = DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=values, formula_errors=errors,
+                                 revision=1, created=now, updated=now)
+                session.add(row)
+                session.flush()
+            elif changed:
+                row.values, row.formula_errors = values, errors
+                row.updated, row.revision = now, row.revision + 1
                 self._clear_keys(session, dataset.id, row.id)
             if changed:
                 session.add_all(self._keys(dataset, row))
@@ -361,6 +368,7 @@ class DatasetRowRepository:
 
         with self.datasets.db.session() as session:
             self.datasets.lock(session, uid, dataset.id, dataset.revision)
+            formulas = dataset.compile_formulas()
             statement = select(DatasetRow).where(DatasetRow.dataset_id == dataset.id, DatasetRow.id.in_([*updates, *removals]))
             rows = {row.id: row for row in session.scalars(statement)}
             changed, issues = {}, []
@@ -368,11 +376,14 @@ class DatasetRowRepository:
                 row = rows.get(row_id)
                 if row is None or row.revision != revision:
                     issues.append(issue(row_id, None, "DATASET_ROW_NOT_FOUND" if row is None else "DATASET_ROW_CONFLICT"))
+            computed_records = []
             if records:
                 total = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
                 if total + len(records) > MAX_DATASET_ROWS:
                     raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
-                for index, record in enumerate(records, 1):
+                self._assign_auto_numbers(session, dataset, records)
+                computed_records = [materialize_formulas(formulas, record) for record in records]
+                for index, (record, _) in enumerate(computed_records, 1):
                     if dataset_size(record) > MAX_ROW_BYTES:
                         issues.append({"index": index, "field": None, "error": AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES).to_dict()})
             for row_id, (revision, cells) in updates.items():
@@ -384,17 +395,17 @@ class DatasetRowRepository:
                 previous = {field: row.values.get(field) for field, value in cells.items() if row.values.get(field) != value}
                 if not previous:
                     continue
-                next_values = {**row.values, **cells}
+                next_values, errors = materialize_formulas(formulas, {**row.values, **cells})
                 if dataset_size(next_values) > MAX_ROW_BYTES:
                     issues.extend(issue(row_id, field, "DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES) for field in previous)
                     continue
-                changed[row_id] = (row, previous, next_values)
+                changed[row_id] = (row, previous, next_values, errors)
             if issues:
                 raise AppError("DATASET_BATCH_CONFLICT", details={"issues": issues})
 
             keys = {}
             unique = {column.key for column in dataset.columns if column.unique and not column.archived}
-            for row_id, (_, previous, values) in changed.items():
+            for row_id, (_, previous, values, _) in changed.items():
                 for field in previous.keys() & unique:
                     value = values[field]
                     if value is None:
@@ -405,8 +416,7 @@ class DatasetRowRepository:
                         issues.append(issue(keys[identity], field, "DATASET_UNIQUE_CONFLICT"))
                     keys[identity] = row_id
             added = []
-            self._assign_auto_numbers(session, dataset, records)
-            for index, record in enumerate(records, 1):
+            for index, (record, errors) in enumerate(computed_records, 1):
                 row_id = uuid4().hex
                 for field in unique:
                     value = record.get(field)
@@ -416,8 +426,8 @@ class DatasetRowRepository:
                     if identity in keys:
                         issues.append({"index": index, "field": field, "error": AppError("DATASET_UNIQUE_CONFLICT").to_dict()})
                     keys[identity] = row_id
-                added.append((row_id, record))
-            added_indices = {row_id: index for index, (row_id, _) in enumerate(added, 1)}
+                added.append((row_id, record, errors))
+            added_indices = {row_id: index for index, (row_id, _, _) in enumerate(added, 1)}
             for (field, digest), row_id in keys.items():
                 existing = session.get(DatasetRowKey, (dataset.id, field, digest))
                 if existing is not None and existing.row_id not in removals and (
@@ -437,16 +447,18 @@ class DatasetRowRepository:
                 ))
             now = time()
             result = []
-            for row, previous, values in changed.values():
-                row.values, row.updated, row.revision = values, now, row.revision + 1
+            for row, previous, values, errors in changed.values():
+                row.values, row.formula_errors = values, errors
+                row.updated, row.revision = now, row.revision + 1
                 session.add_all(self._keys(dataset, row))
                 result.append({"id": row.id, "revision": row.revision, "previous": previous})
             for row_id in removals:
                 session.delete(rows[row_id])
             added_rows = []
-            for index, (row_id, record) in enumerate(added):
+            for index, (row_id, record, errors) in enumerate(added):
                 timestamp = now + index / 1_000_000
-                row = DatasetRow(dataset_id=dataset.id, id=row_id, values=record, revision=1, created=timestamp, updated=timestamp)
+                row = DatasetRow(dataset_id=dataset.id, id=row_id, values=record, formula_errors=errors,
+                                 revision=1, created=timestamp, updated=timestamp)
                 added_rows.append(row)
             session.add_all(added_rows)
             session.flush()
@@ -492,10 +504,16 @@ class DatasetRowRepository:
             if count + len(values) > MAX_DATASET_ROWS:
                 raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
             self._assign_auto_numbers(session, dataset, values)
+            formulas = dataset.compile_formulas()
             now = time()
-            rows = [DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=record, revision=1,
-                               created=now + index / 1_000_000, updated=now + index / 1_000_000)
-                    for index, record in enumerate(values)]
+            rows = []
+            for index, record in enumerate(values):
+                computed_values, errors = materialize_formulas(formulas, record)
+                if dataset_size(computed_values) > MAX_ROW_BYTES:
+                    raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
+                timestamp = now + index / 1_000_000
+                rows.append(DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=computed_values, formula_errors=errors,
+                                       revision=1, created=timestamp, updated=timestamp))
             session.add_all(rows)
             session.flush()
             session.add_all(key for row in rows for key in self._keys(dataset, row))

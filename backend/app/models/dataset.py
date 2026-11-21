@@ -2,6 +2,8 @@ from sqlalchemy import JSON, BigInteger, CheckConstraint, ForeignKey, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from ..core.dataset_formula import Formula, compile_formulas
+from ..core.dataset_types import READ_ONLY_KINDS
 from .base import Base
 
 
@@ -28,6 +30,14 @@ class Dataset(Base):
         cascade="all, delete-orphan", order_by="DatasetColumn.position",
     )
 
+    def compile_formulas(self) -> dict[str, Formula]:
+        expressions = {column.key: column.formula["expression"] for column in self.columns
+                       if not column.archived and column.formula is not None}
+        if not expressions:
+            return {}
+        fields = {column.key: column.kind for column in self.columns if not column.archived}
+        return compile_formulas(fields, expressions)
+
 
 class DatasetColumn(Base):
     __tablename__ = "dataset_columns"
@@ -41,9 +51,14 @@ class DatasetColumn(Base):
     default_value: Mapped[str | int | float | bool | list[str] | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     validation_rules: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     display_format: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
+    formula: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     options: Mapped[list[str]] = mapped_column(JSON)
     position: Mapped[int]
     archived: Mapped[bool]
+
+    @property
+    def read_only(self) -> bool:
+        return self.formula is not None or self.kind in READ_ONLY_KINDS
 
 
 class DatasetRow(Base):
@@ -53,6 +68,7 @@ class DatasetRow(Base):
     dataset_id: Mapped[str] = mapped_column(ForeignKey("datasets.id", ondelete="CASCADE"), primary_key=True)
     id: Mapped[str] = mapped_column(primary_key=True)
     values: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"))
+    formula_errors: Mapped[dict[str, str] | None] = mapped_column(JSON(none_as_null=True), nullable=True)
     revision: Mapped[int]
     created: Mapped[float]
     updated: Mapped[float]
