@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Task ID: TASK-0365
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-21
 - Updated: 2026-11-21
@@ -25,8 +25,8 @@ Persist Formula definitions, result values and cell diagnostics in the existing 
 
 ## Dependencies
 
-- [Contract and evaluator](../done/TASK-0364-dataset-formula-contract.md). Integrate it first or explicitly stack this task on the reviewed dependency.
-- Owner review of the [storage and rollback decision](../../decisions/DEC-0102-dataset-formula-relation-storage.md) per the [approved plan](../../artifacts/PLAN-0020-dataset-formulas-and-relations.md).
+- [Contract and evaluator](../done/TASK-0364-dataset-formula-contract.md). Integration follows the evaluator in PR #423.
+- Owner approval to proceed following review of the [storage and rollback decision](../../decisions/DEC-0102-dataset-formula-relation-storage.md) per the [approved plan](../../artifacts/PLAN-0020-dataset-formulas-and-relations.md).
 
 ## Related Artifacts
 
@@ -49,3 +49,12 @@ Persist Formula definitions, result values and cell diagnostics in the existing 
 ## Activity Log
 
 - 2026-11-21: Prepared after local backfill and transaction feasibility measurements. Awaiting storage design review.
+- 2026-11-21: Owner replied with approval after the storage proposal and Relation layout review. Proceed with the additive Formula migration and retain the planned rollout gate. This approval did not authorize merging either pull request.
+- 2026-11-21: Implemented the additive migration and transactional Formula writes. Validated both database engines, benchmarked real backfills and moved to review.
+
+- 2026-11-21: The owner approved merging PR #424 into develop. Review and QA passed. Final-head CI gates integration.
+
+## Review And QA
+
+- [Review](../../artifacts/REV-0354-TASK-0365-dataset-formula-persistence.md)
+- [QA and backfill measurements](../../artifacts/QA-0354-TASK-0365-dataset-formula-persistence.md)

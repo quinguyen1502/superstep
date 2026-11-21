@@ -899,6 +899,8 @@
     "DATASET_NOT_FOUND": "Không tìm thấy tập dữ liệu",
     "DATASET_COLUMN_NOT_FOUND": "Không tìm thấy cột trong tập dữ liệu",
     "DATASET_COLUMN_READ_ONLY": "Cột {{field}} của tập dữ liệu chỉ có thể đọc.",
+    "DATASET_FORMULA_DISABLED": "Cấu hình công thức cho tập dữ liệu đang tắt.",
+    "DATASET_FORMULA_INVALID": "Công thức của cột {{field}} trong tập dữ liệu không hợp lệ.",
     "DATASET_COLUMN_RULE_VIOLATION": "Giá trị vi phạm quy tắc kiểm tra của cột {{field}}.",
     "DATASET_COLUMN_RULE_EXISTING_ROWS": "{{count}} dòng hiện tại vi phạm quy tắc của cột {{field}}.",
     "DATASET_NAME_TAKEN": "Tên tập dữ liệu đã tồn tại trong phạm vi này",

@@ -7,6 +7,7 @@ from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from ..core.dataset_formula import Formula, materialize_formulas
 from ..core.dataset_types import MAX_ROW_BYTES, dataset_size, key_digest
 from ..core.dataset_rules import violates_rule
 from ..core.errors import AppError
@@ -101,11 +102,12 @@ class DatasetRepository:
             raise AppError("DATASET_SCHEMA_CONFLICT")
 
     def save(self, uid: str, dataset: Dataset, revision: int, *, require_empty: bool = False,
-             unique: tuple[str, bool] | None = None, rows: RowChange | None = None, validate_field: str | None = None) -> tuple[Dataset, int]:
+             unique: tuple[str, bool] | None = None, rows: RowChange | None = None,
+             validate_field: str | None = None, formulas: dict[str, Formula] | None = None) -> tuple[Dataset, int]:
         """Save a definition under the writer lock and return it with the number of rows changed.
 
         `rows` clears or fills one field on every row, and `unique` adds or drops one column's row keys,
-        both in the same transaction as the definition."""
+        both in the same transaction as the definition. A supplied formula plan also backfills\n        results and diagnostics, including clearing a removed computed field."""
         with self.db.session() as session:
             self.lock(session, uid, dataset.id, revision, advance=True)
             if require_empty and session.scalar(select(DatasetRow.id).where(DatasetRow.dataset_id == dataset.id).limit(1)):
@@ -115,7 +117,9 @@ class DatasetRepository:
             result = session.merge(dataset)
             session.flush()
             changed = 0
-            if rows is not None:
+            if formulas is not None:
+                changed = self._backfill_formulas(session, dataset.id, formulas, clear=rows.field if rows and rows.clear else None)
+            elif rows is not None:
                 if rows.auto_number:
                     changed = self._backfill_auto_numbers(session, dataset.id, rows.field)
                 elif rows.clear:
@@ -134,6 +138,27 @@ class DatasetRepository:
                 self._validate_rows(session, result, validate_field)
             self._commit(session)
             return result, changed
+
+    @staticmethod
+    def _backfill_formulas(session: Session, dataset_id: str, formulas: dict[str, Formula], *, clear: str | None) -> int:
+        base = select(DatasetRow).where(DatasetRow.dataset_id == dataset_id).order_by(DatasetRow.id).limit(KEY_BATCH)
+        offset, changed = "", 0
+        while page := list(session.scalars(base.where(DatasetRow.id > offset))):
+            for row in page:
+                inputs = row.values
+                if clear is not None and clear in inputs:
+                    inputs = dict(inputs)
+                    del inputs[clear]
+                values, errors = materialize_formulas(formulas, inputs)
+                if dataset_size(values) > MAX_ROW_BYTES:
+                    raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
+                if values != row.values or errors != row.formula_errors:
+                    row.values, row.formula_errors = values, errors
+                    row.revision += 1
+                    changed += 1
+            offset = page[-1].id
+            session.flush()
+        return changed
 
     @staticmethod
     def _validate_rows(session: Session, dataset: Dataset, field: str) -> None:
