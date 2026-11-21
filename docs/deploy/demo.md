@@ -25,6 +25,7 @@ servers, approval connections, creating workflows and every admin page. Demo mod
 | Visitor data | Visitor accounts older than `STUDIO_DEMO_VISITOR_TTL` seconds (default 86400, one day) are removed with their runs and chats, at every boot and every demo sign-in. |
 | Rate limit | `STUDIO_DEMO_RUN_RATE_LIMIT` runs per client IP per minute (default 20; `RATE_LIMITED`). |
 | Samples | The example, Chatbot (the chat-style one: `message` in, `answer` out, with web chat on for the Chat panel), Router and Approval flow are created and shared with the visitor on every boot, because the free plan's SQLite file is wiped when the service sleeps. |
+| Sample dataset | In **Datasets**, open **Support tickets** to browse 125 fictional tickets and try search, filters, sorting, grouping and column summaries. Use **Export CSV** in the dataset actions to download the rows. The demo seeds this dataset at startup and visitors have read-only access in Studio. Dataset operations from workflows stay disabled in demo mode. |
 | Banner | Every page shows a small notice: this is a demo, data resets, the first load may take about 30 s. |
 
 The admin (`STUDIO_ADMIN_EMAILS` with a fixed `STUDIO_ADMIN_PASSWORD`) is a normal account and
