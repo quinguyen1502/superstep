@@ -97,7 +97,7 @@ export function DatasetAgentSettings({ id, tool, wid, disabled, onChange }: {
       </div>}
       {writes && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetTool.writeFields')}</legend>
-        {columns.filter(column => !datasetReadOnly(column.kind)).map(column => <Label key={column.key} className="gap-1.5">
+        {columns.filter(column => !datasetReadOnly(column)).map(column => <Label key={column.key} className="gap-1.5">
           <Checkbox checked={writeFields.includes(column.key)} disabled={disabled || (upserts && tool.key === column.key)}
             onCheckedChange={checked => onChange({
               write_fields: checked ? [...writeFields, column.key] : writeFields.filter(field => field !== column.key),

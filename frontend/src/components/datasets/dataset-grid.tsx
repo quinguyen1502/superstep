@@ -7,7 +7,7 @@ import {
   type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater,
 } from '@tanstack/react-table'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Keyboard, Pin, PinOff, Plus, Rows2, Rows3, Rows4, Search, Settings2, Sigma, Ungroup, X } from 'lucide-react'
+import { CircleAlert, ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Keyboard, Pin, PinOff, Plus, Rows2, Rows3, Rows4, Search, Settings2, Sigma, Ungroup, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { ShortcutCheatsheet } from '@/components/shortcut-cheatsheet'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayColumnValue, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { datasetFormulaError, DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayColumnValue, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { errorText, type ApiErrorBody } from '@/lib/i18n'
 import { datasetClipboardRows, datasetClipboardText, datasetClipboardValue, type DatasetBatchResult, type DatasetBatchRow } from '@/lib/dataset-clipboard'
 import { cn } from '@/lib/utils'
@@ -538,7 +538,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   function beginEdit(row: DatasetRow, column: DatasetColumn) {
-    if (!editable || editing || saving.current || datasetReadOnly(column.kind)) return
+    if (!editable || editing || saving.current || datasetReadOnly(column)) return
     setActive({ row: row.id, column: column.key })
     setSaveError(null)
     setStale(false)
@@ -610,7 +610,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const row = rows[rowAt + index]?.original
         const values = Object.fromEntries(cells.map((value, position) => {
           const column = heading(orderedVisible[columnAt + position]?.id ?? '')
-          if (!column || datasetReadOnly(column.kind)) throw new Error('dataset.clipboardReadOnly')
+          if (!column || datasetReadOnly(column)) throw new Error('dataset.clipboardReadOnly')
           return [column.key, datasetClipboardValue(value, column)]
         }))
         if (row) updates.push({ id: row.id, revision: row.revision, values })
@@ -638,7 +638,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         for (let j = range.minColumnIndex; j <= range.maxColumnIndex; j++) {
           const column = orderedVisible[j]
           const field = column && heading(column.id)
-          if (!field || datasetReadOnly(field.kind) || (direction === 'down' ? i === range.minRowIndex : j === range.minColumnIndex)) continue
+          if (!field || datasetReadOnly(field) || (direction === 'down' ? i === range.minRowIndex : j === range.minColumnIndex)) continue
           const source = direction === 'down' ? rows[range.minRowIndex] : row
           const sourceField = direction === 'right' ? orderedVisible[range.minColumnIndex] : column
           if (source && sourceField) update.values[field.key] = source.original.values[sourceField.id] ?? null
@@ -710,7 +710,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     setDraftBusy(true)
     setDraftError('')
     try {
-      const values = Object.fromEntries(dataset.columns.filter(column => !datasetReadOnly(column.kind)).map(column => [
+      const values = Object.fromEntries(dataset.columns.filter(column => !datasetReadOnly(column)).map(column => [
         column.key, Object.hasOwn(draft, column.key) ? draft[column.key] : column.default,
       ]))
       await api<DatasetRowResult>(url, { method: 'POST', json: { values, schema_revision: dataset.revision } })
@@ -854,10 +854,12 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const isFocused = !editing && isSelected
         const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
         const buttonId = cellId(row.id, column.key)
-        const cellEditable = editable && !datasetReadOnly(column.kind)
+        const cellEditable = editable && !datasetReadOnly(column)
         const usesPicker = column.kind === 'boolean' || column.kind === 'select'
         const multiSelect = column.kind === 'multi_select'
         const display = displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse'))
+        const reason = row.original.formula_errors?.[column.key]
+        const diagnostic = reason ? datasetFormulaError(reason) : undefined
         const showPreview = isFocused && showCellPreview && value !== null && !!display
         return <TableCell key={cell.id} ref={isFocused ? previewAnchor : undefined} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
           (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : !rangeSelected && 'hover:bg-muted',
@@ -925,7 +927,8 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
               className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0',
                 column.kind === 'url' && value && 'pr-9')}
-              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: display })}
+              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: diagnostic ?? display })}
+              title={diagnostic}
               aria-pressed={isFocused || rangeSelected}
               onMouseDown={event => {
                 if (!editing && event.button === 0) {
@@ -939,7 +942,8 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               onClick={() => { if (!draft) setActive({ row: row.id, column: column.key }) }}
               onDoubleClick={() => beginEdit(row.original, column)}
               onKeyDown={event => handleCellKey(event, row.original, column)}>
-              <span data-dataset-cell-label="" className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{display || '—'}</span>
+              {diagnostic && <CircleAlert aria-hidden="true" className="text-destructive" />}
+              <span data-dataset-cell-label="" className={cn('min-w-0 truncate', diagnostic && 'text-destructive', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{diagnostic || display || '—'}</span>
             </Button>
           }
           {showPreview && <DatasetCellPreview anchor={previewAnchor} content={previewContent} value={display}
@@ -1052,7 +1056,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           <SelectContent>
             <SelectItem value="$none"><Ungroup aria-hidden="true" />{t('dataset.noGrouping')}</SelectItem>
             {dataset.columns.filter(column => datasetGroupable(column.kind)).map(column =>
-              <SelectItem value={column.key} key={column.key}><DatasetFieldIcon kind={column.kind} /><span className="truncate">{column.label}</span></SelectItem>)}
+              <SelectItem value={column.key} key={column.key}><DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} /><span className="truncate">{column.label}</span></SelectItem>)}
           </SelectContent>
         </Select>
         <Button variant="toolbar" aria-pressed={showSummaries} disabled={editing}
@@ -1108,7 +1112,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               aria-sort={priority === 0 && direction ? (direction === 'asc' ? 'ascending' : 'descending') : undefined}>
               <Button variant="ghost" size="sm" className={cn(CELL_BUTTON, 'absolute inset-y-0 left-0 right-2 h-full gap-1 px-2')}
                 onClick={header.column.getToggleSortingHandler()} disabled={!!edit || !!draft}>
-                <DatasetFieldIcon kind={column.kind} />
+                <DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} />
                 <span className="relative top-px min-w-0 truncate leading-none" title={column.label}>{column.label}</span>
                 {column.unique && <DatasetUniqueBadge />}
                 <Icon aria-hidden="true" className="ml-auto" />

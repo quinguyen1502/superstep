@@ -96,6 +96,21 @@ class DatasetColumnUpdate(BaseModel):
 RowValues = Annotated[dict[ColumnKey, DatasetValue], Field(max_length=100)]
 
 
+class DatasetFormulaPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    revision: int = Field(ge=1)
+    column: DatasetColumnIn
+    row_id: str | None = Field(default=None, min_length=1, max_length=100)
+    sample: RowValues = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def one_input(self):
+        if self.row_id is not None and self.sample:
+            raise ValueError("Choose a row or sample values")
+        return self
+
+
 class DatasetRowIn(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 

@@ -68,6 +68,8 @@ def _compile_formulas(dataset: Dataset) -> dict[str, Formula]:
         return dataset.compile_formulas()
     except FormulaDefinitionError as exc:
         details = {"reason": exc.reason}
+        if exc.column is not None:
+            details["field"] = exc.column
         if exc.offset is not None:
             details["offset"] = exc.offset
         if exc.field is not None:
@@ -95,6 +97,7 @@ def _summary(dataset: Dataset) -> dict:
 def _detail(dataset: Dataset) -> dict:
     return {
         **_summary(dataset),
+        **({"formula_config_enabled": True} if config.dataset_formulas_enabled() else {}),
         "columns": [
             {"key": col.key, "label": col.label, "kind": col.kind, "required": col.required,
              "unique": col.unique, "default": col.default_value, "options": col.options,
@@ -216,6 +219,21 @@ class DatasetService:
             if field.key == key and not field.archived:
                 return field
         raise AppError("DATASET_COLUMN_NOT_FOUND")
+
+    def prepare_formula_preview(self, uid: str, dataset_id: str, *, column: dict, revision: int) -> Dataset:
+        dataset = self.managed_definition(uid, dataset_id, revision)
+        _require_formula_enabled()
+        candidate = _column(column, len(dataset.columns))
+        if candidate.formula is None:
+            raise AppError("DATASET_FORMULA_INVALID", field=candidate.key)
+        existing = next((field for field in dataset.columns if field.key == candidate.key), None)
+        if existing is None:
+            dataset.columns.append(candidate)
+        elif existing.archived or existing.formula is None or existing.kind != candidate.kind:
+            raise AppError("DATASET_SCHEMA_INCOMPATIBLE", field=candidate.key)
+        else:
+            existing.formula = candidate.formula
+        return dataset
 
     def add_column(self, uid: str, dataset_id: str, *, column: dict, revision: int) -> dict:
         dataset = self.managed_definition(uid, dataset_id, revision)

@@ -270,3 +270,32 @@ def test_formula_migration_preserves_legacy_rows_and_guards_downgrade(client, db
     downgrade()
     db.migrate()
     assert call(client, "GET", f"{rows}/{legacy['id']}")["values"] == legacy["values"]
+
+
+def test_formula_preview_uses_saved_rows_or_transitive_sample_inputs(client, enabled):
+    data, base = make_dataset(client, [*BASE_COLUMNS, formula("cost", "[hours] * [rate]")])
+    rows = f"{base}/rows"
+    row = insert(client, rows, ticket="A", hours=4, rate=20)
+    preview = f"{base}/columns/formula/preview"
+    request = {"revision": 1, "column": formula("result", "[cost] / [hours]")}
+    assert data["formula_config_enabled"] is True
+    assert call(client, "POST", preview, body={**request, "row_id": row["id"]}) == {
+        "value": 20, "inputs": ["hours", "rate"], "error": None,
+    }
+    assert call(client, "POST", preview, body={**request, "sample": {"hours": 0, "rate": 5}}) == {
+        "value": None, "inputs": ["hours", "rate"], "error": "division_by_zero",
+    }
+    assert call(client, "POST", preview, body=request) == {
+        "value": None, "inputs": ["hours", "rate"], "error": None,
+    }
+    changed = {"revision": 1, "column": formula("cost", "[rate] + 2")}
+    assert call(client, "POST", preview, body={**changed, "row_id": row["id"]})["value"] == 22
+    assert call(client, "GET", f"{rows}/{row['id']}") == row
+    assert call(client, "GET", base) == data
+    error(client.post(preview, json=request, headers=auth("member")), 403, "PERMISSION_DENIED")
+    error(client.post(preview, json=request, headers=auth("other")), 404, "DATASET_NOT_FOUND")
+    error(client.post(preview, json={**request, "row_id": "missing"}, headers=auth("owner")), 404, "DATASET_ROW_NOT_FOUND")
+    error(client.post(preview, json={**request, "revision": 2}, headers=auth("owner")), 409, "DATASET_SCHEMA_CONFLICT")
+    failure = client.post(preview, json={**request, "column": formula("result", "[missing]")}, headers=auth("owner"))
+    error(failure, 400, "DATASET_FORMULA_INVALID")
+    assert failure.json()["error"]["details"] == {"reason": "unknown_field", "offset": 0, "dependency": "missing", "field": "result"}

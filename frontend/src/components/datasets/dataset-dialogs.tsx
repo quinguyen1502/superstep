@@ -10,8 +10,10 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { api, ApiError } from '@/lib/api'
-import { datasetUrl, displayValue, fromDraft, newDatasetColumn, toDraft, type CellValue, type Dataset, type DatasetColumn, type DatasetRow, type DatasetTeam } from '@/lib/datasets'
+import { datasetFormulaError, datasetUrl, displayValue, fromDraft, newDatasetColumn, toDraft, type CellValue, type Dataset, type DatasetColumn, type DatasetRow, type DatasetTeam } from '@/lib/datasets'
+import { cn } from '@/lib/utils'
 import { DatasetFieldIcon } from './dataset-field-icon'
+import { DatasetFormulaEditor } from './dataset-formula-editor'
 import { DatasetColumnFields, DatasetValueField } from './dataset-fields'
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback
@@ -108,12 +110,16 @@ type ColumnFailure = {
   message: string
   duplicates?: { field: string; value: CellValue; rows: string[]; count: number }
   workflow?: { id: string; name: string } | null
+  formula?: string
 }
 
 function columnFailure(failure: unknown, fallback: string): ColumnFailure {
   const result: ColumnFailure = { message: message(failure, fallback) }
   if (!(failure instanceof ApiError)) return result
   const details = failure.details ?? {}
+  if (failure.code === 'DATASET_FORMULA_INVALID') {
+    result.formula = details.reason ? datasetFormulaError(details.reason, details) : result.message
+  }
   if (failure.code === 'DATASET_UNIQUE_DUPLICATES') {
     result.duplicates = { field: details.field, value: details.value ?? null, rows: details.rows ?? [], count: details.count ?? 0 }
   }
@@ -151,11 +157,17 @@ export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDu
   }
 
   const duplicates = error?.duplicates
+  const changeDraft = (next: typeof draft) => {
+    setDraft(next)
+    if (error?.formula) setError(null)
+  }
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
-    <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden">
+    <DialogContent className={cn("flex max-h-[90dvh] flex-col overflow-hidden", draft.formula && "sm:max-w-lg")}>
       <DialogHeader><DialogTitle>{t(column ? 'dataset.editColumn' : 'dataset.addColumn')}</DialogTitle></DialogHeader>
       <DialogBody><form id={formId} className="space-y-4" onSubmit={save}>
-        <DatasetColumnFields column={draft} existing={!!column} onChange={setDraft} />
+        <DatasetColumnFields column={draft} existing={!!column} onChange={changeDraft}
+          formulaEnabled={dataset.formula_config_enabled}
+          formulaEditor={<DatasetFormulaEditor dataset={dataset} column={draft} onChange={changeDraft} saveError={error?.formula} />} />
         {duplicates ? <Alert variant="destructive" data-testid="dataset-unique-duplicates"><AlertTriangle />
           <AlertTitle>{t('dataset.uniqueDuplicatesTitle')}</AlertTitle>
           <AlertDescription>
@@ -169,7 +181,7 @@ export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDu
               {t('dataset.uniqueDuplicatesShow', { value: displayValue(duplicates.value, t('dataset.valueTrue'), t('dataset.valueFalse'), draft.kind) })}
             </Button>}
           </AlertDescription>
-        </Alert> : error && <Alert variant="destructive"><AlertTriangle /><AlertDescription>
+        </Alert> : error && !error.formula && <Alert variant="destructive"><AlertTriangle /><AlertDescription>
           <p>{error.message}</p>
           {error.workflow !== undefined && <p>{error.workflow
             ? <>{t('dataset.uniqueKeyInUse', { workflow: error.workflow.name })}{' '}
@@ -258,7 +270,7 @@ export function DatasetRowDialog({ dataset, row, editable, triggerId, onClose, o
           {schema.columns.map((column, index) => {
             const fieldId = `${id}-${column.key}`
             return <div key={column.key} className="min-w-0 space-y-1">
-              <Label htmlFor={fieldId} className="gap-1"><DatasetFieldIcon kind={column.kind} />{column.label}</Label>
+              <Label htmlFor={fieldId} className="gap-1"><DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} />{column.label}</Label>
               <DatasetValueField id={fieldId} label={column.label} column={column} disabled={busy || !editable} focus={editable && index === 0}
                 value={Object.hasOwn(draft, column.key) ? draft[column.key] : source.values[column.key] ?? null}
                 onChange={value => setDraft(current => ({ ...current, [column.key]: value }))} />
