@@ -944,6 +944,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               onKeyDown={event => handleCellKey(event, row.original, column)}>
               {diagnostic && <CircleAlert aria-hidden="true" className="text-destructive" />}
               <span data-dataset-cell-label="" className={cn('min-w-0 truncate', diagnostic && 'text-destructive', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{diagnostic || display || '—'}</span>
+              {isFocused && cellEditable && (usesPicker || multiSelect) && <ChevronDown aria-hidden="true" className="ms-auto text-muted-foreground" />}
             </Button>
           }
           {showPreview && <DatasetCellPreview anchor={previewAnchor} content={previewContent} value={display}
