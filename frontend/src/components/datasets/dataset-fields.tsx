@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
-import { datasetKinds, datasetReadOnly, datasetSystemTime, displayValue, fromDraft, type CellValue, type ColumnDraft, type DatasetColumn, type DatasetKind } from '@/lib/datasets'
+import { datasetFormulaKinds, datasetKinds, datasetReadOnly, datasetSystemTime, displayValue, fromDraft, type CellValue, type ColumnDraft, type DatasetColumn, type DatasetKind } from '@/lib/datasets'
 import { cn } from '@/lib/utils'
 import { DatasetColumnOptions } from './dataset-column-options'
 import { DatasetFieldIcon } from './dataset-field-icon'
@@ -98,7 +98,7 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   const invalidProps = { 'aria-invalid': !!message, 'aria-describedby': message ? `${id}-error` : undefined }
   const feedback = message && <p id={`${id}-error`} role="alert"
     className={cn('text-xs wrap-anywhere text-destructive', inline ? 'px-2 pb-1' : 'mt-1')}>{message}</p>
-  if (datasetReadOnly(column.kind) && !filter) {
+  if (datasetReadOnly(column) && !filter) {
     return <output id={id} aria-label={label} className="text-sm">
       {displayValue(value, t('dataset.valueTrue'), t('dataset.valueFalse'), column.kind)}
     </output>
@@ -203,10 +203,12 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   </div>
 }
 
-export function DatasetColumnFields({ column, onChange, existing }: {
+export function DatasetColumnFields({ column, onChange, existing, formulaEnabled, formulaEditor }: {
   column: ColumnDraft
   onChange: (column: ColumnDraft) => void
   existing?: boolean
+  formulaEnabled?: boolean
+  formulaEditor?: ReactNode
 }) {
   const { t } = useTranslation()
   const id = useId()
@@ -221,14 +223,35 @@ export function DatasetColumnFields({ column, onChange, existing }: {
         onChange={event => onChange({ ...column, key: event.target.value })} />
     </div>
     <div className="space-y-1"><Label htmlFor={`${id}-kind`}>{t('dataset.columnType')}</Label>
-      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, default: null, optionsText: '', validation_rules: undefined, display_format: undefined,
-        required: datasetReadOnly(kind as DatasetKind) ? false : column.required,
-        unique: kind === 'auto_number' || (!['long_text', 'multi_select'].includes(kind) && !datasetReadOnly(kind as DatasetKind) && column.unique) })}>
+      <Select value={column.formula ? 'formula' : column.kind} disabled={existing} onValueChange={kind => {
+        if (kind === 'formula') {
+          onChange({ ...column, kind: 'number', required: false, unique: false, default: null, optionsText: '',
+            validation_rules: undefined, display_format: undefined, formula: { version: 1, expression: '' } })
+          return
+        }
+        const scalar = kind as DatasetKind
+        onChange({ ...column, kind: scalar, default: null, optionsText: '', validation_rules: undefined, display_format: undefined, formula: undefined,
+          required: datasetReadOnly(scalar) ? false : column.required,
+          unique: scalar === 'auto_number' || (!['long_text', 'multi_select'].includes(scalar) && !datasetReadOnly(scalar) && column.unique) })
+      }}>
         <SelectTrigger id={`${id}-kind`} className="w-full"><SelectValue /></SelectTrigger>
-        <SelectContent>{datasetKinds.map(kind => <SelectItem value={kind} key={kind}><DatasetFieldIcon kind={kind} /><span>{t(`dataset.kind.${kind}`)}</span></SelectItem>)}</SelectContent>
+        <SelectContent>
+          {datasetKinds.map(kind => <SelectItem value={kind} key={kind}><DatasetFieldIcon kind={kind} /><span>{t(`dataset.kind.${kind}`)}</span></SelectItem>)}
+          {(formulaEnabled || !!column.formula) && <SelectItem value="formula"><DatasetFieldIcon kind="formula" />{t('dataset.formula.type')}</SelectItem>}
+        </SelectContent>
       </Select>
     </div>
-    {!datasetReadOnly(column.kind) && <div className="space-y-1"><Label htmlFor={`${id}-default`}>{t('dataset.defaultValue')}</Label>
+    {column.formula && <div className="space-y-1">
+      <Label htmlFor={id + '-formula-result'}>{t('dataset.formula.resultType')}</Label>
+      <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, display_format: undefined })}>
+        <SelectTrigger id={id + '-formula-result'} className="w-full"><SelectValue /></SelectTrigger>
+        <SelectContent>{datasetFormulaKinds.map(kind => <SelectItem value={kind} key={kind}>
+          <DatasetFieldIcon kind={kind} />{t('dataset.kind.' + kind)}
+        </SelectItem>)}</SelectContent>
+      </Select>
+    </div>}
+    {column.formula && formulaEditor}
+    {!datasetReadOnly(column) && <div className="space-y-1"><Label htmlFor={`${id}-default`}>{t('dataset.defaultValue')}</Label>
       <DatasetValueField id={`${id}-default`} label={t('dataset.defaultValue')} column={{ ...column, options }} value={column.default}
         onChange={value => onChange({ ...column, default: value })} nullable />
     </div>}
@@ -236,7 +259,7 @@ export function DatasetColumnFields({ column, onChange, existing }: {
       <Label htmlFor={`${id}-options`}>{t('dataset.options')}</Label>
       <Textarea id={`${id}-options`} required value={column.optionsText} onChange={event => onChange({ ...column, optionsText: event.target.value })} />
     </div>}
-    {!datasetReadOnly(column.kind) && <div className="space-y-1 sm:col-span-2">
+    {!datasetReadOnly(column) && <div className="space-y-1 sm:col-span-2">
       <div className="flex flex-wrap gap-4">
         <Label className={cn(existing && 'text-muted-foreground')}>
           <Checkbox checked={column.required} disabled={existing} aria-describedby={existing ? `${id}-required-help` : undefined}

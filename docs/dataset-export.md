@@ -125,7 +125,7 @@ storage with the auto-number watermark.
 
 ### Formula storage preview
 
-Formula configuration is off by default while Studio and standalone export support are in development. Enable `STUDIO_ENABLE_DATASET_FORMULAS=1` in an isolated test environment to add or edit Formula expressions through the schema API. Existing formulas still recalculate when input rows change after this setting is turned off.
+Formula configuration is off by default while standalone export support is in development. Enable `STUDIO_ENABLE_DATASET_FORMULAS=1` in an isolated test environment to add or edit Formula expressions in the Studio Schema tab or through the schema API. Existing formulas still recalculate when input rows change after this setting is turned off.
 
 A Formula column uses its scalar result kind and optional `formula` metadata with `version: 1` and `expression`. Its result is read-only in all writers. CSV export includes computed values and CSV import skips those columns. Authorized row reads can include a `formula_errors` object keyed by projected column if a calculation returns null with an error. A missing input can also yield null, with no entry in that object. Writes under a write-only grant continue to return identifiers only. A connected request that references a Formula field includes its definition in `columns`. Test writes calculate with the available input and leave stored values and generated numbers untouched.
 

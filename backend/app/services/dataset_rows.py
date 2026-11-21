@@ -8,7 +8,7 @@ from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, RowFilterGroup, WorkflowWrite
-from .dataset_service import DatasetService
+from .dataset_service import DatasetService, _compile_formulas
 
 def _active_columns(dataset: Dataset) -> dict[str, DatasetColumn]:
     return {column.key: column for column in dataset.columns if not column.archived}
@@ -141,6 +141,31 @@ def _summary_metrics(columns, summaries):
 class DatasetRowService:
     def __init__(self, datasets: DatasetService, rows: DatasetRowRepository):
         self.datasets, self.rows = datasets, rows
+
+    def preview_formula(self, uid: str, dataset_id: str, *, column: dict, revision: int,
+                        row_id: str | None, sample: dict) -> dict:
+        dataset = self.datasets.prepare_formula_preview(uid, dataset_id, column=column, revision=revision)
+        formulas = _compile_formulas(dataset)
+        columns = _active_columns(dataset)
+        key = column["key"]
+        dependencies = {key}
+        for output, formula in reversed(formulas.items()):
+            if output in dependencies:
+                dependencies.update(formula.dependencies)
+        inputs = [name for name, field in columns.items() if name in dependencies and not field.read_only]
+        if row_id is not None:
+            row = self.rows.get(dataset.id, row_id)
+            if row is None:
+                raise AppError("DATASET_ROW_NOT_FOUND")
+            values = row.values
+        else:
+            values = {name: columns[name].default_value for name in inputs}
+            for name, value in sample.items():
+                if name not in inputs:
+                    raise AppError("DATASET_COLUMN_NOT_FOUND", field=name)
+                values[name] = _normalize(columns[name], value, required=False)
+        computed, errors = materialize_formulas(formulas, values)
+        return {"value": computed[key], "inputs": inputs, "error": (errors or {}).get(key)}
 
     def expire_receipts(self) -> int:
         return self.rows.expire_receipts(time() - config.dataset_receipt_days() * 86400)

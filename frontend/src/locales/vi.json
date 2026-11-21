@@ -111,6 +111,35 @@
     }
   },
   "dataset": {
+    "formula": {
+      "type": "Công thức",
+      "resultType": "Kiểu kết quả",
+      "expression": "Biểu thức công thức",
+      "insertField": "Chèn trường",
+      "preview": "Xem thử",
+      "previewRow": "Dòng xem thử",
+      "previewHint": "Xem thử kết quả trước khi lưu.",
+      "emptyResult": "Các giá trị đầu vào này cho kết quả trống.",
+      "sampleInputs": "Giá trị đầu vào mẫu",
+      "calculationError": "Không tính được công thức.",
+      "diagnosticField": "Khoá được tham chiếu là {{field}}.",
+      "diagnosticPosition": "Tại ký tự {{position}}.",
+      "diagnostic": {
+        "division_by_zero": "Chia cho 0.",
+        "dependency": "Một công thức được tham chiếu có lỗi.",
+        "invalid_input": "Một giá trị đầu vào không hợp lệ.",
+        "numeric_range": "Số nằm ngoài phạm vi được hỗ trợ.",
+        "text_length": "Văn bản tính được quá dài.",
+        "syntax": "Kiểm tra cú pháp công thức.",
+        "limit": "Công thức quá phức tạp.",
+        "unknown_field": "Một trường được tham chiếu không khả dụng.",
+        "field_type": "Kiểu của một trường được tham chiếu chưa được hỗ trợ.",
+        "type": "Kiểu của các toán hạng không tương thích.",
+        "result_type": "Giá trị không khớp với kiểu kết quả đã chọn.",
+        "cycle": "Các công thức tham chiếu lẫn nhau tạo thành vòng lặp.",
+        "column_settings": "Kiểm tra cấu hình cột công thức."
+      }
+    },
     "clipboardMenu": "Bộ nhớ tạm",
     "shortcutIntro": "Chọn một ô để dùng phím tắt của bảng. Để chọn một vùng, kéo qua các ô hoặc giữ Shift và dùng phím mũi tên.",
     "clipboardCopy": "Sao chép ô",

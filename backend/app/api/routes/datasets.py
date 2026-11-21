@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 
 from ...core.errors import AppError
 from ...schemas.dataset import (
-    DatasetBatchUpdate, DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetGrantInput, DatasetTokenInput,
+    DatasetBatchUpdate, DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetFormulaPreview, DatasetGrantInput, DatasetTokenInput,
     DatasetOwnerUpdate, DatasetRowIn, DatasetGroupedRowQuery, DatasetGroupsQuery, DatasetGroupRowsQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetSummaryQuery, DatasetUpdate,
 )
 from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_csv_service, dataset_row_service, dataset_service, limit_body
@@ -107,6 +107,11 @@ def transfer_dataset(dataset_id: str, body: DatasetOwnerUpdate, user=Depends(cur
 def delete_dataset(dataset_id: str, revision: Revision,
                    user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.delete(user["id"], dataset_id, revision)
+
+
+@router.post("/{dataset_id}/columns/formula/preview", dependencies=[Depends(limit_body)])
+def preview_formula(dataset_id: str, body: DatasetFormulaPreview, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.preview_formula(user["id"], dataset_id, **body.model_dump())
 
 
 @router.post("/{dataset_id}/columns", status_code=201)

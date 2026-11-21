@@ -111,6 +111,35 @@
     }
   },
   "dataset": {
+    "formula": {
+      "type": "Formula",
+      "resultType": "Result type",
+      "expression": "Formula expression",
+      "insertField": "Insert field",
+      "preview": "Preview",
+      "previewRow": "Preview row",
+      "previewHint": "Preview the result before saving.",
+      "emptyResult": "No value for these inputs.",
+      "sampleInputs": "Sample inputs",
+      "calculationError": "Formula calculation failed.",
+      "diagnosticField": "Referenced key {{field}}.",
+      "diagnosticPosition": "At character {{position}}.",
+      "diagnostic": {
+        "division_by_zero": "Division by zero.",
+        "dependency": "A referenced formula has an error.",
+        "invalid_input": "An input has an invalid value.",
+        "numeric_range": "This number is outside the supported range.",
+        "text_length": "The calculated text is too long.",
+        "syntax": "Check the formula syntax.",
+        "limit": "This formula is too complex.",
+        "unknown_field": "A referenced field is unavailable.",
+        "field_type": "A referenced field has an unsupported type.",
+        "type": "These formula operands have incompatible types.",
+        "result_type": "The value does not match the selected result type.",
+        "cycle": "Formula references form a cycle.",
+        "column_settings": "Check the Formula column settings."
+      }
+    },
     "clipboardMenu": "Clipboard",
     "shortcutIntro": "Select a cell to use grid shortcuts. To select a range, drag across cells or hold Shift while moving with the arrow keys.",
     "clipboardCopy": "Copy cells",

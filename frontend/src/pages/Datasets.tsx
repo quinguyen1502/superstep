@@ -298,9 +298,9 @@ export function DatasetsPage() {
                     <TableBody>
                       {!current.columns.length && <TableRow><TableCell colSpan={6}>{t('dataset.noColumns')}</TableCell></TableRow>}
                       {current.columns.map(column => <TableRow key={column.key}>
-                        <TableCell><div className="flex items-center gap-1.5"><DatasetFieldIcon kind={column.kind} />{column.label}</div></TableCell>
+                        <TableCell><div className="flex items-center gap-1.5"><DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} />{column.label}</div></TableCell>
                         <TableCell className="font-mono">{column.key}</TableCell>
-                        <TableCell>{t(`dataset.kind.${column.kind}`)}</TableCell>
+                        <TableCell>{t(column.formula ? 'dataset.formula.type' : 'dataset.kind.' + column.kind)}</TableCell>
                         <TableCell><div className="flex flex-wrap gap-1">
                           {column.required && <Badge variant="outline">{t('dataset.required')}</Badge>}
                           {column.unique && <Badge variant="outline">{t('dataset.unique')}</Badge>}
