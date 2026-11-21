@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from ..core import permissions as P
 from ..core.dataset_rules import column_display, column_rules, enforce_rules
-from ..core.dataset_types import INVALID_TEXT, SYSTEM_TIME_KINDS, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_COLUMNS, SYSTEM_TIME_KINDS, normalize_cell
 from ..core.errors import AppError
 from ..engine import dataset_nodes
 from ..models.dataset import Dataset, DatasetColumn
@@ -14,7 +14,6 @@ from ..repositories.datasets import DatasetRepository, RowChange
 from .access import AccessService
 from .audit_service import AuditService
 
-MAX_COLUMNS = 100
 MAX_COLUMN_DEFINITIONS = 200  # active plus removed; a removed key stays reserved
 
 

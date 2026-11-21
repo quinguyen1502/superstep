@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "valid": [
+    {
+      "name": "precedence_and_parentheses",
+      "fields": {"quantity": "number", "price": "number", "total": "number"},
+      "expressions": {"total": "[quantity] * ([price] + 2) - 1"},
+      "row": {"quantity": 3, "price": 4},
+      "values": {"total": 17},
+      "errors": {}
+    },
+    {
+      "name": "references_to_generated_and_derived_fields",
+      "fields": {"ticket": "auto_number", "base": "number", "total": "number"},
+      "expressions": {"total": "[base] * 2", "base": "[ticket] + 1"},
+      "row": {"ticket": 4, "base": 999},
+      "values": {"base": 5, "total": 10},
+      "errors": {}
+    },
+    {
+      "name": "typed_boolean_and_if",
+      "fields": {"hours": "number", "billable": "boolean", "complete": "boolean"},
+      "expressions": {"complete": "IF([billable] == true, [hours] >= 1.5, false)"},
+      "row": {"hours": 2, "billable": true},
+      "values": {"complete": true},
+      "errors": {}
+    },
+    {
+      "name": "string_literal_and_text_field",
+      "fields": {"status": "select", "title": "long_text", "display": "text"},
+      "expressions": {"display": "[title] & \" \\u2014 \" & [status]"},
+      "row": {"title": "Printer 🖨", "status": "Open"},
+      "values": {"display": "Printer 🖨 — Open"},
+      "errors": {}
+    },
+    {
+      "name": "exact_text_equality",
+      "fields": {"subject": "text", "matched": "boolean"},
+      "expressions": {"matched": "[subject] == \"SUPPORT\""},
+      "row": {"subject": "Support"},
+      "values": {"matched": false},
+      "errors": {}
+    },
+    {
+      "name": "missing_input",
+      "fields": {"unit_price": "number", "quantity": "number", "total": "number"},
+      "expressions": {"total": "[unit_price] * [quantity]"},
+      "row": {"quantity": 2},
+      "values": {"total": null},
+      "errors": {}
+    },
+    {
+      "name": "if_skips_unselected_branch",
+      "fields": {"units": "number", "rate": "number"},
+      "expressions": {"rate": "IF([units] != 0, 100 / [units], 0)"},
+      "row": {"units": 0},
+      "values": {"rate": 0},
+      "errors": {}
+    },
+    {
+      "name": "if_skips_both_branches_for_null_condition",
+      "fields": {"visible": "boolean", "rate": "number"},
+      "expressions": {"rate": "IF([visible], 1 / 0, 2 / 0)"},
+      "row": {},
+      "values": {"rate": null},
+      "errors": {}
+    },
+    {
+      "name": "division_by_zero_and_dependency",
+      "fields": {"units": "number", "adjusted": "number", "rate": "number", "ok": "number"},
+      "expressions": {"adjusted": "[rate] + 2", "rate": "100 / [units]", "ok": "1E2 + -2"},
+      "row": {"units": 0},
+      "values": {"rate": null, "adjusted": null, "ok": 98},
+      "errors": {"rate": "division_by_zero", "adjusted": "dependency"}
+    },
+    {
+      "name": "overflow_is_a_cell_error",
+      "fields": {"max_value": "number", "value": "number"},
+      "expressions": {"value": "[max_value] + 1"},
+      "row": {"max_value": 9007199254740991},
+      "values": {"value": null},
+      "errors": {"value": "numeric_range"}
+    },
+    {
+      "name": "invalid_input_does_not_bypass_type_checks",
+      "fields": {"count": "number", "value": "number"},
+      "expressions": {"value": "[count] * 2"},
+      "row": {"count": true},
+      "values": {"value": null},
+      "errors": {"value": "invalid_input"}
+    }
+  ],
+  "invalid": [
+    {
+      "name": "reference_to_removed_or_unknown_column",
+      "fields": {"total": "number"},
+      "expressions": {"total": "2 + [removed]"},
+      "diagnostic": {"reason": "unknown_field", "column": "total", "field": "removed", "offset": 4}
+    },
+    {
+      "name": "unsupported_input_kind",
+      "fields": {"tags": "multi_select", "total": "text"},
+      "expressions": {"total": "[tags]"},
+      "diagnostic": {"reason": "field_type", "column": "total", "field": "tags", "offset": 0}
+    },
+    {
+      "name": "implicit_string_number_cast",
+      "fields": {"total": "number"},
+      "expressions": {"total": "\"2\" + 1"},
+      "diagnostic": {"reason": "type", "column": "total", "offset": 4}
+    },
+    {
+      "name": "if_requires_compatible_branches",
+      "fields": {"total": "number"},
+      "expressions": {"total": "IF(true, 1, false)"},
+      "diagnostic": {"reason": "type", "column": "total", "offset": 0}
+    },
+    {
+      "name": "mismatching_declared_result",
+      "fields": {"total": "number"},
+      "expressions": {"total": "true"},
+      "diagnostic": {"reason": "result_type", "column": "total"}
+    },
+    {
+      "name": "calls_are_allowlisted",
+      "fields": {"total": "number"},
+      "expressions": {"total": "SUM(1, 2)"},
+      "diagnostic": {"reason": "syntax", "column": "total", "offset": 0}
+    },
+    {
+      "name": "numeric_literal_out_of_range",
+      "fields": {"total": "number"},
+      "expressions": {"total": "9007199254740992"},
+      "diagnostic": {"reason": "numeric_range", "column": "total", "offset": 0}
+    },
+    {
+      "name": "unexpected_trailing_content",
+      "fields": {"total": "number"},
+      "expressions": {"total": "12 34"},
+      "diagnostic": {"reason": "syntax", "column": "total", "offset": 3}
+    },
+    {
+      "name": "dependency_cycle",
+      "fields": {"first": "number", "second": "number"},
+      "expressions": {"first": "[second]", "second": "[first]"},
+      "diagnostic": {"reason": "cycle", "column": "first"}
+    },
+    {
+      "name": "self_cycle",
+      "fields": {"total": "number"},
+      "expressions": {"total": "[total] + 1"},
+      "diagnostic": {"reason": "cycle", "column": "total"}
+    }
+  ]
+}
