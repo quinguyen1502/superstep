@@ -1,6 +1,6 @@
 """Startup bootstrap: migrate the schema, seed the demo user (not in production, ) and the shared example workflow."""
 import os, secrets, time, uuid
-from ..core import config, security
+from ..core import config, permissions, security
 from ..core.logging import get_logger
 from ..models.database import Database
 from ..repositories import UserRepository, WorkflowRepository, RunRepository, WorkflowVersionRepository
@@ -45,10 +45,13 @@ def bootstrap(db: Database, jobs=None) -> None:
             if (a := users.get_by_email(email)) is not None: users.set_admin(a.id); users.set_active(a.id, True)
         if users.count_active_admins() == 0 and (emails := sorted(config.admin_emails())): create_admin(users, emails[0])
         if users.count_active_admins() == 0 and not config.IS_PROD: users.set_admin(uid); users.set_active(uid, True)  # dev: the demo user
-    if not users.get_by_id(uid):  # production without the demo user: the oldest active admin owns legacy rows and the example
+    demo = config.demo_mode()
+    owner = users.get_by_id(uid)
+    if owner is None or (demo and (not owner.active or not permissions.can(owner.role, permissions.RESOURCES_MANAGE))):
+        # The oldest active admin owns startup samples when the local development account is unavailable.
         uid = next((x.id for x, _ in users.list_all() if x.role == "admin" and x.active), None)
         if uid is None: return
     wfs.adopt_unowned(uid)  # legacy rows created before multi-user support
     if not wfs.exists("example"):
         WorkflowService(wfs, RunRepository(db), WorkflowVersionRepository(db)).seed_example(uid, "example")
-    if config.demo_mode(): demo_service.seed(db, uid, jobs=jobs)  # every boot: the free plan wipes SQLite when it sleeps
+    if demo: demo_service.seed(db, uid, jobs=jobs)  # every boot: the free plan wipes SQLite when it sleeps
