@@ -818,7 +818,8 @@ test('pins columns, loads the next rows on scroll, and persists row height', asy
   await expect(page.getByRole('combobox', { name: 'Row height' })).toHaveText('Tall')
 })
 
-test('edits long text and URLs while leaving system timestamps read-only', async ({ page }) => {
+test('previews and edits long text and URLs while leaving system timestamps read-only', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1536, height: 900 })
   await page.addInitScript(() => localStorage.setItem('lang', 'en'))
   await page.goto('/login')
   const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
@@ -836,7 +837,8 @@ test('edits long text and URLs while leaving system timestamps read-only', async
   await page.goto(`/datasets/${id}`)
   await page.getByRole('button', { name: 'Add row' }).click()
   const draft = page.getByTestId('dataset-row-draft')
-  await draft.getByRole('textbox', { name: 'Notes' }).fill('First line\nSecond line')
+  const notes = Array.from({ length: 20 }, (_, index) => `Line ${index + 1} of the support ticket notes.`).join('\n')
+  await draft.getByRole('textbox', { name: 'Notes' }).fill(notes)
   await draft.getByRole('textbox', { name: 'Site' }).fill('https://example.org/reference')
   await expect(draft.getByRole('status', { name: 'Created' })).toBeVisible()
   await draft.getByRole('button', { name: 'Save', exact: true }).click()
@@ -847,8 +849,95 @@ test('edits long text and URLs while leaving system timestamps read-only', async
   const stamp = row.getByRole('button', { name: /^Created:/ })
   await stamp.dblclick()
   await expect(row.getByRole('textbox', { name: 'Created' })).toHaveCount(0)
-  await row.getByRole('button', { name: /^Edit Notes:/ }).dblclick()
-  await expect(row.getByRole('textbox', { name: 'Notes' })).toHaveValue('First line\nSecond line')
+  const notesCell = row.getByRole('button', { name: /^Edit Notes:/ })
+  const rowHeight = (await row.boundingBox())!.height
+  const preview = page.locator('[data-dataset-cell-preview]')
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate(active => document.documentElement.classList.toggle('dark', active === 'dark'), theme)
+    await notesCell.click()
+    await expect(preview).toBeVisible()
+    await expect(notesCell).toBeFocused()
+    await expect.poll(async () => (await row.boundingBox())!.height).toBe(rowHeight)
+    await expect.poll(async () => (await preview.boundingBox())!.height).toBeLessThanOrEqual(144)
+    await expect.poll(async () => {
+      const anchor = (await notesCell.locator('..').boundingBox())!
+      const overlay = (await preview.boundingBox())!
+      return Math.max(
+        Math.abs(overlay.y - anchor.y - anchor.height + 2),
+        Math.abs(overlay.x - anchor.x),
+        Math.abs(overlay.width - anchor.width),
+      )
+    }).toBeLessThanOrEqual(1)
+    await expect(preview).toHaveCSS('border-top-width', '0px')
+    await expect(preview).toHaveCSS('border-inline-start-width', '1px')
+    await expect(preview).toHaveCSS('border-inline-end-width', '1px')
+    await expect(preview).toHaveCSS('border-bottom-width', '1px')
+    await expect.poll(() => preview.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true)
+    const screenshot = info.outputPath(`dataset-cell-preview-${theme}.png`)
+    await page.screenshot({ path: screenshot, animations: 'disabled' })
+    await info.attach(`dataset-cell-preview-${theme}`, { path: screenshot, contentType: 'image/png' })
+    await notesCell.press('PageDown')
+    await expect.poll(() => preview.evaluate(node => node.scrollTop)).toBeGreaterThan(0)
+    await notesCell.press('PageUp')
+    await preview.hover()
+    await page.mouse.wheel(0, 160)
+    await expect.poll(() => preview.evaluate(node => node.scrollTop)).toBeGreaterThan(0)
+    await notesCell.press('Shift+ArrowRight')
+    await expect(preview).toBeHidden()
+    await expect(notesCell).toBeFocused()
+    await stamp.click()
+    await expect.poll(async () => (await row.boundingBox())!.height).toBe(rowHeight)
+  }
+  await page.setViewportSize({ width: 1536, height: 405 })
+  await notesCell.click()
+  await expect(preview).toHaveAttribute('data-side', 'top')
+  await expect(preview).toHaveCSS('border-bottom-width', '0px')
+  await expect(preview).toHaveCSS('border-top-width', '1px')
+  await expect.poll(async () => (await row.boundingBox())!.height).toBe(rowHeight)
+  await page.setViewportSize({ width: 1536, height: 900 })
+  await notesCell.dblclick()
+  const editor = row.getByRole('textbox', { name: 'Notes' })
+  await expect(editor).toHaveValue(notes)
+  await expect(row.getByRole('button', { name: 'Clear value' })).toHaveCount(0)
+  await editor.fill('')
+  await editor.press('Control+Enter')
+  await expect(row.getByRole('button', { name: 'Edit Notes: —', exact: true })).toBeVisible()
+})
+
+test('closes a dismissed select and keeps failed saves editable', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('lang', 'en'))
+  await page.goto('/login')
+  const headers = { Authorization: `Bearer ${await signIn(page, 'admin@example.com', 'admin123')}` }
+  const created = await page.request.post('/api/datasets', { headers, data: {
+    name: `Select editors ${Date.now()}`,
+    columns: [{ key: 'team', label: 'Team', kind: 'select', unique: true, options: ['Support', 'Infra', 'Billing'] }],
+  } })
+  expect(created.ok()).toBeTruthy()
+  const { id } = (await created.json()).data
+  for (const team of ['Support', 'Infra']) {
+    expect((await page.request.post(`/api/datasets/${id}/rows`, { headers, data: { values: { team } } })).ok()).toBeTruthy()
+  }
+  await page.goto(`/datasets/${id}`)
+  const cell = page.getByRole('button', { name: 'Edit Team: Support', exact: true })
+  const picker = page.getByRole('combobox', { name: 'Team', exact: true })
+  const addRow = page.getByRole('button', { name: 'Add row', exact: true })
+
+  await cell.dblclick()
+  await expect(page.getByRole('option', { name: 'Infra', exact: true })).toBeVisible()
+  await page.mouse.click(10, 10)
+  await expect(cell).toBeVisible()
+  await expect(addRow).toBeEnabled()
+
+  await cell.dblclick()
+  await page.getByRole('option', { name: 'Infra', exact: true }).click()
+  await expect(picker).toHaveAttribute('aria-invalid', 'true')
+  await page.mouse.click(10, 10)
+  await expect(picker).toBeFocused()
+  await expect(addRow).toBeDisabled()
+  await picker.click()
+  await page.getByRole('option', { name: 'Billing', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Edit Team: Billing', exact: true })).toBeVisible()
+  await expect(addRow).toBeEnabled()
 })
 
 test('edits multi-select rows and filters by option membership', async ({ page }) => {
@@ -874,7 +963,18 @@ test('edits multi-select rows and filters by option membership', async ({ page }
   await draft.getByRole('button', { name: 'Save', exact: true }).click()
   const row = page.getByTestId('dataset-row')
   await expect(row.getByRole('button', { name: 'Sequence: 1' })).toBeVisible()
-  await expect(row.getByRole('button', { name: 'Edit Labels: Red, Blue' })).toBeVisible()
+  const redAndBlue = row.getByRole('button', { name: 'Edit Labels: Red, Blue' })
+  const redOption = page.getByRole('menuitemcheckbox', { name: 'Red', exact: true })
+  await redAndBlue.dblclick()
+  await expect(redOption).toBeVisible()
+  await redOption.click()
+  await page.keyboard.press('Escape')
+  await expect(redAndBlue).toBeFocused()
+  await redAndBlue.press('Enter')
+  await expect(redOption).toHaveAttribute('aria-checked', 'true')
+  await redOption.click()
+  await page.mouse.click(10, 10)
+  await expect(row.getByRole('button', { name: 'Edit Labels: Blue', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Filter', exact: true }).click()
   const filter = page.getByRole('dialog', { name: 'Filter', exact: true })
   await filter.getByRole('combobox', { name: 'Filter column' }).click()

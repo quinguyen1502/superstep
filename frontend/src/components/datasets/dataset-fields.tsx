@@ -62,7 +62,9 @@ function DatasetCalendar({ inputId, value, nullable, disabled, kind, onPick }: {
   </Popover>
 }
 
-export function DatasetValueField({ id, label, column, value, onChange, nullable = !column.required, focus, disabled, inline, openPicker, onCalendarPick, error, filter }: {
+type PickerClose = 'escape' | 'outside' | 'trigger'
+
+export function DatasetValueField({ id, label, column, value, onChange, nullable = !column.required, focus, disabled, inline, openPicker, onPickerClose, onCalendarPick, error, filter }: {
   id: string
   label: string
   column: DatasetColumn
@@ -73,12 +75,22 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   disabled?: boolean
   inline?: boolean
   openPicker?: boolean
+  onPickerClose?: (reason: PickerClose) => void
   onCalendarPick?: (value: CellValue) => void
   error?: string
   filter?: boolean
 }) {
   const { t } = useTranslation()
   const kind = datasetSystemTime(column.kind) ? 'datetime' : column.kind === 'auto_number' ? 'number' : column.kind
+  const pickerClose = useRef<PickerClose>('trigger')
+  function handlePickerOpen(open: boolean) {
+    if (open) pickerClose.current = 'trigger'
+    else onPickerClose?.(pickerClose.current)
+  }
+  const pickerEvents = onPickerClose ? {
+    onEscapeKeyDown: () => { pickerClose.current = 'escape' },
+    onPointerDownOutside: () => { pickerClose.current = 'outside' },
+  } : undefined
   const [validation, setValidation] = useState('')
   const [multiline, setMultiline] = useState(() => typeof value === 'string' && (value.length > 80 || value.includes('\n')))
   const inlineStyle = inline && 'rounded-none border-0 bg-transparent px-2 text-sm font-normal shadow-none focus-visible:ring-0 aria-invalid:ring-0 dark:bg-transparent dark:aria-invalid:ring-0'
@@ -93,19 +105,20 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   }
   if (kind === 'multi_select') {
     const selected = Array.isArray(value) ? value : []
-    return <DropdownMenu>
+    return <DropdownMenu defaultOpen={openPicker} onOpenChange={handlePickerOpen}>
       <DropdownMenuTrigger asChild>
         <Button id={id} type="button" variant="outline" aria-label={label} disabled={disabled}
           autoFocus={focus} className={cn('w-full justify-start', inlineStyle)} {...invalidProps}>
           <span className="truncate">{selected.length ? selected.join(', ') : t('dataset.chooseValue')}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" data-dataset-editor-popup={inline ? "" : undefined}>
-        {column.options.map(option => <DropdownMenuCheckboxItem key={option} checked={selected.includes(option)}
+      <DropdownMenuContent align="start" data-dataset-editor-popup={inline ? "" : undefined} {...pickerEvents}>
+        {column.options.length ? column.options.map(option => <DropdownMenuCheckboxItem key={option} checked={selected.includes(option)}
           onSelect={event => event.preventDefault()} onCheckedChange={checked => {
             const next = column.options.filter(item => item === option ? checked : selected.includes(item))
             onChange(next.length ? next : null)
-          }}>{option}</DropdownMenuCheckboxItem>)}
+          }}>{option}</DropdownMenuCheckboxItem>) :
+          <p role="status" className="px-2 py-1.5 text-sm text-muted-foreground">{t('common.noOptions')}</p>}
       </DropdownMenuContent>
       {feedback}
     </DropdownMenu>
@@ -115,10 +128,11 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
       ? [{ value: true, label: t('dataset.valueTrue') }, { value: false, label: t('dataset.valueFalse') }]
       : column.options.map(option => ({ value: option, label: option }))
     const selected = items.findIndex(item => item.value === value)
-    return <div className="min-w-0"><Select disabled={disabled} defaultOpen={openPicker} value={selected >= 0 ? String(selected) : nullable ? 'null' : ''} onValueChange={next => onChange(next === 'null' ? null : items[Number(next)].value)}>
+    const canClear = nullable && items.length > 0
+    return <div className="min-w-0"><Select disabled={disabled} defaultOpen={openPicker} onOpenChange={handlePickerOpen} value={selected >= 0 ? String(selected) : canClear ? 'null' : ''} onValueChange={next => onChange(next === 'null' ? null : items[Number(next)].value)}>
       <SelectTrigger id={id} aria-label={label} className={cn('w-full', inlineStyle)} autoFocus={focus} {...invalidProps}><SelectValue placeholder={t('dataset.chooseValue')} /></SelectTrigger>
-      <SelectContent data-dataset-editor-popup={inline ? "" : undefined}>
-        {nullable && <SelectItem value="null">{t('dataset.emptyValue')}</SelectItem>}
+      <SelectContent data-dataset-editor-popup={inline ? "" : undefined} {...pickerEvents}>
+        {canClear && <SelectItem value="null">{t('dataset.emptyValue')}</SelectItem>}
         {items.map((item, index) => <SelectItem key={String(item.value)} value={String(index)}>{item.label}</SelectItem>)}
       </SelectContent>
     </Select>{feedback}</div>
@@ -126,9 +140,10 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   if (kind === 'long_text' || (kind === 'text' && multiline)) {
     return <div className="min-w-0">
       <Textarea id={id} maxLength={16384} aria-label={label} className={cn(inlineStyle)} value={String(value ?? '')} autoFocus={focus}
-        required={!nullable} disabled={disabled} {...invalidProps} onChange={event => onChange(event.target.value)} />
-      {nullable && <Button type="button" variant="ghost" size="sm" disabled={disabled}
-        onClick={() => onChange(null)}>{t('dataset.clearValue')}</Button>}
+        required={!nullable} disabled={disabled} {...invalidProps} onChange={event => {
+          const next = event.target.value
+          onChange(nullable && !filter && next === '' ? null : next)
+        }} />
       {feedback}
     </div>
   }

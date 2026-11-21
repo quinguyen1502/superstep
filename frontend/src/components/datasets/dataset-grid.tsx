@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   cellSelectionFeature, columnGroupingFeature, columnOrderingFeature, columnPinningFeature, columnResizingFeature, columnSizingFeature,
@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from '@/components/ui/checkbox'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
@@ -46,6 +46,7 @@ const DIRECTIONS: Record<string, CellSelectionDirection> = { ArrowUp: 'up', Arro
 const MOVEMENT: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
 const DIVIDER = 'border-e border-border'
 const CELL_BUTTON = 'w-full justify-start rounded-none hover:bg-transparent dark:hover:bg-transparent'
+const CELL_RANGE_BACKGROUND = 'bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]'
 const MIN_COLUMN_WIDTH = 100
 const MAX_COLUMN_WIDTH = 4096
 const ROW_NUMBER_WIDTH = 56
@@ -102,6 +103,42 @@ function inEditorPopup(target: EventTarget | null) {
   return inDatasetCalendar(target) || (target instanceof Element && !!target.closest('[data-dataset-editor-popup]'))
 }
 
+function inCellPreview(target: EventTarget | null) {
+  return target instanceof Element && !!target.closest('[data-dataset-cell-preview]')
+}
+
+function DatasetCellPreview({ anchor, content, value, className, onClose }: {
+  anchor: RefObject<HTMLTableCellElement | null>
+  content: RefObject<HTMLDivElement | null>
+  value: string
+  className: string
+  onClose: () => void
+}) {
+  const [truncated, setTruncated] = useState(false)
+  useEffect(() => {
+    const label = anchor.current?.querySelector('[data-dataset-cell-label]')
+    if (!label) return
+    const observer = new ResizeObserver(() => setTruncated(label.scrollWidth > label.clientWidth))
+    observer.observe(label)
+    return () => observer.disconnect()
+  }, [anchor, value])
+
+  if (!truncated && !value.includes('\n')) return null
+  return <Popover open onOpenChange={open => { if (!open) onClose() }}>
+    <PopoverAnchor virtualRef={anchor} />
+    <PopoverContent ref={content} data-dataset-cell-preview="" aria-hidden="true"
+      // Overlap the focus outline at the join, including its 2px keyboard state.
+      side="bottom" align="start" sideOffset={-2} collisionPadding={8} hideWhenDetached
+      className={cn('max-h-[min(9rem,var(--radix-popover-content-available-height,9rem))] w-(--radix-popover-trigger-width) min-w-0 max-w-(--radix-popover-content-available-width) overflow-y-auto overscroll-contain rounded-none border border-foreground p-2 leading-normal wrap-anywhere whitespace-pre-wrap text-foreground shadow-none ring-0 data-[side=bottom]:border-t-0 data-[side=top]:border-b-0', className)}
+      onOpenAutoFocus={event => event.preventDefault()}
+      onCloseAutoFocus={event => event.preventDefault()}
+      onInteractOutside={event => { if (event.target instanceof Node && anchor.current?.contains(event.target)) event.preventDefault() }}
+      onMouseDown={event => event.preventDefault()}>
+      {value}
+    </PopoverContent>
+  </Popover>
+}
+
 export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, viewOnlyId }: {
   dataset: Dataset
   editable: boolean
@@ -116,6 +153,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const gridFooter = useRef<HTMLDivElement>(null)
   const draftRow = useRef<HTMLTableRowElement>(null)
   const inlineEditor = useRef<HTMLFormElement>(null)
+  const previewAnchor = useRef<HTMLTableCellElement>(null)
+  const previewContent = useRef<HTMLDivElement>(null)
+  const [selectingCells, setSelectingCells] = useState(false)
   const saving = useRef(false)
   const restoreEditorFocus = useRef(false)
   const confirm = useConfirmDelete()
@@ -341,17 +381,22 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     function clearOutsideCell(event: PointerEvent) {
       if (keepInvalidEditorFocused(event)) return
       const target = event.target
-      if (target instanceof Element && (inEditorPopup(target)
+      if (target instanceof Element && (inEditorPopup(target) || inCellPreview(target)
         || target.closest('[data-dataset-clipboard]')
         || (gridViewport.current?.contains(target) && inDatasetCell(target)))) return
       setActive(null)
       if (table.getFocusedCell()) table.resetCellSelection(true)
     }
+    const endCellSelection = () => setSelectingCells(false)
     document.addEventListener('pointerdown', clearOutsideCell, true)
     document.addEventListener('click', keepInvalidEditorFocused, true)
+    document.addEventListener('mouseup', endCellSelection)
+    window.addEventListener('blur', endCellSelection)
     return () => {
       document.removeEventListener('pointerdown', clearOutsideCell, true)
       document.removeEventListener('click', keepInvalidEditorFocused, true)
+      document.removeEventListener('mouseup', endCellSelection)
+      window.removeEventListener('blur', endCellSelection)
     }
   }, [table, editId, saveError])
   const rows = table.getRowModel().rows
@@ -419,6 +464,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const selectedCount = rows.filter(row => row.getIsSelected()).length
   const selectedCell = active && rows.some(row => row.id === active.row) && layout.fields.some(column => column.key === active.column)
     ? active : null
+  const showCellPreview = !editing && !selectingCells && selectedCell && table.getSelectedCellCount() <= 1
   const tabStop = selectedCell ?? { row: rows[virtualRows[0]?.index ?? 0]?.id, column: orderedVisible[0]?.id }
 
   function changeSorting(updater: Updater<SortingState>) {
@@ -605,6 +651,14 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
 
   function handleCellKey(event: KeyboardEvent<HTMLButtonElement>, row: DatasetRow, column: DatasetColumn) {
     const primary = event.ctrlKey || event.metaKey
+    if (!primary && !event.shiftKey && !event.altKey && (event.key === 'PageDown' || event.key === 'PageUp')) {
+      const preview = previewContent.current
+      if (preview && preview.scrollHeight > preview.clientHeight) {
+        event.preventDefault()
+        preview.scrollBy({ top: event.key === 'PageDown' ? preview.clientHeight : -preview.clientHeight })
+        return
+      }
+    }
     if (primary && !event.shiftKey && ['d', 'r', 'z'].includes(event.key.toLowerCase())) {
       if (!editable) return
       event.preventDefault()
@@ -803,9 +857,11 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const cellEditable = editable && !datasetReadOnly(column.kind)
         const usesPicker = column.kind === 'boolean' || column.kind === 'select'
         const multiSelect = column.kind === 'multi_select'
-        return <TableCell key={cell.id} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
+        const display = displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse'))
+        const showPreview = isFocused && showCellPreview && value !== null && !!display
+        return <TableCell key={cell.id} ref={isFocused ? previewAnchor : undefined} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
           (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : !rangeSelected && 'hover:bg-muted',
-          rangeSelected && 'bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]',
+          rangeSelected && CELL_RANGE_BACKGROUND,
           cell.column.getIsPinned() && '!sticky z-10',
           cell.column.getIsPinned() && !isEditing && !isFocused && !rangeSelected && 'bg-background',
         )}>
@@ -848,16 +904,18 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           }}>
             <DatasetValueField id={editId} label={column.label} column={column} value={edit.value} focus inline openPicker disabled={busy}
               error={saveError?.notice ? undefined : saveError?.message}
+              onPickerClose={usesPicker || multiSelect ? reason => {
+                // A single-value picker can start saving before the menu closes.
+                if (saving.current) return
+                if (reason === 'escape') closeEditor()
+                else if (!saveError) void save(edit.value, reason !== 'outside')
+              } : undefined}
               onCalendarPick={column.kind === 'date' && !stale ? value => { void save(value) } : undefined}
               onChange={value => {
                 if (saveError?.field) setSaveError(null)
                 if (usesPicker && !stale) void save(value)
                 else setEdit({ ...edit, value })
               }} />
-            {multiSelect && !saveError && <div className="flex gap-1 p-1">
-              <Button type="submit" variant="outline" size="sm" disabled={busy}>{t('common.save')}</Button>
-              <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => closeEditor()}>{t('common.cancel')}</Button>
-            </div>}
             {saveError && !saveError.field && <div className="space-y-1 px-2 pb-2">
               {saveError.notice && <div role="status" className="text-xs wrap-anywhere text-muted-foreground">{saveError.message}</div>}
               {stale ? <Button type="button" variant="outline" size="sm" onClick={refreshEdit} disabled={busy}>{t('dataset.refreshEdit')}</Button>
@@ -865,19 +923,27 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             </div>}
           </form> :
             <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
-              className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0', column.kind === 'url' && value && 'pr-9')}
-              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
+              className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0',
+                column.kind === 'url' && value && 'pr-9')}
+              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: display })}
               aria-pressed={isFocused || rangeSelected}
-              onMouseDown={event => { if (!editing && event.button === 0) cell.getSelectionStartHandler()(event) }}
+              onMouseDown={event => {
+                if (!editing && event.button === 0) {
+                  setSelectingCells(true)
+                  cell.getSelectionStartHandler()(event)
+                }
+              }}
               onMouseEnter={event => { if (!editing) cell.getSelectionExtendHandler()(event) }}
               onFocus={() => { if (!draft && (!saveError || saveError.notice)) setActive({ row: row.id, column: column.key }) }}
-              onBlur={event => { if (!inDatasetCell(event.relatedTarget)) setActive(null) }}
+              onBlur={event => { if (!inDatasetCell(event.relatedTarget) && !inCellPreview(event.relatedTarget)) setActive(null) }}
               onClick={() => { if (!draft) setActive({ row: row.id, column: column.key }) }}
               onDoubleClick={() => beginEdit(row.original, column)}
               onKeyDown={event => handleCellKey(event, row.original, column)}>
-              <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) || '—'}</span>
+              <span data-dataset-cell-label="" className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{display || '—'}</span>
             </Button>
           }
+          {showPreview && <DatasetCellPreview anchor={previewAnchor} content={previewContent} value={display}
+            className={rangeSelected ? CELL_RANGE_BACKGROUND : 'bg-muted'} onClose={() => setActive(null)} />}
           {!isEditing && column.kind === 'url' && typeof value === 'string' && /^https?:\/\//i.test(value) &&
             <Button asChild variant="ghost" size="icon-sm" className="absolute inset-y-0 right-0 my-auto">
               <a href={value} target="_blank" rel="noopener noreferrer" aria-label={t('dataset.openUrl', { column: column.label })}><ExternalLink /></a>
