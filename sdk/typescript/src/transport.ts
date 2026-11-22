@@ -1,8 +1,13 @@
 import { APIConnectionError, errorFor } from './errors.js'
 
-/** The workflow and chat APIs share the same error envelope. */
+type Payload = { success?: boolean; data?: unknown; error?: { code?: string; message?: string; details?: unknown } } | null
+
+/** Read the shared API error envelope. */
 export async function envelope<T>(response: Response): Promise<T> {
-  const payload = await response.json().catch(() => null) as { success?: boolean; data?: T; error?: { code?: string; message?: string; details?: unknown } } | null
+  return unwrap<T>(response, await response.json().catch(() => null) as Payload)
+}
+
+export function unwrap<T>(response: Response, payload: Payload): T {
   if (!payload || typeof payload.success !== 'boolean' || (payload.success && (!response.ok || !('data' in payload)))) {
     throw new APIConnectionError(`Unexpected response (HTTP ${response.status}); is baseUrl a Superstep server?`, { code: 'BAD_RESPONSE', status: response.status })
   }

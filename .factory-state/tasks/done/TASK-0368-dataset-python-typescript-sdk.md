@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0368
 - Title: Add Dataset clients to Python and TypeScript SDKs
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-22
 - Updated: 2026-11-22
@@ -32,6 +32,8 @@ Expose Python sync and async and a TypeScript client under the existing packages
 - [Architecture](../../artifacts/ARCH-0005-dataset-integrations-and-live-sharing.md)
 - [Decision](../../decisions/DEC-0103-dataset-integration-and-sharing-boundaries.md)
 - [Delivery plan](../../artifacts/PLAN-0021-dataset-integrations-and-live-sharing.md)
+- [Review](../../artifacts/REV-0357-TASK-0368-dataset-python-typescript-sdk.md)
+- [QA](../../artifacts/QA-0357-TASK-0368-dataset-python-typescript-sdk.md)
 
 ## Expected Outputs
 
@@ -62,16 +64,19 @@ Run both SDK unit and package suites, TS generation check, Python shape tests an
 
 ## Assumptions
 
-Use the v1 scope of REQ-0103 and the proposed interfaces in ARCH-0005.
+Use the v1 scope of REQ-0103 and ARCH-0005. Writes request identifiers by default. SDKs retry once with the same serialized body and accept a caller-supplied operation ID for recovery across calls.
 
 ## Open Questions
 
-Confirm the predecessor contract and integration before promoting to todo.
+None blocking. The Connected v1 contract is integrated at `4d71b119`.
 
 ## Activity Log
 
 - 2026-11-22: Planned from the owner-approved scope and sequence.
+- 2026-11-22: Started on develop at `4d71b119` after PR #427 merged. The OpenAPI contract includes the current Formula metadata. Relation and standalone Formula parity are tracked separately. Factory ready passed before source work.
+- 2026-11-22: Implemented and validated the Dataset clients, package exports, and English and Vietnamese examples. Moved the task to review with REV-0357 and QA-0357. The Postgres 17 live SDK run and full Factory profile are covered by PR CI.
+- 2026-11-22: All 25 applicable checks passed for [PR #428](https://github.com/quinguyen1502/superstep/pull/428) at `6648d7b2`, including live SDK tests on SQLite and PostgreSQL 17. The owner approved merge into develop. The updated PR head requires its own CI pass.
 
 ## Handoff Notes
 
-Use a dedicated task branch from current develop when implementation is requested. This plan does not authorize a release or merge.
+After #428 integrates, promote TASK-0369 to todo and start it from develop. Package publication follows the separate release workflow.

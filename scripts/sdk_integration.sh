@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Live integration test of both SDKs: starts the backend on a temporary database, signs in as the dev admin, creates a
-# workflow token and isolated chat app keys, then runs both SDKs' workflow and chat tests.
+# workflow token and isolated chat app keys, then runs both SDKs' workflow, chat, and Dataset tests.
+# SUPERSTEP_IT_DATABASE_URL can point to a disposable PostgreSQL database for a full integration run.
 #
 #   scripts/sdk_integration.sh
 #
@@ -14,14 +15,17 @@ SDK_PYTHON="${SDK_PYTHON:-$ROOT/sdk/python/.venv/bin/python}"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/superstep-sdk-it.XXXXXX")"
 BASE="http://127.0.0.1:$PORT"
 
-cleanup() { [[ -n "${PID:-}" ]] && kill "$PID" 2>/dev/null || true; rm -rf "$WORK"; }
+cleanup() {
+  if [[ -n "${PID:-}" ]]; then kill "$PID" 2>/dev/null || true; wait "$PID" 2>/dev/null || true; fi
+  rm -rf "$WORK"
+}
 trap cleanup EXIT
 "$BACKEND_PYTHON" "$ROOT/scripts/check_test_ports.py" "$PORT"
 
-(cd "$ROOT/backend" && DATABASE_URL= REDIS_URL= STUDIO_DB="$WORK/it.db" STUDIO_IMPORT_DIR="$WORK/imports" STUDIO_SECRET_KEY_FILE="$WORK/secret.key" \
+(cd "$ROOT/backend" && DATABASE_URL="${SUPERSTEP_IT_DATABASE_URL:-}" REDIS_URL= STUDIO_DB="$WORK/it.db" STUDIO_IMPORT_DIR="$WORK/imports" STUDIO_SECRET_KEY_FILE="$WORK/secret.key" \
   OPENAI_API_KEY= STUDIO_ATTACHMENT_STORAGE=db STUDIO_ENABLE_DEMO_TOOLS=1 STUDIO_TRIGGER_RATE_LIMIT=0 \
   STUDIO_PUBLIC_CHAT_RATE_READ=0 STUDIO_PUBLIC_CHAT_RATE_VISITOR=0 STUDIO_PUBLIC_CHAT_RATE_IP=0 STUDIO_PUBLIC_CHAT_RATE_USER=0 \
-  "$BACKEND_PYTHON" -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" >"$WORK/backend.log" 2>&1) &
+  exec "$BACKEND_PYTHON" -m uvicorn app.main:app --host 127.0.0.1 --port "$PORT" >"$WORK/backend.log" 2>&1) &
 PID=$!
 for _ in $(seq 1 120); do curl -fsS "$BASE/api/health" >/dev/null 2>&1 && break; sleep 0.5; done
 curl -fsS "$BASE/api/health" >/dev/null || { cat "$WORK/backend.log"; exit 1; }
@@ -32,6 +36,6 @@ export SUPERSTEP_IT_BASE_URL="$BASE" SUPERSTEP_IT_WORKFLOW_ID="$WID" SUPERSTEP_I
 export SUPERSTEP_IT_CHAT_CONFIG="$WORK/chat.json"
 
 echo "== Python SDK (live)"
-(cd "$ROOT/sdk/python" && "$SDK_PYTHON" -m pytest -q tests/test_integration.py tests/test_chat_integration.py -rs)
+(cd "$ROOT/sdk/python" && "$SDK_PYTHON" -m pytest -q tests/test_integration.py tests/test_chat_integration.py tests/test_dataset_integration.py -rs)
 echo "== TypeScript SDK (live)"
 (cd "$ROOT/sdk/typescript" && npm run --silent test:integration)

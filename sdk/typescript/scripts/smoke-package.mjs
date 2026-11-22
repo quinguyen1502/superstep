@@ -6,6 +6,7 @@ for (const load of [name => import(name), name => require(name)]) {
   const root = await load('@superstep/sdk'), chat = await load('@superstep/sdk/chat'), server = await load('@superstep/sdk/server')
   assert.equal(root.VERSION, '0.3.0')
   assert.equal(typeof root.Superstep, 'function')
+  assert.equal(typeof root.DatasetClient, 'function')
   assert.equal(typeof chat.ChatClient, 'function')
   assert.equal(typeof chat.createChatStore, 'function')
   assert.equal(root.mintChatToken, undefined)
