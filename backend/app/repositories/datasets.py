@@ -15,6 +15,7 @@ from ..models.database import Database
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
 from ..models.dataset_receipt import DatasetWriteReceipt
+from ..models.dataset_share import DatasetShare
 from ..models.team import TeamMember
 from ..models.workflow import Workflow
 
@@ -35,6 +36,7 @@ class RowChange:
 def delete_dataset_definitions(session: Session, condition) -> None:
     """Clean up definitions explicitly on SQLite as well as on PostgreSQL."""
     ids = select(Dataset.id).where(condition)
+    session.execute(delete(DatasetShare).where(DatasetShare.dataset_id.in_(ids)))
     session.execute(delete(DatasetWriteReceipt).where(DatasetWriteReceipt.dataset_id.in_(ids)))
     session.execute(delete(DatasetApiToken).where(DatasetApiToken.dataset_id.in_(ids)))
     session.execute(delete(DatasetWorkflowGrant).where(DatasetWorkflowGrant.dataset_id.in_(ids)))

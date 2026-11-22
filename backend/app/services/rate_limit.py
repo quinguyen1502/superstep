@@ -10,6 +10,7 @@ PREFIX = "studio:rl:"
 # The first part of a limiter key names the product limit; the rest (a user id, an IP, a token id) never leaves here.
 SCOPES = {"demo-run": "demo", "approval-cb": "approval_callback", "chat": "chat_trigger", "pubchat-ip": "public_chat",
           "pubchat-read": "public_chat", "pubchat-user": "public_chat", "pubchat-v": "public_chat", "token": "api_trigger",
+          "pubdataset-ip": "public_dataset", "pubdataset-link": "public_dataset",
           "pat": "api_trigger", "code-test": "code", "cli-device": "pat", "email": "email_node"}
 
 

@@ -4,6 +4,7 @@ nginx bounds bodies in Compose; the all-in-one image and PaaS deploys have no ng
 reads the whole body (`await request.body()`) before any check would otherwise take whatever it is sent. A body that
 says it is too large is refused before it is read; one without a length is counted and refused once it passes, with the same 413 whichever way the route reads it.
 - the chat platform and approval callbacks (no sign-in): 1 MB;
+- Dataset share management: 256 KiB;
 - the upload routes (chat attachments, workflow import, knowledge documents): their own ceilings plus multipart room;
 - everything else: STUDIO_MAX_BODY_MB (default 10).
 """
@@ -11,10 +12,12 @@ from __future__ import annotations
 import json, re
 from ..core import config
 from ..core.errors import AppError
+from .dataset_share_http import SHARE_MANAGEMENT
 
 MB = 1024 * 1024
 SLACK = MB  # multipart boundaries and headers
 CALLBACK_MAX = MB
+DATASET_SHARE_MAX = 256 * 1024
 IMPORT_MAX = 50 * MB  # services.import_service.ZIP_MAX
 KB_MAX = 10 * MB      # services.knowledge_service.MAX_BYTES
 CALLBACK = re.compile(r"^/api/(approvals/callback|channels/events)/[^/]+(/[^/]+)?/?$")
@@ -22,6 +25,7 @@ UPLOADS = re.compile(r"^/api/(chat/sessions/[^/]+/attachments|public/chat/[^/]+/
 
 
 def limit_for(path: str) -> int:
+    if SHARE_MANAGEMENT.fullmatch(path): return DATASET_SHARE_MAX
     if CALLBACK.match(path): return CALLBACK_MAX
     if UPLOADS.match(path): return max(config.chat_attachment_max_mb() * MB, IMPORT_MAX, KB_MAX) + SLACK
     return config.max_body_mb() * MB

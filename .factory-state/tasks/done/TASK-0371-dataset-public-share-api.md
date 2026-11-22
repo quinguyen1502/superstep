@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0371
 - Title: Enforce read-only Dataset share links on the server
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-22
 - Updated: 2026-11-22
@@ -32,6 +32,9 @@ Add a Dataset share resource holding the approved field keys and base filter, wi
 - [Architecture](../../artifacts/ARCH-0005-dataset-integrations-and-live-sharing.md)
 - [Decision](../../decisions/DEC-0103-dataset-integration-and-sharing-boundaries.md)
 - [Delivery plan](../../artifacts/PLAN-0021-dataset-integrations-and-live-sharing.md)
+- [Review](../../artifacts/REV-0360-TASK-0371-dataset-public-share-api.md)
+- [QA](../../artifacts/QA-0360-TASK-0371-dataset-public-share-api.md)
+- [HTTP contract](../../../docs/backend-architecture.md#dataset-share-links)
 
 ## Expected Outputs
 
@@ -66,12 +69,18 @@ Use the v1 scope of REQ-0103 and the proposed interfaces in ARCH-0005.
 
 ## Open Questions
 
-Confirm the predecessor contract and integration before promoting to todo.
+None blocking. The prerequisite Studio realtime task integrated into develop at `837f3e5e`.
 
 ## Activity Log
 
 - 2026-11-22: Planned from the owner-approved scope and sequence.
+- 2026-11-22: Started from develop at `837f3e5e` after PR #430 merged. Factory ready passed. Migration 0073 remains the head, Formula is present and Relation remains a separate milestone.
+- 2026-11-22: Added migration 0074 and the Dataset share management and anonymous read endpoints. The local projection, capability isolation, quota, revision and migration checks passed. Moved to review with REV-0360 and QA-0360.
+- 2026-11-22: Fixed runtime annotation compatibility and locale interpolation from initial CI. Verified the focused backend suite on Python 3.12.13 and all frontend unit tests.
+- 2026-11-22: Added the share token redaction module to the sandbox image's explicit file list. A local Docker build and the focused PostgreSQL 17 and Redis 7 regressions passed.
+
+- 2026-11-22: The owner explicitly approved merging PR #431 into develop. All 25 checks passed on reviewed commit `6387135a`. [PR #431 checks](https://github.com/quinguyen1502/superstep/pull/431/checks)
 
 ## Handoff Notes
 
-Use a dedicated task branch from current develop when implementation is requested. This plan does not authorize a release or merge.
+After integration, use the documented manager endpoints and send the copied fragment in X-Dataset-Share on each anonymous API read. Preview returns the same metadata and row values as the visitor routes. The UI must handle unavailable links and enforce its noindex and referrer policy on the reader page.

@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..core.dataset_formula import materialize_formulas
-from ..core.dataset_types import MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, MAX_ROW_BYTES, CellValue, dataset_size, dataset_timestamp, key_digest, timestamp_millis, write_fingerprint
+from ..core.dataset_types import MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, MAX_ROW_BYTES, CellValue, DatasetValue, dataset_size, dataset_timestamp, key_digest, timestamp_millis, write_fingerprint
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
@@ -256,6 +256,29 @@ class DatasetRowRepository:
                 matches = query.with_only_columns(DatasetRow.id).limit(MAX_DATASET_ROWS + 1)
                 total = session.scalar(select(func.count()).select_from(matches.subquery()))
             return rows, total
+
+    def project_page(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup],
+                     search: str | None, search_columns: list[DatasetColumn], columns: list[DatasetColumn],
+                     limit: int, offset: int) -> list[dict[str, DatasetValue]]:
+        """Select the approved values in SQL. Row identity and diagnostics stay out of the result."""
+        query, _ = self._filtered_query(dataset_id, filters, "and", search, search_columns)
+        stamps = {"created_time": DatasetRow.created, "updated_time": DatasetRow.updated}
+        expressions = [
+            stamps[column.kind] if column.kind in stamps
+            else DatasetRow.values[column.key] if column.kind == "multi_select"
+            else _column_value(column)
+            for column in columns
+        ]
+        statement = (
+            query.with_only_columns(*expressions).order_by(DatasetRow.created, DatasetRow.id)
+            .limit(limit).offset(offset)
+        )
+        with self.datasets.db.session() as session:
+            return [
+                {column.key: dataset_timestamp(value) if column.kind in stamps else value
+                 for column, value in zip(columns, row, strict=True)}
+                for row in session.execute(statement)
+            ]
 
     @staticmethod
     def _check_revision(row: DatasetRow, revision: int | None) -> None:

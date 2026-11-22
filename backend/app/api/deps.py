@@ -16,6 +16,7 @@ from ..services.inbox_service import InboxService
 from ..services.policy_service import PolicyService
 from ..repositories.dataset_access import DatasetAccessRepository
 from ..repositories.dataset_rows import DatasetRowRepository
+from ..repositories.dataset_shares import DatasetShareRepository
 from ..repositories.datasets import DatasetRepository
 from ..services.dataset_access import DatasetAccessService
 from ..services.dataset_connected import DatasetConnectedService
@@ -23,6 +24,7 @@ from ..services.dataset_csv import DatasetCsvService
 from ..services.dataset_rows import DatasetRowService
 from ..services.dataset_runtime import DatasetRuntimeService
 from ..services.dataset_service import DatasetService
+from ..services.dataset_shares import DatasetShareService
 from ..services.team_service import TeamService
 from ..services.ownership_service import OwnershipService
 from ..core import permissions as P
@@ -279,6 +281,11 @@ def dataset_row_service() -> DatasetRowService:
 def dataset_access_service() -> DatasetAccessService:
     datasets = dataset_service()
     return DatasetAccessService(datasets, DatasetAccessRepository(datasets.repo))
+
+def dataset_share_service() -> DatasetShareService:
+    datasets = dataset_service()
+    return DatasetShareService(datasets, DatasetShareRepository(datasets.repo),
+                               DatasetRowRepository(datasets.repo), get_rate_limiter())
 
 def dataset_runtime_service() -> DatasetRuntimeService:
     access = dataset_access_service()

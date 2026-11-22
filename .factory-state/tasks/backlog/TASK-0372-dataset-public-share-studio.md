@@ -48,7 +48,7 @@ Use shadcn components and theme tokens. Manager preview uses the exact public pr
 
 ## Dependencies
 
-- [TASK-0371](../backlog/TASK-0371-dataset-public-share-api.md). Start after this dependency integrates, or document an approved stack.
+- [TASK-0371](../done/TASK-0371-dataset-public-share-api.md). Start after this dependency integrates, or document an approved stack.
 
 ## Acceptance Criteria
 
