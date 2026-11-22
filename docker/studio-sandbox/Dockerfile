@@ -21,7 +21,7 @@ RUN DENO_DIR=/opt/deno-cache deno cache --no-config --no-lock /opt/studio-deps/d
 WORKDIR /srv
 # Only the modules the Code runtime needs (no database, no API, no credentials code).
 COPY backend/app/__init__.py backend/app/sandbox_service.py app/
-COPY backend/app/core/__init__.py backend/app/core/config.py backend/app/core/errors.py backend/app/core/logging.py app/core/
+COPY backend/app/core/__init__.py backend/app/core/config.py backend/app/core/errors.py backend/app/core/logging.py backend/app/core/dataset_shares.py app/core/
 COPY backend/app/engine/__init__.py backend/app/engine/activity.py backend/app/engine/code_runtime.py \
      backend/app/engine/code_languages.py backend/app/engine/issues.py app/engine/
 COPY backend/app/engine/sandbox/ app/engine/sandbox/

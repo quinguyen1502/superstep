@@ -10,6 +10,8 @@ import contextvars, json, logging, re, sys, time, uuid
 from contextlib import contextmanager
 from typing import Iterator, Optional
 
+from .dataset_shares import DATASET_SHARE_TOKEN
+
 TOKEN_RE = re.compile(r"(token=)[^&\s\"']+")
 SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._:-]{1,64}$")  # an incoming X-Request-ID is kept only when it looks like this
 FORMATS = ("text", "json")
@@ -26,7 +28,7 @@ def get_logger(name: str) -> logging.Logger:
 
 
 def redact(text: str) -> str:
-    return TOKEN_RE.sub(r"\1***", text)
+    return DATASET_SHARE_TOKEN.sub("dssh_***", TOKEN_RE.sub(r"\1***", text))
 
 
 class RedactTokens(logging.Filter):
@@ -47,7 +49,7 @@ def redact_tokens(*names: str) -> None:
 def safe_request_id(value: Optional[str]) -> str:
     """The incoming id when it is a short safe token, else a new one (an unsafe value is never kept or logged)."""
     v = (value or "").strip()
-    return v if SAFE_REQUEST_ID.match(v) else uuid.uuid4().hex
+    return v if SAFE_REQUEST_ID.match(v) and not DATASET_SHARE_TOKEN.search(v) else uuid.uuid4().hex
 
 
 @contextmanager

@@ -227,6 +227,52 @@ Upgrade the API and worker together so every writer advances the marker.
 The database can retain the column if live consumers are disabled. If the
 migration is downgraded and reapplied, active readers need a fresh snapshot.
 
+## Dataset share links
+
+Share management uses the same authorization as Dataset Access. The endpoints
+under `/api/datasets/{dataset_id}/shares` are:
+
+| Method and suffix | Result |
+| --- | --- |
+| GET | Active links with their ID, name, fields, fixed filter and availability. Accepts `limit` and `offset`. |
+| POST | Create from `name`, ordered `fields`, optional `filter_tree`, and the current `schema_revision`. Returns the link record and its one-time `token`. |
+| POST `/preview` | The same view and page as a visitor, using the proposed configuration and optional `search`, `limit` and `offset`. |
+| POST `/{share_id}/rotate` | Replace the secret atomically and return the new `token`. |
+| DELETE `/{share_id}` | Revoke the link. |
+
+Creation and preview check the current schema revision. The share stores a
+hash of the secret, the selection and fixed filter, and signatures for the
+referenced column kinds and the relevant Formula definitions and their
+dependencies. Renaming a label and adding unrelated columns can preserve the
+share. Archiving a referenced column or changing a relevant Formula makes
+the link unavailable. A manager can revoke such a link and create a new one
+after reviewing the current view. Migration `0074_dataset_shares` adds the
+storage. Dataset deletion removes its links.
+
+Anonymous clients use `GET /api/public/v1/dataset-view` for the published name,
+column keys, labels, kinds and search availability. `GET .../rows` returns
+`{items, next_offset}`, where each item is a map of approved field keys to
+values. The repository applies the fixed filter and selects only those fields
+in SQL. Search checks only the published text-like columns. The row API omits
+identifiers, counts and Formula diagnostics. It returns a generic unavailable
+response for an invalid, rotated, revoked or incompatible link and rechecks
+authorization before emitting a page. Relation fields are outside the v1 scope.
+
+Send the capability only in `X-Dataset-Share`. Browser links keep it in the
+fragment and transfer it to the header without putting it in the request URL.
+The application omits it from audit records and telemetry. Proxies should omit
+this header and response bodies from logs. Responses use `Cache-Control:
+no-store`. Anonymous API responses also set `X-Robots-Tag: noindex` and
+`Referrer-Policy: no-referrer`.
+
+Management bodies are limited to 256 KiB. Public queries are GETs with up to
+100 rows and 1 MiB of projected items per page, plus the envelope. Search
+takes up to 120 characters. The shared limiter uses a 60-second window and
+defaults to 120 requests per IP and 300 per link. Set
+`STUDIO_PUBLIC_DATASET_RATE_IP` and `STUDIO_PUBLIC_DATASET_RATE_LINK` to tune the
+limits. Redis shares limits across API processes when configured. Disable
+traffic to the share routes before downgrading the migration that stores links.
+
 ## LLM providers
 
 `engine/providers.py` is the provider registry (one strategy class per provider: defaults, model listing, LangChain chat model). `engine/llm.py` dispatches LLM nodes to it; `services/credential_service.py` uses it for validation, model lists and connection tests. Engine failures are `ProviderError(code)` and become `AppError` in the service.
