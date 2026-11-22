@@ -28,7 +28,7 @@ Deliver official Dataset integration clients, then authenticated live grid refre
 | Milestone | Task | Depends on | Exit check |
 | --- | --- | --- | --- |
 | 1. OpenAPI and SDK | [TASK-0367 — Connected v1 OpenAPI](../tasks/done/TASK-0367-dataset-connected-openapi.md) | Existing Connected API | Typed six-operation contract, generated spec sync, and compatible deployed exporters |
-| 1. OpenAPI and SDK | [TASK-0368 — Python and TypeScript SDKs](../tasks/backlog/TASK-0368-dataset-python-typescript-sdk.md) | TASK-0367 | Both clients pass live read/write, scope, retry and drift scenarios |
+| 1. OpenAPI and SDK | [TASK-0368 — Python and TypeScript SDKs](../tasks/done/TASK-0368-dataset-python-typescript-sdk.md) | TASK-0367 | Both clients pass live read/write, scope, retry and drift scenarios |
 | 2. Studio realtime | [TASK-0369 — Commit signals and resync](../tasks/backlog/TASK-0369-dataset-live-invalidations.md) | Milestone 1 | Database revision and authorized push cover every changed writer on SQLite and PostgreSQL, including Redis across processes |
 | 2. Studio realtime | [TASK-0370 — Studio query refresh](../tasks/backlog/TASK-0370-dataset-live-studio-grid.md) | TASK-0369 | Two browser sessions see the same rows and summaries after writes and reconnect. An editor keeps its draft |
 | 3. Public link | [TASK-0371 — Share authorization and projection](../tasks/backlog/TASK-0371-dataset-public-share-api.md) | Milestone 2 | Server projection and filter apply to every anonymous read. Revocation, rotation and schema drift fail closed |

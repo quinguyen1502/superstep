@@ -48,7 +48,7 @@ Advance once per committed changed transaction, separately from row and schema r
 
 ## Dependencies
 
-- [TASK-0368](../backlog/TASK-0368-dataset-python-typescript-sdk.md). Start after this dependency integrates, or document an approved stack.
+- [TASK-0368](../done/TASK-0368-dataset-python-typescript-sdk.md). Start after this dependency integrates, or document an approved stack.
 
 ## Acceptance Criteria
 
