@@ -4,7 +4,26 @@ All notable changes to Superstep. Versions follow [Semantic Versioning](https://
 
 ## Unreleased
 
-## 0.13.0 (release candidate)
+## 0.14.0 (release candidate)
+
+### Added
+
+- **Live Dataset grids.** Open Studio Dataset views refresh after row, schema, or access changes. Updates also cover writes from workflows, Agent tools, and integrations, with local unsaved cell edits preserved.
+- **Read-only Dataset sharing.** Dataset managers can preview and share a link with selected columns and an optional fixed filter. Guests can browse and search the published rows without an account. Managers can rotate or revoke links in the Access tab.
+- **Dataset OpenAPI and SDKs.** The Connected Dataset OpenAPI document describes token-scoped schema, reads, batch writes, and aggregates. Python and TypeScript now include typed Dataset clients for external integrations.
+- **Formula columns (preview).** Set `STUDIO_ENABLE_DATASET_FORMULAS=1` to configure Formula columns in Studio and see calculated values and diagnostics in the grid. Formula runtime and standalone export parity, and Relation columns, remain planned.
+- **Demo Dataset.** The public demo includes a read-only sample Dataset for exploring the grid.
+
+### Fixed
+
+- Dataset picker cells show a chevron when focused. Double-click opens the picker, and clicking away from an unchanged picker exits editing. Selected long values can expand over the grid without changing row height.
+
+### Upgrade
+
+- The server, frontend, Python SDK, CLI, and installer use **0.14.0**. The independently versioned TypeScript SDK **0.4.0** adds Dataset clients. React toolkit **0.1.5** accepts TypeScript SDK **0.2.x**, **0.3.x**, and **0.4.x**.
+- Back up the database before upgrading. Migrations **0072–0074** add Formula column storage, Dataset data revisions, and share links. Apply them before serving traffic.
+
+## 0.13.0 (2026-11-15)
 
 ### Added
 

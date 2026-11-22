@@ -225,8 +225,7 @@ có trang SDK headless, [bộ giao diện React](chat-react.md) và
 mẫu local; thay phần mẫu trước khi triển khai hệ thống tài khoản. CI lưu screenshot dưới dạng artifact tải
 về, không đưa ảnh vào Git.
 
-Bản chuẩn bị phát hành 0.13.0 gồm TypeScript SDK 0.3.0 và Python SDK 0.13.0.
-Python dùng cùng phiên bản với CLI và máy chủ.
+Python SDK, CLI và máy chủ dùng cùng số phiên bản. TypeScript SDK được đánh số phiên bản riêng.
 
 ## Lịch chạy
 
